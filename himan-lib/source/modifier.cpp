@@ -720,7 +720,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 	}
 
 	if ((thePreviousValue <= findValue && theValue >= findValue) ||
-	    (thePreviousValue > findValue && theValue <= findValue))
+	    (thePreviousValue >= findValue && theValue <= findValue))
 	{
 		double actualHeight =
 		    interpolation::Linear<double>(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
