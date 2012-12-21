@@ -1,0 +1,59 @@
+/*
+ * pcuda.h
+ *
+ *  Created on: Dec 19, 2012
+ *      Author: partio
+ *
+ */
+
+#ifndef PCUDA_H
+#define PCUDA_H
+
+#include "auxiliary_plugin.h"
+//#include <cutil.h>
+
+namespace hilpee
+{
+namespace plugin
+{
+
+class pcuda : public auxiliary_plugin
+{
+	public:
+		pcuda();
+
+		virtual ~pcuda();
+
+		virtual std::string ClassName() const
+		{
+			return "hilpee::plugin::pcuda";
+		}
+
+		virtual HPPluginClass PluginClass() const
+		{
+			return kAuxiliary;
+		}
+
+		virtual HPVersionNumber Version() const
+		{
+			return HPVersionNumber(0, 1);
+		}
+
+		void Capabilities() const;
+};
+
+#ifndef HILPEE_AUXILIARY_INCLUDE
+
+// the class factory
+
+extern "C" std::shared_ptr<hilpee_plugin> create()
+{
+	return std::shared_ptr<pcuda> (new pcuda());
+}
+
+#endif /* HILPEE_AUXILIARY_INCLUDE */
+
+}
+}
+
+#endif /* PCUDA_H */
