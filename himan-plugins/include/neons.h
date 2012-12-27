@@ -24,6 +24,7 @@
 
 #include "auxiliary_plugin.h"
 #include "NFmiNeonsDB.h"
+#include "search_options.h"
 
 namespace himan
 {
@@ -36,7 +37,7 @@ class neons : public auxiliary_plugin
 	public:
 		neons();
 
-		virtual ~neons() {}
+		virtual ~neons();
 
 		neons(const neons& other) = delete;
 		neons& operator=(const neons& other) = delete;
@@ -56,10 +57,12 @@ class neons : public auxiliary_plugin
 			return HPVersionNumber(0, 1);
 		}
 
-		std::shared_ptr<NFmiNeonsDB> Neons();
+		std::vector<std::string> Files(const search_options& options);
 
 	private:
-		std::shared_ptr<NFmiNeonsDB> itsNeonsDB;
+		void InitPool();
+
+		std::unique_ptr<NFmiNeonsDB> itsNeonsDB;
 
 };
 
