@@ -1,31 +1,24 @@
 /*
- * hilpee_common.h
+ * himan_common.h
  *
  *  Created on: Nov 17, 2012
  *      Author: partio
  */
 
-#ifndef HILPEE_COMMON_H
-#define HILPEE_COMMON_H
+#ifndef HIMAN_COMMON_H
+#define HIMAN_COMMON_H
 
 // Work around "passing 'T' chooses 'int' over 'unsigned int'" warnings when T
 // is an enum type:
 
-#if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6))
+#if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4))
 #pragma GCC diagnostic ignored "-Wsign-promo"
 #endif
 
-// Check whether we can use std::shared_ptr and std::unique_ptr
-
-#if defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
-#define HAVE_CPP11
-#else
-#undef HAVE_CPP11
-#endif
-
 #include <ostream>
+#include <memory>
 
-namespace hilpee
+namespace himan
 {
 
 // Define some constants
@@ -147,6 +140,6 @@ std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers)
 	return vers.Write(file);
 }
 
-} // namespace hilpee
+} // namespace himan
 
-#endif /* HILPEE_COMMON_H */
+#endif /* HIMAN_COMMON_H */

@@ -6,7 +6,8 @@
  */
 
 #include "logger_factory.h"
-using namespace hilpee;
+
+using namespace himan;
 
 logger_factory* logger_factory::itsInstance = NULL;
 
@@ -32,6 +33,7 @@ logger_factory* logger_factory::Instance()
 
 	return itsInstance;
 }
+
 std::unique_ptr<logger> logger_factory::GetLog(const std::string& theUserName)
 {
 	return std::unique_ptr<logger> (new logger(theUserName, itsDebugStateMain));

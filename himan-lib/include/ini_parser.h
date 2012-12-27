@@ -12,10 +12,10 @@
 #include <vector>
 #include "configuration.h"
 
-namespace hilpee
+namespace himan
 {
 
-class ini_parser
+class ini_parser : public boost::noncopyable
 {
 
 	public:
@@ -27,7 +27,7 @@ class ini_parser
 
 		virtual std::string ClassName() const
 		{
-			return "hilpe::ini_parser";
+			return "himan::ini_parser";
 		}
 		virtual HPVersionNumber Version() const
 		{
@@ -38,6 +38,8 @@ class ini_parser
 
 		ini_parser();
 		~ini_parser() {}
+		ini_parser(const ini_parser& other) = delete;
+		ini_parser& operator=(const ini_parser& other) = delete;
 
 		void ParseAndCreateInfo(int argc, char** argv);
 		void ParseCommandLine(int argc, char** argv);
@@ -49,10 +51,11 @@ class ini_parser
 
 		static ini_parser* itsInstance;
 		std::unique_ptr<logger> itsLogger;
+
 		std::shared_ptr<configuration> itsConfiguration;
 
 };
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* INI_PARSER_H */

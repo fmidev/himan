@@ -9,10 +9,10 @@
 #define PLUGIN_CONTAINER_H
 
 #include <string>
-#include "hilpee_common.h"
-#include "hilpee_plugin.h"
+#include "himan_common.h"
+#include "himan_plugin.h"
 
-namespace hilpee
+namespace himan
 {
 
 class plugin_container
@@ -20,21 +20,21 @@ class plugin_container
 	public:
 		plugin_container() {}
 
-		plugin_container(void* theLibraryHandle, std::shared_ptr<plugin::hilpee_plugin> thePlugin);
+		plugin_container(void* theLibraryHandle, std::shared_ptr<plugin::himan_plugin> thePlugin);
 
 		~plugin_container();
 
-		std::shared_ptr<plugin::hilpee_plugin> Plugin();
-		std::shared_ptr<plugin::hilpee_plugin> Clone();
+		std::shared_ptr<plugin::himan_plugin> Plugin();
+		std::shared_ptr<plugin::himan_plugin> Clone();
 
 		void* Library();
 
 	private:
-		std::shared_ptr<plugin::hilpee_plugin> itsPlugin;
+		std::shared_ptr<plugin::himan_plugin> itsPlugin;
 		void* itsLibraryHandle;
 
 };
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* PLUGIN_CONTAINER_H */

@@ -6,7 +6,6 @@
  */
 
 #include "info.h"
-#include <ostream>
 #include <limits> // for std::numeric_limits<size_t>::max();
 #include <boost/lexical_cast.hpp>
 #include "plugin_factory.h"
@@ -18,115 +17,57 @@
 #include <NFmiLatLonArea.h>
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
-#include <NFmiTimeList.h>
-#include <NFmiQueryDataUtil.h>
 #endif
 
-#define HILPEE_AUXILIARY_INCLUDE
+#define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
 
-#undef HILPEE_AUXILIARY_INCLUDE
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
-using namespace hilpee;
+using namespace himan;
 
-namespace bt = boost::posix_time;
-
-const int kFMICodeTableVer = 204;
-const size_t kMAX_SIZE_T = numeric_limits<size_t>::max();
+const size_t kMAX_SIZE_T = std::numeric_limits<size_t>::max();
 
 info::info()
 {
 	Init();
 	itsLogger = logger_factory::Instance()->GetLog("info");
 
-	itsDataMatrix = std::shared_ptr<matrix_t> (new matrix_t());
+	itsDataMatrix = shared_ptr<matrix_t> (new matrix_t());
 }
 
-/*
- * Copy constructor for info.
- *
- * First copy plain metadata+data, then create descriptors.
- */
-/*
-info::info(const info& other)
-{
-
-	itsProjection = other.itsProjection;
-	itsOrientation = other.itsOrientation;
-
-	itsBottomLeftLatitude = other.itsBottomLeftLatitude;
-	itsBottomLeftLongitude = other.itsBottomLeftLongitude;
-	itsTopRightLatitude = other.itsTopRightLatitude;
-	itsTopRightLongitude = other.itsTopRightLongitude;
-
-	itsDataMatrix = other.itsDataMatrix;
-
-	itsParams = other.itsParams;
-
-	itsLevels = other.itsLevels;
-
-	itsTimes = other.itsTimes;
-
-	itsProducer = other.itsProducer;
-
-	itsOriginDateTime = other.itsOriginDateTime;
-
-	itsLogger = logger_factory::Instance()->GetLog("info");
-
-	Create();
-
-}
-*/
 info::~info()
 {
 }
 
-
-/*
- * Clone()
- *
- * Copy metadata, but do not re-create querydata+info (ie. use the existing
- * querydata). This function can be used to clone one info into many
- * to use for example in threaded functions where many infos refer to just
- * one querydata.
- *
- * Reminder:
- * - Copy constructor: copies metadata, re-creates queryinfo and querydata
- * - Clone(): copies metadata, creates new queryinfo but querydata is the same
- * - Merge(): copies metadata, does not create descriptors (and therefore queryinfo
- *            and -data)
- *
- * TODO: should this function be merged with Merge()
- */
-
 shared_ptr<info> info::Clone() const
 {
 
-	shared_ptr<info> theClone = shared_ptr<info> (new info());
+	shared_ptr<info> clone = shared_ptr<info> (new info());
 
-	theClone->Projection(itsProjection);
-	theClone->Orientation(itsOrientation);
+	clone->Projection(itsProjection);
+	clone->Orientation(itsOrientation);
 
-	theClone->BottomLeftLatitude(itsBottomLeftLatitude);
-	theClone->BottomLeftLongitude(itsBottomLeftLongitude);
-	theClone->TopRightLatitude(itsTopRightLatitude);
-	theClone->TopRightLongitude(itsTopRightLongitude);
+	clone->BottomLeftLatitude(itsBottomLeftLatitude);
+	clone->BottomLeftLongitude(itsBottomLeftLongitude);
+	clone->TopRightLatitude(itsTopRightLatitude);
+	clone->TopRightLongitude(itsTopRightLongitude);
 
-	theClone->Data(itsDataMatrix);
+	clone->Data(itsDataMatrix);
 
-	theClone->Params(itsParams);
+	clone->Params(itsParams);
 
-	theClone->Levels(itsLevels);
+	clone->Levels(itsLevels);
 
-	theClone->Times(itsTimes);
+	clone->Times(itsTimes);
 
-	theClone->Producer(itsProducer);
+	clone->Producer(itsProducer);
 
-	theClone->OriginDateTime(itsOriginDateTime.String("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S");
+	clone->OriginDateTime(itsOriginDateTime.String("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S");
 
-	return theClone;
+	return clone;
 
 }
 
@@ -150,7 +91,7 @@ void info::Init()
 
 }
 
-ostream& info::Write(ostream& file) const
+std::ostream& info::Write(std::ostream& file) const
 {
 
 	file << "<" << ClassName() << " " << Version() << ">" << endl;
@@ -168,11 +109,10 @@ ostream& info::Write(ostream& file) const
 
 	if (itsParams.size())
 	{
-for (auto theParam : itsParams)
+		for (size_t i = 0; i < itsParams.size(); i++)
 		{
-			file << *theParam;
+			file << *itsParams[i];
 		}
-
 	}
 	else
 	{
@@ -181,11 +121,10 @@ for (auto theParam : itsParams)
 
 	if (itsLevels.size())
 	{
-for (auto theLevel : itsLevels)
+		for (size_t i = 0; i < itsLevels.size(); i++)
 		{
-			file << *theLevel;
+			file << *itsLevels[i];
 		}
-
 	}
 	else
 	{
@@ -194,11 +133,10 @@ for (auto theLevel : itsLevels)
 
 	if (itsTimes.size())
 	{
-for (auto theTime : itsTimes)
+		for (size_t i = 0; i < itsTimes.size(); i++)
 		{
-			file << *theTime;
+			file << *itsTimes[i];
 		}
-
 	}
 	else
 	{
@@ -211,10 +149,6 @@ for (auto theTime : itsTimes)
 
 bool info::Create()
 {
-
-	/*
-	 * Create Matrix
-	 */
 
 	itsDataMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimes.size(), itsLevels.size(), itsParams.size()));
 
@@ -231,7 +165,7 @@ bool info::Create()
 			while (NextParam())
 				// Create empty placeholders
 			{
-				itsDataMatrix->Set(CurrentIndex(), std::shared_ptr<d_matrix_t> (new d_matrix_t(0, 0)));
+				itsDataMatrix->Set(CurrentIndex(), shared_ptr<d_matrix_t> (new d_matrix_t(0, 0)));
 			}
 		}
 	}
@@ -305,32 +239,32 @@ void info::Producer(unsigned int theProducer)
 	itsProducer = theProducer;
 }
 
-vector<std::shared_ptr<param>> info::Params() const
+vector<shared_ptr<param> > info::Params() const
 {
 	return itsParams;
 }
 
-void info::Params(vector<std::shared_ptr<param>> theParams)
+void info::Params(vector<shared_ptr<param> > theParams)
 {
 	itsParams = theParams;
 }
 
-vector<std::shared_ptr<level>> info::Levels() const
+vector<shared_ptr<level> > info::Levels() const
 {
 	return itsLevels;
 }
 
-void info::Levels(vector<std::shared_ptr<level>> theLevels)
+void info::Levels(vector<shared_ptr<level> > theLevels)
 {
 	itsLevels = theLevels;
 }
 
-vector<std::shared_ptr<forecast_time>> info::Times() const
+vector<shared_ptr<forecast_time> > info::Times() const
 {
 	return itsTimes;
 }
 
-void info::Times(vector<std::shared_ptr<forecast_time>> theTimes)
+void info::Times(vector<shared_ptr<forecast_time> > theTimes)
 {
 	itsTimes = theTimes;
 }
@@ -348,11 +282,13 @@ void info::OriginDateTime(const string& theOriginDateTime, const string& theTime
 bool info::Param(const param& theRequestedParam)
 {
 
-for (auto theParam : itsParams)
-		if (theParam->Name() == theRequestedParam.Name())
+	for (size_t i = 0; i < itsParams.size(); i++)
+	{
+		if (itsParams[i]->Name() == theRequestedParam.Name())
 		{
 			return true;
 		}
+	}
 
 	return false;
 
@@ -384,7 +320,6 @@ bool info::NextParam()
 void info::ResetParam()
 {
 	itsParamIndex = kMAX_SIZE_T;
-	//itsQueryInfo->ResetParam();
 }
 
 bool info::FirstParam()
@@ -399,7 +334,7 @@ void info::ParamIndex(size_t theParamIndex)
 	itsParamIndex = theParamIndex;
 }
 
-void info::Param(std::shared_ptr<param> theParam)
+void info::Param(shared_ptr<const param> theParam)
 {
 
 	for (size_t i = 0; i < itsParams.size(); i++)
@@ -407,13 +342,12 @@ void info::Param(std::shared_ptr<param> theParam)
 		if (itsParams[i] == theParam)
 		{
 			itsParamIndex = i;
-			//		assert (itsQueryInfo->ParamIndex(i));
 		}
 
 	}
 }
 
-std::shared_ptr<param> info::Param() const
+shared_ptr<param> info::Param() const
 {
 
 	if (itsParamIndex != kMAX_SIZE_T && itsParamIndex < itsParams.size())
@@ -444,8 +378,6 @@ bool info::NextLevel()
 		return false;
 	}
 
-	//itsQueryInfo->NextLevel();
-
 	return true;
 
 }
@@ -475,7 +407,7 @@ void info::LevelIndex(size_t theLevelIndex)
 	itsLevelIndex = theLevelIndex;
 }
 
-void info::Level(std::shared_ptr<level> theLevel)
+void info::Level(shared_ptr<const level> theLevel)
 {
 
 	for (size_t i = 0; i < itsLevels.size(); i++)
@@ -483,13 +415,12 @@ void info::Level(std::shared_ptr<level> theLevel)
 		if (itsLevels[i] == theLevel)
 		{
 			itsLevelIndex = i;
-			//			assert(itsQueryInfo->LevelIndex(i));
 		}
 	}
 
 }
 
-std::shared_ptr<level> info::Level() const
+shared_ptr<level> info::Level() const
 {
 
 	if (itsLevelIndex != kMAX_SIZE_T && itsLevelIndex < itsLevels.size())
@@ -540,7 +471,7 @@ void info::TimeIndex(size_t theTimeIndex)
 	itsTimeIndex = theTimeIndex;
 }
 
-void info::Time(std::shared_ptr<forecast_time> theTime)
+void info::Time(shared_ptr<const forecast_time> theTime)
 {
 
 	for (size_t i = 0; i < itsTimes.size(); i++)
@@ -548,12 +479,11 @@ void info::Time(std::shared_ptr<forecast_time> theTime)
 		if (itsTimes[i] == theTime)
 		{
 			itsTimeIndex = i;
-			//		assert(itsQueryInfo->TimeIndex(i));
 		}
 	}
 }
 
-std::shared_ptr<forecast_time> info::Time() const
+shared_ptr<forecast_time> info::Time() const
 {
 
 	if (itsTimeIndex != kMAX_SIZE_T && itsTimeIndex < itsTimes.size())
@@ -619,9 +549,7 @@ shared_ptr<d_matrix_t> info::Data(size_t timeIndex, size_t levelIndex, size_t pa
 void info::Data(shared_ptr<matrix_t> m)
 {
 	itsDataMatrix = m;
-
 }
-
 
 void info::Data(shared_ptr<d_matrix_t> d)
 {
@@ -637,12 +565,7 @@ bool info::Value(double theValue)
 
 double info::Value() const
 {
-	// copy the double to prevent returning const
-	//double x = itsDataMatrix->At(CurrentIndex())->At(itsLocationIndex);
-
-	//	double y = x;
 	return itsDataMatrix->At(CurrentIndex())->At(itsLocationIndex);
-	//return y;
 }
 
 size_t info::Ni() const
@@ -652,9 +575,54 @@ size_t info::Ni() const
 
 size_t info::Nj() const
 {
-	//const size_t x = itsDataMatrix->At(CurrentIndex())->SizeY();
 	return itsDataMatrix->At(CurrentIndex())->SizeY();
-	//return x;
+}
+
+bool info::GridAndAreaEquals(std::shared_ptr<const info> other) const
+{
+
+	if (itsBottomLeftLatitude != other->BottomLeftLatitude())
+	{
+		return false;
+	}
+
+	if (itsBottomLeftLongitude != other->BottomLeftLongitude())
+	{
+		return false;
+	}
+
+	if (itsTopRightLatitude != other->TopRightLatitude())
+	{
+		return false;
+	}
+
+	if (itsTopRightLongitude != other->TopRightLongitude())
+	{
+		return false;
+	}
+
+	if (itsProjection != other->Projection())
+	{
+		return false;
+	}
+
+	if (itsOrientation != other->Orientation())
+	{
+		return false;
+	}
+
+	if (Ni() != other->Ni())
+	{
+		return false;
+	}
+
+	if (Nj() != other->Nj())
+	{
+		return false;
+	}
+
+	return true;
+
 }
 
 #ifdef NEWBASE_INTERPOLATION
@@ -698,7 +666,7 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 			break;
 	}
 
-	shared_ptr<NFmiGrid> theGrid = shared_ptr<NFmiGrid> (new NFmiGrid(theArea, Ni(), Nj()));
+	shared_ptr<NFmiGrid> theGrid (new NFmiGrid(theArea, Ni(), Nj()));
 
 	size_t dataSize = itsDataMatrix->At(CurrentIndex())->Size();
 
@@ -720,8 +688,6 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 		{
 			throw runtime_error("DataPool init failed");
 		}
-
-		// Tassa vaiheessa data poolissa on dataa
 
 		if (!theGrid->Init(&thePool))
 		{

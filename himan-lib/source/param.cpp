@@ -8,10 +8,11 @@
 #include "param.h"
 #include "logger_factory.h"
 
-using namespace hilpee;
+using namespace himan;
+using namespace std;
 
 param::param()
-	: itsParam(std::shared_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, "HilpeeDefaultParam")))
+	: itsParam(shared_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, "HimanDefaultParam")))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
@@ -21,7 +22,7 @@ param::param()
 }
 
 param::param(const std::string& theName, unsigned long theUnivId)
-	: itsParam(std::shared_ptr<NFmiParam> (new NFmiParam(theUnivId, NFmiString(theName))))
+	: itsParam(shared_ptr<NFmiParam> (new NFmiParam(theUnivId, NFmiString(theName))))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
@@ -31,7 +32,7 @@ param::param(const std::string& theName, unsigned long theUnivId)
 }
 
 param::param(const std::string& theName)
-	: itsParam(std::shared_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, NFmiString(theName))))
+	: itsParam(shared_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, NFmiString(theName))))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
@@ -46,14 +47,14 @@ param::param(const std::string& theName,
              float theBase,
              const std::string& thePrecision,
              FmiInterpolationMethod theInterpolationMethod)
-	: itsParam(std::shared_ptr<NFmiParam> (new NFmiParam (theUnivId,
-	                                       NFmiString(theName),
-	                                       kFloatMissing,
-	                                       kFloatMissing,
-	                                       theScale,
-	                                       theBase,
-	                                       NFmiString(thePrecision),
-	                                       theInterpolationMethod)))
+	: itsParam(shared_ptr<NFmiParam> (new NFmiParam (theUnivId,
+	                                  NFmiString(theName),
+	                                  kFloatMissing,
+	                                  kFloatMissing,
+	                                  theScale,
+	                                  theBase,
+	                                  NFmiString(thePrecision),
+	                                  theInterpolationMethod)))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
@@ -62,13 +63,43 @@ param::param(const std::string& theName,
 	itsLogger = logger_factory::Instance()->GetLog("param");
 }
 
+param::param(const param& other)
+	: itsParam(shared_ptr<NFmiParam> (new NFmiParam (*other.itsParam)))
+	, itsGribParameter(other.itsGribParameter)
+	, itsGribCategory(other.itsGribCategory)
+	, itsGribDiscipline(other.itsGribDiscipline)
+	, itsUnit(other.itsUnit)
+{
+	itsLogger = logger_factory::Instance()->GetLog("param");
+}
+
+param& param::operator=(const param& other)
+{
+	itsParam = shared_ptr<NFmiParam> (new NFmiParam (*other.itsParam));
+	itsGribParameter = other.itsGribParameter;
+	itsGribCategory = other.itsGribCategory;
+	itsGribDiscipline = other.itsGribDiscipline;
+	itsUnit = other.itsUnit;
+
+	return *this;
+}
+
 bool param::operator==(const param& other)
 {
+	if (this == &other)
+	{
+		return true;
+	}
+
 	if (Name() != other.Name())
+	{
 		return false;
+	}
 
 	if (UnivId() != static_cast<unsigned int> (kHPMissingInt) && other.UnivId() !=  static_cast<unsigned int> (kHPMissingInt) && UnivId() != other.UnivId())
+	{
 		return false;
+	}
 
 	return true;
 }
@@ -78,32 +109,32 @@ bool param::operator!=(const param& other)
 	return !(*this == other);
 }
 
-void param::GribParameter(int theGribParameter)
+void param::GribParameter(long theGribParameter)
 {
 	itsGribParameter = theGribParameter;
 }
 
-int param::GribParameter() const
+long param::GribParameter() const
 {
 	return itsGribParameter;
 }
 
-void param::GribDiscipline(int theGribDiscipline)
+void param::GribDiscipline(long theGribDiscipline)
 {
 	itsGribDiscipline = theGribDiscipline;
 }
 
-int param::GribDiscipline() const
+long param::GribDiscipline() const
 {
 	return itsGribDiscipline;
 }
 
-void param::GribCategory(int theGribCategory)
+void param::GribCategory(long theGribCategory)
 {
 	itsGribCategory = theGribCategory;
 }
 
-int param::GribCategory() const
+long param::GribCategory() const
 {
 	return itsGribCategory;
 }

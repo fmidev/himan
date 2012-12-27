@@ -1,7 +1,6 @@
 LIB = himan
 
-MAINFLAGS = -Wall -W -Wno-unused-parameter
-# -Werror
+MAINFLAGS = -Wall -W -Wno-unused-parameter -Werror
 
 EXTRAFLAGS = -Wpointer-arith \
 	-Wcast-qual \
@@ -12,8 +11,8 @@ EXTRAFLAGS = -Wpointer-arith \
 	-Wnon-virtual-dtor \
 	-Wno-pmf-conversions \
 	-Wsign-promo \
-	-Wchar-subscripts
-#	-Wold-style-cast
+	-Wchar-subscripts \
+	-Wold-style-cast
 
 DIFFICULTFLAGS = -pedantic -Weffc++ -Wredundant-decls -Wshadow -Woverloaded-virtual -Wunreachable-code -Wctor-dtor-privacy
 
@@ -22,7 +21,7 @@ CC = g++
 # Default compiler flags
 
 CFLAGS = -fPIC -std=c++0x -DUNIX -O2 -DNDEBUG $(MAINFLAGS)
-LDFLAGS = -Wl,-export-dynamic -Wl,--whole-archive
+LDFLAGS = -Wl,-export-dynamic 
 
 # Special modes
 
@@ -32,33 +31,35 @@ CFLAGS_PROFILE = -DUNIX -O2 -g -pg -DNDEBUG $(MAINFLAGS)
 LDFLAGS_DEBUG =
 LDFLAGS_PROFILE =
 
+workspace = $(HOME)/workspace
+
 INCLUDES = -I include \
            -I$(includedir) \
-           -I../himan-plugins/include \
-           -I../newbase/include \
-           -I../fmigrib/include \
-           -I../fmidb/include \
+           -I/usr/include/oracle \
+           -I$(workspace)/himan-plugins/include \
+           -I/usr/include/smartmet/newbase \
+           -I$(workspace)/fmigrib/include \
+           -I$(workspace)/fmidb/include \
 	   -I/usr/include/oracle/11.2/client64/
 
 LIBS =  -L$(libdir) \
         -L/usr/lib64 \
 	-L../fmigrib/lib \
-        -L /usr/lib/oracle/11.2/client64/lib \
-        -lboost_system \
-        -lboost_filesystem \
-        -lboost_regex \
-        -lboost_iostreams \
-        -lboost_thread \
-	-lboost_program_options \
-	-ldl \
-	/usr/lib/libsmartmet_newbase.a \
+        -L /usr/lib64/oracle \
+	/usr/lib64/libsmartmet_newbase.a \
+        -lclntsh \
+        /usr/lib64/libboost_system.a \
+        /usr/lib64/libboost_filesystem.a \
+        /usr/lib64/libboost_iostreams.a \
+        /usr/lib64/libboost_thread.a \
+	/usr/lib64/libboost_program_options.a \
+	/usr/lib64/libboost_regex.a \
+	-ldl -licuuc \
+	-lz -lbz2 \
 	-lpthread \
-        -lclntsh
 
-#	-lfmigrib \
-#	-lgrib_api \
-#	-lpng \
-#	-ljasper
+#	-Wl,-whole-archive \
+#	-Wl,-no-whole-archive
 
 # Common library compiling template
 
@@ -73,9 +74,9 @@ else
 endif
 
 ifeq ($(processor), x86_64)
-  libdir = $(PREFIX)/lib64
+  LIBDIR = $(PREFIX)/lib64
 else
-  libdir = $(PREFIX)/lib
+  LIBDIR = $(PREFIX)/lib
 endif
 
 objdir = obj
@@ -89,10 +90,16 @@ else
   bindir = $(BINDIR)
 endif
 
+# How to install
+
+INSTALL_DATA = install -m 664
+
 # rpm variables
 
 CWP = $(shell pwd)
 BIN = $(shell basename $(CWP))
+
+rpmsourcedir = /home/partio/rpmbuild/SOURCES
 
 # Special modes
 
@@ -144,15 +151,27 @@ release: objdir $(LIB)
 profile: objdir $(LIB)
 
 $(LIB): $(SUBOBJS)
-
-#$(LIB): % : $(SUBOBJS) %.o
 	$(CC) $(LDFLAGS) -shared -o lib/lib$(LIB).so $(SUBOBJFILES) $(LIBS)
+	ar rcs $(libdir)/lib$(LIB).a $(SUBOBJFILES)
 
 clean:
 	rm -f $(libdir)/*.so $(libdir)/*.a $(OBJFILES) *~ source/*~ include/*~
 
+rpm:    clean
+	if [ -a $(LIB)-lib.spec ]; \
+        then \
+          tar -C ../ --exclude .svn \
+                   -cf $(rpmsourcedir)/$(LIB)-lib.tar $(LIB)-lib ; \
+          gzip -f $(rpmsourcedir)/$(LIB)-lib.tar ; \
+          rpmbuild -ta $(rpmsourcedir)/$(LIB)-lib.tar.gz ; \
+        else \
+          echo $(rpmerr); \
+        fi;
+
 install:
-	$(INSTALL_DATA) $(libdir)/lib$(LIB).a $(NEONS_LIB)
+	mkdir -p  $(DESTDIR)/$(LIBDIR)
+	$(INSTALL_DATA) lib/libhiman.so $(DESTDIR)/$(LIBDIR)/libhiman.so
+	$(INSTALL_DATA) lib/libhiman.a  $(DESTDIR)/$(LIBDIR)/libhiman.a
 
 depend:
 	gccmakedep -fDependencies -- $(CFLAGS) $(INCLUDES) -- $(ALLSRCS)

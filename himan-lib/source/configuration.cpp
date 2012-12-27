@@ -8,7 +8,7 @@
 #include "configuration.h"
 #include "logger_factory.h"
 
-using namespace hilpee;
+using namespace himan;
 
 configuration::configuration()
 {
@@ -24,9 +24,9 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
 
-	for (std::string thePlugin : itsPlugins)
+	for (size_t i = 0; i < itsPlugins.size(); i++)
 	{
-		file << "__itsPlugins__ " << thePlugin << std::endl;
+		file << "__itsPlugins__ " << itsPlugins[i] << std::endl;
 	}
 
 	file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
@@ -39,11 +39,6 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << *itsInfo;
 
 	return file;
-}
-
-std::vector<std::string> configuration::InputFiles() const
-{
-	return itsInputFiles;
 }
 
 std::vector<std::string> configuration::AuxiliaryFiles() const
@@ -135,4 +130,14 @@ bool configuration::ReadDataFromDatabase() const
 void configuration::ReadDataFromDatabase(bool theReadDataFromDatabase)
 {
 	itsReadDataFromDatabase = theReadDataFromDatabase;
+}
+
+int configuration::FileWaitTimeout() const
+{
+	return itsFileWaitTimeout;
+}
+
+void configuration::FileWaitTimeout(int theFileWaitTimeout)
+{
+	itsFileWaitTimeout = theFileWaitTimeout;
 }

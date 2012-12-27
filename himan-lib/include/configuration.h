@@ -1,10 +1,11 @@
-/*
- * configuration.h
+/**
+ * @brief Class to hold configuration information read from configuration file.
  *
- *  Created on: Nov 26, 2012
- *      Author: partio
+ * Class will read metadata from configuration file and create an info instance
+ * from it.
  *
- *
+ * @author Mikko Partio, FMI
+ * @date Nov 26, 2012
  *
  */
 
@@ -14,7 +15,7 @@
 #include "logger.h"
 #include "info.h"
 
-namespace hilpee
+namespace himan
 {
 
 class configuration
@@ -25,12 +26,18 @@ class configuration
 		friend class ini_parser;
 
 		configuration();
-
 		~configuration() {}
+
+		configuration(const configuration& other) = delete;
+		configuration& operator=(const configuration& other) = delete;
+
+		/**
+		 * @return Class name
+		 */
 
 		std::string ClassName() const
 		{
-			return "hilpee::configuration";
+			return "himan::configuration";
 		}
 
 		HPVersionNumber Version() const
@@ -40,24 +47,51 @@ class configuration
 
 		std::ostream& Write(std::ostream& file) const;
 
-		std::shared_ptr<info> Info() const
+		/**
+		 * @return Info instance created from configuration file metadata
+		 */
+
+		inline std::shared_ptr<info> Info() const
 		{
 			return itsInfo;
 		}
 
+		/**
+		 * @return List of plugin names found in the configuration file
+		 */
+
 		std::vector<std::string> Plugins() const;
+
+		/**
+		 * @param List of plugin names
+		 */
+
 		void Plugins(const std::vector<std::string>& thePlugins) ;
 
-		std::vector<std::string> InputFiles() const;
+		/**
+		 * @return List of auxiliary file names found in the configuration file
+		 */
+
 		std::vector<std::string> AuxiliaryFiles() const;
+
+		/**
+		 * @return Filetype of created file. One of: grib1, grib2, querydata, netcdf
+		 */
 
 		HPFileType OutputFileType() const;
 
 		unsigned int SourceProducer() const;
+
 		unsigned int TargetProducer() const;
 
 		void SourceProducer(unsigned int theSourceProducer);
 		void TargetProducer(unsigned int theTargetProducer);
+
+		/**
+		 * @brief Enable or disable writing to one or many file
+		 * @param Value, true = all data is written to one file, false = each data descriptor
+		 * combination is written to separate file
+		 */
 
 		void WholeFileWrite(bool theWholeFileWrite);
 		bool WholeFileWrite() const;
@@ -68,18 +102,31 @@ class configuration
 		void Ni(size_t theNi);
 		void Nj(size_t theNj);
 
-		bool ReadDataFromDatabase() const;
+		/**
+		 * @brief Enable or disable reading of source data from Neons
+		 * @param Value, true = read data from neons, false = use only data specified in command
+		 * line (auxiliary files)
+		 */
+
 		void ReadDataFromDatabase(bool theReadDataFromDatabase);
+		bool ReadDataFromDatabase() const;
+
+		/**
+		 * @brief Enable or disable waiting for files
+		 * @param Value in minutes
+		 */
+
+		void FileWaitTimeout(int theFileWaitTimeout);
+		int FileWaitTimeout() const;
 
 	private:
 
-		std::shared_ptr<info> itsInfo;
-
 		void Init();
+
+		std::shared_ptr<info> itsInfo; //!< @see class info
 
 		HPFileType itsOutputFileType;
 		std::string itsConfigurationFile;
-		std::vector<std::string> itsInputFiles;
 		std::vector<std::string> itsAuxiliaryFiles;
 
 		std::vector<std::string> itsPlugins;
@@ -95,6 +142,8 @@ class configuration
 
 		size_t itsNi;
 		size_t itsNj;
+
+		int itsFileWaitTimeout;
 };
 
 inline
@@ -103,6 +152,6 @@ std::ostream& operator<<(std::ostream& file, configuration& ob)
 	return ob.Write(file);
 }
 
-} // namespace hilpee
+} // namespace himan
 
-#endif /* HILPEE_CONFIGURATION_H */
+#endif /* CONFIGURATION_H */

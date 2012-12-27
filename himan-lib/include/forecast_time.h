@@ -14,7 +14,7 @@
 #include "raw_time.h"
 #include <stdexcept>
 
-namespace hilpee
+namespace himan
 {
 
 class forecast_time
@@ -28,9 +28,13 @@ class forecast_time
 		              const std::string& theValidDateTime,
 		              const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
+		~forecast_time() {}
+		forecast_time(const forecast_time& other);
+		forecast_time& operator=(const forecast_time& other);
+
 		std::string ClassName() const
 		{
-			return "hilpee::forecast_time";
+			return "himan::forecast_time";
 		};
 
 		HPVersionNumber Version() const
@@ -38,12 +42,11 @@ class forecast_time
 			return HPVersionNumber(0, 1);
 		}
 
-		~forecast_time() {}
 
 		std::ostream& Write(std::ostream& file) const;
 
-        bool operator==(const forecast_time& other);
-        bool operator!=(const forecast_time& other);
+		bool operator==(const forecast_time& other);
+		bool operator!=(const forecast_time& other);
 
 		int Step() const;
 
@@ -70,6 +73,6 @@ std::ostream& operator<<(std::ostream& file, forecast_time& ob)
 	return ob.Write(file);
 }
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* FORECAST_TIME_H */

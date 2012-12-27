@@ -9,7 +9,7 @@
 #include "logger_factory.h"
 #include <ostream>
 
-using namespace hilpee;
+using namespace himan;
 
 level::level()
 	: itsIndex(kHPMissingInt)
@@ -38,12 +38,33 @@ level::level(const NFmiLevel& theLevel)
 	itsLogger = logger_factory::Instance()->GetLog("level");
 }
 
-bool level::operator==(const level&  other)
+level::level(const level& other)
+	: itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(*other.itsLevel)))
+	, itsIndex(other.itsIndex)
 {
+	itsLogger = logger_factory::Instance()->GetLog("level");
+}
+
+level& level::operator=(const level& other)
+{
+	itsLevel = std::unique_ptr<NFmiLevel> (new NFmiLevel(*other.itsLevel));
+	itsIndex = other.itsIndex;
+
+	return *this;
+}
+
+
+bool level::operator==(const level& other)
+{
+	if (this == &other)
+	{
+		return true;
+	}
+
 	return (Type() == other.Type() && Value() == other.Value());
 }
 
-bool level::operator!=(const level&  other)
+bool level::operator!=(const level& other)
 {
 	return !(*this == other);
 }

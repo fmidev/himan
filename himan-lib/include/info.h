@@ -6,12 +6,11 @@
  *
  * Class purpose is to server as an in-memory storage of data.
  *
- * Actual data storage is derived from newbase (QueryInfo).
  *
  */
 
-#ifndef HILPEE_INFO_H
-#define HILPEE_INFO_H
+#ifndef INFO_H
+#define INFO_H
 
 #include <NFmiGrid.h>
 #include "logger.h"
@@ -19,8 +18,9 @@
 #include "level.h"
 #include "forecast_time.h"
 #include "matrix.h"
+#include "himan_common.h"
 
-namespace hilpee
+namespace himan
 {
 
 typedef matrix <std::shared_ptr<d_matrix_t> > matrix_t;
@@ -30,15 +30,15 @@ class info
 
 	public:
 
-		//friend class configuration;
-
 		info();
-
 		~info();
+
+		info(const info& other) = delete;
+		info& operator=(const info& other) = delete;
 
 		std::string ClassName() const
 		{
-			return "hilpee::info";
+			return "himan::info";
 		}
 
 		HPVersionNumber Version() const
@@ -68,15 +68,42 @@ class info
 		size_t Nj() const;
 
 		std::vector<std::shared_ptr<param>> Params() const;
-		void Params(std::vector<std::shared_ptr<param>> theParams);
+		void Params(std::vector<std::shared_ptr<param> > theParams);
 
 		std::vector<std::shared_ptr<level>> Levels() const;
-		void Levels(std::vector<std::shared_ptr<level>> theLevels);
+		void Levels(std::vector<std::shared_ptr<level> > theLevels);
 
 		std::vector<std::shared_ptr<forecast_time>> Times() const;
-		void Times(std::vector<std::shared_ptr<forecast_time>> theTimes);
+		void Times(std::vector<std::shared_ptr<forecast_time> > theTimes);
+
+		/**
+		 * @brief Initialize data backend with correct number of zero-sized matrices
+		 *
+		 * Function will create a number of empty (zero-sized) matrices to
+		 * hold the data. The number of the matrices depends on the size
+		 * of times, params and levels.
+		 *
+		 * @todo Should return void?
+		 * @return Always true
+		 *
+		 */
 
 		bool Create();
+
+		/**
+		 * @brief Clone info while preserving its data backend
+		 *
+		 * Function will return a new info (wrapped with shared_ptr) than
+		 * has the same data backend matrix as the original one. This means
+		 * that multiple threads can access the same data with different
+		 * infos ( --> descriptor positions ). Clone will not have the same
+		 * descriptor positions.
+		 *
+		 * @todo Should the clone have same descriptor positions?
+		 *
+		 * @return New info with access to same data backend
+		 *
+		 */
 
 		std::shared_ptr<info> Clone() const;
 
@@ -94,7 +121,7 @@ class info
 		bool NextParam();
 		bool FirstParam();
 
-		void Param(std::shared_ptr<param> theActiveParam);
+		void Param(std::shared_ptr<const param> theActiveParam);
 		void ParamIndex(size_t theParamIndex);
 		std::shared_ptr<param> Param() const;
 
@@ -102,7 +129,7 @@ class info
 		bool NextLevel();
 		bool FirstLevel();
 
-		void Level(std::shared_ptr<level> theLevel);
+		void Level(std::shared_ptr<const level> theLevel);
 		void LevelIndex(size_t theLevelIndex);
 		std::shared_ptr<level> Level() const;
 
@@ -110,7 +137,7 @@ class info
 		bool NextTime();
 		bool FirstTime();
 
-		void Time(std::shared_ptr<forecast_time> theTime);
+		void Time(std::shared_ptr<const forecast_time> theTime);
 		void TimeIndex(size_t theTimeIndex);
 		std::shared_ptr<forecast_time> Time() const;
 
@@ -132,11 +159,11 @@ class info
 		bool Value(double theValue);
 		double Value() const;
 
-
 		std::shared_ptr<NFmiGrid> ToNewbaseGrid() const;
+		bool GridAndAreaEquals(std::shared_ptr<const info> other) const;
 
 	private:
-		info(const info& theInfo);
+
 		size_t CurrentIndex() const;
 		void Init();
 
@@ -147,13 +174,14 @@ class info
 		double itsTopRightLongitude;
 		double itsOrientation;
 
-		std::vector<std::shared_ptr<param>> itsParams;
-		std::vector<std::shared_ptr<level>> itsLevels;
-		std::vector<std::shared_ptr<forecast_time>> itsTimes;
+		std::vector<std::shared_ptr<param> > itsParams;
+		std::vector<std::shared_ptr<level> > itsLevels;
+		std::vector<std::shared_ptr<forecast_time> > itsTimes;
 
 		std::shared_ptr<matrix_t> itsDataMatrix;
 
 		std::unique_ptr<logger> itsLogger;
+
 		unsigned int itsProducer;
 
 		raw_time itsOriginDateTime;
@@ -171,7 +199,7 @@ std::ostream& operator<<(std::ostream& file, info& ob)
 	return ob.Write(file);
 }
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* INFO_H */
 

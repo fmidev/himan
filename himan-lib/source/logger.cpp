@@ -7,7 +7,7 @@
 
 #include "logger.h"
 
-hilpee::logger::logger(const std::string& theUserName, HPDebugState theDebugState) :
+himan::logger::logger(const std::string& theUserName, HPDebugState theDebugState) :
 	itsDebugState(theDebugState),
 	itsUserName(theUserName)
 {

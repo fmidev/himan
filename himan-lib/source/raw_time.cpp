@@ -7,11 +7,10 @@
 
 #include "raw_time.h"
 
-using namespace hilpee;
+using namespace himan;
 
 raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMask)
 {
-	// itsLogger = HilpeeLoggerFactory::GetLog("HilpeeTime");
 
 	std::stringstream s(theDateTime);
 	std::locale l(s.getloc(), new boost::posix_time::time_input_facet(theTimeMask.c_str()));
@@ -22,7 +21,7 @@ raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMas
 
 	if (itsDateTime == boost::date_time::not_a_date_time)
 	{
-		throw std::runtime_error(ClassName() + ": Unable to create time from source '" + theDateTime + "' with mask '" + theTimeMask + "'");
+		throw std::runtime_error(ClassName() + ": Unable to create time from '" + theDateTime + "' with mask '" + theTimeMask + "'");
 	}
 }
 
@@ -35,8 +34,26 @@ raw_time::raw_time(const NFmiMetTime& theDateTime)
 	raw_time(theTempTime, theTempMask);
 }
 
+raw_time::raw_time(const raw_time& other)
+	: itsDateTime(other.itsDateTime)
+{
+}
+
+raw_time& raw_time::operator=(const raw_time& other)
+{
+	itsDateTime = other.itsDateTime;
+
+	return *this;
+}
+
+
 bool raw_time::operator==(const raw_time&  other)
 {
+	if (this == &other)
+	{
+		return true;
+	}
+
 	return (itsDateTime == other.itsDateTime);
 }
 
@@ -56,7 +73,7 @@ std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, 
 
 	if (theFormattedDateTime == boost::date_time::not_a_date_time)
 	{
-		throw std::runtime_error("FormatTime(): input argument is 'not-a-date-time'");
+		throw std::runtime_error(ClassName() + ": input argument is 'not-a-date-time'");
 	}
 
 	std::stringstream s;

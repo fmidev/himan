@@ -8,7 +8,7 @@
 #include "forecast_time.h"
 #include "logger_factory.h"
 
-using namespace hilpee;
+using namespace himan;
 
 forecast_time::forecast_time()
 {
@@ -21,6 +21,7 @@ forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& 
 {
 	itsLogger = logger_factory::Instance()->GetLog("forecast_time");
 }
+
 forecast_time::forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::shared_ptr<raw_time> theValidDateTime)
 	: itsOriginDateTime(theOriginDateTime)
 	, itsValidDateTime(theValidDateTime)
@@ -37,6 +38,21 @@ forecast_time::forecast_time(const std::string& theOriginDateTime,
 	itsLogger = logger_factory::Instance()->GetLog("forecast_time");
 }
 
+forecast_time::forecast_time(const forecast_time& other)
+	: itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime)))
+	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime)))
+{
+	itsLogger = logger_factory::Instance()->GetLog("forecast_time");
+}
+
+forecast_time& forecast_time::operator=(const forecast_time& other)
+{
+	itsOriginDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime));
+	itsValidDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime));
+
+	return *this;
+}
+
 std::ostream& forecast_time::Write(std::ostream& file) const
 {
 
@@ -49,6 +65,11 @@ std::ostream& forecast_time::Write(std::ostream& file) const
 
 bool forecast_time::operator==(const forecast_time& other)
 {
+	if (this == &other)
+	{
+		return true;
+	}
+
 	return ((*itsOriginDateTime == *other.itsOriginDateTime) && (*itsValidDateTime == *other.itsValidDateTime));
 }
 

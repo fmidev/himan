@@ -12,7 +12,7 @@
 #include "plugin_container.h"
 #include "logger.h"
 
-namespace hilpee
+namespace himan
 {
 
 class plugin_factory
@@ -20,12 +20,12 @@ class plugin_factory
 	public:
 		static plugin_factory* Instance();
 
-		std::vector<std::shared_ptr<plugin::hilpee_plugin>> Plugins(HPPluginClass = kUnknownPlugin); // Kinda ugly
-		std::vector<std::shared_ptr<plugin::hilpee_plugin>> CompiledPlugins();
-		std::vector<std::shared_ptr<plugin::hilpee_plugin>> AuxiliaryPlugins();
-		std::vector<std::shared_ptr<plugin::hilpee_plugin>> InterpretedPlugins();
+		std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins(HPPluginClass = kUnknownPlugin); // Kinda ugly
+		std::vector<std::shared_ptr<plugin::himan_plugin>> CompiledPlugins();
+		std::vector<std::shared_ptr<plugin::himan_plugin>> AuxiliaryPlugins();
+		std::vector<std::shared_ptr<plugin::himan_plugin>> InterpretedPlugins();
 
-		std::shared_ptr<plugin::hilpee_plugin> Plugin(const std::string& theClassName, bool theNewInstance = true);
+		std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName, bool theNewInstance = true);
 
 	private:
 		// Hide constructor and destructor
@@ -45,11 +45,10 @@ class plugin_factory
 		std::vector<std::shared_ptr<plugin_container>> itsPluginFactory;
 
 		std::vector<std::string> itsPluginSearchPath;
-
 		std::unique_ptr<logger> itsLogger;
 
 };
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* PLUGIN_FACTORY_H */

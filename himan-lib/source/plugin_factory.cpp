@@ -11,8 +11,8 @@
 #include <boost/regex.hpp>
 #include <dlfcn.h>
 
-using namespace hilpee;
-using namespace hilpee::plugin;
+using namespace himan;
+using namespace himan::plugin;
 
 plugin_factory* plugin_factory::itsInstance = NULL;
 
@@ -32,7 +32,7 @@ plugin_factory::plugin_factory() : itsPluginSearchPath()
 
 	itsLogger = logger_factory::Instance()->GetLog("plugin_factory");
 
-	itsPluginSearchPath.push_back("../hilpee-plugins/lib");
+	itsPluginSearchPath.push_back("../himan-plugins/lib");
 
 	ReadPlugins();
 }
@@ -40,36 +40,36 @@ plugin_factory::plugin_factory() : itsPluginSearchPath()
 // Hide constructor
 plugin_factory::~plugin_factory() {}
 
-std::vector<std::shared_ptr<hilpee_plugin>> plugin_factory::Plugins(HPPluginClass pluginClass)
+std::vector<std::shared_ptr<himan_plugin> > plugin_factory::Plugins(HPPluginClass pluginClass)
 {
 
-	std::vector<std::shared_ptr<hilpee_plugin>> thePlugins;
+	std::vector<std::shared_ptr<himan_plugin>> thePlugins;
 
-for (auto theContainer : itsPluginFactory)
+	for (size_t i = 0; i < itsPluginFactory.size(); i++)
 	{
-		if (pluginClass == theContainer->Plugin()->PluginClass())
+		if (pluginClass == itsPluginFactory[i]->Plugin()->PluginClass())
 		{
-			thePlugins.push_back(theContainer->Plugin());
+			thePlugins.push_back(itsPluginFactory[i]->Plugin());
 		}
 
 		else if (pluginClass == kUnknownPlugin)
 		{
-			thePlugins.push_back(theContainer->Plugin());
+			thePlugins.push_back(itsPluginFactory[i]->Plugin());
 		}
 	}
 
 	return thePlugins;
 }
 
-std::vector<std::shared_ptr<hilpee_plugin>> plugin_factory::CompiledPlugins()
+std::vector<std::shared_ptr<himan_plugin> > plugin_factory::CompiledPlugins()
 {
 	return Plugins(kCompiled);
 }
-std::vector<std::shared_ptr<hilpee_plugin>> plugin_factory::AuxiliaryPlugins()
+std::vector<std::shared_ptr<himan_plugin> > plugin_factory::AuxiliaryPlugins()
 {
 	return Plugins(kAuxiliary);
 }
-std::vector<std::shared_ptr<hilpee_plugin>> plugin_factory::InterpretedPlugins()
+std::vector<std::shared_ptr<himan_plugin> > plugin_factory::InterpretedPlugins()
 {
 	return Plugins(kInterpreted);
 }
@@ -84,27 +84,27 @@ std::vector<std::shared_ptr<hilpee_plugin>> plugin_factory::InterpretedPlugins()
  * caller (this is suitable only in non-threaded functions).
  */
 
-std::shared_ptr<hilpee_plugin> plugin_factory::Plugin(const std::string& theClassName, bool theNewInstance)
+std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClassName, bool theNewInstance)
 {
 
-for (auto theContainer : itsPluginFactory)
+	for (size_t i = 0; i < itsPluginFactory.size(); i++)
 	{
 
-		if ((theContainer->Plugin()->ClassName() == theClassName) ||
-		        (theContainer->Plugin()->ClassName() == "hilpee::plugin::" + theClassName))
+		if ((itsPluginFactory[i]->Plugin()->ClassName() == theClassName) ||
+		        (itsPluginFactory[i]->Plugin()->ClassName() == "himan::plugin::" + theClassName))
 		{
 			if (theNewInstance)
 			{
-				return theContainer->Clone();
+				return itsPluginFactory[i]->Clone();
 			}
 			else
 			{
-				return theContainer->Plugin();
+				return itsPluginFactory[i]->Plugin();
 			}
 		}
 	}
 
-	return 0;
+	throw std::runtime_error("plugin_factory: Unknown plugin clone operation requested: " + theClassName);
 }
 
 /*
@@ -121,9 +121,9 @@ void plugin_factory::ReadPlugins()
 
 	directory_iterator end_iter;
 
-for (std::string thePath : itsPluginSearchPath)
+	for (size_t i = 0; i < itsPluginSearchPath.size(); i++)
 	{
-		path p (thePath);
+		path p (itsPluginSearchPath[i]);
 
 		try
 		{
@@ -164,7 +164,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 	 *  <file>.so undefined symbol: ...
 	 *
 	 *   RTLD_GLOBAL
-	 * We need this because core library (hilpee-lib) need to access aux plugins
+	 * We need this because core library (himan-lib) need to access aux plugins
 	 * and the plugin symbol information needs to be propagated throughout the
 	 * plugins system (or using aux plugins in core lib will fail).
 	 */
@@ -179,7 +179,8 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
 	dlerror(); // clear error handle
 
-	create_t* create_plugin = (create_t*) dlsym(theLibraryHandle, "create");
+	//create_t* create_plugin = (create_t*) dlsym(theLibraryHandle, "create");
+	create_t* create_plugin =  reinterpret_cast<create_t*> (dlsym(theLibraryHandle, "create"));
 
 	if (!create_plugin)
 	{

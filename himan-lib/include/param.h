@@ -15,22 +15,20 @@
  *
  */
 
-#ifndef HILPEE_PARAM_H
-#define HILPEE_PARAM_H
+#ifndef PARAM_H
+#define PARAM_H
 
 #include "logger.h"
 #include <NFmiParam.h>
-// #include "NFmiGlobals.h" // FmiInterpolatioMethod
+#include "NFmiGlobals.h" // FmiInterpolatioMethod
 
-namespace hilpee
+namespace himan
 {
 
 class param
 {
 
 	public:
-
-		friend class hilpee_configuration;
 
 		param();
 		param(const std::string& theName);
@@ -44,9 +42,12 @@ class param
 
 		~param() {}
 
+		param(const param& other);
+		param& operator=(const param& other);
+
 		std::string ClassName() const
 		{
-			return "hilpee::param";
+			return "himan::param";
 		}
 
 		HPVersionNumber Version() const
@@ -57,14 +58,14 @@ class param
 		bool operator==(const param& other);
 		bool operator!=(const param& other);
 
-		void GribParameter(int theGribParameter);
-		int GribParameter() const;
+		void GribParameter(long theGribParameter);
+		long GribParameter() const;
 
-		void GribDiscipline(int theGribDiscipline);
-		int GribDiscipline() const;
+		void GribDiscipline(long theGribDiscipline);
+		long GribDiscipline() const;
 
-		void GribCategory(int theGribCategory);
-		int GribCategory() const;
+		void GribCategory(long theGribCategory);
+		long GribCategory() const;
 
 		unsigned long UnivId() const;
 		void UnivId(unsigned long theUnivId);
@@ -92,10 +93,10 @@ class param
 
 		std::shared_ptr<NFmiParam> itsParam; //!< newbase param will hold name, univ_id and scale+base
 
-		int itsGribParameter; //!< Grib parameter number whether in grib 1 or 2
-		int itsGribTableVersion; //!< Grib table version (only in grib 1)
-		int itsGribCategory; //!< Grib parameter category (only for grib2)
-		int itsGribDiscipline; //!< Grib parameter discipline (only for grib2)
+		long itsGribParameter; //!< Grib parameter number whether in grib 1 or 2
+		long itsGribTableVersion; //!< Grib table version (only in grib 1)
+		long itsGribCategory; //!< Grib parameter category (only for grib2)
+		long itsGribDiscipline; //!< Grib parameter discipline (only for grib2)
 
 		HPParameterUnit itsUnit; //!< Unit of the parameter
 		double itsMissingValue; //!< Missing value (default kFloatMissing)
@@ -110,6 +111,6 @@ std::ostream& operator<<(std::ostream& file, param& ob)
 	return ob.Write(file);
 }
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* PARAM_H */

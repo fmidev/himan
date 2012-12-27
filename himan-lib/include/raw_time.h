@@ -16,7 +16,7 @@
 #include <NFmiMetTime.h>
 #include <stdexcept>
 
-namespace hilpee
+namespace himan
 {
 
 class raw_time
@@ -27,6 +27,10 @@ class raw_time
 		raw_time() {}
 		raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 		raw_time(const NFmiMetTime& theTime);
+		~raw_time() {}
+		raw_time(const raw_time& other);
+		raw_time& operator=(const raw_time& other);
+
 
 		std::string String(const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S") const;
 
@@ -34,7 +38,7 @@ class raw_time
 
 		std::string ClassName() const
 		{
-			return "hilpee::raw_time";
+			return "himan::raw_time";
 		};
 
 		HPVersionNumber Version() const
@@ -42,7 +46,6 @@ class raw_time
 			return HPVersionNumber(0, 1);
 		}
 
-		~raw_time() {}
 
 		bool operator==(const raw_time& other);
 		bool operator!=(const raw_time& other);
@@ -56,8 +59,9 @@ class raw_time
 
 	private:
 
-		boost::posix_time::ptime itsDateTime;
 		std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
+
+		boost::posix_time::ptime itsDateTime;
 
 };
 
@@ -68,6 +72,6 @@ std::ostream& operator<<(std::ostream& file, raw_time& ob)
 	return ob.Write(file);
 }
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* RAW_TIME_H */

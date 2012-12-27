@@ -4,8 +4,8 @@
  *  Created on: Dec 14, 2012
  *      Author: partio
  *
- * 2d or 3d matrix to store data. Does not have any mathematical
- * implication of matrices.
+ * 2-3d matrix to store data. Does not have any mathematical
+ * implications of matrices.
  *
  */
 
@@ -13,10 +13,9 @@
 #define MATRIX_H
 
 #include <boost/thread.hpp>
-#include "hilpee_common.h"
-#include <vector>
+#include "himan_common.h"
 
-namespace hilpee
+namespace himan
 {
 
 template<class T>
@@ -33,9 +32,12 @@ class matrix
 		{
 		}
 
+		matrix(const matrix& other) = delete;
+		matrix& operator=(const matrix& other) = delete;
+
 		std::string ClassName() const
 		{
-			return "hilpee::matrix";
+			return "himan::matrix";
 		}
 
 		HPVersionNumber Version() const
@@ -43,8 +45,7 @@ class matrix
 			return HPVersionNumber(0, 1);
 		}
 
-		// Perhaps dangerous functions: return reference with no const
-
+/*
 		T& operator()(size_t x, size_t y, size_t z = 1)
 		{
 			assert(itsData.size() > 0);
@@ -55,9 +56,9 @@ class matrix
 			assert(itsData.size() > 0);
 			return itsData[combinedIndex];
 		}
+*/
 
-
-		// Copied from newbase, is this good ?
+		// Perhaps dangerous: return reference with no const
 
 		T& At(size_t combinedIndex)
 		{
@@ -106,8 +107,17 @@ class matrix
 			return file;
 		}
 
+		// Print information on contents if T == double
+
 		void DoStuff(std::ostream& file, std::vector<double> theValues) const
 		{
+
+			if (!itsData.size())
+			{
+				file << "__no-data__" << std::endl;
+				return;
+			}
+
 			double min = 1e38;
 			double max = -1e38;
 			double sum = 0;
@@ -115,8 +125,10 @@ class matrix
 
 			// kFloatMissing should be substituted with itsMissingValue
 
-			for (double d : theValues)
+			for (size_t i = 0; i < theValues.size(); i++)
 			{
+				double d = theValues[i];
+
 				if (d == kFloatMissing)
 				{
 					missing++;
@@ -136,27 +148,31 @@ class matrix
 
 		size_t Size() const
 		{
-			return itsData.size() ;
+			return itsData.size();
 		}
+
 		size_t SizeX() const
 		{
 			return itsWidth;
 		}
+
 		size_t SizeY() const
 		{
 			return itsHeight;
 		}
+
 		size_t SizeZ() const
 		{
 			return itsDepth;
 		}
 
-		void Resize(size_t x, size_t y, size_t z = 1)
+		// X Y Z
+		void Resize(size_t theWidth, size_t theHeight, size_t theDepth = 1)
 		{
-			itsData.resize(x * y * z);
-			itsWidth = x;
-			itsHeight = y;
-			itsDepth = z;
+			itsData.resize(theWidth * theHeight * theDepth);
+			itsWidth = theWidth;
+			itsHeight = theHeight;
+			itsDepth = theDepth;
 		}
 
 		const T* Values() const
@@ -191,13 +207,15 @@ class matrix
 
 	private:
 
-		size_t Index(size_t x, size_t y, size_t z) const
+		inline size_t Index(size_t x, size_t y, size_t z) const
 		{
 			return z * itsWidth * itsHeight + y * itsWidth + x;
 		}
 
 		std::vector<T> itsData;
+
 		T itsMissingValue;
+
 		size_t itsWidth, itsHeight, itsDepth;
 
 		boost::mutex itsValueMutex;
@@ -206,6 +224,6 @@ class matrix
 
 typedef matrix <double> d_matrix_t;
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* MATRIX_H */

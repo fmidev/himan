@@ -14,12 +14,13 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 
-using namespace hilpee;
+using namespace himan;
+using namespace std;
 
 /*
  * Parse()
  *
- * Read command line options and create HilpeeInfo instance.
+ * Read command line options and create info instance.
  *
  * Steps taken:
  *
@@ -28,7 +29,7 @@ using namespace hilpee;
  *
  * 2) Read configuration file (if specified).
  *
- * 3) Create HilpeeConfiguration instance.
+ * 3) Create configuration instance.
  *
  * Some of the required information is missing, this function will not
  * behave nicely and will throw an error.
@@ -51,10 +52,10 @@ ini_parser* ini_parser::Instance()
 ini_parser::ini_parser()
 {
 	itsLogger = logger_factory::Instance()->GetLog("ini_parser");
-	itsConfiguration = std::shared_ptr<configuration> (new configuration());
+	itsConfiguration = shared_ptr<configuration> (new configuration());
 }
 
-std::shared_ptr<configuration> ini_parser::Parse(int argc, char** argv)
+shared_ptr<configuration> ini_parser::Parse(int argc, char** argv)
 {
 
 	ParseAndCreateInfo(argc, argv);
@@ -69,18 +70,14 @@ void ini_parser::ParseAndCreateInfo(int argc, char** argv)
 
 	ParseCommandLine(argc, argv);
 
-	// Check that we have either configuration file or input file defined
-	// in command line
+	// Check that we have configuration file defined in command line
 
-	if (itsConfiguration->itsInputFiles.size() == 0 && itsConfiguration->itsConfigurationFile.empty())
+	if (itsConfiguration->itsConfigurationFile.empty())
 	{
-		throw std::runtime_error("Neither configuration file nor input file(s) defined");
+		throw std::runtime_error("Configuration file not defined");
 	}
 
-	if (!itsConfiguration->itsConfigurationFile.empty())
-	{
-		ParseConfigurationFile(itsConfiguration->itsConfigurationFile);
-	}
+	ParseConfigurationFile(itsConfiguration->itsConfigurationFile);
 
 	// Check requested plugins
 
@@ -108,7 +105,7 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 
 	std::string outfileType;
 
-	hilpee::HPDebugState debugState = hilpee::kDebugMsg;
+	himan::HPDebugState debugState = himan::kDebugMsg;
 
 	int logLevel = 0;
 
@@ -139,12 +136,24 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 	{
 		switch (logLevel)
 		{
-		 	case 0: debugState = kFatalMsg; break;
-		 	case 1: debugState = kErrorMsg; break;
-		 	case 2: debugState = kWarningMsg; break;
-		 	case 3: debugState = kInfoMsg; break;
-		 	case 4: debugState = kDebugMsg; break;
-		 	case 5: debugState = kTraceMsg; break;
+			case 0:
+				debugState = kFatalMsg;
+				break;
+			case 1:
+				debugState = kErrorMsg;
+				break;
+			case 2:
+				debugState = kWarningMsg;
+				break;
+			case 3:
+				debugState = kInfoMsg;
+				break;
+			case 4:
+				debugState = kDebugMsg;
+				break;
+			case 5:
+				debugState = kTraceMsg;
+				break;
 		}
 
 	}
@@ -183,7 +192,7 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 
 	if (opt.count("help"))
 	{
-		std::cout << "usage: himan [ options ] [ input_file 1, ...]" << std::endl;
+		std::cout << "usage: himan [ options ]" << std::endl;
 		std::cout << desc;
 		std::cout << std::endl << "Examples:" << std::endl;
 		std::cout << "  himan -f etc/tpot.ini" << std::endl;
@@ -194,31 +203,31 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 	if (opt.count("list-plugins"))
 	{
 
-		std::vector<std::shared_ptr<plugin::hilpee_plugin>> thePlugins = plugin_factory::Instance()->CompiledPlugins();
+		std::vector<shared_ptr<plugin::himan_plugin> > thePlugins = plugin_factory::Instance()->CompiledPlugins();
 
 		std::cout << "Compiled plugins" << std::endl;
 
-		for (auto thePlugin : thePlugins)
+		for (size_t i = 0; i < thePlugins.size(); i++)
 		{
-			std::cout << "\t" << thePlugin->ClassName() << "\t(version " << thePlugin->Version() << ")" << std::endl;
+			std::cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << std::endl;
 		}
 
 		thePlugins = plugin_factory::Instance()->InterpretedPlugins();
 
 		std::cout << "Interpreted plugins" << std::endl;
 
-		for (auto thePlugin : thePlugins)
+		for (size_t i = 0; i < thePlugins.size(); i++)
 		{
-			std::cout << "\t" << thePlugin->ClassName() << "\t(version " << thePlugin->Version() << ")" << std::endl;
+			std::cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << std::endl;
 		}
 
 		std::cout << "Auxiliary plugins" << std::endl;
 
 		thePlugins = plugin_factory::Instance()->AuxiliaryPlugins();
 
-		for (auto thePlugin : thePlugins)
+		for (size_t i = 0; i < thePlugins.size(); i++)
 		{
-			std::cout << "\t" << thePlugin->ClassName() << "\t(version " << thePlugin->Version() << ")" << std::endl;
+			std::cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << std::endl;
 		}
 
 		exit(1);
@@ -230,7 +239,7 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 {
 
-	itsLogger->Info("Parsing configuration file");
+	itsLogger->Debug("Parsing configuration file");
 
 	boost::property_tree::ptree pt;
 
@@ -342,24 +351,24 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 
 		std::vector<int> times ;
 
-		for (std::string t : timesStr)
+		for (size_t i = 0; i < timesStr.size(); i++)
 		{
-			times.push_back(boost::lexical_cast<int> (t));
+			times.push_back(boost::lexical_cast<int> (timesStr[i]));
 		}
 
 		sort (times.begin(), times.end());
 
-		std::vector<std::shared_ptr<forecast_time> > theTimes;
+		std::vector<shared_ptr<forecast_time> > theTimes;
 
-		for (int theHour : times)
+		for (size_t i = 0; i < times.size(); i++)
 		{
 
 			// Create forecast_time with both times origintime, then adjust the validtime
 
-			std::shared_ptr<forecast_time> theTime (new forecast_time(std::shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
-			                                        std::shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime()))));
+			shared_ptr<forecast_time> theTime (new forecast_time(shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
+			                                   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime()))));
 
-			theTime->ValidDateTime()->Adjust("hours", theHour);
+			theTime->ValidDateTime()->Adjust("hours", times[i]);
 
 			theTimes.push_back(theTime);
 		}
@@ -434,18 +443,18 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 
 		std::vector<float> levels ;
 
-		for (std::string l : levelsStr)
+		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
-			levels.push_back(boost::lexical_cast<float> (l));
+			levels.push_back(boost::lexical_cast<float> (levelsStr[i]));
 		}
 
 		sort (levels.begin(), levels.end());
 
-		std::vector<std::shared_ptr<level>> theLevels;
+		std::vector<shared_ptr<level> > theLevels;
 
-		for (float theLevel : levels)
+		for (size_t i = 0; i < levels.size(); i++)
 		{
-			theLevels.push_back(std::shared_ptr<level> (new level(theLevelType, theLevel)));
+			theLevels.push_back(shared_ptr<level> (new level(theLevelType, levels[i])));
 		}
 
 		itsConfiguration->Info()->Levels(theLevels);
@@ -502,6 +511,26 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 		throw std::runtime_error(std::string("Error parsing meta information: ") + e.what());
 	}
 
+	/* Check file_wait_timeout */
+
+	try
+	{
+		std::string theReadDataFromDatabase = pt.get<std::string>("meta.read_data_from_database");
+
+		if (!ParseBoolean(theReadDataFromDatabase))
+		{
+			itsConfiguration->ReadDataFromDatabase(false);
+		}
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (std::exception& e)
+	{
+		throw std::runtime_error(std::string("Error parsing meta information: ") + e.what());
+	}
 }
 
 // copied from http://stackoverflow.com/questions/236129/splitting-a-string-in-c and modified a bit

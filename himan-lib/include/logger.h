@@ -8,12 +8,11 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include "hilpee_common.h"
+#include "himan_common.h"
 #include <string>
 #include <stdio.h>
-#include <memory> // for std::unique_ptr
 
-namespace hilpee
+namespace himan
 {
 
 class logger
@@ -23,57 +22,57 @@ class logger
 
 		logger(const std::string& theUserName, HPDebugState theDebugState);
 
-		void Trace(const std::string& msg)
+		inline void Trace(const std::string& msg)
 		{
 			if (itsDebugState <= kTraceMsg)
 			{
-				printf("Trace <%s> %s\n", itsUserName.c_str(), msg.c_str());
+				printf("Trace::%s %s\n", itsUserName.c_str(), msg.c_str());
 			}
 		};
 
-		void Debug(const std::string& msg)
+		inline void Debug(const std::string& msg)
 		{
 			if (itsDebugState <= kDebugMsg)
 			{
-				printf("Debug <%s> %s\n", itsUserName.c_str(), msg.c_str());
+				printf("Debug::%s %s\n", itsUserName.c_str(), msg.c_str());
 			}
 
 		};
 
-		void Info(const std::string& msg)
+		inline void Info(const std::string& msg)
 		{
 			if (itsDebugState <= kInfoMsg)
 			{
-				printf("Info <%s> %s\n", itsUserName.c_str(), msg.c_str());
+				printf("Info::%s %s\n", itsUserName.c_str(), msg.c_str());
 			}
 
 		};
 
-		void Warning(const std::string& msg)
+		inline void Warning(const std::string& msg)
 		{
 
 			if (itsDebugState <= kWarningMsg)
 			{
-				printf("Warning <%s> %s\n", itsUserName.c_str(), msg.c_str());
+				printf("Warning::%s %s\n", itsUserName.c_str(), msg.c_str());
 			}
 
 		};
 
-		void Error(const std::string& msg)
+		inline void Error(const std::string& msg)
 		{
 			if (itsDebugState <= kErrorMsg)
 			{
-				printf("Error <%s> %s\n", itsUserName.c_str(), msg.c_str());
+				printf("Error::%s %s\n", itsUserName.c_str(), msg.c_str());
 			}
 
 		};
 
-		void Fatal(const std::string& msg)
+		inline void Fatal(const std::string& msg)
 		{
 
 			if (itsDebugState <= kFatalMsg)
 			{
-				printf("Fatal <%s> %s\n", itsUserName.c_str(), msg.c_str());
+				printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str());
 			}
 
 		};
@@ -84,6 +83,6 @@ class logger
 
 };
 
-} // namespace hilpee
+} // namespace himan
 
 #endif /* LOGGER_H */
