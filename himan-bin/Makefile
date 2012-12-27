@@ -20,7 +20,7 @@ CC = g++
 
 # Default compiler flags
 
-CFLAGS = -std=c++0x -DUNIX -O2 -DDEBUG $(MAINFLAGS)
+CFLAGS = -std=c++0x -DUNIX -O2 -DNDEBUG $(MAINFLAGS)
 LDFLAGS = -Wl,--export-dynamic
 
 # Special modes
@@ -28,19 +28,20 @@ LDFLAGS = -Wl,--export-dynamic
 CFLAGS_DEBUG = -std=c++0x -DUNIX -O0 -g -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
 CFLAGS_PROFILE = -std=c++0x -DUNIX -O2 -g -pg -DNDEBUG $(MAINFLAGS)
 
-LDFLAGS_DEBUG =
+LDFLAGS_DEBUG = -Wl,--export-dynamic
 LDFLAGS_PROFILE =
+
+workspace = $(HOME)/workspace
 
 INCLUDES = -I include \
            -I$(includedir) \
-           -I../himan-lib/include \
-           -I../himan-plugins/include \
+           -I$(workspace)/himan-lib/include \
+           -I$(workspace)/himan-plugins/include \
            -I/usr/include/smartmet/newbase
 
 LIBS =  -L$(libdir) \
-        -L../himan-lib/lib \
-        -lhiman \
-        -ldl
+        -L$(workspace)/himan-lib/lib \
+	-lhiman 
 
 # Common library compiling template
 
@@ -75,6 +76,8 @@ endif
 
 CWP = $(shell pwd)
 BIN = $(shell basename $(CWP))
+
+rpmsourcedir = /home/partio/rpmbuild/SOURCES
 
 # Special modes
 
@@ -131,15 +134,26 @@ $(PROG): % : $(SUBOBJS) %.o
 clean:
 	rm -f $(PROG) $(OBJFILES) *~ source/*~ include/*~
 
+rpm:    clean
+	if [ -a $(PROG)-bin.spec ]; \
+        then \
+          tar -C ../ --exclude .svn \
+                   -cf $(rpmsourcedir)/$(PROG)-bin.tar $(PROG)-bin ; \
+          gzip -f $(rpmsourcedir)/$(PROG)-bin.tar ; \
+          rpmbuild -ta $(rpmsourcedir)/$(PROG)-bin.tar.gz ; \
+        else \
+          echo $(rpmerr); \
+        fi;
+
 install:
-	$(INSTALL_DATA) $(libdir)/lib$(PROG).a $(NEONS_PROG)
+	mkdir -p  $(DESTDIR)/$(LIBDIR)
+	$(INSTALL_PROG) himan $(DESTDIR)/$(BINDIR)/himan
 
 depend:
 	gccmakedep -fDependencies -- $(CFLAGS) $(INCLUDES) -- $(ALLSRCS)
 
 objdir:
 	@mkdir -p $(objdir)
-	@mkdir -p $(libdir)
 
 
 .SUFFIXES: $(SUFFIXES) .cpp
