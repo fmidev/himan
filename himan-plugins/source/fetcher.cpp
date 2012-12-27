@@ -27,7 +27,7 @@ using namespace std;
 
 fetcher::fetcher()
 {
-	itsLogger = logger_factory::Instance()->GetLog("fetcher");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
 
 shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfiguration,
@@ -35,6 +35,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
                                        shared_ptr<const level> theLevel,
                                        shared_ptr<const param> theParam)
 {
+
+	const search_options opts { theValidTime, theParam, theLevel, theConfiguration } ;
 
 	// 1. Fetch data from cache
 
@@ -48,62 +50,37 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
 
 	// 3. Fetch data from Neons
 
-	// GetFileNameFromNeons()
+	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
+	vector<string> files = n->Files(opts);
 
-	// FromFile()
-
-
-
-	string theFile;
-
-	if (theParam->Name() == "T-K")
+	if (files.empty())
 	{
-		theFile = "T_" + boost::lexical_cast<string> (theLevel->Type()) +
-		          "_" + boost::lexical_cast<string> (theLevel->Value()) +
-		          "_" + boost::lexical_cast<string> (theValidTime->Step()) +
-		          ".grib2";
+		itsLogger->Warning("Could not find file(s) matching requested parameters");
+
+		throw kFileMetaDataNotFound;
 	}
 
-	else if (theParam->Name() == "P-HPA")
-	{
-		theFile = "P.grib2";
-	}
-
-	else if (theParam->Name() == "VV-PAS")
-	{
-		theFile = "VV-PAS_" + boost::lexical_cast<string> (theLevel->Type()) +
-		          "_" + boost::lexical_cast<string> (theLevel->Value()) +
-		          "_" + boost::lexical_cast<string> (theValidTime->Step()) +
-		          ".grib2";
-	}
-	else
-	{
-		throw runtime_error("Fetching of param " + theParam->Name() + " not supported yet");
-	}
-
-	const search_options opts { theValidTime, theParam, theLevel, theConfiguration } ;
-
-	vector<shared_ptr<info>> theInfos = FromFile(theFile, opts, true);
+	vector<shared_ptr<info>> theInfos = FromFile(files, opts, true);
 
 	if (theInfos.size() == 0)
 	{
-		throw runtime_error(ClassName() + ": No valid data found from file '" + theFile + "'");
+		throw runtime_error(ClassName() + ": No valid data found with given search options");
 	}
 
 	/*
 	 *  Safeguard; later in the code we do not check whether the data requested
 	 *  was actually what was requested.
 	 */
-	/*
-		assert(theConfiguration.SourceProducer() == theInfos[0]->Producer());
 
-		assert(*(theInfos[0]->Level()) == theLevel);
+	// assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
 
-		assert(*(theInfos[0]->Time()) == theValidTime);
+	assert(*(theInfos[0]->Level()) == *theLevel);
 
-		assert(*(theInfos[0]->Param()) == theParam);
-	*/
+	assert(*(theInfos[0]->Time()) == *theValidTime);
+
+	assert(*(theInfos[0]->Param()) == *theParam);
+
 	return theInfos[0];
 
 }
@@ -116,55 +93,56 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
  * read fails).
  */
 
-vector<shared_ptr<himan::info>> fetcher::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, const search_options& options, bool theReadContents)
 {
 
-	vector<shared_ptr<himan::info>> theInfos ;
+	vector<shared_ptr<himan::info>> allInfos ;
 
 	shared_ptr<util> theUtil = dynamic_pointer_cast<util> (plugin_factory::Instance()->Plugin("util"));
 
-	switch (theUtil->FileType(theInputFile))
+	for (size_t i = 0; i < files.size(); i++)
 	{
+		string inputFile = files[i];
 
-		case kGRIB:
-		case kGRIB1:
-		case kGRIB2:
-			{
+		vector<shared_ptr<himan::info>> curInfos;
 
-				theInfos = FromGrib(theInputFile, options, theReadContents);
-				break;
+		switch (theUtil->FileType(inputFile))
+		{
 
+			case kGRIB:
+			case kGRIB1:
+			case kGRIB2:
+				{
+
+					curInfos = FromGrib(inputFile, options, theReadContents);
+					break;
+
+				}
+
+			case kQueryData:
+				{
+
+					curInfos = FromQueryData(inputFile, options, theReadContents);
+					break;
 			}
 
-		case kQueryData:
-			{
-				// Create querydata instance
-				itsLogger->Info("File is QueryData");
-
-				theInfos = FromQueryData(theInputFile, options, theReadContents);
+			case kNetCDF:
+				cout << "File is NetCDF" << endl;
 				break;
-			}
-		case kNetCDF:
-			// Create NetCDF instance
-			cout << "File is NetCDF" << endl;
-			break;
 
-		default:
-			// Unknown file type, cannot proceed
-			throw runtime_error("Input file is neither GRID, NetCDF nor QueryData");
-			break;
+			default:
+				// Unknown file type, cannot proceed
+				throw runtime_error("Input file is neither GRID, NetCDF nor QueryData");
+				break;
+		}
+
+		allInfos.insert(allInfos.end(), curInfos.begin(), curInfos.end());
+
+
 	}
 
-	return theInfos;
+	return allInfos;
 }
-
-/*
- * FromGrib()
- *
- * Read data and metadata from grib file. This function does not create any newbase-
- * specific parameter descriptors, and does *not* connect to neons to get external
- * metadata.
- */
 
 vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& theInputFile, const search_options& options, bool theReadContents)
 {
@@ -184,8 +162,6 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& theInputFil
 	itsLogger->Debug("Reading metadata from file '" + theInputFile + "'");
 
 	vector<shared_ptr<info>> theInfos;
-
-	// Create querydata instance
 
 	shared_ptr<querydata> q = dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
 

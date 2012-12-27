@@ -61,9 +61,9 @@ class fetcher : public auxiliary_plugin
 
 	private:
 
-		std::vector<std::shared_ptr<info>> FromFile(const std::string& theFileName, const search_options& options, bool theReadContents = true);
-		std::vector<std::shared_ptr<info>> FromGrib(const std::string& theInputFile, const search_options& options, bool theReadContents = true);
-		std::vector<std::shared_ptr<info>> FromQueryData(const std::string& theInputFile, const search_options& options, bool theReadContents = true);
+		std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, const search_options& options, bool theReadContents = true);
+		std::vector<std::shared_ptr<info>> FromGrib(const std::string& file, const search_options& options, bool theReadContents = true);
+		std::vector<std::shared_ptr<info>> FromQueryData(const std::string& file, const search_options& options, bool theReadContents = true);
 
 		HPFileType FileType(const std::string& theInputFile);
 
