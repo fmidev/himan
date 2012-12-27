@@ -14,7 +14,7 @@ using namespace himan::plugin;
 grib::grib()
 {
 
-	itsLogger = logger_factory::Instance()->GetLog("grib");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grib"));
 
 	itsGrib = shared_ptr<NFmiGrib> (new NFmiGrib());
 }
@@ -133,7 +133,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		if (options.configuration->SourceProducer() != producer)
 		{
 			itsLogger->Trace("Producer does not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer()) + " vs " + boost::lexical_cast<string> (producer));
-			continue;
+			// continue;
 		}
 
 		shared_ptr<param> p (new param());

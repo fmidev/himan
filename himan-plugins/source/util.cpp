@@ -14,7 +14,7 @@ using namespace himan::plugin;
 
 util::util()
 {
-	itsLogger = logger_factory::Instance()->GetLog("util");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("util"));
 }
 
 std::string util::MakeNeonsFileName(const himan::info& info) const

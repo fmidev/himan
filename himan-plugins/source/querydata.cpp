@@ -20,12 +20,9 @@
 using namespace std;
 using namespace himan::plugin;
 
-// #include <NFmiStreamQueryData.h>
-
 querydata::querydata()
 {
-
-	itsLogger = logger_factory::Instance()->GetLog("querydata");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("querydata"));
 }
 
 bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bool theActiveOnly)

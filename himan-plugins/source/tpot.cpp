@@ -36,7 +36,7 @@ tpot::tpot()
 {
 	itsClearTextFormula = "Tp = Tk * powf((1000/P), 0.286)"; // Poissons equation
 
-	itsLogger = logger_factory::Instance()->GetLog("tpot");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpot"));
 
 }
 
@@ -191,7 +191,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 	std::shared_ptr<param> TParam (new param("T-K"));
 	std::shared_ptr<param> PParam (new param("P-HPA"));
 
-	unique_ptr<logger> myThreadedLogger = logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
 	myTargetInfo->ResetLevel();
 	myTargetInfo->FirstParam();
