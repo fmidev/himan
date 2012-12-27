@@ -28,7 +28,7 @@ int main(int argc, char** argv)
 
 	banner();
 
-	std::unique_ptr<logger> theLogger = logger_factory::Instance()->GetLog("himan");
+	std::unique_ptr<logger> theLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
 
 	std::vector<std::shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
