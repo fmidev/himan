@@ -12,37 +12,47 @@
 using namespace himan;
 
 level::level()
-	: itsIndex(kHPMissingInt)
+	: itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel())), itsIndex(kHPMissingInt)
 {
-	itsLogger = logger_factory::Instance()->GetLog("level");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
-level::level(HPLevelType theType, float theValue)
+level::level(HPLevelType theType, float theValue, const std::string& theName)
 	: itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(static_cast<FmiLevelType> (theType), theValue)))
 	, itsIndex(kHPMissingInt)
 {
-	itsLogger = logger_factory::Instance()->GetLog("level");
+	if (!theName.empty())
+	{
+		itsLevel->SetName(theName);
+	}
+
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
-level::level(HPLevelType theType, float theValue, int theIndex)
+level::level(HPLevelType theType, float theValue, int theIndex, const std::string& theName)
 	: itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(static_cast<FmiLevelType> (theType), theValue)))
 	, itsIndex(theIndex)
 {
-	itsLogger = logger_factory::Instance()->GetLog("level");
+	if (!theName.empty())
+	{
+		itsLevel->SetName(theName);
+	}
+
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level::level(const NFmiLevel& theLevel)
 	: itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(theLevel)))
 	, itsIndex(kHPMissingInt)
 {
-	itsLogger = logger_factory::Instance()->GetLog("level");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level::level(const level& other)
 	: itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(*other.itsLevel)))
 	, itsIndex(other.itsIndex)
 {
-	itsLogger = logger_factory::Instance()->GetLog("level");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level& level::operator=(const level& other)
@@ -100,6 +110,16 @@ void level::Type(HPLevelType theLevelType)
 }
 */
 
+std::string level::Name() const
+{
+	return static_cast<std::string> (itsLevel->GetName());
+}
+
+void level::Name(const std::string& theName)
+{
+	itsLevel->SetName(theName);
+}
+
 std::ostream& level::Write(std::ostream& file) const
 {
 
@@ -107,6 +127,7 @@ std::ostream& level::Write(std::ostream& file) const
 	file << "__itsType__ " << itsLevel->LevelType() << std::endl;
 	file << "__itsIndex__ " << itsIndex << std::endl;
 	file << "__itsValue__ " << itsLevel->LevelValue() << std::endl;
+	file << "__itsName__ " << Name() << std::endl;
 
 	return file;
 }

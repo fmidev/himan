@@ -23,8 +23,8 @@ class level
 
 		level();
 		level(const NFmiLevel& theLevel);
-		level(HPLevelType theType, float theValue);
-		level(HPLevelType theType, float theValue, int theIndex);
+		level(HPLevelType theType, float theValue, const std::string& theName = "");
+		level(HPLevelType theType, float theValue, int theIndex, const std::string& theName = "");
 
 		~level() {}
 		level(const level& other);
@@ -51,6 +51,9 @@ class level
 
 		//void Type(HPLevelType theType);
 		HPLevelType Type() const;
+
+		std::string Name() const;
+		void Name(const std::string& theName);
 
 		std::ostream& Write(std::ostream& file) const;
 
