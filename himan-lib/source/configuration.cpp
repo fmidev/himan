@@ -14,7 +14,7 @@ configuration::configuration()
 {
 
 	Init();
-	itsLogger = logger_factory::Instance()->GetLog("configuration");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
 	itsInfo = std::shared_ptr<info> (new info());
 
 }
