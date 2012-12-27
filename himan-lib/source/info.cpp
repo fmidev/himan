@@ -33,7 +33,7 @@ const size_t kMAX_SIZE_T = std::numeric_limits<size_t>::max();
 info::info()
 {
 	Init();
-	itsLogger = logger_factory::Instance()->GetLog("info");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
 
 	itsDataMatrix = shared_ptr<matrix_t> (new matrix_t());
 }

@@ -20,7 +20,10 @@ class logger_factory
 	public:
 		static logger_factory* Instance();
 
-		std::unique_ptr<logger> GetLog(const std::string& theUserName);
+		logger_factory(const logger_factory& other) = delete;
+		logger_factory& operator=(const logger_factory& other) = delete;
+
+		logger* GetLog(const std::string& theUserName);
 
 		void DebugState(HPDebugState theDebugState);
 		HPDebugState DebugState();
@@ -28,8 +31,6 @@ class logger_factory
 	private:
 		logger_factory();
 		~logger_factory();
-		logger_factory(const logger_factory& other) = delete;
-		logger_factory& operator=(const logger_factory& other) = delete;
 
 		HPDebugState itsDebugStateMain;
 		static logger_factory* itsInstance;

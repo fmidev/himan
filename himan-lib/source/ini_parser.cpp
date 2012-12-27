@@ -51,7 +51,7 @@ ini_parser* ini_parser::Instance()
 
 ini_parser::ini_parser()
 {
-	itsLogger = logger_factory::Instance()->GetLog("ini_parser");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("ini_parser"));
 	itsConfiguration = shared_ptr<configuration> (new configuration());
 }
 
@@ -74,7 +74,7 @@ void ini_parser::ParseAndCreateInfo(int argc, char** argv)
 
 	if (itsConfiguration->itsConfigurationFile.empty())
 	{
-		throw std::runtime_error("Configuration file not defined");
+		throw runtime_error("Configuration file not defined");
 	}
 
 	ParseConfigurationFile(itsConfiguration->itsConfigurationFile);
@@ -83,7 +83,7 @@ void ini_parser::ParseAndCreateInfo(int argc, char** argv)
 
 	if (itsConfiguration->itsPlugins.size() == 0)
 	{
-		throw std::runtime_error("No requested plugins defined");
+		throw runtime_error("No requested plugins defined");
 	}
 
 	if (itsConfiguration->itsOutputFileType == kUnknownFile)
@@ -103,7 +103,7 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 
 	// Can't use required() since it doesn't allow us to use --list-plugins
 
-	std::string outfileType;
+	string outfileType;
 
 	himan::HPDebugState debugState = himan::kDebugMsg;
 
@@ -114,8 +114,8 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 	("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
 	("version,v", "display version number")
 	("configuration-file,f", po::value(&(itsConfiguration->itsConfigurationFile)), "configuration file")
-	("aux-files,a", po::value<std::vector<std::string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
-	("plugins,p", po::value<std::vector<std::string> > (&(itsConfiguration->itsPlugins)), "calculated plugins")
+	("aux-files,a", po::value<vector<string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
+	("plugins,p", po::value<vector<string> > (&(itsConfiguration->itsPlugins)), "calculated plugins")
 	("list-plugins,l", "list all defined plugins")
 	("d,debug-level", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
 	;
@@ -162,7 +162,7 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 
 	if (opt.count("version"))
 	{
-		std::cout << "himan-lib version ???" << std::endl;
+		cout << "himan-lib version ???" << endl;
 		exit(1);
 	}
 
@@ -186,48 +186,48 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 		}
 		else
 		{
-			throw std::runtime_error("Invalid file type: " + outfileType);
+			throw runtime_error("Invalid file type: " + outfileType);
 		}
 	}
 
 	if (opt.count("help"))
 	{
-		std::cout << "usage: himan [ options ]" << std::endl;
-		std::cout << desc;
-		std::cout << std::endl << "Examples:" << std::endl;
-		std::cout << "  himan -f etc/tpot.ini" << std::endl;
-		std::cout << "  himan -f etc/vvmms.ini -a file.grib -t querydata" << std::endl << std::endl;
+		cout << "usage: himan [ options ]" << endl;
+		cout << desc;
+		cout << endl << "Examples:" << endl;
+		cout << "  himan -f etc/tpot.ini" << endl;
+		cout << "  himan -f etc/vvmms.ini -a file.grib -t querydata" << endl << endl;
 		exit(1);
 	}
 
 	if (opt.count("list-plugins"))
 	{
 
-		std::vector<shared_ptr<plugin::himan_plugin> > thePlugins = plugin_factory::Instance()->CompiledPlugins();
+		vector<shared_ptr<plugin::himan_plugin> > thePlugins = plugin_factory::Instance()->CompiledPlugins();
 
-		std::cout << "Compiled plugins" << std::endl;
+		cout << "Compiled plugins" << endl;
 
 		for (size_t i = 0; i < thePlugins.size(); i++)
 		{
-			std::cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << std::endl;
+			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
 		}
 
 		thePlugins = plugin_factory::Instance()->InterpretedPlugins();
 
-		std::cout << "Interpreted plugins" << std::endl;
+		cout << "Interpreted plugins" << endl;
 
 		for (size_t i = 0; i < thePlugins.size(); i++)
 		{
-			std::cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << std::endl;
+			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
 		}
 
-		std::cout << "Auxiliary plugins" << std::endl;
+		cout << "Auxiliary plugins" << endl;
 
 		thePlugins = plugin_factory::Instance()->AuxiliaryPlugins();
 
 		for (size_t i = 0; i < thePlugins.size(); i++)
 		{
-			std::cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << std::endl;
+			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
 		}
 
 		exit(1);
@@ -236,7 +236,7 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 }
 
 
-void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
+void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 {
 
 	itsLogger->Debug("Parsing configuration file");
@@ -247,16 +247,16 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		boost::property_tree::ini_parser::read_ini(theConfigurationFile, pt);
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error reading configuration file: ") + e.what());
+		throw runtime_error(string("Error reading configuration file: ") + e.what());
 	}
 
 	/* Check area definitions */
 
 	try
 	{
-		std::string theProjection = pt.get<std::string>("area.projection");
+		string theProjection = pt.get<string>("area.projection");
 
 		if (itsConfiguration->itsInfo->Projection() == kUnknownProjection)
 		{
@@ -283,9 +283,9 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error parsing projection: ") + e.what());
+		throw runtime_error(string("Error parsing projection: ") + e.what());
 	}
 
 	try
@@ -301,9 +301,9 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error parsing area corners: ") + e.what());
+		throw runtime_error(string("Error parsing area corners: ") + e.what());
 	}
 
 	/* Check grid definitions */
@@ -318,38 +318,52 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error parsing grid dimensions: ") + e.what());
+		throw runtime_error(string("Error parsing grid dimensions: ") + e.what());
 	}
 
-	/* Check plugins (parameters) */
+	/* Check plugins */
 
 	try
 	{
-		itsConfiguration->Plugins(Split(pt.get<std::string>("plugins.plugins"), ','));
+		itsConfiguration->Plugins(Split(pt.get<string>("plugins.plugins"), ','));
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error parsing plugins: ") + e.what());
+		throw runtime_error(string("Error parsing plugins: ") + e.what());
 	}
 
-	/* Check time */
+	/* Check origin time */
 
 	try
 	{
 
-		const std::string theOriginDateTime = pt.get<std::string>("time.origintime");
+		const string theOriginDateTime = pt.get<string>("time.origintime");
 
 		itsConfiguration->Info()->OriginDateTime(theOriginDateTime);
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+	}
 
-		std::vector<std::string> timesStr = Split(pt.get<std::string>("time.hours"), ',', true);
+	/* Check time steps */
 
-		std::vector<int> times ;
+	try
+	{
+
+		vector<string> timesStr = Split(pt.get<string>("time.hours"), ',', true);
+
+		vector<int> times ;
 
 		for (size_t i = 0; i < timesStr.size(); i++)
 		{
@@ -358,7 +372,7 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 
 		sort (times.begin(), times.end());
 
-		std::vector<shared_ptr<forecast_time> > theTimes;
+		vector<shared_ptr<forecast_time> > theTimes;
 
 		for (size_t i = 0; i < times.size(); i++)
 		{
@@ -378,11 +392,46 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		// Something was not found; do nothing
+		// hours was not specified
+		// check if start/stop times are
+
+		int start = boost::lexical_cast<int> (pt.get<string>("time.start_hour"));
+		int stop = boost::lexical_cast<int> (pt.get<string>("time.stop_hour"));
+		int step = boost::lexical_cast<int> (pt.get<string>("time.step"));
+
+		string unit = pt.get<string>("time.step_unit");
+
+		if (unit != "hour")
+		{
+			throw runtime_error("Step units other than hour are not supported yet");
+		}
+
+		vector<shared_ptr<forecast_time> > theTimes;
+
+		int curtime = start;
+		int curstep = 0;
+
+		do
+		{
+
+			shared_ptr<forecast_time> theTime (new forecast_time(shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
+						                                   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime()))));
+
+			theTime->ValidDateTime()->Adjust("hours", curstep);
+
+			theTimes.push_back(theTime);
+
+			curtime += step;
+			curstep = curtime;
+
+		} while (curtime <= stop);
+
+		itsConfiguration->Info()->Times(theTimes);
+
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(ClassName() + ": " + std::string("Error parsing time information: ") + e.what());
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
 	}
 
 	/* Check producer */
@@ -390,8 +439,8 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	try
 	{
 
-		itsConfiguration->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<std::string>("producer.source_producer")));
-		itsConfiguration->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<std::string>("producer.target_producer")));
+		itsConfiguration->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("producer.source_producer")));
+		itsConfiguration->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("producer.target_producer")));
 
 		/*
 		 * Target producer is also set to target info; source infos (and producers) are created
@@ -405,9 +454,9 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(ClassName() + ": " + std::string("Error parsing producer information: ") + e.what());
+		throw runtime_error(ClassName() + ": " + string("Error parsing producer information: ") + e.what());
 	}
 
 	/* Check level */
@@ -415,33 +464,35 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	try
 	{
 
-		std::string theLevelTypeStr = pt.get<std::string>("level.leveltype");
+		string theLevelTypeStr = pt.get<string>("level.leveltype");
+
+		boost::to_upper(theLevelTypeStr);
 
 		HPLevelType theLevelType;
 
-		if (theLevelTypeStr == "height")
+		if (theLevelTypeStr == "HEIGHT")
 		{
 			theLevelType = kHeight;
 		}
-		else if (theLevelTypeStr == "pressure")
+		else if (theLevelTypeStr == "PRESSURE")
 		{
 			theLevelType = kPressure;
 		}
-		else if (theLevelTypeStr == "hybrid")
+		else if (theLevelTypeStr == "HYBRID")
 		{
 			theLevelType = kHybrid;
 		}
 
 		else
 		{
-			throw std::runtime_error("Unknown level type: " + theLevelTypeStr);    // not good practice; constructing string
+			throw runtime_error("Unknown level type: " + theLevelTypeStr);    // not good practice; constructing string
 		}
 
 		// can cause exception, what will happen then ?
 
-		std::vector<std::string> levelsStr = Split(pt.get<std::string>("level.levels"), ',', true);
+		vector<string> levelsStr = Split(pt.get<string>("level.levels"), ',', true);
 
-		std::vector<float> levels ;
+		vector<float> levels ;
 
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
@@ -450,11 +501,11 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 
 		sort (levels.begin(), levels.end());
 
-		std::vector<shared_ptr<level> > theLevels;
+		vector<shared_ptr<level> > theLevels;
 
 		for (size_t i = 0; i < levels.size(); i++)
 		{
-			theLevels.push_back(shared_ptr<level> (new level(theLevelType, levels[i])));
+			theLevels.push_back(shared_ptr<level> (new level(theLevelType, levels[i], theLevelTypeStr)));
 		}
 
 		itsConfiguration->Info()->Levels(theLevels);
@@ -463,9 +514,9 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error parsing level information: ") + e.what());
+		throw runtime_error(string("Error parsing level information: ") + e.what());
 	}
 
 	/* Check whole_file_write */
@@ -473,7 +524,7 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	try
 	{
 
-		std::string theWholeFileWrite = pt.get<std::string>("meta.whole_file_write");
+		string theWholeFileWrite = pt.get<string>("meta.whole_file_write");
 
 		if (ParseBoolean(theWholeFileWrite))
 		{
@@ -485,16 +536,16 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error parsing meta information: ") + e.what());
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
 
 	/* Check read_data_from_database */
 
 	try
 	{
-		std::string theReadDataFromDatabase = pt.get<std::string>("meta.read_data_from_database");
+		string theReadDataFromDatabase = pt.get<string>("meta.read_data_from_database");
 
 		if (!ParseBoolean(theReadDataFromDatabase))
 		{
@@ -506,16 +557,16 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error parsing meta information: ") + e.what());
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
 
 	/* Check file_wait_timeout */
 
 	try
 	{
-		std::string theReadDataFromDatabase = pt.get<std::string>("meta.read_data_from_database");
+		string theReadDataFromDatabase = pt.get<string>("meta.read_data_from_database");
 
 		if (!ParseBoolean(theReadDataFromDatabase))
 		{
@@ -527,20 +578,20 @@ void ini_parser::ParseConfigurationFile(const std::string& theConfigurationFile)
 	{
 		// Something was not found; do nothing
 	}
-	catch (std::exception& e)
+	catch (exception& e)
 	{
-		throw std::runtime_error(std::string("Error parsing meta information: ") + e.what());
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
 }
 
 // copied from http://stackoverflow.com/questions/236129/splitting-a-string-in-c and modified a bit
 
-std::vector<std::string> ini_parser::Split(const std::string& s, char delim, bool fill)
+vector<string> ini_parser::Split(const string& s, char delim, bool fill)
 {
 
-	std::string item;
+	string item;
 
-	std::vector<std::string> orig_elems;
+	vector<string> orig_elems;
 
 	boost::split(orig_elems, s, boost::is_any_of(","));
 
@@ -549,10 +600,10 @@ std::vector<std::string> ini_parser::Split(const std::string& s, char delim, boo
 		return orig_elems;
 	}
 
-	std::vector<std::string> filled_elems;
-	std::vector<std::string> splitted_elems;
+	vector<string> filled_elems;
+	vector<string> splitted_elems;
 
-	std::vector<std::string>::iterator it;
+	vector<string>::iterator it;
 
 	for (it = orig_elems.begin(); it != orig_elems.end(); )
 	{
@@ -565,7 +616,7 @@ std::vector<std::string> ini_parser::Split(const std::string& s, char delim, boo
 
 			for (int i = boost::lexical_cast<int> (splitted_elems[0]); i <= boost::lexical_cast<int> (splitted_elems[1]); i++)
 			{
-				filled_elems.push_back(boost::lexical_cast<std::string> (i));
+				filled_elems.push_back(boost::lexical_cast<string> (i));
 			}
 		}
 		else
@@ -574,7 +625,7 @@ std::vector<std::string> ini_parser::Split(const std::string& s, char delim, boo
 		}
 	}
 
-	std::vector<std::string> all_elems;
+	vector<string> all_elems;
 
 	all_elems.reserve(orig_elems.size() + filled_elems.size());
 
@@ -591,7 +642,7 @@ std::vector<std::string> ini_parser::Split(const std::string& s, char delim, boo
  * Note: will change argument to lower case.
  */
 
-bool ini_parser::ParseBoolean(std::string& booleanValue)
+bool ini_parser::ParseBoolean(string& booleanValue)
 {
 	bool ret;
 
@@ -609,7 +660,7 @@ bool ini_parser::ParseBoolean(std::string& booleanValue)
 
 	else
 	{
-		throw std::runtime_error(ClassName() + ": Invalid boolean value: " + booleanValue);
+		throw runtime_error(ClassName() + ": Invalid boolean value: " + booleanValue);
 	}
 
 	return ret;
