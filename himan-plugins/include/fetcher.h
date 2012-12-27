@@ -27,7 +27,7 @@
 #include "configuration.h"
 #include "search_options.h"
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
@@ -39,9 +39,12 @@ class fetcher : public auxiliary_plugin
 
 		virtual ~fetcher() {}
 
+		fetcher(const fetcher& other) = delete;
+		fetcher& operator=(const fetcher& other) = delete;
+
 		virtual std::string ClassName() const
 		{
-			return "hilpee::plugin::fetcher";
+			return "himan::plugin::fetcher";
 		}
 
 		virtual HPPluginClass PluginClass() const
@@ -54,7 +57,7 @@ class fetcher : public auxiliary_plugin
 			return HPVersionNumber(0, 1);
 		}
 
-		std::shared_ptr<info> Fetch(const configuration& theConfiguration, const forecast_time& theValidTime, const level& theLevel, const param& theParam);
+		std::shared_ptr<info> Fetch(std::shared_ptr<const configuration> theConfiguration, std::shared_ptr<const forecast_time> theValidTime, std::shared_ptr<const level> theLevel, std::shared_ptr<const param> theParam);
 
 	private:
 
@@ -66,18 +69,18 @@ class fetcher : public auxiliary_plugin
 
 };
 
-#ifndef HILPEE_AUXILIARY_INCLUDE
+#ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<hilpee_plugin> create()
+extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::shared_ptr<fetcher> (new fetcher());
 }
 
-#endif /* HILPEE_AUXILIARY_INCLUDE */
+#endif /* HIMAN_AUXILIARY_INCLUDE */
 
-}
-}
+} // namespace plugin
+} // namespace himan
 
 #endif /* FETCHER_H */

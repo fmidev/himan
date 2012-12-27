@@ -22,15 +22,15 @@
 #ifndef AUXILIARY_PLUGIN_H
 #define AUXILIARY_PLUGIN_H
 
-#include "hilpee_plugin.h"
+#include "himan_plugin.h"
 #include "info.h"
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
 
-class auxiliary_plugin : public hilpee_plugin
+class auxiliary_plugin : public himan_plugin
 {
 
 	public:
@@ -40,7 +40,7 @@ class auxiliary_plugin : public hilpee_plugin
 
 };
 
-}
-}
+} // namespace plugin
+} // namespace himan
 
 #endif /* AUXILIARY_PLUGIN_H */

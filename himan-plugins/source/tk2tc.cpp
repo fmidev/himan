@@ -1,5 +1,5 @@
 /*
- * hilpee_tk2tc.cpp
+ * tk2tc.cpp
  *
  *  Created on: Nov 20, 2012
  *      Author: partio
@@ -11,17 +11,18 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
-#define HILPEE_AUXILIARY_INCLUDE
+#define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
+#include "util.h"
 #include "writer.h"
 
-#undef HILPEE_AUXILIARY_INCLUDE
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 
-const int MAX_THREADS = 2; // Max number of threads we allow
+const unsigned int MAX_THREADS = 2; // Max number of threads we allow
 
 tk2tc::tk2tc()
 {
@@ -35,9 +36,9 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 
 	// Get number of threads to use
 
-	int theCoreCount = boost::thread::hardware_concurrency(); // Number of cores
+	unsigned int theCoreCount = boost::thread::hardware_concurrency(); // Number of cores
 
-	unsigned short theThreadCount = theCoreCount > MAX_THREADS ? MAX_THREADS : theCoreCount;
+	unsigned int theThreadCount = theCoreCount > MAX_THREADS ? MAX_THREADS : theCoreCount;
 
 	boost::thread_group g;
 
@@ -77,15 +78,14 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 	theTargetInfo->Create();
 
 	/*
-	 * MetaTargetInfo is used to feed the running threads.
+	 * FeederInfo is used to feed the running threads.
 	 */
 
-	//itsMetaTargetInfo = shared_ptr<info> (new info (*theTargetInfo));
-	itsMetaTargetInfo = theTargetInfo->Clone();
+	itsFeederInfo = theTargetInfo->Clone();
 
-	itsMetaTargetInfo->Reset();
+	itsFeederInfo->Reset();
 
-	itsMetaTargetInfo->Param(theRequestedParam);
+	itsFeederInfo->Param(theRequestedParam);
 
 	/*
 	 * Each thread will have a copy of the target info.
@@ -106,7 +106,7 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 		boost::thread* t = new boost::thread(&tk2tc::Run,
 		                                     this,
 		                                     theTargetInfos[i],
-		                                     *theConfiguration,
+		                                     theConfiguration,
 		                                     i + 1);
 
 		g.add_thread(t);
@@ -123,7 +123,7 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
 		theTargetInfo->FirstTime();
-		string theOutputFile = "Hilpee_FILE_" + theTargetInfo->Time()->OriginDateTime()->String("%Y%m%d%H");
+		string theOutputFile = "himan_" + theTargetInfo->Time()->OriginDateTime()->String("%Y%m%d%H");
 		theWriter->ToFile(theTargetInfo, theOutputFile, theConfiguration->OutputFileType(), false);
 
 	}
@@ -131,22 +131,20 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 }
 
 void tk2tc::Run(shared_ptr<info> myTargetInfo,
-                const configuration& theConfiguration,
+                shared_ptr<const configuration> theConfiguration,
                 unsigned short theThreadIndex)
 {
 
 	while (AdjustParams(myTargetInfo))
 	{
 		Calculate(myTargetInfo, theConfiguration, theThreadIndex);
-
 	}
-
 }
 
 bool tk2tc::AdjustParams(shared_ptr<info> myTargetInfo)
 {
 
-	boost::mutex::scoped_lock lock(itsMetaMutex);
+	boost::mutex::scoped_lock lock(itsAdjustParamMutex);
 
 	// This function has access to the original target info
 
@@ -157,9 +155,9 @@ bool tk2tc::AdjustParams(shared_ptr<info> myTargetInfo)
 	if (1)   // say , leading_dimension == time
 	{
 
-		if (itsMetaTargetInfo->NextTime())
+		if (itsFeederInfo->NextTime())
 		{
-			myTargetInfo->Time(itsMetaTargetInfo->Time());
+			myTargetInfo->Time(itsFeederInfo->Time());
 		}
 		else
 		{
@@ -177,17 +175,16 @@ bool tk2tc::AdjustParams(shared_ptr<info> myTargetInfo)
  */
 
 void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
-                     const configuration& theConfiguration,
-                     unsigned short theThreadIndex)
+                      shared_ptr<const configuration> theConfiguration,
+                      unsigned short theThreadIndex)
 {
 
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-	shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
 	// Required source parameters
 
-	param theT ("T-K");
+	shared_ptr<param> TParam (new param("T-K"));
 
 	unique_ptr<logger> myThreadedLogger = logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex));
 
@@ -200,13 +197,13 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time()->ValidDateTime()->String("%Y%m%d%H") +
 		                        " level " + boost::lexical_cast<string> (myTargetInfo->Level()->Value()));
 
-		myTargetInfo->Data()->Resize(theConfiguration.Ni(), theConfiguration.Nj());
+		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
 
 		// Source info for T
 		shared_ptr<info> theTInfo = theFetcher->Fetch(theConfiguration,
-		                            *myTargetInfo->Time(),
-		                            *myTargetInfo->Level(),
-		                            theT);
+		                            myTargetInfo->Time(),
+		                            myTargetInfo->Level(),
+		                            TParam);
 
 		assert(theTInfo->Param()->Unit() == kK);
 
@@ -252,26 +249,20 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		/*
 		 * Now we are done for this level
 		 *
-		 * If output file type is GRIB, we can write individual time/level combination
-		 * to file.
-		 *
-		 * Could this also be done to other file types ?
+		 * Clone info-instance to writer since it might change our descriptor places
 		 */
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (!theConfiguration.WholeFileWrite())
+		if (!theConfiguration->WholeFileWrite())
 		{
 
-			string theOutputFile = "Hilpee_" +
-								   myTargetInfo->Param()->Name() + "_" +
-			                       myTargetInfo->Time()->ValidDateTime()->String("%Y%m%d%H") + "_" +
-			                       boost::lexical_cast<string> (myTargetInfo->Level()->Type()) + "_" +
-			                       boost::lexical_cast<string> (myTargetInfo->Level()->Value()) + "_" +
-			                       static_cast<string> (myTargetInfo->Param()->Name());
+			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+			shared_ptr<util> theUtil = dynamic_pointer_cast <util> (plugin_factory::Instance()->Plugin("util"));
 
+			string outputFile = theUtil->MakeNeonsFileName(*myTargetInfo);
 
-			theWriter->ToFile(myTargetInfo, theOutputFile, theConfiguration.OutputFileType(), true);
+			theWriter->ToFile(myTargetInfo->Clone(), outputFile, theConfiguration->OutputFileType(), true);
 		}
 	}
 }

@@ -12,7 +12,7 @@
 #include "NFmiGrib.h"
 #include "search_options.h"
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
@@ -26,9 +26,12 @@ class grib : public auxiliary_plugin
 
 		virtual ~grib() {}
 
+		grib(const grib& other) = delete;
+		grib& operator=(const grib& other) = delete;
+
 		virtual std::string ClassName() const
 		{
-			return "hilpee::plugin::grib";
+			return "himan::plugin::grib";
 		};
 
 		virtual HPPluginClass PluginClass() const
@@ -53,18 +56,18 @@ class grib : public auxiliary_plugin
 
 };
 
-#ifndef HILPEE_AUXILIARY_INCLUDE
+#ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<hilpee_plugin> create()
+extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::shared_ptr<grib> (new grib());
 }
 
-#endif /* HILPEE_AUXILIARY_INCLUDE */
+#endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
-} // namespace hilpee
+} // namespace himan
 
 #endif /* GRIB_H */

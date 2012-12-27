@@ -1,5 +1,5 @@
 /*
- * hilpee_util.h
+ * util.h
  *
  *  Created on: Dec 1, 2012
  *      Author: partio
@@ -13,10 +13,9 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "hilpee_common.h"
 #include "auxiliary_plugin.h"
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
@@ -27,11 +26,14 @@ class util : public auxiliary_plugin
 	public:
 
 		util();
-		~util() {}
+		virtual ~util() {}
+
+		util(const util& other) = delete;
+		util& operator=(const util& other) = delete;
 
 		virtual std::string ClassName() const
 		{
-			return "hilpee::plugin::util";
+			return "himan::plugin::util";
 		};
 
 		virtual HPPluginClass PluginClass() const
@@ -45,22 +47,22 @@ class util : public auxiliary_plugin
 		}
 
 		HPFileType FileType(const std::string& theFile) const;
-		std::string MakeNeonsFileName(const hilpee::info& info) const;
+		std::string MakeNeonsFileName(const himan::info& info) const;
 };
 
 
-#ifndef HILPEE_AUXILIARY_INCLUDE
+#ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<hilpee_plugin> create()
+extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::shared_ptr<util> (new util());
 }
 
-#endif /* HILPEE_AUXILIARY_INCLUDE */
+#endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
-} // namespace hilpee
+} // namespace himan
 
 #endif /* UTIL_H */

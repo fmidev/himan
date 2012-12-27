@@ -18,7 +18,7 @@
 #include <NFmiQueryDataUtil.h>
 
 using namespace std;
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 
 // #include <NFmiStreamQueryData.h>
 
@@ -85,7 +85,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
 
 	NFmiFastQueryInfo qinfo = (qdata.get());
 
-	qinfo.SetProducer(NFmiProducer(theInfo->Producer(), "Hilpee"));
+	qinfo.SetProducer(NFmiProducer(theInfo->Producer(), "Himan"));
 
 	/*
 	 * At the same time check that we have only constant-sized grids
@@ -107,9 +107,11 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
 		theInfo->ResetLocation();
 		qinfo.ResetLocation();
 
+		assert(theInfo->Data()->Size() == qinfo.Size());
+
 		while (theInfo->NextLocation() && qinfo.NextLocation())
 		{
-			qinfo.FloatValue(theInfo->Value());
+			qinfo.FloatValue(static_cast<float> (theInfo->Value()));
 		}
 	}
 	else
@@ -133,6 +135,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
 					qinfo.ResetLocation();
 
 #ifndef NDEBUG
+
 					if (first)
 					{
 						first = false;
@@ -142,11 +145,12 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
 					{
 						assert(theInfo->Data()->Size() == size);
 					}
+
 #endif
 
 					while (theInfo->NextLocation() && qinfo.NextLocation())
 					{
-						qinfo.FloatValue(theInfo->Value());
+						qinfo.FloatValue(static_cast<float> (theInfo->Value()));
 					}
 				}
 			}
@@ -171,7 +175,7 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(shared_ptr<info> info, bool t
 	if (theActiveOnly)
 	{
 		tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info->Time()->ValidDateTime()->String("%Y%m%d")),
-			                          boost::lexical_cast<long> (info->Time()->ValidDateTime()->String("%H%M"))));
+		                          boost::lexical_cast<long> (info->Time()->ValidDateTime()->String("%H%M"))));
 	}
 	else
 	{
@@ -220,6 +224,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool
 
 		}
 	}
+
 	return NFmiParamDescriptor(pbag);
 
 
@@ -291,6 +296,7 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(shared_ptr<info> info, bo
 			lbag.AddLevel(NFmiLevel(info->Level()->Type(), "Hipihipi", info->Level()->Value()));
 		}
 	}
+
 	return NFmiVPlaceDescriptor(lbag);
 
 }

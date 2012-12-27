@@ -12,7 +12,7 @@
 #include "search_options.h"
 #include "NFmiFastQueryInfo.h"
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
@@ -24,9 +24,12 @@ class querydata : public auxiliary_plugin
 
 		virtual ~querydata() {}
 
+		querydata(const querydata& other) = delete;
+		querydata& operator=(const querydata& other) = delete;
+
 		virtual std::string ClassName() const
 		{
-			return "hilpee::plugin::querydata";
+			return "himan::plugin::querydata";
 		}
 
 		virtual HPPluginClass PluginClass() const
@@ -51,18 +54,18 @@ class querydata : public auxiliary_plugin
 
 };
 
-#ifndef HILPEE_AUXILIARY_INCLUDE
+#ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<hilpee_plugin> create()
+extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::shared_ptr<querydata> (new querydata());
 }
 
-#endif /* HILPEE_AUXILIARY_INCLUDE */
+#endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
-} // namespace hilpee
+} // namespace himan
 
 #endif /* QUERYDATA_H */

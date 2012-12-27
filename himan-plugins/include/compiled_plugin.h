@@ -8,15 +8,15 @@
 #ifndef COMPILED_PLUGIN_H
 #define COMPILED_PLUGIN_H
 
-#include "hilpee_plugin.h"
+#include "himan_plugin.h"
 #include "configuration.h"
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
 
-class compiled_plugin : public hilpee_plugin
+class compiled_plugin : public himan_plugin
 {
 	public:
 
@@ -38,15 +38,22 @@ class compiled_plugin : public hilpee_plugin
 	protected:
 
 		virtual void Run(std::shared_ptr<info> myTargetInfo,
-		                 const configuration& theConfiguration,
+		                 std::shared_ptr<const configuration> theConfiguration,
 		                 unsigned short theThreadIndex) = 0;
 
+		virtual bool AdjustParams(std::shared_ptr<info> myTargetInfo) = 0;
+
+		virtual void Calculate(std::shared_ptr<info> theTargetInfo,
+		                       std::shared_ptr<const configuration> theConfiguration,
+		                       unsigned short theThreadIndex) = 0;
 
 		std::string itsClearTextFormula;
+		boost::mutex itsAdjustParamMutex;
+		std::shared_ptr<info> itsFeederInfo;
 
 };
 
-}
-}
+} // namespace plugin
+} // namespace himan
 
 #endif /* COMPILED_PLUGIN_H */

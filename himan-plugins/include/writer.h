@@ -12,7 +12,7 @@
 
 #include "auxiliary_plugin.h"
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
@@ -24,9 +24,12 @@ class writer : public auxiliary_plugin
 
 		virtual ~writer() {}
 
+		writer(const writer& other) = delete;
+		writer& operator=(const writer& other) = delete;
+
 		virtual std::string ClassName() const
 		{
-			return "hilpee::plugin::writer";
+			return "himan::plugin::writer";
 		}
 
 		virtual HPPluginClass PluginClass() const
@@ -48,18 +51,18 @@ class writer : public auxiliary_plugin
 
 };
 
-#ifndef HILPEE_AUXILIARY_INCLUDE
+#ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factories
 
-extern "C" std::shared_ptr<hilpee_plugin> create()
+extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::shared_ptr<writer> (new writer());
 }
 
-#endif /* HILPEE_AUXILIARY_INCLUDE */
+#endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
-} // namespace hilpee
+} // namespace himan
 
 #endif /* WRITER_H */

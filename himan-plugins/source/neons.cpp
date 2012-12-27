@@ -8,7 +8,7 @@
 #include "neons.h"
 #include "logger_factory.h"
 
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 
 neons::neons() : itsNeonsDB(std::shared_ptr<NFmiNeonsDB> (new NFmiNeonsDB()))
 {

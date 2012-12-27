@@ -8,7 +8,7 @@
 #include "cache.h"
 #include "logger_factory.h"
 
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 
 cache::cache()
 {

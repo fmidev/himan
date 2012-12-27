@@ -10,31 +10,31 @@
 #include "logger_factory.h"
 #include <sstream>
 
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 
 util::util()
 {
 	itsLogger = logger_factory::Instance()->GetLog("util");
 }
 
-std::string util::MakeNeonsFileName(const hilpee::info& info) const
+std::string util::MakeNeonsFileName(const himan::info& info) const
 {
 
 	std::ostringstream neonsFileName;
 
-	neonsFileName 	<< "hilpee_"
-            		<< info.Param()->Name()
-					<< info.Time()->ValidDateTime()->String("%Y%m%d%H")
-					<< "_"
-					<< info.Level()->Type()
-					<< "_"
-					<< info.Level()->Value();
+	neonsFileName 	<< "himan_"
+	                << info.Param()->Name()
+	                << info.Time()->ValidDateTime()->String("%Y%m%d%H")
+	                << "_"
+	                << info.Level()->Type()
+	                << "_"
+	                << info.Level()->Value();
 
 	return neonsFileName.str();
 
 }
 
-hilpee::HPFileType util::FileType(const std::string& theFile) const
+himan::HPFileType util::FileType(const std::string& theFile) const
 {
 
 	using namespace std;

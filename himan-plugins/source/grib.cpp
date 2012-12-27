@@ -9,7 +9,7 @@
 #include "logger_factory.h"
 
 using namespace std;
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 
 grib::grib()
 {
@@ -109,10 +109,10 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 
 }
 
-vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
 {
 
-	vector<shared_ptr<hilpee::info>> theInfos;
+	vector<shared_ptr<himan::info>> theInfos;
 
 	itsGrib->Open(theInputFile);
 
@@ -128,11 +128,11 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 		 * \todo Should we actually return all matching messages or only the first one
 		 */
 
-		unsigned long producer = itsGrib->Message()->Process();
+		long producer = itsGrib->Message()->Process();
 
-		if (options.configuration.SourceProducer() != producer)
+		if (options.configuration->SourceProducer() != producer)
 		{
-			itsLogger->Trace("Producer does not match: " + boost::lexical_cast<string> (options.configuration.SourceProducer()) + " vs " + boost::lexical_cast<string> (producer));
+			itsLogger->Trace("Producer does not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer()) + " vs " + boost::lexical_cast<string> (producer));
 			continue;
 		}
 
@@ -158,7 +158,7 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 			// Need to get name and unit of parameter
 
 #ifdef NEONS
-			FFFFFFFFFFFFFFFUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU!!!!!!!!!!!!!!!!!!!
+			throw runtime_error("FFFFFFFFFFFFFFFUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU!!!!!!!!!!!!!!!!!!!");
 #else
 
 			assert(discipline == 0);
@@ -182,13 +182,14 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 			{
 				throw runtime_error(ClassName() + ": I do not recognize this parameter (and I can't connect to neons)");
 			}
+
 #endif
 
 			// Name is our primary identifier -- not univ_id or grib param id
 
-			if (*p != options.param)
+			if (*p != *options.param)
 			{
-				itsLogger->Trace("Parameter does not match: " + options.param.Name() + " vs " + p->Name());
+				itsLogger->Trace("Parameter does not match: " + options.param->Name() + " vs " + p->Name());
 				continue;
 			}
 
@@ -198,58 +199,61 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 		}
 
 		string dataDate = boost::lexical_cast<string> (itsGrib->Message()->DataDate());
-		string dataTime = boost::lexical_cast<string> (itsGrib->Message()->DataTime());
 
-		long step = itsGrib->Message()->EndStep();
+		long dt = itsGrib->Message()->DataTime();
 
 		// grib_api stores times as long, so when origin hour is 00
 		// it gets stored as 0 which boost does not understand
 		// (since it's a mix of 12 hour and 24 hour times)
 
-		if (step < 10)
+		string dataTime = boost::lexical_cast<string> (dt);
+
+		if (dt < 10)
 		{
 			dataTime = "0" + dataTime;
 		}
+
+		long step = itsGrib->Message()->ForecastTime();
 
 		string originDateTimeStr = dataDate + dataTime;
 
 		raw_time originDateTime (originDateTimeStr, "%Y%m%d%H");
 
 		std::shared_ptr<forecast_time> t (new forecast_time(originDateTime, originDateTime));
-		t->ValidDateTime()->Adjust("hours", step);
+		t->ValidDateTime()->Adjust("hours", static_cast<int> (step));
 
-		if (*t != options.time)
+		if (*t != *options.time)
 		{
 			itsLogger->Trace("Times do not match");
-			itsLogger->Trace("OriginDateTime: " + options.time.OriginDateTime()->String() + " vs " + t->OriginDateTime()->String());
-			itsLogger->Trace("ValidDateTime: " + options.time.ValidDateTime()->String() + " vs " + t->ValidDateTime()->String());
+			itsLogger->Trace("OriginDateTime: " + options.time->OriginDateTime()->String() + " vs " + t->OriginDateTime()->String());
+			itsLogger->Trace("ValidDateTime: " + options.time->ValidDateTime()->String() + " vs " + t->ValidDateTime()->String());
 			continue;
 		}
 
 		long gribLevel = itsGrib->Message()->NormalizedLevelType();
 
-		hilpee::HPLevelType levelType;
+		himan::HPLevelType levelType;
 
 		switch (gribLevel)
 		{
 			case 1:
-				levelType = hilpee::kGround;
+				levelType = himan::kGround;
 				break;
 
 			case 100:
-				levelType = hilpee::kPressure;
+				levelType = himan::kPressure;
 				break;
 
 			case 102:
-				levelType = hilpee::kMeanSea;
+				levelType = himan::kMeanSea;
 				break;
 
 			case 105:
-				levelType = hilpee::kHeight;
+				levelType = himan::kHeight;
 				break;
 
 			case 109:
-				levelType = hilpee::kHybrid;
+				levelType = himan::kHybrid;
 				break;
 
 			default:
@@ -257,9 +261,9 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 
 		}
 
-		shared_ptr<level> l (new level(levelType, itsGrib->Message()->LevelValue()));
+		shared_ptr<level> l (new level(levelType, static_cast<float> (itsGrib->Message()->LevelValue())));
 
-		if (*l != options.level)
+		if (*l != *options.level)
 		{
 			itsLogger->Trace("Level does not match");
 			continue;
@@ -269,7 +273,7 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 
 		shared_ptr<info> newInfo (new info());
 
-		newInfo->Producer(producer);
+		newInfo->Producer(static_cast<unsigned int> (producer));
 
 		vector<shared_ptr<param>> theParams;
 
@@ -325,10 +329,8 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 		newInfo->TopRightLatitude(itsGrib->Message()->Y1());
 		newInfo->TopRightLongitude(itsGrib->Message()->X1());
 
-
 		size_t ni = itsGrib->Message()->SizeX();
 		size_t nj = itsGrib->Message()->SizeY();
-
 
 		/*
 		 * Read data from grib *
@@ -341,11 +343,8 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 		{
 			len = itsGrib->Message()->ValuesLength();
 
-			// d = new double[len];
-
 			d = itsGrib->Message()->Values();
-			//theNewInfo->DataLength(itsGrib->Message()->ValuesLength());
-			//theNewInfo->DataValues(itsGrib->Message()->Values());
+
 			itsLogger->Debug("Read data from file '" + theInputFile + "'");
 		}
 
@@ -356,7 +355,7 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 		newInfo->Param(p);
 		newInfo->Time(t);
 		newInfo->Level(l);
-
+/*
 		newInfo->ResetLocation();
 
 		size_t i = 0;
@@ -371,7 +370,7 @@ vector<shared_ptr<hilpee::info>> grib::FromFile(const string& theInputFile, cons
 
 			i++;
 		}
-
+*/
 		shared_ptr<d_matrix_t> dm = shared_ptr<d_matrix_t> (new d_matrix_t(ni, nj));
 
 		dm->Data(d, len);

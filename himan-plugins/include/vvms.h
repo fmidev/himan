@@ -1,12 +1,13 @@
-/*
- * tk2tc.h
+/**
  *
- *  Created on: Nov 17, 2012
+ * vvms.h
+ *
+ *  Created on: Dec 21, 2012
  *      Author: partio
  */
 
-#ifndef TK2TC_H
-#define TK2TC_H
+#ifndef VVMS_H
+#define VVMS_H
 
 #include "compiled_plugin.h"
 
@@ -15,21 +16,21 @@ namespace himan
 namespace plugin
 {
 
-class tk2tc : public compiled_plugin
+class vvms : public compiled_plugin
 {
 	public:
-		tk2tc();
+		vvms();
 
-		inline virtual ~tk2tc() {}
+		inline virtual ~vvms() {}
 
-		tk2tc(const tk2tc& other) = delete;
-		tk2tc& operator=(const tk2tc& other) = delete;
+		vvms(const vvms& other) = delete;
+		vvms& operator=(const vvms& other) = delete;
 
 		virtual void Process(std::shared_ptr<configuration> theConfiguration);
 
 		virtual std::string ClassName() const
 		{
-			return "himan::plugin::tk2tc";
+			return "himan::plugin::vvms";
 		}
 
 		virtual HPPluginClass PluginClass() const
@@ -44,8 +45,8 @@ class tk2tc : public compiled_plugin
 
 	private:
 
-		void Run(std::shared_ptr<info>, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 		bool AdjustParams(std::shared_ptr<info> myTargetInfo);
+		void Run(std::shared_ptr<info>, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 		void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 
 };
@@ -54,10 +55,11 @@ class tk2tc : public compiled_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<tk2tc> (new tk2tc());
+	return std::shared_ptr<vvms> (new vvms());
 }
 
 } // namespace plugin
 } // namespace himan
 
-#endif /* TK2TC */
+
+#endif /* VVMS_H */

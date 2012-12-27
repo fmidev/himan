@@ -12,15 +12,15 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 
-#define HILPEE_AUXILIARY_INCLUDE
+#define HIMAN_AUXILIARY_INCLUDE
 
 #include "grib.h"
 #include "querydata.h"
 #include "neons.h"
 
-#undef HILPEE_AUXILIARY_INCLUDE
+#undef HIMAN_AUXILIARY_INCLUDE
 
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 
 writer::writer()
 {

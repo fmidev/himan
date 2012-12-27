@@ -11,7 +11,7 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 
-#define HILPEE_AUXILIARY_INCLUDE
+#define HIMAN_AUXILIARY_INCLUDE
 
 #include "grib.h"
 #include "neons.h"
@@ -20,9 +20,9 @@
 #include "util.h"
 #include "querydata.h"
 
-#undef HILPEE_AUXILIARY_INCLUDE
+#undef HIMAN_AUXILIARY_INCLUDE
 
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 using namespace std;
 
 fetcher::fetcher()
@@ -30,46 +30,56 @@ fetcher::fetcher()
 	itsLogger = logger_factory::Instance()->GetLog("fetcher");
 }
 
-shared_ptr<hilpee::info> fetcher::Fetch(const hilpee::configuration& theConfiguration,
-                                        const hilpee::forecast_time& theValidTime,
-                                        const hilpee::level& theLevel,
-                                        const hilpee::param& theParam)
+shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfiguration,
+                                       shared_ptr<const forecast_time> theValidTime,
+                                       shared_ptr<const level> theLevel,
+                                       shared_ptr<const param> theParam)
 {
 
 	// 1. Fetch data from cache
 
+	// FromCache()
+
 	// 2. Fetch data from auxiliary files specified at command line
+
+	// while (loop_aux_files) {
+	//   FromFile()
+	// }
 
 	// 3. Fetch data from Neons
 
+	// GetFileNameFromNeons()
 
-	// Assume we got this file name from database
+
+	// FromFile()
+
+
 
 	string theFile;
 
-	if (theParam.Name() == "T-K")
+	if (theParam->Name() == "T-K")
 	{
-		theFile = "T_" + boost::lexical_cast<string> (theLevel.Type()) +
-					 "_" + boost::lexical_cast<string> (theLevel.Value()) +
-					 "_" + boost::lexical_cast<string> (theValidTime.Step()) +
-					".grib2";
+		theFile = "T_" + boost::lexical_cast<string> (theLevel->Type()) +
+		          "_" + boost::lexical_cast<string> (theLevel->Value()) +
+		          "_" + boost::lexical_cast<string> (theValidTime->Step()) +
+		          ".grib2";
 	}
 
-	else if (theParam.Name() == "P-HPA")
+	else if (theParam->Name() == "P-HPA")
 	{
 		theFile = "P.grib2";
 	}
 
-	else if (theParam.Name() == "VV-PAS")
+	else if (theParam->Name() == "VV-PAS")
 	{
-		theFile = "VV-PAS_" + boost::lexical_cast<string> (theLevel.Type()) +
-							 "_" + boost::lexical_cast<string> (theLevel.Value()) +
-							 "_" + boost::lexical_cast<string> (theValidTime.Step()) +
-							".grib2";
+		theFile = "VV-PAS_" + boost::lexical_cast<string> (theLevel->Type()) +
+		          "_" + boost::lexical_cast<string> (theLevel->Value()) +
+		          "_" + boost::lexical_cast<string> (theValidTime->Step()) +
+		          ".grib2";
 	}
 	else
 	{
-		throw runtime_error("Fetching of param " + theParam.Name() + " not supported yet");
+		throw runtime_error("Fetching of param " + theParam->Name() + " not supported yet");
 	}
 
 	const search_options opts { theValidTime, theParam, theLevel, theConfiguration } ;
@@ -85,15 +95,15 @@ shared_ptr<hilpee::info> fetcher::Fetch(const hilpee::configuration& theConfigur
 	 *  Safeguard; later in the code we do not check whether the data requested
 	 *  was actually what was requested.
 	 */
-/*
-	assert(theConfiguration.SourceProducer() == theInfos[0]->Producer());
+	/*
+		assert(theConfiguration.SourceProducer() == theInfos[0]->Producer());
 
-	assert(*(theInfos[0]->Level()) == theLevel);
+		assert(*(theInfos[0]->Level()) == theLevel);
 
-	assert(*(theInfos[0]->Time()) == theValidTime);
+		assert(*(theInfos[0]->Time()) == theValidTime);
 
-	assert(*(theInfos[0]->Param()) == theParam);
-*/
+		assert(*(theInfos[0]->Param()) == theParam);
+	*/
 	return theInfos[0];
 
 }
@@ -106,10 +116,10 @@ shared_ptr<hilpee::info> fetcher::Fetch(const hilpee::configuration& theConfigur
  * read fails).
  */
 
-vector<shared_ptr<hilpee::info>> fetcher::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info>> fetcher::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
 {
 
-	vector<shared_ptr<hilpee::info>> theInfos ;
+	vector<shared_ptr<himan::info>> theInfos ;
 
 	shared_ptr<util> theUtil = dynamic_pointer_cast<util> (plugin_factory::Instance()->Plugin("util"));
 
@@ -156,7 +166,7 @@ vector<shared_ptr<hilpee::info>> fetcher::FromFile(const string& theInputFile, c
  * metadata.
  */
 
-vector<shared_ptr<hilpee::info> > fetcher::FromGrib(const string& theInputFile, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& theInputFile, const search_options& options, bool theReadContents)
 {
 
 	shared_ptr<grib> g = dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
@@ -168,7 +178,7 @@ vector<shared_ptr<hilpee::info> > fetcher::FromGrib(const string& theInputFile, 
 	return theInfos;
 }
 
-vector<shared_ptr<hilpee::info>> fetcher::FromQueryData(const string& theInputFile, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& theInputFile, const search_options& options, bool theReadContents)
 {
 
 	itsLogger->Debug("Reading metadata from file '" + theInputFile + "'");

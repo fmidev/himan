@@ -9,9 +9,9 @@
 #define TPOT_H
 
 #include "compiled_plugin.h"
-#include <boost/thread.hpp>
+//#include <boost/thread.hpp>
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
@@ -23,11 +23,14 @@ class tpot : public compiled_plugin
 
 		inline virtual ~tpot() {}
 
+		tpot(const tpot& other) = delete;
+		tpot& operator=(const tpot& other) = delete;
+
 		virtual void Process(std::shared_ptr<configuration> theConfiguration);
 
 		virtual std::string ClassName() const
 		{
-			return "hilpee::plugin::tpot";
+			return "himan::plugin::tpot";
 		}
 
 		virtual HPPluginClass PluginClass() const
@@ -42,24 +45,21 @@ class tpot : public compiled_plugin
 
 	private:
 
+		void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 		bool AdjustParams(std::shared_ptr<info> myTargetInfo);
-		virtual void Run(std::shared_ptr<info>, const configuration& theConfiguration, unsigned short theThreadIndex);
-		void Calculate(std::shared_ptr<info> theTargetInfo, const configuration& theConfiguration, unsigned short theThreadIndex);
-
-		std::shared_ptr<info> itsMetaTargetInfo;
-		boost::mutex itsMetaMutex;
+		void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 
 };
 
 // the class factory
 
-extern "C" std::shared_ptr<hilpee_plugin> create()
+extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::shared_ptr<tpot> (new tpot());
 }
 
 } // namespace plugin
-} // namespace hilpee
+} // namespace himan
 
 
 #endif /* TPOT_H */

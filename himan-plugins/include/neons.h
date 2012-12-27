@@ -25,7 +25,7 @@
 #include "auxiliary_plugin.h"
 #include "NFmiNeonsDB.h"
 
-namespace hilpee
+namespace himan
 {
 namespace plugin
 {
@@ -38,9 +38,12 @@ class neons : public auxiliary_plugin
 
 		virtual ~neons() {}
 
+		neons(const neons& other) = delete;
+		neons& operator=(const neons& other) = delete;
+
 		virtual std::string ClassName() const
 		{
-			return "hilpee::plugin::neons";
+			return "himan::plugin::neons";
 		}
 
 		virtual HPPluginClass PluginClass() const
@@ -60,18 +63,18 @@ class neons : public auxiliary_plugin
 
 };
 
-#ifndef HILPEE_AUXILIARY_INCLUDE
+#ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<hilpee_plugin> create()
+extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::shared_ptr<neons> (new neons());
 }
 
-#endif /* HILPEE_AUXILIARY_INCLUDE */
+#endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
-} // namespace hilpee
+} // namespace himan
 
 #endif /* NEONS_H */

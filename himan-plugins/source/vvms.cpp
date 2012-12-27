@@ -1,45 +1,45 @@
 /*
- * vvmms.cpp
+ * vvms.cpp
  *
  *  Created on: Nov 20, 2012
  *      Author: partio
  */
 
-#include "vvmms.h"
+#include "vvms.h"
 #include <iostream>
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 
-#define HILPEE_AUXILIARY_INCLUDE
+#define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
 #include "writer.h"
 #include "util.h"
 
-#undef HILPEE_AUXILIARY_INCLUDE
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
-using namespace hilpee::plugin;
+using namespace himan::plugin;
 
-const int MAX_THREADS = 1; // Max number of threads we allow
+const unsigned int MAX_THREADS = 2; // Max number of threads we allow
 
-vvmms::vvmms()
+vvms::vvms()
 {
 	itsClearTextFormula = "w = 1000 * -(ver) * 287 * T * (9.81*p)";
 
-	itsLogger = logger_factory::Instance()->GetLog("vvmms");
+	itsLogger = logger_factory::Instance()->GetLog("vvms");
 
 }
 
-void vvmms::Process(shared_ptr<configuration> theConfiguration)
+void vvms::Process(shared_ptr<configuration> theConfiguration)
 {
 
 	// Get number of threads to use
 
-	int theCoreCount = boost::thread::hardware_concurrency(); // Number of cores
+	unsigned int theCoreCount = boost::thread::hardware_concurrency(); // Number of cores
 
-	unsigned short theThreadCount = theCoreCount > MAX_THREADS ? MAX_THREADS : theCoreCount;
+	unsigned int theThreadCount = theCoreCount > MAX_THREADS ? MAX_THREADS : theCoreCount;
 
 	boost::thread_group g;
 
@@ -51,9 +51,6 @@ void vvmms::Process(shared_ptr<configuration> theConfiguration)
 
 	/*
 	 * Set target parameter to potential temperature
-	 * - name TP-K
-	 * - univ_id 8
-	 * - grib2 descriptor 0'00'002
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
@@ -63,11 +60,11 @@ void vvmms::Process(shared_ptr<configuration> theConfiguration)
 
 	vector<shared_ptr<param>> theParams;
 
-	shared_ptr<param> theRequestedParam = std::shared_ptr<param> (new param("TP-K", 8));
+	shared_ptr<param> theRequestedParam = std::shared_ptr<param> (new param("VV-MS", 143));
 
 	theRequestedParam->GribDiscipline(0);
-	theRequestedParam->GribCategory(0);
-	theRequestedParam->GribParameter(2);
+	theRequestedParam->GribCategory(2);
+	theRequestedParam->GribParameter(9);
 
 	theParams.push_back(theRequestedParam);
 
@@ -80,15 +77,14 @@ void vvmms::Process(shared_ptr<configuration> theConfiguration)
 	theTargetInfo->Create();
 
 	/*
-	 * MetaTargetInfo is used to feed the running threads.
+	 * FeederInfo is used to feed the running threads.
 	 */
 
-	//itsMetaTargetInfo = shared_ptr<info> (new info (*theTargetInfo));
-	itsMetaTargetInfo = theTargetInfo->Clone();
+	itsFeederInfo = theTargetInfo->Clone();
 
-	itsMetaTargetInfo->Reset();
+	itsFeederInfo->Reset();
 
-	itsMetaTargetInfo->Param(theRequestedParam);
+	itsFeederInfo->Param(theRequestedParam);
 
 	/*
 	 * Each thread will have a copy of the target info.
@@ -103,13 +99,12 @@ void vvmms::Process(shared_ptr<configuration> theConfiguration)
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		//theTargetInfos[i] = std::shared_ptr<info> (new info(*theTargetInfo));
 		theTargetInfos[i] = theTargetInfo->Clone();
 
-		boost::thread* t = new boost::thread(&vvmms::Run,
+		boost::thread* t = new boost::thread(&vvms::Run,
 		                                     this,
 		                                     theTargetInfos[i],
-		                                     *theConfiguration,
+		                                     theConfiguration,
 		                                     i + 1);
 
 		g.add_thread(t);
@@ -127,29 +122,28 @@ void vvmms::Process(shared_ptr<configuration> theConfiguration)
 
 		theTargetInfo->FirstTime();
 
-		string theOutputFile = "Hilpee_" + theTargetInfo->Param()->Name() + "_" + theTargetInfo->Time()->OriginDateTime()->String("%Y%m%d%H");
+		string theOutputFile = "himan_" + theTargetInfo->Param()->Name() + "_" + theTargetInfo->Time()->OriginDateTime()->String("%Y%m%d%H");
 		theWriter->ToFile(theTargetInfo, theOutputFile, theConfiguration->OutputFileType(), false);
 
 	}
 }
 
-void vvmms::Run(shared_ptr<info> myTargetInfo,
-               const configuration& theConfiguration,
+void vvms::Run(shared_ptr<info> myTargetInfo,
+               shared_ptr<const configuration> theConfiguration,
                unsigned short theThreadIndex)
 {
 
 	while (AdjustParams(myTargetInfo))
 	{
 		Calculate(myTargetInfo, theConfiguration, theThreadIndex);
-
 	}
 
 }
 
-bool vvmms::AdjustParams(shared_ptr<info> myTargetInfo)
+bool vvms::AdjustParams(shared_ptr<info> myTargetInfo)
 {
 
-	boost::mutex::scoped_lock lock(itsMetaMutex);
+	boost::mutex::scoped_lock lock(itsAdjustParamMutex);
 
 	// This function has access to the original target info
 
@@ -160,9 +154,9 @@ bool vvmms::AdjustParams(shared_ptr<info> myTargetInfo)
 	if (1)   // say , leading_dimension == time
 	{
 
-		if (itsMetaTargetInfo->NextTime())
+		if (itsFeederInfo->NextTime())
 		{
-			myTargetInfo->Time(itsMetaTargetInfo->Time());
+			myTargetInfo->Time(itsFeederInfo->Time());
 		}
 		else
 		{
@@ -179,8 +173,8 @@ bool vvmms::AdjustParams(shared_ptr<info> myTargetInfo)
  * This function does the actual calculation.
  */
 
-void vvmms::Calculate(shared_ptr<info> myTargetInfo,
-                     const configuration& theConfiguration,
+void vvms::Calculate(shared_ptr<info> myTargetInfo,
+                     shared_ptr<const configuration> theConfiguration,
                      unsigned short theThreadIndex)
 {
 
@@ -189,11 +183,11 @@ void vvmms::Calculate(shared_ptr<info> myTargetInfo,
 
 	// Required source parameters
 
-	param theT ("T-K");
-	param theP ("P-HPA");
-	param theVV ("VV-PAS");
+	shared_ptr<param> TParam (new param("T-K"));
+	shared_ptr<param> PParam (new param("P-HPA"));
+	shared_ptr<param> VVParam (new param("VV-PAS"));
 
-	unique_ptr<logger> myThreadedLogger = logger_factory::Instance()->GetLog("vvmmsThread #" + boost::lexical_cast<string> (theThreadIndex));
+	unique_ptr<logger> myThreadedLogger = logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (theThreadIndex));
 
 	myTargetInfo->ResetLevel();
 	myTargetInfo->FirstParam();
@@ -204,16 +198,16 @@ void vvmms::Calculate(shared_ptr<info> myTargetInfo,
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time()->ValidDateTime()->String("%Y%m%d%H") +
 		                        " level " + boost::lexical_cast<string> (myTargetInfo->Level()->Value()));
 
-		myTargetInfo->Data()->Resize(theConfiguration.Ni(), theConfiguration.Nj());
+		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
 
 		double PScale = 1;
 		double TBase = 0;
 
 		// Source info for T
 		shared_ptr<info> TInfo = theFetcher->Fetch(theConfiguration,
-		                            *myTargetInfo->Time(),
-		                            *myTargetInfo->Level(),
-		                            theT);
+		                         myTargetInfo->Time(),
+		                         myTargetInfo->Level(),
+		                         TParam);
 
 		if (TInfo->Param()->Unit() == kC)
 		{
@@ -221,7 +215,7 @@ void vvmms::Calculate(shared_ptr<info> myTargetInfo,
 		}
 
 		/*
-		 * If vvmms is calculated for pressure levels, the P value
+		 * If vvms is calculated for pressure levels, the P value
 		 * equals to level value. Otherwise we have to fetch P
 		 * separately.
 		 */
@@ -229,29 +223,29 @@ void vvmms::Calculate(shared_ptr<info> myTargetInfo,
 		shared_ptr<info> PInfo;
 		shared_ptr<NFmiGrid> PGrid;
 
-		bool isPressureLevel = myTargetInfo->Level()->Type() == kPressure;
+		bool isPressureLevel = (myTargetInfo->Level()->Type() == kPressure);
 
 		if (!isPressureLevel)
 		{
 			// Source info for P
 			PInfo = theFetcher->Fetch(theConfiguration,
-		                          *myTargetInfo->Time(),
-		                          *myTargetInfo->Level(),
-		                          theP);
+			                          myTargetInfo->Time(),
+			                          myTargetInfo->Level(),
+			                          PParam);
 
 			if (PInfo->Param()->Unit() == kPa)
 			{
 				PScale = 0.01;
 			}
 
-			shared_ptr<NFmiGrid> PGrid = PInfo->ToNewbaseGrid();
+			PGrid = PInfo->ToNewbaseGrid();
 		}
 
 		// Source info for Vertical Velocity
 		shared_ptr<info> VVInfo = theFetcher->Fetch(theConfiguration,
-				                            *myTargetInfo->Time(),
-				                            *myTargetInfo->Level(),
-				                            theVV);
+		                          myTargetInfo->Time(),
+		                          myTargetInfo->Level(),
+		                          VVParam);
 
 		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
 		shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
@@ -260,34 +254,80 @@ void vvmms::Calculate(shared_ptr<info> myTargetInfo,
 		int missingCount = 0;
 		int count = 0;
 
-		myTargetInfo->ResetLocation();
-
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
+		myTargetInfo->ResetLocation();
+
 		targetGrid->Reset();
+
+		// TODO: data is not always +x+y
+
+		// check if source area and grid == target area and grid --> no interpolation required
+
+		bool haveCUDA = false;
+
+		if (haveCUDA)
+		{
+
+			if (myTargetInfo->GridAndAreaEquals(TInfo) && myTargetInfo->GridAndAreaEquals(VVInfo) &&
+			        (isPressureLevel || myTargetInfo->GridAndAreaEquals(PInfo)))
+			{
+				// doCUDA();
+				// continue;
+			}
+			else
+			{
+				// itsLogger->Info("Grid definition not suitable for CUDA calculation");
+			}
+
+		}
 
 		while (myTargetInfo->NextLocation() && targetGrid->Next())
 		{
 			count++;
 
-			NFmiPoint thePoint = targetGrid->LatLon();
-
 			double T = kFloatMissing;
 			double P = kFloatMissing;
 			double VV = kFloatMissing;
 
-			TGrid->InterpolateToLatLonPoint(thePoint, T);
+#ifdef NO_INTERPOLATION_WHEN_GRIDS_ARE_EQUAL
 
-			if (isPressureLevel)
+			if (gridsAreEqual)
 			{
-				P = myTargetInfo->Level()->Value();
+				T = TGrid->FloatValue();
+				VV = VVGrid->FloatValue();
+
+				if (isPressureLevel)
+				{
+					P = myTargetInfo->Level()->Value();
+				}
+				else
+				{
+					PGrid->FloatValue();
+				}
+
 			}
 			else
 			{
-				PGrid->InterpolateToLatLonPoint(thePoint, P);
+#endif
+				NFmiPoint thePoint = targetGrid->LatLon();
+
+				TGrid->InterpolateToLatLonPoint(thePoint, T);
+				VVGrid->InterpolateToLatLonPoint(thePoint, VV);
+
+				if (isPressureLevel)
+				{
+					P = myTargetInfo->Level()->Value();
+				}
+				else
+				{
+					PGrid->InterpolateToLatLonPoint(thePoint, P);
+				}
+
+#ifdef NO_INTERPOLATION_WHEN_GRIDS_ARE_EQUAL
 			}
 
-			VVGrid->InterpolateToLatLonPoint(thePoint, VV);
+#endif
 
 			if (T == kFloatMissing || P == kFloatMissing || VV == kFloatMissing)
 			{
@@ -297,10 +337,9 @@ void vvmms::Calculate(shared_ptr<info> myTargetInfo,
 				continue;
 			}
 
-			//double Tp = (T + TBase) * powf((1000 / (P * PScale)), 0.286);
-			double VVmms = 287 * -VV * (T+TBase) / (9.81 * (P*PScale));
+			double VVms = 287 * -VV * (T + TBase) / (9.81 * (P * PScale));
 
-			if (!myTargetInfo->Value(VVmms))
+			if (!myTargetInfo->Value(VVms))
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
 			}
@@ -310,15 +349,12 @@ void vvmms::Calculate(shared_ptr<info> myTargetInfo,
 		/*
 		 * Now we are done for this level
 		 *
-		 * If output file type is GRIB, we can write individual time/level combination
-		 * to file.
-		 *
-		 * TODO: Should we clone myTargetInfo to prevent writer modifying our version of info ?
+		 * Clone info-instance to writer since it might change our descriptor places
 		 */
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (!theConfiguration.WholeFileWrite())
+		if (!theConfiguration->WholeFileWrite())
 		{
 
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
@@ -326,7 +362,7 @@ void vvmms::Calculate(shared_ptr<info> myTargetInfo,
 
 			string outputFile = theUtil->MakeNeonsFileName(*myTargetInfo);
 
-			theWriter->ToFile(myTargetInfo, outputFile, theConfiguration.OutputFileType(), true);
+			theWriter->ToFile(myTargetInfo->Clone(), outputFile, theConfiguration->OutputFileType(), true);
 		}
 	}
 }

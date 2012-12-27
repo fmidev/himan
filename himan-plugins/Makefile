@@ -7,7 +7,7 @@ LIB = tpot \
       writer \
       querydata \
       util \
-      vvmms
+      vvms
 
 MAINFLAGS = -Wall -W -Wno-unused-parameter -Werror
 
@@ -20,9 +20,8 @@ EXTRAFLAGS = -Wpointer-arith \
 	-Wno-pmf-conversions \
 	-Wsign-promo \
 	-Wchar-subscripts \
-	-Wold-style-cast
-
-#	-Wconversion \
+	-Wold-style-cast \
+	-Wconversion \
 
 DIFFICULTFLAGS = -pedantic -Weffc++ -Wredundant-decls -Wshadow -Woverloaded-virtual -Wunreachable-code -Wctor-dtor-privacy
 
@@ -60,7 +59,7 @@ INCLUDES = -I include \
            -I../fmigrib/include \
            -I../fminc/include \
            -I$(HOME)/local/include \
-           -I/usr/include/oracle/11.2/client64 \
+           -I/usr/include/oracle \
            -I/usr/include/smartmet/newbase
 
 # CUDA_INCLUDES = -I include \
@@ -71,7 +70,7 @@ LIBS =  -L$(libdir) \
 	-L../fmigrib/lib \
 	-L../fminc/lib \
 	-L../fmidb/lib \
-        -L/usr/lib/oracle/11.2/client64/lib \
+        -L/usr/lib64/oracle \
 	/usr/lib64/libsmartmet_newbase.a \
         -lfmidb \
 	-lfmigrib \
@@ -82,7 +81,7 @@ LIBS =  -L$(libdir) \
 	-lpng \
 	-ljasper \
 	-lclntsh \
-	$(HOME)/local/lib/libgrib_api.a \
+	/usr/lib64/libgrib_api.a \
         -lpthread
 
 # CUDA_LIBS = -L $(CUDA_LIB_PATH) \
