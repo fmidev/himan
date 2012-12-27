@@ -34,9 +34,9 @@ logger_factory* logger_factory::Instance()
 	return itsInstance;
 }
 
-std::unique_ptr<logger> logger_factory::GetLog(const std::string& theUserName)
+logger* logger_factory::GetLog(const std::string& theUserName)
 {
-	return std::unique_ptr<logger> (new logger(theUserName, itsDebugStateMain));
+	return new logger(theUserName, itsDebugStateMain);
 }
 
 void logger_factory::DebugState(HPDebugState theDebugState)

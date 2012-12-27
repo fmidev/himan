@@ -18,7 +18,7 @@ param::param()
 	, itsGribDiscipline(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
 {
-	itsLogger = logger_factory::Instance()->GetLog("param");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const std::string& theName, unsigned long theUnivId)
@@ -28,7 +28,7 @@ param::param(const std::string& theName, unsigned long theUnivId)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
 {
-	itsLogger = logger_factory::Instance()->GetLog("param");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const std::string& theName)
@@ -38,7 +38,7 @@ param::param(const std::string& theName)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
 {
-	itsLogger = logger_factory::Instance()->GetLog("param");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const std::string& theName,
@@ -60,7 +60,7 @@ param::param(const std::string& theName,
 	, itsGribDiscipline(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
 {
-	itsLogger = logger_factory::Instance()->GetLog("param");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const param& other)
@@ -70,7 +70,7 @@ param::param(const param& other)
 	, itsGribDiscipline(other.itsGribDiscipline)
 	, itsUnit(other.itsUnit)
 {
-	itsLogger = logger_factory::Instance()->GetLog("param");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param& param::operator=(const param& other)

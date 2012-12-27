@@ -12,21 +12,21 @@ using namespace himan;
 
 forecast_time::forecast_time()
 {
-	itsLogger = logger_factory::Instance()->GetLog("forecast_time");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime)
 	: itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(theOriginDateTime)))
 	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime)))
 {
-	itsLogger = logger_factory::Instance()->GetLog("forecast_time");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::shared_ptr<raw_time> theValidDateTime)
 	: itsOriginDateTime(theOriginDateTime)
 	, itsValidDateTime(theValidDateTime)
 {
-	itsLogger = logger_factory::Instance()->GetLog("forecast_time");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const std::string& theOriginDateTime,
@@ -35,14 +35,14 @@ forecast_time::forecast_time(const std::string& theOriginDateTime,
 	: itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(theOriginDateTime, theDateMask)))
 	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime, theDateMask)))
 {
-	itsLogger = logger_factory::Instance()->GetLog("forecast_time");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const forecast_time& other)
 	: itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime)))
 	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime)))
 {
-	itsLogger = logger_factory::Instance()->GetLog("forecast_time");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time& forecast_time::operator=(const forecast_time& other)

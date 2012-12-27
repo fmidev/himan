@@ -30,7 +30,7 @@ plugin_factory* plugin_factory::Instance()
 plugin_factory::plugin_factory() : itsPluginSearchPath()
 {
 
-	itsLogger = logger_factory::Instance()->GetLog("plugin_factory");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("plugin_factory"));
 
 	itsPluginSearchPath.push_back("../himan-plugins/lib");
 
