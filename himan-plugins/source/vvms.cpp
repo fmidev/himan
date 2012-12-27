@@ -26,9 +26,9 @@ const unsigned int MAX_THREADS = 2; // Max number of threads we allow
 
 vvms::vvms()
 {
-	itsClearTextFormula = "w = 1000 * -(ver) * 287 * T * (9.81*p)";
+	itsClearTextFormula = "w = -(ver) * 287 * T * (9.81*p)";
 
-	itsLogger = logger_factory::Instance()->GetLog("vvms");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvms"));
 
 }
 
@@ -187,7 +187,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 	shared_ptr<param> PParam (new param("P-HPA"));
 	shared_ptr<param> VVParam (new param("VV-PAS"));
 
-	unique_ptr<logger> myThreadedLogger = logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (theThreadIndex));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
 	myTargetInfo->ResetLevel();
 	myTargetInfo->FirstParam();
@@ -233,9 +233,9 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			                          myTargetInfo->Level(),
 			                          PParam);
 
-			if (PInfo->Param()->Unit() == kPa)
+			if (PInfo->Param()->Unit() == kHPa)
 			{
-				PScale = 0.01;
+				PScale = 100;
 			}
 
 			PGrid = PInfo->ToNewbaseGrid();
@@ -317,7 +317,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 				if (isPressureLevel)
 				{
-					P = myTargetInfo->Level()->Value();
+					P = 100 * myTargetInfo->Level()->Value();
 				}
 				else
 				{
