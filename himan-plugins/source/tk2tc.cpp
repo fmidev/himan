@@ -28,7 +28,7 @@ tk2tc::tk2tc()
 {
 	itsClearTextFormula = "Tc = Tk - 273.15";
 
-	itsLogger = logger_factory::Instance()->GetLog("tk2tc");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }
 
 void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
@@ -186,7 +186,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 	shared_ptr<param> TParam (new param("T-K"));
 
-	unique_ptr<logger> myThreadedLogger = logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
 	myTargetInfo->ResetLevel();
 	myTargetInfo->FirstParam();

@@ -24,7 +24,7 @@ using namespace himan::plugin;
 
 writer::writer()
 {
-	itsLogger = logger_factory::Instance()->GetLog("writer");
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("writer"));
 }
 
 bool writer::ToFile(std::shared_ptr<info> theInfo,
