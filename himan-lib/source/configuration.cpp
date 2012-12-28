@@ -46,6 +46,11 @@ std::vector<std::string> configuration::AuxiliaryFiles() const
 	return itsAuxiliaryFiles;
 }
 
+void configuration::AuxiliaryFiles(const std::vector<std::string> theAuxiliaryFiles)
+{
+	itsAuxiliaryFiles = theAuxiliaryFiles;
+}
+
 std::vector<std::string> configuration::Plugins() const
 {
 	return itsPlugins;

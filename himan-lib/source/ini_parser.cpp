@@ -114,14 +114,14 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 	("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
 	("version,v", "display version number")
 	("configuration-file,f", po::value(&(itsConfiguration->itsConfigurationFile)), "configuration file")
-	("aux-files,a", po::value<vector<string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
+	("auxiliary-files,a", po::value<vector<string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
 	("plugins,p", po::value<vector<string> > (&(itsConfiguration->itsPlugins)), "calculated plugins")
 	("list-plugins,l", "list all defined plugins")
 	("d,debug-level", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
 	;
 
 	po::positional_options_description p;
-	p.add("aux-files", -1);
+	p.add("auxiliary-files", -1);
 
 	po::variables_map opt;
 	po::store(po::command_line_parser(argc, argv)

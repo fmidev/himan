@@ -73,6 +73,7 @@ class configuration
 		 */
 
 		std::vector<std::string> AuxiliaryFiles() const;
+		void AuxiliaryFiles(const std::vector<std::string> theAuxiliaryFiles);
 
 		/**
 		 * @return Filetype of created file. One of: grib1, grib2, querydata, netcdf
