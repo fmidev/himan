@@ -23,9 +23,10 @@ std::string util::MakeNeonsFileName(std::shared_ptr<const info> info) const
 
 	std::ostringstream neonsFileName;
 
-	std::string base = "/cluster/hiladata/BDAP/REFStorage/";
+	std::string base = "/tmp"; //"/cluster/hiladata/BDAP/REFStorage/";
 
 	neonsFileName 	<< base
+					<< "/"
 					<< info->Producer().Centre()
 					<< "_"
 					<< info->Producer().Process()
