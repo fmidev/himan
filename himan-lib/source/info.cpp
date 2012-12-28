@@ -108,7 +108,7 @@ std::ostream& info::Write(std::ostream& file) const
 
 	file << "__itsOriginDateTime__ " << OriginDateTime().String() << endl;
 
-	//file << "__itsProducer__" << itsProducer << endl;
+	//file << "__itsProducer__ " << itsProducer << endl;
 
 	if (itsParams.size())
 	{
@@ -232,7 +232,7 @@ void info::Orientation(double theOrientation)
 	itsOrientation = theOrientation;
 }
 
-producer info::Producer() const
+const producer& info::Producer() const
 {
 	return itsProducer;
 }
