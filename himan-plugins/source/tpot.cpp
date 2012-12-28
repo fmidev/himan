@@ -27,7 +27,7 @@ using namespace himan::plugin;
 
 #ifdef CUDA
 
-void tpot_cuda(double* Tin, double* Pin, double* TPout, int N);
+void tpot_cuda(const float* Tin, const float* Pin, float* TPout, int N);
 
 #endif
 
@@ -267,18 +267,42 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
 		shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
 
-#ifdef CUDA
-
-		double* t = 0;
-		double* p = 0;
-		double* tp = 0;
-
-		tpot_cuda(t, p, tp, 0);
-
-#else
-
 		int missingCount = 0;
 		int count = 0;
+
+#ifdef CUDA
+
+		size_t size = targetGrid->Size();
+
+		// cuda works on float
+
+		const float* t = TGrid->DataPool()->Data();
+		const float* p = new float[size]; // Assume pressure level data
+		float* tp = new float[size];
+
+		tpot_cuda(t, p, tp, size);
+
+		double *data = new double[size];
+
+		for (size_t i = 0; i < size; i++)
+		{
+			data[i] = static_cast<float> (tp[i]);
+
+			if (data[i] == kFloatMissing)
+			{
+				missingCount++;
+			}
+
+			count++;
+		}
+
+		myTargetInfo->Data()->Data(data, size);
+
+		delete [] tp;
+		delete [] p;
+		delete [] data;
+
+#else
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
