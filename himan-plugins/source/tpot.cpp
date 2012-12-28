@@ -81,8 +81,6 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
 
 	}
 
-	cout << "noe set: " << 			theTargetInfo->Producer().Process() << endl;
-
 	/*
 	 * Set target parameter to potential temperature
 	 * - name TP-K
