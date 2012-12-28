@@ -112,13 +112,16 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_li
     (kDepth, "depth")
     ;
 
+// Values match to newbase
+
 enum HPScanningMode
 {
 	kUnknownScanningMode = 0,
-	kplusXplusY,
-	kplusXminusY,
-	kminusXplusY,
-	kminusXminusY
+	kTopLeft = 17, 		// +x-y
+	kTopRight = 18,		// -x-y
+	kBottomLeft = 33,	// +x+y
+	kBottomRight = 34,	// -x+y
+
 };
 
 enum HPExceptionType

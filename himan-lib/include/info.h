@@ -166,6 +166,9 @@ class info
 		std::shared_ptr<NFmiGrid> ToNewbaseGrid() const;
 		bool GridAndAreaEquals(std::shared_ptr<const info> other) const;
 
+		HPScanningMode ScanningMode() const;
+		void ScanningMode(HPScanningMode theScanningMode);
+
 	private:
 
 		size_t CurrentIndex() const;
@@ -194,6 +197,8 @@ class info
 		size_t itsLevelIndex;
 		size_t itsTimeIndex;
 		size_t itsLocationIndex;
+
+		HPScanningMode itsScanningMode; //<! When data is read from files, we need to know what is the scanning mode
 
 };
 

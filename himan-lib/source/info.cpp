@@ -92,6 +92,8 @@ void info::Init()
 	itsParamIndex = kMAX_SIZE_T;
 	itsLocationIndex = kMAX_SIZE_T;
 
+	itsScanningMode = kTopLeft;
+
 }
 
 std::ostream& info::Write(std::ostream& file) const
@@ -602,6 +604,16 @@ double info::Dj() const
 	return abs((itsBottomLeftLatitude - itsTopRightLatitude) / Nj());
 }
 
+HPScanningMode info::ScanningMode() const
+{
+	return itsScanningMode;
+}
+
+void info::ScanningMode(HPScanningMode theScanningMode)
+{
+	itsScanningMode = theScanningMode;
+}
+
 bool info::GridAndAreaEquals(std::shared_ptr<const info> other) const
 {
 
@@ -654,22 +666,36 @@ bool info::GridAndAreaEquals(std::shared_ptr<const info> other) const
 shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 {
 
+	FmiInterpolationMethod interp = kLinearly;
+	FmiDirection dir = static_cast<FmiDirection> (itsScanningMode);
+
 	NFmiArea* theArea = 0;
+
+	// Newbase does not understand grib2 longitude coordinates
+
+	double bottomLeftLongitude = itsBottomLeftLongitude;
+	double topRightLongitude = itsTopRightLongitude;
+
+	if (bottomLeftLongitude > 180 || topRightLongitude > 180)
+	{
+		bottomLeftLongitude -= 180;
+		topRightLongitude -= 180;
+	}
 
 	switch (itsProjection)
 	{
 		case kLatLonProjection:
 			{
-				theArea = new NFmiLatLonArea(NFmiPoint(itsBottomLeftLongitude, itsBottomLeftLatitude),
-				                             NFmiPoint(itsTopRightLongitude, itsTopRightLatitude));
+				theArea = new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
+				                             NFmiPoint(topRightLongitude, itsTopRightLatitude));
 
 				break;
 			}
 
 		case kRotatedLatLonProjection:
 			{
-				theArea = new NFmiRotatedLatLonArea(NFmiPoint(itsBottomLeftLongitude, itsBottomLeftLatitude),
-				                                    NFmiPoint(itsTopRightLongitude, itsTopRightLatitude),
+				theArea = new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
+				                                    NFmiPoint(topRightLongitude, itsTopRightLatitude),
 				                                    NFmiPoint(0., -30.) // south pole location
 				                                   );
 				break;
@@ -677,8 +703,8 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 
 		case kStereographicProjection:
 			{
-				theArea = new NFmiStereographicArea(NFmiPoint(itsBottomLeftLongitude, itsBottomLeftLatitude),
-				                                    NFmiPoint(itsTopRightLongitude, itsTopRightLatitude),
+				theArea = new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
+				                                    NFmiPoint(topRightLongitude, itsTopRightLatitude),
 				                                    itsOrientation);
 				break;
 
@@ -690,7 +716,7 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 			break;
 	}
 
-	shared_ptr<NFmiGrid> theGrid (new NFmiGrid(theArea, Ni(), Nj()));
+	shared_ptr<NFmiGrid> theGrid (new NFmiGrid(theArea, Ni(), Nj(), dir, interp));
 
 	size_t dataSize = itsDataMatrix->At(CurrentIndex())->Size();
 
