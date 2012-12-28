@@ -58,11 +58,30 @@ class neons : public auxiliary_plugin
 		}
 
 		std::vector<std::string> Files(const search_options& options);
+		bool Save(std::shared_ptr<const info> resultInfo);
 
 	private:
+
+		/**
+		 * @brief Initialize connection pool
+		 *
+		 * This function will be called just once even in a threaded environment
+		 * and it will set the maximum size of the connection pool.
+		 */
+
 		void InitPool();
 
-		std::unique_ptr<NFmiNeonsDB> itsNeonsDB;
+		/**
+		 * @brief Connect to database
+		 *
+		 * We cannot connect to database directly in the constructor, but we need
+		 * to use another function for that.
+		 */
+
+		void Init();
+
+		bool itsInit; //!< Holds the initialization status of the database connection
+		std::unique_ptr<NFmiNeonsDB> itsNeonsDB; //<! The actual database class instance
 
 };
 
