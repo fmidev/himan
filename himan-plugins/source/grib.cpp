@@ -73,13 +73,33 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 		switch (theInfo->Projection())
 		{
 			case kLatLonProjection:
+			{
 				itsGrib->Message()->GridType(0);
-				itsGrib->Message()->X0(theInfo->BottomLeftLongitude());
-				itsGrib->Message()->Y0(theInfo->BottomLeftLatitude());
-				itsGrib->Message()->X1(theInfo->TopRightLongitude());
-				itsGrib->Message()->Y1(theInfo->TopRightLatitude());
-				break;
 
+				string scanningMode = "+x-y"; // GFS
+
+				double latitudeOfFirstGridPointInDegrees, longitudeOfFirstGridPointInDegrees;
+				double latitudeOfLastGridPointInDegrees, longitudeOfLastGridPointInDegrees;
+
+				if (scanningMode == "+x-y")
+				{
+					latitudeOfFirstGridPointInDegrees = theInfo->TopRightLatitude();
+					longitudeOfFirstGridPointInDegrees = theInfo->BottomLeftLongitude();
+
+					latitudeOfLastGridPointInDegrees = theInfo->BottomLeftLatitude();
+					longitudeOfLastGridPointInDegrees = theInfo->TopRightLongitude();
+				}
+				else
+				{
+					throw runtime_error(ClassName() + ": unsupported scanning mode: " + scanningMode);
+				}
+
+				itsGrib->Message()->X0(longitudeOfFirstGridPointInDegrees);
+				itsGrib->Message()->Y0(latitudeOfFirstGridPointInDegrees);
+				itsGrib->Message()->X1(longitudeOfLastGridPointInDegrees);
+				itsGrib->Message()->Y1(latitudeOfLastGridPointInDegrees);
+				break;
+			}
 			case kStereographicProjection:
 				itsGrib->Message()->GridType(20);
 				itsGrib->Message()->X0(theInfo->BottomLeftLongitude());
@@ -96,6 +116,14 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 
 		itsGrib->Message()->SizeX(theInfo->Ni());
 		itsGrib->Message()->SizeY(theInfo->Nj());
+
+		// Level
+
+		if (theFileType == kGRIB2)
+		{
+			itsGrib->Message()->LevelType(theInfo->Level()->Type());
+			itsGrib->Message()->LevelValue(static_cast<long> (theInfo->Level()->Value()));
+		}
 
 		itsGrib->Message()->Bitmap(true);
 
