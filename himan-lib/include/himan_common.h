@@ -17,9 +17,13 @@
 
 #include <ostream>
 #include <memory>
+#include <boost/assign/list_of.hpp>
+#include <boost/unordered_map.hpp>
 
 namespace himan
 {
+
+using boost::assign::map_list_of;
 
 // Define some constants
 
@@ -63,14 +67,18 @@ enum HPFileType
 // Define supported projections
 // Values equal to those in newbase
 
-enum HPProjectionType :
-unsigned int
+enum HPProjectionType
 {
 	kUnknownProjection = 0,
 	kLatLonProjection = 10,
 	kRotatedLatLonProjection = 11,
 	kStereographicProjection = 13
 };
+
+const boost::unordered_map<HPProjectionType,const char*> HPProjectionTypeToString = map_list_of
+    (kLatLonProjection, "ll")
+    (kRotatedLatLonProjection, "rll")
+    (kStereographicProjection, "polster");
 
 // Define supported parameter units
 
@@ -81,6 +89,7 @@ enum HPParameterUnit
 	kK,
 	kC,
 	kPas, // Pa/s
+	kHPa
 };
 
 enum HPLevelType
@@ -92,6 +101,30 @@ enum HPLevelType
 	kHeight = 105,
 	kHybrid = 109,
 	kDepth = 160
+};
+
+const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_list_of
+    (kGround, "ground")
+    (kPressure, "pressure")
+    (kMeanSea, "meansea")
+    (kHeight, "height")
+    (kHybrid, "hybrid")
+    (kDepth, "depth")
+    ;
+
+enum HPScanningMode
+{
+	kUnknownScanningMode = 0,
+	kplusXplusY,
+	kplusXminusY,
+	kminusXplusY,
+	kminusXminusY
+};
+
+enum HPExceptionType
+{
+	kUnknownException = 0,
+	kFileMetaDataNotFound
 };
 
 #if 0
