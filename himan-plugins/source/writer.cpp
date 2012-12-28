@@ -9,7 +9,7 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <fstream>
-#include <boost/filesystem/operations.hpp>
+//#include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
@@ -17,6 +17,7 @@
 #include "grib.h"
 #include "querydata.h"
 #include "neons.h"
+#include "util.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -28,15 +29,22 @@ writer::writer()
 }
 
 bool writer::ToFile(std::shared_ptr<info> theInfo,
-                    const std::string& theOutputFile,
                     HPFileType theFileType,
-                    bool theActiveOnly)
+                    bool theActiveOnly,
+                    const std::string& theOutputFile)
 {
 
 	bool ret = false;
 
-	boost::filesystem::path p(theOutputFile);
-	std::string theCorrectOutputFile = p.stem().string();
+	std::string correctFileName = theOutputFile;
+
+	if (correctFileName.empty())
+	{
+		std::shared_ptr<util> u = std::dynamic_pointer_cast<util> (plugin_factory::Instance()->Plugin("util"));
+
+
+		correctFileName = u->MakeNeonsFileName(theInfo);
+	}
 
 	switch (theFileType)
 	{
@@ -46,26 +54,21 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 		case kGRIB2:
 			{
 
-				theCorrectOutputFile += ".grib";
-
 				std::shared_ptr<grib> theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
 
-				ret = theGribWriter->ToFile(theInfo, theCorrectOutputFile, theFileType, theActiveOnly);
+				correctFileName += ".grib";
+
+				ret = theGribWriter->ToFile(theInfo, correctFileName, theFileType, theActiveOnly);
 
 				break;
 			}
 		case kQueryData:
 			{
-				theCorrectOutputFile += ".fqd";
-
 				std::shared_ptr<querydata> theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
 
-				if (!theWriter)
-				{
-					throw std::runtime_error("Unable to load QueryData plugin");
-				}
+				correctFileName += ".fqd";
 
-				ret = theWriter->ToFile(theInfo, theCorrectOutputFile, theActiveOnly);
+				ret = theWriter->ToFile(theInfo, correctFileName, theActiveOnly);
 
 				break;
 			}
@@ -79,9 +82,24 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
 	}
 
-	if (ret)
+	if (ret && theActiveOnly)
 	{
-		itsLogger->Info("Wrote file '" + theCorrectOutputFile + "'");
+		std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		// Save file information to neons
+
+		ret = n->Save(theInfo);
+
+		if (ret)
+		{
+			itsLogger->Info("Wrote file '" + correctFileName + "'");
+		}
+		else
+		{
+			itsLogger->Warning("Saving file information to neons failed");
+			unlink(correctFileName.c_str());
+		}
+
 	}
 
 	return ret;
