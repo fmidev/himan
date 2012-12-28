@@ -67,6 +67,11 @@ shared_ptr<info> info::Clone() const
 
 	clone->OriginDateTime(itsOriginDateTime.String("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S");
 
+	clone->ParamIndex(itsParamIndex);
+	clone->TimeIndex(itsTimeIndex);
+	clone->LevelIndex(itsLevelIndex);
+	clone->LocationIndex(itsLocationIndex);
+
 	return clone;
 
 }
@@ -81,8 +86,6 @@ void info::Init()
 	itsTopRightLatitude = kHPMissingFloat;
 	itsTopRightLongitude = kHPMissingFloat;
 	itsOrientation = kHPMissingFloat;
-
-	itsProducer = kHPMissingInt;
 
 	itsTimeIndex = kMAX_SIZE_T;
 	itsLevelIndex = kMAX_SIZE_T;
@@ -105,7 +108,7 @@ std::ostream& info::Write(std::ostream& file) const
 
 	file << "__itsOriginDateTime__ " << OriginDateTime().String() << endl;
 
-	file << "__itsProducer__" << itsProducer << endl;
+	//file << "__itsProducer__" << itsProducer << endl;
 
 	if (itsParams.size())
 	{
@@ -229,12 +232,18 @@ void info::Orientation(double theOrientation)
 	itsOrientation = theOrientation;
 }
 
-unsigned int info::Producer() const
+producer info::Producer() const
 {
 	return itsProducer;
 }
 
-void info::Producer(unsigned int theProducer)
+void info::Producer(long theFmiProducerId)
+{
+	itsProducer = producer(theFmiProducerId);
+}
+
+
+void info::Producer(const producer& theProducer)
 {
 	itsProducer = theProducer;
 }
@@ -531,6 +540,11 @@ bool info::FirstLocation()
 	return NextTime();
 }
 
+void info::LocationIndex(size_t theLocationIndex)
+{
+	itsLocationIndex = theLocationIndex;
+}
+
 size_t info::CurrentIndex() const
 {
 	return (itsParamIndex * itsLevels.size() * itsTimes.size() + itsLevelIndex * itsTimes.size() + itsTimeIndex);
@@ -576,6 +590,16 @@ size_t info::Ni() const
 size_t info::Nj() const
 {
 	return itsDataMatrix->At(CurrentIndex())->SizeY();
+}
+
+double info::Di() const
+{
+	return abs((itsBottomLeftLongitude - itsTopRightLongitude) / Ni());
+}
+
+double info::Dj() const
+{
+	return abs((itsBottomLeftLatitude - itsTopRightLatitude) / Nj());
 }
 
 bool info::GridAndAreaEquals(std::shared_ptr<const info> other) const

@@ -19,6 +19,7 @@
 #include "forecast_time.h"
 #include "matrix.h"
 #include "himan_common.h"
+#include "producer.h"
 
 namespace himan
 {
@@ -67,6 +68,9 @@ class info
 		size_t Ni() const;
 		size_t Nj() const;
 
+		double Di() const;
+		double Dj() const;
+
 		std::vector<std::shared_ptr<param>> Params() const;
 		void Params(std::vector<std::shared_ptr<param> > theParams);
 
@@ -96,10 +100,8 @@ class info
 		 * Function will return a new info (wrapped with shared_ptr) than
 		 * has the same data backend matrix as the original one. This means
 		 * that multiple threads can access the same data with different
-		 * infos ( --> descriptor positions ). Clone will not have the same
+		 * infos ( --> descriptor positions ). Clone will have the same
 		 * descriptor positions.
-		 *
-		 * @todo Should the clone have same descriptor positions?
 		 *
 		 * @return New info with access to same data backend
 		 *
@@ -107,8 +109,9 @@ class info
 
 		std::shared_ptr<info> Clone() const;
 
-		void Producer(unsigned int theProducer);
-		unsigned int Producer() const;
+		void Producer(long theFmiProducerID);
+		void Producer(const producer& theProducer);
+		producer Producer() const;
 
 		raw_time OriginDateTime() const;
 		void OriginDateTime(const std::string& theOriginDateTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
@@ -141,6 +144,7 @@ class info
 		void TimeIndex(size_t theTimeIndex);
 		std::shared_ptr<forecast_time> Time() const;
 
+		void LocationIndex(size_t theLocationIndex);
 		void ResetLocation();
 		bool NextLocation();
 		bool FirstLocation();
@@ -182,7 +186,7 @@ class info
 
 		std::unique_ptr<logger> itsLogger;
 
-		unsigned int itsProducer;
+		producer itsProducer;
 
 		raw_time itsOriginDateTime;
 
