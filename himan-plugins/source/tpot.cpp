@@ -134,7 +134,7 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
 		theTargetInfo->FirstTime();
 
 		string theOutputFile = "himan_" + theTargetInfo->Param()->Name() + "_" + theTargetInfo->Time()->OriginDateTime()->String("%Y%m%d%H");
-		theWriter->ToFile(theTargetInfo, theOutputFile, theConfiguration->OutputFileType(), false);
+		theWriter->ToFile(theTargetInfo, theConfiguration->OutputFileType(), false, theOutputFile);
 
 	}
 }
@@ -310,13 +310,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 
 		if (!theConfiguration->WholeFileWrite())
 		{
-
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-			shared_ptr<util> theUtil = dynamic_pointer_cast <util> (plugin_factory::Instance()->Plugin("util"));
 
-			string outputFile = theUtil->MakeNeonsFileName(*myTargetInfo);
-
-			theWriter->ToFile(myTargetInfo->Clone(), outputFile, theConfiguration->OutputFileType(), true);
+			theWriter->ToFile(myTargetInfo->Clone(), theConfiguration->OutputFileType(), true);
 		}
 	}
 }

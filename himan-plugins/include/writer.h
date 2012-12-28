@@ -43,9 +43,9 @@ class writer : public auxiliary_plugin
 		}
 
 		bool ToFile(std::shared_ptr<info> theInfo,
-		            const std::string& theFileName,
 		            HPFileType theFileType,
-		            bool theActiveOnly = false);
+		            bool theActiveOnly = false,
+		            const std::string& theFileName = "");
 
 	private:
 
