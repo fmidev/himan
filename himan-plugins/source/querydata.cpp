@@ -82,7 +82,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
 
 	NFmiFastQueryInfo qinfo = (qdata.get());
 
-	qinfo.SetProducer(NFmiProducer(theInfo->Producer(), "Himan"));
+	qinfo.SetProducer(NFmiProducer(theInfo->Producer().Id(), theInfo->Producer().Name()));
 
 	/*
 	 * At the same time check that we have only constant-sized grids
