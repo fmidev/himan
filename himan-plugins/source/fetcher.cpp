@@ -44,9 +44,13 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
 
 	// 2. Fetch data from auxiliary files specified at command line
 
-	// while (loop_aux_files) {
-	//   FromFile()
-	// }
+	vector<shared_ptr<info>> auxInfos = FromFile(theConfiguration->AuxiliaryFiles(), opts, true);
+
+	if (auxInfos.size())
+	{
+		itsLogger->Debug("Data found from auxiliary files");
+		return auxInfos[0];
+	}
 
 	// 3. Fetch data from Neons
 
@@ -57,8 +61,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
 	if (files.empty())
 	{
 		itsLogger->Warning("Could not find file(s) matching requested parameters");
-
-		throw kFileMetaDataNotFound;
+		//throw 0;
+		//throw kFileMetaDataNotFound;
 	}
 
 	vector<shared_ptr<info>> theInfos = FromFile(files, opts, true);
