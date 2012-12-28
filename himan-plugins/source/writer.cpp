@@ -9,8 +9,8 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <fstream>
-//#include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -34,6 +34,8 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
                     const std::string& theOutputFile)
 {
 
+	namespace fs = boost::filesystem;
+
 	bool ret = false;
 
 	std::string correctFileName = theOutputFile;
@@ -45,6 +47,13 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
 		correctFileName = u->MakeNeonsFileName(theInfo);
 	}
+
+    fs::path pathname(correctFileName);
+
+    if (!fs::is_directory(pathname.parent_path()))
+    {
+    	fs::create_directories(pathname.parent_path());
+    }
 
 	switch (theFileType)
 	{
