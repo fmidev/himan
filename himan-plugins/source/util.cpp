@@ -17,18 +17,20 @@ util::util()
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("util"));
 }
 
-std::string util::MakeNeonsFileName(const himan::info& info) const
+std::string util::MakeNeonsFileName(std::shared_ptr<const info> info) const
 {
 
 	std::ostringstream neonsFileName;
 
-	neonsFileName 	<< "himan_"
-	                << info.Param()->Name()
-	                << info.Time()->ValidDateTime()->String("%Y%m%d%H")
+	std::string base = "/cluster/hiladata/BDAP/REFStorage/";
+
+	neonsFileName 	<< base
+					<< info->Param()->Name()
+	                << info->Time()->ValidDateTime()->String("%Y%m%d%H%M")
 	                << "_"
-	                << info.Level()->Type()
+	                << info->Level()->Type()
 	                << "_"
-	                << info.Level()->Value();
+	                << info->Level()->Value();
 
 	return neonsFileName.str();
 

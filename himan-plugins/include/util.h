@@ -47,7 +47,7 @@ class util : public auxiliary_plugin
 		}
 
 		HPFileType FileType(const std::string& theFile) const;
-		std::string MakeNeonsFileName(const himan::info& info) const;
+		std::string MakeNeonsFileName(std::shared_ptr <const info> info) const;
 };
 
 
