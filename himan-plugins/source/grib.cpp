@@ -43,7 +43,8 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 
 		/* Section 1 */
 
-		itsGrib->Message()->Centre(86);
+		itsGrib->Message()->Centre(theInfo->Producer().Centre());
+		itsGrib->Message()->Process(theInfo->Producer().Process());
 
 		if (theFileType == kGRIB2)
 		{
@@ -128,11 +129,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		 * \todo Should we actually return all matching messages or only the first one
 		 */
 
-		long producer = itsGrib->Message()->Process();
+		long process = itsGrib->Message()->Process();
 
-		if (options.configuration->SourceProducer() != producer)
+		if (options.configuration->SourceProducer() != process)
 		{
-			itsLogger->Trace("Producer does not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer()) + " vs " + boost::lexical_cast<string> (producer));
+			itsLogger->Trace("Producer does not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer()) + " vs " + boost::lexical_cast<string> (process));
 			// continue;
 		}
 
@@ -273,20 +274,15 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		shared_ptr<info> newInfo (new info());
 
-		newInfo->Producer(static_cast<unsigned int> (producer));
+		producer prod(itsGrib->Message()->Centre(), process);
+
+		newInfo->Producer(prod);
 
 		vector<shared_ptr<param>> theParams;
 
 		theParams.push_back(p);
 
 		newInfo->Params(theParams);
-
-		if (newInfo->Producer() == 96)
-		{
-			//newInfo->Producer(53);    // VALIAIKAINEN (miten ratkaistaan tama oikeasti:
-		}
-
-		// fmi-tuottaja-id != grib-process-id ainakin grib2 kohdalla
 
 		vector<shared_ptr<forecast_time>> theTimes;
 

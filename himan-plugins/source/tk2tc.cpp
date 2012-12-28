@@ -16,6 +16,7 @@
 #include "fetcher.h"
 #include "util.h"
 #include "writer.h"
+#include "neons.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -47,6 +48,29 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 	 */
 
 	shared_ptr<info> theTargetInfo = theConfiguration->Info();
+
+	/*
+	 * Get producer information from neons if whole_file_write is false.
+	 */
+
+	if (!theConfiguration->WholeFileWrite())
+	{
+		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		map<string,string> prodInfo = n->ProducerInfo(theTargetInfo->Producer().Id());
+
+		if (prodInfo.size())
+		{
+			producer prod(theTargetInfo->Producer().Id());
+
+			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
+			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
+			prod.Name(prodInfo["name"]);
+
+			theTargetInfo->Producer(prod);
+		}
+
+	}
 
 	/*
 	 * Set target parameter to potential temperature

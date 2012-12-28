@@ -38,10 +38,10 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
 	std::string correctFileName = theOutputFile;
 
-	if (correctFileName.empty())
+	if (theActiveOnly || correctFileName.empty())
 	{
-		std::shared_ptr<util> u = std::dynamic_pointer_cast<util> (plugin_factory::Instance()->Plugin("util"));
 
+		std::shared_ptr<util> u = std::dynamic_pointer_cast<util> (plugin_factory::Instance()->Plugin("util"));
 
 		correctFileName = u->MakeNeonsFileName(theInfo);
 	}

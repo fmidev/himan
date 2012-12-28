@@ -47,18 +47,18 @@ void neons::InitPool()
 
 void neons::Init()
 {
-    itsNeonsDB = unique_ptr<NFmiNeonsDB> (NFmiNeonsDBPool::GetConnection());
+	if (!itsInit)
+	{
+		itsNeonsDB = unique_ptr<NFmiNeonsDB> (NFmiNeonsDBPool::GetConnection());
 
-    itsInit = true;
+		itsInit = true;
+	}
 }
 
 vector<string> neons::Files(const search_options& options)
 {
 
-	if (!itsInit)
-	{
-		Init();
-	}
+	Init();
 
 	vector<string> files;
 
@@ -95,14 +95,22 @@ vector<string> neons::Files(const search_options& options)
 
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
-		// string geomname = gridgeoms[i][0];
 		string tablename = gridgeoms[i][1];
 		string dset = gridgeoms[i][2];
 
-	    string query = "SELECT parm_name, lvl_type, lvl1_lvl2, fcst_per, file_location, file_server "
+		/// @todo GFS (or in fact codetable 2) has wrong temperature parameter defined
+
+		string parm_name = options.param->Name();
+
+		if (parm_name == "T-K")
+		{
+			parm_name = "T-C";
+		}
+
+		string query = "SELECT parm_name, lvl_type, lvl1_lvl2, fcst_per, file_location, file_server "
             "FROM "+tablename+" "
             "WHERE dset_id = "+dset+" "
-            "AND parm_name = '"+options.param->Name()+"' "
+            "AND parm_name = '"+parm_name+"' "
             "AND lvl_type = '"+level_name+"' "
             "AND lvl1_lvl2 = " +levelvalue+" "
             "AND fcst_per = "+boost::lexical_cast<string> (options.time->Step())+" "
@@ -127,65 +135,194 @@ vector<string> neons::Files(const search_options& options)
 
 bool neons::Save(shared_ptr<const info> resultInfo)
 {
-
-	if (!itsInit)
-	{
-		Init();
-	}
+	Init();
 
 	shared_ptr<util> u = dynamic_pointer_cast<util> (plugin_factory::Instance()->Plugin("util"));
 
 	string NeonsFileName = u->MakeNeonsFileName(resultInfo);
 
 	stringstream query;
-/*
+
+	/*
+	 * 1. Get grid information
+	 * 2. Get model information
+	 * 3. Get data set information (ie model run)
+	 * 4. Insert or update
+	 */
+
+	// how to handle scanning directions
+
+	// this is for GFS
+
+	string scanningMode = "+x-y";
+
+	long lat_orig, lon_orig;
+
+	if (scanningMode == "+x-y")
+	{
+		lat_orig = static_cast<long> (resultInfo->TopRightLatitude()*1e3);
+		lon_orig = static_cast<long> (resultInfo->BottomLeftLongitude() * 1e3);
+	}
+	else
+	{
+		throw runtime_error(ClassName() + ": unsupported scanning mode: " + scanningMode);
+	}
+
+
+	/*
+	 * pas_latitude and pas_longitude cannot be checked programmatically
+	 * since f.ex. in the case for GFS in neons we have value 500 and
+	 * by calculating we have value 498. But not check these columns should
+	 * not matter as long as row_cnt, col_cnt, lat_orig and lon_orig match
+	 * (since pas_latitude and pas_longitude are derived from these anyway)
+	 */
+
 	query 	<< "SELECT geom_name "
 			<< "FROM grid_reg_geom "
-			<< "WHERE row_cnt = " << info.nj
-			<< " AND col_cnt = " << info.ni
-			<< " AND lat_orig = " << info.lat
-			<< " AND long_orig = " << info.lon
-			<< " AND pas_latitude = " << info.dj
-			<< " AND pas_longitude = " << info.di;
+			<< "WHERE row_cnt = " << resultInfo->Nj()
+			<< " AND col_cnt = " << resultInfo->Ni()
+			<< " AND lat_orig = " << lat_orig
+			<< " AND long_orig = " << lon_orig;
+//			<< " AND pas_latitude = " << static_cast<long> (resultInfo->Dj() * 1e3)
+//			<< " AND pas_longitude = " << static_cast<long> (resultInfo->Di() * 1e3);
 
+	itsNeonsDB->Query(query.str());
 
-	query << "SELECT "
-	         << "m.model_name, "
-	         << "model_type, "
-	         << "type_smt "
-	         << "FROM grid_num_model_grib nu, "
-	         << "grid_model m, "
-	         << "grid_model_name na "
-	         << "WHERE nu.model_id = " << info.process
-	         << " AND nu.ident_id = " << info.centre
-	         << " AND m.flag_mod = 0 "
-	         << " AND nu.model_name = na.model_name "
-	         << " AND m.model_name = na.model_name";
+	vector<string> row;
 
-	query << "SELECT "
-	       << "dset_id, "
-	         << "table_name, "
-	         << "rec_cnt_dset "
-	         << "FROM as_grid "
-	         << "WHERE "
-	         << "model_type = '" << itsModelType << "'"
-	         << " AND geom_name = '" << itsGeomName << "'"
-	         << " AND dset_name = '" << dset_name << "'"
-	         << " AND base_date = '" << info.base_date << "'";
+	row = itsNeonsDB->FetchRow();
 
-	query  << "INSERT INTO " << itsTableName
+	if (row.empty())
+	{
+		itsLogger->Warning("Grid geometry not found from neons");
+		return false;
+	}
+
+	string geom_name = row[0];
+
+	query.str("");
+
+	query 	<< "SELECT "
+			<< "nu.model_id AS process, "
+			<< "nu.ident_id AS centre, "
+	        << "m.model_name, "
+	        << "model_type, "
+	        << "type_smt "
+	        << "FROM "
+	        << "grid_num_model_grib nu, "
+	        << "grid_model m, "
+	        << "grid_model_name na, "
+	        << "fmi_producers f "
+	        << "WHERE f.producer_id = " << resultInfo->Producer().Id()
+	        << " AND nu.model_name = f.ref_prod "
+	        << " AND m.flag_mod = 0 "
+	        << " AND nu.model_name = na.model_name "
+	        << " AND m.model_name = na.model_name ";
+
+	itsNeonsDB->Query(query.str());
+
+	row = itsNeonsDB->FetchRow();
+
+	if (row.empty())
+	{
+		itsLogger->Warning("Producer definition not found from neons");
+		return false;
+	}
+
+	string process = row[0];
+	string centre = row[1];
+	string model_name = row[2];
+	string model_type = row[3];
+
+/*
+	query 	<< "SELECT "
+	        << "m.model_name, "
+	        << "model_type, "
+	        << "type_smt "
+	        << "FROM grid_num_model_grib nu, "
+	        << "grid_model m, "
+	        << "grid_model_name na "
+	        << "WHERE nu.model_id = " << info.process
+	        << " AND nu.ident_id = " << info.centre
+	        << " AND m.flag_mod = 0 "
+	        << " AND nu.model_name = na.model_name "
+	        << " AND m.model_name = na.model_name";
+
+*/
+
+	query.str("");
+
+	query	<< "SELECT "
+			<< "dset_id, "
+	        << "table_name, "
+	        << "rec_cnt_dset "
+	        << "FROM as_grid "
+	        << "WHERE "
+	        << "model_type = '" << model_type << "'"
+	        << " AND geom_name = '" << geom_name << "'"
+	        << " AND dset_name = 'AF'"
+	        << " AND base_date = '" << resultInfo->OriginDateTime().String("%Y%m%d%H%M") << "'";
+
+	itsNeonsDB->Query(query.str());
+
+	row = itsNeonsDB->FetchRow();
+
+	if (row.empty())
+	{
+		itsLogger->Warning("Data set definition not found from neons");
+		return false;
+	}
+
+	string table_name = row[1];
+	string dset_id = row[0];
+
+	string host = "himan_test_host";
+	string eps_specifier = "0";
+
+	query.str("");
+
+	query  << "INSERT INTO " << table_name
 	       << " (dset_id, parm_name, lvl_type, lvl1_lvl2, fcst_per, eps_specifier, file_location, file_server) "
 	       << "VALUES ("
-	       << itsDsetId << ", "
-	       << "'" << info.parname << "', "
-	       << "'" << info.levname << "', "
-	       << info.lvl1_lvl2 << ", "
-	       << info.fcst_per << ", "
-	       << "'" << info.eps_specifier << "', "
-	       << "'" << info.filename << "', "
-	       << "'" << outFileHost << "')";
-*/
+	       << dset_id << ", "
+	       << "'" << resultInfo->Param()->Name() << "', "
+	       << "'" << resultInfo->Level()->Name() << "', "
+	       << resultInfo->Level()->Value() << ", "
+	       << resultInfo->Time()->Step() << ", "
+	       << "'" << eps_specifier << "', "
+	       << "'" << NeonsFileName << "', "
+	       << "'" << host << "')";
+
+	cout << query.str() << endl;
 	itsLogger->Info("Saved information on file '" + NeonsFileName + "' to neons");
 
 	return true;
 }
+
+map<string,string> neons::ProducerInfo(long FmiProducerId)
+{
+
+	Init();
+
+	string query = "SELECT n.model_id, n.ident_id, n.model_name FROM grid_num_model_grib n "
+			 "WHERE n.model_name = (SELECT ref_prod FROM fmi_producers WHERE producer_id = "
+			+ boost::lexical_cast<string> (FmiProducerId) + ")";
+
+	itsNeonsDB->Query(query);
+
+	vector<string> row = itsNeonsDB->FetchRow();
+
+	map<string,string> ret;
+
+	if (row.empty())
+	{
+		return ret;
+	}
+
+	ret["process"] = row[0];
+	ret["centre"] = row[1];
+	ret["name"] = row[2];
+
+	return ret;
+}
+

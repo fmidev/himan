@@ -9,6 +9,7 @@
 #include <boost/filesystem/operations.hpp>
 #include "logger_factory.h"
 #include <sstream>
+#include <iomanip>
 
 using namespace himan::plugin;
 
@@ -25,12 +26,28 @@ std::string util::MakeNeonsFileName(std::shared_ptr<const info> info) const
 	std::string base = "/cluster/hiladata/BDAP/REFStorage/";
 
 	neonsFileName 	<< base
-					<< info->Param()->Name()
+					<< info->Producer().Centre()
+					<< "_"
+					<< info->Producer().Process()
+					<< "/"
 	                << info->Time()->ValidDateTime()->String("%Y%m%d%H%M")
+	                << "/"
+	                << info->Param()->Name()
 	                << "_"
-	                << info->Level()->Type()
+	                << HPLevelTypeToString.at(info->Level()->Type())
 	                << "_"
-	                << info->Level()->Value();
+	                << info->Level()->Value()
+	                << "_"
+	                << HPProjectionTypeToString.at(info->Projection())
+	                << "_"
+	                << info->Ni()
+	                << "_"
+	                << info->Nj()
+	                << "_0_"
+	                << std::setw(3)
+                    << std::setfill('0')
+                    << info->Time()->Step()
+	                ;
 
 	return neonsFileName.str();
 
