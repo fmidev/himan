@@ -47,7 +47,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
     fs::path pathname(correctFileName);
 
-    if (!fs::is_directory(pathname.parent_path()))
+    if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
     {
         fs::create_directories(pathname.parent_path());
     }
@@ -96,11 +96,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
         ret = n->Save(theInfo);
 
-        if (ret)
-        {
-            itsLogger->Info("Wrote file '" + correctFileName + "'");
-        }
-        else
+        if (!ret)
         {
             itsLogger->Warning("Saving file information to neons failed");
             unlink(correctFileName.c_str());
