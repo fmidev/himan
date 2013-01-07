@@ -1,0 +1,16 @@
+#
+# SConstruct for himan-lib
+
+Import('env')
+import os
+
+objects = []
+
+for file in Glob('source/*.cpp'):
+        s=os.path.basename(str(file))
+        obj='obj/'+ s.replace(".cpp","")
+	objects += env.SharedObject(obj, file)
+
+#env.Library(dir = 'lib', target = 'himan', source = objects)
+env.SharedLibrary(directory = 'lib', target = 'himan', source = objects)
+
