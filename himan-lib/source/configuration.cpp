@@ -13,136 +13,152 @@ using namespace himan;
 configuration::configuration()
 {
 
-	Init();
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
-	itsInfo = std::shared_ptr<info> (new info());
+    Init();
+    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
+    itsInfo = std::shared_ptr<info> (new info());
 
 }
 
 std::ostream& configuration::Write(std::ostream& file) const
 {
 
-	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
 
-	for (size_t i = 0; i < itsPlugins.size(); i++)
-	{
-		file << "__itsPlugins__ " << itsPlugins[i] << std::endl;
-	}
+    for (size_t i = 0; i < itsPlugins.size(); i++)
+    {
+        file << "__itsPlugins__ " << itsPlugins[i] << std::endl;
+    }
 
-	file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
-	file << "__itsTargetProducer__ " << itsTargetProducer << std::endl;
-	file << "__itsOutputFileType__ " << itsOutputFileType << std::endl;
-	file << "__itsWholeFileWrite__ " << itsWholeFileWrite << std::endl;
-	file << "__itsNi__ " << itsNi << std::endl;
-	file << "__itsNj__ " << itsNj << std::endl;
+    file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
+    file << "__itsTargetProducer__ " << itsTargetProducer << std::endl;
+    file << "__itsOutputFileType__ " << itsOutputFileType << std::endl;
+    file << "__itsWholeFileWrite__ " << itsWholeFileWrite << std::endl;
+    file << "__itsUseCuda__ " << itsUseCuda << std::endl;
+    file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
+    file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
 
-	file << *itsInfo;
+    file << "__itsNi__ " << itsNi << std::endl;
+    file << "__itsNj__ " << itsNj << std::endl;
 
-	return file;
+    file << *itsInfo;
+
+    return file;
 }
 
 std::vector<std::string> configuration::AuxiliaryFiles() const
 {
-	return itsAuxiliaryFiles;
+    return itsAuxiliaryFiles;
 }
 
 void configuration::AuxiliaryFiles(const std::vector<std::string> theAuxiliaryFiles)
 {
-	itsAuxiliaryFiles = theAuxiliaryFiles;
+    itsAuxiliaryFiles = theAuxiliaryFiles;
 }
 
 std::vector<std::string> configuration::Plugins() const
 {
-	return itsPlugins;
+    return itsPlugins;
 }
 
 void configuration::Plugins(const std::vector<std::string>& thePlugins)
 {
-	itsPlugins = thePlugins;
+    itsPlugins = thePlugins;
 }
 
 void configuration::Init()
 {
-
-	itsOutputFileType = kUnknownFile;
-	itsSourceProducer = kHPMissingInt;
-	itsTargetProducer = kHPMissingInt;
-	itsWholeFileWrite = false;
-	itsReadDataFromDatabase = true;
+    itsOutputFileType = kQueryData;
+    itsSourceProducer = kHPMissingInt;
+    itsTargetProducer = kHPMissingInt;
+    itsWholeFileWrite = false;
+    itsReadDataFromDatabase = true;
+    itsUseCuda = true;
+    itsFileWaitTimeout = 0;
+    itsLeadingDimension = kTimeDimension;
 }
 
 HPFileType configuration::OutputFileType() const
 {
-	return itsOutputFileType;
+    return itsOutputFileType;
 
 }
 
 unsigned int configuration::SourceProducer() const
 {
-	return itsSourceProducer;
+    return itsSourceProducer;
 }
 
 unsigned int configuration::TargetProducer() const
 {
-	return itsTargetProducer;
+    return itsTargetProducer;
 }
 
 void configuration::SourceProducer(unsigned int theSourceProducer)
 {
-	itsSourceProducer = theSourceProducer;
+    itsSourceProducer = theSourceProducer;
 }
 
 void configuration::TargetProducer(unsigned int theTargetProducer)
 {
-	itsTargetProducer = theTargetProducer;
+    itsTargetProducer = theTargetProducer;
 }
 
 bool configuration::WholeFileWrite() const
 {
-	return itsWholeFileWrite;
+    return itsWholeFileWrite;
 }
 
 void configuration::WholeFileWrite(bool theWholeFileWrite)
 {
-	itsWholeFileWrite = theWholeFileWrite;
+    itsWholeFileWrite = theWholeFileWrite;
 }
 
 size_t configuration::Ni() const
 {
-	return itsNi;
+    return itsNi;
 }
 
 void configuration::Ni(size_t theNi)
 {
-	itsNi = theNi;
+    itsNi = theNi;
 }
 
 size_t configuration::Nj() const
 {
-	return itsNj;
+    return itsNj;
 }
 
 void configuration::Nj(size_t theNj)
 {
-	itsNj = theNj;
+    itsNj = theNj;
 }
 
 bool configuration::ReadDataFromDatabase() const
 {
-	return itsReadDataFromDatabase;
+    return itsReadDataFromDatabase;
 }
 
 void configuration::ReadDataFromDatabase(bool theReadDataFromDatabase)
 {
-	itsReadDataFromDatabase = theReadDataFromDatabase;
+    itsReadDataFromDatabase = theReadDataFromDatabase;
 }
 
-int configuration::FileWaitTimeout() const
+unsigned short configuration::FileWaitTimeout() const
 {
-	return itsFileWaitTimeout;
+    return itsFileWaitTimeout;
 }
 
-void configuration::FileWaitTimeout(int theFileWaitTimeout)
+void configuration::FileWaitTimeout(unsigned short theFileWaitTimeout)
 {
-	itsFileWaitTimeout = theFileWaitTimeout;
+    itsFileWaitTimeout = theFileWaitTimeout;
+}
+
+bool configuration::UseCuda() const
+{
+    return itsUseCuda;
+}
+
+HPDimensionType configuration::LeadingDimension() const
+{
+    return itsLeadingDimension;
 }

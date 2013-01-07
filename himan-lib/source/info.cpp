@@ -28,14 +28,13 @@
 using namespace std;
 using namespace himan;
 
-const size_t kMAX_SIZE_T = std::numeric_limits<size_t>::max();
-
 info::info()
 {
-	Init();
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
+    Init();
+    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
 
-	itsDataMatrix = shared_ptr<matrix_t> (new matrix_t());
+    itsDataMatrix = shared_ptr<matrix_t> (new matrix_t());
+    itsTimeIterator = shared_ptr<time_iter> (new time_iter());
 }
 
 info::~info()
@@ -45,619 +44,544 @@ info::~info()
 shared_ptr<info> info::Clone() const
 {
 
-	shared_ptr<info> clone = shared_ptr<info> (new info());
+    shared_ptr<info> clone = shared_ptr<info> (new info());
 
-	clone->Projection(itsProjection);
-	clone->Orientation(itsOrientation);
+    clone->Projection(itsProjection);
+    clone->Orientation(itsOrientation);
 
-	clone->BottomLeftLatitude(itsBottomLeftLatitude);
-	clone->BottomLeftLongitude(itsBottomLeftLongitude);
-	clone->TopRightLatitude(itsTopRightLatitude);
-	clone->TopRightLongitude(itsTopRightLongitude);
+    clone->BottomLeftLatitude(itsBottomLeftLatitude);
+    clone->BottomLeftLongitude(itsBottomLeftLongitude);
+    clone->TopRightLatitude(itsTopRightLatitude);
+    clone->TopRightLongitude(itsTopRightLongitude);
 
-	clone->Data(itsDataMatrix);
+    clone->Data(itsDataMatrix);
 
-	clone->Params(itsParams);
+    clone->ParamIterator(*itsParamIterator);
+    clone->LevelIterator(*itsLevelIterator);
+    clone->TimeIterator(*itsTimeIterator);
 
-	clone->Levels(itsLevels);
+    clone->Producer(itsProducer);
 
-	clone->Times(itsTimes);
+    clone->OriginDateTime(itsOriginDateTime.String("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S");
 
-	clone->Producer(itsProducer);
+    /*
+    clone->ParamIndex(itsParamIndex);
+    clone->TimeIndex(itsTimeIndex);
+    clone->LevelIndex(itsLevelIndex);
+    */
+    clone->LocationIndex(itsLocationIndex);
 
-	clone->OriginDateTime(itsOriginDateTime.String("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S");
-
-	clone->ParamIndex(itsParamIndex);
-	clone->TimeIndex(itsTimeIndex);
-	clone->LevelIndex(itsLevelIndex);
-	clone->LocationIndex(itsLocationIndex);
-
-	return clone;
+    return clone;
 
 }
 
 void info::Init()
 {
 
-	itsProjection = kUnknownProjection;
+    itsProjection = kUnknownProjection;
 
-	itsBottomLeftLatitude = kHPMissingFloat;
-	itsBottomLeftLongitude = kHPMissingFloat;
-	itsTopRightLatitude = kHPMissingFloat;
-	itsTopRightLongitude = kHPMissingFloat;
-	itsOrientation = kHPMissingFloat;
+    itsBottomLeftLatitude = kHPMissingFloat;
+    itsBottomLeftLongitude = kHPMissingFloat;
+    itsTopRightLatitude = kHPMissingFloat;
+    itsTopRightLongitude = kHPMissingFloat;
+    itsOrientation = kHPMissingFloat;
 
-	itsTimeIndex = kMAX_SIZE_T;
-	itsLevelIndex = kMAX_SIZE_T;
-	itsParamIndex = kMAX_SIZE_T;
-	itsLocationIndex = kMAX_SIZE_T;
-
-	itsScanningMode = kTopLeft;
+    itsScanningMode = kTopLeft;
 
 }
 
 std::ostream& info::Write(std::ostream& file) const
 {
 
-	file << "<" << ClassName() << " " << Version() << ">" << endl;
+    file << "<" << ClassName() << " " << Version() << ">" << endl;
 
-	file << "__itsProjection__ " << itsProjection << endl;
-	file << "__itsBottomLeftLongitude__ " << itsBottomLeftLongitude << endl;
-	file << "__itsBottomLeftLatitude__ " << itsBottomLeftLatitude << endl;
-	file << "__itsTopRightLongitude__ " << itsTopRightLongitude << endl;
-	file << "__itsTopRightLongitude__ " << itsTopRightLatitude << endl;
-	file << "__itsOrientation__ " << itsOrientation << endl;
+    file << "__itsProjection__ " << itsProjection << endl;
+    file << "__itsBottomLeftLongitude__ " << itsBottomLeftLongitude << endl;
+    file << "__itsBottomLeftLatitude__ " << itsBottomLeftLatitude << endl;
+    file << "__itsTopRightLongitude__ " << itsTopRightLongitude << endl;
+    file << "__itsTopRightLongitude__ " << itsTopRightLatitude << endl;
+    file << "__itsOrientation__ " << itsOrientation << endl;
 
-	file << "__itsOriginDateTime__ " << OriginDateTime().String() << endl;
+    file << "__itsOriginDateTime__ " << OriginDateTime().String() << endl;
 
-	//file << "__itsProducer__ " << itsProducer << endl;
+    file << "__itsProducer__ " << itsProducer << endl;
 
-	if (itsParams.size())
-	{
-		for (size_t i = 0; i < itsParams.size(); i++)
-		{
-			file << *itsParams[i];
-		}
-	}
-	else
-	{
-		file << "__itsParam__ __no-param__" << endl;
-	}
+    file << itsParamIterator << endl;
+    file << itsLevelIterator << endl;
+    file << itsTimeIterator << endl;
 
-	if (itsLevels.size())
-	{
-		for (size_t i = 0; i < itsLevels.size(); i++)
-		{
-			file << *itsLevels[i];
-		}
-	}
-	else
-	{
-		file << "__itsLevel__ __no-level__" << endl;
-	}
+    /*
+    if (itsParams.size())
+    {
+    	for (size_t i = 0; i < itsParams.size(); i++)
+    	{
+    		file << *itsParams[i];
+    	}
+    }
+    else
+    {
+    	file << "__itsParam__ __no-param__" << endl;
+    }
 
-	if (itsTimes.size())
-	{
-		for (size_t i = 0; i < itsTimes.size(); i++)
-		{
-			file << *itsTimes[i];
-		}
-	}
-	else
-	{
-		file << "__itsTime__ __no-time__" << endl;
-	}
+    if (itsLevels.size())
+    {
+    	for (size_t i = 0; i < itsLevels.size(); i++)
+    	{
+    		file << *itsLevels[i];
+    	}
+    }
+    else
+    {
+    	file << "__itsLevel__ __no-level__" << endl;
+    }
 
-	return file;
+    if (itsTimes.size())
+    {
+    	for (size_t i = 0; i < itsTimes.size(); i++)
+    	{
+    		file << *itsTimes[i];
+    	}
+    }
+    else
+    {
+    	file << "__itsTime__ __no-time__" << endl;
+    }
+    */
+    return file;
 }
 
 
 bool info::Create()
 {
 
-	itsDataMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimes.size(), itsLevels.size(), itsParams.size()));
+    itsDataMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
 
-	Reset();
+    Reset();
 
-	while (NextTime())
-	{
-		ResetLevel();
+    while (NextTime())
+    {
+        ResetLevel();
 
-		while (NextLevel())
-		{
-			ResetParam();
+        while (NextLevel())
+        {
+            ResetParam();
 
-			while (NextParam())
-				// Create empty placeholders
-			{
-				itsDataMatrix->Set(CurrentIndex(), shared_ptr<d_matrix_t> (new d_matrix_t(0, 0)));
-			}
-		}
-	}
+            while (NextParam())
+                // Create empty placeholders
+            {
+                itsDataMatrix->Set(CurrentIndex(), shared_ptr<d_matrix_t> (new d_matrix_t(0, 0)));
+            }
+        }
+    }
 
-	return true;
+    return true;
 
 }
 
 HPProjectionType info::Projection() const
 {
-	return itsProjection;
+    return itsProjection;
 }
 
 void info::Projection(HPProjectionType theProjection)
 {
-	itsProjection = theProjection;
+    itsProjection = theProjection;
 }
 
 double info::BottomLeftLatitude() const
 {
-	return itsBottomLeftLatitude;
+    return itsBottomLeftLatitude;
 }
 double info::BottomLeftLongitude() const
 {
-	return itsBottomLeftLongitude;
+    return itsBottomLeftLongitude;
 }
 double info::TopRightLongitude() const
 {
-	return itsTopRightLongitude;
+    return itsTopRightLongitude;
 }
 double info::TopRightLatitude() const
 {
-	return itsTopRightLatitude;
+    return itsTopRightLatitude;
 }
 
 void info::BottomLeftLatitude(double theBottomLeftLatitude)
 {
-	itsBottomLeftLatitude = theBottomLeftLatitude;
+    itsBottomLeftLatitude = theBottomLeftLatitude;
 }
 
 void info::BottomLeftLongitude(double theBottomLeftLongitude)
 {
-	itsBottomLeftLongitude = theBottomLeftLongitude;
+    itsBottomLeftLongitude = theBottomLeftLongitude;
 }
 void info::TopRightLatitude(double theTopRightLatitude)
 {
-	itsTopRightLatitude = theTopRightLatitude;
+    itsTopRightLatitude = theTopRightLatitude;
 }
 void info::TopRightLongitude(double theTopRightLongitude)
 {
-	itsTopRightLongitude = theTopRightLongitude;
+    itsTopRightLongitude = theTopRightLongitude;
 }
 
 double info::Orientation() const
 {
-	return itsOrientation;
+    return itsOrientation;
 }
 
 void info::Orientation(double theOrientation)
 {
-	itsOrientation = theOrientation;
+    itsOrientation = theOrientation;
 }
 
 const producer& info::Producer() const
 {
-	return itsProducer;
+    return itsProducer;
 }
 
 void info::Producer(long theFmiProducerId)
 {
-	itsProducer = producer(theFmiProducerId);
+    itsProducer = producer(theFmiProducerId);
 }
 
 
 void info::Producer(const producer& theProducer)
 {
-	itsProducer = theProducer;
+    itsProducer = theProducer;
 }
-
+/*
 vector<shared_ptr<param> > info::Params() const
 {
 	return itsParams;
 }
-
-void info::Params(vector<shared_ptr<param> > theParams)
+*/
+void info::ParamIterator(const param_iter& theParamIterator)
 {
-	itsParams = theParams;
+    itsParamIterator = shared_ptr<param_iter> (new param_iter(theParamIterator));
 }
 
+void info::Params(const vector<param>& theParams)
+{
+    itsParamIterator = shared_ptr<param_iter> (new param_iter(theParams));
+}
+/*
 vector<shared_ptr<level> > info::Levels() const
 {
 	return itsLevels;
 }
+*/
 
-void info::Levels(vector<shared_ptr<level> > theLevels)
+void info::LevelIterator(const level_iter& theLevelIterator)
 {
-	itsLevels = theLevels;
+    itsLevelIterator = shared_ptr<level_iter> (new level_iter(theLevelIterator));
 }
 
+void info::Levels(const vector<level>& theLevels)
+{
+    //itsLevels = theLevels;
+    itsLevelIterator = shared_ptr<level_iter> (new level_iter(theLevels));
+}
+/*
 vector<shared_ptr<forecast_time> > info::Times() const
 {
 	return itsTimes;
+}*/
+
+void info::TimeIterator(const time_iter& theTimeIterator)
+{
+    itsTimeIterator = shared_ptr<time_iter> (new time_iter(theTimeIterator));
 }
 
-void info::Times(vector<shared_ptr<forecast_time> > theTimes)
+void info::Times(const vector<forecast_time>& theTimes)
 {
-	itsTimes = theTimes;
+    //itsTimes = theTimes;
+    itsTimeIterator = shared_ptr<time_iter> (new time_iter(theTimes));
 }
 
 raw_time info::OriginDateTime() const
 {
-	return itsOriginDateTime;
+    return itsOriginDateTime;
 }
 
 void info::OriginDateTime(const string& theOriginDateTime, const string& theTimeMask)
 {
-	itsOriginDateTime = raw_time(theOriginDateTime, theTimeMask);
+    itsOriginDateTime = raw_time(theOriginDateTime, theTimeMask);
 }
 
 bool info::Param(const param& theRequestedParam)
 {
-
-	for (size_t i = 0; i < itsParams.size(); i++)
-	{
-		if (itsParams[i]->Name() == theRequestedParam.Name())
-		{
-			return true;
-		}
-	}
-
-	return false;
-
+    return itsParamIterator->Set(theRequestedParam);
 }
 
 bool info::NextParam()
 {
-
-	if (itsParamIndex == kMAX_SIZE_T)
-	{
-		itsParamIndex = 0;    // ResetParam() has been called before this function
-	}
-
-	else
-	{
-		itsParamIndex++;
-	}
-
-	if (itsParamIndex >= itsParams.size())
-	{
-		itsParamIndex = itsParams.size() == 0 ? 0 : itsParams.size() - 1;
-		return false;
-	}
-
-	return true;
-
+    return itsParamIterator->Next();
 }
 
 void info::ResetParam()
 {
-	itsParamIndex = kMAX_SIZE_T;
+    itsParamIterator->Reset();
 }
 
 bool info::FirstParam()
 {
-	ResetParam();
+    return itsParamIterator->First();
+}
 
-	return NextParam();
+size_t info::ParamIndex() const
+{
+    return itsParamIterator->Index();
 }
 
 void info::ParamIndex(size_t theParamIndex)
 {
-	itsParamIndex = theParamIndex;
+    itsParamIterator->Set(theParamIndex);
 }
 
-void info::Param(shared_ptr<const param> theParam)
+param& info::Param() const
 {
-
-	for (size_t i = 0; i < itsParams.size(); i++)
-	{
-		if (itsParams[i] == theParam)
-		{
-			itsParamIndex = i;
-		}
-
-	}
-}
-
-shared_ptr<param> info::Param() const
-{
-
-	if (itsParamIndex != kMAX_SIZE_T && itsParamIndex < itsParams.size())
-	{
-		return itsParams[itsParamIndex];
-	}
-
-	throw runtime_error(ClassName() + ": Invalid param index value: " + boost::lexical_cast<string> (itsParamIndex));
+    return itsParamIterator->At();
 }
 
 bool info::NextLevel()
 {
-
-	if (itsLevelIndex == kMAX_SIZE_T)
-	{
-		itsLevelIndex = 0;    // ResetLevel() has been called before this function
-	}
-
-	else
-	{
-		itsLevelIndex++;
-	}
-
-	if (itsLevelIndex >= itsLevels.size())
-	{
-		itsLevelIndex = itsLevels.size() == 0 ? 0 : itsLevels.size() - 1;
-
-		return false;
-	}
-
-	return true;
-
+    return itsLevelIterator->Next();
 }
 
 void info::Reset()
 {
-	ResetLevel();
-	ResetParam();
-	ResetTime();
-	ResetLocation();
+    ResetLevel();
+    ResetParam();
+    ResetTime();
+    ResetLocation();
 }
 
 void info::ResetLevel()
 {
-	itsLevelIndex = kMAX_SIZE_T;
+    itsLevelIterator->Reset();
 }
 
 bool info::FirstLevel()
 {
-	ResetLevel();
+    return itsLevelIterator->First();
+}
 
-	return NextLevel();
+size_t info::LevelIndex() const
+{
+    return itsLevelIterator->Index();
 }
 
 void info::LevelIndex(size_t theLevelIndex)
 {
-	itsLevelIndex = theLevelIndex;
+    itsLevelIterator->Set(theLevelIndex);
 }
 
-void info::Level(shared_ptr<const level> theLevel)
+bool info::Level(const level& theLevel)
 {
-
-	for (size_t i = 0; i < itsLevels.size(); i++)
-	{
-		if (itsLevels[i] == theLevel)
-		{
-			itsLevelIndex = i;
-		}
-	}
-
+    return itsLevelIterator->Set(theLevel);
 }
 
-shared_ptr<level> info::Level() const
+level& info::Level() const
 {
-
-	if (itsLevelIndex != kMAX_SIZE_T && itsLevelIndex < itsLevels.size())
-	{
-		return itsLevels[itsLevelIndex];
-	}
-
-	throw runtime_error(ClassName() + ": Invalid level index value: " + boost::lexical_cast<string> (itsLevelIndex));
+    return itsLevelIterator->At();
 }
 
 bool info::NextTime()
 {
-	if (itsTimeIndex == kMAX_SIZE_T)
-	{
-		itsTimeIndex = 0;    // ResetTime() has been called before this function
-	}
-
-	else
-	{
-		itsTimeIndex++;
-	}
-
-	if (itsTimeIndex >= itsTimes.size())
-	{
-		itsTimeIndex = (itsTimes.size() == 0) ? 0 : itsTimes.size() - 1;
-
-		return false;
-	}
-
-	return true;
-
+    return itsTimeIterator->Next();
 }
 
 void info::ResetTime()
 {
-	itsTimeIndex = kMAX_SIZE_T;
+    itsTimeIterator->Reset();
 }
 
 bool info::FirstTime()
 {
-	ResetTime();
+    return itsTimeIterator->First();
+}
 
-	return NextTime();
+size_t info::TimeIndex() const
+{
+    return itsTimeIterator->Index();
 }
 
 void info::TimeIndex(size_t theTimeIndex)
 {
-	itsTimeIndex = theTimeIndex;
+    itsTimeIterator->Set(theTimeIndex);
 }
 
-void info::Time(shared_ptr<const forecast_time> theTime)
+bool info::Time(const forecast_time& theTime)
 {
-
-	for (size_t i = 0; i < itsTimes.size(); i++)
-	{
-		if (itsTimes[i] == theTime)
-		{
-			itsTimeIndex = i;
-		}
-	}
+    return itsTimeIterator->Set(theTime);
 }
 
-shared_ptr<forecast_time> info::Time() const
+forecast_time& info::Time() const
 {
-
-	if (itsTimeIndex != kMAX_SIZE_T && itsTimeIndex < itsTimes.size())
-	{
-		return itsTimes[itsTimeIndex];
-	}
-
-	throw runtime_error(ClassName() + ": Invalid time index value: " + boost::lexical_cast<string> (itsTimeIndex));
+    return itsTimeIterator->At();
 }
 
 bool info::NextLocation()
 {
-	if (itsLocationIndex == kMAX_SIZE_T)
-	{
-		itsLocationIndex = 0;    // ResetLocation() has been called before this function
-	}
+    if (itsLocationIndex == kMAX_SIZE_T)
+    {
+        itsLocationIndex = 0;    // ResetLocation() has been called before this function
+    }
 
-	else
-	{
-		itsLocationIndex++;
-	}
+    else
+    {
+        itsLocationIndex++;
+    }
 
-	size_t locationSize = itsDataMatrix->At(CurrentIndex())->Size();
+    size_t locationSize = itsDataMatrix->At(CurrentIndex())->Size();
 
-	if (itsLocationIndex >= locationSize)
-	{
-		itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;
+    if (itsLocationIndex >= locationSize)
+    {
+        itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;
 
-		return false;
-	}
+        return false;
+    }
 
-	return true;
+    return true;
 
 }
 
 void info::ResetLocation()
 {
-	itsLocationIndex = kMAX_SIZE_T;
+    itsLocationIndex = kMAX_SIZE_T;
 }
 
 bool info::FirstLocation()
 {
-	ResetLocation();
+    ResetLocation();
 
-	return NextTime();
+    return NextTime();
 }
 
 void info::LocationIndex(size_t theLocationIndex)
 {
-	itsLocationIndex = theLocationIndex;
+    itsLocationIndex = theLocationIndex;
 }
 
 size_t info::CurrentIndex() const
 {
-	return (itsParamIndex * itsLevels.size() * itsTimes.size() + itsLevelIndex * itsTimes.size() + itsTimeIndex);
+    return (itsParamIterator->Index() * itsLevelIterator->Size() * itsTimeIterator->Size() + itsLevelIterator->Index() * itsTimeIterator->Size() + itsTimeIterator->Index());
 }
 
 shared_ptr<d_matrix_t> info::Data() const
 {
-	return itsDataMatrix->At(CurrentIndex());
+    return itsDataMatrix->At(CurrentIndex());
 }
 
 shared_ptr<d_matrix_t> info::Data(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
-	return itsDataMatrix->At(timeIndex, levelIndex, paramIndex);
+    return itsDataMatrix->At(timeIndex, levelIndex, paramIndex);
 }
 
 void info::Data(shared_ptr<matrix_t> m)
 {
-	itsDataMatrix = m;
+    itsDataMatrix = m;
 }
 
 void info::Data(shared_ptr<d_matrix_t> d)
 {
-	itsDataMatrix->At(CurrentIndex()) = d;
+    itsDataMatrix->At(CurrentIndex()) = d;
 }
 
 bool info::Value(double theValue)
 {
-	itsDataMatrix->At(CurrentIndex())->Set(itsLocationIndex, theValue) ;
+    itsDataMatrix->At(CurrentIndex())->Set(itsLocationIndex, theValue) ;
 
-	return true;
+    return true;
 }
 
 double info::Value() const
 {
-	return itsDataMatrix->At(CurrentIndex())->At(itsLocationIndex);
+    return itsDataMatrix->At(CurrentIndex())->At(itsLocationIndex);
 }
 
 size_t info::Ni() const
 {
-	return itsDataMatrix->At(CurrentIndex())->SizeX();
+    return itsDataMatrix->At(CurrentIndex())->SizeX();
 }
 
 size_t info::Nj() const
 {
-	return itsDataMatrix->At(CurrentIndex())->SizeY();
+    return itsDataMatrix->At(CurrentIndex())->SizeY();
 }
 
 double info::Di() const
 {
-	return abs((itsBottomLeftLongitude - itsTopRightLongitude) / Ni());
+    return abs((itsBottomLeftLongitude - itsTopRightLongitude) / Ni());
 }
 
 double info::Dj() const
 {
-	return abs((itsBottomLeftLatitude - itsTopRightLatitude) / Nj());
+    return abs((itsBottomLeftLatitude - itsTopRightLatitude) / Nj());
 }
 
 HPScanningMode info::ScanningMode() const
 {
-	return itsScanningMode;
+    return itsScanningMode;
 }
 
 void info::ScanningMode(HPScanningMode theScanningMode)
 {
-	itsScanningMode = theScanningMode;
+    itsScanningMode = theScanningMode;
 }
 
-bool info::GridAndAreaEquals(std::shared_ptr<const info> other) const
+bool info::GridAndAreaEquals(shared_ptr<const info> other) const
 {
 
-	if (itsBottomLeftLatitude != other->BottomLeftLatitude())
-	{
-		return false;
-	}
+    // TODO: a clever way to compare if two areas are equal
+    // for example, coordinates could be backwards (-90 to 90 vs 90 to -90)
 
-	if (itsBottomLeftLongitude != other->BottomLeftLongitude())
-	{
-		return false;
-	}
+    if (itsBottomLeftLatitude != other->BottomLeftLatitude())
+    {
+        itsLogger->Trace("BottomLeftLatitudes aren't the same");
+        return false;
+    }
 
-	if (itsTopRightLatitude != other->TopRightLatitude())
-	{
-		return false;
-	}
+    if (itsBottomLeftLongitude != other->BottomLeftLongitude())
+    {
+        itsLogger->Trace("BottomLeftLongitude aren't the same");
+        return false;
+    }
 
-	if (itsTopRightLongitude != other->TopRightLongitude())
-	{
-		return false;
-	}
+    if (itsTopRightLatitude != other->TopRightLatitude())
+    {
+        itsLogger->Trace("TopRightLatitudes aren't the same");
+        return false;
+    }
 
-	if (itsProjection != other->Projection())
-	{
-		return false;
-	}
+    if (itsTopRightLongitude != other->TopRightLongitude())
+    {
+        cout << itsTopRightLongitude << " != " <<  other->TopRightLongitude() << endl;
 
-	if (itsOrientation != other->Orientation())
-	{
-		return false;
-	}
+        itsLogger->Trace("TopRightLongitudes aren't the same");
+        return false;
+    }
 
-	if (Ni() != other->Ni())
-	{
-		return false;
-	}
+    if (itsProjection != other->Projection())
+    {
+        return false;
+    }
 
-	if (Nj() != other->Nj())
-	{
-		return false;
-	}
+    if (itsOrientation != other->Orientation())
+    {
+        return false;
+    }
 
-	return true;
+    if (Ni() != other->Ni())
+    {
+        return false;
+    }
+
+    if (Nj() != other->Nj())
+    {
+        return false;
+    }
+
+    return true;
 
 }
 
@@ -666,90 +590,90 @@ bool info::GridAndAreaEquals(std::shared_ptr<const info> other) const
 shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 {
 
-	FmiInterpolationMethod interp = kLinearly;
-	FmiDirection dir = static_cast<FmiDirection> (itsScanningMode);
+    FmiInterpolationMethod interp = kLinearly;
+    FmiDirection dir = static_cast<FmiDirection> (itsScanningMode);
 
-	NFmiArea* theArea = 0;
+    NFmiArea* theArea = 0;
 
-	// Newbase does not understand grib2 longitude coordinates
+    // Newbase does not understand grib2 longitude coordinates
 
-	double bottomLeftLongitude = itsBottomLeftLongitude;
-	double topRightLongitude = itsTopRightLongitude;
+    double bottomLeftLongitude = itsBottomLeftLongitude;
+    double topRightLongitude = itsTopRightLongitude;
 
-	if (bottomLeftLongitude > 180 || topRightLongitude > 180)
-	{
-		bottomLeftLongitude -= 180;
-		topRightLongitude -= 180;
-	}
+    if (bottomLeftLongitude > 180 || topRightLongitude > 180)
+    {
+        bottomLeftLongitude -= 180;
+        topRightLongitude -= 180;
+    }
 
-	switch (itsProjection)
-	{
-		case kLatLonProjection:
-			{
-				theArea = new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
-				                             NFmiPoint(topRightLongitude, itsTopRightLatitude));
+    switch (itsProjection)
+    {
+    case kLatLonProjection:
+    {
+        theArea = new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
+                                     NFmiPoint(topRightLongitude, itsTopRightLatitude));
 
-				break;
-			}
+        break;
+    }
 
-		case kRotatedLatLonProjection:
-			{
-				theArea = new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
-				                                    NFmiPoint(topRightLongitude, itsTopRightLatitude),
-				                                    NFmiPoint(0., -30.) // south pole location
-				                                   );
-				break;
-			}
+    case kRotatedLatLonProjection:
+    {
+        theArea = new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
+                                            NFmiPoint(topRightLongitude, itsTopRightLatitude),
+                                            NFmiPoint(0., -30.) // south pole location
+                                           );
+        break;
+    }
 
-		case kStereographicProjection:
-			{
-				theArea = new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
-				                                    NFmiPoint(topRightLongitude, itsTopRightLatitude),
-				                                    itsOrientation);
-				break;
+    case kStereographicProjection:
+    {
+        theArea = new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
+                                            NFmiPoint(topRightLongitude, itsTopRightLatitude),
+                                            itsOrientation);
+        break;
 
-			}
+    }
 
-		default:
-			throw runtime_error(ClassName() + ": No supported projection found");
+    default:
+        throw runtime_error(ClassName() + ": No supported projection found");
 
-			break;
-	}
+        break;
+    }
 
-	shared_ptr<NFmiGrid> theGrid (new NFmiGrid(theArea, Ni(), Nj(), dir, interp));
+    shared_ptr<NFmiGrid> theGrid (new NFmiGrid(theArea, Ni(), Nj(), dir, interp));
 
-	size_t dataSize = itsDataMatrix->At(CurrentIndex())->Size();
+    size_t dataSize = itsDataMatrix->At(CurrentIndex())->Size();
 
-	if (dataSize)   // Do we have data
-	{
+    if (dataSize)   // Do we have data
+    {
 
-		NFmiDataPool thePool;
+        NFmiDataPool thePool;
 
-		float* arr = new float[dataSize];
+        float* arr = new float[dataSize];
 
-		// convert double array to float
+        // convert double array to float
 
-		for (unsigned int i = 0; i < dataSize; i++)
-		{
-			arr[i] = static_cast<float> (itsDataMatrix->At(CurrentIndex())->At(i));
-		}
+        for (unsigned int i = 0; i < dataSize; i++)
+        {
+            arr[i] = static_cast<float> (itsDataMatrix->At(CurrentIndex())->At(i));
+        }
 
-		if (!thePool.Init(dataSize, arr))
-		{
-			throw runtime_error("DataPool init failed");
-		}
+        if (!thePool.Init(dataSize, arr))
+        {
+            throw runtime_error("DataPool init failed");
+        }
 
-		if (!theGrid->Init(&thePool))
-		{
-			throw runtime_error("Grid data init failed");
-		}
+        if (!theGrid->Init(&thePool))
+        {
+            throw runtime_error("Grid data init failed");
+        }
 
-		delete [] arr;
-	}
+        delete [] arr;
+    }
 
-	delete theArea;
+    delete theArea;
 
-	return theGrid;
+    return theGrid;
 
 }
 

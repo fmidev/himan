@@ -12,100 +12,100 @@ using namespace himan;
 raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMask)
 {
 
-	std::stringstream s(theDateTime);
-	std::locale l(s.getloc(), new boost::posix_time::time_input_facet(theTimeMask.c_str()));
+    std::stringstream s(theDateTime);
+    std::locale l(s.getloc(), new boost::posix_time::time_input_facet(theTimeMask.c_str()));
 
-	s.imbue(l);
+    s.imbue(l);
 
-	s >> itsDateTime;
+    s >> itsDateTime;
 
-	if (itsDateTime == boost::date_time::not_a_date_time)
-	{
-		throw std::runtime_error(ClassName() + ": Unable to create time from '" + theDateTime + "' with mask '" + theTimeMask + "'");
-	}
+    if (itsDateTime == boost::date_time::not_a_date_time)
+    {
+        throw std::runtime_error(ClassName() + ": Unable to create time from '" + theDateTime + "' with mask '" + theTimeMask + "'");
+    }
 }
 
 raw_time::raw_time(const NFmiMetTime& theDateTime)
 {
 
-	std::string theTempMask = "YYYYMMDD";
-	std::string theTempTime = static_cast<std::string> (theDateTime.ToStr(theTempMask));
+    std::string theTempMask = "YYYYMMDD";
+    std::string theTempTime = static_cast<std::string> (theDateTime.ToStr(theTempMask));
 
-	raw_time(theTempTime, theTempMask);
+    raw_time(theTempTime, theTempMask);
 }
 
 raw_time::raw_time(const raw_time& other)
-	: itsDateTime(other.itsDateTime)
+    : itsDateTime(other.itsDateTime)
 {
 }
 
 raw_time& raw_time::operator=(const raw_time& other)
 {
-	itsDateTime = other.itsDateTime;
+    itsDateTime = other.itsDateTime;
 
-	return *this;
+    return *this;
 }
 
 
 bool raw_time::operator==(const raw_time&  other)
 {
-	if (this == &other)
-	{
-		return true;
-	}
+    if (this == &other)
+    {
+        return true;
+    }
 
-	return (itsDateTime == other.itsDateTime);
+    return (itsDateTime == other.itsDateTime);
 }
 
 bool raw_time::operator!=(const raw_time&  other)
 {
-	return !(*this == other);
+    return !(*this == other);
 }
 
 std::string raw_time::String(const std::string& theTimeMask) const
 {
-	return FormatTime(itsDateTime, theTimeMask);
+    return FormatTime(itsDateTime, theTimeMask);
 }
 
 
 std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, const std::string& theTimeMask) const
 {
 
-	if (theFormattedDateTime == boost::date_time::not_a_date_time)
-	{
-		throw std::runtime_error(ClassName() + ": input argument is 'not-a-date-time'");
-	}
+    if (theFormattedDateTime == boost::date_time::not_a_date_time)
+    {
+        throw std::runtime_error(ClassName() + ": input argument is 'not-a-date-time'");
+    }
 
-	std::stringstream s;
-	std::locale l(s.getloc(), new boost::posix_time::time_facet(theTimeMask.c_str()));
+    std::stringstream s;
+    std::locale l(s.getloc(), new boost::posix_time::time_facet(theTimeMask.c_str()));
 
-	s.imbue(l);
+    s.imbue(l);
 
-	s << theFormattedDateTime;
+    s << theFormattedDateTime;
 
-	return s.str();
+    return s.str();
 
 }
 
 bool raw_time::Adjust(const std::string& theTimeType, int theValue)
 {
 
-	if (theTimeType == "hours")
-	{
-		boost::posix_time::hours adjustment (theValue);
+    if (theTimeType == "hours")
+    {
+        boost::posix_time::hours adjustment (theValue);
 
-		itsDateTime = itsDateTime + adjustment;
-	}
+        itsDateTime = itsDateTime + adjustment;
+    }
 
-	return true;
+    return true;
 }
 
 std::ostream& raw_time::Write(std::ostream& file) const
 {
 
-	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
-	file << "__itsDateTime__ " << FormatTime(itsDateTime, "%Y-%m-%d %H:%M:%S") << std::endl;
+    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+    file << "__itsDateTime__ " << FormatTime(itsDateTime, "%Y-%m-%d %H:%M:%S") << std::endl;
 
-	return file;
+    return file;
 }
 

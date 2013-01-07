@@ -18,35 +18,35 @@ logger_factory::logger_factory() : itsDebugStateMain(kInfoMsg)
 
 logger_factory::~logger_factory()
 {
-	if (itsInstance)
-	{
-		delete itsInstance;
-	}
+    if (itsInstance)
+    {
+        delete itsInstance;
+    }
 }
 
 logger_factory* logger_factory::Instance()
 {
-	if (!itsInstance)
-	{
-		itsInstance = new logger_factory();
-	}
+    if (!itsInstance)
+    {
+        itsInstance = new logger_factory();
+    }
 
-	return itsInstance;
+    return itsInstance;
 }
 
 logger* logger_factory::GetLog(const std::string& theUserName)
 {
-	return new logger(theUserName, itsDebugStateMain);
+    return new logger(theUserName, itsDebugStateMain);
 }
 
 void logger_factory::DebugState(HPDebugState theDebugState)
 {
-	itsDebugStateMain = theDebugState;
+    itsDebugStateMain = theDebugState;
 }
 
 HPDebugState logger_factory::DebugState()
 {
-	return itsDebugStateMain;
+    return itsDebugStateMain;
 }
 
 

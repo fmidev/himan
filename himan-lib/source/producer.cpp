@@ -10,82 +10,82 @@
 using namespace himan;
 
 producer::producer()
-	: itsFmiProducerId(kHPMissingInt)
-	, itsProcess(kHPMissingInt)
-	, itsCentre(kHPMissingInt)
-	, itsNeonsName("")
+    : itsFmiProducerId(kHPMissingInt)
+    , itsProcess(kHPMissingInt)
+    , itsCentre(kHPMissingInt)
+    , itsNeonsName("")
 {
 
 }
 
 producer::producer(long theFmiProducerId)
-	: itsFmiProducerId(theFmiProducerId)
-	, itsProcess(kHPMissingInt)
-	, itsCentre(kHPMissingInt)
-	, itsNeonsName("")
+    : itsFmiProducerId(theFmiProducerId)
+    , itsProcess(kHPMissingInt)
+    , itsCentre(kHPMissingInt)
+    , itsNeonsName("")
 {
 
 }
 
 producer::producer(long theCentre, long theProcess)
-	: itsFmiProducerId(kHPMissingInt)
-	, itsProcess(theProcess)
-	, itsCentre(theCentre)
-	, itsNeonsName("")
+    : itsFmiProducerId(kHPMissingInt)
+    , itsProcess(theProcess)
+    , itsCentre(theCentre)
+    , itsNeonsName("")
 {
 
 }
 
 void producer::Centre(long theCentre)
 {
-	itsCentre = theCentre;
+    itsCentre = theCentre;
 }
 
 long producer::Centre() const
 {
-	return itsCentre;
+    return itsCentre;
 }
 
 void producer::Process(long theProcess)
 {
-	itsProcess = theProcess;
+    itsProcess = theProcess;
 }
 
 long producer::Process() const
 {
-	return itsProcess;
+    return itsProcess;
 }
 
 void producer::Id(long theId)
 {
-	itsFmiProducerId = theId;
+    itsFmiProducerId = theId;
 }
 
 long producer::Id() const
 {
-	return itsFmiProducerId;
+    return itsFmiProducerId;
 }
 
 void producer::Name(const std::string& theName)
 {
-	itsNeonsName = theName;
+    itsNeonsName = theName;
 }
 
 std::string producer::Name() const
 {
-	return itsNeonsName;
+    return itsNeonsName;
 }
 
 std::ostream& producer::Write(std::ostream& file) const
 {
 
-	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
 
-	file << "__itsFmiProducerId__ " << itsFmiProducerId << std::endl;
-	file << "__itsProcess__ " << itsProcess << std::endl;
-	file << "__itsCentre__ " << itsCentre << std::endl;
-	file << "__itsNeonsName__ " << itsNeonsName << std::endl;
+    file << "__itsFmiProducerId__ " << itsFmiProducerId << std::endl;
+    file << "__itsProcess__ " << itsProcess << std::endl;
+    file << "__itsCentre__ " << itsCentre << std::endl;
+    file << "__itsNeonsName__ " << itsNeonsName << std::endl;
 
-	return file;
+    return file;
 
 }
