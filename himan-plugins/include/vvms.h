@@ -18,36 +18,37 @@ namespace plugin
 
 class vvms : public compiled_plugin
 {
-	public:
-		vvms();
+public:
+    vvms();
 
-		inline virtual ~vvms() {}
+    inline virtual ~vvms() {}
 
-		vvms(const vvms& other) = delete;
-		vvms& operator=(const vvms& other) = delete;
+    vvms(const vvms& other) = delete;
+    vvms& operator=(const vvms& other) = delete;
 
-		virtual void Process(std::shared_ptr<configuration> theConfiguration);
+    virtual void Process(std::shared_ptr<configuration> theConfiguration);
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::vvms";
-		}
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::vvms";
+    }
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kCompiled;
-		}
+    virtual HPPluginClass PluginClass() const
+    {
+        return kCompiled;
+    }
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-	private:
+private:
 
-		bool AdjustParams(std::shared_ptr<info> myTargetInfo);
-		void Run(std::shared_ptr<info>, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
-		void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+    void Run(std::shared_ptr<info>, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+    void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+
+    bool itsUseCuda;
 
 };
 
@@ -55,7 +56,7 @@ class vvms : public compiled_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<vvms> (new vvms());
+    return std::shared_ptr<vvms> (new vvms());
 }
 
 } // namespace plugin

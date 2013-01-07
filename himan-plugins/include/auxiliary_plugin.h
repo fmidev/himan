@@ -33,10 +33,10 @@ namespace plugin
 class auxiliary_plugin : public himan_plugin
 {
 
-	public:
-		auxiliary_plugin() {};
+public:
+    auxiliary_plugin() {};
 
-		virtual ~auxiliary_plugin() {};
+    virtual ~auxiliary_plugin() {};
 
 };
 

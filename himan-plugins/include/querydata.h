@@ -19,38 +19,38 @@ namespace plugin
 
 class querydata : public auxiliary_plugin
 {
-	public:
-		querydata();
+public:
+    querydata();
 
-		virtual ~querydata() {}
+    virtual ~querydata() {}
 
-		querydata(const querydata& other) = delete;
-		querydata& operator=(const querydata& other) = delete;
+    querydata(const querydata& other) = delete;
+    querydata& operator=(const querydata& other) = delete;
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::querydata";
-		}
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::querydata";
+    }
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kAuxiliary;
-		}
+    virtual HPPluginClass PluginClass() const
+    {
+        return kAuxiliary;
+    }
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-		std::shared_ptr<info> FromFile(const std::string& theInputFile, const search_options& options, bool theReadContents);
-		bool ToFile(std::shared_ptr<info> theInfo, const std::string& theOutputFile, bool theActiveOnly);
+    std::shared_ptr<info> FromFile(const std::string& theInputFile, const search_options& options, bool theReadContents);
+    bool ToFile(std::shared_ptr<info> theInfo, const std::string& theOutputFile, bool theActiveOnly);
 
-	private:
+private:
 
-		NFmiTimeDescriptor CreateTimeDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
-		NFmiParamDescriptor CreateParamDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
-		NFmiHPlaceDescriptor CreateHPlaceDescriptor(std::shared_ptr<info> info);
-		NFmiVPlaceDescriptor CreateVPlaceDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
+    NFmiTimeDescriptor CreateTimeDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
+    NFmiParamDescriptor CreateParamDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
+    NFmiHPlaceDescriptor CreateHPlaceDescriptor(std::shared_ptr<info> info);
+    NFmiVPlaceDescriptor CreateVPlaceDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
 
 };
 
@@ -60,7 +60,7 @@ class querydata : public auxiliary_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<querydata> (new querydata());
+    return std::shared_ptr<querydata> (new querydata());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */

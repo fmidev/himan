@@ -34,55 +34,59 @@ namespace plugin
 class neons : public auxiliary_plugin
 {
 
-	public:
-		neons();
+public:
+    neons();
 
-		virtual ~neons();
+    inline virtual ~neons()
+    {
+        NFmiNeonsDBPool::Release(&(*itsNeonsDB)); // Return connection back to pool
+        itsNeonsDB.release();
+    }
 
-		neons(const neons& other) = delete;
-		neons& operator=(const neons& other) = delete;
+    neons(const neons& other) = delete;
+    neons& operator=(const neons& other) = delete;
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::neons";
-		}
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::neons";
+    }
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kAuxiliary;
-		}
+    virtual HPPluginClass PluginClass() const
+    {
+        return kAuxiliary;
+    }
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-		std::vector<std::string> Files(const search_options& options);
-		bool Save(std::shared_ptr<const info> resultInfo);
-		std::map<std::string,std::string> ProducerInfo(long FmiProducerId);
+    std::vector<std::string> Files(const search_options& options);
+    bool Save(std::shared_ptr<const info> resultInfo);
+    std::map<std::string,std::string> ProducerInfo(long FmiProducerId);
 
-	private:
+private:
 
-		/**
-		 * @brief Initialize connection pool
-		 *
-		 * This function will be called just once even in a threaded environment
-		 * and it will set the maximum size of the connection pool.
-		 */
+    /**
+     * @brief Initialize connection pool
+     *
+     * This function will be called just once even in a threaded environment
+     * and it will set the maximum size of the connection pool.
+     */
 
-		void InitPool();
+    void InitPool();
 
-		/**
-		 * @brief Connect to database
-		 *
-		 * We cannot connect to database directly in the constructor, but we need
-		 * to use another function for that.
-		 */
+    /**
+     * @brief Connect to database
+     *
+     * We cannot connect to database directly in the constructor, but we need
+     * to use another function for that.
+     */
 
-		void Init();
+    void Init();
 
-		bool itsInit; //!< Holds the initialization status of the database connection
-		std::unique_ptr<NFmiNeonsDB> itsNeonsDB; //<! The actual database class instance
+    bool itsInit; //!< Holds the initialization status of the database connection
+    std::unique_ptr<NFmiNeonsDB> itsNeonsDB; //<! The actual database class instance
 
 };
 
@@ -92,7 +96,7 @@ class neons : public auxiliary_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<neons> (new neons());
+    return std::shared_ptr<neons> (new neons());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */

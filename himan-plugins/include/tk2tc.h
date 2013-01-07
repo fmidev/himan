@@ -17,36 +17,37 @@ namespace plugin
 
 class tk2tc : public compiled_plugin
 {
-	public:
-		tk2tc();
+public:
+    tk2tc();
 
-		inline virtual ~tk2tc() {}
+    inline virtual ~tk2tc() {}
 
-		tk2tc(const tk2tc& other) = delete;
-		tk2tc& operator=(const tk2tc& other) = delete;
+    tk2tc(const tk2tc& other) = delete;
+    tk2tc& operator=(const tk2tc& other) = delete;
 
-		virtual void Process(std::shared_ptr<configuration> theConfiguration);
+    virtual void Process(std::shared_ptr<configuration> theConfiguration);
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::tk2tc";
-		}
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::tk2tc";
+    }
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kCompiled;
-		}
+    virtual HPPluginClass PluginClass() const
+    {
+        return kCompiled;
+    }
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-	private:
+private:
 
-		void Run(std::shared_ptr<info>, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
-		bool AdjustParams(std::shared_ptr<info> myTargetInfo);
-		void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+    void Run(std::shared_ptr<info>, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+    void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+
+    bool itsUseCuda;
 
 };
 
@@ -54,7 +55,7 @@ class tk2tc : public compiled_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<tk2tc> (new tk2tc());
+    return std::shared_ptr<tk2tc> (new tk2tc());
 }
 
 } // namespace plugin

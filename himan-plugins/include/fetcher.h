@@ -34,38 +34,38 @@ namespace plugin
 
 class fetcher : public auxiliary_plugin
 {
-	public:
-		fetcher();
+public:
+    fetcher();
 
-		virtual ~fetcher() {}
+    virtual ~fetcher() {}
 
-		fetcher(const fetcher& other) = delete;
-		fetcher& operator=(const fetcher& other) = delete;
+    fetcher(const fetcher& other) = delete;
+    fetcher& operator=(const fetcher& other) = delete;
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::fetcher";
-		}
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::fetcher";
+    }
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kAuxiliary;
-		}
+    virtual HPPluginClass PluginClass() const
+    {
+        return kAuxiliary;
+    }
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-		std::shared_ptr<info> Fetch(std::shared_ptr<const configuration> theConfiguration, std::shared_ptr<const forecast_time> theValidTime, std::shared_ptr<const level> theLevel, std::shared_ptr<const param> theParam);
+    std::shared_ptr<info> Fetch(std::shared_ptr<const configuration> theConfiguration, const forecast_time& theValidTime, const level& theLevel, const param& theParam);
 
-	private:
+private:
 
-		std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, const search_options& options, bool theReadContents = true);
-		std::vector<std::shared_ptr<info>> FromGrib(const std::string& file, const search_options& options, bool theReadContents = true);
-		std::vector<std::shared_ptr<info>> FromQueryData(const std::string& file, const search_options& options, bool theReadContents = true);
+    std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, const search_options& options, bool theReadContents = true);
+    std::vector<std::shared_ptr<info>> FromGrib(const std::string& file, const search_options& options, bool theReadContents = true);
+    std::vector<std::shared_ptr<info>> FromQueryData(const std::string& file, const search_options& options, bool theReadContents = true);
 
-		HPFileType FileType(const std::string& theInputFile);
+    HPFileType FileType(const std::string& theInputFile);
 
 };
 
@@ -75,7 +75,7 @@ class fetcher : public auxiliary_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<fetcher> (new fetcher());
+    return std::shared_ptr<fetcher> (new fetcher());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */

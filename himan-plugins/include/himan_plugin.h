@@ -20,23 +20,27 @@ namespace himan
 namespace plugin
 {
 
+/**
+ * @interface Top class interface for all plugins
+ */
+
 class himan_plugin
 {
-	public:
+public:
 
-		inline himan_plugin() {};
+    inline himan_plugin() {};
 
-		inline virtual ~himan_plugin() {};
+    inline virtual ~himan_plugin() {};
 
-		virtual std::string ClassName() const = 0;
+    virtual std::string ClassName() const = 0;
 
-		virtual HPPluginClass PluginClass() const = 0;
+    virtual HPPluginClass PluginClass() const = 0;
 
-		virtual HPVersionNumber Version() const = 0;
+    virtual HPVersionNumber Version() const = 0;
 
-	protected:
+protected:
 
-		std::unique_ptr<logger> itsLogger;
+    std::unique_ptr<logger> itsLogger;
 };
 
 // the type of the class factory

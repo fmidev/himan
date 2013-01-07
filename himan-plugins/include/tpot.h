@@ -18,36 +18,37 @@ namespace plugin
 
 class tpot : public compiled_plugin
 {
-	public:
-		tpot();
+public:
+    tpot();
 
-		inline virtual ~tpot() {}
+    inline virtual ~tpot() {}
 
-		tpot(const tpot& other) = delete;
-		tpot& operator=(const tpot& other) = delete;
+    tpot(const tpot& other) = delete;
+    tpot& operator=(const tpot& other) = delete;
 
-		virtual void Process(std::shared_ptr<configuration> theConfiguration);
+    virtual void Process(std::shared_ptr<configuration> theConfiguration);
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::tpot";
-		}
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::tpot";
+    }
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kCompiled;
-		}
+    virtual HPPluginClass PluginClass() const
+    {
+        return kCompiled;
+    }
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-	private:
+private:
 
-		void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
-		bool AdjustParams(std::shared_ptr<info> myTargetInfo);
-		void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+    void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+    void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+
+    bool itsUseCuda;
 
 };
 
@@ -55,7 +56,7 @@ class tpot : public compiled_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<tpot> (new tpot());
+    return std::shared_ptr<tpot> (new tpot());
 }
 
 } // namespace plugin

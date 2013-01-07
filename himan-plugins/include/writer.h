@@ -19,35 +19,35 @@ namespace plugin
 
 class writer : public auxiliary_plugin
 {
-	public:
-		writer();
+public:
+    writer();
 
-		virtual ~writer() {}
+    virtual ~writer() {}
 
-		writer(const writer& other) = delete;
-		writer& operator=(const writer& other) = delete;
+    writer(const writer& other) = delete;
+    writer& operator=(const writer& other) = delete;
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::writer";
-		}
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::writer";
+    }
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kAuxiliary;
-		}
+    virtual HPPluginClass PluginClass() const
+    {
+        return kAuxiliary;
+    }
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-		bool ToFile(std::shared_ptr<info> theInfo,
-		            HPFileType theFileType,
-		            bool theActiveOnly = false,
-		            const std::string& theFileName = "");
+    bool ToFile(std::shared_ptr<info> theInfo,
+                HPFileType theFileType,
+                bool theActiveOnly = false,
+                const std::string& theFileName = "");
 
-	private:
+private:
 
 };
 
@@ -57,7 +57,7 @@ class writer : public auxiliary_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<writer> (new writer());
+    return std::shared_ptr<writer> (new writer());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */

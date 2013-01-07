@@ -20,39 +20,39 @@ namespace plugin
 class grib : public auxiliary_plugin
 {
 
-	public:
+public:
 
-		grib();
+    grib();
 
-		virtual ~grib() {}
+    virtual ~grib() {}
 
-		grib(const grib& other) = delete;
-		grib& operator=(const grib& other) = delete;
+    grib(const grib& other) = delete;
+    grib& operator=(const grib& other) = delete;
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::grib";
-		};
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::grib";
+    };
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kAuxiliary;
-		};
+    virtual HPPluginClass PluginClass() const
+    {
+        return kAuxiliary;
+    };
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-		std::shared_ptr<NFmiGrib> Reader();
+    std::shared_ptr<NFmiGrib> Reader();
 
-		std::vector<std::shared_ptr<info>> FromFile(const std::string& theInputFile, const search_options& options, bool theReadContents = true);
+    std::vector<std::shared_ptr<info>> FromFile(const std::string& theInputFile, const search_options& options, bool theReadContents = true);
 
-		bool ToFile(std::shared_ptr<info> theInfo, const std::string& theOutputFile, HPFileType theFileType, bool theActiveOnly);
+    bool ToFile(std::shared_ptr<info> theInfo, const std::string& theOutputFile, HPFileType theFileType, bool theActiveOnly);
 
-	private:
+private:
 
-		std::shared_ptr<NFmiGrib> itsGrib;
+    std::shared_ptr<NFmiGrib> itsGrib;
 
 };
 
@@ -62,7 +62,7 @@ class grib : public auxiliary_plugin
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<grib> (new grib());
+    return std::shared_ptr<grib> (new grib());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */

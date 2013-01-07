@@ -1,48 +1,52 @@
 /*
- * cache.h
+ * pcuda.h
  *
- *  Created on: Nov 20, 2012
+ *  Created on: Dec 19, 2012
  *      Author: partio
+ *
  */
 
-#ifndef CACHE_H
-#define CACHE_H
+#ifndef PCUDA_H
+#define PCUDA_H
 
 #include "auxiliary_plugin.h"
-//#include "Cache.h"
+#include "himan_common.h"
 
 namespace himan
 {
 namespace plugin
 {
 
-class cache : public auxiliary_plugin
+class pcuda : public auxiliary_plugin
 {
 public:
-    cache();
+    pcuda();
 
-    virtual ~cache() {};
-
-    cache(const cache& other) = delete;
-    cache& operator=(const cache& other) = delete;
+    virtual ~pcuda() {};
 
     virtual std::string ClassName() const
     {
-        return "himan::plugin::cache";
-    };
+        return "himan::plugin::pcuda";
+    }
 
     virtual HPPluginClass PluginClass() const
     {
         return kAuxiliary;
-    };
+    }
 
     virtual HPVersionNumber Version() const
     {
         return HPVersionNumber(0, 1);
     }
 
-private:
+    bool HaveCuda() const;
 
+#ifdef HAVE_CUDA
+    int LibraryVersion() const;
+    int DeviceCount() const;
+    HPVersionNumber ComputeCapability() const;
+    void Capabilities() const;
+#endif
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
@@ -51,12 +55,12 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<cache> (new cache());
+    return std::shared_ptr<pcuda> (new pcuda());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
-} // namespace plugin
-} // namespace himan
+}
+}
 
-#endif /* CACHE_H */
+#endif /* PCUDA_H */

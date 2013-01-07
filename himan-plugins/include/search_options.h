@@ -22,15 +22,12 @@ namespace himan
 namespace plugin
 {
 
-// Could use reference to const shared_ptr to avoid incrementing shared_ptr counter
-// but is that really worth it
-
 struct search_options
 {
-	std::shared_ptr<const himan::forecast_time> time;
-	std::shared_ptr<const himan::param> param;
-	std::shared_ptr<const himan::level> level;
-	std::shared_ptr<const himan::configuration> configuration;
+    const himan::forecast_time& time;
+    const himan::param& param;
+    const himan::level& level;
+    const std::shared_ptr<const himan::configuration> configuration;
 };
 
 } // namespace plugins
