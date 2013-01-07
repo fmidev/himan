@@ -11,13 +11,13 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
+#include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "grib.h"
 #include "querydata.h"
 #include "neons.h"
-#include "util.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -25,7 +25,7 @@ using namespace himan::plugin;
 
 writer::writer()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("writer"));
+    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("writer"));
 }
 
 bool writer::ToFile(std::shared_ptr<info> theInfo,
@@ -34,82 +34,79 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
                     const std::string& theOutputFile)
 {
 
-	namespace fs = boost::filesystem;
+    namespace fs = boost::filesystem;
 
-	bool ret = false;
+    bool ret = false;
 
-	std::string correctFileName = theOutputFile;
+    std::string correctFileName = theOutputFile;
 
-	if (theActiveOnly || correctFileName.empty())
-	{
-
-		std::shared_ptr<util> u = std::dynamic_pointer_cast<util> (plugin_factory::Instance()->Plugin("util"));
-
-		correctFileName = u->MakeNeonsFileName(theInfo);
-	}
+    if (theActiveOnly || correctFileName.empty())
+    {
+        correctFileName = util::MakeNeonsFileName(theInfo);
+    }
 
     fs::path pathname(correctFileName);
 
     if (!fs::is_directory(pathname.parent_path()))
     {
-    	fs::create_directories(pathname.parent_path());
+        fs::create_directories(pathname.parent_path());
     }
 
-	switch (theFileType)
-	{
+    switch (theFileType)
+    {
 
-		case kGRIB:
-		case kGRIB1:
-		case kGRIB2:
-			{
+    case kGRIB:
+    case kGRIB1:
+    case kGRIB2:
+    {
 
-				std::shared_ptr<grib> theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
+        std::shared_ptr<grib> theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
 
-				correctFileName += ".grib";
+        correctFileName += ".grib";
 
-				ret = theGribWriter->ToFile(theInfo, correctFileName, theFileType, theActiveOnly);
+        ret = theGribWriter->ToFile(theInfo, correctFileName, theFileType, theActiveOnly);
 
-				break;
-			}
-		case kQueryData:
-			{
-				std::shared_ptr<querydata> theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+        break;
+    }
+    case kQueryData:
+    {
+        std::shared_ptr<querydata> theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
 
-				correctFileName += ".fqd";
+        correctFileName += ".fqd";
 
-				ret = theWriter->ToFile(theInfo, correctFileName, theActiveOnly);
+        ret = theWriter->ToFile(theInfo, correctFileName, theActiveOnly);
 
-				break;
-			}
-		case kNetCDF:
-			break;
+        break;
+    }
+    case kNetCDF:
+        break;
 
-			// Must have this or compiler complains
-		default:
-			throw std::runtime_error(ClassName() + ": Invalid file type: " + boost::lexical_cast<std::string> (theFileType));
-			break;
+        // Must have this or compiler complains
+    default:
+        throw std::runtime_error(ClassName() + ": Invalid file type: " + boost::lexical_cast<std::string> (theFileType));
+        break;
 
-	}
+    }
 
-	if (ret && theActiveOnly)
-	{
-		std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+    if (ret && theActiveOnly)
+    {
+        std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		// Save file information to neons
+        // Save file information to neons
 
-		ret = n->Save(theInfo);
+        ret = n->Save(theInfo);
 
-		if (ret)
-		{
-			itsLogger->Info("Wrote file '" + correctFileName + "'");
-		}
-		else
-		{
-			itsLogger->Warning("Saving file information to neons failed");
-			unlink(correctFileName.c_str());
-		}
+        if (ret)
+        {
+            itsLogger->Info("Wrote file '" + correctFileName + "'");
+        }
+        else
+        {
+            itsLogger->Warning("Saving file information to neons failed");
+            unlink(correctFileName.c_str());
+        }
 
-	}
+    }
 
-	return ret;
+    return ret;
 }

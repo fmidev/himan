@@ -14,143 +14,184 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
-#include "util.h"
 #include "writer.h"
 #include "neons.h"
+#include "pcuda.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
+
+#ifdef DEBUG
+#include "timer_factory.h"
+#endif
 
 using namespace std;
 using namespace himan::plugin;
 
-const unsigned int MAX_THREADS = 2; // Max number of threads we allow
-
-tk2tc::tk2tc()
+#ifdef HAVE_CUDA
+namespace himan
 {
-	itsClearTextFormula = "Tc = Tk - 273.15";
+namespace plugin
+{
+namespace tk2tc_cuda
+{
+void doCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex);
+}
+}
+}
+#endif
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
+const unsigned int MAX_THREADS = 6; // Max number of threads we allow
+
+tk2tc::tk2tc() : itsUseCuda(false)
+{
+    itsClearTextFormula = "Tc = Tk - 273.15";
+
+    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }
 
 void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 {
 
-	// Get number of threads to use
+    shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-	unsigned int theCoreCount = boost::thread::hardware_concurrency(); // Number of cores
+    if (c->HaveCuda())
+    {
+        string msg = "I possess the powers of CUDA";
 
-	unsigned int theThreadCount = theCoreCount > MAX_THREADS ? MAX_THREADS : theCoreCount;
+        if (!theConfiguration->UseCuda())
+        {
+            msg += ", but I won't use them";
+        }
+        else
+        {
+            msg += ", and I'm not afraid to use them";
+            itsUseCuda = true;
+        }
 
-	boost::thread_group g;
+        itsLogger->Info(msg);
 
-	/*
-	 * The target information is parsed from the configuration file.
-	 */
+    }
 
-	shared_ptr<info> theTargetInfo = theConfiguration->Info();
+    // Get number of threads to use
 
-	/*
-	 * Get producer information from neons if whole_file_write is false.
-	 */
+    unsigned int theCoreCount = boost::thread::hardware_concurrency(); // Number of cores
 
-	if (!theConfiguration->WholeFileWrite())
-	{
-		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+    unsigned int theThreadCount = theCoreCount > MAX_THREADS ? MAX_THREADS : theCoreCount;
 
-		map<string,string> prodInfo = n->ProducerInfo(theTargetInfo->Producer().Id());
+    boost::thread_group g;
 
-		if (prodInfo.size())
-		{
-			producer prod(theTargetInfo->Producer().Id());
+    /*
+     * The target information is parsed from the configuration file.
+     */
 
-			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-			prod.Name(prodInfo["name"]);
+    shared_ptr<info> theTargetInfo = theConfiguration->Info();
 
-			theTargetInfo->Producer(prod);
-		}
+    /*
+     * Get producer information from neons if whole_file_write is false.
+     */
 
-	}
+    if (!theConfiguration->WholeFileWrite())
+    {
+        shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-	/*
-	 * Set target parameter to potential temperature
-	 * - name T-C
-	 * - univ_id 4
-	 * - grib2 descriptor 0'00'000
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 *
-	 */
+        map<string,string> prodInfo = n->ProducerInfo(theTargetInfo->Producer().Id());
 
-	vector<shared_ptr<param>> theParams;
+        if (prodInfo.size())
+        {
+            producer prod(theTargetInfo->Producer().Id());
 
-	shared_ptr<param> theRequestedParam = std::shared_ptr<param> (new param("T-C", 4));
+            prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
+            prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
+            prod.Name(prodInfo["name"]);
 
-	theRequestedParam->GribDiscipline(0);
-	theRequestedParam->GribCategory(0);
-	theRequestedParam->GribParameter(0);
+            theTargetInfo->Producer(prod);
+        }
 
-	theParams.push_back(theRequestedParam);
+    }
 
-	theTargetInfo->Params(theParams);
+    /*
+     * Set target parameter to potential temperature
+     * - name T-C
+     * - univ_id 4
+     * - grib2 descriptor 0'00'000
+     *
+     * We need to specify grib and querydata parameter information
+     * since we don't know which one will be the output format.
+     *
+     */
 
-	/*
-	 * Create data structures.
-	 */
+    vector<param> theParams;
 
-	theTargetInfo->Create();
+    param theRequestedParam("T-C", 4);
 
-	/*
-	 * FeederInfo is used to feed the running threads.
-	 */
+    theRequestedParam.GribDiscipline(0);
+    theRequestedParam.GribCategory(0);
+    theRequestedParam.GribParameter(0);
 
-	itsFeederInfo = theTargetInfo->Clone();
+    theParams.push_back(theRequestedParam);
 
-	itsFeederInfo->Reset();
+    theTargetInfo->Params(theParams);
 
-	itsFeederInfo->Param(theRequestedParam);
+    /*
+     * Create data structures.
+     */
 
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
+    theTargetInfo->Create();
 
-	vector<shared_ptr<info> > theTargetInfos;
+    /*
+     * Initialize thread manager
+     */
 
-	theTargetInfos.resize(theThreadCount);
+    itsThreadManager = shared_ptr<util::thread_manager> (new util::thread_manager());
 
-	for (size_t i = 0; i < theThreadCount; i++)
-	{
+    itsThreadManager->Dimension(theConfiguration->LeadingDimension());
+    itsThreadManager->FeederInfo(theTargetInfo->Clone());
 
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
+    //itsThreadManager->FeederInfo()->Param(theRequestedParam);
 
-		//theTargetInfos[i] = std::shared_ptr<info> (new info(*theTargetInfo)); //theTargetInfo->Clone();
-		theTargetInfos[i] = theTargetInfo->Clone();
+    /*	itsFeederInfo = theTargetInfo->Clone();
 
-		boost::thread* t = new boost::thread(&tk2tc::Run,
-		                                     this,
-		                                     theTargetInfos[i],
-		                                     theConfiguration,
-		                                     i + 1);
+    itsFeederInfo->Reset();
 
-		g.add_thread(t);
+    itsFeederInfo->Param(theRequestedParam);
+    */
+    /*
+     * Each thread will have a copy of the target info.
+     */
 
-	}
+    vector<shared_ptr<info> > theTargetInfos;
 
-	g.join_all();
+    theTargetInfos.resize(theThreadCount);
 
-	itsLogger->Info("Calculation done");
+    for (size_t i = 0; i < theThreadCount; i++)
+    {
 
-	if (theConfiguration->WholeFileWrite())
-	{
+        itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+        theTargetInfos[i] = theTargetInfo->Clone();
 
-		theTargetInfo->FirstTime();
-		string theOutputFile = "himan_" + theTargetInfo->Time()->OriginDateTime()->String("%Y%m%d%H");
-		theWriter->ToFile(theTargetInfo, theConfiguration->OutputFileType(), false, theOutputFile);
+        boost::thread* t = new boost::thread(&tk2tc::Run,
+                                             this,
+                                             theTargetInfos[i],
+                                             theConfiguration,
+                                             i + 1);
 
-	}
+        g.add_thread(t);
+
+    }
+
+    g.join_all();
+
+    if (theConfiguration->WholeFileWrite())
+    {
+
+        shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+
+        theTargetInfo->FirstTime();
+        string theOutputFile = "himan_" + theTargetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
+        theWriter->ToFile(theTargetInfo, theConfiguration->OutputFileType(), false, theOutputFile);
+
+    }
 
 }
 
@@ -159,37 +200,10 @@ void tk2tc::Run(shared_ptr<info> myTargetInfo,
                 unsigned short theThreadIndex)
 {
 
-	while (AdjustParams(myTargetInfo))
-	{
-		Calculate(myTargetInfo, theConfiguration, theThreadIndex);
-	}
-}
-
-bool tk2tc::AdjustParams(shared_ptr<info> myTargetInfo)
-{
-
-	boost::mutex::scoped_lock lock(itsAdjustParamMutex);
-
-	// This function has access to the original target info
-
-	// Leading dimension can be: time or level
-	// Location cannot be, the calculations on cuda are spread on location
-	// Param cannot be, since calculated params are only one
-
-	if (1)   // say , leading_dimension == time
-	{
-
-		if (itsFeederInfo->NextTime())
-		{
-			myTargetInfo->Time(itsFeederInfo->Time());
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	return true;
+    while (itsThreadManager->AdjustLeadingDimension(myTargetInfo))
+    {
+        Calculate(myTargetInfo, theConfiguration, theThreadIndex);
+    }
 }
 
 /*
@@ -204,85 +218,139 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 {
 
 
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+    shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-	// Required source parameters
+    // Required source parameters
 
-	shared_ptr<param> TParam (new param("T-K"));
+    param TParam("T-K");
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex)));
+    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
-	myTargetInfo->ResetLevel();
-	myTargetInfo->FirstParam();
+    itsThreadManager->ResetNonLeadingDimension(myTargetInfo);
 
-	while (myTargetInfo->NextLevel())
-	{
+    myTargetInfo->FirstParam();
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time()->ValidDateTime()->String("%Y%m%d%H") +
-		                        " level " + boost::lexical_cast<string> (myTargetInfo->Level()->Value()));
+    while (itsThreadManager->AdjustNonLeadingDimension(myTargetInfo))
+    {
 
-		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
+        myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+                                " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		// Source info for T
-		shared_ptr<info> theTInfo = theFetcher->Fetch(theConfiguration,
-		                            myTargetInfo->Time(),
-		                            myTargetInfo->Level(),
-		                            TParam);
+        myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
 
-		assert(theTInfo->Param()->Unit() == kK);
+        // Source info for T
+        shared_ptr<info> TInfo = theFetcher->Fetch(theConfiguration,
+                                 myTargetInfo->Time(),
+                                 myTargetInfo->Level(),
+                                 TParam);
 
-		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> TGrid = theTInfo->ToNewbaseGrid();
+        assert(TInfo->Param().Unit() == kK);
 
-		int missingCount = 0;
-		int count = 0;
+        shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
+        shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
 
-		myTargetInfo->ResetLocation();
+        int missingCount = 0;
+        int count = 0;
 
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+#ifdef HAVE_CUDA
 
-		targetGrid->Reset();
+        bool equalGrids = myTargetInfo->GridAndAreaEquals(TInfo);
 
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
-		{
+        //if (itsUseCuda && equalGrids)
+        if (itsUseCuda && equalGrids && theThreadIndex == 1)
+        {
+            size_t N = TGrid->Size();
 
-			count++;
+            float* TOut = new float[N];
 
-			NFmiPoint thePoint = targetGrid->LatLon();
+            tk2tc_cuda::doCuda(TGrid->DataPool()->Data(), TOut, N, theThreadIndex-1);
 
-			double T = kFloatMissing;
+            double *data = new double[N];
 
-			TGrid->InterpolateToLatLonPoint(thePoint, T);
+            for (size_t i = 0; i < N; i++)
+            {
+                data[i] = static_cast<float> (TOut[i]);
 
-			if (T == kFloatMissing)
-			{
-				missingCount++;
+                if (data[i] == kFloatMissing)
+                {
+                    missingCount++;
+                }
 
-				myTargetInfo->Value(kFloatMissing);
-				continue;
-			}
+                count++;
+            }
 
-			double TC = T + 273.15;
+            myTargetInfo->Data()->Data(data, N);
 
-			if (!myTargetInfo->Value(TC))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
-			}
-		}
+            delete [] data;
+            delete [] TOut;
 
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 */
+        }
+        else
+        {
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+#else
+        if (true)
+        {
+#endif
 
-		if (!theConfiguration->WholeFileWrite())
-		{
-			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+            assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-			theWriter->ToFile(myTargetInfo->Clone(), theConfiguration->OutputFileType(), true);
-		}
-	}
+            myTargetInfo->ResetLocation();
+
+            targetGrid->Reset();
+
+#ifdef DEBUG
+            unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+            t->Start();
+#endif
+
+            while (myTargetInfo->NextLocation() && targetGrid->Next())
+            {
+
+                count++;
+
+                NFmiPoint thePoint = targetGrid->LatLon();
+
+                double T = kFloatMissing;
+
+                TGrid->InterpolateToLatLonPoint(thePoint, T);
+
+                if (T == kFloatMissing)
+                {
+                    missingCount++;
+
+                    myTargetInfo->Value(kFloatMissing);
+                    continue;
+                }
+
+                double TC = T + 273.15;
+
+                if (!myTargetInfo->Value(TC))
+                {
+                    throw runtime_error(ClassName() + ": Failed to set value to matrix");
+                }
+            }
+
+#ifdef DEBUG
+            t->Stop();
+            itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on CPU");
+#endif
+
+        }
+
+        /*
+         * Now we are done for this level
+         *
+         * Clone info-instance to writer since it might change our descriptor places
+         */
+
+        myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+
+        if (!theConfiguration->WholeFileWrite())
+        {
+            shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+
+            theWriter->ToFile(myTargetInfo->Clone(), theConfiguration->OutputFileType(), true);
+        }
+    }
 }

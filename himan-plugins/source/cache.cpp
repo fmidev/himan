@@ -12,5 +12,5 @@ using namespace himan::plugin;
 
 cache::cache()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("cache"));
+    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("cache"));
 }
