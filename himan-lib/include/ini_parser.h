@@ -15,7 +15,7 @@
 namespace himan
 {
 
-class ini_parser : public boost::noncopyable
+class ini_parser
 {
 
 public:

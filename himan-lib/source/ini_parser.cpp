@@ -483,6 +483,14 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
         {
             theLevelType = kHybrid;
         }
+        else if (theLevelTypeStr == "GROUND")
+        {
+            theLevelType = kGround;
+        }
+        else if (theLevelTypeStr == "MEANSEA")
+        {
+            theLevelType = kMeanSea;
+        }
 
         else
         {
