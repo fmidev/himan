@@ -132,6 +132,7 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
         itsGrib->Message()->PackingType("grid_jpeg");
         itsGrib->Message()->Write(theOutputFile);
 
+        itsLogger->Info("Wrote file '" + theOutputFile + "'");
     }
 
     return true;
@@ -238,15 +239,18 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
         string dataDate = boost::lexical_cast<string> (itsGrib->Message()->DataDate());
 
-        long dt = itsGrib->Message()->DataTime();
+        /*
+         * dataTime is HH24MM in long datatype.
+         *
+         * So, for example analysistime 00 is 0, and 06 is 600.
+         *
+         */
 
-        // grib_api stores times as long, so when origin hour is 00
-        // it gets stored as 0 which boost does not understand
-        // (since it's a mix of 12 hour and 24 hour times)
+        long dt = itsGrib->Message()->DataTime();
 
         string dataTime = boost::lexical_cast<string> (dt);
 
-        if (dt < 10)
+        if (dt < 1000)
         {
             dataTime = "0" + dataTime;
         }
@@ -255,7 +259,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
         string originDateTimeStr = dataDate + dataTime;
 
-        raw_time originDateTime (originDateTimeStr, "%Y%m%d%H");
+        raw_time originDateTime (originDateTimeStr, "%Y%m%d%H%M");
 
         forecast_time t (originDateTime, originDateTime);
 
