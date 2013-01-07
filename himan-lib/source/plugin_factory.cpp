@@ -34,8 +34,6 @@ plugin_factory::plugin_factory() : itsPluginSearchPath()
 
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("plugin_factory"));
 
-    itsPluginSearchPath.push_back(".");
-
     char* path;
 
     path = std::getenv("HIMAN_LIBRARY_PATH");
@@ -49,8 +47,11 @@ plugin_factory::plugin_factory() : itsPluginSearchPath()
     }
     else
     {
-        itsLogger->Warning("Environment variable HIMAN_LIBRARY_PATH not set -- search plugins only from current working directory");
+        itsLogger->Warning("Environment variable HIMAN_LIBRARY_PATH not set -- search plugins only from pre-defined locations");
     }
+
+    itsPluginSearchPath.push_back(".");
+    itsPluginSearchPath.push_back("/usr/lib64/himan-plugins"); // Default RPM location
 
     ReadPlugins();
 }
@@ -141,6 +142,8 @@ void plugin_factory::ReadPlugins()
 
     for (size_t i = 0; i < itsPluginSearchPath.size(); i++)
     {
+    	itsLogger->Trace("Search plugins from " + itsPluginSearchPath[i]);
+
         path p (itsPluginSearchPath[i]);
 
         try
