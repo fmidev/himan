@@ -11,6 +11,6 @@ for file in Glob('source/*.cpp'):
         obj='obj/'+ s.replace(".cpp","")
 	objects += env.SharedObject(obj, file)
 
-#env.Library(dir = 'lib', target = 'himan', source = objects)
-env.SharedLibrary(directory = 'lib', target = 'himan', source = objects)
+lib = env.SharedLibrary(directory = 'lib', target = 'himan', source = objects)
 
+env.Install(dir = '/usr/lib64', source = lib)
