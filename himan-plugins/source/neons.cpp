@@ -18,7 +18,7 @@ using namespace himan::plugin;
 const int MAX_WORKERS = 16;
 once_flag oflag;
 
-neons::neons() : itsInit(false)
+neons::neons() : itsInit(false), itsNeonsDB(0)
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("neons"));
 

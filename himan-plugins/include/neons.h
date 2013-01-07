@@ -39,8 +39,11 @@ public:
 
     inline virtual ~neons()
     {
-        NFmiNeonsDBPool::Release(&(*itsNeonsDB)); // Return connection back to pool
-        itsNeonsDB.release();
+    	if (itsNeonsDB)
+    	{
+    		NFmiNeonsDBPool::Release(&(*itsNeonsDB)); // Return connection back to pool
+    		itsNeonsDB.release();
+    	}
     }
 
     neons(const neons& other) = delete;
