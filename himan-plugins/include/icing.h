@@ -45,17 +45,21 @@ class icing : public compiled_plugin
 	private:
 
 		void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
-		bool AdjustParams(std::shared_ptr<info> myTargetInfo);
 		void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 
+		bool itsUseCuda;
 };
 
 // the class factory
+
+#ifndef HIMAN_AUXILIARY_INCLUDE
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::shared_ptr<icing> (new icing());
 }
+
+#endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
 } // namespace himan
