@@ -1,0 +1,113 @@
+#
+# SConscript for himan-bin
+
+import os
+
+AddOption(
+    '--debug-build',
+    dest='debug-build',
+    action='store_true',
+    help='debug build',
+    default=False)
+
+env = Environment()
+
+# Check build
+
+DEBUG = GetOption('debug-build')
+RELEASE = (not DEBUG)
+
+# Workspace
+
+workspace = os.environ['HOME'] + "/workspace"
+
+env['CC'] = 'gcc'
+env['CXX'] = 'g++'
+
+# Includes
+
+includes = []
+
+includes.append('./include')
+includes.append(workspace + '/himan-lib/include')
+includes.append(workspace + '/himan-plugins/include')
+includes.append('/usr/include/smartmet/newbase')
+
+env.Append(CPPPATH = includes)
+
+# Library paths
+
+env.Append(LIBPATH = [workspace + '/himan-lib/build/debug', '/usr/lib64'])
+
+# Libraries
+
+env.Append(LIBS = ['himan','smartmet_newbase','boost_regex','boost_filesystem','boost_system', 'rt'])
+
+# CFLAGS
+
+# "Normal" flags
+
+cflags_normal = []
+cflags_normal.append('-Wall')
+cflags_normal.append('-W')
+cflags_normal.append('-Wno-unused-parameter')
+cflags_normal.append('-Werror')
+
+# Extra flags
+
+cflags_extra = []
+cflags_extra.append('-Wpointer-arith')
+cflags_extra.append('-Wcast-qual')
+cflags_extra.append('-Wcast-align')
+cflags_extra.append('-Wwrite-strings')
+cflags_extra.append('-Wconversion')
+# cflags_extra.append('-Winline')
+cflags_extra.append('-Wnon-virtual-dtor')
+cflags_extra.append('-Wno-pmf-conversions')
+cflags_extra.append('-Wsign-promo')
+cflags_extra.append('-Wchar-subscripts')
+cflags_extra.append('-Wold-style-cast')
+
+# Difficult flags
+
+cflags_difficult = []
+cflags_difficult.append('-pedantic')
+cflags_difficult.append('-Weffc++')
+cflags_difficult.append('-Wredundant-decls')
+cflags_difficult.append('-Wshadow')
+cflags_difficult.append('-Woverloaded-virtual')
+cflags_difficult.append('-Wunreachable-code')
+cflags_difficult.append('-Wctor-dtor-privacy')
+
+# Default flags (common for release/debug)
+
+cflags = []
+cflags.append('-std=c++0x')
+
+env.Append(CCFLAGS = cflags)
+env.Append(CCFLAGS = cflags_normal)
+
+# Linker flags
+
+env.Append(LINKFLAGS = ['-Wl,--export-dynamic'])
+
+# Defines
+
+env.Append(CPPDEFINES=['UNIX'])
+
+build_dir = ""
+
+if RELEASE:
+	env.Append(CCFLAGS = ['-O2'])
+	env.Append(CPPDEFINES = ['NDEBUG'])
+	build_dir = "build/release"
+
+if DEBUG:
+	env.Append(CPPDEFINES = ['DEBUG'])
+	env.Append(CCFLAGS = ['-O0', '-g'])
+	env.Append(CCFLAGS = cflags_extra)
+#	env.Append(CCFLAGS = cflags_difficult)
+	build_dir = "build/debug"
+
+SConscript('SConscript', exports = ['env'], variant_dir=build_dir, duplicate=0)
+Clean('.', build_dir)
