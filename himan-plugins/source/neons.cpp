@@ -67,7 +67,7 @@ vector<string> neons::Files(const search_options& options)
 
     // const int kFMICodeTableVer = 204;
 
-    string analtime = options.configuration->Info()->OriginDateTime().String("%Y%m%d%H%M");
+    string analtime = options.configuration->Info()->OriginDateTime().String("%Y%m%d%H%M%S");
     string levelvalue = boost::lexical_cast<string> (options.level.Value());
 
     map<string, string> producerInfo = itsNeonsDB->GetProducerDefinition(options.configuration->SourceProducer());
@@ -104,11 +104,6 @@ vector<string> neons::Files(const search_options& options)
         /// @todo GFS (or in fact codetable 2) has wrong temperature parameter defined
 
         string parm_name = options.param.Name();
-
-        if (parm_name == "T-K")
-        {
-            parm_name = "T-C";
-        }
 
         string query = "SELECT parm_name, lvl_type, lvl1_lvl2, fcst_per, file_location, file_server "
                        "FROM "+tablename+" "
