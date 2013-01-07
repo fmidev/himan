@@ -21,136 +21,143 @@ namespace himan
 class configuration
 {
 
-	public:
+public:
 
-		friend class ini_parser;
+    friend class ini_parser;
 
-		configuration();
-		~configuration() {}
+    configuration();
+    ~configuration() {}
 
-		configuration(const configuration& other) = delete;
-		configuration& operator=(const configuration& other) = delete;
+    configuration(const configuration& other) = delete;
+    configuration& operator=(const configuration& other) = delete;
 
-		/**
-		 * @return Class name
-		 */
+    /**
+     * @return Class name
+     */
 
-		std::string ClassName() const
-		{
-			return "himan::configuration";
-		}
+    std::string ClassName() const
+    {
+        return "himan::configuration";
+    }
 
-		HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-		std::ostream& Write(std::ostream& file) const;
+    std::ostream& Write(std::ostream& file) const;
 
-		/**
-		 * @return Info instance created from configuration file metadata
-		 */
+    /**
+     * @return Info instance created from configuration file metadata
+     */
 
-		inline std::shared_ptr<info> Info() const
-		{
-			return itsInfo;
-		}
+    inline std::shared_ptr<info> Info() const
+    {
+        return itsInfo;
+    }
 
-		/**
-		 * @return List of plugin names found in the configuration file
-		 */
+    /**
+     * @return List of plugin names found in the configuration file
+     */
 
-		std::vector<std::string> Plugins() const;
+    std::vector<std::string> Plugins() const;
 
-		/**
-		 * @param List of plugin names
-		 */
+    /**
+     * @param List of plugin names
+     */
 
-		void Plugins(const std::vector<std::string>& thePlugins) ;
+    void Plugins(const std::vector<std::string>& thePlugins) ;
 
-		/**
-		 * @return List of auxiliary file names found in the configuration file
-		 */
+    /**
+     * @return List of auxiliary file names found in the configuration file
+     */
 
-		std::vector<std::string> AuxiliaryFiles() const;
-		void AuxiliaryFiles(const std::vector<std::string> theAuxiliaryFiles);
+    std::vector<std::string> AuxiliaryFiles() const;
+    void AuxiliaryFiles(const std::vector<std::string> theAuxiliaryFiles);
 
-		/**
-		 * @return Filetype of created file. One of: grib1, grib2, querydata, netcdf
-		 */
+    /**
+     * @return Filetype of created file. One of: grib1, grib2, querydata, netcdf
+     */
 
-		HPFileType OutputFileType() const;
+    HPFileType OutputFileType() const;
 
-		unsigned int SourceProducer() const;
+    unsigned int SourceProducer() const;
 
-		unsigned int TargetProducer() const;
+    unsigned int TargetProducer() const;
 
-		void SourceProducer(unsigned int theSourceProducer);
-		void TargetProducer(unsigned int theTargetProducer);
+    void SourceProducer(unsigned int theSourceProducer);
+    void TargetProducer(unsigned int theTargetProducer);
 
-		/**
-		 * @brief Enable or disable writing to one or many file
-		 * @param Value, true = all data is written to one file, false = each data descriptor
-		 * combination is written to separate file
-		 */
+    /**
+     * @brief Enable or disable writing to one or many file
+     * @param Value, true = all data is written to one file, false = each data descriptor
+     * combination is written to separate file
+     */
 
-		void WholeFileWrite(bool theWholeFileWrite);
-		bool WholeFileWrite() const;
+    void WholeFileWrite(bool theWholeFileWrite);
+    bool WholeFileWrite() const;
 
-		size_t Ni() const;
-		size_t Nj() const;
+    size_t Ni() const;
+    size_t Nj() const;
 
-		void Ni(size_t theNi);
-		void Nj(size_t theNj);
+    void Ni(size_t theNi);
+    void Nj(size_t theNj);
 
-		/**
-		 * @brief Enable or disable reading of source data from Neons
-		 * @param Value, true = read data from neons, false = use only data specified in command
-		 * line (auxiliary files)
-		 */
+    /**
+     * @brief Enable or disable reading of source data from Neons
+     * @param Value, true = read data from neons, false = use only data specified in command
+     * line (auxiliary files)
+     */
 
-		void ReadDataFromDatabase(bool theReadDataFromDatabase);
-		bool ReadDataFromDatabase() const;
+    void ReadDataFromDatabase(bool theReadDataFromDatabase);
+    bool ReadDataFromDatabase() const;
 
-		/**
-		 * @brief Enable or disable waiting for files
-		 * @param Value in minutes
-		 */
+    /**
+     * @brief Enable or disable waiting for files
+     * @param Value in minutes
+     */
 
-		void FileWaitTimeout(int theFileWaitTimeout);
-		int FileWaitTimeout() const;
+    void FileWaitTimeout(unsigned short theFileWaitTimeout);
+    unsigned short FileWaitTimeout() const;
 
-	private:
+    bool UseCuda() const;
 
-		void Init();
+    HPDimensionType LeadingDimension() const;
 
-		std::shared_ptr<info> itsInfo; //!< @see class info
+private:
 
-		HPFileType itsOutputFileType;
-		std::string itsConfigurationFile;
-		std::vector<std::string> itsAuxiliaryFiles;
+    void Init();
 
-		std::vector<std::string> itsPlugins;
-		std::string itsOriginTime;
+    std::shared_ptr<info> itsInfo; //!< @see class 'info'
 
-		std::shared_ptr<logger> itsLogger;
+    HPFileType itsOutputFileType;
+    std::string itsConfigurationFile;
+    std::vector<std::string> itsAuxiliaryFiles;
 
-		unsigned int itsSourceProducer;
-		unsigned int itsTargetProducer;
+    std::vector<std::string> itsPlugins;
+    std::string itsOriginTime;
 
-		bool itsWholeFileWrite;
-		bool itsReadDataFromDatabase;
+    std::shared_ptr<logger> itsLogger;
 
-		size_t itsNi;
-		size_t itsNj;
+    unsigned int itsSourceProducer;
+    unsigned int itsTargetProducer;
 
-		int itsFileWaitTimeout;
+    bool itsWholeFileWrite;
+    bool itsReadDataFromDatabase;
+
+    size_t itsNi;
+    size_t itsNj;
+
+    unsigned short itsFileWaitTimeout; //<! Minutes
+    bool itsUseCuda;
+
+    HPDimensionType itsLeadingDimension;
 };
 
 inline
 std::ostream& operator<<(std::ostream& file, configuration& ob)
 {
-	return ob.Write(file);
+    return ob.Write(file);
 }
 
 } // namespace himan

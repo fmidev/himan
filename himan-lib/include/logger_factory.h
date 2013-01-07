@@ -17,23 +17,23 @@ namespace himan
 class logger_factory
 {
 
-	public:
-		static logger_factory* Instance();
+public:
+    static logger_factory* Instance();
 
-		logger_factory(const logger_factory& other) = delete;
-		logger_factory& operator=(const logger_factory& other) = delete;
+    logger_factory(const logger_factory& other) = delete;
+    logger_factory& operator=(const logger_factory& other) = delete;
 
-		logger* GetLog(const std::string& theUserName);
+    logger* GetLog(const std::string& theUserName);
 
-		void DebugState(HPDebugState theDebugState);
-		HPDebugState DebugState();
+    void DebugState(HPDebugState theDebugState);
+    HPDebugState DebugState();
 
-	private:
-		logger_factory();
-		~logger_factory();
+private:
+    logger_factory();
+    ~logger_factory();
 
-		HPDebugState itsDebugStateMain;
-		static logger_factory* itsInstance;
+    HPDebugState itsDebugStateMain;
+    static logger_factory* itsInstance;
 };
 
 } // namespace himan

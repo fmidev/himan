@@ -28,87 +28,87 @@ namespace himan
 class param
 {
 
-	public:
+public:
 
-		param();
-		param(const std::string& theName);
-		param(const std::string& theName, unsigned long theUnivId);
+    param();
+    param(const std::string& theName);
+    param(const std::string& theName, unsigned long theUnivId);
 
-		param(const std::string& theName, unsigned long theUnivId,
-		      float theScale,
-		      float theBase,
-		      const std::string& thePrecision = "%.1f",
-		      FmiInterpolationMethod theInterpolationMethod = kNearestPoint);
+    param(const std::string& theName, unsigned long theUnivId,
+          float theScale,
+          float theBase,
+          const std::string& thePrecision = "%.1f",
+          FmiInterpolationMethod theInterpolationMethod = kNearestPoint);
 
-		~param() {}
+    ~param() {}
 
-		param(const param& other);
-		param& operator=(const param& other);
+    param(const param& other);
+    param& operator=(const param& other);
 
-		std::string ClassName() const
-		{
-			return "himan::param";
-		}
+    std::string ClassName() const
+    {
+        return "himan::param";
+    }
 
-		HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-		bool operator==(const param& other);
-		bool operator!=(const param& other);
+    bool operator==(const param& other);
+    bool operator!=(const param& other);
 
-		void GribParameter(long theGribParameter);
-		long GribParameter() const;
+    void GribParameter(long theGribParameter);
+    long GribParameter() const;
 
-		void GribDiscipline(long theGribDiscipline);
-		long GribDiscipline() const;
+    void GribDiscipline(long theGribDiscipline);
+    long GribDiscipline() const;
 
-		void GribCategory(long theGribCategory);
-		long GribCategory() const;
+    void GribCategory(long theGribCategory);
+    long GribCategory() const;
 
-		unsigned long UnivId() const;
-		void UnivId(unsigned long theUnivId);
+    unsigned long UnivId() const;
+    void UnivId(unsigned long theUnivId);
 
-		std::string Name() const;
-		void Name(std::string theName);
+    std::string Name() const;
+    void Name(std::string theName);
 
-		/**
-		 *
-		 * @return Unit of parameter
-		 */
+    /**
+     *
+     * @return Unit of parameter
+     */
 
-		HPParameterUnit Unit() const;
+    HPParameterUnit Unit() const;
 
-		/**
-		 *
-		 * @param theUnit
-		 */
+    /**
+     *
+     * @param theUnit
+     */
 
-		void Unit(HPParameterUnit theUnit);
+    void Unit(HPParameterUnit theUnit);
 
-		std::ostream& Write(std::ostream& file) const;
+    std::ostream& Write(std::ostream& file) const;
 
-	private:
+private:
 
-		std::shared_ptr<NFmiParam> itsParam; //!< newbase param will hold name, univ_id and scale+base
+    std::shared_ptr<NFmiParam> itsParam; //!< newbase param will hold name, univ_id and scale+base
 
-		long itsGribParameter; //!< Grib parameter number whether in grib 1 or 2
-		long itsGribTableVersion; //!< Grib table version (only in grib 1)
-		long itsGribCategory; //!< Grib parameter category (only for grib2)
-		long itsGribDiscipline; //!< Grib parameter discipline (only for grib2)
+    long itsGribParameter; //!< Grib parameter number whether in grib 1 or 2
+    long itsGribTableVersion; //!< Grib table version (only in grib 1)
+    long itsGribCategory; //!< Grib parameter category (only for grib2)
+    long itsGribDiscipline; //!< Grib parameter discipline (only for grib2)
 
-		HPParameterUnit itsUnit; //!< Unit of the parameter
-		double itsMissingValue; //!< Missing value (default kFloatMissing)
+    HPParameterUnit itsUnit; //!< Unit of the parameter
+    double itsMissingValue; //!< Missing value (default kFloatMissing)
 
-		std::unique_ptr<logger> itsLogger;
+    std::unique_ptr<logger> itsLogger;
 
 };
 
 inline
 std::ostream& operator<<(std::ostream& file, param& ob)
 {
-	return ob.Write(file);
+    return ob.Write(file);
 }
 
 } // namespace himan

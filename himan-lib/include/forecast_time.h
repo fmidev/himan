@@ -20,57 +20,57 @@ namespace himan
 class forecast_time
 {
 
-	public:
-		forecast_time();
-		forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime);
-		forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::shared_ptr<raw_time> theValidDateTime);
-		forecast_time(const std::string& theOriginDateTime,
-		              const std::string& theValidDateTime,
-		              const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
+public:
+    forecast_time();
+    forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime);
+    forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::shared_ptr<raw_time> theValidDateTime);
+    forecast_time(const std::string& theOriginDateTime,
+                  const std::string& theValidDateTime,
+                  const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
-		~forecast_time() {}
-		forecast_time(const forecast_time& other);
-		forecast_time& operator=(const forecast_time& other);
+    ~forecast_time() {}
+    forecast_time(const forecast_time& other);
+    forecast_time& operator=(const forecast_time& other);
 
-		std::string ClassName() const
-		{
-			return "himan::forecast_time";
-		};
+    std::string ClassName() const
+    {
+        return "himan::forecast_time";
+    };
 
-		HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
 
-		std::ostream& Write(std::ostream& file) const;
+    std::ostream& Write(std::ostream& file) const;
 
-		bool operator==(const forecast_time& other);
-		bool operator!=(const forecast_time& other);
+    bool operator==(const forecast_time& other);
+    bool operator!=(const forecast_time& other);
 
-		int Step() const;
+    int Step() const;
 
-		std::shared_ptr<raw_time> OriginDateTime() const;
-		void OriginDateTime(std::shared_ptr<raw_time> theOriginDateTime);
-		void OriginDateTime(std::string& theOriginDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
+    std::shared_ptr<raw_time> OriginDateTime() const;
+    void OriginDateTime(std::shared_ptr<raw_time> theOriginDateTime);
+    void OriginDateTime(std::string& theOriginDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
-		std::shared_ptr<raw_time> ValidDateTime() const;
-		void ValidDateTime(std::shared_ptr<raw_time> theValidDateTime);
-		void ValidDateTime(std::string& theValidDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
+    std::shared_ptr<raw_time> ValidDateTime() const;
+    void ValidDateTime(std::shared_ptr<raw_time> theValidDateTime);
+    void ValidDateTime(std::string& theValidDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
-	private:
-		std::shared_ptr<logger> itsLogger; // using shared instead of unique since unique prevents
-		// copying of object
+private:
+    std::shared_ptr<logger> itsLogger; // using shared instead of unique since unique prevents
+    // copying of object
 
-		std::shared_ptr<raw_time> itsOriginDateTime;
-		std::shared_ptr<raw_time> itsValidDateTime;
+    std::shared_ptr<raw_time> itsOriginDateTime;
+    std::shared_ptr<raw_time> itsValidDateTime;
 
 };
 
 inline
 std::ostream& operator<<(std::ostream& file, forecast_time& ob)
 {
-	return ob.Write(file);
+    return ob.Write(file);
 }
 
 } // namespace himan

@@ -22,46 +22,46 @@ namespace himan
 class raw_time
 {
 
-	public:
+public:
 
-		raw_time() {}
-		raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
-		raw_time(const NFmiMetTime& theTime);
-		~raw_time() {}
-		raw_time(const raw_time& other);
-		raw_time& operator=(const raw_time& other);
-
-
-		std::string String(const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S") const;
-
-		std::ostream& Write(std::ostream& file) const;
-
-		std::string ClassName() const
-		{
-			return "himan::raw_time";
-		};
-
-		HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    raw_time() {}
+    raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
+    raw_time(const NFmiMetTime& theTime);
+    ~raw_time() {}
+    raw_time(const raw_time& other);
+    raw_time& operator=(const raw_time& other);
 
 
-		bool operator==(const raw_time& other);
-		bool operator!=(const raw_time& other);
+    std::string String(const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S") const;
 
-		bool Adjust(const std::string& theTimeType, int theValue);
+    std::ostream& Write(std::ostream& file) const;
 
-		boost::posix_time::ptime RawTime() const
-		{
-			return itsDateTime;
-		}
+    std::string ClassName() const
+    {
+        return "himan::raw_time";
+    };
 
-	private:
+    HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-		std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
 
-		boost::posix_time::ptime itsDateTime;
+    bool operator==(const raw_time& other);
+    bool operator!=(const raw_time& other);
+
+    bool Adjust(const std::string& theTimeType, int theValue);
+
+    boost::posix_time::ptime RawTime() const
+    {
+        return itsDateTime;
+    }
+
+private:
+
+    std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
+
+    boost::posix_time::ptime itsDateTime;
 
 };
 
@@ -69,7 +69,7 @@ class raw_time
 inline
 std::ostream& operator<<(std::ostream& file, raw_time& ob)
 {
-	return ob.Write(file);
+    return ob.Write(file);
 }
 
 } // namespace himan
