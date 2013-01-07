@@ -158,10 +158,13 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
          * One grib file may contain many grib messages. Loop though all messages
          * and get all that match our search options.
          *
-         * \todo Should we actually return all matching messages or only the first one
          */
 
+        //<!todo Should we actually return all matching messages or only the first one
+
         long process = itsGrib->Message()->Process();
+
+        //<!todo How to best match neons producer id to grib centre/process
 
         if (options.configuration->SourceProducer() != process)
         {
@@ -170,6 +173,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
         }
 
         param p;
+
+        //<! todo GRIB1 support
 
         if (itsGrib->Message()->Edition() == 1)
         {
