@@ -56,7 +56,6 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
     if (c && c->HaveCuda())
     {
-       // int version = c->LibraryVersion();
         string msg = "I possess the powers of CUDA ";
 
         if (!theConfiguration->UseCuda())

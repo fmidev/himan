@@ -59,8 +59,7 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
 
     if (c->HaveCuda())
     {
-        int version = c->LibraryVersion();
-        string msg = "I possess the powers of CUDA (" + boost::lexical_cast<string> (version) + ")";
+        string msg = "I possess the powers of CUDA ";
 
         if (!theConfiguration->UseCuda())
         {
