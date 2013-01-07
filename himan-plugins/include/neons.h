@@ -41,7 +41,7 @@ public:
     {
     	if (itsNeonsDB)
     	{
-    		NFmiNeonsDBPool::Release(&(*itsNeonsDB)); // Return connection back to pool
+    		NFmiNeonsDBPool::Instance()->Release(&(*itsNeonsDB)); // Return connection back to pool
     		itsNeonsDB.release();
     	}
     }

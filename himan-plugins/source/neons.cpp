@@ -26,18 +26,11 @@ neons::neons() : itsInit(false), itsNeonsDB(0)
     // call_once(oflag, [](){ NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS); });
 
     call_once(oflag, &himan::plugin::neons::InitPool, this);
+}
 
-}
-/*
-neons::~neons()
-{
-	NFmiNeonsDBPool::Release(&(*itsNeonsDB)); // Return connection back to pool
-	itsNeonsDB.release();
-}
-*/
 void neons::InitPool()
 {
-    NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS);
+    NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
 }
 
 void neons::Init()
@@ -46,7 +39,7 @@ void neons::Init()
     {
         try
         {
-            itsNeonsDB = unique_ptr<NFmiNeonsDB> (NFmiNeonsDBPool::GetConnection());
+            itsNeonsDB = unique_ptr<NFmiNeonsDB> (NFmiNeonsDBPool::Instance()->GetConnection());
         }
         catch (int e)
         {
