@@ -1,0 +1,166 @@
+#
+# SConscript for himan-bin
+
+import os
+
+AddOption(
+    '--debug-build',
+    dest='debug-build',
+    action='store_true',
+    help='debug build',
+    default=False)
+
+env = Environment()
+
+# Check build
+
+DEBUG = GetOption('debug-build')
+RELEASE = (not DEBUG)
+
+# Workspace
+
+workspace = os.environ['HOME'] + "/workspace"
+
+env['CC'] = 'gcc'
+env['CXX'] = 'g++'
+
+# Includes
+
+includes = []
+
+includes.append('./include')
+includes.append(workspace + '/himan-lib/include')
+includes.append(workspace + '/himan-plugins/include')
+includes.append('/usr/include/smartmet/newbase')
+includes.append(workspace + '/fmidb/include')
+includes.append(workspace + '/fmigrib/include')
+includes.append('/usr/include/oracle/11.2/client64')
+includes.append('/home/partio/local/include/')
+includes.append('/opt/cuda/include/')
+
+env.Append(CPPPATH = includes)
+
+# Library paths
+
+library_paths = []
+
+library_paths.append(workspace + '/himan-lib/build/debug')
+library_paths.append(workspace + '/fmidb/lib')
+library_paths.append(workspace + '/fmigrib/lib')
+library_paths.append('/usr/lib64')
+library_paths.append('/home/partio/local/lib')
+library_paths.append('/usr/lib/oracle/11.2/client64/lib/')
+
+env.Append(LIBPATH = library_paths)
+
+# Libraries
+
+libraries = []
+
+libraries.append('smartmet_newbase')
+libraries.append('fmigrib')
+libraries.append('fmidb')
+#libraries.append('grib_api')
+libraries.append('cudart')
+libraries.append('jasper')
+libraries.append('clntsh')
+
+env.Append(LIBS = libraries)
+
+libgrib_api = env.File('/home/partio/local/lib/libgrib_api.a')
+
+env.Append(LIBS=libgrib_api)
+
+# CFLAGS
+
+# "Normal" flags
+
+cflags_normal = []
+cflags_normal.append('-Wall')
+cflags_normal.append('-W')
+cflags_normal.append('-Wno-unused-parameter')
+#cflags_normal.append('-Werror')
+
+# Extra flags
+
+cflags_extra = []
+cflags_extra.append('-Wpointer-arith')
+cflags_extra.append('-Wcast-qual')
+cflags_extra.append('-Wcast-align')
+cflags_extra.append('-Wwrite-strings')
+cflags_extra.append('-Wconversion')
+# cflags_extra.append('-Winline')
+cflags_extra.append('-Wnon-virtual-dtor')
+cflags_extra.append('-Wno-pmf-conversions')
+cflags_extra.append('-Wsign-promo')
+cflags_extra.append('-Wchar-subscripts')
+cflags_extra.append('-Wold-style-cast')
+
+# Difficult flags
+
+cflags_difficult = []
+cflags_difficult.append('-pedantic')
+cflags_difficult.append('-Weffc++')
+cflags_difficult.append('-Wredundant-decls')
+cflags_difficult.append('-Wshadow')
+cflags_difficult.append('-Woverloaded-virtual')
+cflags_difficult.append('-Wunreachable-code')
+cflags_difficult.append('-Wctor-dtor-privacy')
+
+# Default flags (common for release/debug)
+
+cflags = []
+cflags.append('-std=c++0x')
+cflags.append('-fPIC')
+
+env.Append(CCFLAGS = cflags)
+env.Append(CCFLAGS = cflags_normal)
+
+# Linker flags
+
+env.Append(LINKFLAGS = [])
+
+# Defines
+
+env.Append(CPPDEFINES=['UNIX'])
+
+# Check if this machine has cuda installed
+
+if os.path.isfile('/opt/cuda/lib64/libcudart.so'):
+	env.Append(CPPDEFINES=['HAVE_CUDA'])
+
+# Cuda
+
+env.Append(NVCCFLAGS = ['-m64'])
+env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC']) # these two go hand-in-hand (like -Wl,--export-dynamic)
+env.Append(NVCCFLAGS = ['-Xcompiler','-Wall'])
+env.Append(NVCCFLAGS = ['-arch=compute_20','-code=sm_20'])
+env.Append(NVCCPATH = ['./include'])
+env.Append(NVCCPATH = [workspace + '/himan-lib/include'])
+env.Append(NVCCPATH = ['/home/partio/NVIDIA_GPU_Computing_SDK/C/common/inc'])
+
+build_dir = ""
+
+if RELEASE:
+	env.Append(CCFLAGS = ['-O2'])
+	env.Append(CPPDEFINES = ['NDEBUG'])
+	build_dir = 'build/release'
+
+	# Cuda
+	env.Append(NVCCFLAGS = ['-O2'])
+	env.Append(NVCCDEFINES = ['NDEBUG'])
+
+if DEBUG:
+	env.Append(CCFLAGS = ['-g','-O0'])
+	env.Append(CCFLAGS = cflags_extra)
+	#env.Append(CCFLAGS = cflags_difficult)
+	env.Append(CPPDEFINES = ['DEBUG'])
+
+	# Cuda
+	env.Append(NVCCFLAGS = ['-O0','-g','-G'])
+	env.Append(NVCCDEFINES = ['DEBUG'])
+
+	build_dir = 'build/debug'
+
+SConscript('SConscript', exports = ['env'], variant_dir=build_dir, duplicate=0)
+Clean('.', build_dir)

@@ -1,0 +1,29 @@
+#
+# SConstruct for himan-plugins
+
+Import('env')
+import os
+import sys
+
+cppplugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer']
+cudaplugins = ['tk2tc','tpot','vvms']
+
+# Just for CUDA
+
+env.Tool('cuda')
+
+for p in cppplugins:
+
+	file = 'source/' + p + '.cpp'
+	env.SharedLibrary(target = p, source = [file])
+
+for p in cudaplugins:
+
+	file = 'source/' + p + '.cpp'
+
+	cufile = 'source/' + p + '_cuda.cu'
+ 
+	files = [file, cufile]
+
+	env.SharedLibrary(target = p, source = files)
+
