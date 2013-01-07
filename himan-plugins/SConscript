@@ -5,12 +5,23 @@ Import('env')
 import os
 import sys
 
-cppplugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer']
+libcudart = '/opt/cuda/lib64/libcudart.so'
+
+have_cuda = False
+
+if os.path.isfile(libcudart):
+	have_cuda = True
+
+
+cppplugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer','icing']
+
 cudaplugins = ['tk2tc','tpot','vvms']
 
-# Just for CUDA
+if have_cuda:
+	env.Tool('cuda')
 
-env.Tool('cuda')
+else:
+	cppplugins.extend(cudaplugins)
 
 for p in cppplugins:
 
@@ -18,6 +29,9 @@ for p in cppplugins:
 	env.SharedLibrary(target = p, source = [file])
 
 for p in cudaplugins:
+
+	if not have_cuda:
+		continue
 
 	file = 'source/' + p + '.cpp'
 

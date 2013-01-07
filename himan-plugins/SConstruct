@@ -26,6 +26,8 @@ env['CXX'] = 'g++'
 
 # Includes
 
+libcudart = '/opt/cuda/lib64/libcudart.so'
+
 includes = []
 
 includes.append('./include')
@@ -34,9 +36,11 @@ includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append(workspace + '/fmidb/include')
 includes.append(workspace + '/fmigrib/include')
-includes.append('/usr/include/oracle/11.2/client64')
+includes.append('/usr/include/oracle')
 includes.append('/home/partio/local/include/')
-includes.append('/opt/cuda/include/')
+
+if os.path.isfile(libcudart):
+	includes.append('/opt/cuda/include/')
 
 env.Append(CPPPATH = includes)
 
@@ -48,8 +52,7 @@ library_paths.append(workspace + '/himan-lib/build/debug')
 library_paths.append(workspace + '/fmidb/lib')
 library_paths.append(workspace + '/fmigrib/lib')
 library_paths.append('/usr/lib64')
-library_paths.append('/home/partio/local/lib')
-library_paths.append('/usr/lib/oracle/11.2/client64/lib/')
+library_paths.append('/usr/lib64/oracle/')
 
 env.Append(LIBPATH = library_paths)
 
@@ -61,13 +64,15 @@ libraries.append('smartmet_newbase')
 libraries.append('fmigrib')
 libraries.append('fmidb')
 #libraries.append('grib_api')
-libraries.append('cudart')
 libraries.append('jasper')
 libraries.append('clntsh')
 
+if os.path.isfile(libcudart):
+	libraries.append('cudart')
+
 env.Append(LIBS = libraries)
 
-libgrib_api = env.File('/home/partio/local/lib/libgrib_api.a')
+libgrib_api = env.File('/usr/lib64/libgrib_api.a')
 
 env.Append(LIBS=libgrib_api)
 
@@ -126,7 +131,7 @@ env.Append(CPPDEFINES=['UNIX'])
 
 # Check if this machine has cuda installed
 
-if os.path.isfile('/opt/cuda/lib64/libcudart.so'):
+if os.path.isfile(libcudart):
 	env.Append(CPPDEFINES=['HAVE_CUDA'])
 
 # Cuda

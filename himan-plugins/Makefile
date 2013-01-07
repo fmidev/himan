@@ -1,6 +1,6 @@
-LIB = plugins
+LIB = himan-plugins
 
-SCONS_FLAGS=-j 6
+SCONS_FLAGS=-j 2
 
 # How to install
 
@@ -27,9 +27,9 @@ rpm:    clean
 	if [ -a $(LIB)-lib.spec ]; \
         then \
           tar -C ../ --exclude .svn \
-                   -cf $(rpmsourcedir)/$(LIB)-lib.tar $(LIB)-lib ; \
-          gzip -f $(rpmsourcedir)/$(LIB)-lib.tar ; \
-          rpmbuild -ta $(rpmsourcedir)/$(LIB)-lib.tar.gz ; \
+                   -cf $(rpmsourcedir)/$(LIB).tar $(LIB) ; \
+          gzip -f $(rpmsourcedir)/$(LIB).tar ; \
+          rpmbuild -ta $(rpmsourcedir)/$(LIB).tar.gz ; \
         else \
           echo $(rpmerr); \
         fi;
@@ -38,9 +38,4 @@ install:
 	mkdir -p  $(DESTDIR)/$(LIBDIR)
 #	$(INSTALL_DATA) lib/libhiman.so $(DESTDIR)/$(LIBDIR)/libhiman.so
 #	$(INSTALL_DATA) lib/libhiman.a  $(DESTDIR)/$(LIBDIR)/libhiman.a
-
-objdir:
-	@mkdir -p $(objdir)
-	@mkdir -p $(libdir)
-
 
