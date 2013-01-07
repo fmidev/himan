@@ -27,7 +27,7 @@ string util::MakeNeonsFileName(shared_ptr<const info> info)
                     << "_"
                     << info->Producer().Process()
                     << "/"
-                    << info->Time().ValidDateTime()->String("%Y%m%d%H%M")
+                    << info->Time().OriginDateTime()->String("%Y%m%d%H%M")
                     << "/"
                     << info->Param().Name()
                     << "_"
