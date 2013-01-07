@@ -1,10 +1,11 @@
-//============================================================================
-// Name        : himan.cpp
-// Author      : Mikko Partio
-// Version     : 0.1
-// Copyright   : My copyright notice
-// Description : Main program for himan program
-//============================================================================
+/**
+ * @file himan.cpp
+ *
+ * @brief himan main program
+ *
+ * @author partio
+ *
+ */
 
 #include <iostream>
 #include "himan_common.h"
@@ -17,6 +18,10 @@
 #include <vector>
 #include <boost/lexical_cast.hpp>
 
+#ifdef DEBUG
+#include "timer_factory.h"
+#endif
+
 using namespace himan;
 
 void banner();
@@ -24,78 +29,87 @@ void banner();
 int main(int argc, char** argv)
 {
 
-	std::shared_ptr<configuration> theConfiguration = ini_parser::Instance()->Parse(argc, argv);
+    std::shared_ptr<configuration> theConfiguration = ini_parser::Instance()->Parse(argc, argv);
 
-	banner();
+    banner();
 
-	std::unique_ptr<logger> theLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
+    std::unique_ptr<logger> theLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
 
-	std::vector<std::shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
+    std::vector<std::shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
-	theLogger->Info("Found " + boost::lexical_cast<std::string> (thePlugins.size()) + " plugins");
+    theLogger->Info("Found " + boost::lexical_cast<std::string> (thePlugins.size()) + " plugins");
 
-	for (size_t i = 0; i < thePlugins.size(); i++)
-	{
-		std::string stub = "Plugin '"  + thePlugins[i]->ClassName() + "'";
+    for (size_t i = 0; i < thePlugins.size(); i++)
+    {
+        std::string stub = "Plugin '"  + thePlugins[i]->ClassName() + "'";
 
-		switch (thePlugins[i]->PluginClass())
-		{
-			case kCompiled:
-				theLogger->Info(stub + " \ttype compiled (hard-coded) --> " + std::dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula());
-				break;
+        switch (thePlugins[i]->PluginClass())
+        {
+        case kCompiled:
+            theLogger->Debug(stub + " \ttype compiled (hard-coded) --> " + std::dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula());
+            break;
 
-			case kAuxiliary:
-				theLogger->Info(stub + "\ttype aux");
-				break;
+        case kAuxiliary:
+            theLogger->Debug(stub + "\ttype aux");
+            break;
 
-			case kInterpreted:
-				theLogger->Info(stub + "\ttype interpreted");
-				break;
+        case kInterpreted:
+            theLogger->Debug(stub + "\ttype interpreted");
+            break;
 
-			default:
-				theLogger->Warning("Unknown plugin type");
-				break;
-		}
-	}
+        default:
+            theLogger->Fatal("Unknown plugin type");
+            exit(1);
+        }
+    }
 
 
-	theLogger->Debug("Requested plugin(s):");
+    theLogger->Debug("Requested plugin(s):");
 
-	std::vector<std::string> theRequestedPlugins = theConfiguration->Plugins();
+    std::vector<std::string> theRequestedPlugins = theConfiguration->Plugins();
 
-	for (size_t i = 0; i < theRequestedPlugins.size(); i++)
-	{
-		theLogger->Debug(theRequestedPlugins[i]);
-	}
+    for (size_t i = 0; i < theRequestedPlugins.size(); i++)
+    {
+        theLogger->Debug(theRequestedPlugins[i]);
+    }
 
-	for (size_t i = 0; i < theRequestedPlugins.size(); i++)
-	{
-		std::string theName = theRequestedPlugins[i];
+    for (size_t i = 0; i < theRequestedPlugins.size(); i++)
+    {
+        std::string theName = theRequestedPlugins[i];
 
-		theLogger->Info("Calculating " + theName);
+        theLogger->Info("Calculating " + theName);
 
-		std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(theName));
+        std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(theName));
 
-		if (!thePlugin)
-		{
-			theLogger->Error("Unable to declare plugin " + theName);
-			continue;
-		}
+        if (!thePlugin)
+        {
+            theLogger->Error("Unable to declare plugin " + theName);
+            continue;
+        }
 
-		thePlugin->Process(theConfiguration);
+#ifdef DEBUG
+        std::unique_ptr<timer> t = std::unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+        t->Start();
+#endif
 
-	}
+        thePlugin->Process(theConfiguration);
 
-	return 0;
+#ifdef DEBUG
+        t->Stop();
+        theLogger->Debug("Processing " + theName + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
+#endif
+    }
+
+    return 0;
 }
 
 void banner()
 {
-	std::cout << std::endl
-	          << "************************************************" << std::endl
-	          << "* By the Power of Grayskull, I Have the Power! *" << std::endl
-	          << "************************************************" << std::endl << std::endl;
+    std::cout << std::endl
+              << "************************************************" << std::endl
+              << "* By the Power of Grayskull, I Have the Power! *" << std::endl
+              << "************************************************" << std::endl << std::endl;
 
-	sleep(1);
+    sleep(1);
 
 }
