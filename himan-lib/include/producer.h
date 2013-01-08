@@ -1,8 +1,11 @@
-/*
- * producer.h
+/**
+ * @file producer.h
  *
- *  Created on: Dec 28, 2012
- *      Author: partio
+ * @date Dec 28, 2012
+ * @author: partio
+ *
+ * @brief Class to hold the necessary producer information: neons id, grib process
+ * and grib centre (and name)
  */
 
 #ifndef PRODUCER_H

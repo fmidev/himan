@@ -1,8 +1,10 @@
-/*
- * timer.h
+/**
+ * @file timer.h
  *
- *  Created on: Dec 17, 2012
- *      Author: partio
+ * @date Dec 17, 2012
+ * @author partio
+ *
+ * @brief Simple timer functionality
  */
 
 #ifndef TIMER_H
@@ -28,6 +30,10 @@ public:
     {
         clock_gettime(CLOCK_REALTIME, &stop_ts);
     }
+
+    /**
+     * @return Elapsed time in microseconds
+     */
 
     inline long GetTime()
     {

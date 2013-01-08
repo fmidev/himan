@@ -1,4 +1,6 @@
 /**
+ * @file configuration.h
+ *
  * @brief Class to hold configuration information read from configuration file.
  *
  * Class will read metadata from configuration file and create an info instance

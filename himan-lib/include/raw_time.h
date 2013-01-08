@@ -1,10 +1,10 @@
-/*
- * raw_time.h
+/**
+ * @file raw_time.h
  *
- *  Created on: Dec 9, 2012
- *      Author: partio
+ * @date Dec 9, 2012
+ * @author partio
  *
- * Wrapper for boost::posix_time.
+ * @brief Wrapper for boost::posix_time.
  *
  */
 
@@ -27,10 +27,10 @@ public:
     raw_time() {}
     raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
     raw_time(const NFmiMetTime& theTime);
+
     ~raw_time() {}
     raw_time(const raw_time& other);
     raw_time& operator=(const raw_time& other);
-
 
     std::string String(const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S") const;
 
@@ -45,7 +45,6 @@ public:
     {
         return HPVersionNumber(0, 1);
     }
-
 
     bool operator==(const raw_time& other);
     bool operator!=(const raw_time& other);

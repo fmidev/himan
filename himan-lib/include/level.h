@@ -1,10 +1,10 @@
-/*
- * level.h
+/**
+ * @file level.h
  *
- *  Created on: Nov 30, 2012
- *      Author: partio
+ * @date Nov 30, 2012
+ * @author partio
  *
- * Overcoat for NFmiLevel
+ * @brief Level metadata for himan. Uses NFmiLevel for some features.
  */
 
 #ifndef LEVEL_H
@@ -43,16 +43,47 @@ public:
     bool operator==(const level& other);
     bool operator!=(const level& other);
 
+    /**
+     * @brief Set level values (for pressure levels)
+     */
+
     void Value(float theLevelValue);
+
+    /**
+     * @return Level value (for pressure levels)
+     */
     float Value() const;
 
+    /**
+     * @brief Set level index number
+     */
     void Index(int theIndex);
+
+    /**
+     * @return Level index number
+     */
+
     int Index() const;
 
     //void Type(HPLevelType theType);
+
+    /**
+     * @return Level type
+     * @see himan_common.h
+     */
+
     HPLevelType Type() const;
 
+    /**
+     * @brief deprecated
+     */
+
     std::string Name() const;
+
+    /**
+     * @brief deprecated
+     */
+
     void Name(const std::string& theName);
 
     std::ostream& Write(std::ostream& file) const;

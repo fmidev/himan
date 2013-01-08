@@ -1,8 +1,10 @@
-/*
- * util.h
+/**
+ * @file util.h
  *
- *  Created on: Dec 30, 2012
- *      Author: partio
+ * @date Dec 28, 2012
+ * @author partio
+ *
+ * @brief Utility namespace for general helper functions and classes
  */
 
 #ifndef UTIL_H_
@@ -16,6 +18,15 @@ namespace himan
 {
 namespace util
 {
+
+/**
+ * @class thread_manager
+ *
+ * @brief Provide services for individual threads
+ *
+ * Will help threads to advance leading and non-leading dimensions
+ *
+ */
 
 class thread_manager
 {
@@ -61,8 +72,28 @@ private:
 
 // Regular functions in the namespace
 
+/**
+ * @brief Determine file type by looking at the first few bytes of the file
+ * @return Filetype of given argument, one of: grib, netcdf, querydata (or unknown)
+ */
+
 HPFileType FileType(const std::string& theFile);
+
+/**
+ * @brief Creates a neons-style filename with path, but without file extension
+ */
+
 std::string MakeNeonsFileName(std::shared_ptr <const info> info);
+
+/**
+ * @brief Splits a string and fills the gaps if requested
+ * @param s Input string that should be splitted
+ * @param delims String containing the characters that are used in splitting. If string length > 1, all characters are used
+ * in splitting
+ * @param fill Specify if gaps should be filled. For example string 1-4 can be splitted at - and filled with 2 and 3.
+ * @return Vector or strings
+ */
+
 std::vector<std::string> Split(const std::string& s, const std::string& delims, bool fill);
 
 } // namespace util

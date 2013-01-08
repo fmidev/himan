@@ -11,8 +11,6 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 
-#define NEWBASE_INTERPOLATION
-
 #ifdef NEWBASE_INTERPOLATION
 #include <NFmiLatLonArea.h>
 #include <NFmiRotatedLatLonArea.h>

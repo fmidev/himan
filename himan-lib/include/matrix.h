@@ -1,11 +1,10 @@
-/*
- * matrix.h
+/**
+ * @file matrix.h
  *
- *  Created on: Dec 14, 2012
- *      Author: partio
+ * @date Dec 14, 2012
+ * @author partio
  *
- * 2-3d matrix to store data. Does not have any mathematical
- * implications of matrices.
+ * @brief 2-3d matrix to store data. Does not have any mathematical implications of matrices.
  *
  */
 
@@ -44,19 +43,6 @@ public:
     {
         return HPVersionNumber(0, 1);
     }
-
-    /*
-    		T& operator()(size_t x, size_t y, size_t z = 1)
-    		{
-    			assert(itsData.size() > 0);
-    			return itsData[Index(x, y, z)];
-    		}
-    		T& operator()(size_t combinedIndex)
-    		{
-    			assert(itsData.size() > 0);
-    			return itsData[combinedIndex];
-    		}
-    */
 
     // Perhaps dangerous: return reference with no const
 
@@ -107,7 +93,10 @@ public:
         return file;
     }
 
-    // Print information on contents if T == double
+    /**
+     * @brief Print information on contents if T == double
+     *
+     */
 
     void DoStuff(std::ostream& file, std::vector<double> theValues) const
     {

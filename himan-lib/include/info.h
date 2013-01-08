@@ -3,7 +3,7 @@
  *
  * @brief Define metadata structures requred to calculate and store data
  *
- * Created on: Nov 22, 2012
+ * @date Nov 22, 2012
  *
  * @author partio
  *
@@ -20,6 +20,8 @@
 #include "matrix.h"
 #include "himan_common.h"
 #include "producer.h"
+
+#define NEWBASE_INTERPOLATION
 
 namespace himan
 {
@@ -136,7 +138,7 @@ public:
         /**
          * @brief Set iterator to the position indicated by the function argument
          *
-         * @return true if value exists, else false
+         * @return True if value exists, else false
          *
          */
 
@@ -156,9 +158,11 @@ public:
         }
 
         /**
-         * @brief Set iterator to the position indicated by the function argument
+         * @brief Set iterator to the position indicated by the function argument. No limit-checking is made.
          *
          * @return void
+         *
+         * @todo Should return bool like Set(const T theElement) ?
          */
 
         void Set(size_t theIndex)
@@ -232,6 +236,12 @@ public:
 
     std::ostream& Write(std::ostream& file) const;
 
+    /**
+     * @return Projection type of this info
+     *
+     * One info can hold only one type of projection
+     */
+
     HPProjectionType Projection() const;
     void Projection(HPProjectionType theProjection);
 
@@ -248,22 +258,70 @@ public:
     void Orientation(double theOrientation);
     double Orientation() const;
 
+    /**
+     * @return Number of point along X axis
+     */
+
     size_t Ni() const;
+
+    /**
+     * @return Number of point along Y axis
+     */
+
     size_t Nj() const;
 
+    /**
+     * @return Distance between two points in X axis in degrees
+     */
+
     double Di() const;
+
+    /**
+     * @return Distance between two points in Y axis in degrees
+     */
+
     double Dj() const;
 
-    //std::vector<std::shared_ptr<param>> Params() const;
+    /**
+     * @brief Initialize parameter iterator with new parameters
+     * @param theParams A vector containing new parameter information for this info
+     */
+
     void Params(const std::vector<param>& theParams);
+
+    /**
+     * @brief Replace current parameter iterator with a new one
+     * @param theParamIterator New parameter iterator
+     */
+
     void ParamIterator(const param_iter& theParamIterator);
 
-    //std::vector<std::shared_ptr<level>> Levels() const;
+    /**
+     * @brief Initialize level iterator with new levels
+     * @param theLevels A vector containing new level information for this info
+     */
+
     void Levels(const std::vector<level>& theLevels);
+
+    /**
+     * @brief Replace current level iterator with a new one
+     * @param theLevelIterator New level iterator
+     */
+
     void LevelIterator(const level_iter& theLevelIterator);
 
-    //std::vector<std::shared_ptr<forecast_time>> Times() const;
+    /**
+     * @brief Initialize time iterator with new times
+     * @param theTimes A vector containing new time information for this info
+     */
+
     void Times(const std::vector<forecast_time>& theTimes);
+
+    /**
+     * @brief Replace current time iterator with a new one
+     * @param theTimeIterator New time iterator
+     */
+
     void TimeIterator(const time_iter& theTimeIterator);
 
     /**
@@ -275,7 +333,6 @@ public:
      *
      * @todo Should return void?
      * @return Always true
-     *
      */
 
     bool Create();
@@ -299,40 +356,107 @@ public:
     void Producer(const producer& theProducer);
     const producer& Producer() const;
 
+    /**
+     * @brief Return info-wide origin time if it exists
+     * @return Origin time
+     */
+
     raw_time OriginDateTime() const;
     void OriginDateTime(const std::string& theOriginDateTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 
+    /**
+     * @brief Reset all descriptors
+     */
+
     void Reset();
 
+    /**
+     * @see iterator#Reset
+     */
+
     void ResetParam();
+
+    /**
+     * @see iterator#Next
+     */
+
     bool NextParam();
+
+    /**
+     * @see iterator#First
+     */
+
     bool FirstParam();
 
-    //void Param(std::shared_ptr<const param> theActiveParam);
+    /**
+     * @brief Set parameter iterator to position indicated by the function argument
+     * @see iterator#Set
+     */
+
     bool Param(const param& theRequiredParam);
     void ParamIndex(size_t theParamIndex);
     size_t ParamIndex() const;
     param& Param() const;
 
+    /**
+     * @see iterator#Reset
+     */
+
     void ResetLevel();
+
+    /**
+     * @see iterator#Next
+     */
+
     bool NextLevel();
+
+    /**
+     * @see iterator#First
+     */
+
     bool FirstLevel();
 
-    //bool Level(std::shared_ptr<const level> theLevel);
+    /**
+     * @brief Set level iterator to position indicated by the function argument
+     * @see iterator#Set
+     */
+
     bool Level(const level& theLevel);
     void LevelIndex(size_t theLevelIndex);
     size_t LevelIndex() const;
     level& Level() const;
 
+    /**
+     * @see iterator#Reset
+     */
+
     void ResetTime();
+
+    /**
+     * @see iterator#Next
+     */
+
     bool NextTime();
+
+    /**
+     * @see iterator#First
+     */
+
     bool FirstTime();
 
-    //void Time(std::shared_ptr<const forecast_time> theTime);
+    /**
+     * @brief Set time iterator to position indicated by the function argument
+     * @see iterator#Set
+     */
+
     bool Time(const forecast_time& theTime);
     void TimeIndex(size_t theTimeIndex);
     size_t TimeIndex() const;
     forecast_time& Time() const;
+
+    /**
+     * @brief Set location iterator to given index value. No limit-checking is made.
+     */
 
     void LocationIndex(size_t theLocationIndex);
     void ResetLocation();
@@ -346,23 +470,66 @@ public:
     std::shared_ptr<d_matrix_t> Data() const;
 
     /**
+     * @brief Return data matrix from the given time/level/param indexes
+     *
      * @note Function argument order is important!
+     *
      * @return Data matrix pointed by the given function arguments.
      */
+
     std::shared_ptr<d_matrix_t> Data(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
 
+    /**
+     * @brief Replace current data matrix with the function argument
+     * @param d shared pointer to a data matrix
+     */
+
     void Data(std::shared_ptr<d_matrix_t> d);
+
+    /**
+     * @brief Replace whole meta matrix with a new one
+     * @param m shared pointer to n meta matrix
+     */
     void Data(std::shared_ptr<matrix_t> m);
 
-    size_t DataSize()
+    /**
+     * @brief Return size of meta matrix. Is the same as times*params*levels.
+     *
+     */
+
+    size_t DataSize() const
     {
         return itsDataMatrix->Size();
     }
 
+    /**
+     * @brief Set the data value pointed by the iterators with a new one
+     * @return True if assignment was succesfull
+     */
+
     bool Value(double theValue);
+
+    /**
+     * @return Data value pointed by the iterators
+     */
+
     double Value() const;
 
+#ifdef NEWBASE_INTERPOLATION
+
+    /**
+     * @brief Create a newbase grid (NFmiGrid) from current data
+     * @todo Should return raw pointer ?
+     */
+
     std::shared_ptr<NFmiGrid> ToNewbaseGrid() const;
+
+    #endif
+
+    /**
+     * @brief Check if grid and area are equal
+     */
+
     bool GridAndAreaEquals(std::shared_ptr<const info> other) const;
 
     HPScanningMode ScanningMode() const;
