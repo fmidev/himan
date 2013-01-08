@@ -1,10 +1,11 @@
-/*
- * himan_plugin.h
+/**
+ * @file himan_plugin.h
  *
- *  Created on: Nov 20, 2012
- *      Author: partio
+ * @brief Top level class for all plugins. (not for core-lib).
  *
- * Top level class for all plugins. (Note: not for core-lib).
+ * @date Nov 20, 2012
+ * @author partio
+ *
  */
 
 #ifndef HIMAN_PLUGIN_H
@@ -14,14 +15,27 @@
 #include "himan_common.h"
 #include "logger.h"
 
+/**
+ * @namespace himan
+ * @brief Bottom-level namespace for all himan-related stuff
+ */
+
 namespace himan
 {
+
+/**
+ * @namespace plugin
+ * @brief Namespace for all himan plugins
+ */
 
 namespace plugin
 {
 
 /**
- * @interface Top class interface for all plugins
+ * @class himan_plugin Top class interface for all plugins
+ *
+ * @brief This class acts as an interface, meaning that it declares a bunch of functions
+ * but does not give definitions.
  */
 
 class himan_plugin

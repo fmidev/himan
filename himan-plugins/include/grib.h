@@ -1,8 +1,10 @@
-/*
- * grib.h
+/**
+ * @file grib.h
  *
- *  Created on: Nov 20, 2012
- *      Author: partio
+ * @brief Class to implement grib writing and reading. Actual grib opening and reading is done by fmigrib library.
+ *
+ * @date Nov 20, 2012
+ * @author partio
  */
 
 #ifndef GRIB_H
