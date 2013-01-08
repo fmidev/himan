@@ -1,15 +1,22 @@
-/*
- * grib.cpp
+/**
+ * @file grib.cpp
  *
- *  Created on: Nov 20, 2012
- *      Author: partio
+ * @date Nov 20, 2012
+ * @author partio
  */
 
 #include "grib.h"
 #include "logger_factory.h"
+#include "plugin_factory.h"
 
 using namespace std;
 using namespace himan::plugin;
+
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "neons.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
 
 grib::grib()
 {
@@ -27,16 +34,21 @@ shared_ptr<NFmiGrib> grib::Reader()
 bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileType theFileType, bool theActiveOnly)
 {
 
-    // Write only that data which is currently set at descriptors
+	static long edition = static_cast<long> (theFileType);
 
     if (theActiveOnly)
     {
+        // Write only that data which is currently set at descriptors
 
         /* Section 0 */
 
-        itsGrib->Message()->Edition(static_cast<int> (theFileType));
+        itsGrib->Message()->Edition(edition);
 
-        if (theFileType == kGRIB2)
+        if (theFileType == kGRIB1)
+        {
+        	itsGrib->Message()->Table2Version(theInfo->Param().GribTableVersion()) ;
+        }
+        else if (theFileType == kGRIB2)
         {
             itsGrib->Message()->ParameterDiscipline(theInfo->Param().GribDiscipline()) ;
         }
@@ -62,26 +74,29 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 
         /* Section 4 */
 
-        if (theFileType == kGRIB2)
+        if (theFileType == kGRIB1)
+        {
+            itsGrib->Message()->ParameterNumber(theInfo->Param().GribParameter()) ;
+        }
+        else if (theFileType == kGRIB2)
         {
             itsGrib->Message()->ParameterCategory(theInfo->Param().GribCategory()) ;
             itsGrib->Message()->ParameterNumber(theInfo->Param().GribParameter()) ;
         }
 
-        // TODO: need to normalize these, now they are grib2
-
         switch (theInfo->Projection())
         {
         case kLatLonProjection:
         {
-            itsGrib->Message()->GridType(0);
 
-            string scanningMode = "+x-y"; // GFS
+        	long gridType = 0;
+
+            itsGrib->Message()->GridType(gridType);
 
             double latitudeOfFirstGridPointInDegrees, longitudeOfFirstGridPointInDegrees;
             double latitudeOfLastGridPointInDegrees, longitudeOfLastGridPointInDegrees;
 
-            if (scanningMode == "+x-y")
+            if (theInfo->ScanningMode() == kTopLeft)
             {
                 latitudeOfFirstGridPointInDegrees = theInfo->TopRightLatitude();
                 longitudeOfFirstGridPointInDegrees = theInfo->BottomLeftLongitude();
@@ -91,7 +106,7 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
             }
             else
             {
-                throw runtime_error(ClassName() + ": unsupported scanning mode: " + scanningMode);
+                throw runtime_error(ClassName() + ": unsupported scanning mode: " + boost::lexical_cast<string> (theInfo->ScanningMode()));
             }
 
             itsGrib->Message()->X0(longitudeOfFirstGridPointInDegrees);
@@ -101,14 +116,23 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
             break;
         }
         case kStereographicProjection:
-            itsGrib->Message()->GridType(20);
+        {
+        	long gridType = 5;
+
+        	if (edition == 2)
+        	{
+        		gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
+        	}
+
+            itsGrib->Message()->GridType(gridType);
+
             itsGrib->Message()->X0(theInfo->BottomLeftLongitude());
             itsGrib->Message()->Y0(theInfo->BottomLeftLatitude());
 
             // missing iDirectionIncrementInMeters
             itsGrib->Message()->GridOrientation(theInfo->Orientation());
             break;
-
+        }
         default:
             throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (theInfo->Projection()));
             break;
@@ -119,10 +143,17 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 
         // Level
 
-        if (theFileType == kGRIB2)
+        itsGrib->Message()->LevelValue(static_cast<long> (theInfo->Level().Value()));
+
+        // Himan levels equal to grib 1
+
+        if (edition == 1)
+        {
+        	itsGrib->Message()->LevelTypeToAnotherEdition(theInfo->Level().Type(),1);
+        }
+        else if (edition == 2)
         {
             itsGrib->Message()->LevelType(theInfo->Level().Type());
-            itsGrib->Message()->LevelValue(static_cast<long> (theInfo->Level().Value()));
         }
 
         itsGrib->Message()->Bitmap(true);
@@ -142,6 +173,7 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
 {
 
+	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
     vector<shared_ptr<himan::info>> theInfos;
 
     itsGrib->Open(theInputFile);
@@ -176,21 +208,19 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
         param p;
 
         //<! todo GRIB1 support
+        long number = itsGrib->Message()->ParameterNumber();
 
         if (itsGrib->Message()->Edition() == 1)
         {
-            /*
-            if (itsGrib->Message()->ParameterNumber() != options.param.GribParameter())
-            	continue;
 
-            p->GribParameter(itsGrib->Message()->ParameterNumber());
-            */
-            throw runtime_error(ClassName() + ": grib 1 not supported yet");
+            p.GribParameter(itsGrib->Message()->ParameterNumber());
+            p.GribTableVersion(itsGrib->Message()->Table2Version());
+
+            throw runtime_error(ClassName() + ": neons support missing");
         }
         else
         {
 
-            long number = itsGrib->Message()->ParameterNumber();
             long category = itsGrib->Message()->ParameterCategory();
             long discipline = itsGrib->Message()->ParameterDiscipline();
 
