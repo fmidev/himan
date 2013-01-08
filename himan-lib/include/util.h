@@ -16,6 +16,11 @@
 
 namespace himan
 {
+
+/**
+ * @namespace himan::util 
+ * @brief Namespace for all utility functions and classes
+ */
 namespace util
 {
 

@@ -24,7 +24,7 @@ namespace himan
 {
 
 /**
- * @namespace plugin
+ * @namespace himan::plugin
  * @brief Namespace for all himan plugins
  */
 
