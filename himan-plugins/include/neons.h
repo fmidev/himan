@@ -65,9 +65,9 @@ public:
     }
 
     std::vector<std::string> Files(const search_options& options);
-    bool Save(std::shared_ptr<const info> resultInfo);
-    std::map<std::string,std::string> ProducerInfo(long FmiProducerId);
-    std::string GribParameterName(const long FmiParameterId,const long CodeTableVersion);
+    bool Save(std::shared_ptr<const info> resultInfo, const std::string& theFileName);
+    std::map<std::string,std::string> ProducerInfo(long fmiProducerId);
+    std::string GribParameterName(const long fmiParameterId,const long codeTableVersion);
 
     /**
      * @brief Fetch the latest analysistime from neons for a given producer

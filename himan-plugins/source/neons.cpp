@@ -319,14 +319,14 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
     return true;
 }
 
-map<string,string> neons::ProducerInfo(long FmiProducerId)
+map<string,string> neons::ProducerInfo(long fmiProducerId)
 {
 
     Init();
 
     string query = "SELECT n.model_id, n.ident_id, n.model_name FROM grid_num_model_grib n "
                    "WHERE n.model_name = (SELECT ref_prod FROM fmi_producers WHERE producer_id = "
-                   + boost::lexical_cast<string> (FmiProducerId) + ")";
+                   + boost::lexical_cast<string> (fmiProducerId) + ")";
 
     itsNeonsDB->Query(query);
 
@@ -382,10 +382,11 @@ NFmiNeonsDB& neons::NeonsDB()
  *  \par FmiParameterId - parameter number
  *  \par CodeTableVersion  - code table number
  */
-std::string neons::GribParameterName(const long FmiParameterId, const long CodeTableVersion) {
+std::string neons::GribParameterName(const long fmiParameterId, const long codeTableVersion) 
+{
     
     Init();
     
-    std::string param_name = itsNeonsDB->GetGridParameterName(FmiParameterId, CodeTableVersion, 204);
-    return param_name;   
+    std::string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, 204);
+    return paramName;   
 }
