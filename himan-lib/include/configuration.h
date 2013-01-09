@@ -65,7 +65,7 @@ public:
     std::vector<std::string> Plugins() const;
 
     /**
-     * @param List of plugin names
+     * @param thePlugins List of plugin names (string)
      */
 
     void Plugins(const std::vector<std::string>& thePlugins) ;
@@ -92,7 +92,8 @@ public:
 
     /**
      * @brief Enable or disable writing to one or many file
-     * @param Value, true = all data is written to one file, false = each data descriptor
+     *
+     * @param theWholeFileWrite true = all data is written to one file, false = each data descriptor
      * combination is written to separate file
      */
 
@@ -107,7 +108,7 @@ public:
 
     /**
      * @brief Enable or disable reading of source data from Neons
-     * @param Value, true = read data from neons, false = use only data specified in command
+     * @param theReadDataFromDatabase true = read data from neons, false = use only data specified in command
      * line (auxiliary files)
      */
 
@@ -116,7 +117,7 @@ public:
 
     /**
      * @brief Enable or disable waiting for files
-     * @param Value in minutes
+     * @param theFileWaitTimeout Value in minutes
      */
 
     void FileWaitTimeout(unsigned short theFileWaitTimeout);
