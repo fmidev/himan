@@ -69,6 +69,24 @@ public:
     std::map<std::string,std::string> ProducerInfo(long FmiProducerId);
     std::string GribParameterName(const long FmiParameterId,const long CodeTableVersion);
 
+    /**
+     * @brief Fetch the latest analysistime from neons for a given producer
+     *
+     * @param Producer for which the analysistime is fetched
+     *
+     * @return Latest analysistime as neons-style timestamp string (201301091200)
+     */
+
+    std::string LatestTime(const producer& prod);
+
+    /**
+     * @brief Function to expose the NFmiNeonsDB interface
+     *
+     * @return Reference to the NFmiNeonsDB instance
+     */
+
+    NFmiNeonsDB& NeonsDB();
+
 private:
 
     /**

@@ -18,7 +18,7 @@ using namespace himan::plugin;
 const int MAX_WORKERS = 16;
 once_flag oflag;
 
-neons::neons() : itsInit(false), itsNeonsDB(0)
+neons::neons() : itsInit(false), itsNeonsDB()
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("neons"));
 
@@ -316,6 +316,37 @@ map<string,string> neons::ProducerInfo(long FmiProducerId)
     return ret;
 }
 
+std::string neons::LatestTime(const producer& prod)
+{
+
+	Init();
+
+	string query = "SELECT table_name, dset_id, to_char(base_date,'YYYYMMDDHH24MI') "
+					"FROM as_grid "
+					"WHERE model_type = '" +prod.Name() + "' "
+			//		"AND base_date > TO_DATE(SYSDATE - " +hours_in_interest +"/24 - " +offset + "/24) "
+					"AND rec_cnt_dset > 0 "
+					"ORDER BY base_date DESC";
+
+	itsNeonsDB->Query(query);
+
+	vector<string> row = itsNeonsDB->FetchRow();
+
+	if (row.size() == 0)
+	{
+		itsLogger->Error("Unable to find latest model run for producer '" + prod.Name() + "'");
+		return "";
+	}
+
+	return row[2];
+}
+
+NFmiNeonsDB& neons::NeonsDB()
+{
+	Init();
+	return *itsNeonsDB.get();
+}
+
 std::string neons::GribParameterName(const long FmiParameterId,const long CodeTableVersion) {
     
     Init();
@@ -323,4 +354,3 @@ std::string neons::GribParameterName(const long FmiParameterId,const long CodeTa
     std::string param_name = itsNeonsDB->GetGridParameterName(FmiParameterId, CodeTableVersion, 204);
     return param_name;   
 }
-
