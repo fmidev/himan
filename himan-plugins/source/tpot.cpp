@@ -126,7 +126,7 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
 
     vector<param> theParams;
 
-    param theRequestedParam ("TP-K", 8);
+    param theRequestedParam ("TPW-K", 9);
 
     theRequestedParam.GribDiscipline(0);
     theRequestedParam.GribCategory(0);
@@ -216,7 +216,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
     // Required source parameters
 
     param TParam ("T-K");
-    param PParam ("P-HPA");
+    param PParam ("P-PA");
 
     unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
