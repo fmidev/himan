@@ -215,9 +215,9 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 	param TParam("T-K");
 	param TgParam("T-K"); // Ground temperature
-        level TgLevel(himan::kHeight, 0);
+        level TgLevel(himan::kHeight, 0, "HEIGHT");
         param FfParam("FFG-MS");  // 10 meter wind
-        level FfLevel(himan::kHeight, 10);
+        level FfLevel(himan::kHeight, 10, "HEIGHT");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
