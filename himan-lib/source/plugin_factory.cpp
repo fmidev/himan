@@ -47,7 +47,7 @@ plugin_factory::plugin_factory() : itsPluginSearchPath()
     }
     else
     {
-        itsLogger->Warning("Environment variable HIMAN_LIBRARY_PATH not set -- search plugins only from pre-defined locations");
+        itsLogger->Trace("Environment variable HIMAN_LIBRARY_PATH not set -- search plugins only from pre-defined locations");
     }
 
     itsPluginSearchPath.push_back(".");

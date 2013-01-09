@@ -96,7 +96,7 @@ void ini_parser::ParseAndCreateInfo(int argc, char** argv)
 
 void ini_parser::ParseCommandLine(int argc, char* argv[])
 {
-	itsLogger->Info("Parsing command line");
+	itsLogger->Debug("Parsing command line");
 
 	namespace po = boost::program_options;
 
