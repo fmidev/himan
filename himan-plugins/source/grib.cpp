@@ -209,10 +209,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
         //<! todo GRIB1 support
         long number = itsGrib->Message()->ParameterNumber();
-        long no_vers = itsGrib->Message()->Table2Version();
 
         if (itsGrib->Message()->Edition() == 1)
         {
+            long no_vers = itsGrib->Message()->Table2Version();
+
             shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
             p.Name(n->GribParameterName(number, no_vers));           
             p.GribParameter(number);
