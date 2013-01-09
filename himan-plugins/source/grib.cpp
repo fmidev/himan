@@ -209,14 +209,16 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
         //<! todo GRIB1 support
         long number = itsGrib->Message()->ParameterNumber();
+        long no_vers = itsGrib->Message()->Table2Version();
 
         if (itsGrib->Message()->Edition() == 1)
         {
+            shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+            p.Name(n->GribParameterName(number, no_vers));           
+            p.GribParameter(number);
+            p.GribTableVersion(no_vers);
 
-            p.GribParameter(itsGrib->Message()->ParameterNumber());
-            p.GribTableVersion(itsGrib->Message()->Table2Version());
-
-            throw runtime_error(ClassName() + ": neons support missing");
+            // throw runtime_error(ClassName() + ": neons support missing");
         }
         else
         {
@@ -285,7 +287,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
             dataTime = "0" + dataTime;
         }
 
-        long step = itsGrib->Message()->ForecastTime();
+       // long step = itsGrib->Message()->ForecastTime();
+        long step = itsGrib->Message()->EndStep();
 
         string originDateTimeStr = dataDate + dataTime;
 

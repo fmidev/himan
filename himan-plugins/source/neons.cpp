@@ -80,6 +80,7 @@ vector<string> neons::Files(const search_options& options)
     //string level_name = itsNeonsDB->GetGridLevelName(options.param.UnivId(), options.level.Type(), kFMICodeTableVer, boost::lexical_cast<long>(no_vers));
 
     string level_name = options.level.Name();
+    cout << "LEV_NAME: " << level_name << endl;
 
     vector<vector<string> > gridgeoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime);
 
@@ -313,5 +314,13 @@ map<string,string> neons::ProducerInfo(long FmiProducerId)
     ret["name"] = row[2];
 
     return ret;
+}
+
+std::string neons::GribParameterName(const long FmiParameterId,const long CodeTableVersion) {
+    
+    Init();
+    
+    std::string param_name = itsNeonsDB->GetGridParameterName(FmiParameterId, CodeTableVersion, 204);
+    return param_name;   
 }
 

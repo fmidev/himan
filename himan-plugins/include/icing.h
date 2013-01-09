@@ -1,8 +1,12 @@
 /*
- * icing.h
+ * @file icing.h
+ * 
+ * @brief A plugin to calculate sea spray icing.
  *
- *  Created on: Jan 03, 2013
- *      Author: aaltom
+ * @date Jan 03, 2013
+ * 
+ * @author aaltom
+ * 
  */
 
 #ifndef ICING_H

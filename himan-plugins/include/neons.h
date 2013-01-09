@@ -67,6 +67,7 @@ public:
     std::vector<std::string> Files(const search_options& options);
     bool Save(std::shared_ptr<const info> resultInfo);
     std::map<std::string,std::string> ProducerInfo(long FmiProducerId);
+    std::string GribParameterName(const long FmiParameterId,const long CodeTableVersion);
 
 private:
 

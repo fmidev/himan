@@ -213,9 +213,11 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 	// Required source parameters
 
-	param TParam("T-C");
-	param TgParam("TG-C");
-    param FfParam("FF10-MS");
+	param TParam("T-K");
+	param TgParam("T-K"); // Ground temperature
+        level TgLevel(himan::kHeight, 0);
+        param FfParam("FFG-MS");  // 10 meter wind
+        level FfLevel(himan::kHeight, 10);
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
@@ -241,13 +243,13 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
                 // Source info for Tg
 		shared_ptr<info> TgInfo = theFetcher->Fetch(theConfiguration,
 		                         myTargetInfo->Time(),
-		                         myTargetInfo->Level(),
+		                         TgLevel,
 		                         TgParam);
 
 		// Source info for FF
 		shared_ptr<info> FfInfo = theFetcher->Fetch(theConfiguration,
 		                         myTargetInfo->Time(),
-		                         myTargetInfo->Level(),
+		                         FfLevel,
 		                         FfParam);
                 
 
@@ -258,8 +260,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
 		shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
-        shared_ptr<NFmiGrid> TgGrid = TgInfo->ToNewbaseGrid();
-        shared_ptr<NFmiGrid> FfGrid = FfInfo->ToNewbaseGrid();
+                shared_ptr<NFmiGrid> TgGrid = TgInfo->ToNewbaseGrid();
+                shared_ptr<NFmiGrid> FfGrid = FfInfo->ToNewbaseGrid();
 
 		int missingCount = 0;
 		int count = 0;
