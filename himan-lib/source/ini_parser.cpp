@@ -2,17 +2,23 @@
  * ini_parser.cpp
  *
  *  Created on: Nov 19, 2012
- *      Author: partio
+ *	  Author: partio
  */
 
 #include "ini_parser.h"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
 #include <boost/program_options.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 #include <stdexcept>
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include "util.h"
+#include <map>
+
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "neons.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
 using namespace std;
@@ -25,7 +31,7 @@ using namespace std;
  * Steps taken:
  *
  * 1) Read command line options. Options specified in command line will
- *    override those in the conf file.
+ *	override those in the conf file.
  *
  * 2) Read configuration file (if specified).
  *
@@ -41,26 +47,26 @@ ini_parser* ini_parser::itsInstance = NULL;
 ini_parser* ini_parser::Instance()
 {
 
-    if (!itsInstance)
-    {
-        itsInstance = new ini_parser;
-    }
+	if (!itsInstance)
+	{
+		itsInstance = new ini_parser;
+	}
 
-    return itsInstance;
+	return itsInstance;
 }
 
 ini_parser::ini_parser()
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("ini_parser"));
-    itsConfiguration = shared_ptr<configuration> (new configuration());
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("ini_parser"));
+	itsConfiguration = shared_ptr<configuration> (new configuration());
 }
 
 shared_ptr<configuration> ini_parser::Parse(int argc, char** argv)
 {
 
-    ParseAndCreateInfo(argc, argv);
+	ParseAndCreateInfo(argc, argv);
 
-    return itsConfiguration;
+	return itsConfiguration;
 
 }
 
@@ -68,171 +74,171 @@ shared_ptr<configuration> ini_parser::Parse(int argc, char** argv)
 void ini_parser::ParseAndCreateInfo(int argc, char** argv)
 {
 
-    ParseCommandLine(argc, argv);
+	ParseCommandLine(argc, argv);
 
-    // Check that we have configuration file defined in command line
+	// Check that we have configuration file defined in command line
 
-    if (itsConfiguration->itsConfigurationFile.empty())
-    {
-        throw runtime_error("Configuration file not defined");
-    }
+	if (itsConfiguration->itsConfigurationFile.empty())
+	{
+		throw runtime_error("Configuration file not defined");
+	}
 
-    ParseConfigurationFile(itsConfiguration->itsConfigurationFile);
+	ParseConfigurationFile(itsConfiguration->itsConfigurationFile);
 
-    // Check requested plugins
+	// Check requested plugins
 
-    if (itsConfiguration->itsPlugins.size() == 0)
-    {
-        throw runtime_error("No requested plugins defined");
-    }
+	if (itsConfiguration->itsPlugins.size() == 0)
+	{
+		throw runtime_error("No requested plugins defined");
+	}
 
 }
 
 void ini_parser::ParseCommandLine(int argc, char* argv[])
 {
-    itsLogger->Info("Parsing command line");
+	itsLogger->Info("Parsing command line");
 
-    namespace po = boost::program_options;
+	namespace po = boost::program_options;
 
-    po::options_description desc("Allowed options");
+	po::options_description desc("Allowed options");
 
-    // Can't use required() since it doesn't allow us to use --list-plugins
+	// Can't use required() since it doesn't allow us to use --list-plugins
 
-    string outfileType;
+	string outfileType;
 
-    himan::HPDebugState debugState = himan::kDebugMsg;
+	himan::HPDebugState debugState = himan::kDebugMsg;
 
-    int logLevel = 0;
+	int logLevel = 0;
 
-    desc.add_options()
-    ("help,h", "print out help message")
-    ("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
-    ("version,v", "display version number")
-    ("configuration-file,f", po::value(&(itsConfiguration->itsConfigurationFile)), "configuration file")
-    ("auxiliary-files,a", po::value<vector<string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
-    ("plugins,p", po::value<vector<string> > (&(itsConfiguration->itsPlugins)), "calculated plugins")
-    ("list-plugins,l", "list all defined plugins")
-    ("d,debug-level", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
-    ("no-cuda", "disable cuda extensions")
-    ;
+	desc.add_options()
+	("help,h", "print out help message")
+	("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
+	("version,v", "display version number")
+	("configuration-file,f", po::value(&(itsConfiguration->itsConfigurationFile)), "configuration file")
+	("auxiliary-files,a", po::value<vector<string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
+	("plugins,p", po::value<vector<string> > (&(itsConfiguration->itsPlugins)), "calculated plugins")
+	("list-plugins,l", "list all defined plugins")
+	("d,debug-level", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
+	("no-cuda", "disable cuda extensions")
+	;
 
-    po::positional_options_description p;
-    p.add("auxiliary-files", -1);
+	po::positional_options_description p;
+	p.add("auxiliary-files", -1);
 
-    po::variables_map opt;
-    po::store(po::command_line_parser(argc, argv)
-              .options(desc)
-              .positional(p)
-              .run(),
-              opt);
+	po::variables_map opt;
+	po::store(po::command_line_parser(argc, argv)
+			  .options(desc)
+			  .positional(p)
+			  .run(),
+			  opt);
 
-    po::notify(opt);
+	po::notify(opt);
 
-    if (logLevel)
-    {
-        switch (logLevel)
-        {
-        case 0:
-            debugState = kFatalMsg;
-            break;
-        case 1:
-            debugState = kErrorMsg;
-            break;
-        case 2:
-            debugState = kWarningMsg;
-            break;
-        case 3:
-            debugState = kInfoMsg;
-            break;
-        case 4:
-            debugState = kDebugMsg;
-            break;
-        case 5:
-            debugState = kTraceMsg;
-            break;
-        }
+	if (logLevel)
+	{
+		switch (logLevel)
+		{
+		case 0:
+			debugState = kFatalMsg;
+			break;
+		case 1:
+			debugState = kErrorMsg;
+			break;
+		case 2:
+			debugState = kWarningMsg;
+			break;
+		case 3:
+			debugState = kInfoMsg;
+			break;
+		case 4:
+			debugState = kDebugMsg;
+			break;
+		case 5:
+			debugState = kTraceMsg;
+			break;
+		}
 
-    }
+	}
 
-    logger_factory::Instance()->DebugState(debugState);
+	logger_factory::Instance()->DebugState(debugState);
 
-    if (opt.count("version"))
-    {
-        cout << "himan-lib version ???" << endl;
-        exit(1);
-    }
+	if (opt.count("version"))
+	{
+		cout << "himan-lib version ???" << endl;
+		exit(1);
+	}
 
-    if (opt.count("no-cuda"))
-    {
-        itsConfiguration->itsUseCuda = false;
-    }
+	if (opt.count("no-cuda"))
+	{
+		itsConfiguration->itsUseCuda = false;
+	}
 
-    if (!outfileType.empty())
-    {
-        if (outfileType == "grib")
-        {
-            itsConfiguration->itsOutputFileType = kGRIB1;
-        }
-        else if (outfileType == "grib2")
-        {
-            itsConfiguration->itsOutputFileType = kGRIB2;
-        }
-        else if (outfileType == "netcdf")
-        {
-            itsConfiguration->itsOutputFileType = kNetCDF;
-        }
-        else if (outfileType == "querydata")
-        {
-            itsConfiguration->itsOutputFileType = kQueryData;
-        }
-        else
-        {
-            throw runtime_error("Invalid file type: " + outfileType);
-        }
-    }
+	if (!outfileType.empty())
+	{
+		if (outfileType == "grib")
+		{
+			itsConfiguration->itsOutputFileType = kGRIB1;
+		}
+		else if (outfileType == "grib2")
+		{
+			itsConfiguration->itsOutputFileType = kGRIB2;
+		}
+		else if (outfileType == "netcdf")
+		{
+			itsConfiguration->itsOutputFileType = kNetCDF;
+		}
+		else if (outfileType == "querydata")
+		{
+			itsConfiguration->itsOutputFileType = kQueryData;
+		}
+		else
+		{
+			throw runtime_error("Invalid file type: " + outfileType);
+		}
+	}
 
-    if (opt.count("help"))
-    {
-        cout << "usage: himan [ options ]" << endl;
-        cout << desc;
-        cout << endl << "Examples:" << endl;
-        cout << "  himan -f etc/tpot.ini" << endl;
-        cout << "  himan -f etc/vvmms.ini -a file.grib -t querydata" << endl << endl;
-        exit(1);
-    }
+	if (opt.count("help"))
+	{
+		cout << "usage: himan [ options ]" << endl;
+		cout << desc;
+		cout << endl << "Examples:" << endl;
+		cout << "  himan -f etc/tpot.ini" << endl;
+		cout << "  himan -f etc/vvmms.ini -a file.grib -t querydata" << endl << endl;
+		exit(1);
+	}
 
-    if (opt.count("list-plugins"))
-    {
+	if (opt.count("list-plugins"))
+	{
 
-        vector<shared_ptr<plugin::himan_plugin> > thePlugins = plugin_factory::Instance()->CompiledPlugins();
+		vector<shared_ptr<plugin::himan_plugin> > thePlugins = plugin_factory::Instance()->CompiledPlugins();
 
-        cout << "Compiled plugins" << endl;
+		cout << "Compiled plugins" << endl;
 
-        for (size_t i = 0; i < thePlugins.size(); i++)
-        {
-            cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
-        }
+		for (size_t i = 0; i < thePlugins.size(); i++)
+		{
+			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
+		}
 
-        thePlugins = plugin_factory::Instance()->InterpretedPlugins();
+		thePlugins = plugin_factory::Instance()->InterpretedPlugins();
 
-        cout << "Interpreted plugins" << endl;
+		cout << "Interpreted plugins" << endl;
 
-        for (size_t i = 0; i < thePlugins.size(); i++)
-        {
-            cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
-        }
+		for (size_t i = 0; i < thePlugins.size(); i++)
+		{
+			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
+		}
 
-        cout << "Auxiliary plugins" << endl;
+		cout << "Auxiliary plugins" << endl;
 
-        thePlugins = plugin_factory::Instance()->AuxiliaryPlugins();
+		thePlugins = plugin_factory::Instance()->AuxiliaryPlugins();
 
-        for (size_t i = 0; i < thePlugins.size(); i++)
-        {
-            cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
-        }
+		for (size_t i = 0; i < thePlugins.size(); i++)
+		{
+			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
+		}
 
-        exit(1);
-    }
+		exit(1);
+	}
 
 }
 
@@ -240,387 +246,495 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 {
 
-    itsLogger->Debug("Parsing configuration file");
-
-    boost::property_tree::ptree pt;
-
-    try
-    {
-        boost::property_tree::ini_parser::read_ini(theConfigurationFile, pt);
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error reading configuration file: ") + e.what());
-    }
-
-    /* Check area definitions */
-
-    try
-    {
-        string theProjection = pt.get<string>("area.projection");
-
-        if (itsConfiguration->itsInfo->Projection() == kUnknownProjection)
-        {
-
-            if (theProjection == "latlon")
-            {
-                itsConfiguration->itsInfo->Projection(kLatLonProjection);
-            }
-            else if (theProjection == "rotlatlon")
-            {
-                itsConfiguration->itsInfo->Projection(kRotatedLatLonProjection);
-            }
-            else if (theProjection == "stereographic")
-            {
-                itsConfiguration->itsInfo->Projection(kStereographicProjection);
-            }
-            else
-            {
-                itsLogger->Warning("Unknown projection: " + theProjection);
-            }
-        }
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing projection: ") + e.what());
-    }
-
-    try
-    {
-        itsConfiguration->Info()->BottomLeftLatitude(pt.get<double>("area.bottom_left_latitude"));
-        itsConfiguration->Info()->BottomLeftLongitude(pt.get<double>("area.bottom_left_longitude"));
-        itsConfiguration->Info()->TopRightLatitude(pt.get<double>("area.top_right_latitude"));
-        itsConfiguration->Info()->TopRightLongitude(pt.get<double>("area.top_right_longitude"));
-        itsConfiguration->Info()->Orientation(pt.get<double>("area.orientation"));
-
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing area corners: ") + e.what());
-    }
-
-    /* Check grid definitions */
-
-    try
-    {
-        itsConfiguration->Ni(pt.get<size_t>("grid.ni"));
-        itsConfiguration->Nj(pt.get<size_t>("grid.nj"));
-
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing grid dimensions: ") + e.what());
-    }
-
-    /* Check plugins */
-
-    try
-    {
-        itsConfiguration->Plugins(util::Split(pt.get<string>("plugins.plugins"), ",", false));
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing plugins: ") + e.what());
-    }
-
-    /* Check origin time */
-
-    try
-    {
+	itsLogger->Debug("Parsing configuration file");
+
+	boost::property_tree::ptree pt;
+
+	try
+	{
+		boost::property_tree::ini_parser::read_ini(theConfigurationFile, pt);
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error reading configuration file: ") + e.what());
+	}
+
+	/* Check area definitions */
+
+	ParseAreaAndGrid(pt);
+
+	/* Check plugins */
+
+	try
+	{
+		itsConfiguration->Plugins(util::Split(pt.get<string>("plugins.plugins"), ",", false));
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing plugins: ") + e.what());
+	}
+
+	/* Check producer */
+
+	try
+	{
+
+		itsConfiguration->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("producer.source_producer")));
+		itsConfiguration->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("producer.target_producer")));
+
+		/*
+		 * Target producer is also set to target info; source infos (and producers) are created
+		 * as data is fetched from files.
+		 */
+
+		itsConfiguration->Info()->Producer(itsConfiguration->TargetProducer());
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(ClassName() + ": " + string("Error parsing producer information: ") + e.what());
+	}
+
+	ParseTime(pt);
+
+	/* Check level */
+
+	try
+	{
+
+		string theLevelTypeStr = pt.get<string>("level.leveltype");
+
+		boost::to_upper(theLevelTypeStr);
+
+		HPLevelType theLevelType;
+
+		if (theLevelTypeStr == "HEIGHT")
+		{
+			theLevelType = kHeight;
+		}
+		else if (theLevelTypeStr == "PRESSURE")
+		{
+			theLevelType = kPressure;
+		}
+		else if (theLevelTypeStr == "HYBRID")
+		{
+			theLevelType = kHybrid;
+		}
+		else if (theLevelTypeStr == "GROUND")
+		{
+			theLevelType = kGround;
+		}
+		else if (theLevelTypeStr == "MEANSEA")
+		{
+			theLevelType = kMeanSea;
+		}
+
+		else
+		{
+			throw runtime_error("Unknown level type: " + theLevelTypeStr);	// not good practice; constructing string
+		}
+
+		// can cause exception, what will happen then ?
+
+		vector<string> levelsStr = util::Split(pt.get<string>("level.levels"), ",", true);
+
+		vector<float> levels ;
+
+		for (size_t i = 0; i < levelsStr.size(); i++)
+		{
+			levels.push_back(boost::lexical_cast<float> (levelsStr[i]));
+		}
+
+		sort (levels.begin(), levels.end());
+
+		vector<level> theLevels;
+
+		for (size_t i = 0; i < levels.size(); i++)
+		{
+			theLevels.push_back(level(theLevelType, levels[i], theLevelTypeStr));
+		}
+
+		itsConfiguration->Info()->Levels(theLevels);
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing level information: ") + e.what());
+	}
+
+	/* Check whole_file_write */
+
+	try
+	{
+
+		string theWholeFileWrite = pt.get<string>("meta.whole_file_write");
+
+		if (ParseBoolean(theWholeFileWrite))
+		{
+			itsConfiguration->WholeFileWrite(true);
+		}
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
+
+	/* Check read_data_from_database */
+
+	try
+	{
+		string theReadDataFromDatabase = pt.get<string>("meta.read_data_from_database");
+
+		if (!ParseBoolean(theReadDataFromDatabase))
+		{
+			itsConfiguration->ReadDataFromDatabase(false);
+		}
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
+
+	/* Check file_wait_timeout */
+
+	try
+	{
+		string theFileWaitTimeout = pt.get<string>("meta.file_wait_timeout");
+
+		itsConfiguration->itsFileWaitTimeout = boost::lexical_cast<unsigned short> (theFileWaitTimeout);
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
+
+	/* Check leading_dimension */
+
+	try
+	{
+		string theLeadingDimensionStr = pt.get<string>("meta.leading_dimension");
+
+		HPDimensionType theLeadingDimension = kUnknownDimension;
+
+		if (theLeadingDimensionStr == "time")
+		{
+			theLeadingDimension = kTimeDimension;
+		}
+		else if (theLeadingDimensionStr == "level")
+		{
+			theLeadingDimension = kLevelDimension;
+		}
+		else
+		{
+			throw runtime_error(ClassName() + ": unsupported leading dimension: " + theLeadingDimensionStr);
+		}
+
+		itsConfiguration->itsLeadingDimension = theLeadingDimension;
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
+}
+
+void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
+{
+	/* Check origin time */
 
-        const string theOriginDateTime = pt.get<string>("time.origintime");
+	try
+	{
+		string theOriginDateTime = pt.get<string>("time.origintime");
+		string mask = "%Y-%m-%d %H:%M:%S";
 
-        itsConfiguration->Info()->OriginDateTime(theOriginDateTime);
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
-    }
+		boost::algorithm::to_lower(theOriginDateTime);
 
-    /* Check time steps */
+		if (theOriginDateTime == "latest")
+		{
+			shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-    try
-    {
+			producer p(itsConfiguration->SourceProducer());
 
-        vector<string> timesStr = util::Split(pt.get<string>("time.hours"), ",", true);
+			map<string,string> prod = n->NeonsDB().GetProducerDefinition(p.Id());
 
-        vector<int> times ;
+			p.Name(prod["ref_prod"]);
 
-        for (size_t i = 0; i < timesStr.size(); i++)
-        {
-            times.push_back(boost::lexical_cast<int> (timesStr[i]));
-        }
+			theOriginDateTime = n->LatestTime(p);
 
-        sort (times.begin(), times.end());
+			if (theOriginDateTime.size() == 0)
+			{
+				throw runtime_error("Unable to proceed");
+			}
 
-        vector<forecast_time> theTimes;
+			mask = "%Y%m%d%H%M";
+		}
 
-        for (size_t i = 0; i < times.size(); i++)
-        {
+		itsConfiguration->Info()->OriginDateTime(theOriginDateTime, mask);
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+	}
 
-            // Create forecast_time with both times origintime, then adjust the validtime
+	/* Check time steps */
 
-            forecast_time theTime (shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
-                                   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
+	try
+	{
 
-            theTime.ValidDateTime()->Adjust("hours", times[i]);
+		vector<string> timesStr = util::Split(pt.get<string>("time.hours"), ",", true);
 
-            theTimes.push_back(theTime);
-        }
+		vector<int> times ;
 
-        itsConfiguration->Info()->Times(theTimes);
+		for (size_t i = 0; i < timesStr.size(); i++)
+		{
+			times.push_back(boost::lexical_cast<int> (timesStr[i]));
+		}
 
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // hours was not specified
-        // check if start/stop times are
+		sort (times.begin(), times.end());
 
-        int start = boost::lexical_cast<int> (pt.get<string>("time.start_hour"));
-        int stop = boost::lexical_cast<int> (pt.get<string>("time.stop_hour"));
-        int step = boost::lexical_cast<int> (pt.get<string>("time.step"));
+		vector<forecast_time> theTimes;
 
-        string unit = pt.get<string>("time.step_unit");
+		for (size_t i = 0; i < times.size(); i++)
+		{
 
-        if (unit != "hour")
-        {
-            throw runtime_error("Step units other than hour are not supported yet");
-        }
+			// Create forecast_time with both times origintime, then adjust the validtime
 
-        vector<forecast_time> theTimes;
+			forecast_time theTime (shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
+								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
+
+			theTime.ValidDateTime()->Adjust("hours", times[i]);
 
-        int curtime = start;
-        int curstep = 0;
+			theTimes.push_back(theTime);
+		}
 
-        do
-        {
+		itsConfiguration->Info()->Times(theTimes);
 
-            forecast_time theTime (shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
-                                   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// hours was not specified
+		// check if start/stop times are
 
-            theTime.ValidDateTime()->Adjust("hours", curstep);
+		int start = boost::lexical_cast<int> (pt.get<string>("time.start_hour"));
+		int stop = boost::lexical_cast<int> (pt.get<string>("time.stop_hour"));
+		int step = boost::lexical_cast<int> (pt.get<string>("time.step"));
 
-            theTimes.push_back(theTime);
+		string unit = pt.get<string>("time.step_unit");
 
-            curtime += step;
-            curstep = curtime;
-
-        } while (curtime <= stop);
-
-        itsConfiguration->Info()->Times(theTimes);
-
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
-    }
-
-    /* Check producer */
-
-    try
-    {
-
-        itsConfiguration->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("producer.source_producer")));
-        itsConfiguration->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("producer.target_producer")));
-
-        /*
-         * Target producer is also set to target info; source infos (and producers) are created
-         * as data is fetched from files.
-         */
-
-        itsConfiguration->Info()->Producer(itsConfiguration->TargetProducer());
-
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(ClassName() + ": " + string("Error parsing producer information: ") + e.what());
-    }
-
-    /* Check level */
-
-    try
-    {
-
-        string theLevelTypeStr = pt.get<string>("level.leveltype");
-
-        boost::to_upper(theLevelTypeStr);
-
-        HPLevelType theLevelType;
-
-        if (theLevelTypeStr == "HEIGHT")
-        {
-            theLevelType = kHeight;
-        }
-        else if (theLevelTypeStr == "PRESSURE")
-        {
-            theLevelType = kPressure;
-        }
-        else if (theLevelTypeStr == "HYBRID")
-        {
-            theLevelType = kHybrid;
-        }
-        else if (theLevelTypeStr == "GROUND")
-        {
-            theLevelType = kGround;
-        }
-        else if (theLevelTypeStr == "MEANSEA")
-        {
-            theLevelType = kMeanSea;
-        }
-
-        else
-        {
-            throw runtime_error("Unknown level type: " + theLevelTypeStr);    // not good practice; constructing string
-        }
-
-        // can cause exception, what will happen then ?
-
-        vector<string> levelsStr = util::Split(pt.get<string>("level.levels"), ",", true);
-
-        vector<float> levels ;
-
-        for (size_t i = 0; i < levelsStr.size(); i++)
-        {
-            levels.push_back(boost::lexical_cast<float> (levelsStr[i]));
-        }
-
-        sort (levels.begin(), levels.end());
-
-        vector<level> theLevels;
-
-        for (size_t i = 0; i < levels.size(); i++)
-        {
-            theLevels.push_back(level(theLevelType, levels[i], theLevelTypeStr));
-        }
-
-        itsConfiguration->Info()->Levels(theLevels);
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing level information: ") + e.what());
-    }
-
-    /* Check whole_file_write */
-
-    try
-    {
-
-        string theWholeFileWrite = pt.get<string>("meta.whole_file_write");
-
-        if (ParseBoolean(theWholeFileWrite))
-        {
-            itsConfiguration->WholeFileWrite(true);
-        }
-
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing meta information: ") + e.what());
-    }
-
-    /* Check read_data_from_database */
-
-    try
-    {
-        string theReadDataFromDatabase = pt.get<string>("meta.read_data_from_database");
-
-        if (!ParseBoolean(theReadDataFromDatabase))
-        {
-            itsConfiguration->ReadDataFromDatabase(false);
-        }
-
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing meta information: ") + e.what());
-    }
-
-    /* Check file_wait_timeout */
-
-    try
-    {
-        string theFileWaitTimeout = pt.get<string>("meta.file_wait_timeout");
-
-        itsConfiguration->itsFileWaitTimeout = boost::lexical_cast<unsigned short> (theFileWaitTimeout);
-
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing meta information: ") + e.what());
-    }
-
-    /* Check leading_dimension */
-
-    try
-    {
-        string theLeadingDimensionStr = pt.get<string>("meta.leading_dimension");
-
-        HPDimensionType theLeadingDimension = kUnknownDimension;
-
-        if (theLeadingDimensionStr == "time")
-        {
-            theLeadingDimension = kTimeDimension;
-        }
-        else if (theLeadingDimensionStr == "level")
-        {
-            theLeadingDimension = kLevelDimension;
-        }
-        else
-        {
-            throw runtime_error(ClassName() + ": unsupported leading dimension: " + theLeadingDimensionStr);
-        }
-
-        itsConfiguration->itsLeadingDimension = theLeadingDimension;
-
-    }
-    catch (boost::property_tree::ptree_bad_path& e)
-    {
-        // Something was not found; do nothing
-    }
-    catch (exception& e)
-    {
-        throw runtime_error(string("Error parsing meta information: ") + e.what());
-    }
+		if (unit != "hour")
+		{
+			throw runtime_error("Step units other than hour are not supported yet");
+		}
+
+		vector<forecast_time> theTimes;
+
+		int curtime = start;
+		int curstep = 0;
+
+		do
+		{
+
+			forecast_time theTime (shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
+								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
+
+			theTime.ValidDateTime()->Adjust("hours", curstep);
+
+			theTimes.push_back(theTime);
+
+			curtime += step;
+			curstep = curtime;
+
+		} while (curtime <= stop);
+
+		itsConfiguration->Info()->Times(theTimes);
+
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+	}
+
+}
+
+void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
+{
+
+	/* First check for neons style geom name */
+
+	try
+	{
+		string geom = pt.get<string>("area.geom_name");
+
+		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		map<string, string> geominfo = n->NeonsDB().GetGeometryDefinition(geom);
+
+		if (geominfo.size())
+		{
+			if (geominfo["prjn_name"] == "latlon")
+			{
+				itsConfiguration->itsInfo->Projection(kLatLonProjection);
+			}
+			else if (geominfo["prjn_name"] == "rotlatlon")
+			{
+				itsConfiguration->itsInfo->Projection(kRotatedLatLonProjection);
+			}
+			else if (geominfo["prjn_name"] == "polster")
+			{
+				itsConfiguration->itsInfo->Projection(kStereographicProjection);
+			}
+			else
+			{
+				itsLogger->Warning("Unknown projection: " + geominfo["prjn_name"]);
+			}
+
+			itsConfiguration->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
+			itsConfiguration->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
+
+			int factor = 1;
+
+			if (geominfo["stor_desc"] == "+x-y")
+			{
+				itsConfiguration->Info()->ScanningMode(kTopLeft);
+				factor = -1;
+			}
+			else
+			{
+				throw runtime_error("This geom not supported yet");
+			}
+
+			itsConfiguration->Info()->BottomLeftLatitude(factor * boost::lexical_cast<double>(geominfo["lat_orig"]) / 1e3);
+			itsConfiguration->Info()->BottomLeftLongitude(boost::lexical_cast<double>(geominfo["long_orig"]) / 1e3);
+
+			itsConfiguration->Info()->TopRightLatitude(
+					itsConfiguration->Info()->BottomLeftLatitude() +
+					(itsConfiguration->Nj() * boost::lexical_cast<double>(geominfo["pas_latitude"])/1e3));
+
+			itsConfiguration->Info()->TopRightLongitude(
+								itsConfiguration->Info()->BottomLeftLongitude() +
+								(itsConfiguration->Ni() * boost::lexical_cast<double>(geominfo["pas_longitude"])/1e3));
+
+			itsConfiguration->Info()->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]));
+
+			return;
+		}
+		else
+		{
+			itsLogger->Warning("Unknown geometry '" + geom + "' found");
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing area information: ") + e.what());
+	}
+
+	try
+	{
+		string theProjection = pt.get<string>("area.projection");
+
+		if (itsConfiguration->itsInfo->Projection() == kUnknownProjection)
+		{
+
+			if (theProjection == "latlon")
+			{
+				itsConfiguration->itsInfo->Projection(kLatLonProjection);
+			}
+			else if (theProjection == "rotlatlon")
+			{
+				itsConfiguration->itsInfo->Projection(kRotatedLatLonProjection);
+			}
+			else if (theProjection == "stereographic")
+			{
+				itsConfiguration->itsInfo->Projection(kStereographicProjection);
+			}
+			else
+			{
+				itsLogger->Warning("Unknown projection: " + theProjection);
+			}
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing projection: ") + e.what());
+	}
+
+	try
+	{
+		itsConfiguration->Info()->BottomLeftLatitude(pt.get<double>("area.bottom_left_latitude"));
+		itsConfiguration->Info()->BottomLeftLongitude(pt.get<double>("area.bottom_left_longitude"));
+		itsConfiguration->Info()->TopRightLatitude(pt.get<double>("area.top_right_latitude"));
+		itsConfiguration->Info()->TopRightLongitude(pt.get<double>("area.top_right_longitude"));
+		itsConfiguration->Info()->Orientation(pt.get<double>("area.orientation"));
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing area corners: ") + e.what());
+	}
+
+
+	/* Check grid definitions */
+
+	try
+	{
+		itsConfiguration->Ni(pt.get<size_t>("grid.ni"));
+		itsConfiguration->Nj(pt.get<size_t>("grid.nj"));
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing grid dimensions: ") + e.what());
+	}
 }
 
 /*
@@ -632,24 +746,24 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 bool ini_parser::ParseBoolean(string& booleanValue)
 {
-    bool ret;
+	bool ret;
 
-    boost::algorithm::to_lower(booleanValue);
+	boost::algorithm::to_lower(booleanValue);
 
-    if (booleanValue == "yes" || booleanValue == "true" || booleanValue == "1")
-    {
-        ret = true;
-    }
+	if (booleanValue == "yes" || booleanValue == "true" || booleanValue == "1")
+	{
+		ret = true;
+	}
 
-    else if (booleanValue == "no" || booleanValue == "false" || booleanValue == "0")
-    {
-        ret = false;
-    }
+	else if (booleanValue == "no" || booleanValue == "false" || booleanValue == "0")
+	{
+		ret = false;
+	}
 
-    else
-    {
-        throw runtime_error(ClassName() + ": Invalid boolean value: " + booleanValue);
-    }
+	else
+	{
+		throw runtime_error(ClassName() + ": Invalid boolean value: " + booleanValue);
+	}
 
-    return ret;
+	return ret;
 }

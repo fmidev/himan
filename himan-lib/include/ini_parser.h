@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include "configuration.h"
+#include <boost/property_tree/ptree.hpp>
 
 namespace himan
 {
@@ -21,6 +22,9 @@ class ini_parser
 public:
 
     static ini_parser* Instance();
+
+    ini_parser(const ini_parser& other) = delete;
+    ini_parser& operator=(const ini_parser& other) = delete;
 
     std::shared_ptr<configuration> Parse(int argc, char** argv);
     std::shared_ptr<configuration> GetConfiguration() const;
@@ -38,12 +42,12 @@ private:
 
     ini_parser();
     ~ini_parser() {}
-    ini_parser(const ini_parser& other) = delete;
-    ini_parser& operator=(const ini_parser& other) = delete;
 
     void ParseAndCreateInfo(int argc, char** argv);
     void ParseCommandLine(int argc, char** argv);
     void ParseConfigurationFile(const std::string& theConfigurationFile);
+    void ParseAreaAndGrid(const boost::property_tree::ptree& pt);
+    void ParseTime(const boost::property_tree::ptree& pt);
     bool ParseBoolean(std::string& booleanValue);
 
     static ini_parser* itsInstance;
