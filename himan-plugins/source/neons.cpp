@@ -80,7 +80,6 @@ vector<string> neons::Files(const search_options& options)
     //string level_name = itsNeonsDB->GetGridLevelName(options.param.UnivId(), options.level.Type(), kFMICodeTableVer, boost::lexical_cast<long>(no_vers));
 
     string level_name = options.level.Name();
-    cout << "LEV_NAME: " << level_name << endl;
 
     vector<vector<string> > gridgeoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime);
 
@@ -125,11 +124,9 @@ vector<string> neons::Files(const search_options& options)
 
 }
 
-bool neons::Save(shared_ptr<const info> resultInfo)
+bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 {
     Init();
-
-    string NeonsFileName = util::MakeNeonsFileName(resultInfo);
 
     stringstream query;
 
@@ -140,22 +137,16 @@ bool neons::Save(shared_ptr<const info> resultInfo)
      * 4. Insert or update
      */
 
-    // how to handle scanning directions
-
-    // this is for GFS
-
-    string scanningMode = "+x-y";
-
     long lat_orig, lon_orig;
 
-    if (scanningMode == "+x-y")
+    if (resultInfo->ScanningMode() == kTopLeft)
     {
         lat_orig = static_cast<long> (resultInfo->TopRightLatitude()*1e3);
         lon_orig = static_cast<long> (resultInfo->BottomLeftLongitude() * 1e3);
     }
     else
     {
-        throw runtime_error(ClassName() + ": unsupported scanning mode: " + scanningMode);
+        throw runtime_error(ClassName() + ": unsupported scanning mode: " + boost::lexical_cast<string> (resultInfo->ScanningMode()));
     }
 
 
@@ -215,7 +206,7 @@ bool neons::Save(shared_ptr<const info> resultInfo)
 
     if (row.empty())
     {
-        itsLogger->Warning("Producer definition not found from neons");
+        itsLogger->Warning("Producer definition not found from neons (id: " + boost::lexical_cast<string> (resultInfo->Producer().Id()) + ")");
         return false;
     }
 
@@ -271,6 +262,32 @@ bool neons::Save(shared_ptr<const info> resultInfo)
 
     query.str("");
 
+    query << "LOCK TABLE as_grid IN SHARE MODE";
+
+    itsNeonsDB->Execute(query.str());
+
+    query.str("");
+
+    query << "UPDATE as_grid "
+           << "SET rec_cnt_dset = "
+           << "rec_cnt_dset + 1, "
+           << "date_maj_dset = sysdate "
+           << "WHERE dset_id = " << dset_id;
+
+    try
+    {
+    	itsNeonsDB->Execute(query.str());
+    }
+    catch (int e)
+    {
+       itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
+       itsLogger->Error("Query: " + query.str());
+   	   itsNeonsDB->Rollback();
+   	   return false;
+    }
+
+    query.str("");
+
     query  << "INSERT INTO " << table_name
            << " (dset_id, parm_name, lvl_type, lvl1_lvl2, fcst_per, eps_specifier, file_location, file_server) "
            << "VALUES ("
@@ -280,11 +297,24 @@ bool neons::Save(shared_ptr<const info> resultInfo)
            << resultInfo->Level().Value() << ", "
            << resultInfo->Time().Step() << ", "
            << "'" << eps_specifier << "', "
-           << "'" << NeonsFileName << "', "
+           << "'" << theFileName << "', "
            << "'" << host << "')";
 
-    cout << query.str() << endl;
-    itsLogger->Info("Saved information on file '" + NeonsFileName + "' to neons");
+
+    try
+    {
+    	itsNeonsDB->Execute(query.str());
+    	itsNeonsDB->Commit();
+    }
+    catch (int e)
+    {
+        itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
+        itsLogger->Error("Query: " + query.str());
+        itsNeonsDB->Rollback();
+        return false;
+    }
+
+    itsLogger->Info("Saved information on file '" + theFileName + "' to neons");
 
     return true;
 }

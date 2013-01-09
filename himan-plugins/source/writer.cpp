@@ -94,7 +94,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
         // Save file information to neons
 
-        ret = n->Save(theInfo);
+        ret = n->Save(theInfo, correctFileName);
 
         if (!ret)
         {
