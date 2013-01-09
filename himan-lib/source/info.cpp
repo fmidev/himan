@@ -97,7 +97,7 @@ std::ostream& info::Write(std::ostream& file) const
     file << "__itsBottomLeftLongitude__ " << itsBottomLeftLongitude << endl;
     file << "__itsBottomLeftLatitude__ " << itsBottomLeftLatitude << endl;
     file << "__itsTopRightLongitude__ " << itsTopRightLongitude << endl;
-    file << "__itsTopRightLongitude__ " << itsTopRightLatitude << endl;
+    file << "__itsTopRightLatitude__ " << itsTopRightLatitude << endl;
     file << "__itsOrientation__ " << itsOrientation << endl;
 
     file << "__itsOriginDateTime__ " << OriginDateTime().String() << endl;
