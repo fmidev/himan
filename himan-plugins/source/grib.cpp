@@ -219,7 +219,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
             p.GribParameter(number);
             p.GribTableVersion(no_vers);
 
-            // throw runtime_error(ClassName() + ": neons support missing");
         }
         else
         {
@@ -280,7 +279,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
          */
 
         long dt = itsGrib->Message()->DataTime();
-
+        long step = itsGrib->Message()->EndStep();
         string dataTime = boost::lexical_cast<string> (dt);
 
         if (dt < 1000)
@@ -288,9 +287,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
             dataTime = "0" + dataTime;
         }
 
-       // long step = itsGrib->Message()->ForecastTime();
-        long step = itsGrib->Message()->EndStep();
-
+        if (itsGrib->Message()->Edition() == 2) 
+        {
+            step = itsGrib->Message()->ForecastTime();
+        }
+        
         string originDateTimeStr = dataDate + dataTime;
 
         raw_time originDateTime (originDateTimeStr, "%Y%m%d%H%M");
