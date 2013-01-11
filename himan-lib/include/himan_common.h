@@ -111,6 +111,7 @@ enum HPLevelType
 };
 
 const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_list_of
+        (kUnknownLevel, "unknown")
         (kGround, "ground")
         (kPressure, "pressure")
         (kMeanSea, "meansea")
@@ -120,6 +121,12 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_li
         ;
 
 // Values match to newbase
+
+/**
+ * @enum HPScanningMode
+ *
+ * @brief Describe different data scanning modes (ie in which direction the data is read)
+ */
 
 enum HPScanningMode
 {
@@ -134,7 +141,8 @@ enum HPScanningMode
 enum HPExceptionType
 {
     kUnknownException = 0,
-    kFileMetaDataNotFound
+    kFileMetaDataNotFound,
+    kFileDataNotFound,
 };
 
 /**
