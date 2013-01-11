@@ -180,7 +180,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
     itsLogger->Trace("Reading file '" + theInputFile + "'");
 
-    int foundMessageNo = -1;
+    int foundMessageNo = 0;
 
     while (itsGrib->NextMessage())
     {
@@ -215,6 +215,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
             long no_vers = itsGrib->Message()->Table2Version();
 
             shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
             p.Name(n->GribParameterName(number, no_vers));           
             p.GribParameter(number);
             p.GribTableVersion(no_vers);
@@ -256,17 +257,26 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 #endif
 
-            // Name is our primary identifier -- not univ_id or grib param id
-
-            if (p != options.param)
-            {
-                itsLogger->Trace("Parameter does not match: " + options.param.Name() + " vs " + p.Name());
-                continue;
-            }
-
             p.GribParameter(number);
             p.GribDiscipline(discipline);
             p.GribCategory(category);
+        }
+
+        if (itsGrib->Message()->ParameterUnit() == "K")
+        {
+           	p.Unit(kK);
+        }
+        else
+        {
+        	itsLogger->Warning("Unable to determine himan parameter unit for grib unit " + itsGrib->Message()->ParameterUnit());
+        }
+
+        // Name is our primary identifier -- not univ_id or grib param id
+
+        if (p != options.param)
+        {
+            itsLogger->Trace("Parameter does not match: " + options.param.Name() + " vs " + p.Name());
+            continue;
         }
 
         string dataDate = boost::lexical_cast<string> (itsGrib->Message()->DataDate());
