@@ -178,7 +178,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
     itsGrib->Open(theInputFile);
 
-    itsLogger->Trace("Reading file '" + theInputFile + "'");
+    itsLogger->Debug("Reading file '" + theInputFile + "'");
 
     int foundMessageNo = 0;
 
@@ -467,7 +467,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
         shared_ptr<d_matrix_t> dm = shared_ptr<d_matrix_t> (new d_matrix_t(ni, nj));
 
-        dm->Data(d, len);
+        dm->Set(d, len);
 
         newInfo->Data(dm);
 
@@ -484,7 +484,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
     if (theInfos.size())
     {
         // This will be broken when/if we return multiple infos from this function
-        itsLogger->Trace("Data Found from message " + boost::lexical_cast<string> (foundMessageNo) + "/" + boost::lexical_cast<string> (itsGrib->MessageCount()));
+        itsLogger->Trace("Data found from message " + boost::lexical_cast<string> (foundMessageNo) + "/" + boost::lexical_cast<string> (itsGrib->MessageCount()));
     }
 
     return theInfos;
