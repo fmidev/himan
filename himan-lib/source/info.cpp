@@ -108,43 +108,6 @@ std::ostream& info::Write(std::ostream& file) const
     file << itsLevelIterator << endl;
     file << itsTimeIterator << endl;
 
-    /*
-    if (itsParams.size())
-    {
-    	for (size_t i = 0; i < itsParams.size(); i++)
-    	{
-    		file << *itsParams[i];
-    	}
-    }
-    else
-    {
-    	file << "__itsParam__ __no-param__" << endl;
-    }
-
-    if (itsLevels.size())
-    {
-    	for (size_t i = 0; i < itsLevels.size(); i++)
-    	{
-    		file << *itsLevels[i];
-    	}
-    }
-    else
-    {
-    	file << "__itsLevel__ __no-level__" << endl;
-    }
-
-    if (itsTimes.size())
-    {
-    	for (size_t i = 0; i < itsTimes.size(); i++)
-    	{
-    		file << *itsTimes[i];
-    	}
-    }
-    else
-    {
-    	file << "__itsTime__ __no-time__" << endl;
-    }
-    */
     return file;
 }
 
@@ -167,7 +130,7 @@ bool info::Create()
             while (NextParam())
                 // Create empty placeholders
             {
-                itsDataMatrix->Set(CurrentIndex(), shared_ptr<d_matrix_t> (new d_matrix_t(0, 0)));
+            	Data(shared_ptr<d_matrix_t> (new d_matrix_t(0, 0)));
             }
         }
     }
@@ -430,7 +393,7 @@ bool info::NextLocation()
         itsLocationIndex++;
     }
 
-    size_t locationSize = itsDataMatrix->At(CurrentIndex())->Size();
+    size_t locationSize = Data()->Size();
 
     if (itsLocationIndex >= locationSize)
     {
@@ -460,14 +423,9 @@ void info::LocationIndex(size_t theLocationIndex)
     itsLocationIndex = theLocationIndex;
 }
 
-size_t info::CurrentIndex() const
-{
-    return (itsParamIterator->Index() * itsLevelIterator->Size() * itsTimeIterator->Size() + itsLevelIterator->Index() * itsTimeIterator->Size() + itsTimeIterator->Index());
-}
-
 shared_ptr<d_matrix_t> info::Data() const
 {
-    return itsDataMatrix->At(CurrentIndex());
+    return itsDataMatrix->At(TimeIndex(), LevelIndex(), ParamIndex());
 }
 
 shared_ptr<d_matrix_t> info::Data(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
@@ -482,29 +440,27 @@ void info::Data(shared_ptr<matrix_t> m)
 
 void info::Data(shared_ptr<d_matrix_t> d)
 {
-    itsDataMatrix->At(CurrentIndex()) = d;
+    itsDataMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()) = d;
 }
 
 bool info::Value(double theValue)
 {
-    itsDataMatrix->At(CurrentIndex())->Set(itsLocationIndex, theValue) ;
-
-    return true;
+    return Data()->Set(itsLocationIndex, theValue) ;
 }
 
 double info::Value() const
 {
-    return itsDataMatrix->At(CurrentIndex())->At(itsLocationIndex);
+    return Data()->At(itsLocationIndex);
 }
 
 size_t info::Ni() const
 {
-    return itsDataMatrix->At(CurrentIndex())->SizeX();
+    return Data()->SizeX();
 }
 
 size_t info::Nj() const
 {
-    return itsDataMatrix->At(CurrentIndex())->SizeY();
+    return Data()->SizeY();
 }
 
 double info::Di() const
@@ -643,7 +599,7 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 
     shared_ptr<NFmiGrid> theGrid (new NFmiGrid(theArea, Ni(), Nj(), dir, interp));
 
-    size_t dataSize = itsDataMatrix->At(CurrentIndex())->Size();
+    size_t dataSize = Data()->Size();
 
     if (dataSize)   // Do we have data
     {
@@ -656,7 +612,7 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 
         for (unsigned int i = 0; i < dataSize; i++)
         {
-            arr[i] = static_cast<float> (itsDataMatrix->At(CurrentIndex())->At(i));
+            arr[i] = static_cast<float> (Data()->At(i));
         }
 
         if (!thePool.Init(dataSize, arr))

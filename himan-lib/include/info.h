@@ -537,7 +537,7 @@ public:
 
 private:
 
-    size_t CurrentIndex() const;
+    //size_t CurrentIndex() const;
     void Init();
 
     HPProjectionType itsProjection;
