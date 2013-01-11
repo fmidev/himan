@@ -1,15 +1,10 @@
 LIB = himan
 
-SCONS_FLAGS=-j 4
+SCONS_FLAGS=-j 2
 
 # How to install
 
 INSTALL_DATA = install -m 664
-
-# rpm variables
-
-CWP = $(shell pwd)
-BIN = $(shell basename $(CWP))
 
 rpmsourcedir = /home/partio/rpmbuild/SOURCES
 
@@ -37,10 +32,7 @@ rpm:    clean
         fi;
 
 install:
-	scons $(SCONS_FLAGS) $(INSTALL_TARGET)
-
-objdir:
-	@mkdir -p $(objdir)
-	@mkdir -p $(libdir)
-
-
+	mkdir -p $(DESTDIR)/$(INSTALL_TARGET)
+	if [ -f "build/release/lib$(LIB).so" ]; then \
+		$(INSTALL_DATA) build/release/lib$(LIB).so $(DESTDIR)/$(INSTALL_TARGET); \
+	fi;

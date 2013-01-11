@@ -33,7 +33,7 @@ includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append(workspace + '/fmidb/include')
-includes.append('/usr/include/oracle/11.2/client64')
+includes.append('/usr/include/oracle')
 
 env.Append(CPPPATH = includes)
 
