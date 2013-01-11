@@ -42,15 +42,32 @@ public:
         return HPVersionNumber(0, 1);
     }
 
-    std::shared_ptr<info> FromFile(const std::string& theInputFile, const search_options& options, bool theReadContents);
-    bool ToFile(std::shared_ptr<info> theInfo, const std::string& theOutputFile, bool theActiveOnly);
+    /**
+	 * @brief Return all data from a querydata file.
+	 *
+	 * This function reads a querydata file and returns the metadata+data (if specified) in a info
+	 * class instance. Function returns a vector, but in reality the vector size is always zero
+	 * (error reading file or no data matching search options was found) or one (data was found).
+	 * As querydata data is always in same projection and area, we can fit all data in a single info.
+	 * The function returns a vector just to preserve compatitibilty with FromGrib().
+	 *
+	 * @param file Input file name
+	 * @param options Search options (param, level, time)
+	 * @param readContents Specify if data should also be read (and not only metadata)
+	 *
+	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
+	 */
+
+    std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options, bool readContents);
+
+    bool ToFile(std::shared_ptr<info> info, const std::string& outputFile, bool activeOnly);
 
 private:
 
-    NFmiTimeDescriptor CreateTimeDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
-    NFmiParamDescriptor CreateParamDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
+    NFmiTimeDescriptor CreateTimeDescriptor(std::shared_ptr<info> info, bool activeOnly);
+    NFmiParamDescriptor CreateParamDescriptor(std::shared_ptr<info> info, bool activeOnly);
     NFmiHPlaceDescriptor CreateHPlaceDescriptor(std::shared_ptr<info> info);
-    NFmiVPlaceDescriptor CreateVPlaceDescriptor(std::shared_ptr<info> info, bool theActiveOnly);
+    NFmiVPlaceDescriptor CreateVPlaceDescriptor(std::shared_ptr<info> info, bool activeOnly);
 
 };
 

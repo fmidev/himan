@@ -57,13 +57,37 @@ public:
         return HPVersionNumber(0, 1);
     }
 
-    std::shared_ptr<info> Fetch(std::shared_ptr<const configuration> theConfiguration, const forecast_time& theValidTime, const level& theLevel, const param& theParam);
+    std::shared_ptr<info> Fetch(std::shared_ptr<const configuration> conf, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam);
 
 private:
 
-    std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, const search_options& options, bool theReadContents = true);
-    std::vector<std::shared_ptr<info>> FromGrib(const std::string& file, const search_options& options, bool theReadContents = true);
-    std::vector<std::shared_ptr<info>> FromQueryData(const std::string& file, const search_options& options, bool theReadContents = true);
+    std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, const search_options& options, bool readContents = true);
+
+    /**
+     * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
+     * @see himan::plugin::grib::FromFile()
+     *
+     * @param inputFile Input file name
+     * @param options Search options (param, level, time)
+     * @param readContents Specify if data should also be read (and not only metadata)
+     *
+     * @return A vector of shared_ptr'd infos.
+     */
+
+    std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, const search_options& options, bool readContents = true);
+
+    /**
+     * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
+     * @see himan::plugin::querydata::FromFile()
+     *
+     * @param inputFile Input file name
+     * @param options Search options (param, level, time)
+     * @param readContents Specify if data should also be read (and not only metadata)
+     *
+     * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
+     */
+
+    std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, const search_options& options, bool readContents = true);
 
     HPFileType FileType(const std::string& theInputFile);
 

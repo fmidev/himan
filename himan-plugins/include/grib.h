@@ -48,9 +48,27 @@ public:
 
     std::shared_ptr<NFmiGrib> Reader();
 
-    std::vector<std::shared_ptr<info>> FromFile(const std::string& theInputFile, const search_options& options, bool theReadContents = true);
+    /**
+     * @brief Return all data from a grib file.
+     *
+     * This function reads a grib file and returns the metadata+data (if specified) in a one or
+     * more info class instance(s).
+     *
+     * Function returns a vector because unlike with querydata, one grib file can contain many messages
+     * with totally different areas and projections. A single info-class instance can handle different times,
+     * levels, params and even changing grid size but it cannot handle different sized areas. Therefore from
+     * this function we need to return a vector.
+     *
+     * @param file Input file name
+     * @param options Search options (param, level, time)
+     * @param readContents Specify if data should also be read (and not only metadata)
+     *
+     * @return A vector of shared_ptr'd infos.
+     */
 
-    bool ToFile(std::shared_ptr<info> theInfo, const std::string& theOutputFile, HPFileType theFileType, bool theActiveOnly);
+    std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options, bool readContents = true);
+
+    bool ToFile(std::shared_ptr<info> info, const std::string& outputFile, HPFileType fileType, bool activeOnly);
 
 private:
 
