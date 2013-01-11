@@ -240,33 +240,52 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
         t->Start();
 #endif
 
-        // Source info for T
-        shared_ptr<info> TInfo = theFetcher->Fetch(theConfiguration,
-                                 myTargetInfo->Time(),
-                                 myTargetInfo->Level(),
-                                 TParam);
-
-        // Source info for P
+        // Source infos
+        shared_ptr<info> TInfo;
         shared_ptr<info> PInfo;
+
         shared_ptr<NFmiGrid> PGrid;
 
-        bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
+		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-        if (!isPressureLevel)
-        {
-            // Source info for P
-            PInfo = theFetcher->Fetch(theConfiguration,
-                                      myTargetInfo->Time(),
-                                      myTargetInfo->Level(),
-                                      PParam);
+		try
+		{
 
-            if (PInfo->Param().Unit() == kPa)
-            {
-                PScale = 0.01;
-            }
+			TInfo = theFetcher->Fetch(theConfiguration,
+											 myTargetInfo->Time(),
+											 myTargetInfo->Level(),
+											 TParam);
 
-            PGrid = PInfo->ToNewbaseGrid();
-        }
+			if (!isPressureLevel)
+			{
+				// Source info for P
+				PInfo = theFetcher->Fetch(theConfiguration,
+										  myTargetInfo->Time(),
+										  myTargetInfo->Level(),
+										  PParam);
+
+				if (PInfo->Param().Unit() == kPa)
+				{
+					PScale = 0.01;
+				}
+
+				PGrid = PInfo->ToNewbaseGrid();
+			}
+		}
+		catch (HPExceptionType e)
+		{
+			switch (e)
+			{
+				case kFileDataNotFound:
+					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+					continue;
+					break;
+
+				default:
+					throw runtime_error(ClassName() + ": Unable to proceed");
+					break;
+			}
+		}
 
 #ifdef DEBUG
         t->Stop();
@@ -286,9 +305,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 
         assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-#ifdef HAVE_CUDA
-
         bool equalGrids = (myTargetInfo->GridAndAreaEquals(TInfo) && (isPressureLevel || myTargetInfo->GridAndAreaEquals(PInfo)));
+
+#ifdef HAVE_CUDA
 
         //if (itsUseCuda && equalGrids)
         if (itsUseCuda && equalGrids && theThreadIndex == 1)
@@ -353,12 +372,10 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
             {
                 count++;
 
-                NFmiPoint thePoint = targetGrid->LatLon();
-
                 double T = kFloatMissing;
                 double P = kFloatMissing;
 
-                TGrid->InterpolateToLatLonPoint(thePoint, T);
+                util::InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 
                 if (isPressureLevel)
                 {
@@ -366,7 +383,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
                 }
                 else
                 {
-                    PGrid->InterpolateToLatLonPoint(thePoint, P);
+                    util::InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
                 }
 
                 if (T == kFloatMissing || P == kFloatMissing)

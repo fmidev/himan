@@ -146,13 +146,7 @@ void vvms::Process(shared_ptr<configuration> theConfiguration)
     itsThreadManager->Dimension(theConfiguration->LeadingDimension());
     itsThreadManager->FeederInfo(theTargetInfo->Clone());
     itsThreadManager->FeederInfo()->Param(theRequestedParam);
-    /*
-    	itsFeederInfo = theTargetInfo->Clone();
 
-    	itsFeederInfo->Reset();
-
-    	itsFeederInfo->Param(theRequestedParam);
-    */
     /*
      * Each thread will have a copy of the target info.
      */
@@ -204,34 +198,7 @@ void vvms::Run(shared_ptr<info> myTargetInfo,
     }
 
 }
-/*
-bool vvms::AdjustParams(shared_ptr<info> myTargetInfo)
-{
 
-	boost::mutex::scoped_lock lock(itsAdjustParamMutex);
-
-	// This function has access to the original target info
-
-	// Leading dimension can be: time or level
-	// Location cannot be, the calculations on cuda are spread on location
-	// Param cannot be, since calculated params are only one
-
-	if (1)   // say , leading_dimension == time
-	{
-
-		if (itsFeederInfo->NextTime())
-		{
-			myTargetInfo->Time(*itsFeederInfo->Time());
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-*/
 /*
  * Calculate()
  *
@@ -249,7 +216,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
     // Required source parameters
 
     param TParam("T-K");
-    param PParam("P-HPA");
+    param PParam("P-PA");
     param VVParam("VV-PAS");
 
     unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (theThreadIndex)));
@@ -269,17 +236,6 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
         double PScale = 1;
         double TBase = 0;
 
-        // Source info for T
-        shared_ptr<info> TInfo = theFetcher->Fetch(theConfiguration,
-                                 myTargetInfo->Time(),
-                                 myTargetInfo->Level(),
-                                 TParam);
-
-        if (TInfo->Param().Unit() == kC)
-        {
-            TBase = 273.15;
-        }
-
         /*
          * If vvms is calculated for pressure levels, the P value
          * equals to level value. Otherwise we have to fetch P
@@ -287,31 +243,60 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
          */
 
         shared_ptr<info> PInfo;
+        shared_ptr<info> VVInfo;
+        shared_ptr<info> TInfo;
+
         shared_ptr<NFmiGrid> PGrid;
 
         bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-        if (!isPressureLevel)
+        try
         {
-            // Source info for P
-            PInfo = theFetcher->Fetch(theConfiguration,
-                                      myTargetInfo->Time(),
-                                      myTargetInfo->Level(),
-                                      PParam);
+        	VVInfo = theFetcher->Fetch(theConfiguration,
+        	                                  myTargetInfo->Time(),
+        	                                  myTargetInfo->Level(),
+        	                                  VVParam);
 
-            if (PInfo->Param().Unit() == kHPa)
-            {
-                PScale = 100;
-            }
+        	TInfo = theFetcher->Fetch(theConfiguration,
+        	                                 myTargetInfo->Time(),
+        	                                 myTargetInfo->Level(),
+        	                                 TParam);
 
-            PGrid = PInfo->ToNewbaseGrid();
+        	if (!isPressureLevel)
+			{
+				// Source info for P
+				PInfo = theFetcher->Fetch(theConfiguration,
+										  myTargetInfo->Time(),
+										  myTargetInfo->Level(),
+										  PParam);
+
+				if (PInfo->Param().Unit() == kHPa)
+				{
+					PScale = 100;
+				}
+
+				PGrid = PInfo->ToNewbaseGrid();
+			}
+        }
+        catch (HPExceptionType e)
+        {
+        	switch (e)
+        	{
+				case kFileDataNotFound:
+					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+					continue;
+					break;
+
+				default:
+					throw runtime_error(ClassName() + ": Unable to proceed");
+					break;
+			}
         }
 
-        // Source info for Vertical Velocity
-        shared_ptr<info> VVInfo = theFetcher->Fetch(theConfiguration,
-                                  myTargetInfo->Time(),
-                                  myTargetInfo->Level(),
-                                  VVParam);
+    	if (TInfo->Param().Unit() == kC)
+    	{
+    		TBase = 273.15;
+    	}
 
         shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
         shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
@@ -320,11 +305,11 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
         int missingCount = 0;
         int count = 0;
 
-#ifdef HAVE_CUDA
-
         bool equalGrids = (myTargetInfo->GridAndAreaEquals(TInfo) &&
                            (isPressureLevel || myTargetInfo->GridAndAreaEquals(PInfo)) &&
                            myTargetInfo->GridAndAreaEquals(VVInfo));
+
+#ifdef HAVE_CUDA
 
         if (itsUseCuda && equalGrids)
         {
@@ -388,44 +373,17 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
                 double P = kFloatMissing;
                 double VV = kFloatMissing;
 
-#ifdef NO_INTERPOLATION_WHEN_GRIDS_ARE_EQUAL
+                util::InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+                util::InterpolateToPoint(targetGrid, VVGrid, equalGrids, VV);
 
-                if (gridsAreEqual)
+                if (isPressureLevel)
                 {
-                    T = TGrid->FloatValue();
-                    VV = VVGrid->FloatValue();
-
-                    if (isPressureLevel)
-                    {
-                        P = myTargetInfo->Level()->Value();
-                    }
-                    else
-                    {
-                        PGrid->FloatValue();
-                    }
-
+                    P = 100 * myTargetInfo->Level().Value();
                 }
                 else
                 {
-#endif
-                    NFmiPoint thePoint = targetGrid->LatLon();
-
-                    TGrid->InterpolateToLatLonPoint(thePoint, T);
-                    VVGrid->InterpolateToLatLonPoint(thePoint, VV);
-
-                    if (isPressureLevel)
-                    {
-                        P = 100 * myTargetInfo->Level().Value();
-                    }
-                    else
-                    {
-                        PGrid->InterpolateToLatLonPoint(thePoint, P);
-                    }
-
-#ifdef NO_INTERPOLATION_WHEN_GRIDS_ARE_EQUAL
+                 	util::InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
                 }
-
-#endif
 
                 if (T == kFloatMissing || P == kFloatMissing || VV == kFloatMissing)
                 {
