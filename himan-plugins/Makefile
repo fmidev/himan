@@ -6,10 +6,7 @@ SCONS_FLAGS=-j 2
 
 INSTALL_DATA = install -m 664
 
-# rpm variables
-
-CWP = $(shell pwd)
-BIN = $(shell basename $(CWP))
+INSTALL_TARGET = /usr/lib64/himan-plugins
 
 rpmsourcedir = /home/partio/rpmbuild/SOURCES
 
@@ -24,7 +21,7 @@ clean:
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~
 
 rpm:    clean
-	if [ -a $(LIB)-lib.spec ]; \
+	if [ -a $(LIB).spec ]; \
         then \
           tar -C ../ --exclude .svn \
                    -cf $(rpmsourcedir)/$(LIB).tar $(LIB) ; \
@@ -35,7 +32,9 @@ rpm:    clean
         fi;
 
 install:
-	mkdir -p  $(DESTDIR)/$(LIBDIR)
-#	$(INSTALL_DATA) lib/libhiman.so $(DESTDIR)/$(LIBDIR)/libhiman.so
-#	$(INSTALL_DATA) lib/libhiman.a  $(DESTDIR)/$(LIBDIR)/libhiman.a
+	mkdir -p  $(DESTDIR)/$(INSTALL_TARGET)
+	for plugin in build/release/*.so; do \
+		echo installing $$plugin ; \
+                $(INSTALL_DATA) $$plugin $(DESTDIR)/$(INSTALL_TARGET); \
+	done;
 
