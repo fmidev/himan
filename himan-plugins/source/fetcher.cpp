@@ -30,13 +30,13 @@ fetcher::fetcher()
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
 
-shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfiguration,
-                                       const forecast_time& theValidTime,
-                                       const level& theLevel,
-                                       const param& theParam)
+shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
+                                       const forecast_time& requestedTime,
+                                       const level& requestedLevel,
+                                       const param& requestedParam)
 {
 
-    const search_options opts { theValidTime, theParam, theLevel, theConfiguration } ;
+    const search_options opts { requestedTime, requestedParam, requestedLevel, config } ;
 
     // 1. Fetch data from cache
 
@@ -44,9 +44,9 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
 
     // 2. Fetch data from auxiliary files specified at command line
 
-    if (theConfiguration->AuxiliaryFiles().size())
+    if (config->AuxiliaryFiles().size())
     {
-        vector<shared_ptr<info>> auxInfos = FromFile(theConfiguration->AuxiliaryFiles(), opts, true);
+        vector<shared_ptr<info>> auxInfos = FromFile(config->AuxiliaryFiles(), opts, true);
 
         if (auxInfos.size())
         {
@@ -63,7 +63,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
 
     vector<string> files;
 
-    if (theConfiguration->ReadDataFromDatabase())
+    if (config->ReadDataFromDatabase())
     {
         shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -72,16 +72,21 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
 
     if (files.empty())
     {
-        itsLogger->Warning("Could not find file(s) matching requested parameters");
-        //throw 0;
-        //throw kFileMetaDataNotFound;
+        itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
     }
 
     vector<shared_ptr<info>> theInfos = FromFile(files, opts, true);
 
     if (theInfos.size() == 0)
     {
-        throw runtime_error(ClassName() + ": No valid data found with given search options");
+    	string optsStr = "producer: " + boost::lexical_cast<string> (config->SourceProducer());
+    	optsStr = " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
+    	optsStr += " param: " + requestedParam.Name();
+    	optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
+
+    	itsLogger->Warning("No valid data found with given search options " + optsStr);
+
+    	throw kFileDataNotFound;
     }
 
     /*
@@ -91,11 +96,11 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
 
     // assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
 
-    assert((theInfos[0]->Level()) == theLevel);
+    assert((theInfos[0]->Level()) == requestedLevel);
 
-    assert((theInfos[0]->Time()) == theValidTime);
+    assert((theInfos[0]->Time()) == requestedTime);
 
-    assert((theInfos[0]->Param()) == theParam);
+    assert((theInfos[0]->Param()) == requestedParam);
 
     return theInfos[0];
 
@@ -109,7 +114,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> theConfig
  * read fails).
  */
 
-vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, const search_options& options, bool readContents)
 {
 
     vector<shared_ptr<himan::info>> allInfos ;
@@ -128,7 +133,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
         case kGRIB2:
         {
 
-            curInfos = FromGrib(inputFile, options, theReadContents);
+            curInfos = FromGrib(inputFile, options, readContents);
             break;
 
         }
@@ -136,7 +141,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
         case kQueryData:
         {
 
-            curInfos = FromQueryData(inputFile, options, theReadContents);
+            curInfos = FromQueryData(inputFile, options, readContents);
             break;
         }
 
@@ -162,28 +167,24 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
     return allInfos;
 }
 
-vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& theInputFile, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, const search_options& options, bool readContents)
 {
 
     shared_ptr<grib> g = dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
 
-    vector<shared_ptr<info> > theInfos;
+    vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents);
 
-    theInfos = g->FromFile(theInputFile, options, theReadContents);
-
-    return theInfos;
+    return infos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& theInputFile, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, const search_options& options, bool readContents)
 {
-
-    itsLogger->Debug("Reading metadata from file '" + theInputFile + "'");
-
-    vector<shared_ptr<info>> theInfos;
 
     shared_ptr<querydata> q = dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
 
-    shared_ptr<info> i = q->FromFile(theInputFile, options, theReadContents);
+    shared_ptr<info> i = q->FromFile(inputFile, options, readContents);
+
+    vector<shared_ptr<info>> theInfos;
 
     theInfos.push_back(i);
 
