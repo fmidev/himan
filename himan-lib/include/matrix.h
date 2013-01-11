@@ -74,12 +74,6 @@ public:
         throw std::runtime_error("Stupid compiler");
     }
 
-    void Data(T* arr, size_t len)
-    {
-        assert(itsData.size() == len);
-        itsData.assign(arr, arr + len);
-    }
-
     std::ostream& Write(std::ostream& file) const
     {
         file << "<" << ClassName() << " " << Version() << ">" << std::endl;
@@ -155,7 +149,14 @@ public:
         return itsDepth;
     }
 
-    // X Y Z
+    /**
+     * @brief Resize matrix to given size
+     *
+     * @param theWidth X-size of matrix
+     * @param theHeight Y-size of matrix
+     * @param theDepth Z-size of matrix, if 2D matrix then depth = 1
+     */
+
     void Resize(size_t theWidth, size_t theHeight, size_t theDepth = 1)
     {
         itsData.resize(theWidth * theHeight * theDepth);
@@ -172,6 +173,24 @@ public:
     friend std::ostream& operator<<(std::ostream& file, matrix<T> & ob)
     {
         return ob.Write(file);
+    }
+
+    bool Set(T* arr, size_t len)
+    {
+        std::lock_guard<std::mutex> lock(itsValueMutex);
+
+    	assert(itsData.size() == len);
+        itsData.assign(arr, arr + len);
+        return true;
+    }
+
+    bool Set(size_t x, size_t y, size_t z, T theValue)
+    {
+        std::lock_guard<std::mutex> lock(itsValueMutex);
+
+        itsData[Index(x,y,z)] = theValue;
+
+        return true;
     }
 
     bool Set(size_t theIndex, T theValue)
