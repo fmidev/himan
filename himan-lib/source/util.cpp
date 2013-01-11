@@ -16,6 +16,32 @@
 using namespace himan;
 using namespace std;
 
+const double kInterpolatedValueEpsilon = 0.00001;
+
+bool himan::util::InterpolateToPoint(shared_ptr<const NFmiGrid> targetGrid, shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value)
+{
+	if (gridsAreEqual)
+	{
+		value = sourceGrid->FloatValue();
+		return true;
+	}
+
+	const NFmiPoint targetLatLonPoint = targetGrid->LatLon();
+	const NFmiPoint targetGridPoint = targetGrid->GridPoint();
+	const NFmiPoint TGridPoint = sourceGrid->LatLonToGrid(targetLatLonPoint);
+
+	bool noInterpolation = (fabs(targetGridPoint.X() - round(TGridPoint.X())) < kInterpolatedValueEpsilon &&
+		 fabs(targetGridPoint.Y() - round(TGridPoint.Y())) < kInterpolatedValueEpsilon);
+
+	if (noInterpolation)
+	{
+		value = sourceGrid->FloatValue();
+		return true;
+	}
+
+	return sourceGrid->InterpolateToLatLonPoint(targetLatLonPoint, value);
+
+}
 string util::MakeNeonsFileName(shared_ptr<const info> info)
 {
 

@@ -101,6 +101,24 @@ std::string MakeNeonsFileName(std::shared_ptr <const info> info);
 
 std::vector<std::string> Split(const std::string& s, const std::string& delims, bool fill);
 
+/**
+ * @brief Interpolates value to point, or gets the value directly if grids are equal
+ *
+ * Function will try get the value without interpolation: if parameter gridsAreEqual is true,
+ * the value at given grid point is returned instantly. If not, function will check if the
+ * point projected from targetGrid to sourceGrid is actually the same point. If so, the
+ * value of that gridpoint is returned. As a last resort to do the interpolation.
+ *
+ * @param targetGrid Target grid where the point-to-interpolated is picked
+ * @param sourceGrid Source grid where the latlon point is projected, and the value fetched
+ * @param gridsAreEqual If the definitions of these two grids are equal, do no interpolation
+ * @param value The interpolated value
+ *
+ * @return Always true if no interpolation is made, otherwise returns the value given by newbase interpolation function
+ */
+
+bool InterpolateToPoint(std::shared_ptr<const NFmiGrid> targetGrid, std::shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value);
+
 } // namespace util
 } // namespace himan
 
