@@ -300,8 +300,6 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 		{
 			count++;
 
-			NFmiPoint thePoint = targetGrid->LatLon();
-
 			double T = kFloatMissing;
 			double Tg = kFloatMissing;
 			double Ff = kFloatMissing;
