@@ -52,25 +52,25 @@ icing::icing() : itsUseCuda(false)
 void icing::Process(shared_ptr<configuration> theConfiguration)
 {
 
-    shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-    if (c && c->HaveCuda())
-    {
-        string msg = "I possess the powers of CUDA ";
+	if (c && c->HaveCuda())
+	{
+		string msg = "I possess the powers of CUDA ";
 
-        if (!theConfiguration->UseCuda())
-        {
-            msg += ", but I won't use them";
-        }
-        else
-        {
-            msg += ", and I'm not afraid to use them";
-            itsUseCuda = true;
-        }
+		if (!theConfiguration->UseCuda())
+		{
+			msg += ", but I won't use them";
+		}
+		else
+		{
+			msg += ", and I'm not afraid to use them";
+			itsUseCuda = true;
+		}
 
-        itsLogger->Info(msg);
+		itsLogger->Info(msg);
 
-    }
+	}
 
 	// Get number of threads to use
 
@@ -165,10 +165,10 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 		theTargetInfos[i] = theTargetInfo->Clone();
 
 		boost::thread* t = new boost::thread(&icing::Run,
-		                                     this,
-		                                     theTargetInfos[i],
-		                                     theConfiguration,
-		                                     i + 1);
+											 this,
+											 theTargetInfos[i],
+											 theConfiguration,
+											 i + 1);
 
 		g.add_thread(t);
 
@@ -214,44 +214,65 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 	// Required source parameters
 
 	param TParam("T-K");
-	param TgParam("T-K"); // Ground temperature
-        level TgLevel(himan::kHeight, 0, "HEIGHT");
-        param FfParam("FFG-MS");  // 10 meter wind
-        level FfLevel(himan::kHeight, 10, "HEIGHT");
+	level TgLevel(himan::kHeight, 0, "HEIGHT");
+	param FfParam("FFG-MS");  // 10 meter wind
+	level FfLevel(himan::kHeight, 10, "HEIGHT");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
-	myTargetInfo->ResetLevel();
 	myTargetInfo->FirstParam();
 
 	while (itsThreadManager->AdjustNonLeadingDimension(myTargetInfo))
 	{
 
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-		                        " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
 
 		double TBase = 0;
 
-		// Source info for T
-		shared_ptr<info> TInfo = theFetcher->Fetch(theConfiguration,
-		                         myTargetInfo->Time(),
-		                         myTargetInfo->Level(),
-		                         TParam);
-                
-                // Source info for Tg
-		shared_ptr<info> TgInfo = theFetcher->Fetch(theConfiguration,
-		                         myTargetInfo->Time(),
-		                         TgLevel,
-		                         TgParam);
+		shared_ptr<info> TInfo;
+		shared_ptr<info> TgInfo;
+		shared_ptr<info> FfInfo;
 
-		// Source info for FF
-		shared_ptr<info> FfInfo = theFetcher->Fetch(theConfiguration,
-		                         myTargetInfo->Time(),
-		                         FfLevel,
-		                         FfParam);
-                
+		try
+		{
+			// Source info for T
+			TInfo = theFetcher->Fetch(theConfiguration,
+								 myTargetInfo->Time(),
+								 myTargetInfo->Level(),
+								 TParam);
+				
+			// Source info for Tg
+			TgInfo = theFetcher->Fetch(theConfiguration,
+								 myTargetInfo->Time(),
+								 TgLevel,
+								 TParam);
+
+			// Source info for FF
+			FfInfo = theFetcher->Fetch(theConfiguration,
+								 myTargetInfo->Time(),
+								 FfLevel,
+								 FfParam);
+				
+		}
+		catch (HPExceptionType e)
+		{
+			//HPExceptionType t = static_cast<HPExceptionType> (e);
+
+			switch (e)
+			{
+			case kFileDataNotFound:
+				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+				continue;
+				break;
+
+			default:
+				throw runtime_error(ClassName() + ": Unable to proceed");
+				break;
+			}
+		}
 
 		if (TInfo->Param().Unit() == kC)
 		{
@@ -260,8 +281,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
 		shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
-                shared_ptr<NFmiGrid> TgGrid = TgInfo->ToNewbaseGrid();
-                shared_ptr<NFmiGrid> FfGrid = FfInfo->ToNewbaseGrid();
+		shared_ptr<NFmiGrid> TgGrid = TgInfo->ToNewbaseGrid();
+		shared_ptr<NFmiGrid> FfGrid = FfInfo->ToNewbaseGrid();
 
 		int missingCount = 0;
 		int count = 0;
@@ -280,32 +301,36 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 			double T = kFloatMissing;
 			double Tg = kFloatMissing;
-                        double Ff = kFloatMissing;
+			double Ff = kFloatMissing;
 
 			TGrid->InterpolateToLatLonPoint(thePoint, T);
-                        TgGrid->InterpolateToLatLonPoint(thePoint, Tg);
-                        FfGrid->InterpolateToLatLonPoint(thePoint, Ff);
+			TgGrid->InterpolateToLatLonPoint(thePoint, Tg);
+			FfGrid->InterpolateToLatLonPoint(thePoint, Ff);
 
 			if (T == kFloatMissing || Tg == kFloatMissing || Ff == kFloatMissing)
 			{
 				missingCount++;
 
 				myTargetInfo->Value(-10);  // No missing values
-                                continue;
+				continue;
 			}
-                        double Icing;
-                        
-                        if (Tg > -2 ) {
-                          Icing = -10;  
-                        }
-                        else {
-			  Icing = Ff * ( -.35 -T ) / ( 1 + .3 * ( Tg + 0.35 ));
-                        }
-                        
-                        if (Icing > 100) {
-                          Icing = 100;
-                        }
-                        
+
+			double Icing;
+
+			if (Tg > -2 )
+			{
+				Icing = -10;
+			}
+			else
+			{
+				Icing = Ff * ( -.35 -T ) / ( 1 + .3 * ( Tg + 0.35 ));
+
+				if (Icing > 100)
+				{
+					Icing = 100;
+				}
+			}
+
 			if (!myTargetInfo->Value(Icing))
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
@@ -316,7 +341,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 		/*
 		 * Now we are done for this level
 		 *
-		 * Clone info-instance to writer since it might change our descriptor places		 */
+		 * Clone info-instance to writer since it might change our descriptor places		 
+		 */
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
