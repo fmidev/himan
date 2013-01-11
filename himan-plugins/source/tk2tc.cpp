@@ -40,13 +40,13 @@ void doCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex)
 }
 #endif
 
-const unsigned int MAX_THREADS = 6; // Max number of threads we allow
+const unsigned int MAX_THREADS = 1; // Max number of threads we allow
 
 tk2tc::tk2tc() : itsUseCuda(false)
 {
     itsClearTextFormula = "Tc = Tk - 273.15";
 
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
+    itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }
 
 void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
@@ -252,9 +252,9 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
         int missingCount = 0;
         int count = 0;
 
-#ifdef HAVE_CUDA
-
         bool equalGrids = myTargetInfo->GridAndAreaEquals(TInfo);
+
+#ifdef HAVE_CUDA
 
         //if (itsUseCuda && equalGrids)
         if (itsUseCuda && equalGrids && theThreadIndex == 1)
@@ -309,11 +309,9 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
                 count++;
 
-                NFmiPoint thePoint = targetGrid->LatLon();
-
                 double T = kFloatMissing;
 
-                TGrid->InterpolateToLatLonPoint(thePoint, T);
+                util::InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 
                 if (T == kFloatMissing)
                 {

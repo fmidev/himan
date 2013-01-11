@@ -176,8 +176,6 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	g.join_all();
 
-	itsLogger->Info("Calculation done");
-
 	if (theConfiguration->WholeFileWrite())
 	{
 
@@ -197,7 +195,6 @@ void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> t
 	{
 		Calculate(myTargetInfo, theConfiguration, theThreadIndex);
 	}
-
 }
 
 /*
@@ -219,6 +216,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 	level FfLevel(himan::kHeight, 10, "HEIGHT");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
+
+	itsThreadManager->ResetNonLeadingDimension(myTargetInfo);
 
 	myTargetInfo->FirstParam();
 
@@ -289,6 +288,10 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
+		bool equalGrids = (myTargetInfo->GridAndAreaEquals(TInfo) &&
+							myTargetInfo->GridAndAreaEquals(TgInfo) &&
+							myTargetInfo->GridAndAreaEquals(FfInfo));
+
 		myTargetInfo->ResetLocation();
 
 		targetGrid->Reset();
@@ -303,9 +306,9 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			double Tg = kFloatMissing;
 			double Ff = kFloatMissing;
 
-			TGrid->InterpolateToLatLonPoint(thePoint, T);
-			TgGrid->InterpolateToLatLonPoint(thePoint, Tg);
-			FfGrid->InterpolateToLatLonPoint(thePoint, Ff);
+			util::InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+			util::InterpolateToPoint(targetGrid, TgGrid, equalGrids, Tg);
+			util::InterpolateToPoint(targetGrid, FfGrid, equalGrids, Ff);
 
 			if (T == kFloatMissing || Tg == kFloatMissing || Ff == kFloatMissing)
 			{
