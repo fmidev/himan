@@ -530,8 +530,11 @@ void info::ScanningMode(HPScanningMode theScanningMode)
 bool info::GridAndAreaEquals(shared_ptr<const info> other) const
 {
 
-    // TODO: a clever way to compare if two areas are equal
-    // for example, coordinates could be backwards (-90 to 90 vs 90 to -90)
+	/**
+	 * @todo A clever way to compare if two areas are equal. For newbase we need bottomleft/topright coordinates
+     * but grib gives us just first gridpoints.
+	 *
+	 */
 
     if (itsBottomLeftLatitude != other->BottomLeftLatitude())
     {
