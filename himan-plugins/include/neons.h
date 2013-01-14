@@ -1,10 +1,11 @@
 /*
- * neons.h
+ * @file neons.h
  *
- *  Created on: Nov 17, 2012
- *      Author: partio
+ * @date Nov 17, 2012
+ * 
+ * @author: partio
  *
- * Access to neons database.
+ * @brief Access to neons database.
  *
  * A note on compiling and linking:
  *
@@ -68,6 +69,7 @@ public:
     bool Save(std::shared_ptr<const info> resultInfo, const std::string& theFileName);
     std::map<std::string,std::string> ProducerInfo(long fmiProducerId);
     std::string GribParameterName(const long fmiParameterId,const long codeTableVersion);
+    std::string GribParameterName(const long fmiParameterId,const long category, const long discipline, const long producer);
 
     /**
      * @brief Fetch the latest analysistime from neons for a given producer

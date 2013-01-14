@@ -43,7 +43,7 @@ const unsigned int MAX_THREADS = 1; // Max number of threads we allow
 
 icing::icing() : itsUseCuda(false)
 {
-	itsClearTextFormula = "Icing = FF * ( -.35 -T2m ) / ( 1 + .3 * ( T0 + .35 ))";
+	itsClearTextFormula = "Icing = FF * ( -0.35 -T2m ) / ( 1 + 0.3 * ( T0 + 0.35 ))";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icing"));
 
@@ -96,7 +96,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 		map<string,string> prodInfo = n->ProducerInfo(theTargetInfo->Producer().Id());
 
-		if (prodInfo.size())
+		if (!prodInfo.empty())
 		{
 			producer prod(theTargetInfo->Producer().Id());
 

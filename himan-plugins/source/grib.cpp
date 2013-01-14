@@ -226,6 +226,15 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
             long category = itsGrib->Message()->ParameterCategory();
             long discipline = itsGrib->Message()->ParameterDiscipline();
+            long producer = options.configuration->SourceProducer();
+            map<std::string, std::string> producermap;
+            
+            shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+            producermap = n->ProducerInfo(producer);
+            
+            long centre = boost::lexical_cast<long>(producermap["process"]);
+            p.Name(n->GribParameterName(number, category, discipline, centre));  
+            
 
             // Need to get name and unit of parameter
 
@@ -234,7 +243,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 #else
 
             assert(discipline == 0);
-
+/*
             if (number == 1 && category == 3)
             {
                 p.Name("P-HPA");
@@ -242,7 +251,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
             }
             else if (number == 0 && category == 0)
             {
-                p.Name("T-K");
+                p.Name("T-C");
                 p.Unit(kK);
             }
             else if (number == 8 && category == 2)
@@ -254,7 +263,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
             {
                 throw runtime_error(ClassName() + ": I do not recognize this parameter (and I can't connect to neons)");
             }
-
+*/
 #endif
 
             p.GribParameter(number);

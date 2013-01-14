@@ -379,14 +379,22 @@ NFmiNeonsDB& neons::NeonsDB()
 
 /// Gets grib parameter name based on number and code table
 /**
- *  \par FmiParameterId - parameter number
- *  \par CodeTableVersion  - code table number
+ *  \par fmiParameterId - parameter number
+ *  \par codeTableVersion  - code table number
  */
 std::string neons::GribParameterName(const long fmiParameterId, const long codeTableVersion) 
-{
-    
+{    
     Init();
     
-    std::string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, 204);
+    std::string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, codeTableVersion);
+    return paramName; 
+    
+}
+
+std::string neons::GribParameterName(const long fmiParameterId, const long category, const long discipline, const long producer) 
+{
+    Init();
+    
+    std::string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, category, discipline, producer);
     return paramName;   
 }
