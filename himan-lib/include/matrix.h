@@ -202,6 +202,15 @@ public:
         return true;
     }
 
+    /**
+     * @brief Fill matrix with a given value
+     */
+
+    void Fill(T fillValue)
+    {
+    	std::fill(itsData.begin(),itsData.begin(),fillValue);
+    }
+
     // Only used for calculating statistics in DoStuff()
 
     void MissingValue(T theMissingValue)
