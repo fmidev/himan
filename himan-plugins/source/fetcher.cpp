@@ -10,6 +10,7 @@
 #include "logger_factory.h"
 #include <fstream>
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem/operations.hpp>
 #include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
@@ -80,7 +81,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
     if (theInfos.size() == 0)
     {
     	string optsStr = "producer: " + boost::lexical_cast<string> (config->SourceProducer());
-    	optsStr = " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
+    	optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
     	optsStr += " param: " + requestedParam.Name();
     	optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
 
@@ -122,6 +123,12 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
     for (size_t i = 0; i < files.size(); i++)
     {
         string inputFile = files[i];
+
+        if (!boost::filesystem::exists(inputFile))
+        {
+            itsLogger->Error("Input file '" + inputFile + "' does not exist");
+            continue;
+        }
 
         vector<shared_ptr<himan::info>> curInfos;
 
