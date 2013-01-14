@@ -396,6 +396,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
         case 10:
             newInfo->Projection(kRotatedLatLonProjection);
+            newInfo->SouthPoleLatitude(itsGrib->Message()->SouthPoleY());
+            newInfo->SouthPoleLongitude(itsGrib->Message()->SouthPoleX());
             break;
 
         default:
