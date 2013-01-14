@@ -342,7 +342,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
                 count++;
             }
 
-            myTargetInfo->Data()->Data(data, N);
+            myTargetInfo->Data()->Set(data, N);
 
             delete [] data;
             delete [] TPData;

@@ -340,7 +340,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
                 count++;
             }
 
-            myTargetInfo->Data()->Data(data, N);
+            myTargetInfo->Data()->Set(data, N);
 
             delete [] data;
             delete [] VVout;
