@@ -28,7 +28,7 @@ namespace himan
 
 typedef matrix <std::shared_ptr<d_matrix_t> > matrix_t;
 
-const size_t kMAX_SIZE_T = std::numeric_limits<size_t>::max();
+const size_t kIteratorResetValue = std::numeric_limits<size_t>::max();
 
 class info
 {
@@ -75,7 +75,7 @@ public:
 
         void Reset()
         {
-            itsIndex = kMAX_SIZE_T;
+            itsIndex = kIteratorResetValue;
         }
 
         /**
@@ -101,7 +101,7 @@ public:
 
         bool Next()
         {
-            if (itsIndex == kMAX_SIZE_T)
+            if (itsIndex == kIteratorResetValue)
             {
                 itsIndex = 0;    // Reset() has been called before this function
             }
@@ -126,7 +126,7 @@ public:
 
         T& At()
         {
-            if (itsIndex != kMAX_SIZE_T && itsIndex < itsElements.size())
+            if (itsIndex != kIteratorResetValue && itsIndex < itsElements.size())
             {
                 return itsElements[itsIndex];
             }
@@ -257,6 +257,12 @@ public:
 
     void Orientation(double theOrientation);
     double Orientation() const;
+
+    double SouthPoleLongitude() const;
+    double SouthPoleLatitude() const;
+
+    void SouthPoleLongitude(double theSouthPoleLongitude);
+    void SouthPoleLatitude(double theSouthPoleLatitude);
 
     /**
      * @return Number of point along X axis
@@ -545,6 +551,10 @@ private:
     double itsBottomLeftLongitude;
     double itsTopRightLatitude;
     double itsTopRightLongitude;
+
+    double itsSouthPoleLatitude;
+    double itsSouthPoleLongitude;
+
     double itsOrientation;
 
     std::shared_ptr<level_iter> itsLevelIterator;
