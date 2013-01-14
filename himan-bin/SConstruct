@@ -41,7 +41,7 @@ env.Append(LIBPATH = [workspace + '/himan-lib/build/debug', '/usr/lib64'])
 
 # Libraries
 
-env.Append(LIBS = ['himan','smartmet_newbase','boost_regex','boost_filesystem','boost_system', 'rt'])
+env.Append(LIBS = ['himan','smartmet_newbase','boost_regex','boost_filesystem','boost_system', 'rt', 'z', 'bz2'])
 
 # CFLAGS
 
@@ -89,7 +89,7 @@ env.Append(CCFLAGS = cflags_normal)
 
 # Linker flags
 
-env.Append(LINKFLAGS = ['-Wl,--export-dynamic'])
+env.Append(LINKFLAGS = ['-Wl,--export-dynamic','-Wl,--unresolved-symbols=ignore-in-shared-libs'])
 
 # Defines
 
