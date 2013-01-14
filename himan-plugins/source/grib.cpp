@@ -207,14 +207,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
         param p;
 
-        //<! todo GRIB1 support
         long number = itsGrib->Message()->ParameterNumber();
 
         if (itsGrib->Message()->Edition() == 1)
         {
             long no_vers = itsGrib->Message()->Table2Version();
-
-            shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
             p.Name(n->GribParameterName(number, no_vers));           
             p.GribParameter(number);
@@ -229,58 +226,38 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
             long producer = options.configuration->SourceProducer();
             map<std::string, std::string> producermap;
             
-            shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
             producermap = n->ProducerInfo(producer);
             
+            if (producermap.empty())
+            {
+            	throw runtime_error("Unknown producer: " + boost::lexical_cast<string> (producer));
+            }
+
             long centre = boost::lexical_cast<long>(producermap["process"]);
             p.Name(n->GribParameterName(number, category, discipline, centre));  
-            
-
-            // Need to get name and unit of parameter
-
-#ifdef NEONS
-            throw runtime_error("FFFFFFFFFFFFFFFUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU!!!!!!!!!!!!!!!!!!!");
-#else
-
-            assert(discipline == 0);
-/*
-            if (number == 1 && category == 3)
-            {
-                p.Name("P-HPA");
-                p.Unit(kPa);
-            }
-            else if (number == 0 && category == 0)
-            {
-                p.Name("T-C");
-                p.Unit(kK);
-            }
-            else if (number == 8 && category == 2)
-            {
-                p.Name("VV-PAS");
-                p.Unit(kPas);
-            }
-            else
-            {
-                throw runtime_error(ClassName() + ": I do not recognize this parameter (and I can't connect to neons)");
-            }
-*/
-#endif
 
             p.GribParameter(number);
             p.GribDiscipline(discipline);
             p.GribCategory(category);
+
+            if (p.Name() == "T-C" && producermap["centre"] == "7")
+            {
+            	p.Name("T-K");
+            }
         }
 
         if (itsGrib->Message()->ParameterUnit() == "K")
         {
            	p.Unit(kK);
         }
+        else if (itsGrib->Message()->ParameterUnit() == "Pa s-1")
+        {
+           	p.Unit(kPas);
+        }
         else
         {
         	itsLogger->Warning("Unable to determine himan parameter unit for grib unit " + itsGrib->Message()->ParameterUnit());
         }
-
-        // Name is our primary identifier -- not univ_id or grib param id
 
         if (p != options.param)
         {
