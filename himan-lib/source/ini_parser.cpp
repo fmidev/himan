@@ -605,17 +605,26 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 		if (geominfo.size())
 		{
-			if (geominfo["prjn_name"] == "latlon")
-			{
-				itsConfiguration->itsInfo->Projection(kLatLonProjection);
-			}
-			else if (geominfo["prjn_name"] == "rotlatlon")
+			/*
+			 *  In Neons we don't have rotlatlon projection used separately, instead we have
+			 *  to check if geom_parm_1 and geom_parm_2 specify the regular rotated location
+			 *  if south pole (0,30).
+			 */
+
+			if (geominfo["prjn_name"] == "latlon" && geominfo["geom_param_1"] == "30000" && geominfo["geom_parm_2"] == "0")
 			{
 				itsConfiguration->itsInfo->Projection(kRotatedLatLonProjection);
+				itsConfiguration->itsInfo->SouthPoleLatitude(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
+				itsConfiguration->itsInfo->SouthPoleLongitude(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3);
+			}
+			else if (geominfo["prjn_name"] == "latlon")
+			{
+				itsConfiguration->itsInfo->Projection(kLatLonProjection);
 			}
 			else if (geominfo["prjn_name"] == "polster")
 			{
 				itsConfiguration->itsInfo->Projection(kStereographicProjection);
+				itsConfiguration->itsInfo->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
 			}
 			else
 			{
@@ -632,23 +641,32 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 				itsConfiguration->Info()->ScanningMode(kTopLeft);
 				factor = -1;
 			}
+			else if (geominfo["stor_desc"] == "+x+y")
+			{
+				itsConfiguration->Info()->ScanningMode(kBottomLeft);
+			}
 			else
 			{
-				throw runtime_error("This geom not supported yet");
+				throw runtime_error(ClassName() + ": scanning mode " + geominfo["stor_desc"] + " not supported yet");
 			}
 
 			itsConfiguration->Info()->BottomLeftLatitude(factor * boost::lexical_cast<double>(geominfo["lat_orig"]) / 1e3);
 			itsConfiguration->Info()->BottomLeftLongitude(boost::lexical_cast<double>(geominfo["long_orig"]) / 1e3);
 
+			/*
+			 * Calculate top right coordinates when bottom left is known. The calculation is very simple:
+			 * topright is (from bottomleft): (number of gridpoints - 1) * the distance between two gridpoints.
+			 *
+			 * Both pieces of information are found in grib metadata, at least with latlon/rotlatlon.
+			 */
+
 			itsConfiguration->Info()->TopRightLatitude(
 					itsConfiguration->Info()->BottomLeftLatitude() +
-					(itsConfiguration->Nj() * boost::lexical_cast<double>(geominfo["pas_latitude"])/1e3));
+					((itsConfiguration->Nj()-1) * boost::lexical_cast<double>(geominfo["pas_latitude"])/1e3));
 
 			itsConfiguration->Info()->TopRightLongitude(
 								itsConfiguration->Info()->BottomLeftLongitude() +
-								(itsConfiguration->Ni() * boost::lexical_cast<double>(geominfo["pas_longitude"])/1e3));
-
-			itsConfiguration->Info()->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]));
+								((itsConfiguration->Ni()-1) * boost::lexical_cast<double>(geominfo["pas_longitude"])/1e3));
 
 			return;
 		}
