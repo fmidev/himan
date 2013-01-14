@@ -264,6 +264,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			{
 			case kFileDataNotFound:
 				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 				continue;
 				break;
 
