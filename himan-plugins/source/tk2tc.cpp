@@ -239,18 +239,40 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
         myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
 
         // Source info for T
-        shared_ptr<info> TInfo = theFetcher->Fetch(theConfiguration,
+
+        shared_ptr<info> TInfo;
+
+        try
+        {
+        	TInfo = theFetcher->Fetch(theConfiguration,
                                  myTargetInfo->Time(),
                                  myTargetInfo->Level(),
                                  TParam);
 
-        assert(TInfo->Param().Unit() == kK);
+        	assert(TInfo->Param().Unit() == kK);
 
-        shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-        shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
+        }
+        catch (HPExceptionType e)
+        {
+			switch (e)
+			{
+				case kFileDataNotFound:
+					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+					myTargetInfo->Data()->Fill(kFloatMissing);
+					continue;
+					break;
+
+				default:
+					throw runtime_error(ClassName() + ": Unable to proceed");
+					break;
+			}
+        }
 
         int missingCount = 0;
         int count = 0;
+
+    	shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
+    	shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
 
         bool equalGrids = myTargetInfo->GridAndAreaEquals(TInfo);
 
@@ -279,7 +301,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
                 count++;
             }
 
-            myTargetInfo->Data()->Data(data, N);
+            myTargetInfo->Data()->Set(data, N);
 
             delete [] data;
             delete [] TOut;
