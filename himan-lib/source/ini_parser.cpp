@@ -611,7 +611,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 			 *  if south pole (0,30).
 			 */
 
-			if (geominfo["prjn_name"] == "latlon" && geominfo["geom_param_1"] == "30000" && geominfo["geom_parm_2"] == "0")
+			if (geominfo["prjn_name"] == "latlon" && geominfo["geom_parm_1"] == "-30000" && geominfo["geom_parm_2"] == "0")
 			{
 				itsConfiguration->itsInfo->Projection(kRotatedLatLonProjection);
 				itsConfiguration->itsInfo->SouthPoleLatitude(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
