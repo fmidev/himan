@@ -52,6 +52,9 @@ shared_ptr<info> info::Clone() const
     clone->TopRightLatitude(itsTopRightLatitude);
     clone->TopRightLongitude(itsTopRightLongitude);
 
+    clone->SouthPoleLatitude(itsSouthPoleLatitude);
+    clone->SouthPoleLongitude(itsSouthPoleLongitude);
+
     clone->Data(itsDataMatrix);
 
     clone->ParamIterator(*itsParamIterator);
@@ -82,6 +85,10 @@ void info::Init()
     itsBottomLeftLongitude = kHPMissingFloat;
     itsTopRightLatitude = kHPMissingFloat;
     itsTopRightLongitude = kHPMissingFloat;
+
+    itsSouthPoleLatitude = kHPMissingFloat;
+    itsSouthPoleLongitude = kHPMissingFloat;
+
     itsOrientation = kHPMissingFloat;
 
     itsScanningMode = kTopLeft;
@@ -175,13 +182,35 @@ void info::BottomLeftLongitude(double theBottomLeftLongitude)
 {
     itsBottomLeftLongitude = theBottomLeftLongitude;
 }
+
 void info::TopRightLatitude(double theTopRightLatitude)
 {
     itsTopRightLatitude = theTopRightLatitude;
 }
+
 void info::TopRightLongitude(double theTopRightLongitude)
 {
     itsTopRightLongitude = theTopRightLongitude;
+}
+
+void info::SouthPoleLatitude(double theSouthPoleLatitude)
+{
+    itsSouthPoleLatitude = theSouthPoleLatitude;
+}
+
+double info::SouthPoleLatitude() const
+{
+    return itsSouthPoleLatitude;
+}
+
+void info::SouthPoleLongitude(double theSouthPoleLongitude)
+{
+    itsSouthPoleLongitude = theSouthPoleLongitude;
+}
+
+double info::SouthPoleLongitude() const
+{
+    return itsSouthPoleLongitude;
 }
 
 double info::Orientation() const
@@ -383,7 +412,7 @@ forecast_time& info::Time() const
 
 bool info::NextLocation()
 {
-    if (itsLocationIndex == kMAX_SIZE_T)
+    if (itsLocationIndex == kIteratorResetValue)
     {
         itsLocationIndex = 0;    // ResetLocation() has been called before this function
     }
@@ -408,7 +437,7 @@ bool info::NextLocation()
 
 void info::ResetLocation()
 {
-    itsLocationIndex = kMAX_SIZE_T;
+    itsLocationIndex = kIteratorResetValue;
 }
 
 bool info::FirstLocation()
@@ -486,55 +515,73 @@ void info::ScanningMode(HPScanningMode theScanningMode)
 bool info::GridAndAreaEquals(shared_ptr<const info> other) const
 {
 
+	const float kCoordinateEpsilon = 0.00001;
+
 	/**
 	 * @todo A clever way to compare if two areas are equal. For newbase we need bottomleft/topright coordinates
      * but grib gives us just first gridpoints.
 	 *
 	 */
 
-    if (itsBottomLeftLatitude != other->BottomLeftLatitude())
+    if (fabs(itsBottomLeftLatitude - other->BottomLeftLatitude()) > kCoordinateEpsilon)
     {
-        itsLogger->Trace("BottomLeftLatitudes aren't the same");
+        itsLogger->Trace("BottomLeftLatitudes don't match: " + boost::lexical_cast<string> (itsBottomLeftLatitude) + " vs " + boost::lexical_cast<string> (other->BottomLeftLatitude()));
         return false;
     }
 
-    if (itsBottomLeftLongitude != other->BottomLeftLongitude())
+    if (fabs(itsBottomLeftLongitude - other->BottomLeftLongitude()) > kCoordinateEpsilon)
     {
-        itsLogger->Trace("BottomLeftLongitude aren't the same");
+        itsLogger->Trace("BottomLeftLongitude don't match: " + boost::lexical_cast<string> (itsBottomLeftLongitude) + " vs " + boost::lexical_cast<string> (other->BottomLeftLongitude()));
         return false;
     }
 
-    if (itsTopRightLatitude != other->TopRightLatitude())
+    if (fabs(itsTopRightLatitude - other->TopRightLatitude()) > kCoordinateEpsilon)
     {
-        itsLogger->Trace("TopRightLatitudes aren't the same");
+        itsLogger->Trace("TopRightLatitudes don't match: " + boost::lexical_cast<string> (itsTopRightLatitude) + " vs " + boost::lexical_cast<string> (other->TopRightLatitude()));
         return false;
     }
 
-    if (itsTopRightLongitude != other->TopRightLongitude())
+    if (fabs(itsTopRightLongitude - other->TopRightLongitude()) > kCoordinateEpsilon)
     {
-        cout << itsTopRightLongitude << " != " <<  other->TopRightLongitude() << endl;
-
-        itsLogger->Trace("TopRightLongitudes aren't the same");
+        itsLogger->Trace("TopRightLongitudes don't match: " + boost::lexical_cast<string> (itsTopRightLongitude) + " vs " + boost::lexical_cast<string> (other->TopRightLongitude()));
         return false;
     }
 
     if (itsProjection != other->Projection())
     {
+        itsLogger->Trace("Projections don't match: " + boost::lexical_cast<string> (itsProjection) + " vs " + boost::lexical_cast<string> (other->Projection()));
         return false;
+    }
+
+    if (itsProjection == kRotatedLatLonProjection)
+    {
+		if (fabs(itsSouthPoleLatitude - other->SouthPoleLatitude()) > kCoordinateEpsilon)
+    	{
+        	itsLogger->Trace("SouthPoleLatitudes don't match: " + boost::lexical_cast<string> (itsSouthPoleLatitude) + " vs " + boost::lexical_cast<string> (other->SouthPoleLatitude()));
+        	return false;
+    	}
+		if (fabs(itsSouthPoleLongitude - other->SouthPoleLongitude()) > kCoordinateEpsilon)
+    	{
+        	itsLogger->Trace("SouthPoleLongitudes don't match: " + boost::lexical_cast<string> (itsSouthPoleLongitude) + " vs " + boost::lexical_cast<string> (other->SouthPoleLongitude()));
+        	return false;
+    	}
     }
 
     if (itsOrientation != other->Orientation())
     {
+    	itsLogger->Trace("Orientations don't match: " + boost::lexical_cast<string> (itsOrientation) + " vs " + boost::lexical_cast<string> (other->Orientation()));
         return false;
     }
 
     if (Ni() != other->Ni())
     {
+    	itsLogger->Trace("Grid X-counts don't match: " + boost::lexical_cast<string> (Ni()) + " vs " + boost::lexical_cast<string> (other->Ni()));
         return false;
     }
 
     if (Nj() != other->Nj())
     {
+    	itsLogger->Trace("Grid Y-counts don't match: " + boost::lexical_cast<string> (Nj()) + " vs " + boost::lexical_cast<string> (other->Nj()));
         return false;
     }
 
