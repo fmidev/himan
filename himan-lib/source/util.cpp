@@ -8,7 +8,6 @@
  */
 
 #include "util.h"
-#include <boost/filesystem/operations.hpp>
 #include <boost/algorithm/string.hpp>
 #include <sstream>
 #include <iomanip>
@@ -18,7 +17,7 @@ using namespace std;
 
 const double kInterpolatedValueEpsilon = 0.00001;
 
-bool himan::util::InterpolateToPoint(shared_ptr<const NFmiGrid> targetGrid, shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value)
+bool util::InterpolateToPoint(shared_ptr<const NFmiGrid> targetGrid, shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value)
 {
 	if (gridsAreEqual)
 	{
@@ -82,12 +81,6 @@ himan::HPFileType util::FileType(const string& theFile)
 {
 
     using namespace std;
-
-    if (!boost::filesystem::exists(theFile))
-    {
-        cerr << "Input file '" + theFile + "' does not exist" << endl;
-        exit(1);
-    }
 
     ifstream f(theFile.c_str(), ios::in | ios::binary);
 
