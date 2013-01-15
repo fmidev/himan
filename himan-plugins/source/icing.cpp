@@ -31,15 +31,13 @@ namespace himan
 {
 namespace plugin
 {
-namespace tpot_cuda
+namespace icing_cuda
 {
 void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float* TPout, size_t N, float PConst, unsigned short index);
 }
 }
 }
 #endif
-
-const unsigned int MAX_THREADS = 1; // Max number of threads we allow
 
 icing::icing() : itsUseCuda(false)
 {
@@ -74,9 +72,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	// Get number of threads to use
 
-	unsigned int theCoreCount = boost::thread::hardware_concurrency(); // Number of cores
-
-	unsigned int theThreadCount = theCoreCount > MAX_THREADS ? MAX_THREADS : theCoreCount;
+	unsigned short threadCount = ThreadCount(theConfiguration->ThreadCount());
 
 	boost::thread_group g;
 
@@ -140,14 +136,12 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 	theTargetInfo->Create();
 
 	/*
-	 * FeederInfo is used to feed the running threads.
+	 * Initialize parent class functions for dimension handling
 	 */
 
-	itsThreadManager = shared_ptr<util::thread_manager> (new util::thread_manager());
-
-	itsThreadManager->Dimension(theConfiguration->LeadingDimension());
-	itsThreadManager->FeederInfo(theTargetInfo->Clone());
-	itsThreadManager->FeederInfo()->Param(theRequestedParam);
+	Dimension(theConfiguration->LeadingDimension());
+	FeederInfo(theTargetInfo->Clone());
+	FeederInfo()->Param(theRequestedParam);
 
 	/*
 	 * Each thread will have a copy of the target info.
@@ -155,9 +149,9 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	vector<shared_ptr<info> > theTargetInfos;
 
-	theTargetInfos.resize(theThreadCount);
+	theTargetInfos.resize(threadCount);
 
-	for (size_t i = 0; i < theThreadCount; i++)
+	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
@@ -191,7 +185,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
 {
-	while (itsThreadManager->AdjustLeadingDimension(myTargetInfo))
+	while (AdjustLeadingDimension(myTargetInfo))
 	{
 		Calculate(myTargetInfo, theConfiguration, theThreadIndex);
 	}
@@ -217,11 +211,11 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
-	itsThreadManager->ResetNonLeadingDimension(myTargetInfo);
+	ResetNonLeadingDimension(myTargetInfo);
 
 	myTargetInfo->FirstParam();
 
-	while (itsThreadManager->AdjustNonLeadingDimension(myTargetInfo))
+	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
@@ -305,9 +299,9 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			double Tg = kFloatMissing;
 			double Ff = kFloatMissing;
 
-			util::InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-			util::InterpolateToPoint(targetGrid, TgGrid, equalGrids, Tg);
-			util::InterpolateToPoint(targetGrid, FfGrid, equalGrids, Ff);
+			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+			InterpolateToPoint(targetGrid, TgGrid, equalGrids, Tg);
+			InterpolateToPoint(targetGrid, FfGrid, equalGrids, Ff);
 
 			if (T == kFloatMissing || Tg == kFloatMissing || Ff == kFloatMissing)
 			{

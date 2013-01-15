@@ -10,13 +10,14 @@
 #define VVMS_H
 
 #include "compiled_plugin.h"
+#include "compiled_plugin_base.h"
 
 namespace himan
 {
 namespace plugin
 {
 
-class vvms : public compiled_plugin
+class vvms : public compiled_plugin, private compiled_plugin_base
 {
 public:
     vvms();

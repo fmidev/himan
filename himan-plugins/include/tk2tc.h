@@ -9,13 +9,14 @@
 #define TK2TC_H
 
 #include "compiled_plugin.h"
+#include "compiled_plugin_base.h"
 
 namespace himan
 {
 namespace plugin
 {
 
-class tk2tc : public compiled_plugin
+class tk2tc : public compiled_plugin, private compiled_plugin_base
 {
 public:
     tk2tc();

@@ -11,7 +11,6 @@
 
 #include "himan_plugin.h"
 #include "configuration.h"
-#include "util.h"
 #include <boost/thread.hpp>
 
 namespace himan
@@ -39,17 +38,8 @@ public:
     }
 
 protected:
-    /*
-    		virtual void Run(std::shared_ptr<info> myTargetInfo,
-    		                 std::shared_ptr<const configuration> theConfiguration,
-    		                 unsigned short theThreadIndex) = 0;
 
-    		virtual void Calculate(std::shared_ptr<info> theTargetInfo,
-    		                       std::shared_ptr<const configuration> theConfiguration,
-    		                       unsigned short theThreadIndex) = 0;
-    */
     std::string itsClearTextFormula;
-    std::shared_ptr<util::thread_manager> itsThreadManager;
 
 };
 

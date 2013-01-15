@@ -9,14 +9,14 @@
 #define TPOT_H
 
 #include "compiled_plugin.h"
-//#include <boost/thread.hpp>
+#include "compiled_plugin_base.h"
 
 namespace himan
 {
 namespace plugin
 {
 
-class tpot : public compiled_plugin
+class tpot : public compiled_plugin, private compiled_plugin_base
 {
 public:
     tpot();

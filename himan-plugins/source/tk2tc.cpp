@@ -40,8 +40,6 @@ void doCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex)
 }
 #endif
 
-const unsigned int MAX_THREADS = 1; // Max number of threads we allow
-
 tk2tc::tk2tc() : itsUseCuda(false)
 {
     itsClearTextFormula = "Tc = Tk - 273.15";
@@ -74,9 +72,7 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 
     // Get number of threads to use
 
-    unsigned int theCoreCount = boost::thread::hardware_concurrency(); // Number of cores
-
-    unsigned int theThreadCount = theCoreCount > MAX_THREADS ? MAX_THREADS : theCoreCount;
+    unsigned short threadCount = ThreadCount(theConfiguration->ThreadCount());
 
     boost::thread_group g;
 
@@ -139,31 +135,22 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
     theTargetInfo->Create();
 
     /*
-     * Initialize thread manager
+     * Initialize parent class functions for dimension handling
      */
 
-    itsThreadManager = shared_ptr<util::thread_manager> (new util::thread_manager());
+    Dimension(theConfiguration->LeadingDimension());
+    FeederInfo(theTargetInfo->Clone());
+    FeederInfo()->Param(theRequestedParam);
 
-    itsThreadManager->Dimension(theConfiguration->LeadingDimension());
-    itsThreadManager->FeederInfo(theTargetInfo->Clone());
-
-    //itsThreadManager->FeederInfo()->Param(theRequestedParam);
-
-    /*	itsFeederInfo = theTargetInfo->Clone();
-
-    itsFeederInfo->Reset();
-
-    itsFeederInfo->Param(theRequestedParam);
-    */
     /*
      * Each thread will have a copy of the target info.
      */
 
     vector<shared_ptr<info> > theTargetInfos;
 
-    theTargetInfos.resize(theThreadCount);
+    theTargetInfos.resize(threadCount);
 
-    for (size_t i = 0; i < theThreadCount; i++)
+    for (size_t i = 0; i < threadCount; i++)
     {
 
         itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
@@ -200,7 +187,7 @@ void tk2tc::Run(shared_ptr<info> myTargetInfo,
                 unsigned short theThreadIndex)
 {
 
-    while (itsThreadManager->AdjustLeadingDimension(myTargetInfo))
+    while (AdjustLeadingDimension(myTargetInfo))
     {
         Calculate(myTargetInfo, theConfiguration, theThreadIndex);
     }
@@ -226,11 +213,11 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
     unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
-    itsThreadManager->ResetNonLeadingDimension(myTargetInfo);
+    ResetNonLeadingDimension(myTargetInfo);
 
     myTargetInfo->FirstParam();
 
-    while (itsThreadManager->AdjustNonLeadingDimension(myTargetInfo))
+    while (AdjustNonLeadingDimension(myTargetInfo))
     {
 
         myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
@@ -333,7 +320,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
                 double T = kFloatMissing;
 
-                util::InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+                InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 
                 if (T == kFloatMissing)
                 {

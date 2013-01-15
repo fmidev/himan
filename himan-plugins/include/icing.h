@@ -1,4 +1,4 @@
-/*
+/**
  * @file icing.h
  * 
  * @brief A plugin to calculate sea spray icing.
@@ -13,13 +13,14 @@
 #define ICING_H
 
 #include "compiled_plugin.h"
+#include "compiled_plugin_base.h"
 
 namespace himan
 {
 namespace plugin
 {
 
-class icing : public compiled_plugin
+class icing : public compiled_plugin, private compiled_plugin_base
 {
 	public:
 		icing();

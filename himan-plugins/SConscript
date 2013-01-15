@@ -13,31 +13,40 @@ if os.path.isfile(libcudart):
 	have_cuda = True
 
 
-cppplugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer','icing']
+auxiliary_plugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer']
 
-cudaplugins = ['tk2tc','tpot','vvms']
+compiled_plugins = ['icing']
+
+cuda_plugins = ['tk2tc','tpot','vvms']
 
 if have_cuda:
 	env.Tool('cuda')
 
 else:
-	cppplugins.extend(cudaplugins)
+	compiled_plugins.extend(cuda_plugins)
 
-for p in cppplugins:
+for p in auxiliary_plugins:
 
 	file = 'source/' + p + '.cpp'
 	env.SharedLibrary(target = p, source = [file])
 
-for p in cudaplugins:
-
-	if not have_cuda:
-		continue
+for p in compiled_plugins:
 
 	file = 'source/' + p + '.cpp'
+	base = 'source/compiled_plugin_base.cpp'
 
-	cufile = 'source/' + p + '_cuda.cu'
- 
-	files = [file, cufile]
+	files = [file, base]
 
 	env.SharedLibrary(target = p, source = files)
+
+if have_cuda:
+	for p in cuda_plugins:
+
+		file = 'source/' + p + '.cpp'
+		base = 'source/compiled_plugin_base.cpp'
+		cufile = 'source/' + p + '_cuda.cu'
+ 
+		files = [file, base, cufile]
+
+		env.SharedLibrary(target = p, source = files)
 
