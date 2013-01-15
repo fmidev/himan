@@ -116,9 +116,10 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 	("version,v", "display version number")
 	("configuration-file,f", po::value(&(itsConfiguration->itsConfigurationFile)), "configuration file")
 	("auxiliary-files,a", po::value<vector<string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
-	("plugins,p", po::value<vector<string> > (&(itsConfiguration->itsPlugins)), "calculated plugins")
+	//("plugins,p", po::value<vector<string> > (&(itsConfiguration->itsPlugins)), "calculated plugins")
+	("threads,j", po::value(&itsConfiguration->itsThreadCount), "number of started threads")
 	("list-plugins,l", "list all defined plugins")
-	("d,debug-level", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
+	("dedbug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
 	("no-cuda", "disable cuda extensions")
 	;
 

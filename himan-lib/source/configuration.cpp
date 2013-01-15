@@ -37,6 +37,8 @@ std::ostream& configuration::Write(std::ostream& file) const
     file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
     file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
 
+    file << "__itsThreadCount__ " << itsThreadCount << std::endl;
+
     file << "__itsNi__ " << itsNi << std::endl;
     file << "__itsNj__ " << itsNj << std::endl;
 
@@ -75,6 +77,7 @@ void configuration::Init()
     itsUseCuda = true;
     itsFileWaitTimeout = 0;
     itsLeadingDimension = kTimeDimension;
+    itsThreadCount = -1;
 }
 
 HPFileType configuration::OutputFileType() const
@@ -161,4 +164,14 @@ bool configuration::UseCuda() const
 HPDimensionType configuration::LeadingDimension() const
 {
     return itsLeadingDimension;
+}
+
+short configuration::ThreadCount() const
+{
+    return itsThreadCount;
+}
+
+void configuration::ThreadCount(short theThreadCount)
+{
+    itsThreadCount = theThreadCount;
 }

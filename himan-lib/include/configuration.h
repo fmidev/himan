@@ -127,6 +127,9 @@ public:
 
     HPDimensionType LeadingDimension() const;
 
+    void ThreadCount(short theThreadCount);
+    short ThreadCount() const;
+
 private:
 
     void Init();
@@ -155,6 +158,8 @@ private:
     bool itsUseCuda;
 
     HPDimensionType itsLeadingDimension;
+
+    short itsThreadCount;
 };
 
 inline
