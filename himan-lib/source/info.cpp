@@ -494,12 +494,12 @@ size_t info::Nj() const
 
 double info::Di() const
 {
-    return abs((itsBottomLeftLongitude - itsTopRightLongitude) / Ni());
+    return abs((itsBottomLeftLongitude - itsTopRightLongitude) / (Ni()-1));
 }
 
 double info::Dj() const
 {
-    return abs((itsBottomLeftLatitude - itsTopRightLatitude) / Nj());
+    return abs((itsBottomLeftLatitude - itsTopRightLatitude) / (Nj()-1));
 }
 
 HPScanningMode info::ScanningMode() const
