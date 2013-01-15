@@ -207,16 +207,18 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
         return false;
     }
 
-    std::shared_ptr<plugin_container> mc = std::shared_ptr<plugin_container> (new plugin_container(theLibraryHandle, create_plugin()));
+    std::shared_ptr<himan_plugin> p (create_plugin());
 
     for (size_t i = 0; i < itsPluginFactory.size(); i++)
-    {
-        if (mc->Plugin()->ClassName() == itsPluginFactory[i]->Plugin()->ClassName())
-        {
-            itsLogger->Trace("Plugin '" + mc->Plugin()->ClassName() + "' found more than once, skipping one found from '" + thePluginFileName + "'");
-            return true;
-        }
-    }
+	{
+		if (p->ClassName() == itsPluginFactory[i]->Plugin()->ClassName())
+		{
+			itsLogger->Trace("Plugin '" + p->ClassName() + "' found more than once, skipping one found from '" + thePluginFileName + "'");
+			return true;
+		}
+	}
+
+    std::shared_ptr<plugin_container> mc = std::shared_ptr<plugin_container> (new plugin_container(theLibraryHandle, p));
 
     itsPluginFactory.push_back(mc);
 
