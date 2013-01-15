@@ -31,8 +31,19 @@ neons::neons() : itsInit(false), itsNeonsDB()
 void neons::InitPool()
 {
     NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
-    NFmiNeonsDBPool::Instance()->ExternalAuthentication(true);
-    NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+
+    char* host;
+
+    host = std::getenv("HOSTNAME");
+
+    // TODO: a smarter way to check if we are in production server
+
+    if (host != NULL && (string(host) == "gogol.fmi.fi" || string(host) == "tolstoi.fmi.fi"))
+    {
+        NFmiNeonsDBPool::Instance()->ExternalAuthentication(true);
+        NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+    }
+
 }
 
 void neons::Init()
