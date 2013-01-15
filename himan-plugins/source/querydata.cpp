@@ -237,8 +237,11 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
     {
         theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->BottomLeftLongitude(), info->BottomLeftLatitude()),
                                             NFmiPoint(info->TopRightLongitude(), info->TopRightLatitude()),
-                                            NFmiPoint(0., -30.) // south pole location
-                                           );
+                                            NFmiPoint(info->SouthPoleLongitude(), info->SouthPoleLatitude()),
+                                            NFmiPoint(0.,0.), // default values
+                                            NFmiPoint(1.,1.), // default values
+                                            true);
+
         break;
     }
 
