@@ -330,7 +330,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
                     continue;
                 }
 
-                double TC = T + 273.15;
+                double TC = T - 273.15;
 
                 if (!myTargetInfo->Value(TC))
                 {
