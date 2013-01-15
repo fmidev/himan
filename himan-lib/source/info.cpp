@@ -106,14 +106,14 @@ std::ostream& info::Write(std::ostream& file) const
     file << "__itsTopRightLongitude__ " << itsTopRightLongitude << endl;
     file << "__itsTopRightLatitude__ " << itsTopRightLatitude << endl;
     file << "__itsOrientation__ " << itsOrientation << endl;
+    file << "__itsSouthPoleLongitude__ " << itsSouthPoleLongitude << endl;
+    file << "__itsSouthPoleLatitude__ " << itsSouthPoleLatitude << endl;
 
-    file << "__itsOriginDateTime__ " << OriginDateTime().String() << endl;
+    file << itsProducer;
 
-    file << "__itsProducer__ " << itsProducer << endl;
-
-    file << itsParamIterator << endl;
-    file << itsLevelIterator << endl;
-    file << itsTimeIterator << endl;
+    file << *itsParamIterator;
+    file << *itsLevelIterator;
+    file << *itsTimeIterator;
 
     return file;
 }
@@ -624,8 +624,10 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
     {
         theArea = new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
                                             NFmiPoint(topRightLongitude, itsTopRightLatitude),
-                                            NFmiPoint(0., -30.) // south pole location
-                                           );
+                                            NFmiPoint(itsSouthPoleLongitude, itsSouthPoleLatitude),
+                                            NFmiPoint(0.,0.), // default values
+                                            NFmiPoint(1.,1.), // default values
+                                            true);
         break;
     }
 
