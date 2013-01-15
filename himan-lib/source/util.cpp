@@ -46,7 +46,16 @@ string util::MakeNeonsFileName(shared_ptr<const info> info)
 
     ostringstream neonsFileName;
 
-    string base = "/tmp"; //"/cluster/hiladata/BDAP/REFStorage/";
+    string base = ".";
+
+    char* path;
+
+    path = std::getenv("NEONS_REF_BASE");
+
+    if (path != NULL)
+    {
+    	base = string(path);
+    }
 
     neonsFileName 	<< base
                     << "/"
