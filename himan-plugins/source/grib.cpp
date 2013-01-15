@@ -113,6 +113,9 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
             itsGrib->Message()->Y0(latitudeOfFirstGridPointInDegrees);
             itsGrib->Message()->X1(longitudeOfLastGridPointInDegrees);
             itsGrib->Message()->Y1(latitudeOfLastGridPointInDegrees);
+
+            itsGrib->Message()->iDirectionIncrement(theInfo->Di());
+            itsGrib->Message()->jDirectionIncrement(theInfo->Dj());
             break;
         }
         case kStereographicProjection:
@@ -141,6 +144,7 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
         itsGrib->Message()->SizeX(theInfo->Ni());
         itsGrib->Message()->SizeY(theInfo->Nj());
 
+        itsGrib->TypeOfGeneratingProcess(1); // Forecast
         // Level
 
         itsGrib->Message()->LevelValue(static_cast<long> (theInfo->Level().Value()));
@@ -233,8 +237,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
             	throw runtime_error("Unknown producer: " + boost::lexical_cast<string> (producer));
             }
 
-            long centre = boost::lexical_cast<long>(producermap["process"]);
-            p.Name(n->GribParameterName(number, category, discipline, centre));  
+            long process = boost::lexical_cast<long>(producermap["process"]);
+            p.Name(n->GribParameterName(number, category, discipline, process));
 
             p.GribParameter(number);
             p.GribDiscipline(discipline);
