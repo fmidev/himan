@@ -31,6 +31,8 @@ neons::neons() : itsInit(false), itsNeonsDB()
 void neons::InitPool()
 {
     NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
+    NFmiNeonsDBPool::Instance()->ExternalAuthentication(true);
+    NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
 }
 
 void neons::Init()
@@ -97,6 +99,11 @@ vector<string> neons::Files(const search_options& options)
         /// @todo GFS (or in fact codetable 2) has wrong temperature parameter defined
 
         string parm_name = options.param.Name();
+
+        if (parm_name == "T-K" && no_vers == "2")
+        {
+             	parm_name = "T-C";
+        }
 
         string query = "SELECT parm_name, lvl_type, lvl1_lvl2, fcst_per, file_location, file_server "
                        "FROM "+tablename+" "
