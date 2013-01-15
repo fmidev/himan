@@ -82,7 +82,7 @@ public:
         file << "__itsDepth__ " << itsDepth << std::endl;
         file << "__itsSize__ " << itsData.size() << std::endl;
 
-        DoStuff(file, itsData);
+        PrintFloatData(file, itsData);
 
         return file;
     }
@@ -92,7 +92,7 @@ public:
      *
      */
 
-    void DoStuff(std::ostream& file, std::vector<double> theValues) const
+    void PrintFloatData(std::ostream& file, std::vector<double> theValues) const
     {
 
         if (!itsData.size())
@@ -175,6 +175,21 @@ public:
         return ob.Write(file);
     }
 
+    /**
+     * @brief Set value of whole matrix or a slice of it.
+     *
+     * Function will set whole matrix value (or a slice, depending
+     * on the size of the matrix and the size of the argument len)
+     *
+     * This function is thread-safe.
+     *
+     * @param arr Pointer to array of values
+     * @param len Length of the array
+     *
+     * @return Always true
+     * @todo Return void ?
+     */
+
     bool Set(T* arr, size_t len)
     {
         std::lock_guard<std::mutex> lock(itsValueMutex);
@@ -184,6 +199,22 @@ public:
         return true;
     }
 
+    /**
+     * @brief Set value of a matrix element
+     *
+     * Function will set matrix value in a serialized way -- this
+     * function is thread-safe. No bounds-checking is made for the
+     * index.
+     *
+     * @param x X index
+     * @param y Y index
+     * @param z Z index
+     * @param theValue The value
+     *
+     * @return Always true
+     * @todo Return void ?
+     */
+
     bool Set(size_t x, size_t y, size_t z, T theValue)
     {
         std::lock_guard<std::mutex> lock(itsValueMutex);
@@ -192,6 +223,20 @@ public:
 
         return true;
     }
+
+    /**
+     * @brief Set value of a matrix element
+     *
+     * Function will set matrix value in a serialized way -- this
+     * function is thread-safe. No bounds-checking is made for the
+     * index.
+     *
+     * @param theIndex Combined index of the element
+     * @param theValue The value
+     *
+     * @return Always true
+     * @todo Return void ?
+     */
 
     bool Set(size_t theIndex, T theValue)
     {
@@ -211,7 +256,7 @@ public:
     	std::fill(itsData.begin(),itsData.begin(),fillValue);
     }
 
-    // Only used for calculating statistics in DoStuff()
+    // Only used for calculating statistics in PrintFloatData()
 
     void MissingValue(T theMissingValue)
     {
