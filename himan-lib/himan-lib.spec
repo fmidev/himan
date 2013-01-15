@@ -1,8 +1,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 13.1.9
-Release: 1.el6.fmi
+Version: 13.1.15
+Release: 1.el5.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,7 +13,7 @@ BuildRequires: boost-devel
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-BuildRequires: gcc-c++ >= 4.4.6
+#BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: scons
 Provides: libhiman.so
 
@@ -36,11 +36,11 @@ make install DESTDIR=$RPM_BUILD_ROOT
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%defattr(-,root,root,0775)
+%defattr(-,root,root,0644)
 %{_libdir}/libhiman.so
 
 %changelog
-* Wed Jan  9 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.9-1.el6.fmi
-- Latest release
+* Tue Jan 15 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.15-1.el5.fmi
+- First attempt for production-ready release
 * Thu Dec 27 2012 Mikko Partio <mikko.partio@fmi.fi> - 12.12.27-1.el6.fmi
 - Initial build

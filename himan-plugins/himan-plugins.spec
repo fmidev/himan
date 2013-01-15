@@ -1,8 +1,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.1.14
-Release: 1.el6.fmi
+Version: 13.1.15
+Release: 1.el5.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,7 +13,7 @@ BuildRequires: boost-devel
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-BuildRequires: gcc-c++ >= 4.4.6
+#BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: scons
 Provides: libcache.so
 
@@ -36,7 +36,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%defattr(-,root,root,0775)
+%defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libfetcher.so
 %{_libdir}/himan-plugins/libgrib.so
@@ -50,7 +50,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Wed Jan 14 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.14-1.el6.fmi
-- Latest release
+* Tue Jan 15 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.15-1.el5.fmi
+- First attempt for production-ready release
 * Thu Dec 27 2012 Mikko Partio <mikko.partio@fmi.fi> - 12.12.27-1.el6.fmi
 - Initial build
