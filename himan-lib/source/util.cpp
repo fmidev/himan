@@ -15,32 +15,6 @@
 using namespace himan;
 using namespace std;
 
-const double kInterpolatedValueEpsilon = 0.00001;
-
-bool util::InterpolateToPoint(shared_ptr<const NFmiGrid> targetGrid, shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value)
-{
-	if (gridsAreEqual)
-	{
-		value = sourceGrid->FloatValue();
-		return true;
-	}
-
-	const NFmiPoint targetLatLonPoint = targetGrid->LatLon();
-	const NFmiPoint targetGridPoint = targetGrid->GridPoint();
-	const NFmiPoint TGridPoint = sourceGrid->LatLonToGrid(targetLatLonPoint);
-
-	bool noInterpolation = (fabs(targetGridPoint.X() - round(TGridPoint.X())) < kInterpolatedValueEpsilon &&
-		 fabs(targetGridPoint.Y() - round(TGridPoint.Y())) < kInterpolatedValueEpsilon);
-
-	if (noInterpolation)
-	{
-		value = sourceGrid->FloatValue();
-		return true;
-	}
-
-	return sourceGrid->InterpolateToLatLonPoint(targetLatLonPoint, value);
-
-}
 string util::MakeNeonsFileName(shared_ptr<const info> info)
 {
 
@@ -185,69 +159,4 @@ vector<string> util::Split(const string& s, const std::string& delims, bool fill
     all_elems.insert(all_elems.end(), filled_elems.begin(), filled_elems.end());
 
     return all_elems;
-}
-
-bool util::thread_manager::AdjustLeadingDimension(shared_ptr<info> myTargetInfo)
-{
-
-    lock_guard<mutex> lock(itsAdjustDimensionMutex);
-
-    // Leading dimension can be: time or level
-
-    if (itsLeadingDimension == kTimeDimension)
-    {
-        if (!itsFeederInfo->NextTime())
-        {
-            return false;
-        }
-
-        myTargetInfo->Time(itsFeederInfo->Time());
-    }
-    else if (itsLeadingDimension == kLevelDimension)
-    {
-        if (!itsFeederInfo->NextLevel())
-        {
-            return false;
-        }
-
-        myTargetInfo->Level(itsFeederInfo->Level());
-    }
-    else
-    {
-        throw runtime_error(ClassName() + ": Invalid dimension type: " + boost::lexical_cast<string> (itsLeadingDimension));
-    }
-
-    return true;
-}
-
-bool util::thread_manager::AdjustNonLeadingDimension(shared_ptr<info> myTargetInfo)
-{
-    if (itsLeadingDimension == kTimeDimension)
-    {
-        return myTargetInfo->NextLevel();
-    }
-    else if (itsLeadingDimension == kLevelDimension)
-    {
-        return myTargetInfo->NextTime();
-    }
-    else
-    {
-        throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
-    }
-}
-
-void util::thread_manager::ResetNonLeadingDimension(shared_ptr<info> myTargetInfo)
-{
-    if (itsLeadingDimension == kTimeDimension)
-    {
-        myTargetInfo->ResetLevel();
-    }
-    else if (itsLeadingDimension == kLevelDimension)
-    {
-        myTargetInfo->ResetTime();
-    }
-    else
-    {
-        throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
-    }
 }
