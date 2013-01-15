@@ -144,7 +144,7 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
         itsGrib->Message()->SizeX(theInfo->Ni());
         itsGrib->Message()->SizeY(theInfo->Nj());
 
-        itsGrib->TypeOfGeneratingProcess(1); // Forecast
+        itsGrib->Message()->TypeOfGeneratingProcess(1); // Forecast
         // Level
 
         itsGrib->Message()->LevelValue(static_cast<long> (theInfo->Level().Value()));
