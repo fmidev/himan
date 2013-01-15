@@ -622,7 +622,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 			{
 				itsConfiguration->itsInfo->Projection(kLatLonProjection);
 			}
-			else if (geominfo["prjn_name"] == "polster")
+			else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo")
 			{
 				itsConfiguration->itsInfo->Projection(kStereographicProjection);
 				itsConfiguration->itsInfo->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);

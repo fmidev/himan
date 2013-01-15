@@ -107,6 +107,7 @@ enum HPLevelType
     kMeanSea = 102,
     kHeight = 105,
     kHybrid = 109,
+    kGndLayer = 112,
     kDepth = 160
 };
 
@@ -117,6 +118,7 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_li
         (kMeanSea, "meansea")
         (kHeight, "height")
         (kHybrid, "hybrid")
+        (kGndLayer, "gndlayer")
         (kDepth, "depth")
         ;
 
