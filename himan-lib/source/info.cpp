@@ -26,7 +26,7 @@
 using namespace std;
 using namespace himan;
 
-info::info()
+info::info() : itsLevelIterator(), itsTimeIterator(), itsParamIterator()
 {
     Init();
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
@@ -46,6 +46,7 @@ shared_ptr<info> info::Clone() const
 
     clone->Projection(itsProjection);
     clone->Orientation(itsOrientation);
+    clone->ScanningMode(itsScanningMode);
 
     clone->BottomLeftLatitude(itsBottomLeftLatitude);
     clone->BottomLeftLongitude(itsBottomLeftLongitude);
@@ -109,11 +110,24 @@ std::ostream& info::Write(std::ostream& file) const
     file << "__itsSouthPoleLongitude__ " << itsSouthPoleLongitude << endl;
     file << "__itsSouthPoleLatitude__ " << itsSouthPoleLatitude << endl;
 
+    file << "__itsScanningMode__ " << itsScanningMode << endl;
+
     file << itsProducer;
 
-    file << *itsParamIterator;
-    file << *itsLevelIterator;
-    file << *itsTimeIterator;
+    if (itsParamIterator)
+    {
+    	file << *itsParamIterator;
+    }
+
+    if (itsLevelIterator)
+    {
+    	file << *itsLevelIterator;
+    }
+
+    if (itsTimeIterator)
+    {
+    	file << *itsTimeIterator;
+    }
 
     return file;
 }
