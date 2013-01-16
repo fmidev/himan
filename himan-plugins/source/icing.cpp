@@ -12,6 +12,7 @@
 #include <boost/lexical_cast.hpp>
 #include "util.h"
 
+
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
@@ -41,7 +42,7 @@ void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float
 
 icing::icing() : itsUseCuda(false)
 {
-	itsClearTextFormula = "ice = NINT(alog(500 * CW * 1000.)) + VVcor + Tcor";
+	itsClearTextFormula = "ice = round(log(500 * CW * 1000.)) + VVcor + Tcor";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icing"));
 
@@ -305,9 +306,86 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 			double Icing;
                         double TBase = 273.15;
+                        int vCor;
+                        int tCor;
                         
                         T = T - TBase;
-
+                        
+                        if ((Cl = 0) || (T > 0))
+                        {
+                            Icing = 0;
+                        }
+                        
+                        // Vertical velocity correction factor
+                        
+                        if (Vv < 0)
+                        {
+                            vCor = -1;
+                        }
+                        else if ((Vv >= 0) && (Vv <= 50))
+                        {
+                            vCor = 1;
+                        }
+                        else if ((Vv >= 50) && (Vv <= 100))
+                        {
+                            vCor = 2;
+                        }else if ((Vv >= 100) && (Vv <= 200))
+                        {
+                            vCor = 3;
+                        }
+                        else if ((Vv >= 200) && (Vv <= 300))
+                        {
+                            vCor = 4;
+                        }
+                        else if ((Vv >= 300) && (Vv <= 1000))
+                        {
+                            vCor = 5;
+                        }
+                        else 
+                        {
+                            vCor = 0;
+                        }
+                        
+                        // Temperature correction factor
+                        
+                        if ((T <= 0) && (T > -1))
+                        {
+                            tCor = -2;
+                        }
+                        else if ((T <= -1) && (T > -2))
+                        {
+                            tCor = -1;
+                        }
+                        else if ((T <= -2) && (T > -3))
+                        {
+                            tCor = 0;
+                        }
+                        else if ((T <= -3) && (T > -12))
+                        {
+                            tCor = 1;
+                        }
+                        else if ((T <= -12) && (T > -15))
+                        {
+                            tCor = 2;
+                        }
+                        else if (T <= -18)
+                        {
+                            tCor = 3;
+                        }
+                        else {
+                            tCor = 0;
+                        }
+                        
+                        Icing = round(log(500 * Cl * 1000)) + vCor + tCor;
+                        
+                        // Maximum and minimun values for index
+                        if (Icing > 15) {
+                            Icing = 15;
+                        }
+                        if (Icing < 0) {
+                            Icing = 0;
+                        }
+                        
 			if (!myTargetInfo->Value(Icing))
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
