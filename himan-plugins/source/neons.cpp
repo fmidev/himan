@@ -343,8 +343,9 @@ map<string,string> neons::ProducerInfo(long fmiProducerId)
     Init();
 
     string query = "SELECT n.model_id, n.ident_id, n.model_name FROM grid_num_model_grib n "
-                   "WHERE n.model_name = (SELECT ref_prod FROM fmi_producers WHERE producer_id = "
-                   + boost::lexical_cast<string> (fmiProducerId) + ")";
+                   "WHERE n.model_name = (SELECT model_name from grid_model WHERE model_type = "
+                   "(SELECT ref_prod FROM fmi_producers WHERE producer_id = "
+                   + boost::lexical_cast<string> (fmiProducerId) + "))";
 
     itsNeonsDB->Query(query);
 
