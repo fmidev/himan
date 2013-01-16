@@ -42,7 +42,7 @@ void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float
 
 icing::icing() : itsUseCuda(false)
 {
-	itsClearTextFormula = "ice = round(log(500 * CW * 1000.)) + VVcor + Tcor";
+	itsClearTextFormula = "Icing = round(log(500 * CW * 1000)) + VVcor + Tcor";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icing"));
 
@@ -303,18 +303,13 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 				myTargetInfo->Value(kFloatMissing);  // No missing values
 				continue;
 			}
-
+                        
 			double Icing;
                         double TBase = 273.15;
                         int vCor;
                         int tCor;
                         
                         T = T - TBase;
-                        
-                        if ((Cl = 0) || (T > 0))
-                        {
-                            Icing = 0;
-                        }
                         
                         // Vertical velocity correction factor
                         
@@ -376,7 +371,13 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
                             tCor = 0;
                         }
                         
-                        Icing = round(log(500 * Cl * 1000)) + vCor + tCor;
+                        if ((Cl = 0) || (T > 0))
+                        {
+                            Icing = 0;
+                        }
+                        else {
+                            Icing = round(log(500 * Cl * 1000)) + vCor + tCor;
+                        }
                         
                         // Maximum and minimun values for index
                         if (Icing > 15) {
