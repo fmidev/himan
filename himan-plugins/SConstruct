@@ -31,10 +31,11 @@ libcudart = '/opt/cuda/lib64/libcudart.so'
 includes = []
 
 includes.append('./include')
-includes.append(workspace + '/himan-lib/include')
-includes.append(workspace + '/himan-plugins/include')
+includes.append('/opt/boost-1.52/include')
+includes.append(workspace + '/himan/himan-lib/include')
+includes.append(workspace + '/himan/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
-includes.append(workspace + '/fmidb/include')
+includes.append(workspace + '/database/include')
 includes.append(workspace + '/fmigrib/include')
 includes.append('/usr/include/oracle')
 includes.append('/home/partio/local/include/')
@@ -48,8 +49,8 @@ env.Append(CPPPATH = includes)
 
 library_paths = []
 
-library_paths.append(workspace + '/himan-lib/build/debug')
-library_paths.append(workspace + '/fmidb/lib')
+library_paths.append(workspace + '/himan/himan-lib/build/release')
+library_paths.append(workspace + '/database/lib')
 library_paths.append(workspace + '/fmigrib/lib')
 library_paths.append('/usr/lib64')
 library_paths.append('/usr/lib64/oracle/')

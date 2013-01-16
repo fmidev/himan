@@ -1,11 +1,11 @@
 /**
- * @file icing.cpp
+ * @file seaicing.cpp
  *
  *  Created on: Jan 03, 2013
  *  @author aaltom
  */
 
-#include "icing.h"
+#include "seaicing.h"
 #include <iostream>
 #include "plugin_factory.h"
 #include "logger_factory.h"
@@ -39,15 +39,15 @@ void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float
 }
 #endif
 
-icing::icing() : itsUseCuda(false)
+seaicing::seaicing() : itsUseCuda(false)
 {
-	itsClearTextFormula = "Icing = FF * ( -0.35 -T2m ) / ( 1 + 0.3 * ( T0 + 0.35 ))";
+	itsClearTextFormula = "SeaIcing = FF * ( -0.35 -T2m ) / ( 1 + 0.3 * ( T0 + 0.35 ))";
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icing"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("seaicing"));
 
 }
 
-void icing::Process(shared_ptr<configuration> theConfiguration)
+void seaicing::Process(shared_ptr<configuration> theConfiguration)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -106,9 +106,9 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 	}
 
 	/*
-	 * Set target parameter to icing
-	 * - name ICING-N
-	 * - univ_id 480
+	 * Set target parameter to seaicing
+	 * - name ICEIND-N
+	 * - univ_id 190
 	 * - grib2 descriptor 0'00'002
 	 *
 	 * We need to specify grib and querydata parameter information
@@ -119,7 +119,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	vector<param> theParams;
 
-	param theRequestedParam("ICING-N", 480);
+	param theRequestedParam("ICEIND-N", 190);
 
 	theRequestedParam.GribDiscipline(0);
 	theRequestedParam.GribCategory(0);
@@ -158,7 +158,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 		theTargetInfos[i] = theTargetInfo->Clone();
 
-		boost::thread* t = new boost::thread(&icing::Run,
+		boost::thread* t = new boost::thread(&seaicing::Run,
 											 this,
 											 theTargetInfos[i],
 											 theConfiguration,
@@ -183,7 +183,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 	}
 }
 
-void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void seaicing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
@@ -197,7 +197,7 @@ void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> t
  * This function does the actual calculation.
  */
 
-void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -209,7 +209,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 	param FfParam("FFG-MS");  // 10 meter wind
 	level FfLevel(himan::kHeight, 10, "HEIGHT");
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("seaicingThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);
 
@@ -222,8 +222,6 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
-
-		double TBase = 0;
 
 		shared_ptr<info> TInfo;
 		shared_ptr<info> TgInfo;
@@ -268,11 +266,6 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			}
 		}
 
-		if (TInfo->Param().Unit() == kC)
-		{
-			TBase = 273.15;
-		}
-
 		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
 		shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
 		shared_ptr<NFmiGrid> TgGrid = TgInfo->ToNewbaseGrid();
@@ -311,23 +304,27 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 				continue;
 			}
 
-			double Icing;
+			double seaIcing;
+                        double TBase = 273.15;
+                        
+                        T = T - TBase;
+                        Tg = Tg - TBase;
 
-			if (Tg > -2 )
+			if (Tg < -2 )
 			{
-				Icing = -10;
+				seaIcing = -10;
 			}
 			else
 			{
-				Icing = Ff * ( -.35 -T ) / ( 1 + .3 * ( Tg + 0.35 ));
+				seaIcing = Ff * ( -0.35 -T ) / ( 1 + 0.3 * ( Tg + 0.35 ));
 
-				if (Icing > 100)
+				if (seaIcing > 100)
 				{
-					Icing = 100;
+					seaIcing = 100;
 				}
 			}
 
-			if (!myTargetInfo->Value(Icing))
+			if (!myTargetInfo->Value(seaIcing))
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
 			}

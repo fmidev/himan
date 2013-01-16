@@ -1,12 +1,12 @@
 /*
- * tk2tc.h
+ * @file seaicing.h
  *
- *  Created on: Nov 17, 2012
- *      Author: partio
+ * @date Jan 04, 2012
+ * @author: Aalto
  */
 
-#ifndef ICING_H
-#define ICING_H
+#ifndef SEAICING_H
+#define SEAICING_H
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
@@ -16,21 +16,21 @@ namespace himan
 namespace plugin
 {
 
-class icing : public compiled_plugin, private compiled_plugin_base
+class seaicing : public compiled_plugin, private compiled_plugin_base
 {
 public:
-    icing();
+    seaicing();
 
-    inline virtual ~icing() {}
+    inline virtual ~seaicing() {}
 
-    icing(const icing& other) = delete;
-    icing& operator=(const icing& other) = delete;
+    seaicing(const seaicing& other) = delete;
+    seaicing& operator=(const seaicing& other) = delete;
 
     virtual void Process(std::shared_ptr<configuration> theConfiguration);
 
     virtual std::string ClassName() const
     {
-        return "himan::plugin::icing";
+        return "himan::plugin::seaicing";
     }
 
     virtual HPPluginClass PluginClass() const
@@ -56,10 +56,10 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<icing> (new icing());
+    return std::shared_ptr<seaicing> (new seaicing());
 }
 
 } // namespace plugin
 } // namespace himan
 
-#endif /* ICING */
+#endif /* SEAICING */
