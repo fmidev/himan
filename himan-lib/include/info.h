@@ -265,6 +265,21 @@ public:
     void SouthPoleLatitude(double theSouthPoleLatitude);
 
     /**
+     * @brief Calculates latitude of first grid point based on the area definition and scanning mode
+     * @return Latitude of first grid point
+     * @todo How this works with stereographic projection
+     */
+    double LatitudeOfFirstGridPoint() const;
+
+    /**
+	 * @brief Calculates longitude of first grid point based on the area definition and scanning mode
+	 * @return Latitude of first grid point
+	 * @todo How this works with stereographic projection
+	 */
+
+    double LongitudeOfFirstGridPoint() const;
+
+    /**
      * @return Number of point along X axis
      */
 

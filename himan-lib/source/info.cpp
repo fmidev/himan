@@ -66,11 +66,6 @@ shared_ptr<info> info::Clone() const
 
     clone->OriginDateTime(itsOriginDateTime.String("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S");
 
-    /*
-    clone->ParamIndex(itsParamIndex);
-    clone->TimeIndex(itsTimeIndex);
-    clone->LevelIndex(itsLevelIndex);
-    */
     clone->LocationIndex(itsLocationIndex);
 
     return clone;
@@ -225,6 +220,84 @@ void info::SouthPoleLongitude(double theSouthPoleLongitude)
 double info::SouthPoleLongitude() const
 {
     return itsSouthPoleLongitude;
+}
+
+double info::LatitudeOfFirstGridPoint() const
+{
+	double ret = kHPMissingFloat;
+
+	if (itsProjection != kLatLonProjection && itsProjection != kRotatedLatLonProjection)
+	{
+		itsLogger->Warning("Calculating latitude for first gridpoint in non-latlon projection not supported");
+		return ret;
+	}
+
+	assert(itsBottomLeftLatitude != kHPMissingFloat);
+	assert(itsTopRightLatitude != kHPMissingFloat);
+
+	switch (itsScanningMode)
+	{
+	case kBottomLeft:
+		ret = itsBottomLeftLatitude;
+		break;
+
+	case kTopLeft:
+		ret = itsBottomLeftLatitude + (Nj()-1)*Dj();
+		break;
+
+	case kTopRight:
+		ret = itsTopRightLatitude;
+		break;
+
+	case kBottomRight:
+		ret = itsTopRightLatitude - (Nj()-1)*Dj();
+		break;
+
+	default:
+		itsLogger->Warning("Calculating first grid point when scanning mode is unknown");
+		break;
+	}
+
+	return ret;
+}
+
+double info::LongitudeOfFirstGridPoint() const
+{
+	double ret = kHPMissingFloat;
+
+	if (itsProjection != kLatLonProjection && itsProjection != kRotatedLatLonProjection)
+	{
+		itsLogger->Warning("Calculating longitude for first gridpoint in non-latlon projection not supported");
+		return ret;
+	}
+
+	assert(itsBottomLeftLongitude != kHPMissingFloat);
+	assert(itsTopRightLongitude != kHPMissingFloat);
+
+	switch (itsScanningMode)
+	{
+	case kBottomLeft:
+		ret = itsBottomLeftLongitude;
+		break;
+
+	case kTopLeft:
+		ret = itsBottomLeftLongitude + (Ni()-1)*Di();
+		break;
+
+	case kTopRight:
+		ret = itsTopRightLongitude;
+		break;
+
+	case kBottomRight:
+		ret = itsTopRightLongitude - (Ni()-1)*Di();
+		break;
+
+	default:
+		itsLogger->Warning("Calculating first grid point when scanning mode is unknown");
+		break;
+	}
+
+	return ret;
 }
 
 double info::Orientation() const
