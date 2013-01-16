@@ -131,7 +131,7 @@ vector<string> neons::Files(const search_options& options)
 
         if (values.empty())
         {
-            break;
+            continue;
         }
 
         files.push_back(values[4]);
