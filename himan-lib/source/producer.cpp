@@ -36,6 +36,15 @@ producer::producer(long theCentre, long theProcess)
 
 }
 
+producer::producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName)
+    : itsFmiProducerId(theFmiProducerId)
+    , itsProcess(theProcess)
+    , itsCentre(theCentre)
+    , itsNeonsName("")
+{
+
+}
+
 void producer::Centre(long theCentre)
 {
     itsCentre = theCentre;
