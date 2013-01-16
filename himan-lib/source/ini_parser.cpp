@@ -629,7 +629,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 			}
 			else
 			{
-				itsLogger->Warning("Unknown projection: " + geominfo["prjn_name"]);
+				throw runtime_error(ClassName() + ": Unknown projection: " + geominfo["prjn_name"]);
 			}
 
 			itsConfiguration->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
@@ -673,7 +673,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 		}
 		else
 		{
-			itsLogger->Warning("Unknown geometry '" + geom + "' found");
+			throw runtime_error(ClassName() + ": Unknown geometry '" + geom + "' found");
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
