@@ -108,7 +108,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 	/*
 	 * Set target parameter to icing
 	 * - name ICING-N
-	 * - univ_id 190
+	 * - univ_id 480
 	 * - grib2 descriptor 0'00'002
 	 *
 	 * We need to specify grib and querydata parameter information
@@ -119,7 +119,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	vector<param> theParams;
 
-	param theRequestedParam("ICEIND-N", 190);
+	param theRequestedParam("ICING-N", 480);
 
 	theRequestedParam.GribDiscipline(0);
 	theRequestedParam.GribCategory(0);
@@ -205,10 +205,9 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 	// Required source parameters
 
 	param TParam("T-K");
-	level TgLevel(himan::kGround, 0, "GROUND");
-        param TgParam("TG-K");
+	level TgLevel(himan::kHeight, 0, "HEIGHT");
 	param FfParam("FFG-MS");  // 10 meter wind
-        level FfLevel(himan::kGndLayer, 0, "GNDLAYER");
+	level FfLevel(himan::kHeight, 10, "HEIGHT");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
@@ -224,6 +223,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
 
+		double TBase = 0;
+
 		shared_ptr<info> TInfo;
 		shared_ptr<info> TgInfo;
 		shared_ptr<info> FfInfo;
@@ -233,19 +234,19 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			// Source info for T
 			TInfo = theFetcher->Fetch(theConfiguration,
 								 myTargetInfo->Time(),
-								 TgLevel,
+								 myTargetInfo->Level(),
 								 TParam);
 				
 			// Source info for Tg
 			TgInfo = theFetcher->Fetch(theConfiguration,
 								 myTargetInfo->Time(),
-								 FfLevel,
-								 TgParam);
+								 TgLevel,
+								 TParam);
 
 			// Source info for FF
 			FfInfo = theFetcher->Fetch(theConfiguration,
 								 myTargetInfo->Time(),
-								 TgLevel,
+								 FfLevel,
 								 FfParam);
 				
 		}
@@ -265,6 +266,11 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 				throw runtime_error(ClassName() + ": Unable to proceed");
 				break;
 			}
+		}
+
+		if (TInfo->Param().Unit() == kC)
+		{
+			TBase = 273.15;
 		}
 
 		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
@@ -296,7 +302,6 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 			InterpolateToPoint(targetGrid, TgGrid, equalGrids, Tg);
 			InterpolateToPoint(targetGrid, FfGrid, equalGrids, Ff);
-  
 
 			if (T == kFloatMissing || Tg == kFloatMissing || Ff == kFloatMissing)
 			{
@@ -307,19 +312,15 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			}
 
 			double Icing;
-                        double TBase = 273.15;
-                        
-                        Tg = Tg - TBase;
-                        T = T - TBase;
 
-			if (Tg < -2 )
-			{                         
+			if (Tg > -2 )
+			{
 				Icing = -10;
 			}
 			else
 			{
-				Icing = Ff * ( -0.35 -T ) / ( 1 + 0.3 * ( Tg + 0.35 ));
-                                
+				Icing = Ff * ( -.35 -T ) / ( 1 + .3 * ( Tg + 0.35 ));
+
 				if (Icing > 100)
 				{
 					Icing = 100;
