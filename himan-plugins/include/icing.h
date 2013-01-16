@@ -1,12 +1,8 @@
-/**
+/*
  * @file icing.h
- * 
- * @brief A plugin to calculate sea spray icing.
  *
- * @date Jan 03, 2013
- * 
- * @author aaltom
- * 
+ * @date Jan 16, 2012
+ * @author: Aalto
  */
 
 #ifndef ICING_H
@@ -22,52 +18,48 @@ namespace plugin
 
 class icing : public compiled_plugin, private compiled_plugin_base
 {
-	public:
-		icing();
+public:
+    icing();
 
-		inline virtual ~icing() {}
+    inline virtual ~icing() {}
 
-		icing(const icing& other) = delete;
-		icing& operator=(const icing& other) = delete;
+    icing(const icing& other) = delete;
+    icing& operator=(const icing& other) = delete;
 
-		virtual void Process(std::shared_ptr<configuration> theConfiguration);
+    virtual void Process(std::shared_ptr<configuration> theConfiguration);
 
-		virtual std::string ClassName() const
-		{
-			return "himan::plugin::icing";
-		}
+    virtual std::string ClassName() const
+    {
+        return "himan::plugin::icing";
+    }
 
-		virtual HPPluginClass PluginClass() const
-		{
-			return kCompiled;
-		}
+    virtual HPPluginClass PluginClass() const
+    {
+        return kCompiled;
+    }
 
-		virtual HPVersionNumber Version() const
-		{
-			return HPVersionNumber(0, 1);
-		}
+    virtual HPVersionNumber Version() const
+    {
+        return HPVersionNumber(0, 1);
+    }
 
-	private:
+private:
 
-		void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
-		void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+    void Run(std::shared_ptr<info>, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
+    void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 
-		bool itsUseCuda;
+    bool itsUseCuda;
+
 };
 
 // the class factory
 
-#ifndef HIMAN_AUXILIARY_INCLUDE
-
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<icing> (new icing());
+    return std::shared_ptr<icing> (new icing());
 }
-
-#endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
 } // namespace himan
 
-
-#endif /* ICING_H */
+#endif /* ICING */

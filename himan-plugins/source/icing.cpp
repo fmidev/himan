@@ -41,7 +41,7 @@ void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float
 
 icing::icing() : itsUseCuda(false)
 {
-	itsClearTextFormula = "Icing = FF * ( -0.35 -T2m ) / ( 1 + 0.3 * ( T0 + 0.35 ))";
+	itsClearTextFormula = "ice = NINT(alog(500 * CW * 1000.)) + VVcor + Tcor";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icing"));
 
@@ -107,7 +107,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	/*
 	 * Set target parameter to icing
-	 * - name ICING-N
+	 * - name ICEIND-N
 	 * - univ_id 480
 	 * - grib2 descriptor 0'00'002
 	 *
@@ -205,9 +205,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 	// Required source parameters
 
 	param TParam("T-K");
-	level TgLevel(himan::kHeight, 0, "HEIGHT");
-	param FfParam("FFG-MS");  // 10 meter wind
-	level FfLevel(himan::kHeight, 10, "HEIGHT");
+	param VvParam("VV-PAS");
+        param ClParam("CLDWAT-KGKG");	
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
@@ -223,11 +222,9 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
 
-		double TBase = 0;
-
 		shared_ptr<info> TInfo;
-		shared_ptr<info> TgInfo;
-		shared_ptr<info> FfInfo;
+		shared_ptr<info> VvInfo;
+		shared_ptr<info> ClInfo;
 
 		try
 		{
@@ -238,16 +235,16 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 								 TParam);
 				
 			// Source info for Tg
-			TgInfo = theFetcher->Fetch(theConfiguration,
+			VvInfo = theFetcher->Fetch(theConfiguration,
 								 myTargetInfo->Time(),
-								 TgLevel,
-								 TParam);
+								 myTargetInfo->Level(),
+								 VvParam);
 
 			// Source info for FF
-			FfInfo = theFetcher->Fetch(theConfiguration,
+			ClInfo = theFetcher->Fetch(theConfiguration,
 								 myTargetInfo->Time(),
-								 FfLevel,
-								 FfParam);
+								 myTargetInfo->Level(),
+								 ClParam);
 				
 		}
 		catch (HPExceptionType e)
@@ -268,15 +265,10 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			}
 		}
 
-		if (TInfo->Param().Unit() == kC)
-		{
-			TBase = 273.15;
-		}
-
 		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
 		shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> TgGrid = TgInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> FfGrid = FfInfo->ToNewbaseGrid();
+		shared_ptr<NFmiGrid> VvGrid = VvInfo->ToNewbaseGrid();
+		shared_ptr<NFmiGrid> ClGrid = ClInfo->ToNewbaseGrid();
 
 		int missingCount = 0;
 		int count = 0;
@@ -284,8 +276,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
 		bool equalGrids = (myTargetInfo->GridAndAreaEquals(TInfo) &&
-							myTargetInfo->GridAndAreaEquals(TgInfo) &&
-							myTargetInfo->GridAndAreaEquals(FfInfo));
+							myTargetInfo->GridAndAreaEquals(VvInfo) &&
+							myTargetInfo->GridAndAreaEquals(ClInfo));
 
 		myTargetInfo->ResetLocation();
 
@@ -296,36 +288,25 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			count++;
 
 			double T = kFloatMissing;
-			double Tg = kFloatMissing;
-			double Ff = kFloatMissing;
+			double Vv = kFloatMissing;
+			double Cl = kFloatMissing;
 
 			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-			InterpolateToPoint(targetGrid, TgGrid, equalGrids, Tg);
-			InterpolateToPoint(targetGrid, FfGrid, equalGrids, Ff);
+			InterpolateToPoint(targetGrid, VvGrid, equalGrids, Vv);
+			InterpolateToPoint(targetGrid, ClGrid, equalGrids, Cl);
 
-			if (T == kFloatMissing || Tg == kFloatMissing || Ff == kFloatMissing)
+			if (T == kFloatMissing || Vv == kFloatMissing || Cl == kFloatMissing)
 			{
 				missingCount++;
 
-				myTargetInfo->Value(-10);  // No missing values
+				myTargetInfo->Value(kFloatMissing);  // No missing values
 				continue;
 			}
 
 			double Icing;
-
-			if (Tg > -2 )
-			{
-				Icing = -10;
-			}
-			else
-			{
-				Icing = Ff * ( -.35 -T ) / ( 1 + .3 * ( Tg + 0.35 ));
-
-				if (Icing > 100)
-				{
-					Icing = 100;
-				}
-			}
+                        double TBase = 273.15;
+                        
+                        T = T - TBase;
 
 			if (!myTargetInfo->Value(Icing))
 			{
