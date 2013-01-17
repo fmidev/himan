@@ -212,7 +212,7 @@ point info::FirstGridPoint() const
 
 	case kTopLeft:
 		x = itsBottomLeft.X() + (Ni()-1)*Di();
-		y = itsBottomLeft.Y() + (Nj()-1)*Dj();
+		y = itsBottomLeft.Y() - (Nj()-1)*Dj();
 		break;
 
 	case kTopRight:
@@ -253,8 +253,8 @@ bool info::SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, 
 	switch (itsScanningMode)
 	{
 	case kBottomLeft:
-		bottomLeftLat = firstPoint.X();
-		bottomLeftLon = firstPoint.Y();
+		bottomLeftLon = firstPoint.X();
+		bottomLeftLat = firstPoint.Y();
 		break;
 
 	case kTopLeft: // +x-y
@@ -278,7 +278,7 @@ bool info::SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, 
 
 	}
 
-	itsBottomLeft = point(bottomLeftLat,bottomLeftLon);
+	itsBottomLeft = point(bottomLeftLon,bottomLeftLat);
 	itsTopRight = point(bottomLeftLon + ni*di, bottomLeftLat + nj*dj);
 
 	return true;
