@@ -32,187 +32,232 @@ shared_ptr<NFmiGrib> grib::Reader()
 	return itsGrib;
 }
 
-bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileType theFileType, bool theActiveOnly)
+bool grib::ToFile(shared_ptr<info> info, const string& outputFile, HPFileType fileType, bool theActiveOnly)
 {
-
-	static long edition = static_cast<long> (theFileType);
 
 	if (theActiveOnly)
 	{
 		// Write only that data which is currently set at descriptors
 
-		/* Section 0 */
-
-		itsGrib->Message()->Edition(edition);
-
-		if (theFileType == kGRIB1)
-		{
-			itsGrib->Message()->Table2Version(theInfo->Param().GribTableVersion()) ;
-		}
-		else if (theFileType == kGRIB2)
-		{
-			itsGrib->Message()->ParameterDiscipline(theInfo->Param().GribDiscipline()) ;
-		}
-
-		/* Section 1 */
-
-		itsGrib->Message()->Centre(theInfo->Producer().Centre());
-		itsGrib->Message()->Process(theInfo->Producer().Process());
-
-		if (theFileType == kGRIB1)
-		{
-			itsGrib->Message()->DataDate(boost::lexical_cast<long> (theInfo->Time().OriginDateTime()->String("%Y%m%d")));
-			itsGrib->Message()->DataTime(boost::lexical_cast<long> (theInfo->Time().OriginDateTime()->String("%H%M")));
-		}
-		else if (theFileType == kGRIB2)
-		{
-			// Origin time
-			itsGrib->Message()->Year(theInfo->Time().OriginDateTime()->String("%Y"));
-			itsGrib->Message()->Month(theInfo->Time().OriginDateTime()->String("%m"));
-			itsGrib->Message()->Day(theInfo->Time().OriginDateTime()->String("%d"));
-			itsGrib->Message()->Hour(theInfo->Time().OriginDateTime()->String("%H"));
-			itsGrib->Message()->Minute(theInfo->Time().OriginDateTime()->String("%M"));
-			itsGrib->Message()->Second("0");
-		}
-
-		itsGrib->Message()->StartStep(theInfo->Time().Step());
-		itsGrib->Message()->EndStep(theInfo->Time().Step());
-
-		/* Section 4 */
-
-		if (theFileType == kGRIB1)
-		{
-			itsGrib->Message()->ParameterNumber(theInfo->Param().GribParameter()) ;
-		}
-		else if (theFileType == kGRIB2)
-		{
-			itsGrib->Message()->ParameterCategory(theInfo->Param().GribCategory()) ;
-			itsGrib->Message()->ParameterNumber(theInfo->Param().GribParameter()) ;
-		}
-
-		himan::point firstGridPoint = theInfo->FirstGridPoint();
-		himan::point lastGridPoint = theInfo->LastGridPoint();
-
-		switch (theInfo->Projection())
-		{
-		case kLatLonProjection:
-		{
-			long gridType = 0; // Grib 1
-
-			if (edition == 2)
-			{
-				gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
-			}
-
-			itsGrib->Message()->GridType(gridType);
-
-			itsGrib->Message()->X0(firstGridPoint.X());
-			itsGrib->Message()->Y0(firstGridPoint.Y());
-			itsGrib->Message()->X1(lastGridPoint.X());
-			itsGrib->Message()->Y1(lastGridPoint.Y());
-
-			itsGrib->Message()->iDirectionIncrement(theInfo->Di());
-			itsGrib->Message()->jDirectionIncrement(theInfo->Dj());
-			break;
-		}
-		case kRotatedLatLonProjection:
-		{
-
-			long gridType = 10; // Grib 1
-
-			if (edition == 2)
-			{
-				gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
-			}
-
-			itsGrib->Message()->GridType(gridType);
-
-			itsGrib->Message()->X0(firstGridPoint.X());
-			itsGrib->Message()->Y0(firstGridPoint.Y());
-			itsGrib->Message()->X1(lastGridPoint.X());
-			itsGrib->Message()->Y1(lastGridPoint.Y());
-
-			itsGrib->Message()->SouthPoleX(theInfo->SouthPole().X());
-			itsGrib->Message()->SouthPoleY(theInfo->SouthPole().Y());
-
-			itsGrib->Message()->iDirectionIncrement(theInfo->Di());
-			itsGrib->Message()->jDirectionIncrement(theInfo->Dj());
-
-			if (edition == 2)
-			{
-				gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
-			}
-
-			itsGrib->Message()->GridType(gridType);
-
-			break;
-		}
-
-		case kStereographicProjection:
-		{
-			long gridType = 5; // Grib 1
-
-			if (edition == 2)
-			{
-				gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
-			}
-
-			itsGrib->Message()->GridType(gridType);
-
-			itsGrib->Message()->X0(theInfo->BottomLeft().X());
-			itsGrib->Message()->Y0(theInfo->BottomLeft().Y());
-
-			// missing iDirectionIncrementInMeters
-			itsGrib->Message()->GridOrientation(theInfo->Orientation());
-			break;
-		}
-		default:
-			throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (theInfo->Projection()));
-			break;
-		}
-
-		itsGrib->Message()->SizeX(theInfo->Ni());
-		itsGrib->Message()->SizeY(theInfo->Nj());
-
-		if (edition == 2)
-		{
-			itsGrib->Message()->TypeOfGeneratingProcess(1); // Forecast
-		}
-
-		// Level
-
-		itsGrib->Message()->LevelValue(static_cast<long> (theInfo->Level().Value()));
-
-		// Himan levels equal to grib 1
-
-		if (edition == 1)
-		{
-			itsGrib->Message()->LevelTypeToAnotherEdition(theInfo->Level().Type(),1);
-		}
-		else if (edition == 2)
-		{
-			itsGrib->Message()->LevelType(theInfo->Level().Type());
-		}
-
-		itsGrib->Message()->Bitmap(true);
-
-		itsGrib->Message()->Values(theInfo->Data()->Values(), theInfo->Ni() * theInfo->Nj());
-
-		itsGrib->Message()->PackingType("grid_jpeg");
-		itsGrib->Message()->Write(theOutputFile);
-
-		itsLogger->Info("Wrote file '" + theOutputFile + "'");
+		WriteGrib(info, outputFile, fileType);
 	}
+
+	else
+	{
+		info->ResetTime();
+
+        while (info->NextTime())
+		{
+        	info->ResetLevel();
+
+			while (info->NextLevel())
+			{
+				info->ResetParam();
+
+				while (info->NextParam())
+				{
+					if (!WriteGrib(info, outputFile, fileType, true))
+					{
+						itsLogger->Error("Error writing grib to file");
+					}
+				}
+			}
+		}
+	}
+
 
 	return true;
 
+}
+
+bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFileType fileType, bool appendToFile)
+{
+	const static long edition = static_cast<long> (fileType);
+
+	/* Section 0 */
+
+	itsGrib->Message()->Edition(edition);
+
+	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+	if (info->Producer().Centre() == kHPMissingInt)
+	{
+		map<string, string> producermap = n->ProducerInfo(info->Producer().Id());
+		itsGrib->Message()->Centre(boost::lexical_cast<long> (producermap["centre"]));
+		itsGrib->Message()->Process(boost::lexical_cast<long> (producermap["process"]));
+	}
+	else
+	{
+		itsGrib->Message()->Centre(info->Producer().Centre());
+		itsGrib->Message()->Process(info->Producer().Process());
+	}
+
+	if (fileType == kGRIB1)
+	{
+		itsGrib->Message()->Table2Version(info->Param().GribTableVersion()) ;
+	}
+	else if (fileType == kGRIB2)
+	{
+		itsGrib->Message()->ParameterDiscipline(info->Param().GribDiscipline()) ;
+	}
+
+	/* Section 1 */
+
+	itsGrib->Message()->Centre(info->Producer().Centre());
+	itsGrib->Message()->Process(info->Producer().Process());
+
+	if (fileType == kGRIB1)
+	{
+		itsGrib->Message()->DataDate(boost::lexical_cast<long> (info->Time().OriginDateTime()->String("%Y%m%d")));
+		itsGrib->Message()->DataTime(boost::lexical_cast<long> (info->Time().OriginDateTime()->String("%H%M")));
+	}
+	else if (fileType == kGRIB2)
+	{
+		// Origin time
+		itsGrib->Message()->Year(info->Time().OriginDateTime()->String("%Y"));
+		itsGrib->Message()->Month(info->Time().OriginDateTime()->String("%m"));
+		itsGrib->Message()->Day(info->Time().OriginDateTime()->String("%d"));
+		itsGrib->Message()->Hour(info->Time().OriginDateTime()->String("%H"));
+		itsGrib->Message()->Minute(info->Time().OriginDateTime()->String("%M"));
+		itsGrib->Message()->Second("0");
+	}
+
+	itsGrib->Message()->StartStep(info->Time().Step());
+	itsGrib->Message()->EndStep(info->Time().Step());
+
+	/* Section 4 */
+
+	if (fileType == kGRIB1)
+	{
+		itsGrib->Message()->ParameterNumber(info->Param().GribParameter()) ;
+	}
+	else if (fileType == kGRIB2)
+	{
+		itsGrib->Message()->ParameterCategory(info->Param().GribCategory()) ;
+		itsGrib->Message()->ParameterNumber(info->Param().GribParameter()) ;
+	}
+
+	himan::point firstGridPoint = info->FirstGridPoint();
+	himan::point lastGridPoint = info->LastGridPoint();
+
+	switch (info->Projection())
+	{
+	case kLatLonProjection:
+	{
+		long gridType = 0; // Grib 1
+
+		if (edition == 2)
+		{
+			gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
+		}
+
+		itsGrib->Message()->GridType(gridType);
+
+		itsGrib->Message()->X0(firstGridPoint.X());
+		itsGrib->Message()->Y0(firstGridPoint.Y());
+		itsGrib->Message()->X1(lastGridPoint.X());
+		itsGrib->Message()->Y1(lastGridPoint.Y());
+
+		itsGrib->Message()->iDirectionIncrement(info->Di());
+		itsGrib->Message()->jDirectionIncrement(info->Dj());
+		break;
+	}
+	case kRotatedLatLonProjection:
+	{
+
+		long gridType = 10; // Grib 1
+
+		if (edition == 2)
+		{
+			gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
+		}
+
+		itsGrib->Message()->GridType(gridType);
+
+		itsGrib->Message()->X0(firstGridPoint.X());
+		itsGrib->Message()->Y0(firstGridPoint.Y());
+		itsGrib->Message()->X1(lastGridPoint.X());
+		itsGrib->Message()->Y1(lastGridPoint.Y());
+
+		itsGrib->Message()->SouthPoleX(info->SouthPole().X());
+		itsGrib->Message()->SouthPoleY(info->SouthPole().Y());
+
+		itsGrib->Message()->iDirectionIncrement(info->Di());
+		itsGrib->Message()->jDirectionIncrement(info->Dj());
+
+		if (edition == 2)
+		{
+			gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
+		}
+
+		itsGrib->Message()->GridType(gridType);
+
+		break;
+	}
+
+	case kStereographicProjection:
+	{
+		long gridType = 5; // Grib 1
+
+		if (edition == 2)
+		{
+			gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
+		}
+
+		itsGrib->Message()->GridType(gridType);
+
+		itsGrib->Message()->X0(info->BottomLeft().X());
+		itsGrib->Message()->Y0(info->BottomLeft().Y());
+
+		// missing iDirectionIncrementInMeters
+		itsGrib->Message()->GridOrientation(info->Orientation());
+		break;
+	}
+	default:
+		throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (info->Projection()));
+		break;
+	}
+
+	itsGrib->Message()->SizeX(info->Ni());
+	itsGrib->Message()->SizeY(info->Nj());
+
+	if (edition == 2)
+	{
+		itsGrib->Message()->TypeOfGeneratingProcess(1); // Forecast
+	}
+
+	// Level
+
+	itsGrib->Message()->LevelValue(static_cast<long> (info->Level().Value()));
+
+	// Himan levels equal to grib 1
+
+	if (edition == 1)
+	{
+		itsGrib->Message()->LevelTypeToAnotherEdition(info->Level().Type(),1);
+	}
+	else if (edition == 2)
+	{
+		itsGrib->Message()->LevelType(info->Level().Type());
+	}
+
+	itsGrib->Message()->Bitmap(true);
+
+	itsGrib->Message()->Values(info->Data()->Values(), info->Ni() * info->Nj());
+
+	itsGrib->Message()->PackingType("grid_jpeg");
+	itsGrib->Message()->Write(outputFile, appendToFile);
+
+	itsLogger->Info("Wrote file '" + outputFile + "'");
+
+	return true;
 }
 
 vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
 {
 
 	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-	vector<shared_ptr<himan::info>> theInfos;
+	vector<shared_ptr<himan::info>> infos;
 
 	itsGrib->Open(theInputFile);
 
@@ -504,7 +549,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		newInfo->Data(dm);
 
-		theInfos.push_back(newInfo);
+		infos.push_back(newInfo);
 
 		if (d)
 		{
@@ -514,11 +559,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		break ; // We found what we were looking for
 	}
 
-	if (theInfos.size())
+	if (infos.size())
 	{
 		// This will be broken when/if we return multiple infos from this function
 		itsLogger->Trace("Data found from message " + boost::lexical_cast<string> (foundMessageNo) + "/" + boost::lexical_cast<string> (itsGrib->MessageCount()));
 	}
 
-	return theInfos;
+	return infos;
 }

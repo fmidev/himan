@@ -72,6 +72,8 @@ public:
 
 private:
 
+    bool WriteGrib(std::shared_ptr<const info> info, const std::string& outputFile, HPFileType fileType, bool appendToFile = false);
+
     std::shared_ptr<NFmiGrib> itsGrib;
 
 };
