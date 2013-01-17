@@ -92,26 +92,21 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 		itsGrib->Message()->Process(info->Producer().Process());
 	}
 
-	if (fileType == kGRIB1)
+	if (edition == 1)
 	{
 		itsGrib->Message()->Table2Version(info->Param().GribTableVersion()) ;
 	}
-	else if (fileType == kGRIB2)
+	else if (edition == 2)
 	{
 		itsGrib->Message()->ParameterDiscipline(info->Param().GribDiscipline()) ;
 	}
 
-	/* Section 1 */
-
-	itsGrib->Message()->Centre(info->Producer().Centre());
-	itsGrib->Message()->Process(info->Producer().Process());
-
-	if (fileType == kGRIB1)
+	if (edition == 1)
 	{
 		itsGrib->Message()->DataDate(boost::lexical_cast<long> (info->Time().OriginDateTime()->String("%Y%m%d")));
 		itsGrib->Message()->DataTime(boost::lexical_cast<long> (info->Time().OriginDateTime()->String("%H%M")));
 	}
-	else if (fileType == kGRIB2)
+	else if (edition == 2)
 	{
 		// Origin time
 		itsGrib->Message()->Year(info->Time().OriginDateTime()->String("%Y"));
@@ -127,11 +122,11 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	/* Section 4 */
 
-	if (fileType == kGRIB1)
+	if (edition == 1)
 	{
 		itsGrib->Message()->ParameterNumber(info->Param().GribParameter()) ;
 	}
-	else if (fileType == kGRIB2)
+	else if (edition == 2)
 	{
 		itsGrib->Message()->ParameterCategory(info->Param().GribCategory()) ;
 		itsGrib->Message()->ParameterNumber(info->Param().GribParameter()) ;
@@ -248,7 +243,8 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 	itsGrib->Message()->PackingType("grid_jpeg");
 	itsGrib->Message()->Write(outputFile, appendToFile);
 
-	itsLogger->Info("Wrote file '" + outputFile + "'");
+	string verb = (appendToFile ? "Appended to " : "Wrote ");
+	itsLogger->Info(verb + "file '" + outputFile + "'");
 
 	return true;
 }
