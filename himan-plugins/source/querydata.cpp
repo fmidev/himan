@@ -227,17 +227,17 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
     {
     case kLatLonProjection:
     {
-        theArea = new NFmiLatLonArea(NFmiPoint(info->BottomLeftLongitude(), info->BottomLeftLatitude()),
-                                     NFmiPoint(info->TopRightLongitude(), info->TopRightLatitude()));
+        theArea = new NFmiLatLonArea(NFmiPoint(info->BottomLeft().X(), info->BottomLeft().Y()),
+                                     NFmiPoint(info->TopRight().X(), info->TopRight().Y()));
 
         break;
     }
 
     case kRotatedLatLonProjection:
     {
-        theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->BottomLeftLongitude(), info->BottomLeftLatitude()),
-                                            NFmiPoint(info->TopRightLongitude(), info->TopRightLatitude()),
-                                            NFmiPoint(info->SouthPoleLongitude(), info->SouthPoleLatitude()),
+        theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->BottomLeft().X(), info->BottomLeft().Y()),
+                                            NFmiPoint(info->TopRight().X(), info->TopRight().Y()),
+                                            NFmiPoint(info->SouthPole().X(), info->SouthPole().Y()),
                                             NFmiPoint(0.,0.), // default values
                                             NFmiPoint(1.,1.), // default values
                                             true);
@@ -247,8 +247,8 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
 
     case kStereographicProjection:
     {
-        theArea = new NFmiStereographicArea(NFmiPoint(info->BottomLeftLongitude(), info->BottomLeftLatitude()),
-                                            NFmiPoint(info->TopRightLongitude(), info->TopRightLatitude()),
+        theArea = new NFmiStereographicArea(NFmiPoint(info->BottomLeft().X(), info->BottomLeft().Y()),
+                                            NFmiPoint(info->TopRight().X(), info->TopRight().Y()),
                                             info->Orientation());
         break;
 

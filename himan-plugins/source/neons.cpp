@@ -155,18 +155,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
      * 4. Insert or update
      */
 
-    long lat_orig, lon_orig;
-
-    if (resultInfo->ScanningMode() == kTopLeft)
-    {
-        lat_orig = static_cast<long> (resultInfo->TopRightLatitude()*1e3);
-        lon_orig = static_cast<long> (resultInfo->BottomLeftLongitude() * 1e3);
-    }
-    else
-    {
-        throw runtime_error(ClassName() + ": unsupported scanning mode: " + boost::lexical_cast<string> (resultInfo->ScanningMode()));
-    }
-
+    himan::point firstGridPoint = resultInfo->FirstGridPoint();
 
     /*
      * pas_latitude and pas_longitude cannot be checked programmatically
@@ -180,8 +169,8 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
             << "FROM grid_reg_geom "
             << "WHERE row_cnt = " << resultInfo->Nj()
             << " AND col_cnt = " << resultInfo->Ni()
-            << " AND lat_orig = " << lat_orig
-            << " AND long_orig = " << lon_orig;
+            << " AND lat_orig = " << (firstGridPoint.Y() * 1e3)
+            << " AND long_orig = " << (firstGridPoint.X() * 1e3);
 //			<< " AND pas_latitude = " << static_cast<long> (resultInfo->Dj() * 1e3)
 //			<< " AND pas_longitude = " << static_cast<long> (resultInfo->Di() * 1e3);
 
@@ -205,7 +194,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
             << "nu.model_id AS process, "
             << "nu.ident_id AS centre, "
             << "m.model_name, "
-            << "model_type, "
+            << "m.model_type, "
             << "type_smt "
             << "FROM "
             << "grid_num_model_grib nu, "
@@ -213,7 +202,8 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
             << "grid_model_name na, "
             << "fmi_producers f "
             << "WHERE f.producer_id = " << resultInfo->Producer().Id()
-            << " AND nu.model_name = f.ref_prod "
+            << " AND m.model_type = f.ref_prod "
+            << " AND nu.model_name = m.model_name "
             << " AND m.flag_mod = 0 "
             << " AND nu.model_name = na.model_name "
             << " AND m.model_name = na.model_name ";
