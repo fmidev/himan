@@ -8,6 +8,7 @@
 #include "grib.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
+#include "producer.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -58,7 +59,12 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 		itsGrib->Message()->Centre(theInfo->Producer().Centre());
 		itsGrib->Message()->Process(theInfo->Producer().Process());
 
-		if (theFileType == kGRIB2)
+		if (theFileType == kGRIB1)
+		{
+			itsGrib->Message()->DataDate(boost::lexical_cast<long> (theInfo->Time().OriginDateTime()->String("%Y%m%d")));
+			itsGrib->Message()->DataTime(boost::lexical_cast<long> (theInfo->Time().OriginDateTime()->String("%H%M")));
+		}
+		else if (theFileType == kGRIB2)
 		{
 			// Origin time
 			itsGrib->Message()->Year(theInfo->Time().OriginDateTime()->String("%Y"));
@@ -84,26 +90,8 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 			itsGrib->Message()->ParameterNumber(theInfo->Param().GribParameter()) ;
 		}
 
-
-		long gridType = 0;
-
-		itsGrib->Message()->GridType(gridType);
-
-		double latitudeOfFirstGridPointInDegrees, longitudeOfFirstGridPointInDegrees;
-		double latitudeOfLastGridPointInDegrees, longitudeOfLastGridPointInDegrees;
-
-		if (theInfo->ScanningMode() == kTopLeft)
-		{
-			latitudeOfFirstGridPointInDegrees = theInfo->TopRightLatitude();
-			longitudeOfFirstGridPointInDegrees = theInfo->BottomLeftLongitude();
-
-			latitudeOfLastGridPointInDegrees = theInfo->BottomLeftLatitude();
-			longitudeOfLastGridPointInDegrees = theInfo->TopRightLongitude();
-		}
-		else
-		{
-			throw runtime_error(ClassName() + ": unsupported scanning mode: " + boost::lexical_cast<string> (theInfo->ScanningMode()));
-		}
+		himan::point firstGridPoint = theInfo->FirstGridPoint();
+		himan::point lastGridPoint = theInfo->LastGridPoint();
 
 		switch (theInfo->Projection())
 		{
@@ -118,10 +106,10 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 
 			itsGrib->Message()->GridType(gridType);
 
-			itsGrib->Message()->X0(longitudeOfFirstGridPointInDegrees);
-			itsGrib->Message()->Y0(latitudeOfFirstGridPointInDegrees);
-			itsGrib->Message()->X1(longitudeOfLastGridPointInDegrees);
-			itsGrib->Message()->Y1(latitudeOfLastGridPointInDegrees);
+			itsGrib->Message()->X0(firstGridPoint.X());
+			itsGrib->Message()->Y0(firstGridPoint.Y());
+			itsGrib->Message()->X1(lastGridPoint.X());
+			itsGrib->Message()->Y1(lastGridPoint.Y());
 
 			itsGrib->Message()->iDirectionIncrement(theInfo->Di());
 			itsGrib->Message()->jDirectionIncrement(theInfo->Dj());
@@ -139,13 +127,13 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 
 			itsGrib->Message()->GridType(gridType);
 
-			itsGrib->Message()->X0(longitudeOfFirstGridPointInDegrees);
-			itsGrib->Message()->Y0(latitudeOfFirstGridPointInDegrees);
-			itsGrib->Message()->X1(longitudeOfLastGridPointInDegrees);
-			itsGrib->Message()->Y1(latitudeOfLastGridPointInDegrees);
+			itsGrib->Message()->X0(firstGridPoint.X());
+			itsGrib->Message()->Y0(firstGridPoint.Y());
+			itsGrib->Message()->X1(lastGridPoint.X());
+			itsGrib->Message()->Y1(lastGridPoint.Y());
 
-			itsGrib->Message()->SouthPoleX(theInfo->SouthPoleLongitude());
-			itsGrib->Message()->SouthPoleY(theInfo->SouthPoleLatitude());
+			itsGrib->Message()->SouthPoleX(theInfo->SouthPole().X());
+			itsGrib->Message()->SouthPoleY(theInfo->SouthPole().Y());
 
 			itsGrib->Message()->iDirectionIncrement(theInfo->Di());
 			itsGrib->Message()->jDirectionIncrement(theInfo->Dj());
@@ -171,8 +159,8 @@ bool grib::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileT
 
 			itsGrib->Message()->GridType(gridType);
 
-			itsGrib->Message()->X0(theInfo->BottomLeftLongitude());
-			itsGrib->Message()->Y0(theInfo->BottomLeftLatitude());
+			itsGrib->Message()->X0(theInfo->BottomLeft().X());
+			itsGrib->Message()->Y0(theInfo->BottomLeft().Y());
 
 			// missing iDirectionIncrementInMeters
 			itsGrib->Message()->GridOrientation(theInfo->Orientation());
@@ -232,6 +220,20 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	int foundMessageNo = 0;
 
+	long fmiProducer = options.configuration->SourceProducer();
+
+	map<string, string> producermap = n->ProducerInfo(fmiProducer);
+
+	if (producermap.empty())
+	{
+		throw runtime_error(ClassName() + ": Process and centre information for producer " + boost::lexical_cast<string> (fmiProducer) + " not found from neons");
+	}
+
+	himan::producer sourceProducer(fmiProducer,
+			boost::lexical_cast<long> (producermap["centre"]),
+			boost::lexical_cast<long> (producermap["process"]),
+			producermap["name"]);
+
 	while (itsGrib->NextMessage())
 	{
 
@@ -245,14 +247,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		//<!todo Should we actually return all matching messages or only the first one
 
+		long centre = itsGrib->Message()->Centre();
 		long process = itsGrib->Message()->Process();
 
-		//<!todo How to best match neons producer id to grib centre/process
-
-		if (options.configuration->SourceProducer() != process)
+		if (sourceProducer.Process() != process || sourceProducer.Centre() != centre)
 		{
-			itsLogger->Trace("Producer does not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer()) + " vs " + boost::lexical_cast<string> (process));
-			// continue;
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (sourceProducer.Process()) + " vs " + boost::lexical_cast<string> (process));
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (sourceProducer.Centre()) + " vs " + boost::lexical_cast<string> (centre));
+			//continue;
 		}
 
 		param p;
@@ -432,8 +434,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		case 10:
 			newInfo->Projection(kRotatedLatLonProjection);
-			newInfo->SouthPoleLatitude(itsGrib->Message()->SouthPoleY());
-			newInfo->SouthPoleLongitude(itsGrib->Message()->SouthPoleX());
+			newInfo->SouthPole(himan::point(itsGrib->Message()->SouthPoleX(), itsGrib->Message()->SouthPoleY()));
 			break;
 
 		default:
@@ -441,14 +442,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			break;
 
 		}
-
-		newInfo->BottomLeftLatitude(itsGrib->Message()->Y0());
-		newInfo->BottomLeftLongitude(itsGrib->Message()->X0());
-
-		// Assume +x+y
-
-		newInfo->TopRightLatitude(itsGrib->Message()->Y1());
-		newInfo->TopRightLongitude(itsGrib->Message()->X1());
 
 		size_t ni = itsGrib->Message()->SizeX();
 		size_t nj = itsGrib->Message()->SizeY();
@@ -480,6 +473,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		}
 
 		newInfo->ScanningMode(m);
+
+		newInfo->SetCoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement());
 
 		/*
 		 * Read data from grib *
