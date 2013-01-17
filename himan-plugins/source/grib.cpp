@@ -229,7 +229,7 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	if (edition == 1)
 	{
-		itsGrib->Message()->LevelTypeToAnotherEdition(info->Level().Type(),1);
+		itsGrib->Message()->LevelType(itsGrib->Message()->LevelTypeToAnotherEdition(info->Level().Type(),1));
 	}
 	else if (edition == 2)
 	{
