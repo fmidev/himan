@@ -20,6 +20,7 @@
 #include "matrix.h"
 #include "himan_common.h"
 #include "producer.h"
+#include "point.h"
 
 #define NEWBASE_INTERPOLATION
 
@@ -245,39 +246,49 @@ public:
     HPProjectionType Projection() const;
     void Projection(HPProjectionType theProjection);
 
-    double BottomLeftLatitude() const;
-    double BottomLeftLongitude() const;
-    double TopRightLongitude() const;
-    double TopRightLatitude() const;
+    point BottomLeft() const;
+    point TopRight() const;
 
-    void BottomLeftLatitude(double theBottomLeftLatitude);
-    void BottomLeftLongitude(double theBottomLeftLongitude);
-    void TopRightLatitude(double theTopRightLatitude);
-    void TopRightLongitude(double theTopRightLongitude);
+    void BottomLeft(const point& theBottomLeft);
+    void TopRight(const point& theTopRight);
 
     void Orientation(double theOrientation);
     double Orientation() const;
 
-    double SouthPoleLongitude() const;
-    double SouthPoleLatitude() const;
-
-    void SouthPoleLongitude(double theSouthPoleLongitude);
-    void SouthPoleLatitude(double theSouthPoleLatitude);
+    point SouthPole() const;
+    void SouthPole(const point& theSouthPole);
 
     /**
-     * @brief Calculates latitude of first grid point based on the area definition and scanning mode
-     * @return Latitude of first grid point
+     * @brief Calculates latitude and longitude of first grid point based on the area definition and scanning mode
+     * @return First grid point of the grid
      * @todo How this works with stereographic projection
      */
-    double LatitudeOfFirstGridPoint() const;
+
+    point FirstGridPoint() const;
 
     /**
-	 * @brief Calculates longitude of first grid point based on the area definition and scanning mode
-	 * @return Latitude of first grid point
-	 * @todo How this works with stereographic projection
-	 */
+     * @brief Calculates latitude and longitude of last grid point based on the area definition and scanning mode
+     * @return Last grid point of the grid
+     * @todo How this works with stereographic projection
+     */
 
-    double LongitudeOfFirstGridPoint() const;
+    point LastGridPoint() const;
+
+    /**
+     * @brief Calculate area coordinates from first gridpoint, scanning mode, grid size and distance between two gridpoints.
+     *
+     * This function is the opposite of FirstGridPoint(). NOTE: scanning mode must already be set when calling this function!
+     *
+     * @param firstPoint Latitude and longitude of first gridpoint
+     * @param ni Grid size in X direction
+     * @param ny Grid size in Y direction
+     * @param di Distance between two points in X direction
+     * @param dj Distance between two points in Y direction
+     *
+     * @return True if calculation is successful
+     */
+
+    bool SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj);
 
     /**
      * @return Number of point along X axis
@@ -545,7 +556,7 @@ public:
 
     std::shared_ptr<NFmiGrid> ToNewbaseGrid() const;
 
-    #endif
+#endif
 
     /**
      * @brief Check if grid and area are equal
@@ -558,17 +569,13 @@ public:
 
 private:
 
-    //size_t CurrentIndex() const;
     void Init();
 
     HPProjectionType itsProjection;
-    double itsBottomLeftLatitude;
-    double itsBottomLeftLongitude;
-    double itsTopRightLatitude;
-    double itsTopRightLongitude;
 
-    double itsSouthPoleLatitude;
-    double itsSouthPoleLongitude;
+    point itsBottomLeft;
+    point itsTopRight;
+    point itsSouthPole;
 
     double itsOrientation;
 

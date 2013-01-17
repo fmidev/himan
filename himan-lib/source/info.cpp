@@ -48,13 +48,9 @@ shared_ptr<info> info::Clone() const
     clone->Orientation(itsOrientation);
     clone->ScanningMode(itsScanningMode);
 
-    clone->BottomLeftLatitude(itsBottomLeftLatitude);
-    clone->BottomLeftLongitude(itsBottomLeftLongitude);
-    clone->TopRightLatitude(itsTopRightLatitude);
-    clone->TopRightLongitude(itsTopRightLongitude);
-
-    clone->SouthPoleLatitude(itsSouthPoleLatitude);
-    clone->SouthPoleLongitude(itsSouthPoleLongitude);
+    clone->BottomLeft(itsBottomLeft);
+    clone->TopRight(itsTopRight);
+    clone->SouthPole(itsSouthPole);
 
     clone->Data(itsDataMatrix);
 
@@ -77,13 +73,9 @@ void info::Init()
 
     itsProjection = kUnknownProjection;
 
-    itsBottomLeftLatitude = kHPMissingFloat;
-    itsBottomLeftLongitude = kHPMissingFloat;
-    itsTopRightLatitude = kHPMissingFloat;
-    itsTopRightLongitude = kHPMissingFloat;
-
-    itsSouthPoleLatitude = kHPMissingFloat;
-    itsSouthPoleLongitude = kHPMissingFloat;
+    itsBottomLeft = point(kHPMissingFloat, kHPMissingFloat);
+    itsTopRight = point(kHPMissingFloat, kHPMissingFloat);
+    itsSouthPole = point(kHPMissingFloat, kHPMissingFloat);
 
     itsOrientation = kHPMissingFloat;
 
@@ -97,14 +89,12 @@ std::ostream& info::Write(std::ostream& file) const
     file << "<" << ClassName() << " " << Version() << ">" << endl;
 
     file << "__itsProjection__ " << itsProjection << endl;
-    file << "__itsBottomLeftLongitude__ " << itsBottomLeftLongitude << endl;
-    file << "__itsBottomLeftLatitude__ " << itsBottomLeftLatitude << endl;
-    file << "__itsTopRightLongitude__ " << itsTopRightLongitude << endl;
-    file << "__itsTopRightLatitude__ " << itsTopRightLatitude << endl;
-    file << "__itsOrientation__ " << itsOrientation << endl;
-    file << "__itsSouthPoleLongitude__ " << itsSouthPoleLongitude << endl;
-    file << "__itsSouthPoleLatitude__ " << itsSouthPoleLatitude << endl;
 
+    file << "__itsBottomLeft__ " << &itsBottomLeft << endl;
+    file << "__itsTopRight__ " << &itsTopRight << endl;
+    file << "__itsSouthPole__ " << &itsSouthPole << endl;
+
+    file << "__itsOrientation__ " << itsOrientation << endl;
     file << "__itsScanningMode__ " << itsScanningMode << endl;
 
     file << itsProducer;
@@ -165,92 +155,74 @@ void info::Projection(HPProjectionType theProjection)
     itsProjection = theProjection;
 }
 
-double info::BottomLeftLatitude() const
+point info::BottomLeft() const
 {
-    return itsBottomLeftLatitude;
-}
-double info::BottomLeftLongitude() const
-{
-    return itsBottomLeftLongitude;
-}
-double info::TopRightLongitude() const
-{
-    return itsTopRightLongitude;
-}
-double info::TopRightLatitude() const
-{
-    return itsTopRightLatitude;
+	return itsBottomLeft;
 }
 
-void info::BottomLeftLatitude(double theBottomLeftLatitude)
+point info::TopRight() const
 {
-    itsBottomLeftLatitude = theBottomLeftLatitude;
+	return itsTopRight;
 }
 
-void info::BottomLeftLongitude(double theBottomLeftLongitude)
+void info::BottomLeft(const point& theBottomLeft)
 {
-    itsBottomLeftLongitude = theBottomLeftLongitude;
+	itsBottomLeft = theBottomLeft;
 }
 
-void info::TopRightLatitude(double theTopRightLatitude)
+void info::TopRight(const point& theTopRight)
 {
-    itsTopRightLatitude = theTopRightLatitude;
+	itsTopRight = theTopRight;
 }
 
-void info::TopRightLongitude(double theTopRightLongitude)
+void info::SouthPole(const point& theSouthPole)
 {
-    itsTopRightLongitude = theTopRightLongitude;
+    itsSouthPole = theSouthPole;
 }
 
-void info::SouthPoleLatitude(double theSouthPoleLatitude)
+point info::SouthPole() const
 {
-    itsSouthPoleLatitude = theSouthPoleLatitude;
+    return itsSouthPole;
 }
 
-double info::SouthPoleLatitude() const
+point info::FirstGridPoint() const
 {
-    return itsSouthPoleLatitude;
-}
-
-void info::SouthPoleLongitude(double theSouthPoleLongitude)
-{
-    itsSouthPoleLongitude = theSouthPoleLongitude;
-}
-
-double info::SouthPoleLongitude() const
-{
-    return itsSouthPoleLongitude;
-}
-
-double info::LatitudeOfFirstGridPoint() const
-{
-	double ret = kHPMissingFloat;
+	double x = kHPMissingFloat;
+	double y = kHPMissingFloat;
 
 	if (itsProjection != kLatLonProjection && itsProjection != kRotatedLatLonProjection)
 	{
 		itsLogger->Warning("Calculating latitude for first gridpoint in non-latlon projection not supported");
-		return ret;
+		return point(x,y);
 	}
 
-	assert(itsBottomLeftLatitude != kHPMissingFloat);
-	assert(itsTopRightLatitude != kHPMissingFloat);
+	assert(itsBottomLeft.X() != kHPMissingFloat);
+	assert(itsBottomLeft.Y() != kHPMissingFloat);
+	assert(itsTopRight.X() != kHPMissingFloat);
+	assert(itsTopRight.Y() != kHPMissingFloat);
+	assert(Ni() > 0);
+	assert(Nj() > 0);
 
 	switch (itsScanningMode)
 	{
 	case kBottomLeft:
-		ret = itsBottomLeftLatitude;
+		x = itsBottomLeft.X();
+		y = itsBottomLeft.Y();
 		break;
 
 	case kTopLeft:
-		ret = itsBottomLeftLatitude + (Nj()-1)*Dj();
+		x = itsBottomLeft.X() + (Ni()-1)*Di();
+		y = itsBottomLeft.Y() + (Nj()-1)*Dj();
 		break;
 
 	case kTopRight:
-		ret = itsTopRightLatitude;
+		x = itsTopRight.X();
+		y = itsTopRight.Y();
 		break;
 
 	case kBottomRight:
-		ret = itsTopRightLatitude - (Nj()-1)*Dj();
+		x = itsTopRight.X() - (Ni()-1)*Di();
+		y = itsTopRight.Y() - (Nj()-1)*Dj();
 		break;
 
 	default:
@@ -258,47 +230,60 @@ double info::LatitudeOfFirstGridPoint() const
 		break;
 	}
 
-	return ret;
+	return point(x,y);
 }
 
-double info::LongitudeOfFirstGridPoint() const
+point info::LastGridPoint() const
 {
-	double ret = kHPMissingFloat;
+	point firstGridPoint = FirstGridPoint();
 
-	if (itsProjection != kLatLonProjection && itsProjection != kRotatedLatLonProjection)
-	{
-		itsLogger->Warning("Calculating longitude for first gridpoint in non-latlon projection not supported");
-		return ret;
-	}
+	return point(firstGridPoint.X() + (Ni()-1)*Di(), firstGridPoint.Y() + (Nj()-1)*Dj());
+}
 
-	assert(itsBottomLeftLongitude != kHPMissingFloat);
-	assert(itsTopRightLongitude != kHPMissingFloat);
+bool info::SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj)
+{
+	assert(itsScanningMode != kUnknownScanningMode);
+
+	double bottomLeftLat = kHPMissingFloat;
+	double bottomLeftLon = kHPMissingFloat;
+
+	ni -= 1;
+	nj -= 1;
 
 	switch (itsScanningMode)
 	{
 	case kBottomLeft:
-		ret = itsBottomLeftLongitude;
+		bottomLeftLat = firstPoint.X();
+		bottomLeftLon = firstPoint.Y();
 		break;
 
-	case kTopLeft:
-		ret = itsBottomLeftLongitude + (Ni()-1)*Di();
+	case kTopLeft: // +x-y
+		bottomLeftLon = firstPoint.X() + ni*di;
+		bottomLeftLat = firstPoint.Y() - nj*dj;
 		break;
 
-	case kTopRight:
-		ret = itsTopRightLongitude;
+	case kTopRight: // -x-y
+		bottomLeftLon = firstPoint.X() - ni*di;
+		bottomLeftLat = firstPoint.Y() - nj*dj;
 		break;
 
-	case kBottomRight:
-		ret = itsTopRightLongitude - (Ni()-1)*Di();
+	case kBottomRight: // -x+y
+		bottomLeftLon = firstPoint.X() - ni*di;
+		bottomLeftLat = firstPoint.Y() + nj*dj;
 		break;
 
 	default:
 		itsLogger->Warning("Calculating first grid point when scanning mode is unknown");
 		break;
+
 	}
 
-	return ret;
+	itsBottomLeft = point(bottomLeftLat,bottomLeftLon);
+	itsTopRight = point(bottomLeftLon + ni*di, bottomLeftLat + nj*dj);
+
+	return true;
 }
+
 
 double info::Orientation() const
 {
@@ -325,12 +310,7 @@ void info::Producer(const producer& theProducer)
 {
     itsProducer = theProducer;
 }
-/*
-vector<shared_ptr<param> > info::Params() const
-{
-	return itsParams;
-}
-*/
+
 void info::ParamIterator(const param_iter& theParamIterator)
 {
     itsParamIterator = shared_ptr<param_iter> (new param_iter(theParamIterator));
@@ -340,12 +320,6 @@ void info::Params(const vector<param>& theParams)
 {
     itsParamIterator = shared_ptr<param_iter> (new param_iter(theParams));
 }
-/*
-vector<shared_ptr<level> > info::Levels() const
-{
-	return itsLevels;
-}
-*/
 
 void info::LevelIterator(const level_iter& theLevelIterator)
 {
@@ -354,14 +328,8 @@ void info::LevelIterator(const level_iter& theLevelIterator)
 
 void info::Levels(const vector<level>& theLevels)
 {
-    //itsLevels = theLevels;
     itsLevelIterator = shared_ptr<level_iter> (new level_iter(theLevels));
 }
-/*
-vector<shared_ptr<forecast_time> > info::Times() const
-{
-	return itsTimes;
-}*/
 
 void info::TimeIterator(const time_iter& theTimeIterator)
 {
@@ -370,7 +338,6 @@ void info::TimeIterator(const time_iter& theTimeIterator)
 
 void info::Times(const vector<forecast_time>& theTimes)
 {
-    //itsTimes = theTimes;
     itsTimeIterator = shared_ptr<time_iter> (new time_iter(theTimes));
 }
 
@@ -581,12 +548,16 @@ size_t info::Nj() const
 
 double info::Di() const
 {
-    return abs((itsBottomLeftLongitude - itsTopRightLongitude) / (Ni()-1));
+	assert(itsBottomLeft.X() != kHPMissingInt);
+	assert(itsTopRight.X() != kHPMissingInt);
+	return abs((itsBottomLeft.X() - itsTopRight.X()) / (Ni()-1));
 }
 
 double info::Dj() const
 {
-    return abs((itsBottomLeftLatitude - itsTopRightLatitude) / (Nj()-1));
+	assert(itsBottomLeft.Y() != kHPMissingInt);
+	assert(itsTopRight.Y() != kHPMissingInt);
+    return abs((itsBottomLeft.Y() - itsTopRight.Y()) / (Nj()-1));
 }
 
 HPScanningMode info::ScanningMode() const
@@ -602,35 +573,17 @@ void info::ScanningMode(HPScanningMode theScanningMode)
 bool info::GridAndAreaEquals(shared_ptr<const info> other) const
 {
 
-	const float kCoordinateEpsilon = 0.00001;
-
-	/**
-	 * @todo A clever way to compare if two areas are equal. For newbase we need bottomleft/topright coordinates
-     * but grib gives us just first gridpoints.
-	 *
-	 */
-
-    if (fabs(itsBottomLeftLatitude - other->BottomLeftLatitude()) > kCoordinateEpsilon)
+    if (itsBottomLeft != other->BottomLeft())
     {
-        itsLogger->Trace("BottomLeftLatitudes don't match: " + boost::lexical_cast<string> (itsBottomLeftLatitude) + " vs " + boost::lexical_cast<string> (other->BottomLeftLatitude()));
+        itsLogger->Trace("BottomLeft does not match: " + boost::lexical_cast<string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<string> (other->BottomLeft().X()));
+        itsLogger->Trace("BottomLeft does not match: " + boost::lexical_cast<string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<string> (other->BottomLeft().Y()));
         return false;
     }
 
-    if (fabs(itsBottomLeftLongitude - other->BottomLeftLongitude()) > kCoordinateEpsilon)
+    if (itsTopRight != other->TopRight())
     {
-        itsLogger->Trace("BottomLeftLongitude don't match: " + boost::lexical_cast<string> (itsBottomLeftLongitude) + " vs " + boost::lexical_cast<string> (other->BottomLeftLongitude()));
-        return false;
-    }
-
-    if (fabs(itsTopRightLatitude - other->TopRightLatitude()) > kCoordinateEpsilon)
-    {
-        itsLogger->Trace("TopRightLatitudes don't match: " + boost::lexical_cast<string> (itsTopRightLatitude) + " vs " + boost::lexical_cast<string> (other->TopRightLatitude()));
-        return false;
-    }
-
-    if (fabs(itsTopRightLongitude - other->TopRightLongitude()) > kCoordinateEpsilon)
-    {
-        itsLogger->Trace("TopRightLongitudes don't match: " + boost::lexical_cast<string> (itsTopRightLongitude) + " vs " + boost::lexical_cast<string> (other->TopRightLongitude()));
+        itsLogger->Trace("TopRight does not match: " + boost::lexical_cast<string> (itsTopRight.X()) + " vs " + boost::lexical_cast<string> (other->TopRight().X()));
+        itsLogger->Trace("TopRight does not match: " + boost::lexical_cast<string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<string> (other->TopRight().Y()));
         return false;
     }
 
@@ -642,14 +595,10 @@ bool info::GridAndAreaEquals(shared_ptr<const info> other) const
 
     if (itsProjection == kRotatedLatLonProjection)
     {
-		if (fabs(itsSouthPoleLatitude - other->SouthPoleLatitude()) > kCoordinateEpsilon)
+		if (itsSouthPole != other->SouthPole())
     	{
-        	itsLogger->Trace("SouthPoleLatitudes don't match: " + boost::lexical_cast<string> (itsSouthPoleLatitude) + " vs " + boost::lexical_cast<string> (other->SouthPoleLatitude()));
-        	return false;
-    	}
-		if (fabs(itsSouthPoleLongitude - other->SouthPoleLongitude()) > kCoordinateEpsilon)
-    	{
-        	itsLogger->Trace("SouthPoleLongitudes don't match: " + boost::lexical_cast<string> (itsSouthPoleLongitude) + " vs " + boost::lexical_cast<string> (other->SouthPoleLongitude()));
+        	itsLogger->Trace("SouthPole does not match: " + boost::lexical_cast<string> (itsSouthPole.X()) + " vs " + boost::lexical_cast<string> (other->SouthPole().X()));
+        	itsLogger->Trace("SouthPole does not match: " + boost::lexical_cast<string> (itsSouthPole.Y()) + " vs " + boost::lexical_cast<string> (other->SouthPole().Y()));
         	return false;
     	}
     }
@@ -688,8 +637,8 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 
     // Newbase does not understand grib2 longitude coordinates
 
-    double bottomLeftLongitude = itsBottomLeftLongitude;
-    double topRightLongitude = itsTopRightLongitude;
+    double bottomLeftLongitude = itsBottomLeft.X();
+    double topRightLongitude = itsTopRight.X();
 
     if (bottomLeftLongitude > 180 || topRightLongitude > 180)
     {
@@ -701,17 +650,17 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
     {
     case kLatLonProjection:
     {
-        theArea = new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
-                                     NFmiPoint(topRightLongitude, itsTopRightLatitude));
+        theArea = new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
+                                     NFmiPoint(topRightLongitude, itsTopRight.Y()));
 
         break;
     }
 
     case kRotatedLatLonProjection:
     {
-        theArea = new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
-                                            NFmiPoint(topRightLongitude, itsTopRightLatitude),
-                                            NFmiPoint(itsSouthPoleLongitude, itsSouthPoleLatitude),
+        theArea = new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
+                                            NFmiPoint(topRightLongitude, itsTopRight.Y()),
+                                            NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()),
                                             NFmiPoint(0.,0.), // default values
                                             NFmiPoint(1.,1.), // default values
                                             true);
@@ -720,8 +669,8 @@ shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
 
     case kStereographicProjection:
     {
-        theArea = new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, itsBottomLeftLatitude),
-                                            NFmiPoint(topRightLongitude, itsTopRightLatitude),
+        theArea = new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
+                                            NFmiPoint(topRightLongitude, itsTopRight.Y()),
                                             itsOrientation);
         break;
 

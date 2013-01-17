@@ -615,8 +615,8 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 			if (geominfo["prjn_name"] == "latlon" && (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0"))
 			{
 				itsConfiguration->itsInfo->Projection(kRotatedLatLonProjection);
-				itsConfiguration->itsInfo->SouthPoleLatitude(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
-				itsConfiguration->itsInfo->SouthPoleLongitude(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3);
+				itsConfiguration->itsInfo->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3));
+
 			}
 			else if (geominfo["prjn_name"] == "latlon")
 			{
@@ -635,12 +635,9 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 			itsConfiguration->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
 			itsConfiguration->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
 
-			int factor = 1;
-
 			if (geominfo["stor_desc"] == "+x-y")
 			{
 				itsConfiguration->Info()->ScanningMode(kTopLeft);
-				factor = -1;
 			}
 			else if (geominfo["stor_desc"] == "+x+y")
 			{
@@ -651,23 +648,13 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 				throw runtime_error(ClassName() + ": scanning mode " + geominfo["stor_desc"] + " not supported yet");
 			}
 
-			itsConfiguration->Info()->BottomLeftLatitude(factor * boost::lexical_cast<double>(geominfo["lat_orig"]) / 1e3);
-			itsConfiguration->Info()->BottomLeftLongitude(boost::lexical_cast<double>(geominfo["long_orig"]) / 1e3);
+			double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) / 1e3;
+			double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) / 1e3;
 
-			/*
-			 * Calculate top right coordinates when bottom left is known. The calculation is very simple:
-			 * topright is (from bottomleft): (number of gridpoints - 1) * the distance between two gridpoints.
-			 *
-			 * Both pieces of information are found in grib metadata, at least with latlon/rotlatlon.
-			 */
+			double di = boost::lexical_cast<double>(geominfo["pas_longitude"])/1e3;
+			double dj = boost::lexical_cast<double>(geominfo["pas_latitude"])/1e3;
 
-			itsConfiguration->Info()->TopRightLatitude(
-					itsConfiguration->Info()->BottomLeftLatitude() +
-					((itsConfiguration->Nj()-1) * boost::lexical_cast<double>(geominfo["pas_latitude"])/1e3));
-
-			itsConfiguration->Info()->TopRightLongitude(
-								itsConfiguration->Info()->BottomLeftLongitude() +
-								((itsConfiguration->Ni()-1) * boost::lexical_cast<double>(geominfo["pas_longitude"])/1e3));
+			itsConfiguration->Info()->SetCoordinatesFromFirstGridPoint(point(X0, Y0), itsConfiguration->Ni(), itsConfiguration->Nj(), di, dj);
 
 			return;
 		}
@@ -721,10 +708,8 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Info()->BottomLeftLatitude(pt.get<double>("area.bottom_left_latitude"));
-		itsConfiguration->Info()->BottomLeftLongitude(pt.get<double>("area.bottom_left_longitude"));
-		itsConfiguration->Info()->TopRightLatitude(pt.get<double>("area.top_right_latitude"));
-		itsConfiguration->Info()->TopRightLongitude(pt.get<double>("area.top_right_longitude"));
+		itsConfiguration->Info()->BottomLeft(point(pt.get<double>("area.bottom_left_longitude"), pt.get<double>("area.bottom_left_latitude")));
+		itsConfiguration->Info()->TopRight(point(pt.get<double>("area.top_right_longitude"), pt.get<double>("area.top_right_latitude")));
 		itsConfiguration->Info()->Orientation(pt.get<double>("area.orientation"));
 
 	}
@@ -737,6 +722,36 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 		throw runtime_error(string("Error parsing area corners: ") + e.what());
 	}
 
+	/* Check orientation */
+
+	try
+	{
+		itsConfiguration->Info()->Orientation(pt.get<double>("area.orientation"));
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing area corners: ") + e.what());
+	}
+
+	/* Check south pole coordinates */
+
+	try
+	{
+		itsConfiguration->Info()->BottomLeft(point(pt.get<double>("area.south_pole_longitude"), pt.get<double>("area.south_pole_latitude")));
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing area corners: ") + e.what());
+	}
 
 	/* Check grid definitions */
 
