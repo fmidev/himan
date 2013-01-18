@@ -126,7 +126,7 @@ inline void point::Y(double theY)
 	itsY = theY;
 }
 
-inline std::ostream& operator<<(std::ostream& file, point& ob)
+inline std::ostream& operator<<(std::ostream& file, const point& ob)
 {
     return ob.Write(file);
 }
