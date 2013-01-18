@@ -90,9 +90,9 @@ std::ostream& info::Write(std::ostream& file) const
 
     file << "__itsProjection__ " << itsProjection << endl;
 
-    file << "__itsBottomLeft__ " << &itsBottomLeft << endl;
-    file << "__itsTopRight__ " << &itsTopRight << endl;
-    file << "__itsSouthPole__ " << &itsSouthPole << endl;
+    file << itsBottomLeft;
+    file << itsTopRight;
+    file << itsSouthPole;
 
     file << "__itsOrientation__ " << itsOrientation << endl;
     file << "__itsScanningMode__ " << itsScanningMode << endl;
@@ -211,8 +211,8 @@ point info::FirstGridPoint() const
 		break;
 
 	case kTopLeft:
-		x = itsBottomLeft.X() + (Ni()-1)*Di();
-		y = itsBottomLeft.Y() - (Nj()-1)*Dj();
+		x = itsTopRight.X() - (Ni()-1)*Di();
+		y = itsBottomLeft.Y() + (Nj()-1)*Dj();
 		break;
 
 	case kTopRight:
@@ -221,7 +221,7 @@ point info::FirstGridPoint() const
 		break;
 
 	case kBottomRight:
-		x = itsTopRight.X() - (Ni()-1)*Di();
+		x = itsBottomLeft.X() + (Ni()-1)*Di();
 		y = itsTopRight.Y() - (Nj()-1)*Dj();
 		break;
 
@@ -236,7 +236,6 @@ point info::FirstGridPoint() const
 point info::LastGridPoint() const
 {
 	point firstGridPoint = FirstGridPoint();
-
 	return point(firstGridPoint.X() + (Ni()-1)*Di(), firstGridPoint.Y() + (Nj()-1)*Dj());
 }
 
@@ -244,32 +243,33 @@ bool info::SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, 
 {
 	assert(itsScanningMode != kUnknownScanningMode);
 
-	double bottomLeftLat = kHPMissingFloat;
-	double bottomLeftLon = kHPMissingFloat;
-
 	ni -= 1;
 	nj -= 1;
+
+	point topLeft, bottomRight;
 
 	switch (itsScanningMode)
 	{
 	case kBottomLeft:
-		bottomLeftLon = firstPoint.X();
-		bottomLeftLat = firstPoint.Y();
+		itsBottomLeft = firstPoint;
+		itsTopRight = point(itsBottomLeft.X() + ni*di, itsBottomLeft.Y() + nj*dj);
 		break;
 
 	case kTopLeft: // +x-y
-		bottomLeftLon = firstPoint.X() + ni*di;
-		bottomLeftLat = firstPoint.Y() - nj*dj;
+		bottomRight = point(firstPoint.X() + ni*di, firstPoint.Y() - nj*dj);
+		itsBottomLeft = point(bottomRight.X() - ni*di, firstPoint.Y() - nj*dj);
+		itsTopRight = point(itsBottomLeft.X() + ni*di, itsBottomLeft.Y() + nj*dj);
 		break;
 
 	case kTopRight: // -x-y
-		bottomLeftLon = firstPoint.X() - ni*di;
-		bottomLeftLat = firstPoint.Y() - nj*dj;
+		itsTopRight = firstPoint;
+		itsBottomLeft = point(itsTopRight.X() - ni*di, itsTopRight.Y() - nj*dj);
 		break;
 
 	case kBottomRight: // -x+y
-		bottomLeftLon = firstPoint.X() - ni*di;
-		bottomLeftLat = firstPoint.Y() + nj*dj;
+		topLeft = point(firstPoint.X() - ni*di, firstPoint.Y() + nj*dj);
+		itsBottomLeft = point(firstPoint.X() - ni*di, topLeft.Y() - nj*dj);
+		itsTopRight = point(itsBottomLeft.X() + ni*di, itsBottomLeft.Y() + nj*dj);
 		break;
 
 	default:
@@ -277,9 +277,6 @@ bool info::SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, 
 		break;
 
 	}
-
-	itsBottomLeft = point(bottomLeftLon,bottomLeftLat);
-	itsTopRight = point(bottomLeftLon + ni*di, bottomLeftLat + nj*dj);
 
 	return true;
 }
