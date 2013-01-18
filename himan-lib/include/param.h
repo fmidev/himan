@@ -59,7 +59,7 @@ public:
     bool operator!=(const param& other);
 
     /**
-     * @brief Set grib parameter number (used both for grib 1 and 2)
+     * @brief Set grib parameter number (grib2)
      */
 
     void GribParameter(long theGribParameter);
@@ -87,14 +87,25 @@ public:
     long GribTableVersion() const;
 
     /**
+     * @brief Set grib parameter number (grib1)
+     */
+
+    void GribIndicatorOfParameter(long theGribIndicatorOfParameter);
+    long GribIndicatorOfParameter() const;
+
+    /**
      * @brief Set universal id (newbase)
      */
 
     unsigned long UnivId() const;
     void UnivId(unsigned long theUnivId);
 
-    std::string Name() const;
+    /**
+     * @brief Set parameter name
+     */
+
     void Name(std::string theName);
+    std::string Name() const;
 
     /**
      *
@@ -110,10 +121,11 @@ private:
 
     std::shared_ptr<NFmiParam> itsParam; //!< newbase param will hold name, univ_id and scale+base
 
-    long itsGribParameter; //!< Grib parameter number whether in grib 1 or 2
+    long itsGribParameter; //!< Grib parameter number (only for grib2)
     long itsGribCategory; //!< Grib parameter category (only for grib2)
     long itsGribDiscipline; //!< Grib parameter discipline (only for grib2)
     long itsGribTableVersion; //!< Grib table version (only in grib 1)
+    long itsGribIndicatorOfParameter; //!< Grib parameter number (only in grib 1)
 
     HPParameterUnit itsUnit; //!< Unit of the parameter
     double itsMissingValue; //!< Missing value (default kFloatMissing)

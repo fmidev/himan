@@ -17,6 +17,7 @@ param::param()
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsGribTableVersion(kHPMissingInt)
+	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -28,6 +29,7 @@ param::param(const std::string& theName, unsigned long theUnivId)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsGribTableVersion(kHPMissingInt)
+	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -39,6 +41,7 @@ param::param(const std::string& theName)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsGribTableVersion(kHPMissingInt)
+	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -62,6 +65,7 @@ param::param(const std::string& theName,
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsGribTableVersion(kHPMissingInt)
+	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -73,6 +77,7 @@ param::param(const param& other)
 	, itsGribCategory(other.itsGribCategory)
 	, itsGribDiscipline(other.itsGribDiscipline)
 	, itsGribTableVersion(other.itsGribTableVersion)
+	, itsGribIndicatorOfParameter(other.itsGribIndicatorOfParameter)
 	, itsUnit(other.itsUnit)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -85,6 +90,7 @@ param& param::operator=(const param& other)
 	itsGribCategory = other.itsGribCategory;
 	itsGribDiscipline = other.itsGribDiscipline;
 	itsGribTableVersion = other.itsGribTableVersion;
+	itsGribIndicatorOfParameter = other.itsGribIndicatorOfParameter;
 	itsUnit = other.itsUnit;
 
 	return *this;
@@ -110,6 +116,23 @@ bool param::operator==(const param& other)
 	// Grib 1
 
 	if (itsGribTableVersion != kHPMissingInt && other.GribTableVersion() != kHPMissingInt && itsGribTableVersion != other.GribTableVersion())
+	{
+		return false;
+	}
+
+	if (itsGribIndicatorOfParameter != kHPMissingInt && other.GribIndicatorOfParameter() != kHPMissingInt && itsGribIndicatorOfParameter != other.GribIndicatorOfParameter())
+	{
+		return false;
+	}
+
+	// Grib 2
+
+	if (itsGribDiscipline != kHPMissingInt && other.GribDiscipline() != kHPMissingInt && itsGribDiscipline != other.GribDiscipline())
+	{
+		return false;
+	}
+
+	if (itsGribCategory != kHPMissingInt && other.GribCategory() != kHPMissingInt && itsGribCategory != other.GribCategory())
 	{
 		return false;
 	}
@@ -155,6 +178,16 @@ void param::GribCategory(long theGribCategory)
 long param::GribCategory() const
 {
 	return itsGribCategory;
+}
+
+void param::GribIndicatorOfParameter(long theGribIndicatorOfParameter)
+{
+	itsGribIndicatorOfParameter = theGribIndicatorOfParameter;
+}
+
+long param::GribIndicatorOfParameter() const
+{
+	return itsGribIndicatorOfParameter;
 }
 
 unsigned long param::UnivId() const
