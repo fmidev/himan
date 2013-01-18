@@ -216,6 +216,40 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 	itsGrib->Message()->SizeX(info->Ni());
 	itsGrib->Message()->SizeY(info->Nj());
 
+	bool iNegative = itsGrib->Message()->IScansNegatively();
+	bool jPositive = itsGrib->Message()->JScansPositively();
+
+	switch (info->ScanningMode())
+	{
+	case kTopLeft:
+		iNegative = false;
+		jPositive = false;
+		break;
+
+	case kTopRight:
+		iNegative = true;
+		jPositive = false;
+		break;
+
+	case kBottomLeft:
+		iNegative = false;
+		jPositive = true;
+		break;
+
+	case kBottomRight:
+		iNegative = true;
+		jPositive = true;
+		break;
+
+	default:
+		throw runtime_error(ClassName() + ": Uknown scanning mode when writing grib");
+		break;
+
+	}
+
+	itsGrib->Message()->IScansNegatively(iNegative);
+	itsGrib->Message()->JScansPositively(jPositive);
+
 	if (edition == 2)
 	{
 		itsGrib->Message()->TypeOfGeneratingProcess(1); // Forecast
