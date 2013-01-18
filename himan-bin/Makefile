@@ -1,10 +1,10 @@
-PROB = himan
+PROG = himan
 
 SCONS_FLAGS=-j 4
 
 # How to install
 
-INSTALL_DATA = install -m 664
+INSTALL_PROG = install -m 755
 
 # rpm variables
 
@@ -12,6 +12,8 @@ CWP = $(shell pwd)
 BIN = $(shell basename $(CWP))
 
 rpmsourcedir = /home/partio/rpmbuild/SOURCES
+
+INSTALL_TARGET = /usr/bin
 
 # The rules
 
@@ -27,19 +29,16 @@ rpm:    clean
 	if [ -a $(PROG)-bin.spec ]; \
         then \
           tar -C ../ --exclude .svn \
-                   -cf $(rpmsourcedir)/$(PROG)-lib.tar $(PROG)-lib ; \
-          gzip -f $(rpmsourcedir)/$(PROG)-lib.tar ; \
-          rpmbuild -ta $(rpmsourcedir)/$(PROG)-lib.tar.gz ; \
+                   -cf $(rpmsourcedir)/$(PROG)-bin.tar $(PROG)-bin ; \
+          gzip -f $(rpmsourcedir)/$(PROG)-bin.tar ; \
+          rpmbuild -ta $(rpmsourcedir)/$(PROG)-bin.tar.gz ; \
         else \
           echo $(rpmerr); \
         fi;
 
 install:
-	#mkdir -p  $(DESTDIR)/$(PROGDIR)
-	scons $(SCONS_FLAGS) /usr/bin
+	mkdir -p $(DESTDIR)/$(INSTALL_TARGET)
+	$(INSTALL_PROG) build/release/himan $(DESTDIR)/$(INSTALL_TARGET)
 
-objdir:
-	@mkdir -p $(objdir)
-	@mkdir -p $(libdir)
-
-
+test:	debug
+	cd regression && sh test_all.sh
