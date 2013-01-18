@@ -65,7 +65,6 @@ bool grib::ToFile(shared_ptr<info> info, const string& outputFile, HPFileType fi
 		}
 	}
 
-
 	return true;
 
 }
@@ -80,11 +79,16 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
+	long no_vers = 0; // We might need this later on
+
 	if (info->Producer().Centre() == kHPMissingInt)
 	{
-		map<string, string> producermap = n->ProducerInfo(info->Producer().Id());
-		itsGrib->Message()->Centre(boost::lexical_cast<long> (producermap["centre"]));
-		itsGrib->Message()->Process(boost::lexical_cast<long> (producermap["process"]));
+		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(info->Producer().Id()); //n->ProducerInfo(info->Producer().Id());
+
+		itsGrib->Message()->Centre(boost::lexical_cast<long> (producermap["ident_id"]));
+		itsGrib->Message()->Process(boost::lexical_cast<long> (producermap["model_id"]));
+
+		no_vers = boost::lexical_cast<long> (producermap["no_vers"]);
 	}
 	else
 	{
@@ -92,45 +96,37 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 		itsGrib->Message()->Process(info->Producer().Process());
 	}
 
+	/*
+	 * For grib1, get param_id from neons since its dependant on the table2version
+	 *
+	 * For grib2, assume the plugin has set the correct numbers since they are "static".
+	 */
+
 	if (edition == 1)
 	{
-		itsGrib->Message()->Table2Version(info->Param().GribTableVersion()) ;
+
+		if (no_vers == 0)
+		{
+			map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(info->Producer().Id()); //n->ProducerInfo(info->Producer().Id());
+			no_vers = boost::lexical_cast<long> (producermap["no_vers"]);
+		}
+
+		long parm_id = n->NeonsDB().GetGridParameterId(no_vers, info->Param().Name());
+		itsGrib->Message()->ParameterNumber(parm_id);
+		itsGrib->Message()->Table2Version(no_vers);
 	}
 	else if (edition == 2)
 	{
+		itsGrib->Message()->ParameterNumber(info->Param().GribParameter());
+		itsGrib->Message()->ParameterCategory(info->Param().GribCategory());
 		itsGrib->Message()->ParameterDiscipline(info->Param().GribDiscipline()) ;
 	}
 
-	if (edition == 1)
-	{
-		itsGrib->Message()->DataDate(boost::lexical_cast<long> (info->Time().OriginDateTime()->String("%Y%m%d")));
-		itsGrib->Message()->DataTime(boost::lexical_cast<long> (info->Time().OriginDateTime()->String("%H%M")));
-	}
-	else if (edition == 2)
-	{
-		// Origin time
-		itsGrib->Message()->Year(info->Time().OriginDateTime()->String("%Y"));
-		itsGrib->Message()->Month(info->Time().OriginDateTime()->String("%m"));
-		itsGrib->Message()->Day(info->Time().OriginDateTime()->String("%d"));
-		itsGrib->Message()->Hour(info->Time().OriginDateTime()->String("%H"));
-		itsGrib->Message()->Minute(info->Time().OriginDateTime()->String("%M"));
-		itsGrib->Message()->Second("0");
-	}
+	itsGrib->Message()->DataDate(boost::lexical_cast<long> (info->Time().OriginDateTime()->String("%Y%m%d")));
+	itsGrib->Message()->DataTime(boost::lexical_cast<long> (info->Time().OriginDateTime()->String("%H%M")));
 
 	itsGrib->Message()->StartStep(info->Time().Step());
 	itsGrib->Message()->EndStep(info->Time().Step());
-
-	/* Section 4 */
-
-	if (edition == 1)
-	{
-		itsGrib->Message()->ParameterNumber(info->Param().GribParameter()) ;
-	}
-	else if (edition == 2)
-	{
-		itsGrib->Message()->ParameterCategory(info->Param().GribCategory()) ;
-		itsGrib->Message()->ParameterNumber(info->Param().GribParameter()) ;
-	}
 
 	himan::point firstGridPoint = info->FirstGridPoint();
 	himan::point lastGridPoint = info->LastGridPoint();
