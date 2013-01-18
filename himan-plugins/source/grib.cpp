@@ -180,11 +180,6 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 		itsGrib->Message()->iDirectionIncrement(info->Di());
 		itsGrib->Message()->jDirectionIncrement(info->Dj());
 
-		if (edition == 2)
-		{
-			gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
-		}
-
 		itsGrib->Message()->GridType(gridType);
 
 		break;
@@ -263,18 +258,28 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	if (edition == 1)
 	{
-		itsGrib->Message()->LevelType(itsGrib->Message()->LevelTypeToAnotherEdition(info->Level().Type(),1));
+		itsGrib->Message()->LevelType(info->Level().Type());
 	}
 	else if (edition == 2)
 	{
-		itsGrib->Message()->LevelType(info->Level().Type());
+		itsGrib->Message()->LevelType(itsGrib->Message()->LevelTypeToAnotherEdition(info->Level().Type(),1));
 	}
 
 	itsGrib->Message()->Bitmap(true);
 
+	// itsGrib->Message()->BitsPerValue(16);
+
 	itsGrib->Message()->Values(info->Data()->Values(), info->Ni() * info->Nj());
 
-	itsGrib->Message()->PackingType("grid_jpeg");
+	if (edition == 1)
+	{
+		//itsGrib->Message()->PackingType("grid_second_order");
+	}
+	else if (edition == 2)
+	{
+		itsGrib->Message()->PackingType("grid_jpeg");
+	}
+
 	itsGrib->Message()->Write(outputFile, appendToFile);
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
