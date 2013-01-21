@@ -344,7 +344,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			p.Name(n->GribParameterName(number, no_vers));		   
 			p.GribParameter(number);
 			p.GribTableVersion(no_vers);
-
+                
 		}
 		else
 		{
@@ -457,6 +457,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		case 109:
 			levelType = himan::kHybrid;
 			break;
+            
+                case 112:
+                        levelType = himan::kGndLayer;
+            break;
 
 		default:
 			throw runtime_error(ClassName() + ": Unsupported level type: " + boost::lexical_cast<string> (gribLevel));
