@@ -96,7 +96,8 @@ enum HPParameterUnit
     kK,
     kC,
     kPas, // Pa/s
-    kHPa
+    kHPa,
+    kPrcnt
 };
 
 enum HPLevelType
