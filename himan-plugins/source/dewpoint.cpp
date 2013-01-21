@@ -354,7 +354,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
                     continue;
                 }
 
-                double TD = (T+TBase) / (1 - ((T+TBase) * log(RH) * (RW_div_L)));
+                double TD = ((T+TBase) / (1 - ((T+TBase) * log(RH) * (RW_div_L)))) - 273.15 + TBase;
 
                 if (!myTargetInfo->Value(TD))
                 {
