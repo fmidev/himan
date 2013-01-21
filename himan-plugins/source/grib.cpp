@@ -382,6 +382,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 		   	p.Unit(kPas);
 		}
+		else if (itsGrib->Message()->ParameterUnit() == "%")
+		{
+		   	p.Unit(kPrcnt);
+		}
 		else
 		{
 			itsLogger->Warning("Unable to determine himan parameter unit for grib unit " + itsGrib->Message()->ParameterUnit());
