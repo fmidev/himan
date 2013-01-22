@@ -11,7 +11,7 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include "util.h"
-
+#include <math.h>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -39,6 +39,9 @@ void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float
 }
 }
 #endif
+
+const double kAngleFactor = 57.295779513082; // 180 / PI
+
 
 windvector::windvector() : itsUseCuda(false)
 {
@@ -120,12 +123,23 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 
 	vector<param> theParams;
 
-	param theRequestedParam("DF-MS", 22);
+	param requestedDFParam("DF-MS", 22);
+	param requestedFFParam("FF-MS", 21);
+	requestedFFParam.GribDiscipline(0);
+	requestedFFParam.GribCategory(2);
+	requestedFFParam.GribParameter(1);
 
-	theRequestedParam.GribParameter(103);
-        theRequestedParam.GribTableVersion(204);
+	param requestedDDParam("DD-D", 20);
+	requestedDDParam.GribDiscipline(0);
+	requestedDDParam.GribCategory(2);
+	requestedDDParam.GribParameter(0);
 
-	theParams.push_back(theRequestedParam);
+	//theRequestedParam.GribParameter(103);
+    //    theRequestedParam.GribTableVersion(204);
+
+	theParams.push_back(requestedDFParam);
+	theParams.push_back(requestedFFParam);
+	theParams.push_back(requestedDDParam);
 
 	theTargetInfo->Params(theParams);
 
@@ -141,7 +155,7 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 
 	Dimension(theConfiguration->LeadingDimension());
 	FeederInfo(theTargetInfo->Clone());
-	FeederInfo()->Param(theRequestedParam);
+	FeederInfo()->Param(requestedDFParam);
 
 	/*
 	 * Each thread will have a copy of the target info.
@@ -211,15 +225,26 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 	ResetNonLeadingDimension(myTargetInfo);
 
-	myTargetInfo->FirstParam();
+	myTargetInfo->Param(param("DF-MS"));
+
+	shared_ptr<info> DDInfo = myTargetInfo->Clone();
+	DDInfo->Param(param("DD-D"));
+
+	shared_ptr<info> FFInfo = myTargetInfo->Clone();
+	FFInfo->Param(param("FF-MS"));
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
+
+		DDInfo->Level(myTargetInfo->Level());
+		FFInfo->Level(myTargetInfo->Level());
 
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
+		DDInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
+		FFInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
 
 		shared_ptr<info> UInfo;
 		shared_ptr<info> VInfo;
@@ -237,7 +262,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 VParam);
-
 				
 		}
 		catch (HPExceptionType e)
@@ -248,6 +272,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			case kFileDataNotFound:
 				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
+				DDInfo->Data()->Fill(kFloatMissing);
+				FFInfo->Data()->Fill(kFloatMissing);
 				continue;
 				break;
 
@@ -270,10 +296,12 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 							myTargetInfo->GridAndAreaEquals(VInfo));
 
 		myTargetInfo->ResetLocation();
+		DDInfo->ResetLocation();
+		FFInfo->ResetLocation();
 
 		targetGrid->Reset();
 
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
+		while (myTargetInfo->NextLocation() && DDInfo->NextLocation() && FFInfo->NextLocation() && targetGrid->Next())
 		{
 			count++;
 
@@ -290,21 +318,39 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 				myTargetInfo->Value(kFloatMissing);
 				continue;
 			}
+
+/*
+			if (myTargetInfo->Projection() == kRotatedLatLonProjection)
+			{
+				const double angleOfRotationInDegrees=0;
+				U = U*cos(angleOfRotationInDegrees) + V*sin(angleOfRotationInDegrees);
+				V = V*cos(angleOfRotationInDegrees) - U*sin(angleOfRotationInDegrees);
+			}
+*/
+			double FF = sqrt(U*U + V*V);
+
+			double DD = 0;
+
+			if (FF > 0)
+			{
+				DD = floor(kAngleFactor * atan2(U,V) + 180.0 + 0.5); // Rounding DD
+			}
+
+			DDInfo->Value(DD);
+			FFInfo->Value(FF);
+
+			if (U > 360)
+			{
+				U = U - 360;
+			}
+
+			if (U < 0)
+			{
+				U = U + 360;
+			}
                         
-                        if (U > 360)
-                        {
-                            U = U - 360;
-                        }
-                        
-                        if (U < 0)
-                        {
-                            U = U + 360;
-                        }
-                        
-			double windVector;
-       
-                        windVector = fabs(U/10) + 100 * fabs(V);
-                        
+			double windVector = fabs(U/10) + 100 * fabs(V);
+
 			if (!myTargetInfo->Value(windVector))
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
