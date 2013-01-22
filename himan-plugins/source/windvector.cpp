@@ -349,7 +349,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 				U = U + 360;
 			}
                         
-			double windVector = fabs(U/10) + 100 * fabs(V);
+			double windVector = round(U/10) + 100 * round(V);
 
 			if (!myTargetInfo->Value(windVector))
 			{
