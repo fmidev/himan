@@ -386,6 +386,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 		   	p.Unit(kPrcnt);
 		}
+		else if (itsGrib->Message()->ParameterUnit() == "m s**-1")
+		{
+			p.Unit(kMs);
+		}
 		else
 		{
 			itsLogger->Warning("Unable to determine himan parameter unit for grib unit " + itsGrib->Message()->ParameterUnit());
@@ -555,6 +559,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			throw runtime_error("WHAT?");
 		}
+
+		newInfo->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
 
 		newInfo->ScanningMode(m);
 
