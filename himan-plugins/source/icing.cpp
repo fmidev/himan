@@ -122,9 +122,8 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	param theRequestedParam("ICING-N", 480);
 
-	theRequestedParam.GribDiscipline(0);
-	theRequestedParam.GribCategory(0);
-	theRequestedParam.GribParameter(2);
+	theRequestedParam.GribParameter(103);
+        theRequestedParam.GribTableVersion(203);
 
 	theParams.push_back(theRequestedParam);
 
@@ -248,7 +247,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 								 ClParam);
 				
 		}
-		catch (HPExceptionType e)
+		catch (HPExceptionType& e)
 		{
 			switch (e)
 			{
@@ -369,8 +368,10 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			{
 				tCor = 0;
 			}
-
-			if ((Cl = 0) || (T > 0))
+                        
+                        const double kValueEpsilon = 0.00001;
+                        
+			if ((fabs(Cl - 0) < kValueEpsilon) || (T > 0))
 			{
 				Icing = 0;
 			}
