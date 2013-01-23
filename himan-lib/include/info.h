@@ -567,6 +567,16 @@ public:
     HPScanningMode ScanningMode() const;
     void ScanningMode(HPScanningMode theScanningMode);
 
+    /**
+     * @return True if wind UV components are grid relative, false if they are earth-relative.
+     * On non-wind parameters this has no meaning.
+     *
+     * @todo Now this has the scope of the whole info, should have only param scope?
+     */
+
+    bool UVRelativeToGrid() const;
+    void UVRelativeToGrid(bool theUVRelativeToGrid);
+
 private:
 
     void Init();
@@ -595,6 +605,7 @@ private:
 
     HPScanningMode itsScanningMode; //<! When data is read from files, we need to know what is the scanning mode
 
+    bool itsUVRelativeToGrid; //<! If true, wind UV components are relative to grid north and east (ie. are not earth-relative)
 };
 
 inline

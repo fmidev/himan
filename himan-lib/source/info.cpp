@@ -80,6 +80,7 @@ void info::Init()
     itsOrientation = kHPMissingFloat;
 
     itsScanningMode = kTopLeft;
+    itsUVRelativeToGrid = false;
 
 }
 
@@ -565,6 +566,16 @@ HPScanningMode info::ScanningMode() const
 void info::ScanningMode(HPScanningMode theScanningMode)
 {
     itsScanningMode = theScanningMode;
+}
+
+bool info::UVRelativeToGrid() const
+{
+	return itsUVRelativeToGrid;
+}
+
+void info::UVRelativeToGrid(bool theUVRelativeToGrid)
+{
+	itsUVRelativeToGrid = theUVRelativeToGrid;
 }
 
 bool info::GridAndAreaEquals(shared_ptr<const info> other) const
