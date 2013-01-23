@@ -290,7 +290,9 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 
 		bool equalGrids = (myTargetInfo->GridAndAreaEquals(T850Info) &&
 							myTargetInfo->GridAndAreaEquals(T700Info) &&
-							myTargetInfo->GridAndAreaEquals(T500Info));
+							myTargetInfo->GridAndAreaEquals(T500Info) &&
+                                                        myTargetInfo->GridAndAreaEquals(Td850Info) &&
+                                                        myTargetInfo->GridAndAreaEquals(Td700Info));
 
 		myTargetInfo->ResetLocation();
 
@@ -327,6 +329,8 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
                         T850 = T850 - TBase;
                         T700 = T700 - TBase;
                         T500 = T500 - TBase;
+                        Td850 = Td850 -TBase;
+                        Td700 = Td700 -TBase;
                         
                         kIndex = T850 - T500 + Td850 - (T700 - Td700);
 
