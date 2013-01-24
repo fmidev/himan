@@ -179,6 +179,8 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 		itsGrib->Message()->GridType(gridType);
 
+		itsGrib->Message()->UVRelativeToGrid(info->Grid()->UVRelativeToGrid());
+
 		break;
 	}
 
@@ -563,7 +565,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		newInfo->Create();
 
-		newInfo->Grid()->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
+		if (newInfo->Grid()->Projection() == kRotatedLatLonProjection)
+		{
+			newInfo->Grid()->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
+		}
 
 		newInfo->Grid()->ScanningMode(m);
 
