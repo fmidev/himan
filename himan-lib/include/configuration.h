@@ -130,6 +130,9 @@ public:
     void ThreadCount(short theThreadCount);
     short ThreadCount() const;
 
+    HPScanningMode ScanningMode() const;
+    void ScanningMode(HPScanningMode theScanningMode);
+
 private:
 
     void Init();
@@ -160,6 +163,9 @@ private:
     HPDimensionType itsLeadingDimension;
 
     short itsThreadCount;
+
+    std::string itsGeomName;
+    HPScanningMode itsScanningMode;
 };
 
 inline

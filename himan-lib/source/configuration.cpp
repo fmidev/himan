@@ -42,6 +42,9 @@ std::ostream& configuration::Write(std::ostream& file) const
     file << "__itsNi__ " << itsNi << std::endl;
     file << "__itsNj__ " << itsNj << std::endl;
 
+    file << "__itsGeomName__ " << itsGeomName << std::endl;
+    file << "__itsScanningMode__ " << itsScanningMode << std::endl;
+
     file << *itsInfo;
 
     return file;
@@ -78,6 +81,8 @@ void configuration::Init()
     itsFileWaitTimeout = 0;
     itsLeadingDimension = kTimeDimension;
     itsThreadCount = -1;
+    itsGeomName = "";
+    itsScanningMode = kUnknownScanningMode;
 }
 
 HPFileType configuration::OutputFileType() const
@@ -174,4 +179,14 @@ short configuration::ThreadCount() const
 void configuration::ThreadCount(short theThreadCount)
 {
     itsThreadCount = theThreadCount;
+}
+
+HPScanningMode configuration::ScanningMode() const
+{
+	return itsScanningMode;
+}
+
+void configuration::ScanningMode(HPScanningMode theScanningMode)
+{
+	itsScanningMode = theScanningMode;
 }
