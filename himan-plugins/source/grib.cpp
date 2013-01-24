@@ -9,6 +9,7 @@
 #include "logger_factory.h"
 #include "plugin_factory.h"
 #include "producer.h"
+#include "util.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -128,10 +129,10 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 	itsGrib->Message()->StartStep(info->Time().Step());
 	itsGrib->Message()->EndStep(info->Time().Step());
 
-	himan::point firstGridPoint = info->FirstGridPoint();
-	himan::point lastGridPoint = info->LastGridPoint();
+	himan::point firstGridPoint = info->Grid()->FirstGridPoint();
+	himan::point lastGridPoint = info->Grid()->LastGridPoint();
 
-	switch (info->Projection())
+	switch (info->Grid()->Projection())
 	{
 	case kLatLonProjection:
 	{
@@ -210,7 +211,7 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 	bool iNegative = itsGrib->Message()->IScansNegatively();
 	bool jPositive = itsGrib->Message()->JScansPositively();
 
-	switch (info->ScanningMode())
+	switch (info->Grid()->ScanningMode())
 	{
 	case kTopLeft:
 		iNegative = false;
@@ -560,11 +561,16 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			throw runtime_error("WHAT?");
 		}
 
-		newInfo->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
+		newInfo->Create();
 
-		newInfo->ScanningMode(m);
+		newInfo->Grid()->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
 
-		newInfo->SetCoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement());
+		newInfo->Grid()->ScanningMode(m);
+
+		pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement(), m);
+
+		newInfo->Grid()->BottomLeft(coordinates.first);
+		newInfo->Grid()->TopRight(coordinates.second);
 
 		/*
 		 * Read data from grib *
@@ -580,7 +586,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			d = itsGrib->Message()->Values();
 		}
 
-		newInfo->Create();
 
 		// Set descriptors
 
@@ -592,7 +597,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		dm->Set(d, len);
 
-		newInfo->Data(dm);
+		newInfo->Grid()->Data(dm);
 
 		infos.push_back(newInfo);
 

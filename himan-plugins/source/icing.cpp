@@ -48,7 +48,7 @@ icing::icing() : itsUseCuda(false)
 
 }
 
-void icing::Process(shared_ptr<configuration> theConfiguration)
+void icing::Process(shared_ptr<configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -57,7 +57,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 	{
 		string msg = "I possess the powers of CUDA ";
 
-		if (!theConfiguration->UseCuda())
+		if (!conf->UseCuda())
 		{
 			msg += ", but I won't use them";
 		}
@@ -73,7 +73,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	// Get number of threads to use
 
-	unsigned short threadCount = ThreadCount(theConfiguration->ThreadCount());
+	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
 	boost::thread_group g;
 
@@ -81,13 +81,13 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 	 * The target information is parsed from the configuration file.
 	 */
 
-	shared_ptr<info> theTargetInfo = theConfiguration->Info();
+	shared_ptr<info> theTargetInfo = conf->Info();
 
 	/*
 	 * Get producer information from neons if whole_file_write is false.
 	 */
 
-	if (!theConfiguration->WholeFileWrite())
+	if (!conf->WholeFileWrite())
 	{
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -114,7 +114,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
-	 * (todo: we could check from theConfiguration but why bother?)
+	 * (todo: we could check from conf but why bother?)
 	 *
 	 */
 
@@ -133,13 +133,13 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 	 * Create data structures.
 	 */
 
-	theTargetInfo->Create();
+	theTargetInfo->Create(conf->ScanningMode(), false);
 
 	/*
 	 * Initialize parent class functions for dimension handling
 	 */
 
-	Dimension(theConfiguration->LeadingDimension());
+	Dimension(conf->LeadingDimension());
 	FeederInfo(theTargetInfo->Clone());
 	FeederInfo()->Param(theRequestedParam);
 
@@ -161,7 +161,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 		boost::thread* t = new boost::thread(&icing::Run,
 											 this,
 											 theTargetInfos[i],
-											 theConfiguration,
+											 conf,
 											 i + 1);
 
 		g.add_thread(t);
@@ -170,7 +170,7 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 
 	g.join_all();
 
-	if (theConfiguration->WholeFileWrite())
+	if (conf->WholeFileWrite())
 	{
 
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
@@ -178,16 +178,16 @@ void icing::Process(shared_ptr<configuration> theConfiguration)
 		theTargetInfo->FirstTime();
 
 		string theOutputFile = "himan_" + theTargetInfo->Param().Name() + "_" + theTargetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-		theWriter->ToFile(theTargetInfo, theConfiguration->OutputFileType(), false, theOutputFile);
+		theWriter->ToFile(theTargetInfo, conf->OutputFileType(), false, theOutputFile);
 
 	}
 }
 
-void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
-		Calculate(myTargetInfo, theConfiguration, theThreadIndex);
+		Calculate(myTargetInfo, conf, theThreadIndex);
 	}
 }
 
@@ -197,7 +197,7 @@ void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> t
  * This function does the actual calculation.
  */
 
-void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -220,7 +220,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
+		myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
 		shared_ptr<info> TInfo;
 		shared_ptr<info> VvInfo;
@@ -229,19 +229,19 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 		try
 		{
 			// Source info for T
-			TInfo = theFetcher->Fetch(theConfiguration,
+			TInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 TParam);
 				
 			// Source info for Tg
-			VvInfo = theFetcher->Fetch(theConfiguration,
+			VvInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 VvParam);
 
 			// Source info for FF
-			ClInfo = theFetcher->Fetch(theConfiguration,
+			ClInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 ClParam);
@@ -263,19 +263,19 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			}
 		}
 
-		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> VvGrid = VvInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> ClGrid = ClInfo->ToNewbaseGrid();
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> VvGrid(VvInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> ClGrid(ClInfo->Grid()->ToNewbaseGrid());
 
 		int missingCount = 0;
 		int count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-		bool equalGrids = (myTargetInfo->GridAndAreaEquals(TInfo) &&
-							myTargetInfo->GridAndAreaEquals(VvInfo) &&
-							myTargetInfo->GridAndAreaEquals(ClInfo));
+		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() &&
+							*myTargetInfo->Grid() == *VvInfo->Grid() &&
+							*myTargetInfo->Grid() == *ClInfo->Grid());
 
 		myTargetInfo->ResetLocation();
 
@@ -406,11 +406,11 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (!theConfiguration->WholeFileWrite())
+		if (!conf->WholeFileWrite())
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(myTargetInfo->Clone(), theConfiguration->OutputFileType(), true);
+			theWriter->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
 		}
 	}
 }
