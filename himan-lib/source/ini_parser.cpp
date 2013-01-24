@@ -500,10 +500,11 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 		}
 
 		itsConfiguration->Info()->OriginDateTime(theOriginDateTime, mask);
+
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		// Something was not found; do nothing
+		throw runtime_error(ClassName() + ": origintime not found");
 	}
 	catch (exception& e)
 	{
@@ -515,7 +516,8 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 	try
 	{
 
-		vector<string> timesStr = util::Split(pt.get<string>("time.hours"), ",", true);
+		string hours = pt.get<string>("time.hours");
+		vector<string> timesStr = util::Split(hours, ",", true);
 
 		vector<int> times ;
 
@@ -533,7 +535,7 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 
 			// Create forecast_time with both times origintime, then adjust the validtime
 
-			forecast_time theTime (shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
+			forecast_time theTime (shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())),
 								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
 
 			theTime.ValidDateTime()->Adjust("hours", times[i]);
@@ -568,7 +570,7 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 		do
 		{
 
-			forecast_time theTime (shared_ptr<raw_time> (new raw_time (itsConfiguration->Info()->OriginDateTime())),
+			forecast_time theTime (shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())),
 								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
 
 			theTime.ValidDateTime()->Adjust("hours", curstep);
