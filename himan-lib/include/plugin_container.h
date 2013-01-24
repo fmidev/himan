@@ -18,7 +18,7 @@ namespace himan
 class plugin_container
 {
 public:
-    plugin_container() {}
+    plugin_container() : itsLibraryHandle(0) {}
 
     plugin_container(void* theLibraryHandle, std::shared_ptr<plugin::himan_plugin> thePlugin);
 

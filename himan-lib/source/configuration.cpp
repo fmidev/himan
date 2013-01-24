@@ -55,7 +55,7 @@ std::vector<std::string> configuration::AuxiliaryFiles() const
     return itsAuxiliaryFiles;
 }
 
-void configuration::AuxiliaryFiles(const std::vector<std::string> theAuxiliaryFiles)
+void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryFiles)
 {
     itsAuxiliaryFiles = theAuxiliaryFiles;
 }

@@ -605,7 +605,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 		map<string, string> geominfo = n->NeonsDB().GetGeometryDefinition(geom);
 
-		if (geominfo.size())
+		if (!geominfo.empty())
 		{
 			/*
 			 *  In Neons we don't have rotlatlon projection used separately, instead we have
