@@ -160,7 +160,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	 * 4. Insert or update
 	 */
 
-	himan::point firstGridPoint = resultInfo->FirstGridPoint();
+	himan::point firstGridPoint = resultInfo->Grid()->FirstGridPoint();
 
 	/*
 	 * pas_latitude and pas_longitude cannot be checked programmatically
@@ -354,17 +354,21 @@ map<string,string> neons::ProducerInfo(long fmiProducerId)
 	return ret;
 }
 
-std::string neons::LatestTime(const producer& prod)
+std::string neons::LatestTime(const producer& prod, const string& geom_name)
 {
 
 	Init();
 
-	string query = "SELECT table_name, dset_id, to_char(base_date,'YYYYMMDDHH24MI') "
+	string query = "SELECT to_char(max(base_date),'YYYYMMDDHH24MI') "
 					"FROM as_grid "
 					"WHERE model_type = '" +prod.Name() + "' "
 			//		"AND base_date > TO_DATE(SYSDATE - " +hours_in_interest +"/24 - " +offset + "/24) "
-					"AND rec_cnt_dset > 0 "
-					"ORDER BY base_date DESC";
+					"AND rec_cnt_dset > 0 ";
+
+	if (!geom_name.empty())
+	{
+		//query += "AND geom_name = '" + geom_name + "'";
+	}
 
 	itsNeonsDB->Query(query);
 
@@ -376,7 +380,7 @@ std::string neons::LatestTime(const producer& prod)
 		return "";
 	}
 
-	return row[2];
+	return row[0];
 }
 
 NFmiNeonsDB& neons::NeonsDB()

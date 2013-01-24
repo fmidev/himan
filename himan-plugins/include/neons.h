@@ -74,12 +74,12 @@ public:
     /**
      * @brief Fetch the latest analysistime from neons for a given producer
      *
-     * @param Producer for which the analysistime is fetched
-     *
+     * @param prod Producer for which the analysistime is fetched
+     * @param geom_name Geometry name of the wanted geometry (if default value, check for any geometry defined for producer)
      * @return Latest analysistime as neons-style timestamp string (201301091200)
      */
 
-    std::string LatestTime(const producer& prod);
+    std::string LatestTime(const producer& prod, const std::string& geom_name = "");
 
     /**
      * @brief Function to expose the NFmiNeonsDB interface
