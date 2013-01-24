@@ -48,6 +48,8 @@ std::string MakeNeonsFileName(std::shared_ptr <const info> info);
 
 std::vector<std::string> Split(const std::string& s, const std::string& delims, bool fill);
 
+std::pair<point,point> CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj, HPScanningMode scanningMode);
+
 } // namespace util
 } // namespace himan
 
