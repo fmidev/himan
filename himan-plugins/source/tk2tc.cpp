@@ -47,7 +47,7 @@ tk2tc::tk2tc() : itsUseCuda(false)
     itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }
 
-void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
+void tk2tc::Process(std::shared_ptr<configuration> conf)
 {
 
     shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -56,7 +56,7 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
     {
         string msg = "I possess the powers of CUDA";
 
-        if (!theConfiguration->UseCuda())
+        if (!conf->UseCuda())
         {
             msg += ", but I won't use them";
         }
@@ -72,7 +72,7 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 
     // Get number of threads to use
 
-    unsigned short threadCount = ThreadCount(theConfiguration->ThreadCount());
+    unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
     boost::thread_group g;
 
@@ -80,13 +80,13 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
      * The target information is parsed from the configuration file.
      */
 
-    shared_ptr<info> theTargetInfo = theConfiguration->Info();
+    shared_ptr<info> theTargetInfo = conf->Info();
 
     /*
      * Get producer information from neons if whole_file_write is false.
      */
 
-    if (!theConfiguration->WholeFileWrite())
+    if (!conf->WholeFileWrite())
     {
         shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -132,13 +132,13 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
      * Create data structures.
      */
 
-    theTargetInfo->Create();
+    theTargetInfo->Create(conf->ScanningMode(), false);
 
     /*
      * Initialize parent class functions for dimension handling
      */
 
-    Dimension(theConfiguration->LeadingDimension());
+    Dimension(conf->LeadingDimension());
     FeederInfo(theTargetInfo->Clone());
     FeederInfo()->Param(theRequestedParam);
 
@@ -160,7 +160,7 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
         boost::thread* t = new boost::thread(&tk2tc::Run,
                                              this,
                                              theTargetInfos[i],
-                                             theConfiguration,
+                                             conf,
                                              i + 1);
 
         g.add_thread(t);
@@ -169,27 +169,27 @@ void tk2tc::Process(std::shared_ptr<configuration> theConfiguration)
 
     g.join_all();
 
-    if (theConfiguration->WholeFileWrite())
+    if (conf->WholeFileWrite())
     {
 
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
         theTargetInfo->FirstTime();
         string theOutputFile = "himan_" + theTargetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-        theWriter->ToFile(theTargetInfo, theConfiguration->OutputFileType(), false, theOutputFile);
+        theWriter->ToFile(theTargetInfo, conf->OutputFileType(), false, theOutputFile);
 
     }
 
 }
 
 void tk2tc::Run(shared_ptr<info> myTargetInfo,
-                shared_ptr<const configuration> theConfiguration,
+                shared_ptr<const configuration> conf,
                 unsigned short theThreadIndex)
 {
 
     while (AdjustLeadingDimension(myTargetInfo))
     {
-        Calculate(myTargetInfo, theConfiguration, theThreadIndex);
+        Calculate(myTargetInfo, conf, theThreadIndex);
     }
 }
 
@@ -200,7 +200,7 @@ void tk2tc::Run(shared_ptr<info> myTargetInfo,
  */
 
 void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
-                      shared_ptr<const configuration> theConfiguration,
+                      shared_ptr<const configuration> conf,
                       unsigned short theThreadIndex)
 {
 
@@ -223,7 +223,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
         myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
                                 " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-        myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
+        myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
         // Source info for T
 
@@ -231,7 +231,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
         try
         {
-        	TInfo = theFetcher->Fetch(theConfiguration,
+        	TInfo = theFetcher->Fetch(conf,
                                  myTargetInfo->Time(),
                                  myTargetInfo->Level(),
                                  TParam);
@@ -258,10 +258,10 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
         int missingCount = 0;
         int count = 0;
 
-    	shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-    	shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
+    	shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+    	shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
-        bool equalGrids = myTargetInfo->GridAndAreaEquals(TInfo);
+        bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid());
 
 #ifdef HAVE_CUDA
 
@@ -353,11 +353,11 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
         myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-        if (!theConfiguration->WholeFileWrite())
+        if (!conf->WholeFileWrite())
         {
             shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-            theWriter->ToFile(myTargetInfo->Clone(), theConfiguration->OutputFileType(), true);
+            theWriter->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
         }
     }
 }

@@ -266,19 +266,19 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configu
 			}
 		}
 
-		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> TgGrid = TgInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> FfGrid = FfInfo->ToNewbaseGrid();
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TgGrid(TgInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> FfGrid(FfInfo->Grid()->ToNewbaseGrid());
 
 		int missingCount = 0;
 		int count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-		bool equalGrids = (myTargetInfo->GridAndAreaEquals(TInfo) &&
-							myTargetInfo->GridAndAreaEquals(TgInfo) &&
-							myTargetInfo->GridAndAreaEquals(FfInfo));
+		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() &&
+							*myTargetInfo->Grid() == *TgInfo->Grid() &&
+							*myTargetInfo->Grid() == *FfInfo->Grid());
 
 		myTargetInfo->ResetLocation();
 
@@ -305,10 +305,10 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configu
 			}
 
 			double seaIcing;
-                        double TBase = 273.15;
-                        
-                        T = T - TBase;
-                        Tg = Tg - TBase;
+			double TBase = 273.15;
+
+			T = T - TBase;
+			Tg = Tg - TBase;
 
 			if (Tg < -2 )
 			{

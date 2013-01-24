@@ -50,7 +50,7 @@ tpot::tpot() : itsUseCuda(false)
 
 }
 
-void tpot::Process(shared_ptr<configuration> theConfiguration)
+void tpot::Process(shared_ptr<configuration> conf)
 {
 
     shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -59,7 +59,7 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
     {
         string msg = "I possess the powers of CUDA ";
 
-        if (!theConfiguration->UseCuda())
+        if (!conf->UseCuda())
         {
             msg += ", but I won't use them";
         }
@@ -75,7 +75,7 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
 
     // Get number of threads to use
 
-    unsigned short threadCount = ThreadCount(theConfiguration->ThreadCount());
+    unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
     boost::thread_group g;
 
@@ -83,13 +83,13 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
      * The target information is parsed from the configuration file.
      */
 
-    shared_ptr<info> theTargetInfo = theConfiguration->Info();
+    shared_ptr<info> theTargetInfo = conf->Info();
 
     /*
      * Get producer information from neons if whole_file_write is false.
      */
 
-    if (!theConfiguration->WholeFileWrite())
+    if (!conf->WholeFileWrite())
     {
         shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -116,7 +116,7 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
      *
      * We need to specify grib and querydata parameter information
      * since we don't know which one will be the output format.
-     * (todo: we could check from theConfiguration but why bother?)
+     * (todo: we could check from conf but why bother?)
      *
      */
 
@@ -136,13 +136,13 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
      * Create data structures.
      */
 
-    theTargetInfo->Create();
+    theTargetInfo->Create(conf->ScanningMode(), false);
 
     /*
      * Initialize parent class functions for dimension handling
      */
 
-    Dimension(theConfiguration->LeadingDimension());
+    Dimension(conf->LeadingDimension());
     FeederInfo(theTargetInfo->Clone());
     FeederInfo()->Param(theRequestedParam);
 
@@ -164,7 +164,7 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
         boost::thread* t = new boost::thread(&tpot::Run,
                                              this,
                                              theTargetInfos[i],
-                                             theConfiguration,
+                                             conf,
                                              i + 1);
 
         g.add_thread(t);
@@ -173,7 +173,7 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
 
     g.join_all();
 
-    if (theConfiguration->WholeFileWrite())
+    if (conf->WholeFileWrite())
     {
 
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
@@ -181,17 +181,17 @@ void tpot::Process(shared_ptr<configuration> theConfiguration)
         theTargetInfo->FirstTime();
 
         string theOutputFile = "himan_" + theTargetInfo->Param().Name() + "_" + theTargetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-        theWriter->ToFile(theTargetInfo, theConfiguration->OutputFileType(), false, theOutputFile);
+        theWriter->ToFile(theTargetInfo, conf->OutputFileType(), false, theOutputFile);
 
     }
 }
 
-void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
 {
 
     while (AdjustLeadingDimension(myTargetInfo))
     {
-        Calculate(myTargetInfo, theConfiguration, theThreadIndex);
+        Calculate(myTargetInfo, conf, theThreadIndex);
     }
 
 }
@@ -202,7 +202,7 @@ void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> th
  * This function does the actual calculation.
  */
 
-void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
 {
 
     shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -224,7 +224,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
         myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
                                 " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-        myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
+        myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
         double PScale = 1;
         double TBase = 0;
@@ -245,7 +245,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 		try
 		{
 
-			TInfo = theFetcher->Fetch(theConfiguration,
+			TInfo = theFetcher->Fetch(conf,
 											 myTargetInfo->Time(),
 											 myTargetInfo->Level(),
 											 TParam);
@@ -253,7 +253,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 			if (!isPressureLevel)
 			{
 				// Source info for P
-				PInfo = theFetcher->Fetch(theConfiguration,
+				PInfo = theFetcher->Fetch(conf,
 										  myTargetInfo->Time(),
 										  myTargetInfo->Level(),
 										  PParam);
@@ -263,7 +263,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 					PScale = 0.01;
 				}
 
-				PGrid = PInfo->ToNewbaseGrid();
+				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
 			}
 		}
 		catch (HPExceptionType e)
@@ -272,6 +272,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 			{
 				case kFileDataNotFound:
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 					continue;
 					break;
 
@@ -291,15 +292,15 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
             TBase = 273.15;
         }
 
-        shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-        shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
+        shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+        shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
         int missingCount = 0;
         int count = 0;
 
         assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-        bool equalGrids = (myTargetInfo->GridAndAreaEquals(TInfo) && (isPressureLevel || myTargetInfo->GridAndAreaEquals(PInfo)));
+        bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
 #ifdef HAVE_CUDA
 
@@ -412,11 +413,11 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 
         myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-        if (!theConfiguration->WholeFileWrite())
+        if (!conf->WholeFileWrite())
         {
             shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-            theWriter->ToFile(myTargetInfo->Clone(), theConfiguration->OutputFileType(), true);
+            theWriter->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
         }
     }
 }

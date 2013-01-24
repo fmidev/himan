@@ -47,7 +47,7 @@ kindex::kindex() : itsUseCuda(false)
 
 }
 
-void kindex::Process(shared_ptr<configuration> theConfiguration)
+void kindex::Process(shared_ptr<configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -56,7 +56,7 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 	{
 		string msg = "I possess the powers of CUDA ";
 
-		if (!theConfiguration->UseCuda())
+		if (!conf->UseCuda())
 		{
 			msg += ", but I won't use them";
 		}
@@ -72,7 +72,7 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 
 	// Get number of threads to use
 
-	unsigned short threadCount = ThreadCount(theConfiguration->ThreadCount());
+	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
 	boost::thread_group g;
 
@@ -80,13 +80,13 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 	 * The target information is parsed from the configuration file.
 	 */
 
-	shared_ptr<info> theTargetInfo = theConfiguration->Info();
+	shared_ptr<info> theTargetInfo = conf->Info();
 
 	/*
 	 * Get producer information from neons if whole_file_write is false.
 	 */
 
-	if (!theConfiguration->WholeFileWrite())
+	if (!conf->WholeFileWrite())
 	{
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -113,7 +113,7 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
-	 * (todo: we could check from theConfiguration but why bother?)
+	 * (todo: we could check from conf but why bother?)
 	 *
 	 */
 
@@ -122,7 +122,7 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 	param theRequestedParam("KINDEX-N", 80);
 
 	theRequestedParam.GribParameter(80);
-        theRequestedParam.GribTableVersion(203);
+	theRequestedParam.GribTableVersion(203);
 
 	theParams.push_back(theRequestedParam);
 
@@ -132,13 +132,13 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 	 * Create data structures.
 	 */
 
-	theTargetInfo->Create();
+	theTargetInfo->Create(conf->ScanningMode(), false);
 
 	/*
 	 * Initialize parent class functions for dimension handling
 	 */
 
-	Dimension(theConfiguration->LeadingDimension());
+	Dimension(conf->LeadingDimension());
 	FeederInfo(theTargetInfo->Clone());
 	FeederInfo()->Param(theRequestedParam);
 
@@ -160,7 +160,7 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 		boost::thread* t = new boost::thread(&kindex::Run,
 								this,
 								theTargetInfos[i],
-								theConfiguration,
+								conf,
 								i + 1);
 
 		g.add_thread(t);
@@ -169,7 +169,7 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 
 	g.join_all();
 
-	if (theConfiguration->WholeFileWrite())
+	if (conf->WholeFileWrite())
 	{
 
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
@@ -177,16 +177,16 @@ void kindex::Process(shared_ptr<configuration> theConfiguration)
 		theTargetInfo->FirstTime();
 
 		string theOutputFile = "himan_" + theTargetInfo->Param().Name() + "_" + theTargetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-		theWriter->ToFile(theTargetInfo, theConfiguration->OutputFileType(), false, theOutputFile);
+		theWriter->ToFile(theTargetInfo, conf->OutputFileType(), false, theOutputFile);
 
 	}
 }
 
-void kindex::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void kindex::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
-		Calculate(myTargetInfo, theConfiguration, theThreadIndex);
+		Calculate(myTargetInfo, conf, theThreadIndex);
 	}
 }
 
@@ -196,7 +196,7 @@ void kindex::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> 
  * This function does the actual calculation.
  */
 
-void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -206,9 +206,9 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 	param TParam("T-K");
 	param TdParam("TD-C");  
         
-        level T850Level(himan::kPressure, 850, "PRESSURE");
-        level T700Level(himan::kPressure, 700, "PRESSURE");
-        level T500Level(himan::kPressure, 500, "PRESSURE");
+	level T850Level(himan::kPressure, 850, "PRESSURE");
+	level T700Level(himan::kPressure, 700, "PRESSURE");
+	level T500Level(himan::kPressure, 500, "PRESSURE");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("kindexThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
@@ -222,38 +222,38 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
+		myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
 		shared_ptr<info> T850Info;
 		shared_ptr<info> T700Info;
-                shared_ptr<info> T500Info;
+		shared_ptr<info> T500Info;
 		shared_ptr<info> Td850Info;
-                shared_ptr<info> Td700Info;
+		shared_ptr<info> Td700Info;
 
 		try
 		{
 			// Source info for T850
-			T850Info = theFetcher->Fetch(theConfiguration,
+			T850Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T850Level,
 								 TParam);				
 			// Source info for T700
-			T700Info = theFetcher->Fetch(theConfiguration,
+			T700Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T700Level,
 								 TParam);
 			// Source info for T500
-			T500Info = theFetcher->Fetch(theConfiguration,
+			T500Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T500Level,
 								 TParam);
                         // Source info for Td850
-			Td850Info = theFetcher->Fetch(theConfiguration,
+			Td850Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T850Level,
 								 TdParam);
                         // Source info for Td700
-			Td700Info = theFetcher->Fetch(theConfiguration,
+			Td700Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T700Level,
 								 TdParam);                        
@@ -276,23 +276,23 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 			}
 		}
 
-		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> T850Grid = T850Info->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> T700Grid = T700Info->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> T500Grid = T500Info->ToNewbaseGrid();
-                shared_ptr<NFmiGrid> Td850Grid = Td850Info->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> Td700Grid = Td700Info->ToNewbaseGrid();
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> T700Grid(T700Info->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> T500Grid(T500Info->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> Td850Grid(Td850Info->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> Td700Grid(Td700Info->Grid()->ToNewbaseGrid());
 
 		int missingCount = 0;
 		int count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-		bool equalGrids = (myTargetInfo->GridAndAreaEquals(T850Info) &&
-							myTargetInfo->GridAndAreaEquals(T700Info) &&
-							myTargetInfo->GridAndAreaEquals(T500Info) &&
-                                                        myTargetInfo->GridAndAreaEquals(Td850Info) &&
-                                                        myTargetInfo->GridAndAreaEquals(Td700Info));
+		bool equalGrids = (*myTargetInfo->Grid() == *T850Info->Grid() &&
+							*myTargetInfo->Grid() == *T700Info->Grid() &&
+							*myTargetInfo->Grid() == *T500Info->Grid() &&
+							*myTargetInfo->Grid() == *Td850Info->Grid() &&
+							*myTargetInfo->Grid() == *Td700Info->Grid());
 
 		myTargetInfo->ResetLocation();
 
@@ -349,11 +349,11 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (!theConfiguration->WholeFileWrite())
+		if (!conf->WholeFileWrite())
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(myTargetInfo->Clone(), theConfiguration->OutputFileType(), true);
+			theWriter->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
 		}
 	}
 }

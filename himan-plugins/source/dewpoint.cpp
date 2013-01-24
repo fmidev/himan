@@ -136,7 +136,7 @@ void dewpoint::Process(shared_ptr<configuration> conf)
      * Create data structures.
      */
 
-    targetInfo->Create();
+    targetInfo->Create(conf->ScanningMode(), false);
 
     /*
      * Initialize parent class functions for dimension handling
@@ -255,6 +255,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
         	{
 				case kFileDataNotFound:
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 					continue;
 					break;
 
@@ -271,14 +272,14 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
     		TBase = 273.15;
     	}
 
-        shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-        shared_ptr<NFmiGrid> TGrid = TInfo->ToNewbaseGrid();
-        shared_ptr<NFmiGrid> RHGrid = RHInfo->ToNewbaseGrid();
+        shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+        shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+        shared_ptr<NFmiGrid> RHGrid(RHInfo->Grid()->ToNewbaseGrid());
 
         int missingCount = 0;
         int count = 0;
 
-        bool equalGrids = (myTargetInfo->GridAndAreaEquals(TInfo) && myTargetInfo->GridAndAreaEquals(RHInfo));
+        bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && *myTargetInfo->Grid() == *RHInfo->Grid());
 
 #ifdef HAVE_CUDA
 

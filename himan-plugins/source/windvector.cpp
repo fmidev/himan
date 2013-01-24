@@ -53,7 +53,7 @@ windvector::windvector() : itsUseCuda(false)
 
 }
 
-void windvector::Process(shared_ptr<configuration> theConfiguration)
+void windvector::Process(shared_ptr<configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -62,7 +62,7 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 	{
 		string msg = "I possess the powers of CUDA ";
 
-		if (!theConfiguration->UseCuda())
+		if (!conf->UseCuda())
 		{
 			msg += ", but I won't use them";
 		}
@@ -78,7 +78,7 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 
 	// Get number of threads to use
 
-	unsigned short threadCount = ThreadCount(theConfiguration->ThreadCount());
+	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
 	boost::thread_group g;
 
@@ -86,13 +86,13 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 	 * The target information is parsed from the configuration file.
 	 */
 
-	shared_ptr<info> theTargetInfo = theConfiguration->Info();
+	shared_ptr<info> theTargetInfo = conf->Info();
 
 	/*
 	 * Get producer information from neons if whole_file_write is false.
 	 */
 
-	if (!theConfiguration->WholeFileWrite())
+	if (!conf->WholeFileWrite())
 	{
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -119,7 +119,7 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
-	 * (todo: we could check from theConfiguration but why bother?)
+	 * (todo: we could check from conf but why bother?)
 	 *
 	 */
 
@@ -149,13 +149,13 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 	 * Create data structures.
 	 */
 
-	theTargetInfo->Create();
+	theTargetInfo->Create(conf->ScanningMode(), false);
 
 	/*
 	 * Initialize parent class functions for dimension handling
 	 */
 
-	Dimension(theConfiguration->LeadingDimension());
+	Dimension(conf->LeadingDimension());
 	FeederInfo(theTargetInfo->Clone());
 	FeederInfo()->Param(requestedDFParam);
 
@@ -177,7 +177,7 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 		boost::thread* t = new boost::thread(&windvector::Run,
 								this,
 								theTargetInfos[i],
-								theConfiguration,
+								conf,
 								i + 1);
 
 		g.add_thread(t);
@@ -186,7 +186,7 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 
 	g.join_all();
 
-	if (theConfiguration->WholeFileWrite())
+	if (conf->WholeFileWrite())
 	{
 
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
@@ -194,16 +194,16 @@ void windvector::Process(shared_ptr<configuration> theConfiguration)
 		theTargetInfo->FirstTime();
 
 		string theOutputFile = "himan_" + theTargetInfo->Param().Name() + "_" + theTargetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-		theWriter->ToFile(theTargetInfo, theConfiguration->OutputFileType(), false, theOutputFile);
+		theWriter->ToFile(theTargetInfo, conf->OutputFileType(), false, theOutputFile);
 
 	}
 }
 
-void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
-		Calculate(myTargetInfo, theConfiguration, theThreadIndex);
+		Calculate(myTargetInfo, conf, theThreadIndex);
 	}
 }
 
@@ -213,7 +213,7 @@ void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
  * This function does the actual calculation.
  */
 
-void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex)
+void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -244,9 +244,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		myTargetInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
-		DDInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
-		FFInfo->Data()->Resize(theConfiguration->Ni(), theConfiguration->Nj());
+		myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
+		DDInfo->Data()->Resize(conf->Ni(), conf->Nj());
+		FFInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
 		shared_ptr<info> UInfo;
 		shared_ptr<info> VInfo;
@@ -254,13 +254,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 		try
 		{
 			// Source info for U
-			UInfo = theFetcher->Fetch(theConfiguration,
+			UInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 UParam);
 				
 			// Source info for V
-			VInfo = theFetcher->Fetch(theConfiguration,
+			VInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 VParam);
@@ -285,17 +285,16 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			}
 		}
 
-		shared_ptr<NFmiGrid> targetGrid = myTargetInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> UGrid = UInfo->ToNewbaseGrid();
-		shared_ptr<NFmiGrid> VGrid = VInfo->ToNewbaseGrid();
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> UGrid(UInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> VGrid(VInfo->Grid()->ToNewbaseGrid());
 
 		int missingCount = 0;
 		int count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-		bool equalGrids = (myTargetInfo->GridAndAreaEquals(UInfo) &&
-							myTargetInfo->GridAndAreaEquals(VInfo));
+		bool equalGrids = (*myTargetInfo->Grid() == *UInfo->Grid() && *myTargetInfo->Grid() == *VInfo->Grid());
 
 		myTargetInfo->ResetLocation();
 		DDInfo->ResetLocation();
@@ -303,8 +302,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 		targetGrid->Reset();
 
-		bool needRotLatLonGridRotation = (myTargetInfo->Projection() == kRotatedLatLonProjection && UInfo->UVRelativeToGrid());
-		bool needStereographicGridRotation = (myTargetInfo->Projection() == kStereographicProjection && UInfo->UVRelativeToGrid());
+		bool needRotLatLonGridRotation = (myTargetInfo->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
+		bool needStereographicGridRotation = (myTargetInfo->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
 
 		while (myTargetInfo->NextLocation() && DDInfo->NextLocation() && FFInfo->NextLocation() && targetGrid->Next())
 		{
@@ -389,11 +388,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (!theConfiguration->WholeFileWrite())
+		if (!conf->WholeFileWrite())
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(myTargetInfo->Clone(), theConfiguration->OutputFileType(), true);
+			theWriter->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
 		}
 	}
 }
