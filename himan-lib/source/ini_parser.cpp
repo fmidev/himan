@@ -116,7 +116,6 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 	("version,v", "display version number")
 	("configuration-file,f", po::value(&(itsConfiguration->itsConfigurationFile)), "configuration file")
 	("auxiliary-files,a", po::value<vector<string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
-	//("plugins,p", po::value<vector<string> > (&(itsConfiguration->itsPlugins)), "calculated plugins")
 	("threads,j", po::value(&itsConfiguration->itsThreadCount), "number of started threads")
 	("list-plugins,l", "list all defined plugins")
 	("dedbug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
@@ -600,6 +599,8 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 	{
 		string geom = pt.get<string>("area.geom_name");
 
+		itsConfiguration->itsGeomName = geom;
+
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
 		map<string, string> geominfo = n->NeonsDB().GetGeometryDefinition(geom);
@@ -637,11 +638,11 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 			if (geominfo["stor_desc"] == "+x-y")
 			{
-				itsConfiguration->Info()->ScanningMode(kTopLeft);
+				itsConfiguration->itsScanningMode = kTopLeft;
 			}
 			else if (geominfo["stor_desc"] == "+x+y")
 			{
-				itsConfiguration->Info()->ScanningMode(kBottomLeft);
+				itsConfiguration->itsScanningMode = kBottomLeft;
 			}
 			else
 			{
@@ -654,8 +655,11 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 			double di = boost::lexical_cast<double>(geominfo["pas_longitude"])/1e3;
 			double dj = boost::lexical_cast<double>(geominfo["pas_latitude"])/1e3;
 
-			itsConfiguration->Info()->SetCoordinatesFromFirstGridPoint(point(X0, Y0), itsConfiguration->Ni(), itsConfiguration->Nj(), di, dj);
+			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), itsConfiguration->Ni(), itsConfiguration->Nj(), di, dj, itsConfiguration->itsScanningMode);
+//			itsConfiguration->Info()->SetCoordinatesFromFirstGridPoint(point(X0, Y0), itsConfiguration->Ni(), itsConfiguration->Nj(), di, dj);
 
+			itsConfiguration->itsInfo->BottomLeft(coordinates.first);
+			itsConfiguration->itsInfo->TopRight(coordinates.second);
 			return;
 		}
 		else
