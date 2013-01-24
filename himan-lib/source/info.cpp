@@ -11,12 +11,6 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 
-#ifdef NEWBASE_INTERPOLATION
-#include <NFmiLatLonArea.h>
-#include <NFmiRotatedLatLonArea.h>
-#include <NFmiStereographicArea.h>
-#endif
-
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
@@ -31,7 +25,7 @@ info::info() : itsLevelIterator(), itsTimeIterator(), itsParamIterator()
     Init();
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
 
-    itsDataMatrix = shared_ptr<matrix_t> (new matrix_t());
+    itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t());
     itsTimeIterator = shared_ptr<time_iter> (new time_iter());
 }
 
@@ -46,13 +40,13 @@ shared_ptr<info> info::Clone() const
 
     clone->Projection(itsProjection);
     clone->Orientation(itsOrientation);
-    clone->ScanningMode(itsScanningMode);
+    //clone->ScanningMode(itsScanningMode);
 
     clone->BottomLeft(itsBottomLeft);
     clone->TopRight(itsTopRight);
     clone->SouthPole(itsSouthPole);
 
-    clone->Data(itsDataMatrix);
+    clone->Data(itsDimensionMatrix);
 
     clone->ParamIterator(*itsParamIterator);
     clone->LevelIterator(*itsLevelIterator);
@@ -79,9 +73,6 @@ void info::Init()
 
     itsOrientation = kHPMissingFloat;
 
-    itsScanningMode = kTopLeft;
-    itsUVRelativeToGrid = false;
-
 }
 
 std::ostream& info::Write(std::ostream& file) const
@@ -96,7 +87,6 @@ std::ostream& info::Write(std::ostream& file) const
     file << itsSouthPole;
 
     file << "__itsOrientation__ " << itsOrientation << endl;
-    file << "__itsScanningMode__ " << itsScanningMode << endl;
 
     file << itsProducer;
 
@@ -119,10 +109,10 @@ std::ostream& info::Write(std::ostream& file) const
 }
 
 
-bool info::Create()
+bool info::Create(HPScanningMode theScanningMode, bool theUVRelativeToGrid)
 {
 
-    itsDataMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
+    itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
 
     Reset();
 
@@ -137,160 +127,16 @@ bool info::Create()
             while (NextParam())
                 // Create empty placeholders
             {
-            	Data(shared_ptr<d_matrix_t> (new d_matrix_t(0, 0)));
+            	Grid(shared_ptr<grid> (new grid(theScanningMode, theUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
+
+//            	Grid(shared_ptr<grid> (new grid()));
+  //          	Grid()->ScanningMode(itsScanningMode);
             }
         }
     }
 
     return true;
 
-}
-
-HPProjectionType info::Projection() const
-{
-    return itsProjection;
-}
-
-void info::Projection(HPProjectionType theProjection)
-{
-    itsProjection = theProjection;
-}
-
-point info::BottomLeft() const
-{
-	return itsBottomLeft;
-}
-
-point info::TopRight() const
-{
-	return itsTopRight;
-}
-
-void info::BottomLeft(const point& theBottomLeft)
-{
-	itsBottomLeft = theBottomLeft;
-}
-
-void info::TopRight(const point& theTopRight)
-{
-	itsTopRight = theTopRight;
-}
-
-void info::SouthPole(const point& theSouthPole)
-{
-    itsSouthPole = theSouthPole;
-}
-
-point info::SouthPole() const
-{
-    return itsSouthPole;
-}
-
-point info::FirstGridPoint() const
-{
-	double x = kHPMissingFloat;
-	double y = kHPMissingFloat;
-
-	if (itsProjection != kLatLonProjection && itsProjection != kRotatedLatLonProjection)
-	{
-		itsLogger->Warning("Calculating latitude for first gridpoint in non-latlon projection not supported");
-		return point(x,y);
-	}
-
-	assert(itsBottomLeft.X() != kHPMissingFloat);
-	assert(itsBottomLeft.Y() != kHPMissingFloat);
-	assert(itsTopRight.X() != kHPMissingFloat);
-	assert(itsTopRight.Y() != kHPMissingFloat);
-	assert(Ni() > 0);
-	assert(Nj() > 0);
-
-	switch (itsScanningMode)
-	{
-	case kBottomLeft:
-		x = itsBottomLeft.X();
-		y = itsBottomLeft.Y();
-		break;
-
-	case kTopLeft:
-		x = itsTopRight.X() - (Ni()-1)*Di();
-		y = itsBottomLeft.Y() + (Nj()-1)*Dj();
-		break;
-
-	case kTopRight:
-		x = itsTopRight.X();
-		y = itsTopRight.Y();
-		break;
-
-	case kBottomRight:
-		x = itsBottomLeft.X() + (Ni()-1)*Di();
-		y = itsTopRight.Y() - (Nj()-1)*Dj();
-		break;
-
-	default:
-		itsLogger->Warning("Calculating first grid point when scanning mode is unknown");
-		break;
-	}
-
-	return point(x,y);
-}
-
-point info::LastGridPoint() const
-{
-	point firstGridPoint = FirstGridPoint();
-	return point(firstGridPoint.X() + (Ni()-1)*Di(), firstGridPoint.Y() + (Nj()-1)*Dj());
-}
-
-bool info::SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj)
-{
-	assert(itsScanningMode != kUnknownScanningMode);
-
-	ni -= 1;
-	nj -= 1;
-
-	point topLeft, bottomRight;
-
-	switch (itsScanningMode)
-	{
-	case kBottomLeft:
-		itsBottomLeft = firstPoint;
-		itsTopRight = point(itsBottomLeft.X() + ni*di, itsBottomLeft.Y() + nj*dj);
-		break;
-
-	case kTopLeft: // +x-y
-		bottomRight = point(firstPoint.X() + ni*di, firstPoint.Y() - nj*dj);
-		itsBottomLeft = point(bottomRight.X() - ni*di, firstPoint.Y() - nj*dj);
-		itsTopRight = point(itsBottomLeft.X() + ni*di, itsBottomLeft.Y() + nj*dj);
-		break;
-
-	case kTopRight: // -x-y
-		itsTopRight = firstPoint;
-		itsBottomLeft = point(itsTopRight.X() - ni*di, itsTopRight.Y() - nj*dj);
-		break;
-
-	case kBottomRight: // -x+y
-		topLeft = point(firstPoint.X() - ni*di, firstPoint.Y() + nj*dj);
-		itsBottomLeft = point(firstPoint.X() - ni*di, topLeft.Y() - nj*dj);
-		itsTopRight = point(itsBottomLeft.X() + ni*di, itsBottomLeft.Y() + nj*dj);
-		break;
-
-	default:
-		itsLogger->Warning("Calculating first grid point when scanning mode is unknown");
-		break;
-
-	}
-
-	return true;
-}
-
-
-double info::Orientation() const
-{
-    return itsOrientation;
-}
-
-void info::Orientation(double theOrientation)
-{
-    itsOrientation = theOrientation;
 }
 
 const producer& info::Producer() const
@@ -474,7 +320,7 @@ bool info::NextLocation()
         itsLocationIndex++;
     }
 
-    size_t locationSize = Data()->Size();
+    size_t locationSize = Grid()->Data()->Size();
 
     if (itsLocationIndex >= locationSize)
     {
@@ -504,228 +350,107 @@ void info::LocationIndex(size_t theLocationIndex)
     itsLocationIndex = theLocationIndex;
 }
 
-shared_ptr<d_matrix_t> info::Data() const
+shared_ptr<grid> info::Grid() const
 {
-    return itsDataMatrix->At(TimeIndex(), LevelIndex(), ParamIndex());
+    return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex());
 }
 
-shared_ptr<d_matrix_t> info::Data(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+shared_ptr<grid> info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
-    return itsDataMatrix->At(timeIndex, levelIndex, paramIndex);
+    return itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex);
+}
+
+shared_ptr<d_matrix_t> info::Data() const
+{
+	return Grid()->Data();
 }
 
 void info::Data(shared_ptr<matrix_t> m)
 {
-    itsDataMatrix = m;
+    itsDimensionMatrix = m;
 }
 
-void info::Data(shared_ptr<d_matrix_t> d)
+void info::Grid(shared_ptr<grid> d)
 {
-    itsDataMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()) = d;
+    itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()) = d;
 }
 
 bool info::Value(double theValue)
 {
-    return Data()->Set(itsLocationIndex, theValue) ;
+    return Grid()->Data()->Set(itsLocationIndex, theValue) ;
 }
 
 double info::Value() const
 {
-    return Data()->At(itsLocationIndex);
+    return Grid()->Data()->At(itsLocationIndex);
 }
 
 size_t info::Ni() const
 {
-    return Data()->SizeX();
+    return Grid()->Data()->SizeX();
 }
 
 size_t info::Nj() const
 {
-    return Data()->SizeY();
+    return Grid()->Data()->SizeY();
 }
 
 double info::Di() const
 {
-	assert(itsBottomLeft.X() != kHPMissingInt);
-	assert(itsTopRight.X() != kHPMissingInt);
-	return abs((itsBottomLeft.X() - itsTopRight.X()) / (Ni()-1));
+	return Grid()->Di();
 }
 
 double info::Dj() const
 {
-	assert(itsBottomLeft.Y() != kHPMissingInt);
-	assert(itsTopRight.Y() != kHPMissingInt);
-    return abs((itsBottomLeft.Y() - itsTopRight.Y()) / (Nj()-1));
+	return Grid()->Dj();
 }
 
-HPScanningMode info::ScanningMode() const
+HPProjectionType info::Projection() const
 {
-    return itsScanningMode;
+	return itsProjection;
 }
 
-void info::ScanningMode(HPScanningMode theScanningMode)
+void info::Projection(HPProjectionType theProjection)
 {
-    itsScanningMode = theScanningMode;
+	itsProjection = theProjection;
 }
 
-bool info::UVRelativeToGrid() const
+point info::BottomLeft() const
 {
-	return itsUVRelativeToGrid;
+	return itsBottomLeft;
 }
 
-void info::UVRelativeToGrid(bool theUVRelativeToGrid)
+point info::TopRight() const
 {
-	itsUVRelativeToGrid = theUVRelativeToGrid;
+	return itsTopRight;
 }
 
-bool info::GridAndAreaEquals(shared_ptr<const info> other) const
+void info::BottomLeft(const point& theBottomLeft)
 {
-
-    if (itsBottomLeft != other->BottomLeft())
-    {
-        itsLogger->Trace("BottomLeft does not match: " + boost::lexical_cast<string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<string> (other->BottomLeft().X()));
-        itsLogger->Trace("BottomLeft does not match: " + boost::lexical_cast<string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<string> (other->BottomLeft().Y()));
-        return false;
-    }
-
-    if (itsTopRight != other->TopRight())
-    {
-        itsLogger->Trace("TopRight does not match: " + boost::lexical_cast<string> (itsTopRight.X()) + " vs " + boost::lexical_cast<string> (other->TopRight().X()));
-        itsLogger->Trace("TopRight does not match: " + boost::lexical_cast<string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<string> (other->TopRight().Y()));
-        return false;
-    }
-
-    if (itsProjection != other->Projection())
-    {
-        itsLogger->Trace("Projections don't match: " + boost::lexical_cast<string> (itsProjection) + " vs " + boost::lexical_cast<string> (other->Projection()));
-        return false;
-    }
-
-    if (itsProjection == kRotatedLatLonProjection)
-    {
-		if (itsSouthPole != other->SouthPole())
-    	{
-        	itsLogger->Trace("SouthPole does not match: " + boost::lexical_cast<string> (itsSouthPole.X()) + " vs " + boost::lexical_cast<string> (other->SouthPole().X()));
-        	itsLogger->Trace("SouthPole does not match: " + boost::lexical_cast<string> (itsSouthPole.Y()) + " vs " + boost::lexical_cast<string> (other->SouthPole().Y()));
-        	return false;
-    	}
-    }
-
-    if (itsOrientation != other->Orientation())
-    {
-    	itsLogger->Trace("Orientations don't match: " + boost::lexical_cast<string> (itsOrientation) + " vs " + boost::lexical_cast<string> (other->Orientation()));
-        return false;
-    }
-
-    if (Ni() != other->Ni())
-    {
-    	itsLogger->Trace("Grid X-counts don't match: " + boost::lexical_cast<string> (Ni()) + " vs " + boost::lexical_cast<string> (other->Ni()));
-        return false;
-    }
-
-    if (Nj() != other->Nj())
-    {
-    	itsLogger->Trace("Grid Y-counts don't match: " + boost::lexical_cast<string> (Nj()) + " vs " + boost::lexical_cast<string> (other->Nj()));
-        return false;
-    }
-
-    return true;
-
+	itsBottomLeft = theBottomLeft;
 }
 
-#ifdef NEWBASE_INTERPOLATION
-
-shared_ptr<NFmiGrid> info::ToNewbaseGrid() const
+void info::TopRight(const point& theTopRight)
 {
-
-    FmiInterpolationMethod interp = kLinearly;
-    FmiDirection dir = static_cast<FmiDirection> (itsScanningMode);
-
-    NFmiArea* theArea = 0;
-
-    // Newbase does not understand grib2 longitude coordinates
-
-    double bottomLeftLongitude = itsBottomLeft.X();
-    double topRightLongitude = itsTopRight.X();
-
-    if (bottomLeftLongitude > 180 || topRightLongitude > 180)
-    {
-        bottomLeftLongitude -= 180;
-        topRightLongitude -= 180;
-    }
-
-    switch (itsProjection)
-    {
-    case kLatLonProjection:
-    {
-        theArea = new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
-                                     NFmiPoint(topRightLongitude, itsTopRight.Y()));
-
-        break;
-    }
-
-    case kRotatedLatLonProjection:
-    {
-        theArea = new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
-                                            NFmiPoint(topRightLongitude, itsTopRight.Y()),
-                                            NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()),
-                                            NFmiPoint(0.,0.), // default values
-                                            NFmiPoint(1.,1.), // default values
-                                            true);
-        break;
-    }
-
-    case kStereographicProjection:
-    {
-        theArea = new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
-                                            NFmiPoint(topRightLongitude, itsTopRight.Y()),
-                                            itsOrientation);
-        break;
-
-    }
-
-    default:
-        throw runtime_error(ClassName() + ": No supported projection found");
-
-        break;
-    }
-
-    shared_ptr<NFmiGrid> theGrid (new NFmiGrid(theArea, Ni(), Nj(), dir, interp));
-
-    size_t dataSize = Data()->Size();
-
-    if (dataSize)   // Do we have data
-    {
-
-        NFmiDataPool thePool;
-
-        float* arr = new float[dataSize];
-
-        // convert double array to float
-
-        for (unsigned int i = 0; i < dataSize; i++)
-        {
-            arr[i] = static_cast<float> (Data()->At(i));
-        }
-
-        if (!thePool.Init(dataSize, arr))
-        {
-            throw runtime_error("DataPool init failed");
-        }
-
-        if (!theGrid->Init(&thePool))
-        {
-            throw runtime_error("Grid data init failed");
-        }
-
-        delete [] arr;
-    }
-
-    delete theArea;
-
-    return theGrid;
-
+	itsTopRight = theTopRight;
 }
 
-#endif
+void info::SouthPole(const point& theSouthPole)
+{
+    itsSouthPole = theSouthPole;
+}
 
+point info::SouthPole() const
+{
+    return itsSouthPole;
+}
+
+double info::Orientation() const
+{
+    return itsOrientation;
+}
+
+void info::Orientation(double theOrientation)
+{
+    itsOrientation = theOrientation;
+}

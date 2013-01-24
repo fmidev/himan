@@ -12,23 +12,19 @@
 #ifndef INFO_H
 #define INFO_H
 
-#include <NFmiGrid.h>
 #include "logger.h"
 #include "param.h"
 #include "level.h"
 #include "forecast_time.h"
-#include "matrix.h"
 #include "himan_common.h"
 #include "producer.h"
 #include "point.h"
-
-#define NEWBASE_INTERPOLATION
+#include "grid.h"
 
 namespace himan
 {
 
-typedef matrix <std::shared_ptr<d_matrix_t> > matrix_t;
-
+typedef matrix <std::shared_ptr<grid> > matrix_t;
 const size_t kIteratorResetValue = std::numeric_limits<size_t>::max();
 
 class info
@@ -259,38 +255,6 @@ public:
     void SouthPole(const point& theSouthPole);
 
     /**
-     * @brief Calculates latitude and longitude of first grid point based on the area definition and scanning mode
-     * @return First grid point of the grid
-     * @todo How this works with stereographic projection
-     */
-
-    point FirstGridPoint() const;
-
-    /**
-     * @brief Calculates latitude and longitude of last grid point based on the area definition and scanning mode
-     * @return Last grid point of the grid
-     * @todo How this works with stereographic projection
-     */
-
-    point LastGridPoint() const;
-
-    /**
-     * @brief Calculate area coordinates from first gridpoint, scanning mode, grid size and distance between two gridpoints.
-     *
-     * This function is the opposite of FirstGridPoint(). NOTE: scanning mode must already be set when calling this function!
-     *
-     * @param firstPoint Latitude and longitude of first gridpoint
-     * @param ni Grid size in X direction
-     * @param ny Grid size in Y direction
-     * @param di Distance between two points in X direction
-     * @param dj Distance between two points in Y direction
-     *
-     * @return True if calculation is successful
-     */
-
-    bool SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj);
-
-    /**
      * @return Number of point along X axis
      */
 
@@ -367,7 +331,7 @@ public:
      * @return Always true
      */
 
-    bool Create();
+    bool Create(HPScanningMode theScanningMode = kTopLeft, bool theUVRelativeToGrid  = false);
 
     /**
      * @brief Clone info while preserving its data backend
@@ -499,7 +463,7 @@ public:
      * @return Current data matrix
      */
 
-    std::shared_ptr<d_matrix_t> Data() const;
+    std::shared_ptr<grid> Grid() const;
 
     /**
      * @brief Return data matrix from the given time/level/param indexes
@@ -509,14 +473,21 @@ public:
      * @return Data matrix pointed by the given function arguments.
      */
 
-    std::shared_ptr<d_matrix_t> Data(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
+    std::shared_ptr<grid> Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
 
     /**
-     * @brief Replace current data matrix with the function argument
-     * @param d shared pointer to a data matrix
+     * @brief Replace current grid with the function argument
+     * @param d shared pointer to a grid instance
      */
 
-    void Data(std::shared_ptr<d_matrix_t> d);
+    void Grid(std::shared_ptr<grid> d);
+
+    /**
+     * @brief Shortcut to get the current data matrix
+     * @return Current data matrix
+     */
+
+    std::shared_ptr<d_matrix_t> Data() const;
 
     /**
      * @brief Replace whole meta matrix with a new one
@@ -529,9 +500,9 @@ public:
      *
      */
 
-    size_t DataSize() const
+    size_t DimensionSize() const
     {
-        return itsDataMatrix->Size();
+        return itsDimensionMatrix->Size();
     }
 
     /**
@@ -546,36 +517,6 @@ public:
      */
 
     double Value() const;
-
-#ifdef NEWBASE_INTERPOLATION
-
-    /**
-     * @brief Create a newbase grid (NFmiGrid) from current data
-     * @todo Should return raw pointer ?
-     */
-
-    std::shared_ptr<NFmiGrid> ToNewbaseGrid() const;
-
-#endif
-
-    /**
-     * @brief Check if grid and area are equal
-     */
-
-    bool GridAndAreaEquals(std::shared_ptr<const info> other) const;
-
-    HPScanningMode ScanningMode() const;
-    void ScanningMode(HPScanningMode theScanningMode);
-
-    /**
-     * @return True if wind UV components are grid relative, false if they are earth-relative.
-     * On non-wind parameters this has no meaning.
-     *
-     * @todo Now this has the scope of the whole info, should have only param scope?
-     */
-
-    bool UVRelativeToGrid() const;
-    void UVRelativeToGrid(bool theUVRelativeToGrid);
 
 private:
 
@@ -593,7 +534,7 @@ private:
     std::shared_ptr<time_iter> itsTimeIterator;
     std::shared_ptr<param_iter> itsParamIterator;
 
-    std::shared_ptr<matrix_t> itsDataMatrix;
+    std::shared_ptr<matrix_t> itsDimensionMatrix;
 
     std::unique_ptr<logger> itsLogger;
 
@@ -603,9 +544,6 @@ private:
 
     size_t itsLocationIndex;
 
-    HPScanningMode itsScanningMode; //<! When data is read from files, we need to know what is the scanning mode
-
-    bool itsUVRelativeToGrid; //<! If true, wind UV components are relative to grid north and east (ie. are not earth-relative)
 };
 
 inline
