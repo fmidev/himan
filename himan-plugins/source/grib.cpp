@@ -273,11 +273,21 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 	if (edition == 1)
 	{
 		//itsGrib->Message()->PackingType("grid_second_order");
+
 	}
 	else if (edition == 2)
 	{
 		itsGrib->Message()->PackingType("grid_jpeg");
 	}
+
+	long timeUnit = 1; // hour
+
+	if (info->Time().StepResolution() == kMinute)
+	{
+		timeUnit = 0;
+	}
+
+	itsGrib->Message()->UnitOfTimeRange(timeUnit);
 
 	itsGrib->Message()->Write(outputFile, appendToFile);
 
@@ -433,7 +443,18 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		forecast_time t (originDateTime, originDateTime);
 
-		t.ValidDateTime()->Adjust("hours", static_cast<int> (step));
+		long unitOfTimeRange = itsGrib->Message()->UnitOfTimeRange();
+
+		HPTimeResolution timeResolution = kHour;
+
+		if (unitOfTimeRange == 0)
+		{
+			timeResolution = kMinute;
+		}
+
+		t.StepResolution(timeResolution);
+
+		t.ValidDateTime()->Adjust(timeResolution, static_cast<int> (step));
 
 		if (t != options.time)
 		{
@@ -469,8 +490,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			levelType = himan::kHybrid;
 			break;
             
-                case 112:
-                        levelType = himan::kGndLayer;
+		case 112:
+			levelType = himan::kGndLayer;
             break;
 
 		default:
@@ -511,7 +532,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		theLevels.push_back(l);
 
 		newInfo->Levels(theLevels);
-
 
 		/*
 		 * Get area information from grib.
