@@ -42,8 +42,9 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
     const search_options opts { requestedTime, requestedParam, requestedLevel, config } ;
 
     vector<shared_ptr<info>> theInfos;
+    unsigned int waitedSeconds = 0;
 
-    for (unsigned int waitedSeconds = 0; waitedSeconds < config->FileWaitTimeout() * 60; waitedSeconds += sleepSeconds)
+    do
     {
     	// 1. Fetch data from cache
 
@@ -104,7 +105,10 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
 
 			sleep(sleepSeconds);
 		}
+
+		waitedSeconds += sleepSeconds;
     }
+    while (waitedSeconds < config->FileWaitTimeout() * 60);
 
     /*
      *  Safeguard; later in the code we do not check whether the data requested
