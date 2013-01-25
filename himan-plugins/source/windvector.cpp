@@ -13,6 +13,7 @@
 #include "util.h"
 #include <math.h>
 #include "NFmiRotatedLatLonArea.h"
+#include "NFmiStereographicArea.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -41,9 +42,7 @@ void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float
 }
 #endif
 
-const double kPi = 3.14159265359;
 const double kRadToDeg = 57.295779513082; // 180 / PI
-const double kDegToRad = 0.017453292; // PI / 180
 
 windvector::windvector() : itsUseCuda(false)
 {
@@ -135,9 +134,6 @@ void windvector::Process(shared_ptr<configuration> conf)
 	requestedDDParam.GribDiscipline(0);
 	requestedDDParam.GribCategory(2);
 	requestedDDParam.GribParameter(0);
-
-	//theRequestedParam.GribParameter(103);
-    //    theRequestedParam.GribTableVersion(204);
 
 	theParams.push_back(requestedDFParam);
 	theParams.push_back(requestedFFParam);
@@ -335,7 +331,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 				const point regPoint(targetGrid->LatLon());
 				const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (targetGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
 
-				point regUV = UVToEarthRelative(regPoint, rotPoint, UInfo->SouthPole(), point(U,V));
+				point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->SouthPole(), point(U,V));
 
 				// Wind speed should the same with both forms of U and V
 
@@ -346,7 +342,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			}
 			else if (needStereographicGridRotation)
 			{
-				throw runtime_error(ClassName() + ": I don't know how to rotate stereographic projections (yet)!");
+				double centralLongitude = (reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude());
+
+				point regUV = util::UVToGeographical(centralLongitude, point(U,V));
+
+				// Wind speed should the same with both forms of U and V
+
+				assert(fabs((U*U+V*V) - (regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+
 			}
 
 			double FF = sqrt(U*U + V*V);
@@ -395,90 +398,4 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			theWriter->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
 		}
 	}
-}
-
-himan::point windvector::UVToEarthRelative(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole, const himan::point& UV)
-{
-
-	himan::point newSouthPole;
-
-	if (southPole.Y() > 0)
-	{
-		newSouthPole.Y(-southPole.Y());
-		newSouthPole.X(0);
-	}
-	else
-	{
-		newSouthPole = southPole;
-	}
-
-	double sinPoleY = sin(kDegToRad * (newSouthPole.Y()+90)); // zsyc
-	double cosPoleY = cos(kDegToRad * (newSouthPole.Y()+90)); // zcyc
-
-	//double zsxreg = sin(kDegToRad * regPoint.X());
-	//double zcxreg = cos(kDegToRad * regPoint.X());
-	//double zsyreg = sin(kDegToRad * regPoint.Y());
-	double cosRegY = cos(kDegToRad * regPoint.Y()); // zcyreg
-
-	double zxmxc = kDegToRad * (regPoint.X() - newSouthPole.X());
-	double sinxmxc = sin(zxmxc); // zsxmxc
-	double cosxmxc = cos(zxmxc); // zcxmxc
-
-	double sinRotX = sin(kDegToRad * rotPoint.X()); // zsxrot
-	double cosRotX = cos(kDegToRad * rotPoint.X()); // zcxrot
-	double sinRotY = sin(kDegToRad * rotPoint.Y()); // zsyrot
-	double cosRotY = cos(kDegToRad * rotPoint.Y()); // zcyrot
-
-	double PA = cosxmxc * cosRotX + cosPoleY * sinxmxc * sinRotX;
-	double PB = cosPoleY * sinxmxc * cosRotX * sinRotY + sinPoleY * sinxmxc * cosRotY - cosxmxc * sinRotX * sinRotY;
-	double PC = (-sinPoleY) * sinRotX / cosRegY;
-	double PD = (cosPoleY * cosRotY - sinPoleY * cosRotX * sinRotY) / cosRegY;
-
-	double U = PA * UV.X() + PB * UV.Y();
-	double V = PC * UV.X() + PD * UV.Y();
-
-	return point(U,V);
-}
-
-himan::point windvector::UVToGridRelative(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole, const himan::point& UV)
-{
-
-	himan::point newSouthPole;
-
-	if (southPole.Y() > 0)
-	{
-		newSouthPole.Y(-southPole.Y());
-		newSouthPole.X(0);
-	}
-	else
-	{
-		newSouthPole = southPole;
-	}
-
-	double sinPoleY = sin(kDegToRad * (newSouthPole.Y()+90)); // zsyc
-	double cosPoleY = cos(kDegToRad * (newSouthPole.Y()+90)); // zcyc
-
-	//double sinRegX = sin(kDegToRad * regPoint.X()); // zsxreg
-	//double cosRegX = cos(kDegToRad * regPoint.X()); // zcxreg
-	double sinRegY = sin(kDegToRad * regPoint.Y()); // zsyreg
-	double cosRegY = cos(kDegToRad * regPoint.Y()); // zcyreg
-
-	double zxmxc = kDegToRad * (regPoint.X() - newSouthPole.X());
-	double sinxmxc = sin(zxmxc); // zsxmxc
-	double cosxmxc = cos(zxmxc); // zcxmxc
-
-	double sinRotX = sin(kDegToRad * rotPoint.X()); // zsxrot
-	double cosRotX = cos(kDegToRad * rotPoint.X()); // zcxrot
-	//double sinRotY = sin(kDegToRad * rotPoint.Y()); // zsyrot
-	double cosRotY = cos(kDegToRad * rotPoint.Y()); // zcyrot
-
-	double PA = cosPoleY * sinxmxc * sinRotX + cosxmxc * cosRotX;
-	double PB = cosPoleY * cosxmxc * sinRegY * sinRotX - sinPoleY * cosRegY * sinRotX - sinxmxc * sinRegY * cosRotX;
-	double PC = sinPoleY * sinxmxc / cosRotY;
-	double PD = (sinPoleY * cosxmxc * sinRegY + cosPoleY * cosRegY) / cosRotY;
-
-	double U = PA * UV.X() + PB * UV.Y();
-	double V = PC * UV.X() + PD * UV.Y();
-
-	return point(U,V);
 }
