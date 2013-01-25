@@ -119,7 +119,7 @@ public:
 
 private:
 
-    std::shared_ptr<NFmiParam> itsParam; //!< newbase param will hold name, univ_id and scale+base
+    std::unique_ptr<NFmiParam> itsParam; //!< newbase param will hold name, univ_id and scale+base
 
     long itsGribParameter; //!< Grib parameter number (only for grib2)
     long itsGribCategory; //!< Grib parameter category (only for grib2)

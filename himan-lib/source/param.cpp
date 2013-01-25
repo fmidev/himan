@@ -12,7 +12,7 @@ using namespace himan;
 using namespace std;
 
 param::param()
-	: itsParam(shared_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, "HimanDefaultParam")))
+	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, "HimanDefaultParam")))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
@@ -24,7 +24,7 @@ param::param()
 }
 
 param::param(const std::string& theName, unsigned long theUnivId)
-	: itsParam(shared_ptr<NFmiParam> (new NFmiParam(theUnivId, NFmiString(theName))))
+	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(theUnivId, NFmiString(theName))))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
@@ -36,7 +36,7 @@ param::param(const std::string& theName, unsigned long theUnivId)
 }
 
 param::param(const std::string& theName)
-	: itsParam(shared_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, NFmiString(theName))))
+	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, NFmiString(theName))))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
@@ -53,7 +53,7 @@ param::param(const std::string& theName,
 			 float theBase,
 			 const std::string& thePrecision,
 			 FmiInterpolationMethod theInterpolationMethod)
-	: itsParam(shared_ptr<NFmiParam> (new NFmiParam (theUnivId,
+	: itsParam(unique_ptr<NFmiParam> (new NFmiParam (theUnivId,
 									  NFmiString(theName),
 									  kFloatMissing,
 									  kFloatMissing,
@@ -72,7 +72,7 @@ param::param(const std::string& theName,
 }
 
 param::param(const param& other)
-	: itsParam(shared_ptr<NFmiParam> (new NFmiParam (*other.itsParam)))
+	: itsParam(unique_ptr<NFmiParam> (new NFmiParam (*other.itsParam)))
 	, itsGribParameter(other.itsGribParameter)
 	, itsGribCategory(other.itsGribCategory)
 	, itsGribDiscipline(other.itsGribDiscipline)
@@ -85,7 +85,7 @@ param::param(const param& other)
 
 param& param::operator=(const param& other)
 {
-	itsParam = shared_ptr<NFmiParam> (new NFmiParam (*other.itsParam));
+	itsParam = unique_ptr<NFmiParam> (new NFmiParam (*other.itsParam));
 	itsGribParameter = other.itsGribParameter;
 	itsGribCategory = other.itsGribCategory;
 	itsGribDiscipline = other.itsGribDiscipline;
