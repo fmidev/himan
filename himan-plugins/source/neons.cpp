@@ -20,7 +20,7 @@ once_flag oflag;
 
 neons::neons() : itsInit(false), itsNeonsDB()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("neons"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("neons"));
 
 	// no lambda functions for gcc 4.4 :(
 	// call_once(oflag, [](){ NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS); });
@@ -34,7 +34,7 @@ void neons::InitPool()
 
 	char* host;
 
-	host = std::getenv("HOSTNAME");
+	host = getenv("HOSTNAME");
 
 	// TODO: a smarter way to check if we are in production server
 
@@ -354,7 +354,7 @@ map<string,string> neons::ProducerInfo(long fmiProducerId)
 	return ret;
 }
 
-std::string neons::LatestTime(const producer& prod, const string& geom_name)
+string neons::LatestTime(const producer& prod, const string& geom_name)
 {
 
 	Init();
@@ -389,24 +389,27 @@ NFmiNeonsDB& neons::NeonsDB()
 	return *itsNeonsDB.get();
 }
 
-/// Gets grib parameter name based on number and code table
-/**
- *  \par fmiParameterId - parameter number
- *  \par codeTableVersion  - code table number
- */
-std::string neons::GribParameterName(const long fmiParameterId, const long codeTableVersion) 
+string neons::GribParameterName(const long fmiParameterId, const long codeTableVersion)
 {	
 	Init();
 	
-	std::string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, codeTableVersion);
+	string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, codeTableVersion);
 	return paramName; 
 	
 }
 
-std::string neons::GribParameterName(const long fmiParameterId, const long category, const long discipline, const long producer) 
+string neons::GribParameterName(const long fmiParameterId, const long category, const long discipline, const long producer)
 {
 	Init();
 	
-	std::string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, category, discipline, producer);
+	string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, category, discipline, producer);
 	return paramName;   
+}
+
+map<string, string> neons::GeometryDefinition(const string& geom_name)
+{
+	Init();
+
+	return itsNeonsDB->GetGeometryDefinition(geom_name);
+
 }

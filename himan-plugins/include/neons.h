@@ -68,6 +68,13 @@ public:
     std::vector<std::string> Files(const search_options& options);
     bool Save(std::shared_ptr<const info> resultInfo, const std::string& theFileName);
     std::map<std::string,std::string> ProducerInfo(long fmiProducerId);
+
+    /// Gets grib parameter name based on number and code table
+    /**
+     *  \par fmiParameterId - parameter number
+     *  \par codeTableVersion  - code table number
+     */
+
     std::string GribParameterName(const long fmiParameterId,const long codeTableVersion);
     std::string GribParameterName(const long fmiParameterId,const long category, const long discipline, const long producer);
 
@@ -80,6 +87,9 @@ public:
      */
 
     std::string LatestTime(const producer& prod, const std::string& geom_name = "");
+
+
+    std::map<std::string, std::string> GeometryDefinition(const std::string& geom_name);
 
     /**
      * @brief Function to expose the NFmiNeonsDB interface
