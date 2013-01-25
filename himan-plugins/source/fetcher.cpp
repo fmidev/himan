@@ -26,6 +26,8 @@
 using namespace himan::plugin;
 using namespace std;
 
+const unsigned int sleepSeconds = 10;
+
 fetcher::fetcher()
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
@@ -39,61 +41,87 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
 
     const search_options opts { requestedTime, requestedParam, requestedLevel, config } ;
 
-    // 1. Fetch data from cache
+    vector<shared_ptr<info>> theInfos;
 
-    // FromCache()
-
-    // 2. Fetch data from auxiliary files specified at command line
-
-    if (config->AuxiliaryFiles().size())
+    for (unsigned int waitedSeconds = 0; waitedSeconds < config->FileWaitTimeout() * 60; waitedSeconds += sleepSeconds)
     {
-        vector<shared_ptr<info>> auxInfos = FromFile(config->AuxiliaryFiles(), opts, true);
+    	// 1. Fetch data from cache
 
-        if (auxInfos.size())
-        {
-            itsLogger->Debug("Data found from auxiliary file(s)");
-            return auxInfos[0];
-        }
-        else
-        {
-            itsLogger->Warning("Data not found from auxiliary file(s)");
-        }
-    }
+    	// theInfos = FromCache()
 
-    // 3. Fetch data from Neons
+    	/*
+    	 *  2. Fetch data from auxiliary files specified at command line
+    	 *
+    	 *  Even if file_wait_timeout is specified, auxiliary files is searched
+    	 *  only once.
+    	 */
 
-    vector<string> files;
+    	if (config->AuxiliaryFiles().size() && waitedSeconds == 0)
+    	{
+    		theInfos = FromFile(config->AuxiliaryFiles(), opts, true);
 
-    if (config->ReadDataFromDatabase())
-    {
-        shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+    		if (theInfos.size())
+    		{
+    			itsLogger->Debug("Data found from auxiliary file(s)");
+    			break;
+    		}
+    		else
+    		{
+    			itsLogger->Warning("Data not found from auxiliary file(s)");
+    		}
+    	}
 
-        files = n->Files(opts);
-    }
+		// 3. Fetch data from Neons
 
-    if (files.empty())
-    {
-        itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
-    }
+		vector<string> files;
 
-    vector<shared_ptr<info>> theInfos = FromFile(files, opts, true);
+		if (config->ReadDataFromDatabase())
+		{
+			shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-    if (theInfos.size() == 0)
-    {
-    	string optsStr = "producer: " + boost::lexical_cast<string> (config->SourceProducer());
-    	optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
-    	optsStr += " param: " + requestedParam.Name();
-    	optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
+			files = n->Files(opts);
 
-    	itsLogger->Warning("No valid data found with given search options " + optsStr);
+			if (!files.empty())
+			{
+				theInfos = FromFile(files, opts, true);
 
-    	throw kFileDataNotFound;
+				break;
+			}
+	    	else if (config->ReadDataFromDatabase())
+	    	{
+	    		itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
+	    	}
+		}
+
+		if (config->FileWaitTimeout() > 0)
+		{
+			itsLogger->Debug("Sleeping for " + boost::lexical_cast<string> (sleepSeconds) + " seconds (cumulative: " + boost::lexical_cast<string> (waitedSeconds) + ")");
+
+			if (!config->ReadDataFromDatabase())
+			{
+				itsLogger->Warning("file_wait_timeout specified but file read from Neons is disabled");
+			}
+
+			sleep(sleepSeconds);
+		}
     }
 
     /*
      *  Safeguard; later in the code we do not check whether the data requested
      *  was actually what was requested.
      */
+
+	if (theInfos.size() == 0)
+	{
+		string optsStr = "producer: " + boost::lexical_cast<string> (config->SourceProducer());
+		optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
+		optsStr += " param: " + requestedParam.Name();
+		optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
+
+		itsLogger->Warning("No valid data found with given search options " + optsStr);
+
+		throw kFileDataNotFound;
+	}
 
     // assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
 
