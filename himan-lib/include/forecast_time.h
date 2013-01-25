@@ -1,10 +1,9 @@
-/*
- * forecast_time.h
+/**
+ * @file forecast_time.h
  *
- *  Created on: Dec 1, 2012
- *      Author: partio
+ * @date Dec 1, 2012
+ * @author partio
  *
- * Container for raw_times.
  */
 
 #ifndef FORECAST_TIME_H
@@ -16,6 +15,12 @@
 
 namespace himan
 {
+
+/**
+ * @class forecast_time
+ *
+ * @brief Describe a forecast time: origin time and valid (forecasted) time
+ */
 
 class forecast_time
 {
@@ -58,17 +63,25 @@ public:
     void ValidDateTime(std::shared_ptr<raw_time> theValidDateTime);
     void ValidDateTime(std::string& theValidDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
+    /**
+	 *
+     * @return Time step resolution
+     */
+
+    HPTimeResolution StepResolution() const;
+    void StepResolution(HPTimeResolution theStepResolution);
+
 private:
-    std::shared_ptr<logger> itsLogger; // using shared instead of unique since unique prevents
-    // copying of object
+    std::unique_ptr<logger> itsLogger;
 
     std::shared_ptr<raw_time> itsOriginDateTime;
     std::shared_ptr<raw_time> itsValidDateTime;
 
+    HPTimeResolution itsStepResolution;
 };
 
 inline
-std::ostream& operator<<(std::ostream& file, forecast_time& ob)
+std::ostream& operator<<(std::ostream& file, const forecast_time& ob)
 {
     return ob.Write(file);
 }

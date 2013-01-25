@@ -49,7 +49,7 @@ public:
     bool operator==(const raw_time& other);
     bool operator!=(const raw_time& other);
 
-    bool Adjust(const std::string& theTimeType, int theValue);
+    bool Adjust(HPTimeResolution timeResolution, int theValue);
 
     boost::posix_time::ptime RawTime() const
     {

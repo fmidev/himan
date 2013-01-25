@@ -538,7 +538,7 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 			forecast_time theTime (shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())),
 								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
 
-			theTime.ValidDateTime()->Adjust("hours", times[i]);
+			theTime.ValidDateTime()->Adjust(kHour, times[i]);
 
 			theTimes.push_back(theTime);
 		}
@@ -557,9 +557,9 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 
 		string unit = pt.get<string>("time.step_unit");
 
-		if (unit != "hour")
+		if (unit != "hour" && unit != "minute")
 		{
-			throw runtime_error("Step units other than hour are not supported yet");
+			throw runtime_error("Step unit '" + unit + "' not supported");
 		}
 
 		vector<forecast_time> theTimes;
@@ -567,13 +567,23 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 		int curtime = start;
 		int curstep = 0;
 
+		HPTimeResolution stepResolution = kHour;
+
+		if (unit == "minute")
+		{
+			stop *= 60;
+			stepResolution = kMinute;
+		}
+
 		do
 		{
 
 			forecast_time theTime (shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())),
 								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
 
-			theTime.ValidDateTime()->Adjust("hours", curstep);
+			theTime.ValidDateTime()->Adjust(stepResolution, curstep);
+
+			theTime.StepResolution(stepResolution);
 
 			theTimes.push_back(theTime);
 

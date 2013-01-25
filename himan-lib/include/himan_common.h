@@ -165,6 +165,13 @@ enum HPDimensionType
     kLocationDimension
 };
 
+enum HPTimeResolution
+{
+	kUnknownTimeResolution = 0,
+	kHour,
+	kMinute
+};
+
 /**
  * @struct HPVersionNumber
  *

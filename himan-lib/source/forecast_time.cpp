@@ -18,6 +18,7 @@ forecast_time::forecast_time()
 forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime)
     : itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(theOriginDateTime)))
     , itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime)))
+	, itsStepResolution(kHour)
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
@@ -25,6 +26,7 @@ forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& 
 forecast_time::forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::shared_ptr<raw_time> theValidDateTime)
     : itsOriginDateTime(theOriginDateTime)
     , itsValidDateTime(theValidDateTime)
+	, itsStepResolution(kHour)
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
@@ -34,6 +36,7 @@ forecast_time::forecast_time(const std::string& theOriginDateTime,
                              const std::string& theDateMask)
     : itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(theOriginDateTime, theDateMask)))
     , itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime, theDateMask)))
+	, itsStepResolution(kHour)
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
@@ -41,6 +44,7 @@ forecast_time::forecast_time(const std::string& theOriginDateTime,
 forecast_time::forecast_time(const forecast_time& other)
     : itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime)))
     , itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime)))
+	, itsStepResolution(other.itsStepResolution)
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
@@ -49,7 +53,7 @@ forecast_time& forecast_time::operator=(const forecast_time& other)
 {
     itsOriginDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime));
     itsValidDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime));
-
+    itsStepResolution = other.itsStepResolution;
     return *this;
 }
 
@@ -59,6 +63,7 @@ std::ostream& forecast_time::Write(std::ostream& file) const
     file << "<" << ClassName() << " " << Version() << ">" << std::endl;
     file << *itsOriginDateTime;
     file << *itsValidDateTime;
+    file << "__itsStepResolution__ " << itsStepResolution << std::endl;
 
     return file;
 }
@@ -70,7 +75,9 @@ bool forecast_time::operator==(const forecast_time& other)
         return true;
     }
 
-    return ((*itsOriginDateTime == *other.itsOriginDateTime) && (*itsValidDateTime == *other.itsValidDateTime));
+    return ((*itsOriginDateTime == *other.itsOriginDateTime)
+    			&& (*itsValidDateTime == *other.itsValidDateTime)
+    			&& itsStepResolution == other.itsStepResolution);
 }
 
 bool forecast_time::operator!=(const forecast_time& other)
@@ -83,7 +90,26 @@ int forecast_time::Step() const
 
     if (itsValidDateTime->RawTime() != boost::date_time::not_a_date_time && itsOriginDateTime->RawTime() != boost::date_time::not_a_date_time)
     {
-        return (itsValidDateTime->RawTime() - itsOriginDateTime->RawTime()).hours();
+
+    	int step = kHPMissingInt;
+
+    	switch (itsStepResolution)
+    	{
+    	case kHour:
+    		step = (itsValidDateTime->RawTime() - itsOriginDateTime->RawTime()).hours();
+    		break;
+
+    	case kMinute:
+    		step = (itsValidDateTime->RawTime() - itsOriginDateTime->RawTime()).total_seconds() / 60;
+    		break;
+
+    	default:
+    		throw std::runtime_error(ClassName() + ": unknown step resolution");
+    		break;
+    	}
+
+    	return step;
+
     }
 
     return kHPMissingInt;
@@ -117,4 +143,15 @@ void forecast_time::ValidDateTime(std::shared_ptr<raw_time> theValidDateTime)
 void forecast_time::ValidDateTime(std::string& theValidDateTime, const std::string& theDateMask)
 {
     itsValidDateTime = std::shared_ptr<raw_time> (new raw_time(theValidDateTime, theDateMask));
+}
+
+
+HPTimeResolution forecast_time::StepResolution() const
+{
+	return itsStepResolution;
+}
+
+void forecast_time::StepResolution(HPTimeResolution theStepResolution)
+{
+	itsStepResolution = theStepResolution;
 }

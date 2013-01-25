@@ -87,14 +87,24 @@ std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, 
 
 }
 
-bool raw_time::Adjust(const std::string& theTimeType, int theValue)
+bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 {
 
-    if (theTimeType == "hours")
+    if (timeResolution == kHour)
     {
         boost::posix_time::hours adjustment (theValue);
 
         itsDateTime = itsDateTime + adjustment;
+    }
+    else if (timeResolution == kMinute)
+    {
+        boost::posix_time::minutes adjustment (theValue);
+
+        itsDateTime = itsDateTime + adjustment;
+    }
+    else
+    {
+    	throw std::runtime_error(ClassName() + ": Invalid time adjustment unit: " + boost::lexical_cast<std::string> (timeResolution) + "'");
     }
 
     return true;
@@ -108,4 +118,3 @@ std::ostream& raw_time::Write(std::ostream& file) const
 
     return file;
 }
-
