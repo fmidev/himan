@@ -605,7 +605,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		map<string, string> geominfo = n->NeonsDB().GetGeometryDefinition(geom);
+		map<string, string> geominfo = n->GeometryDefinition(geom);
 
 		if (!geominfo.empty())
 		{
