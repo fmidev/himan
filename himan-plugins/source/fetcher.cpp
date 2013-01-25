@@ -88,7 +88,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
 
 				break;
 			}
-	    	else if (config->ReadDataFromDatabase())
+	    	else
 	    	{
 	    		itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
 	    	}
