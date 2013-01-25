@@ -15,6 +15,8 @@
 using namespace himan;
 using namespace std;
 
+const double kDegToRad = 0.017453292; // PI / 180
+
 string util::MakeNeonsFileName(shared_ptr<const info> info)
 {
 
@@ -199,4 +201,109 @@ std::pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoi
 	}
 
 	return std::pair<point,point> (bottomLeft, topRight);
+}
+
+point util::UVToEarthRelative(const point& regPoint, const point& rotPoint, const point& southPole, const point& UV)
+{
+
+	point newSouthPole;
+
+	if (southPole.Y() > 0)
+	{
+		newSouthPole.Y(-southPole.Y());
+		newSouthPole.X(0);
+	}
+	else
+	{
+		newSouthPole = southPole;
+	}
+
+	double sinPoleY = sin(kDegToRad * (newSouthPole.Y()+90)); // zsyc
+	double cosPoleY = cos(kDegToRad * (newSouthPole.Y()+90)); // zcyc
+
+	//double zsxreg = sin(kDegToRad * regPoint.X());
+	//double zcxreg = cos(kDegToRad * regPoint.X());
+	//double zsyreg = sin(kDegToRad * regPoint.Y());
+	double cosRegY = cos(kDegToRad * regPoint.Y()); // zcyreg
+
+	double zxmxc = kDegToRad * (regPoint.X() - newSouthPole.X());
+	double sinxmxc = sin(zxmxc); // zsxmxc
+	double cosxmxc = cos(zxmxc); // zcxmxc
+
+	double sinRotX = sin(kDegToRad * rotPoint.X()); // zsxrot
+	double cosRotX = cos(kDegToRad * rotPoint.X()); // zcxrot
+	double sinRotY = sin(kDegToRad * rotPoint.Y()); // zsyrot
+	double cosRotY = cos(kDegToRad * rotPoint.Y()); // zcyrot
+
+	double PA = cosxmxc * cosRotX + cosPoleY * sinxmxc * sinRotX;
+	double PB = cosPoleY * sinxmxc * cosRotX * sinRotY + sinPoleY * sinxmxc * cosRotY - cosxmxc * sinRotX * sinRotY;
+	double PC = (-sinPoleY) * sinRotX / cosRegY;
+	double PD = (cosPoleY * cosRotY - sinPoleY * cosRotX * sinRotY) / cosRegY;
+
+	double U = PA * UV.X() + PB * UV.Y();
+	double V = PC * UV.X() + PD * UV.Y();
+
+	return point(U,V);
+}
+
+point util::UVToGridRelative(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole, const himan::point& UV)
+{
+
+	point newSouthPole;
+
+	if (southPole.Y() > 0)
+	{
+		newSouthPole.Y(-southPole.Y());
+		newSouthPole.X(0);
+	}
+	else
+	{
+		newSouthPole = southPole;
+	}
+
+	double sinPoleY = sin(kDegToRad * (newSouthPole.Y()+90)); // zsyc
+	double cosPoleY = cos(kDegToRad * (newSouthPole.Y()+90)); // zcyc
+
+	//double sinRegX = sin(kDegToRad * regPoint.X()); // zsxreg
+	//double cosRegX = cos(kDegToRad * regPoint.X()); // zcxreg
+	double sinRegY = sin(kDegToRad * regPoint.Y()); // zsyreg
+	double cosRegY = cos(kDegToRad * regPoint.Y()); // zcyreg
+
+	double zxmxc = kDegToRad * (regPoint.X() - newSouthPole.X());
+	double sinxmxc = sin(zxmxc); // zsxmxc
+	double cosxmxc = cos(zxmxc); // zcxmxc
+
+	double sinRotX = sin(kDegToRad * rotPoint.X()); // zsxrot
+	double cosRotX = cos(kDegToRad * rotPoint.X()); // zcxrot
+	//double sinRotY = sin(kDegToRad * rotPoint.Y()); // zsyrot
+	double cosRotY = cos(kDegToRad * rotPoint.Y()); // zcyrot
+
+	double PA = cosPoleY * sinxmxc * sinRotX + cosxmxc * cosRotX;
+	double PB = cosPoleY * cosxmxc * sinRegY * sinRotX - sinPoleY * cosRegY * sinRotX - sinxmxc * sinRegY * cosRotX;
+	double PC = sinPoleY * sinxmxc / cosRotY;
+	double PD = (sinPoleY * cosxmxc * sinRegY + cosPoleY * cosRegY) / cosRotY;
+
+	double U = PA * UV.X() + PB * UV.Y();
+	double V = PC * UV.X() + PD * UV.Y();
+
+	return point(U,V);
+}
+
+point util::UVToGeographical(double longitude, const point& stereoUV)
+{
+
+	double U,V;
+
+	if (stereoUV.X() == 0 && stereoUV.Y() == 0)
+	{
+		return point(0,0);
+	}
+
+	double sinLon = sin(longitude * kDegToRad);
+	double cosLon = cos(longitude * kDegToRad);
+
+	U = stereoUV.X() * cosLon + stereoUV.Y() * sinLon;
+	V = -stereoUV.X() * sinLon + stereoUV.Y() * cosLon;
+
+	return point(U,V);
 }

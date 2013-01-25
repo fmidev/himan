@@ -48,7 +48,86 @@ std::string MakeNeonsFileName(std::shared_ptr <const info> info);
 
 std::vector<std::string> Split(const std::string& s, const std::string& delims, bool fill);
 
+/**
+ * @brief Calculate area coordinates from first gridpoint, scanning mode, grid size and distance between two gridpoints.
+ *
+ * This function is the opposite of FirstGridPoint(). NOTE: scanning mode must already be set when calling this function!
+ *
+ * @param firstPoint Latitude and longitude of first gridpoint
+ * @param ni Grid size in X direction
+ * @param ny Grid size in Y direction
+ * @param di Distance between two points in X direction
+ * @param dj Distance between two points in Y direction
+ * @param scanningMode Scanningmode of data
+ *
+ * @return std::pair of points, first=bottomLeft, second=topRight
+ */
+
 std::pair<point,point> CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj, HPScanningMode scanningMode);
+
+
+/**
+ * @brief If U and V components of wind are grid relative, transform them to be earth-relative.
+ *
+ * Algorithm by J.E. HAUGEN (HIRLAM JUNE -92), modified by K. EEROLA
+ * Algorithm originally defined in hilake/TURNDD.F
+ *
+ * All coordinate values are given in degrees N and degrees E (negative values for S and W)
+ *
+ * Function works only with rotated latlon projections.
+ *
+ * @param regPoint Latlon coordinates of the point in question in earth-relative form
+ * @param rotPoint Latlon coordinates of the point in question in grid-relative form
+ * @param southPole Latlon coordinates of south pole
+ * @param UV U and V in grid-relative form
+ * @return U and V in earth-relative form
+ */
+
+himan::point UVToEarthRelative(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole, const himan::point& UV);
+
+/**
+ * @brief If U and V components of wind are earth relative, transform them to be grid-relative.
+ *
+ * Algorithm by J.E. HAUGEN (HIRLAM JUNE -92), modified by K. EEROLA
+ * Algorithm originally defined in hilake/TURNDD.F
+ *
+ * All coordinate values are given in degrees N and degrees E (negative values for S and W)
+ *
+ * Function works only with rotated latlon projections.
+ *
+ * @param regPoint Latlon coordinates of the point in question in earth-relative form
+ * @param rotPoint Latlon coordinates of the point in question in grid-relative form
+ * @param southPole Latlon coordinates of south pole
+ * @param UV U and V in earth-relative form
+ * @return U and V in grid-relative form
+ */
+
+himan::point UVToGridRelative(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole, const himan::point& UV);
+
+/**
+ * @brief If U and V components of a parameter are grid relative, transform them to be earth-relative
+ *
+ * Algorithm used is
+ *
+ * Ugeo = Ustereo * cos(x) + Vstereo * sin(x)
+ * Vgeo = -Ustereo * sin(x) + Vstereo * cos(x)
+ *
+ * Where x is longitude of the point east of reference longitude
+ * Note: The reference longitude is not always Greenwich longitude
+ *
+ * Algorithm originally defined in hilake/VPTOVM.F
+ *
+ * Function works only with stereographic projections.
+ *
+ * !!! FUNCTION HAS NOT BEEN THOROUGHLY TESTED DUE TO LACK OF INPUT UV DATA IN STEREOGRAPHIC PROJECTION !!!
+ *
+ * @param longitude Reference longitude
+ * @param rotatedUV U and V in grid-relative form
+ * @return U and V in earth-relative form
+ */
+
+himan::point UVToGeographical(double longitude, const himan::point& stereoUV);
+
 
 } // namespace util
 } // namespace himan
