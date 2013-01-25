@@ -253,7 +253,7 @@ public:
 
     void Fill(T fillValue)
     {
-    	std::fill(itsData.begin(),itsData.begin(),fillValue);
+    	std::fill(itsData.begin(),itsData.end(),fillValue);
     }
 
     // Only used for calculating statistics in PrintFloatData()
