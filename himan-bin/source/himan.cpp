@@ -10,7 +10,7 @@
 #include <iostream>
 #include "himan_common.h"
 #include "plugin_factory.h"
-#include "ini_parser.h"
+#include "json_parser.h"
 #include "himan_plugin.h"
 #include "compiled_plugin.h"
 #include "auxiliary_plugin.h"
@@ -29,7 +29,7 @@ void banner();
 int main(int argc, char** argv)
 {
 
-    std::shared_ptr<configuration> theConfiguration = ini_parser::Instance()->Parse(argc, argv);
+    std::shared_ptr<configuration> theConfiguration = json_parser::Instance()->Parse(argc, argv);
 
     banner();
 
