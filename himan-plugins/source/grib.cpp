@@ -244,6 +244,23 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 	itsGrib->Message()->IScansNegatively(iNegative);
 	itsGrib->Message()->JScansPositively(jPositive);
 
+	if (info->StepSizeOverOneByte()) // Forecast with stepvalues that don't fit in one byte
+	{
+		itsGrib->Message()->TimeRangeIndicator(10);
+
+		long step = info->Time().Step();
+		long p1 = (step & 0xFF00) >> 8;
+		long p2 = step & 0x00FF;
+
+		itsGrib->Message()->P1(p1);
+		itsGrib->Message()->P2(p2);
+
+	}
+	else
+	{
+		itsGrib->Message()->TimeRangeIndicator(0); // Force forecast
+	}
+
 	if (edition == 2)
 	{
 		itsGrib->Message()->TypeOfGeneratingProcess(1); // Forecast
@@ -424,7 +441,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		 */
 
 		long dt = itsGrib->Message()->DataTime();
-		long step = itsGrib->Message()->EndStep();
+
 		string dataTime = boost::lexical_cast<string> (dt);
 
 		if (dt < 1000)
@@ -432,9 +449,25 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			dataTime = "0" + dataTime;
 		}
 
-		if (itsGrib->Message()->Edition() == 2) 
+		/* Determine time step */
+
+		long step;
+
+		if (itsGrib->Message()->TimeRangeIndicator() == 10)
 		{
-			step = itsGrib->Message()->ForecastTime();
+			long P1 = itsGrib->Message()->P1();
+			long P2 = itsGrib->Message()->P2();
+
+			step = (P1 << 8 ) | P2;
+		}
+		else
+		{
+			step = itsGrib->Message()->EndStep();
+
+			if (itsGrib->Message()->Edition() == 2)
+			{
+				step = itsGrib->Message()->ForecastTime();
+			}
 		}
 		
 		string originDateTimeStr = dataDate + dataTime;
