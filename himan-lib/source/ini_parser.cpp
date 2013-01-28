@@ -7,7 +7,8 @@
 
 #include "ini_parser.h"
 #include <boost/program_options.hpp>
-#include <boost/property_tree/ini_parser.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
 #include <stdexcept>
 #include "plugin_factory.h"
 #include "logger_factory.h"
@@ -252,7 +253,7 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 	try
 	{
-		boost::property_tree::ini_parser::read_ini(theConfigurationFile, pt);
+		boost::property_tree::json_parser::read_json(theConfigurationFile, pt);
 	}
 	catch (exception& e)
 	{
@@ -267,7 +268,10 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 	try
 	{
-		itsConfiguration->Plugins(util::Split(pt.get<string>("plugins.plugins"), ",", false));
+		BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
+                {
+                        itsConfiguration->Plugins(util::Split(node.second.get<std::string>("plugins"), ",", true));
+                }
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -283,8 +287,8 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	try
 	{
 
-		itsConfiguration->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("producer.source_producer")));
-		itsConfiguration->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("producer.target_producer")));
+		itsConfiguration->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("source_producer")));
+		itsConfiguration->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("target_producer")));
 
 		/*
 		 * Target producer is also set to target info; source infos (and producers) are created
@@ -310,8 +314,10 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	try
 	{
 
-		string theLevelTypeStr = pt.get<string>("level.leveltype");
-
+		BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
+                {
+        	string theLevelTypeStr = node.second.get<std::string>("leveltype");
+  	
 		boost::to_upper(theLevelTypeStr);
 
 		HPLevelType theLevelType;
@@ -344,7 +350,7 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 		// can cause exception, what will happen then ?
 
-		vector<string> levelsStr = util::Split(pt.get<string>("level.levels"), ",", true);
+		vector<string> levelsStr = util::Split(node.second.get<std::string>("levels"), ",", true);
 
 		vector<float> levels ;
 
@@ -363,6 +369,8 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 		}
 
 		itsConfiguration->Info()->Levels(theLevels);
+
+                } // END BOOST_FOREACH
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -378,7 +386,7 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	try
 	{
 
-		string theWholeFileWrite = pt.get<string>("meta.whole_file_write");
+		string theWholeFileWrite = pt.get<string>("whole_file_write");
 
 		if (ParseBoolean(theWholeFileWrite))
 		{
@@ -399,7 +407,7 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 	try
 	{
-		string theReadDataFromDatabase = pt.get<string>("meta.read_data_from_database");
+		string theReadDataFromDatabase = pt.get<string>("read_data_from_database");
 
 		if (!ParseBoolean(theReadDataFromDatabase))
 		{
@@ -420,7 +428,7 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 	try
 	{
-		string theFileWaitTimeout = pt.get<string>("meta.file_wait_timeout");
+		string theFileWaitTimeout = pt.get<string>("file_wait_timeout");
 
 		itsConfiguration->itsFileWaitTimeout = boost::lexical_cast<unsigned short> (theFileWaitTimeout);
 
@@ -438,7 +446,7 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 	try
 	{
-		string theLeadingDimensionStr = pt.get<string>("meta.leading_dimension");
+		string theLeadingDimensionStr = pt.get<string>("leading_dimension");
 
 		HPDimensionType theLeadingDimension = kUnknownDimension;
 
@@ -474,7 +482,7 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		string theOriginDateTime = pt.get<string>("time.origintime");
+		string theOriginDateTime = pt.get<string>("origintime");
 		string mask = "%Y-%m-%d %H:%M:%S";
 
 		boost::algorithm::to_lower(theOriginDateTime);
@@ -516,7 +524,7 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 	try
 	{
 
-		string hours = pt.get<string>("time.hours");
+		string hours = pt.get<string>("hours");
 		vector<string> timesStr = util::Split(hours, ",", true);
 
 		vector<int> times ;
@@ -551,11 +559,11 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 		// hours was not specified
 		// check if start/stop times are
 
-		int start = boost::lexical_cast<int> (pt.get<string>("time.start_hour"));
-		int stop = boost::lexical_cast<int> (pt.get<string>("time.stop_hour"));
-		int step = boost::lexical_cast<int> (pt.get<string>("time.step"));
+		int start = boost::lexical_cast<int> (pt.get<string>("start_hour"));
+		int stop = boost::lexical_cast<int> (pt.get<string>("stop_hour"));
+		int step = boost::lexical_cast<int> (pt.get<string>("step"));
 
-		string unit = pt.get<string>("time.step_unit");
+		string unit = pt.get<string>("step_unit");
 
 		if (unit != "hour" && unit != "minute")
 		{
@@ -609,7 +617,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		string geom = pt.get<string>("area.geom_name");
+		string geom = pt.get<string>("geom_name");
 
 		itsConfiguration->itsGeomName = geom;
 
@@ -690,7 +698,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		string theProjection = pt.get<string>("area.projection");
+		string theProjection = pt.get<string>("projection");
 
 		if (itsConfiguration->itsInfo->Projection() == kUnknownProjection)
 		{
@@ -724,9 +732,9 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Info()->BottomLeft(point(pt.get<double>("area.bottom_left_longitude"), pt.get<double>("area.bottom_left_latitude")));
-		itsConfiguration->Info()->TopRight(point(pt.get<double>("area.top_right_longitude"), pt.get<double>("area.top_right_latitude")));
-		itsConfiguration->Info()->Orientation(pt.get<double>("area.orientation"));
+		itsConfiguration->Info()->BottomLeft(point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
+		itsConfiguration->Info()->TopRight(point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
+		itsConfiguration->Info()->Orientation(pt.get<double>("orientation"));
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -742,7 +750,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Info()->Orientation(pt.get<double>("area.orientation"));
+		itsConfiguration->Info()->Orientation(pt.get<double>("orientation"));
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -758,7 +766,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Info()->BottomLeft(point(pt.get<double>("area.south_pole_longitude"), pt.get<double>("area.south_pole_latitude")));
+		itsConfiguration->Info()->BottomLeft(point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude")));
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -773,8 +781,8 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Ni(pt.get<size_t>("grid.ni"));
-		itsConfiguration->Nj(pt.get<size_t>("grid.nj"));
+		itsConfiguration->Ni(pt.get<size_t>("ni"));
+		itsConfiguration->Nj(pt.get<size_t>("nj"));
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
