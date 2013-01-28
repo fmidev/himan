@@ -269,9 +269,9 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	try
 	{
 		BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
-                {
-                        itsConfiguration->Plugins(util::Split(node.second.get<std::string>("plugins"), ",", true));
-                }
+		{
+			itsConfiguration->Plugins(util::Split(node.second.get<std::string>("plugins"), ",", true));
+		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -315,62 +315,62 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	{
 
 		BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
-                {
+		{
         	string theLevelTypeStr = node.second.get<std::string>("leveltype");
   	
-		boost::to_upper(theLevelTypeStr);
+			boost::to_upper(theLevelTypeStr);
 
-		HPLevelType theLevelType;
+			HPLevelType theLevelType;
 
-		if (theLevelTypeStr == "HEIGHT")
-		{
-			theLevelType = kHeight;
-		}
-		else if (theLevelTypeStr == "PRESSURE")
-		{
-			theLevelType = kPressure;
-		}
-		else if (theLevelTypeStr == "HYBRID")
-		{
-			theLevelType = kHybrid;
-		}
-		else if (theLevelTypeStr == "GROUND")
-		{
-			theLevelType = kGround;
-		}
-		else if (theLevelTypeStr == "MEANSEA")
-		{
-			theLevelType = kMeanSea;
-		}
+			if (theLevelTypeStr == "HEIGHT")
+			{
+				theLevelType = kHeight;
+			}
+			else if (theLevelTypeStr == "PRESSURE")
+			{
+				theLevelType = kPressure;
+			}
+			else if (theLevelTypeStr == "HYBRID")
+			{
+				theLevelType = kHybrid;
+			}
+			else if (theLevelTypeStr == "GROUND")
+			{
+				theLevelType = kGround;
+			}
+			else if (theLevelTypeStr == "MEANSEA")
+			{
+				theLevelType = kMeanSea;
+			}
 
-		else
-		{
-			throw runtime_error("Unknown level type: " + theLevelTypeStr);	// not good practice; constructing string
-		}
+			else
+			{
+				throw runtime_error("Unknown level type: " + theLevelTypeStr);	// not good practice; constructing string
+			}
 
-		// can cause exception, what will happen then ?
+			// can cause exception, what will happen then ?
 
-		vector<string> levelsStr = util::Split(node.second.get<std::string>("levels"), ",", true);
+			vector<string> levelsStr = util::Split(node.second.get<std::string>("levels"), ",", true);
 
-		vector<float> levels ;
+			vector<float> levels ;
 
-		for (size_t i = 0; i < levelsStr.size(); i++)
-		{
-			levels.push_back(boost::lexical_cast<float> (levelsStr[i]));
-		}
+			for (size_t i = 0; i < levelsStr.size(); i++)
+			{
+				levels.push_back(boost::lexical_cast<float> (levelsStr[i]));
+			}
 
-		sort (levels.begin(), levels.end());
+			sort (levels.begin(), levels.end());
 
-		vector<level> theLevels;
+			vector<level> theLevels;
 
-		for (size_t i = 0; i < levels.size(); i++)
-		{
-			theLevels.push_back(level(theLevelType, levels[i], theLevelTypeStr));
-		}
+			for (size_t i = 0; i < levels.size(); i++)
+			{
+				theLevels.push_back(level(theLevelType, levels[i], theLevelTypeStr));
+			}
 
-		itsConfiguration->Info()->Levels(theLevels);
+			itsConfiguration->Info()->Levels(theLevels);
 
-                } // END BOOST_FOREACH
+		} // END BOOST_FOREACH
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -570,18 +570,23 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 			throw runtime_error("Step unit '" + unit + "' not supported");
 		}
 
-		vector<forecast_time> theTimes;
-
-		int curtime = start;
-		int curstep = 0;
-
 		HPTimeResolution stepResolution = kHour;
 
 		if (unit == "minute")
 		{
+			start *= 60;
 			stop *= 60;
 			stepResolution = kMinute;
 		}
+
+		if (stop > 1<<8)
+		{
+			itsConfiguration->itsInfo->StepSizeOverOneByte(true);
+		}
+
+		int curtime = start;
+
+		vector<forecast_time> theTimes;
 
 		do
 		{
@@ -589,14 +594,13 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 			forecast_time theTime (shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())),
 								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
 
-			theTime.ValidDateTime()->Adjust(stepResolution, curstep);
+			theTime.ValidDateTime()->Adjust(stepResolution, curtime);
 
 			theTime.StepResolution(stepResolution);
 
 			theTimes.push_back(theTime);
 
 			curtime += step;
-			curstep = curtime;
 
 		} while (curtime <= stop);
 
