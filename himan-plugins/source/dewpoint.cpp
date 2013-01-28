@@ -122,7 +122,7 @@ void dewpoint::Process(shared_ptr<configuration> conf)
 
     vector<param> params;
 
-    param requestedParam ("TD-K", 10);
+    param requestedParam ("TD-C", 10);
 
     requestedParam.GribDiscipline(0);
     requestedParam.GribCategory(0);
