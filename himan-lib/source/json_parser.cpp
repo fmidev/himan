@@ -5,7 +5,7 @@
  *	  Author: partio
  */
 
-#include "ini_parser.h"
+#include "json_parser.h"
 #include <boost/program_options.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
@@ -43,26 +43,26 @@ using namespace std;
  *
  */
 
-ini_parser* ini_parser::itsInstance = NULL;
+json_parser* json_parser::itsInstance = NULL;
 
-ini_parser* ini_parser::Instance()
+json_parser* json_parser::Instance()
 {
 
 	if (!itsInstance)
 	{
-		itsInstance = new ini_parser;
+		itsInstance = new json_parser;
 	}
 
 	return itsInstance;
 }
 
-ini_parser::ini_parser()
+json_parser::json_parser()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("ini_parser"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("json_parser"));
 	itsConfiguration = shared_ptr<configuration> (new configuration());
 }
 
-shared_ptr<configuration> ini_parser::Parse(int argc, char** argv)
+shared_ptr<configuration> json_parser::Parse(int argc, char** argv)
 {
 
 	ParseAndCreateInfo(argc, argv);
@@ -72,7 +72,7 @@ shared_ptr<configuration> ini_parser::Parse(int argc, char** argv)
 }
 
 
-void ini_parser::ParseAndCreateInfo(int argc, char** argv)
+void json_parser::ParseAndCreateInfo(int argc, char** argv)
 {
 
 	ParseCommandLine(argc, argv);
@@ -95,7 +95,7 @@ void ini_parser::ParseAndCreateInfo(int argc, char** argv)
 
 }
 
-void ini_parser::ParseCommandLine(int argc, char* argv[])
+void json_parser::ParseCommandLine(int argc, char* argv[])
 {
 	itsLogger->Debug("Parsing command line");
 
@@ -203,8 +203,8 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 		cout << "usage: himan [ options ]" << endl;
 		cout << desc;
 		cout << endl << "Examples:" << endl;
-		cout << "  himan -f etc/tpot.ini" << endl;
-		cout << "  himan -f etc/vvmms.ini -a file.grib -t querydata" << endl << endl;
+		cout << "  himan -f etc/tpot.json" << endl;
+		cout << "  himan -f etc/vvmms.json -a file.grib -t querydata" << endl << endl;
 		exit(1);
 	}
 
@@ -244,7 +244,7 @@ void ini_parser::ParseCommandLine(int argc, char* argv[])
 }
 
 
-void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
+void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 {
 
 	itsLogger->Debug("Parsing configuration file");
@@ -476,7 +476,7 @@ void ini_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	}
 }
 
-void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
+void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 {
 	/* Check origin time */
 
@@ -610,7 +610,7 @@ void ini_parser::ParseTime(const boost::property_tree::ptree& pt)
 
 }
 
-void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
+void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 {
 
 	/* First check for neons style geom name */
@@ -802,7 +802,7 @@ void ini_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
  * Note: will change argument to lower case.
  */
 
-bool ini_parser::ParseBoolean(string& booleanValue)
+bool json_parser::ParseBoolean(string& booleanValue)
 {
 	bool ret;
 

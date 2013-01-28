@@ -1,12 +1,12 @@
 /*
- * ini_parser.h
+ * json_parser.h
  *
  *  Created on: Nov 20, 2012
  *      Author: partio
  */
 
-#ifndef INI_PARSER_H
-#define INI_PARSER_H
+#ifndef JSON_PARSER_H
+#define JSON_PARSER_H
 
 #include <string>
 #include <vector>
@@ -16,22 +16,22 @@
 namespace himan
 {
 
-class ini_parser
+class json_parser
 {
 
 public:
 
-    static ini_parser* Instance();
+    static json_parser* Instance();
 
-    ini_parser(const ini_parser& other) = delete;
-    ini_parser& operator=(const ini_parser& other) = delete;
+    json_parser(const json_parser& other) = delete;
+    json_parser& operator=(const json_parser& other) = delete;
 
     std::shared_ptr<configuration> Parse(int argc, char** argv);
     std::shared_ptr<configuration> GetConfiguration() const;
 
     virtual std::string ClassName() const
     {
-        return "himan::ini_parser";
+        return "himan::json_parser";
     }
     virtual HPVersionNumber Version() const
     {
@@ -40,8 +40,8 @@ public:
 
 private:
 
-    ini_parser();
-    ~ini_parser() {}
+    json_parser();
+    ~json_parser() {}
 
     void ParseAndCreateInfo(int argc, char** argv);
     void ParseCommandLine(int argc, char** argv);
@@ -50,7 +50,7 @@ private:
     void ParseTime(const boost::property_tree::ptree& pt);
     bool ParseBoolean(std::string& booleanValue);
 
-    static ini_parser* itsInstance;
+    static json_parser* itsInstance;
     std::unique_ptr<logger> itsLogger;
 
     std::shared_ptr<configuration> itsConfiguration;
@@ -59,4 +59,4 @@ private:
 
 } // namespace himan
 
-#endif /* INI_PARSER_H */
+#endif /* JSON_PARSER_H */

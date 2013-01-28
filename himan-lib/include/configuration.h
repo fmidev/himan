@@ -25,7 +25,7 @@ class configuration
 
 public:
 
-    friend class ini_parser;
+    friend class json_parser;
 
     configuration();
     ~configuration() {}
