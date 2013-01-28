@@ -518,6 +518,9 @@ public:
 
     double Value() const;
 
+    bool StepSizeOverOneByte() const;
+    void StepSizeOverOneByte(bool theStepSizeOverOneByte);
+
 private:
 
     void Init();
@@ -543,6 +546,8 @@ private:
     raw_time itsOriginDateTime;
 
     size_t itsLocationIndex;
+
+    bool itsStepSizeOverOneByte;
 
 };
 

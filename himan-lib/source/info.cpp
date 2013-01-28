@@ -58,6 +58,7 @@ shared_ptr<info> info::Clone() const
 
     clone->LocationIndex(itsLocationIndex);
 
+    clone->StepSizeOverOneByte(itsStepSizeOverOneByte);
     return clone;
 
 }
@@ -72,7 +73,7 @@ void info::Init()
     itsSouthPole = point(kHPMissingFloat, kHPMissingFloat);
 
     itsOrientation = kHPMissingFloat;
-
+    itsStepSizeOverOneByte = false;
 }
 
 std::ostream& info::Write(std::ostream& file) const
@@ -453,4 +454,14 @@ double info::Orientation() const
 void info::Orientation(double theOrientation)
 {
     itsOrientation = theOrientation;
+}
+
+bool info::StepSizeOverOneByte() const
+{
+	return itsStepSizeOverOneByte;
+}
+
+void info::StepSizeOverOneByte(bool theStepSizeOverOneByte)
+{
+	itsStepSizeOverOneByte = theStepSizeOverOneByte;
 }
