@@ -8,7 +8,7 @@ fi
 
 rm -f himan*.grib
 
-$HIMAN -d 5 -f vvms_ec1h.ini -t grib t.grib vv.grib
+$HIMAN -d 5 -f vvms_ec1h.json -t grib t.grib vv.grib
 
 grib_compare result.grib himan_VV-MS_2013012100.grib
 
