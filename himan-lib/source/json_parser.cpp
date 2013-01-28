@@ -570,33 +570,36 @@ void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 			throw runtime_error("Step unit '" + unit + "' not supported");
 		}
 
-		vector<forecast_time> theTimes;
-
-		int curtime = start;
-		int curstep = 0;
-
 		HPTimeResolution stepResolution = kHour;
 
 		if (unit == "minute")
 		{
+			start *= 60;
 			stop *= 60;
 			stepResolution = kMinute;
 		}
 
+		if (stop > 1<<8)
+		{
+			itsConfiguration->itsInfo->StepSizeOverOneByte(true);
+		}
+
+		int curtime = start;
+
+		vector<forecast_time> theTimes;
 		do
 		{
 
 			forecast_time theTime (shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())),
 								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
 
-			theTime.ValidDateTime()->Adjust(stepResolution, curstep);
+			theTime.ValidDateTime()->Adjust(stepResolution, curtime);
 
 			theTime.StepResolution(stepResolution);
 
 			theTimes.push_back(theTime);
 
 			curtime += step;
-			curstep = curtime;
 
 		} while (curtime <= stop);
 
