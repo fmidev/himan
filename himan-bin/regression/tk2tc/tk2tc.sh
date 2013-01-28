@@ -8,7 +8,7 @@ fi
 
 rm -f himan*.grib
 
-$HIMAN -d 5 -f tk2tc_ec1h.ini -t grib source.grib
+$HIMAN -d 5 -f tk2tc_ec1h.json -t grib source.grib
 
 grib_compare result.grib himan_2013011800.grib
 
