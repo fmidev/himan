@@ -306,6 +306,43 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	itsGrib->Message()->UnitOfTimeRange(timeUnit);
 
+	/*
+	 *  GRIB 1
+	 *
+	 * 	BIT	VALUE	MEANING
+	 *	1	0		Direction increments not given
+	 *	1	1		Direction increments given
+	 *	2	0		Earth assumed spherical with radius = 6367.47 km
+	 *	2	1		Earth assumed oblate spheroid with size as determined by IAU in 1965: 6378.160 km, 6356.775 km, f = 1/297.0
+	 *	3-4	0		reserved (set to 0)
+	 *	5	0		u- and v-components of vector quantities resolved relative to easterly and northerly directions
+	 * 	5	1		u and v components of vector quantities resolved relative to the defined grid in the direction of increasing x and y (or i and j) coordinates respectively
+	 *	6-8	0		reserved (set to 0)
+	 *
+	 *	GRIB2
+	 *
+	 *	Bit No. 	Value 	Meaning
+	 *	1-2			Reserved
+	 *	3		0	i direction increments not given
+	 *	3		1	i direction increments given
+	 *	4		0	j direction increments not given
+	 *	4		1	j direction increments given
+	 *	5		0	Resolved u and v components of vector quantities relative to easterly and northerly directions
+	 *	5		1	Resolved u and v components of vector quantities relative to the defined grid in the direction
+	 *				of increasing x and y (or i and j) coordinates, respectively.
+	 *	6-8			Reserved - set to zero
+	 *
+	 */
+
+	if (edition == 1)
+	{
+		itsGrib->Message()->ResolutionAndComponentFlags(136); // 10001000
+	}
+	else
+	{
+		itsGrib->Message()->ResolutionAndComponentFlags(56); // 00111000
+	}
+
 	itsGrib->Message()->Write(outputFile, appendToFile);
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
@@ -422,7 +459,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		}
 		else
 		{
-			itsLogger->Warning("Unable to determine himan parameter unit for grib unit " + itsGrib->Message()->ParameterUnit());
+			itsLogger->Trace("Unable to determine himan parameter unit for grib unit " + itsGrib->Message()->ParameterUnit());
 		}
 
 		if (p != options.param)
