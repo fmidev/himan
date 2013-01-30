@@ -46,7 +46,7 @@ const double kRadToDeg = 57.295779513082; // 180 / PI
 
 windvector::windvector() : itsUseCuda(false)
 {
-	itsClearTextFormula = "WV = ";
+	itsClearTextFormula = "FF = sqrt(U*U+V*V) ; DD = round(180/PI * atan2(U,V) + 180.0) ; DF = round(U/10) + 100 * round(V)";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvector"));
 
