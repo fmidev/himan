@@ -15,7 +15,7 @@ if os.path.isfile(libcudart):
 
 auxiliary_plugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer']
 
-compiled_plugins = ['dewpoint','icing', 'kindex', 'seaicing', 'windvector']
+compiled_plugins = ['dewpoint','icing', 'kindex', 'precipitation', 'seaicing', 'windvector']
 
 cuda_plugins = ['tk2tc','tpot','vvms']
 
