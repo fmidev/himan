@@ -77,7 +77,7 @@ def main():
     except GribInternalError,err:
         print >>sys.stderr,err.msg
 
-    return 1
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
