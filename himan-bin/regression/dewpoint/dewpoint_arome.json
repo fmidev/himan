@@ -1,0 +1,19 @@
+{
+	"geom_name" : "AROME022",
+	"source_producer" : "199",
+	"target_producer" : "210",
+	"start_hour" : "24",
+	"stop_hour" : "25",
+	"step" : "15",
+	"step_unit" : "minute",
+	"whole_file_write" : "true",
+	"origintime" : "2013-01-28 06:00:00",
+	"read_data_from_database" : "false",
+	"processqueue" : [
+	{
+		"leveltype" : "height",
+		"levels" : "2",
+		"plugins" : "dewpoint"
+	} 
+	]
+}
