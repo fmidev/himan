@@ -1,7 +1,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 13.1.15
+Version: 13.1.31
 Release: 1.el5.fmi
 License: FMI
 Group: Development/Tools
@@ -26,7 +26,7 @@ rm -rf $RPM_BUILD_ROOT
 %setup -q -n "himan-lib" 
 
 %build
-make %{_smp_mflags} 
+make debug
 
 %install
 mkdir -p $RPM_BUILD_ROOT
@@ -40,6 +40,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Jan 31 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.31-1.el5.fmi
+- Latest changes
+* Thu Jan 24 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.24-1.el5.fmi
+- Latest changes
+* Wed Jan 23 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.23-1.el5.fmi
+- Use debug build
+* Mon Jan 21 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.21-1.el5.fmi
+- Bugfixes
 * Tue Jan 15 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.15-1.el5.fmi
 - First attempt for production-ready release
 * Thu Dec 27 2012 Mikko Partio <mikko.partio@fmi.fi> - 12.12.27-1.el6.fmi

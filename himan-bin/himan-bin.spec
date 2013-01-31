@@ -1,7 +1,7 @@
 %define BINNAME himan-bin
 Summary: himan core library
 Name: %{BINNAME}
-Version: 13.1.14
+Version: 13.1.31
 Release: 1.el5.fmi
 License: FMI
 Group: Development/Tools
@@ -23,7 +23,7 @@ rm -rf $RPM_BUILD_ROOT
 %setup -q -n "himan-bin" 
 
 %build
-make %{_smp_mflags} 
+make debug
 
 %install
 mkdir -p $RPM_BUILD_ROOT
@@ -37,5 +37,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Thu Jan 31 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.31-1.el5.fmi
+- Latest changes
 * Mon Jan 14 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.14-1.el5.fmi
 - Initial build
