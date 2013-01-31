@@ -29,87 +29,99 @@ void banner();
 int main(int argc, char** argv)
 {
 
-    std::shared_ptr<configuration> theConfiguration = json_parser::Instance()->Parse(argc, argv);
+	/*
+	 * Initialize plugin factory before parsing configuration file. This prevents himan from
+	 * terminating suddenly with SIGSEGV on RHEL5 environments.
+	 *
+	 * Also, it may be good to have neons -plugin declared at main level of program. This
+	 * goes also for the cache plugin.
+	 *
+	 * Note that we don't actually do anything with the plugin here.
+	 */
 
-    banner();
+	std::shared_ptr<plugin::auxiliary_plugin> n = std::dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
+ 
+	std::shared_ptr<configuration> theConfiguration = json_parser::Instance()->Parse(argc, argv);
 
-    std::unique_ptr<logger> theLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
+	banner();
 
-    std::vector<std::shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
+	std::unique_ptr<logger> theLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
 
-    theLogger->Info("Found " + boost::lexical_cast<std::string> (thePlugins.size()) + " plugins");
+	std::vector<std::shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
-    for (size_t i = 0; i < thePlugins.size(); i++)
-    {
-        std::string stub = "Plugin '"  + thePlugins[i]->ClassName() + "'";
+	theLogger->Info("Found " + boost::lexical_cast<std::string> (thePlugins.size()) + " plugins");
 
-        switch (thePlugins[i]->PluginClass())
-        {
-        case kCompiled:
-            theLogger->Debug(stub + " \ttype compiled (hard-coded) --> " + std::dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula());
-            break;
+	for (size_t i = 0; i < thePlugins.size(); i++)
+	{
+		std::string stub = "Plugin '"  + thePlugins[i]->ClassName() + "'";
 
-        case kAuxiliary:
-            theLogger->Debug(stub + "\ttype aux");
-            break;
+		switch (thePlugins[i]->PluginClass())
+		{
+		case kCompiled:
+			theLogger->Debug(stub + " \ttype compiled (hard-coded) --> " + std::dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula());
+			break;
 
-        case kInterpreted:
-            theLogger->Debug(stub + "\ttype interpreted");
-            break;
+		case kAuxiliary:
+			theLogger->Debug(stub + "\ttype aux");
+			break;
 
-        default:
-            theLogger->Fatal("Unknown plugin type");
-            exit(1);
-        }
-    }
+		case kInterpreted:
+			theLogger->Debug(stub + "\ttype interpreted");
+			break;
+
+		default:
+			theLogger->Fatal("Unknown plugin type");
+			exit(1);
+		}
+	}
 
 
-    theLogger->Debug("Requested plugin(s):");
+	theLogger->Debug("Requested plugin(s):");
 
-    std::vector<std::string> theRequestedPlugins = theConfiguration->Plugins();
+	std::vector<std::string> theRequestedPlugins = theConfiguration->Plugins();
 
-    for (size_t i = 0; i < theRequestedPlugins.size(); i++)
-    {
-        theLogger->Debug(theRequestedPlugins[i]);
-    }
+	for (size_t i = 0; i < theRequestedPlugins.size(); i++)
+	{
+		theLogger->Debug(theRequestedPlugins[i]);
+	}
 
-    for (size_t i = 0; i < theRequestedPlugins.size(); i++)
-    {
-        std::string theName = theRequestedPlugins[i];
+	for (size_t i = 0; i < theRequestedPlugins.size(); i++)
+	{
+		std::string theName = theRequestedPlugins[i];
 
-        theLogger->Info("Calculating " + theName);
+		theLogger->Info("Calculating " + theName);
 
-        std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(theName));
+		std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(theName));
 
-        if (!thePlugin)
-        {
-            theLogger->Error("Unable to declare plugin " + theName);
-            continue;
-        }
+		if (!thePlugin)
+		{
+			theLogger->Error("Unable to declare plugin " + theName);
+			continue;
+		}
 
 #ifdef DEBUG
-        std::unique_ptr<timer> t = std::unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-        t->Start();
+		std::unique_ptr<timer> t = std::unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		t->Start();
 #endif
 
-        thePlugin->Process(theConfiguration);
+		thePlugin->Process(theConfiguration);
 
 #ifdef DEBUG
-        t->Stop();
-        theLogger->Debug("Processing " + theName + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
+		t->Stop();
+		theLogger->Debug("Processing " + theName + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
 #endif
-    }
+	}
 
-    return 0;
+	return 0;
 }
 
 void banner()
 {
-    std::cout << std::endl
-              << "************************************************" << std::endl
-              << "* By the Power of Grayskull, I Have the Power! *" << std::endl
-              << "************************************************" << std::endl << std::endl;
+	std::cout << std::endl
+			  << "************************************************" << std::endl
+			  << "* By the Power of Grayskull, I Have the Power! *" << std::endl
+			  << "************************************************" << std::endl << std::endl;
 
-    sleep(1);
+	sleep(1);
 
 }
