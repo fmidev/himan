@@ -39,7 +39,7 @@ env.Append(CPPPATH = includes)
 
 # Library paths
 
-env.Append(LIBPATH = [workspace + '/himan-lib/lib', '/usr/lib64'])
+env.Append(LIBPATH = [workspace + '/himan-lib/lib', workspace + '/fmidb/lib', '/usr/lib64'])
 
 # Libraries
 
@@ -51,6 +51,7 @@ libraries.append('boost_filesystem')
 libraries.append('boost_system')
 libraries.append('boost_thread')
 libraries.append('dl')
+libraries.append('fmidb')
 
 env.Append(LIBS = libraries)
 
