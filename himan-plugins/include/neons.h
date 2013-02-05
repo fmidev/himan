@@ -1,4 +1,4 @@
-/*
+/**
  * @file neons.h
  *
  * @date Nov 17, 2012
@@ -79,19 +79,6 @@ public:
     std::string GribParameterName(const long fmiParameterId,const long category, const long discipline, const long producer);
 
     /**
-     * @brief Fetch the latest analysistime from neons for a given producer
-     *
-     * @param prod Producer for which the analysistime is fetched
-     * @param geom_name Geometry name of the wanted geometry (if default value, check for any geometry defined for producer)
-     * @return Latest analysistime as neons-style timestamp string (201301091200)
-     */
-
-    std::string LatestTime(const producer& prod, const std::string& geom_name = "");
-
-
-    std::map<std::string, std::string> GeometryDefinition(const std::string& geom_name);
-
-    /**
      * @brief Function to expose the NFmiNeonsDB interface
      *
      * @return Reference to the NFmiNeonsDB instance
@@ -117,12 +104,37 @@ private:
      * to use another function for that.
      */
 
-    void Init();
+    inline void Init();
 
     bool itsInit; //!< Holds the initialization status of the database connection
     std::unique_ptr<NFmiNeonsDB> itsNeonsDB; //<! The actual database class instance
 
 };
+
+inline void neons::Init()
+{
+	if (!itsInit)
+	{
+		try
+		{
+			itsNeonsDB = std::unique_ptr<NFmiNeonsDB> (NFmiNeonsDBPool::Instance()->GetConnection());
+		}
+		catch (int e)
+		{
+			itsLogger->Fatal("Failed to get connection");
+			exit(1);
+		}
+
+		itsInit = true;
+	}
+}
+
+inline NFmiNeonsDB& neons::NeonsDB()
+{
+	Init();
+	return *itsNeonsDB.get();
+}
+
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 

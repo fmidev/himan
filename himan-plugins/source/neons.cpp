@@ -40,32 +40,8 @@ void neons::InitPool()
 
 	if (host != NULL && (string(host) == "gogol.fmi.fi" || string(host) == "tolstoi.fmi.fi"))
 	{
-		itsLogger->Trace("Production machine '" + string(host) + "' detected, initiating connection as user bdm");
 		NFmiNeonsDBPool::Instance()->ExternalAuthentication(true);
 		NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
-	}
-	else
-	{
-		itsLogger->Trace("Not on production machine, initiating connection as user neons_client");
-	}
-
-}
-
-void neons::Init()
-{
-	if (!itsInit)
-	{
-		try
-		{
-			itsNeonsDB = unique_ptr<NFmiNeonsDB> (NFmiNeonsDBPool::Instance()->GetConnection());
-		}
-		catch (int e)
-		{
-			itsLogger->Fatal("Failed to get connection");
-			exit(1);
-		}
-
-		itsInit = true;
 	}
 }
 
@@ -75,8 +51,6 @@ vector<string> neons::Files(const search_options& options)
 	Init();
 
 	vector<string> files;
-
-	// const int kFMICodeTableVer = 204;
 
 	string analtime = options.configuration->Info()->OriginDateTime().String("%Y%m%d%H%M%S");
 	string levelvalue = boost::lexical_cast<string> (options.level.Value());
@@ -354,41 +328,6 @@ map<string,string> neons::ProducerInfo(long fmiProducerId)
 	return ret;
 }
 
-string neons::LatestTime(const producer& prod, const string& geom_name)
-{
-
-	Init();
-
-	string query = "SELECT to_char(max(base_date),'YYYYMMDDHH24MI') "
-					"FROM as_grid "
-					"WHERE model_type = '" +prod.Name() + "' "
-			//		"AND base_date > TO_DATE(SYSDATE - " +hours_in_interest +"/24 - " +offset + "/24) "
-					"AND rec_cnt_dset > 0 ";
-
-	if (!geom_name.empty())
-	{
-		//query += "AND geom_name = '" + geom_name + "'";
-	}
-
-	itsNeonsDB->Query(query);
-
-	vector<string> row = itsNeonsDB->FetchRow();
-
-	if (row.size() == 0)
-	{
-		itsLogger->Error("Unable to find latest model run for producer '" + prod.Name() + "'");
-		return "";
-	}
-
-	return row[0];
-}
-
-NFmiNeonsDB& neons::NeonsDB()
-{
-	Init();
-	return *itsNeonsDB.get();
-}
-
 string neons::GribParameterName(const long fmiParameterId, const long codeTableVersion)
 {	
 	Init();
@@ -404,12 +343,4 @@ string neons::GribParameterName(const long fmiParameterId, const long category, 
 	
 	string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, category, discipline, producer);
 	return paramName;   
-}
-
-map<string, string> neons::GeometryDefinition(const string& geom_name)
-{
-	Init();
-
-	return itsNeonsDB->GetGeometryDefinition(geom_name);
-
 }
