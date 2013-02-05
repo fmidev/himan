@@ -1,12 +1,11 @@
-/*
- * ini_parser.cpp
+/**
+ * @file json_parser.cpp
  *
- *  Created on: Nov 19, 2012
- *	  Author: partio
+ * @date Nov 19, 2012
+ * @author partio, revised aalto
  */
 
 #include "json_parser.h"
-#include <boost/program_options.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 #include <stdexcept>
@@ -59,192 +58,27 @@ json_parser* json_parser::Instance()
 json_parser::json_parser()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("json_parser"));
-	itsConfiguration = shared_ptr<configuration> (new configuration());
 }
 
-shared_ptr<configuration> json_parser::Parse(int argc, char** argv)
+void json_parser::Parse(shared_ptr<configuration> conf)
 {
 
-	ParseAndCreateInfo(argc, argv);
-
-	return itsConfiguration;
-
-}
-
-
-void json_parser::ParseAndCreateInfo(int argc, char** argv)
-{
-
-	ParseCommandLine(argc, argv);
-
-	// Check that we have configuration file defined in command line
-
-	if (itsConfiguration->itsConfigurationFile.empty())
+	if (conf->ConfigurationFile().empty())
 	{
 		throw runtime_error("Configuration file not defined");
 	}
 
-	ParseConfigurationFile(itsConfiguration->itsConfigurationFile);
+	ParseConfigurationFile(conf);
 
-	// Check requested plugins
-
-	if (itsConfiguration->itsPlugins.size() == 0)
+	if (conf->Plugins().size() == 0)
 	{
-		throw runtime_error("No requested plugins defined");
+		throw runtime_error("No requested plugins");
 	}
+
 
 }
 
-void json_parser::ParseCommandLine(int argc, char* argv[])
-{
-	itsLogger->Debug("Parsing command line");
-
-	namespace po = boost::program_options;
-
-	po::options_description desc("Allowed options");
-
-	// Can't use required() since it doesn't allow us to use --list-plugins
-
-	string outfileType;
-
-	himan::HPDebugState debugState = himan::kDebugMsg;
-
-	int logLevel = 0;
-
-	desc.add_options()
-	("help,h", "print out help message")
-	("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
-	("version,v", "display version number")
-	("configuration-file,f", po::value(&(itsConfiguration->itsConfigurationFile)), "configuration file")
-	("auxiliary-files,a", po::value<vector<string> > (&(itsConfiguration->itsAuxiliaryFiles)), "auxiliary (helper) file(s)")
-	("threads,j", po::value(&itsConfiguration->itsThreadCount), "number of started threads")
-	("list-plugins,l", "list all defined plugins")
-	("dedbug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
-	("no-cuda", "disable cuda extensions")
-	;
-
-	po::positional_options_description p;
-	p.add("auxiliary-files", -1);
-
-	po::variables_map opt;
-	po::store(po::command_line_parser(argc, argv)
-			  .options(desc)
-			  .positional(p)
-			  .run(),
-			  opt);
-
-	po::notify(opt);
-
-	if (logLevel)
-	{
-		switch (logLevel)
-		{
-		case 0:
-			debugState = kFatalMsg;
-			break;
-		case 1:
-			debugState = kErrorMsg;
-			break;
-		case 2:
-			debugState = kWarningMsg;
-			break;
-		case 3:
-			debugState = kInfoMsg;
-			break;
-		case 4:
-			debugState = kDebugMsg;
-			break;
-		case 5:
-			debugState = kTraceMsg;
-			break;
-		}
-
-	}
-
-	logger_factory::Instance()->DebugState(debugState);
-
-	if (opt.count("version"))
-	{
-		cout << "himan-lib version ???" << endl;
-		exit(1);
-	}
-
-	if (opt.count("no-cuda"))
-	{
-		itsConfiguration->itsUseCuda = false;
-	}
-
-	if (!outfileType.empty())
-	{
-		if (outfileType == "grib")
-		{
-			itsConfiguration->itsOutputFileType = kGRIB1;
-		}
-		else if (outfileType == "grib2")
-		{
-			itsConfiguration->itsOutputFileType = kGRIB2;
-		}
-		else if (outfileType == "netcdf")
-		{
-			itsConfiguration->itsOutputFileType = kNetCDF;
-		}
-		else if (outfileType == "querydata")
-		{
-			itsConfiguration->itsOutputFileType = kQueryData;
-		}
-		else
-		{
-			throw runtime_error("Invalid file type: " + outfileType);
-		}
-	}
-
-	if (opt.count("help"))
-	{
-		cout << "usage: himan [ options ]" << endl;
-		cout << desc;
-		cout << endl << "Examples:" << endl;
-		cout << "  himan -f etc/tpot.json" << endl;
-		cout << "  himan -f etc/vvmms.json -a file.grib -t querydata" << endl << endl;
-		exit(1);
-	}
-
-	if (opt.count("list-plugins"))
-	{
-
-		vector<shared_ptr<plugin::himan_plugin> > thePlugins = plugin_factory::Instance()->CompiledPlugins();
-
-		cout << "Compiled plugins" << endl;
-
-		for (size_t i = 0; i < thePlugins.size(); i++)
-		{
-			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
-		}
-
-		thePlugins = plugin_factory::Instance()->InterpretedPlugins();
-
-		cout << "Interpreted plugins" << endl;
-
-		for (size_t i = 0; i < thePlugins.size(); i++)
-		{
-			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
-		}
-
-		cout << "Auxiliary plugins" << endl;
-
-		thePlugins = plugin_factory::Instance()->AuxiliaryPlugins();
-
-		for (size_t i = 0; i < thePlugins.size(); i++)
-		{
-			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
-		}
-
-		exit(1);
-	}
-
-}
-
-
-void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
+void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
 
 	itsLogger->Debug("Parsing configuration file");
@@ -253,7 +87,7 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 	try
 	{
-		boost::property_tree::json_parser::read_json(theConfigurationFile, pt);
+		boost::property_tree::json_parser::read_json(conf->ConfigurationFile(), pt);
 	}
 	catch (exception& e)
 	{
@@ -262,16 +96,16 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 	/* Check area definitions */
 
-	ParseAreaAndGrid(pt);
+	ParseAreaAndGrid(conf, pt);
 
 	/* Check plugins */
 
 	try
 	{
 		BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
-                {
-                        itsConfiguration->Plugins(util::Split(node.second.get<std::string>("plugins"), ",", true));
-                }
+		{
+			conf->Plugins(util::Split(node.second.get<std::string>("plugins"), ",", true));
+		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -287,15 +121,15 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	try
 	{
 
-		itsConfiguration->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("source_producer")));
-		itsConfiguration->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("target_producer")));
+		conf->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("source_producer")));
+		conf->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("target_producer")));
 
 		/*
 		 * Target producer is also set to target info; source infos (and producers) are created
 		 * as data is fetched from files.
 		 */
 
-		itsConfiguration->Info()->Producer(itsConfiguration->TargetProducer());
+		conf->Info()->Producer(conf->TargetProducer());
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -307,7 +141,7 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 		throw runtime_error(ClassName() + ": " + string("Error parsing producer information: ") + e.what());
 	}
 
-	ParseTime(pt);
+	ParseTime(conf, pt);
 
 	/* Check level */
 
@@ -315,62 +149,62 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	{
 
 		BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
-                {
+		{
         	string theLevelTypeStr = node.second.get<std::string>("leveltype");
   	
-		boost::to_upper(theLevelTypeStr);
+			boost::to_upper(theLevelTypeStr);
 
-		HPLevelType theLevelType;
+			HPLevelType theLevelType;
 
-		if (theLevelTypeStr == "HEIGHT")
-		{
-			theLevelType = kHeight;
-		}
-		else if (theLevelTypeStr == "PRESSURE")
-		{
-			theLevelType = kPressure;
-		}
-		else if (theLevelTypeStr == "HYBRID")
-		{
-			theLevelType = kHybrid;
-		}
-		else if (theLevelTypeStr == "GROUND")
-		{
-			theLevelType = kGround;
-		}
-		else if (theLevelTypeStr == "MEANSEA")
-		{
-			theLevelType = kMeanSea;
-		}
+			if (theLevelTypeStr == "HEIGHT")
+			{
+				theLevelType = kHeight;
+			}
+			else if (theLevelTypeStr == "PRESSURE")
+			{
+				theLevelType = kPressure;
+			}
+			else if (theLevelTypeStr == "HYBRID")
+			{
+				theLevelType = kHybrid;
+			}
+			else if (theLevelTypeStr == "GROUND")
+			{
+				theLevelType = kGround;
+			}
+			else if (theLevelTypeStr == "MEANSEA")
+			{
+				theLevelType = kMeanSea;
+			}
 
-		else
-		{
-			throw runtime_error("Unknown level type: " + theLevelTypeStr);	// not good practice; constructing string
-		}
+			else
+			{
+				throw runtime_error("Unknown level type: " + theLevelTypeStr);	// not good practice; constructing string
+			}
 
-		// can cause exception, what will happen then ?
+			// can cause exception, what will happen then ?
 
-		vector<string> levelsStr = util::Split(node.second.get<std::string>("levels"), ",", true);
+			vector<string> levelsStr = util::Split(node.second.get<std::string>("levels"), ",", true);
 
-		vector<float> levels ;
+			vector<float> levels ;
 
-		for (size_t i = 0; i < levelsStr.size(); i++)
-		{
-			levels.push_back(boost::lexical_cast<float> (levelsStr[i]));
-		}
+			for (size_t i = 0; i < levelsStr.size(); i++)
+			{
+				levels.push_back(boost::lexical_cast<float> (levelsStr[i]));
+			}
 
-		sort (levels.begin(), levels.end());
+			sort (levels.begin(), levels.end());
 
-		vector<level> theLevels;
+			vector<level> theLevels;
 
-		for (size_t i = 0; i < levels.size(); i++)
-		{
-			theLevels.push_back(level(theLevelType, levels[i], theLevelTypeStr));
-		}
+			for (size_t i = 0; i < levels.size(); i++)
+			{
+				theLevels.push_back(level(theLevelType, levels[i], theLevelTypeStr));
+			}
 
-		itsConfiguration->Info()->Levels(theLevels);
+			conf->Info()->Levels(theLevels);
 
-                } // END BOOST_FOREACH
+		} // END BOOST_FOREACH
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -390,7 +224,7 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 		if (ParseBoolean(theWholeFileWrite))
 		{
-			itsConfiguration->WholeFileWrite(true);
+			conf->WholeFileWrite(true);
 		}
 
 	}
@@ -411,7 +245,7 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 
 		if (!ParseBoolean(theReadDataFromDatabase))
 		{
-			itsConfiguration->ReadDataFromDatabase(false);
+			conf->ReadDataFromDatabase(false);
 		}
 
 	}
@@ -430,7 +264,7 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	{
 		string theFileWaitTimeout = pt.get<string>("file_wait_timeout");
 
-		itsConfiguration->itsFileWaitTimeout = boost::lexical_cast<unsigned short> (theFileWaitTimeout);
+		conf->itsFileWaitTimeout = boost::lexical_cast<unsigned short> (theFileWaitTimeout);
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -463,7 +297,7 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 			throw runtime_error(ClassName() + ": unsupported leading dimension: " + theLeadingDimensionStr);
 		}
 
-		itsConfiguration->itsLeadingDimension = theLeadingDimension;
+		conf->itsLeadingDimension = theLeadingDimension;
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -476,7 +310,7 @@ void json_parser::ParseConfigurationFile(const string& theConfigurationFile)
 	}
 }
 
-void json_parser::ParseTime(const boost::property_tree::ptree& pt)
+void json_parser::ParseTime(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
 	/* Check origin time */
 
@@ -491,13 +325,13 @@ void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 		{
 			shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-			producer p(itsConfiguration->SourceProducer());
+			producer p(conf->SourceProducer());
 
 			map<string,string> prod = n->NeonsDB().GetProducerDefinition(p.Id());
 
 			p.Name(prod["ref_prod"]);
 
-			theOriginDateTime = n->LatestTime(p);
+			theOriginDateTime = n->NeonsDB().GetLatestTime(p.Name());
 
 			if (theOriginDateTime.size() == 0)
 			{
@@ -507,7 +341,7 @@ void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 			mask = "%Y%m%d%H%M";
 		}
 
-		itsConfiguration->Info()->OriginDateTime(theOriginDateTime, mask);
+		conf->Info()->OriginDateTime(theOriginDateTime, mask);
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -543,15 +377,15 @@ void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 
 			// Create forecast_time with both times origintime, then adjust the validtime
 
-			forecast_time theTime (shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())),
-								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
+			forecast_time theTime (shared_ptr<raw_time> (new raw_time(conf->Info()->OriginDateTime())),
+								   shared_ptr<raw_time> (new raw_time(conf->Info()->OriginDateTime())));
 
 			theTime.ValidDateTime()->Adjust(kHour, times[i]);
 
 			theTimes.push_back(theTime);
 		}
 
-		itsConfiguration->Info()->Times(theTimes);
+		conf->Info()->Times(theTimes);
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -581,7 +415,7 @@ void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 
 		if (stop > 1<<8)
 		{
-			itsConfiguration->itsInfo->StepSizeOverOneByte(true);
+			conf->itsInfo->StepSizeOverOneByte(true);
 		}
 
 		int curtime = start;
@@ -590,8 +424,8 @@ void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 		do
 		{
 
-			forecast_time theTime (shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())),
-								   shared_ptr<raw_time> (new raw_time(itsConfiguration->Info()->OriginDateTime())));
+			forecast_time theTime (shared_ptr<raw_time> (new raw_time(conf->Info()->OriginDateTime())),
+								   shared_ptr<raw_time> (new raw_time(conf->Info()->OriginDateTime())));
 
 			theTime.ValidDateTime()->Adjust(stepResolution, curtime);
 
@@ -603,7 +437,7 @@ void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 
 		} while (curtime <= stop);
 
-		itsConfiguration->Info()->Times(theTimes);
+		conf->Info()->Times(theTimes);
 
 	}
 	catch (exception& e)
@@ -613,7 +447,7 @@ void json_parser::ParseTime(const boost::property_tree::ptree& pt)
 
 }
 
-void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
+void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
 
 	/* First check for neons style geom name */
@@ -622,11 +456,11 @@ void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 	{
 		string geom = pt.get<string>("geom_name");
 
-		itsConfiguration->itsGeomName = geom;
+		conf->itsGeomName = geom;
 
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		map<string, string> geominfo = n->GeometryDefinition(geom);
+		map<string, string> geominfo = n->NeonsDB().GetGeometryDefinition(geom);
 
 		if (!geominfo.empty())
 		{
@@ -638,34 +472,34 @@ void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 			if (geominfo["prjn_name"] == "latlon" && (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0"))
 			{
-				itsConfiguration->itsInfo->Projection(kRotatedLatLonProjection);
-				itsConfiguration->itsInfo->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3));
+				conf->itsInfo->Projection(kRotatedLatLonProjection);
+				conf->itsInfo->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3));
 
 			}
 			else if (geominfo["prjn_name"] == "latlon")
 			{
-				itsConfiguration->itsInfo->Projection(kLatLonProjection);
+				conf->itsInfo->Projection(kLatLonProjection);
 			}
 			else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo")
 			{
-				itsConfiguration->itsInfo->Projection(kStereographicProjection);
-				itsConfiguration->itsInfo->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
+				conf->itsInfo->Projection(kStereographicProjection);
+				conf->itsInfo->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
 			}
 			else
 			{
 				throw runtime_error(ClassName() + ": Unknown projection: " + geominfo["prjn_name"]);
 			}
 
-			itsConfiguration->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
-			itsConfiguration->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
+			conf->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
+			conf->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
 
 			if (geominfo["stor_desc"] == "+x-y")
 			{
-				itsConfiguration->itsScanningMode = kTopLeft;
+				conf->itsScanningMode = kTopLeft;
 			}
 			else if (geominfo["stor_desc"] == "+x+y")
 			{
-				itsConfiguration->itsScanningMode = kBottomLeft;
+				conf->itsScanningMode = kBottomLeft;
 			}
 			else
 			{
@@ -678,11 +512,11 @@ void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 			double di = boost::lexical_cast<double>(geominfo["pas_longitude"])/1e3;
 			double dj = boost::lexical_cast<double>(geominfo["pas_latitude"])/1e3;
 
-			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), itsConfiguration->Ni(), itsConfiguration->Nj(), di, dj, itsConfiguration->itsScanningMode);
-//			itsConfiguration->Info()->SetCoordinatesFromFirstGridPoint(point(X0, Y0), itsConfiguration->Ni(), itsConfiguration->Nj(), di, dj);
+			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), conf->Ni(), conf->Nj(), di, dj, conf->itsScanningMode);
+//			conf->Info()->SetCoordinatesFromFirstGridPoint(point(X0, Y0), conf->Ni(), conf->Nj(), di, dj);
 
-			itsConfiguration->itsInfo->BottomLeft(coordinates.first);
-			itsConfiguration->itsInfo->TopRight(coordinates.second);
+			conf->itsInfo->BottomLeft(coordinates.first);
+			conf->itsInfo->TopRight(coordinates.second);
 			return;
 		}
 		else
@@ -703,20 +537,20 @@ void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 	{
 		string theProjection = pt.get<string>("projection");
 
-		if (itsConfiguration->itsInfo->Projection() == kUnknownProjection)
+		if (conf->itsInfo->Projection() == kUnknownProjection)
 		{
 
 			if (theProjection == "latlon")
 			{
-				itsConfiguration->itsInfo->Projection(kLatLonProjection);
+				conf->itsInfo->Projection(kLatLonProjection);
 			}
 			else if (theProjection == "rotated_latlon")
 			{
-				itsConfiguration->itsInfo->Projection(kRotatedLatLonProjection);
+				conf->itsInfo->Projection(kRotatedLatLonProjection);
 			}
 			else if (theProjection == "stereographic")
 			{
-				itsConfiguration->itsInfo->Projection(kStereographicProjection);
+				conf->itsInfo->Projection(kStereographicProjection);
 			}
 			else
 			{
@@ -735,9 +569,9 @@ void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Info()->BottomLeft(point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
-		itsConfiguration->Info()->TopRight(point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
-		itsConfiguration->Info()->Orientation(pt.get<double>("orientation"));
+		conf->Info()->BottomLeft(point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
+		conf->Info()->TopRight(point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
+		conf->Info()->Orientation(pt.get<double>("orientation"));
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -753,7 +587,7 @@ void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Info()->Orientation(pt.get<double>("orientation"));
+		conf->Info()->Orientation(pt.get<double>("orientation"));
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -769,7 +603,7 @@ void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Info()->BottomLeft(point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude")));
+		conf->Info()->BottomLeft(point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude")));
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -784,8 +618,8 @@ void json_parser::ParseAreaAndGrid(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		itsConfiguration->Ni(pt.get<size_t>("ni"));
-		itsConfiguration->Nj(pt.get<size_t>("nj"));
+		conf->Ni(pt.get<size_t>("ni"));
+		conf->Nj(pt.get<size_t>("nj"));
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)

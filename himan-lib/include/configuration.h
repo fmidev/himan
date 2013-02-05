@@ -82,6 +82,7 @@ public:
      */
 
     HPFileType OutputFileType() const;
+	void OutputFileType(HPFileType theOutputFileType);
 
     unsigned int SourceProducer() const;
 
@@ -124,6 +125,7 @@ public:
     unsigned short FileWaitTimeout() const;
 
     bool UseCuda() const;
+	void UseCuda(bool theUseCuda);
 
     HPDimensionType LeadingDimension() const;
 
@@ -132,6 +134,9 @@ public:
 
     HPScanningMode ScanningMode() const;
     void ScanningMode(HPScanningMode theScanningMode);
+
+	std::string ConfigurationFile() const;
+	void ConfigurationFile(const std::string& theConfigurationFile);
 
 private:
 

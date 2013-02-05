@@ -26,8 +26,7 @@ public:
     json_parser(const json_parser& other) = delete;
     json_parser& operator=(const json_parser& other) = delete;
 
-    std::shared_ptr<configuration> Parse(int argc, char** argv);
-    std::shared_ptr<configuration> GetConfiguration() const;
+    void Parse(std::shared_ptr<configuration> conf);
 
     virtual std::string ClassName() const
     {
@@ -43,17 +42,13 @@ private:
     json_parser();
     ~json_parser() {}
 
-    void ParseAndCreateInfo(int argc, char** argv);
-    void ParseCommandLine(int argc, char** argv);
-    void ParseConfigurationFile(const std::string& theConfigurationFile);
-    void ParseAreaAndGrid(const boost::property_tree::ptree& pt);
-    void ParseTime(const boost::property_tree::ptree& pt);
+    void ParseConfigurationFile(std::shared_ptr<configuration> conf);
+    void ParseAreaAndGrid(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
+    void ParseTime(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
     bool ParseBoolean(std::string& booleanValue);
 
     static json_parser* itsInstance;
     std::unique_ptr<logger> itsLogger;
-
-    std::shared_ptr<configuration> itsConfiguration;
 
 };
 

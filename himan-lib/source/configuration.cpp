@@ -88,7 +88,11 @@ void configuration::Init()
 HPFileType configuration::OutputFileType() const
 {
     return itsOutputFileType;
+}
 
+void configuration::OutputFileType(HPFileType theOutputFileType)
+{
+	itsOutputFileType = theOutputFileType;
 }
 
 unsigned int configuration::SourceProducer() const
@@ -166,6 +170,11 @@ bool configuration::UseCuda() const
     return itsUseCuda;
 }
 
+void configuration::UseCuda(bool theUseCuda)
+{
+    itsUseCuda = theUseCuda;
+}
+
 HPDimensionType configuration::LeadingDimension() const
 {
     return itsLeadingDimension;
@@ -189,4 +198,14 @@ HPScanningMode configuration::ScanningMode() const
 void configuration::ScanningMode(HPScanningMode theScanningMode)
 {
 	itsScanningMode = theScanningMode;
+}
+
+std::string configuration::ConfigurationFile() const
+{
+	return itsConfigurationFile;
+};
+
+void configuration::ConfigurationFile(const std::string& theConfigurationFile)
+{
+	itsConfigurationFile = theConfigurationFile;
 }
