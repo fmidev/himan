@@ -52,6 +52,8 @@ libraries.append('boost_system')
 libraries.append('boost_thread')
 libraries.append('dl')
 libraries.append('fmidb')
+libraries.append('z')
+libraries.append('bz2')
 
 env.Append(LIBS = libraries)
 
