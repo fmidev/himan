@@ -46,7 +46,6 @@ env.Append(LIBPATH = [workspace + '/himan-lib/lib', '/usr/lib64'])
 libraries = []
 
 libraries.append('smartmet_newbase')
-libraries.append('boost_program_options')
 libraries.append('boost_iostreams')
 libraries.append('boost_filesystem')
 libraries.append('boost_system')
@@ -73,7 +72,7 @@ cflags_extra.append('-Wcast-qual')
 cflags_extra.append('-Wcast-align')
 cflags_extra.append('-Wwrite-strings')
 cflags_extra.append('-Wconversion')
-# cflags_extra.append('-Winline')
+cflags_extra.append('-Winline')
 cflags_extra.append('-Wnon-virtual-dtor')
 cflags_extra.append('-Wno-pmf-conversions')
 cflags_extra.append('-Wsign-promo')
@@ -102,7 +101,7 @@ env.Append(CCFLAGS = cflags_normal)
 
 # Linker flags
 
-env.Append(LINKFLAGS = [])
+env.Append(LINKFLAGS = ['-rdynamic','-Wl,--as-needed'])
 
 # Defines
 
