@@ -1,8 +1,8 @@
-/*
- * raw_time.cpp
+/**
+ * @file raw_time.cpp
  *
- *  Created on: Dec 9, 2012
- *      Author: partio
+ * @date Dec 9, 2012
+ * @author partio
  */
 
 #include "raw_time.h"

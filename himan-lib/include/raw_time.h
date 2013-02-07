@@ -66,7 +66,7 @@ private:
 
 
 inline
-std::ostream& operator<<(std::ostream& file, raw_time& ob)
+std::ostream& operator<<(std::ostream& file, const raw_time& ob)
 {
     return ob.Write(file);
 }

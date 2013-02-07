@@ -128,7 +128,7 @@ private:
     long itsGribIndicatorOfParameter; //!< Grib parameter number (only in grib 1)
 
     HPParameterUnit itsUnit; //!< Unit of the parameter
-    double itsMissingValue; //!< Missing value (default kFloatMissing)
+    double itsMissingValue; //!< Missing value
 
     std::unique_ptr<logger> itsLogger;
 
