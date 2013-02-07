@@ -11,6 +11,7 @@
 #include <boost/algorithm/string.hpp>
 #include <sstream>
 #include <iomanip>
+#include <NFmiStereographicArea.h>
 
 using namespace himan;
 using namespace std;
@@ -163,7 +164,7 @@ vector<string> util::Split(const string& s, const std::string& delims, bool fill
     return all_elems;
 }
 
-std::pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj, HPScanningMode scanningMode)
+pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj, HPScanningMode scanningMode)
 {
 	double dni = static_cast<double> (ni) - 1;
 	double dnj = static_cast<double> (nj) - 1;
@@ -200,7 +201,28 @@ std::pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoi
 
 	}
 
-	return std::pair<point,point> (bottomLeft, topRight);
+	return pair<point,point> (bottomLeft, topRight);
+}
+
+pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, double orientation, size_t ni, size_t nj, double xSizeInMeters, double ySizeInMeters)
+{
+
+	double xWidthInMeters = (static_cast<double> (ni)-1.) * xSizeInMeters;
+	double yWidthInMeters = (static_cast<double> (nj)-1.) * ySizeInMeters;
+
+	NFmiStereographicArea a(firstPoint.ToNFmiPoint(),
+								xWidthInMeters,
+								yWidthInMeters,
+								orientation,
+								NFmiPoint(0,0),
+								NFmiPoint(1,1),
+								90.);
+
+	point bottomLeft(a.BottomLeftLatLon());
+	point topRight(a.TopRightLatLon());
+
+	return pair<point,point> (bottomLeft, topRight);
+
 }
 
 point util::UVToEarthRelative(const point& regPoint, const point& rotPoint, const point& southPole, const point& UV)
