@@ -34,6 +34,8 @@ grid::grid(HPScanningMode theScanningMode,
 	, itsTopRight(theTopRight)
 	, itsSouthPole(theSouthPole)
 	, itsOrientation(theOrientation)
+	, itsDi(kHPMissingFloat)
+	, itsDj(kHPMissingFloat)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
@@ -48,18 +50,38 @@ size_t grid::Nj() const
     return itsData->SizeY();
 }
 
+void grid::Di(double theDi)
+{
+	itsDi = theDi;
+}
+
 double grid::Di() const
 {
-	assert(itsBottomLeft.X() != static_cast<size_t> (kHPMissingInt));
-	assert(itsTopRight.X() != static_cast<size_t> (kHPMissingInt));
-	return fabs((itsBottomLeft.X() - itsTopRight.X()) / (static_cast<double> (Ni())-1));
+	if (itsDi == kHPMissingFloat)
+	{
+		assert(itsBottomLeft.X() != static_cast<size_t> (kHPMissingInt));
+		assert(itsTopRight.X() != static_cast<size_t> (kHPMissingInt));
+		itsDi = fabs((itsBottomLeft.X() - itsTopRight.X()) / (static_cast<double> (Ni())-1));
+	}
+
+	return itsDi;
+}
+
+void grid::Dj(double theDj)
+{
+	itsDj = theDj;
 }
 
 double grid::Dj() const
 {
-	assert(itsBottomLeft.Y() != kHPMissingInt);
-	assert(itsTopRight.Y() != kHPMissingInt);
-    return fabs((itsBottomLeft.Y() - itsTopRight.Y()) / (static_cast<double> (Nj())-1));
+	if (itsDi == kHPMissingFloat)
+	{
+		assert(itsBottomLeft.Y() != kHPMissingInt);
+		assert(itsTopRight.Y() != kHPMissingInt);
+		itsDj = fabs((itsBottomLeft.Y() - itsTopRight.Y()) / (static_cast<double> (Nj())-1));
+	}
+
+	return itsDj;
 }
 
 std::shared_ptr<d_matrix_t> grid::Data() const
@@ -145,7 +167,7 @@ point grid::FirstGridPoint() const
 	if (itsProjection != kLatLonProjection && itsProjection != kRotatedLatLonProjection)
 	{
 		itsLogger->Warning("Calculating latitude for first gridpoint in non-latlon projection not supported");
-		return point(x,y);
+		return itsBottomLeft;
 	}
 
 	assert(itsBottomLeft.X() != kHPMissingFloat);

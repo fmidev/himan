@@ -77,6 +77,9 @@ class grid
 
 		double Dj() const;
 
+		void Di(double theDi);
+		void Dj(double theDj);
+
 		/**
 		 *
 		 * @return Data matrix
@@ -201,6 +204,9 @@ class grid
 		double itsOrientation;
 
 	    std::unique_ptr<logger> itsLogger;
+
+	    mutable double itsDi;
+	    mutable double itsDj;
 
 };
 
