@@ -91,9 +91,47 @@ int main(int argc, char** argv)
 
 	theLogger->Debug("Requested plugin(s):");
 
-	std::vector<std::string> theRequestedPlugins = conf->Plugins();
+	std::vector<std::shared_ptr<info> > queues = conf->Infos();
 
-	for (size_t i = 0; i < theRequestedPlugins.size(); i++)
+	for (size_t i = 0; i < queues.size(); i++)
+	{
+		std::vector<std::string> theRequestedPlugins = queues[i]->Plugins();
+
+		for (size_t j = 0; j < theRequestedPlugins.size(); j++)
+		{
+		
+		 	std::string theName = theRequestedPlugins[j];		 
+            
+			theLogger->Info("Calculating " + theName);
+           
+			std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(theName));
+
+		if (!thePlugin)
+		{
+			theLogger->Error("Unable to declare plugin " + theName);
+			continue;
+		}
+
+#ifdef DEBUG
+		std::unique_ptr<timer> t = std::unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		t->Start();
+#endif
+
+		thePlugin->Process(conf);
+
+#ifdef DEBUG
+		t->Stop();
+		theLogger->Debug("Processing " + theName + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
+#endif
+		}
+
+
+	}
+
+return 0;
+}  
+
+/*	for (size_t i = 0; i < theRequestedPlugins.size(); i++)
 	{
 		theLogger->Debug(theRequestedPlugins[i]);
 	}
@@ -117,16 +155,15 @@ int main(int argc, char** argv)
 		t->Start();
 #endif
 
-		thePlugin->Process(conf);
+//		thePlugin->Process(conf);
 
 #ifdef DEBUG
 		t->Stop();
 		theLogger->Debug("Processing " + theName + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
 #endif
 	}
+*/
 
-	return 0;
-}
 
 void banner()
 {
