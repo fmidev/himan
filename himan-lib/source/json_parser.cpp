@@ -70,10 +70,10 @@ void json_parser::Parse(shared_ptr<configuration> conf)
 
 	ParseConfigurationFile(conf);
 
-	if (conf->Plugins().size() == 0)
+/*	if (conf->Infos().size() == 0)
 	{
 		throw runtime_error("No requested plugins");
-	}
+	}*/
 
 
 }
@@ -99,57 +99,68 @@ void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 	ParseAreaAndGrid(conf, pt);
 
 	/* Check plugins */
+    std::vector<std::shared_ptr<info> > infoQueue;
 
-	try
+	BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
 	{
-		BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
+		std::shared_ptr<info> anInfo = shared_ptr<info> (new info());
+
+		try
 		{
-			conf->Plugins(util::Split(node.second.get<std::string>("plugins"), ",", true));
+		    std::vector<std::string> pluginContainer;
+		    std::vector<std::string> s;
+			
+			s = util::Split(node.second.get<std::string>("plugins"), ",", true);
+			for(size_t i = 0; i < s.size(); i++) 
+			{
+				pluginContainer.push_back(s[i]);
+ 			}
+			
+			anInfo->Plugins(pluginContainer);
 		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing plugins: ") + e.what());
-	}
-
-	/* Check producer */
-
-	try
-	{
-
-		conf->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("source_producer")));
-		conf->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("target_producer")));
-
-		/*
-		 * Target producer is also set to target info; source infos (and producers) are created
-		 * as data is fetched from files.
-		 */
-
-		conf->Info()->Producer(conf->TargetProducer());
-
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing producer information: ") + e.what());
-	}
-
-	ParseTime(conf, pt);
-
-	/* Check level */
-
-	try
-	{
-
-		BOOST_FOREACH(boost::property_tree::ptree::value_type &node, pt.get_child("processqueue"))
+		
+		catch (boost::property_tree::ptree_bad_path& e)
 		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing plugins: ") + e.what());
+		}
+
+		/* Check producer */
+
+		try
+		{
+
+			conf->SourceProducer(boost::lexical_cast<unsigned int> (pt.get<string>("source_producer")));
+			conf->TargetProducer(boost::lexical_cast<unsigned int> (pt.get<string>("target_producer")));
+
+			/*
+			 * Target producer is also set to target info; source infos (and producers) are created
+			 * as data is fetched from files.
+			 */
+
+			conf->Info()->Producer(conf->TargetProducer());
+
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(ClassName() + ": " + string("Error parsing producer information: ") + e.what());
+		}
+
+		ParseTime(conf, pt);
+
+		/* Check level */
+
+		try
+		{
+
+	
         	string theLevelTypeStr = node.second.get<std::string>("leveltype");
   	
 			boost::to_upper(theLevelTypeStr);
@@ -202,21 +213,23 @@ void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 				theLevels.push_back(level(theLevelType, levels[i], theLevelTypeStr));
 			}
 
-			conf->Info()->Levels(theLevels);
+			conf->Info()->Levels(theLevels); // TODO add levels
+			infoQueue.push_back(anInfo);
+		
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing level information: ") + e.what());
+		}
+	}// END BOOST_FOREACH
 
-		} // END BOOST_FOREACH
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing level information: ") + e.what());
-	}
+    conf->Infos(infoQueue); 
 
 	/* Check whole_file_write */
-
 	try
 	{
 

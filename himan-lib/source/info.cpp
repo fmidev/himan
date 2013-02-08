@@ -114,7 +114,6 @@ bool info::Create(HPScanningMode theScanningMode, bool theUVRelativeToGrid)
 {
 
     itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
-
     Reset();
 
     while (NextTime())
@@ -464,4 +463,14 @@ bool info::StepSizeOverOneByte() const
 void info::StepSizeOverOneByte(bool theStepSizeOverOneByte)
 {
 	itsStepSizeOverOneByte = theStepSizeOverOneByte;
+}
+
+std::vector<std::string> info::Plugins() const
+{
+    return itsPlugins;
+}
+
+void info::Plugins(const std::vector<std::string>& thePlugins)
+{
+    itsPlugins = thePlugins;
 }

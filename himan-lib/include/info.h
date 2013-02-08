@@ -20,6 +20,7 @@
 #include "producer.h"
 #include "point.h"
 #include "grid.h"
+#include <vector>
 
 namespace himan
 {
@@ -521,6 +522,10 @@ public:
     bool StepSizeOverOneByte() const;
     void StepSizeOverOneByte(bool theStepSizeOverOneByte);
 
+    void Plugins(const std::vector<std::string>& thePlugins);
+    std::vector<std::string> Plugins() const;
+
+
 private:
 
     void Init();
@@ -548,6 +553,8 @@ private:
     size_t itsLocationIndex;
 
     bool itsStepSizeOverOneByte;
+
+    std::vector<std::string> itsPlugins;
 
 };
 

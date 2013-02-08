@@ -24,10 +24,10 @@ std::ostream& configuration::Write(std::ostream& file) const
 
     file << "<" << ClassName() << " " << Version() << ">" << std::endl;
 
-    for (size_t i = 0; i < itsPlugins.size(); i++)
+ /*   for (size_t i = 0; i < itsPlugins.size(); i++)
     {
         file << "__itsPlugins__ " << itsPlugins[i] << std::endl;
-    }
+    }  */
 
     file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
     file << "__itsTargetProducer__ " << itsTargetProducer << std::endl;
@@ -60,6 +60,21 @@ void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryF
     itsAuxiliaryFiles = theAuxiliaryFiles;
 }
 
+std::vector<std::shared_ptr<info>> configuration::Infos() const
+{
+    return itsInfos;
+}
+
+void configuration::Infos(const std::vector<std::shared_ptr<info> >& theInfos)
+{
+    itsInfos = theInfos;
+}
+
+void configuration::Info(const std::shared_ptr<info> & theInfo)
+{
+    itsInfo = theInfo;
+}
+/*
 std::vector<std::string> configuration::Plugins() const
 {
     return itsPlugins;
@@ -69,7 +84,7 @@ void configuration::Plugins(const std::vector<std::string>& thePlugins)
 {
     itsPlugins = thePlugins;
 }
-
+*/
 void configuration::Init()
 {
     itsOutputFileType = kQueryData;

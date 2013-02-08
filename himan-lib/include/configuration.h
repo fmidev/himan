@@ -49,6 +49,12 @@ public:
 
     std::ostream& Write(std::ostream& file) const;
 
+    std::vector<std::shared_ptr<info> > Infos() const;
+    void Infos(const std::vector<std::shared_ptr<info> >& theInfos);
+   
+    void Info(const std::shared_ptr<info>& theInfo);
+
+
     /**
      * @return Info instance created from configuration file metadata
      */
@@ -62,13 +68,13 @@ public:
      * @return List of plugin names found in the configuration file
      */
 
-    std::vector<std::string> Plugins() const;
+  //  std::vector<std::string> Plugins() const;
 
     /**
      * @param thePlugins List of plugin names (string)
      */
 
-    void Plugins(const std::vector<std::string>& thePlugins) ;
+  //  void Plugins(const std::vector<std::string>& thePlugins) ;
 
     /**
      * @return List of auxiliary file names found in the configuration file
@@ -143,12 +149,13 @@ private:
     void Init();
 
     std::shared_ptr<info> itsInfo; //!< @see class 'info'
+    std::vector<std::shared_ptr<info>> itsInfos;
 
     HPFileType itsOutputFileType;
     std::string itsConfigurationFile;
     std::vector<std::string> itsAuxiliaryFiles;
 
-    std::vector<std::string> itsPlugins;
+ //   std::vector<std::string> itsPlugins;
     std::string itsOriginTime;
 
     std::shared_ptr<logger> itsLogger;
