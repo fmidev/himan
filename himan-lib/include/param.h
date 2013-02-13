@@ -135,7 +135,7 @@ private:
 };
 
 inline
-std::ostream& operator<<(std::ostream& file, param& ob)
+std::ostream& operator<<(std::ostream& file, const param& ob)
 {
     return ob.Write(file);
 }

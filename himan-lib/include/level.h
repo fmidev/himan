@@ -96,7 +96,7 @@ private:
 };
 
 inline
-std::ostream& operator<<(std::ostream& file, level& ob)
+std::ostream& operator<<(std::ostream& file, const level& ob)
 {
     return ob.Write(file);
 }

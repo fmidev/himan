@@ -24,7 +24,7 @@ class raw_time
 
 public:
 
-    raw_time() {}
+    raw_time() : itsDateTime(boost::posix_time::not_a_date_time) {}
     raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
     raw_time(const NFmiMetTime& theTime);
 
@@ -55,6 +55,8 @@ public:
     {
         return itsDateTime;
     }
+
+    bool Empty() const;
 
 private:
 

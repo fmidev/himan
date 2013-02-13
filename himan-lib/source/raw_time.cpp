@@ -110,6 +110,11 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
     return true;
 }
 
+bool raw_time::Empty() const
+{
+	return (itsDateTime == boost::posix_time::not_a_date_time);
+}
+
 std::ostream& raw_time::Write(std::ostream& file) const
 {
 

@@ -48,7 +48,7 @@ string util::MakeNeonsFileName(shared_ptr<const info> info)
                     << "_"
                     << info->Level().Value()
                     << "_"
-                    << HPProjectionTypeToString.at(info->Projection())
+                    << HPProjectionTypeToString.at(info->Grid()->Projection())
                     << "_"
                     << info->Ni()
                     << "_"
