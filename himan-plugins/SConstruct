@@ -34,10 +34,11 @@ includes.append('./include')
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
-includes.append(workspace + '/fmidb/include')
+includes.append(workspace + '/database/include')
 includes.append(workspace + '/fmigrib/include')
 includes.append('/usr/include/oracle')
-includes.append('/home/partio/local/include/')
+includes.append('/usr/lib/grib_api/include')
+#includes.append('/home/partio/local/include/')
 
 if os.path.isfile(libcudart):
 	includes.append('/opt/cuda/include/')
@@ -49,10 +50,11 @@ env.Append(CPPPATH = includes)
 library_paths = []
 
 library_paths.append(workspace + '/himan-lib/build/debug')
-library_paths.append(workspace + '/fmidb/lib')
+library_paths.append(workspace + '/database/lib')
 library_paths.append(workspace + '/fmigrib/lib')
 library_paths.append('/usr/lib64')
 library_paths.append('/usr/lib64/oracle/')
+library_paths.append('/usr/lib/grib_api/lib')
 
 env.Append(LIBPATH = library_paths)
 
@@ -73,7 +75,7 @@ if os.path.isfile(libcudart):
 
 env.Append(LIBS = libraries)
 
-libgrib_api = env.File('/usr/lib64/libgrib_api.a')
+libgrib_api = env.File('/usr/lib/grib_api/lib/libgrib_api.a')
 
 env.Append(LIBS=libgrib_api)
 
@@ -116,8 +118,8 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 # Default flags (common for release/debug)
 
 cflags = []
-cflags.append('-std=c++0x')
 cflags.append('-fPIC')
+cflags.append('-std=c++0x')
 
 env.Append(CCFLAGS = cflags)
 env.Append(CCFLAGS = cflags_normal)

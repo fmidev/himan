@@ -61,6 +61,8 @@ public:
 
 private:
 
+    std::vector<std::shared_ptr<info>> FromCache(const search_options& options);
+
     std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, const search_options& options, bool readContents = true);
 
     /**

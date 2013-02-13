@@ -48,7 +48,17 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
     {
     	// 1. Fetch data from cache
 
-    	// theInfos = FromCache()
+    	theInfos = FromCache(opts);
+
+        if (theInfos.size())
+        {
+            itsLogger->Debug("Data found from cache");
+            break;
+        }
+        else
+        {
+            itsLogger->Warning("Data not found from cache");
+        }
 
     	/*
     	 *  2. Fetch data from auxiliary files specified at command line
@@ -206,12 +216,28 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
     return allInfos;
 }
 
+vector<shared_ptr<himan::info> > fetcher::FromCache(const search_options& options)
+{
+    vector<shared_ptr<himan::info>> infos;
+
+    shared_ptr<himan::info> p = cache::Instance()->GetInfo(options);
+
+    if (p)
+    {
+        infos.push_back(p);
+    }
+
+    return infos;
+}
+
 vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, const search_options& options, bool readContents)
 {
 
     shared_ptr<grib> g = dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
 
     vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents);
+
+    cache::Instance()->Insert(options, infos);
 
     return infos;
 }
@@ -226,6 +252,8 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
     vector<shared_ptr<info>> theInfos;
 
     theInfos.push_back(i);
+
+    cache::Instance()->Insert(options, theInfos);
 
     return theInfos;
 }
