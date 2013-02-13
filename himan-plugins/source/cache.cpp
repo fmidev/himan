@@ -9,7 +9,6 @@
 #include "logger_factory.h"
 #include "info.h"
 #include <boost/lexical_cast.hpp>
-//#include <boost/optional.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -59,25 +58,29 @@ string cache::UniqueName(const search_options& options)
 void cache::Insert(const search_options& options, vector<shared_ptr<himan::info>> infos)
 {
 	Lock lock(itsMutex);
-	//for (vector<shared_ptr<himan::info>>::iterator it = infos.begin(); it != infos.end(); ++it)
+	
 	string uniqueName = UniqueName(options);
-	//if (!Find(uniqueName)) {
+	
+	if (!Find(uniqueName)) {
 		for (size_t i = 0; i < infos.size(); i++)
 		{
 			itsCache.insert( pair<string, shared_ptr<himan::info>>(uniqueName, infos[i]));
 			itsLogger->Debug("Data added to cache");
 		}	
-	//}	
+	}	
 }
 
-shared_ptr<himan::info> cache::GetInfo(const search_options& options) 
+vector<shared_ptr<himan::info>> cache::GetInfo(const search_options& options) 
 {
 	string uniqueName = UniqueName(options);
+
+	vector<shared_ptr<himan::info>> info;
+	
 	if (Find(uniqueName))
 	{
-		return itsCache[uniqueName];
+		info.push_back(itsCache[uniqueName]);
 	}
-	return 0;
+	return info;
 }
 
 

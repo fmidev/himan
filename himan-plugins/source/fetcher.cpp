@@ -218,14 +218,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
 
 vector<shared_ptr<himan::info> > fetcher::FromCache(const search_options& options)
 {
-    vector<shared_ptr<himan::info>> infos;
-
-    shared_ptr<himan::info> p = cache::Instance()->GetInfo(options);
-
-    if (p)
-    {
-        infos.push_back(p);
-    }
+    vector<shared_ptr<himan::info>> infos = cache::Instance()->GetInfo(options);
 
     return infos;
 }

@@ -9,17 +9,14 @@
 #define CACHE_H
 
 #include "auxiliary_plugin.h"
-//#include <boost/optional.hpp>
 #include <boost/thread.hpp>
 #include "search_options.h"
-//#include "Cache.h"
 
 namespace himan
 {
 namespace plugin
 {
 
-//class cachePool;
 
 class cache : public auxiliary_plugin
 {    
@@ -35,7 +32,7 @@ public:
     bool Find(const std::string& uniqueName);
     std::string UniqueName(const search_options& options);
     void Insert(const search_options& options, std::vector<std::shared_ptr<himan::info>> infos);
-    std::shared_ptr<himan::info> GetInfo(const search_options& options);
+    std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);
     
 
     virtual std::string ClassName() const
