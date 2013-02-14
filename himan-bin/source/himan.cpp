@@ -38,11 +38,9 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
 int main(int argc, char** argv)
 {
 
-	std::unique_ptr<logger> theLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
-
-	theLogger->Trace("Parsing command line");
-
 	shared_ptr<configuration> conf = ParseCommandLine(argc, argv);
+
+	std::unique_ptr<logger> theLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
 
 	/*
 	 * Initialize plugin factory before parsing configuration file. This prevents himan from
@@ -55,6 +53,7 @@ int main(int argc, char** argv)
 	 */
 
 	std::shared_ptr<plugin::auxiliary_plugin> n = std::dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
+	std::shared_ptr<plugin::auxiliary_plugin> c = std::dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("cache"));
  
 	json_parser::Instance()->Parse(conf);
 
@@ -66,20 +65,18 @@ int main(int argc, char** argv)
 
 	for (size_t i = 0; i < thePlugins.size(); i++)
 	{
-		std::string stub = "Plugin '"  + thePlugins[i]->ClassName() + "'";
-
 		switch (thePlugins[i]->PluginClass())
 		{
 		case kCompiled:
-			theLogger->Debug(stub + " \ttype compiled (hard-coded) --> " + std::dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula());
+			theLogger->Info("Plugin '"  + thePlugins[i]->ClassName() + "'" + " \ttype compiled (hard-coded) --> " + std::dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula());
 			break;
 
 		case kAuxiliary:
-			theLogger->Debug(stub + "\ttype aux");
+			theLogger->Debug("Plugin '"  + thePlugins[i]->ClassName() + "'" + "\ttype aux");
 			break;
 
 		case kInterpreted:
-			theLogger->Debug(stub + "\ttype interpreted");
+			theLogger->Debug("Plugin '"  + thePlugins[i]->ClassName() + "'" + "\ttype interpreted");
 			break;
 
 		default:
@@ -88,81 +85,50 @@ int main(int argc, char** argv)
 		}
 	}
 
+	std::vector<std::shared_ptr<info>> queues = conf->Infos();
 
-	theLogger->Debug("Requested plugin(s):");
-
-	std::vector<std::shared_ptr<info> > queues = conf->Infos();
+	theLogger->Debug("Processqueue size: " + boost::lexical_cast<std::string> (queues.size()));
 
 	for (size_t i = 0; i < queues.size(); i++)
 	{
-		std::vector<std::string> theRequestedPlugins = queues[i]->Plugins();
 
-		for (size_t j = 0; j < theRequestedPlugins.size(); j++)
+		theLogger->Debug("Number of plugins for processqueue element " + boost::lexical_cast<string> (i) + ": " + boost::lexical_cast<string> (queues[i]->Plugins().size()));
+
+		for (size_t j = 0; j < queues[i]->Plugins().size(); j++)
 		{
-		
-		 	std::string theName = theRequestedPlugins[j];		 
+
+		 	plugin_configuration pc = queues[i]->Plugins()[j];
             
-			theLogger->Info("Calculating " + theName);
+			theLogger->Info("Calculating " + pc.Name());
            
-			std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(theName));
+			std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc.Name()));
 
-		if (!thePlugin)
-		{
-			theLogger->Error("Unable to declare plugin " + theName);
-			continue;
-		}
-
-#ifdef DEBUG
-		std::unique_ptr<timer> t = std::unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		t->Start();
-#endif
-
-		thePlugin->Process(conf);
+			if (!thePlugin)
+			{
+				theLogger->Error("Unable to declare plugin " + pc.Name());
+				continue;
+			}
 
 #ifdef DEBUG
-		t->Stop();
-		theLogger->Debug("Processing " + theName + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
+			std::unique_ptr<timer> t = std::unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+			t->Start();
+#endif
+
+			conf->PluginConfiguration(pc);
+
+			thePlugin->Process(conf, queues[i]);
+
+#ifdef DEBUG
+			t->Stop();
+			theLogger->Debug("Processing " + pc.Name() + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
 #endif
 		}
-
 
 	}
 
-return 0;
+	return 0;
+
 }  
-
-/*	for (size_t i = 0; i < theRequestedPlugins.size(); i++)
-	{
-		theLogger->Debug(theRequestedPlugins[i]);
-	}
-
-	for (size_t i = 0; i < theRequestedPlugins.size(); i++)
-	{
-		std::string theName = theRequestedPlugins[i];
-
-		theLogger->Info("Calculating " + theName);
-
-		std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(theName));
-
-		if (!thePlugin)
-		{
-			theLogger->Error("Unable to declare plugin " + theName);
-			continue;
-		}
-
-#ifdef DEBUG
-		std::unique_ptr<timer> t = std::unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		t->Start();
-#endif
-
-//		thePlugin->Process(conf);
-
-#ifdef DEBUG
-		t->Stop();
-		theLogger->Debug("Processing " + theName + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
-#endif
-	}
-*/
 
 
 void banner()
@@ -229,6 +195,10 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	if (!confFile.empty())
 	{
 		conf->ConfigurationFile(confFile);
+	}
+	else
+	{
+		throw runtime_error("himan: Configuration file not defined");
 	}
 
 	if (auxFiles.size())

@@ -17,7 +17,7 @@
 	{
 		"leveltype" : "ground",
 		"levels" : "0",
-		"plugins" : "tk2tc"
+		"plugins" : [ { "name" : "tk2tc" } ]
 	} 
 	]
 }

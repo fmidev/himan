@@ -11,7 +11,7 @@
 	{
 		"leveltype" : "pressure",
 		"levels" : "850",
-		"plugins" : "vvms"
+		"plugins" : [ { "name" : "vvms" } ]
 	} 
 	]
 }
