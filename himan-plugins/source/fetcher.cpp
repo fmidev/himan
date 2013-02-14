@@ -28,6 +28,8 @@ using namespace std;
 
 const unsigned int sleepSeconds = 10;
 
+shared_ptr<cache> itsCache;
+
 fetcher::fetcher()
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
@@ -48,7 +50,9 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
     {
     	// 1. Fetch data from cache
 
-    	theInfos = FromCache(opts);
+    	itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+        
+        theInfos = FromCache(opts);
 
         if (theInfos.size())
         {
@@ -218,7 +222,13 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
 
 vector<shared_ptr<himan::info> > fetcher::FromCache(const search_options& options)
 {
-    vector<shared_ptr<himan::info>> infos = cache::Instance()->GetInfo(options);
+    vector<shared_ptr<himan::info>> infos = itsCache->GetInfo(options);
+
+    vector<shared_ptr<himan::info>> returnInfos;
+
+    for (size_t i = 0; i < infos.size(); i++) {
+            returnInfos.push_back(infos[i]);
+    }
 
     return infos;
 }
@@ -230,7 +240,7 @@ vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, cons
 
     vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents);
 
-    cache::Instance()->Insert(options, infos);
+    itsCache->Insert(options, infos);
 
     return infos;
 }
@@ -246,7 +256,7 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 
     theInfos.push_back(i);
 
-    cache::Instance()->Insert(options, theInfos);
+    itsCache->Insert(options, theInfos);
 
     return theInfos;
 }
