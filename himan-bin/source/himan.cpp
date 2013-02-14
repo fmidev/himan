@@ -192,15 +192,6 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->ThreadCount(threadCount);
 	}
 
-	if (!confFile.empty())
-	{
-		conf->ConfigurationFile(confFile);
-	}
-	else
-	{
-		throw runtime_error("himan: Configuration file not defined");
-	}
-
 	if (auxFiles.size())
 	{
 		conf->AuxiliaryFiles(auxFiles);
@@ -321,6 +312,16 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		}
 
 		exit(1);
+	}
+
+
+	if (!confFile.empty())
+	{
+		conf->ConfigurationFile(confFile);
+	}
+	else
+	{
+		throw runtime_error("himan: Configuration file not defined");
 	}
 
 	return conf;
