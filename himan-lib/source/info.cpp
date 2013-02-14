@@ -20,53 +20,63 @@
 using namespace std;
 using namespace himan;
 
-info::info() : itsLevelIterator(), itsTimeIterator(), itsParamIterator()
+info::info()
+	: itsLevelIterator(new level_iter())
+	, itsTimeIterator(new time_iter())
+	, itsParamIterator(new param_iter())
+	, itsDimensionMatrix(new matrix_t())
 {
     Init();
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
 
-    itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t());
-    itsTimeIterator = shared_ptr<time_iter> (new time_iter());
 }
 
 info::~info()
 {
 }
 
-shared_ptr<info> info::Clone() const
+info::info(const info& other)
+	// Iterators are COPIED
+	: itsLevelIterator(new level_iter(*other.itsLevelIterator))
+	, itsTimeIterator(new time_iter(*other.itsTimeIterator))
+	, itsParamIterator(new param_iter(*other.itsParamIterator))
 {
+	/* START GLOBAL CONFIGURATION OPTIONS */
 
-    shared_ptr<info> clone = shared_ptr<info> (new info());
+	itsProjection = other.itsProjection;
+	itsOrientation = other.itsOrientation;
+	itsScanningMode = other.itsScanningMode;
 
-    clone->Projection(itsProjection);
-    clone->Orientation(itsOrientation);
-    //clone->ScanningMode(itsScanningMode);
+	itsBottomLeft = other.itsBottomLeft;
+	itsTopRight = other.itsTopRight;
+	itsSouthPole = other.itsSouthPole;
 
-    clone->BottomLeft(itsBottomLeft);
-    clone->TopRight(itsTopRight);
-    clone->SouthPole(itsSouthPole);
+	itsUVRelativeToGrid = other.itsUVRelativeToGrid;
+	itsNi = other.itsNi;
+	itsNj = other.itsNj;
 
-    clone->Data(itsDimensionMatrix);
+	/* END GLOBAL CONFIGURATION OPTIONS */
 
-    clone->ParamIterator(*itsParamIterator);
-    clone->LevelIterator(*itsLevelIterator);
-    clone->TimeIterator(*itsTimeIterator);
+	// Data backend is SHARED
+	itsDimensionMatrix = other.itsDimensionMatrix;
 
-    clone->Producer(itsProducer);
 
-    clone->OriginDateTime(itsOriginDateTime.String("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S");
+	itsLocationIndex = other.itsLocationIndex;
 
-    clone->LocationIndex(itsLocationIndex);
+	itsProducer = other.itsProducer;
 
-    clone->StepSizeOverOneByte(itsStepSizeOverOneByte);
-    return clone;
+	itsOriginDateTime = other.itsOriginDateTime;
 
+	itsStepSizeOverOneByte = other.itsStepSizeOverOneByte;
+
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
 }
 
 void info::Init()
 {
 
     itsProjection = kUnknownProjection;
+    itsScanningMode = kUnknownScanningMode;
 
     itsBottomLeft = point(kHPMissingFloat, kHPMissingFloat);
     itsTopRight = point(kHPMissingFloat, kHPMissingFloat);
@@ -74,6 +84,11 @@ void info::Init()
 
     itsOrientation = kHPMissingFloat;
     itsStepSizeOverOneByte = false;
+    itsUVRelativeToGrid = false;
+
+    itsNi = 0;
+    itsNj = 0;
+
 }
 
 std::ostream& info::Write(std::ostream& file) const
@@ -88,6 +103,9 @@ std::ostream& info::Write(std::ostream& file) const
     file << itsSouthPole;
 
     file << "__itsOrientation__ " << itsOrientation << endl;
+    file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
+
+    file << "__itsScanningMode__ " << itsScanningMode << endl;
 
     file << itsProducer;
 
@@ -110,7 +128,7 @@ std::ostream& info::Write(std::ostream& file) const
 }
 
 
-bool info::Create(HPScanningMode theScanningMode, bool theUVRelativeToGrid)
+void info::Create()
 {
 
     itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
@@ -127,15 +145,35 @@ bool info::Create(HPScanningMode theScanningMode, bool theUVRelativeToGrid)
             while (NextParam())
                 // Create empty placeholders
             {
-            	Grid(shared_ptr<grid> (new grid(theScanningMode, theUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
-
-//            	Grid(shared_ptr<grid> (new grid()));
-  //          	Grid()->ScanningMode(itsScanningMode);
+            	Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
+            	Grid()->Data()->Resize(itsNi,itsNj);
             }
         }
     }
 
-    return true;
+}
+
+void info::Create(shared_ptr<grid> baseGrid)
+{
+
+    itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
+    Reset();
+
+    while (NextTime())
+    {
+        ResetLevel();
+
+        while (NextLevel())
+        {
+            ResetParam();
+
+            while (NextParam())
+                // Create empty placeholders
+            {
+            	Grid(shared_ptr<grid> (new grid(*baseGrid)));
+            }
+        }
+    }
 
 }
 
@@ -405,56 +443,6 @@ double info::Dj() const
 	return Grid()->Dj();
 }
 
-HPProjectionType info::Projection() const
-{
-	return itsProjection;
-}
-
-void info::Projection(HPProjectionType theProjection)
-{
-	itsProjection = theProjection;
-}
-
-point info::BottomLeft() const
-{
-	return itsBottomLeft;
-}
-
-point info::TopRight() const
-{
-	return itsTopRight;
-}
-
-void info::BottomLeft(const point& theBottomLeft)
-{
-	itsBottomLeft = theBottomLeft;
-}
-
-void info::TopRight(const point& theTopRight)
-{
-	itsTopRight = theTopRight;
-}
-
-void info::SouthPole(const point& theSouthPole)
-{
-    itsSouthPole = theSouthPole;
-}
-
-point info::SouthPole() const
-{
-    return itsSouthPole;
-}
-
-double info::Orientation() const
-{
-    return itsOrientation;
-}
-
-void info::Orientation(double theOrientation)
-{
-    itsOrientation = theOrientation;
-}
-
 bool info::StepSizeOverOneByte() const
 {
 	return itsStepSizeOverOneByte;
@@ -465,12 +453,12 @@ void info::StepSizeOverOneByte(bool theStepSizeOverOneByte)
 	itsStepSizeOverOneByte = theStepSizeOverOneByte;
 }
 
-std::vector<std::string> info::Plugins() const
+std::vector<plugin_configuration> info::Plugins() const
 {
     return itsPlugins;
 }
 
-void info::Plugins(const std::vector<std::string>& thePlugins)
+void info::Plugins(const std::vector<plugin_configuration>& thePlugins)
 {
     itsPlugins = thePlugins;
 }

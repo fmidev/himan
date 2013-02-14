@@ -52,30 +52,6 @@ public:
     std::vector<std::shared_ptr<info> > Infos() const;
     void Infos(const std::vector<std::shared_ptr<info> >& theInfos);
    
-    void Info(const std::shared_ptr<info>& theInfo);
-
-
-    /**
-     * @return Info instance created from configuration file metadata
-     */
-
-    inline std::shared_ptr<info> Info() const
-    {
-        return itsInfo;
-    }
-
-    /**
-     * @return List of plugin names found in the configuration file
-     */
-
-  //  std::vector<std::string> Plugins() const;
-
-    /**
-     * @param thePlugins List of plugin names (string)
-     */
-
-  //  void Plugins(const std::vector<std::string>& thePlugins) ;
-
     /**
      * @return List of auxiliary file names found in the configuration file
      */
@@ -90,12 +66,14 @@ public:
     HPFileType OutputFileType() const;
 	void OutputFileType(HPFileType theOutputFileType);
 
-    unsigned int SourceProducer() const;
+    std::vector<producer> SourceProducers() const;
+    void SourceProducers(std::vector<producer> theSourceProducers);
 
-    unsigned int TargetProducer() const;
+    producer SourceProducer() const { assert(!itsSourceProducers.empty()); return itsSourceProducers[0]; }
 
-    void SourceProducer(unsigned int theSourceProducer);
-    void TargetProducer(unsigned int theTargetProducer);
+    producer TargetProducer() const;
+
+    void TargetProducer(const producer& theTargetProducer);
 
     /**
      * @brief Enable or disable writing to one or many file
@@ -106,12 +84,6 @@ public:
 
     void WholeFileWrite(bool theWholeFileWrite);
     bool WholeFileWrite() const;
-
-    size_t Ni() const;
-    size_t Nj() const;
-
-    void Ni(size_t theNi);
-    void Nj(size_t theNj);
 
     /**
      * @brief Enable or disable reading of source data from Neons
@@ -138,36 +110,28 @@ public:
     void ThreadCount(short theThreadCount);
     short ThreadCount() const;
 
-    HPScanningMode ScanningMode() const;
-    void ScanningMode(HPScanningMode theScanningMode);
-
 	std::string ConfigurationFile() const;
 	void ConfigurationFile(const std::string& theConfigurationFile);
+
+	plugin_configuration PluginConfiguration() const;
+	void PluginConfiguration(const plugin_configuration& thePluginConfiguration);
 
 private:
 
     void Init();
 
-    std::shared_ptr<info> itsInfo; //!< @see class 'info'
     std::vector<std::shared_ptr<info>> itsInfos;
 
     HPFileType itsOutputFileType;
     std::string itsConfigurationFile;
     std::vector<std::string> itsAuxiliaryFiles;
 
- //   std::vector<std::string> itsPlugins;
     std::string itsOriginTime;
 
     std::shared_ptr<logger> itsLogger;
 
-    unsigned int itsSourceProducer;
-    unsigned int itsTargetProducer;
-
     bool itsWholeFileWrite;
     bool itsReadDataFromDatabase;
-
-    size_t itsNi;
-    size_t itsNj;
 
     unsigned short itsFileWaitTimeout; //<! Minutes
     bool itsUseCuda;
@@ -177,11 +141,16 @@ private:
     short itsThreadCount;
 
     std::string itsGeomName;
-    HPScanningMode itsScanningMode;
+
+    producer itsTargetProducer;
+    std::vector<producer> itsSourceProducers;
+
+    plugin_configuration itsPluginConfiguration;
 };
 
+
 inline
-std::ostream& operator<<(std::ostream& file, configuration& ob)
+std::ostream& operator<<(std::ostream& file, const configuration& ob)
 {
     return ob.Write(file);
 }

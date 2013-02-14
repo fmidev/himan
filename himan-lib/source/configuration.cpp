@@ -15,7 +15,6 @@ configuration::configuration()
 
     Init();
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
-    itsInfo = std::shared_ptr<info> (new info());
 
 }
 
@@ -24,13 +23,14 @@ std::ostream& configuration::Write(std::ostream& file) const
 
     file << "<" << ClassName() << " " << Version() << ">" << std::endl;
 
- /*   for (size_t i = 0; i < itsPlugins.size(); i++)
+    for (size_t i = 0; i < itsInfos.size(); i++)
     {
-        file << "__itsPlugins__ " << itsPlugins[i] << std::endl;
-    }  */
+        file << *itsInfos[i];
+    }
 
-    file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
-    file << "__itsTargetProducer__ " << itsTargetProducer << std::endl;
+   // file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
+    file << itsTargetProducer;
+
     file << "__itsOutputFileType__ " << itsOutputFileType << std::endl;
     file << "__itsWholeFileWrite__ " << itsWholeFileWrite << std::endl;
     file << "__itsUseCuda__ " << itsUseCuda << std::endl;
@@ -39,13 +39,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 
     file << "__itsThreadCount__ " << itsThreadCount << std::endl;
 
-    file << "__itsNi__ " << itsNi << std::endl;
-    file << "__itsNj__ " << itsNj << std::endl;
-
     file << "__itsGeomName__ " << itsGeomName << std::endl;
-    file << "__itsScanningMode__ " << itsScanningMode << std::endl;
-
-    file << *itsInfo;
 
     return file;
 }
@@ -70,26 +64,9 @@ void configuration::Infos(const std::vector<std::shared_ptr<info> >& theInfos)
     itsInfos = theInfos;
 }
 
-void configuration::Info(const std::shared_ptr<info> & theInfo)
-{
-    itsInfo = theInfo;
-}
-/*
-std::vector<std::string> configuration::Plugins() const
-{
-    return itsPlugins;
-}
-
-void configuration::Plugins(const std::vector<std::string>& thePlugins)
-{
-    itsPlugins = thePlugins;
-}
-*/
 void configuration::Init()
 {
     itsOutputFileType = kQueryData;
-    itsSourceProducer = kHPMissingInt;
-    itsTargetProducer = kHPMissingInt;
     itsWholeFileWrite = false;
     itsReadDataFromDatabase = true;
     itsUseCuda = true;
@@ -97,7 +74,6 @@ void configuration::Init()
     itsLeadingDimension = kTimeDimension;
     itsThreadCount = -1;
     itsGeomName = "";
-    itsScanningMode = kUnknownScanningMode;
 }
 
 HPFileType configuration::OutputFileType() const
@@ -110,26 +86,6 @@ void configuration::OutputFileType(HPFileType theOutputFileType)
 	itsOutputFileType = theOutputFileType;
 }
 
-unsigned int configuration::SourceProducer() const
-{
-    return itsSourceProducer;
-}
-
-unsigned int configuration::TargetProducer() const
-{
-    return itsTargetProducer;
-}
-
-void configuration::SourceProducer(unsigned int theSourceProducer)
-{
-    itsSourceProducer = theSourceProducer;
-}
-
-void configuration::TargetProducer(unsigned int theTargetProducer)
-{
-    itsTargetProducer = theTargetProducer;
-}
-
 bool configuration::WholeFileWrite() const
 {
     return itsWholeFileWrite;
@@ -138,26 +94,6 @@ bool configuration::WholeFileWrite() const
 void configuration::WholeFileWrite(bool theWholeFileWrite)
 {
     itsWholeFileWrite = theWholeFileWrite;
-}
-
-size_t configuration::Ni() const
-{
-    return itsNi;
-}
-
-void configuration::Ni(size_t theNi)
-{
-    itsNi = theNi;
-}
-
-size_t configuration::Nj() const
-{
-    return itsNj;
-}
-
-void configuration::Nj(size_t theNj)
-{
-    itsNj = theNj;
 }
 
 bool configuration::ReadDataFromDatabase() const
@@ -205,16 +141,6 @@ void configuration::ThreadCount(short theThreadCount)
     itsThreadCount = theThreadCount;
 }
 
-HPScanningMode configuration::ScanningMode() const
-{
-	return itsScanningMode;
-}
-
-void configuration::ScanningMode(HPScanningMode theScanningMode)
-{
-	itsScanningMode = theScanningMode;
-}
-
 std::string configuration::ConfigurationFile() const
 {
 	return itsConfigurationFile;
@@ -223,4 +149,29 @@ std::string configuration::ConfigurationFile() const
 void configuration::ConfigurationFile(const std::string& theConfigurationFile)
 {
 	itsConfigurationFile = theConfigurationFile;
+}
+
+void configuration::SourceProducers(const std::vector<producer> theSourceProducers)
+{
+	itsSourceProducers = theSourceProducers;
+}
+
+std::vector<producer> configuration::SourceProducers() const
+{
+	return itsSourceProducers;
+}
+
+producer configuration::TargetProducer() const
+{
+	return itsTargetProducer;
+}
+
+plugin_configuration configuration::PluginConfiguration() const
+{
+	return itsPluginConfiguration;
+}
+
+void configuration::PluginConfiguration(const plugin_configuration& thePluginConfiguration)
+{
+	itsPluginConfiguration = thePluginConfiguration;
 }

@@ -13,6 +13,7 @@
 
 #include <mutex>
 #include "himan_common.h"
+#include "grid.h"
 
 namespace himan
 {
@@ -82,7 +83,7 @@ public:
         file << "__itsDepth__ " << itsDepth << std::endl;
         file << "__itsSize__ " << itsData.size() << std::endl;
 
-        PrintFloatData(file, itsData);
+        PrintData(file, itsData);
 
         return file;
     }
@@ -92,7 +93,7 @@ public:
      *
      */
 
-    void PrintFloatData(std::ostream& file, std::vector<double> theValues) const
+    void PrintData(std::ostream& file, std::vector<double> theValues) const
     {
 
         if (!itsData.size())
@@ -129,6 +130,26 @@ public:
         file << "__missing__ " << missing << std::endl;
     }
 
+    /**
+     * @brief Print information on contents if T == grid
+     *
+     */
+/*
+    void PrintData(std::ostream& file, std::vector<std::shared_ptr<grid>> theValues) const
+    {
+
+        if (!itsData.size())
+        {
+            file << "__no-data__" << std::endl;
+            return;
+        }
+
+        for (size_t i = 0; i < theValues.size(); i++)
+        {
+        	file << *theValues[i];
+        }
+    }
+*/
     size_t Size() const
     {
         return itsData.size();
@@ -147,6 +168,24 @@ public:
     size_t SizeZ() const
     {
         return itsDepth;
+    }
+
+    void SizeX(size_t theWidth)
+    {
+        itsWidth = theWidth;
+        Resize(itsWidth, itsHeight, itsDepth);
+    }
+
+    void SizeY(size_t theHeight)
+    {
+        itsHeight = theHeight;
+        Resize(itsWidth, itsHeight, itsDepth);
+    }
+
+    void SizeZ(size_t theDepth)
+    {
+        itsDepth = theDepth;
+        Resize(itsWidth, itsHeight, itsDepth);
     }
 
     /**
@@ -170,7 +209,7 @@ public:
         return &itsData[0];
     }
 
-    friend std::ostream& operator<<(std::ostream& file, matrix<T> & ob)
+    friend std::ostream& operator<<(std::ostream& file, const matrix<T> & ob)
     {
         return ob.Write(file);
     }

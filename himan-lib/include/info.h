@@ -21,6 +21,7 @@
 #include "point.h"
 #include "grid.h"
 #include <vector>
+#include "plugin_configuration.h"
 
 namespace himan
 {
@@ -216,10 +217,17 @@ public:
 
 public:
 
+    friend class json_parser;
+
     info();
     ~info();
 
-    info(const info& other) = delete;
+    /**
+     * @brief Copy constructor for info class. Will preserve data backend.
+     */
+
+    info(const info& other);
+
     info& operator=(const info& other) = delete;
 
     std::string ClassName() const
@@ -233,27 +241,6 @@ public:
     }
 
     std::ostream& Write(std::ostream& file) const;
-
-    /**
-     * @return Projection type of this info
-     *
-     * One info can hold only one type of projection
-     */
-
-    HPProjectionType Projection() const;
-    void Projection(HPProjectionType theProjection);
-
-    point BottomLeft() const;
-    point TopRight() const;
-
-    void BottomLeft(const point& theBottomLeft);
-    void TopRight(const point& theTopRight);
-
-    void Orientation(double theOrientation);
-    double Orientation() const;
-
-    point SouthPole() const;
-    void SouthPole(const point& theSouthPole);
 
     /**
      * @return Number of point along X axis
@@ -322,17 +309,15 @@ public:
     void TimeIterator(const time_iter& theTimeIterator);
 
     /**
-     * @brief Initialize data backend with correct number of zero-sized matrices
+     * @brief Initialize data backend with correct number of matrices
      *
-     * Function will create a number of empty (zero-sized) matrices to
+     * Function will create a number of matrices to
      * hold the data. The number of the matrices depends on the size
      * of times, params and levels.
-     *
-     * @todo Should return void?
-     * @return Always true
      */
 
-    bool Create(HPScanningMode theScanningMode = kTopLeft, bool theUVRelativeToGrid  = false);
+    void Create();
+    void Create(std::shared_ptr<grid> baseGrid);
 
     /**
      * @brief Clone info while preserving its data backend
@@ -347,7 +332,7 @@ public:
      *
      */
 
-    std::shared_ptr<info> Clone() const;
+    //std::shared_ptr<info> Clone(bool resetData = false) const;
 
     void Producer(long theFmiProducerID);
     void Producer(const producer& theProducer);
@@ -522,13 +507,21 @@ public:
     bool StepSizeOverOneByte() const;
     void StepSizeOverOneByte(bool theStepSizeOverOneByte);
 
-    void Plugins(const std::vector<std::string>& thePlugins);
-    std::vector<std::string> Plugins() const;
-
+    void Plugins(const std::vector<plugin_configuration>& thePlugins);
+    std::vector<plugin_configuration> Plugins() const;
 
 private:
 
     void Init();
+
+    /*
+     * START GLOBAL CONFIGURATION FILE PARAMETERS
+     *
+     * These variables are needed when parsing configuration file.
+     * Later on they are used to create the correct data structure.
+     * They should *not* be referred to when calculating or reading/
+     * writing data (that's why they are private).
+     */
 
     HPProjectionType itsProjection;
 
@@ -537,6 +530,14 @@ private:
     point itsSouthPole;
 
     double itsOrientation;
+
+    HPScanningMode itsScanningMode;
+    size_t itsNi;
+    size_t itsNj;
+
+    bool itsUVRelativeToGrid;
+
+    /* END GLOBAL CONFIGURATION PARAMETERS */
 
     std::shared_ptr<level_iter> itsLevelIterator;
     std::shared_ptr<time_iter> itsTimeIterator;
@@ -554,12 +555,12 @@ private:
 
     bool itsStepSizeOverOneByte;
 
-    std::vector<std::string> itsPlugins;
+    std::vector<plugin_configuration> itsPlugins;
 
 };
 
 inline
-std::ostream& operator<<(std::ostream& file, info& ob)
+std::ostream& operator<<(std::ostream& file, const info& ob)
 {
     return ob.Write(file);
 }

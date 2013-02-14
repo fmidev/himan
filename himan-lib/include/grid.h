@@ -35,9 +35,15 @@ class grid
 				point theTopRight,
 				point theSouthPole = point(),
 				double theOrientation = kHPMissingFloat);
+
 		~grid() {}
 
-		grid(const grid& other) = delete;
+		/**
+		 * @brief Copy constructor for grid. Will create new data class instance.
+		 *
+		 */
+
+		grid(const grid& other);
 		grid& operator=(const grid& other) = delete;
 
 
@@ -76,6 +82,9 @@ class grid
 		 */
 
 		double Dj() const;
+
+		void Ni(size_t theNi);
+		void Nj(size_t theNj);
 
 		void Di(double theDi);
 		void Dj(double theDj);

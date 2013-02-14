@@ -43,8 +43,12 @@ private:
     ~json_parser() {}
 
     void ParseConfigurationFile(std::shared_ptr<configuration> conf);
-    void ParseAreaAndGrid(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
-    void ParseTime(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
+    void ParseAreaAndGrid(std::shared_ptr<configuration> conf, std::shared_ptr<info> baseInfo, const boost::property_tree::ptree& pt);
+    void ParseTime(const producer& sourceProducer, std::shared_ptr<info> baseInfo, const boost::property_tree::ptree& pt);
+    void ParseProducers(std::shared_ptr<configuration> conf, std::shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
+    void ParseLevels(std::shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
+
+    std::vector<level> LevelsFromString(const std::string& levelType, const std::string& levelValues) const;
     bool ParseBoolean(std::string& booleanValue);
 
     static json_parser* itsInstance;

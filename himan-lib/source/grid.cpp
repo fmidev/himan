@@ -40,6 +40,22 @@ grid::grid(HPScanningMode theScanningMode,
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
 
+grid::grid(const grid& other)
+	: itsData(new d_matrix_t(other.Ni(), other.Nj()))
+{
+	itsScanningMode = other.itsScanningMode;
+	itsUVRelativeToGrid = other.itsUVRelativeToGrid;
+	itsProjection = other.itsProjection;
+	itsBottomLeft = other.itsBottomLeft;
+	itsTopRight = other.itsTopRight;
+	itsSouthPole = other.itsSouthPole;
+	itsOrientation = other.itsOrientation;
+	itsDi = other.itsDi;
+	itsDj = other.itsDj;
+
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
+}
+
 size_t grid::Ni() const
 {
     return itsData->SizeX();
@@ -48,6 +64,16 @@ size_t grid::Ni() const
 size_t grid::Nj() const
 {
     return itsData->SizeY();
+}
+
+void grid::Ni(size_t theNi)
+{
+	itsData->SizeX(theNi);
+}
+
+void grid::Nj(size_t theNj)
+{
+	itsData->SizeY(theNj);
 }
 
 void grid::Di(double theDi)
