@@ -149,7 +149,11 @@ void windvector::Process(std::shared_ptr<const configuration> conf,
 
 	theParams.push_back(requestedSpeedParam);
 	theParams.push_back(requestedDirParam);
-	theParams.push_back(requestedVectorParam);
+
+	if (itsAirCalculation)
+	{
+		theParams.push_back(requestedVectorParam);
+	}
 
 	targetInfo->Params(theParams);
 
@@ -235,14 +239,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 	if (itsSeaCalculation)
 	{
-		UParam = param("UWVEL-MS");
-		VParam = param("VWVEL-MS");
+		UParam = param("WVELU-MS");
+		VParam = param("WVELV-MS");
 		directionOffset = 0;
 	}
 	else if (itsIceCalculation)
 	{
-		UParam = param("UIVEL-MS");
-		VParam = param("VIVEL-MS");
+		UParam = param("IVELU-MS");
+		VParam = param("IVELV-MS");
 		directionOffset = 0;
 	}
 
