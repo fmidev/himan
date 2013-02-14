@@ -77,7 +77,7 @@ vector<string> neons::Files(const search_options& options)
 
 	if (gridgeoms.size() == 0)
 	{
-		itsLogger->Warning("No data found for given search options");
+		itsLogger->Warning("No geometries found for given search options");
 		return files;
 	}
 
@@ -98,8 +98,8 @@ vector<string> neons::Files(const search_options& options)
 		string query = "SELECT parm_name, lvl_type, lvl1_lvl2, fcst_per, file_location, file_server "
 					   "FROM "+tablename+" "
 					   "WHERE dset_id = "+dset+" "
-					   "AND parm_name = '"+parm_name+"' "
-					   "AND lvl_type = '"+level_name+"' "
+					   "AND parm_name = upper('"+parm_name+"') "
+					   "AND lvl_type = upper('"+level_name+"') "
 					   "AND lvl1_lvl2 = " +levelvalue+" "
 					   "AND fcst_per = "+boost::lexical_cast<string> (options.time.Step())+" "
 					   "ORDER BY dset_id, fcst_per, lvl_type, lvl1_lvl2";
