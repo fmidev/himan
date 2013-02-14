@@ -314,8 +314,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 		bool equalGrids = (*myTargetInfo->Grid() == *UInfo->Grid() && *myTargetInfo->Grid() == *VInfo->Grid());
 
 		myTargetInfo->ResetLocation();
-	//	DDInfo->ResetLocation();
-	//	FFInfo->ResetLocation();
 
 		targetGrid->Reset();
 
@@ -380,6 +378,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			if (speed > 0)
 			{
 				dir = round(kRadToDeg * atan2(U,V) + directionOffset); // Rounding dir
+
+				if (dir < 0)
+				{
+					dir += 360;
+				}
 			}
 
 			/*
@@ -430,7 +433,12 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), true);
+			shared_ptr<info> tempInfo(new info(*myTargetInfo));
+
+			for (tempInfo->ResetParam(); tempInfo->NextParam(); )
+			{
+				theWriter->ToFile(tempInfo, conf->OutputFileType(), true);
+			}
 		}
 	}
 }
