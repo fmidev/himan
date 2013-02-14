@@ -11,6 +11,8 @@
 
 #include "himan_plugin.h"
 #include "configuration.h"
+#include "plugin_configuration.h"
+
 #include <boost/thread.hpp>
 
 namespace himan
@@ -26,7 +28,8 @@ public:
 
     virtual ~compiled_plugin() {}
 
-    virtual void Process(std::shared_ptr<configuration> theConfiguration) = 0;
+    virtual void Process(std::shared_ptr<const configuration> configuration,
+    						std::shared_ptr<info> targetInfo) = 0;
 
     virtual std::string Formula()
     {

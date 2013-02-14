@@ -10,6 +10,7 @@
 #include "plugin_factory.h"
 #include "producer.h"
 #include "util.h"
+#include "grid.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -171,11 +172,11 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 		itsGrib->Message()->X1(lastGridPoint.X());
 		itsGrib->Message()->Y1(lastGridPoint.Y());
 
-		itsGrib->Message()->SouthPoleX(info->SouthPole().X());
-		itsGrib->Message()->SouthPoleY(info->SouthPole().Y());
+		itsGrib->Message()->SouthPoleX(info->Grid()->SouthPole().X());
+		itsGrib->Message()->SouthPoleY(info->Grid()->SouthPole().Y());
 
-		itsGrib->Message()->iDirectionIncrement(info->Di());
-		itsGrib->Message()->jDirectionIncrement(info->Dj());
+		itsGrib->Message()->iDirectionIncrement(info->Grid()->Di());
+		itsGrib->Message()->jDirectionIncrement(info->Grid()->Dj());
 
 		itsGrib->Message()->GridType(gridType);
 
@@ -195,15 +196,16 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 		itsGrib->Message()->GridType(gridType);
 
-		itsGrib->Message()->X0(info->BottomLeft().X());
-		itsGrib->Message()->Y0(info->BottomLeft().Y());
+		itsGrib->Message()->X0(info->Grid()->BottomLeft().X());
+		itsGrib->Message()->Y0(info->Grid()->BottomLeft().Y());
 
-		// missing iDirectionIncrementInMeters
-		itsGrib->Message()->GridOrientation(info->Orientation());
+		itsGrib->Message()->GridOrientation(info->Grid()->Orientation());
+		itsGrib->Message()->XLengthInMeters(info->Grid()->Di());
+		itsGrib->Message()->YLengthInMeters(info->Grid()->Dj());
 		break;
 	}
 	default:
-		throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (info->Projection()));
+		throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (info->Grid()->Projection()));
 		break;
 	}
 
@@ -363,7 +365,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	int foundMessageNo = 0;
 
-	long fmiProducer = options.configuration->SourceProducer();
+	long fmiProducer = options.configuration->SourceProducer().Id();
 
 	map<string, string> producermap = n->ProducerInfo(fmiProducer);
 
@@ -418,7 +420,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			long category = itsGrib->Message()->ParameterCategory();
 			long discipline = itsGrib->Message()->ParameterDiscipline();
-			long producer = options.configuration->SourceProducer();
+			long producer = options.configuration->SourceProducer().Id();
 			map<std::string, std::string> producermap;
 			
 			producermap = n->ProducerInfo(producer);
@@ -580,6 +582,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		// END VALIDATION OF SEARCH PARAMETERS
 
 		shared_ptr<info> newInfo (new info());
+		shared_ptr<grid> newGrid (new grid());
 
 		producer prod(itsGrib->Message()->Centre(), process);
 
@@ -610,12 +613,12 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		switch (itsGrib->Message()->NormalizedGridType())
 		{
 		case 0:
-			newInfo->Projection(kLatLonProjection);
+			newGrid->Projection(kLatLonProjection);
 			break;
 
 		case 10:
-			newInfo->Projection(kRotatedLatLonProjection);
-			newInfo->SouthPole(himan::point(itsGrib->Message()->SouthPoleX(), itsGrib->Message()->SouthPoleY()));
+			newGrid->Projection(kRotatedLatLonProjection);
+			newGrid->SouthPole(himan::point(itsGrib->Message()->SouthPoleX(), itsGrib->Message()->SouthPoleY()));
 			break;
 
 		default:
@@ -626,6 +629,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		size_t ni = itsGrib->Message()->SizeX();
 		size_t nj = itsGrib->Message()->SizeY();
+
+		//newGrid->Data()->Ni(ni);
+		//newGrid->Data()->Nj(nj);
 
 		bool iNegative = itsGrib->Message()->IScansNegatively();
 		bool jPositive = itsGrib->Message()->JScansPositively();
@@ -653,19 +659,19 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			throw runtime_error("WHAT?");
 		}
 
-		newInfo->Create();
+		newGrid->ScanningMode(m);
 
-		if (newInfo->Grid()->Projection() == kRotatedLatLonProjection)
+		if (newGrid->Projection() == kRotatedLatLonProjection)
 		{
-			newInfo->Grid()->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
+			newGrid->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
 		}
-
-		newInfo->Grid()->ScanningMode(m);
 
 		pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement(), m);
 
-		newInfo->Grid()->BottomLeft(coordinates.first);
-		newInfo->Grid()->TopRight(coordinates.second);
+		newGrid->BottomLeft(coordinates.first);
+		newGrid->TopRight(coordinates.second);
+
+		newInfo->Create(newGrid);
 
 		/*
 		 * Read data from grib *

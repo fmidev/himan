@@ -127,7 +127,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
 
 	if (theInfos.size() == 0)
 	{
-		string optsStr = "producer: " + boost::lexical_cast<string> (config->SourceProducer());
+		string optsStr = "producer: " + boost::lexical_cast<string> (config->SourceProducer().Id());
 		optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
 		optsStr += " param: " + requestedParam.Name();
 		optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());

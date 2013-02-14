@@ -27,7 +27,8 @@ public:
     vvms(const vvms& other) = delete;
     vvms& operator=(const vvms& other) = delete;
 
-    virtual void Process(std::shared_ptr<configuration> theConfiguration);
+    virtual void Process(std::shared_ptr<const configuration> conf,
+    						std::shared_ptr<info> targetInfo);
 
     virtual std::string ClassName() const
     {

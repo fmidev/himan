@@ -79,6 +79,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
 
 #ifndef NDEBUG
     size_t size = 0;
+    string firstOriginTime;
 
     bool first = true;
 #endif
@@ -102,12 +103,32 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
     }
     else
     {
+    	/*
+    	 * info-class (like grib) support many different grid types, the "worst" case being that
+    	 * all info-class grid elements are different from each other (different producer,grid,area,time etc).
+    	 * querydata on the other does not support this, so we should check that all elements are equal
+    	 * before writing querydata.
+    	 */
+
         theInfo->ResetTime();
         qinfo.ResetTime();
 
         while (theInfo->NextTime() && qinfo.NextTime())
         {
-            theInfo->ResetLevel();
+
+#ifndef NDEBUG
+
+        	if (first)
+        	{
+        		firstOriginTime = theInfo->Time().OriginDateTime()->String();
+        	}
+        	else
+        	{
+        		assert(firstOriginTime == theInfo->Time().OriginDateTime()->String());
+        	}
+
+#endif
+        	theInfo->ResetLevel();
             qinfo.ResetLevel();
 
             while (theInfo->NextLevel() && qinfo.NextLevel())
@@ -223,21 +244,23 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
 
     NFmiArea* theArea = 0;
 
-    switch (info->Projection())
+    // Assume all grids in the info have equal projections
+
+    switch (info->Grid()->Projection())
     {
     case kLatLonProjection:
     {
-        theArea = new NFmiLatLonArea(NFmiPoint(info->BottomLeft().X(), info->BottomLeft().Y()),
-                                     NFmiPoint(info->TopRight().X(), info->TopRight().Y()));
+        theArea = new NFmiLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+                                     NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()));
 
         break;
     }
 
     case kRotatedLatLonProjection:
     {
-        theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->BottomLeft().X(), info->BottomLeft().Y()),
-                                            NFmiPoint(info->TopRight().X(), info->TopRight().Y()),
-                                            NFmiPoint(info->SouthPole().X(), info->SouthPole().Y()),
+        theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+                                            NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()),
+                                            NFmiPoint(info->Grid()->SouthPole().X(), info->Grid()->SouthPole().Y()),
                                             NFmiPoint(0.,0.), // default values
                                             NFmiPoint(1.,1.), // default values
                                             true);
@@ -247,9 +270,9 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
 
     case kStereographicProjection:
     {
-        theArea = new NFmiStereographicArea(NFmiPoint(info->BottomLeft().X(), info->BottomLeft().Y()),
-                                            NFmiPoint(info->TopRight().X(), info->TopRight().Y()),
-                                            info->Orientation());
+        theArea = new NFmiStereographicArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+                                            NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()),
+                                            info->Grid()->Orientation());
         break;
 
     }
@@ -260,7 +283,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
         break;
     }
 
-    NFmiGrid theGrid (theArea, info->Ni(), info->Nj());
+    NFmiGrid theGrid (theArea, info->Grid()->Ni(), info->Grid()->Nj());
 
     delete theArea;
 

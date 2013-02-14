@@ -44,15 +44,20 @@ void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float
 
 const double kRadToDeg = 57.295779513082; // 180 / PI
 
-windvector::windvector() : itsUseCuda(false)
+windvector::windvector()
+	: itsUseCuda(false)
+	, itsSeaCalculation(false)
+	, itsIceCalculation(false)
+	, itsAirCalculation(false)
 {
-	itsClearTextFormula = "FF = sqrt(U*U+V*V) ; DD = round(180/PI * atan2(U,V) + 180.0) ; DF = round(U/10) + 100 * round(V)";
+	itsClearTextFormula = "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(U/10) + 100 * round(V)";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvector"));
 
 }
 
-void windvector::Process(shared_ptr<configuration> conf)
+void windvector::Process(std::shared_ptr<const configuration> conf,
+		std::shared_ptr<info> targetInfo)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -82,12 +87,6 @@ void windvector::Process(shared_ptr<configuration> conf)
 	boost::thread_group g;
 
 	/*
-	 * The target information is parsed from the configuration file.
-	 */
-
-	shared_ptr<info> theTargetInfo = conf->Info();
-
-	/*
 	 * Get producer information from neons if whole_file_write is false.
 	 */
 
@@ -95,84 +94,97 @@ void windvector::Process(shared_ptr<configuration> conf)
 	{
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		map<string,string> prodInfo = n->ProducerInfo(theTargetInfo->Producer().Id());
+		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
 
 		if (!prodInfo.empty())
 		{
-			producer prod(theTargetInfo->Producer().Id());
+			producer prod(targetInfo->Producer().Id());
 
 			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
 			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
 			prod.Name(prodInfo["name"]);
 
-			theTargetInfo->Producer(prod);
+			targetInfo->Producer(prod);
 		}
 
 	}
 
 	/*
 	 * Set target parameter to windvector
-	 * - name ICEIND-N
-	 * - univ_id 480
-	 * - grib2 descriptor 0'00'002
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
-	 * (todo: we could check from conf but why bother?)
 	 *
 	 */
 
 	vector<param> theParams;
 
-	param requestedDFParam("DF-MS", 22);
-	param requestedFFParam("FF-MS", 21);
-	requestedFFParam.GribDiscipline(0);
-	requestedFFParam.GribCategory(2);
-	requestedFFParam.GribParameter(1);
+	param requestedVectorParam("DF-MS", 22);
 
-	param requestedDDParam("DD-D", 20);
-	requestedDDParam.GribDiscipline(0);
-	requestedDDParam.GribCategory(2);
-	requestedDDParam.GribParameter(0);
+	param requestedSpeedParam("FF-MS", 21);
+	requestedSpeedParam.GribDiscipline(0);
+	requestedSpeedParam.GribCategory(2);
+	requestedSpeedParam.GribParameter(1);
 
-	theParams.push_back(requestedDFParam);
-	theParams.push_back(requestedFFParam);
-	theParams.push_back(requestedDDParam);
+	param requestedDirParam("DD-D", 20);
+	requestedDirParam.GribDiscipline(0);
+	requestedDirParam.GribCategory(2);
+	requestedDirParam.GribParameter(0);
 
-	theTargetInfo->Params(theParams);
+	if (conf->PluginConfiguration().Exists("for_ice") && conf->PluginConfiguration().GetValue("for_ice") == "true")
+	{
+		requestedSpeedParam = param("IFF-MS", 143414);
+		requestedDirParam = param("IDD-D", 143415);
+		itsIceCalculation = true;
+	}
+	else if (conf->PluginConfiguration().Exists("for_sea") && conf->PluginConfiguration().GetValue("for_sea") == "true")
+	{
+		throw runtime_error(ClassName() + ": Not yet");
+		itsSeaCalculation = true;
+	}
+	else
+	{
+		itsAirCalculation = true;
+	}
+
+	theParams.push_back(requestedSpeedParam);
+	theParams.push_back(requestedDirParam);
+	theParams.push_back(requestedVectorParam);
+
+	targetInfo->Params(theParams);
 
 	/*
 	 * Create data structures.
 	 */
 
-	theTargetInfo->Create(conf->ScanningMode(), false);
+	targetInfo->Create();
 
 	/*
 	 * Initialize parent class functions for dimension handling
 	 */
 
 	Dimension(conf->LeadingDimension());
-	FeederInfo(theTargetInfo->Clone());
-	FeederInfo()->Param(requestedDFParam);
+	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
+	FeederInfo()->ParamIndex(0); // Set index to first param (it doesn't matter which one, as long as its set
 
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
 
-	vector<shared_ptr<info> > theTargetInfos;
+	vector<shared_ptr<info> > targetInfos;
 
-	theTargetInfos.resize(threadCount);
+	targetInfos.resize(threadCount);
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		theTargetInfos[i] = theTargetInfo->Clone();
+		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
 		boost::thread* t = new boost::thread(&windvector::Run,
 								this,
-								theTargetInfos[i],
+								targetInfos[i],
 								conf,
 								i + 1);
 
@@ -187,10 +199,10 @@ void windvector::Process(shared_ptr<configuration> conf)
 
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-		theTargetInfo->FirstTime();
+		targetInfo->FirstTime();
 
-		string theOutputFile = "himan_" + theTargetInfo->Param().Name() + "_" + theTargetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-		theWriter->ToFile(theTargetInfo, conf->OutputFileType(), false, theOutputFile);
+		string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
+		theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
 
 	}
 }
@@ -219,30 +231,37 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 	param UParam("U-MS");
 	param VParam("V-MS");
 
+	double directionOffset = 180; // For wind speed add this
+
+	if (itsSeaCalculation)
+	{
+		UParam = param("UWVEL-MS");
+		VParam = param("VWVEL-MS");
+		directionOffset = 0;
+	}
+	else if (itsIceCalculation)
+	{
+		UParam = param("UIVEL-MS");
+		VParam = param("VIVEL-MS");
+		directionOffset = 0;
+	}
+
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);
 
-	myTargetInfo->Param(param("DF-MS"));
-
-	shared_ptr<info> DDInfo = myTargetInfo->Clone();
-	DDInfo->Param(param("DD-D"));
-
-	shared_ptr<info> FFInfo = myTargetInfo->Clone();
-	FFInfo->Param(param("FF-MS"));
+	myTargetInfo->ParamIndex(0);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
-		DDInfo->Level(myTargetInfo->Level());
-		FFInfo->Level(myTargetInfo->Level());
+		//DDInfo->Level(myTargetInfo->Level());
+		//FFInfo->Level(myTargetInfo->Level());
 
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
-		DDInfo->Data()->Resize(conf->Ni(), conf->Nj());
-		FFInfo->Data()->Resize(conf->Ni(), conf->Nj());
+		//myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
 		shared_ptr<info> UInfo;
 		shared_ptr<info> VInfo;
@@ -270,8 +289,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			case kFileDataNotFound:
 				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-				DDInfo->Data()->Fill(kFloatMissing);
-				FFInfo->Data()->Fill(kFloatMissing);
 				continue;
 				break;
 
@@ -293,15 +310,15 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 		bool equalGrids = (*myTargetInfo->Grid() == *UInfo->Grid() && *myTargetInfo->Grid() == *VInfo->Grid());
 
 		myTargetInfo->ResetLocation();
-		DDInfo->ResetLocation();
-		FFInfo->ResetLocation();
+	//	DDInfo->ResetLocation();
+	//	FFInfo->ResetLocation();
 
 		targetGrid->Reset();
 
-		bool needRotLatLonGridRotation = (myTargetInfo->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
-		bool needStereographicGridRotation = (myTargetInfo->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
+		bool needRotLatLonGridRotation = (myTargetInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
+		bool needStereographicGridRotation = (myTargetInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
 
-		while (myTargetInfo->NextLocation() && DDInfo->NextLocation() && FFInfo->NextLocation() && targetGrid->Next())
+		while (myTargetInfo->NextLocation() && targetGrid->Next())
 		{
 			count++;
 
@@ -331,7 +348,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 				const point regPoint(targetGrid->LatLon());
 				const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (targetGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
 
-				point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->SouthPole(), point(U,V));
+				point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->Grid()->SouthPole(), point(U,V));
 
 				// Wind speed should the same with both forms of U and V
 
@@ -352,35 +369,49 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 			}
 
-			double FF = sqrt(U*U + V*V);
+			double speed = sqrt(U*U + V*V);
 
-			double DD = 0;
+			double dir = 0;
 
-			if (FF > 0)
+			if (speed > 0)
 			{
-				DD = round(kRadToDeg * atan2(U,V) + 180.0); // Rounding DD
+				dir = round(kRadToDeg * atan2(U,V) + directionOffset); // Rounding dir
 			}
 
-			DDInfo->Value(DD);
-			FFInfo->Value(FF);
+			/*
+			 * The order of parameters in infos is and must be always:
+			 * index 0 : speed parameter
+			 * index 1 : direction parameter
+			 * index 2 : vector parameter (optional)
+			 */
 
-			if (U > 360)
+			myTargetInfo->ParamIndex(0);
+			myTargetInfo->Value(speed);
+
+			myTargetInfo->ParamIndex(1);
+			myTargetInfo->Value(dir);
+
+			if (itsAirCalculation)
 			{
-				U = U - 360;
-			}
+				if (U > 360)
+				{
+					U = U - 360;
+				}
 
-			if (U < 0)
-			{
-				U = U + 360;
-			}
-                        
-			double windVector = round(U/10) + 100 * round(V);
+				if (U < 0)
+				{
+					U = U + 360;
+				}
 
-			if (!myTargetInfo->Value(windVector))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
-			}
+				double windVector = round(U/10) + 100 * round(V);
 
+				myTargetInfo->ParamIndex(2);
+
+				if (!myTargetInfo->Value(windVector))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
+			}
 		}
 
 		/*
@@ -395,7 +426,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
+			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), true);
 		}
 	}
 }

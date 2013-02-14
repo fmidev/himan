@@ -50,7 +50,8 @@ precipitation::precipitation() : itsUseCuda(false)
 
 }
 
-void precipitation::Process(shared_ptr<configuration> conf)
+void precipitation::Process(std::shared_ptr<const configuration> conf,
+		std::shared_ptr<info> targetInfo)
 {
 
     shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -78,12 +79,6 @@ void precipitation::Process(shared_ptr<configuration> conf)
     unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
     boost::thread_group g;
-
-    /*
-     * The target information is parsed from the configuration file.
-     */
-
-    shared_ptr<info> targetInfo = conf->Info();
 
     /*
      * Get producer information from neons if whole_file_write is false.
@@ -130,14 +125,14 @@ void precipitation::Process(shared_ptr<configuration> conf)
      * Create data structures.
      */
 
-    targetInfo->Create(conf->ScanningMode(), false);
+    targetInfo->Create();
 
     /*
      * Initialize parent class functions for dimension handling
      */
 
     Dimension(kLevelDimension);
-    FeederInfo(targetInfo->Clone());
+    FeederInfo(shared_ptr<info> (new info(*targetInfo)));
     FeederInfo()->Param(requestedParam);
 
     /*
@@ -153,7 +148,7 @@ void precipitation::Process(shared_ptr<configuration> conf)
 
         itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-        targetInfos[i] = targetInfo->Clone();
+        targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
         boost::thread* t = new boost::thread(&precipitation::Run,
                                              this,
@@ -247,7 +242,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
     	 * Those timesteps need to be resized and filled with missing values.
     	 */
 
-        myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
+        //myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 		myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 
         if (myTargetInfo->Time().Step() % paramStep != 0)
@@ -381,7 +376,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
         {
             shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-            w->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
+            w->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), true);
         }
     }
 }

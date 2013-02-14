@@ -54,7 +54,8 @@ dewpoint::dewpoint() : itsUseCuda(false)
 
 }
 
-void dewpoint::Process(shared_ptr<configuration> conf)
+void dewpoint::Process(std::shared_ptr<const configuration> conf,
+		std::shared_ptr<info> targetInfo)
 {
 
     shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -82,12 +83,6 @@ void dewpoint::Process(shared_ptr<configuration> conf)
     unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
     boost::thread_group g;
-
-    /*
-     * The target information is parsed from the configuration file.
-     */
-
-    shared_ptr<info> targetInfo = conf->Info();
 
     /*
      * Get producer information from neons if whole_file_write is false.
@@ -136,14 +131,14 @@ void dewpoint::Process(shared_ptr<configuration> conf)
      * Create data structures.
      */
 
-    targetInfo->Create(conf->ScanningMode(), false);
+    targetInfo->Create();
 
     /*
      * Initialize parent class functions for dimension handling
      */
 
     Dimension(conf->LeadingDimension());
-    FeederInfo(targetInfo->Clone());
+    FeederInfo(shared_ptr<info> (new info(*targetInfo)));
     FeederInfo()->Param(requestedParam);
 
     /*
@@ -159,7 +154,7 @@ void dewpoint::Process(shared_ptr<configuration> conf)
 
         itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-        targetInfos[i] = targetInfo->Clone();
+        targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
         boost::thread* t = new boost::thread(&dewpoint::Run,
                                              this,
@@ -228,8 +223,6 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
         myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
                                 " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-        myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
         double TBase = 0;
 
@@ -381,7 +374,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
         {
             shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-            w->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
+            w->ToFile(shared_ptr<info>(new info(*myTargetInfo)), conf->OutputFileType(), true);
         }
     }
 }

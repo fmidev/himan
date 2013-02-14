@@ -26,7 +26,8 @@ public:
     windvector(const windvector& other) = delete;
     windvector& operator=(const windvector& other) = delete;
 
-    virtual void Process(std::shared_ptr<configuration> theConfiguration);
+    virtual void Process(std::shared_ptr<const configuration> conf,
+    						std::shared_ptr<info> targetInfo);
 
     virtual std::string ClassName() const
     {
@@ -49,6 +50,9 @@ private:
     void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 
     bool itsUseCuda;
+    bool itsSeaCalculation;
+    bool itsIceCalculation;
+    bool itsAirCalculation;
 
 };
 

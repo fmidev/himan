@@ -26,7 +26,8 @@ public:
     tk2tc(const tk2tc& other) = delete;
     tk2tc& operator=(const tk2tc& other) = delete;
 
-    virtual void Process(std::shared_ptr<configuration> theConfiguration);
+    virtual void Process(std::shared_ptr<const configuration> conf,
+    						std::shared_ptr<info> targetInfo);
 
     virtual std::string ClassName() const
     {

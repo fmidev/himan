@@ -99,7 +99,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
         if (!ret)
         {
             itsLogger->Warning("Saving file information to neons failed");
-            unlink(correctFileName.c_str());
+           // unlink(correctFileName.c_str());
         }
 
     }

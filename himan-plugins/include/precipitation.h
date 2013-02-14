@@ -34,7 +34,8 @@ public:
     precipitation(const precipitation& other) = delete;
     precipitation& operator=(const precipitation& other) = delete;
 
-    virtual void Process(std::shared_ptr<configuration> theConfiguration);
+    virtual void Process(std::shared_ptr<const configuration> conf,
+    						std::shared_ptr<info> targetInfo);
 
     virtual std::string ClassName() const
     {

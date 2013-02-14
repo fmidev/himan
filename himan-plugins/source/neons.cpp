@@ -52,10 +52,10 @@ vector<string> neons::Files(const search_options& options)
 
 	vector<string> files;
 
-	string analtime = options.configuration->Info()->OriginDateTime().String("%Y%m%d%H%M%S");
+	string analtime = options.time.OriginDateTime()->String("%Y%m%d%H%M%S");
 	string levelvalue = boost::lexical_cast<string> (options.level.Value());
 
-	map<string, string> producerInfo = itsNeonsDB->GetProducerDefinition(options.configuration->SourceProducer());
+	map<string, string> producerInfo = itsNeonsDB->GetProducerDefinition(options.configuration->SourceProducer().Id());
 
 	if (producerInfo.empty())
 	{

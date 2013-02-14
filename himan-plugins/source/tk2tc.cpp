@@ -47,7 +47,8 @@ tk2tc::tk2tc() : itsUseCuda(false)
     itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }
 
-void tk2tc::Process(std::shared_ptr<configuration> conf)
+void tk2tc::Process(std::shared_ptr<const configuration> conf,
+						std::shared_ptr<info> targetInfo)
 {
 
     shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -77,12 +78,6 @@ void tk2tc::Process(std::shared_ptr<configuration> conf)
     boost::thread_group g;
 
     /*
-     * The target information is parsed from the configuration file.
-     */
-
-    shared_ptr<info> theTargetInfo = conf->Info();
-
-    /*
      * Get producer information from neons if whole_file_write is false.
      */
 
@@ -90,17 +85,17 @@ void tk2tc::Process(std::shared_ptr<configuration> conf)
     {
         shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-        map<string,string> prodInfo = n->ProducerInfo(theTargetInfo->Producer().Id());
+        map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
 
         if (prodInfo.size())
         {
-            producer prod(theTargetInfo->Producer().Id());
+            producer prod(targetInfo->Producer().Id());
 
             prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
             prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
             prod.Name(prodInfo["name"]);
 
-            theTargetInfo->Producer(prod);
+            targetInfo->Producer(prod);
         }
 
     }
@@ -126,40 +121,40 @@ void tk2tc::Process(std::shared_ptr<configuration> conf)
 
     theParams.push_back(theRequestedParam);
 
-    theTargetInfo->Params(theParams);
+    targetInfo->Params(theParams);
 
     /*
      * Create data structures.
      */
 
-    theTargetInfo->Create(conf->ScanningMode(), false);
+    targetInfo->Create();
 
     /*
      * Initialize parent class functions for dimension handling
      */
 
     Dimension(conf->LeadingDimension());
-    FeederInfo(theTargetInfo->Clone());
+    FeederInfo(shared_ptr<info> (new info(*targetInfo)));
     FeederInfo()->Param(theRequestedParam);
 
     /*
      * Each thread will have a copy of the target info.
      */
 
-    vector<shared_ptr<info> > theTargetInfos;
+    vector<shared_ptr<info> > targetInfos;
 
-    theTargetInfos.resize(threadCount);
+    targetInfos.resize(threadCount);
 
     for (size_t i = 0; i < threadCount; i++)
     {
 
         itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-        theTargetInfos[i] = theTargetInfo->Clone();
+        targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
         boost::thread* t = new boost::thread(&tk2tc::Run,
                                              this,
-                                             theTargetInfos[i],
+                                             targetInfos[i],
                                              conf,
                                              i + 1);
 
@@ -174,9 +169,9 @@ void tk2tc::Process(std::shared_ptr<configuration> conf)
 
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-        theTargetInfo->FirstTime();
-        string theOutputFile = "himan_" + theTargetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-        theWriter->ToFile(theTargetInfo, conf->OutputFileType(), false, theOutputFile);
+        targetInfo->FirstTime();
+        string theOutputFile = "himan_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
+        theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
 
     }
 
@@ -203,8 +198,6 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
                       shared_ptr<const configuration> conf,
                       unsigned short theThreadIndex)
 {
-
-
     shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
     // Required source parameters
@@ -222,8 +215,6 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
         myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
                                 " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-        myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
         // Source info for T
 
@@ -357,7 +348,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
         {
             shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-            theWriter->ToFile(myTargetInfo->Clone(), conf->OutputFileType(), true);
+            theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), true);
         }
     }
 }
