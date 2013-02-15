@@ -1,8 +1,8 @@
-/*
- * cache.h
+/**
+ * @file cache.h
  *
- *  Created on: Nov 20, 2012
- *      Author: partio, perämäki
+ * @date Nov 20, 2012
+ * @author perämäki
  */
 
 #ifndef CACHE_H
@@ -30,7 +30,6 @@ public:
     cache(const cache& other) = delete;
     cache& operator=(const cache& other) = delete;
 
-    std::string UniqueName(const search_options& options);
     void Insert(const search_options& options, std::vector<std::shared_ptr<himan::info>> infos);
     std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);    
 
@@ -51,6 +50,8 @@ public:
 
 
 private:
+
+    std::string UniqueName(const search_options& options);
 
 };
 
@@ -92,6 +93,7 @@ private:
     
     std::map<std::string, std::shared_ptr<himan::info>> itsCache;
     static cache_pool* itsInstance;
+    std::mutex itsMutex;
 
 };
 

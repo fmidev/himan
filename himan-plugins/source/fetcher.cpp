@@ -59,10 +59,6 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
             itsLogger->Debug("Data found from cache");
             break;
         }
-        else
-        {
-            itsLogger->Warning("Data not found from cache");
-        }
 
     	/*
     	 *  2. Fetch data from auxiliary files specified at command line
@@ -227,7 +223,7 @@ vector<shared_ptr<himan::info> > fetcher::FromCache(const search_options& option
     vector<shared_ptr<himan::info>> returnInfos;
 
     for (size_t i = 0; i < infos.size(); i++) {
-            returnInfos.push_back(infos[i]);
+		returnInfos.push_back(infos[i]);
     }
 
     return infos;
