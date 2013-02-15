@@ -641,9 +641,22 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		std::vector<producer> sourceProducers;
 		vector<string> sourceProducersStr = util::Split(pt.get<string>("source_producer"), ",", false);
 
+		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+
 		for (size_t i = 0; i < sourceProducersStr.size(); i++)
 		{
-			sourceProducers.push_back(producer(boost::lexical_cast<unsigned int> (sourceProducersStr[i])));
+			long pid = boost::lexical_cast<long> (sourceProducersStr[i]);
+
+			producer sourceprod(pid);
+
+			map<string,string> prodDef = n->NeonsDB().GetProducerDefinition(pid);
+
+			if (!prodDef.empty())
+			{
+				sourceprod.TableVersion(boost::lexical_cast<long> (prodDef["no_vers"]));
+			}
+
+			sourceProducers.push_back(sourceprod);
 		}
 
 		conf->SourceProducers(sourceProducers);
@@ -653,12 +666,23 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		 * as data is fetched from files.
 		 */
 
-		anInfo->itsProducer = producer(boost::lexical_cast<unsigned int> (pt.get<string>("target_producer")));
+		long pid = boost::lexical_cast<long> (pt.get<string>("target_producer"));
+
+		map<string,string> prodDef = n->NeonsDB().GetProducerDefinition(pid);
+
+		producer targetprod (pid);
+
+		if (!prodDef.empty())
+		{
+			targetprod.TableVersion(boost::lexical_cast<long> (prodDef["no_vers"]));
+		}
+
+		anInfo->itsProducer = targetprod;
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		// Something was not found; do nothing
+		throw runtime_error(ClassName() + string(": Producer definitions not found: ") + e.what());
 	}
 	catch (exception& e)
 	{
