@@ -273,6 +273,11 @@ size_t info::SizeParams() const
 	return itsParamIterator->Size();
 }
 
+param& info::PeakParam(size_t theIndex) const
+{
+	return itsParamIterator->At(theIndex);
+}
+
 bool info::NextLevel()
 {
     return itsLevelIterator->Next();
@@ -321,6 +326,11 @@ size_t info::SizeLevels() const
 	return itsLevelIterator->Size();
 }
 
+level& info::PeakLevel(size_t theIndex) const
+{
+	return itsLevelIterator->At(theIndex);
+}
+
 bool info::NextTime()
 {
     return itsTimeIterator->Next();
@@ -359,6 +369,11 @@ forecast_time& info::Time() const
 size_t info::SizeTimes() const
 {
 	return itsTimeIterator->Size();
+}
+
+forecast_time& info::PeakTime(size_t theIndex) const
+{
+	return itsTimeIterator->At(theIndex);
 }
 
 bool info::NextLocation()

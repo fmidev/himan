@@ -135,6 +135,21 @@ public:
         }
 
         /**
+         * @return Reference to value requested or throw exception
+         */
+
+        T& At(size_t theIndex)
+        {
+            if (theIndex < itsElements.size())
+            {
+                return itsElements[theIndex];
+            }
+
+            throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string> (theIndex));
+
+        }
+
+        /**
          * @brief Set iterator to the position indicated by the function argument
          *
          * @return True if value exists, else false
@@ -369,6 +384,7 @@ public:
     void ParamIndex(size_t theParamIndex);
     size_t ParamIndex() const;
     param& Param() const;
+    param& PeakParam(size_t theIndex) const;
 
     size_t SizeParams() const;
 
@@ -399,6 +415,7 @@ public:
     void LevelIndex(size_t theLevelIndex);
     size_t LevelIndex() const;
     level& Level() const;
+    level& PeakLevel(size_t theIndex) const;
 
     size_t SizeLevels() const;
 
@@ -429,6 +446,7 @@ public:
     void TimeIndex(size_t theTimeIndex);
     size_t TimeIndex() const;
     forecast_time& Time() const;
+    forecast_time& PeakTime(size_t theIndex) const;
 
     size_t SizeTimes() const;
 
