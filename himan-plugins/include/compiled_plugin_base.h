@@ -29,7 +29,7 @@ public:
 
 protected:
 
-    virtual std::string ClassName() { return "himan::plugin::compiled_plugin_base"; }
+    virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
 
 	/**
 	 * @brief Determine used thread count
@@ -80,6 +80,17 @@ protected:
 	bool AdjustLeadingDimension(std::shared_ptr<info> myTargetInfo);
 	bool AdjustNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
 	void ResetNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
+
+	/**
+	 * @brief Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.
+	 *
+	 * @param sourceProducer
+	 * @param targetParam
+	 * @param targetLevel
+	 * @return Level that matches level 'targetLevel' on producer 'sourceProducuer', or targetLevel.
+	 */
+
+	level LevelTransform(const himan::producer& sourceProducer, const himan::param& targetParam, const himan::level& targetLevel) const;
 
 private:
   //  std::mutex itsAdjustDimensionMutex;

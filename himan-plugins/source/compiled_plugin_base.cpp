@@ -8,6 +8,13 @@
 
 #include "compiled_plugin_base.h"
 #include <boost/thread.hpp>
+#include "plugin_factory.h"
+
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "neons.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;
@@ -125,3 +132,41 @@ void compiled_plugin_base::ResetNonLeadingDimension(shared_ptr<info> myTargetInf
         throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
     }
 }
+
+himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceProducer,
+													const himan::param& targetParam,
+													const himan::level& targetLevel) const
+{
+
+	level sourceLevel;
+
+	if (sourceProducer.TableVersion() != kHPMissingInt)
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		string ULvlName = n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
+
+		HPLevelType lvlType = kUnknownLevel;
+
+		float lvlValue = targetLevel.Value();
+
+		if (ULvlName == "GROUND")
+		{
+			lvlType = kGround;
+			lvlValue = 0;
+		}
+		else
+		{
+			throw runtime_error(ClassName() + ": Unknown level type: " + ULvlName);
+		}
+
+		sourceLevel = level(lvlType, lvlValue, ULvlName);
+	}
+	else
+	{
+		sourceLevel = targetLevel;
+	}
+
+	return sourceLevel;
+}
+

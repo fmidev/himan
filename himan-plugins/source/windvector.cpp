@@ -133,13 +133,14 @@ void windvector::Process(std::shared_ptr<const configuration> conf,
 
 	if (conf->PluginConfiguration().Exists("for_ice") && conf->PluginConfiguration().GetValue("for_ice") == "true")
 	{
-		requestedSpeedParam = param("IFF-MS", 143414);
-		requestedDirParam = param("IDD-D", 143415);
+		requestedSpeedParam = param("IFF-MS", 100000);
+		requestedDirParam = param("IDD-D", 100001);
 		itsIceCalculation = true;
 	}
 	else if (conf->PluginConfiguration().Exists("for_sea") && conf->PluginConfiguration().GetValue("for_sea") == "true")
 	{
-		throw runtime_error(ClassName() + ": Not yet");
+		requestedSpeedParam = param("SFF-MS", 100000);
+		requestedDirParam = param("SDD-D", 100001);
 		itsSeaCalculation = true;
 	}
 	else
@@ -235,7 +236,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 	param UParam("U-MS");
 	param VParam("V-MS");
 
-	double directionOffset = 180; // For wind speed add this
+	double directionOffset = 180; // For wind direction add this
 
 	if (itsSeaCalculation)
 	{
@@ -256,16 +257,15 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 	myTargetInfo->ParamIndex(0);
 
+	// Fetch source level definition
+
+	level sourceLevel = compiled_plugin_base::LevelTransform(conf->SourceProducer(), UParam, myTargetInfo->PeakLevel(0));
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
-		//DDInfo->Level(myTargetInfo->Level());
-		//FFInfo->Level(myTargetInfo->Level());
-
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		//myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
 		shared_ptr<info> UInfo;
 		shared_ptr<info> VInfo;
@@ -275,13 +275,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			// Source info for U
 			UInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
+								 sourceLevel,
 								 UParam);
 				
 			// Source info for V
 			VInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
+								 sourceLevel,
 								 VParam);
 				
 		}
