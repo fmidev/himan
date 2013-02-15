@@ -12,8 +12,9 @@ using namespace himan;
 producer::producer()
     : itsFmiProducerId(kHPMissingInt)
     , itsProcess(kHPMissingInt)
-    , itsCentre(kHPMissingInt)
-    , itsNeonsName("")
+	, itsCentre(kHPMissingInt)
+	, itsTableVersion(kHPMissingInt)
+	, itsNeonsName("")
 {
 
 }
@@ -22,7 +23,8 @@ producer::producer(long theFmiProducerId)
     : itsFmiProducerId(theFmiProducerId)
     , itsProcess(kHPMissingInt)
     , itsCentre(kHPMissingInt)
-    , itsNeonsName("")
+	, itsTableVersion(kHPMissingInt)
+	, itsNeonsName("")
 {
 
 }
@@ -31,7 +33,8 @@ producer::producer(long theCentre, long theProcess)
     : itsFmiProducerId(kHPMissingInt)
     , itsProcess(theProcess)
     , itsCentre(theCentre)
-    , itsNeonsName("")
+	, itsTableVersion(kHPMissingInt)
+	, itsNeonsName("")
 {
 
 }
@@ -40,7 +43,8 @@ producer::producer(long theFmiProducerId, long theCentre, long theProcess, const
     : itsFmiProducerId(theFmiProducerId)
     , itsProcess(theProcess)
     , itsCentre(theCentre)
-    , itsNeonsName("")
+	, itsTableVersion(kHPMissingInt)
+	, itsNeonsName("")
 {
 
 }
@@ -85,6 +89,16 @@ std::string producer::Name() const
     return itsNeonsName;
 }
 
+long producer::TableVersion() const
+{
+	return itsTableVersion;
+}
+
+void producer::TableVersion(long theTableVersion)
+{
+	itsTableVersion = theTableVersion;
+}
+
 std::ostream& producer::Write(std::ostream& file) const
 {
 
@@ -94,6 +108,7 @@ std::ostream& producer::Write(std::ostream& file) const
     file << "__itsProcess__ " << itsProcess << std::endl;
     file << "__itsCentre__ " << itsCentre << std::endl;
     file << "__itsNeonsName__ " << itsNeonsName << std::endl;
+    file << "__itsTableVersion__ " << itsTableVersion << std::endl;
 
     return file;
 

@@ -52,11 +52,16 @@ public:
     void Name(const std::string& theName);
     std::string Name() const;
 
+    long TableVersion() const;
+    void TableVersion(long theTableVersion);
+
 private:
 
     long itsFmiProducerId;
     long itsProcess;
     long itsCentre;
+    long itsTableVersion;
+
     std::string itsNeonsName;
 
 };
