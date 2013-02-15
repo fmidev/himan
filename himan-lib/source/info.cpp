@@ -268,6 +268,11 @@ param& info::Param() const
     return itsParamIterator->At();
 }
 
+size_t info::SizeParams() const
+{
+	return itsParamIterator->Size();
+}
+
 bool info::NextLevel()
 {
     return itsLevelIterator->Next();
@@ -311,6 +316,11 @@ level& info::Level() const
     return itsLevelIterator->At();
 }
 
+size_t info::SizeLevels() const
+{
+	return itsLevelIterator->Size();
+}
+
 bool info::NextTime()
 {
     return itsTimeIterator->Next();
@@ -344,6 +354,11 @@ bool info::Time(const forecast_time& theTime)
 forecast_time& info::Time() const
 {
     return itsTimeIterator->At();
+}
+
+size_t info::SizeTimes() const
+{
+	return itsTimeIterator->Size();
 }
 
 bool info::NextLocation()

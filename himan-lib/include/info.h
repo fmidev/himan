@@ -224,6 +224,11 @@ public:
 
     /**
      * @brief Copy constructor for info class. Will preserve data backend.
+
+     * New info has the same data backend matrix as the original one.
+     * This means that multiple threads can access the same data with
+     * different infos ( --> descriptor positions ). Clone will have the
+     * same initial descriptor positions.
      */
 
     info(const info& other);
@@ -319,21 +324,6 @@ public:
     void Create();
     void Create(std::shared_ptr<grid> baseGrid);
 
-    /**
-     * @brief Clone info while preserving its data backend
-     *
-     * Function will return a new info (wrapped with shared_ptr) than
-     * has the same data backend matrix as the original one. This means
-     * that multiple threads can access the same data with different
-     * infos ( --> descriptor positions ). Clone will have the same
-     * descriptor positions.
-     *
-     * @return New info with access to same data backend
-     *
-     */
-
-    //std::shared_ptr<info> Clone(bool resetData = false) const;
-
     void Producer(long theFmiProducerID);
     void Producer(const producer& theProducer);
     const producer& Producer() const;
@@ -380,6 +370,8 @@ public:
     size_t ParamIndex() const;
     param& Param() const;
 
+    size_t SizeParams() const;
+
     /**
      * @see iterator#Reset
      */
@@ -408,6 +400,8 @@ public:
     size_t LevelIndex() const;
     level& Level() const;
 
+    size_t SizeLevels() const;
+
     /**
      * @see iterator#Reset
      */
@@ -435,6 +429,8 @@ public:
     void TimeIndex(size_t theTimeIndex);
     size_t TimeIndex() const;
     forecast_time& Time() const;
+
+    size_t SizeTimes() const;
 
     /**
      * @brief Set location iterator to given index value. No limit-checking is made.
