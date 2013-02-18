@@ -16,31 +16,6 @@
 #include <cuda_runtime_api.h>
 #endif
 
-#define CUDA_CHECK(errarg)   __checkErrorFunc(errarg, __FILE__, __LINE__)
-#define CHECK_ERROR_MSG(errstr) __checkErrMsgFunc(errstr, __FILE__, __LINE__)
-
-inline void __checkErrorFunc(cudaError_t errarg, const char* file,
-			     const int line)
-{
-    if(errarg) {
-	fprintf(stderr, "Error at %s(%i)\n", file, line);
-	exit(EXIT_FAILURE);
-    }
-}
-
-
-inline void __checkErrMsgFunc(const char* errstr, const char* file,
-			      const int line)
-{
-    cudaError_t err = cudaGetLastError();
-    if(err != cudaSuccess) {
-	fprintf(stderr, "Error: %s at %s(%i): %s\n",
-		errstr, file, line, cudaGetErrorString(err));
-	exit(EXIT_FAILURE);
-    }
-}
-
-
 namespace himan
 {
 namespace plugin
@@ -92,10 +67,29 @@ inline int himan::plugin::pcuda::LibraryVersion() const
     return ver;
 }
 
-inline void himan::plugin::pcuda::Capabilities() const
+inline int himan::plugin::pcuda::DeviceCount() const
 {
     int devCount;
-    cudaGetDeviceCount(&devCount);
+    cudaError_t err = cudaGetDeviceCount(&devCount);
+    if (err == cudaErrorNoDevice || err == cudaErrorInsufficientDriver)
+    {
+    	// No device or no driver present
+
+    	devCount = 0;
+    }
+
+    return devCount;
+}
+
+inline void himan::plugin::pcuda::Capabilities() const
+{
+    int devCount = DeviceCount();
+
+    if (devCount == 0)
+    {
+    	std::cout << "No CUDA devices found" << std::endl;
+    	return;
+    }
 
 	std::cout << "#---------------------------------------------------#" << std::endl;
 	std::cout << "CUDA library version " << LibraryVersion() << std::endl;
