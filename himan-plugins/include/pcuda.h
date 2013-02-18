@@ -16,6 +16,31 @@
 #include <cuda_runtime_api.h>
 #endif
 
+#define CUDA_CHECK(errarg)   __checkErrorFunc(errarg, __FILE__, __LINE__)
+#define CHECK_ERROR_MSG(errstr) __checkErrMsgFunc(errstr, __FILE__, __LINE__)
+
+inline void __checkErrorFunc(cudaError_t errarg, const char* file,
+			     const int line)
+{
+    if(errarg) {
+	fprintf(stderr, "Error at %s(%i)\n", file, line);
+	exit(EXIT_FAILURE);
+    }
+}
+
+
+inline void __checkErrMsgFunc(const char* errstr, const char* file,
+			      const int line)
+{
+    cudaError_t err = cudaGetLastError();
+    if(err != cudaSuccess) {
+	fprintf(stderr, "Error: %s at %s(%i): %s\n",
+		errstr, file, line, cudaGetErrorString(err));
+	exit(EXIT_FAILURE);
+    }
+}
+
+
 namespace himan
 {
 namespace plugin
@@ -117,6 +142,7 @@ inline void himan::plugin::pcuda::Capabilities() const
 
 }
 #endif
+
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
