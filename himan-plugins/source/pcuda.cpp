@@ -43,16 +43,6 @@ int pcuda::DeviceCount() const
     return devCount;
 }
 
-int pcuda::LibraryVersion() const
-{
-    // todo: error checking
-    int ver;
-
-    cudaDriverGetVersion(&ver);
-
-    return ver;
-}
-
 himan::HPVersionNumber pcuda::ComputeCapability() const
 {
 	// todo: error checking
