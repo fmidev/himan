@@ -5,13 +5,19 @@ Import('env')
 import os
 import sys
 
-libcudart = '/opt/cuda/lib64/libcudart.so'
+# cuda toolkit path
+
+cuda_toolkit_path = '/opt/cuda'
+
+if os.environ.get('CUDA_TOOLKIT_PATH') is None:
+        print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
+else:
+        cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
 
 have_cuda = False
 
-if os.path.isfile(libcudart):
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
 	have_cuda = True
-
 
 auxiliary_plugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer']
 

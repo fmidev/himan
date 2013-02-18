@@ -21,12 +21,30 @@ RELEASE = (not DEBUG)
 
 workspace = os.environ['HOME'] + "/workspace"
 
+# cuda toolkit path
+
+cuda_toolkit_path = '/opt/cuda'
+
+if os.environ.get('CUDA_TOOLKIT_PATH') is None:
+        print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
+else:
+        cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
+
+have_cuda = False
+
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
+	have_cuda = True
+
 env['CC'] = 'gcc'
 env['CXX'] = 'g++'
 
-# Includes
+if os.environ.get('CC') != None:
+        env['CC'] = os.environ.get('CC')
 
-libcudart = '/opt/cuda/lib64/libcudart.so'
+if os.environ.get('CXX') != None:
+        env['CXX'] = os.environ.get('CXX')
+
+# Includes
 
 includes = []
 
@@ -34,14 +52,16 @@ includes.append('./include')
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
-includes.append(workspace + '/database/include')
+includes.append(workspace + '/fmidb/include')
 includes.append(workspace + '/fmigrib/include')
-includes.append('/usr/include/oracle')
-includes.append('/usr/lib/grib_api/include')
-#includes.append('/home/partio/local/include/')
 
-if os.path.isfile(libcudart):
-	includes.append('/opt/cuda/include/')
+if os.environ.get('ORACLE_HOME') is None:
+	includes.append('/usr/include/oracle')
+else:
+	includes.append(os.environ.get('ORACLE_HOME') + '/rdbms/public')
+
+if have_cuda:
+	includes.append(cuda_toolkit_path + '/include')
 
 env.Append(CPPPATH = includes)
 
@@ -50,11 +70,17 @@ env.Append(CPPPATH = includes)
 library_paths = []
 
 library_paths.append(workspace + '/himan-lib/build/debug')
-library_paths.append(workspace + '/database/lib')
+library_paths.append(workspace + '/fmidb/lib')
 library_paths.append(workspace + '/fmigrib/lib')
 library_paths.append('/usr/lib64')
-library_paths.append('/usr/lib64/oracle/')
-library_paths.append('/usr/lib/grib_api/lib')
+
+if os.environ.get('ORACLE_HOME') is None:
+	library_paths.append('/usr/lib64/oracle/')
+else:
+	 library_paths.append(os.environ.get('ORACLE_HOME') + '/lib')
+
+if have_cuda:
+	library_paths.append(cuda_toolkit_path + '/lib64')
 
 env.Append(LIBPATH = library_paths)
 
@@ -65,17 +91,16 @@ libraries = []
 libraries.append('smartmet_newbase')
 libraries.append('fmigrib')
 libraries.append('fmidb')
-#libraries.append('grib_api')
 libraries.append('jasper')
 libraries.append('clntsh')
 libraries.append('boost_filesystem')
 
-if os.path.isfile(libcudart):
+if have_cuda:
 	libraries.append('cudart')
 
 env.Append(LIBS = libraries)
 
-libgrib_api = env.File('/usr/lib/grib_api/lib/libgrib_api.a')
+libgrib_api = env.File('/usr/lib64/libgrib_api.a')
 
 env.Append(LIBS=libgrib_api)
 
@@ -87,7 +112,7 @@ cflags_normal = []
 cflags_normal.append('-Wall')
 cflags_normal.append('-W')
 cflags_normal.append('-Wno-unused-parameter')
-#cflags_normal.append('-Werror')
+cflags_normal.append('-Werror')
 
 # Extra flags
 
@@ -97,7 +122,7 @@ cflags_extra.append('-Wcast-qual')
 cflags_extra.append('-Wcast-align')
 cflags_extra.append('-Wwrite-strings')
 cflags_extra.append('-Wconversion')
-# cflags_extra.append('-Winline')
+cflags_extra.append('-Winline')
 cflags_extra.append('-Wnon-virtual-dtor')
 cflags_extra.append('-Wno-pmf-conversions')
 cflags_extra.append('-Wsign-promo')
@@ -132,9 +157,7 @@ env.Append(LINKFLAGS = ['-rdynamic'])
 
 env.Append(CPPDEFINES=['UNIX'])
 
-# Check if this machine has cuda installed
-
-if os.path.isfile(libcudart):
+if have_cuda:
 	env.Append(CPPDEFINES=['HAVE_CUDA'])
 
 # Cuda
@@ -144,8 +167,7 @@ env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC']) # these two go hand-in-hand (like
 env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
 env.Append(NVCCFLAGS = ['-arch=compute_20','-code=sm_20'])
 env.Append(NVCCPATH = ['./include'])
-env.Append(NVCCPATH = [workspace + '/himan-lib/include'])
-env.Append(NVCCPATH = ['/home/partio/NVIDIA_GPU_Computing_SDK/C/common/inc'])
+env.Append(NVCCPATH = [workspace + '/himan-lib/include']) # timer
 
 build_dir = ""
 
