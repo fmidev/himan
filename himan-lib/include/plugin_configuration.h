@@ -12,6 +12,7 @@
 #include "level.h"
 #include "himan_common.h"
 #include <vector>
+#include <map>
 
 namespace himan
 {
