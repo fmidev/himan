@@ -1,8 +1,17 @@
+%define is_rhel_5 %(grep release /etc/redhat-release | cut -d ' ' -f 3 | head -c 1 | grep 5 || echo 0)
+%define is_rhel_6 %(grep release /etc/redhat-release | cut -d ' ' -f 3 | head -c 1 | grep 6 || echo 0)
+
+%define dist el5
+
+%if %is_rhel_6
+%define dist el6
+%endif
+
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 13.1.31
-Release: 1.el5.fmi
+Version: 13.2.18
+Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,8 +22,17 @@ BuildRequires: boost-devel
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-#BuildRequires: gcc-c++ >= 4.4.6
+
+%if is_rhel_5
+BuildRequires: gcc44-c++ >= 4.4.6
+BuildRequires: gcc44-c++ < 4.7
+%else
+BuildRequires: gcc-c++ >= 4.4.6
+BuildRequires: gcc-c++ < 4.7
+%endif
+
 BuildRequires: scons
+BuildRequires: boost-devel
 Provides: libhiman.so
 
 %description
@@ -40,6 +58,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Feb 18 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.18-1.el5.fmi
+- Latest changes
+* Tue Feb  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.5-1.el5.fmi
+- Latest changes
 * Thu Jan 31 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.31-1.el5.fmi
 - Latest changes
 * Thu Jan 24 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.24-1.el5.fmi
