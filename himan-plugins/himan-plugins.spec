@@ -1,8 +1,17 @@
+%define is_rhel_5 %(grep release /etc/redhat-release | cut -d ' ' -f 3 | head -c 1 | grep 5 || echo 0)
+%define is_rhel_6 %(grep release /etc/redhat-release | cut -d ' ' -f 3 | head -c 1 | grep 6 || echo 0)
+
+%define dist el5
+
+%if %is_rhel_6
+%define dist el6
+%endif
+
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.1.31
-Release: 1.el5.fmi
+Version: 13.2.18
+Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,10 +22,18 @@ BuildRequires: boost-devel
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-#BuildRequires: gcc-c++ >= 4.4.6
+Requires: jasper-libs
+Requires: grib_api
+BuildRequires: boost-devel >= 1.49
 BuildRequires: scons
-Provides: libcache.so
 
+%if is_rhel_5
+BuildRequires: gcc44-c++ >= 4.4.6
+BuildRequires: gcc44-c++ < 4.7
+%else
+BuildRequires: gcc-c++ >= 4.4.6
+BuildRequires: gcc-c++ < 4.7
+%endif
 %description
 FMI himan-plugins -- hila manipulaatio -- plugin library
 
@@ -45,6 +62,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libkindex.so
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libpcuda.so
+%{_libdir}/himan-plugins/libprecipitation.so
 %{_libdir}/himan-plugins/libquerydata.so
 %{_libdir}/himan-plugins/libseaicing.so
 %{_libdir}/himan-plugins/libtk2tc.so
@@ -54,6 +72,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Feb 18 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.18-1.el5.fmi
+- Latest changes
+* Tue Feb  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.5-1.el5.fmi
+- Latest changes
 * Thu Jan 31 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.31-1.el5.fmi
 - Latest changes
 * Thu Jan 24 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.1.24-1.el5.fmi
