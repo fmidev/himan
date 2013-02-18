@@ -54,6 +54,7 @@ includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append(workspace + '/fmidb/include')
 includes.append(workspace + '/fmigrib/include')
+includes.append('/usr/lib/grib_api/include')
 
 if os.environ.get('ORACLE_HOME') is None:
 	includes.append('/usr/include/oracle')
@@ -100,7 +101,7 @@ if have_cuda:
 
 env.Append(LIBS = libraries)
 
-libgrib_api = env.File('/usr/lib64/libgrib_api.a')
+libgrib_api = env.File('/usr/lib/grib_api/lib/libgrib_api.a')
 
 env.Append(LIBS=libgrib_api)
 
