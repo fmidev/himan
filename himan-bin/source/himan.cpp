@@ -27,8 +27,6 @@
 #include "pcuda.h"
 #undef HIMAN_AUXILIARY_INCLUDE
 
-#define CUDA_NOT_YET_AT_HIMAN_BIN
-
 using namespace himan;
 using namespace std;
 
@@ -233,8 +231,8 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (opt.count("cuda-properties"))
 	{
-#ifdef CUDA_NOT_YET_AT_HIMAN_BIN
-		std::cout << "Option --cuda-properties not yet implemented" << std::endl;
+#ifndef HAVE_CUDA
+		std::cout << "CUDA support turned off at compile time" << std::endl;
 #else
 		shared_ptr<plugin::pcuda> p = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 		p->Capabilities();

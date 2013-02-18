@@ -21,8 +21,31 @@ RELEASE = (not DEBUG)
 
 workspace = os.environ['HOME'] + "/workspace"
 
+# cuda toolkit path
+
+cuda_toolkit_path = '/opt/cuda'
+
+if os.environ.get('CUDA_TOOLKIT_PATH') is None:
+	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
+else:
+	cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
+
+have_cuda = False
+
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
+	have_cuda = True
+
+# Assign compilers
+
 env['CC'] = 'gcc'
 env['CXX'] = 'g++'
+
+if os.environ.get('CC') != None:
+        env['CC'] = os.environ.get('CC')
+
+if os.environ.get('CXX') != None:
+        env['CXX'] = os.environ.get('CXX')
+
 
 # Includes
 
@@ -32,15 +55,47 @@ includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 
+if have_cuda:
+	includes.append(cuda_toolkit_path + '/include')
+
 env.Append(CPPPATH = includes)
 
 # Library paths
 
-env.Append(LIBPATH = [workspace + '/himan-lib/build/debug', '/usr/lib64'])
+librarypaths = []
+
+librarypaths.append(workspace + '/himan-lib/build/debug')
+librarypaths.append('/usr/lib64')
+
+if os.environ.get('ORACLE_HOME') is None:
+	librarypaths.append('/usr/lib64/oracle')
+else:
+	librarypaths.append(os.environ.get('ORACLE_HOME') + '/lib')
+
+if have_cuda:
+	librarypaths.append(cuda_toolkit_path + '/lib64')
+
+env.Append(LIBPATH = librarypaths)
 
 # Libraries
 
-env.Append(LIBS = ['himan','smartmet_newbase','boost_program_options','boost_regex','boost_filesystem','boost_system','rt','z','bz2'])
+libraries = []
+
+libraries.append('himan')
+libraries.append('smartmet_newbase')
+libraries.append('boost_program_options')
+libraries.append('boost_regex')
+libraries.append('boost_filesystem')
+libraries.append('boost_system')
+libraries.append('rt')
+libraries.append('z')
+libraries.append('bz2')
+libraries.append('clntsh')
+
+if have_cuda:
+	libraries.append('cudart')
+
+env.Append(LIBS = libraries)
 
 # CFLAGS
 
@@ -94,6 +149,9 @@ env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-ne
 # Defines
 
 env.Append(CPPDEFINES=['UNIX'])
+
+if have_cuda:
+	env.Append(CPPDEFINES=['HAVE_CUDA'])
 
 build_dir = ""
 
