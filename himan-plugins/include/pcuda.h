@@ -55,6 +55,8 @@ public:
 #endif
 };
 
+#ifdef HAVE_CUDA
+
 inline int himan::plugin::pcuda::LibraryVersion() const
 {
    // todo: error checking
@@ -67,7 +69,6 @@ inline int himan::plugin::pcuda::LibraryVersion() const
 
 inline void himan::plugin::pcuda::Capabilities() const
 {
-#ifdef HAVE_CUDA
     int devCount;
     cudaGetDeviceCount(&devCount);
 
@@ -113,9 +114,9 @@ inline void himan::plugin::pcuda::Capabilities() const
 
     }
 	std::cout << "#---------------------------------------------------#" << std::endl;
-#endif
-}
 
+}
+#endif
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
