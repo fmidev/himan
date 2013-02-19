@@ -65,7 +65,6 @@ cache_pool* cache_pool::itsInstance = NULL;
 cache_pool::cache_pool()
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("cache_pool"));
-    itsCache["test"] = NULL;
 }
 
 cache_pool* cache_pool::Instance()
