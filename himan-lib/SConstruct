@@ -24,6 +24,12 @@ workspace = os.environ['HOME'] + "/workspace"
 env['CC'] = 'gcc'
 env['CXX'] = 'g++'
 
+if os.environ.get('CC') != None:
+        env['CC'] = os.environ.get('CC')
+
+if os.environ.get('CXX') != None:
+        env['CXX'] = os.environ.get('CXX')
+
 # Includes
 
 includes = []
@@ -33,13 +39,28 @@ includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append(workspace + '/fmidb/include')
-includes.append('/usr/include/oracle')
+
+if os.environ.get('ORACLE_HOME') is None:
+        includes.append('/usr/include/oracle')
+else:
+        includes.append(os.environ.get('ORACLE_HOME') + '/rdbms/public')
 
 env.Append(CPPPATH = includes)
 
 # Library paths
 
-env.Append(LIBPATH = [workspace + '/himan-lib/lib', workspace + '/fmidb/lib', '/usr/lib64'])
+librarypaths = []
+
+librarypaths.append(workspace + '/himan-lib/lib')
+librarypaths.append(workspace + '/fmidb/lib')
+librarypaths.append('/usr/lib64')
+
+if os.environ.get('ORACLE_HOME') is None:
+        librarypaths.append('/usr/ib64/oracle')
+else:
+        librarypaths.append(os.environ.get('ORACLE_HOME') + '/lib')
+
+env.Append(LIBPATH = librarypaths)
 
 # Libraries
 
@@ -54,6 +75,7 @@ libraries.append('dl')
 libraries.append('fmidb')
 libraries.append('z')
 libraries.append('bz2')
+libraries.append('clntsh')
 
 env.Append(LIBS = libraries)
 
