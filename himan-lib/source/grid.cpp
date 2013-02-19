@@ -100,7 +100,7 @@ void grid::Dj(double theDj)
 
 double grid::Dj() const
 {
-	if (itsDi == kHPMissingFloat)
+	if (itsDj == kHPMissingFloat)
 	{
 		assert(itsBottomLeft.Y() != kHPMissingInt);
 		assert(itsTopRight.Y() != kHPMissingInt);
