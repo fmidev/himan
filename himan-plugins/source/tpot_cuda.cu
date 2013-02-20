@@ -5,16 +5,8 @@
 // CUDA runtime
 #include <cuda_runtime.h>
 
-// helper functions and utilities to work with CUDA
-#include <helper_cuda.h>
-#include <helper_functions.h>
-
-#ifdef DEBUG
-#include "timer_factory.h"
-#endif
-
-//#define CUDA_CHECK(a,msg) checkCUDAError(#a,__FILE__,__LINE__,a,msg)
-//#define CUDA_STREAMS
+#include "cuda_helper.h"
+#include "cuda_extern.h"
 
 namespace himan
 {
@@ -25,8 +17,6 @@ namespace plugin
 namespace tpot_cuda
 {
 
-void doCuda(const float* Tin, float TBase, const float* Pin, float PScale, float* TPout, size_t N, float PConst, unsigned short index);
-void checkCUDAError(const std::string& msg);
 __global__ void kernel_constant_pressure(float* Tin, float TBase, float P, float* TPout, size_t N);
 __global__ void kernel_varying_pressure(float* Tin, float TBase, float* Pin, float PScale, float* TPout, size_t N);
 
@@ -34,9 +24,6 @@ __global__ void kernel_varying_pressure(float* Tin, float TBase, float* Pin, flo
 } // namespace tpot
 } // namespace plugin
 } // namespace himan
-
-
-const float kFloatMissing = 32700.f;
 
 __global__ void himan::plugin::tpot_cuda::kernel_constant_pressure(float* Tin, float TBase, float P, float* TPout, size_t N)
 {
@@ -77,22 +64,22 @@ __global__ void himan::plugin::tpot_cuda::kernel_varying_pressure(float* Tin, fl
 }
 
 
-void himan::plugin::tpot_cuda::doCuda(const float* Tin, float TBase, const float* Pin, float PScale, float* TPout, size_t N, float PConst, unsigned short index)
+void himan::plugin::tpot_cuda::DoCuda(const float* Tin, float TBase, const float* Pin, float PScale, float* TPout, size_t N, float
+PConst, unsigned short deviceIndex)
 {
 
-    //cudaSetDevice(deviceIndex);
-    //cudaSetDevice(0); // this laptop has only one GPU
+    cudaSetDevice(deviceIndex);
+    CheckCudaError("deviceset");
 
 #ifdef CUDA_STREAMS
     cudaStream_t stream;
 
     cudaStreamCreate(&stream);
 
-    cudaError_t err;
+    cudaError_t err;t
 
 #endif
 
-    std::cout << "P " << PConst << std::endl;
     // Allocate host arrays and convert input data to float
 
     size_t size = N * sizeof(float);
@@ -103,31 +90,31 @@ void himan::plugin::tpot_cuda::doCuda(const float* Tin, float TBase, const float
 
     float* dT;
     cudaMalloc((void **) &dT, size);
-    checkCUDAError("malloc dT");
+    CheckCudaError("malloc dT");
 
     float* dP;
 
     if (!isConstantPressure)
     {
         cudaMalloc((void **) &dP, size);
-        checkCUDAError("malloc dP");
+        CheckCudaError("malloc dP");
     }
 
 #ifdef CUDA_STREAMS
     float *TPpinned;
-    checkCudaErrors(cudaMallocHost((void **)&TPpinned, size));
+    CheckCudaErrors(cudaMallocHost((void **)&TPpinned, size));
 #endif
 
     float *dTP;
 
     cudaMalloc((void **) &dTP, size);
-    checkCUDAError("malloc dTP");
+    CheckCudaError("malloc dTP");
 
 #ifdef CUDA_STREAMS
     cudaMemcpyAsync(dT, Tin, size, cudaMemcpyHostToDevice, stream);
 #else
     cudaMemcpy(dT, Tin, size, cudaMemcpyHostToDevice);
-    checkCUDAError("memcpy Tin");
+    CheckCudaError("memcpy Tin");
 #endif
 
 
@@ -137,7 +124,7 @@ void himan::plugin::tpot_cuda::doCuda(const float* Tin, float TBase, const float
         cudaMemcpyAsync(dP, Pin, size, cudaMemcpyHostToDevice, stream);
 #else
         cudaMemcpy(dP, Pin, size, cudaMemcpyHostToDevice);
-        checkCUDAError("memcpy Pin");
+        CheckCudaError("memcpy Pin");
 #endif
 
     }
@@ -146,7 +133,7 @@ void himan::plugin::tpot_cuda::doCuda(const float* Tin, float TBase, const float
     cudaMemcpyAsync(dTP, TPout, size, cudaMemcpyHostToDevice, stream);
 #else
     cudaMemcpy(dTP, TPout, size, cudaMemcpyHostToDevice);
-    checkCUDAError("memcpy TPout");
+    CheckCudaError("memcpy TPout");
 #endif
 
     // dims
@@ -156,11 +143,6 @@ void himan::plugin::tpot_cuda::doCuda(const float* Tin, float TBase, const float
 
     dim3 dimGrid(n_blocks,1);
     dim3 dimBlock(n_threads_per_block, 1);
-
-#ifdef DEBUG
-    timer* t = timer_factory::Instance()->GetTimer();
-    t->Start();
-#endif
 
     if (isConstantPressure)
     {
@@ -194,20 +176,12 @@ void himan::plugin::tpot_cuda::doCuda(const float* Tin, float TBase, const float
     cudaThreadSynchronize();
     // check if kernel execution generated an error
 
-#ifdef DEBUG
-    t->Stop();
-
-    std::cout << "cudaDebug::tpot_cuda Kernel execution took took " << t->GetTime() << " microseconds" << std::endl;
-
-    delete t;
-#endif
-
-    checkCUDAError("kernel invocation");
+    CheckCudaError("kernel invocation");
 
     // Retrieve result from device
     cudaMemcpy(TPout, dTP, size, cudaMemcpyDeviceToHost);
 
-    checkCUDAError("memcpy dTP");
+    CheckCudaError("memcpy dTP");
 
 #endif
 
@@ -226,14 +200,4 @@ void himan::plugin::tpot_cuda::doCuda(const float* Tin, float TBase, const float
     cudaFreeHost(TPpinned);
     cudaStreamDestroy(stream);
 #endif
-}
-
-void himan::plugin::tpot_cuda::checkCUDAError(const std::string& msg)
-{
-    cudaError_t err = cudaGetLastError();
-    if( cudaSuccess != err)
-    {
-        std::cout << "Cuda error (" << msg << "): " << cudaGetErrorString(err) << std::endl;
-        exit(1);
-    }
 }

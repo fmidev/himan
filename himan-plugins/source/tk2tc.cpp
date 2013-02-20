@@ -1,8 +1,8 @@
-/*
- * tk2tc.cpp
+/**
+ * @file tk2tc.cpp
  *
- *  Created on: Nov 20, 2012
- *      Author: partio
+ * @dateNov 20, 2012
+ * @author partio
  */
 
 #include "tk2tc.h"
@@ -27,20 +27,9 @@
 using namespace std;
 using namespace himan::plugin;
 
-#ifdef HAVE_CUDA
-namespace himan
-{
-namespace plugin
-{
-namespace tk2tc_cuda
-{
-void doCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex);
-}
-}
-}
-#endif
+#include "cuda_extern.h"
 
-tk2tc::tk2tc() : itsUseCuda(false)
+tk2tc::tk2tc() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
     itsClearTextFormula = "Tc = Tk - 273.15";
 
@@ -68,6 +57,8 @@ void tk2tc::Process(std::shared_ptr<const configuration> conf,
         }
 
         itsLogger->Info(msg);
+
+        itsCudaDeviceCount = c->DeviceCount();
 
     }
 
@@ -179,12 +170,12 @@ void tk2tc::Process(std::shared_ptr<const configuration> conf,
 
 void tk2tc::Run(shared_ptr<info> myTargetInfo,
                 shared_ptr<const configuration> conf,
-                unsigned short theThreadIndex)
+                unsigned short threadIndex)
 {
 
     while (AdjustLeadingDimension(myTargetInfo))
     {
-        Calculate(myTargetInfo, conf, theThreadIndex);
+        Calculate(myTargetInfo, conf, threadIndex);
     }
 }
 
@@ -196,7 +187,7 @@ void tk2tc::Run(shared_ptr<info> myTargetInfo,
 
 void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
                       shared_ptr<const configuration> conf,
-                      unsigned short theThreadIndex)
+                      unsigned short threadIndex)
 {
     shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
@@ -204,7 +195,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
     param TParam("T-K");
 
-    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex)));
+    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (threadIndex)));
 
     ResetNonLeadingDimension(myTargetInfo);
 
@@ -254,24 +245,29 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
         bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid());
 
-#ifdef HAVE_CUDA
+#ifdef DEBUG
+        unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+        t->Start();
+	string deviceType;
+#endif
 
-        //if (itsUseCuda && equalGrids)
-        if (itsUseCuda && equalGrids && theThreadIndex == 1)
+        if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
         {
+	
+	    deviceType = "GPU";
+
             size_t N = TGrid->Size();
 
-            float* TOut = new float[N];
+            float* TOut = new float[N]; // array that cuda devices will store data
+            double* infoData = new double[N]; // array that's stored to info instance
 
-            tk2tc_cuda::doCuda(TGrid->DataPool()->Data(), TOut, N, theThreadIndex-1);
-
-            double *data = new double[N];
+            tk2tc_cuda::DoCuda(TGrid->DataPool()->Data(), TOut, N, threadIndex-1);
 
             for (size_t i = 0; i < N; i++)
             {
-                data[i] = static_cast<float> (TOut[i]);
+                infoData[i] = static_cast<float> (TOut[i]);
 
-                if (data[i] == kFloatMissing)
+                if (infoData[i] == kFloatMissing)
                 {
                     missingCount++;
                 }
@@ -279,30 +275,22 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
                 count++;
             }
 
-            myTargetInfo->Data()->Set(data, N);
+            myTargetInfo->Data()->Set(infoData, N);
 
-            delete [] data;
+            delete [] infoData;
             delete [] TOut;
 
         }
         else
         {
 
-#else
-        if (true)
-        {
-#endif
+	    deviceType = "CPU";
 
             assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
             myTargetInfo->ResetLocation();
 
             targetGrid->Reset();
-
-#ifdef DEBUG
-            unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-            t->Start();
-#endif
 
             while (myTargetInfo->NextLocation() && targetGrid->Next())
             {
@@ -329,12 +317,13 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
                 }
             }
 
+	}
+	
 #ifdef DEBUG
-            t->Stop();
-            itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on CPU");
+        t->Stop();
+        itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on " + deviceType);
 #endif
 
-        }
 
         /*
          * Now we are done for this level

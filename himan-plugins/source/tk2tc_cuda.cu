@@ -5,13 +5,8 @@
 // CUDA runtime
 #include <cuda_runtime.h>
 
-// helper functions and utilities to work with CUDA
-#include <helper_cuda.h>
-#include <helper_functions.h>
-
-#ifdef DEBUG
-#include "timer_factory.h"
-#endif
+#include "cuda_helper.h"
+#include "cuda_extern.h"
 
 namespace himan
 {
@@ -22,17 +17,12 @@ namespace plugin
 namespace tk2tc_cuda
 {
 
-void doCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex);
-void checkCUDAError(const std::string& msg);
 __global__ void kernel_tk2tc(const float* Tin, float* Tout, size_t N);
 
 
 } // namespace tk2tc_cuda
 } // namespace plugin
 } // namespace himan
-
-
-const float kFloatMissing = 32700.f;
 
 __global__ void himan::plugin::tk2tc_cuda::kernel_tk2tc(const float* Tin, float* Tout, size_t N)
 {
@@ -53,11 +43,11 @@ __global__ void himan::plugin::tk2tc_cuda::kernel_tk2tc(const float* Tin, float*
     }
 }
 
-void himan::plugin::tk2tc_cuda::doCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex)
+void himan::plugin::tk2tc_cuda::DoCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex)
 {
 
-    //cudaSetDevice(deviceIndex);
-    cudaSetDevice(0); // this laptop has only one GPU
+    cudaSetDevice(deviceIndex); // this laptop has only one GPU
+    CheckCudaError("deviceset");
 
     // Allocate host arrays and convert input data to float
 
@@ -67,12 +57,16 @@ void himan::plugin::tk2tc_cuda::doCuda(const float* Tin, float* Tout, size_t N, 
 
     float* dT;
     cudaMalloc((void **) &dT, size);
-    checkCUDAError("malloc dT");
+    CheckCudaError("malloc dT");
 
     float *dTout;
 
     cudaMalloc((void **) &dTout, size);
-    checkCUDAError("malloc dTout");
+    CheckCudaError("malloc dTout");
+
+    cudaMemcpy(dT, Tin, size, cudaMemcpyHostToDevice);
+
+    CheckCudaError("memcpy");
 
     // dims
 
@@ -83,8 +77,7 @@ void himan::plugin::tk2tc_cuda::doCuda(const float* Tin, float* Tout, size_t N, 
     dim3 dimBlock(n_threads_per_block);
 
 #ifdef DEBUG
-    timer* t = timer_factory::Instance()->GetTimer();
-    t->Start();
+    std::cout << "cudaDebug::tpot_cuda blocksize: " << n_threads_per_block << " gridsize: " << n_blocks << std::endl;
 #endif
 
     kernel_tk2tc <<< dimGrid, dimBlock >>> (dT, dTout, N);
@@ -94,32 +87,14 @@ void himan::plugin::tk2tc_cuda::doCuda(const float* Tin, float* Tout, size_t N, 
 
     // check if kernel execution generated an error
 
-    checkCUDAError("kernel invocation");
+    CheckCudaError("kernel invocation");
 
     // Retrieve result from device
     cudaMemcpy(Tout, dTout, size, cudaMemcpyDeviceToHost);
 
-    checkCUDAError("memcpy");
-
-#ifdef DEBUG
-    t->Stop();
-
-    std::cout << "cudaDebug::tpot_cuda Calculation and data transfer took " << t->GetTime() << " microseconds on GPU" << std::endl;
-
-    delete t;
-#endif
+    CheckCudaError("memcpy");
 
     cudaFree(dT);
     cudaFree(dTout);
 
-}
-
-void himan::plugin::tk2tc_cuda::checkCUDAError(const std::string& msg)
-{
-    cudaError_t err = cudaGetLastError();
-    if( cudaSuccess != err)
-    {
-        std::cout << "Cuda error (" << msg << "): " << cudaGetErrorString(err) << std::endl;
-        exit(1);
-    }
 }

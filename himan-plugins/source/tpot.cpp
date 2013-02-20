@@ -29,20 +29,9 @@
 using namespace std;
 using namespace himan::plugin;
 
-#ifdef HAVE_CUDA
-namespace himan
-{
-namespace plugin
-{
-namespace tpot_cuda
-{
-void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float* TPout, size_t N, float PConst, unsigned short index);
-}
-}
-}
-#endif
+#include "cuda_extern.h"
 
-tpot::tpot() : itsUseCuda(false)
+tpot::tpot() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
     itsClearTextFormula = "Tp = Tk * pow((1000/P), 0.286)"; // Poissons equation
 
@@ -72,6 +61,8 @@ void tpot::Process(std::shared_ptr<const configuration> conf,
 
         itsLogger->Info(msg);
 
+	itsCudaDeviceCount = c->DeviceCount();
+	
     }
 
     // Get number of threads to use
@@ -181,12 +172,12 @@ void tpot::Process(std::shared_ptr<const configuration> conf,
     }
 }
 
-void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short threadIndex)
 {
 
     while (AdjustLeadingDimension(myTargetInfo))
     {
-        Calculate(myTargetInfo, conf, theThreadIndex);
+        Calculate(myTargetInfo, conf, threadIndex);
     }
 
 }
@@ -197,7 +188,7 @@ void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> co
  * This function does the actual calculation.
  */
 
-void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short threadIndex)
 {
 
     shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -207,7 +198,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
     param TParam ("T-K");
     param PParam ("P-PA");
 
-    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (theThreadIndex)));
+    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (threadIndex)));
 
     ResetNonLeadingDimension(myTargetInfo);
 
@@ -221,11 +212,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 
         double PScale = 1;
         double TBase = 0;
-
-#ifdef DEBUG
-        unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-        t->Start();
-#endif
 
         // Source infos
         shared_ptr<info> TInfo;
@@ -275,11 +261,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 			}
 		}
 
-#ifdef DEBUG
-        t->Stop();
-        itsLogger->Debug("Data fetching took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds");
-#endif
-
         if (TInfo->Param().Unit() == kC)
         {
             TBase = 273.15;
@@ -295,34 +276,36 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 
         bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
-#ifdef HAVE_CUDA
-
-        //if (itsUseCuda && equalGrids)
-        if (itsUseCuda && equalGrids && theThreadIndex == 1)
-        {
 #ifdef DEBUG
-            t->Start();
+        unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+        t->Start();
+	string deviceType;
 #endif
+
+        if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+        {
+	    deviceType = "GPU";
+	    
             size_t N = TGrid->Size();
 
-            float* TPData = new float[N];
+            float* TPOut = new float[N];
+            double* infoData = new double[N];
 
             if (!isPressureLevel)
             {
-                tpot_cuda::doCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, TPData, N, 0, theThreadIndex-1);
+                tpot_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, TPOut, N, 0, threadIndex-1);
             }
             else
             {
-                tpot_cuda::doCuda(TGrid->DataPool()->Data(), TBase, 0, 0, TPData, N, myTargetInfo->Level().Value(), theThreadIndex-1);
+                tpot_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, TPOut, N, myTargetInfo->Level().Value(), threadIndex-1);
             }
 
-            double *data = new double[N];
 
             for (size_t i = 0; i < N; i++)
             {
-                data[i] = static_cast<float> (TPData[i]);
+                infoData[i] = static_cast<float> (TPOut[i]);
 
-                if (data[i] == kFloatMissing)
+                if (infoData[i] == kFloatMissing)
                 {
                     missingCount++;
                 }
@@ -330,31 +313,20 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
                 count++;
             }
 
-            myTargetInfo->Data()->Set(data, N);
+            myTargetInfo->Data()->Set(infoData, N);
 
-            delete [] data;
-            delete [] TPData;
+            delete [] infoData;
+            delete [] TPOut;
 
-#ifdef DEBUG
-            t->Stop();
-            itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on GPU");
-#endif
         }
         else
         {
 
-#else
-        if (true)
-        {
-#endif
-
+	    deviceType = "CPU";
+	    
             myTargetInfo->ResetLocation();
 
             targetGrid->Reset();
-
-#ifdef DEBUG
-            t->Start();
-#endif
 
             while (myTargetInfo->NextLocation() && targetGrid->Next())
             {
@@ -389,14 +361,12 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
                     throw runtime_error(ClassName() + ": Failed to set value to matrix");
                 }
             }
-
-#ifdef DEBUG
-            t->Stop();
-            itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on CPU");
-#endif
-
         }
 
+#ifdef DEBUG
+        t->Stop();
+        itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on " + deviceType);
+#endif
 
         /*
          * Now we are done for this level

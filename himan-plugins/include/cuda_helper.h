@@ -1,4 +1,8 @@
+#ifndef CUDA_HELPER_H
+#define CUDA_HELPER_H
+
 #include <cuda_runtime.h>
+
 
 const float kFloatMissing = 32700.f;
 
@@ -15,3 +19,4 @@ void CheckCudaError(const std::string& msg)
     }
 }
 
+#endif

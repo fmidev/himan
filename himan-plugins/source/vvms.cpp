@@ -27,20 +27,9 @@
 using namespace std;
 using namespace himan::plugin;
 
-#ifdef HAVE_CUDA
-namespace himan
-{
-namespace plugin
-{
-namespace vvms_cuda
-{
-void doCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex);
-}
-}
-}
-#endif
+#include "cuda_extern.h"
 
-vvms::vvms() : itsUseCuda(false)
+vvms::vvms() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
     itsClearTextFormula = "w = -(ver) * 287 * T * (9.81*p)";
 
@@ -69,6 +58,8 @@ void vvms::Process(std::shared_ptr<const configuration> conf,
         }
 
         itsLogger->Info(msg);
+	
+	itsCudaDeviceCount = c->DeviceCount();
 
     }
 
@@ -178,12 +169,12 @@ void vvms::Process(std::shared_ptr<const configuration> conf,
 
 void vvms::Run(shared_ptr<info> myTargetInfo,
                shared_ptr<const configuration> conf,
-               unsigned short theThreadIndex)
+               unsigned short threadIndex)
 {
 
     while (AdjustLeadingDimension(myTargetInfo))
     {
-        Calculate(myTargetInfo, conf, theThreadIndex);
+        Calculate(myTargetInfo, conf, threadIndex);
     }
 
 }
@@ -196,7 +187,7 @@ void vvms::Run(shared_ptr<info> myTargetInfo,
 
 void vvms::Calculate(shared_ptr<info> myTargetInfo,
                      shared_ptr<const configuration> conf,
-                     unsigned short theThreadIndex)
+                     unsigned short threadIndex)
 {
 
 
@@ -208,7 +199,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
     param PParam("P-PA");
     param VVParam("VV-PAS");
 
-    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (theThreadIndex)));
+    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (threadIndex)));
 
     ResetNonLeadingDimension(myTargetInfo);
 
@@ -219,8 +210,6 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
         myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
                                 " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-        //myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
         double PScale = 1;
         double TBase = 0;
@@ -299,30 +288,36 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
         					*myTargetInfo->Grid() == *VVInfo->Grid() &&
                            (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
-#ifdef HAVE_CUDA
+#ifdef DEBUG
+        unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+        t->Start();
+	string deviceType;
+#endif
 
-        if (itsUseCuda && equalGrids)
+        if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
         {
+	    deviceType = "GPU";
+	    
             size_t N = TGrid->Size();
 
             float* VVout = new float[N];
+            double *infoData = new double[N];
 
             if (!isPressureLevel)
             {
-                vvms_cuda::doCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, VVGrid->DataPool()->Data(), VVout, N, 0, theThreadIndex-1);
+                vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, VVGrid->DataPool()->Data(), VVout, N, 0, threadIndex-1);
             }
             else
             {
-                vvms_cuda::doCuda(TGrid->DataPool()->Data(), TBase, 0, 0, VVGrid->DataPool()->Data(), VVout, N, 100 * myTargetInfo->Level().Value(), theThreadIndex-1);
+                vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, VVGrid->DataPool()->Data(), VVout, N, 100 * myTargetInfo->Level().Value(), threadIndex-1);
             }
 
-            double *data = new double[N];
 
             for (size_t i = 0; i < N; i++)
             {
-                data[i] = static_cast<float> (VVout[i]);
+                infoData[i] = static_cast<float> (VVout[i]);
 
-                if (data[i] == kFloatMissing)
+                if (infoData[i] == kFloatMissing)
                 {
                     missingCount++;
                 }
@@ -330,30 +325,21 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
                 count++;
             }
 
-            myTargetInfo->Data()->Set(data, N);
+            myTargetInfo->Data()->Set(infoData, N);
 
-            delete [] data;
+            delete [] infoData;
             delete [] VVout;
 
         }
         else
         {
-
-#else
-        if (true)
-        {
-#endif
-
+	    deviceType = "CPU";
+	    
             assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
             myTargetInfo->ResetLocation();
 
             targetGrid->Reset();
-
-#ifdef DEBUG
-            unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-            t->Start();
-#endif
 
             while (myTargetInfo->NextLocation() && targetGrid->Next())
             {
@@ -391,11 +377,14 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
                 }
 
             }
+	}
+
+	
 #ifdef DEBUG
-            t->Stop();
-            itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on CPU");
+        t->Stop();
+        itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on "
+	    + deviceType);
 #endif
-        }
 
         /*
          * Now we are done for this level

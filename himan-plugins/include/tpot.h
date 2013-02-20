@@ -50,7 +50,7 @@ private:
     void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> theConfiguration, unsigned short theThreadIndex);
 
     bool itsUseCuda;
-
+    int itsCudaDeviceCount;
 };
 
 // the class factory

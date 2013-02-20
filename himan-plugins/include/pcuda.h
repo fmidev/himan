@@ -43,22 +43,35 @@ public:
         return HPVersionNumber(0, 1);
     }
 
+    /**
+     * @brief Check if this server has cuda enabled devices
+     */
+
     bool HaveCuda() const;
+    int DeviceCount() const;
 
 #ifdef HAVE_CUDA
 
     void Capabilities() const;
     int LibraryVersion() const;
-    int DeviceCount() const;
     HPVersionNumber ComputeCapability() const;
+
+#endif
 
 private:
     mutable int itsDeviceCount;
 	
-#endif
 };
 
-#ifdef HAVE_CUDA
+
+#ifndef HAVE_CUDA
+
+inline int himan::plugin::pcuda::DeviceCount() const
+{
+    return 0;
+}
+
+#else
 
 inline int himan::plugin::pcuda::LibraryVersion() const
 {

@@ -5,13 +5,8 @@
 // CUDA runtime
 #include <cuda_runtime.h>
 
-// helper functions and utilities to work with CUDA
-#include <helper_cuda.h>
-#include <helper_functions.h>
-
-#ifdef DEBUG
-#include "timer_factory.h"
-#endif
+#include "cuda_extern.h"
+#include "cuda_helper.h"
 
 namespace himan
 {
@@ -22,8 +17,6 @@ namespace plugin
 namespace vvms_cuda
 {
 
-void doCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex);
-void checkCUDAError(const std::string& msg);
 __global__ void kernel_constant_pressure(float* Tin, float TBase, float P, float* VVin, float* VVout, size_t N);
 __global__ void kernel_varying_pressure(float* Tin, float TBase, float* Pin, float PScale, float* VVin, float* VVout, size_t N);
 
@@ -31,9 +24,6 @@ __global__ void kernel_varying_pressure(float* Tin, float TBase, float* Pin, flo
 } // namespace tpot
 } // namespace plugin
 } // namespace himan
-
-
-const float kFloatMissing = 32700.f;
 
 __global__ void himan::plugin::vvms_cuda::kernel_constant_pressure(float* Tin, float TBase, float P, float* VVin, float* VVout, size_t N)
 {
@@ -78,11 +68,11 @@ __global__ void himan::plugin::vvms_cuda::kernel_varying_pressure(float* Tin, fl
 }
 
 
-void himan::plugin::vvms_cuda::doCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex)
+void himan::plugin::vvms_cuda::DoCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex)
 {
 
-    //cudaSetDevice(deviceIndex);
-    cudaSetDevice(0); // this laptop has only one GPU
+    cudaSetDevice(deviceIndex);
+    CheckCudaError("deviceset");
 
     // Allocate host arrays and convert input data to float
 
@@ -94,40 +84,40 @@ void himan::plugin::vvms_cuda::doCuda(const float* Tin, float TBase, const float
 
     float* dT;
     cudaMalloc((void **) &dT, size);
-    checkCUDAError("malloc dT");
+    CheckCudaError("malloc dT");
 
     float* dP;
 
     if (!isConstantPressure)
     {
         cudaMalloc((void **) &dP, size);
-        checkCUDAError("malloc dP");
+        CheckCudaError("malloc dP");
     }
 
     float *dVVin;
 
     cudaMalloc((void **) &dVVin, size);
-    checkCUDAError("malloc dVVin");
+    CheckCudaError("malloc dVVin");
 
     float *dVVout;
 
     cudaMalloc((void **) &dVVout, size);
-    checkCUDAError("malloc dVVout");
+    CheckCudaError("malloc dVVout");
 
     cudaMemcpy(dT, Tin, size, cudaMemcpyHostToDevice);
-    checkCUDAError("memcpy Tin");
+    CheckCudaError("memcpy Tin");
 
     if (!isConstantPressure)
     {
         cudaMemcpy(dP, Pin, size, cudaMemcpyHostToDevice);
-        checkCUDAError("memcpy Pin");
+        CheckCudaError("memcpy Pin");
     }
 
     cudaMemcpy(dVVin, VVin, size, cudaMemcpyHostToDevice);
-    checkCUDAError("memcpy VVin");
+    CheckCudaError("memcpy VVin");
 
     cudaMemcpy(dVVout, VVout, size, cudaMemcpyHostToDevice);
-    checkCUDAError("memcpy VVout");
+    CheckCudaError("memcpy VVout");
 
     // dims
 
@@ -136,11 +126,6 @@ void himan::plugin::vvms_cuda::doCuda(const float* Tin, float TBase, const float
 
     dim3 dimGrid(n_blocks);
     dim3 dimBlock(n_threads_per_block);
-
-#ifdef DEBUG
-    timer* t = timer_factory::Instance()->GetTimer();
-    t->Start();
-#endif
 
     if (isConstantPressure)
     {
@@ -156,20 +141,12 @@ void himan::plugin::vvms_cuda::doCuda(const float* Tin, float TBase, const float
 
     // check if kernel execution generated an error
 
-    checkCUDAError("kernel invocation");
+    CheckCudaError("kernel invocation");
 
     // Retrieve result from device
     cudaMemcpy(VVout, dVVout, size, cudaMemcpyDeviceToHost);
 
-    checkCUDAError("memcpy");
-
-#ifdef DEBUG
-    t->Stop();
-
-    std::cout << "cudaDebug::tpot_cuda Calculation and data transfer took " << t->GetTime() << " microseconds on GPU" << std::endl;
-
-    delete t;
-#endif
+    CheckCudaError("memcpy");
 
     cudaFree(dT);
 
@@ -180,14 +157,4 @@ void himan::plugin::vvms_cuda::doCuda(const float* Tin, float TBase, const float
     cudaFree(dVVin);
     cudaFree(dVVout);
 
-}
-
-void himan::plugin::vvms_cuda::checkCUDAError(const std::string& msg)
-{
-    cudaError_t err = cudaGetLastError();
-    if( cudaSuccess != err)
-    {
-        std::cout << "Cuda error (" << msg << "): " << cudaGetErrorString(err) << std::endl;
-        exit(1);
-    }
 }
