@@ -16,6 +16,9 @@ using namespace std;
 using namespace himan::plugin;
 
 pcuda::pcuda()
+#ifdef HAVE_CUDA
+ : itsDeviceCount(kHPMissingInt)
+#endif
 {
     itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("pcuda"));
 }

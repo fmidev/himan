@@ -51,6 +51,9 @@ public:
     int LibraryVersion() const;
     int DeviceCount() const;
     HPVersionNumber ComputeCapability() const;
+
+private:
+    mutable int itsDeviceCount;
 	
 #endif
 };
@@ -69,16 +72,19 @@ inline int himan::plugin::pcuda::LibraryVersion() const
 
 inline int himan::plugin::pcuda::DeviceCount() const
 {
-    int devCount;
-    cudaError_t err = cudaGetDeviceCount(&devCount);
-    if (err == cudaErrorNoDevice || err == cudaErrorInsufficientDriver)
+    if (itsDeviceCount == kHPMissingInt)
     {
-    	// No device or no driver present
+        cudaError_t err = cudaGetDeviceCount(&itsDeviceCount);
 
-    	devCount = 0;
+        if (err == cudaErrorNoDevice || err == cudaErrorInsufficientDriver)
+        {
+            // No device or no driver present
+
+    	    itsDeviceCount = 0;
+        }
     }
 
-    return devCount;
+    return itsDeviceCount;
 }
 
 inline void himan::plugin::pcuda::Capabilities() const
@@ -91,8 +97,8 @@ inline void himan::plugin::pcuda::Capabilities() const
     	return;
     }
 
-	std::cout << "#---------------------------------------------------#" << std::endl;
-	std::cout << "CUDA library version " << LibraryVersion() << std::endl;
+    std::cout << "#---------------------------------------------------#" << std::endl;
+    std::cout << "CUDA library version " << LibraryVersion() << std::endl;
     std::cout << "There are " << devCount << " CUDA device(s)" << std::endl;
 
     // Iterate through devices
