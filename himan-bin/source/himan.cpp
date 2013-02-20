@@ -31,14 +31,14 @@ using namespace himan;
 using namespace std;
 
 void banner();
-std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
+shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
 
 int main(int argc, char** argv)
 {
 
 	shared_ptr<configuration> conf = ParseCommandLine(argc, argv);
 
-	std::unique_ptr<logger> theLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
+	unique_ptr<logger> theLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
 
 	/*
 	 * Initialize plugin factory before parsing configuration file. This prevents himan from
@@ -50,42 +50,20 @@ int main(int argc, char** argv)
 	 * Note that we don't actually do anything with the plugin here.
 	 */
 
-	std::shared_ptr<plugin::auxiliary_plugin> n = std::dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
-	std::shared_ptr<plugin::auxiliary_plugin> c = std::dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("cache"));
+	shared_ptr<plugin::auxiliary_plugin> n = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
+	shared_ptr<plugin::auxiliary_plugin> c = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("cache"));
  
 	json_parser::Instance()->Parse(conf);
 
 	banner();
 
-	std::vector<std::shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
+	vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
-	theLogger->Info("Found " + boost::lexical_cast<std::string> (thePlugins.size()) + " plugins");
+	theLogger->Info("Found " + boost::lexical_cast<string> (thePlugins.size()) + " plugins");
+	
+	vector<shared_ptr<info>> queues = conf->Infos();
 
-	for (size_t i = 0; i < thePlugins.size(); i++)
-	{
-		switch (thePlugins[i]->PluginClass())
-		{
-		case kCompiled:
-			theLogger->Info("Plugin '"  + thePlugins[i]->ClassName() + "'" + " \ttype compiled (hard-coded) --> " + std::dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula());
-			break;
-
-		case kAuxiliary:
-			theLogger->Debug("Plugin '"  + thePlugins[i]->ClassName() + "'" + "\ttype aux");
-			break;
-
-		case kInterpreted:
-			theLogger->Debug("Plugin '"  + thePlugins[i]->ClassName() + "'" + "\ttype interpreted");
-			break;
-
-		default:
-			theLogger->Fatal("Unknown plugin type");
-			exit(1);
-		}
-	}
-
-	std::vector<std::shared_ptr<info>> queues = conf->Infos();
-
-	theLogger->Debug("Processqueue size: " + boost::lexical_cast<std::string> (queues.size()));
+	theLogger->Debug("Processqueue size: " + boost::lexical_cast<string> (queues.size()));
 
 	for (size_t i = 0; i < queues.size(); i++)
 	{
@@ -96,10 +74,8 @@ int main(int argc, char** argv)
 		{
 
 		 	plugin_configuration pc = queues[i]->Plugins()[j];
-            
-			theLogger->Info("Calculating " + pc.Name());
-           
-			std::shared_ptr<plugin::compiled_plugin> thePlugin = std::dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc.Name()));
+
+			shared_ptr<plugin::compiled_plugin> thePlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc.Name()));
 
 			if (!thePlugin)
 			{
@@ -108,17 +84,19 @@ int main(int argc, char** argv)
 			}
 
 #ifdef DEBUG
-			std::unique_ptr<timer> t = std::unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+			unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 			t->Start();
 #endif
 
 			conf->PluginConfiguration(pc);
 
+                        theLogger->Info("Calculating " + pc.Name());
+
 			thePlugin->Process(conf, queues[i]);
 
 #ifdef DEBUG
 			t->Stop();
-			theLogger->Debug("Processing " + pc.Name() + " took " + boost::lexical_cast<std::string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
+			theLogger->Debug("Processing " + pc.Name() + " took " + boost::lexical_cast<string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
 #endif
 		}
 
@@ -131,19 +109,17 @@ int main(int argc, char** argv)
 
 void banner()
 {
-	std::cout << std::endl
-			  << "************************************************" << std::endl
-			  << "* By the Power of Grayskull, I Have the Power! *" << std::endl
-			  << "************************************************" << std::endl << std::endl;
-
-	sleep(1);
+	cout << endl
+			  << "************************************************" << endl
+			  << "* By the Power of Grayskull, I Have the Power! *" << endl
+			  << "************************************************" << endl << endl;
 
 }
 
-std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
+shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 {
 
-	std::shared_ptr<configuration> conf(new configuration());
+	shared_ptr<configuration> conf(new configuration());
 
 	namespace po = boost::program_options;
 
@@ -151,9 +127,9 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	// Can't use required() since it doesn't allow us to use --list-plugins
 
-	std::string outfileType = "";
-	std::string confFile = "";
-	std::vector<std::string> auxFiles;
+	string outfileType = "";
+	string confFile = "";
+	vector<string> auxFiles;
 	
 	himan::HPDebugState debugState = himan::kDebugMsg;
 
@@ -165,7 +141,7 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
 	("version,v", "display version number")
 	("configuration-file,f", po::value(&confFile), "configuration file")
-	("auxiliary-files,a", po::value<std::vector<std::string> > (&auxFiles), "auxiliary (helper) file(s)")
+	("auxiliary-files,a", po::value<vector<string> > (&auxFiles), "auxiliary (helper) file(s)")
 	("threads,j", po::value(&threadCount), "number of started threads")
 	("list-plugins,l", "list all defined plugins")
 	("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
@@ -225,14 +201,14 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (opt.count("version"))
 	{
-		std::cout << "himan version ???" << endl;
+		cout << "himan version ???" << endl;
 		exit(1);
 	}
 
 	if (opt.count("cuda-properties"))
 	{
 #ifndef HAVE_CUDA
-		std::cout << "CUDA support turned off at compile time" << std::endl;
+		cout << "CUDA support turned off at compile time" << endl;
 #else
 		shared_ptr<plugin::pcuda> p = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 		p->Capabilities();
@@ -282,36 +258,35 @@ std::shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	if (opt.count("list-plugins"))
 	{
 
-		vector<shared_ptr<plugin::himan_plugin> > thePlugins = plugin_factory::Instance()->CompiledPlugins();
-
-		cout << "Compiled plugins" << endl;
+		vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
 		for (size_t i = 0; i < thePlugins.size(); i++)
 		{
-			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
-		}
+			cout << "Plugin '"  << thePlugins[i]->ClassName() << "'" << endl << "\tversion " << thePlugins[i]->Version() << endl; 
 
-		thePlugins = plugin_factory::Instance()->InterpretedPlugins();
+			switch (thePlugins[i]->PluginClass())
+			{
 
-		cout << "Interpreted plugins" << endl;
+				case kCompiled:
+					cout << "\ttype compiled (hard-coded) --> " << dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula() << endl;
+					break;
 
-		for (size_t i = 0; i < thePlugins.size(); i++)
-		{
-			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
-		}
+				case kAuxiliary:
+					cout << "\ttype aux" << endl;
+					break;
 
-		cout << "Auxiliary plugins" << endl;
+				case kInterpreted:
+					cout << "\ttype interpreted" << endl;
+					break;
 
-		thePlugins = plugin_factory::Instance()->AuxiliaryPlugins();
-
-		for (size_t i = 0; i < thePlugins.size(); i++)
-		{
-			cout << "\t" << thePlugins[i]->ClassName() << "\t(version " << thePlugins[i]->Version() << ")" << endl;
+				default:
+					cout << " has unknown plugin type" << endl;
+					exit(1);
+			}
 		}
 
 		exit(1);
 	}
-
 
 	if (!confFile.empty())
 	{
