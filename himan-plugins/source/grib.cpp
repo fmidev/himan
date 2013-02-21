@@ -106,8 +106,11 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	if (edition == 1)
 	{
-
-		if (no_vers == 0)
+		if (info->Producer().TableVersion() != kHPMissingInt)
+		{
+			no_vers = info->Producer().TableVersion();
+		}
+		else if (no_vers == 0)
 		{
 			map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(info->Producer().Id()); //n->ProducerInfo(info->Producer().Id());
 			no_vers = boost::lexical_cast<long> (producermap["no_vers"]);
