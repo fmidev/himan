@@ -56,7 +56,7 @@ librarypaths.append(workspace + '/fmidb/lib')
 librarypaths.append('/usr/lib64')
 
 if os.environ.get('ORACLE_HOME') is None:
-        librarypaths.append('/usr/ib64/oracle')
+        librarypaths.append('/usr/lib64/oracle')
 else:
         librarypaths.append(os.environ.get('ORACLE_HOME') + '/lib')
 
