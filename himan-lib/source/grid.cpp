@@ -14,7 +14,7 @@
 
 using namespace himan;
 
-grid::grid() : itsData(new d_matrix_t(0,0)), itsScanningMode(kUnknownScanningMode), itsUVRelativeToGrid(false)
+grid::grid() : itsData(new d_matrix_t(0,0)), itsScanningMode(kUnknownScanningMode), itsUVRelativeToGrid(false), itsDi(kHPMissingFloat), itsDj(kHPMissingFloat)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
@@ -388,15 +388,15 @@ bool grid::operator==(const grid& other) const
 
     if (itsBottomLeft != other.BottomLeft())
     {
-        itsLogger->Trace("BottomLeft does not match: " + boost::lexical_cast<std::string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().X()));
-        itsLogger->Trace("BottomLeft does not match: " + boost::lexical_cast<std::string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().Y()));
+        itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().X()));
+        itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().Y()));
         return false;
     }
 
     if (itsTopRight != other.TopRight())
     {
-        itsLogger->Trace("TopRight does not match: " + boost::lexical_cast<std::string> (itsTopRight.X()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().X()));
-        itsLogger->Trace("TopRight does not match: " + boost::lexical_cast<std::string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().Y()));
+        itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<std::string> (itsTopRight.X()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().X()));
+        itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<std::string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().Y()));
         return false;
     }
 
@@ -410,8 +410,8 @@ bool grid::operator==(const grid& other) const
     {
 		if (itsSouthPole != other.SouthPole())
     	{
-        	itsLogger->Trace("SouthPole does not match: " + boost::lexical_cast<std::string> (itsSouthPole.X()) + " vs " + boost::lexical_cast<std::string> (other.SouthPole().X()));
-        	itsLogger->Trace("SouthPole does not match: " + boost::lexical_cast<std::string> (itsSouthPole.Y()) + " vs " + boost::lexical_cast<std::string> (other.SouthPole().Y()));
+        	itsLogger->Trace("SouthPole does not match: X " + boost::lexical_cast<std::string> (itsSouthPole.X()) + " vs " + boost::lexical_cast<std::string> (other.SouthPole().X()));
+        	itsLogger->Trace("SouthPole does not match: Y " + boost::lexical_cast<std::string> (itsSouthPole.Y()) + " vs " + boost::lexical_cast<std::string> (other.SouthPole().Y()));
         	return false;
     	}
     }
@@ -449,4 +449,28 @@ bool grid::operator!=(const grid& other) const
 void grid::Data(std::shared_ptr<d_matrix_t> d)
 {
 	itsData = d;
+}
+
+bool grid::Stagger(double xStaggerFactor, double yStaggerFactor)
+{
+
+	if (xStaggerFactor == 0 && yStaggerFactor == 0)
+	{
+		return true;
+	}
+
+	point bottomLeft, topRight;
+
+	assert(itsProjection != kStereographicProjection);
+
+	bottomLeft.X(itsBottomLeft.X() + xStaggerFactor * Di());
+	bottomLeft.Y(itsBottomLeft.Y() + yStaggerFactor * Dj());
+
+	topRight.X(itsTopRight.X() + xStaggerFactor * Di());
+	topRight.Y(itsTopRight.Y() + yStaggerFactor * Dj());
+
+	itsBottomLeft = bottomLeft;
+	itsTopRight = topRight;
+
+	return true;
 }

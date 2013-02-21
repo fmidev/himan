@@ -196,6 +196,18 @@ class grid
 	    bool operator==(const grid& other) const;
 	    bool operator!=(const grid& other) const;
 
+
+	    /**
+	     * @brief Stagger a grid
+	     *
+	     * Note: works only for latlon grids.
+	     *
+	     * @param xStaggerFactor Stagger factor in x direction
+	     * @param yStaggerFactor Stagger factor in y direction
+	     */
+
+	    bool Stagger(double xStaggerFactor, double yStaggerFactor);
+
 	private:
 
 		std::shared_ptr<d_matrix_t> itsData;
