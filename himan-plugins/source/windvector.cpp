@@ -133,14 +133,14 @@ void windvector::Process(std::shared_ptr<const configuration> conf,
 
 	if (conf->PluginConfiguration().Exists("for_ice") && conf->PluginConfiguration().GetValue("for_ice") == "true")
 	{
-		requestedSpeedParam = param("IFF-MS", 100000);
-		requestedDirParam = param("IDD-D", 100001);
+		requestedSpeedParam = param("IFF-MS", 389);
+		requestedDirParam = param("IDD-D", 390);
 		itsIceCalculation = true;
 	}
 	else if (conf->PluginConfiguration().Exists("for_sea") && conf->PluginConfiguration().GetValue("for_sea") == "true")
 	{
-		requestedSpeedParam = param("SFF-MS", 100000);
-		requestedDirParam = param("SDD-D", 100001);
+		requestedSpeedParam = param("SFF-MS", 163);
+		requestedDirParam = param("SDD-D", 164);
 		itsSeaCalculation = true;
 	}
 	else
@@ -302,6 +302,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			}
 		}
 
+		// if source producer is Hirlam, we must de-stagger U and V grid
+
+		if (conf->SourceProducer().Id() == 1)
+		{
+			UInfo->Grid()->Stagger(-0.5, 0);
+			VInfo->Grid()->Stagger(0, -0.5);
+		}
+
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> UGrid(UInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> VGrid(VInfo->Grid()->ToNewbaseGrid());
@@ -348,13 +356,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 				 */
 
 				const point regPoint(targetGrid->LatLon());
+
 				const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (targetGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
 
 				point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->Grid()->SouthPole(), point(U,V));
 
 				// Wind speed should the same with both forms of U and V
 
-				assert(fabs((U*U+V*V) - (regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+				assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.0011);
 
 				U = regUV.X();
 				V = regUV.Y();
