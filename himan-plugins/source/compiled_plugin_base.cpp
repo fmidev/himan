@@ -70,7 +70,7 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 bool compiled_plugin_base::AdjustLeadingDimension(shared_ptr<info> myTargetInfo)
 {
 
-    //lock_guard<mutex> lock(itsAdjustDimensionMutex);
+    lock_guard<mutex> lock(itsAdjustDimensionMutex);
 
     // Leading dimension can be: time or level
 

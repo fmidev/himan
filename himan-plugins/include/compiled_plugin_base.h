@@ -93,7 +93,7 @@ protected:
 	level LevelTransform(const himan::producer& sourceProducer, const himan::param& targetParam, const himan::level& targetLevel) const;
 
 private:
-  //  std::mutex itsAdjustDimensionMutex;
+    std::mutex itsAdjustDimensionMutex;
     HPDimensionType itsLeadingDimension;
     std::shared_ptr<info> itsFeederInfo;
 };
