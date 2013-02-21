@@ -52,7 +52,6 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 		return true;
 	}
 
-
 	const NFmiPoint sourceGridPoint = sourceGrid->LatLonToGrid(targetLatLonPoint);
 
 	bool noInterpolation = (fabs(targetGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
@@ -144,23 +143,31 @@ himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceP
 	{
 		shared_ptr<neons> n = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		string ULvlName = n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
+		string lvlName = n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
 
 		HPLevelType lvlType = kUnknownLevel;
 
 		float lvlValue = targetLevel.Value();
 
-		if (ULvlName == "GROUND")
+		if (lvlName == "GROUND")
 		{
 			lvlType = kGround;
 			lvlValue = 0;
 		}
+		else if (lvlName == "PRESSURE")
+		{
+			lvlType = kPressure;
+		}
+		else if (lvlName == "HYBRID")
+		{
+			lvlType = kHybrid;
+		}
 		else
 		{
-			throw runtime_error(ClassName() + ": Unknown level type: " + ULvlName);
+			throw runtime_error(ClassName() + ": Unknown level type: " + lvlName);
 		}
 
-		sourceLevel = level(lvlType, lvlValue, ULvlName);
+		sourceLevel = level(lvlType, lvlValue, lvlName);
 	}
 	else
 	{
