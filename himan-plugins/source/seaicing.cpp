@@ -213,10 +213,8 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configu
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		//myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 
 		shared_ptr<info> TInfo;
 		shared_ptr<info> TgInfo;

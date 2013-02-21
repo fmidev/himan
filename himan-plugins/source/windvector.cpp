@@ -264,7 +264,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		shared_ptr<info> UInfo;

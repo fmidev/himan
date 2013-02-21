@@ -166,7 +166,7 @@ void tpot::Process(std::shared_ptr<const configuration> conf,
 
         targetInfo->FirstTime();
 
-        string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
+        string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H%M");
         theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
 
     }
