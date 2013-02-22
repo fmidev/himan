@@ -89,6 +89,8 @@ void info::Init()
     itsNi = 0;
     itsNj = 0;
 
+    itsDi = kHPMissingFloat;
+    itsDj = kHPMissingFloat;
 }
 
 std::ostream& info::Write(std::ostream& file) const
@@ -147,6 +149,12 @@ void info::Create()
             {
             	Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
             	Grid()->Data()->Resize(itsNi,itsNj);
+
+            	if (itsDi != kHPMissingInt && itsDj != kHPMissingInt)
+            	{
+            		Grid()->Di(itsDi);
+            		Grid()->Dj(itsDj);
+            	}
             }
         }
     }

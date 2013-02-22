@@ -549,6 +549,9 @@ private:
     size_t itsNi;
     size_t itsNj;
 
+    double itsDi;
+    double itsDj;
+
     bool itsUVRelativeToGrid;
 
     /* END GLOBAL CONFIGURATION PARAMETERS */

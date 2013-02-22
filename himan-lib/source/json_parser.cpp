@@ -470,19 +470,28 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 			 *  if south pole (0,30).
 			 */
 
+			double di = boost::lexical_cast<double>(geominfo["pas_longitude"]);
+			double dj = boost::lexical_cast<double>(geominfo["pas_latitude"]);
+
 			if (geominfo["prjn_name"] == "latlon" && (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0"))
 			{
 				anInfo->itsProjection = kRotatedLatLonProjection;
 				anInfo->itsSouthPole = point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
+				di /= 1e3;
+				dj /= 1e3;
 			}
 			else if (geominfo["prjn_name"] == "latlon")
 			{
 				anInfo->itsProjection = kLatLonProjection;
+				di /= 1e3;
+				dj /= 1e3;
 			}
 			else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo")
 			{
 				anInfo->itsProjection = kStereographicProjection;
 				anInfo->itsOrientation = boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3;
+				anInfo->itsDi = di;
+				anInfo->itsDj = dj;
 			}
 			else
 			{
@@ -508,13 +517,21 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 			double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) / 1e3;
 			double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) / 1e3;
 
-			double di = boost::lexical_cast<double>(geominfo["pas_longitude"])/1e3;
-			double dj = boost::lexical_cast<double>(geominfo["pas_latitude"])/1e3;
+			std::pair<point, point> coordinates;
 
-			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), anInfo->itsNi, anInfo->itsNj, di, dj, anInfo->itsScanningMode);
+			if (anInfo->itsProjection == kStereographicProjection)
+			{
+				assert(anInfo->itsScanningMode == kBottomLeft);
+				coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), anInfo->itsOrientation, anInfo->itsNi, anInfo->itsNj, di, dj);
+			}
+			else
+			{
+				coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), anInfo->itsNi, anInfo->itsNj, di, dj, anInfo->itsScanningMode);
+			}
 
 			anInfo->itsBottomLeft = coordinates.first;
 			anInfo->itsTopRight = coordinates.second;
+
 			return;
 		}
 		else

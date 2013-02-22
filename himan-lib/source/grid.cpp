@@ -190,9 +190,10 @@ point grid::FirstGridPoint() const
 	double x = kHPMissingFloat;
 	double y = kHPMissingFloat;
 
-	if (itsProjection != kLatLonProjection && itsProjection != kRotatedLatLonProjection)
+	if (itsProjection == kStereographicProjection)
 	{
-		itsLogger->Warning("Calculating latitude for first gridpoint in non-latlon projection not supported");
+		assert(itsScanningMode == kBottomLeft);
+		itsLogger->Warning("Endpoint calculations not supported for non-latlon projections");
 		return itsBottomLeft;
 	}
 
@@ -235,6 +236,13 @@ point grid::FirstGridPoint() const
 
 point grid::LastGridPoint() const
 {
+	if (itsProjection == kStereographicProjection)
+	{
+		assert(itsScanningMode == kBottomLeft);
+		itsLogger->Warning("Endpoint calculations not supported for non-latlon projections");
+		return itsTopRight;
+	}
+
 	point firstGridPoint = FirstGridPoint();
 	return point(firstGridPoint.X() + (static_cast<double> (Ni())-1)*Di(), firstGridPoint.Y() + (static_cast<double> (Nj())-1)*Dj());
 }
@@ -335,7 +343,7 @@ NFmiGrid* grid::ToNewbaseGrid() const
     case kStereographicProjection:
     {
         theArea = new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
-                                            NFmiPoint(topRightLongitude, itsTopRight.Y()),
+        		                            NFmiPoint(topRightLongitude, itsTopRight.Y()),
                                             itsOrientation);
         break;
 
@@ -386,6 +394,12 @@ NFmiGrid* grid::ToNewbaseGrid() const
 bool grid::operator==(const grid& other) const
 {
 
+	if (itsProjection != other.itsProjection)
+	{
+		itsLogger->Trace("Projections do not match: " + std::string(HPProjectionTypeToString.at(itsProjection)) + " vs " + std::string(HPProjectionTypeToString.at(other.itsProjection)));
+		return false;
+	}
+
     if (itsBottomLeft != other.BottomLeft())
     {
         itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().X()));
@@ -393,17 +407,11 @@ bool grid::operator==(const grid& other) const
         return false;
     }
 
-    if (itsTopRight != other.TopRight())
-    {
-        itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<std::string> (itsTopRight.X()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().X()));
-        itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<std::string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().Y()));
-        return false;
-    }
-
-    if (itsProjection != other.Projection())
-    {
-        itsLogger->Trace("Projections don't match: " + boost::lexical_cast<std::string> (itsProjection) + " vs " + boost::lexical_cast<std::string> (other.Projection()));
-        return false;
+   	if (itsTopRight != other.TopRight())
+	{
+		itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<std::string> (itsTopRight.X()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().X()));
+		itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<std::string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().Y()));
+		return false;
     }
 
     if (itsProjection == kRotatedLatLonProjection)
