@@ -22,6 +22,8 @@ using namespace himan::plugin;
 const unsigned int MAX_THREADS = 12; //<! Max number of threads we allow
 const double kInterpolatedValueEpsilon = 0.00001; //<! Max difference between two grid points (if smaller, points are considered the same)
 
+mutex itsAdjustDimensionMutex;
+
 unsigned short compiled_plugin_base::ThreadCount(short userThreadCount) const
 {
     unsigned int coreCount = boost::thread::hardware_concurrency(); // Number of cores
@@ -161,6 +163,10 @@ himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceP
 		else if (lvlName == "HYBRID")
 		{
 			lvlType = kHybrid;
+		}
+		else if (lvlName == "HEIGHT")
+		{
+			lvlType = kHeight;
 		}
 		else
 		{
