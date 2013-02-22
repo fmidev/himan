@@ -14,6 +14,8 @@
 using namespace std;
 using namespace himan::plugin;
 
+typedef lock_guard<mutex> Lock;
+
 cache::cache()
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("cache"));
@@ -50,15 +52,14 @@ vector<shared_ptr<himan::info>> cache::GetInfo(const search_options& options)
 	string uniqueName = UniqueName(options);
 
 	vector<shared_ptr<himan::info>> info;
-	
+
 	if (cache_pool::Instance()->Find(uniqueName))
 	{
 		info.push_back(cache_pool::Instance()->GetInfo(uniqueName));
 	}
+
 	return info;
 }
-
-typedef lock_guard<mutex> Lock;
 
 cache_pool* cache_pool::itsInstance = NULL;
 
@@ -91,9 +92,9 @@ bool cache_pool::Find(const string& uniqueName)
 	return false;
 }
 
-void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info>& info)
+void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> info)
 {
-	Lock lock(itsMutex);
+	Lock lock(itsInsertMutex);
 
 	itsCache.insert(pair<string, shared_ptr<himan::info>>(uniqueName, info));
 	
@@ -101,7 +102,7 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info>& info)
 
 shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)
 {
-	Lock lock(itsMutex);
+	Lock lock(itsGetMutex);
 
 	return itsCache[uniqueName];
 }
