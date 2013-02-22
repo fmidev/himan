@@ -201,7 +201,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (opt.count("version"))
 	{
-		cout << "himan version ???" << endl;
+		cout << "himan version " << __DATE__ << " " << __TIME__ << endl;
 		exit(1);
 	}
 
