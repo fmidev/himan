@@ -220,12 +220,6 @@ vector<shared_ptr<himan::info> > fetcher::FromCache(const search_options& option
 {
     vector<shared_ptr<himan::info>> infos = itsCache->GetInfo(options);
 
-    vector<shared_ptr<himan::info>> returnInfos;
-
-    for (size_t i = 0; i < infos.size(); i++) {
-		returnInfos.push_back(infos[i]);
-    }
-
     return infos;
 }
 
