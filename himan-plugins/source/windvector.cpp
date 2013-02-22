@@ -304,7 +304,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 		// if source producer is Hirlam, we must de-stagger U and V grid
 
-		if (conf->SourceProducer().Id() == 1)
+		if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
 		{
 			UInfo->Grid()->Stagger(-0.5, 0);
 			VInfo->Grid()->Stagger(0, -0.5);
@@ -376,7 +376,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 				// Wind speed should the same with both forms of U and V
 
-				assert(fabs((U*U+V*V) - (regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+				assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
 
 			}
 
