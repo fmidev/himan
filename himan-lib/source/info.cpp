@@ -55,6 +55,9 @@ info::info(const info& other)
 	itsNi = other.itsNi;
 	itsNj = other.itsNj;
 
+	itsDi = other.itsDi;
+	itsDj = other.itsDj;
+
 	/* END GLOBAL CONFIGURATION OPTIONS */
 
 	// Data backend is SHARED
@@ -105,6 +108,11 @@ std::ostream& info::Write(std::ostream& file) const
     file << itsSouthPole;
 
     file << "__itsOrientation__ " << itsOrientation << endl;
+    file << "__itsNi__ " << itsNi << endl;
+    file << "__itsNj__ " << itsNj << endl;
+    file << "__itsDi__ " << itsDi << endl;
+    file << "__itsDi__ " << itsDj << endl;
+
     file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
 
     file << "__itsScanningMode__ " << itsScanningMode << endl;
@@ -150,7 +158,7 @@ void info::Create()
             	Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
             	Grid()->Data()->Resize(itsNi,itsNj);
 
-            	if (itsDi != kHPMissingInt && itsDj != kHPMissingInt)
+            	if (itsDi != kHPMissingFloat && itsDj != kHPMissingFloat)
             	{
             		Grid()->Di(itsDi);
             		Grid()->Dj(itsDj);
