@@ -24,20 +24,22 @@ cache::cache()
 string cache::UniqueName(const shared_ptr<himan::info>& info)
 {
 	string forecast_time = info->Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S");
+	string valid_time = info->Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S");
 	string param = info->Param().Name();
 	string level_id = boost::lexical_cast<string>(info->Level().Value());
 	string level = boost::lexical_cast<string>(info->Level().Type());
-	return forecast_time + '_' + param + '_' + level_id + '_' + level;
+	return forecast_time + '_' + valid_time + '_' + param + '_' + level_id + '_' + level;
 
 }
 
 string cache::UniqueNameFromOptions(const search_options& options)
 {
-	string forecast_time = (*options.time.OriginDateTime()).String("%Y-%m-%d_%H:%M:%S");
+	string forecast_time = (options.time.OriginDateTime())->String("%Y-%m-%d_%H:%M:%S");
+	string valid_time = (options.time.ValidDateTime())->String("%Y-%m-%d_%H:%M:%S");
 	string param = (options.param).Name();
 	string level_id = boost::lexical_cast<string>((options.level).Value());
 	string level = boost::lexical_cast<string>((options.level).Type());
-	return forecast_time + '_' + param + '_' + level_id + '_' + level;
+	return forecast_time + '_' + valid_time + '_' + param + '_' + level_id + '_' + level;
 }
 
 
@@ -49,9 +51,9 @@ void cache::Insert(vector<shared_ptr<himan::info>>& infos)
 			string uniqueName = UniqueName(infos[i]);
 
 			if (!(cache_pool::Instance()->Find(uniqueName)))
-
-			cache_pool::Instance()->Insert(uniqueName, infos[i]);
-
+			{
+				cache_pool::Instance()->Insert(uniqueName, infos[i]);
+			}
 		}	
 	}
 }
