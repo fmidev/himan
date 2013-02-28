@@ -23,11 +23,7 @@ cache::cache()
 
 string cache::UniqueName(const shared_ptr<himan::info>& info)
 {
-	string forecast_time = "";
-	if (!info->OriginDateTime().Empty()) 
-	{
-		forecast_time = info->OriginDateTime().String("%Y-%m-%d_%H:%M:%S");
-	}
+	string forecast_time = info->Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S");
 	string param = info->Param().Name();
 	string level_id = boost::lexical_cast<string>(info->Level().Value());
 	string level = boost::lexical_cast<string>(info->Level().Type());
