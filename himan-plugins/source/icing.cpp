@@ -200,7 +200,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 	// Required source parameters
 
 	param TParam("T-K");
-	param VvParam("VV-PAS");
+	param VvParam("VV-MMS");
     param ClParam("CLDWAT-KGKG");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
