@@ -42,6 +42,16 @@ string cache::UniqueNameFromOptions(const search_options& options)
 	return forecast_time + '_' + valid_time + '_' + param + '_' + level_id + '_' + level;
 }
 
+void cache::Insert(shared_ptr<himan::info>& info)
+{		
+	string uniqueName = UniqueName(info);
+
+	if (!(cache_pool::Instance()->Find(uniqueName)))
+	{
+		cache_pool::Instance()->Insert(uniqueName, info);		
+	}	
+	
+}
 
 void cache::Insert(vector<shared_ptr<himan::info>>& infos)
 {		

@@ -31,6 +31,7 @@ public:
     cache& operator=(const cache& other) = delete;
 
     void Insert(std::vector<std::shared_ptr<himan::info>>& infos);
+    void Insert(std::shared_ptr<himan::info>& info);
     std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);    
 
     virtual std::string ClassName() const
