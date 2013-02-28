@@ -30,7 +30,7 @@ public:
     cache(const cache& other) = delete;
     cache& operator=(const cache& other) = delete;
 
-    void Insert(const search_options& options, std::vector<std::shared_ptr<himan::info>>& infos);
+    void Insert(std::vector<std::shared_ptr<himan::info>>& infos);
     std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);    
 
     virtual std::string ClassName() const
@@ -51,7 +51,8 @@ public:
 
 private:
 
-    std::string UniqueName(const search_options& options);
+    std::string UniqueName(const std::shared_ptr<himan::info>& info);
+    std::string UniqueNameFromOptions(const search_options& options);
 
 };
 
@@ -67,7 +68,7 @@ public:
 
     static cache_pool* Instance();
     bool Find(const std::string& uniqueName);
-    void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info);
+    void Insert(const std::string& uniqueName, std::shared_ptr<himan::info>& info);
     std::shared_ptr<himan::info> GetInfo(const std::string& uniqueName);
     
 

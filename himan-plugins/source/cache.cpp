@@ -21,27 +21,40 @@ cache::cache()
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("cache"));
 }
 
-string cache::UniqueName(const search_options& options)
+string cache::UniqueName(const shared_ptr<himan::info>& info)
 {
-	string forecast_time = (*options.time.OriginDateTime()).String() + (*options.time.ValidDateTime()).String();
-	string param = options.param.Name();
-	string level_id = boost::lexical_cast<string>(options.level.Value());
-	string level = boost::lexical_cast<string>(options.level.Type());
-	//string config_source = boost::lexical_cast<string>((*options.configuration).SourceProducer());
-	//string config_target = boost::lexical_cast<string>((*options.configuration).TargetProducer());
-	return forecast_time +'_'+ param +'_'+ level_id + '_'+ level;// + config_source + config_target;
+	string forecast_time = "";
+	if (!info->OriginDateTime().Empty()) 
+	{
+		forecast_time = info->OriginDateTime().String("%Y-%m-%d_%H:%M:%S");
+	}
+	string param = info->Param().Name();
+	string level_id = boost::lexical_cast<string>(info->Level().Value());
+	string level = boost::lexical_cast<string>(info->Level().Type());
+	return forecast_time + '_' + param + '_' + level_id + '_' + level;
+
 }
 
-void cache::Insert(const search_options& options, vector<shared_ptr<himan::info>>& infos)
-{	
-	string uniqueName = UniqueName(options);
-	
-	if (!(cache_pool::Instance()->Find(uniqueName)))
+string cache::UniqueNameFromOptions(const search_options& options)
+{
+	string forecast_time = (*options.time.OriginDateTime()).String("%Y-%m-%d_%H:%M:%S");
+	string param = (options.param).Name();
+	string level_id = boost::lexical_cast<string>((options.level).Value());
+	string level = boost::lexical_cast<string>((options.level).Type());
+	return forecast_time + '_' + param + '_' + level_id + '_' + level;
+}
+
+
+void cache::Insert(vector<shared_ptr<himan::info>>& infos)
+{		
 	{
 		for (size_t i = 0; i < infos.size(); i++)
 		{
+			string uniqueName = UniqueName(infos[i]);
+
+			if (!(cache_pool::Instance()->Find(uniqueName)))
+
 			cache_pool::Instance()->Insert(uniqueName, infos[i]);
-			itsLogger->Debug("Data added to cache. UniqueName: " + uniqueName);
 
 		}	
 	}
@@ -49,7 +62,7 @@ void cache::Insert(const search_options& options, vector<shared_ptr<himan::info>
 
 vector<shared_ptr<himan::info>> cache::GetInfo(const search_options& options) 
 {
-	string uniqueName = UniqueName(options);
+	string uniqueName = UniqueNameFromOptions(options);
 
 	vector<shared_ptr<himan::info>> info;
 
@@ -92,11 +105,12 @@ bool cache_pool::Find(const string& uniqueName)
 	return false;
 }
 
-void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> info)
+void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info>& info)
 {
 	Lock lock(itsInsertMutex);
 
 	itsCache.insert(pair<string, shared_ptr<himan::info>>(uniqueName, info));
+	itsLogger->Debug("Data added to cache. UniqueName: " + uniqueName);
 	
 }
 

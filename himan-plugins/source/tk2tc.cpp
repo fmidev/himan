@@ -248,8 +248,8 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 #ifdef DEBUG
         unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
         t->Start();
-	string deviceType;
 #endif
+        string deviceType;
 
         if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
         {

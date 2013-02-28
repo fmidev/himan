@@ -59,7 +59,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
             itsLogger->Debug("Data found from cache");
             break;
         }
-
+        
     	/*
     	 *  2. Fetch data from auxiliary files specified at command line
     	 *
@@ -230,7 +230,7 @@ vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, cons
 
     vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents);
 
-    itsCache->Insert(options, infos);
+    itsCache->Insert(infos);
 
     return infos;
 }
@@ -246,7 +246,7 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 
     theInfos.push_back(i);
 
-    itsCache->Insert(options, theInfos);
+    itsCache->Insert(theInfos);
 
     return theInfos;
 }
