@@ -16,6 +16,13 @@ namespace himan
 namespace plugin
 {
 
+/**
+ * @class kindex
+ *
+ * @brief Calculate k-indexs. 
+ *
+ */
+
 class kindex : public compiled_plugin, private compiled_plugin_base
 {
 public:

@@ -17,6 +17,13 @@ namespace himan
 namespace plugin
 {
 
+/**
+ * @class vvms
+ *
+ * @brief Calculate vertical velocity in m/s. 
+ *
+ */
+
 class vvms : public compiled_plugin, private compiled_plugin_base
 {
 public:

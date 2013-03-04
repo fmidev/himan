@@ -5,6 +5,8 @@
  * 
  * @author: partio
  *
+ * @class neons
+ *
  * @brief Access to neons database.
  *
  * A note on compiling and linking:

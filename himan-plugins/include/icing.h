@@ -16,6 +16,13 @@ namespace himan
 namespace plugin
 {
 
+/**
+ * @class icing
+ *
+ * @brief Calculate icing index for hybrid levels. 
+ *
+ */
+
 class icing : public compiled_plugin, private compiled_plugin_base
 {
 public:

@@ -16,6 +16,13 @@ namespace himan
 namespace plugin
 {
 
+/**
+ * @class seaicing
+ *
+ * @brief Calculate sea spray icing index. 
+ *
+ */
+
 class seaicing : public compiled_plugin, private compiled_plugin_base
 {
 public:
