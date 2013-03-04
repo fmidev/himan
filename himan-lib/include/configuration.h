@@ -30,9 +30,6 @@ public:
     configuration();
     ~configuration() {}
 
-    configuration(const configuration& other) = delete;
-    configuration& operator=(const configuration& other) = delete;
-
     /**
      * @return Class name
      */
@@ -49,9 +46,6 @@ public:
 
     std::ostream& Write(std::ostream& file) const;
 
-    std::vector<std::shared_ptr<info> > Infos() const;
-    void Infos(const std::vector<std::shared_ptr<info> >& theInfos);
-   
     /**
      * @return List of auxiliary file names found in the configuration file
      */
@@ -112,15 +106,10 @@ public:
 
 	std::string ConfigurationFile() const;
 	void ConfigurationFile(const std::string& theConfigurationFile);
-
-	plugin_configuration PluginConfiguration() const;
-	void PluginConfiguration(const plugin_configuration& thePluginConfiguration);
-
+	
 private:
 
     void Init();
-
-    std::vector<std::shared_ptr<info>> itsInfos;
 
     HPFileType itsOutputFileType;
     std::string itsConfigurationFile;
@@ -145,7 +134,6 @@ private:
     producer itsTargetProducer;
     std::vector<producer> itsSourceProducers;
 
-    plugin_configuration itsPluginConfiguration;
 };
 
 

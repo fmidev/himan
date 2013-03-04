@@ -498,13 +498,3 @@ void info::StepSizeOverOneByte(bool theStepSizeOverOneByte)
 {
 	itsStepSizeOverOneByte = theStepSizeOverOneByte;
 }
-
-std::vector<plugin_configuration> info::Plugins() const
-{
-    return itsPlugins;
-}
-
-void info::Plugins(const std::vector<plugin_configuration>& thePlugins)
-{
-    itsPlugins = thePlugins;
-}

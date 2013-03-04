@@ -11,6 +11,9 @@ using namespace himan;
 
 plugin_configuration::plugin_configuration() : itsName(""), itsOptions() {} ;
 
+plugin_configuration::plugin_configuration(std::shared_ptr<configuration> conf) : configuration(*conf), itsName(""), itsOptions() {} ;
+
+
 plugin_configuration::plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions)
 	: itsName(theName), itsOptions(theOptions)
 {
@@ -57,6 +60,16 @@ std::string plugin_configuration::GetValue(const std::string & key) const
 	}
 
 	return iter->second;
+}
+
+std::shared_ptr<info> plugin_configuration::Info() const
+{
+	return itsInfo;
+}
+
+void plugin_configuration::Info(std::shared_ptr<info> theInfo) 
+{
+	itsInfo = theInfo;
 }
 
 std::ostream& plugin_configuration::Write(std::ostream& file) const

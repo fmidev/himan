@@ -21,7 +21,6 @@
 #include "point.h"
 #include "grid.h"
 #include <vector>
-#include "plugin_configuration.h"
 
 namespace himan
 {
@@ -521,9 +520,6 @@ public:
     bool StepSizeOverOneByte() const;
     void StepSizeOverOneByte(bool theStepSizeOverOneByte);
 
-    void Plugins(const std::vector<plugin_configuration>& thePlugins);
-    std::vector<plugin_configuration> Plugins() const;
-
 private:
 
     void Init();
@@ -571,8 +567,6 @@ private:
     size_t itsLocationIndex;
 
     bool itsStepSizeOverOneByte;
-
-    std::vector<plugin_configuration> itsPlugins;
 
 };
 

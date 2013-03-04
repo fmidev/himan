@@ -8,19 +8,21 @@
 #ifndef PLUGIN_CONFIGURATION_H
 #define PLUGIN_CONFIGURATION_H
 
-#include "param.h"
-#include "level.h"
 #include "himan_common.h"
 #include <vector>
 #include <map>
+//#include "statistics.h"
+#include "configuration.h"
+#include "info.h"
 
 namespace himan
 {
 
-class plugin_configuration
+class plugin_configuration : public configuration
 {
 public:
 	plugin_configuration();
+	plugin_configuration(std::shared_ptr<configuration> conf);
 	plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions);
 
 	~plugin_configuration() {};
@@ -51,12 +53,16 @@ public:
 
     bool Exists(const std::string & key) const;
     std::string GetValue(const std::string & key) const;
+    
+	void Info(std::shared_ptr<info> theInfo);
+	std::shared_ptr<info> Info() const;
 
 private:
 
 	std::string itsName;
 	std::map<std::string,std::string> itsOptions;
-
+	std::shared_ptr<info> itsInfo;
+	//std::shared_ptr<statistics> itsStatistics;
 };
 
 inline

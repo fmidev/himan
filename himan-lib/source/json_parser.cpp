@@ -60,7 +60,7 @@ json_parser::json_parser()
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("json_parser"));
 }
 
-void json_parser::Parse(shared_ptr<configuration> conf)
+vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
 
 	if (conf->ConfigurationFile().empty())
@@ -68,16 +68,18 @@ void json_parser::Parse(shared_ptr<configuration> conf)
 		throw runtime_error("Configuration file not defined");
 	}
 
-	ParseConfigurationFile(conf);
+	vector<shared_ptr<plugin_configuration>> plugins = ParseConfigurationFile(conf);
 
-	if (conf->Infos().size() == 0)
+	if (plugins.size() == 0)
 	{
 		throw runtime_error("Empty processqueue");
 	}
 
+	return plugins;
+
 }
 
-void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
+vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
 
 	itsLogger->Debug("Parsing configuration file");
@@ -93,6 +95,7 @@ void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 		throw runtime_error(string("Error reading configuration file: ") + e.what());
 	}
 
+	vector<shared_ptr<plugin_configuration>> pluginContainer;
 	/* Create our base info */
 
 	shared_ptr<info> baseInfo(new info());
@@ -218,8 +221,6 @@ void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 		std::shared_ptr<info> anInfo (new info(*baseInfo));
 		anInfo->Create(); // Reset data backend
 
-		//ParseProducers(anInfo, element.second);
-		//ParseTime(anInfo->SourceProducers()[0], anInfo, element.second);
 		try
 		{
 			ParseAreaAndGrid(conf, anInfo, element.second);
@@ -240,8 +241,6 @@ void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 
 	    boost::property_tree::ptree& plugins = element.second.get_child("plugins");
 
-	    std::vector<plugin_configuration> pluginContainer;
-
 	    if (plugins.empty())
 	    {
 	    	throw runtime_error(ClassName() + ": plugin definitions not found");
@@ -249,7 +248,7 @@ void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 
 	    BOOST_FOREACH(boost::property_tree::ptree::value_type &plugin, plugins)
 	    {
-			plugin_configuration pc;
+			shared_ptr<plugin_configuration> pc(new plugin_configuration(conf));
 
 		    if (plugin.second.empty())
 		    {
@@ -272,31 +271,34 @@ void json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 
 	        	if (key == "name")
 	        	{
-	        		pc.Name(value);
+	        		pc->Name(value);
 	        	}
 	        	else
 	        	{
-	        		pc.AddOption(key, value);
+	        		pc->AddOption(key, value);
 	        	}
 
-	        	if (pc.Name().empty())
+	        	if (pc->Name().empty())
 	        	{
 	        		throw runtime_error(ClassName() + ": plugin name not found from configuration");
 	        	}
 
 			}
 
+			pc->Info(anInfo);
 			pluginContainer.push_back(pc);
-
+			
 		}
 
-		anInfo->Plugins(pluginContainer);
+		//anInfo->Plugins(pluginContainer);
 
-		infoQueue.push_back(anInfo);
+		//infoQueue.push_back(anInfo);
 
 	} // END BOOST_FOREACH
 
-    conf->Infos(infoQueue); 
+    //conf->Infos(infoQueue);
+
+	return pluginContainer;
 
 }
 

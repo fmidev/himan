@@ -23,11 +23,6 @@ std::ostream& configuration::Write(std::ostream& file) const
 
     file << "<" << ClassName() << " " << Version() << ">" << std::endl;
 
-    for (size_t i = 0; i < itsInfos.size(); i++)
-    {
-        file << *itsInfos[i];
-    }
-
    // file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
     file << itsTargetProducer;
 
@@ -52,16 +47,6 @@ std::vector<std::string> configuration::AuxiliaryFiles() const
 void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryFiles)
 {
     itsAuxiliaryFiles = theAuxiliaryFiles;
-}
-
-std::vector<std::shared_ptr<info>> configuration::Infos() const
-{
-    return itsInfos;
-}
-
-void configuration::Infos(const std::vector<std::shared_ptr<info> >& theInfos)
-{
-    itsInfos = theInfos;
 }
 
 void configuration::Init()
@@ -164,14 +149,4 @@ std::vector<producer> configuration::SourceProducers() const
 producer configuration::TargetProducer() const
 {
 	return itsTargetProducer;
-}
-
-plugin_configuration configuration::PluginConfiguration() const
-{
-	return itsPluginConfiguration;
-}
-
-void configuration::PluginConfiguration(const plugin_configuration& thePluginConfiguration)
-{
-	itsPluginConfiguration = thePluginConfiguration;
 }

@@ -10,7 +10,7 @@
 
 #include <string>
 #include <vector>
-#include "configuration.h"
+#include "plugin_configuration.h"
 #include <boost/property_tree/ptree.hpp>
 
 namespace himan
@@ -26,7 +26,7 @@ public:
     json_parser(const json_parser& other) = delete;
     json_parser& operator=(const json_parser& other) = delete;
 
-    void Parse(std::shared_ptr<configuration> conf);
+    std::vector<std::shared_ptr<plugin_configuration>> Parse(std::shared_ptr<configuration> conf);
 
     virtual std::string ClassName() const
     {
@@ -42,7 +42,7 @@ private:
     json_parser();
     ~json_parser() {}
 
-    void ParseConfigurationFile(std::shared_ptr<configuration> conf);
+    std::vector<std::shared_ptr<plugin_configuration>> ParseConfigurationFile(std::shared_ptr<configuration> conf);
     void ParseAreaAndGrid(std::shared_ptr<configuration> conf, std::shared_ptr<info> baseInfo, const boost::property_tree::ptree& pt);
     void ParseTime(const producer& sourceProducer, std::shared_ptr<info> baseInfo, const boost::property_tree::ptree& pt);
     void ParseProducers(std::shared_ptr<configuration> conf, std::shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
