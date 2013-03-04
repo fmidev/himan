@@ -36,8 +36,7 @@ tk2tc::tk2tc() : itsUseCuda(false), itsCudaDeviceCount(0)
     itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }
 
-void tk2tc::Process(std::shared_ptr<const configuration> conf,
-						std::shared_ptr<info> targetInfo)
+void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
     shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -67,6 +66,8 @@ void tk2tc::Process(std::shared_ptr<const configuration> conf,
     unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
     boost::thread_group g;
+
+	shared_ptr<info> targetInfo = conf->Info();
 
     /*
      * Get producer information from neons if whole_file_write is false.

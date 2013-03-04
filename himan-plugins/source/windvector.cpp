@@ -56,8 +56,7 @@ windvector::windvector()
 
 }
 
-void windvector::Process(std::shared_ptr<const configuration> conf,
-		std::shared_ptr<info> targetInfo)
+void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -85,6 +84,8 @@ void windvector::Process(std::shared_ptr<const configuration> conf,
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
 	boost::thread_group g;
+
+	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
 	 * Get producer information from neons if whole_file_write is false.
@@ -131,13 +132,13 @@ void windvector::Process(std::shared_ptr<const configuration> conf,
 	requestedDirParam.GribCategory(2);
 	requestedDirParam.GribParameter(0);
 
-	if (conf->PluginConfiguration().Exists("for_ice") && conf->PluginConfiguration().GetValue("for_ice") == "true")
+	if (conf->Exists("for_ice") && conf->GetValue("for_ice") == "true")
 	{
 		requestedSpeedParam = param("IFF-MS", 389);
 		requestedDirParam = param("IDD-D", 390);
 		itsIceCalculation = true;
 	}
-	else if (conf->PluginConfiguration().Exists("for_sea") && conf->PluginConfiguration().GetValue("for_sea") == "true")
+	else if (conf->Exists("for_sea") && conf->GetValue("for_sea") == "true")
 	{
 		requestedSpeedParam = param("SFF-MS", 163);
 		requestedDirParam = param("SDD-D", 164);

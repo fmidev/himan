@@ -47,8 +47,7 @@ kindex::kindex() : itsUseCuda(false)
 
 }
 
-void kindex::Process(std::shared_ptr<const configuration> conf,
-		std::shared_ptr<info> targetInfo)
+void kindex::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -76,6 +75,8 @@ void kindex::Process(std::shared_ptr<const configuration> conf,
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
 	boost::thread_group g;
+
+	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
 	 * Get producer information from neons if whole_file_write is false.

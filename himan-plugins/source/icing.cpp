@@ -48,8 +48,7 @@ icing::icing() : itsUseCuda(false)
 
 }
 
-void icing::Process(std::shared_ptr<const configuration> conf,
-		std::shared_ptr<info> targetInfo)
+void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -75,6 +74,8 @@ void icing::Process(std::shared_ptr<const configuration> conf,
 	// Get number of threads to use
 
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
+
+	shared_ptr<info> targetInfo = conf->Info();
 
 	boost::thread_group g;
 

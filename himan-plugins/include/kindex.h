@@ -33,8 +33,7 @@ public:
     kindex(const kindex& other) = delete;
     kindex& operator=(const kindex& other) = delete;
 
-    virtual void Process(std::shared_ptr<const configuration> conf,
-    						std::shared_ptr<info> targetInfo);
+    virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
     virtual std::string ClassName() const
     {

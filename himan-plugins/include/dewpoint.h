@@ -34,8 +34,7 @@ public:
     dewpoint(const dewpoint& other) = delete;
     dewpoint& operator=(const dewpoint& other) = delete;
 
-    virtual void Process(std::shared_ptr<const configuration> conf,
-    						std::shared_ptr<info> targetInfo);
+    virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
     virtual std::string ClassName() const
     {
@@ -54,11 +53,11 @@ public:
 
 private:
 
-    void Run(std::shared_ptr<info>, std::shared_ptr<const configuration> conf, unsigned short threadIndex);
-    void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const configuration> conf, unsigned short threadIndex);
+    void Run(std::shared_ptr<info>, const std::shared_ptr<const configuration>& conf, unsigned short threadIndex);
+    void Calculate(std::shared_ptr<info> myTargetInfo, const std::shared_ptr<const configuration>& conf, unsigned short threadIndex);
 
     bool itsUseCuda;
-
+	
 };
 
 // the class factory

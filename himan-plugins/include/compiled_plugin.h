@@ -28,8 +28,7 @@ public:
 
     virtual ~compiled_plugin() {}
 
-    virtual void Process(std::shared_ptr<const configuration> configuration,
-    						std::shared_ptr<info> targetInfo) = 0;
+    virtual void Process(std::shared_ptr<const plugin_configuration> configuration) = 0;
 
     virtual std::string Formula()
     {

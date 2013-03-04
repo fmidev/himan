@@ -27,21 +27,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-#undef HAVE_CUDA
-
-#ifdef HAVE_CUDA
-namespace himan
-{
-namespace plugin
-{
-namespace dewpoint_cuda
-{
-void doCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex);
-}
-}
-}
-#endif
-
 const double RW = 461.5; // Vesihoyryn kaasuvakio (J / K kg)
 const double L = 2.5e6; // Veden hoyrystymislampo (J / kg)
 const double RW_div_L = RW / L;
@@ -54,8 +39,7 @@ dewpoint::dewpoint() : itsUseCuda(false)
 
 }
 
-void dewpoint::Process(std::shared_ptr<const configuration> conf,
-		std::shared_ptr<info> targetInfo)
+void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 {
 
     shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -84,6 +68,8 @@ void dewpoint::Process(std::shared_ptr<const configuration> conf,
 
     boost::thread_group g;
 
+	shared_ptr<info> targetInfo = conf->Info();
+	
     /*
      * Get producer information from neons if whole_file_write is false.
      */
@@ -149,7 +135,7 @@ void dewpoint::Process(std::shared_ptr<const configuration> conf,
 
     targetInfos.resize(threadCount);
 
-    for (size_t i = 0; i < threadCount; i++)
+	for (size_t i = 0; i < threadCount; i++)
     {
 
         itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
@@ -168,24 +154,28 @@ void dewpoint::Process(std::shared_ptr<const configuration> conf,
 
     g.join_all();
 
+	itsLogger->Info("Threads finished");
+
     if (conf->WholeFileWrite())
     {
+		assert(conf->OutputFileType() == kGRIB1);
 
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+		assert(conf->OutputFileType() == kGRIB1);
 
         targetInfo->FirstTime();
-
+	
         string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H%M");
+		assert(conf->OutputFileType() == kGRIB1);
         theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
 
     }
 }
 
 void dewpoint::Run(shared_ptr<info> myTargetInfo,
-               shared_ptr<const configuration> conf,
+               const shared_ptr<const configuration>& conf,
                unsigned short threadIndex)
 {
-
     while (AdjustLeadingDimension(myTargetInfo))
     {
         Calculate(myTargetInfo, conf, threadIndex);
@@ -200,11 +190,11 @@ void dewpoint::Run(shared_ptr<info> myTargetInfo,
  */
 
 void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
-                     shared_ptr<const configuration> conf,
+                     const shared_ptr<const configuration>& conf,
                      unsigned short threadIndex)
 {
 
-
+	
     shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
     // Required source parameters
@@ -213,7 +203,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
     param RHParam("RH-PRCNT");
 
     unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("dewpointThread #" + boost::lexical_cast<string> (threadIndex)));
-
+	
     ResetNonLeadingDimension(myTargetInfo);
 
     myTargetInfo->FirstParam();
@@ -221,7 +211,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
     while (AdjustNonLeadingDimension(myTargetInfo))
     {
 
-        myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+        myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
                                 " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
         double TBase = 0;
@@ -240,6 +230,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
         						myTargetInfo->Time(),
         	        			myTargetInfo->Level(),
         	        			RHParam);
+
 
         }
         catch (HPExceptionType e)
@@ -274,51 +265,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
         bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && *myTargetInfo->Grid() == *RHInfo->Grid());
 
-#ifdef HAVE_CUDA
-
-        if (itsUseCuda && equalGrids)
-        {
-            size_t N = TGrid->Size();
-
-            float* VVout = new float[N];
-
-            if (!isPressureLevel)
-            {
-                dewpoint_cuda::doCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, VVGrid->DataPool()->Data(), VVout, N, 0, theThreadIndex-1);
-            }
-            else
-            {
-                dewpoint_cuda::doCuda(TGrid->DataPool()->Data(), TBase, 0, 0, VVGrid->DataPool()->Data(), VVout, N, 100 * myTargetInfo->Level().Value(), theThreadIndex-1);
-            }
-
-            double *data = new double[N];
-
-            for (size_t i = 0; i < N; i++)
-            {
-                data[i] = static_cast<float> (VVout[i]);
-
-                if (data[i] == kFloatMissing)
-                {
-                    missingCount++;
-                }
-
-                count++;
-            }
-
-            myTargetInfo->Data()->Set(data, N);
-
-            delete [] data;
-            delete [] VVout;
-
-        }
-        else
-        {
-
-#else
         if (true)
         {
-#endif
-
             assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
             myTargetInfo->ResetLocation();
@@ -329,6 +277,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
             unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
             t->Start();
 #endif
+		assert(conf->OutputFileType() == kGRIB1);
 
             while (myTargetInfo->NextLocation() && targetGrid->Next())
             {
@@ -377,4 +326,5 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
             w->ToFile(shared_ptr<info>(new info(*myTargetInfo)), conf->OutputFileType(), true);
         }
     }
+assert(conf.use_count() > 1);
 }
