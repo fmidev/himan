@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 	shared_ptr<plugin::auxiliary_plugin> n = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
 	shared_ptr<plugin::auxiliary_plugin> c = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("cache"));
  
-	json_parser::Instance()->Parse(conf);
+	std::vector<shared_ptr<plugin_configuration>> plugins = json_parser::Instance()->Parse(conf);
 
 	banner();
 
@@ -61,44 +61,34 @@ int main(int argc, char** argv)
 
 	theLogger->Info("Found " + boost::lexical_cast<string> (thePlugins.size()) + " plugins");
 	
-	vector<shared_ptr<info>> queues = conf->Infos();
+	//vector<shared_ptr<info>> queues = conf->Infos();
 
-	theLogger->Debug("Processqueue size: " + boost::lexical_cast<string> (queues.size()));
+	theLogger->Debug("Processqueue size: " + boost::lexical_cast<string> (plugins.size()));
 
-	for (size_t i = 0; i < queues.size(); i++)
+	for (size_t i = 0; i < plugins.size(); i++)
 	{
 
-		theLogger->Debug("Number of plugins for processqueue element " + boost::lexical_cast<string> (i) + ": " + boost::lexical_cast<string> (queues[i]->Plugins().size()));
+		shared_ptr<plugin::compiled_plugin> thePlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(plugins[i]->Name()));
 
-		for (size_t j = 0; j < queues[i]->Plugins().size(); j++)
+		if (!thePlugin)
 		{
-
-		 	plugin_configuration pc = queues[i]->Plugins()[j];
-
-			shared_ptr<plugin::compiled_plugin> thePlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc.Name()));
-
-			if (!thePlugin)
-			{
-				theLogger->Error("Unable to declare plugin " + pc.Name());
-				continue;
-			}
+			theLogger->Error("Unable to declare plugin " + plugins[i]->Name());
+			continue;
+		}
 
 #ifdef DEBUG
 			unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 			t->Start();
 #endif
 
-			conf->PluginConfiguration(pc);
+		theLogger->Info("Calculating " + plugins[i]->Name());
 
-                        theLogger->Info("Calculating " + pc.Name());
-
-			thePlugin->Process(conf, queues[i]);
+		thePlugin->Process(plugins[i]);
 
 #ifdef DEBUG
 			t->Stop();
-			theLogger->Debug("Processing " + pc.Name() + " took " + boost::lexical_cast<string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
+			theLogger->Debug("Processing " + plugins[i]->Name() + " took " + boost::lexical_cast<string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
 #endif
-		}
 
 	}
 
