@@ -158,15 +158,12 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 
     if (conf->WholeFileWrite())
     {
-		assert(conf->OutputFileType() == kGRIB1);
-
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-		assert(conf->OutputFileType() == kGRIB1);
 
         targetInfo->FirstTime();
 	
         string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H%M");
-		assert(conf->OutputFileType() == kGRIB1);
+
         theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
 
     }
@@ -277,7 +274,6 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
             unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
             t->Start();
 #endif
-		assert(conf->OutputFileType() == kGRIB1);
 
             while (myTargetInfo->NextLocation() && targetGrid->Next())
             {
@@ -326,5 +322,4 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
             w->ToFile(shared_ptr<info>(new info(*myTargetInfo)), conf->OutputFileType(), true);
         }
     }
-assert(conf.use_count() > 1);
 }
