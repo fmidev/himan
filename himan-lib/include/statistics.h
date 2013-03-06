@@ -11,7 +11,12 @@
 //#include "NFmiODBC.h"
 #include "timer_factory.h"
 #include "raw_time.h"
+
+#if defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
+#include <cstdatomic>
+#else
 #include <atomic>
+#endif
 
 namespace himan
 {
