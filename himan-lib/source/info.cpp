@@ -299,6 +299,14 @@ bool info::NextLevel()
     return itsLevelIterator->Next();
 }
 
+void info::First()
+{
+    FirstLevel();
+    FirstParam();
+    FirstTime();
+    FirstLocation();
+}
+
 void info::Reset()
 {
     ResetLevel();

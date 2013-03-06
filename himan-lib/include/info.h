@@ -350,6 +350,8 @@ public:
     raw_time OriginDateTime() const;
     void OriginDateTime(const std::string& theOriginDateTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 
+	void First();
+	
     /**
      * @brief Reset all descriptors
      */
