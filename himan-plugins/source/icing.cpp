@@ -25,6 +25,8 @@
 using namespace std;
 using namespace himan::plugin;
 
+const double kValueEpsilon = 0.00001;
+                        
 #undef HAVE_CUDA
 
 #ifdef HAVE_CUDA
@@ -80,10 +82,10 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 	boost::thread_group g;
 
 	/*
-	 * Get producer information from neons if whole_file_write is false.
+	 * Get producer information from neons 
 	 */
 
-	if (!conf->WholeFileWrite())
+	if (conf->FileWriteOption() == kNeons)
 	{
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -166,7 +168,7 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	g.join_all();
 
-	if (conf->WholeFileWrite())
+	if (conf->FileWriteOption() == kSingleFile)
 	{
 
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
@@ -174,7 +176,7 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 		targetInfo->FirstTime();
 
 		string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H%M");
-		theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
+		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
 
 	}
 }
@@ -362,9 +364,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			{
 				tCor = 0;
 			}
-                        
-                        const double kValueEpsilon = 0.00001;
-                        
+            
 			if ((fabs(Cl - 0) < kValueEpsilon) || (T > 0))
 			{
 				Icing = 0;
@@ -400,11 +400,11 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (!conf->WholeFileWrite())
+		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), true);
+			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), conf->FileWriteOption());
 		}
 	}
 }

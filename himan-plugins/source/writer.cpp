@@ -30,7 +30,7 @@ writer::writer()
 
 bool writer::ToFile(std::shared_ptr<info> theInfo,
                     HPFileType theFileType,
-                    bool theActiveOnly,
+                    HPFileWriteOption fileWriteOption,
                     const std::string& theOutputFile)
 {
 
@@ -40,9 +40,9 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
     std::string correctFileName = theOutputFile;
 
-    if (theActiveOnly || correctFileName.empty())
+    if ((fileWriteOption == kNeons || fileWriteOption == kMultipleFiles) || correctFileName.empty())
     {
-        correctFileName = util::MakeNeonsFileName(theInfo);
+        correctFileName = util::MakeFileName(fileWriteOption, theInfo);
     }
 
     fs::path pathname(correctFileName);
@@ -64,7 +64,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
         correctFileName += ".grib";
 
-        ret = theGribWriter->ToFile(theInfo, correctFileName, theFileType, theActiveOnly);
+        ret = theGribWriter->ToFile(theInfo, correctFileName, theFileType, fileWriteOption);
 
         break;
     }
@@ -74,7 +74,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
         correctFileName += ".fqd";
 
-        ret = theWriter->ToFile(theInfo, correctFileName, theActiveOnly);
+        ret = theWriter->ToFile(theInfo, correctFileName, fileWriteOption);
 
         break;
     }
@@ -88,7 +88,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
     }
 
-    if (ret && theActiveOnly)
+    if (ret && fileWriteOption == kNeons)
     {
         std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 

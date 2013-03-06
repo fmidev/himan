@@ -76,10 +76,10 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 	shared_ptr<info> targetInfo = conf->Info();
 
     /*
-     * Get producer information from neons if whole_file_write is false.
+     * Get producer information from neons
      */
 
-    if (!conf->WholeFileWrite())
+    if (conf->FileWriteOption() == kNeons)
     {
         shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -162,14 +162,14 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
     g.join_all();
 
-    if (conf->WholeFileWrite())
+    if (conf->FileWriteOption() == kSingleFile)
     {
 
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
         targetInfo->FirstTime();
         string theOutputFile = "himan_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-        theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
+        theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
 
     }
 
@@ -346,11 +346,11 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			conf->Statistics()->AddToValueCount(count);
 		}
 
-        if (!conf->WholeFileWrite())
+        if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
         {
             shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-            theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), true);
+            theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), conf->FileWriteOption());
         }
     }
 }

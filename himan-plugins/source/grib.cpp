@@ -34,10 +34,10 @@ shared_ptr<NFmiGrib> grib::Reader()
 	return itsGrib;
 }
 
-bool grib::ToFile(shared_ptr<info> info, const string& outputFile, HPFileType fileType, bool theActiveOnly)
+bool grib::ToFile(shared_ptr<info> info, const string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption)
 {
 
-	if (theActiveOnly)
+	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
 	{
 		// Write only that data which is currently set at descriptors
 

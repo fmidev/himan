@@ -44,7 +44,7 @@ public:
 
     bool ToFile(std::shared_ptr<info> theInfo,
                 HPFileType theFileType,
-                bool theActiveOnly = false,
+                HPFileWriteOption fileWriteOption = kSingleFile,
                 const std::string& theFileName = "");
 
 private:

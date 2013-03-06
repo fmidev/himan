@@ -25,7 +25,7 @@ querydata::querydata()
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("querydata"));
 }
 
-bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bool theActiveOnly)
+bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileWriteOption fileWriteOption)
 {
 
     ofstream out(theOutputFile.c_str());
@@ -34,10 +34,17 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
      * Create required descriptors
      */
 
-    NFmiParamDescriptor pdesc = CreateParamDescriptor(theInfo, theActiveOnly);
-    NFmiTimeDescriptor tdesc = CreateTimeDescriptor(theInfo, theActiveOnly);
+	bool activeOnly = true;
+
+	if (fileWriteOption == kSingleFile)
+	{
+		activeOnly = false;
+	}
+
+    NFmiParamDescriptor pdesc = CreateParamDescriptor(theInfo, activeOnly);
+    NFmiTimeDescriptor tdesc = CreateTimeDescriptor(theInfo, activeOnly);
     NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(theInfo);
-    NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(theInfo, theActiveOnly);
+    NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(theInfo, activeOnly);
 
     assert(pdesc.Size());
     assert(tdesc.Size());
@@ -84,7 +91,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, bo
     bool first = true;
 #endif
 
-    if (theActiveOnly)
+    if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
     {
         // Should user Param(arg) Level(arg) Time(arg) here !
         qinfo.FirstParam();

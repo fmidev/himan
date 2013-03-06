@@ -60,7 +60,7 @@ public:
 
     std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options, bool readContents);
 
-    bool ToFile(std::shared_ptr<info> info, const std::string& outputFile, bool activeOnly);
+    bool ToFile(std::shared_ptr<info> info, const std::string& outputFile, HPFileWriteOption fileWriteOption);
 
 private:
 
