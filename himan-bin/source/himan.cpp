@@ -68,27 +68,29 @@ int main(int argc, char** argv)
 	for (size_t i = 0; i < plugins.size(); i++)
 	{
 
-		shared_ptr<plugin::compiled_plugin> thePlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(plugins[i]->Name()));
+		std::shared_ptr<plugin_configuration> pc = plugins[i];
+
+		shared_ptr<plugin::compiled_plugin> thePlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc->Name()));
 
 		if (!thePlugin)
 		{
-			theLogger->Error("Unable to declare plugin " + plugins[i]->Name());
+			theLogger->Error("Unable to declare plugin " + pc->Name());
 			continue;
 		}
 
-#ifdef DEBUG
-			unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-			t->Start();
-#endif
+		if (pc->StatisticsEnabled())
+		{
+			pc->StartStatistics();
+		}
 
-		theLogger->Info("Calculating " + plugins[i]->Name());
+		theLogger->Info("Calculating " + pc->Name());
 
-		thePlugin->Process(plugins[i]);
+		thePlugin->Process(pc);
 
-#ifdef DEBUG
-			t->Stop();
-			theLogger->Debug("Processing " + plugins[i]->Name() + " took " + boost::lexical_cast<string> (static_cast<long> (t->GetTime()/1000)) + " milliseconds");
-#endif
+		if (pc->StatisticsEnabled())
+		{
+			pc->WriteStatistics();
+		}
 
 	}
 
@@ -109,7 +111,7 @@ void banner()
 shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 {
 
-	shared_ptr<configuration> conf(new configuration());
+	shared_ptr<plugin_configuration> conf(new plugin_configuration());
 
 	namespace po = boost::program_options;
 
@@ -119,6 +121,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	string outfileType = "";
 	string confFile = "";
+	string statisticsLabel = "";
 	vector<string> auxFiles;
 	
 	himan::HPDebugState debugState = himan::kDebugMsg;
@@ -137,6 +140,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
 	("no-cuda", "disable cuda extensions")
 	("cuda-properties", "print cuda device properties of platform (if any)")
+	("statistics,s", po::value(&statisticsLabel), "record statistics information")
 	;
 
 	po::positional_options_description p;
@@ -287,5 +291,10 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		throw runtime_error("himan: Configuration file not defined");
 	}
 
+	if (!statisticsLabel.empty())
+	{
+		conf->StatisticsLabel(statisticsLabel);
+	}
+	
 	return conf;
 }
