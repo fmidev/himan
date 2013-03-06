@@ -6,7 +6,7 @@
 	"stop_hour" : "25",
 	"step" : "15",
 	"step_unit" : "minute",
-	"whole_file_write" : "true",
+	"file_write" : "single",
 	"origintime" : "2013-01-28 06:00:00",
 	"read_data_from_database" : "false",
 	"processqueue" : [
