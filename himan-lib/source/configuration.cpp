@@ -18,6 +18,32 @@ configuration::configuration()
 
 }
 
+configuration::configuration(const configuration& other)
+{
+
+    itsOutputFileType = other.itsOutputFileType;
+    itsConfigurationFile = other.itsConfigurationFile;
+    itsAuxiliaryFiles = other.itsAuxiliaryFiles;
+    itsOriginTime = other.itsOriginTime;
+
+    itsWholeFileWrite = other.itsWholeFileWrite;
+    itsReadDataFromDatabase = other.itsReadDataFromDatabase;
+
+    itsFileWaitTimeout = other.itsFileWaitTimeout;
+    itsUseCuda = other.itsUseCuda;
+
+    itsLeadingDimension = other.itsLeadingDimension;
+    itsThreadCount = other.itsThreadCount;
+
+    itsGeomName = other.itsGeomName;
+    itsTargetProducer = other.itsTargetProducer;
+    itsSourceProducers = other.itsSourceProducers;
+
+    itsStatisticsLabel = other.itsStatisticsLabel;
+
+    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
+}
+
 std::ostream& configuration::Write(std::ostream& file) const
 {
 
@@ -36,6 +62,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 
     file << "__itsGeomName__ " << itsGeomName << std::endl;
 
+    file << "__itsStatisticsLabel__ " << itsStatisticsLabel << std::endl;
     return file;
 }
 
@@ -149,4 +176,14 @@ std::vector<producer> configuration::SourceProducers() const
 producer configuration::TargetProducer() const
 {
 	return itsTargetProducer;
+}
+
+void configuration::StatisticsLabel(const std::string& theStatisticsLabel)
+{
+	itsStatisticsLabel = theStatisticsLabel;
+}
+
+std::string configuration::StatisticsLabel() const
+{
+	return itsStatisticsLabel;
 }
