@@ -58,13 +58,19 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
         itsLogger->Info(msg);
 
         itsCudaDeviceCount = c->DeviceCount();
-
+		
     }
 
     // Get number of threads to use
 
     unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
+	if (conf->Statistics()->Enabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+		conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
+	}
+	
     boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
@@ -170,7 +176,7 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 }
 
 void tk2tc::Run(shared_ptr<info> myTargetInfo,
-                shared_ptr<const configuration> conf,
+                shared_ptr<const plugin_configuration> conf,
                 unsigned short threadIndex)
 {
 
@@ -187,7 +193,7 @@ void tk2tc::Run(shared_ptr<info> myTargetInfo,
  */
 
 void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
-                      shared_ptr<const configuration> conf,
+                      shared_ptr<const plugin_configuration> conf,
                       unsigned short threadIndex)
 {
     shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -285,7 +291,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
         else
         {
 
-	    deviceType = "CPU";
+			deviceType = "CPU";
 
             assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
@@ -333,6 +339,12 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
          */
 
         myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+
+		if (true)
+		{
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
+		}
 
         if (!conf->WholeFileWrite())
         {

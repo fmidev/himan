@@ -2,7 +2,7 @@
  * vvms.cpp
  *
  *  Created on: Nov 20, 2012
- *      Author: partio
+ *	  Author: partio
  */
 
 #include "vvms.h"
@@ -31,152 +31,158 @@ using namespace himan::plugin;
 
 vvms::vvms() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
-    itsClearTextFormula = "w = -(ver) * 287 * T * (9.81*p)";
+	itsClearTextFormula = "w = -(ver) * 287 * T * (9.81*p)";
 
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvms"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvms"));
 
 }
 
 void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
-    shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-    if (c->HaveCuda())
-    {
-        string msg = "I possess the powers of CUDA";
+	if (c->HaveCuda())
+	{
+		string msg = "I possess the powers of CUDA";
 
-        if (!conf->UseCuda())
-        {
-            msg += ", but I won't use them";
-        }
-        else
-        {
-            msg += ", and I'm not afraid to use them";
-            itsUseCuda = true;
-        }
+		if (!conf->UseCuda())
+		{
+			msg += ", but I won't use them";
+		}
+		else
+		{
+			msg += ", and I'm not afraid to use them";
+			itsUseCuda = true;
+		}
 
-        itsLogger->Info(msg);
+		itsLogger->Info(msg);
 	
-	itsCudaDeviceCount = c->DeviceCount();
+		itsCudaDeviceCount = c->DeviceCount();
 
-    }
+	}
 
-    // Get number of threads to use
+	// Get number of threads to use
 
-    unsigned short threadCount = ThreadCount(conf->ThreadCount());
+	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
-    boost::thread_group g;
+	if (conf->Statistics()->Enabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+		conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
+	}
+
+	boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
 
-    /*
-     * Get producer information from neons if whole_file_write is false.
-     */
+	/*
+	 * Get producer information from neons if whole_file_write is false.
+	 */
 
-    if (!conf->WholeFileWrite())
-    {
-        shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+	if (!conf->WholeFileWrite())
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-        map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
+		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
 
-        if (prodInfo.size())
-        {
-            producer prod(targetInfo->Producer().Id());
+		if (prodInfo.size())
+		{
+			producer prod(targetInfo->Producer().Id());
 
-            prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-            prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-            prod.Name(prodInfo["name"]);
+			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
+			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
+			prod.Name(prodInfo["name"]);
 
-            targetInfo->Producer(prod);
-        }
+			targetInfo->Producer(prod);
+		}
 
-    }
+	}
 
-    /*
-     * Set target parameter to potential temperature
-     *
-     * We need to specify grib and querydata parameter information
-     * since we don't know which one will be the output format.
-     * (todo: we could check from conf but why bother?)
-     *
-     */
+	/*
+	 * Set target parameter to potential temperature
+	 *
+	 * We need to specify grib and querydata parameter information
+	 * since we don't know which one will be the output format.
+	 * (todo: we could check from conf but why bother?)
+	 *
+	 */
 
-    vector<param> theParams;
+	vector<param> theParams;
 
-    param theRequestedParam ("VV-MS", 143);
+	param theRequestedParam ("VV-MS", 143);
 
-    theRequestedParam.GribDiscipline(0);
-    theRequestedParam.GribCategory(2);
-    theRequestedParam.GribParameter(9);
+	theRequestedParam.GribDiscipline(0);
+	theRequestedParam.GribCategory(2);
+	theRequestedParam.GribParameter(9);
 
-    theParams.push_back(theRequestedParam);
+	theParams.push_back(theRequestedParam);
 
-    targetInfo->Params(theParams);
+	targetInfo->Params(theParams);
 
-    /*
-     * Create data structures.
-     */
+	/*
+	 * Create data structures.
+	 */
 
-    targetInfo->Create();
+	targetInfo->Create();
 
-    /*
-     * Initialize parent class functions for dimension handling
-     */
+	/*
+	 * Initialize parent class functions for dimension handling
+	 */
 
-    Dimension(conf->LeadingDimension());
-    FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-    FeederInfo()->Param(theRequestedParam);
+	Dimension(conf->LeadingDimension());
+	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
+	FeederInfo()->Param(theRequestedParam);
 
-    /*
-     * Each thread will have a copy of the target info.
-     */
+	/*
+	 * Each thread will have a copy of the target info.
+	 */
 
-    vector<shared_ptr<info> > targetInfos;
+	vector<shared_ptr<info> > targetInfos;
 
-    targetInfos.resize(threadCount);
+	targetInfos.resize(threadCount);
 
-    for (size_t i = 0; i < threadCount; i++)
-    {
+	for (size_t i = 0; i < threadCount; i++)
+	{
 
-        itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
+		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-        targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
+		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
-        boost::thread* t = new boost::thread(&vvms::Run,
-                                             this,
-                                             targetInfos[i],
-                                             conf,
-                                             i + 1);
+		boost::thread* t = new boost::thread(&vvms::Run,
+											 this,
+											 targetInfos[i],
+											 conf,
+											 i + 1);
 
-        g.add_thread(t);
+		g.add_thread(t);
 
-    }
+	}
 
-    g.join_all();
+	g.join_all();
 
-    if (conf->WholeFileWrite())
-    {
+	if (conf->WholeFileWrite())
+	{
 
-        shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-        targetInfo->FirstTime();
+		targetInfo->FirstTime();
 
-        string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
-        theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
+		string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
+		theWriter->ToFile(targetInfo, conf->OutputFileType(), false, theOutputFile);
 
-    }
+	}
 }
 
 void vvms::Run(shared_ptr<info> myTargetInfo,
-               shared_ptr<const configuration> conf,
-               unsigned short threadIndex)
+			   shared_ptr<const plugin_configuration> conf,
+			   unsigned short threadIndex)
 {
 
-    while (AdjustLeadingDimension(myTargetInfo))
-    {
-        Calculate(myTargetInfo, conf, threadIndex);
-    }
+	while (AdjustLeadingDimension(myTargetInfo))
+	{
+		Calculate(myTargetInfo, conf, threadIndex);
+	}
 
 }
 
@@ -187,61 +193,61 @@ void vvms::Run(shared_ptr<info> myTargetInfo,
  */
 
 void vvms::Calculate(shared_ptr<info> myTargetInfo,
-                     shared_ptr<const configuration> conf,
-                     unsigned short threadIndex)
+					 shared_ptr<const plugin_configuration> conf,
+					 unsigned short threadIndex)
 {
 
 
-    shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-    // Required source parameters
+	// Required source parameters
 
-    param TParam("T-K");
-    param PParam("P-PA");
-    param VVParam("VV-PAS");
+	param TParam("T-K");
+	param PParam("P-PA");
+	param VVParam("VV-PAS");
 
-    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (threadIndex)));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (threadIndex)));
 
-    ResetNonLeadingDimension(myTargetInfo);
+	ResetNonLeadingDimension(myTargetInfo);
 
-    myTargetInfo->FirstParam();
+	myTargetInfo->FirstParam();
 
-    while (AdjustNonLeadingDimension(myTargetInfo))
-    {
+	while (AdjustNonLeadingDimension(myTargetInfo))
+	{
 
-        myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
-                                " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		myThreadedLogger->Info("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
+								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-        double PScale = 1;
-        double TBase = 0;
+		double PScale = 1;
+		double TBase = 0;
 
-        /*
-         * If vvms is calculated for pressure levels, the P value
-         * equals to level value. Otherwise we have to fetch P
-         * separately.
-         */
+		/*
+		 * If vvms is calculated for pressure levels, the P value
+		 * equals to level value. Otherwise we have to fetch P
+		 * separately.
+		 */
 
-        shared_ptr<info> PInfo;
-        shared_ptr<info> VVInfo;
-        shared_ptr<info> TInfo;
+		shared_ptr<info> PInfo;
+		shared_ptr<info> VVInfo;
+		shared_ptr<info> TInfo;
 
-        shared_ptr<NFmiGrid> PGrid;
+		shared_ptr<NFmiGrid> PGrid;
 
-        bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
+		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-        try
-        {
-        	VVInfo = theFetcher->Fetch(conf,
-        	                                  myTargetInfo->Time(),
-        	                                  myTargetInfo->Level(),
-        	                                  VVParam);
+		try
+		{
+			VVInfo = theFetcher->Fetch(conf,
+											  myTargetInfo->Time(),
+											  myTargetInfo->Level(),
+											  VVParam);
 
-        	TInfo = theFetcher->Fetch(conf,
-        	                                 myTargetInfo->Time(),
-        	                                 myTargetInfo->Level(),
-        	                                 TParam);
+			TInfo = theFetcher->Fetch(conf,
+											 myTargetInfo->Time(),
+											 myTargetInfo->Level(),
+											 TParam);
 
-        	if (!isPressureLevel)
+			if (!isPressureLevel)
 			{
 				// Source info for P
 				PInfo = theFetcher->Fetch(conf,
@@ -256,11 +262,11 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
 			}
-        }
-        catch (HPExceptionType e)
-        {
-        	switch (e)
-        	{
+		}
+		catch (HPExceptionType e)
+		{
+			switch (e)
+			{
 				case kFileDataNotFound:
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
@@ -271,135 +277,139 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 					throw runtime_error(ClassName() + ": Unable to proceed");
 					break;
 			}
-        }
+		}
 
-    	if (TInfo->Param().Unit() == kC)
-    	{
-    		TBase = 273.15;
-    	}
+		if (TInfo->Param().Unit() == kC)
+		{
+			TBase = 273.15;
+		}
 
-        shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-        shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-        shared_ptr<NFmiGrid> VVGrid(VVInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> VVGrid(VVInfo->Grid()->ToNewbaseGrid());
 
-        int missingCount = 0;
-        int count = 0;
+		int missingCount = 0;
+		int count = 0;
 
-        bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() &&
-        					*myTargetInfo->Grid() == *VVInfo->Grid() &&
-                           (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
+		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() &&
+							*myTargetInfo->Grid() == *VVInfo->Grid() &&
+						   (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
 #ifdef DEBUG
-        unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-        t->Start();
+		unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		t->Start();
 #endif
-        string deviceType;
+		string deviceType;
 
-        if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
-        {
-	    deviceType = "GPU";
-	    
-            size_t N = TGrid->Size();
+		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+		{
+			deviceType = "GPU";
 
-            float* VVout = new float[N];
-            double *infoData = new double[N];
+			size_t N = TGrid->Size();
 
-            if (!isPressureLevel)
-            {
-                vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, VVGrid->DataPool()->Data(), VVout, N, 0, threadIndex-1);
-            }
-            else
-            {
-                vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, VVGrid->DataPool()->Data(), VVout, N, 100 * myTargetInfo->Level().Value(), threadIndex-1);
-            }
+			float* VVout = new float[N];
+			double *infoData = new double[N];
+
+			if (!isPressureLevel)
+			{
+				vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, VVGrid->DataPool()->Data(), VVout, N, 0, threadIndex-1);
+			}
+			else
+			{
+				vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, VVGrid->DataPool()->Data(), VVout, N, 100 * myTargetInfo->Level().Value(), threadIndex-1);
+			}
 
 
-            for (size_t i = 0; i < N; i++)
-            {
-                infoData[i] = static_cast<float> (VVout[i]);
+			for (size_t i = 0; i < N; i++)
+			{
+				infoData[i] = static_cast<float> (VVout[i]);
 
-                if (infoData[i] == kFloatMissing)
-                {
-                    missingCount++;
-                }
+				if (infoData[i] == kFloatMissing)
+				{
+					missingCount++;
+				}
 
-                count++;
-            }
+				count++;
+			}
 
-            myTargetInfo->Data()->Set(infoData, N);
+			myTargetInfo->Data()->Set(infoData, N);
 
-            delete [] infoData;
-            delete [] VVout;
+			delete [] infoData;
+			delete [] VVout;
 
-        }
-        else
-        {
-	    deviceType = "CPU";
-	    
-            assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+		}
+		else
+		{
+			deviceType = "CPU";
 
-            myTargetInfo->ResetLocation();
+			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-            targetGrid->Reset();
+			myTargetInfo->ResetLocation();
 
-            while (myTargetInfo->NextLocation() && targetGrid->Next())
-            {
-                count++;
+			targetGrid->Reset();
 
-                double T = kFloatMissing;
-                double P = kFloatMissing;
-                double VV = kFloatMissing;
+			while (myTargetInfo->NextLocation() && targetGrid->Next())
+			{
+				count++;
 
-                InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-                InterpolateToPoint(targetGrid, VVGrid, equalGrids, VV);
+				double T = kFloatMissing;
+				double P = kFloatMissing;
+				double VV = kFloatMissing;
 
-                if (isPressureLevel)
-                {
-                    P = 100 * myTargetInfo->Level().Value();
-                }
-                else
-                {
-                 	InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-                }
+				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+				InterpolateToPoint(targetGrid, VVGrid, equalGrids, VV);
 
-                if (T == kFloatMissing || P == kFloatMissing || VV == kFloatMissing)
-                {
-                    missingCount++;
+				if (isPressureLevel)
+				{
+					P = 100 * myTargetInfo->Level().Value();
+				}
+				else
+				{
+				 	InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				}
 
-                    myTargetInfo->Value(kFloatMissing);
-                    continue;
-                }
+				if (T == kFloatMissing || P == kFloatMissing || VV == kFloatMissing)
+				{
+					missingCount++;
 
-                double VVms = 287 * -VV * (T + TBase) / (9.81 * P * PScale);
+					myTargetInfo->Value(kFloatMissing);
+					continue;
+				}
 
-                if (!myTargetInfo->Value(VVms))
-                {
-                    throw runtime_error(ClassName() + ": Failed to set value to matrix");
-                }
+				double VVms = 287 * -VV * (T + TBase) / (9.81 * P * PScale);
 
-            }
+				if (!myTargetInfo->Value(VVms))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
+
+			}
 	}
-
 	
 #ifdef DEBUG
-        t->Stop();
-        itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on "
-	    + deviceType);
+		t->Stop();
+		itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on "  + deviceType);
 #endif
 
-        /*
-         * Now we are done for this level
-         *
-         * Clone info-instance to writer since it might change our descriptor places
-         */
+		/*
+		 * Now we are done for this level
+		 *
+		 * Clone info-instance to writer since it might change our descriptor places
+		 */
 
-        myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-        if (!conf->WholeFileWrite())
-        {
-            shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+		if (true)
+		{
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
+		}
 
-            theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), true);
-        }
-    }
+		if (!conf->WholeFileWrite())
+		{
+			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+
+			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), true);
+		}
+	}
 }
