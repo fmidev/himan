@@ -18,30 +18,42 @@ using namespace std;
 
 const double kDegToRad = 0.017453292; // PI / 180
 
-string util::MakeNeonsFileName(shared_ptr<const info> info)
+string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const info> info)
 {
 
-    ostringstream neonsFileName;
+    ostringstream fileName;
 
     string base = ".";
 
-    char* path;
+	// For neons get base directory
 
-    path = std::getenv("NEONS_REF_BASE");
+	if (fileWriteOption == kNeons)
+	{
+		char* path;
 
-    if (path != NULL)
-    {
-    	base = string(path);
-    }
+		path = std::getenv("NEONS_REF_BASE");
 
-    neonsFileName 	<< base
+		if (path != NULL)
+		{
+			base = string(path);
+		}
+
+		fileName	<< base
                     << "/"
                     << info->Producer().Centre()
                     << "_"
                     << info->Producer().Process()
                     << "/"
                     << info->Time().OriginDateTime()->String("%Y%m%d%H%M")
-                    << "/"
+                    << "/";
+	}
+
+	// Create a unique file name when creating multiple files from one info
+
+	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
+	{
+		fileName	<< base
+					<< "/"
                     << info->Param().Name()
                     << "_"
                     << HPLevelTypeToString.at(info->Level().Type())
@@ -59,7 +71,17 @@ string util::MakeNeonsFileName(shared_ptr<const info> info)
                     << info->Time().Step()
                     ;
 
-    return neonsFileName.str();
+	}
+	else
+	{
+		// TODO!
+		
+		fileName	<< base
+					<< "/"
+					<< "TODO.file";
+	}
+
+    return fileName.str();
 
 }
 

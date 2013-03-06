@@ -78,8 +78,8 @@ public:
 	 * combination is written to separate file
 	 */
 
-	void WholeFileWrite(bool theWholeFileWrite);
-	bool WholeFileWrite() const;
+	void FileWriteOption(HPFileWriteOption theFileWriteOption);
+	HPFileWriteOption FileWriteOption() const;
 
 	/**
 	 * @brief Enable or disable reading of source data from Neons
@@ -124,7 +124,7 @@ protected:
 
 	std::shared_ptr<logger> itsLogger;
 
-	bool itsWholeFileWrite;
+	HPFileWriteOption itsFileWriteOption;
 	bool itsReadDataFromDatabase;
 
 	unsigned short itsFileWaitTimeout; //<! Minutes

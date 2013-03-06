@@ -26,7 +26,7 @@ configuration::configuration(const configuration& other)
     itsAuxiliaryFiles = other.itsAuxiliaryFiles;
     itsOriginTime = other.itsOriginTime;
 
-    itsWholeFileWrite = other.itsWholeFileWrite;
+    itsFileWriteOption = other.itsFileWriteOption;
     itsReadDataFromDatabase = other.itsReadDataFromDatabase;
 
     itsFileWaitTimeout = other.itsFileWaitTimeout;
@@ -53,7 +53,7 @@ std::ostream& configuration::Write(std::ostream& file) const
     file << itsTargetProducer;
 
     file << "__itsOutputFileType__ " << itsOutputFileType << std::endl;
-    file << "__itsWholeFileWrite__ " << itsWholeFileWrite << std::endl;
+    file << "__itsFileWriteOption__ " << itsFileWriteOption << std::endl;
     file << "__itsUseCuda__ " << itsUseCuda << std::endl;
     file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
     file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
@@ -79,7 +79,7 @@ void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryF
 void configuration::Init()
 {
     itsOutputFileType = kQueryData;
-    itsWholeFileWrite = false;
+    itsFileWriteOption = kSingleFile;
     itsReadDataFromDatabase = true;
     itsUseCuda = true;
     itsFileWaitTimeout = 0;
@@ -98,14 +98,14 @@ void configuration::OutputFileType(HPFileType theOutputFileType)
 	itsOutputFileType = theOutputFileType;
 }
 
-bool configuration::WholeFileWrite() const
+HPFileWriteOption configuration::FileWriteOption() const
 {
-    return itsWholeFileWrite;
+    return itsFileWriteOption;
 }
 
-void configuration::WholeFileWrite(bool theWholeFileWrite)
+void configuration::FileWriteOption(HPFileWriteOption theFileWriteOption)
 {
-    itsWholeFileWrite = theWholeFileWrite;
+    itsFileWriteOption = theFileWriteOption;
 }
 
 bool configuration::ReadDataFromDatabase() const

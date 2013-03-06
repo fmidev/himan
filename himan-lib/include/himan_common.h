@@ -36,6 +36,7 @@ using boost::assign::map_list_of;
 
 const int kHPMissingInt = 999999;
 const float kHPMissingFloat = -999.f; // Hmmh?
+// const float kFloatEpsilon = std::numeric_limits<float>::epsilon();
 
 // Define different plugin types
 
@@ -122,6 +123,21 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_li
         (kHybrid, "hybrid")
         (kGndLayer, "gndlayer")
         (kDepth, "depth")
+        ;
+
+enum HPFileWriteOption
+{
+	kUnknownFileWriteOption = 0,
+	kSingleFile,
+	kMultipleFiles,
+	kNeons
+};
+
+const boost::unordered_map<HPFileWriteOption,const char*> HPFileWriteOptionToString = map_list_of
+        (kUnknownFileWriteOption, "unknown")
+        (kSingleFile, "single file only")
+        (kMultipleFiles, "multiple files")
+        (kNeons, "write to neons")
         ;
 
 // Values match to newbase

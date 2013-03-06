@@ -121,7 +121,7 @@ void plugin_configuration::WriteStatistics()
 	std::cout << "time count:\t" << itsInfo->SizeTimes() << std::endl;
 
 	std::cout << "file type:\t" << itsOutputFileType << std::endl;
-	std::cout << "whole_fw:\t" << itsWholeFileWrite << std::endl;
+	std::cout << "file_write:\t" << itsFileWriteOption << std::endl;
 	std::cout << "read_from_db:\t" << itsReadDataFromDatabase << std::endl;
 	std::cout << "leading_dim:\t" << itsLeadingDimension << std::endl;
 

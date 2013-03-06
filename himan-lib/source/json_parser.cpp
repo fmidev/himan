@@ -121,13 +121,26 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
     try
 	{
 
-		string theWholeFileWrite = pt.get<string>("whole_file_write");
+		string theFileWriteOption = pt.get<string>("file_write");
 
-		if (ParseBoolean(theWholeFileWrite))
+		if (theFileWriteOption == "neons")
 		{
-			conf->WholeFileWrite(true);
+			conf->FileWriteOption(kNeons);
 		}
+		else if (theFileWriteOption == "single")
+		{
+			conf->FileWriteOption(kSingleFile);
 
+		}
+		else if (theFileWriteOption == "multiple")
+		{
+			conf->FileWriteOption(kMultipleFiles);
+		}
+		else
+		{
+			throw runtime_error("Invalid value for file_write: " + theFileWriteOption);
+		}
+		
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -249,7 +262,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	    BOOST_FOREACH(boost::property_tree::ptree::value_type &plugin, plugins)
 	    {
 			shared_ptr<plugin_configuration> pc(new plugin_configuration(conf));
-
+			
 		    if (plugin.second.empty())
 		    {
 		    	throw runtime_error(ClassName() + ": plugin definition is empty");
