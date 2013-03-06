@@ -7,11 +7,14 @@
 
 #include "plugin_factory.h"
 #include "logger_factory.h"
-#include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <cstdlib>
 #include <dlfcn.h>
 #include "util.h"
+
+#define BOOST_FILESYSTEM_NO_DEPRECATED
+
+#include <boost/filesystem.hpp>
 
 using namespace himan;
 using namespace himan::plugin;
@@ -105,6 +108,7 @@ std::vector<std::shared_ptr<himan_plugin> > plugin_factory::InterpretedPlugins()
 
 std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClassName, bool theNewInstance)
 {
+    std::lock_guard<std::mutex> lock(itsPluginMutex);
 
     for (size_t i = 0; i < itsPluginFactory.size(); i++)
     {
@@ -192,7 +196,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
     if (!theLibraryHandle)
     {
-        itsLogger->Error("Unable to load plugin: " + std::string(dlerror()));
+        itsLogger->Error("Unable to load plugin '" + thePluginFileName + "': " + std::string(dlerror()));
         return false;
     }
 

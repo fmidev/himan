@@ -11,6 +11,7 @@
 #include <vector>
 #include "plugin_container.h"
 #include "logger.h"
+#include <mutex>
 
 namespace himan
 {
@@ -46,6 +47,8 @@ private:
 
     std::vector<std::string> itsPluginSearchPath;
     std::unique_ptr<logger> itsLogger;
+
+	std::mutex itsPluginMutex;
 
 };
 
