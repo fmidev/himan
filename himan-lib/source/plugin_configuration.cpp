@@ -9,13 +9,25 @@
 
 using namespace himan;
 
-plugin_configuration::plugin_configuration() : itsName(""), itsOptions() {} ;
+plugin_configuration::plugin_configuration() 
+	: itsName("")
+	, itsOptions()
+	, itsStatistics(new statistics)
+{
+}
 
-plugin_configuration::plugin_configuration(std::shared_ptr<configuration> conf) : configuration(*conf), itsName(""), itsOptions() {} ;
-
+plugin_configuration::plugin_configuration(std::shared_ptr<configuration> conf) 
+	: configuration(*conf)
+	, itsName("")
+	, itsOptions()
+	, itsStatistics(new statistics)
+{
+}
 
 plugin_configuration::plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions)
-	: itsName(theName), itsOptions(theOptions)
+	: itsName(theName)
+	, itsOptions(theOptions)
+	, itsStatistics(new statistics)
 {
 }
 
@@ -72,9 +84,57 @@ void plugin_configuration::Info(std::shared_ptr<info> theInfo)
 	itsInfo = theInfo;
 }
 
+std::shared_ptr<statistics> plugin_configuration::Statistics() const
+{
+	return itsStatistics;
+}
+
+bool plugin_configuration::StatisticsEnabled() const
+{
+	return !(itsStatisticsLabel.empty());
+
+}
+
+void plugin_configuration::StartStatistics()
+{
+	itsStatistics->Start();
+}
+
+void plugin_configuration::WriteStatistics()
+{
+	std::cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << std::endl;
+
+	std::cout << "use cuda:\t" << itsUseCuda << std::endl;
+	std::cout << "origin time:\t" << itsInfo->OriginDateTime().String() << std::endl;
+
+	std::cout << "geom_name\t" << itsGeomName << std::endl;
+	
+	// Hoping we have iterators set
+
+	std::cout << "level type:\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << std::endl;
+	std::cout << "level count:\t" << itsInfo->SizeLevels() << std::endl;
+
+	// assuming even time step
+
+	std::cout << "time step:\t" << itsInfo->Time().Step() << std::endl;
+	std::cout << "time step unit:\t" << itsInfo->Time().StepResolution() << std::endl;
+	std::cout << "time count:\t" << itsInfo->SizeTimes() << std::endl;
+
+	std::cout << "file type:\t" << itsOutputFileType << std::endl;
+	std::cout << "whole_fw:\t" << itsWholeFileWrite << std::endl;
+	std::cout << "read_from_db:\t" << itsReadDataFromDatabase << std::endl;
+	std::cout << "leading_dim:\t" << itsLeadingDimension << std::endl;
+
+	std::cout << "plugin:\t\t" << itsName << std::endl;
+
+	itsStatistics->Write();
+}
+
 std::ostream& plugin_configuration::Write(std::ostream& file) const
 {
 
+	// configuration::Write();
+	
     file << "<" << ClassName() << " " << Version() << ">" << std::endl;
     file << "__itsName__ " << itsName << std::endl;
 

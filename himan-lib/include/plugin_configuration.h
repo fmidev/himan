@@ -11,7 +11,7 @@
 #include "himan_common.h"
 #include <vector>
 #include <map>
-//#include "statistics.h"
+#include "statistics.h"
 #include "configuration.h"
 #include "info.h"
 
@@ -20,7 +20,9 @@ namespace himan
 
 class plugin_configuration : public configuration
 {
+
 public:
+
 	plugin_configuration();
 	plugin_configuration(std::shared_ptr<configuration> conf);
 	plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions);
@@ -57,12 +59,18 @@ public:
 	void Info(std::shared_ptr<info> theInfo);
 	std::shared_ptr<info> Info() const;
 
+	std::shared_ptr<statistics> Statistics() const;
+
+	bool StatisticsEnabled() const;
+	void StartStatistics();
+	void WriteStatistics();
+	
 private:
 
 	std::string itsName;
 	std::map<std::string,std::string> itsOptions;
 	std::shared_ptr<info> itsInfo;
-	//std::shared_ptr<statistics> itsStatistics;
+	std::shared_ptr<statistics> itsStatistics;
 };
 
 inline
