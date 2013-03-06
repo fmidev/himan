@@ -22,8 +22,6 @@ class cache : public auxiliary_plugin
 
 public:
 
-    friend class cache_pool;
-
     cache(); 
     ~cache() {}
 
@@ -31,7 +29,7 @@ public:
     cache& operator=(const cache& other) = delete;
 
     void Insert(std::vector<std::shared_ptr<himan::info>>& infos);
-    void Insert(std::shared_ptr<himan::info>& info);
+    void Insert(std::shared_ptr<himan::info> anInfo);
     std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);    
 
     virtual std::string ClassName() const
@@ -52,7 +50,7 @@ public:
 
 private:
 
-    std::string UniqueName(const std::shared_ptr<himan::info>& info);
+    std::string UniqueName(const std::shared_ptr<const himan::info> anInfo);
     std::string UniqueNameFromOptions(const search_options& options);
 
 };
@@ -69,7 +67,7 @@ public:
 
     static cache_pool* Instance();
     bool Find(const std::string& uniqueName);
-    void Insert(const std::string& uniqueName, std::shared_ptr<himan::info>& info);
+    void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info);
     std::shared_ptr<himan::info> GetInfo(const std::string& uniqueName);
     
 
