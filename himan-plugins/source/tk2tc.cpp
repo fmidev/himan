@@ -65,7 +65,7 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
     unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
-	if (conf->Statistics()->Enabled())
+	if (conf->StatisticsEnabled())
 	{
 		conf->Statistics()->UsedThreadCount(threadCount);
 		conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
@@ -340,7 +340,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
         myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (true)
+		if (conf->StatisticsEnabled())
 		{
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
