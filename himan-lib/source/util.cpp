@@ -22,8 +22,9 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 {
 
     ostringstream fileName;
+    ostringstream base;
 
-    string base = ".";
+    base.str(".");
 
 	// For neons get base directory
 
@@ -35,24 +36,28 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 
 		if (path != NULL)
 		{
-			base = string(path);
+			base.str("");
+			base << path;
+		}
+		else
+		{
+			cout << "Warning::util NEONS_REF_BASE not set" << endl;
 		}
 
-		fileName	<< base
-                    << "/"
-                    << info->Producer().Centre()
-                    << "_"
-                    << info->Producer().Process()
-                    << "/"
-                    << info->Time().OriginDateTime()->String("%Y%m%d%H%M")
-                    << "/";
+		base <<	"/"
+             << info->Producer().Centre()
+             << "_"
+             << info->Producer().Process()
+             << "/"
+             << info->Time().OriginDateTime()->String("%Y%m%d%H%M");
+
 	}
 
 	// Create a unique file name when creating multiple files from one info
 
 	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
 	{
-		fileName	<< base
+		fileName	<< base.str()
 					<< "/"
                     << info->Param().Name()
                     << "_"
