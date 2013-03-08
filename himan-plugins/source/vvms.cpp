@@ -166,9 +166,8 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-		targetInfo->FirstTime();
+		string theOutputFile = conf->ConfigurationFile();
 
-		string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
 		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
 
 	}

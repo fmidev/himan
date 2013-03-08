@@ -167,8 +167,8 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-        targetInfo->FirstTime();
-        string theOutputFile = "himan_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
+        string theOutputFile = conf->ConfigurationFile();
+
         theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
 
     }

@@ -27,21 +27,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-#undef HAVE_CUDA
-
-#ifdef HAVE_CUDA
-namespace himan
-{
-namespace plugin
-{
-namespace precipitation_cuda
-{
-void doCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex);
-}
-}
-}
-#endif
-
 precipitation::precipitation() : itsUseCuda(false)
 {
     itsClearTextFormula = "RR = RR_cur - RR_prev";
@@ -168,9 +153,8 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-        targetInfo->FirstTime();
+        string theOutputFile = conf->ConfigurationFile();
 
-        string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H%M");
         theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
 
     }

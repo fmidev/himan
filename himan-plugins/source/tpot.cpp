@@ -165,9 +165,8 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
         shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-        targetInfo->FirstTime();
+        string theOutputFile = conf->ConfigurationFile();
 
-        string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H%M");
         theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
 
     }
@@ -285,7 +284,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 
         if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
         {
-	    deviceType = "GPU";
+        	deviceType = "GPU";
 	    
             size_t N = TGrid->Size();
 
@@ -323,7 +322,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
         else
         {
 
-	    deviceType = "CPU";
+        	deviceType = "CPU";
 	    
             myTargetInfo->ResetLocation();
 

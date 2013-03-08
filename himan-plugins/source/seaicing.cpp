@@ -24,21 +24,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-#undef HAVE_CUDA
-
-#ifdef HAVE_CUDA
-namespace himan
-{
-namespace plugin
-{
-namespace icing_cuda
-{
-void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float* TPout, size_t N, float PConst, unsigned short index);
-}
-}
-}
-#endif
-
 seaicing::seaicing() : itsUseCuda(false)
 {
 	itsClearTextFormula = "SeaIcing = FF * ( -0.35 -T2m ) / ( 1 + 0.3 * ( T0 + 0.35 ))";
@@ -171,9 +156,8 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-		targetInfo->FirstTime();
+		string theOutputFile = conf->ConfigurationFile();
 
-		string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
 		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
 
 	}
