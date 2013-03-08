@@ -8,15 +8,15 @@ fi
 
 rm -f dewpoint_arome.json.grib dewpoint_arome.json-CPU.grib
 
-$HIMAN -d 5 -f dewpoint_arome.json -t grib source.grib
+$HIMAN -d 5 -f dewpoint_arome.json -t grib source.grib --no-cuda
 
 grib_compare result.grib dewpoint_arome.json.grib
 
 if [ $? -eq 0 ];then
-  echo dewpoint success on CPU!
+  echo dewpoint/arome success on CPU!
 else
-  echo dewpoint failed on CPU
-#  exit 1
+  echo dewpoint/arome failed on CPU
+  exit 1
 fi
 
 if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
@@ -28,9 +28,9 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
   grib_compare -A 0.001 dewpoint_arome.json.grib dewpoint_arome.json-CPU.grib
 
   if [ $? -eq 0 ];then
-    echo dewpoint success on GPU!
+    echo dewpoint/arome success on GPU!
   else
-    echo dewpoint failed on GPU
+    echo dewpoint/arome failed on GPU
   fi
 else
   echo "no cuda device found for cuda tests"

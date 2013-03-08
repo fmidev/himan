@@ -6,11 +6,11 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan"
 fi
 
-rm -f himan*.grib
+rm -f tk2tc_ec1h.json.grib tk2tc_ec1h.json-CPU.grib
 
 $HIMAN -d 5 -f tk2tc_ec1h.json -t grib --no-cuda source.grib
 
-grib_compare result.grib himan_2013011800.grib
+grib_compare result.grib tk2tc_ec1h.json.grib
 
 if [ $? -eq 0 ];then
   echo tk2tc/ec success!
@@ -19,13 +19,13 @@ else
   exit 1
 fi
 
-if [ "$CUDA_TOOLKIT_PATH" != "" ]; then
+if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
-  mv himan_2013011800.grib himan_2013011800-CPU.grib
+  mv tk2tc_ec1h.json.grib tk2tc_ec1h.json-CPU.grib
 
   $HIMAN -d 5 -f tk2tc_ec1h.json -t grib source.grib
 
-  grib_compare -A 0.0001 himan_2013011800.grib himan_2013011800-CPU.grib
+  grib_compare -A 0.0001 tk2tc_ec1h.json.grib tk2tc_ec1h.json-CPU.grib
 
   if [ $? -eq 0 ];then
     echo tk2tc/ec success on GPU!
@@ -33,5 +33,7 @@ if [ "$CUDA_TOOLKIT_PATH" != "" ]; then
     echo tk2tc/ec failed on GPU
     exit 1
   fi
+else
+  echo "no cuda device found for cuda tests"
 fi
 

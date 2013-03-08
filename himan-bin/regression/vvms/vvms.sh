@@ -6,24 +6,33 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan"
 fi
 
-rm -f himan*.grib
+rm -f vvms_ec1h.json.grib vvms_ec1h.json-CPU.grib
 
-$HIMAN -d 5 -f vvms_ec1h.json -t grib t.grib vv.grib
+$HIMAN -d 5 -f vvms_ec1h.json -t grib t.grib vv.grib --no-cuda
 
-grib_compare result.grib himan_VV-MS_2013012100.grib
+grib_compare result.grib vvms_ec1h.json.grib
 
 if [ $? -eq 0 ];then
-  echo vvms success!
+  echo vvms/ec success!
 else
-  echo vvms failed
+  echo vvms/ec failed
   exit 1
 fi
 
-python ../test.py result.grib himan_VV-MS_2013012100.grib
+if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
-if [ $? -eq 0 ];then
-  echo vvms success!
+  mv vvms_ec1h.json.grib vvms_ec1h.json-CPU.grib
+
+  $HIMAN -d 5 -f vvms_ec1h.json -t grib source.grib
+
+  grib_compare -A 0.0001 vvms_ec1h.json.grib vvms_ec1h.json-CPU.grib
+
+  if [ $? -eq 0 ];then
+    echo vvms/ec success on GPU!
+  else
+    echo vvms/ec failed on GPU
+    exit 1
+  fi
 else
-  echo vvms failed
-  exit 1
+  echo "no cuda device found for cuda tests"
 fi
