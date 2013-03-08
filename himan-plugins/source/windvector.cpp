@@ -27,21 +27,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-#undef HAVE_CUDA
-
-#ifdef HAVE_CUDA
-namespace himan
-{
-namespace plugin
-{
-namespace windvector_cuda
-{
-void doCuda(const float* Tin, float TBase, const float* Pin, float TScale, float* TPout, size_t N, float PConst, unsigned short index);
-}
-}
-}
-#endif
-
 const double kRadToDeg = 57.295779513082; // 180 / PI
 
 windvector::windvector()
@@ -205,9 +190,8 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-		targetInfo->FirstTime();
+		string theOutputFile = conf->ConfigurationFile();
 
-		string theOutputFile = "himan_" + targetInfo->Param().Name() + "_" + targetInfo->Time().OriginDateTime()->String("%Y%m%d%H");
 		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
 
 	}
@@ -343,7 +327,17 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 			{
 				missingCount++;
 
+				myTargetInfo->ParamIndex(0);
 				myTargetInfo->Value(kFloatMissing);
+				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Value(kFloatMissing);
+
+				if (itsAirCalculation)
+				{
+					myTargetInfo->ParamIndex(2);
+					myTargetInfo->Value(kFloatMissing);
+				}
+
 				continue;
 			}
 
