@@ -296,8 +296,12 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 		}
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+
 		shared_ptr<NFmiGrid> UGrid(UInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> VGrid(VInfo->Grid()->ToNewbaseGrid());
+
+		UGrid->InterpolationMethod(kNearestPoint);
+		VGrid->InterpolationMethod(kNearestPoint);
 
 		int missingCount = 0;
 		int count = 0;
@@ -310,8 +314,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 		targetGrid->Reset();
 
-		bool needRotLatLonGridRotation = (myTargetInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
-		bool needStereographicGridRotation = (myTargetInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
+		assert(UInfo->Grid()->Projection() == VInfo->Grid()->Projection());
+
+		bool needRotLatLonGridRotation = (UInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
+		bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
 
 		while (myTargetInfo->NextLocation() && targetGrid->Next())
 		{
@@ -350,28 +356,32 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 				 *    to earth-relative
 				 */
 
+				assert(UGrid->Area()->ClassId() == kNFmiRotatedLatLonArea);
+
 				const point regPoint(targetGrid->LatLon());
 
-				const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (targetGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
+				const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (UGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
 
 				point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->Grid()->SouthPole(), point(U,V));
 
-				// Wind speed should the same with both forms of U and V
+				// Wind speed should the same with both forms of U and V if no interpolation is done
 
-				assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.0011);
+				assert(!equalGrids || fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
 
 				U = regUV.X();
 				V = regUV.Y();
 			}
 			else if (needStereographicGridRotation)
 			{
+				assert(UGrid->Area()->ClassId() == kNFmiStereographicArea);
+
 				double centralLongitude = (reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude());
 
 				point regUV = util::UVToGeographical(centralLongitude, point(U,V));
 
-				// Wind speed should the same with both forms of U and V
+				// Wind speed should the same with both forms of U and V if no interpolation is done
 
-				assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+				assert(!equalGrids || fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
 
 			}
 
@@ -386,6 +396,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 				if (dir < 0)
 				{
 					dir += 360;
+				}
+				else if (dir > 360)
+				{
+					dir -= 360;
 				}
 			}
 
@@ -404,15 +418,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 			if (itsAirCalculation)
 			{
-				if (U > 360)
-				{
-					U = U - 360;
-				}
-
-				if (U < 0)
-				{
-					U = U + 360;
-				}
 
 				double windVector = round(U/10) + 100 * round(V);
 
