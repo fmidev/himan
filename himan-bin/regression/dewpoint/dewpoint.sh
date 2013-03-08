@@ -6,9 +6,9 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan"
 fi
 
-rm -f himan*.grib
+rm -f dewpoint_arome.json.grib dewpoint_arome.json-CPU.grib
 
-$HIMAN -d 3 -f dewpoint_arome.json -t grib source.grib
+$HIMAN -d 5 -f dewpoint_arome.json -t grib source.grib
 
 grib_compare result.grib dewpoint_arome.json.grib
 
@@ -19,7 +19,7 @@ else
 #  exit 1
 fi
 
-if [ "$CUDA_TOOLKIT_PATH" != "" ]; then
+if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
   mv dewpoint_arome.json.grib dewpoint_arome.json-CPU.grib
 
@@ -31,8 +31,8 @@ if [ "$CUDA_TOOLKIT_PATH" != "" ]; then
     echo dewpoint success on GPU!
   else
     echo dewpoint failed on GPU
- #   exit 1
   fi
-
+else
+  echo "no cuda device found for cuda tests"
 fi
 
