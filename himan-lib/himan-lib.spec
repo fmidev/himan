@@ -10,15 +10,13 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 13.2.18
+Version: 13.3.11
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
 Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
-BuildRequires: libsmartmet-newbase >= 12.4.18-1
-BuildRequires: boost-devel
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
@@ -31,8 +29,10 @@ BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
 %endif
 
+BuildRequires: libsmartmet-newbase >= 12.4.18-1
 BuildRequires: scons
 BuildRequires: boost-devel
+
 Provides: libhiman.so
 
 %description
@@ -58,6 +58,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Mar 11 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.3.11-1.el5.fmi
+- Latest changes
+* Thu Feb 21 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.21-1.el5.fmi
+- Latest changes
+* Tue Feb 19 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.19-1.el5.fmi
+- Latest changes
 * Mon Feb 18 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.18-1.el5.fmi
 - Latest changes
 * Tue Feb  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.5-1.el5.fmi

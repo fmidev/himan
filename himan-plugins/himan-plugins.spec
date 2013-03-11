@@ -10,15 +10,13 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.2.18
+Version: 13.3.11
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
 Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
-BuildRequires: libsmartmet-newbase >= 12.4.18-1
-BuildRequires: boost-devel
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
@@ -26,6 +24,8 @@ Requires: jasper-libs
 Requires: grib_api
 BuildRequires: boost-devel >= 1.49
 BuildRequires: scons
+BuildRequires: libsmartmet-newbase >= 12.4.18-1
+BuildRequires: grib_api
 
 %if is_rhel_5
 BuildRequires: gcc44-c++ >= 4.4.6
@@ -34,6 +34,7 @@ BuildRequires: gcc44-c++ < 4.7
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
 %endif
+
 %description
 FMI himan-plugins -- hila manipulaatio -- plugin library
 
@@ -72,7 +73,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Fri Feb 18 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.18-1.el5.fmi
+* Mon Mar 11 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.3.11-1.el5.fmi
+- Latest changes
+* Thu Feb 21 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.21-1.el5.fmi
+- Latest changes
+* Mon Feb 18 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.18-1.el5.fmi
 - Latest changes
 * Tue Feb  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.5-1.el5.fmi
 - Latest changes

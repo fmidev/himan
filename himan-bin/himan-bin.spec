@@ -10,7 +10,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 13.2.18
+Version: 13.3.11
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -21,7 +21,6 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: himan-lib
-Requires: oracle-instantclient-basic
 
 %if is_rhel_5
 BuildRequires: gcc44-c++ >= 4.4.6
@@ -33,6 +32,7 @@ BuildRequires: gcc-c++ < 4.7
 
 BuildRequires: scons
 BuildRequires: boost-devel
+BuildRequires: libsmartmet-newbase >= 12.4.18-1
 
 Provides: himan
 
@@ -59,7 +59,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
-* Fri Feb 15 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.15-1.el.fmi
+* Mon Mar 11 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.3.11-1.el5.fmi
+- Latest changes
+* Thu Feb 21 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.21-1.el5.fmi
+- Latest changes
+* Mon Feb 18 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.18-1.el5.fmi
 - Latest changes
 * Tue Feb  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.5-1.el5.fmi
 - Latest changes
