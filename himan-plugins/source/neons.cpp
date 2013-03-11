@@ -244,7 +244,6 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	string table_name = row[1];
 	string dset_id = row[0];
 
-	string host = "himan_test_host";
 	string eps_specifier = "0";
 
 	query.str("");
@@ -269,12 +268,21 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 
 	query.str("");
 
+	string host = "himan_test_host";
+
+	char* kone = getenv("KONE");
+
+	if (kone != NULL)
+	{
+		host = string(kone);
+	}
+
 	query  << "INSERT INTO " << table_name
 		   << " (dset_id, parm_name, lvl_type, lvl1_lvl2, fcst_per, eps_specifier, file_location, file_server) "
 		   << "VALUES ("
 		   << dset_id << ", "
 		   << "'" << resultInfo->Param().Name() << "', "
-		   << "'" << resultInfo->Level().Name() << "', "
+		   << "upper('" << resultInfo->Level().Name() << "'), "
 		   << resultInfo->Level().Value() << ", "
 		   << resultInfo->Time().Step() << ", "
 		   << "'" << eps_specifier << "', "
