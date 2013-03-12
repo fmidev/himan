@@ -72,6 +72,14 @@ enum HPFileType
     kNetCDF
 };
 
+const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = map_list_of
+        (kUnknownFile, "unknown")
+        (kGRIB1, "grib edition 1")
+        (kGRIB2, "grib edition 2")
+        (kGRIB, "grib edition 1 or 2")
+        (kQueryData, "QueryData")
+		(kNetCDF, "NetCDF");
+
 // Define supported projections
 // Values equal to those in newbase
 
