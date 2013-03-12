@@ -18,6 +18,7 @@
 #include <atomic>
 #endif
 
+
 namespace himan
 {
 
@@ -45,8 +46,10 @@ public:
 	bool Start();
 	bool Store();
 
-	void AddToMissingCount(size_t missingCount);
-	void AddToValueCount(size_t valueCount);
+	void AddToMissingCount(size_t theMissingCount);
+	void AddToValueCount(size_t theValueCount);
+	void AddToFetchingTime(size_t theFetchingTime);
+	void AddToProcessingTime(size_t theProcessingTime);
 
 	std::string Label() const;
 	void Label(const std::string& theLabel);
@@ -68,9 +71,12 @@ private:
     
 	std::atomic<size_t> itsValueCount;
 	std::atomic<size_t> itsMissingValueCount;
+	std::atomic<size_t> itsFetchingTime;
+	std::atomic<size_t> itsProcessingTime;
 	std::shared_ptr<timer> itsTimer;
 	size_t itsUsedThreadCount;
 	size_t itsUsedCudaCount;
+	
 
 };
 

@@ -25,24 +25,35 @@ void statistics::Write()
 
 	size_t elapsedTime = itsTimer->GetTime();
 
-	cout << "Thread count:\t" <<  itsUsedThreadCount << endl;
-	cout << "Cuda count:\t" << itsUsedCudaCount << endl;
-	cout << "Elapsed time:\t" <<  elapsedTime << " microseconds" << endl;
-	cout << "Values:\t\t" << itsValueCount << endl;
-	cout << "Missing values:\t" << itsMissingValueCount << endl;
-
-	cout << "pps:\t\t" << 1000*1000*static_cast<double>(itsValueCount)/static_cast<double>(elapsedTime) << endl;
+	cout	<< "Thread count:\t" <<  itsUsedThreadCount << endl
+			<< "Cuda count:\t" << itsUsedCudaCount << endl
+			<< "Elapsed time:\t" <<  elapsedTime << " microseconds" << endl
+			<< "Fetching time:\t" << itsFetchingTime << " microseconds (" << static_cast<int> (100*static_cast<double> (itsFetchingTime)/static_cast<double> (elapsedTime)) << "%)" << endl
+			<< "Process time:\t" << itsProcessingTime << " microseconds (" << static_cast<int> (100*static_cast<double> (itsProcessingTime)/static_cast<double> (elapsedTime)) << "%)" << endl
+			<< "Values:\t\t" << itsValueCount << endl
+			<< "Missing values:\t" << itsMissingValueCount << endl
+			<< "pps:\t\t" << 1000*1000*static_cast<double>(itsValueCount)/static_cast<double>(elapsedTime) << endl;
 
 }
 
-void statistics::AddToMissingCount(size_t missingCount)
+void statistics::AddToMissingCount(size_t theMissingCount)
 {
-	itsMissingValueCount += missingCount;
+	itsMissingValueCount += theMissingCount;
 }
 
-void statistics::AddToValueCount(size_t valueCount)
+void statistics::AddToValueCount(size_t theValueCount)
 {
-	itsValueCount += valueCount;
+	itsValueCount += theValueCount;
+}
+
+void statistics::AddToFetchingTime(size_t theFetchingTime)
+{
+	itsFetchingTime += theFetchingTime;
+}
+
+void statistics::AddToProcessingTime(size_t theProcessingTime)
+{
+	itsProcessingTime += theProcessingTime;
 }
 
 void statistics::Init()
@@ -51,6 +62,8 @@ void statistics::Init()
 	itsValueCount = 0;
 	itsUsedThreadCount = 0;
 	itsUsedCudaCount = 0;
+	itsFetchingTime = 0;
+	itsProcessingTime = 0;
 }
 
 void statistics::UsedThreadCount(size_t theUsedThreadCount)
