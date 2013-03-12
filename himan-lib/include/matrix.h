@@ -32,7 +32,15 @@ public:
     {
     }
 
-    matrix(const matrix& other) = delete;
+    matrix(const matrix& other)
+	{
+		itsData = other.itsData; // Copy contents!
+		itsWidth = other.itsWidth;
+		itsHeight = other.itsHeight;
+		itsDepth = other.itsDepth;
+		itsMissingValue = other.itsMissingValue;
+	}
+	
     matrix& operator=(const matrix& other) = delete;
 
     std::string ClassName() const
