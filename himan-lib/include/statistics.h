@@ -28,20 +28,20 @@ public:
 	friend class plugin_configuration;
 
 	statistics();
-    ~statistics() {};
+	~statistics() {};
 
-    statistics(const statistics& other) = delete;
-    statistics& operator=(const statistics& other) = delete;
+	statistics(const statistics& other) = delete;
+	statistics& operator=(const statistics& other) = delete;
 
-    std::string ClassName() const
-    {
-        return "himan::statistics";
-    };
+	std::string ClassName() const
+	{
+		return "himan::statistics";
+	};
 
-    HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
+	HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
 
 	bool Start();
 	bool Store();
@@ -50,6 +50,7 @@ public:
 	void AddToValueCount(size_t theValueCount);
 	void AddToFetchingTime(size_t theFetchingTime);
 	void AddToProcessingTime(size_t theProcessingTime);
+	void AddToWritingTime(size_t theWritingTime);
 
 	std::string Label() const;
 	void Label(const std::string& theLabel);
@@ -66,12 +67,10 @@ private:
 	bool StoreToDatabase();
 	bool StoreToFile();
 
-	//std::string itsLabel;
-    //std::unique_ptr<NFmiODBC> itsDatabase;
-    
 	std::atomic<size_t> itsValueCount;
 	std::atomic<size_t> itsMissingValueCount;
 	std::atomic<size_t> itsFetchingTime;
+	std::atomic<size_t> itsWritingTime;
 	std::atomic<size_t> itsProcessingTime;
 	std::shared_ptr<timer> itsTimer;
 	size_t itsUsedThreadCount;
