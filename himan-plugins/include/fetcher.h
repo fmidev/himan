@@ -24,7 +24,7 @@
 #define FETCHER_H
 
 #include "auxiliary_plugin.h"
-#include "configuration.h"
+#include "plugin_configuration.h"
 #include "search_options.h"
 
 namespace himan
@@ -57,7 +57,7 @@ public:
         return HPVersionNumber(0, 1);
     }
 
-    std::shared_ptr<info> Fetch(std::shared_ptr<const configuration> conf, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam);
+    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam);
 
 private:
 

@@ -11,6 +11,7 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem/operations.hpp>
+#include "timer_factory.h"
 #include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
@@ -35,12 +36,19 @@ fetcher::fetcher()
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
 
-shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
+shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config,
                                        const forecast_time& requestedTime,
                                        const level& requestedLevel,
                                        const param& requestedParam)
 {
 
+	unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+	
+	if (config->StatisticsEnabled())
+	{
+		t->Start();
+	}
+	
     const search_options opts { requestedTime, requestedParam, requestedLevel, config } ;
 
     vector<shared_ptr<info>> theInfos;
@@ -120,6 +128,12 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const configuration> config,
     }
     while (waitedSeconds < config->FileWaitTimeout() * 60);
 
+	if (config->StatisticsEnabled())
+	{
+		t->Stop();
+
+		config->Statistics()->AddToFetchingTime(t->GetTime());
+	}
     /*
      *  Safeguard; later in the code we do not check whether the data requested
      *  was actually what was requested.
