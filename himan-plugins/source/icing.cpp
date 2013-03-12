@@ -106,7 +106,7 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 	param theRequestedParam("ICING-N", 480);
 
 	theRequestedParam.GribParameter(103);
-    theRequestedParam.GribTableVersion(203);
+	theRequestedParam.GribTableVersion(203);
 
 	theParams.push_back(theRequestedParam);
 
@@ -160,12 +160,12 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		string theOutputFile = conf->ConfigurationFile();
 
-		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
 
 	}
 }
 
-void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
@@ -179,7 +179,7 @@ void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> c
  * This function does the actual calculation.
  */
 
-void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -188,7 +188,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 
 	param TParam("T-K");
 	param VvParam("VV-MMS");
-    param ClParam("CLDWAT-KGKG");
+	param ClParam("CLDWAT-KGKG");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
@@ -280,7 +280,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 				myTargetInfo->Value(kFloatMissing);
 				continue;
 			}
-                        
+
 			double Icing;
 			double TBase = 273.15;
 			int vCor;
@@ -301,7 +301,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			else if ((Vv >= 50) && (Vv <= 100))
 			{
 				vCor = 2;
-			}else if ((Vv >= 100) && (Vv <= 200))
+			}
+			else if ((Vv >= 100) && (Vv <= 200))
 			{
 				vCor = 3;
 			}
@@ -348,7 +349,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			{
 				tCor = 0;
 			}
-            
+
 			if ((fabs(Cl - 0) < kValueEpsilon) || (T > 0))
 			{
 				Icing = 0;
@@ -368,7 +369,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 			{
 				Icing = 0;
 			}
-                        
+
 			if (!myTargetInfo->Value(Icing))
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
@@ -388,7 +389,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurat
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), conf->FileWriteOption());
+			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 		}
 	}
 }

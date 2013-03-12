@@ -168,7 +168,7 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		string theOutputFile = conf->ConfigurationFile();
 
-		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
 
 	}
 }
@@ -294,10 +294,14 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 							*myTargetInfo->Grid() == *VVInfo->Grid() &&
 						   (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
-#ifdef DEBUG
-		unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		t->Start();
-#endif
+
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
+
 		string deviceType;
 
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
@@ -317,7 +321,6 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			{
 				vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, VVGrid->DataPool()->Data(), VVout, N, 100 * myTargetInfo->Level().Value(), threadIndex-1);
 			}
-
 
 			for (size_t i = 0; i < N; i++)
 			{
@@ -383,12 +386,21 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				}
 
 			}
-	}
-	
+		}
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+
 #ifdef DEBUG
-		t->Stop();
-		itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on "  + deviceType);
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
+
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
+
+		}
 
 		/*
 		 * Now we are done for this level
@@ -398,17 +410,11 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->StatisticsEnabled())
-		{
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
-		}
-
 		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), conf->FileWriteOption());
+			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 		}
 	}
 }

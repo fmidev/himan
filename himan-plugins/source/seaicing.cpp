@@ -158,12 +158,12 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		string theOutputFile = conf->ConfigurationFile();
 
-		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
 
 	}
 }
 
-void seaicing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void seaicing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
@@ -177,7 +177,7 @@ void seaicing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration
  * This function does the actual calculation.
  */
 
-void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -321,7 +321,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configu
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), conf->FileWriteOption());
+			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 		}
 	}
 }

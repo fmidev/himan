@@ -33,152 +33,152 @@ using namespace himan::plugin;
 
 tpot::tpot() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
-    itsClearTextFormula = "Tp = Tk * pow((1000/P), 0.286)"; // Poissons equation
+	itsClearTextFormula = "Tp = Tk * pow((1000/P), 0.286)"; // Poissons equation
 
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpot"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpot"));
 
 }
 
 void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
-    shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-    if (c->HaveCuda())
-    {
-        string msg = "I possess the powers of CUDA ";
+	if (c->HaveCuda())
+	{
+		string msg = "I possess the powers of CUDA ";
 
-        if (!conf->UseCuda())
-        {
-            msg += ", but I won't use them";
-        }
-        else
-        {
-            msg += ", and I'm not afraid to use them";
-            itsUseCuda = true;
-        }
+		if (!conf->UseCuda())
+		{
+			msg += ", but I won't use them";
+		}
+		else
+		{
+			msg += ", and I'm not afraid to use them";
+			itsUseCuda = true;
+		}
 
-        itsLogger->Info(msg);
+		itsLogger->Info(msg);
 
 		itsCudaDeviceCount = c->DeviceCount();
 	
-    }
+	}
 
-    // Get number of threads to use
+	// Get number of threads to use
 
-    unsigned short threadCount = ThreadCount(conf->ThreadCount());
+	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
-    boost::thread_group g;
+	boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
 
-    /*
-     * Get producer information from neons
-     */
+	/*
+	 * Get producer information from neons
+	 */
 
-    if (conf->FileWriteOption() == kNeons)
-    {
-        shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+	if (conf->FileWriteOption() == kNeons)
+	{
+		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-        map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
+		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
 
-        if (prodInfo.size())
-        {
-            producer prod(targetInfo->Producer().Id());
+		if (prodInfo.size())
+		{
+			producer prod(targetInfo->Producer().Id());
 
-            prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-            prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-            prod.Name(prodInfo["name"]);
+			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
+			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
+			prod.Name(prodInfo["name"]);
 
-            targetInfo->Producer(prod);
-        }
+			targetInfo->Producer(prod);
+		}
 
-    }
+	}
 
-    /*
-     * Set target parameter to potential temperature
-     * - name TP-K
-     * - univ_id 8
-     * - grib2 descriptor 0'00'002
-     *
-     * We need to specify grib and querydata parameter information
-     * since we don't know which one will be the output format.
-     * (todo: we could check from conf but why bother?)
-     *
-     */
+	/*
+	 * Set target parameter to potential temperature
+	 * - name TP-K
+	 * - univ_id 8
+	 * - grib2 descriptor 0'00'002
+	 *
+	 * We need to specify grib and querydata parameter information
+	 * since we don't know which one will be the output format.
+	 * (todo: we could check from conf but why bother?)
+	 *
+	 */
 
-    vector<param> theParams;
+	vector<param> theParams;
 
-    param theRequestedParam ("TP-K", 8);
+	param theRequestedParam ("TP-K", 8);
 
-    theRequestedParam.GribDiscipline(0);
-    theRequestedParam.GribCategory(0);
-    theRequestedParam.GribParameter(2);
+	theRequestedParam.GribDiscipline(0);
+	theRequestedParam.GribCategory(0);
+	theRequestedParam.GribParameter(2);
 
-    theParams.push_back(theRequestedParam);
+	theParams.push_back(theRequestedParam);
 
-    targetInfo->Params(theParams);
+	targetInfo->Params(theParams);
 
-    /*
-     * Create data structures.
-     */
+	/*
+	 * Create data structures.
+	 */
 
-    targetInfo->Create();
+	targetInfo->Create();
 
-    /*
-     * Initialize parent class functions for dimension handling
-     */
+	/*
+	 * Initialize parent class functions for dimension handling
+	 */
 
-    Dimension(conf->LeadingDimension());
-    FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-    FeederInfo()->Param(theRequestedParam);
+	Dimension(conf->LeadingDimension());
+	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
+	FeederInfo()->Param(theRequestedParam);
 
-    /*
-     * Each thread will have a copy of the target info.
-     */
+	/*
+	 * Each thread will have a copy of the target info.
+	 */
 
-    vector<shared_ptr<info> > targetInfos;
+	vector<shared_ptr<info> > targetInfos;
 
-    targetInfos.resize(threadCount);
+	targetInfos.resize(threadCount);
 
-    for (size_t i = 0; i < threadCount; i++)
-    {
+	for (size_t i = 0; i < threadCount; i++)
+	{
 
-        itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
+		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-        targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
+		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
-        boost::thread* t = new boost::thread(&tpot::Run,
-                                             this,
-                                             targetInfos[i],
-                                             conf,
-                                             i + 1);
+		boost::thread* t = new boost::thread(&tpot::Run,
+											 this,
+											 targetInfos[i],
+											 conf,
+											 i + 1);
 
-        g.add_thread(t);
+		g.add_thread(t);
 
-    }
+	}
 
-    g.join_all();
+	g.join_all();
 
-    if (conf->FileWriteOption() == kSingleFile)
-    {
+	if (conf->FileWriteOption() == kSingleFile)
+	{
 
-        shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-        string theOutputFile = conf->ConfigurationFile();
+		string theOutputFile = conf->ConfigurationFile();
 
-        theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
 
-    }
+	}
 }
 
-void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short threadIndex)
+void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 
-    while (AdjustLeadingDimension(myTargetInfo))
-    {
-        Calculate(myTargetInfo, conf, threadIndex);
-    }
+	while (AdjustLeadingDimension(myTargetInfo))
+	{
+		Calculate(myTargetInfo, conf, threadIndex);
+	}
 
 }
 
@@ -188,36 +188,36 @@ void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> co
  * This function does the actual calculation.
  */
 
-void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short threadIndex)
+void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 
-    shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-    // Required source parameters
+	// Required source parameters
 
-    param TParam ("T-K");
-    param PParam ("P-PA");
+	param TParam ("T-K");
+	param PParam ("P-PA");
 
-    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (threadIndex)));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (threadIndex)));
 
-    ResetNonLeadingDimension(myTargetInfo);
+	ResetNonLeadingDimension(myTargetInfo);
 
-    myTargetInfo->FirstParam();
+	myTargetInfo->FirstParam();
 
-    while (AdjustNonLeadingDimension(myTargetInfo))
-    {
+	while (AdjustNonLeadingDimension(myTargetInfo))
+	{
 
-        myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-                                " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-        double PScale = 1;
-        double TBase = 0;
+		double PScale = 1;
+		double TBase = 0;
 
-        // Source infos
-        shared_ptr<info> TInfo;
-        shared_ptr<info> PInfo;
+		// Source infos
+		shared_ptr<info> TInfo;
+		shared_ptr<info> PInfo;
 
-        shared_ptr<NFmiGrid> PGrid;
+		shared_ptr<NFmiGrid> PGrid;
 
 		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
@@ -261,126 +261,126 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
 			}
 		}
 
-        if (TInfo->Param().Unit() == kC)
-        {
-            TBase = 273.15;
-        }
+		if (TInfo->Param().Unit() == kC)
+		{
+			TBase = 273.15;
+		}
 
-        shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-        shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
-        int missingCount = 0;
-        int count = 0;
+		int missingCount = 0;
+		int count = 0;
 
-        assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-        bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
-
-#ifdef DEBUG
-        unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-        t->Start();
-#endif
-        string deviceType;
-
-        if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
-        {
-        	deviceType = "GPU";
-	    
-            size_t N = TGrid->Size();
-
-            float* TPOut = new float[N];
-            double* infoData = new double[N];
-
-            if (!isPressureLevel)
-            {
-                tpot_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, TPOut, N, 0, threadIndex-1);
-            }
-            else
-            {
-                tpot_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, TPOut, N, myTargetInfo->Level().Value(), threadIndex-1);
-            }
-
-
-            for (size_t i = 0; i < N; i++)
-            {
-                infoData[i] = static_cast<float> (TPOut[i]);
-
-                if (infoData[i] == kFloatMissing)
-                {
-                    missingCount++;
-                }
-
-                count++;
-            }
-
-            myTargetInfo->Data()->Set(infoData, N);
-
-            delete [] infoData;
-            delete [] TPOut;
-
-        }
-        else
-        {
-
-        	deviceType = "CPU";
-	    
-            myTargetInfo->ResetLocation();
-
-            targetGrid->Reset();
-
-            while (myTargetInfo->NextLocation() && targetGrid->Next())
-            {
-                count++;
-
-                double T = kFloatMissing;
-                double P = kFloatMissing;
-
-                InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-
-                if (isPressureLevel)
-                {
-                    P = myTargetInfo->Level().Value();
-                }
-                else
-                {
-                    InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-                }
-
-                if (T == kFloatMissing || P == kFloatMissing)
-                {
-                    missingCount++;
-
-                    myTargetInfo->Value(kFloatMissing);
-                    continue;
-                }
-
-                double Tp = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
-
-                if (!myTargetInfo->Value(Tp))
-                {
-                    throw runtime_error(ClassName() + ": Failed to set value to matrix");
-                }
-            }
-        }
+		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
 #ifdef DEBUG
-        t->Stop();
-        itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on " + deviceType);
+		unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		t->Start();
+#endif
+		string deviceType;
+
+		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+		{
+			deviceType = "GPU";
+
+			size_t N = TGrid->Size();
+
+			float* TPOut = new float[N];
+			double* infoData = new double[N];
+
+			if (!isPressureLevel)
+			{
+				tpot_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, TPOut, N, 0, threadIndex-1);
+			}
+			else
+			{
+				tpot_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, TPOut, N, myTargetInfo->Level().Value(), threadIndex-1);
+			}
+
+
+			for (size_t i = 0; i < N; i++)
+			{
+				infoData[i] = static_cast<float> (TPOut[i]);
+
+				if (infoData[i] == kFloatMissing)
+				{
+					missingCount++;
+				}
+
+				count++;
+			}
+
+			myTargetInfo->Data()->Set(infoData, N);
+
+			delete [] infoData;
+			delete [] TPOut;
+
+		}
+		else
+		{
+
+			deviceType = "CPU";
+
+			myTargetInfo->ResetLocation();
+
+			targetGrid->Reset();
+
+			while (myTargetInfo->NextLocation() && targetGrid->Next())
+			{
+				count++;
+
+				double T = kFloatMissing;
+				double P = kFloatMissing;
+
+				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+
+				if (isPressureLevel)
+				{
+					P = myTargetInfo->Level().Value();
+				}
+				else
+				{
+					InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				}
+
+				if (T == kFloatMissing || P == kFloatMissing)
+				{
+					missingCount++;
+
+					myTargetInfo->Value(kFloatMissing);
+					continue;
+				}
+
+				double Tp = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
+
+				if (!myTargetInfo->Value(Tp))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
+			}
+		}
+
+#ifdef DEBUG
+		t->Stop();
+		itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on " + deviceType);
 #endif
 
-        /*
-         * Now we are done for this level
-         *
-         * Clone info-instance to writer since it might change our descriptor places
-         * */
+		/*
+		 * Now we are done for this level
+		 *
+		 * Clone info-instance to writer since it might change our descriptor places
+		 * */
 
-        myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-        if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
-        {
-            shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+		{
+			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-            theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), conf->FileWriteOption());
-        }
-    }
+			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
+		}
+	}
 }

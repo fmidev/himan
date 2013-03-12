@@ -192,12 +192,12 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		string theOutputFile = conf->ConfigurationFile();
 
-		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
 
 	}
 }
 
-void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
@@ -211,7 +211,7 @@ void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configurati
  * This function does the actual calculation.
  */
 
-void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -289,11 +289,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 		// if source producer is Hirlam, we must de-stagger U and V grid
 
-		if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
+		/*if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
 		{
 			UInfo->Grid()->Stagger(-0.5, 0);
 			VInfo->Grid()->Stagger(0, -0.5);
-		}
+		}*/
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
@@ -446,7 +446,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const confi
 
 			for (tempInfo->ResetParam(); tempInfo->NextParam(); )
 			{
-				theWriter->ToFile(tempInfo, conf->OutputFileType(), conf->FileWriteOption());
+				theWriter->ToFile(tempInfo, conf);
 			}
 		}
 	}

@@ -157,12 +157,12 @@ void kindex::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		string theOutputFile = conf->ConfigurationFile();
 
-		theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
 
 	}
 }
 
-void kindex::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void kindex::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
@@ -176,7 +176,7 @@ void kindex::Run(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> 
  * This function does the actual calculation.
  */
 
-void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configuration> conf, unsigned short theThreadIndex)
+void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -185,7 +185,7 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 
 	param TParam("T-K");
 	param TdParam("TD-C");  
-        
+
 	level T850Level(himan::kPressure, 850, "PRESSURE");
 	level T700Level(himan::kPressure, 700, "PRESSURE");
 	level T500Level(himan::kPressure, 500, "PRESSURE");
@@ -227,16 +227,16 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 								 myTargetInfo->Time(),
 								 T500Level,
 								 TParam);
-                        // Source info for Td850
+						// Source info for Td850
 			Td850Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T850Level,
 								 TdParam);
-                        // Source info for Td700
+						// Source info for Td700
 			Td700Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T700Level,
-								 TdParam);                        
+								 TdParam);
 				
 		}
 		catch (HPExceptionType& e)
@@ -285,15 +285,15 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 			double T850 = kFloatMissing;
 			double T700 = kFloatMissing;
 			double T500 = kFloatMissing;
-                        double Td850 = kFloatMissing;
-                        double Td700 = kFloatMissing;
+			double Td850 = kFloatMissing;
+			double Td700 = kFloatMissing;
 
 			InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
 			InterpolateToPoint(targetGrid, T700Grid, equalGrids, T700);
 			InterpolateToPoint(targetGrid, T500Grid, equalGrids, T500);
-                        InterpolateToPoint(targetGrid, Td850Grid, equalGrids, Td850);
+			InterpolateToPoint(targetGrid, Td850Grid, equalGrids, Td850);
 			InterpolateToPoint(targetGrid, Td700Grid, equalGrids, Td700);
-                        
+
 
 			if (T850 == kFloatMissing || T700 == kFloatMissing || T500 == kFloatMissing)
 			{
@@ -304,15 +304,15 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 			}
 
 			double kIndex;
-                        double TBase = 273.15;
-                        
-                        T850 = T850 - TBase;
-                        T700 = T700 - TBase;
-                        T500 = T500 - TBase;
-                        Td850 = Td850 -TBase;
-                        Td700 = Td700 -TBase;
-                        
-                        kIndex = T850 - T500 + Td850 - (T700 - Td700);
+			double TBase = 273.15;
+
+			T850 = T850 - TBase;
+			T700 = T700 - TBase;
+			T500 = T500 - TBase;
+			Td850 = Td850 -TBase;
+			Td700 = Td700 -TBase;
+
+			kIndex = T850 - T500 + Td850 - (T700 - Td700);
 
 			if (!myTargetInfo->Value(kIndex))
 			{
@@ -333,7 +333,7 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const configura
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), conf->FileWriteOption());
+			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 		}
 	}
 }

@@ -2,7 +2,7 @@
  * writer.cpp
  *
  *  Created on: Nov 26, 2012
- *      Author: partio
+ *	  Author: partio
  */
 
 #include "writer.h"
@@ -12,6 +12,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 #include "util.h"
+#include "timer_factory.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -25,84 +26,100 @@ using namespace himan::plugin;
 
 writer::writer()
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("writer"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("writer"));
 }
 
 bool writer::ToFile(std::shared_ptr<info> theInfo,
-                    HPFileType theFileType,
-                    HPFileWriteOption fileWriteOption,
-                    const std::string& theOutputFile)
+					std::shared_ptr<const plugin_configuration> conf,
+					const std::string& theOutputFile)
 {
 
-    namespace fs = boost::filesystem;
+	std::unique_ptr<himan::timer> t = std::unique_ptr<himan::timer> (timer_factory::Instance()->GetTimer());
 
-    bool ret = false;
+	if (conf->StatisticsEnabled())
+	{
+		t->Start();
+	}
 
-    std::string correctFileName = theOutputFile;
+	namespace fs = boost::filesystem;
 
-    if ((fileWriteOption == kNeons || fileWriteOption == kMultipleFiles) || correctFileName.empty())
-    {
-        correctFileName = util::MakeFileName(fileWriteOption, theInfo);
-    }
+	bool ret = false;
 
-    fs::path pathname(correctFileName);
+	std::string correctFileName = theOutputFile;
 
-    if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
-    {
-        fs::create_directories(pathname.parent_path());
-    }
+	HPFileWriteOption fileWriteOption = conf->FileWriteOption();
+	HPFileType fileType = conf->OutputFileType();
 
-    switch (theFileType)
-    {
+	if ((fileWriteOption == kNeons || fileWriteOption == kMultipleFiles) || correctFileName.empty())
+	{
+		correctFileName = util::MakeFileName(fileWriteOption, theInfo);
+	}
 
-    case kGRIB:
-    case kGRIB1:
-    case kGRIB2:
-    {
+	fs::path pathname(correctFileName);
 
-        std::shared_ptr<grib> theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
+	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
+	{
+		fs::create_directories(pathname.parent_path());
+	}
 
-        correctFileName += ".grib";
+	switch (fileType)
+	{
 
-        ret = theGribWriter->ToFile(theInfo, correctFileName, theFileType, fileWriteOption);
+	case kGRIB:
+	case kGRIB1:
+	case kGRIB2:
+	{
 
-        break;
-    }
-    case kQueryData:
-    {
-        std::shared_ptr<querydata> theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+		std::shared_ptr<grib> theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
 
-        correctFileName += ".fqd";
+		correctFileName += ".grib";
 
-        ret = theWriter->ToFile(theInfo, correctFileName, fileWriteOption);
+		ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileWriteOption);
 
-        break;
-    }
-    case kNetCDF:
-        break;
+		break;
+	}
+	case kQueryData:
+	{
+		std::shared_ptr<querydata> theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
 
-        // Must have this or compiler complains
-    default:
-        throw std::runtime_error(ClassName() + ": Invalid file type: " + boost::lexical_cast<std::string> (theFileType));
-        break;
+		correctFileName += ".fqd";
 
-    }
+		ret = theWriter->ToFile(theInfo, correctFileName, fileWriteOption);
 
-    if (ret && fileWriteOption == kNeons)
-    {
-        std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+		break;
+	}
+	case kNetCDF:
+		break;
 
-        // Save file information to neons
+		// Must have this or compiler complains
+	default:
+		throw std::runtime_error(ClassName() + ": Invalid file type: " + HPFileTypeToString.at(fileType));
+		break;
 
-        ret = n->Save(theInfo, correctFileName);
+	}
 
-        if (!ret)
-        {
-            itsLogger->Warning("Saving file information to neons failed");
-           // unlink(correctFileName.c_str());
-        }
+	if (ret && fileWriteOption == kNeons)
+	{
+		std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-    }
+		// Save file information to neons
 
-    return ret;
+		ret = n->Save(theInfo, correctFileName);
+
+		if (!ret)
+		{
+			itsLogger->Warning("Saving file information to neons failed");
+		   // unlink(correctFileName.c_str());
+		}
+
+	}
+
+	if (conf->StatisticsEnabled())
+	{
+		t->Stop();
+
+		conf->Statistics()->AddToWritingTime(t->GetTime());
+	}
+
+	return ret;
 }

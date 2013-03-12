@@ -29,146 +29,146 @@ using namespace himan::plugin;
 
 precipitation::precipitation() : itsUseCuda(false)
 {
-    itsClearTextFormula = "RR = RR_cur - RR_prev";
+	itsClearTextFormula = "RR = RR_cur - RR_prev";
 
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("precipitation"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("precipitation"));
 
 }
 
 void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
-    shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-    if (c->HaveCuda())
-    {
-        string msg = "I possess the powers of CUDA";
+	if (c->HaveCuda())
+	{
+		string msg = "I possess the powers of CUDA";
 
-        if (!conf->UseCuda())
-        {
-            msg += ", but I won't use them";
-        }
-        else
-        {
-            msg += ", and I'm not afraid to use them";
-            itsUseCuda = true;
-        }
+		if (!conf->UseCuda())
+		{
+			msg += ", but I won't use them";
+		}
+		else
+		{
+			msg += ", and I'm not afraid to use them";
+			itsUseCuda = true;
+		}
 
-        itsLogger->Info(msg);
+		itsLogger->Info(msg);
 
-    }
+	}
 
-    // Get number of threads to use
+	// Get number of threads to use
 
-    unsigned short threadCount = ThreadCount(conf->ThreadCount());
+	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
-    boost::thread_group g;
+	boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
 
-    /*
-     * Get producer information from neons
-     */
+	/*
+	 * Get producer information from neons
+	 */
 
-    if (conf->FileWriteOption() == kNeons)
-    {
-        shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+	if (conf->FileWriteOption() == kNeons)
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-        map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
+		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
 
-        if (prodInfo.size())
-        {
-            producer prod(targetInfo->Producer().Id());
+		if (prodInfo.size())
+		{
+			producer prod(targetInfo->Producer().Id());
 
-            prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-            prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-            prod.Name(prodInfo["name"]);
+			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
+			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
+			prod.Name(prodInfo["name"]);
 
-            targetInfo->Producer(prod);
-        }
+			targetInfo->Producer(prod);
+		}
 
-    }
+	}
 
-    /*
-     * Set target parameter to precipitation.
-     *
-     * We need to specify grib and querydata parameter information
-     * since we don't know which one will be the output format.
-     *
-     */
+	/*
+	 * Set target parameter to precipitation.
+	 *
+	 * We need to specify grib and querydata parameter information
+	 * since we don't know which one will be the output format.
+	 *
+	 */
 
-    vector<param> params;
+	vector<param> params;
 
-    //param requestedParam ("RR-1-MM", 353);
-    param requestedParam ("RR-3-MM", 354);
-    //param requestedParam ("RR-6-MM", 355);
+	//param requestedParam ("RR-1-MM", 353);
+	param requestedParam ("RR-3-MM", 354);
+	//param requestedParam ("RR-6-MM", 355);
 
-    params.push_back(requestedParam);
+	params.push_back(requestedParam);
 
-    targetInfo->Params(params);
+	targetInfo->Params(params);
 
-    /*
-     * Create data structures.
-     */
+	/*
+	 * Create data structures.
+	 */
 
-    targetInfo->Create();
+	targetInfo->Create();
 
-    /*
-     * Initialize parent class functions for dimension handling
-     */
+	/*
+	 * Initialize parent class functions for dimension handling
+	 */
 
-    Dimension(kLevelDimension);
-    FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-    FeederInfo()->Param(requestedParam);
+	Dimension(kLevelDimension);
+	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
+	FeederInfo()->Param(requestedParam);
 
-    /*
-     * Each thread will have a copy of the target info.
-     */
+	/*
+	 * Each thread will have a copy of the target info.
+	 */
 
-    vector<shared_ptr<info> > targetInfos;
+	vector<shared_ptr<info> > targetInfos;
 
-    targetInfos.resize(threadCount);
+	targetInfos.resize(threadCount);
 
-    for (size_t i = 0; i < threadCount; i++)
-    {
+	for (size_t i = 0; i < threadCount; i++)
+	{
 
-        itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
+		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-        targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
+		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
-        boost::thread* t = new boost::thread(&precipitation::Run,
-                                             this,
-                                             targetInfos[i],
-                                             conf,
-                                             i + 1);
+		boost::thread* t = new boost::thread(&precipitation::Run,
+											 this,
+											 targetInfos[i],
+											 conf,
+											 i + 1);
 
-        g.add_thread(t);
+		g.add_thread(t);
 
-    }
+	}
 
-    g.join_all();
+	g.join_all();
 
-    if (conf->FileWriteOption() == kSingleFile)
-    {
+	if (conf->FileWriteOption() == kSingleFile)
+	{
 
-        shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-        string theOutputFile = conf->ConfigurationFile();
+		string theOutputFile = conf->ConfigurationFile();
 
-        theWriter->ToFile(targetInfo, conf->OutputFileType(), conf->FileWriteOption(), theOutputFile);
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
 
-    }
+	}
 }
 
 void precipitation::Run(shared_ptr<info> myTargetInfo,
-               shared_ptr<const configuration> conf,
-               unsigned short threadIndex)
+			   shared_ptr<const plugin_configuration> conf,
+			   unsigned short threadIndex)
 {
 
-    while (AdjustLeadingDimension(myTargetInfo))
-    {
-        Calculate(myTargetInfo, conf, threadIndex);
-    }
+	while (AdjustLeadingDimension(myTargetInfo))
+	{
+		Calculate(myTargetInfo, conf, threadIndex);
+	}
 
 }
 
@@ -179,75 +179,74 @@ void precipitation::Run(shared_ptr<info> myTargetInfo,
  */
 
 void precipitation::Calculate(shared_ptr<info> myTargetInfo,
-                     shared_ptr<const configuration> conf,
-                     unsigned short threadIndex)
+					 shared_ptr<const plugin_configuration> conf,
+					 unsigned short threadIndex)
 {
 
-    unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("precipitationThread #" + boost::lexical_cast<string> (threadIndex)));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("precipitationThread #" + boost::lexical_cast<string> (threadIndex)));
 
-    ResetNonLeadingDimension(myTargetInfo);
+	ResetNonLeadingDimension(myTargetInfo);
 
-    myTargetInfo->FirstParam();
+	myTargetInfo->FirstParam();
 
-    long paramStep;
+	long paramStep;
 
-    if (myTargetInfo->Param().Name() == "RR-1-MM")
-    {
-    	paramStep = 1;
-    }
-    else if (myTargetInfo->Param().Name() == "RR-3-MM")
-    {
-    	paramStep = 3;
-    }
-    else if (myTargetInfo->Param().Name() == "RR-6-MM")
-    {
-    	paramStep = 6;
-    }
-    else if (myTargetInfo->Param().Name() == "RR-12-MM")
-    {
-    	paramStep = 12;
-    }
-    else
-    {
-    	throw runtime_error(ClassName() + ": Unsupported parameter: " + myTargetInfo->Param().Name());
-    }
+	if (myTargetInfo->Param().Name() == "RR-1-MM")
+	{
+		paramStep = 1;
+	}
+	else if (myTargetInfo->Param().Name() == "RR-3-MM")
+	{
+		paramStep = 3;
+	}
+	else if (myTargetInfo->Param().Name() == "RR-6-MM")
+	{
+		paramStep = 6;
+	}
+	else if (myTargetInfo->Param().Name() == "RR-12-MM")
+	{
+		paramStep = 12;
+	}
+	else
+	{
+		throw runtime_error(ClassName() + ": Unsupported parameter: " + myTargetInfo->Param().Name());
+	}
 
-    shared_ptr<info> prevInfo;
+	shared_ptr<info> prevInfo;
 
-    bool dataFoundFromRRParam = true; // Assume that we have parameter RR-KGM2 present
+	bool dataFoundFromRRParam = true; // Assume that we have parameter RR-KGM2 present
 
-    while (AdjustNonLeadingDimension(myTargetInfo))
-    {
+	while (AdjustNonLeadingDimension(myTargetInfo))
+	{
 
-    	assert(myTargetInfo->Time().StepResolution() == kHour);
+		assert(myTargetInfo->Time().StepResolution() == kHour);
 
-    	/*
-    	 * We only calculate data for certain times (based on parameter time step),
-    	 * but user may have specified time steps that are between parameter time steps.
-    	 * Those timesteps need to be resized and filled with missing values.
-    	 */
+		/*
+		 * We only calculate data for certain times (based on parameter time step),
+		 * but user may have specified time steps that are between parameter time steps.
+		 * Those timesteps need to be resized and filled with missing values.
+		 */
 
-        //myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
 		myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 
-        if (myTargetInfo->Time().Step() % paramStep != 0)
-        {
-        	continue;
-        }
+		if (myTargetInfo->Time().Step() % paramStep != 0)
+		{
+			continue;
+		}
 
-        shared_ptr<info> RRInfo;
+		shared_ptr<info> RRInfo;
 
-        try
-        {
-        	if (!prevInfo || myTargetInfo->Time().Step() - prevInfo->Time().Step() != paramStep)
-        	{
+		try
+		{
+			if (!prevInfo || myTargetInfo->Time().Step() - prevInfo->Time().Step() != paramStep)
+			{
 
-        		/*
-        		 * If this is the first time this loop executed, or if the previous data is not suitable
-        		 * for calculating against current time step data, fetch source data.
-        		 */
+				/*
+				 * If this is the first time this loop executed, or if the previous data is not suitable
+				 * for calculating against current time step data, fetch source data.
+				 */
 
-        		forecast_time prevTimeStep = myTargetInfo->Time();
+				forecast_time prevTimeStep = myTargetInfo->Time();
 
 				if (prevTimeStep.Step() >= paramStep)
 				{
@@ -259,15 +258,15 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 				{
 					continue;
 				}
-        	}
+			}
 
-        	// Get data for current step
+			// Get data for current step
 
-        	RRInfo = FetchSourcePrecipitation(conf,myTargetInfo->Time(),myTargetInfo->Level(),dataFoundFromRRParam);
+			RRInfo = FetchSourcePrecipitation(conf,myTargetInfo->Time(),myTargetInfo->Level(),dataFoundFromRRParam);
 
-        }
-        catch (HPExceptionType e)
-        {
+		}
+		catch (HPExceptionType e)
+		{
 			switch (e)
 			{
 				case kFileDataNotFound:
@@ -281,92 +280,92 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 			}
 		}
 
-        myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-                                              " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+											  " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-        shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
-        shared_ptr<NFmiGrid> prevGrid(prevInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> prevGrid(prevInfo->Grid()->ToNewbaseGrid());
 
-        shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
-        int missingCount = 0;
-        int count = 0;
+		int missingCount = 0;
+		int count = 0;
 
-        bool equalGrids = (*myTargetInfo->Grid() == *RRInfo->Grid());
+		bool equalGrids = (*myTargetInfo->Grid() == *RRInfo->Grid());
 
-        if (true)
-        {
+		if (true)
+		{
 
-            assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-            myTargetInfo->ResetLocation();
+			myTargetInfo->ResetLocation();
 
-            targetGrid->Reset();
-            prevGrid->Reset();
-
-#ifdef DEBUG
-            unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-            t->Start();
-#endif
-
-            while (myTargetInfo->NextLocation() && targetGrid->Next() && prevGrid->Next())
-            {
-                count++;
-
-                double RRcur = kFloatMissing;
-                double RRprev = kFloatMissing;
-
-                InterpolateToPoint(targetGrid, RRGrid, equalGrids, RRcur);
-                InterpolateToPoint(targetGrid, prevGrid, equalGrids, RRprev);
-
-                if (RRcur == kFloatMissing || RRprev == kFloatMissing)
-                {
-                    missingCount++;
-
-                    myTargetInfo->Value(kFloatMissing);
-                    continue;
-                }
-
-                double RR = RRcur - RRprev;
-
-                if (RR < 0)
-                {
-                	RR = 0;
-                }
-
-                if (!myTargetInfo->Value(RR))
-                {
-                    throw runtime_error(ClassName() + ": Failed to set value to matrix");
-                }
-
-            }
-
-            prevInfo = RRInfo;
+			targetGrid->Reset();
+			prevGrid->Reset();
 
 #ifdef DEBUG
-            t->Stop();
-            itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on CPU");
+			unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+			t->Start();
 #endif
-        }
 
-        /*
-         * Now we are done for this level
-         *
-         * Clone info-instance to writer since it might change our descriptor places
-         */
+			while (myTargetInfo->NextLocation() && targetGrid->Next() && prevGrid->Next())
+			{
+				count++;
 
-        myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+				double RRcur = kFloatMissing;
+				double RRprev = kFloatMissing;
 
-        if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
-        {
-            shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+				InterpolateToPoint(targetGrid, RRGrid, equalGrids, RRcur);
+				InterpolateToPoint(targetGrid, prevGrid, equalGrids, RRprev);
 
-            w->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf->OutputFileType(), conf->FileWriteOption());
-        }
-    }
+				if (RRcur == kFloatMissing || RRprev == kFloatMissing)
+				{
+					missingCount++;
+
+					myTargetInfo->Value(kFloatMissing);
+					continue;
+				}
+
+				double RR = RRcur - RRprev;
+
+				if (RR < 0)
+				{
+					RR = 0;
+				}
+
+				if (!myTargetInfo->Value(RR))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
+
+			}
+
+			prevInfo = RRInfo;
+
+#ifdef DEBUG
+			t->Stop();
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on CPU");
+#endif
+		}
+
+		/*
+		 * Now we are done for this level
+		 *
+		 * Clone info-instance to writer since it might change our descriptor places
+		 */
+
+		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+
+		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+		{
+			shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+
+			w->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
+		}
+	}
 }
 
-shared_ptr<himan::info> precipitation::FetchSourcePrecipitation(shared_ptr<const configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, bool& dataFoundFromRRParam)
+shared_ptr<himan::info> precipitation::FetchSourcePrecipitation(shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, bool& dataFoundFromRRParam)
 {
 
 	try
@@ -420,9 +419,9 @@ shared_ptr<himan::info> precipitation::FetchSourcePrecipitation(shared_ptr<const
 }
 
 
-shared_ptr<himan::info> precipitation::FetchSourceRR(shared_ptr<const configuration> conf, const forecast_time& wantedTime, const level& wantedLevel)
+shared_ptr<himan::info> precipitation::FetchSourceRR(shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel)
 {
-    shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
 	try
 	{
@@ -438,13 +437,13 @@ shared_ptr<himan::info> precipitation::FetchSourceRR(shared_ptr<const configurat
 
 }
 
-shared_ptr<himan::info> precipitation::FetchSourceConvectiveAndLSRR(shared_ptr<const configuration> conf, const forecast_time& wantedTime, const level& wantedLevel)
+shared_ptr<himan::info> precipitation::FetchSourceConvectiveAndLSRR(shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel)
 {
-    shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-    shared_ptr<himan::info> ConvectiveInfo;
-    shared_ptr<himan::info> LSInfo;
-    shared_ptr<himan::info> RRInfo;
+	shared_ptr<himan::info> ConvectiveInfo;
+	shared_ptr<himan::info> LSInfo;
+	shared_ptr<himan::info> RRInfo;
 
 	try
 	{
