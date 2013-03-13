@@ -145,12 +145,19 @@ void plugin_configuration::WriteStatistics()
 		threadCountDivisor = itsInfo->SizeLevels();
 	}
 
+	if (threadCountDivisor == 0)
+	{
+		itsLogger->Warning("Unable to print statistics due to invalid value for threadcount (0) -- somebody forgot to configure their plugin?");
+		return;
+	}
+	
 	int fetchingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsFetchingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
 	int processingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsProcessingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
 
 	int writingTimePercentage = 0;
 
 	string writingThreads;
+
 	if (itsFileWriteOption == kSingleFile)
 	{
 		writingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsWritingTime)/static_cast<double> (elapsedTime));
