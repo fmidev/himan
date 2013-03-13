@@ -30,6 +30,11 @@ namespace vvms_cuda
 void DoCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex);
 }
 
+namespace windvector_cuda
+{
+void DoCuda(const float* Uin, const float* Vin, float* dataOut, size_t N, bool doVector, unsigned short deviceIndex);
+}
+
 } // namespace plugin
 } // namespace himan
 

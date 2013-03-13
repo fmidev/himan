@@ -52,6 +52,7 @@ private:
     bool itsSeaCalculation;
     bool itsIceCalculation;
     bool itsAirCalculation;
+    int itsCudaDeviceCount;
 
 };
 

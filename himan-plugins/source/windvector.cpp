@@ -27,6 +27,8 @@
 using namespace std;
 using namespace himan::plugin;
 
+#include "cuda_extern.h"
+
 const double kRadToDeg = 57.295779513082; // 180 / PI
 
 windvector::windvector()
@@ -61,6 +63,7 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 		}
 
 		itsLogger->Info(msg);
+		itsCudaDeviceCount = c->DeviceCount();
 
 	}
 
@@ -71,7 +74,7 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->StatisticsEnabled())
 	{
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedCudaCount(0);
+		conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
 	}
 
 	boost::thread_group g;
@@ -203,11 +206,11 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 }
 
-void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
+void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
-		Calculate(myTargetInfo, conf, theThreadIndex);
+		Calculate(myTargetInfo, conf, threadIndex);
 	}
 }
 
@@ -217,7 +220,7 @@ void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
  * This function does the actual calculation.
  */
 
-void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
+void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -242,7 +245,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		directionOffset = 0;
 	}
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string> (theThreadIndex)));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string> (threadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);
 
@@ -340,119 +343,192 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		bool needRotLatLonGridRotation = (UInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
 		bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
 
-		string deviceType = "CPU";
-		
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
+		string deviceType;
+
+		if (itsUseCuda && equalGrids && !needRotLatLonGridRotation && !needStereographicGridRotation && threadIndex <= itsCudaDeviceCount)
 		{
-			count++;
+			deviceType = "GPU";
 
-			double U = kFloatMissing;
-			double V = kFloatMissing;
-
-			InterpolateToPoint(targetGrid, UGrid, equalGrids, U);
-			InterpolateToPoint(targetGrid, VGrid, equalGrids, V);
-
-			if (U == kFloatMissing || V == kFloatMissing)
-			{
-				missingCount++;
-
-				myTargetInfo->ParamIndex(0);
-				myTargetInfo->Value(kFloatMissing);
-				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Value(kFloatMissing);
-
-				if (itsAirCalculation)
-				{
-					myTargetInfo->ParamIndex(2);
-					myTargetInfo->Value(kFloatMissing);
-				}
-
-				continue;
-			}
-
-			if (needRotLatLonGridRotation)
-			{
-				/*
-				 * 1. Get coordinates of current grid point in earth-relative form
-				 * 2. Get coordinates of current grid point in grid-relative form
-				 * 3. Call function UVToEarthRelative() that transforms U and V from grid-relative
-				 *    to earth-relative
-				 */
-
-				assert(UGrid->Area()->ClassId() == kNFmiRotatedLatLonArea);
-
-				const point regPoint(targetGrid->LatLon());
-
-				const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (UGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
-
-				point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->Grid()->SouthPole(), point(U,V));
-
-				// Wind speed should the same with both forms of U and V if no interpolation is done
-
-				assert(!equalGrids || fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
-
-				U = regUV.X();
-				V = regUV.Y();
-			}
-			else if (needStereographicGridRotation)
-			{
-				assert(UGrid->Area()->ClassId() == kNFmiStereographicArea);
-
-				double centralLongitude = (reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude());
-
-				point regUV = util::UVToGeographical(centralLongitude, point(U,V));
-
-				// Wind speed should the same with both forms of U and V if no interpolation is done
-
-				assert(!equalGrids || fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
-
-			}
-
-			double speed = sqrt(U*U + V*V);
-
-			double dir = 0;
-
-			if (speed > 0)
-			{
-				dir = round(kRadToDeg * atan2(U,V) + directionOffset); // Rounding dir
-
-				if (dir < 0)
-				{
-					dir += 360;
-				}
-				else if (dir > 360)
-				{
-					dir -= 360;
-				}
-			}
-
-			/*
-			 * The order of parameters in infos is and must be always:
-			 * index 0 : speed parameter
-			 * index 1 : direction parameter
-			 * index 2 : vector parameter (optional)
-			 */
-
-			myTargetInfo->ParamIndex(0);
-			myTargetInfo->Value(speed);
-
-			myTargetInfo->ParamIndex(1);
-			myTargetInfo->Value(dir);
+			size_t N = UGrid->Size();
+			float* dataOut;
 
 			if (itsAirCalculation)
 			{
+				dataOut = new float[3*N];
+			}
+			else
+			{
+				dataOut = new float[2*N];
+			}
 
-				double windVector = round(U/10) + 100 * round(V);
+			windvector_cuda::DoCuda(UGrid->DataPool()->Data(), VGrid->DataPool()->Data(), dataOut, N, itsAirCalculation, threadIndex-1);
 
-				myTargetInfo->ParamIndex(2);
+			double* FFdata = new double[N];
+			double* DDdata = new double[N];
+			double* DFdata;
+			
+			if (itsAirCalculation)
+			{
+				DFdata = new double[N];
+			}
 
-				if (!myTargetInfo->Value(windVector))
+			for (size_t i = 0; i < N; i++)
+			{
+				count++;
+				
+				FFdata[i] = static_cast<float> (dataOut[i]);
+
+				if (FFdata[i] == kFloatMissing)
 				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					missingCount++;
+					DDdata[i] = kFloatMissing;
+					continue;
+				}
+
+				DDdata[i] = static_cast<double> (dataOut[i+N]);
+
+				if (itsAirCalculation)
+				{
+					DFdata[i] = static_cast<double> (dataOut[i+2*N]);
+				}
+				
+			}
+
+			myTargetInfo->ParamIndex(0);
+			myTargetInfo->Data()->Set(FFdata, N);
+
+			myTargetInfo->ParamIndex(1);
+			myTargetInfo->Data()->Set(DDdata, N);
+
+			if (itsAirCalculation)
+			{
+				myTargetInfo->ParamIndex(2);
+				myTargetInfo->Data()->Set(DFdata, N);
+
+				delete [] DFdata;
+			}
+
+			delete [] FFdata;
+			delete [] DDdata;
+			
+			delete [] dataOut;
+		}
+		else
+		{
+			deviceType = "CPU";
+			
+			while (myTargetInfo->NextLocation() && targetGrid->Next())
+			{
+				count++;
+
+				double U = kFloatMissing;
+				double V = kFloatMissing;
+
+				InterpolateToPoint(targetGrid, UGrid, equalGrids, U);
+				InterpolateToPoint(targetGrid, VGrid, equalGrids, V);
+
+				if (U == kFloatMissing || V == kFloatMissing)
+				{
+					missingCount++;
+
+					myTargetInfo->ParamIndex(0);
+					myTargetInfo->Value(kFloatMissing);
+					myTargetInfo->ParamIndex(1);
+					myTargetInfo->Value(kFloatMissing);
+
+					if (itsAirCalculation)
+					{
+						myTargetInfo->ParamIndex(2);
+						myTargetInfo->Value(kFloatMissing);
+					}
+
+					continue;
+				}
+
+				if (needRotLatLonGridRotation)
+				{
+					/*
+					 * 1. Get coordinates of current grid point in earth-relative form
+					 * 2. Get coordinates of current grid point in grid-relative form
+					 * 3. Call function UVToEarthRelative() that transforms U and V from grid-relative
+					 *    to earth-relative
+					 */
+
+					assert(UGrid->Area()->ClassId() == kNFmiRotatedLatLonArea);
+
+					const point regPoint(targetGrid->LatLon());
+
+					const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (UGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
+
+					point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->Grid()->SouthPole(), point(U,V));
+
+					// Wind speed should the same with both forms of U and V if no interpolation is done
+
+					assert(!equalGrids || fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+
+					U = regUV.X();
+					V = regUV.Y();
+				}
+				else if (needStereographicGridRotation)
+				{
+					assert(UGrid->Area()->ClassId() == kNFmiStereographicArea);
+
+					double centralLongitude = (reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude());
+
+					point regUV = util::UVToGeographical(centralLongitude, point(U,V));
+
+					// Wind speed should the same with both forms of U and V if no interpolation is done
+
+					assert(!equalGrids || fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+
+				}
+
+				double speed = sqrt(U*U + V*V);
+
+				double dir = 0;
+
+				if (speed > 0)
+				{
+					dir = round(kRadToDeg * atan2(U,V) + directionOffset); // Rounding dir
+
+					if (dir < 0)
+					{
+						dir += 360;
+					}
+					else if (dir > 360)
+					{
+						dir -= 360;
+					}
+				}
+
+				/*
+				 * The order of parameters in infos is and must be always:
+				 * index 0 : speed parameter
+				 * index 1 : direction parameter
+				 * index 2 : vector parameter (optional)
+				 */
+
+				myTargetInfo->ParamIndex(0);
+				myTargetInfo->Value(speed);
+
+				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Value(dir);
+
+				if (itsAirCalculation)
+				{
+
+					double windVector = round(U/10) + 100 * round(V);
+
+					myTargetInfo->ParamIndex(2);
+
+					if (!myTargetInfo->Value(windVector))
+					{
+						throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					}
 				}
 			}
 		}
-
+		
 		if (conf->StatisticsEnabled())
 		{
 			processTimer->Stop();
