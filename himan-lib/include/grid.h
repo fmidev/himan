@@ -72,6 +72,13 @@ class grid
 		size_t Nj() const;
 
 		/**
+		 * 
+		 * @return  Grid size
+		 */
+		
+		size_t Size() const;
+
+		/**
 		 * @return Distance between two points in X axis in degrees
 		 */
 

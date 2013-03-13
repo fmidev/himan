@@ -115,6 +115,11 @@ std::shared_ptr<d_matrix_t> grid::Data() const
 	return itsData;
 }
 
+size_t grid::Size() const
+{
+	return itsData->Size();
+}
+
 HPScanningMode grid::ScanningMode() const
 {
 	return itsScanningMode;
@@ -606,11 +611,12 @@ bool grid::Stagger(double xStaggerFactor, double yStaggerFactor)
 				}
 			}
 		}
+
 		if (yStaggerFactor == 0)
 		{
 			for (size_t yi = 0; yi < sizeY; yi++)
 			{
-				newData->Set(sizeX-1, yi, 1, itsData->At(sizeX-1, yi));
+				newData->Set(sizeX-1, yi, ZI, 0.5 * (3 * itsData->At(sizeX-1, yi) - itsData->At(sizeX-2, yi))); // Righternmost column is extrapolated
 		
 				for (size_t xi = 0; xi < sizeX-1; xi++)
 				{
