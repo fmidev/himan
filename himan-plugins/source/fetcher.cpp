@@ -65,6 +65,12 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
         if (theInfos.size())
         {
             itsLogger->Debug("Data found from cache");
+			
+			if (config->StatisticsEnabled())
+			{
+				config->Statistics()->AddToCacheHitCount(1);
+			}
+
             break;
         }
         
@@ -82,6 +88,12 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
     		if (theInfos.size())
     		{
     			itsLogger->Debug("Data found from auxiliary file(s)");
+				
+				if (config->StatisticsEnabled())
+				{
+					config->Statistics()->AddToCacheMissCount(1);
+				}
+
     			break;
     		}
     		else
@@ -103,6 +115,11 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			if (!files.empty())
 			{
 				theInfos = FromFile(files, opts, true);
+
+				if (config->StatisticsEnabled())
+				{
+					config->Statistics()->AddToCacheMissCount(1);
+				}
 
 				break;
 			}
