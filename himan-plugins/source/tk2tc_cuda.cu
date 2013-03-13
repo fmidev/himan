@@ -17,14 +17,14 @@ namespace plugin
 namespace tk2tc_cuda
 {
 
-__global__ void kernel_tk2tc(const float* Tin, float* Tout, size_t N);
+__global__ void kernel_tk2tc(const float* __restrict__ Tin, float* __restrict__ Tout, size_t N);
 
 
 } // namespace tk2tc_cuda
 } // namespace plugin
 } // namespace himan
 
-__global__ void himan::plugin::tk2tc_cuda::kernel_tk2tc(const float* Tin, float* Tout, size_t N)
+__global__ void himan::plugin::tk2tc_cuda::kernel_tk2tc(const float* __restrict__ Tin, float* __restrict__ Tout, size_t N)
 {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;

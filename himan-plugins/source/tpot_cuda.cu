@@ -17,15 +17,15 @@ namespace plugin
 namespace tpot_cuda
 {
 
-__global__ void kernel_constant_pressure(float* Tin, float TBase, float P, float* TPout, size_t N);
-__global__ void kernel_varying_pressure(float* Tin, float TBase, float* Pin, float PScale, float* TPout, size_t N);
+__global__ void kernel_constant_pressure(float* __restrict__ Tin, float TBase, float P, float* __restrict__ TPout, size_t N);
+__global__ void kernel_varying_pressure(float* __restrict__ Tin, float TBase, float* __restrict__ Pin, float PScale, float* __restrict__ TPout, size_t N);
 
 
 } // namespace tpot
 } // namespace plugin
 } // namespace himan
 
-__global__ void himan::plugin::tpot_cuda::kernel_constant_pressure(float* Tin, float TBase, float P, float* TPout, size_t N)
+__global__ void himan::plugin::tpot_cuda::kernel_constant_pressure(float* __restrict__ Tin, float TBase, float P, float* __restrict__ TPout, size_t N)
 {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -44,7 +44,7 @@ __global__ void himan::plugin::tpot_cuda::kernel_constant_pressure(float* Tin, f
     }
 }
 
-__global__ void himan::plugin::tpot_cuda::kernel_varying_pressure(float* Tin, float TBase, float* Pin, float PScale, float* TPout, size_t N)
+__global__ void himan::plugin::tpot_cuda::kernel_varying_pressure(float* __restrict__ Tin, float TBase, float* __restrict__ Pin, float PScale, float* __restrict__ TPout, size_t N)
 {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
