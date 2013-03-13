@@ -8,6 +8,7 @@
 #include "plugin_configuration.h"
 
 using namespace himan;
+using namespace std;
 
 plugin_configuration::plugin_configuration() 
 	: itsName("")
@@ -16,7 +17,7 @@ plugin_configuration::plugin_configuration()
 {
 }
 
-plugin_configuration::plugin_configuration(std::shared_ptr<configuration> conf) 
+plugin_configuration::plugin_configuration(shared_ptr<configuration> conf) 
 	: configuration(*conf)
 	, itsName("")
 	, itsOptions()
@@ -24,47 +25,47 @@ plugin_configuration::plugin_configuration(std::shared_ptr<configuration> conf)
 {
 }
 
-plugin_configuration::plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions)
+plugin_configuration::plugin_configuration(const string& theName, const map<string,string>& theOptions)
 	: itsName(theName)
 	, itsOptions(theOptions)
 	, itsStatistics(new statistics)
 {
 }
 
-void plugin_configuration::AddOption(const std::string& key, const std::string& value)
+void plugin_configuration::AddOption(const string& key, const string& value)
 {
 	itsOptions[key] = value;
 }
 
-void plugin_configuration::Options(const std::map<std::string,std::string>& theOptions)
+void plugin_configuration::Options(const map<string,string>& theOptions)
 {
 	itsOptions = theOptions;
 }
 
-const std::map<std::string,std::string>& plugin_configuration::Options() const
+const map<string,string>& plugin_configuration::Options() const
 {
 	return itsOptions;
 }
 
-void plugin_configuration::Name(const std::string& theName)
+void plugin_configuration::Name(const string& theName)
 {
 	itsName = theName;
 }
 
-std::string plugin_configuration::Name() const
+string plugin_configuration::Name() const
 {
 	return itsName;
 }
 
-bool plugin_configuration::Exists(const std::string & key) const
+bool plugin_configuration::Exists(const string & key) const
 {
 	return !(GetValue(key).empty());
 }
 
-std::string plugin_configuration::GetValue(const std::string & key) const
+string plugin_configuration::GetValue(const string & key) const
 {
 
-	std::map<std::string,std::string>::const_iterator iter = itsOptions.find(key);
+	map<string,string>::const_iterator iter = itsOptions.find(key);
 
 	if (iter == itsOptions.end())
 	{
@@ -74,17 +75,17 @@ std::string plugin_configuration::GetValue(const std::string & key) const
 	return iter->second;
 }
 
-std::shared_ptr<info> plugin_configuration::Info() const
+shared_ptr<info> plugin_configuration::Info() const
 {
 	return itsInfo;
 }
 
-void plugin_configuration::Info(std::shared_ptr<info> theInfo) 
+void plugin_configuration::Info(shared_ptr<info> theInfo) 
 {
 	itsInfo = theInfo;
 }
 
-std::shared_ptr<statistics> plugin_configuration::Statistics() const
+shared_ptr<statistics> plugin_configuration::Statistics() const
 {
 	return itsStatistics;
 }
@@ -102,45 +103,88 @@ void plugin_configuration::StartStatistics()
 
 void plugin_configuration::WriteStatistics()
 {
-	std::cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << std::endl;
+	itsStatistics->itsTimer->Stop();
 
-	std::cout << "use cuda:\t" << itsUseCuda << std::endl;
-	std::cout << "origin time:\t" << itsInfo->OriginDateTime().String() << std::endl;
+	cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << endl;
 
-	std::cout << "geom_name\t" << itsGeomName << std::endl;
+	cout << "Use cuda:\t" << (itsUseCuda ? "true" : "false") << endl;
+	cout << "Origin time:\t" << itsInfo->OriginDateTime().String() << endl;
+
+	cout << "geom_name\t" << itsGeomName << endl;
 	
 	// Hoping we have iterators set
 
-	std::cout << "level type:\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << std::endl;
-	std::cout << "level count:\t" << itsInfo->SizeLevels() << std::endl;
+	itsInfo->First();
+
+	cout << "Level type:\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
+	cout << "Level count:\t" << itsInfo->SizeLevels() << endl;
 
 	// assuming even time step
 
-	std::cout << "time step:\t" << itsInfo->Time().Step() << std::endl;
-	std::cout << "time step unit:\t" << itsInfo->Time().StepResolution() << std::endl;
-	std::cout << "time count:\t" << itsInfo->SizeTimes() << std::endl;
+	cout << "Time step len:\t" << itsInfo->Time().Step() << endl;
+	cout << "Time step unit:\t" << HPTimeResolutionToString.at(itsInfo->Time().StepResolution()) << endl;
+	cout << "Time count:\t" << itsInfo->SizeTimes() << endl;
 
-	std::cout << "file type:\t" << itsOutputFileType << std::endl;
-	std::cout << "file_write:\t" << itsFileWriteOption << std::endl;
-	std::cout << "read_from_db:\t" << itsReadDataFromDatabase << std::endl;
-	std::cout << "leading_dim:\t" << itsLeadingDimension << std::endl;
+	cout << "Outfile type:\t" << HPFileTypeToString.at(itsOutputFileType) << endl;
+	cout << "File write:\t" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl;
+	cout << "Read from_db:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
+	cout << "Leading dim:\t" << HPDimensionTypeToString.at(itsLeadingDimension) << endl;
 
-	std::cout << "plugin:\t\t" << itsName << std::endl;
+	cout << "Plugin:\t\t" << itsName << endl;
 
-	itsStatistics->Write();
+	size_t elapsedTime = itsStatistics->itsTimer->GetTime();
+
+	size_t threadCountDivisor = itsStatistics->itsUsedThreadCount;
+
+	if (itsLeadingDimension == kTimeDimension && itsInfo->SizeTimes() < itsStatistics->itsUsedThreadCount)
+	{
+		threadCountDivisor = itsInfo->SizeTimes();
+	}
+	else if (itsLeadingDimension == kLevelDimension && itsInfo->SizeLevels() < itsStatistics->itsUsedThreadCount)
+	{
+		threadCountDivisor = itsInfo->SizeLevels();
+	}
+
+	int fetchingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsFetchingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
+	int processingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsProcessingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
+
+	int writingTimePercentage = 0;
+
+	string writingThreads;
+	if (itsFileWriteOption == kSingleFile)
+	{
+		writingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsWritingTime)/static_cast<double> (elapsedTime));
+		writingThreads = ", single thread";
+	}
+	else
+	{
+		writingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsWritingTime/threadCountDivisor)/static_cast<double> (elapsedTime));
+		writingThreads = ", average over used threads";
+	}
+
+	cout	<< "Thread count:\t" <<  itsStatistics->itsUsedThreadCount << endl
+			<< "Cuda count:\t" << itsStatistics->itsUsedCudaCount << endl
+			<< "Elapsed time:\t" <<  elapsedTime << " microseconds" << endl
+			<< "Fetching time:\t" << itsStatistics->itsFetchingTime/threadCountDivisor << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
+			<< "Process time:\t" << itsStatistics->itsProcessingTime/threadCountDivisor << " microseconds, average over used threads (" << processingTimePercentage << "%)" << endl
+			<< "Writing time:\t" << itsStatistics->itsWritingTime/threadCountDivisor << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
+			<< "Values:\t\t" << itsStatistics->itsValueCount << endl
+			<< "Missing values:\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
+			<< "PPS:\t\t" << 1000*1000*static_cast<double>(itsStatistics->itsValueCount)/static_cast<double>(elapsedTime) << endl;
+
 }
 
-std::ostream& plugin_configuration::Write(std::ostream& file) const
+ostream& plugin_configuration::Write(ostream& file) const
 {
 
 	// configuration::Write();
 	
-    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
-    file << "__itsName__ " << itsName << std::endl;
+    file << "<" << ClassName() << " " << Version() << ">" << endl;
+    file << "__itsName__ " << itsName << endl;
 
-    for(std::map<std::string, std::string>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)
+    for(map<string, string>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)
     {
-    	file << "__" << iter->first << "__ " << iter->second << std::endl;
+    	file << "__" << iter->first << "__ " << iter->second << endl;
     }
 
     return file;

@@ -59,8 +59,6 @@ public:
 
 	void UsedThreadCount(size_t theThreadCount);
 	void UsedCudaCount(size_t theCudaCount);
-
-	void Write();
 	
 private:
 	void Init();

@@ -189,12 +189,24 @@ enum HPDimensionType
     kLocationDimension
 };
 
+const boost::unordered_map<HPDimensionType,const char*> HPDimensionTypeToString = map_list_of
+        (kUnknownDimension, "unknown")
+		(kTimeDimension, "time dimension")
+		(kLevelDimension, "level dimension")
+		(kParamDimension, "param dimension")
+		(kLocationDimension, "location dimension");
+
 enum HPTimeResolution
 {
 	kUnknownTimeResolution = 0,
 	kHour,
 	kMinute
 };
+
+const boost::unordered_map<HPTimeResolution,const char*> HPTimeResolutionToString = map_list_of
+		(kUnknownTimeResolution, "unknown")
+		(kHour, "hour")
+		(kMinute, "minute");
 
 /**
  * @struct HPVersionNumber
