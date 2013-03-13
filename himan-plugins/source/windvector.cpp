@@ -68,6 +68,12 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
+	if (conf->StatisticsEnabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+		conf->Statistics()->UsedCudaCount(0);
+	}
+
 	boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
