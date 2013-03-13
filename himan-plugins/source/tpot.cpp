@@ -252,6 +252,13 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				case kFileDataNotFound:
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
+
+					if (conf->StatisticsEnabled())
+					{
+						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					}
+
 					continue;
 					break;
 
@@ -259,6 +266,13 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					throw runtime_error(ClassName() + ": Unable to proceed");
 					break;
 			}
+		}
+
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
 		}
 
 		if (TInfo->Param().Unit() == kC)
@@ -276,10 +290,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
-#ifdef DEBUG
-		unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		t->Start();
-#endif
 		string deviceType;
 
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
@@ -363,10 +373,19 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			}
 		}
 
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+
 #ifdef DEBUG
-		t->Stop();
-		itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on " + deviceType);
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
+
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
+
+		}
 
 		/*
 		 * Now we are done for this level

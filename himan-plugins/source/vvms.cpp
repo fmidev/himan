@@ -269,6 +269,13 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				case kFileDataNotFound:
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
+					
+					if (conf->StatisticsEnabled())
+					{
+						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					}
+
 					continue;
 					break;
 
@@ -278,6 +285,13 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			}
 		}
 
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
+		
 		if (TInfo->Param().Unit() == kC)
 		{
 			TBase = 273.15;
@@ -293,14 +307,6 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() &&
 							*myTargetInfo->Grid() == *VVInfo->Grid() &&
 						   (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
-
-
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
 
 		string deviceType;
 

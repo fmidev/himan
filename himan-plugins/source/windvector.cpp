@@ -275,18 +275,33 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		
 			switch (e)
 			{
-			case kFileDataNotFound:
-				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-				continue;
-				break;
+				case kFileDataNotFound:
+					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 
-			default:
-				throw runtime_error(ClassName() + ": Unable to proceed");
-				break;
-			}
+					if (conf->StatisticsEnabled())
+					{
+						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					}
+
+					continue;
+					break;
+
+				default:
+					throw runtime_error(ClassName() + ": Unable to proceed");
+					break;
+				}
 		}
 
+
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
+		
 		// if source producer is Hirlam, we must de-stagger U and V grid
 
 		/*if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
@@ -319,6 +334,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		bool needRotLatLonGridRotation = (UInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
 		bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
 
+		string deviceType = "CPU";
+		
 		while (myTargetInfo->NextLocation() && targetGrid->Next())
 		{
 			count++;
@@ -428,6 +445,20 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
 			}
+		}
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+
+#ifdef DEBUG
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
+#endif
+
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
+
 		}
 
 		/*

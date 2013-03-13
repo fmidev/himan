@@ -235,6 +235,13 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 				case kFileDataNotFound:
 					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing);
+
+					if (conf->StatisticsEnabled())
+					{
+						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					}
+					
 					continue;
 					break;
 
@@ -252,10 +259,13 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid());
 
-#ifdef DEBUG
-		unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		t->Start();
-#endif
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
+		
 		string deviceType;
 
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
@@ -324,13 +334,19 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 				}
 			}
 
-	}
+		}
 	
-#ifdef DEBUG
-		t->Stop();
-		itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on " + deviceType);
-#endif
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
+#ifdef DEBUG
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
+#endif
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
+		}
 
 		/*
 		 * Now we are done for this level
@@ -340,11 +356,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->StatisticsEnabled())
-		{
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
-		}
+
 
 		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
 		{
