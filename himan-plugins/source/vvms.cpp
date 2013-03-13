@@ -330,7 +330,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 			for (size_t i = 0; i < N; i++)
 			{
-				infoData[i] = static_cast<float> (VVout[i]);
+				infoData[i] = static_cast<double> (VVout[i]);
 
 				if (infoData[i] == kFloatMissing)
 				{
