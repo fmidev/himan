@@ -44,6 +44,16 @@ void statistics::AddToWritingTime(size_t theWritingTime)
 	itsWritingTime += theWritingTime;
 }
 
+void statistics::AddToCacheMissCount(size_t theCacheMissCount)
+{
+	itsCacheMissCount += theCacheMissCount;
+}
+
+void statistics::AddToCacheHitCount(size_t theCacheHitCount)
+{
+	itsCacheHitCount += theCacheHitCount;
+}
+
 void statistics::Init()
 {
 	itsMissingValueCount = 0;
@@ -53,6 +63,8 @@ void statistics::Init()
 	itsFetchingTime = 0;
 	itsProcessingTime = 0;
 	itsWritingTime = 0;
+	itsCacheHitCount = 0;
+	itsCacheMissCount = 0;
 }
 
 void statistics::UsedThreadCount(size_t theUsedThreadCount)

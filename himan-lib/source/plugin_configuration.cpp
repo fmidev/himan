@@ -107,31 +107,33 @@ void plugin_configuration::WriteStatistics()
 
 	cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << endl;
 
-	cout << "Use cuda:\t" << (itsUseCuda ? "true" : "false") << endl;
-	cout << "Origin time:\t" << itsInfo->OriginDateTime().String() << endl;
+	cout << "Use cuda:\t\t" << (itsUseCuda ? "true" : "false") << endl;
+	cout << "Origin time:\t\t" << itsInfo->OriginDateTime().String() << endl;
 
-	cout << "geom_name\t" << itsGeomName << endl;
+	cout << "geom_name\t\t" << itsGeomName << endl;
 	
 	// Hoping we have iterators set
 
 	itsInfo->First();
 
-	cout << "Level type:\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
-	cout << "Level count:\t" << itsInfo->SizeLevels() << endl;
+	cout << "Level type:\t\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
+	cout << "Level count:\t\t" << itsInfo->SizeLevels() << endl;
 
 	// assuming even time step
 
-	cout << "Time step len:\t" << itsInfo->Time().Step() << endl;
-	cout << "Time step unit:\t" << HPTimeResolutionToString.at(itsInfo->Time().StepResolution()) << endl;
-	cout << "Time count:\t" << itsInfo->SizeTimes() << endl;
+	cout << "Time step length:\t" << itsInfo->Time().Step() << endl;
+	cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsInfo->Time().StepResolution()) << endl;
+	cout << "Time count:\t\t" << itsInfo->SizeTimes() << endl;
 
-	cout << "Outfile type:\t" << HPFileTypeToString.at(itsOutputFileType) << endl;
-	cout << "File write:\t" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl;
-	cout << "Read from_db:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
-	cout << "Leading dim:\t" << HPDimensionTypeToString.at(itsLeadingDimension) << endl;
+	cout << "Outfile type:\t\t" << HPFileTypeToString.at(itsOutputFileType) << endl;
+	cout << "File write:\t\t" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl;
+	cout << "Read from database:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
+	cout << "Leading dimension:\t" << HPDimensionTypeToString.at(itsLeadingDimension) << endl;
 
-	cout << "Plugin:\t\t" << itsName << endl;
+	cout << "Plugin:\t\t\t" << itsName << endl;
 
+	// Statistics from class statistics
+	
 	size_t elapsedTime = itsStatistics->itsTimer->GetTime();
 
 	size_t threadCountDivisor = itsStatistics->itsUsedThreadCount;
@@ -169,15 +171,17 @@ void plugin_configuration::WriteStatistics()
 		writingThreads = ", average over used threads";
 	}
 
-	cout	<< "Thread count:\t" <<  itsStatistics->itsUsedThreadCount << endl
-			<< "Cuda count:\t" << itsStatistics->itsUsedCudaCount << endl
-			<< "Elapsed time:\t" <<  elapsedTime << " microseconds" << endl
-			<< "Fetching time:\t" << itsStatistics->itsFetchingTime/threadCountDivisor << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
-			<< "Process time:\t" << itsStatistics->itsProcessingTime/threadCountDivisor << " microseconds, average over used threads (" << processingTimePercentage << "%)" << endl
-			<< "Writing time:\t" << itsStatistics->itsWritingTime/threadCountDivisor << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
-			<< "Values:\t\t" << itsStatistics->itsValueCount << endl
-			<< "Missing values:\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
-			<< "PPS:\t\t" << 1000*1000*static_cast<double>(itsStatistics->itsValueCount)/static_cast<double>(elapsedTime) << endl;
+	cout	<< "Thread count:\t\t" <<  itsStatistics->itsUsedThreadCount << endl
+			<< "Cuda count:\t\t" << itsStatistics->itsUsedCudaCount << endl
+			<< "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
+			<< "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
+			<< "Elapsed time:\t\t" <<  elapsedTime << " microseconds" << endl
+			<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/threadCountDivisor << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
+			<< "Process time:\t\t" << itsStatistics->itsProcessingTime/threadCountDivisor << " microseconds, average over used threads (" << processingTimePercentage << "%)" << endl
+			<< "Writing time:\t\t" << itsStatistics->itsWritingTime/threadCountDivisor << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
+			<< "Values:\t\t\t" << itsStatistics->itsValueCount << endl
+			<< "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
+			<< "PPS:\t\t\t" << 1000*1000*static_cast<double>(itsStatistics->itsValueCount)/static_cast<double>(elapsedTime) << endl;
 
 }
 

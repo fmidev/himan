@@ -51,6 +51,8 @@ public:
 	void AddToFetchingTime(size_t theFetchingTime);
 	void AddToProcessingTime(size_t theProcessingTime);
 	void AddToWritingTime(size_t theWritingTime);
+	void AddToCacheMissCount(size_t theCacheMissCount);
+	void AddToCacheHitCount(size_t theCacheHitCount);
 
 	std::string Label() const;
 	void Label(const std::string& theLabel);
@@ -70,6 +72,9 @@ private:
 	std::atomic<size_t> itsFetchingTime;
 	std::atomic<size_t> itsWritingTime;
 	std::atomic<size_t> itsProcessingTime;
+	std::atomic<size_t> itsCacheMissCount;
+	std::atomic<size_t> itsCacheHitCount;
+
 	std::shared_ptr<timer> itsTimer;
 	size_t itsUsedThreadCount;
 	size_t itsUsedCudaCount;
