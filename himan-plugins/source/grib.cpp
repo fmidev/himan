@@ -341,11 +341,11 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	if (edition == 1)
 	{
-		itsGrib->Message()->ResolutionAndComponentFlags(136); // 10001000
+		itsGrib->Message()->ResolutionAndComponentFlags(128); // 10000000
 	}
 	else
 	{
-		itsGrib->Message()->ResolutionAndComponentFlags(56); // 00111000
+		itsGrib->Message()->ResolutionAndComponentFlags(48); // 00110000
 	}
 
 	itsGrib->Message()->Write(outputFile, appendToFile);
