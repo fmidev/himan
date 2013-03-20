@@ -17,84 +17,80 @@ namespace plugin
 namespace tk2tc_cuda
 {
 
-__global__ void kernel_tk2tc(const float* __restrict__ Tin, float* __restrict__ Tout, size_t N);
+__global__ void kernel_tk2tc(const float* __restrict__ dT, float* __restrict__ dTout, size_t N);
 
 
 } // namespace tk2tc_cuda
 } // namespace plugin
 } // namespace himan
 
-__global__ void himan::plugin::tk2tc_cuda::kernel_tk2tc(const float* __restrict__ Tin, float* __restrict__ Tout, size_t N)
+__global__ void himan::plugin::tk2tc_cuda::kernel_tk2tc(const float* __restrict__ dT, float* __restrict__ dTout, size_t N)
 {
 
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < N)
-    {
+	if (idx < N)
+	{
 
-        if (Tin[idx] == kFloatMissing)
-        {
-            Tout[idx] = kFloatMissing;
-        }
-        else
-        {
-            Tout[idx] = Tin[idx] - 273.15f;
-        }
-    }
+		if (dT[idx] == kFloatMissing)
+		{
+			dTout[idx] = kFloatMissing;
+		}
+		else
+		{
+			dTout[idx] = dT[idx] - 273.15f;
+		}
+	}
 }
 
 void himan::plugin::tk2tc_cuda::DoCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex)
 {
 
-    cudaSetDevice(deviceIndex); // this laptop has only one GPU
-    CheckCudaError("deviceset");
+	cudaSetDevice(deviceIndex); // this laptop has only one GPU
+	CheckCudaError("deviceset");
 
-    // Allocate host arrays and convert input data to float
+	// Allocate host arrays and convert input data to float
 
-    size_t size = N * sizeof(float);
+	size_t memSize = N * sizeof(float);
 
-    // Allocate device arrays
+	// Allocate device arrays
 
-    float* dT;
-    cudaMalloc((void **) &dT, size);
-    CheckCudaError("malloc dT");
+	float* dT;
+	cudaMalloc((void **) &dT, memSize);
+	CheckCudaError("malloc dT");
 
-    float *dTout;
+	float *dTout;
 
-    cudaMalloc((void **) &dTout, size);
-    CheckCudaError("malloc dTout");
+	cudaMalloc((void **) &dTout, memSize);
+	CheckCudaError("malloc dTout");
 
-    cudaMemcpy(dT, Tin, size, cudaMemcpyHostToDevice);
+	cudaMemcpy(dT, Tin, memSize, cudaMemcpyHostToDevice);
 
-    CheckCudaError("memcpy");
+	CheckCudaError("memcpy");
 
-    // dims
+	// dims
 
-    const int n_threads_per_block = 512;
-    int n_blocks = N/n_threads_per_block + (N%n_threads_per_block == 0?0:1);
+	const int blockSize = 512;
+	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
 
-    dim3 dimGrid(n_blocks);
-    dim3 dimBlock(n_threads_per_block);
+	dim3 gridDim(gridSize);
+	dim3 blockDim(blockSize);
 
-#ifdef DEBUG
-    std::cout << "cudaDebug::tpot_cuda blocksize: " << n_threads_per_block << " gridsize: " << n_blocks << std::endl;
-#endif
+	kernel_tk2tc <<< gridDim, blockDim >>> (dT, dTout, N);
 
-    kernel_tk2tc <<< dimGrid, dimBlock >>> (dT, dTout, N);
+	// block until the device has completed
+	cudaDeviceSynchronize();
 
-    // block until the device has completed
-    cudaThreadSynchronize();
+	// check if kernel execution generated an error
 
-    // check if kernel execution generated an error
+	CheckCudaError("kernel invocation");
 
-    CheckCudaError("kernel invocation");
+	// Retrieve result from device
+	cudaMemcpy(Tout, dTout, memSize, cudaMemcpyDeviceToHost);
 
-    // Retrieve result from device
-    cudaMemcpy(Tout, dTout, size, cudaMemcpyDeviceToHost);
+	CheckCudaError("memcpy");
 
-    CheckCudaError("memcpy");
-
-    cudaFree(dT);
-    cudaFree(dTout);
+	cudaFree(dT);
+	cudaFree(dTout);
 
 }
