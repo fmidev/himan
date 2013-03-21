@@ -14,6 +14,7 @@
 #include <math.h>
 #include "NFmiRotatedLatLonArea.h"
 #include "NFmiStereographicArea.h"
+#include "windvector_cuda_options.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -35,9 +36,11 @@ windvector::windvector()
 	: itsUseCuda(false)
 	, itsSeaCalculation(false)
 	, itsIceCalculation(false)
-	, itsAirCalculation(false)
+	, itsWindCalculation(false)
+	, itsWindGustCalculation(false)
+	, itsVectorCalculation(false)
 {
-	itsClearTextFormula = "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(U/10) + 100 * round(V)";
+	itsClearTextFormula = "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * round(speed)";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvector"));
 
@@ -114,39 +117,93 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param requestedVectorParam("DF-MS", 22);
-
-	param requestedSpeedParam("FF-MS", 21);
-	requestedSpeedParam.GribDiscipline(0);
-	requestedSpeedParam.GribCategory(2);
-	requestedSpeedParam.GribParameter(1);
+	// By default assume we'll calculate for wind
 
 	param requestedDirParam("DD-D", 20);
 	requestedDirParam.GribDiscipline(0);
 	requestedDirParam.GribCategory(2);
 	requestedDirParam.GribParameter(0);
 
+	param requestedSpeedParam("FF-MS", 21);
+	requestedSpeedParam.GribDiscipline(0);
+	requestedSpeedParam.GribCategory(2);
+	requestedSpeedParam.GribParameter(1);
+
+	param requestedVectorParam("DF-MS", 22);
+
+	if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
+	{
+		itsVectorCalculation = true;
+	}
+	
 	if (conf->Exists("for_ice") && conf->GetValue("for_ice") == "true")
 	{
 		requestedSpeedParam = param("IFF-MS", 389);
 		requestedDirParam = param("IDD-D", 390);
+
+		requestedSpeedParam.GribDiscipline(10);
+		requestedSpeedParam.GribCategory(2);
+		requestedSpeedParam.GribParameter(3);
+
+		requestedDirParam.GribDiscipline(10);
+		requestedDirParam.GribCategory(2);
+		requestedDirParam.GribParameter(2);
+
 		itsIceCalculation = true;
+
+		if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
+		{
+			itsLogger->Error("Unable to calculate vector for ice");
+		}
 	}
 	else if (conf->Exists("for_sea") && conf->GetValue("for_sea") == "true")
 	{
 		requestedSpeedParam = param("SFF-MS", 163);
 		requestedDirParam = param("SDD-D", 164);
+
+		requestedSpeedParam.GribDiscipline(10);
+		requestedSpeedParam.GribCategory(1);
+		requestedSpeedParam.GribParameter(1);
+
+		requestedDirParam.GribDiscipline(10);
+		requestedDirParam.GribCategory(1);
+		requestedDirParam.GribParameter(0);
+		
 		itsSeaCalculation = true;
+
+		if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
+		{
+			itsLogger->Error("Unable to calculate vector for sea");
+		}
+	}
+	else if (conf->Exists("for_gust") && conf->GetValue("for_gust") == "true")
+	{
+		requestedSpeedParam = param("WG-MS", 417);
+		
+		requestedSpeedParam.GribDiscipline(0);
+		requestedSpeedParam.GribCategory(2);
+		requestedSpeedParam.GribParameter(22);
+
+		itsWindGustCalculation = true;
+
+		if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
+		{
+			itsLogger->Error("Unable to calculate vector for wind gust");
+		}
 	}
 	else
 	{
-		itsAirCalculation = true;
+		itsWindCalculation = true;
 	}
 
 	theParams.push_back(requestedSpeedParam);
-	theParams.push_back(requestedDirParam);
 
-	if (itsAirCalculation)
+	if (!itsWindGustCalculation)
+	{
+		theParams.push_back(requestedDirParam);
+	}
+
+	if (itsVectorCalculation)
 	{
 		theParams.push_back(requestedVectorParam);
 	}
@@ -243,6 +300,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		UParam = param("IVELU-MS");
 		VParam = param("IVELV-MS");
 		directionOffset = 0;
+	}
+	else if (itsWindGustCalculation)
+	{
+		UParam = param("WGU-MS");
+		VParam = param("WGV-MS");
 	}
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string> (threadIndex)));
@@ -345,29 +407,53 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 		string deviceType;
 
-		if (itsUseCuda && equalGrids && !needRotLatLonGridRotation && !needStereographicGridRotation && threadIndex <= itsCudaDeviceCount)
+		if (itsUseCuda && equalGrids && !needStereographicGridRotation && threadIndex <= itsCudaDeviceCount)
 		{
 			deviceType = "GPU";
 
-			size_t N = UGrid->Size();
-			float* dataOut;
+			assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->ScanningMode() == kBottomLeft);
+			assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->Projection() == kRotatedLatLonProjection);
+			
+			windvector_cuda_options opts;
 
-			if (itsAirCalculation)
+			opts.Uin = const_cast<float*> (UGrid->DataPool()->Data());
+			opts.Vin = const_cast<float*> (VGrid->DataPool()->Data());
+
+			opts.sizeX = myTargetInfo->Grid()->Data()->SizeX();
+			opts.sizeY = myTargetInfo->Grid()->Data()->SizeY();
+
+			opts.vectorCalculation = itsVectorCalculation;
+			opts.needRotLatLonGridRotation = needRotLatLonGridRotation;
+			opts.dirCalculation = !itsWindGustCalculation; // direction not calculated for gust
+
+			if (itsVectorCalculation)
 			{
-				dataOut = new float[3*N];
+				opts.dataOut = new float[3*opts.sizeX*opts.sizeY];
 			}
 			else
 			{
-				dataOut = new float[2*N];
+				opts.dataOut = new float[2*opts.sizeX*opts.sizeY];
 			}
 
-			windvector_cuda::DoCuda(UGrid->DataPool()->Data(), VGrid->DataPool()->Data(), dataOut, N, itsAirCalculation, threadIndex-1);
+			opts.firstLatitude = myTargetInfo->Grid()->FirstGridPoint().Y();
+			opts.firstLongitude = myTargetInfo->Grid()->FirstGridPoint().X();
+			opts.southPoleLat = myTargetInfo->Grid()->SouthPole().Y();
+			opts.southPoleLon = myTargetInfo->Grid()->SouthPole().X();
+
+			opts.di = myTargetInfo->Grid()->Di();
+			opts.dj = myTargetInfo->Grid()->Dj();
+
+			opts.CudaDeviceIndex = threadIndex-1;
+
+			windvector_cuda::DoCuda(opts);
+
+			size_t N = opts.sizeX*opts.sizeY;
 
 			double* FFdata = new double[N];
 			double* DDdata = new double[N];
 			double* DFdata;
 			
-			if (itsAirCalculation)
+			if (itsVectorCalculation)
 			{
 				DFdata = new double[N];
 			}
@@ -376,22 +462,23 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			{
 				count++;
 				
-				FFdata[i] = static_cast<float> (dataOut[i]);
+				FFdata[i] = static_cast<double> (opts.dataOut[i]);
+				DDdata[i] = static_cast<double> (opts.dataOut[i+N]);
 
-				if (FFdata[i] == kFloatMissing)
+				if (FFdata[i] == kFloatMissing || DDdata[i] == kFloatMissing)
 				{
 					missingCount++;
+
+					// Make sure both are missing
+					FFdata[i] = kFloatMissing;
 					DDdata[i] = kFloatMissing;
-					continue;
 				}
 
-				DDdata[i] = static_cast<double> (dataOut[i+N]);
-
-				if (itsAirCalculation)
+				if (itsVectorCalculation)
 				{
-					DFdata[i] = static_cast<double> (dataOut[i+2*N]);
+					// No need to check missing value here, if it is missing then it is
+					DFdata[i] = static_cast<double> (opts.dataOut[i+2*N]);
 				}
-				
 			}
 
 			myTargetInfo->ParamIndex(0);
@@ -400,7 +487,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			myTargetInfo->ParamIndex(1);
 			myTargetInfo->Data()->Set(DDdata, N);
 
-			if (itsAirCalculation)
+			if (itsVectorCalculation)
 			{
 				myTargetInfo->ParamIndex(2);
 				myTargetInfo->Data()->Set(DFdata, N);
@@ -411,12 +498,12 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			delete [] FFdata;
 			delete [] DDdata;
 			
-			delete [] dataOut;
+			delete [] opts.dataOut;
 		}
 		else
 		{
 			deviceType = "CPU";
-			
+
 			while (myTargetInfo->NextLocation() && targetGrid->Next())
 			{
 				count++;
@@ -436,7 +523,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					myTargetInfo->ParamIndex(1);
 					myTargetInfo->Value(kFloatMissing);
 
-					if (itsAirCalculation)
+					if (itsVectorCalculation)
 					{
 						myTargetInfo->ParamIndex(2);
 						myTargetInfo->Value(kFloatMissing);
@@ -462,12 +549,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 					point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->Grid()->SouthPole(), point(U,V));
 
-					// Wind speed should the same with both forms of U and V if no interpolation is done
+					// Wind speed should the same with both forms of U and V
 
-					assert(!equalGrids || fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
 
 					U = regUV.X();
 					V = regUV.Y();
+
 				}
 				else if (needStereographicGridRotation)
 				{
@@ -477,9 +565,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 					point regUV = util::UVToGeographical(centralLongitude, point(U,V));
 
-					// Wind speed should the same with both forms of U and V if no interpolation is done
+					// Wind speed should the same with both forms of U and V
 
-					assert(!equalGrids || fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
 
 				}
 
@@ -487,37 +575,39 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				double dir = 0;
 
-				if (speed > 0)
+				if (!itsWindGustCalculation && speed > 0)
 				{
-					dir = round(kRadToDeg * atan2(U,V) + directionOffset); // Rounding dir
+					dir = kRadToDeg * atan2(U,V) + directionOffset;
 
-					if (dir < 0)
-					{
-						dir += 360;
-					}
-					else if (dir > 360)
-					{
-						dir -= 360;
-					}
+					// reduce the angle
+					dir = fmod(dir,360);
+					
+					// force it to be the positive remainder, so that 0 <= dir < 360
+					dir = fmod((dir + 360), 360);
+
 				}
 
 				/*
 				 * The order of parameters in infos is and must be always:
 				 * index 0 : speed parameter
-				 * index 1 : direction parameter
+				 * index 1 : direction parameter (not available for gust)
 				 * index 2 : vector parameter (optional)
 				 */
 
 				myTargetInfo->ParamIndex(0);
 				myTargetInfo->Value(speed);
 
-				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Value(dir);
-
-				if (itsAirCalculation)
+#ifndef HIL_PP_DD_COMPATIBILITY_MODE
+				if (!itsWindGustCalculation)
+				{
+					myTargetInfo->ParamIndex(1);
+					myTargetInfo->Value(round(dir));
+				}
+#endif
+				if (itsVectorCalculation)
 				{
 
-					double windVector = round(U/10) + 100 * round(V);
+					double windVector = round(dir/10) + 100 * round(speed);
 
 					myTargetInfo->ParamIndex(2);
 
@@ -525,6 +615,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					{
 						throw runtime_error(ClassName() + ": Failed to set value to matrix");
 					}
+	
+#ifdef HIL_PP_DD_COMPATIBILITY_MODE
+					dir = 10 * (static_cast<int> (round(windVector)) % 100);
+
+					myTargetInfo->ParamIndex(1);
+					myTargetInfo->Value(dir);
+#endif
 				}
 			}
 		}

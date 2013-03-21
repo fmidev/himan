@@ -51,7 +51,10 @@ private:
     bool itsUseCuda;
     bool itsSeaCalculation;
     bool itsIceCalculation;
-    bool itsAirCalculation;
+    bool itsWindCalculation;
+	bool itsWindGustCalculation;
+	bool itsVectorCalculation;
+
     int itsCudaDeviceCount;
 
 };
