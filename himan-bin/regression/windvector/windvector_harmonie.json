@@ -1,0 +1,19 @@
+{
+	"geom_name" : "AROME022",
+	"source_producer" : "199",
+	"target_producer" : "210",
+	"start_hour" : "6",
+	"stop_hour" : "6",
+	"step" : "1",
+	"step_unit" : "minute",
+	"file_write" : "multiple",
+	"origintime" : "latest",
+	"read_data_from_database" : "true",
+	"processqueue" : [
+	{
+		"leveltype" : "height",
+		"levels" : "10",
+		"plugins" : [ { "name" : "windvector", "for_gust" : true } ]
+	} 
+	]
+}
