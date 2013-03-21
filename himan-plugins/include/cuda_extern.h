@@ -8,7 +8,9 @@
  */
 
 #ifndef CUDA_EXTERN_H
-#define	CUDA_EXTERN_H
+#define CUDA_EXTERN_H
+
+#include "windvector_cuda_options.h"
 
 namespace himan
 {
@@ -32,7 +34,7 @@ void DoCuda(const float* Tin, float TBase, const float* Pin, float PScale, const
 
 namespace windvector_cuda
 {
-void DoCuda(const float* Uin, const float* Vin, float* dataOut, size_t N, bool doVector, unsigned short deviceIndex);
+void DoCuda(windvector_cuda_options& opts);
 }
 
 } // namespace plugin
