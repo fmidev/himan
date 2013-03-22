@@ -14,7 +14,7 @@ producer::producer()
     , itsProcess(kHPMissingInt)
 	, itsCentre(kHPMissingInt)
 	, itsTableVersion(kHPMissingInt)
-	, itsNeonsName("")
+	, itsNeonsName("himanDefaultProducer")
 {
 
 }
@@ -24,7 +24,7 @@ producer::producer(long theFmiProducerId)
     , itsProcess(kHPMissingInt)
     , itsCentre(kHPMissingInt)
 	, itsTableVersion(kHPMissingInt)
-	, itsNeonsName("")
+	, itsNeonsName("himanDefaultProducer")
 {
 
 }
@@ -34,7 +34,7 @@ producer::producer(long theCentre, long theProcess)
     , itsProcess(theProcess)
     , itsCentre(theCentre)
 	, itsTableVersion(kHPMissingInt)
-	, itsNeonsName("")
+	, itsNeonsName("himanDefaultProducer")
 {
 
 }
@@ -44,7 +44,7 @@ producer::producer(long theFmiProducerId, long theCentre, long theProcess, const
     , itsProcess(theProcess)
     , itsCentre(theCentre)
 	, itsTableVersion(kHPMissingInt)
-	, itsNeonsName("")
+	, itsNeonsName(theNeonsName)
 {
 
 }
