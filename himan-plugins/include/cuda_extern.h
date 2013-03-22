@@ -37,6 +37,11 @@ namespace windvector_cuda
 void DoCuda(windvector_cuda_options& opts);
 }
 
+namespace dewpoint_cuda
+{
+void DoCuda(const float* Tin, float TBase, const float* RHin, float* DPout, size_t N, unsigned short deviceIndex);
+}
+
 } // namespace plugin
 } // namespace himan
 

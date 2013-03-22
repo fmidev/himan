@@ -24,6 +24,8 @@
 #include "timer_factory.h"
 #endif
 
+#include "cuda_extern.h"
+
 using namespace std;
 using namespace himan::plugin;
 
@@ -59,12 +61,20 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 		}
 
 		itsLogger->Info(msg);
+		
+		itsCudaDeviceCount = c->DeviceCount();
 
 	}
 
 	// Get number of threads to use
 
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
+
+	if (conf->StatisticsEnabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+		conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
+	}
 
 	boost::thread_group g;
 
@@ -235,6 +245,13 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 				case kFileDataNotFound:
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
+
+					if (conf->StatisticsEnabled())
+					{
+						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					}
+
 					continue;
 					break;
 
@@ -242,6 +259,13 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 					throw runtime_error(ClassName() + ": Unable to proceed");
 					break;
 			}
+		}
+
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
 		}
 
 		assert(RHInfo->Param().Unit() == kPrcnt);
@@ -258,20 +282,48 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 		int missingCount = 0;
 		int count = 0;
 
+		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
 		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && *myTargetInfo->Grid() == *RHInfo->Grid());
 
-		if (true)
+		string deviceType;
+
+		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
 		{
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
+			deviceType = "GPU";
+
+			size_t N = TGrid->Size();
+
+			float* DPout = new float[N];
+			double* infoData = new double[N];
+
+			dewpoint_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, RHGrid->DataPool()->Data(), DPout, N, threadIndex-1);
+
+			for (size_t i = 0; i < N; i++)
+			{
+				infoData[i] = static_cast<float> (DPout[i]);
+
+				if (infoData[i] == kFloatMissing)
+				{
+					missingCount++;
+				}
+
+				count++;
+			}
+
+			myTargetInfo->Data()->Set(infoData, N);
+
+			delete [] infoData;
+			delete [] DPout;
+		}
+		else
+		{
+			deviceType = "CPU";
 
 			myTargetInfo->ResetLocation();
 
 			targetGrid->Reset();
-
-#ifdef DEBUG
-			unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-			t->Start();
-#endif
 
 			while (myTargetInfo->NextLocation() && targetGrid->Next())
 			{
@@ -299,12 +351,22 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 				}
 
 			}
-#ifdef DEBUG
-			t->Stop();
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on CPU");
-#endif
 		}
+		
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
+#ifdef DEBUG
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
+#endif
+
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
+
+		}
+		
 		/*
 		 * Now we are done for this level
 		 *
