@@ -463,29 +463,50 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				count++;
 				
 				FFdata[i] = static_cast<double> (opts.dataOut[i]);
-				DDdata[i] = static_cast<double> (opts.dataOut[i+N]);
 
-				if (FFdata[i] == kFloatMissing || DDdata[i] == kFloatMissing)
+				if (FFdata[i] == kFloatMissing)
 				{
 					missingCount++;
 
 					// Make sure both are missing
-					FFdata[i] = kFloatMissing;
-					DDdata[i] = kFloatMissing;
+
+					if (!itsWindGustCalculation)
+					{
+						FFdata[i] = kFloatMissing;
+					}
+
+					if (itsVectorCalculation)
+					{
+						DFdata[i] = kFloatMissing;
+					}
+					
+					continue;
+				}
+
+				if (!itsWindGustCalculation)
+				{
+					DDdata[i] = static_cast<double> (opts.dataOut[i+N]);
+
+					assert(DDdata[i] != kFloatMissing);
 				}
 
 				if (itsVectorCalculation)
 				{
 					// No need to check missing value here, if it is missing then it is
 					DFdata[i] = static_cast<double> (opts.dataOut[i+2*N]);
+
+					assert(DFdata[i] != kFloatMissing);
 				}
 			}
 
 			myTargetInfo->ParamIndex(0);
 			myTargetInfo->Data()->Set(FFdata, N);
 
-			myTargetInfo->ParamIndex(1);
-			myTargetInfo->Data()->Set(DDdata, N);
+			if (!itsWindGustCalculation)
+			{
+				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Data()->Set(DDdata, N);
+			}
 
 			if (itsVectorCalculation)
 			{
@@ -520,8 +541,12 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 					myTargetInfo->ParamIndex(0);
 					myTargetInfo->Value(kFloatMissing);
-					myTargetInfo->ParamIndex(1);
-					myTargetInfo->Value(kFloatMissing);
+
+					if (!itsWindGustCalculation)
+					{
+						myTargetInfo->ParamIndex(1);
+						myTargetInfo->Value(kFloatMissing);
+					}
 
 					if (itsVectorCalculation)
 					{
@@ -532,6 +557,27 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					continue;
 				}
 
+				/*
+				 * Speed can be calculated with rotated U and V components
+				 */
+				
+				double speed = sqrt(U*U + V*V);
+
+				/*
+				 * The order of parameters in infos is and must be always:
+				 * index 0 : speed parameter
+				 * index 1 : direction parameter (not available for gust)
+				 * index 2 : vector parameter (optional)
+				 */
+
+				myTargetInfo->ParamIndex(0);
+				myTargetInfo->Value(speed);
+
+				if (itsWindGustCalculation)
+				{
+					continue;
+				}
+				
 				if (needRotLatLonGridRotation)
 				{
 					/*
@@ -571,11 +617,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				}
 
-				double speed = sqrt(U*U + V*V);
-
 				double dir = 0;
 
-				if (!itsWindGustCalculation && speed > 0)
+				if (speed > 0)
 				{
 					dir = kRadToDeg * atan2(U,V) + directionOffset;
 
@@ -587,23 +631,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				}
 
-				/*
-				 * The order of parameters in infos is and must be always:
-				 * index 0 : speed parameter
-				 * index 1 : direction parameter (not available for gust)
-				 * index 2 : vector parameter (optional)
-				 */
-
-				myTargetInfo->ParamIndex(0);
-				myTargetInfo->Value(speed);
-
 #ifndef HIL_PP_DD_COMPATIBILITY_MODE
-				if (!itsWindGustCalculation)
-				{
-					myTargetInfo->ParamIndex(1);
-					myTargetInfo->Value(round(dir));
-				}
+				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Value(round(dir));
 #endif
+				
 				if (itsVectorCalculation)
 				{
 

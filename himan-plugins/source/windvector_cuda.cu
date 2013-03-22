@@ -270,7 +270,7 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 		opts.southPoleLat = -opts.southPoleLat;
 		opts.southPoleLon = 0;
 	}
-	if (opts.needRotLatLonGridRotation)
+	if (opts.needRotLatLonGridRotation || opts.dirCalculation)
 	{	
 		kernel_windvector_rotation <<< gridDim, blockDim >>> (opts, dU, dV, dDataOut);
 	}
