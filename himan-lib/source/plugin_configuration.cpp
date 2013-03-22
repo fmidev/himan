@@ -190,13 +190,15 @@ ostream& plugin_configuration::Write(ostream& file) const
 
 	// configuration::Write();
 	
-    file << "<" << ClassName() << " " << Version() << ">" << endl;
-    file << "__itsName__ " << itsName << endl;
+	file << "<" << ClassName() << " " << Version() << ">" << endl;
+	file << "__itsName__ " << itsName << endl;
 
-    for(map<string, string>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)
-    {
-    	file << "__" << iter->first << "__ " << iter->second << endl;
-    }
+	for(map<string, string>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)
+	{
+		file << "__" << iter->first << "__ " << iter->second << endl;
+	}
 
-    return file;
+	configuration::Write(file);
+
+	return file;
 }
