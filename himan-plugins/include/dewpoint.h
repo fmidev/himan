@@ -48,7 +48,7 @@ public:
 
     virtual HPVersionNumber Version() const
     {
-        return HPVersionNumber(0, 1);
+        return HPVersionNumber(1, 0);
     }
 
 private:
@@ -57,7 +57,8 @@ private:
     void Calculate(std::shared_ptr<info> myTargetInfo, const std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
 
     bool itsUseCuda;
-	
+    int itsCudaDeviceCount;
+
 };
 
 // the class factory
