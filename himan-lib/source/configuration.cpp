@@ -1,8 +1,8 @@
-/*
- * configuration.cpp
+/**
+ * @file configuration.cpp
  *
- *  Created on: Nov 26, 2012
- *      Author: partio
+ * @date Nov 26, 2012
+ * @author partio
  */
 
 #include "configuration.h"
@@ -13,84 +13,92 @@ using namespace himan;
 configuration::configuration()
 {
 
-    Init();
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
+	Init();
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
 
 }
 
 configuration::configuration(const configuration& other)
 {
 
-    itsOutputFileType = other.itsOutputFileType;
-    itsConfigurationFile = other.itsConfigurationFile;
-    itsAuxiliaryFiles = other.itsAuxiliaryFiles;
-    itsOriginTime = other.itsOriginTime;
+	itsOutputFileType = other.itsOutputFileType;
+	itsConfigurationFile = other.itsConfigurationFile;
+	itsAuxiliaryFiles = other.itsAuxiliaryFiles;
+	itsOriginTime = other.itsOriginTime;
 
-    itsFileWriteOption = other.itsFileWriteOption;
-    itsReadDataFromDatabase = other.itsReadDataFromDatabase;
+	itsFileWriteOption = other.itsFileWriteOption;
+	itsReadDataFromDatabase = other.itsReadDataFromDatabase;
 
-    itsFileWaitTimeout = other.itsFileWaitTimeout;
-    itsUseCuda = other.itsUseCuda;
+	itsFileWaitTimeout = other.itsFileWaitTimeout;
+	itsUseCuda = other.itsUseCuda;
 
-    itsLeadingDimension = other.itsLeadingDimension;
-    itsThreadCount = other.itsThreadCount;
+	itsLeadingDimension = other.itsLeadingDimension;
+	itsThreadCount = other.itsThreadCount;
 
-    itsGeomName = other.itsGeomName;
-    itsTargetProducer = other.itsTargetProducer;
-    itsSourceProducers = other.itsSourceProducers;
+	itsGeomName = other.itsGeomName;
+	itsTargetProducer = other.itsTargetProducer;
+	itsSourceProducers = other.itsSourceProducers;
 
-    itsStatisticsLabel = other.itsStatisticsLabel;
+	itsStatisticsLabel = other.itsStatisticsLabel;
 
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
 }
 
 std::ostream& configuration::Write(std::ostream& file) const
 {
 
-    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
 
    // file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
-    file << itsTargetProducer;
+	file << itsTargetProducer;
 
-    file << "__itsOutputFileType__ " << itsOutputFileType << std::endl;
-    file << "__itsFileWriteOption__ " << itsFileWriteOption << std::endl;
-    file << "__itsUseCuda__ " << itsUseCuda << std::endl;
-    file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
-    file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
+	file << "__itsOutputFileType__ " << itsOutputFileType << std::endl;
+	file << "__itsFileWriteOption__ " << itsFileWriteOption << std::endl;
+	file << "__itsUseCuda__ " << itsUseCuda << std::endl;
+	file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
+	file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
+	file << "__itsLeadingDimension__ " << itsLeadingDimension << std::endl;
 
-    file << "__itsThreadCount__ " << itsThreadCount << std::endl;
+	file << "__itsThreadCount__ " << itsThreadCount << std::endl;
 
-    file << "__itsGeomName__ " << itsGeomName << std::endl;
+	file << "__itsGeomName__ " << itsGeomName << std::endl;
 
-    file << "__itsStatisticsLabel__ " << itsStatisticsLabel << std::endl;
-    return file;
+	file << "__itsStatisticsLabel__ " << itsStatisticsLabel << std::endl;
+
+	file << "__itsConfigurationFile__ " << itsConfigurationFile << std::endl;
+	
+	for (size_t i = 0; i < itsAuxiliaryFiles.size(); i++)
+	{
+		file << "__itsAuxiliaryFiles__ " << i << " " << itsAuxiliaryFiles[i] << std::endl;
+	}
+	return file;
 }
 
 std::vector<std::string> configuration::AuxiliaryFiles() const
 {
-    return itsAuxiliaryFiles;
+	return itsAuxiliaryFiles;
 }
 
 void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryFiles)
 {
-    itsAuxiliaryFiles = theAuxiliaryFiles;
+	itsAuxiliaryFiles = theAuxiliaryFiles;
 }
 
 void configuration::Init()
 {
-    itsOutputFileType = kQueryData;
-    itsFileWriteOption = kSingleFile;
-    itsReadDataFromDatabase = true;
-    itsUseCuda = true;
-    itsFileWaitTimeout = 0;
-    itsLeadingDimension = kTimeDimension;
-    itsThreadCount = -1;
-    itsGeomName = "";
+	itsOutputFileType = kQueryData;
+	itsFileWriteOption = kSingleFile;
+	itsReadDataFromDatabase = true;
+	itsUseCuda = true;
+	itsFileWaitTimeout = 0;
+	itsLeadingDimension = kTimeDimension;
+	itsThreadCount = -1;
+	itsGeomName = "";
 }
 
 HPFileType configuration::OutputFileType() const
 {
-    return itsOutputFileType;
+	return itsOutputFileType;
 }
 
 void configuration::OutputFileType(HPFileType theOutputFileType)
@@ -100,57 +108,57 @@ void configuration::OutputFileType(HPFileType theOutputFileType)
 
 HPFileWriteOption configuration::FileWriteOption() const
 {
-    return itsFileWriteOption;
+	return itsFileWriteOption;
 }
 
 void configuration::FileWriteOption(HPFileWriteOption theFileWriteOption)
 {
-    itsFileWriteOption = theFileWriteOption;
+	itsFileWriteOption = theFileWriteOption;
 }
 
 bool configuration::ReadDataFromDatabase() const
 {
-    return itsReadDataFromDatabase;
+	return itsReadDataFromDatabase;
 }
 
 void configuration::ReadDataFromDatabase(bool theReadDataFromDatabase)
 {
-    itsReadDataFromDatabase = theReadDataFromDatabase;
+	itsReadDataFromDatabase = theReadDataFromDatabase;
 }
 
 unsigned short configuration::FileWaitTimeout() const
 {
-    return itsFileWaitTimeout;
+	return itsFileWaitTimeout;
 }
 
 void configuration::FileWaitTimeout(unsigned short theFileWaitTimeout)
 {
-    itsFileWaitTimeout = theFileWaitTimeout;
+	itsFileWaitTimeout = theFileWaitTimeout;
 }
 
 bool configuration::UseCuda() const
 {
-    return itsUseCuda;
+	return itsUseCuda;
 }
 
 void configuration::UseCuda(bool theUseCuda)
 {
-    itsUseCuda = theUseCuda;
+	itsUseCuda = theUseCuda;
 }
 
 HPDimensionType configuration::LeadingDimension() const
 {
-    return itsLeadingDimension;
+	return itsLeadingDimension;
 }
 
 short configuration::ThreadCount() const
 {
-    return itsThreadCount;
+	return itsThreadCount;
 }
 
 void configuration::ThreadCount(short theThreadCount)
 {
-    itsThreadCount = theThreadCount;
+	itsThreadCount = theThreadCount;
 }
 
 std::string configuration::ConfigurationFile() const
