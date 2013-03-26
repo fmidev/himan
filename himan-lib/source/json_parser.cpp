@@ -118,7 +118,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	/* Check whole_file_write */
 
-    try
+	try
 	{
 
 		string theFileWriteOption = pt.get<string>("file_write");
@@ -225,12 +225,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	/* Check processqueue */
 
-    std::vector<std::shared_ptr<info> > infoQueue;
+	std::vector<std::shared_ptr<info> > infoQueue;
 
-    boost::property_tree::ptree& pq = pt.get_child("processqueue");
+	boost::property_tree::ptree& pq = pt.get_child("processqueue");
 
-    BOOST_FOREACH(boost::property_tree::ptree::value_type &element, pq)
-    {
+	BOOST_FOREACH(boost::property_tree::ptree::value_type &element, pq)
+	{
 		std::shared_ptr<info> anInfo (new info(*baseInfo));
 		anInfo->Create(); // Reset data backend
 
@@ -252,49 +252,49 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			throw runtime_error(ClassName() + ": Unable to proceed");
 		}
 
-	    boost::property_tree::ptree& plugins = element.second.get_child("plugins");
+		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
 
-	    if (plugins.empty())
-	    {
-	    	throw runtime_error(ClassName() + ": plugin definitions not found");
-	    }
+		if (plugins.empty())
+		{
+			throw runtime_error(ClassName() + ": plugin definitions not found");
+		}
 
-	    BOOST_FOREACH(boost::property_tree::ptree::value_type &plugin, plugins)
-	    {
+		BOOST_FOREACH(boost::property_tree::ptree::value_type &plugin, plugins)
+		{
 			shared_ptr<plugin_configuration> pc(new plugin_configuration(conf));
 			
-		    if (plugin.second.empty())
-		    {
-		    	throw runtime_error(ClassName() + ": plugin definition is empty");
-		    }
-
-	        BOOST_FOREACH(boost::property_tree::ptree::value_type& kv, plugin.second)
+			if (plugin.second.empty())
 			{
-	        	string key = kv.first;
-	        	string value;
+				throw runtime_error(ClassName() + ": plugin definition is empty");
+			}
 
-	        	try
-	        	{
-	        		value = kv.second.get<string> ("");
-	        	}
-	        	catch (...)
-	        	{
-	        		continue;
-	        	}
+			BOOST_FOREACH(boost::property_tree::ptree::value_type& kv, plugin.second)
+			{
+				string key = kv.first;
+				string value;
 
-	        	if (key == "name")
-	        	{
-	        		pc->Name(value);
-	        	}
-	        	else
-	        	{
-	        		pc->AddOption(key, value);
-	        	}
+				try
+				{
+					value = kv.second.get<string> ("");
+				}
+				catch (...)
+				{
+					continue;
+				}
 
-	        	if (pc->Name().empty())
-	        	{
-	        		throw runtime_error(ClassName() + ": plugin name not found from configuration");
-	        	}
+				if (key == "name")
+				{
+					pc->Name(value);
+				}
+				else
+				{
+					pc->AddOption(key, value);
+				}
+
+				if (pc->Name().empty())
+				{
+					throw runtime_error(ClassName() + ": plugin name not found from configuration");
+				}
 
 			}
 
@@ -303,13 +303,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			
 		}
 
-		//anInfo->Plugins(pluginContainer);
-
-		//infoQueue.push_back(anInfo);
-
 	} // END BOOST_FOREACH
-
-    //conf->Infos(infoQueue);
 
 	return pluginContainer;
 
@@ -679,16 +673,19 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		{
 			long pid = boost::lexical_cast<long> (sourceProducersStr[i]);
 
-			producer sourceprod(pid);
+			producer prod(pid);
 
-			map<string,string> prodDef = n->NeonsDB().GetProducerDefinition(pid);
+			map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(pid);
 
-			if (!prodDef.empty())
+			if (!prodInfo.empty())
 			{
-				sourceprod.TableVersion(boost::lexical_cast<long> (prodDef["no_vers"]));
+				prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
+				prod.Name(prodInfo["model_name"]);
+				prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
+				prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
 			}
 
-			sourceProducers.push_back(sourceprod);
+			sourceProducers.push_back(prod);
 		}
 
 		conf->SourceProducers(sourceProducers);
@@ -700,17 +697,20 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 
 		long pid = boost::lexical_cast<long> (pt.get<string>("target_producer"));
 
-		map<string,string> prodDef = n->NeonsDB().GetProducerDefinition(pid);
+		map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(pid);
 
-		producer targetprod (pid);
+		producer prod (pid);
 
-		if (!prodDef.empty())
+		if (!prodInfo.empty())
 		{
-			targetprod.TableVersion(boost::lexical_cast<long> (prodDef["no_vers"]));
+                        prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
+                        prod.Name(prodInfo["model_name"]);
+                        prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
+                        prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
 		}
+		// conf->TargetProducer(prod);
 
-		anInfo->itsProducer = targetprod;
-
+		anInfo->itsProducer = prod;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{

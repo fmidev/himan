@@ -176,6 +176,11 @@ void configuration::SourceProducers(const std::vector<producer> theSourceProduce
 	itsSourceProducers = theSourceProducers;
 }
 
+void configuration::SourceProducer(const producer& theSourceProducer)
+{
+	itsSourceProducers[0] = theSourceProducer;
+}
+
 std::vector<producer> configuration::SourceProducers() const
 {
 	return itsSourceProducers;

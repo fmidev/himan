@@ -64,6 +64,7 @@ public:
 
 	std::vector<producer> SourceProducers() const;
 	void SourceProducers(std::vector<producer> theSourceProducers);
+	void SourceProducer(const producer& theSourceProducer);
 
 	producer SourceProducer() const { assert(!itsSourceProducers.empty()); return itsSourceProducers[0]; }
 
