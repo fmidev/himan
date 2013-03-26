@@ -69,7 +69,6 @@ public:
 
 	std::vector<std::string> Files(const search_options& options);
 	bool Save(std::shared_ptr<const info> resultInfo, const std::string& theFileName);
-	std::map<std::string,std::string> ProducerInfo(long fmiProducerId);
 
 	/// Gets grib parameter name based on number and code table
 	/**
@@ -111,8 +110,6 @@ private:
 	bool itsInit; //!< Holds the initialization status of the database connection
 	std::unique_ptr<NFmiNeonsDB> itsNeonsDB; //<! The actual database class instance
 
-	std::unique_ptr<std::map<unsigned long, std::map<std::string,std::string> > > itsProducerCache; //!< cache for producer queries
-																									// plugin construction does not allow stack-allocated objects !?!
 };
 
 inline void neons::Init()

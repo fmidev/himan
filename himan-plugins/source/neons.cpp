@@ -18,10 +18,9 @@ using namespace himan::plugin;
 const int MAX_WORKERS = 16;
 once_flag oflag;
 
-neons::neons() : itsInit(false), itsNeonsDB(), itsProducerCache()
+neons::neons() : itsInit(false), itsNeonsDB()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("neons"));
-	itsProducerCache = unique_ptr <map<unsigned long, map<string,string> > > (new map<unsigned long, map<string,string> >);
 	
 	// no lambda functions for gcc 4.4 :(
 	// call_once(oflag, [](){ NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS); });
@@ -56,21 +55,9 @@ vector<string> neons::Files(const search_options& options)
 	string analtime = options.time.OriginDateTime()->String("%Y%m%d%H%M%S");
 	string levelvalue = boost::lexical_cast<string> (options.level.Value());
 
-	map<string, string> producerInfo = itsNeonsDB->GetProducerDefinition(options.configuration->SourceProducer().Id());
-
-	if (producerInfo.empty())
-	{
-		itsLogger->Warning("Producer definition not found for producer " + boost::lexical_cast<string> (options.configuration->SourceProducer()));
-		return files;
-	}
-
-	string ref_prod = producerInfo["ref_prod"];
-	string proddef = producerInfo["producer_id"];
-	string no_vers = producerInfo["no_vers"];
-
-	//string param_name = itsNeonsDB->GetGridParameterName(options.param.UnivId(), kFMICodeTableVer, boost::lexical_cast<long>(no_vers));
-
-	//string level_name = itsNeonsDB->GetGridLevelName(options.param.UnivId(), options.level.Type(), kFMICodeTableVer, boost::lexical_cast<long>(no_vers));
+	string ref_prod = options.configuration->SourceProducer().Name(); //producerInfo["ref_prod"];
+//	long proddef = options.configuration->SourceProducer().Id(); // producerInfo["producer_id"];
+	long no_vers = options.configuration->SourceProducer().TableVersion(); // producerInfo["no_vers"];
 
 	string level_name = options.level.Name();
 
@@ -91,19 +78,19 @@ vector<string> neons::Files(const search_options& options)
 
 		string parm_name = options.param.Name();
 
-		if (parm_name == "T-K" && no_vers == "2")
+		if (parm_name == "T-K" && no_vers == 2)
 		{
-			 	parm_name = "T-C";
+		 	parm_name = "T-C";
 		}
 
 		string query = "SELECT parm_name, lvl_type, lvl1_lvl2, fcst_per, file_location, file_server "
-					   "FROM "+tablename+" "
-					   "WHERE dset_id = "+dset+" "
-					   "AND parm_name = upper('"+parm_name+"') "
-					   "AND lvl_type = upper('"+level_name+"') "
-					   "AND lvl1_lvl2 = " +levelvalue+" "
-					   "AND fcst_per = "+boost::lexical_cast<string> (options.time.Step())+" "
-					   "ORDER BY dset_id, fcst_per, lvl_type, lvl1_lvl2";
+				   "FROM "+tablename+" "
+				   "WHERE dset_id = "+dset+" "
+				   "AND parm_name = upper('"+parm_name+"') "
+				   "AND lvl_type = upper('"+level_name+"') "
+				   "AND lvl1_lvl2 = " +levelvalue+" "
+				   "AND fcst_per = "+boost::lexical_cast<string> (options.time.Step())+" "
+				   "ORDER BY dset_id, fcst_per, lvl_type, lvl1_lvl2";
 
 		itsNeonsDB->Query(query);
 
@@ -307,41 +294,6 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	itsLogger->Info("Saved information on file '" + theFileName + "' to neons");
 
 	return true;
-}
-
-map<string,string> neons::ProducerInfo(long fmiProducerId)
-{
-
-	if (itsProducerCache->count(fmiProducerId) > 0)
-	{
-		return (*itsProducerCache)[fmiProducerId];
-	}
-	
-	Init();
-
-	string query = "SELECT n.model_id, n.ident_id, n.model_name FROM grid_num_model_grib n "
-				   "WHERE n.model_name = (SELECT model_name from grid_model WHERE model_type = "
-				   "(SELECT ref_prod FROM fmi_producers WHERE producer_id = "
-				   + boost::lexical_cast<string> (fmiProducerId) + "))";
-
-	itsNeonsDB->Query(query);
-
-	vector<string> row = itsNeonsDB->FetchRow();
-
-	map<string,string> ret;
-
-	if (row.empty())
-	{
-		return ret;
-	}
-
-	ret["process"] = row[0];
-	ret["centre"] = row[1];
-	ret["name"] = row[2];
-
-	(*itsProducerCache)[fmiProducerId] = ret;
-	
-	return ret;
 }
 
 string neons::GribParameterName(const long fmiParameterId, const long codeTableVersion)

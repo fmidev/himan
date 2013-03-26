@@ -77,31 +77,6 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
-	 * Get producer information from neons
-	 */
-
-	shared_ptr<neons> n;
-
-	if (conf->FileWriteOption() == kNeons || conf->OutputFileType() == kGRIB1 || conf->OutputFileType() == kGRIB2)
-	{
-		n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(targetInfo->Producer().Id());
-
-		if (prodInfo.size())
-		{
-			producer prod(targetInfo->Producer().Id());
-
-			prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
-			prod.Name(prodInfo["model_name"]);
-			prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
-
-			targetInfo->Producer(prod);
-		}
-	}
-
-	/*
 	 * Set target parameter to potential temperature
 	 *
 	 * We need to specify grib and querydata parameter information
@@ -124,12 +99,9 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->OutputFileType() == kGRIB1)
 	{
-		if (!n)
-		{
-			n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-		}
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-                long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theRequestedParam.Name());
+		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theRequestedParam.Name());
 		theRequestedParam.GribIndicatorOfParameter(parm_id);
 		theRequestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
 	
@@ -169,10 +141,10 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
 		boost::thread* t = new boost::thread(&vvms::Run,
-											 this,
-											 targetInfos[i],
-											 conf,
-											 i + 1);
+							 this,
+							 targetInfos[i],
+							 conf,
+							 i + 1);
 
 		g.add_thread(t);
 
@@ -256,22 +228,22 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 		try
 		{
 			VVInfo = theFetcher->Fetch(conf,
-											  myTargetInfo->Time(),
-											  myTargetInfo->Level(),
-											  VVParam);
+						  myTargetInfo->Time(),
+						  myTargetInfo->Level(),
+						  VVParam);
 
 			TInfo = theFetcher->Fetch(conf,
-											 myTargetInfo->Time(),
-											 myTargetInfo->Level(),
-											 TParam);
+						 myTargetInfo->Time(),
+						 myTargetInfo->Level(),
+						 TParam);
 
 			if (!isPressureLevel)
 			{
 				// Source info for P
 				PInfo = theFetcher->Fetch(conf,
-										  myTargetInfo->Time(),
-										  myTargetInfo->Level(),
-										  PParam);
+							  myTargetInfo->Time(),
+							  myTargetInfo->Level(),
+							  PParam);
 
 				if (PInfo->Param().Unit() == kHPa)
 				{
