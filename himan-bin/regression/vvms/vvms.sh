@@ -23,9 +23,9 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
   mv vvms_ec1h.json.grib vvms_ec1h.json-CPU.grib
 
-  $HIMAN -d 5 -f vvms_ec1h.json -t grib source.grib
+  $HIMAN -d 5 -f vvms_ec1h.json -t grib t.grib vv.grib
 
-  grib_compare -A 0.0001 vvms_ec1h.json.grib vvms_ec1h.json-CPU.grib
+  grib_compare -b referenceValue -A 0.0001 vvms_ec1h.json.grib vvms_ec1h.json-CPU.grib
 
   if [ $? -eq 0 ];then
     echo vvms/ec success on GPU!
