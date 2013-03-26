@@ -311,6 +311,11 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 map<string,string> neons::ProducerInfo(long fmiProducerId)
 {
 
+	if (itsProducerCache.count(fmiProducerId) > 1)
+	{
+		return itsProducerCache[fmiProducerId];
+	}
+	
 	Init();
 
 	string query = "SELECT n.model_id, n.ident_id, n.model_name FROM grid_num_model_grib n "

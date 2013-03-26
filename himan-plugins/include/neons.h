@@ -38,79 +38,80 @@ class neons : public auxiliary_plugin
 {
 
 public:
-    neons();
+	neons();
 
-    inline virtual ~neons()
-    {
-    	if (itsNeonsDB)
-    	{
-    		NFmiNeonsDBPool::Instance()->Release(&(*itsNeonsDB)); // Return connection back to pool
-    		itsNeonsDB.release();
-    	}
-    }
+	inline virtual ~neons()
+	{
+		if (itsNeonsDB)
+		{
+			NFmiNeonsDBPool::Instance()->Release(&(*itsNeonsDB)); // Return connection back to pool
+			itsNeonsDB.release();
+		}
+	}
 
-    neons(const neons& other) = delete;
-    neons& operator=(const neons& other) = delete;
+	neons(const neons& other) = delete;
+	neons& operator=(const neons& other) = delete;
 
-    virtual std::string ClassName() const
-    {
-        return "himan::plugin::neons";
-    }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::neons";
+	}
 
-    virtual HPPluginClass PluginClass() const
-    {
-        return kAuxiliary;
-    }
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	}
 
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
 
-    std::vector<std::string> Files(const search_options& options);
-    bool Save(std::shared_ptr<const info> resultInfo, const std::string& theFileName);
-    std::map<std::string,std::string> ProducerInfo(long fmiProducerId);
+	std::vector<std::string> Files(const search_options& options);
+	bool Save(std::shared_ptr<const info> resultInfo, const std::string& theFileName);
+	std::map<std::string,std::string> ProducerInfo(long fmiProducerId);
 
-    /// Gets grib parameter name based on number and code table
-    /**
-     *  \par fmiParameterId - parameter number
-     *  \par codeTableVersion  - code table number
-     */
+	/// Gets grib parameter name based on number and code table
+	/**
+	 *  \par fmiParameterId - parameter number
+	 *  \par codeTableVersion  - code table number
+	 */
 
-    std::string GribParameterName(const long fmiParameterId,const long codeTableVersion);
-    std::string GribParameterName(const long fmiParameterId,const long category, const long discipline, const long producer);
+	std::string GribParameterName(const long fmiParameterId,const long codeTableVersion);
+	std::string GribParameterName(const long fmiParameterId,const long category, const long discipline, const long producer);
 
-    /**
-     * @brief Function to expose the NFmiNeonsDB interface
-     *
-     * @return Reference to the NFmiNeonsDB instance
-     */
+	/**
+	 * @brief Function to expose the NFmiNeonsDB interface
+	 *
+	 * @return Reference to the NFmiNeonsDB instance
+	 */
 
-    NFmiNeonsDB& NeonsDB();
+	NFmiNeonsDB& NeonsDB();
 
 private:
 
-    /**
-     * @brief Initialize connection pool
-     *
-     * This function will be called just once even in a threaded environment
-     * and it will set the maximum size of the connection pool.
-     */
+	/**
+	 * @brief Initialize connection pool
+	 *
+	 * This function will be called just once even in a threaded environment
+	 * and it will set the maximum size of the connection pool.
+	 */
 
-    void InitPool();
+	void InitPool();
 
-    /**
-     * @brief Connect to database
-     *
-     * We cannot connect to database directly in the constructor, but we need
-     * to use another function for that.
-     */
+	/**
+	 * @brief Connect to database
+	 *
+	 * We cannot connect to database directly in the constructor, but we need
+	 * to use another function for that.
+	 */
 
-    inline void Init();
+	inline void Init();
 
-    bool itsInit; //!< Holds the initialization status of the database connection
-    std::unique_ptr<NFmiNeonsDB> itsNeonsDB; //<! The actual database class instance
+	bool itsInit; //!< Holds the initialization status of the database connection
+	std::unique_ptr<NFmiNeonsDB> itsNeonsDB; //<! The actual database class instance
 
+	std::map<unsigned long, std::map<std::string,std::string> > itsProducerCache; //!< cache for producer queries
 };
 
 inline void neons::Init()
@@ -144,7 +145,7 @@ inline NFmiNeonsDB& neons::NeonsDB()
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<neons> (new neons());
+	return std::shared_ptr<neons> (new neons());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
