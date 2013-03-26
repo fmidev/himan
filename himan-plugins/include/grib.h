@@ -68,11 +68,11 @@ public:
 
 	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options, bool readContents = true);
 
-	bool ToFile(std::shared_ptr<info> info, const std::string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption);
+	bool ToFile(std::shared_ptr<info> anInfo, const std::string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption);
 
 private:
 
-	bool WriteGrib(std::shared_ptr<const info> info, const std::string& outputFile, HPFileType fileType, bool appendToFile = false);
+	bool WriteGrib(std::shared_ptr<const info> anInfo, const std::string& outputFile, HPFileType fileType, bool appendToFile = false);
 
 	std::shared_ptr<NFmiGrib> itsGrib;
 
