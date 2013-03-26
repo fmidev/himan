@@ -131,7 +131,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 		}
 
 		itsGrib->Message()->ParameterNumber(parm_id);
-		itsGrib->Message()->Table2Version(no_vers);
+		itsGrib->Message()->Table2Version(anInfo->Producer().TableVersion());
 	}
 	else if (edition == 2)
 	{
@@ -371,7 +371,8 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
 {
 
-	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+	shared_ptr<neons> n;
+
 	vector<shared_ptr<himan::info>> infos;
 
 	itsGrib->Open(theInputFile);
@@ -380,19 +381,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	int foundMessageNo = 0;
 
-	long fmiProducer = options.configuration->SourceProducer().Id();
-
-	map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(fmiProducer);
-
-	if (producermap.empty())
+	if (options.configuration->SourceProducer().Centre() == kHPMissingInt)
 	{
-		throw runtime_error(ClassName() + ": Process and centre information for producer " + boost::lexical_cast<string> (fmiProducer) + " not found from neons");
+		throw runtime_error(ClassName() + ": Process and centre information for producer " + boost::lexical_cast<string> (options.configuration->SourceProducer().Id()) + " not found from neons");
 	}
-
-	himan::producer sourceProducer(fmiProducer,
-			boost::lexical_cast<long> (producermap["ident_id"]),
-			boost::lexical_cast<long> (producermap["model_id"]),
-			producermap["model_name"]);
 
 	while (itsGrib->NextMessage())
 	{
@@ -410,10 +402,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		long centre = itsGrib->Message()->Centre();
 		long process = itsGrib->Message()->Process();
 
-		if (sourceProducer.Process() != process || sourceProducer.Centre() != centre)
+		if (options.configuration->SourceProducer().Process() != process || options.configuration->SourceProducer().Centre() != centre)
 		{
-			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (sourceProducer.Process()) + " vs " + boost::lexical_cast<string> (process));
-			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (sourceProducer.Centre()) + " vs " + boost::lexical_cast<string> (centre));
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer().Process()) + " vs " + boost::lexical_cast<string> (process));
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer().Centre()) + " vs " + boost::lexical_cast<string> (centre));
 			//continue;
 		}
 
@@ -425,33 +417,32 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			long no_vers = itsGrib->Message()->Table2Version();
 
-			p.Name(n->GribParameterName(number, no_vers));		   
-			p.GribParameter(number);
-			p.GribTableVersion(no_vers);
+			if (no_vers == options.configuration->SourceProducer().TableVersion() && number == options.param.GribIndicatorOfParameter())
+			{
+				p = options.param; // Parameter are identical --> this param will be accepted
+			}
+			else
+			{
+				p.GribParameter(number);
+				p.GribTableVersion(no_vers);	
+			}
+				
 		}
 		else
 		{
-
 			long category = itsGrib->Message()->ParameterCategory();
 			long discipline = itsGrib->Message()->ParameterDiscipline();
-			long producer = options.configuration->SourceProducer().Id();
-			map<std::string, std::string> producermap;
-			
-			producermap = n->NeonsDB().GetGridModelDefinition(producer);
-			
-			if (producermap.empty())
-			{
-				throw runtime_error("Unknown producer: " + boost::lexical_cast<string> (producer));
-			}
+			long process = options.configuration->SourceProducer().Process();
 
-			long process = boost::lexical_cast<long>(producermap["model_id"]);
+			n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
 			p.Name(n->GribParameterName(number, category, discipline, process));
 
 			p.GribParameter(number);
 			p.GribDiscipline(discipline);
 			p.GribCategory(category);
 
-			if (p.Name() == "T-C" && producermap["centre"] == "7")
+			if (p.Name() == "T-C" && options.configuration->SourceProducer().Centre() == 7)
 			{
 				p.Name("T-K");
 			}
