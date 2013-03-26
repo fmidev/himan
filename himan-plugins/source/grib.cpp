@@ -371,7 +371,8 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
 {
 
-	shared_ptr<neons> n;
+	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
 
 	vector<shared_ptr<himan::info>> infos;
 
@@ -417,15 +418,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			long no_vers = itsGrib->Message()->Table2Version();
 
-			if (no_vers == options.configuration->SourceProducer().TableVersion() && number == options.param.GribIndicatorOfParameter())
-			{
-				p = options.param; // Parameter are identical --> this param will be accepted
-			}
-			else
-			{
-				p.GribParameter(number);
-				p.GribTableVersion(no_vers);	
-			}
+                        p.Name(n->GribParameterName(number, no_vers));             
+                        p.GribParameter(number);
+                        p.GribTableVersion(no_vers);
 				
 		}
 		else
@@ -433,9 +428,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			long category = itsGrib->Message()->ParameterCategory();
 			long discipline = itsGrib->Message()->ParameterDiscipline();
 			long process = options.configuration->SourceProducer().Process();
-
-			n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
+		
 			p.Name(n->GribParameterName(number, category, discipline, process));
 
 			p.GribParameter(number);
