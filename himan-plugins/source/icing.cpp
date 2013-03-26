@@ -67,29 +67,6 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 	boost::thread_group g;
 
 	/*
-	 * Get producer information from neons 
-	 */
-
-	if (conf->FileWriteOption() == kNeons)
-	{
-		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
-
-		if (!prodInfo.empty())
-		{
-			producer prod(targetInfo->Producer().Id());
-
-			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-			prod.Name(prodInfo["name"]);
-
-			targetInfo->Producer(prod);
-		}
-
-	}
-
-	/*
 	 * Set target parameter to icing
 	 * - name ICEIND-N
 	 * - univ_id 480

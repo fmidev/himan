@@ -67,29 +67,6 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
-	 * Get producer information from neons
-	 */
-
-	if (conf->FileWriteOption() == kNeons)
-	{
-		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
-
-		if (prodInfo.size())
-		{
-			producer prod(targetInfo->Producer().Id());
-
-			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-			prod.Name(prodInfo["name"]);
-
-			targetInfo->Producer(prod);
-		}
-
-	}
-
-	/*
 	 * Set target parameter to precipitation.
 	 *
 	 * We need to specify grib and querydata parameter information
@@ -103,6 +80,17 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	param requestedParam ("RR-3-MM", 354);
 	//param requestedParam ("RR-6-MM", 355);
 
+	// GRIB 1
+
+	if (conf->OutputFileType() == kGRIB1)
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedParam.Name());
+		requestedParam.GribIndicatorOfParameter(parm_id);
+		requestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+
+	}
 	params.push_back(requestedParam);
 
 	targetInfo->Params(params);

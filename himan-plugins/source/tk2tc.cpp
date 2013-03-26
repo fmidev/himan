@@ -76,29 +76,6 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
-	 * Get producer information from neons
-	 */
-
-	if (conf->FileWriteOption() == kNeons)
-	{
-		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
-
-		if (prodInfo.size())
-		{
-			producer prod(targetInfo->Producer().Id());
-
-			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-			prod.Name(prodInfo["name"]);
-
-			targetInfo->Producer(prod);
-		}
-
-	}
-
-	/*
 	 * Set target parameter to potential temperature
 	 * - name T-C
 	 * - univ_id 4
@@ -111,13 +88,27 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param theRequestedParam("T-C", 4);
+	param requestedParam("T-C", 4);
 
-	theRequestedParam.GribDiscipline(0);
-	theRequestedParam.GribCategory(0);
-	theRequestedParam.GribParameter(0);
+	// GRIB 2
+	
+	requestedParam.GribDiscipline(0);
+	requestedParam.GribCategory(0);
+	requestedParam.GribParameter(0);
 
-	theParams.push_back(theRequestedParam);
+	// GRIB 1
+
+	if (conf->OutputFileType() == kGRIB1)
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedParam.Name());
+		requestedParam.GribIndicatorOfParameter(parm_id);
+		requestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+
+	}
+
+	theParams.push_back(requestedParam);
 
 	targetInfo->Params(theParams);
 
@@ -133,7 +124,7 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	Dimension(conf->LeadingDimension());
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(theRequestedParam);
+	FeederInfo()->Param(requestedParam);
 
 	/*
 	 * Each thread will have a copy of the target info.
