@@ -80,23 +80,25 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Get producer information from neons
 	 */
 
-	if (conf->FileWriteOption() == kNeons)
-	{
-		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+	shared_ptr<neons> n;
 
-		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
+	if (conf->FileWriteOption() == kNeons || conf->OutputFileType() == kGRIB1 || conf->OutputFileType() == kGRIB2)
+	{
+		n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(targetInfo->Producer().Id());
 
 		if (prodInfo.size())
 		{
 			producer prod(targetInfo->Producer().Id());
 
-			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-			prod.Name(prodInfo["name"]);
+			prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
+			prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
+			prod.Name(prodInfo["model_name"]);
+			prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
 
 			targetInfo->Producer(prod);
 		}
-
 	}
 
 	/*
@@ -112,9 +114,26 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	param theRequestedParam ("VV-MS", 143);
 
+	// GRIB 2
+
 	theRequestedParam.GribDiscipline(0);
 	theRequestedParam.GribCategory(2);
 	theRequestedParam.GribParameter(9);
+
+	// GRIB 1
+
+	if (conf->OutputFileType() == kGRIB1)
+	{
+		if (!n)
+		{
+			n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+		}
+
+                long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theRequestedParam.Name());
+		theRequestedParam.GribIndicatorOfParameter(parm_id);
+		theRequestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+	
+	}
 
 	theParams.push_back(theRequestedParam);
 

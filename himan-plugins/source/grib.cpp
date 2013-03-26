@@ -49,7 +49,7 @@ bool grib::ToFile(shared_ptr<info> info, const string& outputFile, HPFileType fi
 		info->ResetTime();
 
         while (info->NextTime())
-		{
+	{
         	info->ResetLevel();
 
 			while (info->NextLevel())
@@ -79,13 +79,15 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	itsGrib->Message()->Edition(edition);
 
-	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+	shared_ptr<neons> n; 
 
-	long no_vers = 0; // We might need this later on
+	long no_vers = info->Producer().TableVersion(); // We might need this later on
 
 	if (info->Producer().Centre() == kHPMissingInt)
 	{
-		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(info->Producer().Id()); //n->ProducerInfo(info->Producer().Id());
+		n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(info->Producer().Id());
 
 		itsGrib->Message()->Centre(boost::lexical_cast<long> (producermap["ident_id"]));
 		itsGrib->Message()->Process(boost::lexical_cast<long> (producermap["model_id"]));
@@ -106,17 +108,29 @@ bool grib::WriteGrib(shared_ptr<const info> info, const string& outputFile, HPFi
 
 	if (edition == 1)
 	{
+
+		if (!n)
+                        {
+			n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+		}
+
 		if (info->Producer().TableVersion() != kHPMissingInt)
 		{
 			no_vers = info->Producer().TableVersion();
 		}
-		else if (no_vers == 0)
+		else if (no_vers == kHPMissingInt)
 		{
-			map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(info->Producer().Id()); //n->ProducerInfo(info->Producer().Id());
+			map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(info->Producer().Id());
 			no_vers = boost::lexical_cast<long> (producermap["no_vers"]);
 		}
 
-		long parm_id = n->NeonsDB().GetGridParameterId(no_vers, info->Param().Name());
+		long parm_id = info->Param().GribIndicatorOfParameter();
+
+		if (parm_id == kHPMissingInt)
+		{
+			parm_id = n->NeonsDB().GetGridParameterId(no_vers, info->Param().Name());
+		}
+
 		itsGrib->Message()->ParameterNumber(parm_id);
 		itsGrib->Message()->Table2Version(no_vers);
 	}
@@ -370,7 +384,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	long fmiProducer = options.configuration->SourceProducer().Id();
 
-	map<string, string> producermap = n->ProducerInfo(fmiProducer);
+	map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(fmiProducer);
 
 	if (producermap.empty())
 	{
@@ -378,9 +392,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	}
 
 	himan::producer sourceProducer(fmiProducer,
-			boost::lexical_cast<long> (producermap["centre"]),
-			boost::lexical_cast<long> (producermap["process"]),
-			producermap["name"]);
+			boost::lexical_cast<long> (producermap["ident_id"]),
+			boost::lexical_cast<long> (producermap["model_id"]),
+			producermap["model_name"]);
 
 	while (itsGrib->NextMessage())
 	{
@@ -426,14 +440,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			long producer = options.configuration->SourceProducer().Id();
 			map<std::string, std::string> producermap;
 			
-			producermap = n->ProducerInfo(producer);
+			producermap = n->NeonsDB().GetGridModelDefinition(producer);
 			
 			if (producermap.empty())
 			{
 				throw runtime_error("Unknown producer: " + boost::lexical_cast<string> (producer));
 			}
 
-			long process = boost::lexical_cast<long>(producermap["process"]);
+			long process = boost::lexical_cast<long>(producermap["model_id"]);
 			p.Name(n->GribParameterName(number, category, discipline, process));
 
 			p.GribParameter(number);
