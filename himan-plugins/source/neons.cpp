@@ -18,10 +18,11 @@ using namespace himan::plugin;
 const int MAX_WORKERS = 16;
 once_flag oflag;
 
-neons::neons() : itsInit(false), itsNeonsDB()
+neons::neons() : itsInit(false), itsNeonsDB(), itsProducerCache()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("neons"));
-
+	itsProducerCache = unique_ptr <map<unsigned long, map<string,string> > > ();
+	
 	// no lambda functions for gcc 4.4 :(
 	// call_once(oflag, [](){ NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS); });
 
@@ -311,9 +312,9 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 map<string,string> neons::ProducerInfo(long fmiProducerId)
 {
 
-	if (itsProducerCache.count(fmiProducerId) > 1)
+	if (itsProducerCache->count(fmiProducerId) > 1)
 	{
-		return itsProducerCache[fmiProducerId];
+		return (*itsProducerCache)[fmiProducerId];
 	}
 	
 	Init();
@@ -338,6 +339,8 @@ map<string,string> neons::ProducerInfo(long fmiProducerId)
 	ret["centre"] = row[1];
 	ret["name"] = row[2];
 
+	(*itsProducerCache)[fmiProducerId] = ret;
+	
 	return ret;
 }
 
