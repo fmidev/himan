@@ -39,6 +39,7 @@ windvector::windvector()
 	, itsWindCalculation(false)
 	, itsWindGustCalculation(false)
 	, itsVectorCalculation(false)
+	, itsCudaDeviceCount(0)
 {
 	itsClearTextFormula = "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * round(speed)";
 
@@ -46,14 +47,14 @@ windvector::windvector()
 
 }
 
-void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
+void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 	if (c && c->HaveCuda())
 	{
-		string msg = "I possess the powers of CUDA ";
+		string msg = "I possess the powers of CUDA";
 
 		if (!conf->UseCuda())
 		{
@@ -85,29 +86,6 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
-	 * Get producer information from neons
-	 */
-
-	if (conf->FileWriteOption() == kNeons)
-	{
-		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
-
-		if (!prodInfo.empty())
-		{
-			producer prod(targetInfo->Producer().Id());
-
-			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-			prod.Name(prodInfo["name"]);
-
-			targetInfo->Producer(prod);
-		}
-
-	}
-
-	/*
 	 * Set target parameter to windvector
 	 *
 	 * We need to specify grib and querydata parameter information
@@ -117,29 +95,21 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	// By default assume we'll calculate for wind
-
-	param requestedDirParam("DD-D", 20);
-	requestedDirParam.GribDiscipline(0);
-	requestedDirParam.GribCategory(2);
-	requestedDirParam.GribParameter(0);
-
-	param requestedSpeedParam("FF-MS", 21);
-	requestedSpeedParam.GribDiscipline(0);
-	requestedSpeedParam.GribCategory(2);
-	requestedSpeedParam.GribParameter(1);
-
-	param requestedVectorParam("DF-MS", 22);
+	param requestedDirParam;
+	param requestedSpeedParam;
+	param requestedVectorParam;
 
 	if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
 	{
 		itsVectorCalculation = true;
 	}
-	
+
 	if (conf->Exists("for_ice") && conf->GetValue("for_ice") == "true")
 	{
 		requestedSpeedParam = param("IFF-MS", 389);
 		requestedDirParam = param("IDD-D", 390);
+
+		// GRIB 2
 
 		requestedSpeedParam.GribDiscipline(10);
 		requestedSpeedParam.GribCategory(2);
@@ -193,7 +163,44 @@ void windvector::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 	else
 	{
+		// By default assume we'll calculate for wind
+
+		requestedDirParam = param("DD-D", 20);
+		requestedDirParam.GribDiscipline(0);
+		requestedDirParam.GribCategory(2);
+		requestedDirParam.GribParameter(0);
+
+		requestedSpeedParam = param("FF-MS", 21);
+		requestedSpeedParam.GribDiscipline(0);
+		requestedSpeedParam.GribCategory(2);
+		requestedSpeedParam.GribParameter(1);
+
+		requestedVectorParam = param("DF-MS", 22);
 		itsWindCalculation = true;
+	}
+
+	if (conf->OutputFileType() == kGRIB1)
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedSpeedParam.Name());
+		requestedSpeedParam.GribIndicatorOfParameter(parm_id);
+		requestedSpeedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+
+		if (!itsWindGustCalculation)
+		{
+			parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedDirParam.Name());
+			requestedDirParam.GribIndicatorOfParameter(parm_id);
+			requestedDirParam.GribTableVersion(targetInfo->Producer().TableVersion());
+		}
+
+		if (itsVectorCalculation)
+		{
+			parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedVectorParam.Name());
+			requestedDirParam.GribIndicatorOfParameter(parm_id);
+			requestedDirParam.GribTableVersion(targetInfo->Producer().TableVersion());
+		}
+		
 	}
 
 	theParams.push_back(requestedSpeedParam);

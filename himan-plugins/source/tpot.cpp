@@ -46,7 +46,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (c->HaveCuda())
 	{
-		string msg = "I possess the powers of CUDA ";
+		string msg = "I possess the powers of CUDA";
 
 		if (!conf->UseCuda())
 		{
@@ -68,32 +68,15 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
+	if (conf->StatisticsEnabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+		conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
+	}
+
 	boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
-
-	/*
-	 * Get producer information from neons
-	 */
-
-	if (conf->FileWriteOption() == kNeons)
-	{
-		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
-
-		if (prodInfo.size())
-		{
-			producer prod(targetInfo->Producer().Id());
-
-			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-			prod.Name(prodInfo["name"]);
-
-			targetInfo->Producer(prod);
-		}
-
-	}
 
 	/*
 	 * Set target parameter to potential temperature
@@ -111,9 +94,23 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	param theRequestedParam ("TP-K", 8);
 
+	// GRIB 2
+	
 	theRequestedParam.GribDiscipline(0);
 	theRequestedParam.GribCategory(0);
 	theRequestedParam.GribParameter(2);
+
+	// GRIB 1
+
+	if (conf->OutputFileType() == kGRIB1)
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theRequestedParam.Name());
+		theRequestedParam.GribIndicatorOfParameter(parm_id);
+		theRequestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+
+	}
 
 	theParams.push_back(theRequestedParam);
 
@@ -313,7 +310,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 			for (size_t i = 0; i < N; i++)
 			{
-				infoData[i] = static_cast<float> (TPOut[i]);
+				infoData[i] = static_cast<double> (TPOut[i]);
 
 				if (infoData[i] == kFloatMissing)
 				{
