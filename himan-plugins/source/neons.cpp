@@ -21,7 +21,7 @@ once_flag oflag;
 neons::neons() : itsInit(false), itsNeonsDB(), itsProducerCache()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("neons"));
-	itsProducerCache = unique_ptr <map<unsigned long, map<string,string> > > ();
+	itsProducerCache = unique_ptr <map<unsigned long, map<string,string> > > (new map<unsigned long, map<string,string> >);
 	
 	// no lambda functions for gcc 4.4 :(
 	// call_once(oflag, [](){ NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS); });
@@ -312,7 +312,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 map<string,string> neons::ProducerInfo(long fmiProducerId)
 {
 
-	if (itsProducerCache->count(fmiProducerId) > 1)
+	if (itsProducerCache->count(fmiProducerId) > 0)
 	{
 		return (*itsProducerCache)[fmiProducerId];
 	}
