@@ -148,7 +148,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	}
 	else if (conf->Exists("for_gust") && conf->GetValue("for_gust") == "true")
 	{
-		requestedSpeedParam = param("WG-MS", 417);
+		requestedSpeedParam = param("FFG-MS", 417);
 		
 		requestedSpeedParam.GribDiscipline(0);
 		requestedSpeedParam.GribCategory(2);
