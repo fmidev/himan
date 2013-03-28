@@ -51,6 +51,7 @@ public:
 	void AddToFetchingTime(size_t theFetchingTime);
 	void AddToProcessingTime(size_t theProcessingTime);
 	void AddToWritingTime(size_t theWritingTime);
+	void AddToInitTime(size_t theInitTime);
 	void AddToCacheMissCount(size_t theCacheMissCount);
 	void AddToCacheHitCount(size_t theCacheHitCount);
 
@@ -74,6 +75,7 @@ private:
 	std::atomic<size_t> itsProcessingTime;
 	std::atomic<size_t> itsCacheMissCount;
 	std::atomic<size_t> itsCacheHitCount;
+	std::atomic<size_t> itsInitTime;
 
 	std::shared_ptr<timer> itsTimer;
 	size_t itsUsedThreadCount;
