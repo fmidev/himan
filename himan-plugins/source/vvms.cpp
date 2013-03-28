@@ -69,7 +69,7 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->StatisticsEnabled())
 	{
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
+		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
 	}
 
 	boost::thread_group g;
