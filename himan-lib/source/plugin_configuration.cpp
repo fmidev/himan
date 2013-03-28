@@ -130,6 +130,9 @@ void plugin_configuration::WriteStatistics()
 	cout << "Read from database:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
 	cout << "Leading dimension:\t" << HPDimensionTypeToString.at(itsLeadingDimension) << endl;
 
+	cout << "Source producer:\t" << SourceProducer().Id() << endl;
+	cout << "Target producer:\t" << itsInfo->Producer().Id() << endl;
+
 	cout << "Plugin:\t\t\t" << itsName << endl;
 
 	// Statistics from class statistics
@@ -155,6 +158,7 @@ void plugin_configuration::WriteStatistics()
 	
 	int fetchingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsFetchingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
 	int processingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsProcessingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
+	int initTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsInitTime)/static_cast<double> (elapsedTime));;
 
 	int writingTimePercentage = 0;
 
@@ -172,16 +176,17 @@ void plugin_configuration::WriteStatistics()
 	}
 
 	cout	<< "Thread count:\t\t" <<  itsStatistics->itsUsedThreadCount << endl
-			<< "Cuda count:\t\t" << itsStatistics->itsUsedCudaCount << endl
-			<< "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
-			<< "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
-			<< "Elapsed time:\t\t" <<  elapsedTime << " microseconds" << endl
-			<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/threadCountDivisor << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
-			<< "Process time:\t\t" << itsStatistics->itsProcessingTime/threadCountDivisor << " microseconds, average over used threads (" << processingTimePercentage << "%)" << endl
-			<< "Writing time:\t\t" << itsStatistics->itsWritingTime/threadCountDivisor << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
-			<< "Values:\t\t\t" << itsStatistics->itsValueCount << endl
-			<< "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
-			<< "PPS:\t\t\t" << 1000*1000*static_cast<double>(itsStatistics->itsValueCount)/static_cast<double>(elapsedTime) << endl;
+		<< "Used GPU count:\t\t" << itsStatistics->itsUsedGPUCount << endl
+		<< "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
+		<< "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
+		<< "Elapsed time:\t\t" <<  elapsedTime << " microseconds" << endl
+		<< "Plugin init time\t" << itsStatistics->itsInitTime << " microseconds, single thread (" << initTimePercentage << "%)" << endl
+		<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/threadCountDivisor << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
+		<< "Process time:\t\t" << itsStatistics->itsProcessingTime/threadCountDivisor << " microseconds, average over used threads (" << processingTimePercentage << "%)" << endl
+		<< "Writing time:\t\t" << itsStatistics->itsWritingTime/threadCountDivisor << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
+		<< "Values:\t\t\t" << itsStatistics->itsValueCount << endl
+		<< "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
+		<< "PPS:\t\t\t" << 1000*1000*static_cast<double>(itsStatistics->itsValueCount)/static_cast<double>(elapsedTime) << endl;
 
 }
 

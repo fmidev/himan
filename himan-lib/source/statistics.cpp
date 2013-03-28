@@ -64,7 +64,7 @@ void statistics::Init()
 	itsMissingValueCount = 0;
 	itsValueCount = 0;
 	itsUsedThreadCount = 0;
-	itsUsedCudaCount = 0;
+	itsUsedGPUCount = 0;
 	itsFetchingTime = 0;
 	itsProcessingTime = 0;
 	itsWritingTime = 0;
@@ -78,7 +78,7 @@ void statistics::UsedThreadCount(size_t theUsedThreadCount)
 	itsUsedThreadCount = theUsedThreadCount;
 }
 
-void statistics::UsedCudaCount(size_t theUsedCudaCount)
+void statistics::UsedGPUCount(size_t theUsedGPUCount)
 {
-	itsUsedCudaCount = theUsedCudaCount;
+	itsUsedGPUCount = theUsedGPUCount;
 }

@@ -61,7 +61,7 @@ public:
 	bool Enabled() const;
 
 	void UsedThreadCount(size_t theThreadCount);
-	void UsedCudaCount(size_t theCudaCount);
+	void UsedGPUCount(size_t theGPUCount);
 	
 private:
 	void Init();
@@ -79,7 +79,7 @@ private:
 
 	std::shared_ptr<timer> itsTimer;
 	size_t itsUsedThreadCount;
-	size_t itsUsedCudaCount;
+	size_t itsUsedGPUCount;
 	
 
 };
