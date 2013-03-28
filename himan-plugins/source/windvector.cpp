@@ -49,6 +49,13 @@ windvector::windvector()
 
 void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
@@ -78,7 +85,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	if (conf->StatisticsEnabled())
 	{
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
+		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
 	}
 
 	boost::thread_group g;
@@ -238,6 +245,14 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	vector<shared_ptr<info> > targetInfos;
 
 	targetInfos.resize(threadCount);
+
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer->Stop();
+		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+	}
+
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
