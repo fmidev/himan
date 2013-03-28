@@ -458,7 +458,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 			double* FFdata = new double[N];
 			double* DDdata = new double[N];
-			double* DFdata;
+			double* DFdata = nullptr;
 			
 			if (itsVectorCalculation)
 			{
