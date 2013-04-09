@@ -576,6 +576,15 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			itsLogger->Trace("Level does not match");
 			continue;
 		}
+        
+        std::vector<double> ab;
+
+        if (levelType == himan::kHybrid)
+        {			
+		 	long nv = itsGrib->Message()->NV();
+		 	long lev = itsGrib->Message()->LevelValue();
+			ab = itsGrib->Message()->PV(nv, lev);
+        }
 
 		// END VALIDATION OF SEARCH PARAMETERS
 
@@ -583,6 +592,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		shared_ptr<grid> newGrid (new grid());
 
 		producer prod(itsGrib->Message()->Centre(), process);
+
+		newGrid->AB(ab);
 
 		newInfo->Producer(prod);
 
