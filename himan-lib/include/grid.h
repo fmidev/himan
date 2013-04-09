@@ -31,6 +31,7 @@ class grid
 		grid(HPScanningMode theScanningMode,
 				bool theUVRelativeToGrid,
 				HPProjectionType theProjection,
+				std::vector<double> theAB,
 				point theBottomLeft,
 				point theTopRight,
 				point theSouthPole = point(),
@@ -143,6 +144,9 @@ class grid
 		HPProjectionType Projection() const;
 		void Projection(HPProjectionType theProjection);
 
+		std::vector<double> AB() const;
+		void AB(std::vector<double> theAB);
+
 		point BottomLeft() const;
 		point TopRight() const;
 
@@ -224,6 +228,7 @@ class grid
 
 		bool Stagger(double xStaggerFactor, double yStaggerFactor);
 
+
 	private:
 
 		std::shared_ptr<d_matrix_t> itsData;
@@ -233,6 +238,7 @@ class grid
 		bool itsUVRelativeToGrid; //<! If true, wind UV components are relative to grid north and east (ie. are not earth-relative)
 
 		HPProjectionType itsProjection;
+		std::vector<double> itsAB;
 
 		point itsBottomLeft;
 		point itsTopRight;

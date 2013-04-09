@@ -81,6 +81,8 @@ void info::Init()
     itsProjection = kUnknownProjection;
     itsScanningMode = kUnknownScanningMode;
 
+//    itsAB = std::vector<double>;
+
     itsBottomLeft = point(kHPMissingFloat, kHPMissingFloat);
     itsTopRight = point(kHPMissingFloat, kHPMissingFloat);
     itsSouthPole = point(kHPMissingFloat, kHPMissingFloat);
@@ -140,7 +142,7 @@ std::ostream& info::Write(std::ostream& file) const
 
 void info::Create()
 {
-
+    std::vector<double> itsAB;
     itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
     Reset();
 
@@ -155,7 +157,7 @@ void info::Create()
             while (NextParam())
                 // Create empty placeholders
             {
-            	Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
+            	Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsAB, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
             	Grid()->Data()->Resize(itsNi,itsNj);
 
             	if (itsDi != kHPMissingFloat && itsDj != kHPMissingFloat)

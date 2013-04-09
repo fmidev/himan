@@ -22,6 +22,7 @@ grid::grid() : itsData(new d_matrix_t(0,0)), itsScanningMode(kUnknownScanningMod
 grid::grid(HPScanningMode theScanningMode,
 			bool theUVRelativeToGrid,
 			HPProjectionType theProjection,
+			std::vector<double> theAB,
 			point theBottomLeft,
 			point theTopRight,
 			point theSouthPole,
@@ -30,6 +31,7 @@ grid::grid(HPScanningMode theScanningMode,
 	, itsScanningMode(theScanningMode)
 	, itsUVRelativeToGrid(theUVRelativeToGrid)
 	, itsProjection(theProjection)
+	, itsAB(theAB)
 	, itsBottomLeft(theBottomLeft)
 	, itsTopRight(theTopRight)
 	, itsSouthPole(theSouthPole)
@@ -46,6 +48,7 @@ grid::grid(const grid& other)
 	itsScanningMode = other.itsScanningMode;
 	itsUVRelativeToGrid = other.itsUVRelativeToGrid;
 	itsProjection = other.itsProjection;
+	itsAB = other.itsAB;
 	itsBottomLeft = other.itsBottomLeft;
 	itsTopRight = other.itsTopRight;
 	itsSouthPole = other.itsSouthPole;
@@ -158,6 +161,16 @@ HPProjectionType grid::Projection() const
 void grid::Projection(HPProjectionType theProjection)
 {
 	itsProjection = theProjection;
+}
+
+std::vector<double> grid::AB() const
+{
+	return itsAB;
+}
+
+void grid::AB(std::vector<double> theAB)
+{
+	itsAB = theAB;
 }
 
 point grid::BottomLeft() const
