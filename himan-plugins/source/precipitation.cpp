@@ -238,7 +238,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 				if (prevTimeStep.Step() >= paramStep)
 				{
-					prevTimeStep.ValidDateTime()->Adjust(kHour, -paramStep);
+					prevTimeStep.ValidDateTime()->Adjust(kHourResolution, -paramStep);
 
 					prevInfo = FetchSourcePrecipitation(conf,prevTimeStep,myTargetInfo->Level(),dataFoundFromRRParam);
 				}
