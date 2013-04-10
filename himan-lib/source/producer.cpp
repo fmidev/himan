@@ -1,8 +1,8 @@
-/*
- * producer.cpp
+/**
+ * @file producer.cpp
  *
- *  Created on: Dec 28, 2012
- *      Author: partio
+ * @date Dec 28, 2012
+ * @author partio
  */
 
 #include "producer.h"
@@ -10,8 +10,8 @@
 using namespace himan;
 
 producer::producer()
-    : itsFmiProducerId(kHPMissingInt)
-    , itsProcess(kHPMissingInt)
+	: itsFmiProducerId(kHPMissingInt)
+	, itsProcess(kHPMissingInt)
 	, itsCentre(kHPMissingInt)
 	, itsTableVersion(kHPMissingInt)
 	, itsNeonsName("himanDefaultProducer")
@@ -20,9 +20,9 @@ producer::producer()
 }
 
 producer::producer(long theFmiProducerId)
-    : itsFmiProducerId(theFmiProducerId)
-    , itsProcess(kHPMissingInt)
-    , itsCentre(kHPMissingInt)
+	: itsFmiProducerId(theFmiProducerId)
+	, itsProcess(kHPMissingInt)
+	, itsCentre(kHPMissingInt)
 	, itsTableVersion(kHPMissingInt)
 	, itsNeonsName("himanDefaultProducer")
 {
@@ -30,9 +30,9 @@ producer::producer(long theFmiProducerId)
 }
 
 producer::producer(long theCentre, long theProcess)
-    : itsFmiProducerId(kHPMissingInt)
-    , itsProcess(theProcess)
-    , itsCentre(theCentre)
+	: itsFmiProducerId(kHPMissingInt)
+	, itsProcess(theProcess)
+	, itsCentre(theCentre)
 	, itsTableVersion(kHPMissingInt)
 	, itsNeonsName("himanDefaultProducer")
 {
@@ -40,9 +40,9 @@ producer::producer(long theCentre, long theProcess)
 }
 
 producer::producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName)
-    : itsFmiProducerId(theFmiProducerId)
-    , itsProcess(theProcess)
-    , itsCentre(theCentre)
+	: itsFmiProducerId(theFmiProducerId)
+	, itsProcess(theProcess)
+	, itsCentre(theCentre)
 	, itsTableVersion(kHPMissingInt)
 	, itsNeonsName(theNeonsName)
 {
@@ -51,42 +51,42 @@ producer::producer(long theFmiProducerId, long theCentre, long theProcess, const
 
 void producer::Centre(long theCentre)
 {
-    itsCentre = theCentre;
+	itsCentre = theCentre;
 }
 
 long producer::Centre() const
 {
-    return itsCentre;
+	return itsCentre;
 }
 
 void producer::Process(long theProcess)
 {
-    itsProcess = theProcess;
+	itsProcess = theProcess;
 }
 
 long producer::Process() const
 {
-    return itsProcess;
+	return itsProcess;
 }
 
 void producer::Id(long theId)
 {
-    itsFmiProducerId = theId;
+	itsFmiProducerId = theId;
 }
 
 long producer::Id() const
 {
-    return itsFmiProducerId;
+	return itsFmiProducerId;
 }
 
 void producer::Name(const std::string& theName)
 {
-    itsNeonsName = theName;
+	itsNeonsName = theName;
 }
 
 std::string producer::Name() const
 {
-    return itsNeonsName;
+	return itsNeonsName;
 }
 
 long producer::TableVersion() const
@@ -102,14 +102,14 @@ void producer::TableVersion(long theTableVersion)
 std::ostream& producer::Write(std::ostream& file) const
 {
 
-    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
 
-    file << "__itsFmiProducerId__ " << itsFmiProducerId << std::endl;
-    file << "__itsProcess__ " << itsProcess << std::endl;
-    file << "__itsCentre__ " << itsCentre << std::endl;
-    file << "__itsNeonsName__ " << itsNeonsName << std::endl;
-    file << "__itsTableVersion__ " << itsTableVersion << std::endl;
+	file << "__itsFmiProducerId__ " << itsFmiProducerId << std::endl;
+	file << "__itsProcess__ " << itsProcess << std::endl;
+	file << "__itsCentre__ " << itsCentre << std::endl;
+	file << "__itsNeonsName__ " << itsNeonsName << std::endl;
+	file << "__itsTableVersion__ " << itsTableVersion << std::endl;
 
-    return file;
+	return file;
 
 }
