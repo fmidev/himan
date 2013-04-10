@@ -1,8 +1,8 @@
-/*
- * fetcher.cpp
+/**
+ * @file fetcher.cpp
  *
- *  Created on: Nov 21, 2012
- *      Author: partio
+ * @date Nov 21, 2012
+ * @author partio
  */
 
 #include "fetcher.h"
@@ -33,13 +33,14 @@ shared_ptr<cache> itsCache;
 
 fetcher::fetcher()
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
 
 shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config,
-                                       const forecast_time& requestedTime,
-                                       const level& requestedLevel,
-                                       const param& requestedParam)
+										const forecast_time& requestedTime,
+										const level& requestedLevel,
+										const param& requestedParam,
+										bool readPackedData)
 {
 
 	unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
@@ -48,59 +49,59 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		t->Start();
 	}
-	
-    const search_options opts { requestedTime, requestedParam, requestedLevel, config } ;
 
-    vector<shared_ptr<info>> theInfos;
-    unsigned int waitedSeconds = 0;
+	const search_options opts (requestedTime, requestedParam, requestedLevel, config) ;
 
-    do
-    {
-    	// 1. Fetch data from cache
+	vector<shared_ptr<info>> theInfos;
+	unsigned int waitedSeconds = 0;
+		
+	do
+	{
+		// 1. Fetch data from cache
 
-    	itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
-        
-        theInfos = FromCache(opts);
+		itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
 
-        if (theInfos.size())
-        {
-            itsLogger->Debug("Data found from cache");
+		theInfos = FromCache(opts);
+
+		if (theInfos.size())
+		{
+			itsLogger->Debug("Data found from cache");
 			
 			if (config->StatisticsEnabled())
 			{
 				config->Statistics()->AddToCacheHitCount(1);
 			}
 
-            break;
-        }
-        
-    	/*
-    	 *  2. Fetch data from auxiliary files specified at command line
-    	 *
-    	 *  Even if file_wait_timeout is specified, auxiliary files is searched
-    	 *  only once.
-    	 */
+			break;
+		}
 
-    	if (config->AuxiliaryFiles().size() && waitedSeconds == 0)
-    	{
-    		theInfos = FromFile(config->AuxiliaryFiles(), opts, true);
+		/*
+		 *  2. Fetch data from auxiliary files specified at command line
+		 *
+		 *  Even if file_wait_timeout is specified, auxiliary files is searched
+		 *  only once.
+		 */
 
-    		if (theInfos.size())
-    		{
-    			itsLogger->Debug("Data found from auxiliary file(s)");
+		if (config->AuxiliaryFiles().size() && waitedSeconds == 0)
+		{
+			theInfos = FromFile(config->AuxiliaryFiles(), opts, true, readPackedData);
+
+			if (theInfos.size())
+			{
+				itsLogger->Debug("Data found from auxiliary file(s)");
 				
 				if (config->StatisticsEnabled())
 				{
 					config->Statistics()->AddToCacheMissCount(1);
 				}
 
-    			break;
-    		}
-    		else
-    		{
-    			itsLogger->Warning("Data not found from auxiliary file(s)");
-    		}
-    	}
+				break;
+			}
+			else
+			{
+				itsLogger->Warning("Data not found from auxiliary file(s)");
+			}
+		}
 
 		// 3. Fetch data from Neons
 
@@ -123,10 +124,10 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 				break;
 			}
-	    	else
-	    	{
-	    		itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
-	    	}
+			else
+			{
+				itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
+			}
 		}
 
 		if (config->FileWaitTimeout() > 0)
@@ -142,8 +143,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		}
 
 		waitedSeconds += sleepSeconds;
-    }
-    while (waitedSeconds < config->FileWaitTimeout() * 60);
+	}
+	while (waitedSeconds < config->FileWaitTimeout() * 60);
 
 	if (config->StatisticsEnabled())
 	{
@@ -151,10 +152,10 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		config->Statistics()->AddToFetchingTime(t->GetTime());
 	}
-    /*
-     *  Safeguard; later in the code we do not check whether the data requested
-     *  was actually what was requested.
-     */
+	/*
+	 *  Safeguard; later in the code we do not check whether the data requested
+	 *  was actually what was requested.
+	 */
 
 	if (theInfos.size() == 0)
 	{
@@ -168,15 +169,15 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		throw kFileDataNotFound;
 	}
 
-    // assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
+	// assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
 
-    assert((theInfos[0]->Level()) == requestedLevel);
+	assert((theInfos[0]->Level()) == requestedLevel);
 
-    assert((theInfos[0]->Time()) == requestedTime);
+	assert((theInfos[0]->Time()) == requestedTime);
 
-    assert((theInfos[0]->Param()) == requestedParam);
+	assert((theInfos[0]->Param()) == requestedParam);
 
-    return theInfos[0];
+	return theInfos[0];
 
 }
 
@@ -188,96 +189,96 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
  * read fails).
  */
 
-vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, const search_options& options, bool readContents)
+vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, const search_options& options, bool readContents, bool readPackedData)
 {
 
-    vector<shared_ptr<himan::info>> allInfos ;
+	vector<shared_ptr<himan::info>> allInfos ;
 
-    for (size_t i = 0; i < files.size(); i++)
-    {
-        string inputFile = files[i];
+	for (size_t i = 0; i < files.size(); i++)
+	{
+		string inputFile = files[i];
 
-        if (!boost::filesystem::exists(inputFile))
-        {
-            itsLogger->Error("Input file '" + inputFile + "' does not exist");
-            continue;
-        }
+		if (!boost::filesystem::exists(inputFile))
+		{
+			itsLogger->Error("Input file '" + inputFile + "' does not exist");
+			continue;
+		}
 
-        vector<shared_ptr<himan::info>> curInfos;
+		vector<shared_ptr<himan::info>> curInfos;
 
-        switch (util::FileType(inputFile))
-        {
+		switch (util::FileType(inputFile))
+		{
 
-        case kGRIB:
-        case kGRIB1:
-        case kGRIB2:
-        {
+		case kGRIB:
+		case kGRIB1:
+		case kGRIB2:
+		{
 
-            curInfos = FromGrib(inputFile, options, readContents);
-            break;
+			curInfos = FromGrib(inputFile, options, readContents, readPackedData);
+			break;
 
-        }
+		}
 
-        case kQueryData:
-        {
+		case kQueryData:
+		{
 
-            curInfos = FromQueryData(inputFile, options, readContents);
-            break;
-        }
+			curInfos = FromQueryData(inputFile, options, readContents);
+			break;
+		}
 
-        case kNetCDF:
-            cout << "File is NetCDF" << endl;
-            break;
+		case kNetCDF:
+			cout << "File is NetCDF" << endl;
+			break;
 
-        default:
-            // Unknown file type, cannot proceed
-            throw runtime_error("Input file is neither GRID, NetCDF nor QueryData");
-            break;
-        }
+		default:
+			// Unknown file type, cannot proceed
+			throw runtime_error("Input file is neither GRID, NetCDF nor QueryData");
+			break;
+		}
 
-        allInfos.insert(allInfos.end(), curInfos.begin(), curInfos.end());
+		allInfos.insert(allInfos.end(), curInfos.begin(), curInfos.end());
 
-        if (curInfos.size())
-        {
-            break; // We found what we were looking for
-        }
+		if (curInfos.size())
+		{
+			break; // We found what we were looking for
+		}
 
-    }
+	}
 
-    return allInfos;
+	return allInfos;
 }
 
 vector<shared_ptr<himan::info> > fetcher::FromCache(const search_options& options)
 {
-    vector<shared_ptr<himan::info>> infos = itsCache->GetInfo(options);
+	vector<shared_ptr<himan::info>> infos = itsCache->GetInfo(options);
 
-    return infos;
+	return infos;
 }
 
-vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, const search_options& options, bool readContents)
+vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, const search_options& options, bool readContents, bool readPackedData)
 {
 
-    shared_ptr<grib> g = dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
+	shared_ptr<grib> g = dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
 
-    vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents);
+	vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents, readPackedData);
 
-    itsCache->Insert(infos);
+	itsCache->Insert(infos);
 
-    return infos;
+	return infos;
 }
 
 vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, const search_options& options, bool readContents)
 {
 
-    shared_ptr<querydata> q = dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+	shared_ptr<querydata> q = dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
 
-    shared_ptr<info> i = q->FromFile(inputFile, options, readContents);
+	shared_ptr<info> i = q->FromFile(inputFile, options, readContents);
 
-    vector<shared_ptr<info>> theInfos;
+	vector<shared_ptr<info>> theInfos;
 
-    theInfos.push_back(i);
+	theInfos.push_back(i);
 
-    itsCache->Insert(theInfos);
+	itsCache->Insert(theInfos);
 
-    return theInfos;
+	return theInfos;
 }

@@ -163,14 +163,16 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 		itsGrib->Message()->GridType(gridType);
 
 		itsGrib->Message()->X0(firstGridPoint.X());
-		itsGrib->Message()->Y0(firstGridPoint.Y());
 		itsGrib->Message()->X1(lastGridPoint.X());
+		itsGrib->Message()->Y0(firstGridPoint.Y());
 		itsGrib->Message()->Y1(lastGridPoint.Y());
-
+		
 		itsGrib->Message()->iDirectionIncrement(anInfo->Di());
 		itsGrib->Message()->jDirectionIncrement(anInfo->Dj());
+		
 		break;
 	}
+	
 	case kRotatedLatLonProjection:
 	{
 
@@ -220,6 +222,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 		itsGrib->Message()->YLengthInMeters(anInfo->Grid()->Dj());
 		break;
 	}
+	
 	default:
 		throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (anInfo->Grid()->Projection()));
 		break;
@@ -280,7 +283,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 
 	if (edition == 2)
 	{
-		itsGrib->Message()->TypeOfGeneratingProcess(1); // Forecast
+		itsGrib->Message()->TypeOfGeneratingProcess(2); // Forecast
 	}
 
 	// Level
@@ -368,11 +371,10 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 	return true;
 }
 
-vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool theReadContents)
+vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool readContents, bool readPackedData)
 {
 
 	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
 
 	vector<shared_ptr<himan::info>> infos;
 
@@ -418,9 +420,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			long no_vers = itsGrib->Message()->Table2Version();
 
-                        p.Name(n->GribParameterName(number, no_vers));             
-                        p.GribParameter(number);
-                        p.GribTableVersion(no_vers);
+			p.Name(n->GribParameterName(number, no_vers));
+			p.GribParameter(number);
+			p.GribTableVersion(no_vers);
 				
 		}
 		else
@@ -515,11 +517,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		long unitOfTimeRange = itsGrib->Message()->UnitOfTimeRange();
 
-		HPTimeResolution timeResolution = kHour;
+		HPTimeResolution timeResolution = kHourResolution;
 
 		if (unitOfTimeRange == 0)
 		{
-			timeResolution = kMinute;
+			timeResolution = kMinuteResolution;
 		}
 
 		t.StepResolution(timeResolution);
@@ -576,15 +578,15 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			itsLogger->Trace("Level does not match");
 			continue;
 		}
-        
-        std::vector<double> ab;
 
-        if (levelType == himan::kHybrid)
-        {			
+		std::vector<double> ab;
+
+		if (levelType == himan::kHybrid)
+		{
 		 	long nv = itsGrib->Message()->NV();
 		 	long lev = itsGrib->Message()->LevelValue();
 			ab = itsGrib->Message()->PV(nv, lev);
-        }
+		}
 
 		// END VALIDATION OF SEARCH PARAMETERS
 
@@ -682,39 +684,55 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		newInfo->Create(newGrid);
 
-		/*
-		 * Read data from grib *
-		 */
-
-		size_t len = 0;
-		double* d = 0;
-
-		if (theReadContents)
-		{
-			len = itsGrib->Message()->ValuesLength();
-
-			d = itsGrib->Message()->Values();
-		}
-
-
 		// Set descriptors
 
 		newInfo->Param(p);
 		newInfo->Time(t);
 		newInfo->Level(l);
 
-		shared_ptr<d_matrix_t> dm = shared_ptr<d_matrix_t> (new d_matrix_t(ni, nj));
+		shared_ptr<unpacked> dm = shared_ptr<unpacked> (new unpacked(ni, nj));
 
-		dm->Set(d, len);
+		/*
+		 * Read data from grib *
+		 */
+
+		size_t len = 0;
+
+		if (readPackedData)
+		{
+			len = itsGrib->Message()->UnpackedValuesLength();
+
+			unsigned char* u = itsGrib->Message()->UnpackedValues();
+
+			double bsf = itsGrib->Message()->BinaryScaleFactor();
+			double dsf = itsGrib->Message()->DecimalScaleFactor();
+			double rv = itsGrib->Message()->ReferenceValue();
+			long bpv = itsGrib->Message()->BitsPerValue();
+
+			size_t len = itsGrib->Message()->Section4Length();
+
+			auto packed = std::make_shared<simple_packed> (bpv, bsf, dsf, rv);
+
+			packed->Resize(len, 1, 1);
+			
+			packed->Set(u, len);
+
+			newInfo->Grid()->PackedData(packed);
+		}
+		else if (readContents)
+		{
+			len = itsGrib->Message()->ValuesLength();
+
+			double* d = itsGrib->Message()->Values();
+
+			dm->Set(d, len);
+
+			free(d);
+		}
 
 		newInfo->Grid()->Data(dm);
 
 		infos.push_back(newInfo);
-
-		if (d)
-		{
-			free(d);
-		}
 
 		break ; // We found what we were looking for
 	}

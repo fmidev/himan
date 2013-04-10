@@ -57,13 +57,25 @@ public:
         return HPVersionNumber(0, 1);
     }
 
-    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam);
+	/**
+	 *
+     * @param config
+     * @param requestedValidTime
+     * @param requestedLevel
+     * @param requestedParam
+	 * @param readPackedData Whether to read unpacked data (from grib only!). Caller must do unpacking.
+     * @return
+     */
+    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam, bool readPackedData = false);
 
 private:
 
     std::vector<std::shared_ptr<info>> FromCache(const search_options& options);
 
-    std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, const search_options& options, bool readContents = true);
+    std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files,
+												const search_options& options,
+												bool readContents = true,
+												bool readPackedData = false);
 
     /**
      * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
@@ -72,12 +84,13 @@ private:
      * @param inputFile Input file name
      * @param options Search options (param, level, time)
      * @param readContents Specify if data should also be read (and not only metadata)
+	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
      *
      * @return A vector of shared_ptr'd infos.
      */
 
-    std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, const search_options& options, bool readContents = true);
-
+    std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, const search_options& options, bool readContents = true, bool readPackedData = false);
+	
     /**
      * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
      * @see himan::plugin::querydata::FromFile()

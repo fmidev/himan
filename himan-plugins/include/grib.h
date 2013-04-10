@@ -62,11 +62,12 @@ public:
 	 * @param file Input file name
 	 * @param options Search options (param, level, time)
 	 * @param readContents Specify if data should also be read (and not only metadata)
+	 * @param readPackedData Whether to read packed data (from grib). Caller must do unpacking.
 	 *
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options, bool readContents = true);
+	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options, bool readContents = true, bool readPackedData = false);
 
 	bool ToFile(std::shared_ptr<info> anInfo, const std::string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption);
 
