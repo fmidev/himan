@@ -27,12 +27,17 @@ struct vvms_cuda_options
 	const unsigned char* VVInPacked;
 	double* VVOut;
 	size_t N;
+	size_t NPacked;
 	double PConst;
 	double TBase;
 	double PScale;
 	bool isConstantPressure;
 	bool isPackedData;
 	unsigned short cudaDeviceIndex;
+	long bitsPerValue;
+	double binaryScaleFactor;
+	double decimalScaleFactor;
+	double referenceValue;
 
 	vvms_cuda_options() : isConstantPressure(false), isPackedData(false) {}
 };
