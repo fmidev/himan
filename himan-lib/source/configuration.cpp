@@ -94,6 +94,7 @@ void configuration::Init()
 	itsLeadingDimension = kTimeDimension;
 	itsThreadCount = -1;
 	itsGeomName = "";
+	itsConfigurationFile = "";
 }
 
 HPFileType configuration::OutputFileType() const
