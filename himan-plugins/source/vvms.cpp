@@ -27,7 +27,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "cuda_extern.h"
+#include "vvms_cuda.h"
 
 vvms::vvms() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
@@ -202,6 +202,8 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 	myTargetInfo->FirstParam();
 
+	bool useCudaInThisThread = itsUseCuda && threadIndex <= itsCudaDeviceCount;
+	
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -224,13 +226,14 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 		shared_ptr<NFmiGrid> PGrid;
 
 		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
-
+		cout << threadIndex << " " << useCudaInThisThread << endl;
 		try
 		{
 			VVInfo = theFetcher->Fetch(conf,
 						  myTargetInfo->Time(),
 						  myTargetInfo->Level(),
-						  VVParam);
+						  VVParam,
+						  useCudaInThisThread);
 
 			TInfo = theFetcher->Fetch(conf,
 						 myTargetInfo->Time(),
@@ -288,10 +291,6 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			TBase = 273.15;
 		}
 
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> VVGrid(VVInfo->Grid()->ToNewbaseGrid());
-
 		int missingCount = 0;
 		int count = 0;
 
@@ -301,45 +300,81 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 		string deviceType;
 
-		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+		if (useCudaInThisThread && equalGrids)
 		{
 			deviceType = "GPU";
+			
+			vvms_cuda::vvms_cuda_options opts;
 
-			size_t N = TGrid->Size();
+			opts.isConstantPressure = isPressureLevel;
+			opts.TBase = TBase;
+			opts.PScale = PScale;
+			opts.cudaDeviceIndex = threadIndex-1;
 
-			float* VVout = new float[N];
-			double *infoData = new double[N];
+			opts.N = TInfo->Grid()->Size();
 
-			if (!isPressureLevel)
+			if (TInfo->Grid()->DataIsPacked())
 			{
-				vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, VVGrid->DataPool()->Data(), VVout, N, 0, threadIndex-1);
+				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+				opts.NPacked = TInfo->Grid()->PackedData()->Size();
+
+				opts.TInPacked = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData())->Values();
+				opts.VVInPacked = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData())->Values();
+				
+				if (!opts.isConstantPressure)
+				{
+					opts.PInPacked = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData())->Values();
+				}
+				
+				opts.isPackedData = true;
 			}
 			else
 			{
-				vvms_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, VVGrid->DataPool()->Data(), VVout, N, 100 * myTargetInfo->Level().Value(), threadIndex-1);
-			}
+				opts.TIn = TInfo->Grid()->Data()->Values();
+				opts.VVIn = VVInfo->Grid()->Data()->Values();
 
-			for (size_t i = 0; i < N; i++)
-			{
-				infoData[i] = static_cast<double> (VVout[i]);
-
-				if (infoData[i] == kFloatMissing)
+				if (!opts.isConstantPressure)
 				{
-					missingCount++;
+					opts.PIn = PInfo->Grid()->Data()->Values();
 				}
 
-				count++;
+				opts.isPackedData = false;
+
 			}
 
-			myTargetInfo->Data()->Set(infoData, N);
+			if (opts.isConstantPressure)
+			{
+				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
+			}
 
-			delete [] infoData;
-			delete [] VVout;
+			cudaMallocHost(reinterpret_cast<void**> (&opts.VVOut), opts.N * sizeof(double));
+			
+			vvms_cuda::DoCuda(opts);
+
+			assert(TInfo->Grid()->ScanningMode() == VVInfo->Grid()->ScanningMode() && (isPressureLevel || VVInfo->Grid()->ScanningMode() == PInfo->Grid()->ScanningMode()));
+						
+			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
+			{
+				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
+
+				myTargetInfo->Grid()->ScanningMode(TInfo->Grid()->ScanningMode());
+
+				myTargetInfo->Grid()->Swap(originalMode);
+			}
+
+			myTargetInfo->Data()->Set(opts.VVOut, opts.N);
+
+			cudaFreeHost(opts.VVOut);
 
 		}
 		else
 		{
 			deviceType = "CPU";
+
+			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> VVGrid(VVInfo->Grid()->ToNewbaseGrid());
 
 			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
@@ -381,7 +416,20 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
+			}
 
+			/*
+			 * Newbase normalizes scanning mode to bottom left -- if that's not what
+			 * the target scanning mode is, we have to swap the data back.
+			 */
+
+			if (myTargetInfo->Grid()->ScanningMode() != kBottomLeft)
+			{
+				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
+
+				myTargetInfo->Grid()->ScanningMode(kBottomLeft);
+
+				myTargetInfo->Grid()->Swap(originalMode);
 			}
 		}
 
