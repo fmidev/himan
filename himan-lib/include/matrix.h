@@ -22,17 +22,17 @@ template<class T>
 class matrix
 {
 public:
-    matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0) {}
+	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0) {}
 
-    matrix(size_t theWidth, size_t theHeight, size_t theDepth = 1)
-        : itsData(theWidth* theHeight* theDepth)
-        , itsWidth(theWidth)
-        , itsHeight(theHeight)
-        , itsDepth(theDepth)
-    {
-    }
+	matrix(size_t theWidth, size_t theHeight, size_t theDepth = 1)
+		: itsData(theWidth* theHeight* theDepth)
+		, itsWidth(theWidth)
+		, itsHeight(theHeight)
+		, itsDepth(theDepth)
+	{
+	}
 
-    matrix(const matrix& other)
+	matrix(const matrix& other)
 	{
 		itsData = other.itsData; // Copy contents!
 		itsWidth = other.itsWidth;
@@ -41,298 +41,303 @@ public:
 		itsMissingValue = other.itsMissingValue;
 	}
 	
-    matrix& operator=(const matrix& other) = delete;
+	matrix& operator=(const matrix& other) = delete;
 
-    std::string ClassName() const
-    {
-        return "himan::matrix";
-    }
+	std::string ClassName() const
+	{
+		return "himan::matrix";
+	}
 
-    HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
+	HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
 
-    // Perhaps dangerous: return reference with no const
+	// Perhaps dangerous: return reference with no const
 
-    T& At(size_t combinedIndex)
-    {
-        try
-        {
-            return itsData[combinedIndex];
-        }
-        catch (std::exception& e)
-        {
-            throw std::runtime_error(e.what());
-        }
+	T& At(size_t combinedIndex)
+	{
+		try
+		{
+			return itsData[combinedIndex];
+		}
+		catch (std::exception& e)
+		{
+			throw std::runtime_error(e.what());
+		}
 
-        throw std::runtime_error("Stupid compiler");
-    }
+		throw std::runtime_error("Stupid compiler");
+	}
 
-    T& At(size_t x, size_t y, size_t z = 1)
-    {
-        try
-        {
-            return itsData[Index(x, y, z)];
-        }
-        catch (std::exception& e)
-        {
-            throw std::runtime_error(e.what());
-        }
+	T& At(size_t x, size_t y, size_t z = 0)
+	{
+		try
+		{
+			return itsData[Index(x, y, z)];
+		}
+		catch (std::exception& e)
+		{
+			throw std::runtime_error(e.what());
+		}
 
-        throw std::runtime_error("Stupid compiler");
-    }
+		throw std::runtime_error("Stupid compiler");
+	}
 
-    std::ostream& Write(std::ostream& file) const
-    {
-        file << "<" << ClassName() << " " << Version() << ">" << std::endl;
-        file << "__itsWidth__ " << itsWidth << std::endl;
-        file << "__itsHeight__ " << itsHeight << std::endl;
-        file << "__itsDepth__ " << itsDepth << std::endl;
-        file << "__itsSize__ " << itsData.size() << std::endl;
+	std::ostream& Write(std::ostream& file) const
+	{
+		file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+		file << "__itsWidth__ " << itsWidth << std::endl;
+		file << "__itsHeight__ " << itsHeight << std::endl;
+		file << "__itsDepth__ " << itsDepth << std::endl;
+		file << "__itsSize__ " << itsData.size() << std::endl;
 
-        PrintData(file, itsData);
+		PrintData(file, itsData);
 
-        return file;
-    }
+		return file;
+	}
 
-    /**
-     * @brief Print information on contents if T == double
-     *
-     */
+	/**
+	 * @brief Print information on contents if T == double
+	 *
+	 */
 
-    void PrintData(std::ostream& file, std::vector<double> theValues) const
-    {
+	void PrintData(std::ostream& file, std::vector<double> theValues) const
+	{
 
-        if (!itsData.size())
-        {
-            file << "__no-data__" << std::endl;
-            return;
-        }
+		if (!itsData.size())
+		{
+			file << "__no-data__" << std::endl;
+			return;
+		}
 
-        double min = 1e38;
-        double max = -1e38;
-        double sum = 0;
-        long missing = 0;
+		double min = 1e38;
+		double max = -1e38;
+		double sum = 0;
+		long missing = 0;
 
-        // kFloatMissing should be substituted with itsMissingValue
+		// kFloatMissing should be substituted with itsMissingValue
 
-        for (size_t i = 0; i < theValues.size(); i++)
-        {
-            double d = theValues[i];
+		for (size_t i = 0; i < theValues.size(); i++)
+		{
+			double d = theValues[i];
 
-            if (d == kFloatMissing)
-            {
-                missing++;
-                continue;
-            }
+			if (d == kFloatMissing)
+			{
+				missing++;
+				continue;
+			}
 
-            min = (min < d) ? min : d;
-            max = (max > d) ? max : d;
-            sum += d;
-        }
+			min = (min < d) ? min : d;
+			max = (max > d) ? max : d;
+			sum += d;
+		}
 
-        file << "__min__ " << min << std::endl;
-        file << "__max__ " << max << std::endl;
-        file << "__avg__ " << sum / theValues.size() << std::endl;
-        file << "__missing__ " << missing << std::endl;
-    }
+		file << "__min__ " << min << std::endl;
+		file << "__max__ " << max << std::endl;
+		file << "__avg__ " << sum / theValues.size() << std::endl;
+		file << "__missing__ " << missing << std::endl;
+	}
 
-    /**
-     * @brief Print information on contents if T == grid
-     *
-     */
+	/**
+	 * @brief Print information on contents if T == grid
+	 *
+	 */
 /*
-    void PrintData(std::ostream& file, std::vector<std::shared_ptr<grid>> theValues) const
-    {
+	void PrintData(std::ostream& file, std::vector<std::shared_ptr<grid>> theValues) const
+	{
 
-        if (!itsData.size())
-        {
-            file << "__no-data__" << std::endl;
-            return;
-        }
+		if (!itsData.size())
+		{
+			file << "__no-data__" << std::endl;
+			return;
+		}
 
-        for (size_t i = 0; i < theValues.size(); i++)
-        {
-        	file << *theValues[i];
-        }
-    }
+		for (size_t i = 0; i < theValues.size(); i++)
+		{
+			file << *theValues[i];
+		}
+	}
 */
-    size_t Size() const
-    {
-        return itsData.size();
-    }
+	size_t Size() const
+	{
+		return itsData.size();
+	}
 
-    size_t SizeX() const
-    {
-        return itsWidth;
-    }
+	size_t SizeX() const
+	{
+		return itsWidth;
+	}
 
-    size_t SizeY() const
-    {
-        return itsHeight;
-    }
+	size_t SizeY() const
+	{
+		return itsHeight;
+	}
 
-    size_t SizeZ() const
-    {
-        return itsDepth;
-    }
+	size_t SizeZ() const
+	{
+		return itsDepth;
+	}
 
-    void SizeX(size_t theWidth)
-    {
-        itsWidth = theWidth;
-        Resize(itsWidth, itsHeight, itsDepth);
-    }
+	void SizeX(size_t theWidth)
+	{
+		itsWidth = theWidth;
+		Resize(itsWidth, itsHeight, itsDepth);
+	}
 
-    void SizeY(size_t theHeight)
-    {
-        itsHeight = theHeight;
-        Resize(itsWidth, itsHeight, itsDepth);
-    }
+	void SizeY(size_t theHeight)
+	{
+		itsHeight = theHeight;
+		Resize(itsWidth, itsHeight, itsDepth);
+	}
 
-    void SizeZ(size_t theDepth)
-    {
-        itsDepth = theDepth;
-        Resize(itsWidth, itsHeight, itsDepth);
-    }
+	void SizeZ(size_t theDepth)
+	{
+		itsDepth = theDepth;
+		Resize(itsWidth, itsHeight, itsDepth);
+	}
 
-    /**
-     * @brief Resize matrix to given size
-     *
-     * @param theWidth X-size of matrix
-     * @param theHeight Y-size of matrix
-     * @param theDepth Z-size of matrix, if 2D matrix then depth = 1
-     */
+	/**
+	 * @brief Resize matrix to given size
+	 *
+	 * @param theWidth X-size of matrix
+	 * @param theHeight Y-size of matrix
+	 * @param theDepth Z-size of matrix, if 2D matrix then depth = 1
+	 */
 
-    void Resize(size_t theWidth, size_t theHeight, size_t theDepth = 1)
-    {
-        itsData.resize(theWidth * theHeight * theDepth);
-        itsWidth = theWidth;
-        itsHeight = theHeight;
-        itsDepth = theDepth;
-    }
+	void Resize(size_t theWidth, size_t theHeight, size_t theDepth = 1)
+	{
+		itsData.resize(theWidth * theHeight * theDepth);
+		itsWidth = theWidth;
+		itsHeight = theHeight;
+		itsDepth = theDepth;
+	}
 
-    const T* Values() const
-    {
-        return &itsData[0];
-    }
+	const T* Values() const
+	{
+		return &itsData[0];
+	}
 
-    friend std::ostream& operator<<(std::ostream& file, const matrix<T> & ob)
-    {
-        return ob.Write(file);
-    }
+	friend std::ostream& operator<<(std::ostream& file, const matrix<T> & ob)
+	{
+		return ob.Write(file);
+	}
 
-    /**
-     * @brief Set value of whole matrix or a slice of it.
-     *
-     * Function will set whole matrix value (or a slice, depending
-     * on the size of the matrix and the size of the argument len)
-     *
-     * This function is thread-safe.
-     *
-     * @param arr Pointer to array of values
-     * @param len Length of the array
-     *
-     * @return Always true
-     * @todo Return void ?
-     */
+	/**
+	 * @brief Set value of whole matrix or a slice of it.
+	 *
+	 * Function will set whole matrix value (or a slice, depending
+	 * on the size of the matrix and the size of the argument len)
+	 *
+	 * This function is thread-safe.
+	 *
+	 * @param arr Pointer to array of values
+	 * @param len Length of the array
+	 *
+	 * @return Always true
+	 * @todo Return void ?
+	 */
 
-    bool Set(T* arr, size_t len)
-    {
-        std::lock_guard<std::mutex> lock(itsValueMutex);
+	bool Set(T* arr, size_t len)
+	{
+		std::lock_guard<std::mutex> lock(itsValueMutex);
 
-    	assert(itsData.size() == len);
-        itsData.assign(arr, arr + len);
-        return true;
-    }
+		assert(itsData.size() == len);
+		itsData.assign(arr, arr + len);
+		return true;
+	}
 
-    /**
-     * @brief Set value of a matrix element
-     *
-     * Function will set matrix value in a serialized way -- this
-     * function is thread-safe. No bounds-checking is made for the
-     * index.
-     *
-     * @param x X index
-     * @param y Y index
-     * @param z Z index
-     * @param theValue The value
-     *
-     * @return Always true
-     * @todo Return void ?
-     */
+	/**
+	 * @brief Set value of a matrix element
+	 *
+	 * Function will set matrix value in a serialized way -- this
+	 * function is thread-safe. No bounds-checking is made for the
+	 * index.
+	 *
+	 * @param x X index
+	 * @param y Y index
+	 * @param z Z index
+	 * @param theValue The value
+	 *
+	 * @return Always true
+	 * @todo Return void ?
+	 */
 
-    bool Set(size_t x, size_t y, size_t z, T theValue)
-    {
-        std::lock_guard<std::mutex> lock(itsValueMutex);
+	bool Set(size_t x, size_t y, size_t z, T theValue)
+	{
+		std::lock_guard<std::mutex> lock(itsValueMutex);
 
-        itsData[Index(x,y,z)] = theValue;
+		assert(Index(x,y,z) < itsData.size());
 
-        return true;
-    }
+		itsData[Index(x,y,z)] = theValue;
 
-    /**
-     * @brief Set value of a matrix element
-     *
-     * Function will set matrix value in a serialized way -- this
-     * function is thread-safe. No bounds-checking is made for the
-     * index.
-     *
-     * @param theIndex Combined index of the element
-     * @param theValue The value
-     *
-     * @return Always true
-     * @todo Return void ?
-     */
+		return true;
+	}
 
-    bool Set(size_t theIndex, T theValue)
-    {
-        std::lock_guard<std::mutex> lock(itsValueMutex);
+	/**
+	 * @brief Set value of a matrix element
+	 *
+	 * Function will set matrix value in a serialized way -- this
+	 * function is thread-safe. No bounds-checking is made for the
+	 * index.
+	 *
+	 * @param theIndex Combined index of the element
+	 * @param theValue The value
+	 *
+	 * @return Always true
+	 * @todo Return void ?
+	 */
 
-        itsData[theIndex] = theValue;
+	bool Set(size_t theIndex, T theValue)
+	{
+		std::lock_guard<std::mutex> lock(itsValueMutex);
 
-        return true;
-    }
+		assert(theIndex < itsData.size());
 
-    /**
-     * @brief Fill matrix with a given value
-     */
+		itsData[theIndex] = theValue;
 
-    void Fill(T fillValue)
-    {
-    	std::fill(itsData.begin(),itsData.end(),fillValue);
-    }
+		return true;
+	}
 
-    // Only used for calculating statistics in PrintFloatData()
+	/**
+	 * @brief Fill matrix with a given value
+	 */
 
-    void MissingValue(T theMissingValue)
-    {
-        itsMissingValue = theMissingValue;
-    }
+	void Fill(T fillValue)
+	{
+		std::fill(itsData.begin(),itsData.end(),fillValue);
+	}
 
-    T MissingValue()
-    {
-        return itsMissingValue;
-    }
+	// Only used for calculating statistics in PrintFloatData()
+
+	void MissingValue(T theMissingValue)
+	{
+		itsMissingValue = theMissingValue;
+	}
+
+	T MissingValue()
+	{
+		return itsMissingValue;
+	}
 
 private:
 
-    inline size_t Index(size_t x, size_t y, size_t z) const
-    {
-        return z * itsWidth * itsHeight + y * itsWidth + x;
-    }
+	inline size_t Index(size_t x, size_t y, size_t z) const
+	{
+		return z * itsWidth * itsHeight + y * itsWidth + x;
+	}
 
-    std::vector<T> itsData;
+	std::vector<T> itsData;
 
-    T itsMissingValue;
+	T itsMissingValue;
 
-    size_t itsWidth, itsHeight, itsDepth;
+	size_t itsWidth, itsHeight, itsDepth;
 
-    std::mutex itsValueMutex;
+	std::mutex itsValueMutex;
 };
 
 
 typedef matrix <double> d_matrix_t;
+typedef matrix <unsigned char> uc_matrix_t;
 
 } // namespace himan
 

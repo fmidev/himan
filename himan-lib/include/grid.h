@@ -20,7 +20,7 @@
 #include "logger.h"
 #include "matrix.h"
 #include <NFmiGrid.h>
-#include "grid_data.h"
+#include "packed_data.h"
 #include <boost/variant.hpp>
 
 namespace himan
