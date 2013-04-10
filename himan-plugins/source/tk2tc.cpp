@@ -27,7 +27,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "cuda_extern.h"
+#include "tk2tc_cuda.h"
 
 tk2tc::tk2tc() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
@@ -264,29 +264,26 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 	
 			deviceType = "GPU";
 
-			size_t N = TGrid->Size();
-
-			float* TOut = new float[N]; // array that cuda devices will store data
-			double* infoData = new double[N]; // array that's stored to info instance
-
-			tk2tc_cuda::DoCuda(TGrid->DataPool()->Data(), TOut, N, threadIndex-1);
-
-			for (size_t i = 0; i < N; i++)
+			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
 			{
-				infoData[i] = static_cast<float> (TOut[i]);
-
-				if (infoData[i] == kFloatMissing)
-				{
-					missingCount++;
-				}
-
-				count++;
+				TInfo->Grid()->Swap(myTargetInfo->Grid()->ScanningMode());
 			}
 
-			myTargetInfo->Data()->Set(infoData, N);
+			tk2tc_cuda::tk2tc_cuda_options opts;
 
-			delete [] infoData;
-			delete [] TOut;
+			opts.N = TGrid->Size();
+			opts.TIn = TInfo->Data()->Values();
+			opts.TOut = new double[opts.N];
+			opts.cudaDeviceIndex = threadIndex-1;
+			
+			tk2tc_cuda::DoCuda(opts);
+
+			myTargetInfo->Data()->Set(opts.TOut, opts.N);
+
+			missingCount = opts.missingValuesCount;
+			count = opts.totalValuesCount;
+
+			delete [] opts.TOut;
 
 		}
 		else
@@ -323,6 +320,21 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
+			}
+
+			/*
+			 * Newbase normalizes scanning mode to bottom left -- if that's not what
+			 * the target scanning mode is, we have to swap the data back.
+			 */
+			
+			if (myTargetInfo->Grid()->ScanningMode() != kBottomLeft)
+			{
+				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
+
+				myTargetInfo->Grid()->ScanningMode(kBottomLeft); // newbase did this
+				
+				myTargetInfo->Grid()->Swap(originalMode);
+
 			}
 
 		}

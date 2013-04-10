@@ -14,7 +14,6 @@
 #include <math.h>
 #include "NFmiRotatedLatLonArea.h"
 #include "NFmiStereographicArea.h"
-#include "windvector_cuda_options.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -28,7 +27,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "cuda_extern.h"
+#include "windvector_cuda.h"
 
 const double kRadToDeg = 57.295779513082; // 180 / PI
 
@@ -436,10 +435,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->ScanningMode() == kBottomLeft);
 			assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->Projection() == kRotatedLatLonProjection);
 			
-			windvector_cuda_options opts;
+			windvector_cuda::windvector_cuda_options opts;
 
-			opts.Uin = const_cast<float*> (UGrid->DataPool()->Data());
-			opts.Vin = const_cast<float*> (VGrid->DataPool()->Data());
+			opts.Uin = const_cast<double*> (UInfo->Data()->Values());
+			opts.Vin = const_cast<double*> (VInfo->Data()->Values());
 
 			opts.sizeX = myTargetInfo->Grid()->Data()->SizeX();
 			opts.sizeY = myTargetInfo->Grid()->Data()->SizeY();
@@ -450,11 +449,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 			if (itsVectorCalculation)
 			{
-				opts.dataOut = new float[3*opts.sizeX*opts.sizeY];
+				opts.dataOut = new double[3*opts.sizeX*opts.sizeY];
 			}
 			else
 			{
-				opts.dataOut = new float[2*opts.sizeX*opts.sizeY];
+				opts.dataOut = new double[2*opts.sizeX*opts.sizeY];
 			}
 
 			opts.firstLatitude = myTargetInfo->Grid()->FirstGridPoint().Y();

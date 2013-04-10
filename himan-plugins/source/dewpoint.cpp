@@ -284,28 +284,14 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 			deviceType = "GPU";
 
-			size_t N = TGrid->Size();
+			size_t N = TInfo->Data()->Size();
 
-			float* DPout = new float[N];
-			double* infoData = new double[N];
+			double* DPout = new double[N];
 
-			dewpoint_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, RHGrid->DataPool()->Data(), DPout, N, threadIndex-1);
+			dewpoint_cuda::DoCuda(TInfo->Data()->Values(), TBase, RHInfo->Data()->Values(), DPout, N, threadIndex-1);
 
-			for (size_t i = 0; i < N; i++)
-			{
-				infoData[i] = static_cast<float> (DPout[i]);
+			myTargetInfo->Data()->Set(DPout, N);
 
-				if (infoData[i] == kFloatMissing)
-				{
-					missingCount++;
-				}
-
-				count++;
-			}
-
-			myTargetInfo->Data()->Set(infoData, N);
-
-			delete [] infoData;
 			delete [] DPout;
 		}
 		else

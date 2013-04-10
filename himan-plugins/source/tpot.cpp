@@ -295,36 +295,30 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 			size_t N = TGrid->Size();
 
-			float* TPOut = new float[N];
-			double* infoData = new double[N];
+			double* TPOut;
+
+#ifdef HAVE_CUDA
+			cudaMallocHost((void**) &TPOut, N*sizeof(double));
+#else
+			TPOut = new double[N];
+#endif
 
 			if (!isPressureLevel)
 			{
-				tpot_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, PGrid->DataPool()->Data(), PScale, TPOut, N, 0, threadIndex-1);
+				tpot_cuda::DoCuda(TInfo->Data()->Values(), TBase, PInfo->Data()->Values(), PScale, TPOut, N, 0, threadIndex-1);
 			}
 			else
 			{
-				tpot_cuda::DoCuda(TGrid->DataPool()->Data(), TBase, 0, 0, TPOut, N, myTargetInfo->Level().Value(), threadIndex-1);
+				tpot_cuda::DoCuda(TInfo->Data()->Values(), TBase, 0, 0, TPOut, N, myTargetInfo->Level().Value(), threadIndex-1);
 			}
 
+			myTargetInfo->Data()->Set(TPOut, N);
 
-			for (size_t i = 0; i < N; i++)
-			{
-				infoData[i] = static_cast<double> (TPOut[i]);
-
-				if (infoData[i] == kFloatMissing)
-				{
-					missingCount++;
-				}
-
-				count++;
-			}
-
-			myTargetInfo->Data()->Set(infoData, N);
-
-			delete [] infoData;
+#ifdef HAVE_CUDA
+			cudaFreeHost(TPOut);
+#else
 			delete [] TPOut;
-
+#endif
 		}
 		else
 		{
