@@ -2,7 +2,7 @@
  * himan_common.h
  *
  *  Created on: Nov 17, 2012
- *      Author: partio
+ *	  Author: partio
  */
 
 #ifndef HIMAN_COMMON_H
@@ -42,42 +42,42 @@ const float kHPMissingFloat = -999.f; // Hmmh?
 
 enum HPPluginClass
 {
-    kUnknownPlugin = 0,
-    kInterpreted,
-    kCompiled,
-    kAuxiliary
+	kUnknownPlugin = 0,
+	kInterpreted,
+	kCompiled,
+	kAuxiliary
 };
 
 // Define different logging levels
 
 enum HPDebugState
 {
-    kTraceMsg = 0,
-    kDebugMsg,
-    kInfoMsg,
-    kWarningMsg,
-    kErrorMsg,
-    kFatalMsg
+	kTraceMsg = 0,
+	kDebugMsg,
+	kInfoMsg,
+	kWarningMsg,
+	kErrorMsg,
+	kFatalMsg
 };
 
 // Define supported file types
 
 enum HPFileType
 {
-    kUnknownFile = 0,
-    kGRIB1,
-    kGRIB2,
-    kGRIB, // when we don't know if its 1 or 2
-    kQueryData,
-    kNetCDF
+	kUnknownFile = 0,
+	kGRIB1,
+	kGRIB2,
+	kGRIB, // when we don't know if its 1 or 2
+	kQueryData,
+	kNetCDF
 };
 
 const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = map_list_of
-        (kUnknownFile, "unknown")
-        (kGRIB1, "grib edition 1")
-        (kGRIB2, "grib edition 2")
-        (kGRIB, "grib edition 1 or 2")
-        (kQueryData, "QueryData")
+		(kUnknownFile, "unknown")
+		(kGRIB1, "grib edition 1")
+		(kGRIB2, "grib edition 2")
+		(kGRIB, "grib edition 1 or 2")
+		(kQueryData, "QueryData")
 		(kNetCDF, "NetCDF");
 
 // Define supported projections
@@ -85,53 +85,53 @@ const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = map_list
 
 enum HPProjectionType
 {
-    kUnknownProjection = 0,
-    kLatLonProjection = 10,
-    kRotatedLatLonProjection = 11,
-    kStereographicProjection = 13
+	kUnknownProjection = 0,
+	kLatLonProjection = 10,
+	kRotatedLatLonProjection = 11,
+	kStereographicProjection = 13
 };
 
 const boost::unordered_map<HPProjectionType,const char*> HPProjectionTypeToString = map_list_of
-        (kLatLonProjection, "ll")
-        (kRotatedLatLonProjection, "rll")
-        (kStereographicProjection, "polster");
+		(kLatLonProjection, "ll")
+		(kRotatedLatLonProjection, "rll")
+		(kStereographicProjection, "polster");
 
 // Define supported parameter units
 
 enum HPParameterUnit
 {
-    kUnknownUnit = 0,
-    kPa,
-    kK,
-    kC,
-    kPas, // Pa/s
-    kHPa,
-    kPrcnt,
-    kMs // m/s
+	kUnknownUnit = 0,
+	kPa,
+	kK,
+	kC,
+	kPas, // Pa/s
+	kHPa,
+	kPrcnt,
+	kMs // m/s
 };
 
 enum HPLevelType
 {
-    kUnknownLevel = 0,
-    kGround = 1,
-    kPressure = 100,
-    kMeanSea = 102,
-    kHeight = 105,
-    kHybrid = 109,
-    kGndLayer = 112,
-    kDepth = 160
+	kUnknownLevel = 0,
+	kGround = 1,
+	kPressure = 100,
+	kMeanSea = 102,
+	kHeight = 105,
+	kHybrid = 109,
+	kGndLayer = 112,
+	kDepth = 160
 };
 
 const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_list_of
-        (kUnknownLevel, "unknown")
-        (kGround, "ground")
-        (kPressure, "pressure")
-        (kMeanSea, "meansea")
-        (kHeight, "height")
-        (kHybrid, "hybrid")
-        (kGndLayer, "gndlayer")
-        (kDepth, "depth")
-        ;
+		(kUnknownLevel, "unknown")
+		(kGround, "ground")
+		(kPressure, "pressure")
+		(kMeanSea, "meansea")
+		(kHeight, "height")
+		(kHybrid, "hybrid")
+		(kGndLayer, "gndlayer")
+		(kDepth, "depth")
+		;
 
 enum HPFileWriteOption
 {
@@ -142,11 +142,11 @@ enum HPFileWriteOption
 };
 
 const boost::unordered_map<HPFileWriteOption,const char*> HPFileWriteOptionToString = map_list_of
-        (kUnknownFileWriteOption, "unknown")
-        (kSingleFile, "single file only")
-        (kMultipleFiles, "multiple files")
-        (kNeons, "write to neons")
-        ;
+		(kUnknownFileWriteOption, "unknown")
+		(kSingleFile, "single file only")
+		(kMultipleFiles, "multiple files")
+		(kNeons, "write to neons")
+		;
 
 // Values match to newbase
 
@@ -158,19 +158,25 @@ const boost::unordered_map<HPFileWriteOption,const char*> HPFileWriteOptionToStr
 
 enum HPScanningMode
 {
-    kUnknownScanningMode = 0,
-    kTopLeft = 17, 		// +x-y
-    kTopRight = 18,		// -x-y
-    kBottomLeft = 33,	// +x+y
-    kBottomRight = 34,	// -x+y
+	kUnknownScanningMode = 0,
+	kTopLeft = 17, 		// +x-y
+	kTopRight = 18,		// -x-y
+	kBottomLeft = 33,	// +x+y
+	kBottomRight = 34,	// -x+y
 
 };
 
+const boost::unordered_map<HPScanningMode,const char*> HPScanningModeToString = map_list_of
+		(kTopLeft, "+x-y")
+		(kTopRight, "+x+y")
+		(kBottomLeft, "+x+y")
+		(kBottomRight, "-x-y");
+
 enum HPExceptionType
 {
-    kUnknownException = 0,
-    kFileMetaDataNotFound,
-    kFileDataNotFound,
+	kUnknownException = 0,
+	kFileMetaDataNotFound,
+	kFileDataNotFound,
 };
 
 /**
@@ -182,15 +188,15 @@ enum HPExceptionType
  */
 enum HPDimensionType
 {
-    kUnknownDimension = 0,
-    kTimeDimension,
-    kLevelDimension,
-    kParamDimension,
-    kLocationDimension
+	kUnknownDimension = 0,
+	kTimeDimension,
+	kLevelDimension,
+	kParamDimension,
+	kLocationDimension
 };
 
 const boost::unordered_map<HPDimensionType,const char*> HPDimensionTypeToString = map_list_of
-        (kUnknownDimension, "unknown")
+		(kUnknownDimension, "unknown")
 		(kTimeDimension, "time dimension")
 		(kLevelDimension, "level dimension")
 		(kParamDimension, "param dimension")
@@ -199,14 +205,21 @@ const boost::unordered_map<HPDimensionType,const char*> HPDimensionTypeToString 
 enum HPTimeResolution
 {
 	kUnknownTimeResolution = 0,
-	kHour,
-	kMinute
+	kHourResolution,
+	kMinuteResolution
 };
 
 const boost::unordered_map<HPTimeResolution,const char*> HPTimeResolutionToString = map_list_of
 		(kUnknownTimeResolution, "unknown")
-		(kHour, "hour")
-		(kMinute, "minute");
+		(kHourResolution, "hour")
+		(kMinuteResolution, "minute");
+
+enum HPGridPackingType
+{
+	kUnknownPackingType = 0,
+	kUnpacked,
+	kSimplePacked
+};
 
 /**
  * @struct HPVersionNumber
@@ -217,36 +230,36 @@ const boost::unordered_map<HPTimeResolution,const char*> HPTimeResolutionToStrin
 
 struct HPVersionNumber
 {
-    unsigned short itsMajorVersion;
-    unsigned short itsMinorVersion;
+	unsigned short itsMajorVersion;
+	unsigned short itsMinorVersion;
 
-    unsigned short Minor()
-    {
-        return itsMinorVersion;
-    }
-    unsigned short Major()
-    {
-        return itsMajorVersion;
-    }
+	unsigned short Minor()
+	{
+		return itsMinorVersion;
+	}
+	unsigned short Major()
+	{
+		return itsMajorVersion;
+	}
 
-    HPVersionNumber(unsigned short theMajorVersion, unsigned short theMinorVersion)
-    {
-        itsMinorVersion = theMinorVersion;
-        itsMajorVersion = theMajorVersion;
-    }
+	HPVersionNumber(unsigned short theMajorVersion, unsigned short theMinorVersion)
+	{
+		itsMinorVersion = theMinorVersion;
+		itsMajorVersion = theMajorVersion;
+	}
 
-    std::ostream& Write(std::ostream& file) const
-    {
-        file << itsMajorVersion << "." << itsMinorVersion;
-        return file;
-    }
+	std::ostream& Write(std::ostream& file) const
+	{
+		file << itsMajorVersion << "." << itsMinorVersion;
+		return file;
+	}
 
 };
 
 inline
 std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers)
 {
-    return vers.Write(file);
+	return vers.Write(file);
 }
 
 } // namespace himan
