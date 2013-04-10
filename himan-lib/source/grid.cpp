@@ -13,25 +13,31 @@
 #include "logger_factory.h"
 
 using namespace himan;
+using namespace std;
 
-grid::grid() : itsData(new d_matrix_t(0,0)), itsScanningMode(kUnknownScanningMode), itsUVRelativeToGrid(false), itsDi(kHPMissingFloat), itsDj(kHPMissingFloat)
+grid::grid() 
+	: itsData(new unpacked())
+	, itsPackedData()
+	, itsScanningMode(kUnknownScanningMode)
+	, itsUVRelativeToGrid(false)
+	, itsDi(kHPMissingFloat)
+	, itsDj(kHPMissingFloat)
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
 
 grid::grid(HPScanningMode theScanningMode,
 			bool theUVRelativeToGrid,
 			HPProjectionType theProjection,
-			std::vector<double> theAB,
 			point theBottomLeft,
 			point theTopRight,
 			point theSouthPole,
 			double theOrientation)
-	: itsData(new d_matrix_t(0,0))
+	: itsData(new unpacked())
+	, itsPackedData()
 	, itsScanningMode(theScanningMode)
 	, itsUVRelativeToGrid(theUVRelativeToGrid)
 	, itsProjection(theProjection)
-	, itsAB(theAB)
 	, itsBottomLeft(theBottomLeft)
 	, itsTopRight(theTopRight)
 	, itsSouthPole(theSouthPole)
@@ -39,11 +45,11 @@ grid::grid(HPScanningMode theScanningMode,
 	, itsDi(kHPMissingFloat)
 	, itsDj(kHPMissingFloat)
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
 
 grid::grid(const grid& other)
-	: itsData(new d_matrix_t(other.Ni(), other.Nj()))
+	: itsData(new unpacked(other.Ni(), other.Nj()))
 {
 	itsScanningMode = other.itsScanningMode;
 	itsUVRelativeToGrid = other.itsUVRelativeToGrid;
@@ -56,7 +62,12 @@ grid::grid(const grid& other)
 	itsDi = other.itsDi;
 	itsDj = other.itsDj;
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
+	if (other.itsPackedData)
+	{
+		itsPackedData = shared_ptr<packed_data> (new packed_data(*other.itsPackedData));
+	}
+
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
 
 size_t grid::Ni() const
@@ -113,7 +124,7 @@ double grid::Dj() const
 	return itsDj;
 }
 
-std::shared_ptr<d_matrix_t> grid::Data() const
+shared_ptr<unpacked> grid::Data() const
 {
 	return itsData;
 }
@@ -163,12 +174,12 @@ void grid::Projection(HPProjectionType theProjection)
 	itsProjection = theProjection;
 }
 
-std::vector<double> grid::AB() const
+vector<double> grid::AB() const
 {
 	return itsAB;
 }
 
-void grid::AB(std::vector<double> theAB)
+void grid::AB(vector<double> theAB)
 {
 	itsAB = theAB;
 }
@@ -262,7 +273,26 @@ point grid::LastGridPoint() const
 	}
 
 	point firstGridPoint = FirstGridPoint();
-	return point(firstGridPoint.X() + (static_cast<double> (Ni())-1)*Di(), firstGridPoint.Y() + (static_cast<double> (Nj())-1)*Dj());
+	point lastGridPoint;
+
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			lastGridPoint.X(firstGridPoint.X() + (static_cast<double> (Ni())-1)*Di());
+			lastGridPoint.Y(firstGridPoint.Y() + (static_cast<double> (Nj())-1)*Dj());
+			break;
+
+		case kTopLeft:
+			lastGridPoint.X(firstGridPoint.X() + (static_cast<double> (Ni())-1)*Di());
+			lastGridPoint.Y(firstGridPoint.Y() - (static_cast<double> (Nj())-1)*Dj());
+			break;
+
+		default:
+			throw runtime_error(ClassName() + ": Invalid scanning mode in LastGridPoint()");
+			break;
+	}
+	
+	return lastGridPoint;
 }
 
 bool grid::SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj)
@@ -368,7 +398,7 @@ NFmiGrid* grid::ToNewbaseGrid() const
 	}
 
 	default:
-		throw std::runtime_error(ClassName() + ": No supported projection found");
+		throw runtime_error(ClassName() + ": No supported projection found");
 		break;
 	}
 
@@ -392,12 +422,12 @@ NFmiGrid* grid::ToNewbaseGrid() const
 
 		if (!thePool.Init(dataSize, arr))
 		{
-			throw std::runtime_error("DataPool init failed");
+			throw runtime_error("DataPool init failed");
 		}
 
 		if (!theGrid->Init(&thePool))
 		{
-			throw std::runtime_error("Grid data init failed");
+			throw runtime_error("Grid data init failed");
 		}
 
 		delete [] arr;
@@ -414,21 +444,21 @@ bool grid::operator==(const grid& other) const
 
 	if (itsProjection != other.itsProjection)
 	{
-		itsLogger->Trace("Projections do not match: " + std::string(HPProjectionTypeToString.at(itsProjection)) + " vs " + std::string(HPProjectionTypeToString.at(other.itsProjection)));
+		itsLogger->Trace("Projections do not match: " + string(HPProjectionTypeToString.at(itsProjection)) + " vs " + string(HPProjectionTypeToString.at(other.itsProjection)));
 		return false;
 	}
 
 	if (itsBottomLeft != other.BottomLeft())
 	{
-		itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().X()));
-		itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().Y()));
+		itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<string> (other.BottomLeft().X()));
+		itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<string> (other.BottomLeft().Y()));
 		return false;
 	}
 
    	if (itsTopRight != other.TopRight())
 	{
-		itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<std::string> (itsTopRight.X()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().X()));
-		itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<std::string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().Y()));
+		itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<string> (itsTopRight.X()) + " vs " + boost::lexical_cast<string> (other.TopRight().X()));
+		itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<string> (other.TopRight().Y()));
 		return false;
 	}
 
@@ -436,8 +466,8 @@ bool grid::operator==(const grid& other) const
 	{
 		if (itsSouthPole != other.SouthPole())
 		{
-			itsLogger->Trace("SouthPole does not match: X " + boost::lexical_cast<std::string> (itsSouthPole.X()) + " vs " + boost::lexical_cast<std::string> (other.SouthPole().X()));
-			itsLogger->Trace("SouthPole does not match: Y " + boost::lexical_cast<std::string> (itsSouthPole.Y()) + " vs " + boost::lexical_cast<std::string> (other.SouthPole().Y()));
+			itsLogger->Trace("SouthPole does not match: X " + boost::lexical_cast<string> (itsSouthPole.X()) + " vs " + boost::lexical_cast<string> (other.SouthPole().X()));
+			itsLogger->Trace("SouthPole does not match: Y " + boost::lexical_cast<string> (itsSouthPole.Y()) + " vs " + boost::lexical_cast<string> (other.SouthPole().Y()));
 			return false;
 		}
 	}
@@ -446,20 +476,20 @@ bool grid::operator==(const grid& other) const
 	{
 		if (itsOrientation != other.Orientation())
 		{
-			itsLogger->Trace("Orientations don't match: " + boost::lexical_cast<std::string> (itsOrientation) + " vs " + boost::lexical_cast<std::string> (other.Orientation()));
+			itsLogger->Trace("Orientations don't match: " + boost::lexical_cast<string> (itsOrientation) + " vs " + boost::lexical_cast<string> (other.Orientation()));
 			return false;
 		}
 	}
 
 	if (Ni() != other.Ni())
 	{
-		itsLogger->Trace("Grid X-counts don't match: " + boost::lexical_cast<std::string> (Ni()) + " vs " + boost::lexical_cast<std::string> (other.Ni()));
+		itsLogger->Trace("Grid X-counts don't match: " + boost::lexical_cast<string> (Ni()) + " vs " + boost::lexical_cast<string> (other.Ni()));
 		return false;
 	}
 
 	if (Nj() != other.Nj())
 	{
-		itsLogger->Trace("Grid Y-counts don't match: " + boost::lexical_cast<std::string> (Nj()) + " vs " + boost::lexical_cast<std::string> (other.Nj()));
+		itsLogger->Trace("Grid Y-counts don't match: " + boost::lexical_cast<string> (Nj()) + " vs " + boost::lexical_cast<string> (other.Nj()));
 		return false;
 	}
 
@@ -472,7 +502,7 @@ bool grid::operator!=(const grid& other) const
 	return !(*this == other);
 }
 
-void grid::Data(std::shared_ptr<d_matrix_t> d)
+void grid::Data(shared_ptr<unpacked> d)
 {
 	itsData = d;
 }
@@ -500,7 +530,8 @@ bool grid::Stagger(double xStaggerFactor, double yStaggerFactor)
 
 	assert(itsData->Size() > 0);
 
-	auto newData = std::make_shared<d_matrix_t> (*itsData);
+	//auto newData = unique_ptr<unpacked> (new unpacked(*itsData)); //make_shared<unpacked> (*itsData);
+	auto newData = new unpacked(*itsData);
 
 	size_t sizeX = itsData->SizeX(), sizeY = itsData->SizeY();
 
@@ -567,7 +598,7 @@ bool grid::Stagger(double xStaggerFactor, double yStaggerFactor)
 		}
 		else
 		{
-			throw std::runtime_error(ClassName() + ": Invalid y stagger value: " + boost::lexical_cast<std::string> (yStaggerFactor));
+			throw runtime_error(ClassName() + ": Invalid y stagger value: " + boost::lexical_cast<string> (yStaggerFactor));
 		}
 	}
 	else if (xStaggerFactor == 0)
@@ -598,7 +629,7 @@ bool grid::Stagger(double xStaggerFactor, double yStaggerFactor)
 		}
 		else
 		{
-			throw std::runtime_error(ClassName() + ": Invalid y stagger value: " + boost::lexical_cast<std::string> (yStaggerFactor));
+			throw runtime_error(ClassName() + ": Invalid y stagger value: " + boost::lexical_cast<string> (yStaggerFactor));
 		}
 	}
 	else if (xStaggerFactor == 0.5)
@@ -660,15 +691,73 @@ bool grid::Stagger(double xStaggerFactor, double yStaggerFactor)
 		}
 		else
 		{
-			throw std::runtime_error(ClassName() + ": Invalid y stagger value: " + boost::lexical_cast<std::string> (yStaggerFactor));
+			throw runtime_error(ClassName() + ": Invalid y stagger value: " + boost::lexical_cast<string> (yStaggerFactor));
 		}
 	}
 	else
 	{
-		throw std::runtime_error(ClassName() + ": Invalid x stagger value: " + boost::lexical_cast<std::string> (xStaggerFactor));
+		throw runtime_error(ClassName() + ": Invalid x stagger value: " + boost::lexical_cast<string> (xStaggerFactor));
 	}
 
-	itsData = newData;
+	itsData = unique_ptr<unpacked> (newData);
 
 	return true;
+}
+
+bool grid::Swap(HPScanningMode newScanningMode)
+{
+	if (itsScanningMode == newScanningMode)
+	{
+		itsLogger->Trace("Not swapping data between same scanningmodes");
+		return true;
+	}
+
+	assert(itsData);
+
+	// Flip with regards to x axis
+
+	if ((itsScanningMode == kTopLeft && newScanningMode == kBottomLeft) || (itsScanningMode == kBottomLeft && newScanningMode == kTopLeft))
+	{
+		for (size_t y = 0; y < static_cast<size_t> (floor(Nj()/2)); y++)
+		{
+			for (size_t x = 0; x < Ni(); x++)
+			{
+				double upper = itsData->At(x,y);
+				double lower = itsData->At(x, Nj()-1-y);
+
+				itsData->Set(x,y,0,lower);
+				itsData->Set(x,Nj()-1-y,0,upper);
+			}
+		}
+	}
+	else
+	{
+		itsLogger->Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " + string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
+		return false;
+	}
+
+	itsScanningMode = newScanningMode;
+
+	return true;
+
+}
+
+shared_ptr<packed_data> grid::PackedData() const
+{
+	return itsPackedData;
+}
+
+void grid::PackedData(shared_ptr<packed_data> thePackedData)
+{
+	itsPackedData = thePackedData;
+}
+
+bool grid::DataIsPacked() const
+{
+	if (itsPackedData)
+	{
+		return true;
+	}
+
+	return false;
 }

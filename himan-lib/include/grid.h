@@ -20,9 +20,13 @@
 #include "logger.h"
 #include "matrix.h"
 #include <NFmiGrid.h>
+#include "grid_data.h"
+#include <boost/variant.hpp>
 
 namespace himan
 {
+
+typedef d_matrix_t unpacked;
 
 class grid
 {
@@ -31,19 +35,25 @@ class grid
 		grid(HPScanningMode theScanningMode,
 				bool theUVRelativeToGrid,
 				HPProjectionType theProjection,
-				std::vector<double> theAB,
 				point theBottomLeft,
 				point theTopRight,
 				point theSouthPole = point(),
 				double theOrientation = kHPMissingFloat);
 
-		~grid() {}
+		~grid() { }
 
 		/**
-		 * @brief Copy constructor for grid. Will create new data class instance.
+		 * @brief Copy constructor for grid
 		 *
+		 * TODO: Currently creates a new data matrix with same dimensions as the
+		 * one that's it's being copied from, but does not copy the contents. Should
+		 * we do as we do with info-class, ie copy metadata but share the pointer to
+		 * the data, or should we copy the data. Initial feeling is that latter is the
+		 * correct behaviour.
+		 * 
+		 * @param other
 		 */
-
+		
 		grid(const grid& other);
 		grid& operator=(const grid& other) = delete;
 
@@ -102,14 +112,15 @@ class grid
 		 * @return Data matrix
 		 */
 
-		std::shared_ptr<d_matrix_t> Data() const;
+		std::shared_ptr<unpacked> Data() const;
 
 		/**
 		 * @brief Replace current data matrix with the function argument
 		 * @param d shared pointer to a data matrix
 		 */
 
-		void Data(std::shared_ptr<d_matrix_t> d);
+		//void Data(std::shared_ptr<unpacked> d);
+		void Data(std::shared_ptr<unpacked> d);
 
 		HPScanningMode ScanningMode() const;
 		void ScanningMode(HPScanningMode theScanningMode);
@@ -228,10 +239,24 @@ class grid
 
 		bool Stagger(double xStaggerFactor, double yStaggerFactor);
 
+		void PackedData(std::shared_ptr<packed_data> thePackedData);
+		std::shared_ptr<packed_data> PackedData() const;
+		
+		bool DataIsPacked() const;
+
+		/**
+		 * @brief Swap data from one scanning mode to another in-place.
+		 * 
+		 * @param newScanningMode
+		 * @return
+		 */
+		
+		bool Swap(HPScanningMode newScanningMode);
 
 	private:
 
-		std::shared_ptr<d_matrix_t> itsData;
+		std::shared_ptr<unpacked> itsData; //<! Variable to hold unpacked data
+		std::shared_ptr<packed_data> itsPackedData; //<! Variable to hold packed data
 
 		HPScanningMode itsScanningMode; //<! When data is read from files, we need to know what is the scanning mode
 
