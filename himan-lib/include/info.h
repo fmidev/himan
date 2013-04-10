@@ -488,7 +488,7 @@ public:
      * @return Current data matrix
      */
 
-    std::shared_ptr<d_matrix_t> Data() const;
+    std::shared_ptr<unpacked> Data() const;
 
     /**
      * @brief Replace whole meta matrix with a new one
