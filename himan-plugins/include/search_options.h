@@ -15,7 +15,7 @@
 #include "forecast_time.h"
 #include "param.h"
 #include "level.h"
-#include "configuration.h"
+#include "plugin_configuration.h"
 
 namespace himan
 {
@@ -24,10 +24,20 @@ namespace plugin
 
 struct search_options
 {
-    const himan::forecast_time& time;
-    const himan::param& param;
-    const himan::level& level;
+    himan::forecast_time time;
+    himan::param param;
+    himan::level level;
     const std::shared_ptr<const himan::configuration> configuration;
+
+	search_options(const himan::forecast_time& theTime,
+					const himan::param& theParam,
+					const himan::level& theLevel,
+					std::shared_ptr<const himan::configuration> theConf)
+	: time(theTime)
+	, param(theParam)
+	, level(theLevel)
+	, configuration(theConf)
+	{}
 };
 
 } // namespace plugins
