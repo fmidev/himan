@@ -1,0 +1,23 @@
+{
+	"_INFO":{
+            "modified":"28 Jan 2013",
+            "author": "partio",
+            "description": "Regression suite for tk2tc/gfs"
+        },
+    
+	"geom_name" : "GFS0500",
+	"source_producer" : "53",
+	"target_producer" : "53",
+	"hours" : "192",
+	"file_write" : "single",
+	"origintime" : "2013-04-09 18:00:00",
+	"read_data_from_database" : "false",
+
+	"processqueue" : [
+	{
+		"leveltype" : "pressure",
+		"levels" : "1000",
+		"plugins" : [ { "name" : "tk2tc" } ]
+	} 
+	]
+}
