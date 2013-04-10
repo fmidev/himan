@@ -74,6 +74,11 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
 		correctFileName += ".grib";
 
+		if (fileType == kGRIB2)
+		{
+			correctFileName += "2";
+		}		
+
 		ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileWriteOption);
 
 		break;
