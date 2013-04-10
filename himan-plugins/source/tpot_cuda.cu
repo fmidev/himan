@@ -17,17 +17,17 @@ namespace plugin
 namespace tpot_cuda
 {
 
-__global__ void kernel_constant_pressure(const float* __restrict__ dT, float TBase, float P, float* __restrict__ TPout, size_t N);
-__global__ void kernel_varying_pressure(const float* __restrict__ dT, float TBase, const float* __restrict__ dP, float PScale, float* __restrict__ TPout, size_t N);
+__global__ void kernel_constant_pressure(const double* __restrict__ dT, double TBase, double P, double* __restrict__ TPout, size_t N);
+__global__ void kernel_varying_pressure(const double* __restrict__ dT, double TBase, const double* __restrict__ dP, double PScale, double* __restrict__ TPout, size_t N);
 
 
 } // namespace tpot
 } // namespace plugin
 } // namespace himan
 
-__global__ void himan::plugin::tpot_cuda::kernel_constant_pressure(const float* __restrict__ dT,
-																	float TBase, float P,
-																	float* __restrict__ TPout, size_t N)
+__global__ void himan::plugin::tpot_cuda::kernel_constant_pressure(const double* __restrict__ dT,
+																	double TBase, double P,
+																	double* __restrict__ TPout, size_t N)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -46,9 +46,9 @@ __global__ void himan::plugin::tpot_cuda::kernel_constant_pressure(const float* 
 	}
 }
 
-__global__ void himan::plugin::tpot_cuda::kernel_varying_pressure(const float* __restrict__ dT, float TBase,
-																	const float* __restrict__ dP, float PScale,
-																	float* __restrict__ TPout, size_t N)
+__global__ void himan::plugin::tpot_cuda::kernel_varying_pressure(const double* __restrict__ dT, double TBase,
+																	const double* __restrict__ dP, double PScale,
+																	double* __restrict__ TPout, size_t N)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -68,44 +68,34 @@ __global__ void himan::plugin::tpot_cuda::kernel_varying_pressure(const float* _
 }
 
 
-void himan::plugin::tpot_cuda::DoCuda(const float* Tin, float TBase, const float* Pin, float PScale, float* TPout, size_t N, float PConst, unsigned short deviceIndex)
+void himan::plugin::tpot_cuda::DoCuda(const double* Tin, double TBase, const double* Pin, double PScale, double* TPout, size_t N, double PConst, unsigned short deviceIndex)
 {
 
-	cudaSetDevice(deviceIndex);
-	CheckCudaError("deviceset");
+	CUDA_CHECK(cudaSetDevice(deviceIndex));
 
-	// Allocate host arrays and convert input data to float
-
-	size_t memSize = N * sizeof(float);
+	size_t memSize = N * sizeof(double);
 
 	bool isConstantPressure = (Pin == 0 && PConst > 0);
 
 	// Allocate device arrays
 
-	float* dT;
-	cudaMalloc((void **) &dT, memSize);
-	CheckCudaError("malloc dT");
-
-	float* dP;
+	double* dT;
+	double* dP;
+	double* dTP;
+	
+	CUDA_CHECK(cudaMalloc((void **) &dT, memSize));
+	CUDA_CHECK(cudaMalloc((void **) &dTP, memSize));
 
 	if (!isConstantPressure)
 	{
-		cudaMalloc((void **) &dP, memSize);
-		CheckCudaError("malloc dP");
+		CUDA_CHECK(cudaMalloc((void **) &dP, memSize));
 	}
 
-	float *dTP;
-
-	cudaMalloc((void **) &dTP, memSize);
-	CheckCudaError("malloc dTP");
-
-	cudaMemcpy(dT, Tin, memSize, cudaMemcpyHostToDevice);
-	CheckCudaError("memcpy Tin");
+	CUDA_CHECK(cudaMemcpy(dT, Tin, memSize, cudaMemcpyHostToDevice));
 
 	if (!isConstantPressure)
 	{
-		cudaMemcpy(dP, Pin, memSize, cudaMemcpyHostToDevice);
-		CheckCudaError("memcpy Pin");
+		CUDA_CHECK(cudaMemcpy(dP, Pin, memSize, cudaMemcpyHostToDevice));
 	}
 
 	// dims
@@ -126,24 +116,22 @@ void himan::plugin::tpot_cuda::DoCuda(const float* Tin, float TBase, const float
 	}
 
 	// block until the device has completed
-	cudaDeviceSynchronize();
+	CUDA_CHECK(cudaDeviceSynchronize());
 
 	// check if kernel execution generated an error
 
-	CheckCudaError("kernel invocation");
+	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// Retrieve result from device
-	cudaMemcpy(TPout, dTP, memSize, cudaMemcpyDeviceToHost);
+	CUDA_CHECK(cudaMemcpy(TPout, dTP, memSize, cudaMemcpyDeviceToHost));
 
-	CheckCudaError("memcpy dTP");
-
-	cudaFree(dT);
+	CUDA_CHECK(cudaFree(dT));
 
 	if (!isConstantPressure)
 	{
-		cudaFree(dP);
+		CUDA_CHECK(cudaFree(dP));
 	}
 
-	cudaFree(dTP);
+	CUDA_CHECK(cudaFree(dTP));
 
 }

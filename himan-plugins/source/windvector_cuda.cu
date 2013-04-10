@@ -5,7 +5,7 @@
 // CUDA runtime
 #include <cuda_runtime.h>
 
-#include "cuda_extern.h"
+#include "windvector_cuda.h"
 #include "cuda_helper.h"
 
 // #include "cuPrintf.cu"
@@ -13,8 +13,8 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const float kRadToDeg = 57.295775f; // 180 / PI
-const float kDegToRad = 0.017453f; // PI / 180
+const double kRadToDeg = 57.295775f; // 180 / PI
+const double kDegToRad = 0.017453f; // PI / 180
 
 namespace himan
 {
@@ -25,11 +25,11 @@ namespace plugin
 namespace windvector_cuda
 {
 
-__global__ void kernel_windvector(windvector_cuda_options opts, float* dU, float* dV, float* dataOut);
-__global__ void kernel_windvector_rotation(windvector_cuda_options opts, float* dU, float* dV, float* dataOut);
+__global__ void kernel_windvector(windvector_cuda_options opts, double* dU, double* dV, double* dataOut);
+__global__ void kernel_windvector_rotation(windvector_cuda_options opts, double* dU, double* dV, double* dataOut);
 
-__device__ void Calculate(float* __restrict__ dU, float* __restrict__ dV, float* __restrict__ dataOut, size_t N, bool vectorCalculation, bool dirCalculation);
-__device__ void UVToEarthRelative(float* __restrict__ dU, float* __restrict__ dV, float firstLatitude, float firstLongitude, float di, float dj, float southPoleLat, float southPoleLon, size_t sizeY, size_t sizeX);
+__device__ void Calculate(double* __restrict__ dU, double* __restrict__ dV, double* __restrict__ dataOut, size_t N, bool vectorCalculation, bool dirCalculation);
+__device__ void UVToEarthRelative(double* __restrict__ dU, double* __restrict__ dV, double firstLatitude, double firstLongitude, double di, double dj, double southPoleLat, double southPoleLon, size_t sizeY, size_t sizeX);
 
 } // namespace windvector
 } // namespace plugin
@@ -43,12 +43,12 @@ __device__ void UVToEarthRelative(float* __restrict__ dU, float* __restrict__ dV
  * 2N..3N are for windvector (if that's calculated).
  */
 
-__device__ void himan::plugin::windvector_cuda::Calculate(float* __restrict__ dU, float* __restrict__ dV, float* __restrict__ dDataOut, size_t N, bool vectorCalculation, bool dirCalculation)
+__device__ void himan::plugin::windvector_cuda::Calculate(double* __restrict__ dU, double* __restrict__ dV, double* __restrict__ dDataOut, size_t N, bool vectorCalculation, bool dirCalculation)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	float U = dU[idx], V = dV[idx];
+	double U = dU[idx], V = dV[idx];
 	
 	if (U == kFloatMissing || V == kFloatMissing)
 	{
@@ -67,34 +67,34 @@ __device__ void himan::plugin::windvector_cuda::Calculate(float* __restrict__ dU
 	else
 	{
 		
-		float speed = sqrtf(U*U + V*V);
+		double speed = sqrtf(U*U + V*V);
 
 		dDataOut[idx] = speed;
 
-		float dir = 0.f;	// Direction is float although we round the result so that it *could* be int as well.
+		double dir = 0;	// Direction is double although we round the result so that it *could* be int as well.
 							// This is because if we use int the windvector calculation will have a small bias due
 							// to int decimal value truncation.
 
 		if (dirCalculation)
 		{
 
-			int offset = 180.f;
+			int offset = 180;
 
 			if (!vectorCalculation)
 			{
 				// vector is calculated only for air, and for air we have offset of 180 degrees
-				offset = 0.f;
+				offset = 0;
 			}
 
-			if (speed > 0.f)
+			if (speed > 0)
 			{
 				dir = kRadToDeg * atan2(U,V) + offset;
 
 				// reduce the angle
-				dir = fmod(dir, 360.f);
+				dir = fmod(dir, 360);
 
 				// force it to be the positive remainder, so that 0 <= dir < 360
-				dir = fmod((dir + 360.f), 360.f);
+				dir = fmod((dir + 360), 360);
 
 			}
 
@@ -103,7 +103,7 @@ __device__ void himan::plugin::windvector_cuda::Calculate(float* __restrict__ dU
 
 		if (vectorCalculation)
 		{
-			dDataOut[idx+2*N] = round(dir/10.f) + 100.f * round(speed);
+			dDataOut[idx+2*N] = round(dir/10) + 100 * round(speed);
 		}
 
 	}
@@ -118,72 +118,72 @@ __device__ void himan::plugin::windvector_cuda::Calculate(float* __restrict__ dU
  *
  */
 
-__device__ void himan::plugin::windvector_cuda::UVToEarthRelative(float* __restrict__ dU, float* __restrict__ dV,
-									float firstLatitude, float firstLongitude, float di, float dj,
-									float southPoleLat, float southPoleLon, size_t sizeY, size_t sizeX)
+__device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __restrict__ dU, double* __restrict__ dV,
+									double firstLatitude, double firstLongitude, double di, double dj,
+									double southPoleLat, double southPoleLon, size_t sizeY, size_t sizeX)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	float U = dU[idx];
-	float V = dV[idx];
+	double U = dU[idx];
+	double V = dV[idx];
 
 	if (U != kFloatMissing && V != kFloatMissing)
 	{
 		int j = floorf(idx/sizeX);
 		int i = idx - j * sizeX;
 
-		float lon = firstLongitude + i * di;
-		float lat = firstLatitude + j * dj;
+		double lon = firstLongitude + i * di;
+		double lat = firstLatitude + j * dj;
 
-		float SinYPole = sinf((southPoleLat + 90.f) * kDegToRad);
-		float CosYPole = cosf((southPoleLat + 90.f) * kDegToRad);
+		double SinYPole = sin((southPoleLat + 90) * kDegToRad);
+		double CosYPole = cos((southPoleLat + 90) * kDegToRad);
 
-		float SinXRot, CosXRot, SinYRot, CosYRot;
+		double SinXRot, CosXRot, SinYRot, CosYRot;
 
-		sincosf(lon*kDegToRad, &SinXRot, &CosXRot);
-		sincosf(lat*kDegToRad, &SinYRot, &CosYRot);
+		sincos(lon*kDegToRad, &SinXRot, &CosXRot);
+		sincos(lat*kDegToRad, &SinYRot, &CosYRot);
 
-		float SinYReg = CosYPole * SinYRot + SinYPole * CosYRot * CosXRot;
+		double SinYReg = CosYPole * SinYRot + SinYPole * CosYRot * CosXRot;
 
-		SinYReg = MIN(MAX(SinYReg, -1.f), 1.f);
+		SinYReg = MIN(MAX(SinYReg, -1), 1);
 
-		float YReg = asinf(SinYReg) * kRadToDeg;
+		double YReg = asinf(SinYReg) * kRadToDeg;
 
-		float CosYReg = cosf(YReg*kDegToRad);
-		float CosXReg = (CosYPole * CosYRot * CosXRot - SinYPole * SinYRot) / CosYReg;
+		double CosYReg = cosf(YReg*kDegToRad);
+		double CosXReg = (CosYPole * CosYRot * CosXRot - SinYPole * SinYRot) / CosYReg;
 
-		CosXReg = MIN(MAX(CosXReg, -1.f), 1.f);
-		float SinXReg = CosYRot * SinXRot / CosYReg;
+		CosXReg = MIN(MAX(CosXReg, -1), 1);
+		double SinXReg = CosYRot * SinXRot / CosYReg;
 
-		float XReg = acosf(CosXReg) * kRadToDeg;
+		double XReg = acosf(CosXReg) * kRadToDeg;
 
-		if (SinXReg < 0.f)
+		if (SinXReg < 0)
 			XReg = -XReg;
 
 		XReg += southPoleLon;
 
 		// UV to earth relative
 
-		float zxmxc = kDegToRad * (XReg - southPoleLon);
+		double zxmxc = kDegToRad * (XReg - southPoleLon);
 
-		float sinxmxc, cosxmxc;
+		double sinxmxc, cosxmxc;
 
-		sincosf(zxmxc, &sinxmxc, &cosxmxc);
+		sincos(zxmxc, &sinxmxc, &cosxmxc);
 
-		float PA = cosxmxc * CosXRot + CosYPole * sinxmxc * SinXRot;
-		float PB = CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
-		float PC = (-SinYPole) * SinXRot / CosYReg;
-		float PD = (CosYPole * CosYRot - SinYPole * CosXRot * SinYRot) / CosYReg;
+		double PA = cosxmxc * CosXRot + CosYPole * sinxmxc * SinXRot;
+		double PB = CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
+		double PC = (-SinYPole) * SinXRot / CosYReg;
+		double PD = (CosYPole * CosYRot - SinYPole * CosXRot * SinYRot) / CosYReg;
 
-		float newU = PA * U + PB * V;
-		float newV = PC * U + PD * V;
+		double newU = PA * U + PB * V;
+		double newV = PC * U + PD * V;
 
 		dU[idx] = newU;
 		dV[idx] = newV;
 	}
 }
 
-__global__ void himan::plugin::windvector_cuda::kernel_windvector(windvector_cuda_options opts, float* dU, float* dV, float* dDataOut)
+__global__ void himan::plugin::windvector_cuda::kernel_windvector(windvector_cuda_options opts, double* dU, double* dV, double* dDataOut)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -194,7 +194,7 @@ __global__ void himan::plugin::windvector_cuda::kernel_windvector(windvector_cud
 	}
 }
 
-__global__ void himan::plugin::windvector_cuda::kernel_windvector_rotation(windvector_cuda_options opts, float* dU, float* dV, float* dDataOut)
+__global__ void himan::plugin::windvector_cuda::kernel_windvector_rotation(windvector_cuda_options opts, double* dU, double* dV, double* dDataOut)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -210,27 +210,22 @@ __global__ void himan::plugin::windvector_cuda::kernel_windvector_rotation(windv
 void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 {
 
-	cudaSetDevice(opts.CudaDeviceIndex);
-	CheckCudaError("deviceset");
-
-	// Allocate host arrays and convert input data to float
+	CUDA_CHECK(cudaSetDevice(opts.CudaDeviceIndex));
+	
+	// Allocate host arrays and convert input data to double
 
 	size_t N = opts.sizeY*opts.sizeX;
 
-	size_t memSize = N * sizeof(float);
+	size_t memSize = N * sizeof(double);
 
 	// Allocate device arrays
 
-	float* dU;
-	cudaMalloc((void **) &dU, memSize);
-	CheckCudaError("malloc dU");
+	double* dU;
+	double* dV;
+	double* dDataOut;
 
-	float* dV;
-
-	cudaMalloc((void **) &dV, memSize);
-	CheckCudaError("malloc dV");
-
-	float *dDataOut;
+	CUDA_CHECK(cudaMalloc((void **) &dU, memSize));
+	CUDA_CHECK(cudaMalloc((void **) &dV, memSize));
 
 	int numberOfParams = 2;
 
@@ -243,16 +238,11 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 		numberOfParams = 1;
 	}
 
-	cudaMalloc((void **) &dDataOut, numberOfParams*memSize);
-
-	CheckCudaError("malloc dDataOut");
-
-	cudaMemcpy(dU, opts.Uin, memSize, cudaMemcpyHostToDevice);
-	CheckCudaError("memcpy Uin");
-
-	cudaMemcpy(dV, opts.Vin, memSize, cudaMemcpyHostToDevice);
-	CheckCudaError("memcpy Vin");
-
+	CUDA_CHECK(cudaMalloc((void **) &dDataOut, numberOfParams*memSize));
+	
+	CUDA_CHECK(cudaMemcpy(dU, opts.Uin, memSize, cudaMemcpyHostToDevice));
+	CUDA_CHECK(cudaMemcpy(dV, opts.Vin, memSize, cudaMemcpyHostToDevice));
+	
 	// dims
 
 	const int blockSize = 512;
@@ -280,22 +270,20 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 	}
 
 	// block until the device has completed
-	cudaDeviceSynchronize();
+	CUDA_CHECK(cudaDeviceSynchronize());
 
 	// check if kernel execution generated an error
 
-	CheckCudaError("kernel invocation");
+	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// cudaPrintfDisplay(stdout, true);
 	// cudaPrintfEnd();
 
 	// Retrieve result from device
-	cudaMemcpy(opts.dataOut, dDataOut, numberOfParams*memSize, cudaMemcpyDeviceToHost);
+	CUDA_CHECK(cudaMemcpy(opts.dataOut, dDataOut, numberOfParams*memSize, cudaMemcpyDeviceToHost));
 
-	CheckCudaError("memcpy");
-
-	cudaFree(dU);
-	cudaFree(dV);
-	cudaFree(dDataOut);
+	CUDA_CHECK(cudaFree(dU));
+	CUDA_CHECK(cudaFree(dV));
+	CUDA_CHECK(cudaFree(dDataOut));
 	
 }

@@ -5,7 +5,7 @@
 // CUDA runtime
 #include <cuda_runtime.h>
 
-#include "cuda_extern.h"
+#include "vvms_cuda.h"
 #include "cuda_helper.h"
 
 namespace himan
@@ -17,15 +17,18 @@ namespace plugin
 namespace vvms_cuda
 {
 
-__global__ void kernel_constant_pressure(const float* __restrict__ dT, float TBase, float P, const float* __restrict__ dVVPas, float* __restrict__ VVout, size_t N);
-__global__ void kernel_varying_pressure(const float* __restrict__ dT, float TBase, const float* __restrict__ dP, float PScale, const float* __restrict__ dVVPas, float* __restrict__ VVout, size_t N);
+__global__ void UnpackAndCalculate();
+__global__ void Calculate();
+
+__global__ void kernel_constant_pressure(const double* __restrict__ dT, double TBase, double P, const double* __restrict__ dVVPas, double* __restrict__ VVout, size_t N);
+__global__ void kernel_varying_pressure(const double* __restrict__ dT, double TBase, const double* __restrict__ dP, double PScale, const double* __restrict__ dVVPas, double* __restrict__ VVout, size_t N);
 
 
 } // namespace tpot
 } // namespace plugin
 } // namespace himan
 
-__global__ void himan::plugin::vvms_cuda::kernel_constant_pressure(const float* __restrict__ dT, float TBase, float P, const float* __restrict__ dVVPas, float* __restrict__ VVout, size_t N)
+__global__ void himan::plugin::vvms_cuda::kernel_constant_pressure(const double* __restrict__ dT, double TBase, double P, const double* __restrict__ dVVPas, double* __restrict__ VVout, size_t N)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -44,7 +47,7 @@ __global__ void himan::plugin::vvms_cuda::kernel_constant_pressure(const float* 
 	}
 }
 
-__global__ void himan::plugin::vvms_cuda::kernel_varying_pressure(const float* dT, float TBase, const float* __restrict__ dP, float PScale, const float* __restrict__ dVVPas, float* __restrict__ VVout, size_t N)
+__global__ void himan::plugin::vvms_cuda::kernel_varying_pressure(const double* dT, double TBase, const double* __restrict__ dP, double PScale, const double* __restrict__ dVVPas, double* __restrict__ VVout, size_t N)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -63,92 +66,72 @@ __global__ void himan::plugin::vvms_cuda::kernel_varying_pressure(const float* d
 	}
 }
 
-
-void himan::plugin::vvms_cuda::DoCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex)
+void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 {
 
-	cudaSetDevice(deviceIndex);
-	CheckCudaError("deviceset");
+	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
 
-	// Allocate host arrays and convert input data to float
-
-	size_t memSize = N * sizeof(float);
-
-	bool isConstantPressure = (Pin == 0 && PConst > 0);
+	size_t memSize = opts.N * sizeof(double);
 
 	// Allocate device arrays
 
-	float* dT;
-	cudaMalloc((void **) &dT, memSize);
-	CheckCudaError("malloc dT");
+	double* dT;
+	double* dP;
+	double *dVVPas;
+	double *dVVOut;
+	
+	CUDA_CHECK(cudaMalloc((void **) &dT, memSize));
 
-	float* dP;
-
-	if (!isConstantPressure)
+	if (!opts.isConstantPressure)
 	{
-		cudaMalloc((void **) &dP, memSize);
-		CheckCudaError("malloc dP");
+		CUDA_CHECK(cudaMalloc((void **) &dP, memSize));
 	}
 
-	float *dVVPas;
+	CUDA_CHECK(cudaMalloc((void **) &dVVPas, memSize));
+	CUDA_CHECK(cudaMalloc((void **) &dVVOut, memSize));
 
-	cudaMalloc((void **) &dVVPas, memSize);
-	CheckCudaError("malloc dVVPas");
+	CUDA_CHECK(cudaMemcpy(dT, opts.TIn, memSize, cudaMemcpyHostToDevice));
 
-	float *dVVout;
-
-	cudaMalloc((void **) &dVVout, memSize);
-	CheckCudaError("malloc dVVout");
-
-	cudaMemcpy(dT, Tin, memSize, cudaMemcpyHostToDevice);
-	CheckCudaError("memcpy dT");
-
-	if (!isConstantPressure)
+	if (!opts.isConstantPressure)
 	{
-		cudaMemcpy(dP, Pin, memSize, cudaMemcpyHostToDevice);
-		CheckCudaError("memcpy dP");
+		CUDA_CHECK(cudaMemcpy(dP, opts.PIn, memSize, cudaMemcpyHostToDevice));
 	}
 
-	cudaMemcpy(dVVPas, VVin, memSize, cudaMemcpyHostToDevice);
-	CheckCudaError("memcpy dVVPas");
+	CUDA_CHECK(cudaMemcpy(dVVPas, opts.VVIn, memSize, cudaMemcpyHostToDevice));
 
 	// dims
 
 	const int blockSize = 512;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
 	dim3 gridDim(gridSize);
 	dim3 blockDim(blockSize);
 
-	if (isConstantPressure)
+	if (opts.isConstantPressure)
 	{
-		kernel_constant_pressure <<< gridDim, blockDim >>> (dT, TBase, PConst, dVVPas, dVVout, N);
+		kernel_constant_pressure <<< gridDim, blockDim >>> (dT, opts.TBase, opts.PConst, dVVPas, dVVOut, opts.N);
 	}
 	else
 	{
-		kernel_varying_pressure <<< gridDim, blockDim >>> (dT, TBase, dP, PScale, dVVPas, dVVout, N);
+		kernel_varying_pressure <<< gridDim, blockDim >>> (dT, opts.TBase, dP, opts.PScale, dVVPas, dVVOut, opts.N);
 	}
+
+	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// block until the device has completed
-	cudaDeviceSynchronize();
-
-	// check if kernel execution generated an error
-
-	CheckCudaError("kernel invocation");
+	CUDA_CHECK(cudaDeviceSynchronize());
 
 	// Retrieve result from device
-	cudaMemcpy(VVout, dVVout, memSize, cudaMemcpyDeviceToHost);
+	CUDA_CHECK(cudaMemcpy(opts.VVOut, dVVOut, memSize, cudaMemcpyDeviceToHost));
 
-	CheckCudaError("memcpy");
+	CUDA_CHECK(cudaFree(dT));
 
-	cudaFree(dT);
-
-	if (!isConstantPressure)
+	if (!opts.isConstantPressure)
 	{
-		cudaFree(dP);
+		CUDA_CHECK(cudaFree(dP));
 	}
 
-	cudaFree(dVVPas);
-	cudaFree(dVVout);
+	CUDA_CHECK(cudaFree(dVVPas));
+	CUDA_CHECK(cudaFree(dVVOut));
 
 }

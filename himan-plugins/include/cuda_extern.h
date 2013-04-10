@@ -10,8 +10,6 @@
 #ifndef CUDA_EXTERN_H
 #define CUDA_EXTERN_H
 
-#include "windvector_cuda_options.h"
-
 namespace himan
 {
 namespace plugin
@@ -19,31 +17,20 @@ namespace plugin
 
 namespace tk2tc_cuda
 {
-void DoCuda(const float* Tin, float* Tout, size_t N, unsigned short deviceIndex);
+void DoCuda(const double* Tin, double* Tout, size_t N, unsigned short deviceIndex);
 }
 
 namespace tpot_cuda
 {
-void DoCuda(const float* Tin, float TBase, const float* Pin, float TScale, float* TPout, size_t N, float PConst, unsigned short index);
-}
-
-namespace vvms_cuda
-{
-void DoCuda(const float* Tin, float TBase, const float* Pin, float PScale, const float* VVin, float* VVout, size_t N, float PConst, unsigned short deviceIndex);
-}
-
-namespace windvector_cuda
-{
-void DoCuda(windvector_cuda_options& opts);
+void DoCuda(const double* Tin, double TBase, const double* Pin, double TScale, double* TPout, size_t N, double PConst, unsigned short index);
 }
 
 namespace dewpoint_cuda
 {
-void DoCuda(const float* Tin, float TBase, const float* RHin, float* DPout, size_t N, unsigned short deviceIndex);
+void DoCuda(const double* Tin, double TBase, const double* RHin, double* DPout, size_t N, unsigned short deviceIndex);
 }
 
 } // namespace plugin
 } // namespace himan
 
 #endif	/* CUDA_EXTERN_H */
-

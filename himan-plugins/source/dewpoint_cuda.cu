@@ -8,9 +8,9 @@
 #include "cuda_helper.h"
 #include "cuda_extern.h"
 
-const float RW = 461.5f; // Vesihoyryn kaasuvakio (J / K kg)
-const float L = 2.5e6f; // Veden hoyrystymislampo (J / kg)
-const float RW_div_L = RW / L;
+const double RW = 461.5f; // Vesihoyryn kaasuvakio (J / K kg)
+const double L = 2.5e6f; // Veden hoyrystymislampo (J / kg)
+const double RW_div_L = RW / L;
 
 namespace himan
 {
@@ -21,16 +21,16 @@ namespace plugin
 namespace dewpoint_cuda
 {
 
-__global__ void kernel_dewpoint(const float* __restrict__ dT, float TBase, const float* __restrict__ dRH, float* __restrict__ dDP, size_t N);
+__global__ void kernel_dewpoint(const double* __restrict__ dT, double TBase, const double* __restrict__ dRH, double* __restrict__ dDP, size_t N);
 
 
 } // namespace dewpoint
 } // namespace plugin
 } // namespace himan
 
-__global__ void himan::plugin::dewpoint_cuda::kernel_dewpoint(const float* __restrict__ dT, float TBase,
-																const float* __restrict__ dRH,
-																float* __restrict__ dDP, size_t N)
+__global__ void himan::plugin::dewpoint_cuda::kernel_dewpoint(const double* __restrict__ dT, double TBase,
+																const double* __restrict__ dRH,
+																double* __restrict__ dDP, size_t N)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -49,38 +49,26 @@ __global__ void himan::plugin::dewpoint_cuda::kernel_dewpoint(const float* __res
 	}
 }
 
-void himan::plugin::dewpoint_cuda::DoCuda(const float* Tin, float TBase, const float* RHin, float* DPout, size_t N, unsigned short deviceIndex)
+void himan::plugin::dewpoint_cuda::DoCuda(const double* Tin, double TBase, const double* RHin, double* DPout, size_t N, unsigned short deviceIndex)
 {
 
-	cudaSetDevice(deviceIndex);
-	CheckCudaError("deviceset");
+	CUDA_CHECK(cudaSetDevice(deviceIndex));
 
-	// Allocate host arrays and convert input data to float
-
-	size_t memSize = N * sizeof(float);
+	size_t memSize = N * sizeof(double);
 
 	// Allocate device arrays
 
-	float* dT;
-	cudaMalloc((void **) &dT, memSize);
-	CheckCudaError("malloc dT");
+	double* dT;
+	double* dRH;
+	double* dDP;
 
-	float *dRH;
-
-	cudaMalloc((void **) &dRH, memSize);
-	CheckCudaError("malloc dRH");
-
-	float *dDP;
-
-	cudaMalloc((void **) &dDP, memSize);
-	CheckCudaError("malloc dDP");
-
-	cudaMemcpy(dT, Tin, memSize, cudaMemcpyHostToDevice);
-	CheckCudaError("memcpy Tin");
-
-	cudaMemcpy(dRH, RHin, memSize, cudaMemcpyHostToDevice);
-	CheckCudaError("memcpy RHin");
-
+	CUDA_CHECK(cudaMalloc((void **) &dT, memSize));
+	CUDA_CHECK(cudaMalloc((void **) &dRH, memSize));
+	CUDA_CHECK(cudaMalloc((void **) &dDP, memSize));
+	
+	CUDA_CHECK(cudaMemcpy(dT, Tin, memSize, cudaMemcpyHostToDevice));
+	CUDA_CHECK(cudaMemcpy(dRH, RHin, memSize, cudaMemcpyHostToDevice));
+	
 	// dims
 
 	const int blockSize = 512;
@@ -92,18 +80,17 @@ void himan::plugin::dewpoint_cuda::DoCuda(const float* Tin, float TBase, const f
 	kernel_dewpoint <<< gridDim, blockDim >>> (dT, TBase, dRH, dDP, N);
 
 	// block until the device has completed
-	cudaDeviceSynchronize();
+	CUDA_CHECK(cudaDeviceSynchronize());
 
 	// check if kernel execution generated an error
 
-	CheckCudaError("kernel invocation");
+	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// Retrieve result from device
-	cudaMemcpy(DPout, dDP, memSize, cudaMemcpyDeviceToHost);
+	CUDA_CHECK(cudaMemcpy(DPout, dDP, memSize, cudaMemcpyDeviceToHost));
 
-	CheckCudaError("memcpy dDP");
-
-	cudaFree(dT);
-	cudaFree(dRH);
+	CUDA_CHECK(cudaFree(dT));
+	CUDA_CHECK(cudaFree(dRH));
+	CUDA_CHECK(cudaFree(dDP));
 
 }
