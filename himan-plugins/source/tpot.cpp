@@ -298,7 +298,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			double* TPOut;
 
 #ifdef HAVE_CUDA
-			cudaMallocHost((void**) &TPOut, N*sizeof(double));
+			cudaMallocHost(reinterpret_cast<void**> (&TPOut), N*sizeof(double));
 #else
 			TPOut = new double[N];
 #endif
