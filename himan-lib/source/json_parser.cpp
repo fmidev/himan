@@ -388,7 +388,7 @@ void json_parser::ParseTime(const producer& sourceProducer,
 			forecast_time theTime (shared_ptr<raw_time> (new raw_time(originDateTime, mask)),
 								   shared_ptr<raw_time> (new raw_time(originDateTime, mask)));
 
-			theTime.ValidDateTime()->Adjust(kHour, times[i]);
+			theTime.ValidDateTime()->Adjust(kHourResolution, times[i]);
 
 			theTimes.push_back(theTime);
 		}
@@ -412,13 +412,13 @@ void json_parser::ParseTime(const producer& sourceProducer,
 			throw runtime_error("Step unit '" + unit + "' not supported");
 		}
 
-		HPTimeResolution stepResolution = kHour;
+		HPTimeResolution stepResolution = kHourResolution;
 
 		if (unit == "minute")
 		{
 			start *= 60;
 			stop *= 60;
-			stepResolution = kMinute;
+			stepResolution = kMinuteResolution;
 		}
 
 		if (stop > 1<<8)

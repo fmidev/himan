@@ -1,8 +1,8 @@
-/*
- * forecast_time.cpp
+/**
+ * @file forecast_time.cpp
  *
- *  Created on: Dec  1, 2012
- *      Author: partio
+ * @date Dec  1, 2012
+ * @author partio
  */
 
 #include "forecast_time.h"
@@ -12,137 +12,137 @@ using namespace himan;
 
 forecast_time::forecast_time()
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime)
-    : itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(theOriginDateTime)))
-    , itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime)))
-	, itsStepResolution(kHour)
+	: itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(theOriginDateTime)))
+	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime)))
+	, itsStepResolution(kHourResolution)
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::shared_ptr<raw_time> theValidDateTime)
-    : itsOriginDateTime(theOriginDateTime)
-    , itsValidDateTime(theValidDateTime)
-	, itsStepResolution(kHour)
+	: itsOriginDateTime(theOriginDateTime)
+	, itsValidDateTime(theValidDateTime)
+	, itsStepResolution(kHourResolution)
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const std::string& theOriginDateTime,
-                             const std::string& theValidDateTime,
-                             const std::string& theDateMask)
-    : itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(theOriginDateTime, theDateMask)))
-    , itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime, theDateMask)))
-	, itsStepResolution(kHour)
+							 const std::string& theValidDateTime,
+							 const std::string& theDateMask)
+	: itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(theOriginDateTime, theDateMask)))
+	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime, theDateMask)))
+	, itsStepResolution(kHourResolution)
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const forecast_time& other)
-    : itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime)))
-    , itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime)))
+	: itsOriginDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime)))
+	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime)))
 	, itsStepResolution(other.itsStepResolution)
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time& forecast_time::operator=(const forecast_time& other)
 {
-    itsOriginDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime));
-    itsValidDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime));
-    itsStepResolution = other.itsStepResolution;
-    return *this;
+	itsOriginDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime));
+	itsValidDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime));
+	itsStepResolution = other.itsStepResolution;
+	return *this;
 }
 
 std::ostream& forecast_time::Write(std::ostream& file) const
 {
 
-    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
-    file << *itsOriginDateTime;
-    file << *itsValidDateTime;
-    file << "__itsStepResolution__ " << itsStepResolution << std::endl;
+	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	file << *itsOriginDateTime;
+	file << *itsValidDateTime;
+	file << "__itsStepResolution__ " << itsStepResolution << std::endl;
 
-    return file;
+	return file;
 }
 
 bool forecast_time::operator==(const forecast_time& other)
 {
-    if (this == &other)
-    {
-        return true;
-    }
+	if (this == &other)
+	{
+		return true;
+	}
 
-    return ((*itsOriginDateTime == *other.itsOriginDateTime)
-    			&& (*itsValidDateTime == *other.itsValidDateTime)
-    			&& itsStepResolution == other.itsStepResolution);
+	return ((*itsOriginDateTime == *other.itsOriginDateTime)
+				&& (*itsValidDateTime == *other.itsValidDateTime)
+				&& itsStepResolution == other.itsStepResolution);
 }
 
 bool forecast_time::operator!=(const forecast_time& other)
 {
-    return !(*this == other);
+	return !(*this == other);
 }
 
 int forecast_time::Step() const
 {
 
-    if (itsValidDateTime->RawTime() != boost::date_time::not_a_date_time && itsOriginDateTime->RawTime() != boost::date_time::not_a_date_time)
-    {
+	if (itsValidDateTime->RawTime() != boost::date_time::not_a_date_time && itsOriginDateTime->RawTime() != boost::date_time::not_a_date_time)
+	{
 
-    	int step = kHPMissingInt;
+		int step = kHPMissingInt;
 
-    	switch (itsStepResolution)
-    	{
-    	case kHour:
-    		step = (itsValidDateTime->RawTime() - itsOriginDateTime->RawTime()).hours();
-    		break;
+		switch (itsStepResolution)
+		{
+		case kHourResolution:
+			step = (itsValidDateTime->RawTime() - itsOriginDateTime->RawTime()).hours();
+			break;
 
-    	case kMinute:
-    		step = (itsValidDateTime->RawTime() - itsOriginDateTime->RawTime()).total_seconds() / 60;
-    		break;
+		case kMinuteResolution:
+			step = (itsValidDateTime->RawTime() - itsOriginDateTime->RawTime()).total_seconds() / 60;
+			break;
 
-    	default:
-    		throw std::runtime_error(ClassName() + ": unknown step resolution");
-    		break;
-    	}
+		default:
+			throw std::runtime_error(ClassName() + ": unknown step resolution");
+			break;
+		}
 
-    	return step;
+		return step;
 
-    }
+	}
 
-    return kHPMissingInt;
+	return kHPMissingInt;
 }
 
 std::shared_ptr<raw_time> forecast_time::OriginDateTime() const
 {
-    return itsOriginDateTime;
+	return itsOriginDateTime;
 }
 
 void forecast_time::OriginDateTime(std::shared_ptr<raw_time> theOriginDateTime)
 {
-    itsOriginDateTime = theOriginDateTime;
+	itsOriginDateTime = theOriginDateTime;
 }
 
 void forecast_time::OriginDateTime(std::string& theOriginDateTime, const std::string& theDateMask)
 {
-    itsOriginDateTime = std::shared_ptr<raw_time> (new raw_time(theOriginDateTime, theDateMask));
+	itsOriginDateTime = std::shared_ptr<raw_time> (new raw_time(theOriginDateTime, theDateMask));
 }
 
 std::shared_ptr<raw_time> forecast_time::ValidDateTime() const
 {
-    return itsValidDateTime;
+	return itsValidDateTime;
 }
 
 void forecast_time::ValidDateTime(std::shared_ptr<raw_time> theValidDateTime)
 {
-    itsValidDateTime = theValidDateTime;
+	itsValidDateTime = theValidDateTime;
 }
 
 void forecast_time::ValidDateTime(std::string& theValidDateTime, const std::string& theDateMask)
 {
-    itsValidDateTime = std::shared_ptr<raw_time> (new raw_time(theValidDateTime, theDateMask));
+	itsValidDateTime = std::shared_ptr<raw_time> (new raw_time(theValidDateTime, theDateMask));
 }
 
 

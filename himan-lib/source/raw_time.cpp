@@ -90,13 +90,13 @@ std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, 
 bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 {
 
-    if (timeResolution == kHour)
+    if (timeResolution == kHourResolution)
     {
         boost::posix_time::hours adjustment (theValue);
 
         itsDateTime = itsDateTime + adjustment;
     }
-    else if (timeResolution == kMinute)
+    else if (timeResolution == kMinuteResolution)
     {
         boost::posix_time::minutes adjustment (theValue);
 
