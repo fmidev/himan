@@ -698,6 +698,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		size_t len = 0;
 
+#ifdef READ_PACKED_DATA
+
 		if (readPackedData)
 		{
 			len = itsGrib->Message()->UnpackedValuesLength();
@@ -719,7 +721,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			newInfo->Grid()->PackedData(packed);
 		}
-		else if (readContents)
+		else
+#endif
+		if (readContents)
 		{
 			len = itsGrib->Message()->ValuesLength();
 
