@@ -1,15 +1,22 @@
 /**
- * @file tk2tc.cpp
+ * @file height.cpp
  *
- * @dateNov 20, 2012
- * @author partio
+ * @date Apr 5, 2013
+ * @author peramaki
  */
 
-#include "tk2tc.h"
+#include "height.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include <math.h>
+
+#define HIMAN_COMPILED_INCLUDE
+
+#include "hybrid_pressure.h"
+
+#undef HIMAN_COMPILED_INCLUDE
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -27,16 +34,17 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "tk2tc_cuda.h"
+#include "cuda_extern.h"
 
-tk2tc::tk2tc() : itsUseCuda(false), itsCudaDeviceCount(0)
+const string itsName("height");
+
+height::height() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
-	itsClearTextFormula = "Tc = Tk - 273.15";
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }
 
-void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
+void height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -70,45 +78,30 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->UsedThreadCount(threadCount);
 		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
 	}
-	
+
 	boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
 
+
 	/*
-	 * Set target parameter to potential temperature
-	 * - name T-C
-	 * - univ_id 4
-	 * - grib2 descriptor 0'00'000
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
+	 * Set target parameter to TODO
 	 *
 	 */
 
 	vector<param> theParams;
 
-	param requestedParam("T-C", 4);
+	param theRequestedParam("H0C-M", 270);
 
 	// GRIB 2
-	
-	requestedParam.GribDiscipline(0);
-	requestedParam.GribCategory(0);
-	requestedParam.GribParameter(0);
 
-	// GRIB 1
+	theRequestedParam.GribParameter(0);
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+	// GRIB 1?
 
-		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedParam.Name());
-		requestedParam.GribIndicatorOfParameter(parm_id);
-		requestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+	// tähän GRIB 1
 
-	}
-
-	theParams.push_back(requestedParam);
+	theParams.push_back(theRequestedParam);
 
 	targetInfo->Params(theParams);
 
@@ -118,55 +111,17 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	targetInfo->Create();
 
+
 	/*
 	 * Initialize parent class functions for dimension handling
 	 */
 
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(requestedParam);
-
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
-
-	for (size_t i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
-		boost::thread* t = new boost::thread(&tk2tc::Run,
-											 this,
-											 targetInfos[i],
-											 conf,
-											 i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-
-		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-		string theOutputFile = conf->ConfigurationFile();
-
-		theWriter->ToFile(targetInfo, conf, theOutputFile);
-
-	}
-
 }
 
-void tk2tc::Run(shared_ptr<info> myTargetInfo,
+void height::Run(shared_ptr<info> myTargetInfo,
 				shared_ptr<const plugin_configuration> conf,
 				unsigned short threadIndex)
 {
@@ -183,40 +138,75 @@ void tk2tc::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
-					  shared_ptr<const plugin_configuration> conf,
-					  unsigned short threadIndex)
+void height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
+
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
 	// Required source parameters
 
-	param TParam("T-K");
+	param PParam("P-Pa"); //maanpintapaine
+	param TParam("T-K"); //2m-lämpötila
+	level H2(kHeight, 2);
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tcThread #" + boost::lexical_cast<string> (threadIndex)));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
+
+	shared_ptr<hybrid_pressure> itsHybridPressure = dynamic_pointer_cast<hybrid_pressure> (plugin_factory::Instance()->Plugin("hybrid_pressure"));
+	shared_ptr<plugin_configuration> hybridConf(new plugin_configuration(*conf));
+	hybridConf->Name("hybrid_pressure");
+	hybridConf->Options(conf->Options());
+
+	itsHybridPressure->Process(hybridConf);
 
 	ResetNonLeadingDimension(myTargetInfo);
 
 	myTargetInfo->FirstParam();
 
+	shared_ptr<info> PInfoOld;
+	shared_ptr<info> T2mInfoOld;
+	shared_ptr<info> TInfoOld;
+
+	double POld(kFloatMissing);
+	//double T2mOld;
+	double TOld(kFloatMissing);
+	
+	bool firstFetch(true);
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
-
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
+		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		// Source info for T
 
+		shared_ptr<info> PInfo;
+		shared_ptr<info> T2mInfo;
 		shared_ptr<info> TInfo;
-
 		try
 		{
+			// Source info for P
+			PInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 myTargetInfo->Level(),
+								 PParam);
+				
+			// Source info for 2m T
+			T2mInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 H2,
+								 TParam);
+
+			// Source info for Hybrid
 			TInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
-								 TParam);
+								 TParam);			
 
-			assert(TInfo->Param().Unit() == kK);
+			if (firstFetch)
+			{
+				PInfoOld = PInfo;
+				//T2mInfoOld = T2mInfo;
+				TInfoOld = TInfo;
+			}
 
 		}
 		catch (HPExceptionType e)
@@ -224,6 +214,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			switch (e)
 			{
 				case kFileDataNotFound:
+					//warning vai info, tk2tc:ssä on warning, tpot, icing ja kindeks sisältää infon
 					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing);
 
@@ -246,9 +237,16 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		int count = 0;
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> T2mGrid(T2mInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid());
+		shared_ptr<NFmiGrid> PGridOld(PInfoOld->Grid()->ToNewbaseGrid());
+		//shared_ptr<NFmiGrid> T2mGridOld(T2mInfoOld->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGridOld(TInfoOld->Grid()->ToNewbaseGrid());
+
+		bool equalGrids = ( *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *T2mInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() && 
+							*myTargetInfo->Grid() == *PInfoOld->Grid() && *myTargetInfo->Grid() == *TInfoOld->Grid());
 
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
@@ -256,34 +254,14 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		{
 			processTimer->Start();
 		}
-		
+
 		string deviceType;
+
 
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
 		{
 	
 			deviceType = "GPU";
-
-			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
-			{
-				TInfo->Grid()->Swap(myTargetInfo->Grid()->ScanningMode());
-			}
-
-			tk2tc_cuda::tk2tc_cuda_options opts;
-
-			opts.N = TGrid->Size();
-			opts.TIn = TInfo->Data()->Values();
-			opts.TOut = new double[opts.N];
-			opts.cudaDeviceIndex = threadIndex-1;
-			
-			tk2tc_cuda::DoCuda(opts);
-
-			myTargetInfo->Data()->Set(opts.TOut, opts.N);
-
-			missingCount = opts.missingValuesCount;
-			count = opts.totalValuesCount;
-
-			delete [] opts.TOut;
 
 		}
 		else
@@ -302,11 +280,18 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 				count++;
 
+				//interpolointi
+
 				double T = kFloatMissing;
+				double T2m = kFloatMissing;
+				double P = kFloatMissing;
 
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+				InterpolateToPoint(targetGrid, T2mGrid, equalGrids, T2m);
+				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
 
-				if (T == kFloatMissing)
+
+				if (T == kFloatMissing || T2m == kFloatMissing || P == kFloatMissing)
 				{
 					missingCount++;
 
@@ -314,52 +299,52 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 					continue;
 				}
 
-				double TC = T - 273.15;
 
-				if (!myTargetInfo->Value(TC))
+				if (firstFetch)
+				{
+					TOld = T;
+					//T2mOld = T2m;
+					POld = P;
+					firstFetch = false;
+				}
+
+				//laskenta
+				double Tave = ( T + TOld ) /2;
+				double deltaZ = (287 / 9.81) * Tave * log(POld / P);
+
+				if (!myTargetInfo->Value(deltaZ))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
 			}
 
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
-			
-			if (myTargetInfo->Grid()->ScanningMode() != kBottomLeft)
-			{
-				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
-
-				myTargetInfo->Grid()->ScanningMode(kBottomLeft); // newbase did this
-				
-				myTargetInfo->Grid()->Swap(originalMode);
-
-			}
-
 		}
-	
+
+		PInfoOld = PInfo;
+		T2mInfoOld = T2mInfo;
+		TInfoOld = TInfo;
+
 		if (conf->StatisticsEnabled())
 		{
 			processTimer->Stop();
 			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
 #ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
+
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
+
 		}
 
 		/*
 		 * Now we are done for this level
 		 *
 		 * Clone info-instance to writer since it might change our descriptor places
-		 */
+		 * */
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-
 
 		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
 		{

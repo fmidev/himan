@@ -1,12 +1,12 @@
 /*
- * @file hybrid_pressure.h
+ * example_plugin.h
  *
- * @date Jan 23, 2012
- * @author: Aalto
+ *  Created on: Nov 17, 2012
+ *      Author: partio
  */
 
-#ifndef HYBRID_PRESSURE_H
-#define HYBRID_PRESSURE_H
+#ifndef EXAMPLE_PLUGIN_H
+#define EXAMPLE_PLUGIN_H
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
@@ -16,28 +16,21 @@ namespace himan
 namespace plugin
 {
 
-/**
- * @class hybrid_pressure
- *
- * @brief Calculate pressure on hybrid level. 
- *
- */
-
-class hybrid_pressure : public compiled_plugin, private compiled_plugin_base
+class example_plugin : public compiled_plugin, private compiled_plugin_base
 {
 public:
-    hybrid_pressure();
+    example_plugin();
 
-    inline virtual ~hybrid_pressure() {}
+    inline virtual ~example_plugin() {}
 
-    hybrid_pressure(const hybrid_pressure& other) = delete;
-    hybrid_pressure& operator=(const hybrid_pressure& other) = delete;
+    example_plugin(const example_plugin& other) = delete;
+    example_plugin& operator=(const example_plugin& other) = delete;
 
     virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
     virtual std::string ClassName() const
     {
-        return "himan::plugin::hybrid_pressure";
+        return "himan::plugin::example_plugin";
     }
 
     virtual HPPluginClass PluginClass() const
@@ -47,7 +40,7 @@ public:
 
     virtual HPVersionNumber Version() const
     {
-        return HPVersionNumber(0, 1);
+        return HPVersionNumber(1, 0);
     }
 
 private:
@@ -57,21 +50,16 @@ private:
 
     bool itsUseCuda;
     int itsCudaDeviceCount;
-
 };
 
-
-#ifndef HIMAN_COMPILED_INCLUDE
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<hybrid_pressure> (new hybrid_pressure());
+    return std::shared_ptr<example_plugin> (new example_plugin());
 }
-
-#endif /* HIMAN_COMPILED_INCLUDE */
 
 } // namespace plugin
 } // namespace himan
 
-#endif /* HYBRID_PRESSURE_H */
+#endif /* EXAMPLE_PLUGIN_H */

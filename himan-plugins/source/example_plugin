@@ -1,11 +1,12 @@
 /**
- * @file tk2tc.cpp
+ * @file example_plugin
  *
- * @dateNov 20, 2012
- * @author partio
+ * Template for future plugins.
+ *
+ * @dateApr 10, 2013
+ * @author peramaki
  */
 
-#include "tk2tc.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
@@ -27,16 +28,17 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "tk2tc_cuda.h"
+#include "cuda_extern.h"
 
-tk2tc::tk2tc() : itsUseCuda(false), itsCudaDeviceCount(0)
+const string itsName("example_plugin");
+
+example_plugin::example_plugin() : itsUseCuda(false)
 {
-	itsClearTextFormula = "Tc = Tk - 273.15";
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }
 
-void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
+void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -70,16 +72,16 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->UsedThreadCount(threadCount);
 		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
 	}
-	
+
 	boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
 	 * Set target parameter to potential temperature
-	 * - name T-C
-	 * - univ_id 4
-	 * - grib2 descriptor 0'00'000
+	 * - name PARM_NAME
+	 * - univ_id UNIV_ID
+	 * - grib2 descriptor X'Y'Z
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
@@ -88,17 +90,23 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param requestedParam("T-C", 4);
+	//param theRequestedParam(PARM_ NAME, UNIV_ID);
 
 	// GRIB 2
-	
-	requestedParam.GribDiscipline(0);
-	requestedParam.GribCategory(0);
-	requestedParam.GribParameter(0);
+
+	/*
+	 * requestedParam.GribDiscipline(X);
+	 * requestedParam.GribCategory(Y);
+	 * requestedParam.GribParameter(Z);
+	 */
 
 	// GRIB 1
 
-	if (conf->OutputFileType() == kGRIB1)
+	/*
+	 * GRIB 1 parameters go here
+	 *
+	 */
+ 	if (conf->OutputFileType() == kGRIB1)
 	{
 		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -108,7 +116,9 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	}
 
-	theParams.push_back(requestedParam);
+	// ----
+
+	theParams.push_back(theRequestedParam);
 
 	targetInfo->Params(theParams);
 
@@ -118,55 +128,17 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	targetInfo->Create();
 
+
 	/*
 	 * Initialize parent class functions for dimension handling
 	 */
 
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(requestedParam);
-
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
-
-	for (size_t i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
-		boost::thread* t = new boost::thread(&tk2tc::Run,
-											 this,
-											 targetInfos[i],
-											 conf,
-											 i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-
-		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-		string theOutputFile = conf->ConfigurationFile();
-
-		theWriter->ToFile(targetInfo, conf, theOutputFile);
-
-	}
-
 }
 
-void tk2tc::Run(shared_ptr<info> myTargetInfo,
+void example_plugin::Run(shared_ptr<info> myTargetInfo,
 				shared_ptr<const plugin_configuration> conf,
 				unsigned short threadIndex)
 {
@@ -183,17 +155,23 @@ void tk2tc::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
-					  shared_ptr<const plugin_configuration> conf,
-					  unsigned short threadIndex)
+void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
+
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
 	// Required source parameters
 
-	param TParam("T-K");
+	/*
+	 * eg. param PParam("P-Pa"); for pressure in pascals
+	 *
+	 */
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tcThread #" + boost::lexical_cast<string> (threadIndex)));
+	param exampleParam("quantity-unit_name");
+	// ----	
+
+
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);
 
@@ -201,22 +179,24 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
-
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
+		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		// Source info for T
-
-		shared_ptr<info> TInfo;
-
+		shared_ptr<info> exampleInfo;
 		try
 		{
-			TInfo = theFetcher->Fetch(conf,
+			/*
+			 *	Parameter infos are made here
+			 *
+			 */
+
+			// Source info for exampleParam
+			exampleInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
-								 TParam);
-
-			assert(TInfo->Param().Unit() == kK);
+								 exampleParam);
+			
+			// ----
 
 		}
 		catch (HPExceptionType e)
@@ -245,10 +225,15 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		int missingCount = 0;
 		int count = 0;
 
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		/*
+		 * Converting original grid-data to newbase grid
+		 *
+		 */
 
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid());
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> exampleGrid(exampleInfo->Grid()->ToNewbaseGrid());
+
+		bool equalGrids = (*myTargetInfo->Grid() == *exampleInfo->Grid() );
 
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
@@ -256,34 +241,38 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		{
 			processTimer->Start();
 		}
-		
+
 		string deviceType;
+
 
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
 		{
 	
 			deviceType = "GPU";
 
-			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
+			size_t N = exampleGrid->Size();
+
+			float* exampleOut = new float[N]; // array that cuda devices will store data
+			double* infoData = new double[N]; // array that's stored to info instance
+
+			example_cuda::DoCuda(exampleGrid->DataPool()->Data(), exampleOut, N, threadIndex-1);
+
+			for (size_t i = 0; i < N; i++)
 			{
-				TInfo->Grid()->Swap(myTargetInfo->Grid()->ScanningMode());
+				infoData[i] = static_cast<float> (exampleOut[i]);
+
+				if (infoData[i] == kFloatMissing)
+				{
+					missingCount++;
+				}
+
+				count++;
 			}
 
-			tk2tc_cuda::tk2tc_cuda_options opts;
+			myTargetInfo->Data()->Set(infoData, N);
 
-			opts.N = TGrid->Size();
-			opts.TIn = TInfo->Data()->Values();
-			opts.TOut = new double[opts.N];
-			opts.cudaDeviceIndex = threadIndex-1;
-			
-			tk2tc_cuda::DoCuda(opts);
-
-			myTargetInfo->Data()->Set(opts.TOut, opts.N);
-
-			missingCount = opts.missingValuesCount;
-			count = opts.totalValuesCount;
-
-			delete [] opts.TOut;
+			delete [] infoData;
+			delete [] exampleOut;
 
 		}
 		else
@@ -302,11 +291,15 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 				count++;
 
-				double T = kFloatMissing;
+				/*
+				 * interpolation happens here
+				 *
+				 */
+				double example = kFloatMissing;
 
-				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+				InterpolateToPoint(targetGrid, exampleGrid, equalGrids, example);
 
-				if (T == kFloatMissing)
+				if (example == kFloatMissing )
 				{
 					missingCount++;
 
@@ -314,52 +307,46 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 					continue;
 				}
 
-				double TC = T - 273.15;
+				/*
+				 * Calculations go here
+				 *
+				 */
+				
 
-				if (!myTargetInfo->Value(TC))
+				if (!myTargetInfo->Value(example))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
 			}
 
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
-			
-			if (myTargetInfo->Grid()->ScanningMode() != kBottomLeft)
-			{
-				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
-
-				myTargetInfo->Grid()->ScanningMode(kBottomLeft); // newbase did this
-				
-				myTargetInfo->Grid()->Swap(originalMode);
-
-			}
-
 		}
-	
+
+
+
+
+
+
 		if (conf->StatisticsEnabled())
 		{
 			processTimer->Stop();
 			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
 #ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
+
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
+
 		}
 
 		/*
 		 * Now we are done for this level
 		 *
 		 * Clone info-instance to writer since it might change our descriptor places
-		 */
+		 * */
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-
 
 		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
 		{
