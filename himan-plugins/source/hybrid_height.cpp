@@ -12,12 +12,6 @@
 #include <boost/thread.hpp>
 #include <math.h>
 
-#define HIMAN_COMPILED_INCLUDE
-
-#include "hybrid_pressure.h"
-
-#undef HIMAN_COMPILED_INCLUDE
-
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
@@ -151,13 +145,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
-	shared_ptr<hybrid_pressure> itsHybridPressure = dynamic_pointer_cast<hybrid_pressure> (plugin_factory::Instance()->Plugin("hybrid_pressure"));
-	shared_ptr<plugin_configuration> hybridConf(new plugin_configuration(*conf));
-	hybridConf->Name("hybrid_pressure");
-	hybridConf->Options(conf->Options());
-
-	itsHybridPressure->Process(hybridConf);
-
 	ResetNonLeadingDimension(myTargetInfo);
 
 	myTargetInfo->FirstParam();
@@ -258,6 +245,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		string deviceType;
 
 
+		/*
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
 		{
 	
@@ -266,59 +254,62 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		}
 		else
 		{
+		*/
+		deviceType = "CPU";
 
-			deviceType = "CPU";
+		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+		myTargetInfo->ResetLocation();
 
-			myTargetInfo->ResetLocation();
+		targetGrid->Reset();
 
-			targetGrid->Reset();
+		while (myTargetInfo->NextLocation() && targetGrid->Next())
+		{
 
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
+			count++;
+
+			//interpolointi
+
+			double T = kFloatMissing;
+			double T2m = kFloatMissing;
+			double P = kFloatMissing;
+
+			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+			InterpolateToPoint(targetGrid, T2mGrid, equalGrids, T2m);
+			InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+
+
+			if (T == kFloatMissing || T2m == kFloatMissing || P == kFloatMissing)
 			{
+				missingCount++;
 
-				count++;
-
-				//interpolointi
-
-				double T = kFloatMissing;
-				double T2m = kFloatMissing;
-				double P = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-				InterpolateToPoint(targetGrid, T2mGrid, equalGrids, T2m);
-				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-
-
-				if (T == kFloatMissing || T2m == kFloatMissing || P == kFloatMissing)
-				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-
-
-				if (firstFetch)
-				{
-					TOld = T;
-					//T2mOld = T2m;
-					POld = P;
-					firstFetch = false;
-				}
-
-				//laskenta
-				double Tave = ( T + TOld ) /2;
-				double deltaZ = (287 / 9.81) * Tave * log(POld / P);
-
-				if (!myTargetInfo->Value(deltaZ))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
-				}
+				myTargetInfo->Value(kFloatMissing);
+				continue;
 			}
 
+
+			if (firstFetch)
+			{
+				TOld = T;
+				//T2mOld = T2m;
+				POld = P;
+				firstFetch = false;
+			}
+
+			//laskenta
+			double Tave = ( T + TOld ) /2;
+			double deltaZ = (287 / 9.81) * Tave * log(POld / P);
+
+			if (!myTargetInfo->Value(deltaZ))
+			{
+				throw runtime_error(ClassName() + ": Failed to set value to matrix");
+			}
+			TOld = T;
+			POld = P;
+		
 		}
+
+		//} cuda
 
 		PInfoOld = PInfo;
 		T2mInfoOld = T2mInfo;
