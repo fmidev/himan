@@ -1,11 +1,11 @@
 /**
- * @file height.cpp
+ * @file hybrid_height.cpp
  *
  * @date Apr 5, 2013
  * @author peramaki
  */
 
-#include "height.h"
+#include "hybrid_height.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
@@ -36,15 +36,15 @@ using namespace himan::plugin;
 
 #include "cuda_extern.h"
 
-const string itsName("height");
+const string itsName("hybrid_height");
 
-height::height() : itsUseCuda(false), itsCudaDeviceCount(0)
+hybrid_height::hybrid_height() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
 
-void height::Process(std::shared_ptr<const plugin_configuration> conf)
+void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -121,7 +121,7 @@ void height::Process(std::shared_ptr<const plugin_configuration> conf)
 	 */
 }
 
-void height::Run(shared_ptr<info> myTargetInfo,
+void hybrid_height::Run(shared_ptr<info> myTargetInfo,
 				shared_ptr<const plugin_configuration> conf,
 				unsigned short threadIndex)
 {
@@ -138,7 +138,7 @@ void height::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));

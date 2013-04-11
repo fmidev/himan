@@ -1,12 +1,12 @@
 /**
- * @file height.h
+ * @file hybrid_height.h
  *
  * @date Apr 5, 2013
  * @author peramaki
  */
 
-#ifndef HEIGHT_H
-#define HEIGHT_H
+#ifndef HYBRID_HEIGHT_H
+#define HYBRID_HEIGHT_H
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
@@ -16,21 +16,21 @@ namespace himan
 namespace plugin
 {
 
-class height : public compiled_plugin, private compiled_plugin_base
+class hybrid_height : public compiled_plugin, private compiled_plugin_base
 {
 public:
-	height();
+	hybrid_height();
 
-	inline virtual ~height() {}
+	inline virtual ~hybrid_height() {}
 
-	height(const height& other) = delete;
-	height& operator=(const height& other) = delete;
+	hybrid_height(const hybrid_height& other) = delete;
+	hybrid_height& operator=(const hybrid_height& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
 	virtual std::string ClassName() const
 	{
-		return "himan::plugin::height";
+		return "himan::plugin::hybrid_height";
 	}
 
     virtual HPPluginClass PluginClass() const
@@ -56,11 +56,11 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<height> (new height());
+    return std::shared_ptr<hybrid_height> (new hybrid_height());
 }
 
 } // namespace plugin
 } // namespace himan
 
 
-#endif /* HEIGHT_H */
+#endif /* HYBRID_HEIGHT_H */
