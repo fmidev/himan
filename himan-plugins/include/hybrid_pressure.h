@@ -60,16 +60,12 @@ private:
 
 };
 
-
-#ifndef HIMAN_COMPILED_INCLUDE
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
     return std::shared_ptr<hybrid_pressure> (new hybrid_pressure());
 }
-
-#endif /* HIMAN_COMPILED_INCLUDE */
 
 } // namespace plugin
 } // namespace himan
