@@ -49,10 +49,8 @@ inline __device__ void GetBitValue(const unsigned char* d_p, long bitp, int *val
 
 inline __device__ void SimpleUnpackFullBytes(const unsigned char* __restrict__ d_p,
 											double* __restrict__ d_u,
-											size_t values_len, int bpv, double bsf, double dsf, double rv)
+											size_t values_len, int bpv, double bsf, double dsf, double rv, int idx)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
 	int bc;
 	unsigned long lvalue;
 
@@ -77,10 +75,8 @@ inline __device__ void SimpleUnpackFullBytes(const unsigned char* __restrict__ d
 
 inline __device__ void SimpleUnpackUnevenBytes(const unsigned char* __restrict__ d_p,
 											double* __restrict__ d_u,
-											size_t values_len, int bpv, double bsf, double dsf, double rv)
+											size_t values_len, int bpv, double bsf, double dsf, double rv, int idx)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
 	int j=0;
 	unsigned long lvalue;
 	long bitp=bpv*idx;
@@ -106,4 +102,15 @@ inline __device__ void SimpleUnpackUnevenBytes(const unsigned char* __restrict__
 
 }
 
+inline __device__ void SimpleUnpack(const unsigned char* d_p, double* d_u, size_t values_len, int bpv, double bsf, double dsf, double rv, int idx)
+{
+	if (bpv%8)
+	{
+		SimpleUnpackUnevenBytes(d_p, d_u, values_len, bpv, bsf, dsf, rv, idx);
+	}
+	else
+	{
+		SimpleUnpackFullBytes(d_p, d_u, values_len, bpv, bsf, dsf, rv, idx);
+	}
+}
 #endif
