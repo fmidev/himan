@@ -18,7 +18,7 @@
 // Work around "passing 'T' chooses 'int' over 'unsigned int'" warnings when T
 // is an enum type:
 
-#if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4))
+#if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)) && ! __CUDACC__
 #pragma GCC diagnostic ignored "-Wsign-promo"
 #endif
 
@@ -214,11 +214,11 @@ const boost::unordered_map<HPTimeResolution,const char*> HPTimeResolutionToStrin
 		(kHourResolution, "hour")
 		(kMinuteResolution, "minute");
 
-enum HPGridPackingType
+enum HPPackingType
 {
 	kUnknownPackingType = 0,
 	kUnpacked,
-	kSimplePacked
+	kSimplePacking
 };
 
 /**
