@@ -21,6 +21,8 @@ using namespace himan::plugin;
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
+#define READ_PACKED_DATA
+
 grib::grib()
 {
 
@@ -715,9 +717,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			size_t len = itsGrib->Message()->Section4Length();
 
-			auto packed = std::make_shared<simple_packed> (bpv, bsf, dsf, rv);
+			auto packed = std::make_shared<simple_packed> (bpv, util::ToPower(bsf,2), util::ToPower(-dsf, 10), rv);
 
-			packed->Resize(len, 1, 1);
+			//packed->Resize(len);
 			
 			packed->Set(u, len);
 

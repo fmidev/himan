@@ -10,7 +10,6 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
-#include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -279,7 +278,13 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			tk2tc_cuda::tk2tc_cuda_options opts;
 
 			opts.N = TGrid->Size();
+
+#ifdef HAVE_CUDA
+			cudaMallocHost(reinterpret_cast<void**> (&opts.TOut), opts.N * sizeof(double));
+#else
 			opts.TOut = new double[opts.N];
+#endif
+
 			opts.cudaDeviceIndex = threadIndex-1;
 
 			if (TInfo->Grid()->DataIsPacked())
@@ -287,15 +292,9 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
 				shared_ptr<simple_packed> s = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
+
+				opts.simplePackedT = *(s);
 				
-				opts.simple_packing.N = s->Size();
-				opts.simple_packing.bitsPerValue = s->BitsPerValue();
-				opts.simple_packing.binaryScaleFactor = util::ToPower(s->BinaryScaleFactor(), 2);
-				opts.simple_packing.decimalScaleFactor = util::ToPower(-s->DecimalScaleFactor(), 10);
-				opts.simple_packing.referenceValue = s->ReferenceValue();
-
-				opts.TInPacked = s->Values();
-
 				opts.isPackedData = true;
 			}
 			else
@@ -322,7 +321,11 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 
+#ifdef HAVE_CUDA
+			cudaFreeHost(opts.TOut);
+#else
 			delete [] opts.TOut;
+#endif	
 
 		}
 		else
