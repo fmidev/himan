@@ -13,7 +13,6 @@
 
 #include <mutex>
 #include "himan_common.h"
-#include "grid.h"
 
 namespace himan
 {
@@ -115,13 +114,11 @@ public:
 		double sum = 0;
 		long missing = 0;
 
-		// kFloatMissing should be substituted with itsMissingValue
-
 		for (size_t i = 0; i < theValues.size(); i++)
 		{
 			double d = theValues[i];
 
-			if (d == kFloatMissing)
+			if (d == itsMissingValue)
 			{
 				missing++;
 				continue;
