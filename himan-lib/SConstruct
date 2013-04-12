@@ -21,6 +21,20 @@ RELEASE = (not DEBUG)
 
 workspace = os.environ['HOME'] + "/workspace"
 
+# cuda toolkit path
+
+cuda_toolkit_path = '/opt/cuda'
+
+if os.environ.get('CUDA_TOOLKIT_PATH') is None:
+        print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
+else:
+        cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
+
+have_cuda = False
+
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
+        have_cuda = True
+
 env['CC'] = 'gcc'
 env['CXX'] = 'g++'
 
@@ -44,6 +58,9 @@ if os.environ.get('ORACLE_HOME') is None:
         includes.append('/usr/include/oracle')
 else:
         includes.append(os.environ.get('ORACLE_HOME') + '/rdbms/public')
+
+if have_cuda:
+        includes.append(cuda_toolkit_path + '/include')
 
 env.Append(CPPPATH = includes)
 
@@ -71,7 +88,9 @@ libraries.append('boost_iostreams')
 libraries.append('boost_filesystem')
 libraries.append('boost_system')
 libraries.append('boost_thread')
+libraries.append('boost_regex')
 libraries.append('dl')
+libraries.append('clntsh')
 libraries.append('fmidb')
 libraries.append('z')
 libraries.append('bz2')
@@ -131,6 +150,9 @@ env.Append(LINKFLAGS = ['-rdynamic','-Wl,--as-needed'])
 # Defines
 
 env.Append(CPPDEFINES=['UNIX'])
+
+if have_cuda:
+        env.Append(CPPDEFINES=['HAVE_CUDA'])
 
 # Other
 
