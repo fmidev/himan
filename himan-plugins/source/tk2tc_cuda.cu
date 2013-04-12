@@ -20,7 +20,7 @@ namespace tk2tc_cuda
 __global__ void UnpackAndCalculate(const unsigned char* dTPacked, double* dT, double* dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount);
 __global__ void Calculate(const double* dT, double* dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount);
 
-__device__ void _Calculate(const double* __restrict__ dT, double* __restrict__ dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount);
+__device__ void _Calculate(const double* __restrict__ dT, double* __restrict__ dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount, int idx);
 
 } // namespace tk2tc_cuda
 } // namespace plugin
@@ -32,40 +32,33 @@ __global__ void himan::plugin::tk2tc_cuda::UnpackAndCalculate(const unsigned cha
 
 	if (idx < opts.N)
 	{
-		if (opts.simplePackedT.bitsPerValue%8)
-		{
-			SimpleUnpackUnevenBytes(dTPacked, dT, opts.N, opts.simplePackedT.bitsPerValue, opts.simplePackedT.binaryScaleFactor, opts.simplePackedT.decimalScaleFactor, opts.simplePackedT.referenceValue);
-		}
-		else
-		{
-			SimpleUnpackFullBytes(dTPacked, dT, opts.N, opts.simplePackedT.bitsPerValue, opts.simplePackedT.binaryScaleFactor, opts.simplePackedT.decimalScaleFactor, opts.simplePackedT.referenceValue);
-		}
+		SimpleUnpack(dTPacked, dT, opts.N, opts.simplePackedT.bitsPerValue, opts.simplePackedT.binaryScaleFactor, opts.simplePackedT.decimalScaleFactor, opts.simplePackedT.referenceValue, idx);
 		
-		_Calculate(dT, dTOut, opts, dMissingValuesCount);
+		_Calculate(dT, dTOut, opts, dMissingValuesCount, idx);
 	}
 }
 
 __global__ void himan::plugin::tk2tc_cuda::Calculate(const double* dT, double* dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount)
 {
-	_Calculate(dT, dTOut, opts, dMissingValuesCount);
-}
-
-__device__ void himan::plugin::tk2tc_cuda::_Calculate(const double* __restrict__ dT, double* __restrict__ dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount)
-{
-
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
 	{
-		if (dT[idx] == kFloatMissing)
-		{
-			atomicAdd(dMissingValuesCount, 1);
-			dTOut[idx] = kFloatMissing;
-		}
-		else
-		{
-			dTOut[idx] = dT[idx] - 273.15;
-		}
+		_Calculate(dT, dTOut, opts, dMissingValuesCount, idx);
+	}
+}
+
+__device__ void himan::plugin::tk2tc_cuda::_Calculate(const double* __restrict__ dT, double* __restrict__ dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount, int idx)
+{
+
+	if (dT[idx] == kFloatMissing)
+	{
+		atomicAdd(dMissingValuesCount, 1);
+		dTOut[idx] = kFloatMissing;
+	}
+	else
+	{
+		dTOut[idx] = dT[idx] - 273.15;
 	}
 }
 
