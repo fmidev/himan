@@ -143,6 +143,14 @@ himan::point UVToGridRelative(const himan::point& regPoint, const himan::point& 
 
 himan::point UVToGeographical(double longitude, const himan::point& stereoUV);
 
+/**
+ * @brief Raise value to power. Function originated from grib_api.
+ * @param value Value that's raised
+ * @param power To which power value is raised
+ * @return `value` raised to `power`:th power
+ */
+
+double ToPower(double value, double power);
 
 } // namespace util
 } // namespace himan

@@ -356,3 +356,22 @@ point util::UVToGeographical(double longitude, const point& stereoUV)
 
 	return point(U,V);
 }
+
+double util::ToPower(double value, double power)
+{
+  double divisor = 1.0;
+
+  while(value < 0)
+  {
+    divisor /= power;
+    value++;
+  }
+
+  while(value > 0)
+  {
+    divisor *= power;
+    value--;
+  }
+
+  return divisor;
+}
