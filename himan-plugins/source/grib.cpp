@@ -700,8 +700,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 #ifdef READ_PACKED_DATA
 
-		if (readPackedData)
+		if (readPackedData && itsGrib->Message()->PackingType() == "grid_simple")
 		{
+			itsLogger->Trace("Retrieving packed data from grib");
+			
 			len = itsGrib->Message()->UnpackedValuesLength();
 
 			unsigned char* u = itsGrib->Message()->UnpackedValues();
