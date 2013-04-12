@@ -32,16 +32,25 @@ public:
 	}
 
 	matrix(const matrix& other)
+		: itsData(other.itsData) // Copy contents!
+		, itsWidth(other.itsWidth)
+		, itsHeight(other.itsHeight)
+		, itsDepth(other.itsDepth)
+		, itsMissingValue(other.itsMissingValue)
+	{
+	}
+
+	matrix& operator=(const matrix& other)
 	{
 		itsData = other.itsData; // Copy contents!
 		itsWidth = other.itsWidth;
 		itsHeight = other.itsHeight;
 		itsDepth = other.itsDepth;
 		itsMissingValue = other.itsMissingValue;
+
+		return *this;
 	}
 	
-	matrix& operator=(const matrix& other) = delete;
-
 	std::string ClassName() const
 	{
 		return "himan::matrix";
@@ -51,8 +60,6 @@ public:
 	{
 		return HPVersionNumber(0, 1);
 	}
-
-	// Perhaps dangerous: return reference with no const
 
 	T& At(size_t combinedIndex)
 	{
@@ -316,6 +323,18 @@ public:
 		return itsMissingValue;
 	}
 
+	/**
+	 * @brief Clear contents of matrix (set size = 0)
+     */
+
+	void Clear()
+	{
+		itsData.clear();
+		itsWidth=0;
+		itsHeight=0;
+		itsDepth=0;
+	}
+
 private:
 
 	inline size_t Index(size_t x, size_t y, size_t z) const
@@ -325,11 +344,13 @@ private:
 
 	std::vector<T> itsData;
 
-	T itsMissingValue;
-
 	size_t itsWidth, itsHeight, itsDepth;
 
+	T itsMissingValue;
+	
 	std::mutex itsValueMutex;
+
+
 };
 
 
