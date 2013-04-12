@@ -140,8 +140,8 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 	// Required source parameters
 
 	param PParam("P-Pa"); //maanpintapaine
-	param TParam("T-K"); //2m-lämpötila
-	level H2(kHeight, 2);
+	param TParam("T-K"); //lämpötila
+	//level H2(kHeight, 2);
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
@@ -149,15 +149,17 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	myTargetInfo->FirstParam();
 
-	shared_ptr<info> PInfoOld;
-	shared_ptr<info> T2mInfoOld;
-	shared_ptr<info> TInfoOld;
+	shared_ptr<info> PInfoPrevious;
+	//shared_ptr<info> T2mInfoPrevious;
+	shared_ptr<info> TInfoPrevious;
 
-	double POld(kFloatMissing);
-	//double T2mOld;
-	double TOld(kFloatMissing);
+	double PPrevious(kFloatMissing);
+	//double T2mPrevious;
+	double TPrevious(kFloatMissing);
 	
 	bool firstFetch(true);
+
+	double TotalHeight(0);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
@@ -166,7 +168,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 
 		shared_ptr<info> PInfo;
-		shared_ptr<info> T2mInfo;
+		//shared_ptr<info> T2mInfo;
 		shared_ptr<info> TInfo;
 		try
 		{
@@ -176,12 +178,12 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 								 myTargetInfo->Level(),
 								 PParam);
 				
-			// Source info for 2m T
+			/* Source info for 2m T
 			T2mInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 H2,
 								 TParam);
-
+			*/
 			// Source info for Hybrid
 			TInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
@@ -190,9 +192,9 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 			if (firstFetch)
 			{
-				PInfoOld = PInfo;
-				//T2mInfoOld = T2mInfo;
-				TInfoOld = TInfo;
+				PInfoPrevious = PInfo;
+				//T2mInfoPrevious = T2mInfo;
+				TInfoPrevious = TInfo;
 			}
 
 		}
@@ -201,7 +203,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 			switch (e)
 			{
 				case kFileDataNotFound:
-					//warning vai info, tk2tc:ssä on warning, tpot, icing ja kindeks sisältää infon
+					//warning vai info, tk2twc:ssä on warning, tpot, icing ja kindeks sisältää infon
 					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing);
 
@@ -225,15 +227,15 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> T2mGrid(T2mInfo->Grid()->ToNewbaseGrid());
+		//shared_ptr<NFmiGrid> T2mGrid(T2mInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
-		shared_ptr<NFmiGrid> PGridOld(PInfoOld->Grid()->ToNewbaseGrid());
-		//shared_ptr<NFmiGrid> T2mGridOld(T2mInfoOld->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGridOld(TInfoOld->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> PGridPrevious(PInfoPrevious->Grid()->ToNewbaseGrid());
+		//shared_ptr<NFmiGrid> T2mGridPrevious(T2mInfoPrevious->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGridPrevious(TInfoPrevious->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = ( *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *T2mInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() && 
-							*myTargetInfo->Grid() == *PInfoOld->Grid() && *myTargetInfo->Grid() == *TInfoOld->Grid());
+		bool equalGrids = ( *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() && 
+							*myTargetInfo->Grid() == *PInfoPrevious->Grid() && *myTargetInfo->Grid() == *TInfoPrevious->Grid());
 
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
@@ -271,15 +273,15 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 			//interpolointi
 
 			double T = kFloatMissing;
-			double T2m = kFloatMissing;
+			//double T2m = kFloatMissing;
 			double P = kFloatMissing;
 
 			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-			InterpolateToPoint(targetGrid, T2mGrid, equalGrids, T2m);
+			//InterpolateToPoint(targetGrid, T2mGrid, equalGrids, T2m);
 			InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
 
 
-			if (T == kFloatMissing || T2m == kFloatMissing || P == kFloatMissing)
+			if (T == kFloatMissing || P == kFloatMissing)
 			{
 				missingCount++;
 
@@ -290,30 +292,32 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 			if (firstFetch)
 			{
-				TOld = T;
-				//T2mOld = T2m;
-				POld = P;
+				TPrevious = T;
+				//T2mPrevious = T2m;
+				PPrevious = P;
 				firstFetch = false;
 			}
 
 			//laskenta
-			double Tave = ( T + TOld ) /2;
-			double deltaZ = (287 / 9.81) * Tave * log(POld / P);
+			double Tave = ( T + TPrevious ) /2;
+			double deltaZ = (287 / 9.81) * Tave * log(PPrevious / P);
 
-			if (!myTargetInfo->Value(deltaZ))
+			TotalHeight += deltaZ;
+
+			if (!myTargetInfo->Value(TotalHeight))
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
 			}
-			TOld = T;
-			POld = P;
+			TPrevious = T;
+			PPrevious = P;
 		
 		}
 
 		//} cuda
 
-		PInfoOld = PInfo;
-		T2mInfoOld = T2mInfo;
-		TInfoOld = TInfo;
+		PInfoPrevious = PInfo;
+		//T2mInfoPrevious = T2mInfo;
+		TInfoPrevious = TInfo;
 
 		if (conf->StatisticsEnabled())
 		{
