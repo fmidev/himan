@@ -35,7 +35,13 @@
 #define	PACKED_DATA_H
 
 #ifndef HAVE_CUDA
-#warn CUDA extensions disabled, some content might be missing
+
+// Define shells so that compilation succeeds
+namespace himan
+{
+	struct packed_data {};
+}
+
 #else
 
 #include <cuda_runtime_api.h>
@@ -46,7 +52,6 @@ namespace himan
 
 struct packed_data
 {
-public:
 
 #ifdef __CUDACC__
 __device__  __host__
