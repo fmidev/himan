@@ -58,7 +58,6 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		}
 
 		itsLogger->Info(msg);
-
 		itsCudaDeviceCount = c->DeviceCount();
 		
 	}
@@ -79,7 +78,13 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 
 	/*
-	 * Set target parameter to TODO
+	 * Set target parameter to H0C-M
+	 * - name H0C-M
+	 * - univ_id 270
+	 * 
+	 *
+	 * We need to specify grib and querydata parameter information
+	 * since we don't know which one will be the output format.
 	 *
 	 */
 
@@ -89,11 +94,22 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	// GRIB 2
 
-	theRequestedParam.GribParameter(0);
+	theRequestedParam.GribDiscipline(0);
+	theRequestedParam.GribCategory(3);
+	theRequestedParam.GribParameter(13);
 
 	// GRIB 1?
 
-	// tähän GRIB 1
+
+	if (conf->OutputFileType() == kGRIB1)
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theRequestedParam.Name());
+		theRequestedParam.GribIndicatorOfParameter(parm_id);
+		theRequestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+
+	}
 
 	theParams.push_back(theRequestedParam);
 
@@ -105,14 +121,51 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	targetInfo->Create();
 
-
 	/*
 	 * Initialize parent class functions for dimension handling
 	 */
 
+	Dimension(conf->LeadingDimension());
+	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
+	FeederInfo()->Param(theRequestedParam);
+
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
+
+	vector<shared_ptr<info> > targetInfos;
+
+	targetInfos.resize(threadCount);
+
+	for (size_t i = 0; i < threadCount; i++)
+	{
+
+		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
+
+		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
+
+		boost::thread* t = new boost::thread(&hybrid_height::Run,
+								this,
+								targetInfos[i],
+								conf,
+								i + 1);
+
+		g.add_thread(t);
+
+	}
+
+	g.join_all();
+
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+
+		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+
+		string theOutputFile = conf->ConfigurationFile();
+
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
+
+	}
 }
 
 void hybrid_height::Run(shared_ptr<info> myTargetInfo,
@@ -149,9 +202,9 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	myTargetInfo->FirstParam();
 
-	shared_ptr<info> PInfoPrevious;
+	//shared_ptr<info> PInfoPrevious;
 	//shared_ptr<info> T2mInfoPrevious;
-	shared_ptr<info> TInfoPrevious;
+	//shared_ptr<info> TInfoPrevious;
 
 	double PPrevious(kFloatMissing);
 	//double T2mPrevious;
@@ -190,12 +243,12 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 								 myTargetInfo->Level(),
 								 TParam);			
 
-			if (firstFetch)
+			/*if (firstFetch)
 			{
 				PInfoPrevious = PInfo;
 				//T2mInfoPrevious = T2mInfo;
 				TInfoPrevious = TInfo;
-			}
+			}*/
 
 		}
 		catch (HPExceptionType e)
@@ -230,12 +283,12 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		//shared_ptr<NFmiGrid> T2mGrid(T2mInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
-		shared_ptr<NFmiGrid> PGridPrevious(PInfoPrevious->Grid()->ToNewbaseGrid());
+		//shared_ptr<NFmiGrid> PGridPrevious(PInfoPrevious->Grid()->ToNewbaseGrid());
 		//shared_ptr<NFmiGrid> T2mGridPrevious(T2mInfoPrevious->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGridPrevious(TInfoPrevious->Grid()->ToNewbaseGrid());
+		//shared_ptr<NFmiGrid> TGridPrevious(TInfoPrevious->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = ( *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() && 
-							*myTargetInfo->Grid() == *PInfoPrevious->Grid() && *myTargetInfo->Grid() == *TInfoPrevious->Grid());
+		bool equalGrids = ( *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() );
+							//*myTargetInfo->Grid() == *PInfoPrevious->Grid() && *myTargetInfo->Grid() == *TInfoPrevious->Grid());
 
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
@@ -269,8 +322,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		{
 
 			count++;
-
-			//interpolointi
 
 			double T = kFloatMissing;
 			//double T2m = kFloatMissing;
@@ -315,9 +366,9 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 		//} cuda
 
-		PInfoPrevious = PInfo;
+		//PInfoPrevious = PInfo;
 		//T2mInfoPrevious = T2mInfo;
-		TInfoPrevious = TInfo;
+		//TInfoPrevious = TInfo;
 
 		if (conf->StatisticsEnabled())
 		{

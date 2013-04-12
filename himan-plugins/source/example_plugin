@@ -133,9 +133,47 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Initialize parent class functions for dimension handling
 	 */
 
+	Dimension(conf->LeadingDimension());
+	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
+	FeederInfo()->Param(theRequestedParam);
+
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
+
+	vector<shared_ptr<info> > targetInfos;
+
+	targetInfos.resize(threadCount);
+
+	for (size_t i = 0; i < threadCount; i++)
+	{
+
+		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
+
+		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
+
+		boost::thread* t = new boost::thread(&example_plugin::Run,
+								this,
+								targetInfos[i],
+								conf,
+								i + 1);
+
+		g.add_thread(t);
+
+	}
+
+	g.join_all();
+
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+
+		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+
+		string theOutputFile = conf->ConfigurationFile();
+
+		theWriter->ToFile(targetInfo, conf, theOutputFile);
+
+	}
 }
 
 void example_plugin::Run(shared_ptr<info> myTargetInfo,
