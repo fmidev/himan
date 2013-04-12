@@ -7,29 +7,36 @@
 
 #include "packed_data.h"
 
-simple_packed::simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimalScaleFactor, double theReferenceValue)
-	: itsBitsPerValue(theBitsPerValue)
-	, itsBinaryScaleFactor(theBinaryScaleFactor)
-	, itsDecimalScaleFactor(theDecimalScaleFactor)
-	, itsReferenceValue(theReferenceValue)
-{}
+#ifdef HAVE_CUDA
 
-int simple_packed::BitsPerValue() const
+using namespace himan;
+
+void packed_data::Set(unsigned char* newData, size_t newDataLength)
 {
-	return itsBitsPerValue;
+	if (data)
+	{
+		cudaFreeHost(data);
+	}
+
+	dataLength = newDataLength;
+	data = newData;
 }
 
-double simple_packed::BinaryScaleFactor() const
+void packed_data::Resize(size_t newDataLength)
 {
-	return itsBinaryScaleFactor;
+	assert(newDataLength > dataLength);
+
+	dataLength = newDataLength;
+	unsigned char* newData = 0;
+
+	cudaMallocHost(reinterpret_cast<void**> (&newData), dataLength * sizeof(unsigned char));
+
+	memcpy(newData, data, dataLength * sizeof(unsigned char));
+
+	cudaFreeHost(data);
+
+	data = newData;
+	
 }
 
-double simple_packed::DecimalScaleFactor() const
-{
-	return itsDecimalScaleFactor;
-}
-
-double simple_packed::ReferenceValue() const
-{
-	return itsReferenceValue;
-}
+#endif
