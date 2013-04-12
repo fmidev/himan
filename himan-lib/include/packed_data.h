@@ -15,7 +15,7 @@ using namespace himan;
 class packed_data : public uc_matrix_t
 {
 public:
-	packed_data() {}
+	packed_data() : uc_matrix_t() {}
 	virtual ~packed_data() {}
 	packed_data(const packed_data& other) : uc_matrix_t(other) {};
 	
@@ -28,7 +28,7 @@ protected:
 class simple_packed : public packed_data
 {
 public:
-	simple_packed();
+	simple_packed() {}
 	simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimaleScaleFactor, double theReferenceValue);
 
 	simple_packed(const simple_packed& other);
@@ -37,7 +37,11 @@ public:
 
 	virtual std::string ClassName() const { return "simple_packed"; }
 
-	
+	int BitsPerValue() const;
+	double BinaryScaleFactor() const;
+	double DecimalScaleFactor() const;
+	double ReferenceValue() const;
+
 private:
 	int itsBitsPerValue;
 	double itsBinaryScaleFactor;
@@ -47,15 +51,6 @@ private:
 
 
 };
-
-inline simple_packed::simple_packed() {}
-
-inline simple_packed::simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimalScaleFactor, double theReferenceValue)
-	: itsBitsPerValue(theBitsPerValue)
-	, itsBinaryScaleFactor(theBinaryScaleFactor)
-	, itsDecimalScaleFactor(theDecimalScaleFactor)
-	, itsReferenceValue(theReferenceValue)
-{}
 
 #endif	/* PACKED_DATA_H */
 
