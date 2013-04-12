@@ -10,6 +10,8 @@
 #ifndef VVMS_CUDA_H
 #define VVMS_CUDA_H
 
+#include "packed_data.h"
+
 namespace himan
 {
 namespace plugin
@@ -22,24 +24,21 @@ struct vvms_cuda_options
 	const double* TIn;
 	const double* PIn;
 	const double* VVIn;
-	const unsigned char* TInPacked;
-	const unsigned char* PInPacked;
-	const unsigned char* VVInPacked;
 	double* VVOut;
 	size_t N;
-	size_t NPacked;
 	double PConst;
 	double TBase;
 	double PScale;
 	bool isConstantPressure;
 	bool isPackedData;
 	unsigned short cudaDeviceIndex;
-	long bitsPerValue;
-	double binaryScaleFactor;
-	double decimalScaleFactor;
-	double referenceValue;
+	int missingValuesCount;
+	
+	simple_packed simplePackedT;
+	simple_packed simplePackedVV;
+	simple_packed simplePackedP;
 
-	vvms_cuda_options() : isConstantPressure(false), isPackedData(false) {}
+	vvms_cuda_options() : isConstantPressure(false), isPackedData(false), missingValuesCount(0) {}
 };
 
 void DoCuda(vvms_cuda_options& options);

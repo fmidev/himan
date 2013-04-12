@@ -1,8 +1,8 @@
-/*
- * vvms.cpp
+/**
+ * @file vvms.cpp
  *
- *  Created on: Nov 20, 2012
- *	  Author: partio
+ * @date Nov 20, 2012
+ * @author partio
  */
 
 #include "vvms.h"
@@ -40,6 +40,14 @@ vvms::vvms() : itsUseCuda(false), itsCudaDeviceCount(0)
 void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
+	
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 	if (c->HaveCuda())
@@ -125,24 +133,24 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(theRequestedParam);
 
+	if (conf->StatisticsEnabled())
+	{
+		initTimer->Stop();
+		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+	}
+
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
 		boost::thread* t = new boost::thread(&vvms::Run,
 							 this,
-							 targetInfos[i],
+							 shared_ptr<info> (new info(*targetInfo)),
 							 conf,
 							 i + 1);
 
@@ -226,7 +234,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 		shared_ptr<NFmiGrid> PGrid;
 
 		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
-		cout << threadIndex << " " << useCudaInThisThread << endl;
+
 		try
 		{
 			VVInfo = theFetcher->Fetch(conf,
@@ -236,17 +244,19 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 						  useCudaInThisThread);
 
 			TInfo = theFetcher->Fetch(conf,
-						 myTargetInfo->Time(),
-						 myTargetInfo->Level(),
-						 TParam);
+						myTargetInfo->Time(),
+						myTargetInfo->Level(),
+						TParam,
+						useCudaInThisThread);
 
 			if (!isPressureLevel)
 			{
 				// Source info for P
 				PInfo = theFetcher->Fetch(conf,
-							  myTargetInfo->Time(),
-							  myTargetInfo->Level(),
-							  PParam);
+							myTargetInfo->Time(),
+							myTargetInfo->Level(),
+							PParam,
+							useCudaInThisThread);
 
 				if (PInfo->Param().Unit() == kHPa)
 				{
@@ -317,14 +327,16 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			{
 				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
-				opts.NPacked = TInfo->Grid()->PackedData()->Size();
+				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
+				shared_ptr<simple_packed> vv = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData());
 
-				opts.TInPacked = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData())->Values();
-				opts.VVInPacked = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData())->Values();
+				opts.simplePackedT = *(t);
+				opts.simplePackedVV = *(vv);
 				
 				if (!opts.isConstantPressure)
 				{
-					opts.PInPacked = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData())->Values();
+					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
+					opts.simplePackedP = *(p);
 				}
 				
 				opts.isPackedData = true;
@@ -348,12 +360,18 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
 			}
 
+#ifdef HAVE_CUDA
 			cudaMallocHost(reinterpret_cast<void**> (&opts.VVOut), opts.N * sizeof(double));
-			
+#else
+			opts.TOut = new double[opts.N];
+#endif
+						
 			vvms_cuda::DoCuda(opts);
+				
+			myTargetInfo->Data()->Set(opts.VVOut, opts.N);
 
 			assert(TInfo->Grid()->ScanningMode() == VVInfo->Grid()->ScanningMode() && (isPressureLevel || VVInfo->Grid()->ScanningMode() == PInfo->Grid()->ScanningMode()));
-						
+
 			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
 			{
 				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
@@ -363,9 +381,14 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				myTargetInfo->Grid()->Swap(originalMode);
 			}
 
-			myTargetInfo->Data()->Set(opts.VVOut, opts.N);
+			missingCount = opts.missingValuesCount;
+			count = opts.N;
 
+#ifdef HAVE_CUDA
 			cudaFreeHost(opts.VVOut);
+#else
+			delete [] opts.VVOut;
+#endif
 
 		}
 		else
