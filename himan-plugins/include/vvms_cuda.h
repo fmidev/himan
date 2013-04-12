@@ -9,6 +9,7 @@
 
 #ifndef VVMS_CUDA_H
 #define VVMS_CUDA_H
+#ifdef HAVE_CUDA
 
 #include "packed_data.h"
 
@@ -47,5 +48,6 @@ void DoCuda(vvms_cuda_options& options);
 } // namespace plugin
 } // namespace himan
 
+#endif	/* HAVE_CUDA */
 #endif	/* VVMS_CUDA_H */
 

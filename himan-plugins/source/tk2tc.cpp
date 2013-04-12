@@ -270,6 +270,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		
 		string deviceType;
 
+#ifdef HAVE_CUDA
 		if (useCudaInThisThread && equalGrids)
 		{
 	
@@ -279,11 +280,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 			opts.N = TGrid->Size();
 
-#ifdef HAVE_CUDA
 			cudaMallocHost(reinterpret_cast<void**> (&opts.TOut), opts.N * sizeof(double));
-#else
-			opts.TOut = new double[opts.N];
-#endif
 
 			opts.cudaDeviceIndex = threadIndex-1;
 
@@ -321,14 +318,10 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 
-#ifdef HAVE_CUDA
 			cudaFreeHost(opts.TOut);
-#else
-			delete [] opts.TOut;
-#endif	
-
 		}
 		else
+#endif
 		{
 
 			deviceType = "CPU";

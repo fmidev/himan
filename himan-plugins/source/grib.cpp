@@ -700,7 +700,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		size_t len = 0;
 
-#ifdef READ_PACKED_DATA
+#if defined READ_PACKED_DATA && defined HAVE_CUDA
 
 		if (readPackedData && itsGrib->Message()->PackingType() == "grid_simple")
 		{

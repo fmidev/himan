@@ -10,6 +10,8 @@
 #ifndef TK2TC_CUDA_H
 #define TK2TC_CUDA_H
 
+#ifdef HAVE_CUDA
+
 #include "packed_data.h"
 
 namespace himan
@@ -39,5 +41,6 @@ void DoCuda(tk2tc_cuda_options& options);
 } // namespace plugin
 } // namespace himan
 
+#endif  /* HAVE_CUDA */
 #endif	/* TK2TC_CUDA_H */
 

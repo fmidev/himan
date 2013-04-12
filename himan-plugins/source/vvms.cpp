@@ -310,6 +310,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 		string deviceType;
 
+#ifdef HAVE_CUDA
 		if (useCudaInThisThread && equalGrids)
 		{
 			deviceType = "GPU";
@@ -360,11 +361,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
 			}
 
-#ifdef HAVE_CUDA
 			cudaMallocHost(reinterpret_cast<void**> (&opts.VVOut), opts.N * sizeof(double));
-#else
-			opts.TOut = new double[opts.N];
-#endif
 						
 			vvms_cuda::DoCuda(opts);
 				
@@ -384,14 +381,11 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 
-#ifdef HAVE_CUDA
 			cudaFreeHost(opts.VVOut);
-#else
-			delete [] opts.VVOut;
-#endif
 
 		}
 		else
+#endif
 		{
 			deviceType = "CPU";
 
