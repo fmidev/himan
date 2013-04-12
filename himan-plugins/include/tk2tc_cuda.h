@@ -10,6 +10,8 @@
 #ifndef TK2TC_CUDA_H
 #define TK2TC_CUDA_H
 
+#include "simple_packing_options.h"
+
 namespace himan
 {
 namespace plugin
@@ -23,12 +25,13 @@ struct tk2tc_cuda_options
 	const unsigned char* TInPacked;
 	double* TOut;
 	size_t N;
+	size_t NPacked;
 	bool isPackedData;
 	unsigned short cudaDeviceIndex;
 	int missingValuesCount;
-	int totalValuesCount;
+	struct simple_packing_options simple_packing;
 
-	tk2tc_cuda_options() : isPackedData(false) {}
+	tk2tc_cuda_options() : isPackedData(false), simple_packing() {}
 };
 
 void DoCuda(tk2tc_cuda_options& options);

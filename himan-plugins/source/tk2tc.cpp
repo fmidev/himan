@@ -10,6 +10,7 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -38,6 +39,14 @@ tk2tc::tk2tc() : itsUseCuda(false), itsCudaDeviceCount(0)
 
 void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 {
+
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
@@ -125,25 +134,25 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 	Dimension(conf->LeadingDimension());
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(requestedParam);
+	
+	if (conf->StatisticsEnabled())
+	{
+		initTimer->Stop();
+		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+	}
 
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
 		boost::thread* t = new boost::thread(&tk2tc::Run,
 											 this,
-											 targetInfos[i],
+											 shared_ptr<info> (new info(*targetInfo)),
 											 conf,
 											 i + 1);
 
@@ -199,6 +208,8 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 	myTargetInfo->FirstParam();
 
+	bool useCudaInThisThread = itsUseCuda && threadIndex <= itsCudaDeviceCount;
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -214,7 +225,8 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			TInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
-								 TParam);
+								 TParam,
+								useCudaInThisThread);
 
 			assert(TInfo->Param().Unit() == kK);
 
@@ -259,29 +271,56 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		
 		string deviceType;
 
-		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+		if (useCudaInThisThread && equalGrids)
 		{
 	
 			deviceType = "GPU";
 
-			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
-			{
-				TInfo->Grid()->Swap(myTargetInfo->Grid()->ScanningMode());
-			}
-
 			tk2tc_cuda::tk2tc_cuda_options opts;
 
 			opts.N = TGrid->Size();
-			opts.TIn = TInfo->Data()->Values();
 			opts.TOut = new double[opts.N];
 			opts.cudaDeviceIndex = threadIndex-1;
+
+			if (TInfo->Grid()->DataIsPacked())
+			{
+				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+				shared_ptr<simple_packed> s = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
+				
+				opts.simple_packing.N = s->Size();
+				opts.simple_packing.bitsPerValue = s->BitsPerValue();
+				opts.simple_packing.binaryScaleFactor = util::ToPower(s->BinaryScaleFactor(), 2);
+				opts.simple_packing.decimalScaleFactor = util::ToPower(-s->DecimalScaleFactor(), 10);
+				opts.simple_packing.referenceValue = s->ReferenceValue();
+
+				opts.TInPacked = s->Values();
+
+				opts.isPackedData = true;
+			}
+			else
+			{
+				opts.TIn = TInfo->Grid()->Data()->Values();
+
+				opts.isPackedData = false;
+
+			}
 			
 			tk2tc_cuda::DoCuda(opts);
 
 			myTargetInfo->Data()->Set(opts.TOut, opts.N);
 
+			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
+			{
+				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
+
+				myTargetInfo->Grid()->ScanningMode(TInfo->Grid()->ScanningMode());
+
+				myTargetInfo->Grid()->Swap(originalMode);
+			}
+	
 			missingCount = opts.missingValuesCount;
-			count = opts.totalValuesCount;
+			count = opts.N;
 
 			delete [] opts.TOut;
 

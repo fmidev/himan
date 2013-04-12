@@ -2,16 +2,11 @@
 #define CUDA_HELPER_H
 
 #include <cuda_runtime.h>
-//#include <cuda.h>
 
 const float kFloatMissing = 32700.f;
 
 void CheckCudaError(cudaError_t errarg, const char* file, const int line);
 void CheckCudaErrorString(const char* errstr, const char* file,	const int line);
-
-__device__ void SimpleUnpackFullBytes(const unsigned char* __restrict__ d_p,double* __restrict__ d_u, size_t values_len, int bpv, double bsf, double dsf, double rv);
-__device__ void SimpleUnpackUnevenBytes(unsigned char* __restrict__ d_p, double* __restrict__ d_u, size_t values_len, int bpv, double bsf, double dsf, double rv);
-__device__ void GetBitValue(const unsigned char* d_p, long bitp, int *val);
 
 #define CUDA_CHECK(errarg)	 CheckCudaError(errarg, __FILE__, __LINE__)
 #define CUDA_CHECK_ERROR_MSG(errstr) CheckCudaErrorString(errstr, __FILE__, __LINE__)
@@ -46,7 +41,13 @@ inline void CheckCudaErrorString(const char* errstr, const char* file,	const int
 	}
 }
 
-__device__ void SimpleUnpackFullBytes(const unsigned char* __restrict__ d_p,
+inline __device__ void GetBitValue(const unsigned char* d_p, long bitp, int *val)
+{
+	d_p += (bitp >> 3);
+	*val = (*d_p&(1<<(7-(bitp%8))));
+}
+
+inline __device__ void SimpleUnpackFullBytes(const unsigned char* __restrict__ d_p,
 											double* __restrict__ d_u,
 											size_t values_len, int bpv, double bsf, double dsf, double rv)
 {
@@ -74,7 +75,7 @@ __device__ void SimpleUnpackFullBytes(const unsigned char* __restrict__ d_p,
 	}
 }
 
-__device__ void SimpleUnpackUnevenBytes(unsigned char* __restrict__ d_p,
+inline __device__ void SimpleUnpackUnevenBytes(const unsigned char* __restrict__ d_p,
 											double* __restrict__ d_u,
 											size_t values_len, int bpv, double bsf, double dsf, double rv)
 {
@@ -104,13 +105,5 @@ __device__ void SimpleUnpackUnevenBytes(unsigned char* __restrict__ d_p,
 	}
 
 }
-
-__device__ void GetBitValue(const unsigned char* d_p, long bitp, int *val)
-{
-	d_p += (bitp >> 3);
-	*val = (*d_p&(1<<(7-(bitp%8))));
-}
-
-
 
 #endif
