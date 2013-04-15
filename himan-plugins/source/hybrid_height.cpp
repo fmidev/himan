@@ -275,6 +275,17 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 			}
 		}
 
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
+
+		assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
+
+		SetAB(myTargetInfo, TInfo);
+
 		int missingCount = 0;
 		int count = 0;
 
@@ -290,13 +301,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		bool equalGrids = ( *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() );
 							//*myTargetInfo->Grid() == *PInfoPrevious->Grid() && *myTargetInfo->Grid() == *TInfoPrevious->Grid());
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
+		
 		string deviceType;
 
 
@@ -363,6 +368,13 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 			PPrevious = P;
 		
 		}
+
+		/*
+		 * Newbase normalizes scanning mode to bottom left -- if that's not what
+		 * the target scanning mode is, we have to swap the data back.
+		 */
+
+		SwapTo(myTargetInfo, kBottomLeft);
 
 		//} cuda
 

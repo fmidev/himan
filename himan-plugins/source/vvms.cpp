@@ -295,6 +295,10 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 		{
 			processTimer->Start();
 		}
+
+		assert(TInfo->Grid()->AB() == VVInfo->Grid()->AB() && (isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB()));
+
+		SetAB(myTargetInfo, TInfo);
 		
 		if (TInfo->Param().Unit() == kC)
 		{
@@ -371,19 +375,12 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 			assert(TInfo->Grid()->ScanningMode() == VVInfo->Grid()->ScanningMode() && (isPressureLevel || VVInfo->Grid()->ScanningMode() == PInfo->Grid()->ScanningMode()));
 
-			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
-			{
-				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
-
-				myTargetInfo->Grid()->ScanningMode(TInfo->Grid()->ScanningMode());
-
-				myTargetInfo->Grid()->Swap(originalMode);
-			}
-
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 
 			cudaFreeHost(opts.VVOut);
+
+			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 
 		}
 		else
@@ -442,14 +439,8 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			 * the target scanning mode is, we have to swap the data back.
 			 */
 
-			if (myTargetInfo->Grid()->ScanningMode() != kBottomLeft)
-			{
-				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
+			SwapTo(myTargetInfo, kBottomLeft);
 
-				myTargetInfo->Grid()->ScanningMode(kBottomLeft);
-
-				myTargetInfo->Grid()->Swap(originalMode);
-			}
 		}
 
 		if (conf->StatisticsEnabled())

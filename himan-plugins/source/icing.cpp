@@ -220,6 +220,10 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 			}
 		}
 
+		assert(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
+
+		SetAB(myTargetInfo, TInfo);
+		
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> VvGrid(VvInfo->Grid()->ToNewbaseGrid());
@@ -353,6 +357,14 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 			}
 
 		}
+
+		/*
+		 * Newbase normalizes scanning mode to bottom left -- if that's not what
+		 * the target scanning mode is, we have to swap the data back.
+		 */
+
+		SwapTo(myTargetInfo, kBottomLeft);
+
 
 		/*
 		 * Now we are done for this level

@@ -73,30 +73,6 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
-	 * Get producer information from neons
-	 */
-
-/*
-	if (conf->FileWriteOption() == kNeons)
-	{
-		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		map<string,string> prodInfo = n->ProducerInfo(targetInfo->Producer().Id());
-
-		if (!prodInfo.empty())
-		{
-			producer prod(targetInfo->Producer().Id());
-
-			prod.Process(boost::lexical_cast<long> (prodInfo["process"]));
-			prod.Centre(boost::lexical_cast<long> (prodInfo["centre"]));
-			prod.Name(prodInfo["name"]);
-
-			targetInfo->Producer(prod);
-		}
-
-	}  */
-
-	/*
 	 * Set target parameter to P-HPA
 	 * - name P-HPA
 	 * - univ_id 1
@@ -271,6 +247,8 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const 
 			processTimer->Start();
 		}
 
+		SetAB(myTargetInfo, QInfo);
+
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> QGrid(QInfo->Grid()->ToNewbaseGrid());
@@ -318,6 +296,13 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const 
 			}
 
 		}
+
+		/*
+		 * Newbase normalizes scanning mode to bottom left -- if that's not what
+		 * the target scanning mode is, we have to swap the data back.
+		 */
+
+		SwapTo(myTargetInfo, kBottomLeft);
 
 		if (conf->StatisticsEnabled())
 		{

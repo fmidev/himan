@@ -253,6 +253,16 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			}
 		}
 
+
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
+
+		SetAB(myTargetInfo, TInfo);
+
 		int missingCount = 0;
 		int count = 0;
 
@@ -261,13 +271,6 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid());
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-		
 		string deviceType;
 
 #ifdef HAVE_CUDA
@@ -306,15 +309,8 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 			myTargetInfo->Data()->Set(opts.TOut, opts.N);
 
-			if (TInfo->Grid()->ScanningMode() != myTargetInfo->Grid()->ScanningMode())
-			{
-				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
-
-				myTargetInfo->Grid()->ScanningMode(TInfo->Grid()->ScanningMode());
-
-				myTargetInfo->Grid()->Swap(originalMode);
-			}
-	
+			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+			
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 
@@ -361,16 +357,8 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			 * Newbase normalizes scanning mode to bottom left -- if that's not what
 			 * the target scanning mode is, we have to swap the data back.
 			 */
-			
-			if (myTargetInfo->Grid()->ScanningMode() != kBottomLeft)
-			{
-				HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
 
-				myTargetInfo->Grid()->ScanningMode(kBottomLeft); // newbase did this
-				
-				myTargetInfo->Grid()->Swap(originalMode);
-
-			}
+			SwapTo(myTargetInfo, kBottomLeft);
 
 		}
 	

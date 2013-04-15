@@ -299,6 +299,13 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_co
 		}
 
 		/*
+		 * Newbase normalizes scanning mode to bottom left -- if that's not what
+		 * the target scanning mode is, we have to swap the data back.
+		 */
+
+		SwapTo(myTargetInfo, kBottomLeft);
+
+		/*
 		 * Now we are done for this level
 		 *
 		 * Clone info-instance to writer since it might change our descriptor places		 

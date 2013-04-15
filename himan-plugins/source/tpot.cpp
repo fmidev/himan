@@ -272,6 +272,10 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			processTimer->Start();
 		}
 
+		assert(isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB());
+
+		SetAB(myTargetInfo, TInfo);
+
 		if (TInfo->Param().Unit() == kC)
 		{
 			TBase = 273.15;
@@ -289,6 +293,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 		string deviceType;
 
+#ifdef HAVE_CUDA
+		
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
 		{
 			deviceType = "GPU";
@@ -297,11 +303,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 			double* TPOut;
 
-#ifdef HAVE_CUDA
 			cudaMallocHost(reinterpret_cast<void**> (&TPOut), N*sizeof(double));
-#else
-			TPOut = new double[N];
-#endif
 
 			if (!isPressureLevel)
 			{
@@ -314,13 +316,15 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 			myTargetInfo->Data()->Set(TPOut, N);
 
-#ifdef HAVE_CUDA
 			cudaFreeHost(TPOut);
-#else
-			delete [] TPOut;
-#endif
+
+			assert(TInfo->Grid()->ScanningMode() && (isPressureLevel || PInfo->Grid()->ScanningMode() == TInfo->Grid()->ScanningMode()));
+
+			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+
 		}
 		else
+#endif
 		{
 
 			deviceType = "CPU";
@@ -362,6 +366,13 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
 			}
+
+			/*
+			 * Newbase normalizes scanning mode to bottom left -- if that's not what
+			 * the target scanning mode is, we have to swap the data back.
+			 */
+
+			SwapTo(myTargetInfo, kBottomLeft);
 		}
 
 		if (conf->StatisticsEnabled())

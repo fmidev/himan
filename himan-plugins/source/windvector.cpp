@@ -393,7 +393,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		{
 			processTimer->Start();
 		}
-		
+
+		assert(UInfo->Grid()->AB() == VInfo->Grid()->AB());
+
+		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
+		{
+			SetAB(myTargetInfo, UInfo);
+		}		
+				
 		// if source producer is Hirlam, we must de-stagger U and V grid
 
 		/*if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
@@ -541,6 +548,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			delete [] DDdata;
 			
 			delete [] opts.dataOut;
+
+			assert(UInfo->Grid()->ScanningMode() == VInfo->Grid()->ScanningMode());
+			
+			for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
+			{
+				SwapTo(myTargetInfo, UInfo->Grid()->ScanningMode());
+			}
 		}
 		else
 		{
@@ -676,6 +690,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					myTargetInfo->Value(dir);
 #endif
 				}
+			}
+
+			for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
+			{
+				SwapTo(myTargetInfo, kBottomLeft);
 			}
 		}
 		
