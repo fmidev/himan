@@ -25,11 +25,6 @@ namespace tpot_cuda
 void DoCuda(const double* Tin, double TBase, const double* Pin, double TScale, double* TPout, size_t N, double PConst, unsigned short index);
 }
 
-namespace dewpoint_cuda
-{
-void DoCuda(const double* Tin, double TBase, const double* RHin, double* DPout, size_t N, unsigned short deviceIndex);
-}
-
 } // namespace plugin
 } // namespace himan
 
