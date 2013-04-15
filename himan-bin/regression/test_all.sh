@@ -19,7 +19,7 @@ for d in $(find . -maxdepth 1 -type d ! -name ".*" -print); do
 	for s in $(ls *.sh); do
 		LOGFILE=$LOGDIR/$s.log
 
-		printf "%-10s %-20s %-45s " \
+		printf "%-15s %-23s %-45s " \
 			$(basename $d) \
 			$s \
 			" (log: $LOGFILE)" 
@@ -34,7 +34,7 @@ for d in $(find . -maxdepth 1 -type d ! -name ".*" -print); do
 		if [ $ret -ne 0 ]; then
 		        RESULT="[${txtred}FAILED${txtrst}]"
 		else
-			RESULT="[${txtgrn}SUCCESS${txtgrn}]"
+			RESULT="[${txtgrn}SUCCESS${txtrst}]"
 		fi
 		
 	        printf "%-15s\n" $RESULT
