@@ -179,7 +179,7 @@ vector<double> grid::AB() const
 	return itsAB;
 }
 
-void grid::AB(vector<double> theAB)
+void grid::AB(const vector<double>& theAB)
 {
 	itsAB = theAB;
 }

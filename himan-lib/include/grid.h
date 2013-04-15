@@ -156,7 +156,7 @@ class grid
 		void Projection(HPProjectionType theProjection);
 
 		std::vector<double> AB() const;
-		void AB(std::vector<double> theAB);
+		void AB(const std::vector<double>& theAB);
 
 		point BottomLeft() const;
 		point TopRight() const;
