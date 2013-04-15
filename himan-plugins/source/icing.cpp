@@ -38,6 +38,14 @@ icing::icing() : itsUseCuda(false)
 void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
+	
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 	if (c && c->HaveCuda())
@@ -62,6 +70,12 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
+	if (conf->StatisticsEnabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+		conf->Statistics()->UsedGPUCount(0);
+	}
+	
 	shared_ptr<info> targetInfo = conf->Info();
 
 	boost::thread_group g;
@@ -103,24 +117,24 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(theRequestedParam);
 
+	if (conf->StatisticsEnabled())
+	{
+		initTimer->Stop();
+		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+	}
+
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
 		boost::thread* t = new boost::thread(&icing::Run,
 											 this,
-											 targetInfos[i],
+											 shared_ptr<info> (new info(*targetInfo)),
 											 conf,
 											 i + 1);
 
@@ -211,6 +225,13 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 			case kFileDataNotFound:
 				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
+
+				if (conf->StatisticsEnabled())
+				{
+					conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+					conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+				}
+
 				continue;
 				break;
 
@@ -220,6 +241,13 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 			}
 		}
 
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
+		
 		assert(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
 
 		SetAB(myTargetInfo, TInfo);
@@ -242,6 +270,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 
 		targetGrid->Reset();
 
+		string deviceType = "CPU";
+		
 		while (myTargetInfo->NextLocation() && targetGrid->Next())
 		{
 			count++;
@@ -365,6 +395,17 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 
 		SwapTo(myTargetInfo, kBottomLeft);
 
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+
+#ifdef DEBUG
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
+#endif
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
+		}
 
 		/*
 		 * Now we are done for this level

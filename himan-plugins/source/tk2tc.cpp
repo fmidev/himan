@@ -253,7 +253,6 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			}
 		}
 
-
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
 		if (conf->StatisticsEnabled())
@@ -381,8 +380,6 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		 */
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-
 
 		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
 		{

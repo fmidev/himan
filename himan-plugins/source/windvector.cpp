@@ -237,32 +237,24 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->ParamIndex(0); // Set index to first param (it doesn't matter which one, as long as its set
 
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
-
-
 	if (conf->StatisticsEnabled())
 	{
 		initTimer->Stop();
 		conf->Statistics()->AddToInitTime(initTimer->GetTime());
 	}
 
+	/*
+	 * Each thread will have a copy of the target info.
+	 */
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
 		boost::thread* t = new boost::thread(&windvector::Run,
 								this,
-								targetInfos[i],
+								shared_ptr<info> (new info(*targetInfo)),
 								conf,
 								i + 1);
 

@@ -37,6 +37,14 @@ hybrid_pressure::hybrid_pressure() : itsUseCuda(false)
 void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
+	
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 	if (c && c->HaveCuda())
@@ -65,7 +73,7 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->StatisticsEnabled())
 	{
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
+		conf->Statistics()->UsedGPUCount(0);
 	}
 
 	boost::thread_group g;
@@ -121,24 +129,24 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(theRequestedParam);
 
+	if (conf->StatisticsEnabled())
+	{
+		initTimer->Stop();
+		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+	}
+	
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
 		boost::thread* t = new boost::thread(&hybrid_pressure::Run,
 								this,
-								targetInfos[i],
+								shared_ptr<info> (new info(*targetInfo)),
 								conf,
 								i + 1);
 
