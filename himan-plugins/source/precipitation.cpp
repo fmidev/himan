@@ -38,6 +38,14 @@ precipitation::precipitation() : itsUseCuda(false)
 void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
+	
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 	if (c->HaveCuda())
@@ -62,6 +70,12 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
 
+	if (conf->StatisticsEnabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+		conf->Statistics()->UsedGPUCount(0);
+	}
+
 	boost::thread_group g;
 
 	shared_ptr<info> targetInfo = conf->Info();
@@ -77,8 +91,8 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	vector<param> params;
 
 	//param requestedParam ("RR-1-MM", 353);
-	param requestedParam ("RR-3-MM", 354);
-	//param requestedParam ("RR-6-MM", 355);
+	//param requestedParam ("RR-3-MM", 354);
+	param requestedParam ("RR-6-MM", 355);
 
 	// GRIB 1
 
@@ -109,24 +123,24 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(requestedParam);
 
+	if (conf->StatisticsEnabled())
+	{
+		initTimer->Stop();
+		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+	}
+
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
 		boost::thread* t = new boost::thread(&precipitation::Run,
 											 this,
-											 targetInfos[i],
+											 shared_ptr<info> (new info(*targetInfo)),
 											 conf,
 											 i + 1);
 
@@ -209,19 +223,6 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
 
-		/*
-		 * We only calculate data for certain times (based on parameter time step),
-		 * but user may have specified time steps that are between parameter time steps.
-		 * Those timesteps need to be resized and filled with missing values.
-		 */
-
-		myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-		if (myTargetInfo->Time().Step() % paramStep != 0)
-		{
-			continue;
-		}
-
 		shared_ptr<info> RRInfo;
 
 		try
@@ -259,6 +260,14 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 			{
 				case kFileDataNotFound:
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+					myTargetInfo->Data()->Fill(kFloatMissing);
+
+					if (conf->StatisticsEnabled())
+					{
+						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					}
+					
 					continue;
 					break;
 
@@ -266,6 +275,13 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 					throw runtime_error(ClassName() + ": Unable to proceed");
 					break;
 			}
+		}
+
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
 		}
 
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
@@ -281,9 +297,9 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 		bool equalGrids = (*myTargetInfo->Grid() == *RRInfo->Grid());
 
-		if (true)
+		string deviceType = "CPU";
+		
 		{
-
 			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
 			myTargetInfo->ResetLocation();
@@ -330,10 +346,18 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 			prevInfo = RRInfo;
 
+		}
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+
 #ifdef DEBUG
-			t->Stop();
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (t->GetTime()) + " microseconds on CPU");
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
 #endif
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
 		}
 
 		/*
