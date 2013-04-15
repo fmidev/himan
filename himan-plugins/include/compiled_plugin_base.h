@@ -92,6 +92,12 @@ protected:
 
 	level LevelTransform(const himan::producer& sourceProducer, const himan::param& targetParam, const himan::level& targetLevel) const;
 
+	/**
+	 * @brief Copy AB values from source to dest info
+	 */
+
+	bool SetAB(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
+
 private:
     HPDimensionType itsLeadingDimension;
     std::shared_ptr<info> itsFeederInfo;

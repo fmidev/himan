@@ -183,3 +183,19 @@ himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceP
 	return sourceLevel;
 }
 
+bool compiled_plugin_base::SetAB(shared_ptr<info> myTargetInfo, shared_ptr<info> sourceInfo)
+{
+	if (myTargetInfo->Level().Type() == kHybrid)
+	{
+		int index = myTargetInfo->ParamIndex();
+
+		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
+		{
+			myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
+		}
+
+		myTargetInfo->ParamIndex(index);
+	}
+
+	return true;
+}
