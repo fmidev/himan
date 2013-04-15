@@ -327,6 +327,8 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			if (TInfo->Grid()->DataIsPacked())
 			{
 				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+				assert(VVInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+				assert(isPressureLevel || PInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
 				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
 				shared_ptr<simple_packed> vv = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData());
