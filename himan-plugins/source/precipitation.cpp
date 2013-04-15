@@ -207,7 +207,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
-		assert(myTargetInfo->Time().StepResolution() == kHour);
+		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
 
 		/*
 		 * We only calculate data for certain times (based on parameter time step),
