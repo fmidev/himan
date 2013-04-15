@@ -189,12 +189,24 @@ bool compiled_plugin_base::SetAB(shared_ptr<info> myTargetInfo, shared_ptr<info>
 	{
 		int index = myTargetInfo->ParamIndex();
 
-		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
-		{
-			myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
-		}
+		myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
 
 		myTargetInfo->ParamIndex(index);
+	}
+
+	return true;
+}
+
+bool compiled_plugin_base::SwapTo(shared_ptr<info> myTargetInfo, HPScanningMode targetScanningMode)
+{
+
+	if (myTargetInfo->Grid()->ScanningMode() != targetScanningMode)
+	{
+		HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
+
+		myTargetInfo->Grid()->ScanningMode(targetScanningMode);
+
+		myTargetInfo->Grid()->Swap(originalMode);
 	}
 
 	return true;

@@ -98,6 +98,14 @@ protected:
 
 	bool SetAB(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
 
+	/**
+	 * @brief Swap data ordering in a grid
+	 *
+	 */
+
+	bool SwapTo(std::shared_ptr<info> myTargetInfo, HPScanningMode targetScanningMode);
+
+
 private:
     HPDimensionType itsLeadingDimension;
     std::shared_ptr<info> itsFeederInfo;
