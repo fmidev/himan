@@ -365,6 +365,14 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 		itsGrib->Message()->ResolutionAndComponentFlags(48); // 00110000
 	}
 
+	vector<double> AB = anInfo->Grid()->AB();
+
+	if (!AB.empty())
+	{
+		itsGrib->Message()->NV(AB.size());
+		itsGrib->Message()->PV(AB, AB.size());
+	}
+
 	itsGrib->Message()->Write(outputFile, appendToFile);
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
