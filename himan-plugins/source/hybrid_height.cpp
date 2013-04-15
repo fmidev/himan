@@ -41,6 +41,14 @@ hybrid_height::hybrid_height() : itsUseCuda(false), itsCudaDeviceCount(0)
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
+	
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 	if (c->HaveCuda())
@@ -58,7 +66,6 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		}
 
 		itsLogger->Info(msg);
-		itsCudaDeviceCount = c->DeviceCount();
 		
 	}
 
@@ -69,7 +76,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->StatisticsEnabled())
 	{
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
+		conf->Statistics()->UsedGPUCount(0);
 	}
 
 	boost::thread_group g;
@@ -129,24 +136,24 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(theRequestedParam);
 
+	if (conf->StatisticsEnabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
+	}
+
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	vector<shared_ptr<info> > targetInfos;
-
-	targetInfos.resize(threadCount);
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
 		boost::thread* t = new boost::thread(&hybrid_height::Run,
 								this,
-								targetInfos[i],
+								shared_ptr<info> (new info(*targetInfo)),
 								conf,
 								i + 1);
 
@@ -302,20 +309,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 							//*myTargetInfo->Grid() == *PInfoPrevious->Grid() && *myTargetInfo->Grid() == *TInfoPrevious->Grid());
 
 		
-		string deviceType;
-
-
-		/*
-		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
-		{
-	
-			deviceType = "GPU";
-
-		}
-		else
-		{
-		*/
-		deviceType = "CPU";
+		string deviceType = "CPU";
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
@@ -375,8 +369,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		 */
 
 		SwapTo(myTargetInfo, kBottomLeft);
-
-		//} cuda
 
 		//PInfoPrevious = PInfo;
 		//T2mInfoPrevious = T2mInfo;
