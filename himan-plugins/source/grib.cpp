@@ -321,7 +321,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 
 	long timeUnit = 1; // hour
 
-	if (anInfo->Time().StepResolution() == kMinute)
+	if (anInfo->Time().StepResolution() == kMinuteResolution)
 	{
 		timeUnit = 0;
 	}
