@@ -29,7 +29,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "cuda_extern.h"
+#include "tpot_cuda.h"
 
 tpot::tpot() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
@@ -100,7 +100,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param theRequestedParam ("TP-K", 8);
+	param theRequestedParam ("TPW-K", 8);
 
 	// GRIB 2
 	
@@ -230,17 +230,17 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		{
 
 			TInfo = theFetcher->Fetch(conf,
-											 myTargetInfo->Time(),
-											 myTargetInfo->Level(),
-											 TParam);
+										myTargetInfo->Time(),
+										myTargetInfo->Level(),
+										TParam);
 
 			if (!isPressureLevel)
 			{
 				// Source info for P
 				PInfo = theFetcher->Fetch(conf,
-										  myTargetInfo->Time(),
-										  myTargetInfo->Level(),
-										  PParam);
+											myTargetInfo->Time(),
+											myTargetInfo->Level(),
+											PParam);
 
 				if (PInfo->Param().Unit() == kPa)
 				{
@@ -307,26 +307,65 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		{
 			deviceType = "GPU";
 
-			size_t N = TGrid->Size();
+			tpot_cuda::tpot_cuda_options opts;
 
-			double* TPOut;
+			opts.N = TGrid->Size();
 
-			cudaMallocHost(reinterpret_cast<void**> (&TPOut), N*sizeof(double));
-
-			if (!isPressureLevel)
+			opts.isConstantPressure = isPressureLevel;
+			opts.TBase = TBase;
+			opts.PScale = PScale;
+			opts.cudaDeviceIndex = threadIndex-1;
+			opts.isPackedData = false;
+			
+			if (TInfo->Grid()->DataIsPacked())
 			{
-				tpot_cuda::DoCuda(TInfo->Data()->Values(), TBase, PInfo->Data()->Values(), PScale, TPOut, N, 0, threadIndex-1);
+				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
+
+				opts.simplePackedT = *(t);
+
+				opts.isPackedData = true;
+
 			}
 			else
 			{
-				tpot_cuda::DoCuda(TInfo->Data()->Values(), TBase, 0, 0, TPOut, N, myTargetInfo->Level().Value(), threadIndex-1);
+				opts.TIn = TInfo->Grid()->Data()->Values();
 			}
 
-			myTargetInfo->Data()->Set(TPOut, N);
+			if (!isPressureLevel)
+			{
+				if (PInfo->Grid()->DataIsPacked())
+				{
+					assert(PInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
+					opts.simplePackedP = *(p);
+				}
+				else
+				{
+					opts.PIn = PInfo->Grid()->Data()->Values();
+				}
 
-			cudaFreeHost(TPOut);
+				opts.isPackedData = true;
+
+			}
+			else
+			{
+				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
+			}
+
+			cudaMallocHost(reinterpret_cast<void**> (&opts.TpOut), opts.N*sizeof(double));
+
+			tpot_cuda::DoCuda(opts);
+
+			myTargetInfo->Data()->Set(opts.TpOut, opts.N);
+
+			cudaFreeHost(opts.TpOut);
 
 			assert(TInfo->Grid()->ScanningMode() && (isPressureLevel || PInfo->Grid()->ScanningMode() == TInfo->Grid()->ScanningMode()));
+
+			missingCount = opts.missingValuesCount;
+			count = opts.N;
 
 			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 
