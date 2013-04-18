@@ -105,20 +105,26 @@ void himan::plugin::dewpoint_cuda::DoCuda(dewpoint_cuda_options& opts)
 	CUDA_CHECK(cudaMalloc((void **) &dRH, memSize));
 	CUDA_CHECK(cudaMalloc((void **) &dTD, memSize));
 
-	if (opts.isPackedData)
+	if (opts.simplePackedT.HasData())
 	{
 		CUDA_CHECK(cudaMalloc((void **) &dTPacked, opts.simplePackedT.dataLength * sizeof(unsigned char)));
-		CUDA_CHECK(cudaMalloc((void **) &dRHPacked, opts.simplePackedRH.dataLength * sizeof(unsigned char)));
-
 		CUDA_CHECK(cudaMemcpy(dTPacked, opts.simplePackedT.data, opts.simplePackedT.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+	}
+	else
+	{
+		CUDA_CHECK(cudaMemcpy(dT, opts.TIn, memSize, cudaMemcpyHostToDevice));		
+	}
+
+	if (opts.simplePackedRH.HasData())
+	{
+		CUDA_CHECK(cudaMalloc((void **) &dRHPacked, opts.simplePackedRH.dataLength * sizeof(unsigned char)));
 		CUDA_CHECK(cudaMemcpy(dRHPacked, opts.simplePackedRH.data, opts.simplePackedRH.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMemcpy(dT, opts.TIn, memSize, cudaMemcpyHostToDevice));
 		CUDA_CHECK(cudaMemcpy(dRH, opts.RHIn, memSize, cudaMemcpyHostToDevice));
 	}
-
+	
 	int src = 0;
 
 	CUDA_CHECK(cudaMemcpy(dMissingValuesCount, &src, sizeof(int), cudaMemcpyHostToDevice));
@@ -157,9 +163,13 @@ void himan::plugin::dewpoint_cuda::DoCuda(dewpoint_cuda_options& opts)
 	CUDA_CHECK(cudaFree(dTD));
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
 
-	if (opts.isPackedData)
+	if (opts.simplePackedT.HasData())
 	{
 		CUDA_CHECK(cudaFree(dTPacked));
+	}
+
+	if (opts.simplePackedRH.HasData())
+	{
 		CUDA_CHECK(cudaFree(dRHPacked));
 	}
 

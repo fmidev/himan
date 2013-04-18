@@ -343,15 +343,17 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		{
 			// Source info for U
 			UInfo = theFetcher->Fetch(conf,
-								 myTargetInfo->Time(),
-								 sourceLevel,
-								 UParam);
+										myTargetInfo->Time(),
+										sourceLevel,
+										UParam,
+										false);
 				
 			// Source info for V
 			VInfo = theFetcher->Fetch(conf,
-								 myTargetInfo->Time(),
-								 sourceLevel,
-								 VParam);
+										myTargetInfo->Time(),
+										sourceLevel,
+										VParam,
+										false);
 				
 		}
 		catch (HPExceptionType e)
@@ -463,7 +465,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			opts.di = myTargetInfo->Grid()->Di();
 			opts.dj = myTargetInfo->Grid()->Dj();
 
-			opts.CudaDeviceIndex = threadIndex-1;
+			opts.cudaDeviceIndex = threadIndex-1;
 
 			windvector_cuda::DoCuda(opts);
 

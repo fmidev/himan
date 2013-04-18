@@ -61,16 +61,22 @@ __global__ void himan::plugin::vvms_cuda::UnpackAndCalculate(const unsigned char
 
 	if (idx < opts.N)
 	{
-		SimpleUnpack(dTPacked, dT, opts.N, opts.simplePackedT.bitsPerValue, opts.simplePackedT.binaryScaleFactor, opts.simplePackedT.decimalScaleFactor, opts.simplePackedT.referenceValue, idx);
-		SimpleUnpack(dVVPacked, dVV, opts.N, opts.simplePackedVV.bitsPerValue, opts.simplePackedVV.binaryScaleFactor, opts.simplePackedVV.decimalScaleFactor, opts.simplePackedVV.referenceValue, idx);
-	
-		if (!opts.isConstantPressure)
+		if (opts.simplePackedT.HasData())
 		{
-			SimpleUnpackUnevenBytes(dPPacked, dP, opts.N, opts.simplePackedP.bitsPerValue, opts.simplePackedP.binaryScaleFactor, opts.simplePackedP.decimalScaleFactor, opts.simplePackedP.referenceValue, idx);
+			SimpleUnpack(dTPacked, dT, opts.N, opts.simplePackedT.bitsPerValue, opts.simplePackedT.binaryScaleFactor, opts.simplePackedT.decimalScaleFactor, opts.simplePackedT.referenceValue, idx);
+		}
+
+		if (opts.simplePackedVV.HasData())
+		{
+			SimpleUnpack(dVVPacked, dVV, opts.N, opts.simplePackedVV.bitsPerValue, opts.simplePackedVV.binaryScaleFactor, opts.simplePackedVV.decimalScaleFactor, opts.simplePackedVV.referenceValue, idx);
+		}
+
+		if (!opts.isConstantPressure && opts.simplePackedP.HasData())
+		{
+			SimpleUnpack(dPPacked, dP, opts.N, opts.simplePackedP.bitsPerValue, opts.simplePackedP.binaryScaleFactor, opts.simplePackedP.decimalScaleFactor, opts.simplePackedP.referenceValue, idx);
 		}
 
 		_Calculate(dT, dVV, dP, dVVOut, opts, dMissingValuesCount, idx);
-	
 	}
 }
 
@@ -130,44 +136,47 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 	int *dMissingValuesCount;
 
 	CUDA_CHECK(cudaMalloc((void **) &dMissingValuesCount, sizeof(int)));
-
 	CUDA_CHECK(cudaMalloc((void **) &dT, memSize));
-	
-	if (!opts.isConstantPressure)
-	{
-		CUDA_CHECK(cudaMalloc((void **) &dP, memSize));
-	}
-
 	CUDA_CHECK(cudaMalloc((void **) &dVV, memSize));
 	CUDA_CHECK(cudaMalloc((void **) &dVVOut, memSize));
 
-	if (opts.isPackedData)
+	if (opts.simplePackedT.HasData())
 	{
 		CUDA_CHECK(cudaMalloc((void **) &dTPacked, opts.simplePackedT.dataLength * sizeof(unsigned char)));
-		CUDA_CHECK(cudaMalloc((void **) &dVVPacked, opts.simplePackedVV.dataLength * sizeof(unsigned char)));
+		CUDA_CHECK(cudaMemcpy(dTPacked, opts.simplePackedT.data, opts.simplePackedT.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+	}
+	else
+	{
+		CUDA_CHECK(cudaMemcpy(dT, opts.TIn, memSize, cudaMemcpyHostToDevice));
+	}
 
-		if (!opts.isConstantPressure)
+	if (opts.simplePackedVV.HasData())
+	{
+		CUDA_CHECK(cudaMalloc((void **) &dVVPacked, opts.simplePackedVV.dataLength * sizeof(unsigned char)));
+		CUDA_CHECK(cudaMemcpy(dVVPacked, opts.simplePackedVV.data, opts.simplePackedVV.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+	}
+	else
+	{
+		CUDA_CHECK(cudaMemcpy(dVV, opts.VVIn, memSize, cudaMemcpyHostToDevice));
+	}
+
+	if (!opts.isConstantPressure)
+	{
+		if (opts.simplePackedP.HasData())
 		{
 			CUDA_CHECK(cudaMalloc((void **) &dPPacked, opts.simplePackedP.dataLength * sizeof(unsigned char)));
 			CUDA_CHECK(cudaMemcpy(dPPacked, opts.simplePackedP.data, opts.simplePackedP.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
 		}
-
-		CUDA_CHECK(cudaMemcpy(dTPacked, opts.simplePackedT.data, opts.simplePackedT.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
-		CUDA_CHECK(cudaMemcpy(dVVPacked, opts.simplePackedVV.data, opts.simplePackedVV.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
-
-	}
-	else
-	{
-
-		CUDA_CHECK(cudaMemcpy(dT, opts.TIn, memSize, cudaMemcpyHostToDevice));
-
-		if (!opts.isConstantPressure)
+		else
 		{
+			CUDA_CHECK(cudaMalloc((void **) &dP, memSize));
 			CUDA_CHECK(cudaMemcpy(dP, opts.PIn, memSize, cudaMemcpyHostToDevice));
 		}
-
-		CUDA_CHECK(cudaMemcpy(dVV, opts.VVIn, memSize, cudaMemcpyHostToDevice));
 	}
+
+	int src=0;
+
+	CUDA_CHECK(cudaMemcpy(dMissingValuesCount, &src, sizeof(int), cudaMemcpyHostToDevice));
 
 	// dims
 
@@ -196,24 +205,30 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 	CUDA_CHECK(cudaMemcpy(&opts.missingValuesCount, dMissingValuesCount, sizeof(int), cudaMemcpyDeviceToHost));
 
 	CUDA_CHECK(cudaFree(dT));
+	CUDA_CHECK(cudaFree(dVV));
+	CUDA_CHECK(cudaFree(dVVOut));
+
+	CUDA_CHECK(cudaFree(dMissingValuesCount));
+
+	if (opts.simplePackedT.HasData())
+	{
+		CUDA_CHECK(cudaFree(dTPacked));
+	}
+
+	if (opts.simplePackedVV.HasData())
+	{
+		CUDA_CHECK(cudaFree(dVVPacked));
+	}
 
 	if (!opts.isConstantPressure)
 	{
-		CUDA_CHECK(cudaFree(dP));
-	}
-
-	CUDA_CHECK(cudaFree(dVV));
-	CUDA_CHECK(cudaFree(dVVOut));
-	CUDA_CHECK(cudaFree(dMissingValuesCount));
-
-	if (opts.isPackedData)
-	{
-		CUDA_CHECK(cudaFree(dVVPacked));
-		CUDA_CHECK(cudaFree(dTPacked));
-
-		if (!opts.isConstantPressure)
+		if (opts.simplePackedT.HasData())
 		{
 			CUDA_CHECK(cudaFree(dPPacked));
 		}
+
+		CUDA_CHECK(cudaFree(dP));
+
 	}
+
 }

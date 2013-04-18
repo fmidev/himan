@@ -8,6 +8,8 @@
 #ifndef WINDVECTOR_CUDA_H
 #define	WINDVECTOR_CUDA_H
 
+#include "packed_data.h"
+
 namespace himan
 {
 namespace plugin
@@ -31,9 +33,13 @@ struct windvector_cuda_options
 	bool vectorCalculation;
 	bool dirCalculation;
 	bool needRotLatLonGridRotation;
-	unsigned short CudaDeviceIndex;
+	unsigned short cudaDeviceIndex;
+	bool isPackedData;
+	int missingValuesCount;
 
-	windvector_cuda_options() : vectorCalculation(false), dirCalculation(true), needRotLatLonGridRotation(false) {}
+	simple_packed simplePackedU, simplePackedV;
+
+	windvector_cuda_options() : vectorCalculation(false), dirCalculation(true), needRotLatLonGridRotation(false), isPackedData(false), missingValuesCount(0) {}
 
 };
 
