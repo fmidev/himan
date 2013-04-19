@@ -58,7 +58,7 @@ __global__ void himan::plugin::vvms_cuda::UnpackAndCalculate(const unsigned char
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
+	
 	if (idx < opts.N)
 	{
 		if (opts.simplePackedT.HasData())
@@ -124,16 +124,16 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 
 	// Allocate device arrays
 
-	double* dT;
-	double* dP;
-	double *dVV;
-	double *dVVOut;
+	double* dT = NULL;
+	double* dP = NULL;
+	double* dVV = NULL;
+	double* dVVOut = NULL;
 
-	unsigned char* dTPacked;
-	unsigned char* dPPacked;
-	unsigned char* dVVPacked;
+	unsigned char* dTPacked = NULL;
+	unsigned char* dPPacked = NULL;
+	unsigned char* dVVPacked = NULL;
 
-	int *dMissingValuesCount;
+	int *dMissingValuesCount = NULL;
 
 	CUDA_CHECK(cudaMalloc((void **) &dMissingValuesCount, sizeof(int)));
 	CUDA_CHECK(cudaMalloc((void **) &dT, memSize));
@@ -162,6 +162,8 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 
 	if (!opts.isConstantPressure)
 	{
+		CUDA_CHECK(cudaMalloc((void **) &dP, memSize));
+
 		if (opts.simplePackedP.HasData())
 		{
 			CUDA_CHECK(cudaMalloc((void **) &dPPacked, opts.simplePackedP.dataLength * sizeof(unsigned char)));
@@ -169,7 +171,6 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &dP, memSize));
 			CUDA_CHECK(cudaMemcpy(dP, opts.PIn, memSize, cudaMemcpyHostToDevice));
 		}
 	}
@@ -194,11 +195,11 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 	{
 		Calculate <<< gridDim, blockDim >>> (dT, dVV, dP, dVVOut, opts, dMissingValuesCount);
 	}
-	
-	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// block until the device has completed
 	CUDA_CHECK(cudaDeviceSynchronize());
+
+	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// Retrieve result from device
 	CUDA_CHECK(cudaMemcpy(opts.VVOut, dVVOut, memSize, cudaMemcpyDeviceToHost));
@@ -222,7 +223,7 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 
 	if (!opts.isConstantPressure)
 	{
-		if (opts.simplePackedT.HasData())
+		if (opts.simplePackedP.HasData())
 		{
 			CUDA_CHECK(cudaFree(dPPacked));
 		}
