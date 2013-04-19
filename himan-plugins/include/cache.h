@@ -28,7 +28,7 @@ public:
 	cache(const cache& other) = delete;
 	cache& operator=(const cache& other) = delete;
 
-	void Insert(std::vector<std::shared_ptr<himan::info>>& infos);
+	void Insert(const std::vector<std::shared_ptr<himan::info>>& infos, bool activeOnly = true);
 
 	/**
 	 * @brief Insert data to cache

@@ -93,11 +93,11 @@ void cache::SplitToPool(const shared_ptr<info> anInfo)
 	}
 }
 
-void cache::Insert(vector<shared_ptr<himan::info>>& infos)
+void cache::Insert(const vector<shared_ptr<himan::info>>& infos, bool activeOnly)
 {		
 	for (size_t i = 0; i < infos.size(); i++)
 	{
-		Insert(infos[i]);
+		Insert(infos[i], activeOnly);
 	}	
 }
 
