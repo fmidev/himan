@@ -210,7 +210,7 @@ __global__ void himan::plugin::windvector_cuda::kernel_windvector_rotation(windv
 void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 {
 
-	CUDA_CHECK(cudaSetDevice(opts.CudaDeviceIndex));
+	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
 	
 	// Allocate host arrays and convert input data to double
 
