@@ -70,6 +70,11 @@ __device__  __host__
 	void Resize(size_t newDataLength);
 	void Set(unsigned char* newData, size_t newDataLength);
 	void Clear();
+	
+#ifdef __CUDACC__
+__device__  __host__
+#endif
+	bool HasData() const;
 
 	unsigned char* data;
 	size_t dataLength;
@@ -112,6 +117,15 @@ packed_data::~packed_data()
 #ifndef __CUDACC__
 	Clear();
 #endif
+}
+
+inline
+#ifdef __CUDACC__
+__device__  __host__
+#endif
+bool packed_data::HasData() const
+{
+	return (dataLength > 0);
 }
 
 inline
