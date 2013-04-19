@@ -113,6 +113,12 @@ public:
 	void StatisticsLabel(const std::string& theStatisticsLabel);
 	std::string StatisticsLabel() const;
 
+	bool UseCudaForPacking() const;
+	void UseCudaForPacking(bool theUseCudaForPacking);
+
+	bool UseCache() const;
+	void UseCache(bool theUseCache);
+
 protected:
 	
 	void Init();
@@ -142,6 +148,8 @@ protected:
 
 	std::string itsStatisticsLabel;
 
+	bool itsUseCudaForPacking;
+	bool itsUseCache;
 };
 
 

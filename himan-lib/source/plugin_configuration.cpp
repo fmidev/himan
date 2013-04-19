@@ -107,7 +107,10 @@ void plugin_configuration::WriteStatistics()
 
 	cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << endl;
 
+	cout << "Use cache:\t\t" << (itsUseCache ? "true" : "false") << endl;
 	cout << "Use cuda:\t\t" << (itsUseCuda ? "true" : "false") << endl;
+	cout << "Use cuda packing:\t" << (itsUseCudaForPacking ? "true" : "false") << endl;
+
 	cout << "Origin time:\t\t" << itsInfo->OriginDateTime().String() << endl;
 
 	cout << "geom_name\t\t" << itsGeomName << endl;
@@ -121,7 +124,7 @@ void plugin_configuration::WriteStatistics()
 
 	// assuming even time step
 
-	cout << "Time step length:\t" << itsInfo->Time().Step() << endl;
+	cout << "Time step:\t\t" << itsInfo->Time().Step() << endl;
 	cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsInfo->Time().StepResolution()) << endl;
 	cout << "Time count:\t\t" << itsInfo->SizeTimes() << endl;
 
@@ -175,7 +178,7 @@ void plugin_configuration::WriteStatistics()
 		writingThreads = ", average over used threads";
 	}
 
-	cout	<< "Thread count:\t\t" <<  itsStatistics->itsUsedThreadCount << endl
+	cout << "Thread count:\t\t" <<  itsStatistics->itsUsedThreadCount << endl
 		<< "Used GPU count:\t\t" << itsStatistics->itsUsedGPUCount << endl
 		<< "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
 		<< "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl

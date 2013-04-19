@@ -31,6 +31,8 @@ configuration::configuration(const configuration& other)
 
 	itsFileWaitTimeout = other.itsFileWaitTimeout;
 	itsUseCuda = other.itsUseCuda;
+	itsUseCudaForPacking = other.itsUseCudaForPacking;
+	itsUseCache = other.itsUseCache;
 
 	itsLeadingDimension = other.itsLeadingDimension;
 	itsThreadCount = other.itsThreadCount;
@@ -66,6 +68,10 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsStatisticsLabel__ " << itsStatisticsLabel << std::endl;
 
 	file << "__itsConfigurationFile__ " << itsConfigurationFile << std::endl;
+
+	file << "__itsUseCudaForPacking__ " << itsUseCudaForPacking << std::endl;
+
+	file << "__itsUseCache__ " << itsUseCache << std::endl;
 	
 	for (size_t i = 0; i < itsAuxiliaryFiles.size(); i++)
 	{
@@ -95,6 +101,8 @@ void configuration::Init()
 	itsThreadCount = -1;
 	itsGeomName = "";
 	itsConfigurationFile = "";
+	itsUseCudaForPacking = true;
+	itsUseCache = true;
 }
 
 HPFileType configuration::OutputFileType() const
@@ -201,3 +209,24 @@ std::string configuration::StatisticsLabel() const
 {
 	return itsStatisticsLabel;
 }
+
+bool configuration::UseCudaForPacking() const
+{
+	return itsUseCudaForPacking;
+}
+
+void configuration::UseCudaForPacking(bool theUseCudaForPacking)
+{
+	itsUseCudaForPacking = theUseCudaForPacking;
+}
+
+bool configuration::UseCache() const
+{
+	return itsUseCache;
+}
+
+void configuration::UseCache(bool theUseCache)
+{
+	itsUseCache = theUseCache;
+}
+

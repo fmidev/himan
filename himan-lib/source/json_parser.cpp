@@ -223,6 +223,26 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
 
+	// Check global use_cache option
+
+	try
+	{
+		string theUseCache = pt.get<string>("use_cache");
+
+		if (!ParseBoolean(theUseCache))
+		{
+			conf->UseCache(false);
+		}
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
 	/* Check processqueue */
 
 	std::vector<std::shared_ptr<info> > infoQueue;
@@ -252,6 +272,26 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			throw runtime_error(ClassName() + ": Unable to proceed");
 		}
 
+		// Check local use_cache option
+
+		bool delayedUseCache = conf->UseCache();
+		
+		try
+		{
+			string theUseCache = element.second.get<string>("use_cache");
+
+			delayedUseCache = ParseBoolean(theUseCache);
+
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing meta information: ") + e.what());
+		}
+
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
 
 		if (plugins.empty())
@@ -262,6 +302,8 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		BOOST_FOREACH(boost::property_tree::ptree::value_type &plugin, plugins)
 		{
 			shared_ptr<plugin_configuration> pc(new plugin_configuration(conf));
+
+			pc->UseCache(delayedUseCache);
 			
 			if (plugin.second.empty())
 			{
