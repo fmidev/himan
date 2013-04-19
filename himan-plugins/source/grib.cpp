@@ -21,8 +21,6 @@ using namespace himan::plugin;
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
-#define READ_PACKED_DATA
-
 grib::grib()
 {
 
