@@ -429,6 +429,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 		string deviceType;
 
+#ifdef HAVE_CUDA
 		if (itsUseCuda && equalGrids && !needStereographicGridRotation && threadIndex <= itsCudaDeviceCount)
 		{
 			deviceType = "GPU";
@@ -551,6 +552,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			}
 		}
 		else
+#endif
 		{
 			deviceType = "CPU";
 

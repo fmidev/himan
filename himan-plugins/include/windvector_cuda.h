@@ -8,6 +8,8 @@
 #ifndef WINDVECTOR_CUDA_H
 #define	WINDVECTOR_CUDA_H
 
+#ifdef HAVE_CUDA
+
 #include "packed_data.h"
 
 namespace himan
@@ -50,5 +52,6 @@ void DoCuda(windvector_cuda_options& opts);
 } // namespace plugin
 } // namespace himan
 
+#endif  /* HAVE_CUDA */
 #endif	/* WINDVECTOR_CUDA_H */
 
