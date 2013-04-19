@@ -18,83 +18,92 @@ namespace plugin
 
 
 class cache : public auxiliary_plugin
-{    
+{	
 
 public:
 
-    cache(); 
-    ~cache() {}
+	cache(); 
+	~cache() {}
 
-    cache(const cache& other) = delete;
-    cache& operator=(const cache& other) = delete;
+	cache(const cache& other) = delete;
+	cache& operator=(const cache& other) = delete;
 
-    void Insert(std::vector<std::shared_ptr<himan::info>>& infos);
-    void Insert(std::shared_ptr<himan::info> anInfo);
-    std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);    
+	void Insert(std::vector<std::shared_ptr<himan::info>>& infos);
 
-    virtual std::string ClassName() const
-    {
-        return "himan::plugin::cache";
-    };
+	/**
+	 * @brief Insert data to cache
+	 *
+	 * @param anInfo Info class instance containing the data
+	 * @param activeOnly Specify if we want to copy only the active part of the info class
+	 * to cache
+	 */
 
-    virtual HPPluginClass PluginClass() const
-    {
-        return kAuxiliary;
-    };
+	void Insert(std::shared_ptr<himan::info> anInfo, bool activeOnly = true);
+	std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);	
 
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::cache";
+	};
+
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	};
+
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
 
 
 private:
-
-    std::string UniqueName(const std::shared_ptr<const himan::info> anInfo);
-    std::string UniqueNameFromOptions(const search_options& options);
+	void SplitToPool(const std::shared_ptr<info> anInfo);
+	std::string UniqueName(const std::shared_ptr<const himan::info> anInfo);
+	std::string UniqueNameFromOptions(const search_options& options);
 
 };
 
 class cache_pool : public auxiliary_plugin
-{    
+{	
 
 public:
  
-    ~cache_pool() { delete itsInstance; }
+	~cache_pool() { delete itsInstance; }
 
-    cache_pool(const cache_pool& other) = delete;
-    cache_pool& operator=(const cache_pool& other) = delete;
+	cache_pool(const cache_pool& other) = delete;
+	cache_pool& operator=(const cache_pool& other) = delete;
 
-    static cache_pool* Instance();
-    bool Find(const std::string& uniqueName);
-    void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info);
-    std::shared_ptr<himan::info> GetInfo(const std::string& uniqueName);
-    
+	static cache_pool* Instance();
+	bool Find(const std::string& uniqueName);
+	void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info);
+	std::shared_ptr<himan::info> GetInfo(const std::string& uniqueName);
+	
 
-    virtual std::string ClassName() const
-    {
-        return "himan::plugin::cache_pool";
-    };
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::cache_pool";
+	};
 
-    virtual HPPluginClass PluginClass() const
-    {
-        return kAuxiliary;
-    };
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	};
 
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
 
 
 private:
 
-    cache_pool();
-    
-    std::map<std::string, std::shared_ptr<himan::info>> itsCache;
-    static cache_pool* itsInstance;
-    std::mutex itsInsertMutex;
-    std::mutex itsGetMutex;
+	cache_pool();
+	
+	std::map<std::string, std::shared_ptr<himan::info>> itsCache;
+	static cache_pool* itsInstance;
+	std::mutex itsInsertMutex;
+	std::mutex itsGetMutex;
 
 };
 
@@ -103,7 +112,7 @@ private:
 // the class factory
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<cache> (new cache());
+	return std::shared_ptr<cache> (new cache());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
