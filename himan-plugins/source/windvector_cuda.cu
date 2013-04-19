@@ -129,7 +129,7 @@ __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __rest
 
 	if (U != kFloatMissing && V != kFloatMissing)
 	{
-		int j = floorf(idx/sizeX);
+		int j = floor(idx/sizeX);
 		int i = idx - j * sizeX;
 
 		double lon = firstLongitude + i * di;
@@ -147,15 +147,15 @@ __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __rest
 
 		SinYReg = MIN(MAX(SinYReg, -1), 1);
 
-		double YReg = asinf(SinYReg) * kRadToDeg;
+		double YReg = asin(SinYReg) * kRadToDeg;
 
-		double CosYReg = cosf(YReg*kDegToRad);
+		double CosYReg = cos(YReg*kDegToRad);
 		double CosXReg = (CosYPole * CosYRot * CosXRot - SinYPole * SinYRot) / CosYReg;
 
 		CosXReg = MIN(MAX(CosXReg, -1), 1);
 		double SinXReg = CosYRot * SinXRot / CosYReg;
 
-		double XReg = acosf(CosXReg) * kRadToDeg;
+		double XReg = acos(CosXReg) * kRadToDeg;
 
 		if (SinXReg < 0)
 			XReg = -XReg;
