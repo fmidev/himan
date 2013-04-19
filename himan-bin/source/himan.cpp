@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 
 	shared_ptr<configuration> conf = ParseCommandLine(argc, argv);
 
-	unique_ptr<logger> theLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
+	unique_ptr<logger> aLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
 
 	/*
 	 * Initialize plugin factory before parsing configuration file. This prevents himan from
@@ -55,26 +55,26 @@ int main(int argc, char** argv)
  
 	std::vector<shared_ptr<plugin_configuration>> plugins = json_parser::Instance()->Parse(conf);
 
+	conf.reset(); // we don't need this conf anymore, it was only used as a base for json_parser
+	
 	banner();
 
 	vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
-	theLogger->Info("Found " + boost::lexical_cast<string> (thePlugins.size()) + " plugins");
-	
-	//vector<shared_ptr<info>> queues = conf->Infos();
+	aLogger->Info("Found " + boost::lexical_cast<string> (thePlugins.size()) + " plugins");
 
-	theLogger->Debug("Processqueue size: " + boost::lexical_cast<string> (plugins.size()));
+	aLogger->Debug("Processqueue size: " + boost::lexical_cast<string> (plugins.size()));
 
 	for (size_t i = 0; i < plugins.size(); i++)
 	{
 
 		std::shared_ptr<plugin_configuration> pc = plugins[i];
 
-		shared_ptr<plugin::compiled_plugin> thePlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc->Name()));
+		shared_ptr<plugin::compiled_plugin> aPlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc->Name()));
 
-		if (!thePlugin)
+		if (!aPlugin)
 		{
-			theLogger->Error("Unable to declare plugin " + pc->Name());
+			aLogger->Error("Unable to declare plugin " + pc->Name());
 			continue;
 		}
 
@@ -83,9 +83,9 @@ int main(int argc, char** argv)
 			pc->StartStatistics();
 		}
 
-		theLogger->Info("Calculating " + pc->Name());
+		aLogger->Info("Calculating " + pc->Name());
 
-		thePlugin->Process(pc);
+		aPlugin->Process(pc);
 
 		if (pc->StatisticsEnabled())
 		{
@@ -111,7 +111,7 @@ void banner()
 shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 {
 
-	shared_ptr<plugin_configuration> conf(new plugin_configuration());
+	shared_ptr<configuration> conf = make_shared<configuration> ();
 
 	namespace po = boost::program_options;
 
@@ -141,6 +141,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	("no-cuda", "disable cuda extensions")
 	("cuda-properties", "print cuda device properties of platform (if any)")
 	("statistics,s", po::value(&statisticsLabel), "record statistics information")
+	("no-cuda-packing", "do not use cuda for packing and unpacking grib data")
 	;
 
 	po::positional_options_description p;
@@ -210,9 +211,15 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		exit(1);
 	}
 
+	if (opt.count("no-cuda-packing"))
+	{
+		conf->UseCudaForPacking(false);
+	}
+
 	if (opt.count("no-cuda"))
 	{
 		conf->UseCuda(false);
+		conf->UseCudaForPacking(false);
 	}
 
 	if (!outfileType.empty())
