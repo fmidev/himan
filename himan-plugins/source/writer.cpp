@@ -19,6 +19,7 @@
 #include "grib.h"
 #include "querydata.h"
 #include "neons.h"
+#include "cache.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -39,6 +40,15 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 	if (conf->StatisticsEnabled())
 	{
 		t->Start();
+	}
+
+	std::shared_ptr<cache> c = std::dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+
+	bool activeOnly = (conf->FileWriteOption() == kSingleFile) ? false : true;
+
+	if (conf->UseCache())
+	{
+		c->Insert(theInfo, activeOnly);
 	}
 
 	namespace fs = boost::filesystem;
@@ -65,41 +75,41 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 	switch (fileType)
 	{
 
-	case kGRIB:
-	case kGRIB1:
-	case kGRIB2:
-	{
-
-		std::shared_ptr<grib> theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
-
-		correctFileName += ".grib";
-
-		if (fileType == kGRIB2)
+		case kGRIB:
+		case kGRIB1:
+		case kGRIB2:
 		{
-			correctFileName += "2";
-		}		
 
-		ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileWriteOption);
+			std::shared_ptr<grib> theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
 
-		break;
-	}
-	case kQueryData:
-	{
-		std::shared_ptr<querydata> theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+			correctFileName += ".grib";
 
-		correctFileName += ".fqd";
+			if (fileType == kGRIB2)
+			{
+				correctFileName += "2";
+			}
 
-		ret = theWriter->ToFile(theInfo, correctFileName, fileWriteOption);
+			ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileWriteOption);
 
-		break;
-	}
-	case kNetCDF:
-		break;
+			break;
+		}
+		case kQueryData:
+		{
+			std::shared_ptr<querydata> theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
 
-		// Must have this or compiler complains
-	default:
-		throw std::runtime_error(ClassName() + ": Invalid file type: " + HPFileTypeToString.at(fileType));
-		break;
+			correctFileName += ".fqd";
+
+			ret = theWriter->ToFile(theInfo, correctFileName, fileWriteOption);
+
+			break;
+		}
+		case kNetCDF:
+			break;
+
+			// Must have this or compiler complains
+		default:
+			throw std::runtime_error(ClassName() + ": Invalid file type: " + HPFileTypeToString.at(fileType));
+			break;
 
 	}
 
@@ -117,6 +127,11 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 		   // unlink(correctFileName.c_str());
 		}
 
+	}
+
+	if (!conf->UseCache())
+	{
+		theInfo->Grid()->Data()->Clear();
 	}
 
 	if (conf->StatisticsEnabled())
