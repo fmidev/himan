@@ -129,7 +129,7 @@ __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __rest
 
 	if (U != kFloatMissing && V != kFloatMissing)
 	{
-		int j = floor(idx/sizeX);
+		int j = floor(static_cast<double> (idx/sizeX));
 		int i = idx - j * sizeX;
 
 		double lon = firstLongitude + i * di;
