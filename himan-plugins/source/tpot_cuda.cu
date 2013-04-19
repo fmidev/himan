@@ -179,6 +179,11 @@ void himan::plugin::tpot_cuda::DoCuda(tpot_cuda_options& opts)
 
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
 
+	if (opts.simplePackedT.HasData())
+	{
+		CUDA_CHECK(cudaFree(dTPacked));
+	}
+	
 	if (!opts.isConstantPressure)
 	{
 		if (opts.simplePackedP.HasData())
