@@ -63,7 +63,7 @@ vector<string> neons::Files(const search_options& options)
 
 	vector<vector<string> > gridgeoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime);
 
-	if (gridgeoms.size() == 0)
+	if (gridgeoms.empty())
 	{
 		itsLogger->Warning("No geometries found for given search options");
 		return files;
