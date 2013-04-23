@@ -16,7 +16,7 @@
 using namespace himan;
 using namespace std;
 
-const double kDegToRad = 0.017453292; // PI / 180
+const double kDegToRad = 0.017453292519944; // PI / 180
 
 string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const info> info)
 {
