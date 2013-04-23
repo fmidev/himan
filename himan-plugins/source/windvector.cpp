@@ -319,7 +319,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			VParam = param("WGV-MS");
 			break;
 
-		case kAir:
+		case kWind:
 			UParam = param("U-MS");
 			VParam = param("V-MS");
 			break;
