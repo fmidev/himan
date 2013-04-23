@@ -8,13 +8,13 @@
 #include "windvector_cuda.h"
 #include "cuda_helper.h"
 
-// #include "cuPrintf.cu"
+ //#include "cuPrintf.cu"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const double kRadToDeg = 57.295775f; // 180 / PI
-const double kDegToRad = 0.017453f; // PI / 180
+const double kRadToDeg = 57.29577951307855; // 180 / PI
+const double kDegToRad = 0.017453292519944; // PI / 180
 
 namespace himan
 {
@@ -25,11 +25,11 @@ namespace plugin
 namespace windvector_cuda
 {
 
-__global__ void kernel_windvector(windvector_cuda_options opts, double* dU, double* dV, double* dataOut);
-__global__ void kernel_windvector_rotation(windvector_cuda_options opts, double* dU, double* dV, double* dataOut);
+__global__ void Calculate(windvector_cuda_options opts, double* dU, double* dV, double* dataOut);
+__global__ void RotateAndCalculate(windvector_cuda_options opts, double* dU, double* dV, double* dataOut);
 
-__device__ void Calculate(double* __restrict__ dU, double* __restrict__ dV, double* __restrict__ dataOut, size_t N, bool vectorCalculation, bool dirCalculation);
-__device__ void UVToEarthRelative(double* __restrict__ dU, double* __restrict__ dV, double firstLatitude, double firstLongitude, double di, double dj, double southPoleLat, double southPoleLon, size_t sizeY, size_t sizeX);
+__device__ void _Calculate(double* __restrict__ dU, double* __restrict__ dV, double* __restrict__ dataOut, windvector_cuda_options opts, int idx);
+__device__ void UVToEarthRelative(double* __restrict__ dU, double* __restrict__ dV, double firstLatitude, double firstLongitude, double di, double dj, double southPoleLat, double southPoleLon, size_t sizeY, size_t sizeX, int idx);
 
 } // namespace windvector
 } // namespace plugin
@@ -43,23 +43,23 @@ __device__ void UVToEarthRelative(double* __restrict__ dU, double* __restrict__ 
  * 2N..3N are for windvector (if that's calculated).
  */
 
-__device__ void himan::plugin::windvector_cuda::Calculate(double* __restrict__ dU, double* __restrict__ dV, double* __restrict__ dDataOut, size_t N, bool vectorCalculation, bool dirCalculation)
+__device__ void himan::plugin::windvector_cuda::_Calculate(double* __restrict__ dU, double* __restrict__ dV, double* __restrict__ dDataOut, windvector_cuda_options opts, int idx)
 {
 
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	double U = dU[idx], V = dV[idx];
+	size_t N = opts.sizeX * opts.sizeY;
 	
+	double U = dU[idx], V = dV[idx];
+
 	if (U == kFloatMissing || V == kFloatMissing)
 	{
 		dDataOut[idx] = kFloatMissing;
 
-		if (dirCalculation)
+		if (opts.targetType != kGust)
 		{
 			dDataOut[idx+N] = kFloatMissing;
 		}
 
-		if (vectorCalculation)
+		if (opts.vectorCalculation)
 		{
 			dDataOut[idx+2*N] = kFloatMissing;
 		}
@@ -67,7 +67,7 @@ __device__ void himan::plugin::windvector_cuda::Calculate(double* __restrict__ d
 	else
 	{
 		
-		double speed = sqrtf(U*U + V*V);
+		double speed = sqrt(U*U + V*V);
 
 		dDataOut[idx] = speed;
 
@@ -75,14 +75,13 @@ __device__ void himan::plugin::windvector_cuda::Calculate(double* __restrict__ d
 							// This is because if we use int the windvector calculation will have a small bias due
 							// to int decimal value truncation.
 
-		if (dirCalculation)
+		if (opts.targetType != kGust)
 		{
 
 			int offset = 180;
 
-			if (!vectorCalculation)
+			if (opts.targetType == kSea || opts.targetType == kIce)
 			{
-				// vector is calculated only for air, and for air we have offset of 180 degrees
 				offset = 0;
 			}
 
@@ -101,7 +100,7 @@ __device__ void himan::plugin::windvector_cuda::Calculate(double* __restrict__ d
 			dDataOut[idx+N] = round(dir);
 		}
 
-		if (vectorCalculation)
+		if (opts.vectorCalculation)
 		{
 			dDataOut[idx+2*N] = round(dir/10) + 100 * round(speed);
 		}
@@ -120,10 +119,8 @@ __device__ void himan::plugin::windvector_cuda::Calculate(double* __restrict__ d
 
 __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __restrict__ dU, double* __restrict__ dV,
 									double firstLatitude, double firstLongitude, double di, double dj,
-									double southPoleLat, double southPoleLon, size_t sizeY, size_t sizeX)
+									double southPoleLat, double southPoleLon, size_t sizeY, size_t sizeX, int idx)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
 	double U = dU[idx];
 	double V = dV[idx];
 
@@ -135,8 +132,9 @@ __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __rest
 		double lon = firstLongitude + i * di;
 		double lat = firstLatitude + j * dj;
 
-		double SinYPole = sin((southPoleLat + 90) * kDegToRad);
-		double CosYPole = cos((southPoleLat + 90) * kDegToRad);
+
+		double SinYPole = sin((southPoleLat + 90.) * kDegToRad);
+		double CosYPole = cos((southPoleLat + 90.) * kDegToRad);
 
 		double SinXRot, CosXRot, SinYRot, CosYRot;
 
@@ -145,19 +143,20 @@ __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __rest
 
 		double SinYReg = CosYPole * SinYRot + SinYPole * CosYRot * CosXRot;
 
-		SinYReg = MIN(MAX(SinYReg, -1), 1);
+		SinYReg = MIN(MAX(SinYReg, -1.), 1.);
 
 		double YReg = asin(SinYReg) * kRadToDeg;
 
 		double CosYReg = cos(YReg*kDegToRad);
+
 		double CosXReg = (CosYPole * CosYRot * CosXRot - SinYPole * SinYRot) / CosYReg;
 
-		CosXReg = MIN(MAX(CosXReg, -1), 1);
+		CosXReg = MIN(MAX(CosXReg, -1.), 1.);
 		double SinXReg = CosYRot * SinXRot / CosYReg;
 
 		double XReg = acos(CosXReg) * kRadToDeg;
 
-		if (SinXReg < 0)
+		if (SinXReg < 0.)
 			XReg = -XReg;
 
 		XReg += southPoleLon;
@@ -183,26 +182,26 @@ __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __rest
 	}
 }
 
-__global__ void himan::plugin::windvector_cuda::kernel_windvector(windvector_cuda_options opts, double* dU, double* dV, double* dDataOut)
+__global__ void himan::plugin::windvector_cuda::Calculate(windvector_cuda_options opts, double* dU, double* dV, double* dDataOut)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	if (idx < opts.sizeX*opts.sizeY)
 	{
-		Calculate(dU, dV, dDataOut, opts.sizeX*opts.sizeY, opts.vectorCalculation, opts.dirCalculation);
+		_Calculate(dU, dV, dDataOut, opts, idx);
 	}
 }
 
-__global__ void himan::plugin::windvector_cuda::kernel_windvector_rotation(windvector_cuda_options opts, double* dU, double* dV, double* dDataOut)
+__global__ void himan::plugin::windvector_cuda::RotateAndCalculate(windvector_cuda_options opts, double* dU, double* dV, double* dDataOut)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.sizeX*opts.sizeY)
 	{
-		UVToEarthRelative(dU, dV, opts.firstLatitude, opts.firstLongitude, opts.di, opts.dj, opts.southPoleLat, opts.southPoleLon, opts.sizeY, opts.sizeX);
-		Calculate(dU, dV, dDataOut, opts.sizeX*opts.sizeY, opts.vectorCalculation, opts.dirCalculation);
+		UVToEarthRelative(dU, dV, opts.firstLatitude, opts.firstLongitude, opts.di, opts.dj, opts.southPoleLat, opts.southPoleLon, opts.sizeY, opts.sizeX, idx);
+		_Calculate(dU, dV, dDataOut, opts, idx);
 	}
 }
 
@@ -233,7 +232,7 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 	{
 		numberOfParams = 3;
 	}
-	else if (!opts.dirCalculation)
+	else if (opts.targetType == kGust)
 	{
 		numberOfParams = 1;
 	}
@@ -251,7 +250,7 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 	dim3 gridDim(gridSize);
 	dim3 blockDim(blockSize);
 
-	// cudaPrintfInit();
+	 //cudaPrintfInit();
 
 	// Better do this once here than millions of times in the kernel
 
@@ -260,13 +259,19 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 		opts.southPoleLat = -opts.southPoleLat;
 		opts.southPoleLon = 0;
 	}
-	if (opts.needRotLatLonGridRotation || opts.dirCalculation)
-	{	
-		kernel_windvector_rotation <<< gridDim, blockDim >>> (opts, dU, dV, dDataOut);
+
+	/*
+	 *  If calculating gust, do not ever rotate grid since we don't calculate
+	 * direction for it.
+	*/
+
+	if (opts.targetType == kGust || !opts.needRotLatLonGridRotation)
+	{
+		Calculate <<< gridDim, blockDim >>> (opts, dU, dV, dDataOut);
 	}
 	else
 	{
-		kernel_windvector <<< gridDim, blockDim >>> (opts, dU, dV, dDataOut);
+		RotateAndCalculate <<< gridDim, blockDim >>> (opts, dU, dV, dDataOut);
 	}
 
 	// block until the device has completed
@@ -276,8 +281,8 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
-	// cudaPrintfDisplay(stdout, true);
-	// cudaPrintfEnd();
+	 //cudaPrintfDisplay(stdout, true);
+	 //cudaPrintfEnd();
 
 	// Retrieve result from device
 	CUDA_CHECK(cudaMemcpy(opts.dataOut, dDataOut, numberOfParams*memSize, cudaMemcpyDeviceToHost));

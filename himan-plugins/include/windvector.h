@@ -11,6 +11,12 @@
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
 
+#define WINDVECTOR_HEADER_INCLUDE
+
+#include "windvector_cuda.h" // need to have this here because of HPTargetType
+
+#undef WINDVECTOR_HEADER_INCLUDE
+
 namespace himan
 {
 namespace plugin
@@ -42,17 +48,14 @@ public:
     {
         return HPVersionNumber(1, 0);
     }
-
+   
 private:
 
     void Run(std::shared_ptr<info>, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
     void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
 
     bool itsUseCuda;
-    bool itsSeaCalculation;
-    bool itsIceCalculation;
-    bool itsWindCalculation;
-	bool itsWindGustCalculation;
+	HPTargetType itsCalculationTarget;
 	bool itsVectorCalculation;
 
     int itsCudaDeviceCount;
