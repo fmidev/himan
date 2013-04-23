@@ -29,7 +29,7 @@ using namespace himan::plugin;
 
 #include "windvector_cuda.h"
 
-const double kRadToDeg = 57.295779513082; // 180 / PI
+const double kRadToDeg = 57.29577951307855; // 180 / PI
 
 windvector::windvector()
 	: itsUseCuda(false)
