@@ -295,8 +295,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	// Required source parameters
 
-	param UParam("U-MS");
-	param VParam("V-MS");
+	param UParam;
+	param VParam;
 
 	double directionOffset = 180; // For wind direction add this
 
@@ -317,6 +317,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		case kGust:
 			UParam = param("WGU-MS");
 			VParam = param("WGV-MS");
+			break;
+
+		case kAir:
+			UParam = param("U-MS");
+			VParam = param("V-MS");
 			break;
 
 		default:
