@@ -16,12 +16,17 @@ txtrst=$(tput sgr0)       # Text reset
 
 for d in $(find . -maxdepth 1 -type d ! -name ".*" -print); do
 	cd $d
-	for s in $(ls *.sh); do
-		LOGFILE=$LOGDIR/$s.log
 
-		printf "%-15s %-23s %-45s " \
-			$(basename $d) \
-			$s \
+	dbase=$(basename $d)
+
+	for s in $(ls *.sh); do
+		sbase=$(basename $s)
+
+		LOGFILE="$LOGDIR/${dbase}_$sbase.log"
+
+		printf "%-15s %-20s %-53s " \
+			$dbase \
+			$sbase \
 			" (log: $LOGFILE)" 
 
 
@@ -42,6 +47,7 @@ for d in $(find . -maxdepth 1 -type d ! -name ".*" -print); do
 		if [ $ret -ne 0 ]; then
 			exit 1
 		fi
+		rm -f $LOGFILE
 	done
 	cd ..
 		
