@@ -138,7 +138,7 @@ public:
 
 		file << "__min__ " << min << std::endl;
 		file << "__max__ " << max << std::endl;
-		file << "__avg__ " << sum / theValues.size() << std::endl;
+		file << "__avg__ " << sum / static_cast<double> (theValues.size()) << std::endl;
 		file << "__missing__ " << missing << std::endl;
 	}
 
