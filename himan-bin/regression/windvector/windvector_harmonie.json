@@ -7,8 +7,8 @@
 	"step" : "1",
 	"step_unit" : "minute",
 	"file_write" : "multiple",
-	"origintime" : "latest",
-	"read_data_from_database" : "true",
+	"origintime" : "2013-03-21 06:00:00",
+	"read_data_from_database" : "false",
 	"processqueue" : [
 	{
 		"leveltype" : "height",
