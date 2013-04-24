@@ -496,11 +496,12 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				DFdata = new double[N];
 			}
 
+			count = N;
+
 			for (size_t i = 0; i < N; i++)
 			{
-				count++;
-				
-				FFdata[i] = static_cast<double> (opts.dataOut[i]);
+			
+				FFdata[i] = opts.dataOut[i];
 
 				if (FFdata[i] == kFloatMissing)
 				{
@@ -523,7 +524,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				if (itsCalculationTarget != kGust)
 				{
-					DDdata[i] = static_cast<double> (opts.dataOut[i+N]);
+					DDdata[i] = opts.dataOut[i+N];
 
 					assert(DDdata[i] != kFloatMissing);
 				}
@@ -531,7 +532,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				if (itsVectorCalculation)
 				{
 					// No need to check missing value here, if it is missing then it is
-					DFdata[i] = static_cast<double> (opts.dataOut[i+2*N]);
+					DFdata[i] = opts.dataOut[i+2*N];
 
 					assert(DFdata[i] != kFloatMissing);
 				}
