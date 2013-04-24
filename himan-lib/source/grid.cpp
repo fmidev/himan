@@ -761,3 +761,27 @@ bool grid::DataIsPacked() const
 
 	return false;
 }
+
+ostream& grid::Write(std::ostream& file) const
+{
+	file << *itsData;
+	file << "__dataIsPacked__ " << DataIsPacked() << endl;
+	file << "__itsScanningMode__ " << itsScanningMode << endl;
+	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
+	file << "__itsProjection__ " << itsProjection << endl;
+
+	for (double ab : itsAB)
+	{
+		cout << "__itsAB__" << ab << endl;
+	}
+
+	file << itsBottomLeft;
+	file << itsTopRight;
+	file << itsSouthPole;
+	file << "__itsOrientation__ " << itsOrientation << endl;
+	file << "__itsDi__ " << itsDi << endl;
+	file << "__itsDj__ " << itsDj << endl;
+
+
+	return file;
+}
