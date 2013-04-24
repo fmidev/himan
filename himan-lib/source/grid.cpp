@@ -770,9 +770,9 @@ ostream& grid::Write(std::ostream& file) const
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
 	file << "__itsProjection__ " << itsProjection << endl;
 
-	for (double ab : itsAB)
+	for (size_t i = 0; i < itsAB.size(); i++)
 	{
-		cout << "__itsAB__" << ab << endl;
+		cout << "__itsAB__" << itsAB[i] << endl;
 	}
 
 	file << itsBottomLeft;
