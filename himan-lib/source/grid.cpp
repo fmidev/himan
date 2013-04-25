@@ -422,12 +422,12 @@ NFmiGrid* grid::ToNewbaseGrid() const
 
 		if (!thePool.Init(dataSize, arr))
 		{
-			throw runtime_error("DataPool init failed");
+			throw runtime_error("NFmiDataPool init failed");
 		}
 
 		if (!theGrid->Init(&thePool))
 		{
-			throw runtime_error("Grid data init failed");
+			throw runtime_error("NFmiGrid init failed");
 		}
 
 		delete [] arr;
