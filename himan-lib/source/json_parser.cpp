@@ -689,16 +689,31 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 		anInfo->itsNi = pt.get<size_t>("ni");
 		anInfo->itsNj = pt.get<size_t>("nj");
 
+		string mode = pt.get<string> ("scanning_mode");
+
+		if (mode == "+x-y")
+		{
+			anInfo->itsScanningMode = kTopLeft;
+		}
+		else if (mode == "+x+y")
+		{
+			anInfo->itsScanningMode = kBottomLeft;
+		}
+		else
+		{
+			throw runtime_error(ClassName() + ": scanning mode " + mode + " not supported (yet)");
+		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		throw runtime_error(string("Grid size definition not found: ") + e.what());
+		throw runtime_error(string("Grid definitions not found: ") + e.what());
 
 	}
 	catch (exception& e)
 	{
 		throw runtime_error(string("Error parsing grid dimensions: ") + e.what());
 	}
+
 }
 
 void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
