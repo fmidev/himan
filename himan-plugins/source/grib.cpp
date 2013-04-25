@@ -386,7 +386,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	vector<shared_ptr<himan::info>> infos;
 
-	itsGrib->Open(theInputFile);
+	if (!itsGrib->Open(theInputFile))
+	{
+		throw runtime_error(ClassName() + ": Opening file '" + theInputFile + "' failed");
+	}
 
 	itsLogger->Debug("Reading file '" + theInputFile + "'");
 
@@ -583,7 +586,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		if (l != options.level)
 		{
-			itsLogger->Trace("Level does not match");
+			itsLogger->Trace("Level does not match: " + string(HPLevelTypeToString.at(options.level.Type())) + " vs " + string(HPLevelTypeToString.at(l.Type())));
 			continue;
 		}
 
