@@ -245,6 +245,13 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	 * Each thread will have a copy of the target info.
 	 */
 
+	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Start();
+	}
+
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
@@ -261,6 +268,13 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	g.join_all();
+
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(processTimer->GetTime() - conf->Statistics()->FetchingTime());
+	}
 
 	if (conf->FileWriteOption() == kSingleFile)
 	{
@@ -339,6 +353,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	level sourceLevel = compiled_plugin_base::LevelTransform(conf->SourceProducer(), UParam, myTargetInfo->PeakLevel(0));
 
+	bool useCudaInThisThread = itsUseCuda && threadIndex <= itsCudaDeviceCount;
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -355,14 +371,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 										myTargetInfo->Time(),
 										sourceLevel,
 										UParam,
-										false);
+										conf->UseCudaForPacking() && useCudaInThisThread);
 				
 			// Source info for V
 			VInfo = theFetcher->Fetch(conf,
 										myTargetInfo->Time(),
 										sourceLevel,
 										VParam,
-										false);
+										conf->UseCudaForPacking() && useCudaInThisThread);
 				
 		}
 		catch (HPExceptionType e)
@@ -389,14 +405,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				}
 		}
 
-
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
 		assert(UInfo->Grid()->AB() == VInfo->Grid()->AB());
 
 		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
@@ -412,24 +420,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			VInfo->Grid()->Stagger(0, -0.5);
 		}*/
 
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-
-		shared_ptr<NFmiGrid> UGrid(UInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> VGrid(VInfo->Grid()->ToNewbaseGrid());
-
-		UGrid->InterpolationMethod(kNearestPoint);
-		VGrid->InterpolationMethod(kNearestPoint);
-
 		int missingCount = 0;
 		int count = 0;
 
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
 		bool equalGrids = (*myTargetInfo->Grid() == *UInfo->Grid() && *myTargetInfo->Grid() == *VInfo->Grid());
-
-		myTargetInfo->ResetLocation();
-
-		targetGrid->Reset();
 
 		assert(UInfo->Grid()->Projection() == VInfo->Grid()->Projection());
 
@@ -439,7 +433,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		string deviceType;
 
 #ifdef HAVE_CUDA
-		if (itsUseCuda && equalGrids && !needStereographicGridRotation && threadIndex <= itsCudaDeviceCount)
+		if (useCudaInThisThread && equalGrids && !needStereographicGridRotation)
 		{
 			deviceType = "GPU";
 
@@ -447,31 +441,60 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			
 			windvector_cuda::windvector_cuda_options opts;
 
-			opts.Uin = const_cast<double*> (UInfo->Data()->Values());
-			opts.Vin = const_cast<double*> (VInfo->Data()->Values());
+			opts.isPackedData = false;
+
+			if (UInfo->Grid()->DataIsPacked())
+			{
+				assert(UInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+				shared_ptr<simple_packed> u = dynamic_pointer_cast<simple_packed> (UInfo->Grid()->PackedData());
+
+				opts.simplePackedU = *(u);
+
+				opts.isPackedData = true;
+
+			}
+			else
+			{
+				opts.UIn = const_cast<double*> (UInfo->Data()->Values());
+			}
+
+			if (VInfo->Grid()->DataIsPacked())
+			{
+				assert(VInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+				shared_ptr<simple_packed> v = dynamic_pointer_cast<simple_packed> (VInfo->Grid()->PackedData());
+
+				opts.simplePackedV = *(v);
+
+				opts.isPackedData = true;
+
+			}
+			else
+			{
+				opts.VIn = const_cast<double*> (VInfo->Data()->Values());
+			}
 
 			opts.sizeX = myTargetInfo->Grid()->Data()->SizeX();
 			opts.sizeY = myTargetInfo->Grid()->Data()->SizeY();
+
+			size_t N = opts.sizeX*opts.sizeY;
 
 			opts.vectorCalculation = itsVectorCalculation;
 			opts.needRotLatLonGridRotation = needRotLatLonGridRotation;
 			opts.targetType = itsCalculationTarget;
 
-			if (itsCalculationTarget == kGust)
+			cudaMallocHost(reinterpret_cast<void**> (&opts.speed), N * sizeof(double));
+
+			if (itsCalculationTarget != kGust)
 			{
-				opts.dataOut = new double[opts.sizeX*opts.sizeY];
+				cudaMallocHost(reinterpret_cast<void**> (&opts.dir), N * sizeof(double));
 			}
-			else
+
+			if (opts.vectorCalculation)
 			{
-				if (itsVectorCalculation)
-				{
-					opts.dataOut = new double[3*opts.sizeX*opts.sizeY];
-				}
-				else
-				{
-					opts.dataOut = new double[2*opts.sizeX*opts.sizeY];
-				}
-			}			
+				cudaMallocHost(reinterpret_cast<void**> (&opts.vector), N * sizeof(double));
+			}
 
 			opts.firstLatitude = myTargetInfo->Grid()->FirstGridPoint().Y();
 			opts.firstLongitude = myTargetInfo->Grid()->FirstGridPoint().X();
@@ -485,81 +508,37 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 			windvector_cuda::DoCuda(opts);
 
-			size_t N = opts.sizeX*opts.sizeY;
-
-			double* FFdata = new double[N];
-			double* DDdata = new double[N];
-			double* DFdata = nullptr;
-			
-			if (itsVectorCalculation)
-			{
-				DFdata = new double[N];
-			}
-
 			count = N;
-
-			for (size_t i = 0; i < N; i++)
-			{
-			
-				FFdata[i] = opts.dataOut[i];
-
-				if (FFdata[i] == kFloatMissing)
-				{
-					missingCount++;
-
-					// Make sure both are missing
-
-					if (itsCalculationTarget != kGust)
-					{
-						DDdata[i] = kFloatMissing;
-					}
-
-					if (itsVectorCalculation)
-					{
-						DFdata[i] = kFloatMissing;
-					}
-					
-					continue;
-				}
-
-				if (itsCalculationTarget != kGust)
-				{
-					DDdata[i] = opts.dataOut[i+N];
-
-					assert(DDdata[i] != kFloatMissing);
-				}
-
-				if (itsVectorCalculation)
-				{
-					// No need to check missing value here, if it is missing then it is
-					DFdata[i] = opts.dataOut[i+2*N];
-
-					assert(DFdata[i] != kFloatMissing);
-				}
-			}
-
+			missingCount = opts.missingValuesCount;
+		
 			myTargetInfo->ParamIndex(0);
-			myTargetInfo->Data()->Set(FFdata, N);
+			myTargetInfo->Data()->Set(opts.speed, N);
 
 			if (itsCalculationTarget != kGust)
 			{
 				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Data()->Set(DDdata, N);
+				myTargetInfo->Data()->Set(opts.dir, N);
 			}
 
 			if (itsVectorCalculation)
 			{
 				myTargetInfo->ParamIndex(2);
-				myTargetInfo->Data()->Set(DFdata, N);
+				myTargetInfo->Data()->Set(opts.vector, N);
 
-				delete [] DFdata;
 			}
 
-			delete [] FFdata;
-			delete [] DDdata;
-			
-			delete [] opts.dataOut;
+			cudaFreeHost(opts.speed);
 
+			if (opts.targetType != kGust)
+			{
+				cudaFreeHost(opts.dir);
+			}
+
+			if (opts.vectorCalculation)
+			{
+				cudaFreeHost(opts.vector);
+			}
+			
 			assert(UInfo->Grid()->ScanningMode() == VInfo->Grid()->ScanningMode());
 			
 			for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
@@ -571,6 +550,20 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 #endif
 		{
 			deviceType = "CPU";
+
+			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+
+			shared_ptr<NFmiGrid> UGrid(UInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> VGrid(VInfo->Grid()->ToNewbaseGrid());
+
+			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
+			UGrid->InterpolationMethod(kNearestPoint);
+			VGrid->InterpolationMethod(kNearestPoint);
+
+			myTargetInfo->ResetLocation();
+
+			targetGrid->Reset();
 
 			while (myTargetInfo->NextLocation() && targetGrid->Next())
 			{
@@ -712,16 +705,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		
 		if (conf->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
-#endif
-
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
-
 		}
 
 		/*

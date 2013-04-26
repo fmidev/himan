@@ -25,11 +25,25 @@ namespace plugin
 namespace windvector_cuda
 {
 
-__global__ void Calculate(windvector_cuda_options opts, double* dU, double* dV, double* dataOut);
-__global__ void RotateAndCalculate(windvector_cuda_options opts, double* dU, double* dV, double* dataOut);
+__global__ void UnpackAndCalculate(const unsigned char* dUPacked,
+									const unsigned char* dVPacked,
+									double* dU,
+									double* dV,
+									double* dSpeed,
+									double* dDir,
+									double* dVector,
+									windvector_cuda_options opts,
+									int* dMissingValuesCount);
 
-__device__ void _Calculate(double* __restrict__ dU, double* __restrict__ dV, double* __restrict__ dataOut, windvector_cuda_options opts, int idx);
-__device__ void UVToEarthRelative(double* __restrict__ dU, double* __restrict__ dV, double firstLatitude, double firstLongitude, double di, double dj, double southPoleLat, double southPoleLon, size_t sizeY, size_t sizeX, int idx);
+__global__ void Calculate(double* dU, double* dV, double* dSpeed, double* dDir, double* dVector, windvector_cuda_options opts, int* dMissingValueCount);
+
+__device__ void Rotate(double* __restrict__ dU, double* __restrict__ dV, windvector_cuda_options opts, int idx);
+__device__ void _Calculate(double* __restrict__ dU, 
+							double* __restrict__ dV,
+							double* __restrict__ dSpeed,
+							double* __restrict__ dDir,
+							double* __restrict__ dVector,
+							windvector_cuda_options opts, int* dMissingValueCount, int idx);
 
 } // namespace windvector
 } // namespace plugin
@@ -43,7 +57,12 @@ __device__ void UVToEarthRelative(double* __restrict__ dU, double* __restrict__ 
  * 2N..3N are for windvector (if that's calculated).
  */
 
-__device__ void himan::plugin::windvector_cuda::_Calculate(double* __restrict__ dU, double* __restrict__ dV, double* __restrict__ dDataOut, windvector_cuda_options opts, int idx)
+__device__ void himan::plugin::windvector_cuda::_Calculate(double* __restrict__ dU,
+															double* __restrict__ dV,
+															double* __restrict__ dSpeed,
+															double* __restrict__ dDir,
+															double* __restrict__ dVector,
+															windvector_cuda_options opts, int* dMissingValuesCount, int idx)
 {
 
 	size_t N = opts.sizeX * opts.sizeY;
@@ -52,16 +71,16 @@ __device__ void himan::plugin::windvector_cuda::_Calculate(double* __restrict__ 
 
 	if (U == kFloatMissing || V == kFloatMissing)
 	{
-		dDataOut[idx] = kFloatMissing;
+		dSpeed[idx] = kFloatMissing;
 
 		if (opts.targetType != kGust)
 		{
-			dDataOut[idx+N] = kFloatMissing;
+			dDir[idx] = kFloatMissing;
 		}
 
 		if (opts.vectorCalculation)
 		{
-			dDataOut[idx+2*N] = kFloatMissing;
+			dVector[idx] = kFloatMissing;
 		}
 	}
 	else
@@ -69,7 +88,7 @@ __device__ void himan::plugin::windvector_cuda::_Calculate(double* __restrict__ 
 		
 		double speed = sqrt(U*U + V*V);
 
-		dDataOut[idx] = speed;
+		dSpeed[idx] = speed;
 
 		double dir = 0;	// Direction is double although we round the result so that it *could* be int as well.
 							// This is because if we use int the windvector calculation will have a small bias due
@@ -97,14 +116,53 @@ __device__ void himan::plugin::windvector_cuda::_Calculate(double* __restrict__ 
 
 			}
 
-			dDataOut[idx+N] = round(dir);
+			dDir[idx] = round(dir);
 		}
 
 		if (opts.vectorCalculation)
 		{
-			dDataOut[idx+2*N] = round(dir/10) + 100 * round(speed);
+			dVector[idx+2*N] = round(dir/10) + 100 * round(speed);
 		}
 
+	}
+}
+
+__global__ void himan::plugin::windvector_cuda::UnpackAndCalculate(const unsigned char* dUPacked,
+									const unsigned char* dVPacked,
+									double* dU,
+									double* dV,
+									double* dSpeed,
+									double* dDir,
+									double* dVector,
+									windvector_cuda_options opts,
+									int* dMissingValuesCount)
+{
+
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < opts.sizeX*opts.sizeY)
+	{
+		if (opts.simplePackedU.HasData())
+		{
+			SimpleUnpack(dUPacked, dU, opts.sizeX*opts.sizeY, opts.simplePackedU.bitsPerValue, opts.simplePackedU.binaryScaleFactor, opts.simplePackedU.decimalScaleFactor, opts.simplePackedU.referenceValue, idx);
+		}
+
+		if (opts.simplePackedV.HasData())
+		{
+			SimpleUnpack(dVPacked, dV, opts.sizeX*opts.sizeY, opts.simplePackedV.bitsPerValue, opts.simplePackedV.binaryScaleFactor, opts.simplePackedV.decimalScaleFactor, opts.simplePackedV.referenceValue, idx);
+		}
+
+		/*
+		 *  If calculating gust, do not ever rotate grid since we don't calculate
+		 * direction for it.
+		 */
+
+		if (opts.targetType != kGust && opts.needRotLatLonGridRotation)
+		{
+			Rotate(dU, dV, opts, idx);
+		}
+
+		_Calculate(dU, dV, dSpeed, dDir, dVector, opts, dMissingValuesCount, idx);
 	}
 }
 
@@ -117,24 +175,22 @@ __device__ void himan::plugin::windvector_cuda::_Calculate(double* __restrict__ 
  *
  */
 
-__device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __restrict__ dU, double* __restrict__ dV,
-									double firstLatitude, double firstLongitude, double di, double dj,
-									double southPoleLat, double southPoleLon, size_t sizeY, size_t sizeX, int idx)
+__device__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ dU, double* __restrict__ dV, windvector_cuda_options opts, int idx)
 {
 	double U = dU[idx];
 	double V = dV[idx];
 
 	if (U != kFloatMissing && V != kFloatMissing)
 	{
-		int j = floor(static_cast<double> (idx/sizeX));
-		int i = idx - j * sizeX;
+		int j = floor(static_cast<double> (idx/opts.sizeX));
+		int i = idx - j * opts.sizeX;
 
-		double lon = firstLongitude + i * di;
-		double lat = firstLatitude + j * dj;
+		double lon = opts.firstLongitude + i * opts.di;
+		double lat = opts.firstLatitude + j * opts.dj;
 
 
-		double SinYPole = sin((southPoleLat + 90.) * kDegToRad);
-		double CosYPole = cos((southPoleLat + 90.) * kDegToRad);
+		double SinYPole = sin((opts.southPoleLat + 90.) * kDegToRad);
+		double CosYPole = cos((opts.southPoleLat + 90.) * kDegToRad);
 
 		double SinXRot, CosXRot, SinYRot, CosYRot;
 
@@ -159,11 +215,11 @@ __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __rest
 		if (SinXReg < 0.)
 			XReg = -XReg;
 
-		XReg += southPoleLon;
+		XReg += opts.southPoleLon;
 
 		// UV to earth relative
 
-		double zxmxc = kDegToRad * (XReg - southPoleLon);
+		double zxmxc = kDegToRad * (XReg - opts.southPoleLon);
 
 		double sinxmxc, cosxmxc;
 
@@ -182,29 +238,27 @@ __device__ void himan::plugin::windvector_cuda::UVToEarthRelative(double* __rest
 	}
 }
 
-__global__ void himan::plugin::windvector_cuda::Calculate(windvector_cuda_options opts, double* dU, double* dV, double* dDataOut)
+__global__ void himan::plugin::windvector_cuda::Calculate(double* dU, double* dV, double* dSpeed, double* dDir, double* dVector, windvector_cuda_options opts, int* dMissingValueCount)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	if (idx < opts.sizeX*opts.sizeY)
 	{
-		_Calculate(dU, dV, dDataOut, opts, idx);
+
+		/*
+		 *  If calculating gust, do not ever rotate grid since we don't calculate
+		 * direction for it.
+		 */
+
+		if (opts.targetType != kGust && opts.needRotLatLonGridRotation)
+		{
+			Rotate(dU, dV, opts, idx);
+		}
+
+		_Calculate(dU, dV, dSpeed, dDir, dVector, opts, dMissingValueCount, idx);
 	}
 }
-
-__global__ void himan::plugin::windvector_cuda::RotateAndCalculate(windvector_cuda_options opts, double* dU, double* dV, double* dDataOut)
-{
-
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (idx < opts.sizeX*opts.sizeY)
-	{
-		UVToEarthRelative(dU, dV, opts.firstLatitude, opts.firstLongitude, opts.di, opts.dj, opts.southPoleLat, opts.southPoleLon, opts.sizeY, opts.sizeX, idx);
-		_Calculate(dU, dV, dDataOut, opts, idx);
-	}
-}
-
 
 void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 {
@@ -221,27 +275,56 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 
 	double* dU;
 	double* dV;
-	double* dDataOut;
+	double* dSpeed;
+	double* dDir;
+	double* dVector;
+
+	unsigned char* dUPacked;
+	unsigned char* dVPacked;
+	
+	int* dMissingValuesCount;
+
+	CUDA_CHECK(cudaMalloc((void **) &dMissingValuesCount, sizeof(int)));
 
 	CUDA_CHECK(cudaMalloc((void **) &dU, memSize));
 	CUDA_CHECK(cudaMalloc((void **) &dV, memSize));
 
-	int numberOfParams = 2;
+	CUDA_CHECK(cudaMalloc((void **) &dSpeed, memSize));
+
+	if (opts.targetType != kGust)
+	{
+		CUDA_CHECK(cudaMalloc((void **) &dDir, memSize));
+	}
 
 	if (opts.vectorCalculation)
 	{
-		numberOfParams = 3;
+		CUDA_CHECK(cudaMalloc((void **) &dVector, memSize));
 	}
-	else if (opts.targetType == kGust)
+	
+	if (opts.simplePackedU.HasData())
 	{
-		numberOfParams = 1;
+		CUDA_CHECK(cudaMalloc((void **) &dUPacked, opts.simplePackedU.dataLength * sizeof(unsigned char)));
+		CUDA_CHECK(cudaMemcpy(dUPacked, opts.simplePackedU.data, opts.simplePackedU.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+	}
+	else
+	{
+		CUDA_CHECK(cudaMemcpy(dU, opts.UIn, memSize, cudaMemcpyHostToDevice));
 	}
 
-	CUDA_CHECK(cudaMalloc((void **) &dDataOut, numberOfParams*memSize));
-	
-	CUDA_CHECK(cudaMemcpy(dU, opts.Uin, memSize, cudaMemcpyHostToDevice));
-	CUDA_CHECK(cudaMemcpy(dV, opts.Vin, memSize, cudaMemcpyHostToDevice));
-	
+	if (opts.simplePackedV.HasData())
+	{
+		CUDA_CHECK(cudaMalloc((void **) &dVPacked, opts.simplePackedV.dataLength * sizeof(unsigned char)));
+		CUDA_CHECK(cudaMemcpy(dVPacked, opts.simplePackedV.data, opts.simplePackedV.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+	}
+	else
+	{
+		CUDA_CHECK(cudaMemcpy(dV, opts.VIn, memSize, cudaMemcpyHostToDevice));
+	}
+
+	int src=0;
+
+	CUDA_CHECK(cudaMemcpy(dMissingValuesCount, &src, sizeof(int), cudaMemcpyHostToDevice));
+
 	// dims
 
 	const int blockSize = 512;
@@ -260,18 +343,13 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 		opts.southPoleLon = 0;
 	}
 
-	/*
-	 *  If calculating gust, do not ever rotate grid since we don't calculate
-	 * direction for it.
-	*/
-
-	if (opts.targetType == kGust || !opts.needRotLatLonGridRotation)
+	if (opts.isPackedData)
 	{
-		Calculate <<< gridDim, blockDim >>> (opts, dU, dV, dDataOut);
+		UnpackAndCalculate <<< gridDim, blockDim >>> (dUPacked, dVPacked, dU, dV, dSpeed, dDir, dVector, opts, dMissingValuesCount);
 	}
 	else
 	{
-		RotateAndCalculate <<< gridDim, blockDim >>> (opts, dU, dV, dDataOut);
+		Calculate <<< gridDim, blockDim >>> (dU, dV, dSpeed, dDir, dVector, opts, dMissingValuesCount);
 	}
 
 	// block until the device has completed
@@ -285,10 +363,32 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts)
 	 //cudaPrintfEnd();
 
 	// Retrieve result from device
-	CUDA_CHECK(cudaMemcpy(opts.dataOut, dDataOut, numberOfParams*memSize, cudaMemcpyDeviceToHost));
+
+	CUDA_CHECK(cudaMemcpy(opts.speed, dSpeed, memSize, cudaMemcpyDeviceToHost));
+	
+	if (opts.targetType != kGust)
+	{
+		CUDA_CHECK(cudaMemcpy(opts.dir, dDir, memSize, cudaMemcpyDeviceToHost));
+	}
+
+	if (opts.vectorCalculation)
+	{
+		CUDA_CHECK(cudaMemcpy(opts.vector, dVector, memSize, cudaMemcpyDeviceToHost));
+	}
 
 	CUDA_CHECK(cudaFree(dU));
 	CUDA_CHECK(cudaFree(dV));
-	CUDA_CHECK(cudaFree(dDataOut));
+	CUDA_CHECK(cudaFree(dMissingValuesCount));
+
+	if (opts.simplePackedU.HasData())
+	{
+		CUDA_CHECK(cudaFree(dUPacked));
+	}
+
+	if (opts.simplePackedV.HasData())
+	{
+		CUDA_CHECK(cudaFree(dVPacked));
+	}
+
 	
 }

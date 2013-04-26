@@ -44,9 +44,11 @@ namespace windvector_cuda
 
 struct windvector_cuda_options
 {
-	double* Uin;
-	double* Vin;
-	double* dataOut;
+	double* UIn;
+	double* VIn;
+	double* speed;
+	double* dir;
+	double* vector;
 	size_t sizeX;
 	size_t sizeY;
 	double firstLatitude;
@@ -62,7 +64,7 @@ struct windvector_cuda_options
 	bool isPackedData;
 	int missingValuesCount;
 
-	//simple_packed simplePackedU, simplePackedV;
+	simple_packed simplePackedU, simplePackedV;
 
 	windvector_cuda_options() : targetType(kUnknownElement), vectorCalculation(false), needRotLatLonGridRotation(false), isPackedData(false), missingValuesCount(0) {}
 
