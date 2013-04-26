@@ -211,7 +211,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 	myTargetInfo->FirstParam();
 
 	bool useCudaInThisThread = itsUseCuda && threadIndex <= itsCudaDeviceCount;
-	
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -241,13 +241,13 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 						  myTargetInfo->Time(),
 						  myTargetInfo->Level(),
 						  VVParam,
-						  useCudaInThisThread);
+						  conf->UseCudaForPacking() && useCudaInThisThread);
 
 			TInfo = theFetcher->Fetch(conf,
 						myTargetInfo->Time(),
 						myTargetInfo->Level(),
 						TParam,
-						useCudaInThisThread);
+						conf->UseCudaForPacking() && useCudaInThisThread);
 
 			if (!isPressureLevel)
 			{
@@ -256,7 +256,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 							myTargetInfo->Time(),
 							myTargetInfo->Level(),
 							PParam,
-							useCudaInThisThread);
+							conf->UseCudaForPacking() && useCudaInThisThread);
 
 				if (PInfo->Param().Unit() == kHPa)
 				{
@@ -328,41 +328,58 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 			opts.N = TInfo->Grid()->Size();
 
+			opts.isPackedData = false;
+
+			cudaMallocHost(reinterpret_cast<void**> (&opts.VVOut), opts.N * sizeof(double));
+
 			if (TInfo->Grid()->DataIsPacked())
 			{
 				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-				assert(VVInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-				assert(isPressureLevel || PInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
 				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
-				shared_ptr<simple_packed> vv = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData());
 
 				opts.simplePackedT = *(t);
-				opts.simplePackedVV = *(vv);
-				
-				if (!opts.isConstantPressure)
-				{
-					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
-					opts.simplePackedP = *(p);
-				}
-				
+
 				opts.isPackedData = true;
+
 			}
 			else
 			{
 				opts.TIn = TInfo->Grid()->Data()->Values();
-				opts.VVIn = VVInfo->Grid()->Data()->Values();
+			}
 
-				if (!opts.isConstantPressure)
+			if (VVInfo->Grid()->DataIsPacked())
+			{
+				assert(VVInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+				shared_ptr<simple_packed> vv = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData());
+
+				opts.simplePackedVV = *(vv);
+
+				opts.isPackedData = true;
+
+			}
+			else
+			{
+				opts.VVIn = VVInfo->Grid()->Data()->Values();
+			}
+
+			if (!isPressureLevel)
+			{
+				if (PInfo->Grid()->DataIsPacked())
+				{
+					assert(PInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
+					opts.simplePackedP = *(p);
+					opts.isPackedData = true;
+				}
+				else
 				{
 					opts.PIn = PInfo->Grid()->Data()->Values();
 				}
 
-				opts.isPackedData = false;
-
 			}
-
-			if (opts.isConstantPressure)
+			else
 			{
 				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
 			}
