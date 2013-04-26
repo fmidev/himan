@@ -62,6 +62,8 @@ public:
 
 	void UsedThreadCount(size_t theThreadCount);
 	void UsedGPUCount(size_t theGPUCount);
+
+	size_t FetchingTime() const;
 	
 private:
 	void Init();

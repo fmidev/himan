@@ -82,3 +82,8 @@ void statistics::UsedGPUCount(size_t theUsedGPUCount)
 {
 	itsUsedGPUCount = theUsedGPUCount;
 }
+
+size_t statistics::FetchingTime() const
+{
+	return itsFetchingTime;
+}
