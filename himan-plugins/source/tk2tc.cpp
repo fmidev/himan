@@ -225,7 +225,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 TParam,
-								useCudaInThisThread);
+								 conf->UseCudaForPacking() && useCudaInThisThread);
 
 			assert(TInfo->Param().Unit() == kK);
 
