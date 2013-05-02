@@ -12,23 +12,6 @@
  * All CUDA commands are still wrapped with preprocessor macros so that HIMAN can be compiled
  * even on a machine that does not have CUDA SDK installed.
  *
- * Default behavior with regards to copying structs is as follows:
- *
- * WHEN STRUCT IS COPIED AT HOST SIDE, WITH HOST COMPILER (g++):
- * - struct is deep-copied
- *
- * WHEN STRUCT IS COPIED AT DEVICE SIDE, WITH CUDA COMPILER (nvcc):
- * - struct is shallow-copied
- *
- * From this follows that creating and freeing (destrying) struct MUST BE DONE ON THE HOST SIDE.
- * 
- * Explanation for this is that since the struct is passed by-value from host to
- * device (device cannot access data in host memory, therefore it must be copied), we don't
- * want to copy the array that holds the data since that's already memcopied using
- * cudaMemcpy -- we only want to copy the metadata.
- * 
- * So when struct is passed to and fro in the device code, only shallow copies are
- * done.
  */
 
 #ifndef PACKED_DATA_H
@@ -56,7 +39,7 @@ struct packed_data
 #ifdef __CUDACC__
 __device__  __host__
 #endif
-	packed_data() : data(0), dataLength(0), packingType(kUnknownPackingType) {}
+	packed_data() : data(0), dataLength(0), bitmap(0), bitmapLength(0), packingType(kUnknownPackingType) {}
 
 #ifdef __CUDACC__
 __device__  __host__
@@ -69,6 +52,7 @@ __device__  __host__
 
 	void Resize(size_t newDataLength);
 	void Set(unsigned char* newData, size_t newDataLength);
+	void Bitmap(int* newBitmap, size_t newBitmapLength);
 	void Clear();
 	
 #ifdef __CUDACC__
@@ -76,10 +60,17 @@ __device__  __host__
 #endif
 	bool HasData() const;
 
+#ifdef __CUDACC__
+__device__  __host__
+#endif
+	bool HasBitmap() const;
+
 	unsigned char* data;
 	size_t dataLength;
+	int* bitmap;
+	size_t bitmapLength;
+
 	HPPackingType packingType;
-	
 
 };
 
@@ -92,12 +83,13 @@ packed_data::packed_data(const packed_data& other)
 	, packingType(other.packingType)
 {
 
-	if (other.data)
+	if (other.dataLength)
 	{
-#ifndef __CUDA_ARCH__
+#ifndef __CUDACC__
 		dataLength = other.dataLength;
 
-		cudaMallocHost(reinterpret_cast<void**> (&data), dataLength * sizeof(unsigned char));
+		//cudaMallocHost(reinterpret_cast<void**> (&data), dataLength * sizeof(unsigned char));
+		cudaHostAlloc(reinterpret_cast<void**> (&data), dataLength * sizeof(unsigned char), cudaHostAllocMapped);
 
 		memcpy(data, other.data, dataLength * sizeof(unsigned char));
 #endif
@@ -105,6 +97,21 @@ packed_data::packed_data(const packed_data& other)
 	else
 	{
 		data = 0;
+	}
+
+	if (other.bitmapLength)
+	{
+#ifndef __CUDACC__
+		bitmapLength = other.bitmapLength;
+		
+		cudaHostAlloc(reinterpret_cast<void**> (&bitmap), bitmapLength * sizeof(int), cudaHostAllocMapped);
+
+		memcpy(bitmap, other.bitmap, bitmapLength * sizeof(int));
+#endif
+	}
+	else
+	{
+		bitmap = 0;
 	}
 }
 
@@ -130,17 +137,51 @@ bool packed_data::HasData() const
 
 inline
 #ifdef __CUDACC__
+__device__  __host__
+#endif
+bool packed_data::HasBitmap() const
+{
+	return (bitmapLength > 0);
+}
+
+inline
+#ifdef __CUDACC__
  __device__ __host__
 #endif
 void packed_data::Clear()
 {
-	if (data)
+	if (dataLength)
 	{
-#ifndef __CUDA_ARCH__
+#ifndef __CUDACC__
 		cudaFreeHost(data);
+		dataLength = 0;
+#endif
+	}
+
+	if (bitmapLength)
+	{
+#ifndef __CUDACC__
+		cudaFreeHost(bitmap);
+		bitmapLength = 0;
 #endif
 	}
 }
+
+struct simple_packed_coefficients
+{
+	int bitsPerValue;
+	double binaryScaleFactor;
+	double decimalScaleFactor;
+	double referenceValue;
+
+#ifdef __CUDACC__
+	__host__ __device__
+#endif
+	simple_packed_coefficients()
+		: bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0)
+	{}
+
+};
 
 struct simple_packed : packed_data
 {
@@ -168,11 +209,8 @@ struct simple_packed : packed_data
 	virtual ~simple_packed() {}
 
 	virtual std::string ClassName() const { return "simple_packed"; }
+	simple_packed_coefficients coefficients;
 
-	int bitsPerValue;
-	double binaryScaleFactor;
-	double decimalScaleFactor;
-	double referenceValue;
 };
 
 
@@ -180,13 +218,12 @@ inline
 #ifdef __CUDACC__
 __device__  __host__
 #endif
-simple_packed::simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimalScaleFactor, double theReferenceValue)
-	: bitsPerValue(theBitsPerValue)
-	, binaryScaleFactor(theBinaryScaleFactor)
-	, decimalScaleFactor(theDecimalScaleFactor)
-	, referenceValue(theReferenceValue)
-	
+simple_packed::simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimalScaleFactor, double theReferenceValue) 
 {
+	coefficients.bitsPerValue = theBitsPerValue;
+	coefficients.binaryScaleFactor = theBinaryScaleFactor;
+	coefficients.decimalScaleFactor = theDecimalScaleFactor;
+	coefficients.referenceValue = theReferenceValue;
 	packingType = kSimplePacking;
 }
 
@@ -196,12 +233,14 @@ __device__  __host__
 #endif
 simple_packed::simple_packed(const simple_packed& other)
 	: packed_data(other)
-	, bitsPerValue(other.bitsPerValue)
-	, binaryScaleFactor(other.binaryScaleFactor)
-	, decimalScaleFactor(other.decimalScaleFactor)
-	, referenceValue(other.referenceValue)
-	
-{}
+{
+	coefficients.bitsPerValue = other.coefficients.bitsPerValue;
+	coefficients.binaryScaleFactor = other.coefficients.binaryScaleFactor;
+	coefficients.decimalScaleFactor = other.coefficients.decimalScaleFactor;
+	coefficients.referenceValue = other.coefficients.referenceValue;
+	packingType = kSimplePacking;
+
+}
 
 } // namespace himan
 
