@@ -21,6 +21,10 @@ using namespace himan::plugin;
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
+#ifdef HAVE_CUDA
+#include "cuda_helper.h"
+#endif
+
 grib::grib()
 {
 
@@ -714,23 +718,44 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		if (readPackedData && itsGrib->Message()->PackingType() == "grid_simple")
 		{
 			itsLogger->Trace("Retrieving packed data from grib");
-			
+
 			len = itsGrib->Message()->UnpackedValuesLength();
 
-			unsigned char* u = itsGrib->Message()->UnpackedValues();
+			unsigned char* data, *bitmap;
+			int* unpackedBitmap;
+			
+			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&data), len * sizeof(unsigned char), cudaHostAllocMapped));
 
+			itsGrib->Message()->UnpackedValues(data);
+		
 			double bsf = itsGrib->Message()->BinaryScaleFactor();
 			double dsf = itsGrib->Message()->DecimalScaleFactor();
 			double rv = itsGrib->Message()->ReferenceValue();
 			long bpv = itsGrib->Message()->BitsPerValue();
 
-			size_t len = itsGrib->Message()->Section4Length();
+			size_t values_len = itsGrib->Message()->Section4Length();
 
 			auto packed = std::make_shared<simple_packed> (bpv, util::ToPower(bsf,2), util::ToPower(-dsf, 10), rv);
 
-			//packed->Resize(len);
-			
-			packed->Set(u, len);
+			packed->Set(data, values_len);
+
+			if (itsGrib->Message()->Bitmap())
+			{
+				size_t bitmap_len =itsGrib->Message()->BytesLength("bitmap");
+				size_t bitmap_size = ceil(bitmap_len/8);
+
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&unpackedBitmap), bitmap_len * sizeof(int), cudaHostAllocMapped));
+
+				bitmap = new unsigned char[bitmap_size];
+
+				itsGrib->Message()->Bytes("bitmap", bitmap);
+
+				UnpackBitmap(bitmap, unpackedBitmap, bitmap_size);
+				
+				packed->Bitmap(unpackedBitmap, bitmap_len);
+
+				delete [] bitmap;
+			}
 
 			newInfo->Grid()->PackedData(packed);
 		}
@@ -761,4 +786,27 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	}
 
 	return infos;
+}
+
+
+#define BitMask1(i)	(1u << i)
+#define BitTest(n,i)	!!((n) & BitMask1(i))
+
+void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len) const
+{
+	size_t i, v = 1, idx = 0;
+	short j = 0;
+
+	for (i = 0; i < len; i++)
+	{
+		for (j = 7; j >= 0; j--)
+		{
+			if (BitTest(bitmap[i], j))
+			{
+				unpacked[idx] = v++;
+			}
+
+			idx++;
+	    }
+	}
 }

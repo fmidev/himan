@@ -75,6 +75,22 @@ private:
 
 	bool WriteGrib(std::shared_ptr<const info> anInfo, const std::string& outputFile, HPFileType fileType, bool appendToFile = false);
 
+	/**
+	 * @brief UnpackBitmap
+	 *
+	 * Transform regular bitmap (unsigned char) to a int-based bitmap where each array key represents
+	 * an actual data value. If bitmap is zero for that key, zero is also put to the int array. If bitmap
+	 * is set for that key, the order number of that key in the data array is put to the array. The order
+	 * number is incremented by one in order to be able to distinguish missing value from value at data array
+	 * element zero.
+	 *
+	 * @param bitmap Original bitmap read from grib
+	 * @param unpacked Unpacked bitmap where number of keys is the same as in the data array
+	 * @param len Length of original bitmap
+	 */
+	
+	void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len) const;
+	
 	std::shared_ptr<NFmiGrib> itsGrib;
 
 };
