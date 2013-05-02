@@ -7,7 +7,7 @@
 
 #include "windvector_cuda.h"
 #include "cuda_helper.h"
-#include "cuPrintf.cu"
+// #include "cuPrintf.cu"
 
 #define BitMask1(i)	(1u << i)
 #define BitTest(n,i)	!!((n) & BitMask1(i))
@@ -79,7 +79,7 @@ __global__ void himan::plugin::windvector_cuda::Calculate(const double* __restri
 		{
 
 			double speed = sqrt(U*U + V*V);
-if (idx==14756) cuPrintf("speed %f\n", speed);
+
 			dSpeed[idx] = speed;
 
 			double dir = 0;	// Direction is double although we round the result so that it *could* be int as well.
@@ -282,7 +282,7 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 	dim3 gridDim(gridSize);
 	dim3 blockDim(blockSize);
 
-	cudaPrintfInit();
+	// cudaPrintfInit();
 
 	// Better do this once here than millions of times in the kernel
 
@@ -321,8 +321,8 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
-	 cudaPrintfDisplay(stdout, true);
-	 cudaPrintfEnd();
+	// cudaPrintfDisplay(stdout, true);
+	// cudaPrintfEnd();
 
 	CUDA_CHECK(cudaMemcpy(&opts.missingValuesCount, dMissingValuesCount, sizeof(int), cudaMemcpyDeviceToHost));
 
