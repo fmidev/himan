@@ -211,6 +211,10 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		exit(1);
 	}
 
+#ifndef HAVE_CUDA
+	conf->UseCuda(false);
+	conf->UseCudaForPacking(false);
+#else
 	if (opt.count("no-cuda-packing"))
 	{
 		conf->UseCudaForPacking(false);
@@ -221,6 +225,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCuda(false);
 		conf->UseCudaForPacking(false);
 	}
+#endif
 
 	if (!outfileType.empty())
 	{
