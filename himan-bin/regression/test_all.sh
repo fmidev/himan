@@ -1,6 +1,9 @@
 #!/bin/sh
 
-export HIMAN=$(pwd)/../build/debug/himan
+if [ -z "$HIMAN" ]; then
+  export HIMAN=$(pwd)/../build/debug/himan
+fi
+
 LOGDIR=/tmp
 
 txtund=$(tput sgr 0 1)    # Underline
