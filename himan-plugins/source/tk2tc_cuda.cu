@@ -17,80 +17,68 @@ namespace plugin
 namespace tk2tc_cuda
 {
 
-__global__ void UnpackAndCalculate(const unsigned char* dTPacked, double* dT, double* dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount);
-__global__ void Calculate(const double* dT, double* dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount);
-
-__device__ void _Calculate(const double* __restrict__ dT, double* __restrict__ dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount, int idx);
+__global__ void Calculate(const double* __restrict__ dTK, double* __restrict__ dTC, tk2tc_cuda_options opts, int* dMissingValuesCount);
 
 } // namespace tk2tc_cuda
 } // namespace plugin
 } // namespace himan
 
-__global__ void himan::plugin::tk2tc_cuda::UnpackAndCalculate(const unsigned char* dTPacked, double* dT, double* dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount)
+__global__ void himan::plugin::tk2tc_cuda::Calculate(const double* __restrict__ dTK,
+														double* __restrict__ dTC,
+														tk2tc_cuda_options opts,
+														int* dMissingValuesCount)
 {
+
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
 	{
-		SimpleUnpack(dTPacked, dT, opts.N, opts.simplePackedT.bitsPerValue, opts.simplePackedT.binaryScaleFactor, opts.simplePackedT.decimalScaleFactor, opts.simplePackedT.referenceValue, idx);
-		
-		_Calculate(dT, dTOut, opts, dMissingValuesCount, idx);
+		if (dTK[idx] == kFloatMissing)
+		{
+			atomicAdd(dMissingValuesCount, 1);
+			dTC[idx] = kFloatMissing;
+		}
+		else
+		{
+			dTC[idx] = dTK[idx] - 273.15;
+		}
 	}
 }
 
-__global__ void himan::plugin::tk2tc_cuda::Calculate(const double* dT, double* dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (idx < opts.N)
-	{
-		_Calculate(dT, dTOut, opts, dMissingValuesCount, idx);
-	}
-}
-
-__device__ void himan::plugin::tk2tc_cuda::_Calculate(const double* __restrict__ dT, double* __restrict__ dTOut, tk2tc_cuda_options opts, int* dMissingValuesCount, int idx)
-{
-
-	if (dT[idx] == kFloatMissing)
-	{
-		atomicAdd(dMissingValuesCount, 1);
-		dTOut[idx] = kFloatMissing;
-	}
-	else
-	{
-		dTOut[idx] = dT[idx] - 273.15;
-	}
-}
-
-void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts)
+void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts, tk2tc_cuda_data& datas)
 {
 
 	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
-
-	size_t memSize = opts.N * sizeof(double);
+	
+	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate device arrays
 
-	double* dT;
-	unsigned char* dTPacked;
-	double *dTOut;
+	double* dTK;
+	unsigned char* dpTK;
+	int* dbmTK;
+	double *dTC;
 
 	int *dMissingValuesCount;
 	
-	CUDA_CHECK(cudaMalloc((void **) &dT, memSize));
-	CUDA_CHECK(cudaMalloc((void **) &dTOut, memSize));
 	CUDA_CHECK(cudaMalloc((void **) &dMissingValuesCount, sizeof(int)));
 
-	if (opts.isPackedData)
-	{
-		CUDA_CHECK(cudaMalloc((void **) &dTPacked, opts.simplePackedT.dataLength * sizeof(unsigned char)));
-		CUDA_CHECK(cudaMemcpy(dTPacked, opts.simplePackedT.data, opts.simplePackedT.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+	CUDA_CHECK(cudaHostGetDevicePointer(&dTC, datas.TC, 0));
 
-		//opts.simplePackedT.Clear();
+	if (opts.pTK)
+	{
+		CUDA_CHECK(cudaHostGetDevicePointer(&dTK, datas.TK, 0));
+		CUDA_CHECK(cudaHostGetDevicePointer(&dpTK, datas.pTK.data, 0));
+
+		if (datas.pTK.HasBitmap())
+		{
+			CUDA_CHECK(cudaHostGetDevicePointer(&dbmTK, datas.pTK.bitmap, 0));
+		}
 	}
 	else
 	{
-		CUDA_CHECK(cudaMemcpy(dT, opts.TIn, memSize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMalloc((void **) &dTK, memsize));
+		CUDA_CHECK(cudaMemcpy(dTK, datas.TK, memsize, cudaMemcpyHostToDevice));
 	}
 
 	int src = 0;
@@ -105,14 +93,12 @@ void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts)
 	dim3 gridDim(gridSize);
 	dim3 blockDim(blockSize);
 
-	if (opts.isPackedData)
+	if (opts.pTK)
 	{
-		UnpackAndCalculate <<< gridDim, blockDim >>> (dTPacked, dT, dTOut, opts, dMissingValuesCount);
+		SimpleUnpack <<< gridDim, blockDim >>> (dpTK, dTK, dbmTK, datas.pTK.coefficients, opts.N, datas.pTK.HasBitmap());
 	}
-	else
-	{
-		Calculate <<< gridDim, blockDim >>> (dT, dTOut, opts, dMissingValuesCount);
-	}
+
+	Calculate <<< gridDim, blockDim >>> (dTK, dTC, opts, dMissingValuesCount);
 
 	// block until the device has completed
 	CUDA_CHECK(cudaDeviceSynchronize());
@@ -122,17 +108,13 @@ void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts)
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// Retrieve result from device
-	CUDA_CHECK(cudaMemcpy(opts.TOut, dTOut, memSize, cudaMemcpyDeviceToHost));
 	CUDA_CHECK(cudaMemcpy(&opts.missingValuesCount, dMissingValuesCount, sizeof(int), cudaMemcpyDeviceToHost));
 
-	CUDA_CHECK(cudaFree(dT));
-	CUDA_CHECK(cudaFree(dTOut));
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
 
-	if (opts.isPackedData)
+	if (!opts.pTK)
 	{
-		CUDA_CHECK(cudaFree(dTPacked));
+		CUDA_CHECK(cudaFree(dTK));
 	}
-
 
 }

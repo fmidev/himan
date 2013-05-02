@@ -44,11 +44,6 @@ namespace windvector_cuda
 
 struct windvector_cuda_options
 {
-	double* UIn;
-	double* VIn;
-	double* speed;
-	double* dir;
-	double* vector;
 	size_t sizeX;
 	size_t sizeY;
 	double firstLatitude;
@@ -61,16 +56,35 @@ struct windvector_cuda_options
 	bool vectorCalculation;
 	bool needRotLatLonGridRotation;
 	unsigned short cudaDeviceIndex;
-	bool isPackedData;
 	int missingValuesCount;
+	bool pU;
+	bool pV;
 
-	simple_packed simplePackedU, simplePackedV;
-
-	windvector_cuda_options() : targetType(kUnknownElement), vectorCalculation(false), needRotLatLonGridRotation(false), isPackedData(false), missingValuesCount(0) {}
+	windvector_cuda_options() 
+		: targetType(kUnknownElement)
+		, vectorCalculation(false)
+		, needRotLatLonGridRotation(false)
+		, missingValuesCount(0)
+		, pU(false)
+		, pV(false) {}
 
 };
 
-void DoCuda(windvector_cuda_options& opts);
+struct windvector_cuda_data
+{
+	double* u;
+	double* v;
+	double* speed;
+	double* dir;
+	double* vector;
+	simple_packed pU;
+	simple_packed pV;
+
+	windvector_cuda_data() : u(0), v(0), speed(0), dir(0), vector(0), pU(), pV() {}
+
+};
+
+void DoCuda(windvector_cuda_options& opts, windvector_cuda_data& data);
 
 
 } // namespace windvector_cuda

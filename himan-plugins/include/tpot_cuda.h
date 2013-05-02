@@ -23,11 +23,9 @@ namespace tpot_cuda
 
 struct tpot_cuda_options
 {
-	const double* TIn;
-	const double* PIn;
-	double* TpOut;
 	size_t N;
-	bool isPackedData;
+	bool pT;
+	bool pP;
 	unsigned short cudaDeviceIndex;
 	int missingValuesCount;
 	double TBase;
@@ -35,13 +33,22 @@ struct tpot_cuda_options
 	double PConst;
 	bool isConstantPressure;
 	
-	simple_packed simplePackedT;
-	simple_packed simplePackedP;
-
-	tpot_cuda_options() : isPackedData(false), missingValuesCount(0) {}
+	tpot_cuda_options() : pT(false), pP(false), missingValuesCount(0) {}
 };
 
-void DoCuda(tpot_cuda_options& options);
+struct tpot_cuda_data
+{
+	double* T;
+	double* P;
+	double* Tp;
+
+	simple_packed pT;
+	simple_packed pP;
+
+	tpot_cuda_data() : T(0), P(0), Tp(0), pT(), pP() {}
+};
+
+void DoCuda(tpot_cuda_options& options, tpot_cuda_data& datas);
 
 } // namespace tpot_cuda
 } // namespace plugin

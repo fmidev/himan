@@ -22,27 +22,37 @@ namespace vvms_cuda
 
 struct vvms_cuda_options
 {
-	const double* TIn;
-	const double* PIn;
-	const double* VVIn;
-	double* VVOut;
 	size_t N;
 	double PConst;
 	double TBase;
 	double PScale;
 	bool isConstantPressure;
-	bool isPackedData;
+	bool pT;
+	bool pVV;
+	bool pP;
 	unsigned short cudaDeviceIndex;
 	int missingValuesCount;
 	
-	simple_packed simplePackedT;
-	simple_packed simplePackedVV;
-	simple_packed simplePackedP;
-
-	vvms_cuda_options() : isConstantPressure(false), isPackedData(false), missingValuesCount(0) {}
+	vvms_cuda_options() : isConstantPressure(false), pT(false), pVV(false), pP(false), missingValuesCount(0) {}
 };
 
-void DoCuda(vvms_cuda_options& options);
+struct vvms_cuda_data
+{
+	double* T;
+	double* P;
+	double* VV;
+	double* VVMS;
+
+	simple_packed pT;
+	simple_packed pVV;
+	simple_packed pP;
+
+	vvms_cuda_data() : T(0), P(0), VV(0), pT(), pVV(), pP() {}
+
+};
+
+
+void DoCuda(vvms_cuda_options& options, vvms_cuda_data& datas);
 
 } // namespace vvms_cuda
 } // namespace plugin

@@ -28,6 +28,7 @@ using namespace std;
 using namespace himan::plugin;
 
 #include "tk2tc_cuda.h"
+#include "cuda_helper.h"
 
 tk2tc::tk2tc() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
@@ -144,6 +145,13 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Each thread will have a copy of the target info.
 	 */
 
+	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Start();
+	}
+
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
@@ -160,6 +168,12 @@ void tk2tc::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	g.join_all();
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+	}
 
 	if (conf->FileWriteOption() == kSingleFile)
 	{
@@ -253,13 +267,6 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			}
 		}
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
 		SetAB(myTargetInfo, TInfo);
 
 		int missingCount = 0;
@@ -279,12 +286,13 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			deviceType = "GPU";
 
 			tk2tc_cuda::tk2tc_cuda_options opts;
+			tk2tc_cuda::tk2tc_cuda_data datas;
 
 			opts.N = TGrid->Size();
 
-			cudaMallocHost(reinterpret_cast<void**> (&opts.TOut), opts.N * sizeof(double));
-
 			opts.cudaDeviceIndex = threadIndex-1;
+
+			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TC), opts.N * sizeof(double), cudaHostAllocMapped));
 
 			if (TInfo->Grid()->DataIsPacked())
 			{
@@ -292,28 +300,34 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 				shared_ptr<simple_packed> s = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
 
-				opts.simplePackedT = *(s);
-				
-				opts.isPackedData = true;
+				datas.pTK = *(s);
+
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TK), opts.N * sizeof(double), cudaHostAllocMapped));
+
+				opts.pTK = true;
 			}
 			else
 			{
-				opts.TIn = TInfo->Grid()->Data()->Values();
-
-				opts.isPackedData = false;
-
+				datas.TK = const_cast<double*> (TInfo->Grid()->Data()->Values());
 			}
 			
-			tk2tc_cuda::DoCuda(opts);
+			tk2tc_cuda::DoCuda(opts, datas);
 
-			myTargetInfo->Data()->Set(opts.TOut, opts.N);
+			myTargetInfo->Data()->Set(datas.TC, opts.N);
 
 			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 			
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 
-			cudaFreeHost(opts.TOut);
+			CUDA_CHECK(cudaFreeHost(datas.TC));
+
+			if (TInfo->Grid()->DataIsPacked())
+			{
+				TInfo->Data()->Set(datas.TK, opts.N);
+				TInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.TK));
+			}
 		}
 		else
 #endif
@@ -363,12 +377,6 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 	
 		if (conf->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
-#endif
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
 		}

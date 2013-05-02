@@ -23,22 +23,29 @@ namespace dewpoint_cuda
 
 struct dewpoint_cuda_options
 {
-	const double* TIn;
-	const double* RHIn;
-	double* TDOut;
 	size_t N;
-	bool isPackedData;
 	unsigned short cudaDeviceIndex;
 	int missingValuesCount;
 	double TBase;
+	bool pT;
+	bool pRH;
 	
-	simple_packed simplePackedT;
-	simple_packed simplePackedRH;
-
-	dewpoint_cuda_options() : isPackedData(false), missingValuesCount(0) {}
+	dewpoint_cuda_options() : missingValuesCount(0), pT(false), pRH(false) {}
 };
 
-void DoCuda(dewpoint_cuda_options& options);
+struct dewpoint_cuda_data
+{
+	double* T;
+	double* RH;
+	double* TD;
+	simple_packed pT;
+	simple_packed pRH;
+
+	dewpoint_cuda_data() : T(0), RH(0), TD(0), pT(), pRH() {}
+
+};
+
+void DoCuda(dewpoint_cuda_options& options, dewpoint_cuda_data& datas);
 
 } // namespace dewpoint_cuda
 } // namespace plugin

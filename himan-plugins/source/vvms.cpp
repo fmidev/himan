@@ -28,6 +28,7 @@ using namespace std;
 using namespace himan::plugin;
 
 #include "vvms_cuda.h"
+#include "cuda_helper.h"
 
 vvms::vvms() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
@@ -143,6 +144,13 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Each thread will have a copy of the target info.
 	 */
 
+	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Start();
+	}
+	
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
@@ -159,6 +167,12 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	g.join_all();
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+	}
 
 	if (conf->FileWriteOption() == kSingleFile)
 	{
@@ -289,13 +303,6 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			}
 		}
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
 		assert(TInfo->Grid()->AB() == VVInfo->Grid()->AB() && (isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB()));
 
 		SetAB(myTargetInfo, TInfo);
@@ -320,6 +327,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			deviceType = "GPU";
 			
 			vvms_cuda::vvms_cuda_options opts;
+			vvms_cuda::vvms_cuda_data datas;
 
 			opts.isConstantPressure = isPressureLevel;
 			opts.TBase = TBase;
@@ -328,9 +336,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 			opts.N = TInfo->Grid()->Size();
 
-			opts.isPackedData = false;
-
-			cudaMallocHost(reinterpret_cast<void**> (&opts.VVOut), opts.N * sizeof(double));
+			cudaMallocHost(reinterpret_cast<void**> (&datas.VVMS), opts.N * sizeof(double));
 
 			if (TInfo->Grid()->DataIsPacked())
 			{
@@ -338,14 +344,16 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
 
-				opts.simplePackedT = *(t);
+				datas.pT = *(t);
 
-				opts.isPackedData = true;
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
+
+				opts.pT = true;
 
 			}
 			else
 			{
-				opts.TIn = TInfo->Grid()->Data()->Values();
+				datas.T = const_cast<double*> (TInfo->Grid()->Data()->Values());
 			}
 
 			if (VVInfo->Grid()->DataIsPacked())
@@ -354,14 +362,16 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 				shared_ptr<simple_packed> vv = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData());
 
-				opts.simplePackedVV = *(vv);
+				datas.pVV = *(vv);
 
-				opts.isPackedData = true;
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.VV), opts.N * sizeof(double), cudaHostAllocMapped));
+
+				opts.pVV = true;
 
 			}
 			else
 			{
-				opts.VVIn = VVInfo->Grid()->Data()->Values();
+				datas.VV = const_cast<double*> (VVInfo->Grid()->Data()->Values());
 			}
 
 			if (!isPressureLevel)
@@ -369,13 +379,18 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				if (PInfo->Grid()->DataIsPacked())
 				{
 					assert(PInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
 					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
-					opts.simplePackedP = *(p);
-					opts.isPackedData = true;
+					
+					datas.pP = *(p);
+
+					CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.P), opts.N * sizeof(double), cudaHostAllocMapped));
+
+					opts.pP = true;
 				}
 				else
 				{
-					opts.PIn = PInfo->Grid()->Data()->Values();
+					datas.P = const_cast<double*> (PInfo->Grid()->Data()->Values());
 				}
 
 			}
@@ -384,18 +399,39 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
 			}
 
-			cudaMallocHost(reinterpret_cast<void**> (&opts.VVOut), opts.N * sizeof(double));
-						
-			vvms_cuda::DoCuda(opts);
+			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.VVMS), opts.N * sizeof(double), cudaHostAllocMapped));
+
+			vvms_cuda::DoCuda(opts, datas);
 				
-			myTargetInfo->Data()->Set(opts.VVOut, opts.N);
+			myTargetInfo->Data()->Set(datas.VVMS, opts.N);
 
 			assert(TInfo->Grid()->ScanningMode() == VVInfo->Grid()->ScanningMode() && (isPressureLevel || VVInfo->Grid()->ScanningMode() == PInfo->Grid()->ScanningMode()));
 
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 
-			cudaFreeHost(opts.VVOut);
+			CUDA_CHECK(cudaFreeHost(datas.VVMS));
+
+			if (TInfo->Grid()->DataIsPacked())
+			{
+				TInfo->Data()->Set(datas.T, opts.N);
+				TInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.T));
+			}
+
+			if (VVInfo->Grid()->DataIsPacked())
+			{
+				VVInfo->Data()->Set(datas.VV, opts.N);
+				VVInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.VV));
+			}
+
+			if (!opts.isConstantPressure && PInfo->Grid()->DataIsPacked())
+			{
+				PInfo->Data()->Set(datas.P, opts.N);
+				PInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.P));
+			}
 
 			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 
@@ -462,16 +498,8 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 		if (conf->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
-#endif
-
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
-
 		}
 
 		/*

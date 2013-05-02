@@ -30,6 +30,7 @@ using namespace std;
 using namespace himan::plugin;
 
 #include "tpot_cuda.h"
+#include "cuda_helper.h"
 
 tpot::tpot() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
@@ -148,6 +149,13 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Each thread will have a copy of the target info.
 	 */
 
+	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Start();
+	}
+	
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
@@ -165,6 +173,12 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	g.join_all();
 
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+	}
+	
 	if (conf->FileWriteOption() == kSingleFile)
 	{
 
@@ -273,13 +287,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			}
 		}
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
 		assert(isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB());
 
 		SetAB(myTargetInfo, TInfo);
@@ -308,6 +315,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			deviceType = "GPU";
 
 			tpot_cuda::tpot_cuda_options opts;
+			tpot_cuda::tpot_cuda_data datas;
 
 			opts.N = TGrid->Size();
 
@@ -315,22 +323,23 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			opts.TBase = TBase;
 			opts.PScale = PScale;
 			opts.cudaDeviceIndex = threadIndex-1;
-			opts.isPackedData = false;
-			
+						
 			if (TInfo->Grid()->DataIsPacked())
 			{
 				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
 				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
 
-				opts.simplePackedT = *(t);
+				datas.pT = *(t);
 
-				opts.isPackedData = true;
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
+
+				opts.pT = true;
 
 			}
 			else
 			{
-				opts.TIn = TInfo->Grid()->Data()->Values();
+				datas.T = const_cast<double*> (TInfo->Grid()->Data()->Values());
 			}
 
 			if (!isPressureLevel)
@@ -338,15 +347,19 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				if (PInfo->Grid()->DataIsPacked())
 				{
 					assert(PInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
 					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
-					opts.simplePackedP = *(p);
+					
+					datas.pP = *(p);
+
+					CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.P), opts.N * sizeof(double), cudaHostAllocMapped));
+
+					opts.pP = true;
 				}
 				else
 				{
-					opts.PIn = PInfo->Grid()->Data()->Values();
+					datas.P = const_cast<double*> (PInfo->Grid()->Data()->Values());
 				}
-
-				opts.isPackedData = true;
 
 			}
 			else
@@ -354,13 +367,13 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
 			}
 
-			cudaMallocHost(reinterpret_cast<void**> (&opts.TpOut), opts.N*sizeof(double));
+			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.Tp), opts.N * sizeof(double), cudaHostAllocMapped));
 
-			tpot_cuda::DoCuda(opts);
+			tpot_cuda::DoCuda(opts, datas);
 
-			myTargetInfo->Data()->Set(opts.TpOut, opts.N);
+			myTargetInfo->Data()->Set(datas.Tp, opts.N);
 
-			cudaFreeHost(opts.TpOut);
+			CUDA_CHECK(cudaFreeHost(datas.Tp));
 
 			assert(TInfo->Grid()->ScanningMode() && (isPressureLevel || PInfo->Grid()->ScanningMode() == TInfo->Grid()->ScanningMode()));
 
@@ -368,6 +381,20 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			count = opts.N;
 
 			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+
+			if (TInfo->Grid()->DataIsPacked())
+			{
+				TInfo->Data()->Set(datas.T, opts.N);
+				TInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.T));
+			}
+
+			if (!opts.isConstantPressure && PInfo->Grid()->DataIsPacked())
+			{
+				PInfo->Data()->Set(datas.P, opts.N);
+				PInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.P));
+			}
 
 		}
 		else
@@ -424,16 +451,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 		if (conf->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
-#endif
-
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
-
 		}
 
 		/*

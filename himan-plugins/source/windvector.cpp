@@ -28,6 +28,7 @@ using namespace std;
 using namespace himan::plugin;
 
 #include "windvector_cuda.h"
+#include "cuda_helper.h"
 
 const double kRadToDeg = 57.29577951307855; // 180 / PI
 
@@ -273,7 +274,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	if (conf->StatisticsEnabled())
 	{
 		processTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(processTimer->GetTime() - conf->Statistics()->FetchingTime());
+		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
 	}
 
 	if (conf->FileWriteOption() == kSingleFile)
@@ -440,8 +441,12 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			assert(UInfo->Grid()->Projection() == kLatLonProjection || (UInfo->Grid()->ScanningMode() == kBottomLeft && UInfo->Grid()->Projection() == kRotatedLatLonProjection));
 			
 			windvector_cuda::windvector_cuda_options opts;
+			windvector_cuda::windvector_cuda_data datas;
 
-			opts.isPackedData = false;
+			opts.sizeX = myTargetInfo->Grid()->Data()->SizeX();
+			opts.sizeY = myTargetInfo->Grid()->Data()->SizeY();
+
+			size_t N = opts.sizeX*opts.sizeY;
 
 			if (UInfo->Grid()->DataIsPacked())
 			{
@@ -449,14 +454,16 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				shared_ptr<simple_packed> u = dynamic_pointer_cast<simple_packed> (UInfo->Grid()->PackedData());
 
-				opts.simplePackedU = *(u);
+				datas.pU = *(u);
 
-				opts.isPackedData = true;
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.u), N * sizeof(double), cudaHostAllocMapped));
+
+				opts.pU = true;
 
 			}
 			else
 			{
-				opts.UIn = const_cast<double*> (UInfo->Data()->Values());
+				datas.u = const_cast<double*> (UInfo->Data()->Values());
 			}
 
 			if (VInfo->Grid()->DataIsPacked())
@@ -465,35 +472,32 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				shared_ptr<simple_packed> v = dynamic_pointer_cast<simple_packed> (VInfo->Grid()->PackedData());
 
-				opts.simplePackedV = *(v);
+				datas.pV = *(v);
 
-				opts.isPackedData = true;
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.v), N * sizeof(double), cudaHostAllocMapped));
+
+				opts.pV = true;
 
 			}
 			else
 			{
-				opts.VIn = const_cast<double*> (VInfo->Data()->Values());
+				datas.v = const_cast<double*> (VInfo->Data()->Values());
 			}
-
-			opts.sizeX = myTargetInfo->Grid()->Data()->SizeX();
-			opts.sizeY = myTargetInfo->Grid()->Data()->SizeY();
-
-			size_t N = opts.sizeX*opts.sizeY;
 
 			opts.vectorCalculation = itsVectorCalculation;
 			opts.needRotLatLonGridRotation = needRotLatLonGridRotation;
 			opts.targetType = itsCalculationTarget;
 
-			cudaMallocHost(reinterpret_cast<void**> (&opts.speed), N * sizeof(double));
+			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.speed), N * sizeof(double), cudaHostAllocMapped));
 
 			if (itsCalculationTarget != kGust)
 			{
-				cudaMallocHost(reinterpret_cast<void**> (&opts.dir), N * sizeof(double));
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.dir), N * sizeof(double), cudaHostAllocMapped));
 			}
 
 			if (opts.vectorCalculation)
 			{
-				cudaMallocHost(reinterpret_cast<void**> (&opts.vector), N * sizeof(double));
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.vector), N * sizeof(double), cudaHostAllocMapped));
 			}
 
 			opts.firstLatitude = myTargetInfo->Grid()->FirstGridPoint().Y();
@@ -506,37 +510,54 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 			opts.cudaDeviceIndex = threadIndex-1;
 
-			windvector_cuda::DoCuda(opts);
+			windvector_cuda::DoCuda(opts, datas);
 
 			count = N;
 			missingCount = opts.missingValuesCount;
-		
+
 			myTargetInfo->ParamIndex(0);
-			myTargetInfo->Data()->Set(opts.speed, N);
+			myTargetInfo->Data()->Set(datas.speed, N);
 
 			if (itsCalculationTarget != kGust)
 			{
 				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Data()->Set(opts.dir, N);
+				myTargetInfo->Data()->Set(datas.dir, N);
 			}
 
 			if (itsVectorCalculation)
 			{
 				myTargetInfo->ParamIndex(2);
-				myTargetInfo->Data()->Set(opts.vector, N);
-
+				myTargetInfo->Data()->Set(datas.vector, N);
 			}
 
-			cudaFreeHost(opts.speed);
+			// Copy unpacked data to source info in case
+			// some other thread/plugin calls for this same data.
+			// Clear packed data now that it's been unpacked
+
+			if (UInfo->Grid()->DataIsPacked())
+			{
+				UInfo->Data()->Set(datas.u, N);
+				UInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.u));
+			}
+
+			if (VInfo->Grid()->DataIsPacked())
+			{
+				VInfo->Data()->Set(datas.v, N);
+				VInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.v));
+			}			
+						
+			CUDA_CHECK(cudaFreeHost(datas.speed));
 
 			if (opts.targetType != kGust)
 			{
-				cudaFreeHost(opts.dir);
+				CUDA_CHECK(cudaFreeHost(datas.dir));
 			}
 
 			if (opts.vectorCalculation)
 			{
-				cudaFreeHost(opts.vector);
+				CUDA_CHECK(cudaFreeHost(datas.vector));
 			}
 			
 			assert(UInfo->Grid()->ScanningMode() == VInfo->Grid()->ScanningMode());
@@ -545,6 +566,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			{
 				SwapTo(myTargetInfo, UInfo->Grid()->ScanningMode());
 			}
+
 		}
 		else
 #endif
@@ -699,6 +721,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 			for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
 			{
+
 				SwapTo(myTargetInfo, kBottomLeft);
 			}
 		}

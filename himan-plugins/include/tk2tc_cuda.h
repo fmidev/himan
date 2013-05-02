@@ -23,19 +23,24 @@ namespace tk2tc_cuda
 
 struct tk2tc_cuda_options
 {
-	const double* TIn;
-	double* TOut;
 	size_t N;
-	bool isPackedData;
+	bool pTK;
 	unsigned short cudaDeviceIndex;
 	int missingValuesCount;
 	
-	simple_packed simplePackedT;
-
-	tk2tc_cuda_options() : isPackedData(false), missingValuesCount(0) {}
+	tk2tc_cuda_options() : pTK(false), missingValuesCount(0) {}
 };
 
-void DoCuda(tk2tc_cuda_options& options);
+struct tk2tc_cuda_data
+{
+	double* TK;
+	double* TC;
+
+	simple_packed pTK;
+
+	tk2tc_cuda_data() : TK(0), TC(0), pTK() {}
+};
+void DoCuda(tk2tc_cuda_options& options, tk2tc_cuda_data& datas);
 
 } // namespace tk2tc_cuda
 } // namespace plugin

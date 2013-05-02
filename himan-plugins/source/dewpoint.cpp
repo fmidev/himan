@@ -25,6 +25,7 @@
 #endif
 
 #include "dewpoint_cuda.h"
+#include "cuda_helper.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -146,6 +147,13 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 	 * Each thread will have a copy of the target info.
 	 */
 
+	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Start();
+	}
+
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
@@ -163,6 +171,12 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 
 	g.join_all();
 
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+	}
+	
 	itsLogger->Info("Threads finished");
 
 	if (conf->FileWriteOption() == kSingleFile)
@@ -212,6 +226,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 	myTargetInfo->FirstParam();
 
+	bool useCudaInThisThread = itsUseCuda && threadIndex <= itsCudaDeviceCount;
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -228,12 +244,14 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 			TInfo = f->Fetch(conf,
 								myTargetInfo->Time(),
 								myTargetInfo->Level(),
-								TParam);
+								TParam,
+								conf->UseCudaForPacking() && useCudaInThisThread);
 
 			RHInfo = f->Fetch(conf,
 								myTargetInfo->Time(),
 								myTargetInfo->Level(),
-								RHParam);
+								RHParam,
+								conf->UseCudaForPacking() && useCudaInThisThread);
 
 
 		}
@@ -258,13 +276,6 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 					throw runtime_error(ClassName() + ": Unable to proceed");
 					break;
 			}
-		}
-
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
 		}
 
 		assert(TInfo->Grid()->AB() == RHInfo->Grid()->AB());
@@ -299,45 +310,72 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 			deviceType = "GPU";
 
 			dewpoint_cuda::dewpoint_cuda_options opts;
+			dewpoint_cuda::dewpoint_cuda_data datas;
 
 			opts.N = TInfo->Data()->Size();
 			opts.cudaDeviceIndex = threadIndex-1;
 
 			opts.TBase = TBase;
-			
-			cudaMallocHost(reinterpret_cast<void**> (&opts.TDOut), opts.N * sizeof(double));
 
+			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TD), opts.N * sizeof(double), cudaHostAllocMapped));
+			
 			if (TInfo->Grid()->DataIsPacked())
 			{
 				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-				assert(RHInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
 				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
-				shared_ptr<simple_packed> rh = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
 
-				opts.simplePackedT = *(t);
-				opts.simplePackedT = *(rh);
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
 
-				opts.isPackedData = true;
+				datas.pT = *(t);
+
+				opts.pT = true;
 			}
 			else
 			{
-				opts.TIn = TInfo->Grid()->Data()->Values();
-				opts.RHIn = RHInfo->Grid()->Data()->Values();
-
-				opts.isPackedData = false;
+				datas.T = const_cast<double*> (TInfo->Grid()->Data()->Values());
 			}
 
-			dewpoint_cuda::DoCuda(opts);
+			if (RHInfo->Grid()->DataIsPacked())
+			{
+				assert(RHInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
-			myTargetInfo->Data()->Set(opts.TDOut, opts.N);
+				shared_ptr<simple_packed> rh = dynamic_pointer_cast<simple_packed> (RHInfo->Grid()->PackedData());
 
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.RH), opts.N * sizeof(double), cudaHostAllocMapped));
+
+				datas.pRH = *(rh);
+
+				opts.pRH = true;
+			}
+			else
+			{
+				datas.RH = const_cast<double*> (RHInfo->Grid()->Data()->Values());
+			}
+
+			dewpoint_cuda::DoCuda(opts, datas);
+
+			myTargetInfo->Data()->Set(datas.TD, opts.N);
 			assert(TInfo->Grid()->ScanningMode() == RHInfo->Grid()->ScanningMode());
 
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 			
-			cudaFreeHost(opts.TDOut);
+			CUDA_CHECK(cudaFreeHost(datas.TD));
+
+			if (TInfo->Grid()->DataIsPacked())
+			{
+				TInfo->Data()->Set(datas.T, opts.N);
+				TInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.T));
+			}
+
+			if (RHInfo->Grid()->DataIsPacked())
+			{
+				RHInfo->Data()->Set(datas.RH, opts.N);
+				RHInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.RH));
+			}
 
 			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 
@@ -388,16 +426,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 		if (conf->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
-#endif
-
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
-
 		}
 		
 		/*

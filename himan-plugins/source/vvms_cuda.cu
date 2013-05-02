@@ -17,161 +17,119 @@ namespace plugin
 namespace vvms_cuda
 {
 
-__global__ void UnpackAndCalculate(const unsigned char* dTPacked,
-									const unsigned char* dVVPacked,
-									const unsigned char* dPPacked,
-									double*  dT,
-									double* dVV,
-									double* dP,
-									double* dVVOut,
-									vvms_cuda_options opts,
-									int* dMissingValuesCount);
-
-__global__ void Calculate(const double* dT,
-							const double* dVV,
-							const double* dP,
-							double* dVVOut,
-							vvms_cuda_options opts,
-							int* dMissingValuesCount);
-
-__device__ void _Calculate(const double* __restrict__ dT,
+__global__ void Calculate(const double* __restrict__ dT,
 							const double* __restrict__ dVV,
 							const double* __restrict__ dP,
 							double* __restrict__ dVVOut,
 							vvms_cuda_options opts,
-							int* dMissingValuesCount,
-							int idx);
+							int* dMissingValuesCount);
 
 } // namespace vvms_cuda
 } // namespace plugin
 } // namespace himan
 
-__global__ void himan::plugin::vvms_cuda::UnpackAndCalculate(const unsigned char* dTPacked,
-									const unsigned char* dVVPacked,
-									const unsigned char* dPPacked,
-									double* dT,
-									double* dVV,
-									double* dP,
-									double* dVVOut,
-									vvms_cuda_options opts,
-									int* dMissingValuesCount)
-{
 
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	
-	if (idx < opts.N)
-	{
-		if (opts.simplePackedT.HasData())
-		{
-			SimpleUnpack(dTPacked, dT, opts.N, opts.simplePackedT.bitsPerValue, opts.simplePackedT.binaryScaleFactor, opts.simplePackedT.decimalScaleFactor, opts.simplePackedT.referenceValue, idx);
-		}
-
-		if (opts.simplePackedVV.HasData())
-		{
-			SimpleUnpack(dVVPacked, dVV, opts.N, opts.simplePackedVV.bitsPerValue, opts.simplePackedVV.binaryScaleFactor, opts.simplePackedVV.decimalScaleFactor, opts.simplePackedVV.referenceValue, idx);
-		}
-
-		if (!opts.isConstantPressure && opts.simplePackedP.HasData())
-		{
-			SimpleUnpack(dPPacked, dP, opts.N, opts.simplePackedP.bitsPerValue, opts.simplePackedP.binaryScaleFactor, opts.simplePackedP.decimalScaleFactor, opts.simplePackedP.referenceValue, idx);
-		}
-
-		_Calculate(dT, dVV, dP, dVVOut, opts, dMissingValuesCount, idx);
-	}
-}
-
-__device__ void himan::plugin::vvms_cuda::_Calculate(const double* __restrict__ dT,
+__device__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ dT,
 														const double* __restrict__ dVV,
 														const double* __restrict__ dP,
-														double* __restrict__ VVOut,
-														vvms_cuda_options opts, int* dMissingValuesCount, int idx)
+														double* __restrict__ VVMS,
+														vvms_cuda_options opts,
+														int* dMissingValuesCount)
 {
 
-	double P = (opts.isConstantPressure) ? opts.PConst : dP[idx];
-
-	if (dT[idx] == kFloatMissing || dVV[idx] == kFloatMissing || P == kFloatMissing)
-	{
-		atomicAdd(dMissingValuesCount, 1);
-		VVOut[idx] = kFloatMissing;
-	}
-	else
-	{
-		VVOut[idx] = 287 * -dVV[idx] * (opts.TBase + dT[idx]) / (9.81 * P);
-	}
-}
-
-__global__ void himan::plugin::vvms_cuda::Calculate(const double* dT, 
-														const double* dVV,
-														const double* dP,
-														double* dVVOut,
-														vvms_cuda_options opts, int* dMissingValuesCount)
-{
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
 	{
-		_Calculate(dT, dVV, dP, dVVOut, opts, dMissingValuesCount, idx);
+		double P = (opts.isConstantPressure) ? opts.PConst : dP[idx];
+
+		if (dT[idx] == kFloatMissing || dVV[idx] == kFloatMissing || P == kFloatMissing)
+		{
+			atomicAdd(dMissingValuesCount, 1);
+			VVMS[idx] = kFloatMissing;
+		}
+		else
+		{
+			VVMS[idx] = 287 * -dVV[idx] * (opts.TBase + dT[idx]) / (9.81 * P);
+		}
 	}
-	
 }
 
-void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
+void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& datas)
 {
 
 	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
 
-	size_t memSize = opts.N * sizeof(double);
+	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate device arrays
 
 	double* dT = NULL;
 	double* dP = NULL;
 	double* dVV = NULL;
-	double* dVVOut = NULL;
+	double* dVVMS = NULL;
 
-	unsigned char* dTPacked = NULL;
-	unsigned char* dPPacked = NULL;
-	unsigned char* dVVPacked = NULL;
+	unsigned char* dpT = NULL;
+	unsigned char* dpP = NULL;
+	unsigned char* dpVV = NULL;
+	int* dbmT = NULL;
+	int* dbmP = NULL;
+	int* dbmVV = NULL;
 
 	int *dMissingValuesCount = NULL;
 
 	CUDA_CHECK(cudaMalloc((void **) &dMissingValuesCount, sizeof(int)));
-	CUDA_CHECK(cudaMalloc((void **) &dT, memSize));
-	CUDA_CHECK(cudaMalloc((void **) &dVV, memSize));
-	CUDA_CHECK(cudaMalloc((void **) &dVVOut, memSize));
 
-	if (opts.simplePackedT.HasData())
+	CUDA_CHECK(cudaHostGetDevicePointer(&dVVMS, datas.VVMS, 0));
+
+	if (opts.pT)
 	{
-		CUDA_CHECK(cudaMalloc((void **) &dTPacked, opts.simplePackedT.dataLength * sizeof(unsigned char)));
-		CUDA_CHECK(cudaMemcpy(dTPacked, opts.simplePackedT.data, opts.simplePackedT.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaHostGetDevicePointer(&dT, datas.T, 0));
+		CUDA_CHECK(cudaHostGetDevicePointer(&dpT, datas.pT.data, 0));
+
+		if (datas.pT.HasBitmap())
+		{
+			CUDA_CHECK(cudaHostGetDevicePointer(&dbmT, datas.pT.bitmap, 0));
+		}
 	}
 	else
 	{
-		CUDA_CHECK(cudaMemcpy(dT, opts.TIn, memSize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMalloc((void **) &dT, memsize));
+		CUDA_CHECK(cudaMemcpy(dT, datas.T, memsize, cudaMemcpyHostToDevice));
 	}
 
-	if (opts.simplePackedVV.HasData())
+	if (opts.pVV)
 	{
-		CUDA_CHECK(cudaMalloc((void **) &dVVPacked, opts.simplePackedVV.dataLength * sizeof(unsigned char)));
-		CUDA_CHECK(cudaMemcpy(dVVPacked, opts.simplePackedVV.data, opts.simplePackedVV.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaHostGetDevicePointer(&dVV, datas.VV, 0));
+		CUDA_CHECK(cudaHostGetDevicePointer(&dpVV, datas.pVV.data, 0));
+
+		if (datas.pVV.HasBitmap())
+		{
+			CUDA_CHECK(cudaHostGetDevicePointer(&dbmVV, datas.pVV.bitmap, 0));
+		}
 	}
 	else
 	{
-		CUDA_CHECK(cudaMemcpy(dVV, opts.VVIn, memSize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMalloc((void **) &dVV, memsize));
+		CUDA_CHECK(cudaMemcpy(dVV, datas.VV, memsize, cudaMemcpyHostToDevice));
 	}
 
 	if (!opts.isConstantPressure)
 	{
-		CUDA_CHECK(cudaMalloc((void **) &dP, memSize));
-
-		if (opts.simplePackedP.HasData())
+		if (opts.pP)
 		{
-			CUDA_CHECK(cudaMalloc((void **) &dPPacked, opts.simplePackedP.dataLength * sizeof(unsigned char)));
-			CUDA_CHECK(cudaMemcpy(dPPacked, opts.simplePackedP.data, opts.simplePackedP.dataLength * sizeof(unsigned char), cudaMemcpyHostToDevice));
+			CUDA_CHECK(cudaHostGetDevicePointer(&dP, datas.P, 0));
+			CUDA_CHECK(cudaHostGetDevicePointer(&dpP, datas.pP.data, 0));
+
+			if (datas.pP.HasBitmap())
+			{
+				CUDA_CHECK(cudaHostGetDevicePointer(&dbmP, datas.pP.bitmap, 0));
+			}
 		}
 		else
 		{
-			CUDA_CHECK(cudaMemcpy(dP, opts.PIn, memSize, cudaMemcpyHostToDevice));
+			CUDA_CHECK(cudaMalloc((void **) &dP, memsize));
+			CUDA_CHECK(cudaMemcpy(dP, datas.P, memsize, cudaMemcpyHostToDevice));
 		}
 	}
 
@@ -187,49 +145,46 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts)
 	dim3 gridDim(gridSize);
 	dim3 blockDim(blockSize);
 
-	if (opts.isPackedData)
+	if (opts.pT)
 	{
-		UnpackAndCalculate <<< gridDim, blockDim >>> (dTPacked, dVVPacked, dPPacked, dT, dVV, dP, dVVOut, opts, dMissingValuesCount);
-	}
-	else
-	{
-		Calculate <<< gridDim, blockDim >>> (dT, dVV, dP, dVVOut, opts, dMissingValuesCount);
+		SimpleUnpack <<< gridDim, blockDim >>> (dpT, dT, dbmT, datas.pT.coefficients, opts.N, datas.pT.HasBitmap());
 	}
 
+	if (opts.pVV)
+	{
+		SimpleUnpack <<< gridDim, blockDim >>> (dpVV, dVV, dbmVV, datas.pVV.coefficients, opts.N, datas.pVV.HasBitmap());
+	}
+
+	if (opts.pP)
+	{
+		SimpleUnpack <<< gridDim, blockDim >>> (dpP, dP, dbmP, datas.pP.coefficients, opts.N, datas.pP.HasBitmap());
+	}
+
+	Calculate <<< gridDim, blockDim >>> (dT, dVV, dP, dVVMS, opts, dMissingValuesCount);
+	
 	// block until the device has completed
 	CUDA_CHECK(cudaDeviceSynchronize());
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// Retrieve result from device
-	CUDA_CHECK(cudaMemcpy(opts.VVOut, dVVOut, memSize, cudaMemcpyDeviceToHost));
 	CUDA_CHECK(cudaMemcpy(&opts.missingValuesCount, dMissingValuesCount, sizeof(int), cudaMemcpyDeviceToHost));
 
-	CUDA_CHECK(cudaFree(dT));
-	CUDA_CHECK(cudaFree(dVV));
-	CUDA_CHECK(cudaFree(dVVOut));
+	if (!opts.pT)
+	{
+		CUDA_CHECK(cudaFree(dT));
+	}
+
+	if (!opts.pVV)
+	{
+		CUDA_CHECK(cudaFree(dVV));
+	}
+
+	if (!opts.isConstantPressure && !opts.pP)
+	{
+		CUDA_CHECK(cudaFree(dP));
+	}
 
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
-
-	if (opts.simplePackedT.HasData())
-	{
-		CUDA_CHECK(cudaFree(dTPacked));
-	}
-
-	if (opts.simplePackedVV.HasData())
-	{
-		CUDA_CHECK(cudaFree(dVVPacked));
-	}
-
-	if (!opts.isConstantPressure)
-	{
-		if (opts.simplePackedP.HasData())
-		{
-			CUDA_CHECK(cudaFree(dPPacked));
-		}
-
-		CUDA_CHECK(cudaFree(dP));
-
-	}
 
 }
