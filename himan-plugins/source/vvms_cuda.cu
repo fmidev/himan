@@ -29,7 +29,7 @@ __global__ void Calculate(const double* __restrict__ dT,
 } // namespace himan
 
 
-__device__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ dT,
+__global__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ dT,
 														const double* __restrict__ dVV,
 														const double* __restrict__ dP,
 														double* __restrict__ VVMS,
