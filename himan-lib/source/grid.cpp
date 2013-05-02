@@ -567,6 +567,7 @@ bool grid::Stagger(double xStaggerFactor, double yStaggerFactor)
 			for (size_t yi = 0; yi < sizeY; yi++)
 			{
 				newData->Set(0, yi, ZI, itsData->At(0, yi));
+				newData->Set(0, yi, ZI, 0.5 * (3 * itsData->At(0, yi) - itsData->At(1, yi))); // Lefternmost column is extrapolated
 
 				for (size_t xi = 1; xi < sizeX; xi++)
 				{
@@ -754,7 +755,7 @@ void grid::PackedData(shared_ptr<packed_data> thePackedData)
 
 bool grid::DataIsPacked() const
 {
-	if (itsPackedData)
+	if (itsPackedData && itsPackedData->HasData())
 	{
 		return true;
 	}
