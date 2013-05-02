@@ -119,7 +119,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 			if (!files.empty())
 			{
-				theInfos = FromFile(files, opts, true);
+				theInfos = FromFile(files, opts, true, readPackedData);
 
 				if (config->StatisticsEnabled())
 				{
