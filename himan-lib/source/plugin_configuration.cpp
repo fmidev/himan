@@ -113,7 +113,7 @@ void plugin_configuration::WriteStatistics()
 
 	cout << "Origin time:\t\t" << itsInfo->OriginDateTime().String() << endl;
 
-	cout << "geom_name\t\t" << itsGeomName << endl;
+	cout << "geom_name:\t\t" << itsGeomName << endl;
 	
 	// Hoping we have iterators set
 
@@ -160,8 +160,8 @@ void plugin_configuration::WriteStatistics()
 	}
 	
 	int fetchingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsFetchingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
-	int processingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsProcessingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
-	int initTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsInitTime)/static_cast<double> (elapsedTime));;
+	int processingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsProcessingTime-itsStatistics->itsFetchingTime/threadCountDivisor)/static_cast<double> (elapsedTime));
+	int initTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsInitTime)/static_cast<double> (elapsedTime));
 
 	int writingTimePercentage = 0;
 
@@ -185,7 +185,7 @@ void plugin_configuration::WriteStatistics()
 		<< "Elapsed time:\t\t" <<  elapsedTime << " microseconds" << endl
 		<< "Plugin init time\t" << itsStatistics->itsInitTime << " microseconds, single thread (" << initTimePercentage << "%)" << endl
 		<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/threadCountDivisor << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
-		<< "Process time:\t\t" << itsStatistics->itsProcessingTime/threadCountDivisor << " microseconds, average over used threads (" << processingTimePercentage << "%)" << endl
+		<< "Process time:\t\t" << itsStatistics->itsProcessingTime/threadCountDivisor << " microseconds, total over used threads (" << processingTimePercentage << "%)" << endl
 		<< "Writing time:\t\t" << itsStatistics->itsWritingTime/threadCountDivisor << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
 		<< "Values:\t\t\t" << itsStatistics->itsValueCount << endl
 		<< "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
