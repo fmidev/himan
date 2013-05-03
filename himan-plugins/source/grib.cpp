@@ -21,9 +21,7 @@ using namespace himan::plugin;
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
-#ifdef HAVE_CUDA
 #include "cuda_helper.h"
-#endif
 
 grib::grib()
 {
@@ -719,25 +717,23 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			itsLogger->Trace("Retrieving packed data from grib");
 
-			len = itsGrib->Message()->UnpackedValuesLength();
+			len = itsGrib->Message()->PackedValuesLength();
 
 			unsigned char* data, *bitmap;
 			int* unpackedBitmap;
 			
 			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&data), len * sizeof(unsigned char), cudaHostAllocMapped));
 
-			itsGrib->Message()->UnpackedValues(data);
+			itsGrib->Message()->PackedValues(data);
 		
 			double bsf = itsGrib->Message()->BinaryScaleFactor();
 			double dsf = itsGrib->Message()->DecimalScaleFactor();
 			double rv = itsGrib->Message()->ReferenceValue();
 			long bpv = itsGrib->Message()->BitsPerValue();
 
-			size_t values_len = itsGrib->Message()->Section4Length();
-
 			auto packed = std::make_shared<simple_packed> (bpv, util::ToPower(bsf,2), util::ToPower(-dsf, 10), rv);
 
-			packed->Set(data, values_len);
+			packed->Set(data, len);
 
 			if (itsGrib->Message()->Bitmap())
 			{
