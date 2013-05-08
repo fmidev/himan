@@ -97,13 +97,13 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param theRequestedParam("H0C-M", 270);
+	param theRequestedParam("HL-M", 3);
 
 	// GRIB 2
 
 	theRequestedParam.GribDiscipline(0);
 	theRequestedParam.GribCategory(3);
-	theRequestedParam.GribParameter(13);
+	theRequestedParam.GribParameter(6);
 
 	// GRIB 1?
 
@@ -199,7 +199,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	// Required source parameters
 
-	param PParam("P-Pa"); //maanpintapaine
+	param PParam("P-PA"); //maanpintapaine
 	param TParam("T-K"); //lämpötila
 	//level H2(kHeight, 2);
 
