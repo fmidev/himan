@@ -10,14 +10,28 @@ rm -f RR*grib
 
 $HIMAN -d 5 -f precipitation_hl.json -t grib hl_source.grib --no-cuda -s hl_nocuda
 
-grib_compare hl_result_24.grib RR-6-MM_height_0_rll_1030_816_0_024.grib
+grib_compare hl_result_3_24.grib RR-3-MM_height_0_rll_1030_816_0_024.grib
 
 if [ $? -ne 0 ];then
   echo precipitation/hirlam failed on CPU
   exit 1
 fi
 
-grib_compare hl_result_25.grib RR-6-MM_height_0_rll_1030_816_0_025.grib
+grib_compare hl_result_3_25.grib RR-3-MM_height_0_rll_1030_816_0_025.grib
+
+if [ $? -ne 0 ];then
+  echo precipitation/hirlam failed on CPU
+  exit 1
+fi
+
+grib_compare hl_result_6_24.grib RR-6-MM_height_0_rll_1030_816_0_024.grib
+
+if [ $? -ne 0 ];then
+  echo precipitation/hirlam failed on CPU
+  exit 1
+fi
+
+grib_compare hl_result_6_25.grib RR-6-MM_height_0_rll_1030_816_0_025.grib
 
 if [ $? -eq 0 ];then
   echo precipitation/hirlam success on CPU!
@@ -25,3 +39,5 @@ else
   echo precipitation/hirlam failed on CPU
   exit 1
 fi
+
+
