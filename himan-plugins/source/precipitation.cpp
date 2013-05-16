@@ -90,9 +90,33 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> params;
 
-	//param requestedParam ("RR-1-MM", 353);
-	//param requestedParam ("RR-3-MM", 354);
 	param requestedParam ("RR-6-MM", 355);
+
+	if (conf->Exists("rr1h") && conf->GetValue("rr1h") == "true")
+	{
+		params.push_back(param("RR-1-MM", 353));
+	}
+
+	if (conf->Exists("rr3h") && conf->GetValue("rr3h") == "true")
+	{
+		params.push_back(param("RR-3-MM", 354));
+	}
+
+	if (conf->Exists("rr6h") && conf->GetValue("rr6h") == "true")
+	{
+		params.push_back(param("RR-6-MM", 355));
+	}
+
+	if (conf->Exists("rr12h") && conf->GetValue("rr12h") == "true")
+	{
+		params.push_back(param("RR-12-MM", 356));
+	}
+
+	if (params.empty())
+	{
+		itsLogger->Trace("No parameter definition given, defaulting to rr6h");
+		params.push_back(param("RR-6-MM", 355));
+	}
 
 	// GRIB 1
 
@@ -100,13 +124,18 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedParam.Name());
-		requestedParam.GribIndicatorOfParameter(parm_id);
-		requestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+		for (size_t i = 0; i < params.size(); i++)
+		{
+			param p = params[i];
+			
+			long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), p.Name());
+			p.GribIndicatorOfParameter(parm_id);
+			p.GribTableVersion(targetInfo->Producer().TableVersion());
 
+			params[i] = p;
+		}
 	}
-	params.push_back(requestedParam);
-
+	
 	targetInfo->Params(params);
 
 	/*
@@ -119,7 +148,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Initialize parent class functions for dimension handling
 	 */
 
-	Dimension(kLevelDimension);
+	Dimension(conf->LeadingDimension());
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(requestedParam);
 
@@ -132,6 +161,13 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
+
+	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Start();
+	}
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
@@ -149,6 +185,12 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	g.join_all();
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+	}
 
 	if (conf->FileWriteOption() == kSingleFile)
 	{
@@ -191,195 +233,186 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 	myTargetInfo->FirstParam();
 
-	long paramStep;
-
-	if (myTargetInfo->Param().Name() == "RR-1-MM")
-	{
-		paramStep = 1;
-	}
-	else if (myTargetInfo->Param().Name() == "RR-3-MM")
-	{
-		paramStep = 3;
-	}
-	else if (myTargetInfo->Param().Name() == "RR-6-MM")
-	{
-		paramStep = 6;
-	}
-	else if (myTargetInfo->Param().Name() == "RR-12-MM")
-	{
-		paramStep = 12;
-	}
-	else
-	{
-		throw runtime_error(ClassName() + ": Unsupported parameter: " + myTargetInfo->Param().Name());
-	}
-
-	shared_ptr<info> prevInfo;
-
 	bool dataFoundFromRRParam = true; // Assume that we have parameter RR-KGM2 present
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
+		shared_ptr<info> prevInfo;
 
 		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
 
-		shared_ptr<info> RRInfo;
-
-		try
+		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
 		{
-			if (!prevInfo || myTargetInfo->Time().Step() - prevInfo->Time().Step() != paramStep)
+			shared_ptr<info> RRInfo;
+
+			long paramStep;
+
+			if (myTargetInfo->Param().Name() == "RR-1-MM")
 			{
+				paramStep = 1;
+			}
+			else if (myTargetInfo->Param().Name() == "RR-3-MM")
+			{
+				paramStep = 3;
+			}
+			else if (myTargetInfo->Param().Name() == "RR-6-MM")
+			{
+				paramStep = 6;
+			}
+			else if (myTargetInfo->Param().Name() == "RR-12-MM")
+			{
+				paramStep = 12;
+			}
+			else
+			{
+				throw runtime_error(ClassName() + ": Unsupported parameter: " + myTargetInfo->Param().Name());
+			}
+
+			myThreadedLogger->Warning("Calculating parameter " + myTargetInfo->Param().Name() + " time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+												  " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+			try
+			{
+				if (!prevInfo || myTargetInfo->Time().Step() - prevInfo->Time().Step() != paramStep)
+				{
+
+					/*
+					 * If this is the first time this loop executed, or if the previous data is not suitable
+					 * for calculating against current time step data, fetch source data.
+					 */
+
+					forecast_time prevTimeStep = myTargetInfo->Time();
+
+					if (prevTimeStep.Step() >= paramStep)
+					{
+						prevTimeStep.ValidDateTime()->Adjust(kHourResolution, -paramStep);
+
+						prevInfo = FetchSourcePrecipitation(conf,prevTimeStep,myTargetInfo->Level(),dataFoundFromRRParam);
+					}
+					else
+					{
+						continue;
+					}
+				}
+
+				// Get data for current step
+
+				RRInfo = FetchSourcePrecipitation(conf,myTargetInfo->Time(),myTargetInfo->Level(),dataFoundFromRRParam);
+
+			}
+			catch (HPExceptionType e)
+			{
+				switch (e)
+				{
+					case kFileDataNotFound:
+						itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+						myTargetInfo->Data()->Fill(kFloatMissing);
+
+						if (conf->StatisticsEnabled())
+						{
+							conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+							conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						}
+
+						continue;
+						break;
+
+					default:
+						throw runtime_error(ClassName() + ": Unable to proceed");
+						break;
+				}
+			}
+
+			myThreadedLogger->Debug("Calculating parameter " + myTargetInfo->Param().Name() + " time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+												  " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+
+			shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> prevGrid(prevInfo->Grid()->ToNewbaseGrid());
+
+			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+
+			int missingCount = 0;
+			int count = 0;
+
+			bool equalGrids = (*myTargetInfo->Grid() == *RRInfo->Grid());
+
+			string deviceType = "CPU";
+
+			{
+				assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
+				myTargetInfo->ResetLocation();
+
+				targetGrid->Reset();
+				prevGrid->Reset();
+
+				while (myTargetInfo->NextLocation() && targetGrid->Next() && prevGrid->Next())
+				{
+					count++;
+
+					double RRcur = kFloatMissing;
+					double RRprev = kFloatMissing;
+
+					InterpolateToPoint(targetGrid, RRGrid, equalGrids, RRcur);
+					InterpolateToPoint(targetGrid, prevGrid, equalGrids, RRprev);
+
+					if (RRcur == kFloatMissing || RRprev == kFloatMissing)
+					{
+						missingCount++;
+
+						myTargetInfo->Value(kFloatMissing);
+						continue;
+					}
+
+					double RR = RRcur - RRprev;
+
+					if (RR < 0)
+					{
+						RR = 0;
+					}
+
+					if (!myTargetInfo->Value(RR))
+					{
+						throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					}
+
+				}
+
+				prevInfo = RRInfo;
 
 				/*
-				 * If this is the first time this loop executed, or if the previous data is not suitable
-				 * for calculating against current time step data, fetch source data.
+				 * Newbase normalizes scanning mode to bottom left -- if that's not what
+				 * the target scanning mode is, we have to swap the data back.
 				 */
 
-				forecast_time prevTimeStep = myTargetInfo->Time();
+				SwapTo(myTargetInfo, kBottomLeft);
 
-				if (prevTimeStep.Step() >= paramStep)
-				{
-					prevTimeStep.ValidDateTime()->Adjust(kHourResolution, -paramStep);
-
-					prevInfo = FetchSourcePrecipitation(conf,prevTimeStep,myTargetInfo->Level(),dataFoundFromRRParam);
-				}
-				else
-				{
-					continue;
-				}
 			}
 
-			// Get data for current step
-
-			RRInfo = FetchSourcePrecipitation(conf,myTargetInfo->Time(),myTargetInfo->Level(),dataFoundFromRRParam);
-
-		}
-		catch (HPExceptionType e)
-		{
-			switch (e)
+			if (conf->StatisticsEnabled())
 			{
-				case kFileDataNotFound:
-					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing);
-
-					if (conf->StatisticsEnabled())
-					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-					
-					continue;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
+				conf->Statistics()->AddToMissingCount(missingCount);
+				conf->Statistics()->AddToValueCount(count);
 			}
-		}
-
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-											  " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> prevGrid(prevInfo->Grid()->ToNewbaseGrid());
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-
-		int missingCount = 0;
-		int count = 0;
-
-		bool equalGrids = (*myTargetInfo->Grid() == *RRInfo->Grid());
-
-		string deviceType = "CPU";
-		
-		{
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-			prevGrid->Reset();
-
-#ifdef DEBUG
-			unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-			t->Start();
-#endif
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next() && prevGrid->Next())
-			{
-				count++;
-
-				double RRcur = kFloatMissing;
-				double RRprev = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, RRGrid, equalGrids, RRcur);
-				InterpolateToPoint(targetGrid, prevGrid, equalGrids, RRprev);
-
-				if (RRcur == kFloatMissing || RRprev == kFloatMissing)
-				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-
-				double RR = RRcur - RRprev;
-
-				if (RR < 0)
-				{
-					RR = 0;
-				}
-
-				if (!myTargetInfo->Value(RR))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
-				}
-
-			}
-
-			prevInfo = RRInfo;
 
 			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
+			* Now we are done for this param for this level
+			*
+			* Clone info-instance to writer since it might change our descriptor places
+			*/
 
-			SwapTo(myTargetInfo, kBottomLeft);
+		   myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		}
+		   if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+		   {
+			   shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+			   shared_ptr<info> tempInfo(new info(*myTargetInfo));
 
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
-#endif
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
-		}
-
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 */
-
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
-		{
-			shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-			w->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
+			   for (tempInfo->ResetParam(); tempInfo->NextParam(); )
+			   {
+				   w->ToFile(tempInfo, conf);
+			   }
+		   }
 		}
 	}
 }
