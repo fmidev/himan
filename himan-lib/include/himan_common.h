@@ -221,6 +221,24 @@ enum HPPackingType
 	kSimplePacking
 };
 
+enum HPAggregationType
+{
+	kUnknownAggregationType = 0,
+	kAverage,
+	kAccumulation,
+	kMaximum,
+	kMinimum,
+	kDifference
+};
+
+const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToString = map_list_of
+		(kUnknownAggregationType, "unknown")
+		(kAverage, "average")
+		(kAccumulation, "accumulation")
+		(kMaximum, "maximum")
+		(kMinimum, "minimum")
+		(kDifference, "difference");
+
 /**
  * @struct HPVersionNumber
  *

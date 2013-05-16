@@ -19,6 +19,7 @@
 #define PARAM_H
 
 #include "logger.h"
+#include "aggregation.h"
 #include <NFmiParam.h>
 #include "NFmiGlobals.h" // FmiInterpolatioMethod
 
@@ -48,11 +49,6 @@ public:
     std::string ClassName() const
     {
         return "himan::param";
-    }
-
-    HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
     }
 
     bool operator==(const param& other);
@@ -115,6 +111,8 @@ public:
     HPParameterUnit Unit() const;
     void Unit(HPParameterUnit theUnit);
 
+	aggregation& Aggregation();
+	
     std::ostream& Write(std::ostream& file) const;
 
 private:
@@ -130,6 +128,8 @@ private:
     HPParameterUnit itsUnit; //!< Unit of the parameter
     double itsMissingValue; //!< Missing value
 
+	aggregation itsAggregation;
+	
     std::unique_ptr<logger> itsLogger;
 
 };

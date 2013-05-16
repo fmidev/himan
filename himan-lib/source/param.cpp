@@ -19,6 +19,7 @@ param::param()
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
+	, itsAggregation()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
@@ -31,6 +32,7 @@ param::param(const std::string& theName, unsigned long theUnivId)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
+	, itsAggregation()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
@@ -43,6 +45,7 @@ param::param(const std::string& theName)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
+	, itsAggregation()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
@@ -67,6 +70,7 @@ param::param(const std::string& theName,
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
+	, itsAggregation()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
@@ -79,6 +83,7 @@ param::param(const param& other)
 	, itsGribTableVersion(other.itsGribTableVersion)
 	, itsGribIndicatorOfParameter(other.itsGribIndicatorOfParameter)
 	, itsUnit(other.itsUnit)
+	, itsAggregation(other.itsAggregation)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
@@ -92,6 +97,7 @@ param& param::operator=(const param& other)
 	itsGribTableVersion = other.itsGribTableVersion;
 	itsGribIndicatorOfParameter = other.itsGribIndicatorOfParameter;
 	itsUnit = other.itsUnit;
+	itsAggregation = other.itsAggregation;
 
 	return *this;
 }
@@ -230,10 +236,15 @@ long param::GribTableVersion() const
 	return itsGribTableVersion;
 }
 
+aggregation& param::Aggregation()
+{
+	return itsAggregation;
+}
+
 std::ostream& param::Write(std::ostream& file) const
 {
 
-	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	file << "<" << ClassName() << ">" << std::endl;
 	file << "__itsName__ " << std::string(itsParam->GetName()) << std::endl;
 	file << "__itsUnivId__ " << itsParam->GetIdent() << std::endl;
 	file << "__itsGribParameter__ " << itsGribParameter << std::endl;
@@ -242,6 +253,8 @@ std::ostream& param::Write(std::ostream& file) const
 	file << "__itsScale__ " << itsParam->Scale() << std::endl;
 	file << "__itsBase__ " << itsParam->Base() << std::endl;
 	file << "__itsUnit__ " << itsUnit << std::endl;
+
+	file << itsAggregation;
 
 	return file;
 }
