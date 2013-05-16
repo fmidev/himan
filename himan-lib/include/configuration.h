@@ -119,6 +119,8 @@ public:
 	bool UseCache() const;
 	void UseCache(bool theUseCache);
 
+	std::string SourceGeomName() const;
+
 protected:
 	
 	void Init();
@@ -141,8 +143,9 @@ protected:
 
 	short itsThreadCount;
 
-	std::string itsGeomName;
-
+	std::string itsTargetGeomName;
+	std::string itsSourceGeomName;
+	
 	producer itsTargetProducer;
 	std::vector<producer> itsSourceProducers;
 

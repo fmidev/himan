@@ -505,9 +505,9 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 	try
 	{
-		string geom = pt.get<string>("geom_name");
+		string geom = pt.get<string>("target_geom_name");
 
-		conf->itsGeomName = geom; // whats this for
+		conf->itsTargetGeomName = geom;
 
 		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
@@ -583,7 +583,6 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 			anInfo->itsBottomLeft = coordinates.first;
 			anInfo->itsTopRight = coordinates.second;
 
-			return;
 		}
 		else
 		{
@@ -599,6 +598,28 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 		throw runtime_error(string("Error parsing area information: ") + e.what());
 	}
 
+	// Check for source geom name
+
+	try
+	{
+		string geom = pt.get<string>("source_geom_name");
+
+		conf->itsSourceGeomName = geom;
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing area information: ") + e.what());
+	}
+
+	if (!conf->itsTargetGeomName.empty())
+	{
+		return;
+	}
+	
 	// Check for manual definition of area
 
 	try

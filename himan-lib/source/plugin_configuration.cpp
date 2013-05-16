@@ -113,7 +113,8 @@ void plugin_configuration::WriteStatistics()
 
 	cout << "Origin time:\t\t" << itsInfo->OriginDateTime().String() << endl;
 
-	cout << "geom_name:\t\t" << itsGeomName << endl;
+	cout << "Target geom_name:\t" << itsTargetGeomName << endl;
+	cout << "Source geom_name:\t" << itsSourceGeomName << endl;
 	
 	// Hoping we have iterators set
 

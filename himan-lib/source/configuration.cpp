@@ -37,7 +37,9 @@ configuration::configuration(const configuration& other)
 	itsLeadingDimension = other.itsLeadingDimension;
 	itsThreadCount = other.itsThreadCount;
 
-	itsGeomName = other.itsGeomName;
+	itsTargetGeomName = other.itsTargetGeomName;
+	itsSourceGeomName = other.itsSourceGeomName;
+	
 	itsTargetProducer = other.itsTargetProducer;
 	itsSourceProducers = other.itsSourceProducers;
 
@@ -63,8 +65,9 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << "__itsThreadCount__ " << itsThreadCount << std::endl;
 
-	file << "__itsGeomName__ " << itsGeomName << std::endl;
-
+	file << "__itsTargetGeomName__ " << itsTargetGeomName << std::endl;
+	file << "__itsSourceGeomName__ " << itsSourceGeomName << std::endl;
+	
 	file << "__itsStatisticsLabel__ " << itsStatisticsLabel << std::endl;
 
 	file << "__itsConfigurationFile__ " << itsConfigurationFile << std::endl;
@@ -99,7 +102,8 @@ void configuration::Init()
 	itsFileWaitTimeout = 0;
 	itsLeadingDimension = kTimeDimension;
 	itsThreadCount = -1;
-	itsGeomName = "";
+	itsTargetGeomName = "";
+	itsSourceGeomName = "";
 	itsConfigurationFile = "";
 	itsUseCudaForPacking = true;
 	itsUseCache = true;
@@ -228,5 +232,10 @@ bool configuration::UseCache() const
 void configuration::UseCache(bool theUseCache)
 {
 	itsUseCache = theUseCache;
+}
+
+std::string configuration::SourceGeomName() const
+{
+	return itsSourceGeomName;
 }
 
