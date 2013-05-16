@@ -1,5 +1,5 @@
 {
-	"geom_name" : "HELMI",
+	"target_geom_name" : "HELMI",
 	"source_producer" : "152",
 	"target_producer" : "152",
 	"start_hour" : "10",

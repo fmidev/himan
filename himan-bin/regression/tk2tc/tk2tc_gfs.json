@@ -5,7 +5,7 @@
             "description": "Regression suite for tk2tc/gfs"
         },
     
-	"geom_name" : "GFS0500",
+	"target_geom_name" : "GFS0500",
 	"source_producer" : "53",
 	"target_producer" : "53",
 	"hours" : "192",

@@ -1,5 +1,5 @@
 {
-	"geom_name" : "MTEDIT125",
+	"target_geom_name" : "MTEDIT125",
 	"source_producer" : "131",
 	"target_producer" : "240",
 	"hours" : "1",
