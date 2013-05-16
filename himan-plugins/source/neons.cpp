@@ -61,7 +61,7 @@ vector<string> neons::Files(const search_options& options)
 
 	string level_name = options.level.Name();
 
-	vector<vector<string> > gridgeoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime);
+	vector<vector<string> > gridgeoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime, options.configuration->SourceGeomName());
 
 	if (gridgeoms.empty())
 	{
@@ -101,6 +101,8 @@ vector<string> neons::Files(const search_options& options)
 			continue;
 		}
 
+		itsLogger->Trace("Found data for parameter " + parm_name + " from neons geometry " + gridgeoms[i][0]);
+		
 		files.push_back(values[4]);
 
 	}
