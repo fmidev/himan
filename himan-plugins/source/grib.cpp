@@ -295,6 +295,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			p.Unit(kMs);
 		}
+		else if (itsGrib->Message()->ParameterUnit() == "m")
+		{
+			p.Unit(kM);
+		}
 		else
 		{
 			itsLogger->Trace("Unable to determine himan parameter unit for grib unit " + itsGrib->Message()->ParameterUnit());
