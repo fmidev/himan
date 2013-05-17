@@ -74,6 +74,9 @@ public:
 private:
 
 	bool WriteGrib(std::shared_ptr<const info> anInfo, const std::string& outputFile, HPFileType fileType, bool appendToFile = false);
+	void WriteAreaAndGrid(std::shared_ptr<const info> anInfo);
+	void WriteTime(std::shared_ptr<const info> anInfo);
+	void WriteParameter(std::shared_ptr<const info> anInfo);
 
 	/**
 	 * @brief UnpackBitmap

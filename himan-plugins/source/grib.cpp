@@ -77,13 +77,9 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 {
 	const static long edition = static_cast<long> (fileType);
 
-	/* Section 0 */
-
 	itsGrib->Message()->Edition(edition);
 
 	shared_ptr<neons> n; 
-
-	long no_vers = anInfo->Producer().TableVersion(); // We might need this later on
 
 	if (anInfo->Producer().Centre() == kHPMissingInt)
 	{
@@ -94,200 +90,34 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 		itsGrib->Message()->Centre(boost::lexical_cast<long> (producermap["ident_id"]));
 		itsGrib->Message()->Process(boost::lexical_cast<long> (producermap["model_id"]));
 
-		no_vers = boost::lexical_cast<long> (producermap["no_vers"]);
+		if (edition == 1)
+		{
+			itsGrib->Message()->Table2Version(boost::lexical_cast<long> (producermap["no_vers"]));
+		}
 	}
 	else
 	{
 		itsGrib->Message()->Centre(anInfo->Producer().Centre());
 		itsGrib->Message()->Process(anInfo->Producer().Process());
+
+		if (edition == 1)
+		{
+			itsGrib->Message()->Table2Version(anInfo->Producer().TableVersion());
+		}
 	}
 
-	/*
-	 * For grib1, get param_id from neons since its dependant on the table2version
-	 *
-	 * For grib2, assume the plugin has set the correct numbers since they are "static".
-	 */
-
-	if (edition == 1)
-	{
-		if (anInfo->Producer().TableVersion() != kHPMissingInt)
-		{
-			no_vers = anInfo->Producer().TableVersion();
-		}
-		else if (no_vers == kHPMissingInt)
-		{
-			map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(anInfo->Producer().Id());
-			no_vers = boost::lexical_cast<long> (producermap["no_vers"]);
-		}
-
-		long parm_id = anInfo->Param().GribIndicatorOfParameter();
-
-		if (parm_id == kHPMissingInt)
-		{
-			if (!n)
-			{
-				n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-			}
-			
-			parm_id = n->NeonsDB().GetGridParameterId(no_vers, anInfo->Param().Name());
-		}
-
-		itsGrib->Message()->ParameterNumber(parm_id);
-		itsGrib->Message()->Table2Version(anInfo->Producer().TableVersion());
-	}
-	else if (edition == 2)
-	{
-		itsGrib->Message()->ParameterNumber(anInfo->Param().GribParameter());
-		itsGrib->Message()->ParameterCategory(anInfo->Param().GribCategory());
-		itsGrib->Message()->ParameterDiscipline(anInfo->Param().GribDiscipline()) ;
-	}
-
-	itsGrib->Message()->DataDate(boost::lexical_cast<long> (anInfo->Time().OriginDateTime()->String("%Y%m%d")));
-	itsGrib->Message()->DataTime(boost::lexical_cast<long> (anInfo->Time().OriginDateTime()->String("%H%M")));
-
-	itsGrib->Message()->StartStep(anInfo->Time().Step());
-	itsGrib->Message()->EndStep(anInfo->Time().Step());
-
-	himan::point firstGridPoint = anInfo->Grid()->FirstGridPoint();
-	himan::point lastGridPoint = anInfo->Grid()->LastGridPoint();
-
-	switch (anInfo->Grid()->Projection())
-	{
-	case kLatLonProjection:
-	{
-		long gridType = 0; // Grib 1
-
-		if (edition == 2)
-		{
-			gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
-		}
-
-		itsGrib->Message()->GridType(gridType);
-
-		itsGrib->Message()->X0(firstGridPoint.X());
-		itsGrib->Message()->X1(lastGridPoint.X());
-		itsGrib->Message()->Y0(firstGridPoint.Y());
-		itsGrib->Message()->Y1(lastGridPoint.Y());
-		
-		itsGrib->Message()->iDirectionIncrement(anInfo->Di());
-		itsGrib->Message()->jDirectionIncrement(anInfo->Dj());
-		
-		break;
-	}
+	// Parameter
 	
-	case kRotatedLatLonProjection:
-	{
+	WriteParameter(anInfo);
 
-		long gridType = 10; // Grib 1
-
-		if (edition == 2)
-		{
-			gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
-		}
-
-		itsGrib->Message()->GridType(gridType);
-
-		itsGrib->Message()->X0(firstGridPoint.X());
-		itsGrib->Message()->Y0(firstGridPoint.Y());
-		itsGrib->Message()->X1(lastGridPoint.X());
-		itsGrib->Message()->Y1(lastGridPoint.Y());
-
-		itsGrib->Message()->SouthPoleX(anInfo->Grid()->SouthPole().X());
-		itsGrib->Message()->SouthPoleY(anInfo->Grid()->SouthPole().Y());
-
-		itsGrib->Message()->iDirectionIncrement(anInfo->Grid()->Di());
-		itsGrib->Message()->jDirectionIncrement(anInfo->Grid()->Dj());
-
-		itsGrib->Message()->GridType(gridType);
-
-		itsGrib->Message()->UVRelativeToGrid(anInfo->Grid()->UVRelativeToGrid());
-
-		break;
-	}
-
-	case kStereographicProjection:
-	{
-		long gridType = 5; // Grib 1
-
-		if (edition == 2)
-		{
-			gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
-		}
-
-		itsGrib->Message()->GridType(gridType);
-
-		itsGrib->Message()->X0(anInfo->Grid()->BottomLeft().X());
-		itsGrib->Message()->Y0(anInfo->Grid()->BottomLeft().Y());
-
-		itsGrib->Message()->GridOrientation(anInfo->Grid()->Orientation());
-		itsGrib->Message()->XLengthInMeters(anInfo->Grid()->Di());
-		itsGrib->Message()->YLengthInMeters(anInfo->Grid()->Dj());
-		break;
-	}
+	// Area and Grid
 	
-	default:
-		throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (anInfo->Grid()->Projection()));
-		break;
-	}
+	WriteAreaAndGrid(anInfo);
 
-	itsGrib->Message()->SizeX(anInfo->Ni());
-	itsGrib->Message()->SizeY(anInfo->Nj());
+	// Time information
 
-	bool iNegative = itsGrib->Message()->IScansNegatively();
-	bool jPositive = itsGrib->Message()->JScansPositively();
-
-	switch (anInfo->Grid()->ScanningMode())
-	{
-		case kTopLeft:
-			iNegative = false;
-			jPositive = false;
-			break;
-
-		case kTopRight:
-			iNegative = true;
-			jPositive = false;
-			break;
-
-		case kBottomLeft:
-			iNegative = false;
-			jPositive = true;
-			break;
-
-		case kBottomRight:
-			iNegative = true;
-			jPositive = true;
-			break;
-
-		default:
-			throw runtime_error(ClassName() + ": Uknown scanning mode when writing grib");
-			break;
-	}
-
-	itsGrib->Message()->IScansNegatively(iNegative);
-	itsGrib->Message()->JScansPositively(jPositive);
-
-	if (anInfo->StepSizeOverOneByte()) // Forecast with stepvalues that don't fit in one byte
-	{
-		itsGrib->Message()->TimeRangeIndicator(10);
-
-		long step = anInfo->Time().Step();
-		long p1 = (step & 0xFF00) >> 8;
-		long p2 = step & 0x00FF;
-
-		itsGrib->Message()->P1(p1);
-		itsGrib->Message()->P2(p2);
-
-	}
-	else
-	{
-		itsGrib->Message()->TimeRangeIndicator(0); // Force forecast
-	}
-
-	if (edition == 2)
-	{
-		itsGrib->Message()->TypeOfGeneratingProcess(2); // Forecast
-	}
-
+	WriteTime(anInfo);
+	
 	// Level
 
 	itsGrib->Message()->LevelValue(static_cast<long> (anInfo->Level().Value()));
@@ -300,33 +130,26 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 	}
 	else if (edition == 2)
 	{
-		itsGrib->Message()->LevelType(itsGrib->Message()->LevelTypeToAnotherEdition(anInfo->Level().Type(),1));
+		itsGrib->Message()->LevelType(itsGrib->Message()->LevelTypeToAnotherEdition(anInfo->Level().Type(),2));
 	}
 
+	// Misc
+
+	if (edition == 2)
+	{
+		itsGrib->Message()->TypeOfGeneratingProcess(2); // Forecast
+	}
+	
 	itsGrib->Message()->Bitmap(true);
 
 	//itsGrib->Message()->BitsPerValue(16);
 
 	itsGrib->Message()->Values(anInfo->Data()->Values(), anInfo->Ni() * anInfo->Nj());
 
-	if (edition == 1)
-	{
-		//itsGrib->Message()->PackingType("grid_second_order");
-
-	}
-	else if (edition == 2)
+	if (edition == 2)
 	{
 		itsGrib->Message()->PackingType("grid_jpeg");
 	}
-
-	long timeUnit = 1; // hour
-
-	if (anInfo->Time().StepResolution() == kMinuteResolution)
-	{
-		timeUnit = 0;
-	}
-
-	itsGrib->Message()->UnitOfTimeRange(timeUnit);
 
 	/*
 	 *  GRIB 1
@@ -804,5 +627,298 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 
 			idx++;
 	    }
+	}
+}
+
+void grib::WriteAreaAndGrid(std::shared_ptr<const info> anInfo)
+{
+	himan::point firstGridPoint = anInfo->Grid()->FirstGridPoint();
+	himan::point lastGridPoint = anInfo->Grid()->LastGridPoint();
+
+	long edition = itsGrib->Message()->Edition();
+	
+	switch (anInfo->Grid()->Projection())
+	{
+		case kLatLonProjection:
+		{
+			long gridType = 0; // Grib 1
+
+			if (edition == 2)
+			{
+				gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
+			}
+
+			itsGrib->Message()->GridType(gridType);
+
+			itsGrib->Message()->X0(firstGridPoint.X());
+			itsGrib->Message()->X1(lastGridPoint.X());
+			itsGrib->Message()->Y0(firstGridPoint.Y());
+			itsGrib->Message()->Y1(lastGridPoint.Y());
+
+			itsGrib->Message()->iDirectionIncrement(anInfo->Di());
+			itsGrib->Message()->jDirectionIncrement(anInfo->Dj());
+
+			break;
+		}
+
+		case kRotatedLatLonProjection:
+		{
+
+			long gridType = 10; // Grib 1
+
+			if (edition == 2)
+			{
+				gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
+			}
+
+			itsGrib->Message()->GridType(gridType);
+
+			itsGrib->Message()->X0(firstGridPoint.X());
+			itsGrib->Message()->Y0(firstGridPoint.Y());
+			itsGrib->Message()->X1(lastGridPoint.X());
+			itsGrib->Message()->Y1(lastGridPoint.Y());
+
+			itsGrib->Message()->SouthPoleX(anInfo->Grid()->SouthPole().X());
+			itsGrib->Message()->SouthPoleY(anInfo->Grid()->SouthPole().Y());
+
+			itsGrib->Message()->iDirectionIncrement(anInfo->Grid()->Di());
+			itsGrib->Message()->jDirectionIncrement(anInfo->Grid()->Dj());
+
+			itsGrib->Message()->GridType(gridType);
+
+			itsGrib->Message()->UVRelativeToGrid(anInfo->Grid()->UVRelativeToGrid());
+
+			break;
+		}
+
+		case kStereographicProjection:
+		{
+			long gridType = 5; // Grib 1
+
+			if (edition == 2)
+			{
+				gridType = itsGrib->Message()->GridTypeToAnotherEdition(gridType, 2);
+			}
+
+			itsGrib->Message()->GridType(gridType);
+
+			itsGrib->Message()->X0(anInfo->Grid()->BottomLeft().X());
+			itsGrib->Message()->Y0(anInfo->Grid()->BottomLeft().Y());
+
+			itsGrib->Message()->GridOrientation(anInfo->Grid()->Orientation());
+			itsGrib->Message()->XLengthInMeters(anInfo->Grid()->Di());
+			itsGrib->Message()->YLengthInMeters(anInfo->Grid()->Dj());
+			break;
+		}
+
+		default:
+			throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (anInfo->Grid()->Projection()));
+			break;
+	}
+
+	itsGrib->Message()->SizeX(anInfo->Ni());
+	itsGrib->Message()->SizeY(anInfo->Nj());
+
+	bool iNegative = itsGrib->Message()->IScansNegatively();
+	bool jPositive = itsGrib->Message()->JScansPositively();
+
+	switch (anInfo->Grid()->ScanningMode())
+	{
+		case kTopLeft:
+			iNegative = false;
+			jPositive = false;
+			break;
+
+		case kTopRight:
+			iNegative = true;
+			jPositive = false;
+			break;
+
+		case kBottomLeft:
+			iNegative = false;
+			jPositive = true;
+			break;
+
+		case kBottomRight:
+			iNegative = true;
+			jPositive = true;
+			break;
+
+		default:
+			throw runtime_error(ClassName() + ": Uknown scanning mode when writing grib");
+			break;
+	}
+
+	itsGrib->Message()->IScansNegatively(iNegative);
+	itsGrib->Message()->JScansPositively(jPositive);
+}
+
+void grib::WriteTime(std::shared_ptr<const info> anInfo)
+{
+	itsGrib->Message()->DataDate(boost::lexical_cast<long> (anInfo->Time().OriginDateTime()->String("%Y%m%d")));
+	itsGrib->Message()->DataTime(boost::lexical_cast<long> (anInfo->Time().OriginDateTime()->String("%H%M")));
+
+	if (itsGrib->Message()->Edition() == 1)
+	{
+		itsGrib->Message()->StartStep(anInfo->Time().Step());
+		itsGrib->Message()->EndStep(anInfo->Time().Step());
+	}
+	else
+	{
+		itsGrib->Message()->ForecastTime(anInfo->Time().Step());
+	}
+
+	/*
+	 * Check if this is an aggregated parameter.
+	 *
+	 * At least when writing grib2, the aggregation of the parameter is defined outside
+	 * the actual parameter numbering scheme.
+	 *
+	 * One thing to note is that when we have mixed time types in the grib, for example
+	 * when calculating hourly parameters to harmonie (forecast time in minutes, aggregation
+	 * time in hours) we must convert them to the same unit, in harmonies case minute.
+	 */
+
+	if (anInfo->Param().Aggregation().AggregationType() != kUnknownAggregationType)
+	{
+		long timeRangeValue;
+		long unitForTimeRange;
+
+		if (anInfo->Param().Aggregation().TimeResolution() == kHourResolution)
+		{
+			timeRangeValue = 1;
+
+			int timeResolutionValue = anInfo->Param().Aggregation().TimeResolutionValue();
+
+			if (anInfo->Time().StepResolution() == kHourResolution)
+			{
+
+				if (timeResolutionValue == 1)
+				{
+					unitForTimeRange = 1; // hour
+				}
+				else if (timeResolutionValue == 3)
+				{
+					unitForTimeRange = 10; // 3 hours
+				}
+				else if (timeResolutionValue == 6)
+				{
+					unitForTimeRange = 11; // 6 hours
+				}
+				else if (timeResolutionValue == 12)
+				{
+					unitForTimeRange = 12; // 1 hours
+				}
+				else
+				{
+					throw runtime_error(ClassName() + ": Invalid timeResolutionValue: " + boost::lexical_cast<string> (timeResolutionValue));
+				}
+			}
+			else
+			{
+				// mixed time types in the grib, must convert
+				timeRangeValue = 60 * timeResolutionValue;
+				unitForTimeRange = 0; // minute
+				
+			}
+			
+		}
+		else if (anInfo->Param().Aggregation().TimeResolution() == kMinuteResolution)
+		{
+			itsLogger->Warning(ClassName() + ": minute resolution for aggregated data, seems fishy");
+			
+			unitForTimeRange = 0; // minute
+			timeRangeValue = anInfo->Param().Aggregation().TimeResolutionValue();
+		}
+
+		itsGrib->Message()->LengthOfTimeRange(timeRangeValue);
+		itsGrib->Message()->UnitForTimeRange(unitForTimeRange);
+
+	}
+	
+	long unitOfTimeRange = 1; // hour
+
+	if (anInfo->Time().StepResolution() == kMinuteResolution)
+	{
+		unitOfTimeRange = 0;
+	}
+	
+	itsGrib->Message()->UnitOfTimeRange(unitOfTimeRange);
+
+	if (anInfo->StepSizeOverOneByte()) // Forecast with stepvalues that don't fit in one byte
+	{
+		itsGrib->Message()->TimeRangeIndicator(10);
+
+		long step = anInfo->Time().Step();
+		long p1 = (step & 0xFF00) >> 8;
+		long p2 = step & 0x00FF;
+
+		itsGrib->Message()->P1(p1);
+		itsGrib->Message()->P2(p2);
+
+	}
+	else
+	{
+		itsGrib->Message()->TimeRangeIndicator(0); // Force forecast
+	}
+}
+
+void grib::WriteParameter(std::shared_ptr<const info> anInfo)
+{
+	/*
+	 * For grib1, get param_id from neons since its dependant on the table2version
+	 *
+	 * For grib2, assume the plugin has set the correct numbers since they are "static".
+	 */
+
+	if (itsGrib->Message()->Edition() == 1)
+	{
+		shared_ptr<neons> n;
+		
+		long parm_id = anInfo->Param().GribIndicatorOfParameter();
+
+		if (parm_id == kHPMissingInt)
+		{
+			if (!n)
+			{
+				n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+			}
+
+			parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message()->Table2Version(), anInfo->Param().Name());
+		}
+
+		itsGrib->Message()->ParameterNumber(parm_id);
+	}
+	else
+	{
+		itsGrib->Message()->ParameterNumber(anInfo->Param().GribParameter());
+		itsGrib->Message()->ParameterCategory(anInfo->Param().GribCategory());
+		itsGrib->Message()->ParameterDiscipline(anInfo->Param().GribDiscipline()) ;
+
+		if (anInfo->Param().Aggregation().AggregationType() != kUnknownAggregationType)
+		{
+			itsGrib->Message()->ProductDefinitionTemplateNumber(8);
+
+			long type;
+
+			switch (anInfo->Param().Aggregation().AggregationType())
+			{
+				default:
+				case kAverage:
+					type=0;
+					break;
+				case kAccumulation:
+					type=1;
+					break;
+				case kMaximum:
+					type=2;
+					break;
+				case kMinimum:
+					type=3;
+					break;
+			}
+
+			itsGrib->Message()->TypeOfStatisticalProcessing(type);
+		}
 	}
 }
