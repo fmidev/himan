@@ -384,6 +384,15 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 			bool equalGrids = (*myTargetInfo->Grid() == *RRInfo->Grid());
 
+			double scaleFactor = 1.;
+
+			// EC gives precipitation in meters, we are calculating millimeters
+
+			if (RRInfo->Param().Unit() == kM)
+			{
+				scaleFactor = 1000.;
+			}
+
 			string deviceType = "CPU";
 
 			{
@@ -418,6 +427,8 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 					{
 						RR = 0;
 					}
+
+					RR *= scaleFactor;
 
 					if (!myTargetInfo->Value(RR))
 					{
