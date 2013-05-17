@@ -59,6 +59,7 @@ struct windvector_cuda_options
 	int missingValuesCount;
 	bool pU;
 	bool pV;
+	bool jScansPositive;
 
 	windvector_cuda_options() 
 		: targetType(kUnknownElement)
@@ -66,7 +67,9 @@ struct windvector_cuda_options
 		, needRotLatLonGridRotation(false)
 		, missingValuesCount(0)
 		, pU(false)
-		, pV(false) {}
+		, pV(false)
+		, jScansPositive(true)
+	{}
 
 };
 

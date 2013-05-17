@@ -270,7 +270,6 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	g.join_all();
 
-
 	if (conf->StatisticsEnabled())
 	{
 		processTimer->Stop();
@@ -438,10 +437,19 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		{
 			deviceType = "GPU";
 
-			assert(UInfo->Grid()->Projection() == kLatLonProjection || (UInfo->Grid()->ScanningMode() == kBottomLeft && UInfo->Grid()->Projection() == kRotatedLatLonProjection));
+			assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->Projection() == kRotatedLatLonProjection);
 			
 			windvector_cuda::windvector_cuda_options opts;
 			windvector_cuda::windvector_cuda_data datas;
+
+			if (myTargetInfo->Grid()->ScanningMode() == kTopLeft)
+			{
+				opts.jScansPositive = false;
+			}
+			else if (myTargetInfo->Grid()->ScanningMode() != kBottomLeft)
+			{
+				throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " + string(HPScanningModeToString.at(myTargetInfo->Grid()->ScanningMode())));
+			}
 
 			opts.sizeX = myTargetInfo->Grid()->Data()->SizeX();
 			opts.sizeY = myTargetInfo->Grid()->Data()->SizeY();

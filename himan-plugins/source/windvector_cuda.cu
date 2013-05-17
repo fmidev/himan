@@ -140,7 +140,17 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ dU, 
 
 		if (U != himan::kFloatMissing && V != himan::kFloatMissing)
 		{
-			int j = floor(static_cast<double> (idx/opts.sizeX));
+			int j;
+			
+			if (opts.jScansPositive)
+			{
+				j = floor(static_cast<double> (idx/opts.sizeX));
+			}
+			else
+			{
+				j = opts.sizeY - floor(static_cast<double> (idx/opts.sizeX));
+			}
+
 			int i = idx - j * opts.sizeX;
 
 			double lon = opts.firstLongitude + i * opts.di;
