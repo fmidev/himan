@@ -101,7 +101,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param theRequestedParam ("TPW-K", 8);
+	param theRequestedParam ("TP-K", 8);
 
 	// GRIB 2
 	
