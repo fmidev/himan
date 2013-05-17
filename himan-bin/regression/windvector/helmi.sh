@@ -40,7 +40,7 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
     echo windvector/helmi ice speed success on GPU!
   else
     echo windvector/helmi ice speed failed on GPU
-#    exit 1
+    exit 1
   fi
 
   grib_compare -A 1 helmi_result_IDD.grib IDD-D_ground_0_ll_415_556_0_010.grib
@@ -49,6 +49,6 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
     echo windvector/helmi ice direction success on GPU!
   else
     echo windvector/helmi ice direction failed on GPU
-#    exit 1
+    exit 1
   fi
 fi
