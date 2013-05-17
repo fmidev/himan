@@ -90,32 +90,59 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> params;
 
-	param requestedParam ("RR-6-MM", 355);
+	param baseParam;
+	baseParam.GribDiscipline(0);
+	baseParam.GribCategory(1);
+	baseParam.GribParameter(8);
+	baseParam.Aggregation().AggregationType(kAccumulation);
+	baseParam.Aggregation().TimeResolution(kHourResolution);
 
 	if (conf->Exists("rr1h") && conf->GetValue("rr1h") == "true")
 	{
-		params.push_back(param("RR-1-MM", 353));
+		baseParam.Name("RR-1-MM");
+		baseParam.UnivId(353);
+		baseParam.Aggregation().TimeResolutionValue(1);
+
+		params.push_back(baseParam);
+
 	}
 
 	if (conf->Exists("rr3h") && conf->GetValue("rr3h") == "true")
 	{
-		params.push_back(param("RR-3-MM", 354));
+		baseParam.Name("RR-3-MM");
+		baseParam.UnivId(354);
+		baseParam.Aggregation().TimeResolutionValue(3);
+
+		params.push_back(baseParam);
 	}
 
 	if (conf->Exists("rr6h") && conf->GetValue("rr6h") == "true")
 	{
-		params.push_back(param("RR-6-MM", 355));
+		baseParam.Name("RR-6-MM");
+		baseParam.UnivId(355);
+		baseParam.Aggregation().TimeResolutionValue(6);
+
+		params.push_back(baseParam);
 	}
 
 	if (conf->Exists("rr12h") && conf->GetValue("rr12h") == "true")
 	{
-		params.push_back(param("RR-12-MM", 356));
+		baseParam.Name("RR-12-MM");
+		baseParam.UnivId(356);
+		baseParam.Aggregation().TimeResolutionValue(12);
+
+		params.push_back(baseParam);
 	}
 
 	if (params.empty())
 	{
 		itsLogger->Trace("No parameter definition given, defaulting to rr6h");
-		params.push_back(param("RR-6-MM", 355));
+		
+		baseParam.Name("RR-6-MM");
+		baseParam.UnivId(355);
+		baseParam.Aggregation().TimeResolutionValue(6);
+
+		params.push_back(baseParam);
 	}
 
 	// GRIB 1
@@ -150,7 +177,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	Dimension(conf->LeadingDimension());
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(requestedParam);
+	FeederInfo()->ParamIndex(0);
 
 	if (conf->StatisticsEnabled())
 	{
@@ -237,10 +264,6 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
-		shared_ptr<info> prevInfo;
-
-		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
-
 		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
 		{
 			shared_ptr<info> RRInfo;
@@ -268,30 +291,56 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 				throw runtime_error(ClassName() + ": Unsupported parameter: " + myTargetInfo->Param().Name());
 			}
 
-			myThreadedLogger->Warning("Calculating parameter " + myTargetInfo->Param().Name() + " time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-												  " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+			if (myTargetInfo->Time().StepResolution() != kHourResolution)
+			{
+				assert(myTargetInfo->Time().StepResolution() == kMinuteResolution);
+
+				paramStep *= 60;
+			}
+
+			shared_ptr<info> prevInfo;
+
 			try
 			{
-				if (!prevInfo || myTargetInfo->Time().Step() - prevInfo->Time().Step() != paramStep)
+
+				forecast_time prevTimeStep = myTargetInfo->Time();
+
+				if (prevTimeStep.Step() >= paramStep && prevTimeStep.Step() - paramStep >= 0)
 				{
+					prevTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -paramStep);
+
+					prevInfo = FetchSourcePrecipitation(conf,prevTimeStep,myTargetInfo->Level(),dataFoundFromRRParam);
+				}
+				else
+				{
+					// Unable to get data for this step, as target time is smaller than step time
+					// (f.ex fcst_per = 2, and target parameter is rr3h
+			
+					myThreadedLogger->Info("Not calculating " + myTargetInfo->Param().Name() + " for step " + boost::lexical_cast<string> (prevTimeStep.Step()));
+
+					if (conf->StatisticsEnabled())
+					{
+						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					}
 
 					/*
-					 * If this is the first time this loop executed, or if the previous data is not suitable
-					 * for calculating against current time step data, fetch source data.
+					 * If we want to write empty files to disk, comment out the following code
 					 */
 
-					forecast_time prevTimeStep = myTargetInfo->Time();
+					/*
 
-					if (prevTimeStep.Step() >= paramStep)
-					{
-						prevTimeStep.ValidDateTime()->Adjust(kHourResolution, -paramStep);
+					myTargetInfo->Data()->Fill(kFloatMissing);
 
-						prevInfo = FetchSourcePrecipitation(conf,prevTimeStep,myTargetInfo->Level(),dataFoundFromRRParam);
-					}
-					else
+					if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
 					{
-						continue;
+						shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+
+						w->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 					}
+					*/
+
+					continue;
 				}
 
 				// Get data for current step
@@ -304,7 +353,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 				switch (e)
 				{
 					case kFileDataNotFound:
-						itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+						myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 						myTargetInfo->Data()->Fill(kFloatMissing);
 
 						if (conf->StatisticsEnabled())
@@ -322,7 +371,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 				}
 			}
 
-			myThreadedLogger->Debug("Calculating parameter " + myTargetInfo->Param().Name() + " time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
+			myThreadedLogger->Info("Calculating parameter " + myTargetInfo->Param().Name() + " time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
 												  " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 			shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
@@ -377,8 +426,6 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 				}
 
-				prevInfo = RRInfo;
-
 				/*
 				 * Newbase normalizes scanning mode to bottom left -- if that's not what
 				 * the target scanning mode is, we have to swap the data back.
@@ -406,12 +453,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 		   {
 			   shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			   shared_ptr<info> tempInfo(new info(*myTargetInfo));
-
-			   for (tempInfo->ResetParam(); tempInfo->NextParam(); )
-			   {
-				   w->ToFile(tempInfo, conf);
-			   }
+			   w->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 		   }
 		}
 	}
