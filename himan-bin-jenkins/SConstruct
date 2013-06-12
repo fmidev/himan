@@ -64,7 +64,7 @@ env.Append(CPPPATH = includes)
 
 librarypaths = []
 
-librarypaths.append(workspace + '/himan-lib/build/debug')
+librarypaths.append(workspace + '/himan-lib/build/release')
 librarypaths.append('/usr/lib64')
 
 if os.environ.get('ORACLE_HOME') is None:
@@ -143,7 +143,9 @@ env.Append(CCFLAGS = cflags_normal)
 
 # Linker flags
 
-env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-needed'])
+#env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-needed'])
+env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,-rpath,.','-Wl,--as-needed'])
+
 # '-Wl,-rpath,.'
 
 # Defines
