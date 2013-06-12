@@ -1,0 +1,171 @@
+#
+# SConscript for himan-bin
+
+import os
+
+AddOption(
+    '--debug-build',
+    dest='debug-build',
+    action='store_true',
+    help='debug build',
+    default=False)
+
+env = Environment()
+
+# Check build
+
+DEBUG = GetOption('debug-build')
+RELEASE = (not DEBUG)
+
+# Workspace
+
+workspace = os.environ['HOME'] + "/workspace"
+
+# cuda toolkit path
+
+cuda_toolkit_path = '/opt/cuda'
+
+if os.environ.get('CUDA_TOOLKIT_PATH') is None:
+	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
+else:
+	cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
+
+have_cuda = False
+
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
+	have_cuda = True
+
+# Assign compilers
+
+env['CC'] = 'gcc'
+env['CXX'] = 'g++'
+
+if os.environ.get('CC') != None:
+        env['CC'] = os.environ.get('CC')
+
+if os.environ.get('CXX') != None:
+        env['CXX'] = os.environ.get('CXX')
+
+
+# Includes
+
+includes = []
+
+includes.append(workspace + '/himan-lib/include')
+includes.append(workspace + '/himan-plugins/include')
+includes.append('/usr/include/smartmet/newbase')
+
+if have_cuda:
+	includes.append(cuda_toolkit_path + '/include')
+
+env.Append(CPPPATH = includes)
+
+# Library paths
+
+librarypaths = []
+
+librarypaths.append(workspace + '/himan-lib/build/debug')
+librarypaths.append('/usr/lib64')
+
+if os.environ.get('ORACLE_HOME') is None:
+	librarypaths.append('/usr/lib64/oracle')
+else:
+	librarypaths.append(os.environ.get('ORACLE_HOME') + '/lib')
+
+if have_cuda:
+	librarypaths.append(cuda_toolkit_path + '/lib64')
+
+env.Append(LIBPATH = librarypaths)
+
+# Libraries
+
+libraries = []
+
+libraries.append('himan')
+libraries.append('smartmet_newbase')
+libraries.append('boost_program_options')
+libraries.append('boost_regex')
+libraries.append('boost_filesystem')
+libraries.append('boost_system')
+libraries.append('rt')
+libraries.append('z')
+libraries.append('bz2')
+libraries.append('clntsh')
+
+if have_cuda:
+	libraries.append('cudart')
+
+env.Append(LIBS = libraries)
+
+# CFLAGS
+
+# "Normal" flags
+
+cflags_normal = []
+cflags_normal.append('-Wall')
+cflags_normal.append('-W')
+cflags_normal.append('-Wno-unused-parameter')
+cflags_normal.append('-Werror')
+
+# Extra flags
+
+cflags_extra = []
+cflags_extra.append('-Wpointer-arith')
+cflags_extra.append('-Wcast-qual')
+cflags_extra.append('-Wcast-align')
+cflags_extra.append('-Wwrite-strings')
+cflags_extra.append('-Wconversion')
+# cflags_extra.append('-Winline')
+cflags_extra.append('-Wnon-virtual-dtor')
+cflags_extra.append('-Wno-pmf-conversions')
+cflags_extra.append('-Wsign-promo')
+cflags_extra.append('-Wchar-subscripts')
+cflags_extra.append('-Wold-style-cast')
+
+# Difficult flags
+
+cflags_difficult = []
+cflags_difficult.append('-pedantic')
+cflags_difficult.append('-Weffc++')
+cflags_difficult.append('-Wredundant-decls')
+cflags_difficult.append('-Wshadow')
+cflags_difficult.append('-Woverloaded-virtual')
+cflags_difficult.append('-Wunreachable-code')
+cflags_difficult.append('-Wctor-dtor-privacy')
+
+# Default flags (common for release/debug)
+
+cflags = []
+cflags.append('-std=c++0x')
+
+env.Append(CCFLAGS = cflags)
+env.Append(CCFLAGS = cflags_normal)
+
+# Linker flags
+
+env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-needed'])
+# '-Wl,-rpath,.'
+
+# Defines
+
+env.Append(CPPDEFINES=['UNIX'])
+
+if have_cuda:
+	env.Append(CPPDEFINES=['HAVE_CUDA'])
+
+build_dir = ""
+
+if RELEASE:
+	env.Append(CCFLAGS = ['-O2'])
+	env.Append(CPPDEFINES = ['NDEBUG'])
+	build_dir = "build/release"
+
+if DEBUG:
+	env.Append(CPPDEFINES = ['DEBUG'])
+	env.Append(CCFLAGS = ['-O0', '-g'])
+	env.Append(CCFLAGS = cflags_extra)
+#	env.Append(CCFLAGS = cflags_difficult)
+	build_dir = "build/debug"
+
+SConscript('SConscript', exports = ['env'], variant_dir=build_dir, duplicate=0)
+Clean('.', build_dir)

@@ -1,0 +1,19 @@
+{
+	"target_geom_name" : "RCR068",
+	"source_producer" : "1",
+	"target_producer" : "230",
+	"start_hour" : "6",
+	"stop_hour" : "6",
+	"step" : "1",
+	"step_unit" : "hour",
+	"file_write" : "multiple",
+	"origintime" : "2013-03-20 00:00:00",
+	"read_data_from_database" : "false",
+	"processqueue" : [
+	{
+		"leveltype" : "height",
+		"levels" : "10",
+		"plugins" : [ { "name" : "windvector" } ]
+	} 
+	]
+}
