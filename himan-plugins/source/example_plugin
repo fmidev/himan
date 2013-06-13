@@ -260,6 +260,13 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 			}
 		}
 
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
+		
 		int missingCount = 0;
 		int count = 0;
 
@@ -273,12 +280,6 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 
 		bool equalGrids = (*myTargetInfo->Grid() == *exampleInfo->Grid() );
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
 
 		string deviceType;
 
