@@ -3,7 +3,7 @@
 
 testEquality()
 {
-  bash /home/peramaki/workspace/himan-bin/regression/hybrid_pressure/hybrid_pressure.sh
+  bash /home/peramaki/workspace/himan-bin-jenkins/regression/hybrid_pressure/hybrid_pressure.sh
   testbool=$?
   assertEquals $testbool 0
 }
