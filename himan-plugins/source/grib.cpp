@@ -785,8 +785,8 @@ void grib::WriteTime(std::shared_ptr<const info> anInfo)
 
 	if (anInfo->Param().Aggregation().AggregationType() != kUnknownAggregationType)
 	{
-		long timeRangeValue;
-		long unitForTimeRange;
+		long timeRangeValue = 1;
+		long unitForTimeRange = 1;
 
 		if (anInfo->Param().Aggregation().TimeResolution() == kHourResolution)
 		{

@@ -3,8 +3,8 @@
  *
  * Template for future plugins.
  *
- * @dateApr 10, 2013
- * @author peramaki
+ * @date Apr 10, 2013
+ * @author partio, peramaki
  */
 
 #include "plugin_factory.h"
@@ -95,9 +95,9 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 	// GRIB 2
 
 	/*
-	 * requestedParam.GribDiscipline(X);
-	 * requestedParam.GribCategory(Y);
-	 * requestedParam.GribParameter(Z);
+	 * theRequestedParam.GribDiscipline(X);
+	 * theRequestedParam.GribCategory(Y);
+	 * theRequestedParam.GribParameter(Z);
 	 */
 
 	// GRIB 1
@@ -111,8 +111,8 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
 		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedParam.Name());
-		requestedParam.GribIndicatorOfParameter(parm_id);
-		requestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
+		theRequestedParam.GribIndicatorOfParameter(parm_id);
+		theRequestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
 
 	}
 
@@ -193,7 +193,7 @@ void example_plugin::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));

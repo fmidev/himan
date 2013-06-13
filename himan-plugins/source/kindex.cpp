@@ -218,12 +218,12 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_co
 								 myTargetInfo->Time(),
 								 T500Level,
 								 TParam);
-						// Source info for Td850
+			// Source info for Td850
 			Td850Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T850Level,
 								 TdParam);
-						// Source info for Td700
+			// Source info for Td700
 			Td700Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T700Level,
@@ -316,8 +316,8 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_co
 			T850 = T850 - TBase;
 			T700 = T700 - TBase;
 			T500 = T500 - TBase;
-			Td850 = Td850 -TBase;
-			Td700 = Td700 -TBase;
+			Td850 = Td850 - TBase;
+			Td700 = Td700 - TBase;
 
 			kIndex = T850 - T500 + Td850 - (T700 - Td700);
 
