@@ -3,10 +3,10 @@
 set -x
 
 if [ -z "$HIMAN" ]; then
-	export HIMAN="/home/peramaki/workspace/himan-bin/build/release/himan"
+	export HIMAN="/home/peramaki/workspace/himan-bin-jenkins/build/release/himan"
 fi
 
-cd /home/peramaki/workspace/himan-bin/regression/hybrid_pressure
+cd /home/peramaki/workspace/himan-bin-jenkins/regression/hybrid_pressure
 
 rm -f hybrid_pressure_hir.json.grib
 

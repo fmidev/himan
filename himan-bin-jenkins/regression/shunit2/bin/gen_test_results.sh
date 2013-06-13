@@ -33,10 +33,11 @@ SRC_DIR="${BASE_DIR}/src"
 
 os_name=`versions_osName |sed 's/ /_/g'`
 os_version=`versions_osVersion`
+time_now=`date`
 
 DEFINE_boolean force false 'force overwrite' f
 DEFINE_string output_dir "`pwd`" 'output dir' d
-DEFINE_string output_file "${os_name}-${os_version}.txt" 'output file' o
+DEFINE_string output_file "${os_name}-${os_version}-${time_now}.txt" 'output file' o
 DEFINE_string suite 'shunit2_test.sh' 'unit test suite' s
 FLAGS "${@:-}" || exit $?; shift ${FLAGS_ARGC}
 
