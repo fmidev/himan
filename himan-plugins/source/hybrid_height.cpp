@@ -199,7 +199,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	// Required source parameters
 
-	param PParam("P-PA"); //maanpintapaine
+	param PParam("P-HPA"); //maanpintapaine
 	param TParam("T-K"); //lämpötila
 	//level H2(kHeight, 2);
 

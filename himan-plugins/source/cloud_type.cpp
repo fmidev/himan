@@ -199,11 +199,11 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 	param TParam("T-K");
 	param RHParam("RH-PRCNT");
 	param TdParam("TD-C");
-	param NParam("N-PRCNT");
+	param NParam("N-0TO1");
 	param KParam("KINDEX-N");
 
-	level T2mLevel(himan::kHeight, 2);
-	level NLevel(himan::kHeight, 0);
+	level T2mLevel(himan::kHeight, 2, "HEIGHT");
+	level NLevel(himan::kHeight, 0, "HEIGHT");
 	//level KLevel(himan::kHeight, 0);
 	//level T850Level(himan::kPressure, 850, "PRESSURE");
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
@@ -369,6 +369,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			T2m = T2m - 273.15;
 			T850 = T850 - 273.15;
 			int MATAKO = DoMatako(T2m, T850);
+			N *= 100;
 
 			if ( N >= 90 || N <= 100 )
 			//Jos N = 90…100 % (pilvistä), niin
