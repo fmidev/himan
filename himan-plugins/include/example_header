@@ -16,6 +16,13 @@ namespace himan
 namespace plugin
 {
 
+/**
+ * @class example_plugin
+ *
+ * @brief Calculate ...
+ *
+ */
+
 class example_plugin : public compiled_plugin, private compiled_plugin_base
 {
 public:

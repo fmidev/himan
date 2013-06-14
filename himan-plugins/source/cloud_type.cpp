@@ -196,12 +196,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	// Required source parameters
 
-	/*
-	 * eg. param PParam("P-Pa"); for pressure in pascals
-	 *
-	 */
-
-	param TParam("T-K");
+	param TParam("T-C");
 	param RHParam("RH-PRCNT");
 	param TdParam("TD-C");
 	param NParam("N-PRCNT");
@@ -210,21 +205,11 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 	level T2mLevel(himan::kHeight, 2);
 	level NLevel(himan::kHeight, 0);
 	level KLevel(himan::kHeight, 0);
-	level T850Level(himan::kPressure, 850, "PRESSURE");
+	//level T850Level(himan::kPressure, 850, "PRESSURE");
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
 	level RH700Level(himan::kPressure, 700, "PRESSURE");
 	level RH500Level(himan::kPressure, 500, "PRESSURE");
 	
-	//tee_pilvet Tarvitsee: lämpötilan 500 hPa ja lämpötilan ja kastepisteen 850 ja 700 hPa
-/*
-	T2m
-	RH500
-	RH700
-	RH850
-	T850
-	N
-	kIndex
-*/
 	param exampleParam("quantity-unit_name");
 	// ----	
 
@@ -260,7 +245,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 								 myTargetInfo->Time(),
 								 NLevel,
 								 NParam);
-			// Source info for N
+			// Source info for kIndex
 			KInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 KLevel,
@@ -379,7 +364,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				continue;
 			}
 
-			int result = 0;
+			int cloudCode = 0;
 			int cloudType = 0;
 			int MATAKO = DoMatako(T2m, T850);
 
@@ -388,33 +373,33 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			{
   				if ( RH500 > 65 )
   				{
-  					result = 3502;
-  					cloudType = 4;//?;
+  					cloudCode = 3502;
+  					//cloudType = 4;//?;
   				}
   				else 
   				{
-  					result = 3306;
-  					cloudType = 4;//?;
+  					cloudCode = 3306;
+  					//cloudType = 4;//?;
   				}
 
   				if ( RH700 > 80)
   				{
-  					result = 3405;
-  					cloudType = 4;//?;
+  					cloudCode = 3405;
+  					//cloudType = 4;//?;
   				}
 
   				if ( RH850 > 60 )
   				{
   					if ( RH700 > 60 )
   					{
-  						result = 3604;
+  						cloudCode = 3604;
   						cloudType = 3;
   						continue;
   					}
   					else
   					{
-  						result = 3307;
-  						cloudType= 4;
+  						cloudCode = 3307;
+  						cloudType= 2;
   					}
   				}
 
@@ -427,24 +412,24 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
             	if ( kIndex > 25 )
 				{
-					result = 3309;
+					cloudCode = 3309;
 					cloudType = 4;
 				}
 				
 				else if ( kIndex > 20 )
 				{
-					result = 2303;
+					cloudCode = 2303;
 					cloudType = 4;
 				}
 				
 				else if ( kIndex > 15 )
 				{
-					result = 2302;
+					cloudCode = 2302;
 					cloudType = 4;
 				}
 				if ( MATAKO == 1 )
 				{
-					result = 2303;
+					cloudCode = 2303;
 					cloudType = 4;
 				}
 				/*
@@ -459,26 +444,27 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			{
 				if ( RH500 > 65 )
 				{
-					result = 2501;
+					cloudCode = 2501;
 					cloudType = 4;
 				}
 
 				else 
 				{
-					result = 2305;
-					cloudType = 4;//?;
+					cloudCode = 2305;
+					//cloudType = 4;//?;
 				}
 
 				if ( RH700 > 80 )
 				{
-					result = 2403;
-					cloudType = 4;//?;
+					cloudCode = 2403;
+					//cloudType = 4;//?;
 				}
 
 				if ( RH850 > 80 ) 
 				{
-					result = 2307;
-					cloudType = 4;//;
+					cloudCode = 2307;
+					//cloudType = 4;//;
+
 					if ( N > 70 )
 						cloudType = 2;
 				}
@@ -491,24 +477,24 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
             	if ( kIndex > 25 )
 				{
-					result = 2309;
+					cloudCode = 3309;
 					cloudType = 4;
 				}
 				
 				else if ( kIndex > 20 )
 				{
-					result = 2303;
+					cloudCode = 2303;
 					cloudType = 4;
 				}
 				
 				else if ( kIndex > 15 )
 				{
-					result = 2302;
+					cloudCode = 2302;
 					cloudType = 4;
 				}
 				if ( MATAKO == 1 )
 				{
-					result = 2303;
+					cloudCode = 2303;
 					cloudType = 4;
 				}
 				/*
@@ -522,15 +508,28 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			//Jos N = 10… 50 % (hajanaista pilvisyyttä)
 			{
 				if ( RH850 > 80 )
-					result = 1305;
+				{
+					cloudCode = 1305;
+					//cloudType = 4;//?;
+				}
+				
 				else if ( RH700 > 70 )
-					result = 1403;
+				{					
+					cloudCode = 1403;
+					//cloudType = 4;//?;
+				}
 
 				else if ( RH500 > 60 )
-					result = 1501;
+				{
+					cloudCode = 1501;
+					//cloudType = 4;//?;
+				}
 
 				else
-					result = 1305;
+				{
+					cloudCode = 1305;
+					//cloudType = 4;//?;
+				}
 			
       			//	jos RH500 > 60, niin tulos 1501 (ohutta cirrusta), muuten tulos 1305 (alapilveä)
       			//	Jos RH700 > 70, tulos 1403 (keskipilveä)
@@ -538,31 +537,31 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				if ( kIndex > 25 )
 				{
-					result = 1309;
+					cloudCode = 1309;
 					cloudType = 4;
 				}
 
 				else if ( kIndex > 20 )
 				{
-					result = 1303;
+					cloudCode = 1303;
 					cloudType = 4;
 				}
 
 				else if ( kIndex > 15 )
 				{
-					result = 1302;
+					cloudCode = 1302;
 					cloudType = 4;
 				}
 
 				if ( MATAKO == 2 )
 				{
-					result = 1301;
-					cloudType = 4;//?;
+					cloudCode = 1301;
+					//cloudType = 4;//?;
 				}
 
 				if ( MATAKO == 1 )
 				{
-					result = 1303;
+					cloudCode = 1303;
 					cloudType = 4;
 				}
 
@@ -571,17 +570,17 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				Jos kIndex > 20, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
 				Jos kIndex > 15, niin tulos 1302 (konvektiopilvi), tyyppi 4
 				Jos MATAKO = 2, niin tulos 1301 (poutapilvi)
-					Jos MATAKO = 1, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
+				Jos MATAKO = 1, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
 				*/
 				}
 				else if ( N >= 0 || N < 10 )
-			//Jos N 0…10 %
+				//Jos N 0…10 %
 				{
       			//tulos 0. Jos MATAKO = 1, tulos 1303, tyyppi 4
-      			result = 0;
+      			cloudCode = 0;
       			if ( MATAKO == 1 )
       			{
-      				result = 1303;
+      				cloudCode = 1303;
       				cloudType = 4;
       			}
       		}
@@ -589,10 +588,12 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
       		if ( cloudType == 2 && T850 < -9 )
       			cloudType = 5;
+
       		else if ( cloudType == 4 )
       		{
       			if (kIndex > 37)
       				cloudType = 45;
+
       			else if (kIndex > 27)
       				cloudType = 35;
       		}
@@ -603,7 +604,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
       				*/
 			
 
-			if (!myTargetInfo->Value(cloudType))
+			if (!myTargetInfo->Value(cloudCode))
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
 			}
@@ -643,12 +644,12 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 int cloud_type::DoMatako(double T2m, double T850)
 {
-	double T2mC = T2m + 273.15;
+	//double T2mC = T2m + 273.15;
 
-	if ( T2mC >= 8 && T2mC - T850 >= 10)
+	if ( T2m >= 8 && T2m - T850 >= 10)
 		return 2;
 	
-	if ( T2mC > 0 && T850 > 0 && T2mC - T850 >= 10)
+	if ( T2m > 0 && T850 > 0 && T2m - T850 >= 10)
 		return 1;
 	
 	return 0;
