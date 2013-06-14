@@ -196,7 +196,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	// Required source parameters
 
-	param TParam("T-C");
+	param TParam("T-K");
 	param RHParam("RH-PRCNT");
 	param TdParam("TD-C");
 	param NParam("N-PRCNT");
@@ -204,7 +204,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	level T2mLevel(himan::kHeight, 2);
 	level NLevel(himan::kHeight, 0);
-	level KLevel(himan::kHeight, 0);
+	//level KLevel(himan::kHeight, 0);
 	//level T850Level(himan::kPressure, 850, "PRESSURE");
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
 	level RH700Level(himan::kPressure, 700, "PRESSURE");
@@ -248,7 +248,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			// Source info for kIndex
 			KInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 KLevel,
+								 NLevel,
 								 KParam);
 			// Source info for T850
 			T850Info = theFetcher->Fetch(conf,
@@ -366,6 +366,8 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 			int cloudCode = 0;
 			int cloudType = 0;
+			T2m = T2m - 273.15;
+			T850 = T850 - 273.15;
 			int MATAKO = DoMatako(T2m, T850);
 
 			if ( N >= 90 || N <= 100 )
