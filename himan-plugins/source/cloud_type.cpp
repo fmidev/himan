@@ -573,10 +573,10 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				Jos MATAKO = 2, niin tulos 1301 (poutapilvi)
 				Jos MATAKO = 1, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
 				*/
-				}
-				else if ( N >= 0 || N < 10 )
+			}
+			else
 				//Jos N 0…10 %
-				{
+			{
       			//tulos 0. Jos MATAKO = 1, tulos 1303, tyyppi 4
       			cloudCode = 0;
       			if ( MATAKO == 1 )
