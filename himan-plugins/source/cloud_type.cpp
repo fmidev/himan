@@ -198,21 +198,16 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	param TParam("T-K");
 	param RHParam("RH-PRCNT");
-	param TdParam("TD-C");
 	param NParam("N-0TO1");
 	param KParam("KINDEX-N");
 
 	level T2mLevel(himan::kHeight, 2, "HEIGHT");
-	level NLevel(himan::kHeight, 0, "HEIGHT");
-	//level KLevel(himan::kHeight, 0);
-	//level T850Level(himan::kPressure, 850, "PRESSURE");
+	level NKLevel(himan::kHeight, 0, "HEIGHT");
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
 	level RH700Level(himan::kPressure, 700, "PRESSURE");
 	level RH500Level(himan::kPressure, 500, "PRESSURE");
 	
-	param exampleParam("quantity-unit_name");
-	// ----	
-
+	
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
@@ -243,12 +238,12 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			// Source info for N
 			NInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 NLevel,
+								 NKLevel,
 								 NParam);
 			// Source info for kIndex
 			KInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 NLevel,
+								 NKLevel,
 								 KParam);
 			// Source info for T850
 			T850Info = theFetcher->Fetch(conf,
@@ -370,8 +365,9 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			T850 = T850 - 273.15;
 			int MATAKO = DoMatako(T2m, T850);
 			N *= 100;
+			bool skip = false;
 
-			if ( N >= 90 || N <= 100 )
+			if ( N > 90 )
 			//Jos N = 90…100 % (pilvistä), niin
 			{
   				if ( RH500 > 65 )
@@ -397,7 +393,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
   					{
   						cloudCode = 3604;
   						cloudType = 3;
-  						continue;
+  						skip = true;
   					}
   					else
   					{
@@ -412,37 +408,39 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
  				//Jos kuitenkin RH850 > 60, niin
         			//jos RH700 > 80, tulos 3604 (paksut kerrospilvet) tyyppi = 3 (sade) > ulos
 			    		//ellei, niin tulos 3307 (alapilvi) tyyppi = 2
-
-            	if ( kIndex > 25 )
-				{
-					cloudCode = 3309;
-					cloudType = 4;
+  				if (!skip)
+  				{
+	            	if ( kIndex > 25 )
+					{
+						cloudCode = 3309;
+						cloudType = 4;
+					}
+					
+					else if ( kIndex > 20)
+					{
+						cloudCode = 2303;
+						cloudType = 4;
+					}
+					
+					else if ( kIndex > 15 )
+					{
+						cloudCode = 2302;
+						cloudType = 4;
+					}
+					if ( MATAKO == 1 )
+					{
+						cloudCode = 2303;
+						cloudType = 4;
+					}
+					/*
+					Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
+					Jos kIndex > 20, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
+					Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4
+					Jos MATAKO = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
+					*/
 				}
-				
-				else if ( kIndex > 20 )
-				{
-					cloudCode = 2303;
-					cloudType = 4;
-				}
-				
-				else if ( kIndex > 15 )
-				{
-					cloudCode = 2302;
-					cloudType = 4;
-				}
-				if ( MATAKO == 1 )
-				{
-					cloudCode = 2303;
-					cloudType = 4;
-				}
-				/*
-				Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
-				Jos kIndex > 20, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
-				Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4
-				Jos MATAKO = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
-				*/
 			}
-			else if ( N >= 50 || N < 90 )
+			else if ( N > 50 )
 			//Jos N = 50…90 % (puolipilvistä tai pilvistä), niin
 			{
 				if ( RH500 > 65 )
@@ -507,7 +505,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				Jos MATAKO = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
 				*/
 			}
-			else if ( N >= 10 || N < 50 )
+			else if ( N > 10 )
 			//Jos N = 10… 50 % (hajanaista pilvisyyttä)
 			{
 				if ( RH850 > 80 )
