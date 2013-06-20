@@ -190,7 +190,7 @@ void rain_type::Run(shared_ptr<info> myTargetInfo,
 
 int rain_type::RelativeTopo(int p1, int p2, double z1, double z2)
 {
-//p1=1000, p2=850;	
+    //p1=1000, p2=850;	
 	int zvakio = 1;
     int rtopo = 0;
     double h = 0;
@@ -201,12 +201,8 @@ int rain_type::RelativeTopo(int p1, int p2, double z1, double z2)
     }
 
     h = 8.1 * ((z1 * 0.01) - 1000); // metreinä
-
-  //  cout << "Z1: " << z1 << " ja Z2: " << z2 << " ja h: " << h << "\n";
     
     rtopo = zvakio * (h-(z2 * 0.10197));  // Muutos metreiksi z2/9.81
-
- //   cout << "tapa 1:" << rtopo << "\n";
 
 	return rtopo;
 }
@@ -381,11 +377,12 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 					continue;
 				}
 
+				// Koska P1 on 1000Mba, pitää z tehdä paineesta
+				// Sen kautta sitten lasketaan reltopo
 				reltopo = RelativeTopo(1000, 850, P, Z850);
                 
-           /*     if (reltopo < 1285 ) {
-				  cout << "RELTOPO: " << reltopo << "\n";
-				}*/
+				// Laske intensiteetti ensin, sitten päättele WaWa-koodi
+				// Voi olla, että tässä on väärä sade
 
 				if (RR > 0.1 && RR < 0.2 ) {
 				  
@@ -408,6 +405,17 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 					rain = -1;
 				}
 
+/*
+				if (cloud > 0)
+				{
+					cout << "PILVI: " << cloud << "\n";
+				}
+				*/
+
+				// Pilvikoodista päätellään pilvityyppi
+				// Päättelyketju vielä puutteellinen, logiikan voi ehkä siirtää 
+				// cloud_type plugarista
+
 				if (cloud == 3307) 
 				{
 					cloudType = 2;
@@ -428,41 +436,11 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				}
 
 				
-				// Laske intensiteetti ensin, sitten päättele WaWa-koodista
-/*				   IF (mallin_hetkellinen_sade_kaytossa) THEN
-   zraja1 = 0.1 * integ
-
-            zraja2 = 0.2 * integ
-
-            zraja3 = 1. * integ
-
-            zraja4 = 5. * integ
-
-            IF(B(I) .GT. zraja1) A(I)=60.
-
-            IF(B(I) .GT. zraja2) A(I)=61.
-
-            IF(B(I) .GT. zraja3) A(I)=63.
-
-            IF(B(I) .GT. zraja4) A(I)=65.
-
-        ELSE
-
-            IF(B(I) .GT. zraja1 .AND. C(I) .GT. zraja1) A(I)=60.
-
-            IF(B(I) .GT. zraja2 .AND. C(I) .GT. zraja2) A(I)=61.
-
-            IF(B(I) .GT. zraja3 .AND. C(I) .GT. zraja3) A(I)=63.
-
-            IF(B(I) .GT. zraja4 .AND. C(I) .GT. zraja4) A(I)=65.
-
-        END IF   */
-
-
+				// Sitten itse HSADE
 
 				if (rain >= 60 && rain <= 65) 
 				{
-      cout << "rain is "  << rain << "\n";
+      				// cout << "rain is "  << rain << "\n";
 					if (cloudType == 3) // Jatkuva sade
 					{
               
@@ -595,7 +573,6 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
 			}
-
 
 
 		if (conf->StatisticsEnabled())
