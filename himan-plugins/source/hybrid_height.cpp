@@ -85,9 +85,9 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 
 	/*
-	 * Set target parameter to H0C-M
-	 * - name H0C-M
-	 * - univ_id 270
+	 * Set target parameter to HL-M
+	 * - name HL-M
+	 * - univ_id 3
 	 * 
 	 *
 	 * We need to specify grib and querydata parameter information
@@ -199,9 +199,12 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	// Required source parameters
 
-	param PParam("P-HPA"); //maanpintapaine
+	param GPParam("P-PA"); //maanpintapaine
+	param PParam("P-HPA"); //hybridipaine
 	param TParam("T-K"); //lämpötila
-	//level H2(kHeight, 2);
+	
+	level H2(himan::kHeight, 2, "HEIGHT"); //t2m
+	level H0(himan::kHeight, 0, "HEIGHT"); //p0m
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
@@ -209,17 +212,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	myTargetInfo->FirstParam();
 
-	//shared_ptr<info> PInfoPrevious;
-	//shared_ptr<info> T2mInfoPrevious;
-	//shared_ptr<info> TInfoPrevious;
-
-	double PPrevious(kFloatMissing);
-	//double T2mPrevious;
-	double TPrevious(kFloatMissing);
 	
-	bool firstFetch(true);
-
-	double TotalHeight(0);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
@@ -227,180 +220,232 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 
-		shared_ptr<info> PInfo;
-		//shared_ptr<info> T2mInfo;
-		shared_ptr<info> TInfo;
-		try
-		{
-			// Source info for P
-			PInfo = theFetcher->Fetch(conf,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 PParam);
-				
-			/* Source info for 2m T
-			T2mInfo = theFetcher->Fetch(conf,
-								 myTargetInfo->Time(),
-								 H2,
-								 TParam);
-			*/
-			// Source info for Hybrid
-			TInfo = theFetcher->Fetch(conf,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 TParam);			
+		level prevLevel = myTargetInfo->Level();
 
-			/*if (firstFetch)
+		bool firstLevel(true);
+		for ( myTargetInfo->ResetLevel(); myTargetInfo->PreviousLevel(); )
+		{			
+			shared_ptr<info> PInfo;
+			shared_ptr<info> TInfo;			
+			shared_ptr<info> prevPInfo;
+			shared_ptr<info> prevTInfo;
+			shared_ptr<info> prevHInfo;
+
+			try
 			{
-				PInfoPrevious = PInfo;
-				//T2mInfoPrevious = T2mInfo;
-				TInfoPrevious = TInfo;
-			}*/
 
-		}
-		catch (HPExceptionType e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					//warning vai info, tk2twc:ssä on warning, tpot, icing ja kindeks sisältää infon
-					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing);
+				forecast_time& fTime = myTargetInfo->Time();
+				if (!firstLevel)
+				{
+					prevTInfo = FetchPrevious(conf, fTime, prevLevel, param("T-K"));
+					prevPInfo = FetchPrevious(conf, fTime, prevLevel, param("P-HPA"));
+					prevHInfo = FetchPrevious(conf, fTime, prevLevel, param("HL-M"));
+				}
+				else 
+				{
+					prevTInfo = FetchPrevious(conf, fTime, H2, param("T-K"));
+					prevPInfo = FetchPrevious(conf, fTime, H0, param("P-PA"));
+					prevHInfo = NULL;
+				}
+				prevLevel = myTargetInfo->Level();
 
-					if (conf->StatisticsEnabled())
-					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
+				// Source info for P
+				PInfo = theFetcher->Fetch(conf,
+									 myTargetInfo->Time(),
+									 myTargetInfo->Level(),
+									 PParam);
 					
+				// Source info for T
+				TInfo = theFetcher->Fetch(conf,
+									 myTargetInfo->Time(),
+									 myTargetInfo->Level(),
+									 TParam);			
+
+			}
+			catch (HPExceptionType e)
+			{
+				switch (e)
+				{
+					case kFileDataNotFound:
+						//warning vai info, tk2tc:ssä on warning, tpot, icing ja kindeks sisältää infon
+						itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+						myTargetInfo->Data()->Fill(kFloatMissing);
+
+						if (conf->StatisticsEnabled())
+						{
+							conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+							conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						}
+						
+						continue;
+						break;
+
+					default:
+						throw runtime_error(ClassName() + ": Unable to proceed");
+						break;
+				}
+			}
+
+			unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+
+			if (conf->StatisticsEnabled())
+			{
+				processTimer->Start();
+			}
+
+			assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
+
+			SetAB(myTargetInfo, TInfo);
+
+			int missingCount = 0;
+			int count = 0;
+
+			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> prevPGrid(prevPInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> prevTGrid(prevTInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> prevHGrid;
+			
+			if (!firstLevel )
+				prevHGrid = shared_ptr<NFmiGrid>(prevHInfo->Grid()->ToNewbaseGrid());
+
+			bool equalGrids = ( *myTargetInfo->Grid() == *prevTInfo->Grid() && *myTargetInfo->Grid() == *prevPInfo->Grid() && *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() ); //&& *myTargetInfo->Grid() == *T2mInfo->Grid() && *myTargetInfo->Grid() == *P0mInfo->Grid() );
+
+			if (!firstLevel)
+				equalGrids = ( equalGrids && *myTargetInfo->Grid() == *prevHInfo->Grid() );
+
+			string deviceType = "CPU";
+
+			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
+			myTargetInfo->ResetLocation();
+
+			targetGrid->Reset();
+
+			prevPGrid->Reset();
+			prevTGrid->Reset();
+			if (!firstLevel)
+				prevHGrid->Reset();
+
+			while (myTargetInfo->NextLocation() && targetGrid->Next() && prevTGrid->Next() && prevPGrid->Next())
+			{
+
+				count++;
+
+				double T = kFloatMissing;
+				double P = kFloatMissing;
+				double prevP = kFloatMissing;
+				double prevT = kFloatMissing;
+				double prevH = kFloatMissing;
+
+				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				InterpolateToPoint(targetGrid, prevPGrid, equalGrids, prevP);		
+				InterpolateToPoint(targetGrid, prevTGrid, equalGrids, prevT);
+			
+				if (!firstLevel)
+				{
+					prevHGrid->Next();
+					InterpolateToPoint(targetGrid, prevHGrid, equalGrids, prevH);
+					
+					if (prevH == kFloatMissing )
+					{
+						missingCount++;
+
+						myTargetInfo->Value(kFloatMissing);
+						continue;
+					}
+				}
+
+				if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )//|| T2m == kFloatMissing || P0m == kFloatMissing)
+				{
+					missingCount++;
+
+					myTargetInfo->Value(kFloatMissing);
 					continue;
-					break;
+				}
 
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
+
+				if (firstLevel)
+				{
+					prevP /= 100.f;
+				}
+
+				//laskenta
+				double Tave = ( T + prevT ) / 2;
+				double deltaZ = (287 / 9.81) * Tave * log(prevP / P);
+
+				double totalHeight(0);
+
+				if (firstLevel)
+				{
+					totalHeight = deltaZ;		
+				}
+				else
+					totalHeight = prevH + deltaZ;
+
+				if (!myTargetInfo->Value(totalHeight))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
+			
 			}
-		}
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+			firstLevel = false;
+			/*
+			 * Newbase normalizes scanning mode to bottom left -- if that's not what
+			 * the target scanning mode is, we have to swap the data back.
+			 */
 
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
+			SwapTo(myTargetInfo, kBottomLeft);
 
-		assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
-
-		SetAB(myTargetInfo, TInfo);
-
-		int missingCount = 0;
-		int count = 0;
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
-		//shared_ptr<NFmiGrid> T2mGrid(T2mInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-
-		//shared_ptr<NFmiGrid> PGridPrevious(PInfoPrevious->Grid()->ToNewbaseGrid());
-		//shared_ptr<NFmiGrid> T2mGridPrevious(T2mInfoPrevious->Grid()->ToNewbaseGrid());
-		//shared_ptr<NFmiGrid> TGridPrevious(TInfoPrevious->Grid()->ToNewbaseGrid());
-
-		bool equalGrids = ( *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() );
-							//*myTargetInfo->Grid() == *PInfoPrevious->Grid() && *myTargetInfo->Grid() == *TInfoPrevious->Grid());
-
-		
-		string deviceType = "CPU";
-
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-		myTargetInfo->ResetLocation();
-
-		targetGrid->Reset();
-
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
-		{
-
-			count++;
-
-			double T = kFloatMissing;
-			//double T2m = kFloatMissing;
-			double P = kFloatMissing;
-
-			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-			//InterpolateToPoint(targetGrid, T2mGrid, equalGrids, T2m);
-			InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-
-
-			if (T == kFloatMissing || P == kFloatMissing)
+			if (conf->StatisticsEnabled())
 			{
-				missingCount++;
-
-				myTargetInfo->Value(kFloatMissing);
-				continue;
-			}
-
-
-			if (firstFetch)
-			{
-				TPrevious = T;
-				//T2mPrevious = T2m;
-				PPrevious = P;
-				firstFetch = false;
-			}
-
-			//laskenta
-			double Tave = ( T + TPrevious ) /2;
-			double deltaZ = (287 / 9.81) * Tave * log(PPrevious / P);
-
-			TotalHeight += deltaZ;
-
-			if (!myTargetInfo->Value(TotalHeight))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
-			}
-			TPrevious = T;
-			PPrevious = P;
-		
-		}
-
-		/*
-		 * Newbase normalizes scanning mode to bottom left -- if that's not what
-		 * the target scanning mode is, we have to swap the data back.
-		 */
-
-		SwapTo(myTargetInfo, kBottomLeft);
-
-		//PInfoPrevious = PInfo;
-		//T2mInfoPrevious = T2mInfo;
-		//TInfoPrevious = TInfo;
-
-		if (conf->StatisticsEnabled())
-		{
-			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+				processTimer->Stop();
+				conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
 #ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
+				itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
 
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+				conf->Statistics()->AddToMissingCount(missingCount);
+				conf->Statistics()->AddToValueCount(count);
 
-		}
+			}
 
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 * */
+			/*
+			 * Now we are done for this level
+			 *
+			 * Clone info-instance to writer since it might change our descriptor places
+			 * */
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+			myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
-		{
-			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+			if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+			{
+				shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
+				theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
+			}
 		}
 	}
+}
+
+shared_ptr<himan::info> hybrid_height::FetchPrevious(shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam)
+{
+	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+
+	try
+	{
+		return f->Fetch(conf,
+						wantedTime,
+						wantedLevel,
+						wantedParam);
+   	}
+	catch (HPExceptionType e)
+	{
+		throw e;
+	}
+
 }
