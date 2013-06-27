@@ -355,9 +355,9 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 
 		bool equalGrids = (		*myTargetInfo->Grid() == *PInfo->Grid() &&
                                 *myTargetInfo->Grid() == *Z850Info->Grid() &&
-                                *myTargetInfo->Grid() == *TInfo->Grid()) &&
-								*myTargetInfo->Grid() == *RRInfo->Grid()) &&
-								*myTargetInfo->Grid() == *Cloudinfo->Grid());
+                                *myTargetInfo->Grid() == *TInfo->Grid() &&
+				*myTargetInfo->Grid() == *RRInfo->Grid() &&
+				*myTargetInfo->Grid() == *CloudInfo->Grid());
 
 
 		string deviceType;
