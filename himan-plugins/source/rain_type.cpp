@@ -41,6 +41,13 @@ rain_type::rain_type() : itsUseCuda(false)
 
 void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 {
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
@@ -138,24 +145,31 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(theRequestedParam);
 
+	if (conf->StatisticsEnabled())
+	{
+		initTimer->Stop();
+		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+	}
+
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
 
-	vector<shared_ptr<info> > targetInfos;
+	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
-	targetInfos.resize(threadCount);
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Start();
+	}
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
-
 		boost::thread* t = new boost::thread(&rain_type::Run,
 								this,
-								targetInfos[i],
+								shared_ptr<info> (new info(*targetInfo)),
 								conf,
 								i + 1);
 
@@ -164,6 +178,12 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	g.join_all();
+
+	if (conf->StatisticsEnabled())
+	{
+		processTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+	}
 
 	if (conf->FileWriteOption() == kSingleFile)
 	{
@@ -177,9 +197,7 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 }
 
-void rain_type::Run(shared_ptr<info> myTargetInfo,
-				shared_ptr<const plugin_configuration> conf,
-				unsigned short threadIndex)
+void rain_type::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 
 	while (AdjustLeadingDimension(myTargetInfo))
@@ -190,7 +208,7 @@ void rain_type::Run(shared_ptr<info> myTargetInfo,
 
 int rain_type::RelativeTopo(int p1, int p2, double z1, double z2)
 {
-    //p1=1000, p2=850;	
+    
 	int zvakio = 1;
     int rtopo = 0;
     double h = 0;
@@ -200,9 +218,16 @@ int rain_type::RelativeTopo(int p1, int p2, double z1, double z2)
       zvakio = -1;
     }
 
-    h = 8.1 * ((z1 * 0.01) - 1000); // metreinä
+    if (p1 == 1000) // make z from from pressure
+    {
+    	h = 8.1 * ((z1 * 0.01) - 1000); // metres
+    }
+    else
+    {
+    	h = z1 * 0.10197; // convert 2 metres z/9.81
+    }
     
-    rtopo = zvakio * (h-(z2 * 0.10197));  // Muutos metreiksi z2/9.81
+    rtopo = zvakio * (h - (z2 * 0.10197)); 
 
 	return rtopo;
 }
@@ -326,12 +351,13 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		shared_ptr<NFmiGrid> Z850Grid(Z850Info->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> CloudGrid(RRInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> CloudGrid(CloudInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = (
-										*myTargetInfo->Grid() == *PInfo->Grid() &&
-                                       	*myTargetInfo->Grid() == *Z850Info->Grid() &&
-                                        *myTargetInfo->Grid() == *TInfo->Grid());
+		bool equalGrids = (		*myTargetInfo->Grid() == *PInfo->Grid() &&
+                                *myTargetInfo->Grid() == *Z850Info->Grid() &&
+                                *myTargetInfo->Grid() == *TInfo->Grid()) &&
+								*myTargetInfo->Grid() == *RRInfo->Grid()) &&
+								*myTargetInfo->Grid() == *Cloudinfo->Grid());
 
 
 		string deviceType;
@@ -405,13 +431,6 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 					rain = -1;
 				}
 
-/*
-				if (cloud > 0)
-				{
-					cout << "PILVI: " << cloud << "\n";
-				}
-				*/
-
 				// Pilvikoodista päätellään pilvityyppi
 				// Päättelyketju vielä puutteellinen, logiikan voi ehkä siirtää 
 				// cloud_type plugarista
@@ -440,7 +459,6 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 
 				if (rain >= 60 && rain <= 65) 
 				{
-      				// cout << "rain is "  << rain << "\n";
 					if (cloudType == 3) // Jatkuva sade
 					{
               
