@@ -255,6 +255,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 	param PParam("P-PA");
 	param CloudParam("CLDSYM-N");
 	param PrecParam("RR-1-MM");
+	param KindexParam("KINDEX-N");
 
     level Z850Level(himan::kPressure, 850, "PRESSURE");
     level T2Level(himan::kHeight, 2, "HEIGHT");
@@ -277,6 +278,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		shared_ptr<info> TInfo;
 		shared_ptr<info> RRInfo;
 		shared_ptr<info> CloudInfo;
+		shared_ptr<info> KindexInfo;
 
 		try
 		{
@@ -306,6 +308,10 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 								 myTargetInfo->Time(),
 								 PLevel,
 								 CloudParam);
+			KindexInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 PLevel,
+								 KindexParam);
 
 		}
 		catch (HPExceptionType e)
@@ -352,6 +358,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> CloudGrid(CloudInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> KindexGrid(KindexInfo->Grid()->ToNewbaseGrid());
 
 		bool equalGrids = (		*myTargetInfo->Grid() == *PInfo->Grid() &&
                                 *myTargetInfo->Grid() == *Z850Info->Grid() &&
@@ -388,12 +395,14 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				double cloud;
 				double reltopo;
 				double RR;
+				double kindex;
 
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
 				InterpolateToPoint(targetGrid, Z850Grid, equalGrids, Z850);
 				InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
 				InterpolateToPoint(targetGrid, CloudGrid, equalGrids, cloud);
+				InterpolateToPoint(targetGrid, KindexGrid, equalGrids, kindex);
 			
 				if (T == kFloatMissing )
 				{
@@ -428,7 +437,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				}
 				else 
 				{
-					rain = -1;
+					rain = 0;
 				}
 
 				// Pilvikoodista päätellään pilvityyppi
@@ -447,12 +456,22 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 					 && cloud == 2307 && cloud == 3309 && cloud == 2303 && cloud == 2302
 					 && cloud == 1309 && cloud == 1303 && cloud == 1302)
 				{
-				   cloudType = 3; 	
+				   cloudType = 4; 	
 				}
-				else
-				{
-					cloudType = 5;
-				}
+
+				// Ukkoset
+
+			/*	if ( cloudType == 2 && T850 < -9 )
+      			   cloudType = 5;  */
+
+      		    if ( cloudType == 4 )
+      		    {
+      			  if (kindex >= 37)
+      				cloudType = 45;
+
+      			  else if (kindex >= 27)
+      				cloudType = 35;
+      		    }
 
 				
 				// Sitten itse HSADE
