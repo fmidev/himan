@@ -245,7 +245,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 				{
 					prevTInfo = FetchPrevious(conf, fTime, H2, param("T-K"));
 					prevPInfo = FetchPrevious(conf, fTime, H0, param("P-PA"));
-					prevHInfo = NULL;
 				}
 				prevLevel = myTargetInfo->Level();
 
