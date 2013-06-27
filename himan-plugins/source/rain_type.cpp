@@ -275,6 +275,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 
 		shared_ptr<info> PInfo;
 		shared_ptr<info> Z850Info;
+                shared_ptr<info> T850Info;
 		shared_ptr<info> TInfo;
 		shared_ptr<info> RRInfo;
 		shared_ptr<info> CloudInfo;
@@ -312,6 +313,10 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 								 myTargetInfo->Time(),
 								 PLevel,
 								 KindexParam);
+                        T850Info = theFetcher->Fetch(conf,
+                                                                 myTargetInfo->Time(),
+                                                                 Z850Level,
+                                                                 TParam);
 
 		}
 		catch (HPExceptionType e)
@@ -359,6 +364,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> CloudGrid(CloudInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> KindexGrid(KindexInfo->Grid()->ToNewbaseGrid());
+                shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
 
 		bool equalGrids = (		*myTargetInfo->Grid() == *PInfo->Grid() &&
                                 *myTargetInfo->Grid() == *Z850Info->Grid() &&
@@ -389,6 +395,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 			
 				double rain = 0; // intensiteetti(hetkellinen)
 				double T;
+                                double T850;
 				double Z850;
 				double P;
 				double cloudType;
@@ -403,6 +410,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
 				InterpolateToPoint(targetGrid, CloudGrid, equalGrids, cloud);
 				InterpolateToPoint(targetGrid, KindexGrid, equalGrids, kindex);
+                                InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
 			
 				if (T == kFloatMissing )
 				{
@@ -425,15 +433,15 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				}
 				else if (RR > 0.1 && RR < 0.2 ) 
 				{
-                    rain = 61;
+                   	 		rain = 61;
 				}
 				else if (RR > 1 && RR < 5 ) 
 				{
-                    rain = 63;
+                    			rain = 63;
 				}
 				else if (RR > 5 ) 
 				{
-                    rain = 65;
+                    			rain = 65;
 				}
 				else 
 				{
@@ -452,26 +460,26 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				{
 				    cloudType = 3;	
 				}
-				else if (cloud == 3309 && cloud == 2303 && cloud == 2302 && cloud == 2303
-					 && cloud == 2307 && cloud == 3309 && cloud == 2303 && cloud == 2302
-					 && cloud == 1309 && cloud == 1303 && cloud == 1302)
+				else if (cloud == 3309 || cloud == 2303 || cloud == 2302 || cloud == 2303
+					 || cloud == 2307 || cloud == 3309 || cloud == 2303 || cloud == 2302
+					 || cloud == 1309 || cloud == 1303 || cloud == 1302)
 				{
 				   cloudType = 4; 	
 				}
 
 				// Ukkoset
 
-			/*	if ( cloudType == 2 && T850 < -9 )
-      			   cloudType = 5;  */
+				if ( cloudType == 2 && T850 < -9 )
+      			           cloudType = 5;  
 
-      		    if ( cloudType == 4 )
-      		    {
-      			  if (kindex >= 37)
-      				cloudType = 45;
+      		                if ( cloudType == 4 )
+      		                {
+      			           if (kindex >= 37)
+      				      cloudType = 45;
 
-      			  else if (kindex >= 27)
-      				cloudType = 35;
-      		    }
+      			           else if (kindex >= 27)
+      				      cloudType = 35;
+      		                }
 
 				
 				// Sitten itse HSADE
