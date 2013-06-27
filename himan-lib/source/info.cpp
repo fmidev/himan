@@ -298,6 +298,16 @@ bool info::NextLevel()
     return itsLevelIterator->Next();
 }
 
+bool info::PreviousLevel()
+{
+    return itsLevelIterator->Previous();
+}
+
+bool info::LastLevel()
+{
+    return itsLevelIterator->Last();
+}
+
 void info::First()
 {
     FirstLevel();
@@ -357,6 +367,11 @@ level& info::PeakLevel(size_t theIndex) const
 bool info::NextTime()
 {
     return itsTimeIterator->Next();
+}
+
+bool info::LastTime()
+{
+    return itsTimeIterator->Last();
 }
 
 void info::ResetTime()
@@ -422,6 +437,37 @@ bool info::NextLocation()
 
     return true;
 
+}
+
+bool info::PreviousLocation()
+{
+    
+    size_t locationSize = Grid()->Data()->Size();
+
+    if (itsLocationIndex == kIteratorResetValue)
+    {
+        itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;   // ResetLocation() has been called before this function
+    }
+
+    else
+    {
+        if (itsLocationIndex == 0)
+        {
+            itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;
+            return false;
+        }
+        itsLocationIndex--;
+    }
+
+    return true;
+
+}
+
+bool info::LastLocation()
+{
+    ResetLocation();
+
+    return PreviousTime();
 }
 
 void info::ResetLocation()

@@ -91,6 +91,53 @@ public:
         }
 
         /**
+         * @brief Set iterator to first element
+         *
+         * @return boolean if iterator has at least one element, else false
+         *
+         */
+
+        bool Last()
+        {
+            Reset();
+
+            return Previous();
+        }
+
+        /**
+         * @brief Retreat iterator by one
+         *
+         * @return boolean if iterator has more elements left, else false
+         *
+         */
+
+        bool Previous()
+        {
+            if (itsIndex == kIteratorResetValue)
+            {
+                itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;    // Reset() has been called before this function
+            }
+
+            else
+            {
+                if ( itsIndex == 0 )
+                {
+                    itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;
+                    return false;
+                }
+                itsIndex--;
+            }
+
+            /*if (itsIndex >= itsElements.size())
+            {
+                itsIndex = 0;
+                return false;
+            }*/
+
+            return true;
+        }
+
+        /**
          * @brief Advance iterator by one
          *
          * @return boolean if iterator has more elements left, else false
@@ -351,7 +398,7 @@ public:
     void OriginDateTime(const std::string& theOriginDateTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 
 	void First();
-	
+
     /**
      * @brief Reset all descriptors
      */
@@ -402,11 +449,22 @@ public:
     bool NextLevel();
 
     /**
+     * @see iterator#Previous
+     */
+
+    bool PreviousLevel();
+
+    /**
      * @see iterator#First
      */
 
     bool FirstLevel();
 
+    /**
+     * @see iterator#Last
+     */
+
+    bool LastLevel();
     /**
      * @brief Set level iterator to position indicated by the function argument
      * @see iterator#Set
@@ -433,10 +491,22 @@ public:
     bool NextTime();
 
     /**
+     * @see iterator#Previous
+     */
+
+    bool PreviousTime();
+
+    /**
      * @see iterator#First
      */
 
     bool FirstTime();
+
+    /**
+     * @see iterator#Last
+     */
+
+    bool LastTime();
 
     /**
      * @brief Set time iterator to position indicated by the function argument
@@ -459,6 +529,8 @@ public:
     void ResetLocation();
     bool NextLocation();
     bool FirstLocation();
+    bool PreviousLocation();
+    bool LastLocation();
 
     /**
      * @return Current data matrix
