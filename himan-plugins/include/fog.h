@@ -1,7 +1,7 @@
 /*
  * fog.h
  *
- *  Created on: Jul 5, 2012
+ *  Created on: Jul 3, 2012
  *      Author: perämäki
  */
 
