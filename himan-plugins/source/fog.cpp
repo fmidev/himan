@@ -35,6 +35,7 @@ const string itsName("fog");
 
 fog::fog() : itsUseCuda(false)
 {
+	itsClearTextFormula = "FOG = (T2M-TDGround + TBase > -0.3 && FF10M < 5)  ? 607 : 0";
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }

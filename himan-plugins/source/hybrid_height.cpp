@@ -34,6 +34,7 @@ const string itsName("hybrid_height");
 
 hybrid_height::hybrid_height() : itsUseCuda(false), itsCudaDeviceCount(0)
 {
+	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
@@ -197,14 +198,12 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-	// Required source parameters
-
-	param GPParam("P-PA"); //maanpintapaine
-	param PParam("P-HPA"); //hybridipaine
-	param TParam("T-K"); //lämpötila
+	param GPParam("P-PA");
+	param PParam("P-HPA");
+	param TParam("T-K");
 	
-	level H2(himan::kHeight, 2, "HEIGHT"); //t2m
-	level H0(himan::kHeight, 0, "HEIGHT"); //p0m
+	level H2(himan::kHeight, 2, "HEIGHT");
+	level H0(himan::kHeight, 0, "HEIGHT");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
@@ -212,7 +211,9 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 	myTargetInfo->FirstParam();
 
-	
+	/*
+		pitääkö tunnistaa tuottaja?
+	*/
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
@@ -248,13 +249,11 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 				}
 				prevLevel = myTargetInfo->Level();
 
-				// Source info for P
 				PInfo = theFetcher->Fetch(conf,
 									 myTargetInfo->Time(),
 									 myTargetInfo->Level(),
 									 PParam);
 					
-				// Source info for T
 				TInfo = theFetcher->Fetch(conf,
 									 myTargetInfo->Time(),
 									 myTargetInfo->Level(),
@@ -266,7 +265,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 				switch (e)
 				{
 					case kFileDataNotFound:
-						//warning vai info, tk2tc:ssä on warning, tpot, icing ja kindeks sisältää infon
 						itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 						myTargetInfo->Data()->Fill(kFloatMissing);
 
@@ -357,7 +355,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 					}
 				}
 
-				if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )//|| T2m == kFloatMissing || P0m == kFloatMissing)
+				if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )
 				{
 					missingCount++;
 
@@ -371,7 +369,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 					prevP /= 100.f;
 				}
 
-				//laskenta
 				double Tave = ( T + prevT ) / 2;
 				double deltaZ = (287 / 9.81) * Tave * log(prevP / P);
 
@@ -392,6 +389,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 			}
 
 			firstLevel = false;
+
 			/*
 			 * Newbase normalizes scanning mode to bottom left -- if that's not what
 			 * the target scanning mode is, we have to swap the data back.
