@@ -1,13 +1,13 @@
 /**
- * @file example_plugin
+ * @file fog
  *
  * Template for future plugins.
  *
- * @date Apr 10, 2013
+ * @date Jul 5, 2013
  * @author peramaki
  */
 
-#include "example_header"
+#include "fog.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
@@ -31,15 +31,15 @@ using namespace himan::plugin;
 
 #include "cuda_extern.h"
 
-const string itsName("example_plugin");
+const string itsName("fog");
 
-example_plugin::example_plugin() : itsUseCuda(false)
+fog::fog() : itsUseCuda(false)
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
 
-void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
+void fog::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -91,16 +91,15 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	//param theRequestedParam(PARM_ NAME, UNIV_ID);
+	param theRequestedParam("FOGSYM-N", 334);
 
 	// GRIB 2
 
-	/*
-	 * theRequestedParam.GribDiscipline(X);
-	 * theRequestedParam.GribCategory(Y);
-	 * theRequestedParam.GribParameter(Z);
-	 */
-
+	//temp parameters
+	theRequestedParam.GribDiscipline(0);
+	theRequestedParam.GribCategory(0);
+	theRequestedParam.GribParameter(0);
+	
 	// GRIB 1
 
 	/*
@@ -153,7 +152,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
-		boost::thread* t = new boost::thread(&example_plugin::Run,
+		boost::thread* t = new boost::thread(&fog::Run,
 								this,
 								targetInfos[i],
 								conf,
@@ -177,7 +176,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 }
 
-void example_plugin::Run(shared_ptr<info> myTargetInfo,
+void fog::Run(shared_ptr<info> myTargetInfo,
 				shared_ptr<const plugin_configuration> conf,
 				unsigned short threadIndex)
 {
@@ -194,7 +193,7 @@ void example_plugin::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -206,8 +205,18 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 	 *
 	 */
 
-	param exampleParam("quantity-unit_name");
-	// ----	
+	//2m kastepiste
+	//10m tuulen nopeus
+	//alustan lämpötila
+
+	param groundParam("T-K");
+	param dewParam("TD-C");
+	param windParam("FF-MS");
+	
+	level ground(himan::kHeight, 0, "HEIGHT");
+	level h2m(himan::kHeight, 2, "HEIGHT");
+	level h10m(himan::kHeight, 10, "HEIGHT");
+
 
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
@@ -221,21 +230,26 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		shared_ptr<info> exampleInfo;
+		shared_ptr<info> groundInfo;
+		shared_ptr<info> dewInfo;
+		shared_ptr<info> windInfo;
 		try
 		{
-			/*
-			 *	Parameter infos are made here
-			 *
-			 */
 
-			// Source info for exampleParam
-			exampleInfo = theFetcher->Fetch(conf,
+			groundInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 exampleParam);
+								 ground,
+								 groundParam);
 			
-			// ----
+			dewInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 h2m,
+								 dewParam);
+
+			windInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 h10m,
+								 windParam);
 
 		}
 		catch (HPExceptionType e)
@@ -277,94 +291,68 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 		 */
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> exampleGrid(exampleInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> groundGrid(groundInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> dewGrid(dewInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> windGrid(windInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = (*myTargetInfo->Grid() == *exampleInfo->Grid() );
+		bool equalGrids = (*myTargetInfo->Grid() == *groundInfo->Grid() && *myTargetInfo->Grid() == *dewInfo->Grid() && *myTargetInfo->Grid() == *windInfo->Grid() );
 
 
 		string deviceType;
 
 
-		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
-		{
-	
-			deviceType = "GPU";
 
-			size_t N = exampleGrid->Size();
+		deviceType = "CPU";
 
-			float* exampleOut = new float[N]; // array that cuda devices will store data
-			double* infoData = new double[N]; // array that's stored to info instance
+		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-			example_cuda::DoCuda(exampleGrid->DataPool()->Data(), exampleOut, N, threadIndex-1);
+		myTargetInfo->ResetLocation();
 
-			for (size_t i = 0; i < N; i++)
-			{
-				infoData[i] = static_cast<float> (exampleOut[i]);
+		targetGrid->Reset();
 
-				if (infoData[i] == kFloatMissing)
-				{
-					missingCount++;
-				}
-
-				count++;
-			}
-
-			myTargetInfo->Data()->Set(infoData, N);
-
-			delete [] infoData;
-			delete [] exampleOut;
-
-		}
-		else
+		while (myTargetInfo->NextLocation() && targetGrid->Next())
 		{
 
-			deviceType = "CPU";
+			count++;
 
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+			/*
+			 * interpolation happens here
+			 *
+			 */
+			double t2m = kFloatMissing;
+			double wind10m = kFloatMissing;
+			double tGround = kFloatMissing;
 
-			myTargetInfo->ResetLocation();
+			InterpolateToPoint(targetGrid, groundGrid, equalGrids, t2m);
+			InterpolateToPoint(targetGrid, dewGrid, equalGrids, tGround);
+			InterpolateToPoint(targetGrid, windGrid, equalGrids, wind10m);
 
-			targetGrid->Reset();
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
+			if (tGround == kFloatMissing || t2m == kFloatMissing || wind10m == kFloatMissing)
 			{
+				missingCount++;
 
-				count++;
-
-				/*
-				 * interpolation happens here
-				 *
-				 */
-				double example = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, exampleGrid, equalGrids, example);
-
-				if (example == kFloatMissing )
-				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-
-				/*
-				 * Calculations go here
-				 *
-				 */
-				
-
-				if (!myTargetInfo->Value(example))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
-				}
+				myTargetInfo->Value(kFloatMissing);
+				continue;
 			}
 
+			/*
+			 * Calculations go here
+			 *
+			 */
+
+			double TBase = 273.15;
+			double fog = 0;
+
+			if (t2m-tGround + TBase > -0.3 && wind10m < 5 )
+				fog = 607;
+			//else
+			//	fog = 0;
+
+			if (!myTargetInfo->Value(fog))
+			{
+				throw runtime_error(ClassName() + ": Failed to set value to matrix");
+			}
 		}
-
-
-
-
-
 
 		if (conf->StatisticsEnabled())
 		{
