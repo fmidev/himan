@@ -359,11 +359,14 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				continue;
 			}
 
+			//error codes from fortran
 			int cloudCode = 704;
-			int cloudType = 1;
+			//int cloudType = 1;
+
 			double TBase = 273.15;
 			T2m = T2m - TBase;
 			T850 = T850 - TBase;
+			
 			int MATAKO = DoMatako(T2m, T850);
 			
 			//data comes as 0..1 instead of 0-100%
@@ -372,26 +375,21 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			RH700 *= 100;
 			RH850 *= 100;
 			
-			//bool skip = false;
-
 			if ( N > 90 )
 			//Jos N = 90…100 % (pilvistä), niin
 			{
   				if ( RH500 > 65 )
   				{
   					cloudCode = 3502;
-  					//cloudType = 4;//?;
   				}
   				else 
   				{
   					cloudCode = 3306;
-  					//cloudType = 4;//?;
   				}
 
   				if ( RH700 > 80)
   				{
   					cloudCode = 3405;
-  					//cloudType = 4;//?;
   				}
 
   				if ( RH850 > 60 )
@@ -399,7 +397,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
   					if ( RH700 > 80 )
   					{
   						cloudCode = 3604;
-  						cloudType = 3;
+  					//	cloudType = 3;
 						if (!myTargetInfo->Value(cloudCode))
 						{
 							throw runtime_error(ClassName() + ": Failed to set value to matrix");
@@ -409,7 +407,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
   					else
   					{
   						cloudCode = 3307;
-  						cloudType= 2;
+  					//	cloudType= 2;
   					}
   				}
 
@@ -423,24 +421,24 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				if ( kIndex > 25 )
 				{
 					cloudCode = 3309;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 				
 				else if ( kIndex > 20)
 				{
 					cloudCode = 2303;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 				
 				else if ( kIndex > 15 )
 				{
 					cloudCode = 2302;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 				else if ( MATAKO == 1 )
 				{
 					cloudCode = 2303;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 				/*
 				Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
@@ -456,28 +454,24 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				if ( RH500 > 65 )
 				{
 					cloudCode = 2501;
-					//cloudType = 4;//?;
 				}
 
 				else 
 				{
 					cloudCode = 2305;
-					//cloudType = 4;//?;
 				}
 
 				if ( RH700 > 80 )
 				{
 					cloudCode = 2403;
-					//cloudType = 4;//?;
 				}
 
 				if ( RH850 > 80 ) 
 				{
 					cloudCode = 2307;
-					//cloudType = 4;//;
 
-					if ( N > 70 )
-						cloudType = 2;
+				//	if ( N > 70 )
+				//		cloudType = 2;
 				}
       			/*	jos RH500 > 65, tulos 2501 (cirrus)
       				ellei, niin tulos 2305 (stratocumulus)
@@ -489,24 +483,24 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
             	if ( kIndex > 25 )
 				{
 					cloudCode = 3309;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 				
 				else if ( kIndex > 20 )
 				{
 					cloudCode = 2303;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 				
 				else if ( kIndex > 15 )
 				{
 					cloudCode = 2302;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 				else if ( MATAKO == 1 )
 				{
 					cloudCode = 2303;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 				/*
 				Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
@@ -521,27 +515,22 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				if ( RH500 > 60 )
 				{
 					cloudCode = 1501;
-					//cloudType = 4;//?;
 				}
 
 				else
 				{
 					cloudCode = 1305;
-					//cloudType = 4;//?;
 				}
 				
 				if ( RH700 > 70 )
 				{					
 					cloudCode = 1403;
-					//cloudType = 4;//?;
 				}
 
 				if ( RH850 > 80 )
 				{
 					cloudCode = 1305;
-					//cloudType = 4;//?;
 				}
-				
 				
       			//	jos RH500 > 60, niin tulos 1501 (ohutta cirrusta), muuten tulos 1305 (alapilveä)
       			//	Jos RH700 > 70, tulos 1403 (keskipilveä)
@@ -550,31 +539,30 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				if ( kIndex > 25 )
 				{
 					cloudCode = 1309;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 
 				else if ( kIndex > 20 )
 				{
 					cloudCode = 1303;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 
 				else if ( kIndex > 15 )
 				{
 					cloudCode = 1302;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 
 				else if ( MATAKO == 2 )
 				{
 					cloudCode = 1301;
-					//cloudType = 4;//?;
 				}
 
 				else if ( MATAKO == 1 )
 				{
 					cloudCode = 1303;
-					cloudType = 4;
+				//	cloudType = 4;
 				}
 
 				/*
@@ -593,12 +581,12 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
       			if ( MATAKO == 1 )
       			{
       				cloudCode = 1303;
-      				cloudType = 4;
+      			//	cloudType = 4;
       			}
       		}
 			//Jälkikäsittely:
 
-      		if ( cloudType == 2 && T850 < -9 )
+      		/*if ( cloudType == 2 && T850 < -9 )
       			cloudType = 5;
 
       		else if ( cloudType == 4 )
@@ -608,13 +596,13 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
       			else if (kIndex >= 27)
       				cloudType = 35;
-      		}
+      		}*/
 				/*Jos tyyppi = 2 ja T850 < -9, tyyppi = 5 (lumisade alapilvistä)
 				Jos tyyppi = 4, ja
       				kIndex > 37, tyyppi = 45
       				kIndex > 27, tyyppi = 35
       				*/
-			
+		
 
 			if (!myTargetInfo->Value(cloudCode))
 			{
