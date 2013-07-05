@@ -35,7 +35,7 @@ const string itsName("fog");
 
 fog::fog() : itsUseCuda(false)
 {
-	itsClearTextFormula = "FOG = (T2M-TDGround + TBase > -0.3 && FF10M < 5)  ? 607 : 0";
+	itsClearTextFormula = "FOG = (T2M-TDGround> -0.3 && FF10M < 5)  ? 607 : 0";
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
@@ -201,11 +201,6 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 	// Required source parameters
 
-	/*
-	 * eg. param PParam("P-Pa"); for pressure in pascals
-	 *
-	 */
-
 	//2m kastepiste
 	//10m tuulen nopeus
 	//alustan lämpötila
@@ -296,12 +291,12 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 		shared_ptr<NFmiGrid> dewGrid(dewInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> windGrid(windInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = (*myTargetInfo->Grid() == *groundInfo->Grid() && *myTargetInfo->Grid() == *dewInfo->Grid() && *myTargetInfo->Grid() == *windInfo->Grid() );
+		bool equalGrids = (*myTargetInfo->Grid() == *groundInfo->Grid() 
+						&& *myTargetInfo->Grid() == *dewInfo->Grid() 
+						&& *myTargetInfo->Grid() == *windInfo->Grid() );
 
 
 		string deviceType;
-
-
 
 		deviceType = "CPU";
 
@@ -311,24 +306,28 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 		targetGrid->Reset();
 
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
+		dewGrid->Reset();
+		groundGrid->Reset();
+		windGrid->Reset();
+
+		while (myTargetInfo->NextLocation() 
+			&& targetGrid->Next() 
+			&& groundGrid->Next()
+			&& dewGrid->Next() 
+			&& windGrid->Next() )
 		{
 
 			count++;
 
-			/*
-			 * interpolation happens here
-			 *
-			 */
-			double t2m = kFloatMissing;
+			double dt2m = kFloatMissing;
 			double wind10m = kFloatMissing;
 			double tGround = kFloatMissing;
 
-			InterpolateToPoint(targetGrid, groundGrid, equalGrids, t2m);
-			InterpolateToPoint(targetGrid, dewGrid, equalGrids, tGround);
+			InterpolateToPoint(targetGrid, groundGrid, equalGrids, tGround);
+			InterpolateToPoint(targetGrid, dewGrid, equalGrids, dt2m);
 			InterpolateToPoint(targetGrid, windGrid, equalGrids, wind10m);
 
-			if (tGround == kFloatMissing || t2m == kFloatMissing || wind10m == kFloatMissing)
+			if (tGround == kFloatMissing || dt2m == kFloatMissing || wind10m == kFloatMissing)
 			{
 				missingCount++;
 
@@ -336,15 +335,11 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 				continue;
 			}
 
-			/*
-			 * Calculations go here
-			 *
-			 */
 
-			double TBase = 273.15;
+			//double TBase = 273.15;
 			double fog = 0;
 
-			if (t2m-tGround + TBase > -0.3 && wind10m < 5 )
+			if (dt2m-tGround > -0.3 && wind10m < 5 )
 				fog = 607;
 			//else
 			//	fog = 0;

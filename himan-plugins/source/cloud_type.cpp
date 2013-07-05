@@ -647,7 +647,7 @@ int cloud_type::DoMatako(double T2m, double T850)
 	if ( T2m >= 8 && T2m - T850 >= 10 ) 
 		return 2;
 	
-	if ( T2m >= 0 && T850 <= 0 && T2m - T850 >= 10 ) 
+	else if ( T2m >= 0 && T850 <= 0 && T2m - T850 >= 10 ) 
 		return 1;
 	
 	return 0;
