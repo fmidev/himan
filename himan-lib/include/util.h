@@ -152,6 +152,18 @@ himan::point UVToGeographical(double longitude, const himan::point& stereoUV);
 
 double ToPower(double value, double power);
 
+/**
+ * @brief Calculates Relative Topography between the two given fields in Geop
+ * @param level1 Value of pressure level1
+ * @param level2 Value of pressure level2
+ * @param z1 Geopotential height of level1, Use pressure if level1 = 1000
+ * @param z2 Geopotential height of level2
+ * @return Relative Topography in Geopotential
+ */
+
+double RelativeTopography(int level1, int level2, double z1, double z2);
+
+
 } // namespace util
 } // namespace himan
 

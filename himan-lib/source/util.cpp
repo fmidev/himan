@@ -375,3 +375,29 @@ double util::ToPower(double value, double power)
 
   return divisor;
 }
+
+double util::RelativeTopography(int level1, int level2, double z1, double z2)
+{
+    
+	int coefficient = 1;
+    double topography = 0;
+    double height = 0;
+    
+    if (level1 > level2) 
+    {
+      coefficient = -1;
+    }
+
+    if (level1 == 1000) // make z from from pressure
+    {
+    	height = 8.1 * ((z1 * 0.01) - 1000); // metres
+    }
+    else
+    {
+    	height = z1 * 0.10197; // convert to metres z/9.81
+    }
+    
+    topography = coefficient * (height - (z2 * 0.10197)); 
+
+	return topography;
+}
