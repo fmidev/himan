@@ -83,7 +83,7 @@ void cloud_type::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Set target parameter to potential temperature
 	 * - name CLDSYM-N
 	 * - univ_id 328
-	 * - grib2 descriptor X'Y'Z
+	 * - grib2 descriptor 0'6'8
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.

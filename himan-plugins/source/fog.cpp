@@ -35,7 +35,7 @@ const string itsName("fog");
 
 fog::fog() : itsUseCuda(false)
 {
-	itsClearTextFormula = "FOG = (T2M-TDGround> -0.3 && FF10M < 5)  ? 607 : 0";
+	itsClearTextFormula = "FOG = (DT2M-TGround> -0.3 && FF10M < 5) ? 607 : 0";
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
@@ -83,7 +83,7 @@ void fog::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Set target parameter to potential temperature
 	 * - name PARM_NAME
 	 * - univ_id UNIV_ID
-	 * - grib2 descriptor X'Y'Z
+	 * - grib2 descriptor 0'6'8
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
@@ -98,8 +98,8 @@ void fog::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	//temp parameters
 	theRequestedParam.GribDiscipline(0);
-	theRequestedParam.GribCategory(0);
-	theRequestedParam.GribParameter(0);
+	theRequestedParam.GribCategory(6);
+	theRequestedParam.GribParameter(8);
 	
 	// GRIB 1
 
