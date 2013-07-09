@@ -401,3 +401,14 @@ double util::RelativeTopography(int level1, int level2, double z1, double z2)
 
 	return topography;
 }
+
+int util::LowConvection(double T2m, double T850)
+{
+	if ( T2m >= 8 && T2m - T850 >= 10 ) 
+		return 2;
+	
+	else if ( T2m >= 0 && T850 <= 0 && T2m - T850 >= 10 ) 
+		return 1;
+	
+	return 0;
+}

@@ -163,6 +163,13 @@ double ToPower(double value, double power);
 
 double RelativeTopography(int level1, int level2, double z1, double z2);
 
+/**
+ * @brief Calculates low convection for a point.
+ * @param T2m Value of 2m temperature
+ * @param T850 Value of temperature at 850 hPa pressure level
+ * @return convection value
+ */
+int LowConvection(double T2m, double T850);
 
 } // namespace util
 } // namespace himan
