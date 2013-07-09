@@ -16,6 +16,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
+#include "util.h"
 #include "writer.h"
 #include "neons.h"
 #include "pcuda.h"
@@ -367,7 +368,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			T2m = T2m - TBase;
 			T850 = T850 - TBase;
 			
-			int MATAKO = DoMatako(T2m, T850);
+			int lowConvection = util::LowConvection(T2m, T850);
 			
 			//data comes as 0..1 instead of 0-100%
 			N *= 100;
@@ -435,7 +436,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					cloudCode = 2302;
 				//	cloudType = 4;
 				}
-				else if ( MATAKO == 1 )
+				else if ( lowConvection == 1 )
 				{
 					cloudCode = 2303;
 				//	cloudType = 4;
@@ -444,7 +445,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
 				Jos kIndex > 20, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
 				Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4
-				Jos MATAKO = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
+				Jos lowConvection = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
 				*/
 			
 			}
@@ -497,7 +498,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					cloudCode = 2302;
 				//	cloudType = 4;
 				}
-				else if ( MATAKO == 1 )
+				else if ( lowConvection == 1 )
 				{
 					cloudCode = 2303;
 				//	cloudType = 4;
@@ -506,7 +507,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
 		    	Jos kIndex > 20, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4		
 		    	Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4		
-				Jos MATAKO = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
+				Jos lowConvection = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
 				*/
 			}
 			else if ( N > 10 )
@@ -554,12 +555,12 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				//	cloudType = 4;
 				}
 
-				else if ( MATAKO == 2 )
+				else if ( lowConvection == 2 )
 				{
 					cloudCode = 1301;
 				}
 
-				else if ( MATAKO == 1 )
+				else if ( lowConvection == 1 )
 				{
 					cloudCode = 1303;
 				//	cloudType = 4;
@@ -569,16 +570,16 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				Jos kIndex > 25, niin tulos 1309 (korkea kuuropilvi), tyyppi 4
 				Jos kIndex > 20, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
 				Jos kIndex > 15, niin tulos 1302 (konvektiopilvi), tyyppi 4
-				Jos MATAKO = 2, niin tulos 1301 (poutapilvi)
-				Jos MATAKO = 1, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
+				Jos lowConvection = 2, niin tulos 1301 (poutapilvi)
+				Jos lowConvection = 1, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
 				*/
 			}
 			else
 				//Jos N 0…10 %
 			{
-      			//tulos 0. Jos MATAKO = 1, tulos 1303, tyyppi 4
+      			//tulos 0. Jos lowConvection = 1, tulos 1303, tyyppi 4
       			cloudCode = 0;
-      			if ( MATAKO == 1 )
+      			if ( lowConvection == 1 )
       			{
       				cloudCode = 1303;
       			//	cloudType = 4;
@@ -640,17 +641,4 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 		}
 	}
-}
-
-int cloud_type::DoMatako(double T2m, double T850)
-{
-	if ( T2m >= 8 && T2m - T850 >= 10 ) 
-		return 2;
-	
-	else if ( T2m >= 0 && T850 <= 0 && T2m - T850 >= 10 ) 
-		return 1;
-	
-	return 0;
-	//Menetelmä: 	T2 >= 8 && T2 - T850 >= 10, tulos on 2, 
-	//				T2 > 0 && T850 < 0 && T2 - T850 >= 10, tulos on 1
 }
