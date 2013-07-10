@@ -54,8 +54,7 @@ private:
 
     void Run(std::shared_ptr<info>, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
     void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
-    int RelativeTopo(int p1, int p2, double z1, double z2);
-
+    std::shared_ptr<info> FetchSourceRR(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel);
     bool itsUseCuda;
     int itsCudaDeviceCount;
 };

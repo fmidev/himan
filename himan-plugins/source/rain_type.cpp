@@ -1,15 +1,15 @@
 /**
  * @file rain_type
  *
- * Template for future plugins.
  *
  * @date Apr 10, 2013
- * @author partio, peramaki
+ * @author partio, peramaki, aalto
  */
 
 #include "rain_type.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
+#include "util.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
@@ -206,32 +206,6 @@ void rain_type::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 	}
 }
 
-int rain_type::RelativeTopo(int p1, int p2, double z1, double z2)
-{
-    
-	int zvakio = 1;
-    int rtopo = 0;
-    double h = 0;
-    
-    if (p1 > p2) 
-    {
-      zvakio = -1;
-    }
-
-    if (p1 == 1000) // make z from from pressure
-    {
-    	h = 8.1 * ((z1 * 0.01) - 1000); // metres
-    }
-    else
-    {
-    	h = z1 * 0.10197; // convert 2 metres z/9.81
-    }
-    
-    rtopo = zvakio * (h - (z2 * 0.10197)); 
-
-	return rtopo;
-}
-
 /*
  * Calculate()
  *
@@ -273,16 +247,52 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
+		long paramStep = 1;
 		shared_ptr<info> PInfo;
 		shared_ptr<info> Z850Info;
-                shared_ptr<info> T850Info;
+        shared_ptr<info> T850Info;
 		shared_ptr<info> TInfo;
 		shared_ptr<info> RRInfo;
 		shared_ptr<info> CloudInfo;
 		shared_ptr<info> KindexInfo;
-
+		shared_ptr<info> prevRRInfo;
+		
 		try
 		{
+			// Fetch previous rain. Calculate average from these.
+			try
+			{
+				forecast_time prevTimeStep = myTargetInfo->Time();
+				prevTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -paramStep);				
+
+				prevRRInfo = FetchSourceRR(conf,prevTimeStep,myTargetInfo->Level());
+
+			}
+			catch (HPExceptionType e)
+			{
+				switch (e)
+				{
+					case kFileDataNotFound:
+						myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+						myTargetInfo->Data()->Fill(kFloatMissing);
+
+						if (conf->StatisticsEnabled())
+						{
+							conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+							conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						}
+
+						continue;
+						break;
+
+					default:
+						throw runtime_error(ClassName() + ": Unable to proceed");
+						break;
+				}      
+				
+
+			}
+
 			/*
 			 *	Parameter infos are made here
 			 *
@@ -291,12 +301,10 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 								 myTargetInfo->Time(),
 								 PLevel,
 								 PParam);
-
 			Z850Info = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 Z850Level,
 								 ZParam);
-
 			TInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T2Level,
@@ -313,10 +321,10 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 								 myTargetInfo->Time(),
 								 PLevel,
 								 KindexParam);
-                        T850Info = theFetcher->Fetch(conf,
-                                                                 myTargetInfo->Time(),
-                                                                 Z850Level,
-                                                                 TParam);
+            T850Info = theFetcher->Fetch(conf,
+                                 myTargetInfo->Time(),
+                                 Z850Level,
+                                 TParam);
 
 		}
 		catch (HPExceptionType e)
@@ -364,13 +372,14 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> CloudGrid(CloudInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> KindexGrid(KindexInfo->Grid()->ToNewbaseGrid());
-                shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
+        shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
+        shared_ptr<NFmiGrid> PrevRRGrid(prevRRInfo->Grid()->ToNewbaseGrid());
 
 		bool equalGrids = (		*myTargetInfo->Grid() == *PInfo->Grid() &&
                                 *myTargetInfo->Grid() == *Z850Info->Grid() &&
                                 *myTargetInfo->Grid() == *TInfo->Grid() &&
-				*myTargetInfo->Grid() == *RRInfo->Grid() &&
-				*myTargetInfo->Grid() == *CloudInfo->Grid());
+								*myTargetInfo->Grid() == *RRInfo->Grid() &&
+								*myTargetInfo->Grid() == *CloudInfo->Grid());
 
 
 		string deviceType;
@@ -393,15 +402,16 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				 *
 				 */
 			
-				double rain = 0; // intensiteetti(hetkellinen)
+				double rain; // sateen saakoodi
 				double T;
-                                double T850;
+                double T850;
 				double Z850;
 				double P;
 				double cloudType;
 				double cloud;
 				double reltopo;
 				double RR;
+				double prevRR;
 				double kindex;
 
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
@@ -410,7 +420,8 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
 				InterpolateToPoint(targetGrid, CloudGrid, equalGrids, cloud);
 				InterpolateToPoint(targetGrid, KindexGrid, equalGrids, kindex);
-                                InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
+                InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
+                InterpolateToPoint(targetGrid, PrevRRGrid, equalGrids, prevRR);
 			
 				if (T == kFloatMissing )
 				{
@@ -422,64 +433,65 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 
 				// Koska P1 on 1000Mba, pitää z tehdä paineesta
 				// Sen kautta sitten lasketaan reltopo
-				reltopo = RelativeTopo(1000, 850, P, Z850);
-                
+				reltopo = util::RelativeTopography(1000, 850, P, Z850);
+				
+				double rainPeriod = RR - prevRR;
+
+				if ( rainPeriod <= 0)
+					rainPeriod = 0;
+            
 				// Laske intensiteetti ensin, sitten päättele WaWa-koodi
 				// Voi olla, että tässä on väärä sade
 
-				if (RR > 0.1 && RR < 0.2 ) {
+				if (rainPeriod > 0.01 && rainPeriod < 0.1 ) {
 				  
 					rain = 60;
 				}
-				else if (RR > 0.1 && RR < 0.2 ) 
+				else if (rainPeriod > 0.1 && rainPeriod < 1 ) 
 				{
-                   	 		rain = 61;
+                   	rain = 61;
 				}
-				else if (RR > 1 && RR < 5 ) 
+				else if (rainPeriod > 1 && rainPeriod < 3 ) 
 				{
-                    			rain = 63;
+                    rain = 63;
 				}
-				else if (RR > 5 ) 
+				else if (rainPeriod > 3 ) 
 				{
-                    			rain = 65;
+                    rain = 65;
 				}
-				else 
-				{
-					rain = 0;
-				}
-
+				
 				// Pilvikoodista päätellään pilvityyppi
 				// Päättelyketju vielä puutteellinen, logiikan voi ehkä siirtää 
 				// cloud_type plugarista
 
 				if (cloud == 3307) 
 				{
-					cloudType = 2;
+					cloudType = 2;  // sade alapilvesta
 				}
 				else if (cloud == 3604) 
 				{
-				    cloudType = 3;	
+				    cloudType = 3;	// sade paksusta pilvesta
 				}
 				else if (cloud == 3309 || cloud == 2303 || cloud == 2302 || cloud == 2303
 					 || cloud == 2307 || cloud == 3309 || cloud == 2303 || cloud == 2302
 					 || cloud == 1309 || cloud == 1303 || cloud == 1302)
 				{
-				   cloudType = 4; 	
+				   cloudType = 4; 	// kuuropilvi
 				}
 
 				// Ukkoset
 
 				if ( cloudType == 2 && T850 < -9 )
-      			           cloudType = 5;  
+      			           cloudType = 5;  // lumisade
 
-      		                if ( cloudType == 4 )
-      		                {
-      			           if (kindex >= 37)
-      				      cloudType = 45;
+      		    if ( cloudType == 4 )
+      		    {
+      			    if (kindex >= 37)
+      				    cloudType = 45;  // ukkossade
 
-      			           else if (kindex >= 27)
-      				      cloudType = 35;
-      		                }
+      			    else if (kindex >= 27)
+      				    cloudType = 35; // ukkossade
+      		    }
 
 				
 				// Sitten itse HSADE
@@ -495,7 +507,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
                      	}
                      	else if (reltopo > 1300) 
                      	{
-					   		rain = rain;   // Vesi
+					   		rain = 60;   // Vesi
 					 	}
 					 	else 
 					 	{
@@ -649,4 +661,22 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 		}
 	}
+}
+
+shared_ptr<himan::info> rain_type::FetchSourceRR(shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel)
+{
+	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+
+	try
+	{
+		return f->Fetch(conf,
+						wantedTime,
+						wantedLevel,
+						param("RR-1-MM"));
+   	}
+	catch (HPExceptionType e)
+	{
+		throw e;
+	}
+
 }
