@@ -402,7 +402,6 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				 *
 				 */
 			
-				double rain; // sateen saakoodi
 				double T;
                 double T850;
 				double Z850;
@@ -436,6 +435,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				reltopo = util::RelativeTopography(1000, 850, P, Z850);
 				
 				double rainPeriod = RR - prevRR;
+				double rain = 0; // sateen saakoodi, oletus pouta
 
 				if ( rainPeriod <= 0)
 					rainPeriod = 0;
@@ -482,7 +482,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				// Ukkoset
 
 				if ( cloudType == 2 && T850 < -9 )
-      			           cloudType = 5;  // lumisade
+      				cloudType = 5;  // lumisade
 
       		    if ( cloudType == 4 )
       		    {
@@ -507,7 +507,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
                      	}
                      	else if (reltopo > 1300) 
                      	{
-					   		rain = 60;   // Vesi
+					   		rain = rain;   // Vesi
 					 	}
 					 	else 
 					 	{
@@ -604,7 +604,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 
                 }
 
-                if (reltopo > 1289) // Lopuksi jäätävä sade
+                if (reltopo >= 1289) // Lopuksi jäätävä sade
                 {
                 	if (rain >= 60 && rain <= 61 && T <= 270.15)
                   	{
