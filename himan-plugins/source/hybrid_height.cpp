@@ -325,7 +325,10 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 			if (!firstLevel)
 				prevHGrid->Reset();
 
-			while (myTargetInfo->NextLocation() && targetGrid->Next() && prevTGrid->Next() && prevPGrid->Next())
+			while (	myTargetInfo->NextLocation() && 
+				targetGrid->Next() && 
+				prevTGrid->Next() && 
+				prevPGrid->Next())
 			{
 
 				count++;

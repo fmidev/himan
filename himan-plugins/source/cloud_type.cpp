@@ -1,7 +1,5 @@
 /**
- * @file cloud_type
- *
- * Template for future plugins.
+ * @file cloud_type.cpp
  *
  * @date Jun 13, 2013
  * @author peramaki
@@ -330,8 +328,23 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		myTargetInfo->ResetLocation();
 
 		targetGrid->Reset();
+		T2mGrid->Reset();
+		NGrid->Reset();
+		KGrid->Reset();
+		T850Grid->Reset();
+		RH850Grid->Reset();
+		RH700Grid->Reset();
+		RH500Grid->Reset();
 
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
+		while ( myTargetInfo->NextLocation() && 
+				targetGrid->Next() &&
+				T2mGrid->Next() &&
+				NGrid->Next() &&
+				KGrid->Next() &&
+				T850Grid->Next() &&
+				RH850Grid->Next() &&
+				RH700Grid->Next() &&
+				RH500Grid->Next() )
 		{
 
 			count++;

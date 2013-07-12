@@ -1,7 +1,5 @@
 /**
- * @file fog
- *
- * Template for future plugins.
+ * @file fog.cpp
  *
  * @date Jul 3, 2013
  * @author peramaki

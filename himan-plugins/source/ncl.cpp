@@ -1,5 +1,5 @@
 /**
- * @file example_plugin.cpp
+ * @file ncl.cpp
  *
  * Template for future plugins.
  *
@@ -7,7 +7,7 @@
  * @author peramaki
  */
 
-#include "example_header.h"
+#include "ncl.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
@@ -31,15 +31,15 @@ using namespace himan::plugin;
 
 #include "cuda_extern.h"
 
-const string itsName("example_plugin");
+const string itsName("ncl");
 
-example_plugin::example_plugin() : itsUseCuda(false)
+ncl::ncl() : itsUseCuda(false)
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
 
-void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
+void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
@@ -90,18 +90,29 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 	 */
 
 	vector<param> theParams;
-
-	//param theRequestedParam(PARM_ NAME, UNIV_ID);
-
+	
 	// GRIB 2
+	
+	param theRequestedParam;
+	theRequestedParam.GribDiscipline(0);
+	theRequestedParam.GribCategory(3);
+	theRequestedParam.GribParameter(6);
 
-	/*
-	 * theRequestedParam.GribDiscipline(X);
-	 * theRequestedParam.GribCategory(Y);
-	 * theRequestedParam.GribParameter(Z);
-	 */
 
-	// GRIB 1
+	if (conf->Exists("temp") && conf->GetValue("temp") == "-20" )
+	{
+    	theRequestedParam.Name("HM20C-M");
+    	theRequestedParam.UnivId(28);
+    	targetTemperature = -20;
+    }
+
+    if (conf->Exists("temp") && conf->GetValue("temp") == "0" )
+	{
+    	theRequestedParam.Name("H0C-M");
+    	theRequestedParam.UnivId(270);
+    	targetTemperature = 0;
+    	
+    }
 
 	/*
 	 * GRIB 1 parameters go here
@@ -153,7 +164,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		targetInfos[i] = shared_ptr<info> (new info(*targetInfo));
 
-		boost::thread* t = new boost::thread(&example_plugin::Run,
+		boost::thread* t = new boost::thread(&ncl::Run,
 								this,
 								targetInfos[i],
 								conf,
@@ -177,7 +188,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 }
 
-void example_plugin::Run(shared_ptr<info> myTargetInfo,
+void ncl::Run(shared_ptr<info> myTargetInfo,
 				shared_ptr<const plugin_configuration> conf,
 				unsigned short threadIndex)
 {
@@ -194,21 +205,17 @@ void example_plugin::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-	// Required source parameters
+	param HParam("HL-M");
+	param TParam("T-K");
 
-	/*
-	 * eg. param PParam("P-Pa"); for pressure in pascals
-	 *
-	 */
+	int levelNumber = 65;
 
-	param exampleParam("quantity-unit_name");
-	// ----	
-
+	level HLevel(himan::kHybrid, levelNumber, "HYBRID");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
@@ -221,22 +228,24 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		shared_ptr<info> exampleInfo;
+		shared_ptr<info> HInfo;
+		shared_ptr<info> TInfo;
+		shared_ptr<info> prevHInfo;
+		shared_ptr<info> prevTInfo;
+
 		try
 		{
-			/*
-			 *	Parameter infos are made here
-			 *
-			 */
 
-			// Source info for exampleParam
-			exampleInfo = theFetcher->Fetch(conf,
+			HInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 exampleParam);
+								 HLevel,
+								 HParam);
 			
-			// ----
-
+			TInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 HLevel,
+								 TParam);
+			
 		}
 		catch (HPExceptionType e)
 		{
@@ -276,70 +285,70 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 		 *
 		 */
 
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> exampleGrid(exampleInfo->Grid()->ToNewbaseGrid());
+		bool firstLevel = true;
 
-		bool equalGrids = (*myTargetInfo->Grid() == *exampleInfo->Grid() );
+		myTargetInfo->Data()->Fill(0);
 
+			
+		
+		
+		HInfo->ResetLocation();
+		TInfo->ResetLocation();
 
-		string deviceType;
-
-
-		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+		level curLevel = HLevel;
+		level prevLevel;
+		
+		while (--levelNumber > 0)
 		{
-	
-			deviceType = "GPU";
+			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
-			size_t N = exampleGrid->Size();
 
-			float* exampleOut = new float[N]; // array that cuda devices will store data
-			double* infoData = new double[N]; // array that's stored to info instance
+			targetGrid->Reset();		
+			myTargetInfo->ResetLocation();	
+			
+			 //minneköhän tää pitäis pistää
+			//itsLogger->Debug("kierros woop " +  boost::lexical_cast<string> (count) );
 
-			example_cuda::DoCuda(exampleGrid->DataPool()->Data(), exampleOut, N, threadIndex-1);
+			shared_ptr<NFmiGrid> HGrid(HInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> prevHGrid;
+			shared_ptr<NFmiGrid> prevTGrid;
 
-			for (size_t i = 0; i < N; i++)
+			if (!firstLevel)
 			{
-				infoData[i] = static_cast<float> (exampleOut[i]);
-
-				if (infoData[i] == kFloatMissing)
-				{
-					missingCount++;
-				}
-
-				count++;
+				prevHGrid = shared_ptr<NFmiGrid>(prevHInfo->Grid()->ToNewbaseGrid());
+				prevTGrid = shared_ptr<NFmiGrid>(prevTInfo->Grid()->ToNewbaseGrid());
 			}
 
-			myTargetInfo->Data()->Set(infoData, N);
 
-			delete [] infoData;
-			delete [] exampleOut;
+			bool equalGrids = (*myTargetInfo->Grid() == *HInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() && ( firstLevel || ( *myTargetInfo->Grid() == *prevHInfo->Grid() && *myTargetInfo->Grid() == *prevTInfo->Grid() ) ) );
 
-		}
-		else
-		{
-
-			deviceType = "CPU";
-
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
+			while ( myTargetInfo->NextLocation() && targetGrid->Next() && HGrid->Next() && TGrid->Next() && ( firstLevel || (prevHGrid->Next() && prevTGrid->Next() ) ) )
 			{
-
 				count++;
+				string deviceType;
 
-				/*
-				 * interpolation happens here
-				 *
-				 */
-				double example = kFloatMissing;
+				deviceType = "CPU";
 
-				InterpolateToPoint(targetGrid, exampleGrid, equalGrids, example);
+				double height = kFloatMissing;
+				double temp = kFloatMissing;
+				double prevHeight = kFloatMissing;
+				double prevTemp = kFloatMissing;
 
-				if (example == kFloatMissing )
+				double targetHeight = myTargetInfo->Value();
+
+				assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
+				InterpolateToPoint(targetGrid, HGrid, equalGrids, height);
+				InterpolateToPoint(targetGrid, TGrid, equalGrids, temp);
+
+				if (!firstLevel)
+				{
+					InterpolateToPoint(targetGrid, prevHGrid, equalGrids, prevHeight);
+					InterpolateToPoint(targetGrid, prevTGrid, equalGrids, prevTemp);
+				}
+
+				if (height == kFloatMissing || temp == kFloatMissing || (!firstLevel && ( prevHeight == kFloatMissing || prevTemp == kFloatMissing)))
 				{
 					missingCount++;
 
@@ -347,24 +356,53 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 					continue;
 				}
 
-				/*
-				 * Calculations go here
-				 *
-				 */
-				
+				temp -= 273.15;
+				prevTemp -= 273.15;
 
-				if (!myTargetInfo->Value(example))
+				if (targetHeight == 0)
+				{
+					//itsLogger->Debug("level: " + boost::lexical_cast<string> (height));
+					
+					if (temp < targetTemperature)
+					{
+						if (!firstLevel)
+						{
+							double p_rel = (targetTemperature - temp) / (prevTemp - temp);
+							targetHeight = height + (prevHeight - height) * p_rel;
+						}
+						else
+						{
+							targetHeight = -99999;
+						}
+					}
+				}
+				//Inversiotilanteessa pelastetaan vielä pisteitä uudelleen laskentaan
+				else if (targetHeight != 0 && temp > targetTemperature)
+				{
+					targetHeight = 0;
+				}
+
+		
+
+				if (!myTargetInfo->Value(targetHeight))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
+
 			}
 
-		}
+			prevLevel = curLevel;
+			curLevel = level(himan::kHybrid, levelNumber, "HYBRID");
+			
+			HInfo = FetchPrevious(conf, myTargetInfo->Time(), curLevel, HParam);
+			TInfo = FetchPrevious(conf, myTargetInfo->Time(), curLevel, TParam);
+			
+			prevHInfo = FetchPrevious(conf, myTargetInfo->Time(), prevLevel, HParam);
+			prevTInfo = FetchPrevious(conf, myTargetInfo->Time(), prevLevel, TParam);
 
 
-
-
-
+			firstLevel = false;
+		} 
 
 		if (conf->StatisticsEnabled())
 		{
@@ -377,8 +415,8 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 
 			conf->Statistics()->AddToMissingCount(missingCount);
 			conf->Statistics()->AddToValueCount(count);
+		}	
 
-		}
 
 		/*
 		 * Now we are done for this level
@@ -395,4 +433,21 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 		}
 	}
+}
+shared_ptr<himan::info> ncl::FetchPrevious(shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam)
+{
+	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+
+	try
+	{
+		return f->Fetch(conf,
+						wantedTime,
+						wantedLevel,
+						wantedParam);
+   	}
+	catch (HPExceptionType e)
+	{
+		throw e;
+	}
+
 }
