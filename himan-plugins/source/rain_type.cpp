@@ -225,6 +225,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 	 */
 
 	param ZParam("Z-M2S2");
+	param NParam("N-0TO1");
 	param TParam("T-K");
 	param PParam("P-PA");
 	param CloudParam("CLDSYM-N");
@@ -251,6 +252,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		shared_ptr<info> PInfo;
 		shared_ptr<info> Z850Info;
         shared_ptr<info> T850Info;
+		shared_ptr<info> NInfo;
 		shared_ptr<info> TInfo;
 		shared_ptr<info> RRInfo;
 		shared_ptr<info> CloudInfo;
@@ -305,6 +307,10 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 								 myTargetInfo->Time(),
 								 Z850Level,
 								 ZParam);
+			NInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 PLevel,
+								 NParam);
 			TInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 T2Level,
@@ -368,6 +374,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> Z850Grid(Z850Info->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> NGrid(NInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> CloudGrid(CloudInfo->Grid()->ToNewbaseGrid());
@@ -401,18 +408,20 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				 * interpolation happens here
 				 *
 				 */
-			
+
+				double N;
 				double T;
                 double T850;
 				double Z850;
 				double P;
-				double cloudType;
+				double cloudType = 704; // hil_pp:n oletusarvo
 				double cloud;
 				double reltopo;
 				double RR;
 				double prevRR;
 				double kindex;
 
+				InterpolateToPoint(targetGrid, NGrid, equalGrids, N);
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
 				InterpolateToPoint(targetGrid, Z850Grid, equalGrids, Z850);
@@ -464,7 +473,9 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				// Päättelyketju vielä puutteellinen, logiikan voi ehkä siirtää 
 				// cloud_type plugarista
 
-				if (cloud == 3307) 
+				N *= 100;
+
+				if (cloud == 3307 || ( cloud = 2307 && N > 70) ) 
 				{
 					cloudType = 2;  // sade alapilvesta
 				}
