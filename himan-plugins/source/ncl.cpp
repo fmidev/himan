@@ -298,13 +298,13 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 		level curLevel = HLevel;
 		level prevLevel;
 		
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+
 		while (--levelNumber > 0)
 		{
-			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-
 
 			targetGrid->Reset();		
-			myTargetInfo->ResetLocation();	
+			myTargetInfo->FirstLocation();	
 			
 			 //minneköhän tää pitäis pistää
 			//itsLogger->Debug("kierros woop " +  boost::lexical_cast<string> (count) );
@@ -321,7 +321,9 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			}
 
 
-			bool equalGrids = (*myTargetInfo->Grid() == *HInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() && ( firstLevel || ( *myTargetInfo->Grid() == *prevHInfo->Grid() && *myTargetInfo->Grid() == *prevTInfo->Grid() ) ) );
+			bool equalGrids = (	*myTargetInfo->Grid() == *HInfo->Grid() 
+								&& *myTargetInfo->Grid() == *TInfo->Grid() 
+								&& ( firstLevel || ( *myTargetInfo->Grid() == *prevHInfo->Grid() && *myTargetInfo->Grid() == *prevTInfo->Grid() ) ) );
 
 			while ( myTargetInfo->NextLocation() && targetGrid->Next() && HGrid->Next() && TGrid->Next() && ( firstLevel || (prevHGrid->Next() && prevTGrid->Next() ) ) )
 			{
@@ -372,7 +374,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 						}
 						else
 						{
-							targetHeight = -99999;
+							targetHeight = kFloatMissing;
 						}
 					}
 				}
@@ -383,7 +385,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 				}
 
 		
-
+				//itsLogger->Debug("level: " + boost::lexical_cast<string> (targetHeight));
 				if (!myTargetInfo->Value(targetHeight))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
