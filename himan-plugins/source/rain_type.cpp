@@ -483,8 +483,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				{
 				    cloudType = 3;	// sade paksusta pilvesta
 				}
-				else if (cloud == 3309 || cloud == 2303 || cloud == 2302 || cloud == 2303
-					 || cloud == 2307 || cloud == 3309 || cloud == 2303 || cloud == 2302
+				else if (cloud == 3309 || cloud == 2303 || cloud == 2302				 
 					 || cloud == 1309 || cloud == 1303 || cloud == 1302)
 				{
 				   cloudType = 4; 	// kuuropilvi
