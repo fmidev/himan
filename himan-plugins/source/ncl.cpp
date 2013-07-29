@@ -300,6 +300,10 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 		
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
+		string deviceType;
+		deviceType = "CPU";
+
+
 		while (--levelNumber > 0)
 		{
 
@@ -328,9 +332,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			while ( myTargetInfo->NextLocation() && targetGrid->Next() && HGrid->Next() && TGrid->Next() && ( firstLevel || (prevHGrid->Next() && prevTGrid->Next() ) ) )
 			{
 				count++;
-				string deviceType;
-
-				deviceType = "CPU";
+		
 
 				double height = kFloatMissing;
 				double temp = kFloatMissing;
