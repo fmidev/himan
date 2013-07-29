@@ -623,7 +623,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
                 	}
                 	else if (rain >= 62 && rain <= 65 && T <= 270.15)
                 	{
-				    	rain = 66;
+				    	rain = 67;
                 	}
                 	else if (rain >= 50 && rain <= 51 && T <= 270.15)
                 	{
