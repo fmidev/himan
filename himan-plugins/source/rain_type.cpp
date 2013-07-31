@@ -254,10 +254,10 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
         shared_ptr<info> T850Info;
 		shared_ptr<info> NInfo;
 		shared_ptr<info> TInfo;
-		shared_ptr<info> RRInfo;
 		shared_ptr<info> CloudInfo;
 		shared_ptr<info> KindexInfo;
 		shared_ptr<info> prevRRInfo;
+		shared_ptr<info> nextRRInfo;
 		
 		try
 		{
@@ -266,8 +266,11 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 			{
 				forecast_time prevTimeStep = myTargetInfo->Time();
 				prevTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -paramStep);				
-
 				prevRRInfo = FetchSourceRR(conf,prevTimeStep,myTargetInfo->Level());
+
+				forecast_time nextTimeStep = myTargetInfo->Time();
+				nextTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), paramStep);				
+				nextRRInfo = FetchSourceRR(conf,prevTimeStep,myTargetInfo->Level());
 
 			}
 			catch (HPExceptionType e)
@@ -315,10 +318,6 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 								 myTargetInfo->Time(),
 								 T2Level,
 								 TParam);
-			RRInfo = theFetcher->Fetch(conf,
-								 myTargetInfo->Time(),
-								 PLevel,
-								 PrecParam);
 			CloudInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
 								 PLevel,
@@ -331,6 +330,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
                                  myTargetInfo->Time(),
                                  Z850Level,
                                  TParam);
+
 
 		}
 		catch (HPExceptionType e)
@@ -376,16 +376,15 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		shared_ptr<NFmiGrid> Z850Grid(Z850Info->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> NGrid(NInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> CloudGrid(CloudInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> KindexGrid(KindexInfo->Grid()->ToNewbaseGrid());
         shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
         shared_ptr<NFmiGrid> PrevRRGrid(prevRRInfo->Grid()->ToNewbaseGrid());
+        shared_ptr<NFmiGrid> NextRRGrid(nextRRInfo->Grid()->ToNewbaseGrid());
 
 		bool equalGrids = (		*myTargetInfo->Grid() == *PInfo->Grid() &&
                                 *myTargetInfo->Grid() == *Z850Info->Grid() &&
                                 *myTargetInfo->Grid() == *TInfo->Grid() &&
-								*myTargetInfo->Grid() == *RRInfo->Grid() &&
 								*myTargetInfo->Grid() == *CloudInfo->Grid());
 
 
@@ -417,19 +416,19 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				double cloudType = 704; // hil_pp:n oletusarvo
 				double cloud;
 				double reltopo;
-				double RR;
 				double prevRR;
+				double nextRR;
 				double kindex;
 
 				InterpolateToPoint(targetGrid, NGrid, equalGrids, N);
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
 				InterpolateToPoint(targetGrid, Z850Grid, equalGrids, Z850);
-				InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
 				InterpolateToPoint(targetGrid, CloudGrid, equalGrids, cloud);
 				InterpolateToPoint(targetGrid, KindexGrid, equalGrids, kindex);
                 InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
                 InterpolateToPoint(targetGrid, PrevRRGrid, equalGrids, prevRR);
+                InterpolateToPoint(targetGrid, NextRRGrid, equalGrids, nextRR);
 			
 				if (T == kFloatMissing )
 				{
@@ -443,32 +442,29 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 				// Sen kautta sitten lasketaan reltopo
 				reltopo = util::RelativeTopography(1000, 850, P, Z850);
 				
-				double rainPeriod = RR - prevRR;
 				double rain = 0; // sateen saakoodi, oletus pouta
 
-				if ( rainPeriod <= 0)
-					rainPeriod = 0;
-            
 				// Laske intensiteetti ensin, sitten päättele WaWa-koodi
 				// Voi olla, että tässä on väärä sade
 
-				if (rainPeriod > 0.01 && rainPeriod < 0.1 ) {
+				
+				if (nextRR > 0.01 && prevRR > 0.01 ) {
 				  
 					rain = 60;
 				}
-				else if (rainPeriod > 0.1 && rainPeriod < 1 ) 
+				if (nextRR > 0.1 && prevRR > 0.1 ) 
 				{
                    	rain = 61;
 				}
-				else if (rainPeriod > 1 && rainPeriod < 3 ) 
+				if (nextRR > 1 && prevRR > 1 ) 
 				{
                     rain = 63;
 				}
-				else if (rainPeriod > 3 ) 
+				if (nextRR > 3 && prevRR > 3) 
 				{
                     rain = 65;
 				}
-				
+
 				// Pilvikoodista päätellään pilvityyppi
 				// Päättelyketju vielä puutteellinen, logiikan voi ehkä siirtää 
 				// cloud_type plugarista
@@ -615,28 +611,29 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
                     	rain = 0;
                   	}
 
-                }
+                
 
-                if (reltopo >= 1289) // Lopuksi jäätävä sade
-                {
-                	if (rain >= 60 && rain <= 61 && T <= 270.15)
-                  	{
-                    	rain = 66;
-                	}
-                	else if (rain >= 62 && rain <= 65 && T <= 270.15)
-                	{
-				    	rain = 67;
-                	}
-                	else if (rain >= 50 && rain <= 51 && T <= 270.15)
-                	{
-				    	rain = 56;
-                	}
-                	else if (rain >= 52 && rain <= 55 && T <= 270.15)
-                  	{
-				    	rain = 57;
-                	}
+	                if (reltopo >= 1289) // Lopuksi jäätävä sade
+	                {
+	                	if (rain >= 60 && rain <= 61 && T <= 270.15)
+	                  	{
+	                    	rain = 66;
+	                	}
+	                	else if (rain >= 62 && rain <= 65 && T <= 270.15)
+	                	{
+					    	rain = 67;
+	                	}
+	                	else if (rain >= 50 && rain <= 51 && T <= 270.15)
+	                	{
+					    	rain = 56;
+	                	}
+	                	else if (rain >= 52 && rain <= 55 && T <= 270.15)
+	                  	{
+					    	rain = 57;
+	                	}
 
-                }
+	                }
+	            }
 
 				if (!myTargetInfo->Value(rain))
 				{
