@@ -21,9 +21,9 @@ if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
 
 auxiliary_plugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer']
 
-compiled_plugins = ['icing', 'kindex', 'precipitation', 'seaicing', 'hybrid_pressure', 'hybrid_height', 'cloud_type', 'fog']
+compiled_plugins = ['icing', 'kindex', 'precipitation', 'seaicing', 'hybrid_pressure', 'hybrid_height', 'cloud_type', 'ncl', 'rain_type']
 
-cuda_plugins = ['dewpoint', 'tk2tc','tpot', 'windvector']
+cuda_plugins = ['dewpoint', 'tk2tc','tpot', 'fog', 'windvector']
 
 if have_cuda:
 	env.Tool('cuda')

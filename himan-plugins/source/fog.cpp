@@ -296,55 +296,160 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 		string deviceType;
 
-		deviceType = "CPU";
-
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-		myTargetInfo->ResetLocation();
-
-		targetGrid->Reset();
-
-		dewGrid->Reset();
-		groundGrid->Reset();
-		windGrid->Reset();
-
-		while (myTargetInfo->NextLocation() 
-			&& targetGrid->Next() 
-			&& groundGrid->Next()
-			&& dewGrid->Next() 
-			&& windGrid->Next() )
+#ifdef HAVE_CUDA
+		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
 		{
 
-			count++;
+			deviceType = "GPU";
 
-			double dt2m = kFloatMissing;
-			double wind10m = kFloatMissing;
-			double tGround = kFloatMissing;
+			fog_cuda::fog_cuda_options opts;
+			fog_cuda::fog_cuda_data datas;
 
-			InterpolateToPoint(targetGrid, groundGrid, equalGrids, tGround);
-			InterpolateToPoint(targetGrid, dewGrid, equalGrids, dt2m);
-			InterpolateToPoint(targetGrid, windGrid, equalGrids, wind10m);
+			opts.N = dewInfo->Data()->Size();
+			opts.cudaDeviceIndex = threadIndex-1;
 
-			if (tGround == kFloatMissing || dt2m == kFloatMissing || wind10m == kFloatMissing)
+			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.F), opts.N * sizeof(double), cudaHostAllocMapped));
+			
+			if (dewInfo->Grid()->DataIsPacked())
 			{
-				missingCount++;
+				assert(dewInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
-				myTargetInfo->Value(kFloatMissing);
-				continue;
+				shared_ptr<simple_packed> dtc2m = dynamic_pointer_cast<simple_packed> (dewInfo->Grid()->PackedData());
+
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.DTC2M), opts.N * sizeof(double), cudaHostAllocMapped));
+
+				datas.pDTC2M = *(dtc2m);
+
+				opts.pDTC2M = true;
+			}
+			else
+			{
+				datas.DTC2M = const_cast<double*> (dewInfo->Grid()->Data()->Values());
 			}
 
-
-			//double TBase = 273.15;
-			double fog = 0;
-
-			if (dt2m-tGround > -0.3 && wind10m < 5 )
-				fog = 607;
-			//else
-			//	fog = 0;
-
-			if (!myTargetInfo->Value(fog))
+			if (groundInfo->Grid()->DataIsPacked())
 			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				assert(groundInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+				shared_ptr<simple_packed> tkground = dynamic_pointer_cast<simple_packed> (groundInfo->Grid()->PackedData());
+
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TKGround), opts.N * sizeof(double), cudaHostAllocMapped));
+
+				datas.pTKGround = *(tkground);
+
+				opts.pTKGround = true;
+			}
+			else
+			{
+				datas.TKGround = const_cast<double*> (groundInfo->Grid()->Data()->Values());
+			}
+
+			if (windInfo->Grid()->DataIsPacked())
+			{
+				assert(windInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+				shared_ptr<simple_packed> f10m = dynamic_pointer_cast<simple_packed> (windInfo->Grid()->PackedData());
+
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.FF10M), opts.N * sizeof(double), cudaHostAllocMapped));
+
+				datas.pFF10M = *(ff10m);
+
+				opts.pFF10M = true;
+			}
+			else
+			{
+				datas.FF10M = const_cast<double*> (windInfo->Grid()->Data()->Values());
+			}
+
+			fog_cuda::DoCuda(opts, datas);
+
+			myTargetInfo->Data()->Set(datas.F, opts.N);
+			assert(dewInfo->Grid()->ScanningMode() == groundInfo->Grid()->ScanningMode());
+			assert(dewInfo->Grid()->ScanningMode() == windInfo->Grid()->ScanningMode());
+
+			missingCount = opts.missingValuesCount;
+			count = opts.N;
+			
+			CUDA_CHECK(cudaFreeHost(datas.F));
+
+			if (dewInfo->Grid()->DataIsPacked())
+			{
+				dewInfo->Data()->Set(datas.DTC2M, opts.N);
+				dewInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.DTC2M));
+			}
+
+			if (groundInfo->Grid()->DataIsPacked())
+			{
+				groundInfo->Data()->Set(datas.TKGround, opts.N);
+				groundInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.TKGround));
+			}
+
+			if (windInfo->Grid()->DataIsPacked())
+			{
+				windInfo->Data()->Set(datas.FF10M, opts.N);
+				windInfo->Grid()->PackedData()->Clear();
+				CUDA_CHECK(cudaFreeHost(datas.FF10M));
+			}
+
+			SwapTo(myTargetInfo, dewInfo->Grid()->ScanningMode());
+
+		}
+
+		else 
+#endif
+		{
+			deviceType = "CPU";
+
+			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
+			myTargetInfo->ResetLocation();
+
+			targetGrid->Reset();
+
+			dewGrid->Reset();
+			groundGrid->Reset();
+			windGrid->Reset();
+
+			while (myTargetInfo->NextLocation() 
+				&& targetGrid->Next() 
+				&& groundGrid->Next()
+				&& dewGrid->Next() 
+				&& windGrid->Next() )
+			{
+
+				count++;
+
+				double dt2m = kFloatMissing;
+				double wind10m = kFloatMissing;
+				double tGround = kFloatMissing;
+
+				InterpolateToPoint(targetGrid, groundGrid, equalGrids, tGround);
+				InterpolateToPoint(targetGrid, dewGrid, equalGrids, dt2m);
+				InterpolateToPoint(targetGrid, windGrid, equalGrids, wind10m);
+
+				if (tGround == kFloatMissing || dt2m == kFloatMissing || wind10m == kFloatMissing)
+				{
+					missingCount++;
+
+					myTargetInfo->Value(kFloatMissing);
+					continue;
+				}
+
+
+				//double TBase = 273.15;
+				double fog = 0;
+
+				if (dt2m-tGround > -0.3 && wind10m < 5 )
+					fog = 607;
+				//else
+				//	fog = 0;
+
+				if (!myTargetInfo->Value(fog))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
 			}
 		}
 
