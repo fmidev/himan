@@ -6,7 +6,6 @@
  */
 
 #include "dewpoint.h"
-#include <iostream>
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>

@@ -9,7 +9,6 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include <boost/thread.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -24,10 +23,11 @@
 #include "timer_factory.h"
 #endif
 
+#include "fog_cuda.h"
+#include "cuda_helper.h"
+
 using namespace std;
 using namespace himan::plugin;
-
-#include "cuda_extern.h"
 
 const string itsName("fog");
 
@@ -40,6 +40,13 @@ fog::fog() : itsUseCuda(false)
 
 void fog::Process(std::shared_ptr<const plugin_configuration> conf)
 {
+	unique_ptr<timer> initTimer;
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		initTimer->Start();
+	}
 
 	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
@@ -135,6 +142,12 @@ void fog::Process(std::shared_ptr<const plugin_configuration> conf)
 	Dimension(conf->LeadingDimension());
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(theRequestedParam);
+
+	if (conf->StatisticsEnabled())
+	{
+		initTimer->Stop();
+		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+	}
 
 	/*
 	 * Each thread will have a copy of the target info.
@@ -297,6 +310,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 		string deviceType;
 
 #ifdef HAVE_CUDA
+
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
 		{
 
@@ -348,7 +362,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			{
 				assert(windInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
-				shared_ptr<simple_packed> f10m = dynamic_pointer_cast<simple_packed> (windInfo->Grid()->PackedData());
+				shared_ptr<simple_packed> ff10m = dynamic_pointer_cast<simple_packed> (windInfo->Grid()->PackedData());
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.FF10M), opts.N * sizeof(double), cudaHostAllocMapped));
 

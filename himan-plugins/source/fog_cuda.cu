@@ -46,7 +46,7 @@ __global__ void himan::plugin::fog_cuda::Calculate( const double* __restrict__ d
 		}
 		else
 		{
-			dF[idx] = dDTC2M[idx] - dTKGround[idx] -0.3 && dFF10M[idx] < 5) ? 607 : 0;
+			dF[idx] = (dDTC2M[idx] - dTKGround[idx] -0.3 && dFF10M[idx] < 5) ? 607 : 0;
 			
 		}
 	}
@@ -88,13 +88,13 @@ void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& data
 
 		if (datas.pDTC2M.HasBitmap())
 		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmT, datas.pDTC2M.bitmap, 0));
+			CUDA_CHECK(cudaHostGetDevicePointer(&dbmDTC2M, datas.pDTC2M.bitmap, 0));
 		}
 	}
 	else
 	{
 		CUDA_CHECK(cudaMalloc((void **) &dDTC2M, memsize));
-		CUDA_CHECK(cudaMemcpy(dDTC2M, datas.DTC2MT, memsize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMemcpy(dDTC2M, datas.DTC2M, memsize, cudaMemcpyHostToDevice));
 	}
 
 	if (opts.pTKGround)
