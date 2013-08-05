@@ -101,7 +101,7 @@ if have_cuda:
 
 env.Append(LIBS = libraries)
 
-libgrib_api = env.File('/usr/lib/grib_api/lib/libgrib_api.a')
+libgrib_api = env.File('/usr/lib64/libgrib_api.a')
 
 env.Append(LIBS=libgrib_api)
 
@@ -157,6 +157,7 @@ env.Append(LINKFLAGS = ['-rdynamic'])
 # Defines
 
 env.Append(CPPDEFINES=['UNIX'])
+env.Append(NVCCDEFINES=['HAVE_CUDA'])
 
 if have_cuda:
 	env.Append(CPPDEFINES=['HAVE_CUDA'])
