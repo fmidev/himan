@@ -465,9 +465,9 @@ bool info::PreviousLocation()
 
 bool info::LastLocation()
 {
-    ResetLocation();
+    itsLocationIndex = Grid()->Data()->Size() - 1;
 
-    return PreviousTime();
+    return true;
 }
 
 void info::ResetLocation()
@@ -479,7 +479,7 @@ bool info::FirstLocation()
 {
     ResetLocation();
 
-    return NextTime();
+    return NextLocation();
 }
 
 void info::LocationIndex(size_t theLocationIndex)
