@@ -384,6 +384,11 @@ bool info::FirstTime()
     return itsTimeIterator->First();
 }
 
+bool info::PreviousTime()
+{
+    return itsTimeIterator->Previous();
+}
+
 size_t info::TimeIndex() const
 {
     return itsTimeIterator->Index();
