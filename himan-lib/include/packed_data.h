@@ -22,7 +22,10 @@
 // Define shells so that compilation succeeds
 namespace himan
 {
-	struct packed_data {};
+struct packed_data 
+{
+       	bool HasData() const { return false; }
+};
 }
 
 #else
