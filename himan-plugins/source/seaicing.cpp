@@ -24,6 +24,8 @@
 using namespace std;
 using namespace himan::plugin;
 
+#include "cuda_extern.h"
+
 seaicing::seaicing() : itsUseCuda(false)
 {
 	itsClearTextFormula = "SeaIcing = FF * ( -0.35 -T2m ) / ( 1 + 0.3 * ( T0 + 0.35 ))";
@@ -66,6 +68,12 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Get number of threads to use
 
 	unsigned short threadCount = ThreadCount(conf->ThreadCount());
+        
+        if (conf->StatisticsEnabled())
+	{
+		conf->Statistics()->UsedThreadCount(threadCount);
+	//	conf->Statistics()->UsedCudaCount(itsCudaDeviceCount);
+	}
 
 	if (conf->StatisticsEnabled())
 	{
@@ -185,12 +193,10 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
-	// Required source parameters
-
-	param TParam("T-K");
-	level TgLevel(himan::kHeight, 0, "HEIGHT");
-	param FfParam("FFG-MS");  // 10 meter wind
+        
+        param TParam("T-K");
+        level TLevel(himan::kHeight, 2, "HEIGHT");
+	param FfParam("FF-MS");  // 10 meter wind
 	level FfLevel(himan::kHeight, 10, "HEIGHT");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("seaicingThread #" + boost::lexical_cast<string> (theThreadIndex)));
@@ -214,13 +220,13 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_
 			// Source info for T
 			TInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
+								 TLevel,
 								 TParam);
 				
 			// Source info for Tg
 			TgInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
-								 TgLevel,
+								 myTargetInfo->Level(),
 								 TParam);
 
 			// Source info for FF
@@ -230,7 +236,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_
 								 FfParam);
 				
 		}
-		catch (HPExceptionType e)
+		catch (HPExceptionType& e)
 		{
 			//HPExceptionType t = static_cast<HPExceptionType> (e);
 
@@ -254,8 +260,8 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_
 				break;
 			}
 		}
-
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+                
+                unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
 		if (conf->StatisticsEnabled())
 		{
@@ -326,6 +332,17 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_
 			{
 				throw runtime_error(ClassName() + ": Failed to set value to matrix");
 			}
+
+		}
+                
+                if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+
+
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
 
 		}
 
