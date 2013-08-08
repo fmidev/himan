@@ -17,6 +17,11 @@ using namespace himan;
 using namespace std;
 
 const double kDegToRad = 0.017453292519944; // PI / 180
+const double kKelvin = 273.15;
+
+// ideal gas law
+
+const double kEp = 0.623;
 
 string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const info> info)
 {
@@ -411,4 +416,118 @@ int util::LowConvection(double T2m, double T850)
 		return 1;
 	
 	return 0;
+}
+
+double util::Es(double T)
+{
+	double Es;
+
+	if (T < -5)
+	{
+		Es = 6.107 * pow(10, (7.5*T/237.0+T));
+	}
+	else
+	{
+		Es = 6.107 * pow(10, (9.5*T/265.5+T));
+	}
+
+	return Es;
+
+}
+
+double Gammas(double P, double T)
+{
+	const double R = 287;
+	const double CP = 1004;
+	const double L = 2.5e6;
+
+	double Q = kEp * util::Es(T) / P;
+
+	// unit changes
+	
+	P *= 100; // mb --> pa
+	T += kKelvin; // c --> k
+
+	double A = R * T / CP / P * (1+L*Q/R/T);
+
+	double gammas = A / (1 + kEp / CP * (pow(L, 2) / R * Q / pow(T,2)));
+
+	return gammas;
+}
+
+const std::vector<double> util::LCL(double P, double T, double TD)
+{
+	// starting T step
+
+	double Tstep = 0.05;
+
+	const double kRCp = 0.286;
+	
+	// saturated vapor pressure
+	
+	double E0 = Es(TD);
+
+	double Q = kEp * E0 / P;
+	double C = (T+kKelvin) / pow(E0, kRCp);
+	
+	double TEs = C * pow(Es(T), kRCp);
+
+	double TLCL = kFloatMissing;
+	double PLCL = kFloatMissing;
+
+	double TT = T;
+
+	short nq = 0;
+
+	std::vector<double> ret;
+	
+	while (nq < 100)
+	{
+		if (abs(TEs - (TT+kKelvin)) < 0.05)
+		{
+			TLCL = TT;
+			PLCL = pow(((TLCL+kKelvin)/(T+kKelvin)), (1/kRCp)) * P;
+
+			ret.push_back(TLCL);
+			ret.push_back(PLCL);
+			ret.push_back(Q);
+
+			return ret;
+		}
+		else
+		{
+
+			Tstep = min((TEs - T - kKelvin) / 2 * (++nq), 15.);
+			TT -= Tstep;
+		}
+
+		// Fallback to slower method
+
+		TT = T;
+		Tstep = 0.1;
+
+		// Probably should add some kind of loop counter here ...
+		
+		while (true)
+		{
+			if (pow((C * Es(TT)), (kRCp-TT+kKelvin)) > 0)
+			{
+				TT = Tstep;
+			}
+			else
+			{
+				TLCL = TT;
+				PLCL = pow((TLCL + kKelvin) / (T+kKelvin), (1/kRCp)) * P;
+
+				ret.push_back(TLCL);
+				ret.push_back(PLCL);
+				ret.push_back(Q);
+
+				return ret;
+			}
+		}
+	}
+
+	// we should *never* get here
+	throw runtime_error("util::LCL(): Impossible error!");
 }

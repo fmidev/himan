@@ -171,6 +171,48 @@ double RelativeTopography(int level1, int level2, double z1, double z2);
  */
 int LowConvection(double T2m, double T850);
 
+
+/**
+ * @brief Calculate water vapor saturated pressure in hPa
+ *
+ * Equation found in f.ex. Smithsonian meteorological tables or
+ * http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
+ *
+ * If temperature is less than -5, use ice instead of water for
+ * calculations.
+ *
+ * @param T Temperature in C
+ * @return Saturated water vapor pressure in hPa
+ */
+
+double Es(double T);
+
+/**
+ * @brief Calculates pseudo-adiabatic lapse rate
+ *
+ * Originally author AK Sarkanen May 1985.
+ * 
+ * @param P Pressure in hPa
+ * @param T Temperature in C
+ * @return Lapse rate in C/km
+ */
+
+double Gammas(double P, double T);
+
+/**
+ * @brief Calculates the temperature, pressure and specific humidity (Q) of
+ * a parcel of air in LCL
+ *
+ * Original author AK Sarkanen/Kalle Eerola
+ *
+ * @param P Pressure in hPa
+ * @param T Temperature in C
+ * @param TD Dew point temperature in C
+ * @return Temperature, pressure and specific humidity (g/kg) for LCL
+ */
+
+const std::vector<double> LCL(double P, double T, double TD);
+
 } // namespace util
 } // namespace himan
 
