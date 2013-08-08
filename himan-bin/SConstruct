@@ -20,10 +20,12 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.environ['HOME'] + "/workspace"
-
+if os.environ['HOME'] == "/var/lib/jenkins":
+	workspace = os.environ['HOME'] + "/jobs/himan/workspace"
+	
 # cuda toolkit path
 
-cuda_toolkit_path = '/opt/cuda'
+cuda_toolkit_path = '/usr/lib'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
 	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -32,7 +34,7 @@ else:
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
+if os.path.isfile(cuda_toolkit_path + '/x86_64-linux-gnu/libcudart.so'):
 	have_cuda = True
 
 # Assign compilers
@@ -64,7 +66,7 @@ env.Append(CPPPATH = includes)
 
 librarypaths = []
 
-librarypaths.append(workspace + '/himan-lib/build/debug')
+librarypaths.append(workspace + '/himan-lib/build/release')
 librarypaths.append('/usr/lib64')
 
 if os.environ.get('ORACLE_HOME') is None:
