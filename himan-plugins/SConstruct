@@ -20,7 +20,8 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.environ['HOME'] + "/workspace"
-
+if os.environ['HOME'] is "/var/lib/jenkins":
+	workspace = os.environ['HOME'] + "/jobs/workspace"
 # cuda toolkit path
 
 cuda_toolkit_path = '/opt/cuda'
@@ -51,6 +52,7 @@ includes = []
 includes.append('./include')
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
+#includes.append(workspace + '/trunk/newbase/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append(workspace + '/fmidb/include')
 includes.append(workspace + '/fmigrib/include')
