@@ -683,7 +683,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 					// Wind speed should the same with both forms of U and V
 
-					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.005);
 
 				}
 
