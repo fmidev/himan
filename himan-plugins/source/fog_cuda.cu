@@ -46,7 +46,7 @@ __global__ void himan::plugin::fog_cuda::Calculate( const double* __restrict__ d
 		}
 		else
 		{
-			dF[idx] = (dDTC2M[idx] - dTKGround[idx] -0.3 && dFF10M[idx] < 5) ? 607 : 0;
+			dF[idx] = (dDTC2M[idx] - dTKGround[idx] > -0.3 && dFF10M[idx] < 5) ? 607 : 0;
 			
 		}
 	}
