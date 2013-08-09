@@ -48,6 +48,9 @@ private:
     void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
     void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
 
+    bool itsThetaCalculation;
+    bool itsThetaWCalculation;
+    bool itsThetaECalculation;
     bool itsUseCuda;
     int itsCudaDeviceCount;
 };

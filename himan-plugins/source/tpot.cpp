@@ -1,7 +1,8 @@
 /**
  * @file tpot.cpp
  *
- * @brief Plugin to calculate potential temperature
+ * @brief Plugin to calculate potential temperature, pseudo-adiabatic
+ * potential temperature or equivalent potential temperature.
  *
  * Created on: Nov 20, 2012
  * @author partio
@@ -32,9 +33,16 @@ using namespace himan::plugin;
 #include "tpot_cuda.h"
 #include "cuda_helper.h"
 
-tpot::tpot() : itsUseCuda(false), itsCudaDeviceCount(0)
+#include "util.h"
+
+tpot::tpot()
+: itsThetaCalculation(false)
+, itsThetaWCalculation(false)
+, itsThetaECalculation(false)
+, itsUseCuda(false)
+, itsCudaDeviceCount(0)
 {
-	itsClearTextFormula = "Tp = Tk * pow((1000/P), 0.286)"; // Poissons equation
+	itsClearTextFormula = "TP = Tk * pow((1000/P), 0.286) ; TPW calculated with LCL ; TPE = X"; 
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpot"));
 
@@ -101,27 +109,77 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param theRequestedParam ("TP-K", 8);
+	if (conf->Exists("theta") && conf->GetValue("theta") == "true")
+	{
+		itsThetaCalculation = true;
 
-	// GRIB 2
+		param p("TP-K", 8);
+
+		p.GribDiscipline(0);
+		p.GribCategory(0);
+		p.GribParameter(2);		
+		
+		theParams.push_back(p);
+	}
+
+	if (conf->Exists("thetaw") && conf->GetValue("thetaw") == "true")
+	{
+		itsThetaWCalculation = true;
+
+		param p("TPW-K", 9);
+
+		// Sharing number with thetae!
+
+		p.GribDiscipline(0);
+		p.GribCategory(0);
+		p.GribParameter(3);
+
+	}
+
+	if (conf->Exists("thetae") && conf->GetValue("thetae") == "true")
+	{
+		itsThetaECalculation = true;
+
+		param p("TPE-K", 99999);
+
+		// Sharing number with thetaw!
+
+		p.GribDiscipline(0);
+		p.GribCategory(0);
+		p.GribParameter(3);
+
+		theParams.push_back(p);
+
+	}
+
+	if (theParams.size() == 0)
+	{
+		// By default assume we'll calculate theta
+
+		itsThetaCalculation = true;
+
+		param p("TP-K", 8);
+
+		p.GribDiscipline(0);
+		p.GribCategory(0);
+		p.GribParameter(2);
+
+		theParams.push_back(p);
+	}
 	
-	theRequestedParam.GribDiscipline(0);
-	theRequestedParam.GribCategory(0);
-	theRequestedParam.GribParameter(2);
-
 	// GRIB 1
 
 	if (conf->OutputFileType() == kGRIB1)
 	{
 		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theRequestedParam.Name());
-		theRequestedParam.GribIndicatorOfParameter(parm_id);
-		theRequestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
-
+		for (unsigned int i = 0; i < theParams.size(); i++)
+		{
+			long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theParams[i].Name());
+			theParams[i].GribIndicatorOfParameter(parm_id);
+			theParams[i].GribTableVersion(targetInfo->Producer().TableVersion());
+		}
 	}
-
-	theParams.push_back(theRequestedParam);
 
 	targetInfo->Params(theParams);
 
@@ -137,7 +195,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	Dimension(conf->LeadingDimension());
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(theRequestedParam);
+	FeederInfo()->ParamIndex(0); // Set index to first param (it doesn't matter which one, as long as its set
 
 	if (conf->StatisticsEnabled())
 	{
@@ -212,11 +270,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-	// Required source parameters
-
-	param TParam ("T-K");
-	param PParam ("P-PA");
-
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (threadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);
@@ -235,8 +288,10 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		// Source infos
 		shared_ptr<info> TInfo;
 		shared_ptr<info> PInfo;
+		shared_ptr<info> TDInfo;
 
 		shared_ptr<NFmiGrid> PGrid;
+		shared_ptr<NFmiGrid> TDGrid;
 
 		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
@@ -246,7 +301,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			TInfo = theFetcher->Fetch(conf,
 										myTargetInfo->Time(),
 										myTargetInfo->Level(),
-										TParam);
+										param("T-K"));
 
 			if (!isPressureLevel)
 			{
@@ -254,7 +309,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				PInfo = theFetcher->Fetch(conf,
 											myTargetInfo->Time(),
 											myTargetInfo->Level(),
-											PParam);
+											param("P-PA"));
 
 				if (PInfo->Param().Unit() == kPa)
 				{
@@ -262,6 +317,17 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				}
 
 				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
+			}
+
+			if (itsThetaWCalculation || itsThetaECalculation)
+			{
+				TDInfo = theFetcher->Fetch(conf,
+										myTargetInfo->Time(),
+										myTargetInfo->Level(),
+										param("TD-K"));
+
+				TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
+
 			}
 		}
 		catch (HPExceptionType e)
@@ -287,11 +353,16 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			}
 		}
 
-		assert(isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB());
+		assert(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB() && PInfo->Grid()->AB() == TDInfo->Grid()->AB())));
 
 		SetAB(myTargetInfo, TInfo);
 
 		if (TInfo->Param().Unit() == kC)
+		{
+			TBase = 273.15;
+		}
+
+		if (TDInfo && TDInfo->Param().Unit() == kC)
 		{
 			TBase = 273.15;
 		}
@@ -413,6 +484,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 				double T = kFloatMissing;
 				double P = kFloatMissing;
+				double TD = kFloatMissing;
 
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 
@@ -425,7 +497,12 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
 				}
 
-				if (T == kFloatMissing || P == kFloatMissing)
+				if (itsThetaWCalculation || itsThetaECalculation)
+				{
+					InterpolateToPoint(targetGrid, TDGrid, equalGrids, TD);
+				}
+
+				if (T == kFloatMissing || P == kFloatMissing || ((itsThetaECalculation || itsThetaWCalculation) && TD == kFloatMissing))
 				{
 					missingCount++;
 
@@ -433,12 +510,159 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					continue;
 				}
 
-				double Tp = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
+				double value = kFloatMissing;
 
-				if (!myTargetInfo->Value(Tp))
+				if (itsThetaCalculation)
 				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+
+					value = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
+
+					myTargetInfo->Param(param("TP-K"));
+
+					if (!myTargetInfo->Value(value))
+					{
+						throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					}
 				}
+				
+				if (itsThetaWCalculation)
+				{
+					/*
+					 * Calculating pseudo-adiabatic theta.
+					 *
+					 * Method: numerical integration from LCL to 1000mb level
+					 * along wet adiabatic line.
+					 *
+					 * Numerical integration method used: leapfrog starting with euler
+					 *
+					 * Originally author AK Sarkanen / May 1985
+					 */
+
+					double Pstep = 5;
+					double Zref = kFloatMissing;
+
+					if (T > 100)
+					{
+						Zref = 273.15;
+					}
+					else
+					{
+						Zref = 0;
+					}
+
+					double ZT = T - Zref;
+
+					// Search LCL level
+
+					double TD = 1e6;
+
+					vector<double> LCL = util::LCL(P, ZT, TD);
+
+					double TLCL = LCL[1] + 273.15;
+					double PLCL = LCL[0]*100;
+
+					double T0 = TLCL;
+					Pstep *= 100;
+
+					int i = 1;
+
+					double Z = kFloatMissing;
+					double TT = kFloatMissing;
+					
+					while (true)
+					{
+						double TA = TLCL;
+
+						if (i < 2)
+						{
+							Z = i * Pstep/2;
+						}
+						else
+						{
+							Z = 2 * Pstep;
+						}
+
+						TT = T0 + util::Gammas(P/100, 273.15) * Z;
+
+						if (i > 2)
+						{
+							T0 = TA;
+						}
+
+						double PP = PLCL + Pstep;
+
+						if (PP >= 1e5)
+						{
+							break;
+						}
+					}
+
+					value = TT - 273.15 + Zref;
+
+					myTargetInfo->Param(param("TPW-K"));
+
+					if (!myTargetInfo->Value(value))
+					{
+						throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					}
+				}
+				
+				if (itsThetaECalculation)
+				{
+					/*
+					 * Calculate equivalent potential temperature
+					 *
+					 * Method:
+					 *
+					 * The approximation given by Holton: Introduction to Dyn. Met.
+					 * page 331 is used. If the air is not saturated, it is
+					 * taken adiabatically to LCL.
+					 *
+					 * Original author K Eerola.
+					 */
+
+					double ZCp = 1004;
+					double ZLc = 2.5e6;
+
+					// check units
+
+					double Zref = kFloatMissing;
+
+					if (T > 150)
+					{
+						Zref = 273.15;
+					}
+					else
+					{
+						Zref = 0;
+					}
+
+					double ZT = T - Zref;
+
+					double TD = 1e6;
+					double ZTD = TD - Zref;
+
+					vector<double> LCL = util::LCL(P, ZT, ZTD);
+
+					double TLCL = LCL[1];
+
+					double Ztheta =  (T + TBase) * pow((1000 / (P * PScale)), 0.286);
+					double ZEs = util::Es(TLCL);
+					double ZQs = 0.622 * (ZEs / (P - ZEs));
+
+					double ZthetaE = Ztheta * exp(ZLc * ZQs / ZCp / (TLCL + 273.15));
+
+					value = ZthetaE * Zref;
+
+					myTargetInfo->Param(param("TPE-K"));
+
+					if (!myTargetInfo->Value(value))
+					{
+						throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					}
+
+				}
+
 			}
 
 			/*
