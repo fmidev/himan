@@ -272,22 +272,27 @@ point util::UVToEarthRelative(const point& regPoint, const point& rotPoint, cons
 		newSouthPole = southPole;
 	}
 
-	double sinPoleY = sin(kDegToRad * (newSouthPole.Y()+90)); // zsyc
-	double cosPoleY = cos(kDegToRad * (newSouthPole.Y()+90)); // zcyc
+	double southPoleY = kDegToRad * (newSouthPole.Y()+90);
+	double sinPoleY, cosPoleY;
 
-	//double zsxreg = sin(kDegToRad * regPoint.X());
-	//double zcxreg = cos(kDegToRad * regPoint.X());
-	//double zsyreg = sin(kDegToRad * regPoint.Y());
+	sincos(southPoleY, &sinPoleY, &cosPoleY);
+
 	double cosRegY = cos(kDegToRad * regPoint.Y()); // zcyreg
 
 	double zxmxc = kDegToRad * (regPoint.X() - newSouthPole.X());
-	double sinxmxc = sin(zxmxc); // zsxmxc
-	double cosxmxc = cos(zxmxc); // zcxmxc
 
-	double sinRotX = sin(kDegToRad * rotPoint.X()); // zsxrot
-	double cosRotX = cos(kDegToRad * rotPoint.X()); // zcxrot
-	double sinRotY = sin(kDegToRad * rotPoint.Y()); // zsyrot
-	double cosRotY = cos(kDegToRad * rotPoint.Y()); // zcyrot
+	double sinxmxc, cosxmxc;
+
+	sincos(zxmxc, &sinxmxc, &cosxmxc);
+
+	double rotXRad = kDegToRad * rotPoint.X();
+	double rotYRad = kDegToRad * rotPoint.Y();
+
+	double sinRotX, cosRotX;
+	sincos(rotXRad, &sinRotX, &cosRotX);
+
+	double sinRotY, cosRotY;
+	sincos(rotYRad, &sinRotY, &cosRotY);
 
 	double PA = cosxmxc * cosRotX + cosPoleY * sinxmxc * sinRotX;
 	double PB = cosPoleY * sinxmxc * cosRotX * sinRotY + sinPoleY * sinxmxc * cosRotY - cosxmxc * sinRotX * sinRotY;
