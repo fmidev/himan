@@ -511,15 +511,16 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				}
 
 				double value = kFloatMissing;
+				double theta = kFloatMissing;
 
 				if (itsThetaCalculation)
 				{
 
-					value = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
+					theta = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
 
 					myTargetInfo->Param(param("TP-K"));
 
-					if (!myTargetInfo->Value(value))
+					if (!myTargetInfo->Value(theta))
 					{
 						throw runtime_error(ClassName() + ": Failed to set value to matrix");
 					}
@@ -553,8 +554,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					double ZT = T - Zref;
 
 					// Search LCL level
-
-					double TD = 1e6;
 
 					vector<double> LCL = util::LCL(P, ZT, TD);
 
@@ -639,18 +638,23 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 					double ZT = T - Zref;
 
-					double TD = 1e6;
 					double ZTD = TD - Zref;
 
 					vector<double> LCL = util::LCL(P, ZT, ZTD);
 
 					double TLCL = LCL[1];
 
-					double Ztheta =  (T + TBase) * pow((1000 / (P * PScale)), 0.286);
+					if (theta == kFloatMissing)
+					{
+						// theta was not calculated in this plugin session :(
+
+						theta = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
+					}
+					
 					double ZEs = util::Es(TLCL);
 					double ZQs = 0.622 * (ZEs / (P - ZEs));
 
-					double ZthetaE = Ztheta * exp(ZLc * ZQs / ZCp / (TLCL + 273.15));
+					double ZthetaE = theta * exp(ZLc * ZQs / ZCp / (TLCL + 273.15));
 
 					value = ZthetaE * Zref;
 
