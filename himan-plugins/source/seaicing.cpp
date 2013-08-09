@@ -99,7 +99,7 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param requestedParam("ICEIND-N", 190);
+	param requestedParam("ICING-N", 480);
 
 	// GRIB 2
 	requestedParam.GribDiscipline(0);
@@ -115,7 +115,6 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedParam.Name());
 		requestedParam.GribIndicatorOfParameter(parm_id);
 		requestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
-
 	}
 	
 	theParams.push_back(requestedParam);
