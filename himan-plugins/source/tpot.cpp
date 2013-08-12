@@ -379,6 +379,10 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 		string deviceType;
 
+		const double Cp = 1004; // specific heat at constant pressure
+		const double ZLc = 2.5e6; // latent heat of vaporization J/kg (=Rd)
+		const double e = 0.622; // Rd/Rv
+
 #ifdef HAVE_CUDA
 		
 		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
@@ -620,9 +624,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					 * Original author K Eerola.
 					 */
 
-					double ZCp = 1004;
-					double ZLc = 2.5e6;
-
 					// check units
 
 					double Zref = kFloatMissing;
@@ -652,9 +653,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					}
 					
 					double ZEs = util::Es(TLCL);
-					double ZQs = 0.622 * (ZEs / (P - ZEs));
+					double ZQs = e * (ZEs / (P - ZEs));
 
-					double ZthetaE = theta * exp(ZLc * ZQs / ZCp / (TLCL + 273.15));
+					double ZthetaE = theta * exp(ZLc * ZQs / Cp / (TLCL + 273.15));
 
 					value = ZthetaE * Zref;
 
