@@ -307,27 +307,27 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 			}
 			else if ((Vv >= 0) && (Vv <= 50))
 			{
-				vCor = 1;
+				vCor = 0;
 			}
 			else if ((Vv >= 50) && (Vv <= 100))
 			{
-				vCor = 2;
+				vCor = 1;
 			}
 			else if ((Vv >= 100) && (Vv <= 200))
 			{
-				vCor = 3;
+				vCor = 2;
 			}
 			else if ((Vv >= 200) && (Vv <= 300))
 			{
-				vCor = 4;
+				vCor = 3;
 			}
 			else if ((Vv >= 300) && (Vv <= 1000))
 			{
-				vCor = 5;
+				vCor = 4;
 			}
-			else
+			else if (Vv > 1000)
 			{
-				vCor = 0;
+				vCor = 5;
 			}
 
 			// Temperature correction factor
@@ -350,18 +350,22 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 			}
 			else if ((T <= -12) && (T > -15))
 			{
-				tCor = 2;
+				tCor = 0;
 			}
-			else if (T <= -18)
+			else if ((T <= -15) && (T > -18))
 			{
-				tCor = 3;
+				tCor = -1;
 			}
-			else
+			else if (T < -18)
+			{
+				tCor = -2;
+			}
+			else 
 			{
 				tCor = 0;
 			}
 
-			if ((fabs(Cl - 0) < kValueEpsilon) || (T > 0))
+			if ((Cl <= 0) || (T > 0))
 			{
 				Icing = 0;
 			}
@@ -376,7 +380,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 				Icing = 15;
 			}
 
-			else if (Icing < 0)
+			if (Icing < 0)
 			{
 				Icing = 0;
 			}
