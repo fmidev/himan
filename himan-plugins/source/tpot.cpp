@@ -294,7 +294,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 		double PScale = 1;
 		double TBase = 273.15;
-
+		double TDBase  = 273.15;
+		
 		// Source infos
 		shared_ptr<info> TInfo;
 		shared_ptr<info> PInfo;
@@ -521,9 +522,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				}
 
 				T -= TBase; // to Celsius
-				TD -= TBase; // to Celsius
+				TD -= TDBase; // to Celsius
 				P /= PScale; // to hPa
-				cout << "T " << T << " TD " << TD << " P " << P << endl;
+
 				double value = kFloatMissing;
 				double theta = kFloatMissing;
 
