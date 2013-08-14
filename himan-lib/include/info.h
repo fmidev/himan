@@ -25,256 +25,255 @@
 namespace himan
 {
 
-typedef matrix <std::shared_ptr<grid> > matrix_t;
+/**
+* @class iterator
+*
+* @brief Nested class inside info to provide iterator functions to info class
+*
+*/
+
 const size_t kIteratorResetValue = std::numeric_limits<size_t>::max();
+
+template <class T>
+class iterator
+{
+public:
+
+  iterator<T>() {}
+  iterator<T>(const std::vector<T>& theElements)
+  {
+	  itsElements = theElements;
+	  Reset();
+  }
+
+  std::string ClassName() const
+  {
+	  return "himan::info::iterator";
+  }
+
+  HPVersionNumber Version() const
+  {
+	  return HPVersionNumber(0, 1);
+  }
+
+  /**
+   * @brief Reset iterator
+   *
+   * Reset iterator by setting index value to max size_t (which equals to max unsigned int)
+   *
+   * @return void
+   *
+   */
+
+  void Reset()
+  {
+	  itsIndex = kIteratorResetValue;
+  }
+
+  /**
+   * @brief Set iterator to first element
+   *
+   * @return boolean if iterator has at least one element, else false
+   *
+   */
+
+  bool First()
+  {
+	  Reset();
+
+	  return Next();
+  }
+
+  /**
+   * @brief Set iterator to first element
+   *
+   * @return boolean if iterator has at least one element, else false
+   *
+   */
+
+  bool Last()
+  {
+	  Reset();
+
+	  return Previous();
+  }
+
+  /**
+   * @brief Retreat iterator by one
+   *
+   * @return boolean if iterator has more elements left, else false
+   *
+   */
+
+  bool Previous()
+  {
+	  if (itsIndex == kIteratorResetValue)
+	  {
+		  itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;    // Reset() has been called before this function
+	  }
+
+	  else
+	  {
+		  if ( itsIndex == 0 )
+		  {
+			  itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;
+			  return false;
+		  }
+		  itsIndex--;
+	  }
+
+	  /*if (itsIndex >= itsElements.size())
+	  {
+		  itsIndex = 0;
+		  return false;
+	  }*/
+
+	  return true;
+  }
+
+  /**
+   * @brief Advance iterator by one
+   *
+   * @return boolean if iterator has more elements left, else false
+   *
+   */
+
+  bool Next()
+  {
+	  if (itsIndex == kIteratorResetValue)
+	  {
+		  itsIndex = 0;    // Reset() has been called before this function
+	  }
+
+	  else
+	  {
+		  itsIndex++;
+	  }
+
+	  if (itsIndex >= itsElements.size())
+	  {
+		  itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;
+		  return false;
+	  }
+
+	  return true;
+  }
+
+  /**
+   * @return Reference to current value or throw exception
+   */
+
+  T& At()
+  {
+	  if (itsIndex != kIteratorResetValue && itsIndex < itsElements.size())
+	  {
+		  return itsElements[itsIndex];
+	  }
+
+	  throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string> (itsIndex));
+
+  }
+
+  /**
+   * @return Reference to value requested or throw exception
+   */
+
+  T& At(size_t theIndex)
+  {
+	  if (theIndex < itsElements.size())
+	  {
+		  return itsElements[theIndex];
+	  }
+
+	  throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string> (theIndex));
+
+  }
+
+  /**
+   * @brief Set iterator to the position indicated by the function argument
+   *
+   * @return True if value exists, else false
+   *
+   */
+
+  bool Set(const T theElement)
+  {
+
+	  for (size_t i = 0; i < itsElements.size(); i++)
+	  {
+		  if (itsElements[i] == theElement)
+		  {
+			  Set(i);
+			  return true;
+		  }
+	  }
+
+	  return false;
+  }
+
+  /**
+   * @brief Set iterator to the position indicated by the function argument. No limit-checking is made.
+   *
+   * @return void
+   *
+   * @todo Should return bool like Set(const T theElement) ?
+   */
+
+  void Set(size_t theIndex)
+  {
+	  itsIndex = theIndex;
+  }
+
+  /**
+   * @return Current index value
+   */
+
+  size_t Index() const
+  {
+	  return itsIndex;
+  }
+
+  /**
+   * @return Iterator size
+   */
+
+  size_t Size() const
+  {
+	  return itsElements.size();
+  }
+
+  friend std::ostream& operator<<(std::ostream& file, iterator<T> & ob)
+  {
+	  return ob.Write(file);
+  }
+
+  /**
+   * @brief Write object to stream
+   */
+
+  std::ostream& Write(std::ostream& file) const
+  {
+	  file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	  file << "__itsIndex__ " << itsIndex << std::endl;
+	  file << "__itsSize__ " << itsElements.size() << std::endl;
+
+	  return file;
+  }
+
+private:
+  std::vector<T> itsElements; //<! Vector to hold the elements
+  size_t itsIndex; //<! Current index of iterator
+
+};
+
+typedef iterator<level> level_iter;
+typedef iterator<param> param_iter;
+typedef iterator<forecast_time> time_iter;
+typedef iterator<producer> producer_iter;
+typedef matrix <std::shared_ptr<grid> > matrix_t;
 
 class info
 {
-
-public:
-
-    /**
-     * @class iterator
-     *
-     * @brief Nested class inside info to provide iterator functions to info class
-     *
-     */
-
-    template <class T>
-    class iterator
-    {
-    public:
-
-        iterator<T>() {}
-        iterator<T>(const std::vector<T>& theElements)
-        {
-            itsElements = theElements;
-            Reset();
-        }
-
-        std::string ClassName() const
-        {
-            return "himan::info::iterator";
-        }
-
-        HPVersionNumber Version() const
-        {
-            return HPVersionNumber(0, 1);
-        }
-
-        /**
-         * @brief Reset iterator
-         *
-         * Reset iterator by setting index value to max size_t (which equals to max unsigned int)
-         *
-         * @return void
-         *
-         */
-
-        void Reset()
-        {
-            itsIndex = kIteratorResetValue;
-        }
-
-        /**
-         * @brief Set iterator to first element
-         *
-         * @return boolean if iterator has at least one element, else false
-         *
-         */
-
-        bool First()
-        {
-            Reset();
-
-            return Next();
-        }
-
-        /**
-         * @brief Set iterator to first element
-         *
-         * @return boolean if iterator has at least one element, else false
-         *
-         */
-
-        bool Last()
-        {
-            Reset();
-
-            return Previous();
-        }
-
-        /**
-         * @brief Retreat iterator by one
-         *
-         * @return boolean if iterator has more elements left, else false
-         *
-         */
-
-        bool Previous()
-        {
-            if (itsIndex == kIteratorResetValue)
-            {
-                itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;    // Reset() has been called before this function
-            }
-
-            else
-            {
-                if ( itsIndex == 0 )
-                {
-                    itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;
-                    return false;
-                }
-                itsIndex--;
-            }
-
-            /*if (itsIndex >= itsElements.size())
-            {
-                itsIndex = 0;
-                return false;
-            }*/
-
-            return true;
-        }
-
-        /**
-         * @brief Advance iterator by one
-         *
-         * @return boolean if iterator has more elements left, else false
-         *
-         */
-
-        bool Next()
-        {
-            if (itsIndex == kIteratorResetValue)
-            {
-                itsIndex = 0;    // Reset() has been called before this function
-            }
-
-            else
-            {
-                itsIndex++;
-            }
-
-            if (itsIndex >= itsElements.size())
-            {
-                itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;
-                return false;
-            }
-
-            return true;
-        }
-
-        /**
-         * @return Reference to current value or throw exception
-         */
-
-        T& At()
-        {
-            if (itsIndex != kIteratorResetValue && itsIndex < itsElements.size())
-            {
-                return itsElements[itsIndex];
-            }
-
-            throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string> (itsIndex));
-
-        }
-
-        /**
-         * @return Reference to value requested or throw exception
-         */
-
-        T& At(size_t theIndex)
-        {
-            if (theIndex < itsElements.size())
-            {
-                return itsElements[theIndex];
-            }
-
-            throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string> (theIndex));
-
-        }
-
-        /**
-         * @brief Set iterator to the position indicated by the function argument
-         *
-         * @return True if value exists, else false
-         *
-         */
-
-        bool Set(const T theElement)
-        {
-
-            for (size_t i = 0; i < itsElements.size(); i++)
-            {
-                if (itsElements[i] == theElement)
-                {
-                    Set(i);
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * @brief Set iterator to the position indicated by the function argument. No limit-checking is made.
-         *
-         * @return void
-         *
-         * @todo Should return bool like Set(const T theElement) ?
-         */
-
-        void Set(size_t theIndex)
-        {
-            itsIndex = theIndex;
-        }
-
-        /**
-         * @return Current index value
-         */
-
-        size_t Index() const
-        {
-            return itsIndex;
-        }
-
-        /**
-         * @return Iterator size
-         */
-
-        size_t Size() const
-        {
-            return itsElements.size();
-        }
-
-        friend std::ostream& operator<<(std::ostream& file, iterator<T> & ob)
-        {
-            return ob.Write(file);
-        }
-
-        /**
-         * @brief Write object to stream
-         */
-
-        std::ostream& Write(std::ostream& file) const
-        {
-            file << "<" << ClassName() << " " << Version() << ">" << std::endl;
-            file << "__itsIndex__ " << itsIndex << std::endl;
-            file << "__itsSize__ " << itsElements.size() << std::endl;
-
-            return file;
-        }
-
-    private:
-        std::vector<T> itsElements; //<! Vector to hold the elements
-        size_t itsIndex; //<! Current index of iterator
-
-    };
-
-    typedef iterator<level> level_iter;
-    typedef iterator<param> param_iter;
-    typedef iterator<forecast_time> time_iter;
 
 public:
 
@@ -526,6 +525,7 @@ public:
      */
 
     void LocationIndex(size_t theLocationIndex);
+    size_t LocationIndex() const;
     void ResetLocation();
     bool NextLocation();
     bool FirstLocation();
