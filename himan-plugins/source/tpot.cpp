@@ -116,6 +116,8 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		itsThetaCalculation = true;
 
+		itsLogger->Trace("Theta calculation requested");
+
 		param p("TP-K", 8);
 
 		p.GribDiscipline(0);
@@ -128,6 +130,8 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->Exists("thetaw") && conf->GetValue("thetaw") == "true")
 	{
 		itsThetaWCalculation = true;
+
+		itsLogger->Trace("ThetaW calculation requested");
 
 		param p("TPW-K", 9);
 
@@ -143,6 +147,8 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->Exists("thetae") && conf->GetValue("thetae") == "true")
 	{
 		itsThetaECalculation = true;
+
+		itsLogger->Trace("ThetaE calculation requested");
 
 		param p("TPE-K", 99999);
 
@@ -170,7 +176,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		theParams.push_back(p);
 	}
-	
+
 	// GRIB 1
 
 	if (conf->OutputFileType() == kGRIB1)
@@ -517,7 +523,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				T -= TBase; // to Celsius
 				TD -= TBase; // to Celsius
 				P /= PScale; // to hPa
-				
+				cout << "T " << T << " TD " << TD << " P " << P << endl;
 				double value = kFloatMissing;
 				double theta = kFloatMissing;
 
@@ -596,26 +602,12 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 double tpot::Theta(double P, double T)
 {
-	// Calculating theta with poissons equation
-
-	double value = T * pow((1000 / P), 0.286);
-
+	double value = (T+273.15) * pow((1000 / P), 0.28586) - 273.15;
 	return value;
 }
 
 double tpot::ThetaW(double P, double T, double TD)
 {
-	/*
-	* Calculating pseudo-adiabatic theta.
-	*
-	* Method: numerical integration from LCL to 1000mb level
-	* along wet adiabatic line.
-	*
-	* Numerical integration method used: leapfrog starting with euler
-	*
-	* Originally author AK Sarkanen / May 1985
-	*/
-
    const double Pstep = 500;
    double value = kFloatMissing;
 
@@ -676,18 +668,6 @@ double tpot::ThetaW(double P, double T, double TD)
 
 double tpot::ThetaE(double P, double T, double TD, double theta)
 {
-	/*
-	 * Calculate equivalent potential temperature
-	 *
-	 * Method:
-	 *
-	 * The approximation given by Holton: Introduction to Dyn. Met.
-	 * page 331 is used. If the air is not saturated, it is
-	 * taken adiabatically to LCL.
-	 *
-	 * Original author K Eerola.
-	 */
-
 	vector<double> LCL = util::LCL(P, T, TD);
 
 	double TLCL = LCL[1];
