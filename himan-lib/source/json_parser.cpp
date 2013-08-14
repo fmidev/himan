@@ -110,7 +110,8 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	/* Check time definitions */
 
-	ParseTime(conf->SourceProducers()[0], baseInfo, pt);
+	conf->FirstSourceProducer();
+	ParseTime(conf->SourceProducer(), baseInfo, pt);
 
 	/* Check levels */
 

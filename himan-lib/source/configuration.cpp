@@ -10,7 +10,7 @@
 
 using namespace himan;
 
-configuration::configuration()
+configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 {
 
 	Init();
@@ -41,9 +41,12 @@ configuration::configuration(const configuration& other)
 	itsSourceGeomName = other.itsSourceGeomName;
 	
 	itsTargetProducer = other.itsTargetProducer;
-	itsSourceProducers = other.itsSourceProducers;
+	//itsSourceProducers = other.itsSourceProducers;
 
 	itsStatisticsLabel = other.itsStatisticsLabel;
+
+	itsSourceProducerIterator = std::unique_ptr<producer_iter> (new producer_iter(*other.itsSourceProducerIterator));
+	itsSourceProducerIterator->Set(other.itsSourceProducerIterator->Index());
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
 }
@@ -186,17 +189,27 @@ void configuration::ConfigurationFile(const std::string& theConfigurationFile)
 
 void configuration::SourceProducers(const std::vector<producer> theSourceProducers)
 {
-	itsSourceProducers = theSourceProducers;
+	itsSourceProducerIterator = std::unique_ptr<producer_iter> (new producer_iter(theSourceProducers));
 }
 
-void configuration::SourceProducer(const producer& theSourceProducer)
+bool configuration::SourceProducer(const producer& theSourceProducer)
 {
-	itsSourceProducers[0] = theSourceProducer;
+	return itsSourceProducerIterator->Set(theSourceProducer);
 }
 
-std::vector<producer> configuration::SourceProducers() const
+bool configuration::NextSourceProducer() const
 {
-	return itsSourceProducers;
+	return itsSourceProducerIterator->Next();
+}
+
+bool configuration::FirstSourceProducer() const
+{
+	return itsSourceProducerIterator->First();
+}
+
+producer configuration::SourceProducer() const
+{
+	return itsSourceProducerIterator->At();
 }
 
 producer configuration::TargetProducer() const

@@ -62,11 +62,8 @@ public:
 	HPFileType OutputFileType() const;
 	void OutputFileType(HPFileType theOutputFileType);
 
-	std::vector<producer> SourceProducers() const;
 	void SourceProducers(std::vector<producer> theSourceProducers);
-	void SourceProducer(const producer& theSourceProducer);
-
-	producer SourceProducer() const { assert(!itsSourceProducers.empty()); return itsSourceProducers[0]; }
+	producer SourceProducer() const;
 
 	producer TargetProducer() const;
 
@@ -121,6 +118,11 @@ public:
 
 	std::string SourceGeomName() const;
 
+	bool SourceProducer(const producer& theSourceProducer);
+	bool NextSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+	bool FirstSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+
+
 protected:
 	
 	void Init();
@@ -147,12 +149,13 @@ protected:
 	std::string itsSourceGeomName;
 	
 	producer itsTargetProducer;
-	std::vector<producer> itsSourceProducers;
 
 	std::string itsStatisticsLabel;
 
 	bool itsUseCudaForPacking;
 	bool itsUseCache;
+
+	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 };
 
 
