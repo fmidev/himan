@@ -208,7 +208,7 @@ double Gammas(double P, double T);
  * @param P Pressure in hPa
  * @param T Temperature in C
  * @param TD Dew point temperature in C
- * @return Temperature, pressure and specific humidity (g/kg) for LCL
+ * @return Pressure, temperature and specific humidity (g/kg) for LCL (in this order).
  */
 
 const std::vector<double> LCL(double P, double T, double TD);
