@@ -113,3 +113,38 @@ std::ostream& producer::Write(std::ostream& file) const
 	return file;
 
 }
+
+bool producer::operator==(const producer& other)
+{
+	if (itsFmiProducerId != other.itsFmiProducerId)
+	{
+		return false;
+	}
+
+	if (itsProcess != other.itsProcess)
+	{
+		return false;
+	}
+
+	if (itsCentre != other.itsCentre)
+	{
+		return false;
+	}
+
+	if (itsNeonsName != other.itsNeonsName)
+	{
+		return false;
+	}
+
+	if (itsTableVersion != other.itsTableVersion)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool producer::operator!=(const producer& other)
+{
+	return !(*this == other);
+}
