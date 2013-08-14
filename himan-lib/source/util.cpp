@@ -477,6 +477,7 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 	double PLCL = kFloatMissing;
 
 	double Torig = T;
+	double Porig = P;
 
 	short nq = 0;
 
@@ -511,16 +512,16 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 
 	nq = 0;
 
-	while (++nq <= 1000)
+	while (++nq <= 500)
 	{
-		if ((C * pow(Es(T), kRCp)-T+kKelvin) > 0)
+		if ((C * pow(Es(T), kRCp)-(T+kKelvin)) > 0)
 		{
 			T -= Tstep;
 		}
 		else
 		{
 			TLCL = T;
-			PLCL = pow((TLCL + kKelvin) / (T+kKelvin), (1/kRCp)) * P;
+			PLCL = pow((TLCL + kKelvin) / (Torig+kKelvin), (1/kRCp)) * Porig;
 
 			ret[0] = PLCL;
 			ret[1] = TLCL;
