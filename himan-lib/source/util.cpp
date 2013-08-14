@@ -427,37 +427,35 @@ double util::Es(double T)
 {
 	double Es;
 
-	if (T < -5)
+	if (T > -5)
 	{
-		Es = 6.107 * pow(10, (7.5*T/237.0+T));
+		Es = 6.107 * pow(10, (7.5*T/(237.0+T)));
 	}
 	else
 	{
-		Es = 6.107 * pow(10, (9.5*T/265.5+T));
+		Es = 6.107 * pow(10, (9.5*T/(265.5+T)));
 	}
 
 	return Es;
 
 }
 
-double Gammas(double P, double T)
+double util::Gammas(double P, double T)
 {
-	const double R = 287;
-	const double CP = 1004;
+	const double R = 287; // gas constant
+	const double CP = 1004; // specific heat at constant pressure
 	const double L = 2.5e6;
 
 	double Q = kEp * util::Es(T) / P;
 
 	// unit changes
 	
-	P *= 100; // mb --> pa
+	P *= 100; // hpa --> pa
 	T += kKelvin; // c --> k
 
 	double A = R * T / CP / P * (1+L*Q/R/T);
-
-	double gammas = A / (1 + kEp / CP * (pow(L, 2) / R * Q / pow(T,2)));
-
-	return gammas;
+	
+	return A / (1 + kEp / CP * (pow(L, 2) / R * Q / pow(T,2)));
 }
 
 const std::vector<double> util::LCL(double P, double T, double TD)
@@ -475,64 +473,62 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 	double Q = kEp * E0 / P;
 	double C = (T+kKelvin) / pow(E0, kRCp);
 	
-	double TEs = C * pow(Es(T), kRCp);
-
 	double TLCL = kFloatMissing;
 	double PLCL = kFloatMissing;
 
-	double TT = T;
+	double Torig = T;
 
 	short nq = 0;
 
-	std::vector<double> ret;
-	
-	while (nq < 100)
-	{
-		if (abs(TEs - (TT+kKelvin)) < 0.05)
-		{
-			TLCL = TT;
-			PLCL = pow(((TLCL+kKelvin)/(T+kKelvin)), (1/kRCp)) * P;
+	std::vector<double> ret { kFloatMissing, kFloatMissing, kFloatMissing };
 
-			ret.push_back(TLCL);
-			ret.push_back(PLCL);
-			ret.push_back(Q);
+	while (++nq < 100)
+	{
+		double TEs = C * pow(Es(T), kRCp);
+
+		if (fabs(TEs - (T+kKelvin)) < 0.05)
+		{
+			TLCL = T;
+			PLCL = pow(((TLCL+kKelvin)/(Torig+kKelvin)), (1/kRCp)) * P;
+
+			ret[0] = PLCL;
+			ret[1] = TLCL;
+			ret[2] = Q;
 
 			return ret;
 		}
 		else
 		{
-
-			Tstep = min((TEs - T - kKelvin) / 2 * (++nq), 15.);
-			TT -= Tstep;
-		}
-
-		// Fallback to slower method
-
-		TT = T;
-		Tstep = 0.1;
-
-		// Probably should add some kind of loop counter here ...
-		
-		while (true)
-		{
-			if (pow((C * Es(TT)), (kRCp-TT+kKelvin)) > 0)
-			{
-				TT = Tstep;
-			}
-			else
-			{
-				TLCL = TT;
-				PLCL = pow((TLCL + kKelvin) / (T+kKelvin), (1/kRCp)) * P;
-
-				ret.push_back(TLCL);
-				ret.push_back(PLCL);
-				ret.push_back(Q);
-
-				return ret;
-			}
+			Tstep = min((TEs - T - kKelvin) / (2 * (nq+1)), 15.);
+			T -= Tstep;
 		}
 	}
 
-	// we should *never* get here
-	throw runtime_error("util::LCL(): Impossible error!");
+	// Fallback to slower method
+
+	T = Torig;
+	Tstep = 0.1;
+
+	nq = 0;
+
+	while (++nq <= 1000)
+	{
+		if ((C * pow(Es(T), kRCp)-T+kKelvin) > 0)
+		{
+			T -= Tstep;
+		}
+		else
+		{
+			TLCL = T;
+			PLCL = pow((TLCL + kKelvin) / (T+kKelvin), (1/kRCp)) * P;
+
+			ret[0] = PLCL;
+			ret[1] = TLCL;
+			ret[2] = Q;
+
+			break;
+		}
+	}
+
+	return ret;
 }
