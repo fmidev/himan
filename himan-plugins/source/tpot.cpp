@@ -32,8 +32,11 @@ using namespace himan::plugin;
 
 #include "tpot_cuda.h"
 #include "cuda_helper.h"
-
 #include "util.h"
+
+const double Cp = 1004; // specific heat at constant pressure
+const double ZLc = 2.5e6; // latent heat of vaporization J/kg (=Rd)
+const double e = 0.622; // Rd/Rv
 
 tpot::tpot()
 : itsThetaCalculation(false)
@@ -134,6 +137,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 		p.GribCategory(0);
 		p.GribParameter(3);
 
+		theParams.push_back(p);
 	}
 
 	if (conf->Exists("thetae") && conf->GetValue("thetae") == "true")
@@ -283,7 +287,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		double PScale = 1;
-		double TBase = 0;
+		double TBase = 273.15;
 
 		// Source infos
 		shared_ptr<info> TInfo;
@@ -324,7 +328,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				TDInfo = theFetcher->Fetch(conf,
 										myTargetInfo->Time(),
 										myTargetInfo->Level(),
-										param("TD-K"));
+										param("TD-C"));
 
 				TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
 
@@ -378,10 +382,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
 		string deviceType;
-
-		const double Cp = 1004; // specific heat at constant pressure
-		const double ZLc = 2.5e6; // latent heat of vaporization J/kg (=Rd)
-		const double e = 0.622; // Rd/Rv
 
 #ifdef HAVE_CUDA
 		
@@ -514,13 +514,16 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					continue;
 				}
 
+				T -= TBase; // to Celsius
+				TD -= TBase; // to Celsius
+				P /= PScale; // to hPa
+				
 				double value = kFloatMissing;
 				double theta = kFloatMissing;
 
 				if (itsThetaCalculation)
 				{
-
-					theta = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
+					theta = Theta(P, T);
 
 					myTargetInfo->Param(param("TP-K"));
 
@@ -532,75 +535,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				
 				if (itsThetaWCalculation)
 				{
-					/*
-					 * Calculating pseudo-adiabatic theta.
-					 *
-					 * Method: numerical integration from LCL to 1000mb level
-					 * along wet adiabatic line.
-					 *
-					 * Numerical integration method used: leapfrog starting with euler
-					 *
-					 * Originally author AK Sarkanen / May 1985
-					 */
-
-					double Pstep = 5;
-					double Zref = kFloatMissing;
-
-					if (T > 100)
-					{
-						Zref = 273.15;
-					}
-					else
-					{
-						Zref = 0;
-					}
-
-					double ZT = T - Zref;
-
-					// Search LCL level
-
-					vector<double> LCL = util::LCL(P, ZT, TD);
-
-					double TLCL = LCL[1] + 273.15;
-					double PLCL = LCL[0]*100;
-
-					double T0 = TLCL;
-					Pstep *= 100;
-
-					int i = 1;
-
-					double Z = kFloatMissing;
-					double TT = kFloatMissing;
-					
-					while (true)
-					{
-						double TA = TLCL;
-
-						if (i < 2)
-						{
-							Z = i * Pstep/2;
-						}
-						else
-						{
-							Z = 2 * Pstep;
-						}
-
-						TT = T0 + util::Gammas(P/100, 273.15) * Z;
-
-						if (i > 2)
-						{
-							T0 = TA;
-						}
-
-						double PP = PLCL + Pstep;
-
-						if (PP >= 1e5)
-						{
-							break;
-						}
-					}
-
-					value = TT - 273.15 + Zref;
+					value = ThetaW(P, T, TD);
 
 					myTargetInfo->Param(param("TPW-K"));
 
@@ -612,62 +547,15 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				
 				if (itsThetaECalculation)
 				{
-					/*
-					 * Calculate equivalent potential temperature
-					 *
-					 * Method:
-					 *
-					 * The approximation given by Holton: Introduction to Dyn. Met.
-					 * page 331 is used. If the air is not saturated, it is
-					 * taken adiabatically to LCL.
-					 *
-					 * Original author K Eerola.
-					 */
-
-					// check units
-
-					double Zref = kFloatMissing;
-
-					if (T > 150)
-					{
-						Zref = 273.15;
-					}
-					else
-					{
-						Zref = 0;
-					}
-
-					double ZT = T - Zref;
-
-					double ZTD = TD - Zref;
-
-					vector<double> LCL = util::LCL(P, ZT, ZTD);
-
-					double TLCL = LCL[1];
-
-					if (theta == kFloatMissing)
-					{
-						// theta was not calculated in this plugin session :(
-
-						theta = (T + TBase) * pow((1000 / (P * PScale)), 0.286);
-					}
+					value = ThetaE(P, T, TD, theta);
 					
-					double ZEs = util::Es(TLCL);
-					double ZQs = e * (ZEs / (P - ZEs));
-
-					double ZthetaE = theta * exp(ZLc * ZQs / Cp / (TLCL + 273.15));
-
-					value = ZthetaE * Zref;
-
 					myTargetInfo->Param(param("TPE-K"));
 
 					if (!myTargetInfo->Value(value))
 					{
 						throw runtime_error(ClassName() + ": Failed to set value to matrix");
 					}
-
 				}
-
 			}
 
 			/*
@@ -696,7 +584,126 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		{
 			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
+			shared_ptr<info> tempInfo(new info(*myTargetInfo));
+
+			for (tempInfo->ResetParam(); tempInfo->NextParam(); )
+			{
+				theWriter->ToFile(tempInfo, conf);
+			}
 		}
 	}
+}
+
+double tpot::Theta(double P, double T)
+{
+	// Calculating theta with poissons equation
+
+	double value = T * pow((1000 / P), 0.286);
+
+	return value;
+}
+
+double tpot::ThetaW(double P, double T, double TD)
+{
+	/*
+	* Calculating pseudo-adiabatic theta.
+	*
+	* Method: numerical integration from LCL to 1000mb level
+	* along wet adiabatic line.
+	*
+	* Numerical integration method used: leapfrog starting with euler
+	*
+	* Originally author AK Sarkanen / May 1985
+	*/
+
+   const double Pstep = 500;
+   double value = kFloatMissing;
+
+   // Search LCL level
+
+   vector<double> LCL = util::LCL(P, T, TD);
+
+   double Tint = LCL[1];
+   double Pint = LCL[0];
+
+   if (Tint == kFloatMissing || Pint == kFloatMissing)
+   {
+	   value = kFloatMissing;
+   }
+   else
+   {
+       Pint *= 100; // back to Pa
+
+	   double T0 = Tint;
+
+	   int i = 0;
+
+	   double Z = kFloatMissing;
+
+	   while (++i < 500)
+	   {
+		   double TA = Tint;
+
+		   if (i <= 2)
+		   {
+			   Z = i * Pstep/2;
+		   }
+		   else
+		   {
+			   Z = 2 * Pstep;
+		   }
+
+		   // Gammas() takes hPa
+		   Tint = T0 + util::Gammas(Pint/100, Tint) * Z;
+
+		   if (i > 2)
+		   {
+			   T0 = TA;
+		   }
+
+		   Pint += Pstep;
+
+		   if (Pint >= 1e5)
+		   {
+			   value = Tint;
+			   break;
+		   }
+	   }
+   }
+
+   return value;
+}
+
+double tpot::ThetaE(double P, double T, double TD, double theta)
+{
+	/*
+	 * Calculate equivalent potential temperature
+	 *
+	 * Method:
+	 *
+	 * The approximation given by Holton: Introduction to Dyn. Met.
+	 * page 331 is used. If the air is not saturated, it is
+	 * taken adiabatically to LCL.
+	 *
+	 * Original author K Eerola.
+	 */
+
+	vector<double> LCL = util::LCL(P, T, TD);
+
+	double TLCL = LCL[1];
+
+	if (theta == kFloatMissing)
+	{
+		// theta was not calculated in this plugin session :(
+
+		theta = Theta(P, T);
+	}
+
+	double ZEs = util::Es(TLCL);
+	double ZQs = e * (ZEs / (P - ZEs));
+
+	double value = theta * exp(ZLc * ZQs / Cp / (TLCL + 273.15));
+
+	return value;
+
 }

@@ -1,8 +1,8 @@
-/*
- * tpot.h
+/**
+ * @file tpot.h
  *
- *  Created on: Nov 20, 2012
- *      Author: partio
+ * @date Nov 20, 2012
+ * @author partio
  */
 
 #ifndef TPOT_H
@@ -19,47 +19,51 @@ namespace plugin
 class tpot : public compiled_plugin, private compiled_plugin_base
 {
 public:
-    tpot();
+	tpot();
 
-    inline virtual ~tpot() {}
+	inline virtual ~tpot() {}
 
-    tpot(const tpot& other) = delete;
-    tpot& operator=(const tpot& other) = delete;
+	tpot(const tpot& other) = delete;
+	tpot& operator=(const tpot& other) = delete;
 
-    virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-    virtual std::string ClassName() const
-    {
-        return "himan::plugin::tpot";
-    }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::tpot";
+	}
 
-    virtual HPPluginClass PluginClass() const
-    {
-        return kCompiled;
-    }
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
 
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
 
 private:
 
-    void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
-    void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
+	double Theta(double P, double T);
+	double ThetaW(double P, double T, double TD);
+	double ThetaE(double P, double T, double TD, double theta);
 
-    bool itsThetaCalculation;
-    bool itsThetaWCalculation;
-    bool itsThetaECalculation;
-    bool itsUseCuda;
-    int itsCudaDeviceCount;
+	void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
+	void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
+
+	bool itsThetaCalculation;
+	bool itsThetaWCalculation;
+	bool itsThetaECalculation;
+	bool itsUseCuda;
+	int itsCudaDeviceCount;
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<tpot> (new tpot());
+	return std::shared_ptr<tpot> (new tpot());
 }
 
 } // namespace plugin
