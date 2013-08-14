@@ -487,6 +487,11 @@ bool info::FirstLocation()
     return NextLocation();
 }
 
+size_t info::LocationIndex() const
+{
+    return itsLocationIndex;
+}
+
 void info::LocationIndex(size_t theLocationIndex)
 {
     itsLocationIndex = theLocationIndex;
