@@ -57,82 +57,92 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		
 	do
 	{
-		if (config->UseCache())
+		// Loop over all source producers if more than one specified
+
+		config->FirstSourceProducer();
+
+		do
 		{
 
-			// 1. Fetch data from cache
+			itsLogger->Debug("Current producer: " + config->SourceProducer().Name());
 
-			itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
-
-			theInfos = FromCache(opts);
-
-			if (theInfos.size())
+			if (config->UseCache())
 			{
-				itsLogger->Debug("Data found from cache");
 
-				if (config->StatisticsEnabled())
+				// 1. Fetch data from cache
+
+				itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+
+				theInfos = FromCache(opts);
+
+				if (theInfos.size())
 				{
-					config->Statistics()->AddToCacheHitCount(1);
+					itsLogger->Debug("Data found from cache");
+
+					if (config->StatisticsEnabled())
+					{
+						config->Statistics()->AddToCacheHitCount(1);
+					}
+
+					break;
 				}
-
-				break;
 			}
-		}
-		
-		/*
-		 *  2. Fetch data from auxiliary files specified at command line
-		 *
-		 *  Even if file_wait_timeout is specified, auxiliary files is searched
-		 *  only once.
-		 */
 
-		if (config->AuxiliaryFiles().size() && waitedSeconds == 0)
-		{
-			theInfos = FromFile(config->AuxiliaryFiles(), opts, true, readPackedData);
+			/*
+			 *  2. Fetch data from auxiliary files specified at command line
+			 *
+			 *  Even if file_wait_timeout is specified, auxiliary files is searched
+			 *  only once.
+			 */
 
-			if (theInfos.size())
+			if (config->AuxiliaryFiles().size() && waitedSeconds == 0)
 			{
-				itsLogger->Debug("Data found from auxiliary file(s)");
-				
-				if (config->StatisticsEnabled())
+				theInfos = FromFile(config->AuxiliaryFiles(), opts, true, readPackedData);
+
+				if (theInfos.size())
 				{
-					config->Statistics()->AddToCacheMissCount(1);
+					itsLogger->Debug("Data found from auxiliary file(s)");
+
+					if (config->StatisticsEnabled())
+					{
+						config->Statistics()->AddToCacheMissCount(1);
+					}
+
+					break;
 				}
-
-				break;
-			}
-			else
-			{
-				itsLogger->Warning("Data not found from auxiliary file(s)");
-			}
-		}
-
-		// 3. Fetch data from Neons
-
-		vector<string> files;
-
-		if (config->ReadDataFromDatabase())
-		{
-			shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-			files = n->Files(opts);
-
-			if (!files.empty())
-			{
-				theInfos = FromFile(files, opts, true, readPackedData);
-
-				if (config->StatisticsEnabled())
+				else
 				{
-					config->Statistics()->AddToCacheMissCount(1);
+					itsLogger->Warning("Data not found from auxiliary file(s)");
 				}
+			}
 
-				break;
-			}
-			else
+			// 3. Fetch data from Neons
+
+			vector<string> files;
+
+			if (config->ReadDataFromDatabase())
 			{
-				itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
+				shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+				files = n->Files(opts);
+
+				if (!files.empty())
+				{
+					theInfos = FromFile(files, opts, true, readPackedData);
+
+					if (config->StatisticsEnabled())
+					{
+						config->Statistics()->AddToCacheMissCount(1);
+					}
+
+					break;
+				}
+				else
+				{
+					itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
+				}
 			}
-		}
+		} while (config->NextSourceProducer());
 
 		if (config->FileWaitTimeout() > 0)
 		{
