@@ -46,7 +46,7 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 		}
 		else
 		{
-			dTp[idx] = (opts.TBase + dT[idx]) * powf((1000 / (opts.PScale * P)), 0.286);
+			dTp[idx] = (opts.TBase + dT[idx]) * powf((1000 / (opts.PScale * P)), 0.28586);
 		}
 	}
 }
