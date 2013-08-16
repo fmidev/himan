@@ -20,13 +20,15 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: jasper-libs
-Requires: grib_api
+Requires: grib_api >= 1.10.0
+Requires: oracle-instantclient-basic >= 11.2.0.3.0
 BuildRequires: boost-devel >= 1.52
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 12.4.18-1
 BuildRequires: grib_api-devel >= 1.10
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-5-5
+BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
 %if %{distnum} == 5
 BuildRequires: gcc44-c++ >= 4.4.6
