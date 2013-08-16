@@ -294,8 +294,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 
 			double Icing;
 			double TBase = 273.15;
-			int vCor;
-			int tCor;
+			int vCor = kHPMissingInt;
+			int tCor = kHPMissingInt;
 
 			T = T - TBase;
 
