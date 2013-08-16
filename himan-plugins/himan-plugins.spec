@@ -1,16 +1,15 @@
-%define is_rhel_5 %(grep release /etc/redhat-release | cut -d ' ' -f 3 | head -c 1 | grep 5 || echo 0)
-%define is_rhel_6 %(grep release /etc/redhat-release | cut -d ' ' -f 3 | head -c 1 | grep 6 || echo 0)
+%define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
 %define dist el5
 
-%if %is_rhel_6
+%if %{distnum} == 6
 %define dist el6
 %endif
 
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.3.11
+Version: 13.8.16
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -22,12 +21,14 @@ Requires: libgcc
 Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api
-BuildRequires: boost-devel >= 1.49
+BuildRequires: boost-devel >= 1.52
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 12.4.18-1
-BuildRequires: grib_api
+BuildRequires: grib_api-devel >= 1.10
+BuildRequires: redhat-rpm-config
+BuildRequires: cuda-5-5
 
-%if is_rhel_5
+%if %{distnum} == 5
 BuildRequires: gcc44-c++ >= 4.4.6
 BuildRequires: gcc44-c++ < 4.7
 %else
@@ -44,7 +45,7 @@ rm -rf $RPM_BUILD_ROOT
 %setup -q -n "himan-plugins" 
 
 %build
-make debug
+make
 
 %install
 mkdir -p $RPM_BUILD_ROOT
@@ -56,15 +57,21 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libcache.so
+%{_libdir}/himan-plugins/libcloud_type.so
 %{_libdir}/himan-plugins/libdewpoint.so
 %{_libdir}/himan-plugins/libfetcher.so
+%{_libdir}/himan-plugins/libfog.so
 %{_libdir}/himan-plugins/libgrib.so
+%{_libdir}/himan-plugins/libhybrid_height.so
+%{_libdir}/himan-plugins/libhybrid_pressure.so
 %{_libdir}/himan-plugins/libicing.so
 %{_libdir}/himan-plugins/libkindex.so
 %{_libdir}/himan-plugins/libneons.so
+%{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libpcuda.so
 %{_libdir}/himan-plugins/libprecipitation.so
 %{_libdir}/himan-plugins/libquerydata.so
+%{_libdir}/himan-plugins/librain_type.so
 %{_libdir}/himan-plugins/libseaicing.so
 %{_libdir}/himan-plugins/libtk2tc.so
 %{_libdir}/himan-plugins/libtpot.so
@@ -73,6 +80,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Aug 16 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.16-1.el6.fmi
+- Latest changes
+- First release for masala-cluster
 * Mon Mar 11 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.3.11-1.el5.fmi
 - Latest changes
 * Thu Feb 21 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.21-1.el5.fmi
