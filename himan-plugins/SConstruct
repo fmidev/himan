@@ -169,7 +169,7 @@ if have_cuda:
 env.Append(NVCCFLAGS = ['-m64'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC']) # these two go hand-in-hand (like -Wl,--export-dynamic)
 env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
-env.Append(NVCCFLAGS = ['-arch=compute_20','-code=sm_20'])
+env.Append(NVCCFLAGS = ['-arch=compute_35','-code=sm_35'])
 env.Append(NVCCPATH = ['./include'])
 env.Append(NVCCPATH = [workspace + '/himan-lib/include']) # timer
 
