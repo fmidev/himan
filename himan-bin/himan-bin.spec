@@ -1,16 +1,15 @@
-%define is_rhel_5 %(grep release /etc/redhat-release | cut -d ' ' -f 3 | head -c 1 | grep 5 || echo 0)
-%define is_rhel_6 %(grep release /etc/redhat-release | cut -d ' ' -f 3 | head -c 1 | grep 6 || echo 0)
+%define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
 %define dist el5
 
-%if %is_rhel_6
+%if %{distnum} == 6
 %define dist el6
 %endif
 
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 13.3.11
+Version: 13.8.16
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -20,9 +19,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib
+Requires: himan-lib >= 13.8.16
+BuildRequires: redhat-rpm-config
 
-%if is_rhel_5
+%if %{distnum} == 5
 BuildRequires: gcc44-c++ >= 4.4.6
 BuildRequires: gcc44-c++ < 4.7
 %else
@@ -31,7 +31,7 @@ BuildRequires: gcc-c++ < 4.7
 %endif
 
 BuildRequires: scons
-BuildRequires: boost-devel
+BuildRequires: boost-devel >= 1.52
 BuildRequires: libsmartmet-newbase >= 12.4.18-1
 
 Provides: himan
@@ -45,7 +45,7 @@ rm -rf $RPM_BUILD_ROOT
 %setup -q -n "himan-bin" 
 
 %build
-make debug
+make
 
 %install
 mkdir -p $RPM_BUILD_ROOT
@@ -59,6 +59,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Fri Aug 16 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.16-1.el6.fmi
+- Latest changes
+- First release for masala-cluster
 * Mon Mar 11 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.3.11-1.el5.fmi
 - Latest changes
 * Thu Feb 21 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.2.21-1.el5.fmi
