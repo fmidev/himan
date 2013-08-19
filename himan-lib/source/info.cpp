@@ -101,22 +101,6 @@ std::ostream& info::Write(std::ostream& file) const
 
     file << "<" << ClassName() << " " << Version() << ">" << endl;
 
-    file << "__itsProjection__ " << itsProjection << endl;
-
-    file << itsBottomLeft;
-    file << itsTopRight;
-    file << itsSouthPole;
-
-    file << "__itsOrientation__ " << itsOrientation << endl;
-    file << "__itsNi__ " << itsNi << endl;
-    file << "__itsNj__ " << itsNj << endl;
-    file << "__itsDi__ " << itsDi << endl;
-    file << "__itsDi__ " << itsDj << endl;
-
-    file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
-
-    file << "__itsScanningMode__ " << itsScanningMode << endl;
-
     file << itsProducer;
 
     if (itsParamIterator)
@@ -134,6 +118,11 @@ std::ostream& info::Write(std::ostream& file) const
     	file << *itsTimeIterator;
     }
 
+	for (size_t i = 0; i < itsDimensionMatrix->Size(); i++)
+	{
+		file << *itsDimensionMatrix->At(i);
+	}
+	
     return file;
 }
 
