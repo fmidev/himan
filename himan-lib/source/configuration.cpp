@@ -7,6 +7,13 @@
 
 #include "configuration.h"
 #include "logger_factory.h"
+#include "plugin_factory.h"
+
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "pcuda.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
 
@@ -254,9 +261,9 @@ std::string configuration::SourceGeomName() const
 
 void configuration::StoreCudaDeviceCount()
 {
-	std::shared_ptr<plugin::pcuda> p = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	std::shared_ptr<plugin::pcuda> p = std::dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-	itsCudaDeviceCount = p->DeviceCount();
+	itsCudaDeviceCount = static_cast<short> (p->DeviceCount());
 }
 
 bool configuration::HaveCuda() const
