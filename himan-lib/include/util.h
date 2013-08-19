@@ -190,7 +190,7 @@ double Es(double T);
 /**
  * @brief Calculates pseudo-adiabatic lapse rate
  *
- * Originally author AK Sarkanen May 1985.
+ * Original author AK Sarkanen May 1985.
  * 
  * @param P Pressure in hPa
  * @param T Temperature in C
