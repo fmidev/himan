@@ -102,8 +102,6 @@ private:
 	bool itsThetaCalculation;
 	bool itsThetaWCalculation;
 	bool itsThetaECalculation;
-	bool itsUseCuda;
-	int itsCudaDeviceCount;
 };
 
 // the class factory

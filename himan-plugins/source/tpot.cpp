@@ -9,23 +9,16 @@
  */
 
 #include "tpot.h"
-#include <iostream>
 #include "plugin_factory.h"
 #include "logger_factory.h"
+#include "timer_factory.h"
 #include <boost/lexical_cast.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
-#include "writer.h"
-#include "neons.h"
-#include "pcuda.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
-
-#ifdef DEBUG
-#include "timer_factory.h"
-#endif
 
 using namespace std;
 using namespace himan::plugin;
@@ -42,8 +35,6 @@ tpot::tpot()
 : itsThetaCalculation(false)
 , itsThetaWCalculation(false)
 , itsThetaECalculation(false)
-, itsUseCuda(false)
-, itsCudaDeviceCount(0)
 {
 	itsClearTextFormula = "TP = Tk * pow((1000/P), 0.286) ; TPW calculated with LCL ; TPE = X"; 
 
@@ -54,35 +45,7 @@ tpot::tpot()
 void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
-	unique_ptr<timer> initTimer;
-
-	if (conf->StatisticsEnabled())
-	{
-		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		initTimer->Start();
-	}
-
-	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
-
-	if (c->HaveCuda())
-	{
-		string msg = "I possess the powers of CUDA";
-
-		if (!conf->UseCuda())
-		{
-			msg += ", but I won't use them";
-		}
-		else
-		{
-			msg += ", and I'm not afraid to use them";
-			itsUseCuda = true;
-		}
-
-		itsLogger->Info(msg);
-
-		itsCudaDeviceCount = c->DeviceCount();
-	
-	}
+	unique_ptr<timer> aTimer;
 
 	// Get number of threads to use
 
@@ -90,8 +53,10 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
+		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		aTimer->Start();
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
+		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
 	}
 
 	boost::thread_group g;
@@ -181,14 +146,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->OutputFileType() == kGRIB1)
 	{
-		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		for (unsigned int i = 0; i < theParams.size(); i++)
-		{
-			long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theParams[i].Name());
-			theParams[i].GribIndicatorOfParameter(parm_id);
-			theParams[i].GribTableVersion(targetInfo->Producer().TableVersion());
-		}
+		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
 	}
 
 	targetInfo->Params(theParams);
@@ -209,19 +167,10 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		initTimer->Stop();
-		conf->Statistics()->AddToInitTime(initTimer->GetTime());
-	}
+		aTimer->Stop();
+		conf->Statistics()->AddToInitTime(aTimer->GetTime());
 
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-	if (conf->StatisticsEnabled())
-	{
-		processTimer->Start();
+		aTimer->Start();
 	}
 	
 	for (size_t i = 0; i < threadCount; i++)
@@ -243,20 +192,12 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		processTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+		aTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 	
-	if (conf->FileWriteOption() == kSingleFile)
-	{
+	WriteToFile(conf, targetInfo);
 
-		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-		string theOutputFile = conf->ConfigurationFile();
-
-		theWriter->ToFile(targetInfo, conf, theOutputFile);
-
-	}
 }
 
 void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
@@ -381,8 +322,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
-		int missingCount = 0;
-		int count = 0;
+		size_t missingCount = 0;
+		size_t count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
@@ -392,7 +333,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 #ifdef HAVE_CUDA
 		
-		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+		if (conf->UseCuda() && equalGrids && threadIndex <= conf->CudaDeviceCount())
 		{
 			deviceType = "GPU";
 
@@ -404,7 +345,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			opts.isConstantPressure = isPressureLevel;
 			opts.TBase = TBase;
 			opts.PScale = PScale;
-			opts.cudaDeviceIndex = threadIndex-1;
+			opts.cudaDeviceIndex = static_cast<unsigned short> (threadIndex-1);
 						
 			if (TInfo->Grid()->DataIsPacked())
 			{
@@ -583,21 +524,16 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		 * Now we are done for this level
 		 *
 		 * Clone info-instance to writer since it might change our descriptor places
-		 * */
+		 *
+		 */
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+		if (conf->FileWriteOption() != kSingleFile)
 		{
-			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-			shared_ptr<info> tempInfo(new info(*myTargetInfo));
-
-			for (tempInfo->ResetParam(); tempInfo->NextParam(); )
-			{
-				theWriter->ToFile(tempInfo, conf);
-			}
+			WriteToFile(conf, myTargetInfo);
 		}
+
 	}
 }
 
