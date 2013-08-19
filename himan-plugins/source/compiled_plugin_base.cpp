@@ -13,6 +13,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
+#include "writer.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -210,4 +211,41 @@ bool compiled_plugin_base::SwapTo(shared_ptr<info> myTargetInfo, HPScanningMode 
 	}
 
 	return true;
+}
+
+void compiled_plugin_base::StoreGrib1ParameterDefinitions(vector<param> params, long table2Version)
+{
+	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+	for (unsigned int i = 0; i < params.size(); i++)
+	{
+		long parm_id = n->NeonsDB().GetGridParameterId(table2Version, params[i].Name());
+		params[i].GribIndicatorOfParameter(parm_id);
+		params[i].GribTableVersion(table2Version);
+	}
+}
+
+void compiled_plugin_base::WriteToFile(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> targetInfo)
+{
+	shared_ptr<writer> aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+
+	// writing might modify iterator positions --> create a copy
+
+	shared_ptr<info> tempInfo(new info(*targetInfo));
+
+	if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+	{
+		// if info holds multiple parameters, we must loop over them all
+
+		tempInfo->FirstParam();
+
+		for (; tempInfo->NextParam(); )
+		{
+			aWriter->ToFile(tempInfo, conf);
+		}
+	}
+	else if (conf->FileWriteOption() == kSingleFile)
+	{
+		aWriter->ToFile(tempInfo, conf, conf->ConfigurationFile());
+	}
 }

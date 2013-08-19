@@ -10,6 +10,7 @@
 
 #include <NFmiGrid.h>
 #include "info.h"
+#include "plugin_configuration.h"
 #include <mutex>
 
 namespace himan
@@ -105,6 +106,23 @@ protected:
 
 	bool SwapTo(std::shared_ptr<info> myTargetInfo, HPScanningMode targetScanningMode);
 
+	/**
+	 * @brief Retrieve grib 1 parameter information from neons
+	 *
+	 * @param params vector containing all the parameters
+	 * @param table2Version table2version of the producer
+	 */
+
+	void StoreGrib1ParameterDefinitions(std::vector<param> params, long table2Version);
+
+	/**
+	 * @brief Write plugin contents to file
+	 *
+	 * @param conf configuration
+	 * @param targetInfo info-class instance holding the data
+	 */
+
+	void WriteToFile(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> targetInfo);
 
 private:
     HPDimensionType itsLeadingDimension;
