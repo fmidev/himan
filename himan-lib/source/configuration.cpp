@@ -154,7 +154,7 @@ void configuration::FileWaitTimeout(unsigned short theFileWaitTimeout)
 
 bool configuration::UseCuda() const
 {
-	return itsUseCuda;
+	return itsUseCuda && HaveCuda();
 }
 
 void configuration::UseCuda(bool theUseCuda)
@@ -252,3 +252,19 @@ std::string configuration::SourceGeomName() const
 	return itsSourceGeomName;
 }
 
+void configuration::StoreCudaDeviceCount()
+{
+	std::shared_ptr<plugin::pcuda> p = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+
+	itsCudaDeviceCount = p->DeviceCount();
+}
+
+bool configuration::HaveCuda() const
+{
+	return (itsCudaDeviceCount > 0);
+}
+
+short configuration::CudaDeviceCount() const
+{
+	return itsCudaDeviceCount;
+}

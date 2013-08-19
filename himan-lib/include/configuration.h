@@ -122,6 +122,9 @@ public:
 	bool NextSourceProducer() const; // THIS SHOULD NOT BE CONST ??
 	bool FirstSourceProducer() const; // THIS SHOULD NOT BE CONST ??
 
+	void StoreCudaDeviceCount();
+	bool HaveCuda() const;
+	short CudaDeviceCount() const;
 
 protected:
 	
@@ -154,6 +157,8 @@ protected:
 
 	bool itsUseCudaForPacking;
 	bool itsUseCache;
+
+	short itsCudaDeviceCount;
 
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 };
