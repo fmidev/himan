@@ -46,25 +46,52 @@ unsigned short compiled_plugin_base::ThreadCount(short userThreadCount) const
 
 bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetGrid, shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value)
 {
-	const NFmiPoint targetLatLonPoint = targetGrid->LatLon();
-	const NFmiPoint targetGridPoint = targetGrid->GridPoint();
+
+	/*
+	 * Logic of interpolating values:
+	 *
+	 * 1) If source and target grids are equal, meaning that the grid AND the area
+	 *    properties are effectively the same, do not interpolate. Instead return
+	 *    the value of the source grid point that matches the ordering number of the
+	 *    target grid point (ie. target grid point #1 --> source grid point #1 etc).
+	 *
+	 * 2) If actual interpolation is needed, first get the *grid* coordinates of the
+	 *    latlon target point. Then check if those grid coordinates are very close
+	 *    to a grid point -- if so, return the value of the grid point. This serves two
+	 *    purposes:
+	 *    - We don't need to interpolate if the distance between requested grid point
+	 *      and actual grid point is small enough, saving some CPU cycles
+	 *    - Sometimes when the requested grid point is close to grid edge, floating
+	 *      point inaccuracies might move it outside the grid. If this happens, the
+	 *      interpolation fails even though initially the grid point is valid.
+	 *
+	 * 3) If requested source grid point is not near and actual grid point, interpolate
+	 *    the value of the point.
+	 */
+
+	// Step 1)
 
 	if (gridsAreEqual)
 	{
-		value = sourceGrid->FloatValue(targetGridPoint);
+		value = sourceGrid->FloatValue(targetGrid->GridPoint());
 		return true;
 	}
 
-	const NFmiPoint sourceGridPoint = sourceGrid->LatLonToGrid(targetLatLonPoint);
+	const NFmiPoint targetLatLonPoint = targetGrid->LatLon();
+	const NFmiPoint sourceGridPoint = targetGrid->LatLonToGrid(targetLatLonPoint.X(), targetLatLonPoint.Y());
 
-	bool noInterpolation = (fabs(targetGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
-		 fabs(targetGridPoint.Y() - round(sourceGridPoint.Y())) < kInterpolatedValueEpsilon);
+	// Step 2)
+
+	bool noInterpolation = (fabs(sourceGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
+		 fabs(sourceGridPoint.Y() - round(sourceGridPoint.Y())) < kInterpolatedValueEpsilon);
 
 	if (noInterpolation)
 	{
-		value = sourceGrid->FloatValue();
+		value = sourceGrid->FloatValue(sourceGridPoint);
 		return true;
 	}
+
+	// Step 3)
 
 	return sourceGrid->InterpolateToLatLonPoint(targetLatLonPoint, value);
 
