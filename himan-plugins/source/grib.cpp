@@ -299,6 +299,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			p.Unit(kM);
 		}
+		else if (itsGrib->Message()->ParameterUnit() == "Pa")
+		{
+			p.Unit(kPa);
+		}
 		else
 		{
 			itsLogger->Trace("Unable to determine himan parameter unit for grib unit " + itsGrib->Message()->ParameterUnit());
@@ -415,7 +419,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		if (l != options.level)
 		{
-			itsLogger->Trace("Level does not match: " + string(HPLevelTypeToString.at(options.level.Type())) + " vs " + string(HPLevelTypeToString.at(l.Type())));
+			itsLogger->Trace("Level does not match: " + 
+				string(HPLevelTypeToString.at(options.level.Type())) +
+				" " +
+				string(boost::lexical_cast<string> (options.level.Value())) +
+				" vs " +
+				string(HPLevelTypeToString.at(l.Type())) +
+				" " +
+				string(boost::lexical_cast<string> (l.Value())));
 			continue;
 		}
 
@@ -538,7 +549,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		size_t len = 0;
 
-#if defined READ_PACKED_DATA && defined HAVE_CUDA
+#if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
 
 		if (readPackedData && itsGrib->Message()->PackingType() == "grid_simple")
 		{

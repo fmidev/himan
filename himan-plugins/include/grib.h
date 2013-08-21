@@ -43,7 +43,7 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 0);
 	}
 
 	std::shared_ptr<NFmiGrib> Reader();
