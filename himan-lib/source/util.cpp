@@ -37,7 +37,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 	{
 		char* path;
 
-		path = std::getenv("NEONS_REF_BASE");
+		path = std::getenv("MASALA_PROCESSED_DATA_BASE");
 
 		if (path != NULL)
 		{
@@ -46,7 +46,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 		}
 		else
 		{
-			cout << "Warning::util NEONS_REF_BASE not set" << endl;
+			cout << "Warning::util MASALA_PROCESSED_DATA_BASE not set" << endl;
 		}
 
 		base <<	"/"
@@ -442,9 +442,12 @@ double util::Es(double T)
 
 double util::Gammas(double P, double T)
 {
-	const double R = 287; // gas constant
-	const double CP = 1004; // specific heat at constant pressure
-	const double L = 2.5e6;
+	// http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate ?
+	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
+	
+	const double R = 287; // gas constant, J/kg/K
+	const double CP = 1004; // specific heat at constant pressure, J/kg/K
+	const double L = 2.5e6; // heat of vaporization of water, J/kg
 
 	double Q = kEp * util::Es(T) / P;
 
