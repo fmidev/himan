@@ -247,7 +247,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		}
 		else
 		{
-			throw runtime_error("Invalid file type: " + outfileType);
+			cerr << "Invalid file type: " << outfileType << endl;
+			exit(1);
 		}
 	}
 
@@ -300,7 +301,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	}
 	else
 	{
-		throw runtime_error("himan: Configuration file not defined");
+		cerr << "himan: Configuration file not defined" << endl;
+		exit(1);
 	}
 
 	if (!statisticsLabel.empty())
