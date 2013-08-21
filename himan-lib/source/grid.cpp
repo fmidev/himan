@@ -20,6 +20,7 @@ grid::grid()
 	, itsPackedData()
 	, itsScanningMode(kUnknownScanningMode)
 	, itsUVRelativeToGrid(false)
+	, itsOrientation(kHPMissingFloat)
 	, itsDi(kHPMissingFloat)
 	, itsDj(kHPMissingFloat)
 {
@@ -221,8 +222,8 @@ point grid::FirstGridPoint() const
 
 	if (itsProjection == kStereographicProjection)
 	{
+		// Currently support no other scanning mode than bottom left for stereographic projections
 		assert(itsScanningMode == kBottomLeft);
-		itsLogger->Warning("Endpoint calculations not supported for non-latlon projections");
 		return itsBottomLeft;
 	}
 
@@ -267,8 +268,8 @@ point grid::LastGridPoint() const
 {
 	if (itsProjection == kStereographicProjection)
 	{
+		// Currently support no other scanning mode than bottom left for stereographic projections
 		assert(itsScanningMode == kBottomLeft);
-		itsLogger->Warning("Endpoint calculations not supported for non-latlon projections");
 		return itsTopRight;
 	}
 
