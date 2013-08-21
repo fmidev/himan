@@ -15,7 +15,7 @@ grib_compare -A 0.01 harmonie_gust_result.grib ./FFG-MS_height_10_rll_290_594_0_
 if [ $? -eq 0 ];then
   echo windvector/harmonie gust speed success on CPU
 else
-  echo windvector/harmonie gust speed success on CPU
+  echo windvector/harmonie gust speed failed on CPU
   exit 1
 fi
 
