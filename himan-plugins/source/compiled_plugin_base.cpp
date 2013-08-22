@@ -264,9 +264,9 @@ void compiled_plugin_base::WriteToFile(shared_ptr<const plugin_configuration> co
 	{
 		// if info holds multiple parameters, we must loop over them all
 
-		tempInfo->FirstParam();
+		tempInfo->ResetParam();
 
-		for (; tempInfo->NextParam(); )
+		while (tempInfo->NextParam())
 		{
 			aWriter->ToFile(tempInfo, conf);
 		}
@@ -275,4 +275,6 @@ void compiled_plugin_base::WriteToFile(shared_ptr<const plugin_configuration> co
 	{
 		aWriter->ToFile(tempInfo, conf, conf->ConfigurationFile());
 	}
+
+	tempInfo.reset();
 }
