@@ -18,9 +18,6 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
-#include "writer.h"
-#include "pcuda.h"
-#include "neons.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -46,34 +43,7 @@ windvector::windvector()
 
 void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
-	unique_ptr<timer> initTimer;
-
-	if (conf->StatisticsEnabled())
-	{
-		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		initTimer->Start();
-	}
-
-	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
-
-	if (c && c->HaveCuda())
-	{
-		string msg = "I possess the powers of CUDA";
-
-		if (!conf->UseCuda())
-		{
-			msg += ", but I won't use them";
-		}
-		else
-		{
-			msg += ", and I'm not afraid to use them";
-			itsUseCuda = true;
-		}
-
-		itsLogger->Info(msg);
-		itsCudaDeviceCount = c->DeviceCount();
-
-	}
+	unique_ptr<timer> aTimer;
 
 	// Get number of threads to use
 
@@ -81,8 +51,10 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
+		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		aTimer->Start();
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
+		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
 	}
 
 	boost::thread_group g;
@@ -129,6 +101,9 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		{
 			itsLogger->Error("Unable to calculate vector for ice");
 		}
+
+		theParams.push_back(requestedSpeedParam);
+		theParams.push_back(requestedDirParam);
 	}
 	else if (conf->Exists("for_sea") && conf->GetValue("for_sea") == "true")
 	{
@@ -149,6 +124,9 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		{
 			itsLogger->Error("Unable to calculate vector for sea");
 		}
+
+		theParams.push_back(requestedSpeedParam);
+		theParams.push_back(requestedDirParam);
 	}
 	else if (conf->Exists("for_gust") && conf->GetValue("for_gust") == "true")
 	{
@@ -164,6 +142,9 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		{
 			itsLogger->Error("Unable to calculate vector for wind gust");
 		}
+
+		theParams.push_back(requestedSpeedParam);
+
 	}
 	else
 	{
@@ -179,45 +160,21 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		requestedSpeedParam.GribCategory(2);
 		requestedSpeedParam.GribParameter(1);
 
-		requestedVectorParam = param("DF-MS", 22);
+		theParams.push_back(requestedSpeedParam);
+		theParams.push_back(requestedDirParam);
+
+		if (itsVectorCalculation)
+		{
+			requestedVectorParam = param("DF-MS", 22);
+			theParams.push_back(requestedVectorParam);
+		}
 		
 		itsCalculationTarget = kWind;
 	}
 
 	if (conf->OutputFileType() == kGRIB1)
 	{
-		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedSpeedParam.Name());
-		requestedSpeedParam.GribIndicatorOfParameter(parm_id);
-		requestedSpeedParam.GribTableVersion(targetInfo->Producer().TableVersion());
-
-		if (itsCalculationTarget != kGust)
-		{
-			parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedDirParam.Name());
-			requestedDirParam.GribIndicatorOfParameter(parm_id);
-			requestedDirParam.GribTableVersion(targetInfo->Producer().TableVersion());
-		}
-
-		if (itsVectorCalculation)
-		{
-			parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedVectorParam.Name());
-			requestedDirParam.GribIndicatorOfParameter(parm_id);
-			requestedDirParam.GribTableVersion(targetInfo->Producer().TableVersion());
-		}
-		
-	}
-
-	theParams.push_back(requestedSpeedParam);
-
-	if (itsCalculationTarget != kGust)
-	{
-		theParams.push_back(requestedDirParam);
-	}
-
-	if (itsVectorCalculation)
-	{
-		theParams.push_back(requestedVectorParam);
+		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
 	}
 
 	targetInfo->Params(theParams);
@@ -238,20 +195,16 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		initTimer->Stop();
-		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+		aTimer->Stop();
+		conf->Statistics()->AddToInitTime(aTimer->GetTime());
+
+		aTimer->Start();
+
 	}
 
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-	if (conf->StatisticsEnabled())
-	{
-		processTimer->Start();
-	}
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
@@ -272,20 +225,12 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		processTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+		aTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	if (conf->FileWriteOption() == kSingleFile)
-	{
+	WriteToFile(conf, targetInfo);
 
-		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-		string theOutputFile = conf->ConfigurationFile();
-
-		theWriter->ToFile(targetInfo, conf, theOutputFile);
-
-	}
 }
 
 void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
@@ -420,8 +365,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			VInfo->Grid()->Stagger(0, -0.5);
 		}*/
 
-		int missingCount = 0;
-		int count = 0;
+		size_t missingCount = 0;
+		size_t count = 0;
 
 		bool equalGrids = (*myTargetInfo->Grid() == *UInfo->Grid() && *myTargetInfo->Grid() == *VInfo->Grid());
 
@@ -516,7 +461,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			opts.di = myTargetInfo->Grid()->Di();
 			opts.dj = myTargetInfo->Grid()->Dj();
 
-			opts.cudaDeviceIndex = threadIndex-1;
+			opts.cudaDeviceIndex = static_cast<unsigned short> (threadIndex-1);
 
 			windvector_cuda::DoCuda(opts, datas);
 
@@ -748,16 +693,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+
+		if (conf->FileWriteOption() != kSingleFile)
 		{
-			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-			shared_ptr<info> tempInfo(new info(*myTargetInfo));
-
-			for (tempInfo->ResetParam(); tempInfo->NextParam(); )
-			{
-				theWriter->ToFile(tempInfo, conf);
-			}
+			WriteToFile(conf, myTargetInfo);
 		}
 	}
 }
