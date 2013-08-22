@@ -20,8 +20,8 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.environ['HOME'] + "/workspace"
-if os.environ['HOME'] == "/var/lib/jenkins":
-	workspace = os.environ['HOME'] + "/jobs/himan/workspace"
+if os.environ['HOME'] == "/home/weto":
+	workspace = os.environ['HOME'] + "/workspace/himan"
 # cuda toolkit path
 
 cuda_toolkit_path = '/opt/cuda'
@@ -50,10 +50,11 @@ if os.environ.get('CXX') != None:
 includes = []
 
 includes.append('./include')
+
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
-#includes.append(workspace + '/trunk/newbase/include')
-includes.append('/usr/include/smartmet/newbase')
+includes.append(workspace + '/trunk/newbase/include')
+#includes.append('/usr/include/smartmet/newbase')
 includes.append(workspace + '/fmidb/include')
 includes.append(workspace + '/fmigrib/include')
 includes.append('/usr/lib/grib_api/include')
