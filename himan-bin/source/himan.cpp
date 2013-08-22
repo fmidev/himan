@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 
 	shared_ptr<plugin::auxiliary_plugin> n = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
 	shared_ptr<plugin::auxiliary_plugin> c = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("cache"));
- 
+
 	std::vector<shared_ptr<plugin_configuration>> plugins = json_parser::Instance()->Parse(conf);
 
 	conf.reset(); // we don't need this conf anymore, it was only used as a base for json_parser
@@ -226,6 +226,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCudaForPacking(false);
 	}
 #endif
+
+	conf->StoreCudaDeviceCount();
 
 	if (!outfileType.empty())
 	{
