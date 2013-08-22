@@ -20,8 +20,8 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.environ['HOME'] + "/workspace"
-if os.environ['HOME'] == "/var/lib/jenkins":
-	workspace = os.environ['HOME'] + "/jobs/himan/workspace"
+if os.environ['HOME'] == "/home/weto":
+	workspace = os.environ['HOME'] + "/workspace/himan"
 	
 # cuda toolkit path
 
