@@ -38,10 +38,19 @@ void neons::InitPool()
 
 	// TODO: a smarter way to check if we are in production server
 
-	if (host != NULL && (string(host) == "gogol.fmi.fi" || string(host) == "tolstoi.fmi.fi"))
+	if (host != NULL)
 	{
-		NFmiNeonsDBPool::Instance()->ExternalAuthentication(true);
-		NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+		if (string(host) == "gogol.fmi.fi" || string(host) == "tolstoi.fmi.fi")
+		{
+			NFmiNeonsDBPool::Instance()->ExternalAuthentication(true);
+			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+		}
+		else if (string(host) == "jeera.fmi.fi" || string(host) == "sahrami.fmi.fi")
+		{
+			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+			NFmiNeonsDBPool::Instance()->Username("wetodb");
+			NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
+		}
 	}
 }
 
@@ -260,7 +269,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 
 	string host = "himan_test_host";
 
-	char* kone = getenv("KONE");
+	char* kone = getenv("HOST");
 
 	if (kone != NULL)
 	{
