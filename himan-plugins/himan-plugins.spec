@@ -9,7 +9,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.8.16
+Version: 13.8.21
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -20,12 +20,12 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: jasper-libs
-Requires: grib_api >= 1.10.0
+Requires: grib_api >= 1.10.4
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
 BuildRequires: boost-devel >= 1.52
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 12.4.18-1
-BuildRequires: grib_api-devel >= 1.10
+BuildRequires: grib_api-devel >= 1.10.4
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-5-5
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
@@ -82,6 +82,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Aug 16 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.21-1.el6.fmi
+- Latest changes
+- Linking with new version of fmigrib to avoid grib_api bug crashing the program 
+  (SUP-592 @ http://software.ecmwf.int)
 * Fri Aug 16 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.16-1.el6.fmi
 - Latest changes
 - First release for masala-cluster
