@@ -478,6 +478,15 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			newGrid->Projection(kLatLonProjection);
 			break;
 
+		case 5:
+			newGrid->Projection(kStereographicProjection);
+			newGrid->BottomLeft(himan::point(itsGrib->Message()->X0(),itsGrib->Message()->Y0() ));
+			newGrid->TopRight(himan::point(itsGrib->Message()->X0() + itsGrib->Message()->SizeX(),itsGrib->Message()->Y0() + itsGrib->Message()->SizeY() ));
+			newGrid->Orientation(itsGrib->Message()->GridOrientation());
+			newGrid->Di(itsGrib->Message()->XLengthInMeters());
+			newGrid->Dj(itsGrib->Message()->YLengthInMeters());
+			break;
+
 		case 10:
 			newGrid->Projection(kRotatedLatLonProjection);
 			newGrid->SouthPole(himan::point(itsGrib->Message()->SouthPoleX(), itsGrib->Message()->SouthPoleY()));
@@ -523,12 +532,22 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		newGrid->ScanningMode(m);
 
+		pair<point,point> coordinates;
+
 		if (newGrid->Projection() == kRotatedLatLonProjection)
 		{
 			newGrid->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
 		}
 
-		pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement(), m);
+
+
+		if (newGrid->Projection() != kStereographicProjection )
+			coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement(), m);
+
+		else
+		{
+			coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->XLengthInMeters(), itsGrib->Message()->YLengthInMeters(), m);
+		}
 
 		newGrid->BottomLeft(coordinates.first);
 		newGrid->TopRight(coordinates.second);
