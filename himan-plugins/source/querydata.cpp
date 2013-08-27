@@ -277,15 +277,17 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
 
     case kStereographicProjection:
     {
-        theArea = new NFmiStereographicArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-                                            NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()),
-                                            info->Grid()->Orientation());
+		theArea = new NFmiStereographicArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+											info->Grid()->Di() * static_cast<double> ((info->Grid()->Ni()-1)),
+											info->Grid()->Dj() * static_cast<double> ((info->Grid()->Nj()-1)),
+											info->Grid()->Orientation());
+
         break;
 
     }
 
     default:
-        itsLogger->Warning("No supported projection found");
+        itsLogger->Error("No supported projection found");
         return NFmiHPlaceDescriptor();
         break;
     }
