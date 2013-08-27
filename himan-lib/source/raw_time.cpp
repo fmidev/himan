@@ -25,15 +25,6 @@ raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMas
     }
 }
 
-raw_time::raw_time(const NFmiMetTime& theDateTime)
-{
-
-    std::string theTempMask = "YYYYMMDD";
-    std::string theTempTime = static_cast<std::string> (theDateTime.ToStr(theTempMask));
-
-    raw_time(theTempTime, theTempMask);
-}
-
 raw_time::raw_time(const raw_time& other)
     : itsDateTime(other.itsDateTime)
 {

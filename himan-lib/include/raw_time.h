@@ -13,7 +13,6 @@
 
 #include <boost/date_time.hpp>
 #include "logger.h"
-#include <NFmiMetTime.h>
 #include <stdexcept>
 
 namespace himan
@@ -26,7 +25,6 @@ public:
 
     raw_time() : itsDateTime(boost::posix_time::not_a_date_time) {}
     raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
-    raw_time(const NFmiMetTime& theTime);
 
     ~raw_time() {}
     raw_time(const raw_time& other);
@@ -40,11 +38,6 @@ public:
     {
         return "himan::raw_time";
     };
-
-    HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
 
     bool operator==(const raw_time& other);
     bool operator!=(const raw_time& other);
