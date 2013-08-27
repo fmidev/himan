@@ -411,7 +411,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			break;
 
 		default:
-			throw runtime_error(ClassName() + ": Unsupported level type: " + boost::lexical_cast<string> (gribLevel));
+			itsLogger->Error(ClassName() + ": Unsupported level type: " + boost::lexical_cast<string> (gribLevel));
+			continue;
+			break;
 
 		}
 
@@ -472,6 +474,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		 * Get area information from grib.
 		 */
 
+		size_t ni = itsGrib->Message()->SizeX();
+		size_t nj = itsGrib->Message()->SizeY();
+
 		switch (itsGrib->Message()->NormalizedGridType())
 		{
 		case 0:
@@ -480,11 +485,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		case 5:
 			newGrid->Projection(kStereographicProjection);
-			newGrid->BottomLeft(himan::point(itsGrib->Message()->X0(),itsGrib->Message()->Y0() ));
-			newGrid->TopRight(himan::point(itsGrib->Message()->X0() + itsGrib->Message()->SizeX(),itsGrib->Message()->Y0() + itsGrib->Message()->SizeY() ));
+			
 			newGrid->Orientation(itsGrib->Message()->GridOrientation());
-			newGrid->Di(itsGrib->Message()->XLengthInMeters());
-			newGrid->Dj(itsGrib->Message()->YLengthInMeters());
+			newGrid->Di(itsGrib->Message()->XLengthInMeters() / (ni - 1));
+			newGrid->Dj(itsGrib->Message()->YLengthInMeters() / (nj - 1));
 			break;
 
 		case 10:
@@ -497,12 +501,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			break;
 
 		}
-
-		size_t ni = itsGrib->Message()->SizeX();
-		size_t nj = itsGrib->Message()->SizeY();
-
-		//newGrid->Data()->Ni(ni);
-		//newGrid->Data()->Nj(nj);
 
 		bool iNegative = itsGrib->Message()->IScansNegatively();
 		bool jPositive = itsGrib->Message()->JScansPositively();
@@ -532,25 +530,36 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		newGrid->ScanningMode(m);
 
-		pair<point,point> coordinates;
-
 		if (newGrid->Projection() == kRotatedLatLonProjection)
 		{
 			newGrid->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
 		}
 
+		if (newGrid->Projection() == kStereographicProjection)
+		{
+			/*
+			 * Do not support stereographic projections but in bottom left scanning mode.
+			 *
+			 * The calculation of grid extremes could be done with f.ex. NFmiAzimuthalArea
+			 * but lets not do that unless it's absolutely necessary.
+			 */
+			
+			if (newGrid->ScanningMode() != kBottomLeft)
+			{
+				itsLogger->Error(ClassName() + ": stereographic projection only supported when scanning mode is bottom left");
+				continue;
+			}
 
-
-		if (newGrid->Projection() != kStereographicProjection )
-			coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement(), m);
-
+			newGrid->BottomLeft(himan::point(itsGrib->Message()->X0(),itsGrib->Message()->Y0()));
+		}
 		else
 		{
-			coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->XLengthInMeters(), itsGrib->Message()->YLengthInMeters(), m);
-		}
 
-		newGrid->BottomLeft(coordinates.first);
-		newGrid->TopRight(coordinates.second);
+			pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement(), m);
+
+			newGrid->BottomLeft(coordinates.first);
+			newGrid->TopRight(coordinates.second);
+		}
 
 		newInfo->Create(newGrid);
 
@@ -740,8 +749,8 @@ void grib::WriteAreaAndGrid(std::shared_ptr<const info> anInfo)
 			itsGrib->Message()->Y0(anInfo->Grid()->BottomLeft().Y());
 
 			itsGrib->Message()->GridOrientation(anInfo->Grid()->Orientation());
-			itsGrib->Message()->XLengthInMeters(anInfo->Grid()->Di());
-			itsGrib->Message()->YLengthInMeters(anInfo->Grid()->Dj());
+			itsGrib->Message()->XLengthInMeters(anInfo->Grid()->Di() * (anInfo->Grid()->Ni() - 1));
+			itsGrib->Message()->YLengthInMeters(anInfo->Grid()->Dj() * (anInfo->Grid()->Nj() - 1));
 			break;
 		}
 
