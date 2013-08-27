@@ -28,7 +28,7 @@ using namespace himan::plugin;
 
 const string itsName("rain_type");
 
-rain_type::rain_type() : itsUseCuda(false)
+rain_type::rain_type()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
