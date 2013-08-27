@@ -30,10 +30,8 @@ using namespace himan::plugin;
 const double kRadToDeg = 57.29577951307855; // 180 / PI
 
 windvector::windvector()
-	: itsUseCuda(false)
-	, itsCalculationTarget(kUnknownElement)
+	: itsCalculationTarget(kUnknownElement)
 	, itsVectorCalculation(false)
-	, itsCudaDeviceCount(0)
 {
 	itsClearTextFormula = "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * round(speed)";
 
@@ -298,7 +296,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	level sourceLevel = compiled_plugin_base::LevelTransform(conf->SourceProducer(), UParam, myTargetInfo->PeakLevel(0));
 
-	bool useCudaInThisThread = itsUseCuda && threadIndex <= itsCudaDeviceCount;
+	bool useCudaInThisThread = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{

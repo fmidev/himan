@@ -21,7 +21,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-seaicing::seaicing() : itsUseCuda(false)
+seaicing::seaicing()
 {
 	itsClearTextFormula = "SeaIcing = FF * ( -0.35 -T2m ) / ( 1 + 0.3 * ( T0 + 0.35 ))";
 

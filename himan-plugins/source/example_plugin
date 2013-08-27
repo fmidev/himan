@@ -249,7 +249,7 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const p
 		string deviceType;
 
 
-		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+		if (conf->UseCuda() && equalGrids && threadIndex <= conf->CudaDeviceCount())
 		{
 	
 			deviceType = "GPU";
