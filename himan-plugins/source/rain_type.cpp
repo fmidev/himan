@@ -16,9 +16,6 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
-#include "writer.h"
-#include "neons.h"
-#include "pcuda.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -28,8 +25,6 @@
 
 using namespace std;
 using namespace himan::plugin;
-
-#include "cuda_extern.h"
 
 const string itsName("rain_type");
 
@@ -41,35 +36,7 @@ rain_type::rain_type() : itsUseCuda(false)
 
 void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-	unique_ptr<timer> initTimer;
-
-	if (conf->StatisticsEnabled())
-	{
-		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		initTimer->Start();
-	}
-
-	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
-
-	if (c->HaveCuda())
-	{
-		string msg = "I possess the powers of CUDA";
-
-		if (!conf->UseCuda())
-		{
-			msg += ", but I won't use them";
-		}
-		else
-		{
-			msg += ", and I'm not afraid to use them";
-			itsUseCuda = true;
-		}
-
-		itsLogger->Info(msg);
-
-		itsCudaDeviceCount = c->DeviceCount();
-		
-	}
+	unique_ptr<timer> aTimer;
 
 	// Get number of threads to use
 
@@ -77,8 +44,10 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
+		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		aTimer->Start();
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
+		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
 	}
 
 	boost::thread_group g;
@@ -110,23 +79,12 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	// GRIB 1
 
-	/*
-	 * GRIB 1 parameters go here
-	 *
-	 */
- 	if (conf->OutputFileType() == kGRIB1)
-	{
-		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), theRequestedParam.Name());
-		theRequestedParam.GribIndicatorOfParameter(parm_id);
-		theRequestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
-
-	}
-
-	// ----
-
 	theParams.push_back(theRequestedParam);
+
+	if (conf->OutputFileType() == kGRIB1)
+	{
+		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
+	}
 
 	targetInfo->Params(theParams);
 
@@ -135,7 +93,6 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 	 */
 
 	targetInfo->Create();
-
 
 	/*
 	 * Initialize parent class functions for dimension handling
@@ -147,20 +104,14 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		initTimer->Stop();
-		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+		aTimer->Stop();
+		conf->Statistics()->AddToInitTime(aTimer->GetTime());
+		aTimer->Start();
 	}
 
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
-
-	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-	if (conf->StatisticsEnabled())
-	{
-		processTimer->Start();
-	}
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
@@ -181,20 +132,11 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		processTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+		aTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-
-		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-		string theOutputFile = conf->ConfigurationFile();
-
-		theWriter->ToFile(targetInfo, conf, theOutputFile);
-
-	}
+	WriteToFile(conf, targetInfo);
 }
 
 void rain_type::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
@@ -248,7 +190,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		long paramStep = 1;
+		int paramStep = 1;
 		shared_ptr<info> PInfo;
 		shared_ptr<info> Z850Info;
         shared_ptr<info> T850Info;
@@ -664,11 +606,9 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+		if (conf->FileWriteOption() != kSingleFile)
 		{
-			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
+			WriteToFile(conf, myTargetInfo);
 		}
 	}
 }

@@ -13,15 +13,8 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
-#include "writer.h"
-#include "neons.h"
-#include "pcuda.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
-
-#ifdef DEBUG
-#include "timer_factory.h"
-#endif
 
 #include "dewpoint_cuda.h"
 #include "cuda_helper.h"
@@ -33,7 +26,7 @@ const double RW = 461.5; // Vesihoyryn kaasuvakio (J / K kg)
 const double L = 2.5e6; // Veden hoyrystymislampo (J / kg)
 const double RW_div_L = RW / L;
 
-dewpoint::dewpoint() : itsUseCuda(false)
+dewpoint::dewpoint()
 {
 	itsClearTextFormula = "Td = T / (1 - (T * ln(RH)*(Rw/L)))";
 
@@ -44,35 +37,7 @@ dewpoint::dewpoint() : itsUseCuda(false)
 void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 {
 
-	unique_ptr<timer> initTimer;
-
-	if (conf->StatisticsEnabled())
-	{
-		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		initTimer->Start();
-	}
-
-	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
-
-	if (c->HaveCuda())
-	{
-		string msg = "I possess the powers of CUDA";
-
-		if (!conf->UseCuda())
-		{
-			msg += ", but I won't use them";
-		}
-		else
-		{
-			msg += ", and I'm not afraid to use them";
-			itsUseCuda = true;
-		}
-
-		itsLogger->Info(msg);
-		
-		itsCudaDeviceCount = c->DeviceCount();
-
-	}
+	unique_ptr<timer> aTimer;
 
 	// Get number of threads to use
 
@@ -80,8 +45,10 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
+		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		aTimer->Start();
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(itsCudaDeviceCount);
+		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
 	}
 
 	boost::thread_group g;
@@ -106,19 +73,14 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 	requestedParam.GribCategory(0);
 	requestedParam.GribParameter(6);
 
+	params.push_back(requestedParam);
+
 	// GRIB 1
 
 	if (conf->OutputFileType() == kGRIB1)
 	{
-		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		long parm_id = n->NeonsDB().GetGridParameterId(targetInfo->Producer().TableVersion(), requestedParam.Name());
-		requestedParam.GribIndicatorOfParameter(parm_id);
-		requestedParam.GribTableVersion(targetInfo->Producer().TableVersion());
-
+		StoreGrib1ParameterDefinitions(params, targetInfo->Producer().TableVersion());
 	}
-
-	params.push_back(requestedParam);
 
 	targetInfo->Params(params);
 
@@ -138,8 +100,9 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		initTimer->Stop();
-		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+		aTimer->Stop();
+		conf->Statistics()->AddToInitTime(aTimer->GetTime());
+		aTimer->Start();
 	}
 
 	/*
@@ -147,11 +110,6 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 	 */
 
 	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-	if (conf->StatisticsEnabled())
-	{
-		processTimer->Start();
-	}
 
 	for (size_t i = 0; i < threadCount; i++)
 	{
@@ -172,21 +130,11 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		processTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+		aTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
-	
-	itsLogger->Info("Threads finished");
 
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-		string theOutputFile = conf->ConfigurationFile();
-
-		theWriter->ToFile(targetInfo, conf, theOutputFile);
-
-	}
+	WriteToFile(conf, targetInfo);
 }
 
 void dewpoint::Run(shared_ptr<info> myTargetInfo,
@@ -225,7 +173,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 	myTargetInfo->FirstParam();
 
-	bool useCudaInThisThread = itsUseCuda && threadIndex <= itsCudaDeviceCount;
+	bool useCudaInThisThread = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
@@ -292,8 +240,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> RHGrid(RHInfo->Grid()->ToNewbaseGrid());
 
-		int missingCount = 0;
-		int count = 0;
+		size_t missingCount = 0;
+		size_t count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
@@ -303,7 +251,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 #ifdef HAVE_CUDA
 		
-		if (itsUseCuda && equalGrids && threadIndex <= itsCudaDeviceCount)
+		if (useCudaInThisThread && equalGrids)
 		{
 
 			deviceType = "GPU";
@@ -437,11 +385,9 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() == kMultipleFiles || conf->FileWriteOption() == kNeons)
+		if (conf->FileWriteOption() != kSingleFile)
 		{
-			shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-			w->ToFile(shared_ptr<info>(new info(*myTargetInfo)), conf);
+			WriteToFile(conf, myTargetInfo);
 		}
 	}
 }

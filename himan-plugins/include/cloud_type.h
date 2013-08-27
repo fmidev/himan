@@ -48,8 +48,7 @@ private:
     void Run(std::shared_ptr<info>, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
     void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
     int DoMatako(double T2m, double T850);
-    bool itsUseCuda;
-    int itsCudaDeviceCount;
+
 };
 
 // the class factory

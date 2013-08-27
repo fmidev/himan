@@ -98,9 +98,6 @@ private:
 
 	std::shared_ptr<info> FetchSourceConvectiveAndLSRR(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel);
 
-
-	bool itsUseCuda;
-
 };
 
 // the class factory

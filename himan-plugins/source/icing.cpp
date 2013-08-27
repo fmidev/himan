@@ -12,13 +12,9 @@
 #include <boost/lexical_cast.hpp>
 #include "util.h"
 
-
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
-#include "writer.h"
-#include "pcuda.h"
-#include "neons.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -27,7 +23,7 @@ using namespace himan::plugin;
 
 const double kValueEpsilon = 0.00001;
 
-icing::icing() : itsUseCuda(false)
+icing::icing()
 {
 	itsClearTextFormula = "Icing = round(log(500 * CW * 1000)) + VVcor + Tcor";
 
@@ -38,33 +34,7 @@ icing::icing() : itsUseCuda(false)
 void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
-	unique_ptr<timer> initTimer;
-
-	if (conf->StatisticsEnabled())
-	{
-		initTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		initTimer->Start();
-	}
-	
-	shared_ptr<plugin::pcuda> c = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
-
-	if (c && c->HaveCuda())
-	{
-		string msg = "I possess the powers of CUDA ";
-
-		if (!conf->UseCuda())
-		{
-			msg += ", but I won't use them";
-		}
-		else
-		{
-			msg += ", and I'm not afraid to use them";
-			itsUseCuda = true;
-		}
-
-		itsLogger->Info(msg);
-
-	}
+	unique_ptr<timer> aTimer;
 
 	// Get number of threads to use
 
@@ -72,8 +42,10 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
+		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		aTimer->Start();
 		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(0);
+		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
 	}
 	
 	shared_ptr<info> targetInfo = conf->Info();
@@ -96,10 +68,12 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	param theRequestedParam("ICING-N", 480);
 
-	theRequestedParam.GribParameter(103);
-	theRequestedParam.GribTableVersion(203);
-
 	theParams.push_back(theRequestedParam);
+
+	if (conf->OutputFileType() == kGRIB1)
+	{
+		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
+	}
 
 	targetInfo->Params(theParams);
 
@@ -119,8 +93,9 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->StatisticsEnabled())
 	{
-		initTimer->Stop();
-		conf->Statistics()->AddToInitTime(initTimer->GetTime());
+		aTimer->Stop();
+		conf->Statistics()->AddToInitTime(aTimer->GetTime());
+		aTimer->Start();
 	}
 
 	/*
@@ -144,16 +119,13 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	g.join_all();
 
-	if (conf->FileWriteOption() == kSingleFile)
+	if (conf->StatisticsEnabled())
 	{
-
-		shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-		string theOutputFile = conf->ConfigurationFile();
-
-		theWriter->ToFile(targetInfo, conf, theOutputFile);
-
+		aTimer->Stop();
+		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
+
+	WriteToFile(conf, targetInfo);
 }
 
 void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
@@ -419,11 +391,9 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+		if (conf->FileWriteOption() != kSingleFile)
 		{
-			shared_ptr<writer> theWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-			theWriter->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
+			WriteToFile(conf, myTargetInfo);
 		}
 	}
 }

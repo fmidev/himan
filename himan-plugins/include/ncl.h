@@ -56,8 +56,6 @@ private:
     void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
     std::shared_ptr<info> FetchPrevious(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
 
-    bool itsUseCuda;
-    int itsCudaDeviceCount;
     int targetTemperature;
 };
 
