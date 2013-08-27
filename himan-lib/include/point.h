@@ -46,11 +46,6 @@ public:
 		return "himan::point";
 	}
 
-	HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
-
 	/**
 	 * @return X coordinate value
 	 */
@@ -68,7 +63,7 @@ public:
 
     std::ostream& Write(std::ostream& file) const
     {
-		file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+		file << "<" << ClassName() << ">" << std::endl;
 		file << "__itsX__ " << itsX << std::endl;
 		file << "__itsY__ " << itsY << std::endl;
 

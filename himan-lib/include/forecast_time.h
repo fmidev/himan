@@ -42,12 +42,6 @@ public:
         return "himan::forecast_time";
     };
 
-    HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
-
-
     std::ostream& Write(std::ostream& file) const;
 
     bool operator==(const forecast_time& other);

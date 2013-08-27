@@ -109,7 +109,7 @@ bool raw_time::Empty() const
 std::ostream& raw_time::Write(std::ostream& file) const
 {
 
-    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+    file << "<" << ClassName() << ">" << std::endl;
     file << "__itsDateTime__ " << FormatTime(itsDateTime, "%Y-%m-%d %H:%M:%S") << std::endl;
 
     return file;

@@ -60,7 +60,7 @@ forecast_time& forecast_time::operator=(const forecast_time& other)
 std::ostream& forecast_time::Write(std::ostream& file) const
 {
 
-	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	file << "<" << ClassName() << ">" << std::endl;
 	file << *itsOriginDateTime;
 	file << *itsValidDateTime;
 	file << "__itsStepResolution__ " << itsStepResolution << std::endl;
