@@ -531,6 +531,7 @@ public:
     bool FirstLocation();
     bool PreviousLocation();
     bool LastLocation();
+    size_t LocationIndex();
 
     /**
      * @return Current data matrix
@@ -593,6 +594,8 @@ public:
 
     bool StepSizeOverOneByte() const;
     void StepSizeOverOneByte(bool theStepSizeOverOneByte);
+
+    HPProjectionType Projection() const { return itsProjection; }
 
 private:
 
