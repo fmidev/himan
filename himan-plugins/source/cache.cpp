@@ -27,10 +27,10 @@ string cache::UniqueName(const shared_ptr<const himan::info> info)
 	string forecast_time = info->Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = info->Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S");
 	string param = info->Param().Name();
-	string targetGeom = boost::lexical_cast<string> (info->Projection());
+	string projection = boost::lexical_cast<string> (info->Projection());
 	string level_value = boost::lexical_cast<string>(info->Level().Value());
 	string level = HPLevelTypeToString.at(info->Level().Type());
-	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + targetGeom + '_' + level_value;
+	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + projection + '_' + level_value;
 
 }
 
@@ -39,10 +39,10 @@ string cache::UniqueNameFromOptions(const search_options& options)
 	string forecast_time = (options.time.OriginDateTime())->String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = (options.time.ValidDateTime())->String("%Y-%m-%d_%H:%M:%S");
 	string param = (options.param).Name();
-	string targetGeom = (options.configuration)->TargetGeomName();
+	string projection = (options.configuration)->TargetProjection();
 	string level_value = boost::lexical_cast<string>((options.level).Value());
 	string level = HPLevelTypeToString.at(options.level.Type());
-	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + targetGeom + '_' + level_value;
+	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + projection + '_' + level_value;
 }
 
 void cache::Insert(shared_ptr<himan::info> anInfo, bool activeOnly)
