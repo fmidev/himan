@@ -13,7 +13,6 @@
 #include <map>
 #include "statistics.h"
 #include "configuration.h"
-#include "info.h"
 
 namespace himan
 {
