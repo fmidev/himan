@@ -99,6 +99,8 @@ public:
 	bool UseCuda() const;
 	void UseCuda(bool theUseCuda);
 
+	std::string TargetGeomName() const;
+
 	HPDimensionType LeadingDimension() const;
 
 	void ThreadCount(short theThreadCount);

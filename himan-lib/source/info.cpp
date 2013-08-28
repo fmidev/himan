@@ -358,6 +358,11 @@ bool info::NextTime()
     return itsTimeIterator->Next();
 }
 
+bool info::PreviousTime()
+{
+    return itsTimeIterator->Previous();
+}
+
 bool info::LastTime()
 {
     return itsTimeIterator->Last();
@@ -371,11 +376,6 @@ void info::ResetTime()
 bool info::FirstTime()
 {
     return itsTimeIterator->First();
-}
-
-bool info::PreviousTime()
-{
-    return itsTimeIterator->Previous();
 }
 
 size_t info::TimeIndex() const
@@ -484,6 +484,11 @@ size_t info::LocationIndex() const
 void info::LocationIndex(size_t theLocationIndex)
 {
     itsLocationIndex = theLocationIndex;
+}
+
+size_t info::LocationIndex()
+{
+    return itsLocationIndex;
 }
 
 shared_ptr<grid> info::Grid() const

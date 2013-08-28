@@ -105,7 +105,7 @@ void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryF
 
 void configuration::Init()
 {
-	itsOutputFileType = kGRIB1;
+	itsOutputFileType = kQueryData;
 	itsFileWriteOption = kSingleFile;
 	itsReadDataFromDatabase = true;
 	itsUseCuda = true;
@@ -274,4 +274,12 @@ bool configuration::HaveCuda() const
 short configuration::CudaDeviceCount() const
 {
 	return itsCudaDeviceCount;
+}
+std::string configuration::TargetGeomName() const
+{
+	if (itsTargetGeomName == "RCR068")
+		return "11";
+	if (itsTargetGeomName == "MTHIPS25")
+		return "13";
+	return "0";
 }
