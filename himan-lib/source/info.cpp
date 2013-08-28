@@ -555,3 +555,9 @@ void info::StepSizeOverOneByte(bool theStepSizeOverOneByte)
 {
 	itsStepSizeOverOneByte = theStepSizeOverOneByte;
 }
+
+HPProjectionType info::Projection() const
+{
+	// unsafe: will crash if grid is not set?
+	return Grid()->Projection();
+}

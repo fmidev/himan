@@ -595,7 +595,7 @@ public:
     bool StepSizeOverOneByte() const;
     void StepSizeOverOneByte(bool theStepSizeOverOneByte);
 
-    HPProjectionType Projection() const { return itsProjection; }
+    HPProjectionType Projection() const;
 
 private:
 
