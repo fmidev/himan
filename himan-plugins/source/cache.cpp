@@ -8,6 +8,7 @@
 #include "cache.h"
 #include "logger_factory.h"
 #include "info.h"
+#include <time.h>
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
 
@@ -26,9 +27,10 @@ string cache::UniqueName(const shared_ptr<const himan::info> info)
 	string forecast_time = info->Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = info->Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S");
 	string param = info->Param().Name();
+	string targetGeom = boost::lexical_cast<string> (info->Projection());
 	string level_value = boost::lexical_cast<string>(info->Level().Value());
 	string level = HPLevelTypeToString.at(info->Level().Type());
-	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
+	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + targetGeom + '_' + level_value;
 
 }
 
@@ -37,9 +39,10 @@ string cache::UniqueNameFromOptions(const search_options& options)
 	string forecast_time = (options.time.OriginDateTime())->String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = (options.time.ValidDateTime())->String("%Y-%m-%d_%H:%M:%S");
 	string param = (options.param).Name();
+	string targetGeom = (options.configuration)->TargetGeomName();
 	string level_value = boost::lexical_cast<string>((options.level).Value());
 	string level = HPLevelTypeToString.at(options.level.Type());
-	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
+	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + targetGeom + '_' + level_value;
 }
 
 void cache::Insert(shared_ptr<himan::info> anInfo, bool activeOnly)
@@ -98,6 +101,7 @@ void cache::Insert(const vector<shared_ptr<himan::info>>& infos, bool activeOnly
 	for (size_t i = 0; i < infos.size(); i++)
 	{
 		Insert(infos[i], activeOnly);
+		//Clean();
 	}	
 }
 
@@ -110,9 +114,15 @@ vector<shared_ptr<himan::info>> cache::GetInfo(const search_options& options)
 	if (cache_pool::Instance()->Find(uniqueName))
 	{
 		info.push_back(cache_pool::Instance()->GetInfo(uniqueName));
+		itsLogger->Debug( "Found matching data for " + uniqueName);
 	}
 
 	return info;
+}
+
+void cache::Clean()
+{
+	cache_pool::Instance()->Clean();
 }
 
 cache_pool* cache_pool::itsInstance = NULL;
@@ -134,7 +144,6 @@ cache_pool* cache_pool::Instance()
 
 bool cache_pool::Find(const string& uniqueName) 
 {
-
 	for (map<string, shared_ptr<himan::info>>::iterator it = itsCache.begin(); it != itsCache.end(); ++it)
 	{
 		if (it->first == uniqueName)
@@ -151,8 +160,29 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 	Lock lock(itsInsertMutex);
 
 	itsCache.insert(pair<string, shared_ptr<himan::info>>(uniqueName, anInfo));
+	time_t timer;
+	time(&timer);
+	itsCacheItems.insert(pair<string, time_t>(uniqueName, timer));
 	itsLogger->Debug("Data added to cache. UniqueName: " + uniqueName);
 	
+}
+
+void cache_pool::Clean()
+{
+	Lock lock(itsDeleteMutex);
+
+	for (map<string, time_t>::iterator it = itsCacheItems.begin(); it != itsCacheItems.end(); ++it)
+	{
+		time_t timer;
+		time(&timer);
+		if (timer - it->second > 10)
+		{
+			string name = it->first;
+			itsCache.erase(name);
+			itsCacheItems.erase(name);
+			itsLogger->Debug("Data cleared from cache: " + name);
+		}
+	}
 }
 
 shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)

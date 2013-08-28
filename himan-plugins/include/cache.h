@@ -40,6 +40,7 @@ public:
 
 	void Insert(std::shared_ptr<himan::info> anInfo, bool activeOnly = true);
 	std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);	
+	void Clean();
 
 	virtual std::string ClassName() const
 	{
@@ -78,7 +79,7 @@ public:
 	bool Find(const std::string& uniqueName);
 	void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info);
 	std::shared_ptr<himan::info> GetInfo(const std::string& uniqueName);
-	
+	void Clean();
 
 	virtual std::string ClassName() const
 	{
@@ -104,6 +105,8 @@ private:
 	static cache_pool* itsInstance;
 	std::mutex itsInsertMutex;
 	std::mutex itsGetMutex;
+	std::mutex itsDeleteMutex;
+	std::map<std::string, time_t> itsCacheItems;
 
 };
 
