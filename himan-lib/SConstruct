@@ -72,7 +72,7 @@ librarypaths = []
 
 librarypaths.append(workspace + '/himan-lib/lib')
 librarypaths.append(workspace + '/fmidb/lib')
-librarypaths.append('/usr/lib')
+librarypaths.append('/usr/lib64')
 
 if os.environ.get('ORACLE_HOME') is None:
         librarypaths.append('/usr/lib64/oracle')

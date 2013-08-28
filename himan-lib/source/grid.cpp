@@ -756,10 +756,10 @@ void grid::PackedData(shared_ptr<packed_data> thePackedData)
 
 bool grid::DataIsPacked() const
 {
-	/*if (itsPackedData && itsPackedData->HasData())
+	if (itsPackedData && itsPackedData->HasData())
 	{
 		return true;
-	}*/
+	}
 	
 	return false;
 }
