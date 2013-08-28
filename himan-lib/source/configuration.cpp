@@ -39,6 +39,8 @@ configuration::configuration(const configuration& other)
 	itsFileWaitTimeout = other.itsFileWaitTimeout;
 	itsUseCuda = other.itsUseCuda;
 	itsUseCudaForPacking = other.itsUseCudaForPacking;
+	itsCudaDeviceCount = other.itsCudaDeviceCount;
+	
 	itsUseCache = other.itsUseCache;
 
 	itsLeadingDimension = other.itsLeadingDimension;
@@ -105,7 +107,7 @@ void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryF
 
 void configuration::Init()
 {
-	itsOutputFileType = kQueryData;
+	itsOutputFileType = kGRIB;
 	itsFileWriteOption = kSingleFile;
 	itsReadDataFromDatabase = true;
 	itsUseCuda = true;
