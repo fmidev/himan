@@ -275,7 +275,7 @@ short configuration::CudaDeviceCount() const
 {
 	return itsCudaDeviceCount;
 }
-std::string configuration::TargetGeomName() const
+std::string configuration::TargetProjection() const
 {
 	if (itsTargetGeomName == "RCR068")
 		return "11";

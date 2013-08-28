@@ -99,7 +99,7 @@ public:
 	bool UseCuda() const;
 	void UseCuda(bool theUseCuda);
 
-	std::string TargetGeomName() const;
+	std::string TargetProjection() const;
 
 	HPDimensionType LeadingDimension() const;
 
