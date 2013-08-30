@@ -22,7 +22,7 @@ public:
 
     logger(const std::string& theUserName, HPDebugState theDebugState);
 
-    inline void Trace(const std::string& msg)
+    void Trace(const std::string& msg)
     {
         if (itsDebugState <= kTraceMsg)
         {
@@ -30,7 +30,7 @@ public:
         }
     };
 
-    inline void Debug(const std::string& msg)
+    void Debug(const std::string& msg)
     {
         if (itsDebugState <= kDebugMsg)
         {
@@ -39,7 +39,7 @@ public:
 
     };
 
-    inline void Info(const std::string& msg)
+    void Info(const std::string& msg)
     {
         if (itsDebugState <= kInfoMsg)
         {
@@ -48,7 +48,7 @@ public:
 
     };
 
-    inline void Warning(const std::string& msg)
+    void Warning(const std::string& msg)
     {
 
         if (itsDebugState <= kWarningMsg)
@@ -58,7 +58,7 @@ public:
 
     };
 
-    inline void Error(const std::string& msg)
+    void Error(const std::string& msg)
     {
         if (itsDebugState <= kErrorMsg)
         {
@@ -67,14 +67,9 @@ public:
 
     };
 
-    inline void Fatal(const std::string& msg)
+    void Fatal(const std::string& msg)
     {
-
-        if (itsDebugState <= kFatalMsg)
-        {
-            printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str());
-        }
-
+        printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str());
     };
 
 private:
