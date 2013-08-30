@@ -99,6 +99,10 @@ libraries.append('clntsh')
 
 env.Append(LIBS = libraries)
 
+if have_cuda:
+        env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
+
+
 # CFLAGS
 
 # "Normal" flags
