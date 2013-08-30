@@ -82,7 +82,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configura
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
 
-	itsLogger->Debug("Parsing configuration file");
+	itsLogger->Debug("Parsing configuration file '" + conf->ConfigurationFile() + "'");
 
 	boost::property_tree::ptree pt;
 
