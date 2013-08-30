@@ -20,12 +20,13 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.environ['HOME'] + "/workspace"
+
 if os.environ['HOME'] == "/home/weto":
     workspace = os.environ['HOME'] + "/workspace/himan"
     
 # cuda toolkit path
 
-cuda_toolkit_path = '/opt/cuda'
+cuda_toolkit_path = '/usr/local/cuda-5.5'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
         print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -50,7 +51,6 @@ if os.environ.get('CXX') != None:
 
 includes = []
 
-includes.append('./include')
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
@@ -70,7 +70,6 @@ env.Append(CPPPATH = includes)
 
 librarypaths = []
 
-librarypaths.append(workspace + '/himan-lib/lib')
 librarypaths.append(workspace + '/fmidb/lib')
 librarypaths.append('/usr/lib64')
 
@@ -155,6 +154,16 @@ env.Append(CPPDEFINES=['UNIX'])
 
 if have_cuda:
         env.Append(CPPDEFINES=['HAVE_CUDA'])
+
+env.Append(NVCCDEFINES=['HAVE_CUDA'])
+
+env.Append(NVCCFLAGS = ['-m64'])
+env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
+env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
+env.Append(NVCCFLAGS = ['-arch=compute_35','-code=sm_35'])
+
+env.Append(NVCCPATH = ['./include'])
+env.Append(NVCCPATH = [workspace + '/himan-plugins/include']) # cuda-helper
 
 # Other
 
