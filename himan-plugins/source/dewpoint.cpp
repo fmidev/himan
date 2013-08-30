@@ -260,7 +260,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 			dewpoint_cuda::dewpoint_cuda_data datas;
 
 			opts.N = TInfo->Data()->Size();
-			opts.cudaDeviceIndex = threadIndex-1;
+			opts.cudaDeviceIndex = static_cast<unsigned short> (threadIndex-1);
 
 			opts.TBase = TBase;
 
@@ -274,7 +274,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
 
-				datas.pT = *(t);
+				datas.pT = t.get();
 
 				opts.pT = true;
 			}
@@ -291,7 +291,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.RH), opts.N * sizeof(double), cudaHostAllocMapped));
 
-				datas.pRH = *(rh);
+				datas.pRH = rh.get();
 
 				opts.pRH = true;
 			}

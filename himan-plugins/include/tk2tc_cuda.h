@@ -12,7 +12,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "packed_data.h"
+#include "simple_packed.h"
 
 namespace himan
 {
@@ -25,7 +25,7 @@ struct tk2tc_cuda_options
 {
 	size_t N;
 	bool pTK;
-	unsigned short cudaDeviceIndex;
+	unsigned short threadIndex;
 	int missingValuesCount;
 	
 	tk2tc_cuda_options() : pTK(false), missingValuesCount(0) {}
@@ -36,10 +36,11 @@ struct tk2tc_cuda_data
 	double* TK;
 	double* TC;
 
-	simple_packed pTK;
+	simple_packed* pTK;
 
-	tk2tc_cuda_data() : TK(0), TC(0), pTK() {}
+	tk2tc_cuda_data() : pTK() {}
 };
+
 void DoCuda(tk2tc_cuda_options& options, tk2tc_cuda_data& datas);
 
 } // namespace tk2tc_cuda

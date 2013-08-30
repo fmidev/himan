@@ -267,7 +267,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			fog_cuda::fog_cuda_data datas;
 
 			opts.N = dewInfo->Data()->Size();
-			opts.cudaDeviceIndex = threadIndex-1;
+			opts.cudaDeviceIndex = static_cast<unsigned short> (threadIndex-1);
 
 			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.F), opts.N * sizeof(double), cudaHostAllocMapped));
 			
@@ -279,7 +279,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.DTC2M), opts.N * sizeof(double), cudaHostAllocMapped));
 
-				datas.pDTC2M = *(dtc2m);
+				datas.pDTC2M = dtc2m.get();
 
 				opts.pDTC2M = true;
 			}
@@ -296,7 +296,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TKGround), opts.N * sizeof(double), cudaHostAllocMapped));
 
-				datas.pTKGround = *(tkground);
+				datas.pTKGround = tkground.get();
 
 				opts.pTKGround = true;
 			}
@@ -313,7 +313,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.FF10M), opts.N * sizeof(double), cudaHostAllocMapped));
 
-				datas.pFF10M = *(ff10m);
+				datas.pFF10M = ff10m.get();
 
 				opts.pFF10M = true;
 			}

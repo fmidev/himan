@@ -8,6 +8,8 @@
 #include "cuda_helper.h"
 #include "tk2tc_cuda.h"
 
+#include "stdio.h"
+
 namespace himan
 {
 
@@ -17,11 +19,13 @@ namespace plugin
 namespace tk2tc_cuda
 {
 
+
 __global__ void Calculate(const double* __restrict__ dTK, double* __restrict__ dTC, tk2tc_cuda_options opts, int* dMissingValuesCount);
 
 } // namespace tk2tc_cuda
 } // namespace plugin
 } // namespace himan
+
 
 __global__ void himan::plugin::tk2tc_cuda::Calculate(const double* __restrict__ dTK,
 														double* __restrict__ dTC,
@@ -48,16 +52,15 @@ __global__ void himan::plugin::tk2tc_cuda::Calculate(const double* __restrict__ 
 void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts, tk2tc_cuda_data& datas)
 {
 
-	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
+	int deviceId = (opts.threadIndex <= 32) ? 0 : 1;
 	
+	CUDA_CHECK(cudaSetDevice(deviceId));
+
 	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate device arrays
 
-	double* dTK;
-	unsigned char* dpTK;
-	int* dbmTK;
-	double *dTC;
+	double* dTK = 0, *dTC = 0;
 
 	int *dMissingValuesCount;
 	
@@ -68,12 +71,6 @@ void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts, tk2tc_cuda_data
 	if (opts.pTK)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dTK, datas.TK, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpTK, datas.pTK.data, 0));
-
-		if (datas.pTK.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmTK, datas.pTK.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -90,24 +87,24 @@ void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts, tk2tc_cuda_data
 	const int blockSize = 512;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
-	dim3 gridDim(gridSize);
-	dim3 blockDim(blockSize);
+	cudaStream_t stream;
+
+	CUDA_CHECK(cudaStreamCreate(&stream));
 
 	if (opts.pTK)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpTK, dTK, dbmTK, datas.pTK.coefficients, opts.N, datas.pTK.HasBitmap());
+		datas.pTK->Unpack(dTK, &stream);
 	}
 
-	Calculate <<< gridDim, blockDim >>> (dTK, dTC, opts, dMissingValuesCount);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (dTK, dTC, opts, dMissingValuesCount);
 
-	// block until the device has completed
-	CUDA_CHECK(cudaDeviceSynchronize());
+	// block until the stream has completed
+	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// check if kernel execution generated an error
-
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
-	// Retrieve result from device
+	// Retrieve missing values from device
 	CUDA_CHECK(cudaMemcpy(&opts.missingValuesCount, dMissingValuesCount, sizeof(int), cudaMemcpyDeviceToHost));
 
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
@@ -116,5 +113,7 @@ void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts, tk2tc_cuda_data
 	{
 		CUDA_CHECK(cudaFree(dTK));
 	}
+
+    cudaStreamDestroy(stream);
 
 }

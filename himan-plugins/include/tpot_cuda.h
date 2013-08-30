@@ -12,7 +12,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "packed_data.h"
+#include "simple_packed.h"
 
 namespace himan
 {
@@ -42,10 +42,10 @@ struct tpot_cuda_data
 	double* P;
 	double* Tp;
 
-	simple_packed pT;
-	simple_packed pP;
+	simple_packed* pT;
+	simple_packed* pP;
 
-	tpot_cuda_data() : T(0), P(0), Tp(0), pT(), pP() {}
+	tpot_cuda_data() : T(0), P(0), Tp(0), pT(0), pP(0) {}
 };
 
 void DoCuda(tpot_cuda_options& options, tpot_cuda_data& datas);

@@ -11,7 +11,7 @@
 #define VVMS_CUDA_H
 #ifdef HAVE_CUDA
 
-#include "packed_data.h"
+#include "simple_packed.h"
 
 namespace himan
 {
@@ -43,9 +43,9 @@ struct vvms_cuda_data
 	double* VV;
 	double* VVMS;
 
-	simple_packed pT;
-	simple_packed pVV;
-	simple_packed pP;
+	simple_packed* pT;
+	simple_packed* pVV;
+	simple_packed* pP;
 
 	vvms_cuda_data() : T(0), P(0), VV(0), pT(), pVV(), pP() {}
 

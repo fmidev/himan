@@ -69,13 +69,6 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& d
 	double* dVV = NULL;
 	double* dVVMS = NULL;
 
-	unsigned char* dpT = NULL;
-	unsigned char* dpP = NULL;
-	unsigned char* dpVV = NULL;
-	int* dbmT = NULL;
-	int* dbmP = NULL;
-	int* dbmVV = NULL;
-
 	int *dMissingValuesCount = NULL;
 
 	CUDA_CHECK(cudaMalloc((void **) &dMissingValuesCount, sizeof(int)));
@@ -85,12 +78,7 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& d
 	if (opts.pT)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dT, datas.T, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpT, datas.pT.data, 0));
 
-		if (datas.pT.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmT, datas.pT.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -101,12 +89,7 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& d
 	if (opts.pVV)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dVV, datas.VV, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpVV, datas.pVV.data, 0));
 
-		if (datas.pVV.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmVV, datas.pVV.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -119,12 +102,7 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& d
 		if (opts.pP)
 		{
 			CUDA_CHECK(cudaHostGetDevicePointer(&dP, datas.P, 0));
-			CUDA_CHECK(cudaHostGetDevicePointer(&dpP, datas.pP.data, 0));
 
-			if (datas.pP.HasBitmap())
-			{
-				CUDA_CHECK(cudaHostGetDevicePointer(&dbmP, datas.pP.bitmap, 0));
-			}
 		}
 		else
 		{
@@ -142,28 +120,29 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& d
 	const int blockSize = 512;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
-	dim3 gridDim(gridSize);
-	dim3 blockDim(blockSize);
+	cudaStream_t stream;
+
+	CUDA_CHECK(cudaStreamCreate(&stream));
 
 	if (opts.pT)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpT, dT, dbmT, datas.pT.coefficients, opts.N, datas.pT.HasBitmap());
+		datas.pT->Unpack(dT, &stream);
 	}
 
 	if (opts.pVV)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpVV, dVV, dbmVV, datas.pVV.coefficients, opts.N, datas.pVV.HasBitmap());
+		datas.pVV->Unpack(dVV, &stream);
 	}
 
 	if (opts.pP)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpP, dP, dbmP, datas.pP.coefficients, opts.N, datas.pP.HasBitmap());
+		datas.pP->Unpack(dP, &stream);
 	}
 
-	Calculate <<< gridDim, blockDim >>> (dT, dVV, dP, dVVMS, opts, dMissingValuesCount);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (dT, dVV, dP, dVVMS, opts, dMissingValuesCount);
 	
 	// block until the device has completed
-	CUDA_CHECK(cudaDeviceSynchronize());
+	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
@@ -186,5 +165,5 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& d
 	}
 
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
-
+	CUDA_CHECK(cudaStreamDestroy(stream));
 }

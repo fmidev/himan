@@ -292,7 +292,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
 
-				datas.pT = *(t);
+				datas.pT = t.get();
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
 
@@ -310,7 +310,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 				shared_ptr<simple_packed> vv = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData());
 
-				datas.pVV = *(vv);
+				datas.pVV = vv.get();
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.VV), opts.N * sizeof(double), cudaHostAllocMapped));
 
@@ -330,7 +330,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 
 					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
 					
-					datas.pP = *(p);
+					datas.pP = p.get();
 
 					CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.P), opts.N * sizeof(double), cudaHostAllocMapped));
 

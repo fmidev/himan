@@ -60,11 +60,6 @@ void himan::plugin::tpot_cuda::DoCuda(tpot_cuda_options& opts, tpot_cuda_data& d
 
 	// Allocate device arrays
 
-	unsigned char* dpT;
-	unsigned char* dpP;
-	int* dbmT;
-	int* dbmP;
-
 	double* dT;
 	double* dP;
 	double* dTp;
@@ -78,12 +73,6 @@ void himan::plugin::tpot_cuda::DoCuda(tpot_cuda_options& opts, tpot_cuda_data& d
 	if (opts.pT)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dT, datas.T, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpT, datas.pT.data, 0));
-
-		if (datas.pT.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmT, datas.pT.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -96,12 +85,6 @@ void himan::plugin::tpot_cuda::DoCuda(tpot_cuda_options& opts, tpot_cuda_data& d
 		if (opts.pP)
 		{
 			CUDA_CHECK(cudaHostGetDevicePointer(&dP, datas.P, 0));
-			CUDA_CHECK(cudaHostGetDevicePointer(&dpP, datas.pP.data, 0));
-
-			if (datas.pP.HasBitmap())
-			{
-				CUDA_CHECK(cudaHostGetDevicePointer(&dbmP, datas.pP.bitmap, 0));
-			}
 		}
 		else
 		{
@@ -119,22 +102,22 @@ void himan::plugin::tpot_cuda::DoCuda(tpot_cuda_options& opts, tpot_cuda_data& d
 	const int blockSize = 512;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
-	dim3 gridDim(gridSize);
-	dim3 blockDim(blockSize);
+	cudaStream_t stream;
+	CUDA_CHECK(cudaStreamCreate(&stream));
 
 	if (opts.pT)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpT, dT, dbmT, datas.pT.coefficients, opts.N, datas.pT.HasBitmap());
+		datas.pT->Unpack(dT, &stream);
 	}
 	if (opts.pP)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpP, dP, dbmP, datas.pP.coefficients, opts.N, datas.pP.HasBitmap());
+		datas.pP->Unpack(dP, &stream);
 	}
 
-	Calculate <<< gridDim, blockDim >>> (dT, dP, dTp, opts, dMissingValuesCount);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (dT, dP, dTp, opts, dMissingValuesCount);
 
 	// block until the device has completed
-	CUDA_CHECK(cudaDeviceSynchronize());
+	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// check if kernel execution generated an error
 
@@ -153,4 +136,6 @@ void himan::plugin::tpot_cuda::DoCuda(tpot_cuda_options& opts, tpot_cuda_data& d
 	{
 		CUDA_CHECK(cudaFree(dP));
 	}
+
+	CUDA_CHECK(cudaStreamDestroy(stream));
 }

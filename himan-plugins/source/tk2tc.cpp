@@ -233,15 +233,15 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		{
 	
 			deviceType = "GPU";
-
+			
 			tk2tc_cuda::tk2tc_cuda_options opts;
 			tk2tc_cuda::tk2tc_cuda_data datas;
 
 			opts.N = TGrid->Size();
 
-			opts.cudaDeviceIndex = static_cast <unsigned short> (threadIndex-1);
+			opts.threadIndex = threadIndex;
 
-			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TC), opts.N * sizeof(double), cudaHostAllocMapped));
+			//cudaMallocHost(reinterpret_cast<void**> (&datas.TC), opts.N * sizeof(double));
 
 			if (TInfo->Grid()->DataIsPacked())
 			{
@@ -249,9 +249,10 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 				shared_ptr<simple_packed> s = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
 
-				datas.pTK = *(s);
+				datas.pTK = s.get();
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TK), opts.N * sizeof(double), cudaHostAllocMapped));
+				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TC), opts.N * sizeof(double), cudaHostAllocMapped));
 
 				opts.pTK = true;
 			}
@@ -259,7 +260,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			{
 				datas.TK = const_cast<double*> (TInfo->Grid()->Data()->Values());
 			}
-			
+
 			tk2tc_cuda::DoCuda(opts, datas);
 
 			myTargetInfo->Data()->Set(datas.TC, opts.N);
@@ -269,13 +270,17 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			missingCount = opts.missingValuesCount;
 			count = opts.N;
 
-			CUDA_CHECK(cudaFreeHost(datas.TC));
-
 			if (TInfo->Grid()->DataIsPacked())
 			{
+				// Copy unpacked data to info class matrix so that when this class is put
+				// to cache, it will have the unpacked version of data
+				
 				TInfo->Data()->Set(datas.TK, opts.N);
+
 				TInfo->Grid()->PackedData()->Clear();
+
 				CUDA_CHECK(cudaFreeHost(datas.TK));
+				CUDA_CHECK(cudaFreeHost(datas.TC));
 			}
 		}
 		else
@@ -323,7 +328,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			SwapTo(myTargetInfo, kBottomLeft);
 
 		}
-	
+
 		if (conf->StatisticsEnabled())
 		{
 			conf->Statistics()->AddToMissingCount(missingCount);
@@ -336,7 +341,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 		 * Clone info-instance to writer since it might change our descriptor places
 		 */
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
 		if (conf->FileWriteOption() != kSingleFile)
 		{

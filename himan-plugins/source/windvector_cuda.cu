@@ -100,11 +100,29 @@ __global__ void himan::plugin::windvector_cuda::Calculate(const double* __restri
 				{
 					dir = kRadToDeg * atan2(U,V) + offset;
 
-					// reduce the angle
-					dir = fmod(dir, 360);
+					// modulo operator is supposedly slow on cuda ?
 
+					/*
+					 * quote:
+					 * 
+					 * Integer division and modulo operation are costly: tens of instructions on devices of
+					 * compute capability 1.x, below 20 instructions on devices of compute capability 2.x and
+					 * higher.
+					 */
+
+					// reduce the angle
+					while (dir > 360)
+					{
+						dir -= 360;
+					}
+					
 					// force it to be the positive remainder, so that 0 <= dir < 360
-					dir = fmod((dir + 360), 360);
+
+					while (dir < 0)
+					{
+						dir += 360;
+					}
+
 
 				}
 
@@ -215,8 +233,6 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 
 	size_t N = opts.sizeY*opts.sizeX;
 
-	//size_t memSize = N * sizeof(double);
-
 	// Allocate device arrays
 
 	double* dU = 0;
@@ -224,11 +240,6 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 	double* dSpeed = 0;
 	double* dDir = 0;
 	double* dVector = 0;
-
-	unsigned char* dpU = 0;
-	int* dbmU = 0;
-	unsigned char* dpV = 0;
-	int* dbmV = 0;
 	
 	int* dMissingValuesCount = 0;
 
@@ -251,12 +262,6 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 	if (opts.pU)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dU, datas.u, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpU, datas.pU.data, 0));
-
-		if (datas.pU.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmU, datas.pU.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -267,12 +272,6 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 	if (opts.pV)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dV, datas.v, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpV, datas.pV.data, 0));
-
-		if (datas.pU.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmV, datas.pV.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -289,11 +288,6 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 	const int blockSize = 128;
 	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
 
-	dim3 gridDim(gridSize);
-	dim3 blockDim(blockSize);
-
-	// cudaPrintfInit();
-
 	// Better do this once here than millions of times in the kernel
 
 	if (opts.southPoleLat > 0)
@@ -302,14 +296,18 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 		opts.southPoleLon = 0;
 	}
 
+	cudaStream_t stream;
+
+	CUDA_CHECK(cudaStreamCreate(&stream));
+
 	if (opts.pU)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpU, dU, dbmU, datas.pU.coefficients, opts.sizeX * opts.sizeY, datas.pU.HasBitmap());
+		datas.pU->Unpack(dU, &stream);
 	}
 
 	if (opts.pV)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpV, dV, dbmV, datas.pV.coefficients, opts.sizeX * opts.sizeY, datas.pV.HasBitmap());
+		datas.pV->Unpack(dV, &stream);
 	}
 
 	/*
@@ -319,20 +317,17 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 
 	if (opts.targetType != kGust && opts.needRotLatLonGridRotation)
 	{
-		Rotate <<< gridDim, blockDim >>> (dU, dV, opts);
+		Rotate <<< gridSize, blockSize, 0, stream >>> (dU, dV, opts);
 	}
 	
-	Calculate <<< gridDim, blockDim >>> (dU, dV, dSpeed, dDir, dVector, opts, dMissingValuesCount);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (dU, dV, dSpeed, dDir, dVector, opts, dMissingValuesCount);
 
-	// block until the device has completed
-	CUDA_CHECK(cudaDeviceSynchronize());
+	// block until the stream has completed
+	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// check if kernel execution generated an error
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
-
-	// cudaPrintfDisplay(stdout, true);
-	// cudaPrintfEnd();
 
 	CUDA_CHECK(cudaMemcpy(&opts.missingValuesCount, dMissingValuesCount, sizeof(int), cudaMemcpyDeviceToHost));
 
@@ -347,5 +342,6 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 	}
 
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
-	
+
+	CUDA_CHECK(cudaStreamDestroy(stream));
 }

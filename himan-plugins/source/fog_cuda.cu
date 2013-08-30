@@ -66,14 +66,6 @@ void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& data
 	double* dFF10M;
 	
 	double* dF;
-
-	unsigned char* dpDTC2M;
-	unsigned char* dpTKGround;
-	unsigned char* dpFF10M;
-
-	int* dbmDTC2M;
-	int* dbmTKGround;
-	int* dbmFF10M;
 	
 	int* dMissingValuesCount;
 
@@ -84,12 +76,6 @@ void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& data
 	if (opts.pDTC2M)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dDTC2M, datas.DTC2M, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpDTC2M, datas.pDTC2M.data, 0));
-
-		if (datas.pDTC2M.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmDTC2M, datas.pDTC2M.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -100,12 +86,6 @@ void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& data
 	if (opts.pTKGround)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dTKGround, datas.TKGround, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpTKGround, datas.pTKGround.data, 0));
-
-		if (datas.pTKGround.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmTKGround, datas.pTKGround.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -116,12 +96,6 @@ void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& data
 	if (opts.pFF10M)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dFF10M, datas.FF10M, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpFF10M, datas.pFF10M.data, 0));
-
-		if (datas.pFF10M.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmFF10M, datas.pFF10M.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -138,28 +112,28 @@ void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& data
 	const int blockSize = 512;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
-	dim3 gridDim(gridSize);
-	dim3 blockDim(blockSize);
-
+	cudaStream_t stream;
+	CUDA_CHECK(cudaStreamCreate(&stream));
+	
 	if (opts.pDTC2M)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpDTC2M, dDTC2M, dbmDTC2M, datas.pDTC2M.coefficients, opts.N, datas.pDTC2M.HasBitmap());
+		datas.pDTC2M->Unpack(dDTC2M, &stream);
 	}
 
 	if (opts.pTKGround)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpTKGround, dTKGround, dbmTKGround, datas.pTKGround.coefficients, opts.N, datas.pTKGround.HasBitmap());
+		datas.pTKGround->Unpack(dTKGround, &stream);
 	}
 
 	if (opts.pFF10M)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpFF10M, dFF10M, dbmFF10M, datas.pFF10M.coefficients, opts.N, datas.pFF10M.HasBitmap());
+		datas.pFF10M->Unpack(dFF10M, &stream);
 	}
 
-	Calculate <<< gridDim, blockDim >>> (dDTC2M, dTKGround, dFF10M, dF, opts, dMissingValuesCount);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (dDTC2M, dTKGround, dFF10M, dF, opts, dMissingValuesCount);
 
 	// block until the device has completed
-	CUDA_CHECK(cudaDeviceSynchronize());
+	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// check if kernel execution generated an error
 
@@ -184,5 +158,6 @@ void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& data
 	}
 
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
+	CUDA_CHECK(cudaStreamDestroy(stream));
 
 }

@@ -65,11 +65,6 @@ void himan::plugin::dewpoint_cuda::DoCuda(dewpoint_cuda_options& opts, dewpoint_
 	double* dT;
 	double* dRH;
 	double* dTD;
-
-	unsigned char* dpT;
-	unsigned char* dpRH;
-	int* dbmT;
-	int* dbmRH;
 	
 	int* dMissingValuesCount;
 
@@ -80,12 +75,6 @@ void himan::plugin::dewpoint_cuda::DoCuda(dewpoint_cuda_options& opts, dewpoint_
 	if (opts.pT)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dT, datas.T, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpT, datas.pT.data, 0));
-
-		if (datas.pT.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmT, datas.pT.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -96,12 +85,7 @@ void himan::plugin::dewpoint_cuda::DoCuda(dewpoint_cuda_options& opts, dewpoint_
 	if (opts.pRH)
 	{
 		CUDA_CHECK(cudaHostGetDevicePointer(&dRH, datas.RH, 0));
-		CUDA_CHECK(cudaHostGetDevicePointer(&dpRH, datas.pRH.data, 0));
 
-		if (datas.pRH.HasBitmap())
-		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dbmRH, datas.pRH.bitmap, 0));
-		}
 	}
 	else
 	{
@@ -118,23 +102,23 @@ void himan::plugin::dewpoint_cuda::DoCuda(dewpoint_cuda_options& opts, dewpoint_
 	const int blockSize = 512;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
-	dim3 gridDim(gridSize);
-	dim3 blockDim(blockSize);
+	cudaStream_t stream;
+	CUDA_CHECK(cudaStreamCreate(&stream));
 
 	if (opts.pT)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpT, dT, dbmT, datas.pT.coefficients, opts.N, datas.pT.HasBitmap());
+		datas.pT->Unpack(dT, &stream);
 	}
 
 	if (opts.pRH)
 	{
-		SimpleUnpack <<< gridDim, blockDim >>> (dpRH, dRH, dbmRH, datas.pRH.coefficients, opts.N, datas.pRH.HasBitmap());
+		datas.pRH->Unpack(dRH, &stream);
 	}
 
-	Calculate <<< gridDim, blockDim >>> (dT, dRH, dTD, opts, dMissingValuesCount);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (dT, dRH, dTD, opts, dMissingValuesCount);
 
 	// block until the device has completed
-	CUDA_CHECK(cudaDeviceSynchronize());
+	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// check if kernel execution generated an error
 
@@ -154,5 +138,6 @@ void himan::plugin::dewpoint_cuda::DoCuda(dewpoint_cuda_options& opts, dewpoint_
 	}
 
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
+	CUDA_CHECK(cudaStreamDestroy(stream));
 
 }

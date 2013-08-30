@@ -12,7 +12,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "packed_data.h"
+#include "simple_packed.h"
 
 namespace himan
 {
@@ -39,11 +39,11 @@ struct fog_cuda_data
 	double* TKGround;
 	double* FF10M;
 	double* F;
-	simple_packed pDTC2M;
-	simple_packed pTKGround;
-	simple_packed pFF10M;
+	simple_packed* pDTC2M;
+	simple_packed* pTKGround;
+	simple_packed* pFF10M;
 
-	fog_cuda_data() : DTC2M(0), TKGround(0), FF10M(0), pDTC2M(), pTKGround(), pFF10M() {}
+	fog_cuda_data() : DTC2M(0), TKGround(0), FF10M(0), pDTC2M(0), pTKGround(0), pFF10M(0) {}
 
 };
 

@@ -332,8 +332,13 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		string deviceType;
 
 #ifdef HAVE_CUDA
-		
+
 		if (conf->UseCuda() && equalGrids && threadIndex <= conf->CudaDeviceCount())
+		{
+			itsLogger->Warning("tpot@cuda not supported for now");
+		}
+
+		if (false)
 		{
 			deviceType = "GPU";
 
@@ -353,7 +358,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
 
-				datas.pT = *(t);
+				datas.pT = t.get();
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
 
@@ -373,7 +378,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
 					
-					datas.pP = *(p);
+					datas.pP = p.get();
 
 					CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.P), opts.N * sizeof(double), cudaHostAllocMapped));
 

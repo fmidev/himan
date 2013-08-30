@@ -405,7 +405,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				shared_ptr<simple_packed> u = dynamic_pointer_cast<simple_packed> (UInfo->Grid()->PackedData());
 
-				datas.pU = *(u);
+				datas.pU = u.get();
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.u), N * sizeof(double), cudaHostAllocMapped));
 
@@ -423,7 +423,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				shared_ptr<simple_packed> v = dynamic_pointer_cast<simple_packed> (VInfo->Grid()->PackedData());
 
-				datas.pV = *(v);
+				datas.pV = v.get();
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.v), N * sizeof(double), cudaHostAllocMapped));
 

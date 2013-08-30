@@ -12,7 +12,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "packed_data.h"
+#include "simple_packed.h"
 
 namespace himan
 {
@@ -38,10 +38,10 @@ struct dewpoint_cuda_data
 	double* T;
 	double* RH;
 	double* TD;
-	simple_packed pT;
-	simple_packed pRH;
+	simple_packed* pT;
+	simple_packed* pRH;
 
-	dewpoint_cuda_data() : T(0), RH(0), TD(0), pT(), pRH() {}
+	dewpoint_cuda_data() : T(0), RH(0), TD(0), pT(0), pRH(0) {}
 
 };
 

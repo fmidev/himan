@@ -33,7 +33,7 @@ enum HPTargetType
 
 #ifdef HAVE_CUDA
 
-#include "packed_data.h"
+#include "simple_packed.h"
 
 namespace himan
 {
@@ -80,10 +80,10 @@ struct windvector_cuda_data
 	double* speed;
 	double* dir;
 	double* vector;
-	simple_packed pU;
-	simple_packed pV;
+	simple_packed* pU;
+	simple_packed* pV;
 
-	windvector_cuda_data() : u(0), v(0), speed(0), dir(0), vector(0), pU(), pV() {}
+	windvector_cuda_data() : u(0), v(0), speed(0), dir(0), vector(0), pU(0), pV(0) {}
 
 };
 
