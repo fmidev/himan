@@ -8,7 +8,7 @@ INSTALL_DATA = install -m 664
 
 INSTALL_TARGET = /usr/lib64/himan-plugins
 
-rpmsourcedir = /home/partio/rpmbuild/SOURCES
+rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
 
 # The rules
 
@@ -21,12 +21,14 @@ clean:
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~
 
 rpm:    clean
+	mkdir -p $(rpmsourcedir) ; \
 	if [ -a $(LIB).spec ]; \
         then \
           tar -C ../ --exclude .svn \
                    -cf $(rpmsourcedir)/$(LIB).tar $(LIB) ; \
           gzip -f $(rpmsourcedir)/$(LIB).tar ; \
           rpmbuild -ta $(rpmsourcedir)/$(LIB).tar.gz ; \
+          rm -f $(rpmsourcedir)/$(LIB).tar.gz ; \
         else \
           echo $(rpmerr); \
         fi;
