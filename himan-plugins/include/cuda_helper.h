@@ -45,7 +45,7 @@ inline void CheckCudaErrorString(const char* errstr, const char* file,	const int
 
 namespace himan
 {
-	
+
 const float kFloatMissing = 32700.f;
 
 #define BitMask1(i)	(1u << i)
@@ -69,12 +69,6 @@ inline __host__ void UnpackBitmap(const unsigned char* __restrict__ bitmap, int*
   }
 }
 
-inline __device__ void GetBitValue(const unsigned char* p, long bitp, int *val)
-{
-	p += (bitp >> 3);
-	*val = (*p&(1<<(7-(bitp%8))));
-}
-
 inline __device__ void SetBitOn(unsigned char* p, long bitp)
 {
   p += bitp/8;
@@ -87,132 +81,6 @@ inline __device__ void SetBitOff( unsigned char* p, long bitp)
   *p &= ~(1u << (7-((bitp)%8)));
 }
 
-inline __device__ void SimpleUnpackFullBytes(const unsigned char* __restrict__ d_p,
-											double* __restrict__ d_u,
-											const int* __restrict__ d_bm,
-											size_t values_len,
-											int bpv, double bsf, double dsf, double rv, bool hasBitmap, int idx)
-{
-	int bc;
-	unsigned long lvalue;
-
-	int l = bpv/8;
-
-	if (idx < values_len)
-	{
-		int bm = idx;
-		int value_found = 1;
-
-		if (hasBitmap)
-		{
-			bm = d_bm[idx];
-
-			if (bm == 0)
-			{
-				d_u[idx] = kFloatMissing;
-				value_found = 0;
-			}
-			else
-			{
-				bm--;
-			}
-		}
-
-		if (value_found)
-		{
-			size_t o = bm*l;
-
-			lvalue	= 0;
-			lvalue	<<= 8;
-			lvalue |= d_p[o++] ;
-
-			for ( bc=1; bc<l; bc++ )
-			{
-				lvalue <<= 8;
-				lvalue |= d_p[o++] ;
-			}
-
-			d_u[idx] = ((lvalue*bsf)+rv)*dsf;
-		}
-	}
-}
-
-inline __device__ void SimpleUnpackUnevenBytes(const unsigned char* __restrict__ d_p,
-												double* __restrict__ d_u,
-												const int* __restrict__ d_bm,
-												size_t values_len, int bpv, double bsf, double dsf, double rv, bool hasBitmap, int idx)
-{
-	int j=0;
-	unsigned long lvalue;
-
-	if (idx < values_len)
-	{
-		int bm = idx;
-		int value_found = 1;
-
-		/*
-		 * Check if bitmap is set.
-		 * If bitmap is set and indicates that value for this element is missing, do
-		 * not proceed to calculating phase.
-		 *
-		 * If bitmap is set and indicates that value exists for this element, the index
-		 * for the actual data is the one indicated by the bitmap array. From this index
-		 * we reduce one (1) because that one is added to the value in unpack_bitmap.
-		 */
-		
-		if (hasBitmap)
-		{
-			bm = d_bm[idx];
-
-			if (bm == 0)
-			{
-				d_u[idx] = kFloatMissing;
-				value_found = 0;
-			}
-			else
-			{
-				bm--;
-			}
-		}
-
-		if (value_found)
-		{
-			long bitp=bpv*bm;
-
-			lvalue=0;
-
-			for(j=0; j< bpv;j++)
-			{
-				lvalue <<= 1;
-				int val;
-
-				GetBitValue(d_p, bitp, &val);
-
-				if (val) lvalue += 1;
-
-				bitp += 1;
-			}
-			d_u[idx] = ((lvalue*bsf)+rv)*dsf;
-		}
-	}
-}
-
-__global__ void SimpleUnpack(const unsigned char* d_p, double* d_u, const int* d_bm, himan::simple_packed_coefficients coeff, size_t N, bool hasBitmap)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (idx < N)
-	{
-		if (coeff.bitsPerValue % 8)
-		{
-			SimpleUnpackUnevenBytes(d_p, d_u, d_bm, N,coeff.bitsPerValue, coeff.binaryScaleFactor, coeff.decimalScaleFactor, coeff.referenceValue, hasBitmap, idx);
-		}
-		else
-		{
-			SimpleUnpackFullBytes(d_p, d_u, d_bm, N, coeff.bitsPerValue, coeff.binaryScaleFactor, coeff.decimalScaleFactor, coeff.referenceValue, hasBitmap, idx);
-		}
-	}
-}
 
 // ----------- NOTE -----------
 // PACKING FUNCTION DO NOT WORK YET
