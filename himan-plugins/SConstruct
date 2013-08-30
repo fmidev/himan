@@ -20,11 +20,14 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.environ['HOME'] + "/workspace"
+
+# jenkins
 if os.environ['HOME'] == "/home/weto":
 	workspace = os.environ['HOME'] + "/workspace/himan"
+
 # cuda toolkit path
 
-cuda_toolkit_path = '/opt/cuda'
+cuda_toolkit_path = '/usr/local/cuda-5.5'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
         print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -33,7 +36,7 @@ else:
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart_static.a'):
 	have_cuda = True
 
 env['CC'] = 'gcc'
@@ -53,7 +56,6 @@ includes.append('./include')
 
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
-#includes.append(workspace + '/trunk/newbase/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append(workspace + '/fmidb/include')
 includes.append(workspace + '/fmigrib/include')
@@ -73,7 +75,12 @@ env.Append(CPPPATH = includes)
 
 library_paths = []
 
-library_paths.append(workspace + '/himan-lib/build/debug')
+if RELEASE:
+	library_paths.append(workspace + '/himan-lib/build/release')
+
+elif DEBUG:
+	library_paths.append(workspace + '/himan-lib/build/debug')
+
 library_paths.append(workspace + '/fmidb/lib')
 library_paths.append(workspace + '/fmigrib/lib')
 library_paths.append('/usr/lib64')
@@ -82,9 +89,6 @@ if os.environ.get('ORACLE_HOME') is None:
 	library_paths.append('/usr/lib64/oracle/')
 else:
 	 library_paths.append(os.environ.get('ORACLE_HOME') + '/lib')
-
-if have_cuda:
-	library_paths.append(cuda_toolkit_path + '/lib64')
 
 env.Append(LIBPATH = library_paths)
 
@@ -99,14 +103,14 @@ libraries.append('jasper')
 libraries.append('clntsh')
 libraries.append('boost_filesystem')
 
-if have_cuda:
-	libraries.append('cudart')
-
 env.Append(LIBS = libraries)
 
 libgrib_api = env.File('/usr/lib64/libgrib_api.a')
 
 env.Append(LIBS=libgrib_api)
+
+if have_cuda:
+	env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
 
 # CFLAGS
 
@@ -168,9 +172,10 @@ if have_cuda:
 # Cuda
 
 env.Append(NVCCFLAGS = ['-m64'])
-env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC']) # these two go hand-in-hand (like -Wl,--export-dynamic)
+env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
 env.Append(NVCCFLAGS = ['-arch=compute_35','-code=sm_35'])
+
 env.Append(NVCCPATH = ['./include'])
 env.Append(NVCCPATH = [workspace + '/himan-lib/include']) # timer
 
