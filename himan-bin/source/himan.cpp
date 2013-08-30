@@ -36,7 +36,18 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
 int main(int argc, char** argv)
 {
 
-	shared_ptr<configuration> conf = ParseCommandLine(argc, argv);
+	shared_ptr<configuration> conf;
+	
+	try
+	{
+		conf = ParseCommandLine(argc, argv);
+	}
+	catch (const std::exception &e)
+	{
+		cerr << e.what() << endl;
+		exit(1);
+	}
+
 
 	unique_ptr<logger> aLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
 
@@ -53,7 +64,17 @@ int main(int argc, char** argv)
 	shared_ptr<plugin::auxiliary_plugin> n = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
 	shared_ptr<plugin::auxiliary_plugin> c = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("cache"));
 
-	std::vector<shared_ptr<plugin_configuration>> plugins = json_parser::Instance()->Parse(conf);
+	std::vector<shared_ptr<plugin_configuration>> plugins;
+
+	try
+	{
+		plugins = json_parser::Instance()->Parse(conf);
+	}
+	catch (std::runtime_error& e)
+	{
+		aLogger->Fatal(e.what());
+		exit(1);
+	}
 
 	conf.reset(); // we don't need this conf anymore, it was only used as a base for json_parser
 	
