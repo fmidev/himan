@@ -22,6 +22,7 @@ using namespace himan::plugin;
 #undef HIMAN_AUXILIARY_INCLUDE
 
 #include "cuda_helper.h"
+#include "simple_packed.h"
 
 grib::grib()
 {
@@ -590,6 +591,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			
 			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&data), len * sizeof(unsigned char), cudaHostAllocMapped));
 
+			// Get packed values from grib
+			
 			itsGrib->Message()->PackedValues(data);
 		
 			double bsf = itsGrib->Message()->BinaryScaleFactor();
@@ -599,7 +602,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			auto packed = std::make_shared<simple_packed> (bpv, util::ToPower(bsf,2), util::ToPower(-dsf, 10), rv);
 
-			packed->Set(data, len);
+			packed->Set(data, len, itsGrib->Message()->SizeX() * itsGrib->Message()->SizeY());
 
 			if (itsGrib->Message()->Bitmap())
 			{
