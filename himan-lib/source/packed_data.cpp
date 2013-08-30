@@ -11,14 +11,15 @@
 
 using namespace himan;
 
-void packed_data::Set(unsigned char* newData, size_t newDataLength)
+void packed_data::Set(unsigned char* newData, size_t newPackedLength, size_t newUnpackedLength)
 {
-	if (dataLength)
+	if (packedLength)
 	{
 		cudaFreeHost(data);
 	}
 
-	dataLength = newDataLength;
+	packedLength = newPackedLength;
+	unpackedLength = newUnpackedLength;
 	data = newData;
 }
 
@@ -33,16 +34,18 @@ void packed_data::Bitmap(int* newBitmap, size_t newBitmapLength)
 	bitmap = newBitmap;
 }
 
-void packed_data::Resize(size_t newDataLength)
+void packed_data::Resize(size_t newPackedLength, size_t newUnpackedLength)
 {
-	assert(newDataLength > dataLength);
+	assert(newPackedLength > packedLength);
 
-	dataLength = newDataLength;
+	packedLength = newPackedLength;
+	unpackedLength = newUnpackedLength;
+
 	unsigned char* newData = 0;
 
-	cudaHostAlloc(reinterpret_cast<void**> (&newData), dataLength * sizeof(unsigned char), cudaHostAllocMapped);
+	cudaHostAlloc(reinterpret_cast<void**> (&newData), packedLength * sizeof(unsigned char), cudaHostAllocMapped);
 
-	memcpy(newData, data, dataLength * sizeof(unsigned char));
+	memcpy(newData, data, packedLength * sizeof(unsigned char));
 
 	cudaFreeHost(data);
 

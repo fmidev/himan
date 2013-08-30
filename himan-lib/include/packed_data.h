@@ -18,7 +18,6 @@
 #define	PACKED_DATA_H
 
 #ifndef HAVE_CUDA
-
 // Define shells so that compilation succeeds
 namespace himan
 {
@@ -30,6 +29,14 @@ struct packed_data
 
 #else
 
+#ifdef __CUDACC__
+#define CUDA_HOST __host__
+#define CUDA_DEVICE __device__
+#else
+#define CUDA_HOST
+#define CUDA_DEVICE
+#endif
+
 #include <cuda_runtime_api.h>
 #include "himan_common.h"
 
@@ -39,37 +46,39 @@ namespace himan
 struct packed_data
 {
 
-#ifdef __CUDACC__
-__device__  __host__
-#endif
-	packed_data() : data(0), dataLength(0), bitmap(0), bitmapLength(0), packingType(kUnknownPackingType) {}
+	CUDA_HOST
+	packed_data() : data(0), packedLength(0), unpackedLength(0), bitmap(0), bitmapLength(0), packingType(kUnknownPackingType) {}
 
-#ifdef __CUDACC__
-__device__  __host__
-#endif
+	CUDA_HOST CUDA_DEVICE
 	virtual ~packed_data();
+
+	/**
+	 * @brief Copy constructor for packed data
+	 *
+	 * This is defined for both gcc and nvcc separately
+	 * 
+     * @param other packed_data instance that we are copying from
+     */
 	
+	CUDA_HOST
 	packed_data(const packed_data& other);
 
 	virtual std::string ClassName() const { return "packed_data"; }
 
-	void Resize(size_t newDataLength);
-	void Set(unsigned char* newData, size_t newDataLength);
+	void Resize(size_t newPackedLength, size_t newUnpackedLength);
+	void Set(unsigned char* packedData, size_t packedDataLength, size_t unpackedDataLength);
 	void Bitmap(int* newBitmap, size_t newBitmapLength);
 	void Clear();
 	
-#ifdef __CUDACC__
-__device__  __host__
-#endif
+	CUDA_HOST
 	bool HasData() const;
 
-#ifdef __CUDACC__
-__device__  __host__
-#endif
+	CUDA_HOST CUDA_DEVICE
 	bool HasBitmap() const;
 
 	unsigned char* data;
-	size_t dataLength;
+	size_t packedLength;
+	size_t unpackedLength;
 	int* bitmap;
 	size_t bitmapLength;
 
@@ -78,50 +87,40 @@ __device__  __host__
 };
 
 inline
-#ifdef __CUDACC__
-__device__  __host__
-#endif
+CUDA_HOST
 packed_data::packed_data(const packed_data& other)
-	: dataLength(other.dataLength)
+	: packedLength(other.packedLength)
+	, unpackedLength(other.unpackedLength)
 	, packingType(other.packingType)
 {
 
-	if (other.dataLength)
+	data = 0;
+	bitmap = 0;
+
+	if (other.packedLength)
 	{
+
 #ifndef __CUDACC__
-		dataLength = other.dataLength;
+		cudaHostAlloc(reinterpret_cast<void**> (&data), packedLength * sizeof(unsigned char), cudaHostAllocMapped);
 
-		//cudaMallocHost(reinterpret_cast<void**> (&data), dataLength * sizeof(unsigned char));
-		cudaHostAlloc(reinterpret_cast<void**> (&data), dataLength * sizeof(unsigned char), cudaHostAllocMapped);
-
-		memcpy(data, other.data, dataLength * sizeof(unsigned char));
+		memcpy(data, other.data, packedLength * sizeof(unsigned char));
 #endif
-	}
-	else
-	{
-		data = 0;
+
 	}
 
 	if (other.bitmapLength)
 	{
+
 #ifndef __CUDACC__
-		bitmapLength = other.bitmapLength;
-		
 		cudaHostAlloc(reinterpret_cast<void**> (&bitmap), bitmapLength * sizeof(int), cudaHostAllocMapped);
 
 		memcpy(bitmap, other.bitmap, bitmapLength * sizeof(int));
 #endif
 	}
-	else
-	{
-		bitmap = 0;
-	}
 }
 
 inline
-#ifdef __CUDACC__
-__device__  __host__
-#endif
+CUDA_HOST CUDA_DEVICE
 packed_data::~packed_data()
 {
 #ifndef __CUDACC__
@@ -130,119 +129,34 @@ packed_data::~packed_data()
 }
 
 inline
-#ifdef __CUDACC__
-__device__  __host__
-#endif
+CUDA_HOST
 bool packed_data::HasData() const
 {
-	return (dataLength > 0);
+	return (packedLength > 0);
 }
 
 inline
-#ifdef __CUDACC__
-__device__  __host__
-#endif
+CUDA_HOST CUDA_DEVICE
 bool packed_data::HasBitmap() const
 {
 	return (bitmapLength > 0);
 }
 
 inline
-#ifdef __CUDACC__
- __device__ __host__
-#endif
 void packed_data::Clear()
 {
-	if (dataLength)
+	if (packedLength)
 	{
-#ifndef __CUDACC__
 		cudaFreeHost(data);
-		dataLength = 0;
-#endif
+		packedLength = 0;
+		unpackedLength = 0;
 	}
 
 	if (bitmapLength)
 	{
-#ifndef __CUDACC__
 		cudaFreeHost(bitmap);
 		bitmapLength = 0;
-#endif
 	}
-}
-
-struct simple_packed_coefficients
-{
-	int bitsPerValue;
-	double binaryScaleFactor;
-	double decimalScaleFactor;
-	double referenceValue;
-
-#ifdef __CUDACC__
-	__host__ __device__
-#endif
-	simple_packed_coefficients()
-		: bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0)
-	{}
-
-};
-
-struct simple_packed : packed_data
-{
-#ifdef __CUDACC__
-	__device__ __host__
-#endif
-	simple_packed() : packed_data()
-	{
-		packingType = kSimplePacking;
-	}
-
-#ifdef __CUDACC__
-	__device__ __host__
-#endif
-	simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimaleScaleFactor, double theReferenceValue);
-
-#ifdef __CUDACC__
-	__device__ __host__
-#endif
-	simple_packed(const simple_packed& other);
-
-#ifdef __CUDACC__
-	__device__ __host__
-#endif
-	virtual ~simple_packed() {}
-
-	virtual std::string ClassName() const { return "simple_packed"; }
-	simple_packed_coefficients coefficients;
-
-};
-
-
-inline 
-#ifdef __CUDACC__
-__device__  __host__
-#endif
-simple_packed::simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimalScaleFactor, double theReferenceValue) 
-{
-	coefficients.bitsPerValue = theBitsPerValue;
-	coefficients.binaryScaleFactor = theBinaryScaleFactor;
-	coefficients.decimalScaleFactor = theDecimalScaleFactor;
-	coefficients.referenceValue = theReferenceValue;
-	packingType = kSimplePacking;
-}
-
-inline
-#ifdef __CUDACC__
-__device__  __host__
-#endif
-simple_packed::simple_packed(const simple_packed& other)
-	: packed_data(other)
-{
-	coefficients.bitsPerValue = other.coefficients.bitsPerValue;
-	coefficients.binaryScaleFactor = other.coefficients.binaryScaleFactor;
-	coefficients.decimalScaleFactor = other.coefficients.decimalScaleFactor;
-	coefficients.referenceValue = other.coefficients.referenceValue;
-	packingType = kSimplePacking;
-
 }
 
 } // namespace himan
