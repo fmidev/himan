@@ -9,7 +9,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.8.21
+Version: 13.8.22
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -82,7 +82,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Fri Aug 16 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.21-1.el6.fmi
+* Thu Aug 22 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.22-1.el6.fmi
+- Latest changes
+* Wed Aug 21 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.21-1.el6.fmi
 - Latest changes
 - Linking with new version of fmigrib to avoid grib_api bug crashing the program 
   (SUP-592 @ http://software.ecmwf.int)
