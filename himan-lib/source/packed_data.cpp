@@ -53,4 +53,51 @@ void packed_data::Resize(size_t newPackedLength, size_t newUnpackedLength)
 	
 }
 
+packed_data::packed_data(const packed_data& other)
+	: packedLength(other.packedLength)
+	, unpackedLength(other.unpackedLength)
+	, packingType(other.packingType)
+{
+
+	data = 0;
+	bitmap = 0;
+
+	if (other.packedLength)
+	{
+
+#ifndef __CUDACC__
+		cudaHostAlloc(reinterpret_cast<void**> (&data), packedLength * sizeof(unsigned char), cudaHostAllocMapped);
+
+		memcpy(data, other.data, packedLength * sizeof(unsigned char));
+#endif
+
+	}
+
+	if (other.bitmapLength)
+	{
+
+#ifndef __CUDACC__
+		cudaHostAlloc(reinterpret_cast<void**> (&bitmap), bitmapLength * sizeof(int), cudaHostAllocMapped);
+
+		memcpy(bitmap, other.bitmap, bitmapLength * sizeof(int));
+#endif
+	}
+}
+
+void packed_data::Clear()
+{
+	if (packedLength)
+	{
+		cudaFreeHost(data);
+		packedLength = 0;
+		unpackedLength = 0;
+	}
+
+	if (bitmapLength)
+	{
+		cudaFreeHost(bitmap);
+		bitmapLength = 0;
+	}
+}
+
 #endif
