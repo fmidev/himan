@@ -6,7 +6,8 @@ SCONS_FLAGS=-j 2
 
 INSTALL_DATA = install -m 664
 
-rpmsourcedir = /home/partio/rpmbuild/SOURCES
+#rpmsourcedir = /home/partio/rpmbuild/SOURCES
+rpmsourcedir=/tmp/$(shell whoami)/rpmbuild
 
 INSTALL_TARGET = /usr/lib64
 
@@ -21,6 +22,7 @@ clean:
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~
 
 rpm:    clean
+	mkdir -p $(rpmsourcedir) ; \
 	if [ -a $(LIB)-lib.spec ]; \
         then \
           tar -C ../ --exclude .svn \
