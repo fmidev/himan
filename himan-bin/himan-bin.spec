@@ -9,7 +9,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 13.8.16
+Version: 13.8.30
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -59,6 +59,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Fri Aug 30 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.30-1.el6.fmi
+- Latest changes
+- First compilation on scout.fmi.fi
 * Fri Aug 16 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.16-1.el6.fmi
 - Latest changes
 - First release for masala-cluster

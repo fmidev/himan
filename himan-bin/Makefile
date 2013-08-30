@@ -11,7 +11,7 @@ INSTALL_PROG = install -m 755
 CWP = $(shell pwd)
 BIN = $(shell basename $(CWP))
 
-rpmsourcedir = /home/partio/rpmbuild/SOURCES
+rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
 
 INSTALL_TARGET = /usr/bin
 
@@ -26,12 +26,14 @@ clean:
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~
 
 rpm:    clean
-	if [ -a $(PROG)-bin.spec ]; \
+	mkdir -p $(rpmsourcedir) ; \
+        if [ -a $(PROG)-bin.spec ]; \
         then \
           tar -C ../ --exclude .svn \
                    -cf $(rpmsourcedir)/$(PROG)-bin.tar $(PROG)-bin ; \
           gzip -f $(rpmsourcedir)/$(PROG)-bin.tar ; \
           rpmbuild -ta $(rpmsourcedir)/$(PROG)-bin.tar.gz ; \
+          rm -f $(rpmsourcedir)/$(LIB).tar.gz ; \
         else \
           echo $(rpmerr); \
         fi;
