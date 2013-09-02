@@ -107,7 +107,7 @@ void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryF
 
 void configuration::Init()
 {
-	itsOutputFileType = kGRIB;
+	itsOutputFileType = kGRIB1;
 	itsFileWriteOption = kSingleFile;
 	itsReadDataFromDatabase = true;
 	itsUseCuda = true;
