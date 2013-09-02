@@ -1,6 +1,6 @@
 LIB = himan-plugins
 
-SCONS_FLAGS=-j 2
+SCONS_FLAGS=-j 4
 
 # How to install
 
