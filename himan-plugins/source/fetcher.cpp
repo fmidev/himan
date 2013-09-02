@@ -64,7 +64,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		do
 		{
 
-			itsLogger->Debug("Current producer: " + config->SourceProducer().Name());
+			itsLogger->Trace("Current producer: " + config->SourceProducer().Name());
 
 			if (config->UseCache())
 			{
