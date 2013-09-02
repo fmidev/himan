@@ -216,6 +216,11 @@ bool configuration::FirstSourceProducer() const
 	return itsSourceProducerIterator->First();
 }
 
+void configuration::ResetSourceProducer() const
+{
+	itsSourceProducerIterator->Reset();
+}
+
 producer configuration::SourceProducer() const
 {
 	return itsSourceProducerIterator->At();

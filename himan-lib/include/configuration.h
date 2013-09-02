@@ -123,6 +123,7 @@ public:
 	bool SourceProducer(const producer& theSourceProducer);
 	bool NextSourceProducer() const; // THIS SHOULD NOT BE CONST ??
 	bool FirstSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+	void ResetSourceProducer() const;
 
 	void StoreCudaDeviceCount();
 	bool HaveCuda() const;
