@@ -110,7 +110,7 @@ libgrib_api = env.File('/usr/lib64/libgrib_api.a')
 env.Append(LIBS=libgrib_api)
 
 if have_cuda:
-	env.Append(LIBS=env.File(cuda_toolkit_path + '/libcudart.so'))
+	env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
 
 # CFLAGS
 
