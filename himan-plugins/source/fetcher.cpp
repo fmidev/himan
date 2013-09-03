@@ -70,9 +70,11 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			{
 
 				// 1. Fetch data from cache
-
-				itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
-
+				if (!itsCache)
+				{
+					itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+				}
+				
 				theInfos = FromCache(opts);
 
 				if (theInfos.size())
@@ -278,7 +280,7 @@ vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, cons
 {
 
 	shared_ptr<grib> g = dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
-
+	
 	vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents, readPackedData);
 
 	return infos;

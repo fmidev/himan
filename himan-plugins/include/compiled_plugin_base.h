@@ -58,6 +58,9 @@ protected:
 
 	bool InterpolateToPoint(std::shared_ptr<const NFmiGrid> targetGrid, std::shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value);
 
+	bool InterpolateToHilPP(std::shared_ptr<NFmiGrid> sourceGrid, const NFmiPoint &theLatLonPoint, double &value);
+	bool BiLinearInterpolation(std::shared_ptr<NFmiGrid> sourceGrid, double x, double y, double &theValue);
+
 	/**
 	 * @brief Set leading dimension
 	 */

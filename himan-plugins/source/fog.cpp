@@ -26,7 +26,7 @@ const string itsName("fog");
 
 fog::fog()
 {
-	itsClearTextFormula = "FOG = (DT2M-TGround> -0.3 && FF10M < 5) ? 607 : 0";
+	itsClearTextFormula = "FOG = ( TD2M - TGround > -0.3 && FF10M < 5) ? 607 : 0";
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
@@ -382,15 +382,15 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 				count++;
 
-				double dt2m = kFloatMissing;
+				double td2m = kFloatMissing;
 				double wind10m = kFloatMissing;
 				double tGround = kFloatMissing;
 
 				InterpolateToPoint(targetGrid, groundGrid, equalGrids, tGround);
-				InterpolateToPoint(targetGrid, dewGrid, equalGrids, dt2m);
+				InterpolateToPoint(targetGrid, dewGrid, equalGrids, td2m);
 				InterpolateToPoint(targetGrid, windGrid, equalGrids, wind10m);
 
-				if (tGround == kFloatMissing || dt2m == kFloatMissing || wind10m == kFloatMissing)
+				if (tGround == kFloatMissing || td2m == kFloatMissing || wind10m == kFloatMissing)
 				{
 					missingCount++;
 
@@ -399,11 +399,15 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 				}
 
 
-				//double TBase = 273.15;
 				double fog = 0;
-
-				if (dt2m-tGround > -0.3 && wind10m < 5 )
-					fog = 607;
+				//tGround += -273.15;
+				if (td2m-tGround > -0.3 && wind10m < 5 )
+					{
+						//itsLogger->Debug("ground: " + boost::lexical_cast<string> (tGround));
+						//itsLogger->Debug("td2m: " + boost::lexical_cast<string> (td2m));
+						
+						fog = 607;
+					}
 				//else
 				//	fog = 0;
 

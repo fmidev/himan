@@ -212,7 +212,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 									 myTargetInfo->Time(),
 									 myTargetInfo->Level(),
 									 PParam);
-					
 				TInfo = theFetcher->Fetch(conf,
 									 myTargetInfo->Time(),
 									 myTargetInfo->Level(),
@@ -328,6 +327,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 				if (firstLevel)
 				{
+					// from Pa to hPa
 					prevP /= 100.f;
 				}
 
@@ -338,10 +338,21 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 
 				if (firstLevel)
 				{
+					//cout << "piste: " + boost::lexical_cast<string> (count) << endl;
+					//cout << "lämpötila: " + boost::lexical_cast<string> (T) << endl;
+					//cout << "edellinen lämpötila: " + boost::lexical_cast<string> (prevT) << endl;
+					//cout << "paine: " + boost::lexical_cast<string> (P) << endl;
+					//cout << "edellinen paine: " + boost::lexical_cast<string> (prevP) << endl;
+					//cout << "muutos: " + boost::lexical_cast<string> (deltaZ) << endl << endl;
 					totalHeight = deltaZ;		
 				}
 				else
+				{
 					totalHeight = prevH + deltaZ;
+					//cout << "korkeus: " + boost::lexical_cast<string> (totalHeight) << endl;
+					//cout << "edellinen korkeus: " + boost::lexical_cast<string> (prevH) << endl;
+					//cout << "muutos: " + boost::lexical_cast<string> (deltaZ) << endl << endl;
+				}
 
 				if (!myTargetInfo->Value(totalHeight))
 				{

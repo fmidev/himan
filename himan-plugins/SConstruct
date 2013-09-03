@@ -27,7 +27,7 @@ if os.environ['HOME'] == "/home/weto":
 
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-5.5'
+cuda_toolkit_path = '/usr/local/cuda-5.5/targets/x86_64-linux/lib'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
         print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -36,7 +36,7 @@ else:
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart_static.a'):
+if os.path.isfile(cuda_toolkit_path + '/libcudart.so'):
 	have_cuda = True
 
 env['CC'] = 'gcc'
@@ -83,7 +83,7 @@ elif DEBUG:
 
 library_paths.append(workspace + '/fmidb/lib')
 library_paths.append(workspace + '/fmigrib/lib')
-library_paths.append('/usr/lib64')
+library_paths.append('/usr/lib')
 
 if os.environ.get('ORACLE_HOME') is None:
 	library_paths.append('/usr/lib64/oracle/')
@@ -110,7 +110,7 @@ libgrib_api = env.File('/usr/lib64/libgrib_api.a')
 env.Append(LIBS=libgrib_api)
 
 if have_cuda:
-	env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
+	env.Append(LIBS=env.File(cuda_toolkit_path + '/libcudart_static.a'))
 
 # CFLAGS
 
