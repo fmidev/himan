@@ -36,7 +36,7 @@ else:
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart_static.a'):
 	have_cuda = True
 
 env['CC'] = 'gcc'
