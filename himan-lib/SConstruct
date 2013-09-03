@@ -95,7 +95,6 @@ libraries.append('clntsh')
 libraries.append('fmidb')
 libraries.append('z')
 libraries.append('bz2')
-libraries.append('clntsh')
 
 env.Append(LIBS = libraries)
 
