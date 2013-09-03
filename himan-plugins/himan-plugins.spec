@@ -9,8 +9,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.8.30
-Release: 1.%{dist}.fmi
+Version: 13.9.3
+Release: 2.%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -82,6 +82,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Sep  3 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.3-2.el6.fmi
+- Attempt to fix HIMAN-14
+* Tue Sep  3 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.3-1.el6.fmi
+- Fix bug that crashes himan (unresolved cuda-symbols at excutable)
 * Fri Aug 30 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.30-1.el6.fmi
 - Latest changes
 - First compilation on scout.fmi.fi
