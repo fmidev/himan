@@ -88,147 +88,14 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 	if (noInterpolation)
 	{
 		value = sourceGrid->FloatValue(sourceGridPoint);
-		//cout << value << endl;
 		return true;
 	}
-	
 
 	// Step 3)
 
 	return sourceGrid->InterpolateToLatLonPoint(targetLatLonPoint, value);
-	//return InterpolateToHilPP(sourceGrid, targetLatLonPoint, value);
 
 }
-/*
-bool compiled_plugin_base::InterpolateToHilPP(shared_ptr<NFmiGrid> sourceGrid, const NFmiPoint &theLatLonPoint, double &value)
-{
-	double x = theLatLonPoint.X();
-	double y = theLatLonPoint.Y();
-	if(x > sourceGrid->OriginalXNumber()-1 || y > sourceGrid->OriginalYNumber()-1)
-	{
-		value = kFloatMissing;
-		return false;
-	}
-  
-  	if(!BiLinearInterpolation(sourceGrid, x, y, value))
-	{
-		value = kFloatMissing;
-		return false;
-	}
-	return true;
-}
-
-bool compiled_plugin_base::BiLinearInterpolation(shared_ptr<NFmiGrid> sourceGrid, double x, double y, double &theValue)
-{
-	double X,Y;
-	
-	double kFmiEps = 0.0001;
-	double dx = modf(x, &X);
-	double dy = modf(y, &Y);
-   	
-   	if ( abs(x - X) < kFmiEps)
-      	x = x - kFmiEps;
-
-   	if ( abs(y - Y) < kFmiEps)
-      	y = y - kFmiEps;
-
-   	if ( abs(x - 1.0) < kFmiEps)
-      	x = x - kFmiEps;
-
-    if ( abs(y - 1.0) < kFmiEps)
-      	y = y - kFmiEps;
-
-	dx = x - float(int(x));
-    dy = y - float(int(y));
-	
-	if( (dx != 0.) && (dx < kFmiEps)) { dx = 0;}
-	if( (dy != 0.) && (dy < kFmiEps)) { dy = 0;}
-	
-	if(dx > (1-kFmiEps)) { dx = 0; X++; }
-	if(dy > (1-kFmiEps)) { dy = 0; Y++; }
-	
-	double topLeftValue;
-	double topRightValue;
-	double bottomLeftValue;
-	double bottomRightValue;
-	
-	if((X == sourceGrid->getPreviousX()) && (Y == sourceGrid->getPreviousY()))
-	{
-	  // Still sitting within the same grid cell -->
-	  // previous cell corner values can be used
-	  
-	  topLeftValue = sourceGrid->getTopLeftValue();
-	  topRightValue = sourceGrid->getTopRightValue();
-	  bottomLeftValue = sourceGrid->getBottomLeftValue();
-	  bottomRightValue = sourceGrid->getBottomRightValue();
-	}
-  	else
-	{
-		if(!sourceGrid->GridPoint(X,Y))
-		{
-			theValue = static_cast<double>(kFloatMissing);
-			
-			sourceGrid->setPreviousX(kMinDouble);
-			sourceGrid->setPreviousY(kMinDouble);
-			
-			return false;						
-		}
-	  
-	  	topLeftValue = sourceGrid->FloatValue(0, 1);
-	  	topRightValue = sourceGrid->FloatValue(1, 1);
-	  	bottomLeftValue = sourceGrid->FloatValue(0, 0);
-	  	bottomRightValue = sourceGrid->FloatValue(1, 0);
-	  
-	  	sourceGrid->setTopLeftValue(topLeftValue);
-	  	sourceGrid->setTopRightValue(topRightValue);
-	  	sourceGrid->setBottomLeftValue(bottomLeftValue);
-	  	sourceGrid->setBottomRightValue(bottomRightValue);
-	  
-	  	sourceGrid->setPreviousX(X);
-	  	sourceGrid->setPreviousY(Y);
-	}
-  
-  
-  	if((topLeftValue == topRightValue) &&
-	 	(topRightValue == bottomLeftValue) &&
-	 	(bottomLeftValue == bottomRightValue))
-	{
-	  	theValue = topLeftValue;
-	  	return true; // Each of four corner values are the same - nothing to interpolate!
-	}
-  
-  
-  	if((!sourceGrid->IsMissingValue(topLeftValue)) && (!sourceGrid->IsMissingValue(topRightValue))	&&
-	 	(!sourceGrid->IsMissingValue(bottomLeftValue)) && (!sourceGrid->IsMissingValue(bottomRightValue)))
-	{
-		
-		double pres = 0.0;
-	  	pres += (1-dx)*(1-dy)*topRightValue;
-	  	pres += dx*(1-dy)*bottomRightValue;
-		pres += (1-dx)*dy*bottomLeftValue;
-		pres += dx*dy*topLeftValue;
-		
-		theValue = pres;
-		
-		//newbase
-		double interpolatedTopValue = dx*topRightValue + (1. - dx)*topLeftValue;
-	  	double interpolatedBottomValue = dx*bottomRightValue + (1. - dx)*bottomLeftValue;
-		
-
-		//hil_pp
-	  	//double interpolatedTopValue = dx*topLeftValue + (1. - dx)*bottomLeftValue;
-	  	//double interpolatedBottomValue = dx*bottomRightValue + (1. - dx)*topRightValue;
-	  
-	  	theValue = dy*interpolatedTopValue + (1. - dy)*interpolatedBottomValue;
-	  	return true;	
-	}
-  
-  	// Missing value(s) found. Use nearest point interpolation method instead
-  	sourceGrid->NearestPointInterpolation(x,y,theValue);
-  	
-  	return true;
-}*/
-
 
 bool compiled_plugin_base::AdjustLeadingDimension(shared_ptr<info> myTargetInfo)
 {

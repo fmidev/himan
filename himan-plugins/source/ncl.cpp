@@ -274,6 +274,9 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			targetGrid->Reset();		
 			myTargetInfo->FirstLocation();	
 			
+			 //minneköhän tää pitäis pistää
+			//itsLogger->Debug("kierros woop " +  boost::lexical_cast<string> (count) );
+
 			shared_ptr<NFmiGrid> HGrid(HInfo->Grid()->ToNewbaseGrid());
 			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 			shared_ptr<NFmiGrid> prevHGrid;
@@ -290,15 +293,11 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 								&& *myTargetInfo->Grid() == *TInfo->Grid() 
 								&& ( firstLevel || ( *myTargetInfo->Grid() == *prevHInfo->Grid() && *myTargetInfo->Grid() == *prevTInfo->Grid() ) ) );
 
-			while ( myTargetInfo->NextLocation() && targetGrid->Next() && HGrid->Next() && TGrid->Next() )
+			while ( myTargetInfo->NextLocation() && targetGrid->Next() && HGrid->Next() && TGrid->Next() && ( firstLevel || (prevHGrid->Next() && prevTGrid->Next() ) ) )
 			{
 				count++;
 		
-				if (!firstLevel)
-				{
-					prevHGrid->Next();
-					prevTGrid->Next();
-				}
+
 				double height = kFloatMissing;
 				double temp = kFloatMissing;
 				double prevHeight = kFloatMissing;
