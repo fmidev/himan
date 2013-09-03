@@ -197,8 +197,9 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	}
 
 	string process = row[0];
-	string centre = row[1];
-	string model_name = row[2];
+
+	//string centre = row[1];
+	//string model_name = row[2];
 	string model_type = row[3];
 
 	/*
@@ -267,13 +268,13 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 
 	query.str("");
 
-	string host = "himan_test_host";
+	string host = "undetermined host";
 
-	char* kone = getenv("HOST");
+	char* hostname = getenv("HOSTNAME");
 
-	if (kone != NULL)
+	if (hostname != NULL)
 	{
-		host = string(kone);
+		host = string(hostname);
 	}
 
 	query  << "INSERT INTO " << table_name
@@ -296,9 +297,19 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	}
 	catch (int e)
 	{
-		itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
-		itsLogger->Error("Query: " + query.str());
+		if (e == 1)
+		{
+			// unique key violation
+			itsLogger->Debug("Unique key violation when inserting to '" + table_name + "' -- data is already loaded");
+		}
+		else
+		{
+			itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
+			itsLogger->Error("Query: " + query.str());
+		}
+
 		itsNeonsDB->Rollback();
+
 		return false;
 	}
 
