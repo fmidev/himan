@@ -20,12 +20,13 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.environ['HOME'] + "/workspace"
+
 if os.environ['HOME'] == "/home/weto":
 	workspace = os.environ['HOME'] + "/workspace/himan"
 	
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/lib'
+cuda_toolkit_path = '/usr/local/cuda-5.5'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
 	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -34,7 +35,7 @@ else:
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/x86_64-linux-gnu/libcudart.so'):
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
 	have_cuda = True
 
 # Assign compilers
@@ -66,13 +67,12 @@ env.Append(CPPPATH = includes)
 
 librarypaths = []
 
-librarypaths.append(workspace + '/himan-lib/build/release')
-librarypaths.append('/usr/lib64')
-
-if os.environ.get('ORACLE_HOME') is None:
-	librarypaths.append('/usr/lib64/oracle')
+if RELEASE:
+	librarypaths.append(workspace + '/himan-lib/build/release')
 else:
-	librarypaths.append(os.environ.get('ORACLE_HOME') + '/lib')
+	librarypaths.append(workspace + '/himan-lib/build/debug')
+
+librarypaths.append('/usr/lib64')
 
 if have_cuda:
 	librarypaths.append(cuda_toolkit_path + '/lib64')
@@ -92,7 +92,6 @@ libraries.append('boost_system')
 libraries.append('rt')
 libraries.append('z')
 libraries.append('bz2')
-libraries.append('clntsh')
 
 if have_cuda:
 	libraries.append('cudart')
