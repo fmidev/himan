@@ -83,7 +83,7 @@ elif DEBUG:
 
 library_paths.append(workspace + '/fmidb/lib')
 library_paths.append(workspace + '/fmigrib/lib')
-library_paths.append('/usr/lib')
+library_paths.append('/usr/lib64')
 
 if os.environ.get('ORACLE_HOME') is None:
 	library_paths.append('/usr/lib64/oracle/')
