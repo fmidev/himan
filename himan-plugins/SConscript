@@ -17,7 +17,7 @@ else:
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart_static.a'):
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
 	have_cuda = True
 
 # List all auxiliary plugins

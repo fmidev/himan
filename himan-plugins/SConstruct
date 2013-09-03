@@ -27,7 +27,7 @@ if os.environ['HOME'] == "/home/weto":
 
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-5.5/targets/x86_64-linux/lib'
+cuda_toolkit_path = '/usr/local/cuda-5.5'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
         print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -36,7 +36,7 @@ else:
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/libcudart.so'):
+if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
 	have_cuda = True
 
 env['CC'] = 'gcc'
@@ -110,7 +110,7 @@ libgrib_api = env.File('/usr/lib64/libgrib_api.a')
 env.Append(LIBS=libgrib_api)
 
 if have_cuda:
-	env.Append(LIBS=env.File(cuda_toolkit_path + '/libcudart_static.a'))
+	env.Append(LIBS=env.File(cuda_toolkit_path + '/libcudart.so'))
 
 # CFLAGS
 
