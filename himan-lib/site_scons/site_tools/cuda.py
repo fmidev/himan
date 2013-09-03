@@ -36,8 +36,7 @@ def find_paths(paths):
 
 def determine_paths(env):
     """
-    Fill the 'CUDA_TOOLKIT_PATH' and 'CUDA_SDK_PATH' into environment if they
-    were not there.
+    Fill the 'CUDA_TOOLKIT_PATH' into environment if it is not there.
 
     @return: the paths.
     @rtype: tuple
@@ -88,52 +87,17 @@ def determine_paths(env):
                 'Please set it to CUDA_TOOLKIT_PATH environment variable.')
     env['CUDA_TOOLKIT_PATH'] = cudaToolkitPath
 
-    # find CUDA SDK path and set CUDA_SDK_PATH.
-    cudaSDKPath = os.environ.get('CUDA_SDK_PATH', '')
-    if not cudaSDKPath:
-        paths = [
-            '/'.join([home, 'NVIDIA_GPU_Computing_SDK', 'C']),
-            '/'.join([home, 'NVIDIA_CUDA_SDK', 'C']),
-            '/'.join([home, 'opt', 'cudasdk', 'C']),
-            '/'.join([home, 'opt', 'NVIDIA_GPU_Computing_SDK', 'C']),
-            '/'.join([home, 'opt', 'NVIDIA_CUDA_SDK', 'C']),
-            '/'.join([home, 'Apps', 'NVIDIA_CUDA_SDK']),
-            '/'.join([home, 'Apps', 'CudaSDK']),
-            '/'.join(['/usr', 'local', 'NVIDIA_CUDA_SDK']),
-            '/'.join(['/usr', 'local', 'CUDASDK']),
-            '/'.join(['/usr', 'local', 'cuda_sdk']),
-            '/'.join(['/Developer', 'NVIDIA CUDA SDK']),
-            '/'.join(['/Developer', 'CUDA SDK']),
-            '/'.join(['/Developer', 'CUDA']),
-            '/'.join([programfiles, 'NVIDIA Corporation', 'NVIDIA CUDA SDK']),
-            '/'.join([programfiles, 'NVIDIA', 'NVIDIA CUDA SDK']),
-            '/'.join([programfiles, 'NVIDIA CUDA SDK']),
-            '/'.join([programfiles, 'CudaSDK']),
-            '/'.join([homedrive, 'NVIDIA CUDA SDK']),
-            '/'.join([homedrive, 'CUDA SDK']),
-            '/'.join([homedrive, 'CUDA', 'SDK']),
-        ]
-        cudaSDKPath = find_paths(paths)
-        if cudaSDKPath:
-            sys.stdout.write(
-                'scons: CUDA SDK found in %s \n' % cudaSDKPath)
-        else:
-            warn('Cannot find the CUDA SDK path. '
-                'Please set it to CUDA_SDK_PATH environment variable.')
-    env['CUDA_SDK_PATH'] = cudaSDKPath
-
-    # return.
-    return cudaToolkitPath, cudaSDKPath
+    return cudaToolkitPath
 
 def generate(env):
     """
-    In order to use this tool, user must have CUDA_SDK_PATH and
-    CUDA_TOOLKIT_PATH environmental variables defined.
+    In order to use this tool, user must have 
+    CUDA_TOOLKIT_PATH environmental variable defined.
     """
     import os
     import SCons.Tool
     import SCons.Scanner.C
-    cudaToolkitPath, cudaSDKPath = determine_paths(env)
+    cudaToolkitPath = determine_paths(env)
 
     # scanners and builders.
     CUDAScanner = SCons.Scanner.C.CScanner()
@@ -179,31 +143,13 @@ def generate(env):
     for i, p in enumerate(env['NVCCPATH']):
 	env['NVCCPATH'][i] = '-I' + p
 
-    # includes.
-    #env.Append(NVCCINC=' '.join(['-I',
-    #    '/'.join([cudaSDKPath, 'common', 'inc']),
-    #]))
-    #env.Append(CPPPATH=[
-    #    '/'.join([cudaSDKPath, 'common', 'inc']),
-    #    '/'.join([cudaToolkitPath, 'include']),
-    #])
-
-    # NVCC compiler flags.
-#    env['NVCCFLAGS'] = ''
     env['STATICNVCCFLAGS'] = ''
     env['SHAREDNVCCFLAGS'] = ''
     env['ENABLESHAREDNVCCFLAG'] = '-shared'
 
     # libraries.
-    if env['PLATFORM'] == 'posix':
-        cudaSDKSubLibDir = 'linux'
-    elif env['PLATFORM'] == 'darwin':
-        cudaSDKSubLibDir = 'darwin'
-    else:
-        cudaSDKSubLibDir = ''
+
     env.Append(LIBPATH=[
-        '/'.join([cudaSDKPath, 'lib']),
-        '/'.join([cudaSDKPath, 'common', 'lib', cudaSDKSubLibDir]),
         '/'.join([cudaToolkitPath, 'lib64']),
         '/'.join([cudaToolkitPath, 'lib']),
     ])
