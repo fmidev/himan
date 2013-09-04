@@ -8,10 +8,6 @@
 #include "logger_factory.h"
 #include "pcuda.h"
 
-#ifdef HAVE_CUDA
-#include <cuda_runtime_api.h>
-#endif
-
 using namespace std;
 using namespace himan::plugin;
 
