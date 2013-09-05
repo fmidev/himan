@@ -68,8 +68,8 @@ vector<string> neons::Files(const search_options& options)
 //	long proddef = options.configuration->SourceProducer().Id(); // producerInfo["producer_id"];
 	long no_vers = options.configuration->SourceProducer().TableVersion(); // producerInfo["no_vers"];
 
-	string level_name = options.level.Name();
-
+	string level_name = HPLevelTypeToString.at(options.level.Type());
+	
 	vector<vector<string> > gridgeoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime, options.configuration->SourceGeomName());
 
 	if (gridgeoms.empty())
@@ -318,7 +318,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	return true;
 }
 
-string neons::GribParameterName(const long fmiParameterId, const long codeTableVersion)
+string neons::GribParameterName(long fmiParameterId, long codeTableVersion)
 {	
 	Init();
 	
@@ -327,7 +327,7 @@ string neons::GribParameterName(const long fmiParameterId, const long codeTableV
 	
 }
 
-string neons::GribParameterName(const long fmiParameterId, const long category, const long discipline, const long producer)
+string neons::GribParameterName(long fmiParameterId, long category, long discipline, long producer)
 {
 	Init();
 	
