@@ -80,7 +80,7 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> params;
 
-	param targetParam("PRECFORM-N", 57);
+	param targetParam("PRECF-FMI-N", 1000 + 57);
 
 	/*
 	 * !!! HUOM !!!
