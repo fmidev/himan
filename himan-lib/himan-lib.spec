@@ -9,7 +9,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 13.9.3
+Version: 13.9.5
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -58,6 +58,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Sep  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.5-1.el6.fmi
+- Functions to support preform_pressure
 * Tue Sep  3 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.3-1.el6.fmi
 - Fix bug that crashes himan (unresolved cuda-symbols at excutable)
 * Fri Aug 30 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.30-1.el6.fmi
