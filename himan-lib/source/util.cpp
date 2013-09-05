@@ -536,3 +536,25 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 
 	return ret;
 }
+
+HPPrecipitationForm util::PrecipitationForm(double T, double RH)
+{
+	const double probWater = 1 / (1 + exp(22 - 2.7 * T - 0.2 * RH));
+
+	HPPrecipitationForm ret = kUnknownPrecipitationForm;
+
+	if (probWater > 0.8)
+	{
+		ret = kRain;
+	}
+	else if (probWater >= 0.2 && probWater <= 0.8)
+	{
+		ret = kSleet;
+	}
+	else if (probWater < 0.2)
+	{
+		ret = kSnow;
+	}
+
+	return ret;
+}
