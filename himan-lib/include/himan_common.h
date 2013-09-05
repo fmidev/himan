@@ -241,6 +241,29 @@ const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToStr
 		(kMinimum, "minimum")
 		(kDifference, "difference");
 
+/// Precipitation forms as agreed by FMI
+
+enum HPPrecipitationForm
+{
+	kDrizzle = 0,
+	kRain,
+	kSleet,
+	kSnow,
+	kFreezingDrizzle,
+	kFreezingRain,
+	kUnknownPrecipitationForm = 10
+};
+
+const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormToString = map_list_of
+		(kDrizzle, "drizzle")
+		(kRain, "rain")
+		(kSleet, "sleet")
+		(kSnow, "snow")
+		(kFreezingDrizzle, "freezing drizzle")
+		(kFreezingRain, "freezing rain")
+		(kUnknownPrecipitationForm, "unknown");
+
+
 /**
  * @struct HPVersionNumber
  *
