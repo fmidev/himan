@@ -300,9 +300,17 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			p.Unit(kM);
 		}
+		else if (itsGrib->Message()->ParameterUnit() == "mm")
+		{
+			p.Unit(kMm);
+		}
 		else if (itsGrib->Message()->ParameterUnit() == "Pa")
 		{
 			p.Unit(kPa);
+		}
+		else if (itsGrib->Message()->ParameterUnit() == "m**2 s**-2")
+		{
+			p.Unit(kGph);
 		}
 		else
 		{
