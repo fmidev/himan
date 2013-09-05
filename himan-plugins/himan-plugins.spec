@@ -9,8 +9,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.9.3
-Release: 2.%{dist}.fmi
+Version: 13.9.5
+Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -72,6 +72,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libpcuda.so
 %{_libdir}/himan-plugins/libprecipitation.so
+%{_libdir}/himan-plugins/libpreform_pressure.so
 %{_libdir}/himan-plugins/libquerydata.so
 %{_libdir}/himan-plugins/librain_type.so
 %{_libdir}/himan-plugins/libseaicing.so
@@ -82,6 +83,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.5-1.el6.fmi
+- New plugin: preform_pressure
 * Tue Sep  3 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.3-2.el6.fmi
 - Attempt to fix HIMAN-14
 * Tue Sep  3 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.3-1.el6.fmi
