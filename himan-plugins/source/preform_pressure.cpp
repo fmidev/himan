@@ -101,7 +101,8 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->OutputFileType() == kGRIB2)
 	{
-		itsLogger->Warning("GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not lossless");
+		itsLogger->Error("GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not lossless");
+		return;
 	}
 
 	params.push_back(targetParam);
