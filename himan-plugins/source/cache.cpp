@@ -27,10 +27,9 @@ string cache::UniqueName(const shared_ptr<const himan::info> info)
 	string forecast_time = info->Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = info->Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S");
 	string param = info->Param().Name();
-	string projection = boost::lexical_cast<string> (info->Projection());
 	string level_value = boost::lexical_cast<string>(info->Level().Value());
 	string level = HPLevelTypeToString.at(info->Level().Type());
-	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + projection + '_' + level_value;
+	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
 
 }
 
@@ -39,10 +38,9 @@ string cache::UniqueNameFromOptions(const search_options& options)
 	string forecast_time = (options.time.OriginDateTime())->String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = (options.time.ValidDateTime())->String("%Y-%m-%d_%H:%M:%S");
 	string param = (options.param).Name();
-	string projection = (options.configuration)->TargetProjection();
 	string level_value = boost::lexical_cast<string>((options.level).Value());
 	string level = HPLevelTypeToString.at(options.level.Type());
-	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + projection + '_' + level_value;
+	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
 }
 
 void cache::Insert(shared_ptr<himan::info> anInfo, bool activeOnly)
@@ -114,7 +112,7 @@ vector<shared_ptr<himan::info>> cache::GetInfo(const search_options& options)
 	if (cache_pool::Instance()->Find(uniqueName))
 	{
 		info.push_back(cache_pool::Instance()->GetInfo(uniqueName));
-		itsLogger->Debug( "Found matching data for " + uniqueName);
+		itsLogger->Trace( "Found matching data for " + uniqueName);
 	}
 
 	return info;
@@ -163,7 +161,7 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 	time_t timer;
 	time(&timer);
 	itsCacheItems.insert(pair<string, time_t>(uniqueName, timer));
-	itsLogger->Debug("Data added to cache. UniqueName: " + uniqueName);
+	itsLogger->Trace("Data added to cache. UniqueName: " + uniqueName);
 	
 }
 
@@ -180,7 +178,7 @@ void cache_pool::Clean()
 			string name = it->first;
 			itsCache.erase(name);
 			itsCacheItems.erase(name);
-			itsLogger->Debug("Data cleared from cache: " + name);
+			itsLogger->Trace("Data cleared from cache: " + name);
 		}
 	}
 }
