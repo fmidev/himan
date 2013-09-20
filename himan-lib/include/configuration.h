@@ -65,6 +65,12 @@ public:
 	void SourceProducers(std::vector<producer> theSourceProducers);
 	producer SourceProducer() const;
 
+	bool SourceProducer(const producer& theSourceProducer);
+	bool NextSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+	bool FirstSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+	void ResetSourceProducer() const;
+	size_t SizeSourceProducers() const;
+	
 	producer TargetProducer() const;
 
 	void TargetProducer(const producer& theTargetProducer);
@@ -99,8 +105,6 @@ public:
 	bool UseCuda() const;
 	void UseCuda(bool theUseCuda);
 
-	std::string TargetProjection() const;
-
 	HPDimensionType LeadingDimension() const;
 
 	void ThreadCount(short theThreadCount);
@@ -119,11 +123,6 @@ public:
 	void UseCache(bool theUseCache);
 
 	std::string SourceGeomName() const;
-
-	bool SourceProducer(const producer& theSourceProducer);
-	bool NextSourceProducer() const; // THIS SHOULD NOT BE CONST ??
-	bool FirstSourceProducer() const; // THIS SHOULD NOT BE CONST ??
-	void ResetSourceProducer() const;
 
 	void StoreCudaDeviceCount();
 	bool HaveCuda() const;

@@ -50,7 +50,6 @@ configuration::configuration(const configuration& other)
 	itsSourceGeomName = other.itsSourceGeomName;
 	
 	itsTargetProducer = other.itsTargetProducer;
-	//itsSourceProducers = other.itsSourceProducers;
 
 	itsStatisticsLabel = other.itsStatisticsLabel;
 
@@ -281,12 +280,4 @@ bool configuration::HaveCuda() const
 short configuration::CudaDeviceCount() const
 {
 	return itsCudaDeviceCount;
-}
-std::string configuration::TargetProjection() const
-{
-	if (itsTargetGeomName == "RCR068")
-		return "11";
-	if (itsTargetGeomName == "MTHIPS25")
-		return "13";
-	return "0";
 }
