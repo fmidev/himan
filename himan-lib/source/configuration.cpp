@@ -62,9 +62,8 @@ configuration::configuration(const configuration& other)
 std::ostream& configuration::Write(std::ostream& file) const
 {
 
-	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	file << "<" << ClassName() << ">" << std::endl;
 
-   // file << "__itsSourceProducer__ " << itsSourceProducer << std::endl;
 	file << itsTargetProducer;
 
 	file << "__itsOutputFileType__ " << itsOutputFileType << std::endl;

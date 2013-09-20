@@ -13,6 +13,22 @@ statistics::statistics()
 	Init();
 }
 
+statistics::statistics(const statistics& other)
+	: itsUsedThreadCount(other.itsUsedThreadCount)
+	, itsUsedGPUCount(other.itsUsedGPUCount)
+{
+	itsValueCount.store(other.itsValueCount, std::memory_order_relaxed);
+	itsMissingValueCount.store(other.itsMissingValueCount, std::memory_order_relaxed);
+	itsFetchingTime.store(other.itsFetchingTime, std::memory_order_relaxed);
+	itsWritingTime.store(other.itsWritingTime, std::memory_order_relaxed);
+	itsProcessingTime.store(other.itsProcessingTime, std::memory_order_relaxed);
+	itsInitTime.store(other.itsInitTime, std::memory_order_relaxed);
+	itsCacheMissCount.store(other.itsCacheMissCount, std::memory_order_relaxed);
+	itsCacheHitCount.store(other.itsCacheHitCount, std::memory_order_relaxed);
+
+	itsTimer = shared_ptr<timer> (timer_factory::Instance()->GetTimer());
+}
+
 bool statistics::Start()
 {
 	itsTimer->Start();

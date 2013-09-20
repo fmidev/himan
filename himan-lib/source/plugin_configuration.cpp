@@ -25,6 +25,14 @@ plugin_configuration::plugin_configuration(shared_ptr<configuration> conf)
 {
 }
 
+plugin_configuration::plugin_configuration(const plugin_configuration& other)
+	: configuration(other)
+	, itsName(other.itsName)
+	, itsOptions(other.itsOptions)
+{
+	itsStatistics = make_shared<statistics> (*other.itsStatistics);
+}
+
 plugin_configuration::plugin_configuration(const string& theName, const map<string,string>& theOptions)
 	: itsName(theName)
 	, itsOptions(theOptions)
@@ -199,7 +207,7 @@ ostream& plugin_configuration::Write(ostream& file) const
 
 	// configuration::Write();
 	
-	file << "<" << ClassName() << " " << Version() << ">" << endl;
+	file << "<" << ClassName() << ">" << endl;
 	file << "__itsName__ " << itsName << endl;
 
 	for(map<string, string>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)

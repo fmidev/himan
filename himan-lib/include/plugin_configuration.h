@@ -23,6 +23,9 @@ class plugin_configuration : public configuration
 public:
 
 	plugin_configuration();
+	plugin_configuration(const plugin_configuration& other);
+	plugin_configuration& operator=(const plugin_configuration& other) = delete;
+
 	plugin_configuration(std::shared_ptr<configuration> conf);
 	plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions);
 
@@ -35,11 +38,6 @@ public:
     std::string ClassName() const
     {
         return "himan::plugin_configuration";
-    }
-
-    HPVersionNumber Version() const
-    {
-	    return HPVersionNumber(0, 1);
     }
 
     std::ostream& Write(std::ostream& file) const;

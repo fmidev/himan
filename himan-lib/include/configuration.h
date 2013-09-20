@@ -31,6 +31,7 @@ public:
 	~configuration() {}
 
 	configuration(const configuration& other);
+	configuration& operator=(const configuration& other) = delete;
 
 	/**
 	 * @return Class name
@@ -39,11 +40,6 @@ public:
 	std::string ClassName() const
 	{
 		return "himan::configuration";
-	}
-
-	HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
 	}
 
 	std::ostream& Write(std::ostream& file) const;

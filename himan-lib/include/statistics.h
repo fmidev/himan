@@ -30,17 +30,12 @@ public:
 	statistics();
 	~statistics() {};
 
-	statistics(const statistics& other) = delete;
+	statistics(const statistics& other);
 	statistics& operator=(const statistics& other) = delete;
 
 	std::string ClassName() const
 	{
 		return "himan::statistics";
-	};
-
-	HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
 	}
 
 	bool Start();
@@ -75,9 +70,9 @@ private:
 	std::atomic<size_t> itsFetchingTime;
 	std::atomic<size_t> itsWritingTime;
 	std::atomic<size_t> itsProcessingTime;
+	std::atomic<size_t> itsInitTime;
 	std::atomic<size_t> itsCacheMissCount;
 	std::atomic<size_t> itsCacheHitCount;
-	std::atomic<size_t> itsInitTime;
 
 	std::shared_ptr<timer> itsTimer;
 	size_t itsUsedThreadCount;
