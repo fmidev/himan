@@ -213,7 +213,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 	level P925(kPressure, 925);
 	level P1000(kPressure, 1000);
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tcThread #" + boost::lexical_cast<string> (threadIndex)));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("preformPressureThread #" + boost::lexical_cast<string> (threadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);
 
