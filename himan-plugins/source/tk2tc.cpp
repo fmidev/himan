@@ -241,7 +241,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 			opts.threadIndex = threadIndex;
 
-			//cudaMallocHost(reinterpret_cast<void**> (&datas.TC), opts.N * sizeof(double));
+			cudaMallocHost(reinterpret_cast<void**> (&datas.TC), opts.N * sizeof(double));
 
 			if (TInfo->Grid()->DataIsPacked())
 			{
