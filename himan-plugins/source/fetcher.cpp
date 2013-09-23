@@ -140,10 +140,6 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 					break;
 				}
-				else
-				{
-					itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
-				}
 			}
 		}
 
@@ -180,7 +176,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
 		{
-			optsStr += "producer: " + boost::lexical_cast<string> (config->SourceProducer(prodNum).Id());
+			optsStr += boost::lexical_cast<string> (config->SourceProducer(prodNum).Id()) + ",";
 		}
 
 		optsStr = optsStr.substr(0, optsStr.size()-1);
