@@ -9,7 +9,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.9.5
+Version: 13.9.23
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -83,6 +83,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Sep 23 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.23-1.el6.fmi
+- Fix for HIMAN-15
 * Thu Sep  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.5-1.el6.fmi
 - New plugin: preform_pressure
 * Tue Sep  3 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.3-2.el6.fmi
