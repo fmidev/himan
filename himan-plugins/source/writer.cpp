@@ -42,12 +42,12 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 		t->Start();
 	}
 
-	std::shared_ptr<cache> c = std::dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
-
 	bool activeOnly = (conf->FileWriteOption() == kSingleFile) ? false : true;
 
 	if (conf->UseCache())
 	{
+		std::shared_ptr<cache> c = std::dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+
 		c->Insert(theInfo, activeOnly);
 	}
 
@@ -56,7 +56,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 	bool ret = false;
 
 	std::string correctFileName = theOutputFile;
-
+	
 	HPFileWriteOption fileWriteOption = conf->FileWriteOption();
 	HPFileType fileType = conf->OutputFileType();
 
