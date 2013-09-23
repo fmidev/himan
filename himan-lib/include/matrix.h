@@ -56,42 +56,19 @@ public:
 		return "himan::matrix";
 	}
 
-	HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
-
 	T& At(size_t combinedIndex)
 	{
-		try
-		{
-			return itsData[combinedIndex];
-		}
-		catch (std::exception& e)
-		{
-			throw std::runtime_error(e.what());
-		}
-
-		throw std::runtime_error("Stupid compiler");
+		return itsData[combinedIndex];
 	}
 
 	T& At(size_t x, size_t y, size_t z = 0)
 	{
-		try
-		{
-			return itsData[Index(x, y, z)];
-		}
-		catch (std::exception& e)
-		{
-			throw std::runtime_error(e.what());
-		}
-
-		throw std::runtime_error("Stupid compiler");
+		return itsData[Index(x, y, z)];
 	}
 
 	std::ostream& Write(std::ostream& file) const
 	{
-		file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+		file << "<" << ClassName() << ">" << std::endl;
 		file << "__itsWidth__ " << itsWidth << std::endl;
 		file << "__itsHeight__ " << itsHeight << std::endl;
 		file << "__itsDepth__ " << itsDepth << std::endl;
