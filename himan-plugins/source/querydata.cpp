@@ -1,8 +1,8 @@
-/*
- * querydata.cpp
+/**
+ * @file querydata.cpp
  *
- *  Created on: Nov 27, 2012
- *      Author: partio
+ * @date Nov 27, 2012
+ * @author: partio
  */
 
 
@@ -322,4 +322,10 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(shared_ptr<info> info, bo
 
     return NFmiVPlaceDescriptor(lbag);
 
+}
+
+shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const search_options& options, bool readContents)
+{
+	itsLogger->Fatal("Function FromFile() not implemented yet");
+	exit(1);
 }
