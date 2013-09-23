@@ -302,7 +302,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		BOOST_FOREACH(boost::property_tree::ptree::value_type &plugin, plugins)
 		{
-			shared_ptr<plugin_configuration> pc(new plugin_configuration(conf));
+			shared_ptr<plugin_configuration> pc = make_shared<plugin_configuration> (*conf);
 
 			pc->UseCache(delayedUseCache);
 			

@@ -17,12 +17,12 @@ plugin_configuration::plugin_configuration()
 {
 }
 
-plugin_configuration::plugin_configuration(shared_ptr<configuration> conf) 
-	: configuration(*conf)
+plugin_configuration::plugin_configuration(const configuration& theConfiguration)
+	: configuration(theConfiguration)
 	, itsName("")
 	, itsOptions()
-	, itsStatistics(new statistics)
 {
+	itsStatistics = make_shared<statistics> ();
 }
 
 plugin_configuration::plugin_configuration(const plugin_configuration& other)
