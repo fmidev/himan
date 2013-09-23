@@ -72,17 +72,34 @@ private:
 
     std::vector<std::shared_ptr<info>> FromCache(const search_options& options);
 
+	/**
+	 * @brief Get data and metadata from a file.
+	 * 
+	 * Returns a vector of infos, mainly because one grib file can contain many
+	 * grib messages. If read file is querydata, the vector size is always one
+	 * (or zero if the read fails)
+	 *
+	 * Function will call FromGrib() or FromQueryData()
+	 *
+	 * @param files The files that are read
+	 * @param options A struct holding the search criteria
+	 * @param readContents Specify if data should also be read (and not only metadata)
+	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
+	 *
+     * @return A vector of shared_ptr'd infos.
+	 */
+
     std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files,
 												const search_options& options,
 												bool readContents = true,
 												bool readPackedData = false);
 
     /**
-     * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
+     * @brief Return all data from a grib file, overcoat for himan::plugin::grib::FromFile().
      * @see himan::plugin::grib::FromFile()
      *
      * @param inputFile Input file name
-     * @param options Search options (param, level, time)
+     * @param options Search options (param, level, time, prod, config)
      * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
      *
@@ -96,7 +113,7 @@ private:
      * @see himan::plugin::querydata::FromFile()
      *
      * @param inputFile Input file name
-     * @param options Search options (param, level, time)
+     * @param options Search options (param, level, time, prod, config)
      * @param readContents Specify if data should also be read (and not only metadata)
      *
      * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
