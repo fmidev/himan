@@ -26,7 +26,7 @@ public:
 	plugin_configuration(const plugin_configuration& other);
 	plugin_configuration& operator=(const plugin_configuration& other) = delete;
 
-	plugin_configuration(std::shared_ptr<configuration> conf);
+	plugin_configuration(const configuration& theConfiguration);
 	plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions);
 
 	~plugin_configuration() {};
