@@ -64,9 +64,8 @@ vector<string> neons::Files(const search_options& options)
 	string analtime = options.time.OriginDateTime()->String("%Y%m%d%H%M%S");
 	string levelvalue = boost::lexical_cast<string> (options.level.Value());
 
-	string ref_prod = options.configuration->SourceProducer().Name(); //producerInfo["ref_prod"];
-//	long proddef = options.configuration->SourceProducer().Id(); // producerInfo["producer_id"];
-	long no_vers = options.configuration->SourceProducer().TableVersion(); // producerInfo["no_vers"];
+	string ref_prod = options.prod.Name();
+	long no_vers = options.prod.TableVersion();
 
 	string level_name = HPLevelTypeToString.at(options.level.Type());
 	
