@@ -49,9 +49,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		t->Start();
 	}
-
-	const search_options opts (requestedTime, requestedParam, requestedLevel, config) ;
-
+	
 	vector<shared_ptr<info>> theInfos;
 	unsigned int waitedSeconds = 0;
 		
@@ -59,12 +57,14 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		// Loop over all source producers if more than one specified
 
-		config->FirstSourceProducer();
-
-		do
+		for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
 		{
+		
+			producer sourceProd(config->SourceProducer(prodNum));
+			
+			const search_options opts (requestedTime, requestedParam, requestedLevel, sourceProd, config);
 
-			itsLogger->Trace("Current producer: " + config->SourceProducer().Name());
+			itsLogger->Trace("Current producer: " + sourceProd.Name());
 
 			if (config->UseCache())
 			{
@@ -145,7 +145,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 					itsLogger->Debug("Could not find file(s) from Neons matching requested parameters");
 				}
 			}
-		} while (config->NextSourceProducer());
+		}
 
 		if (config->FileWaitTimeout() > 0)
 		{
@@ -176,7 +176,15 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (theInfos.size() == 0)
 	{
-		string optsStr = "producer: " + boost::lexical_cast<string> (config->SourceProducer().Id());
+		string optsStr = "producer(s): ";
+
+		for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+		{
+			optsStr += "producer: " + boost::lexical_cast<string> (config->SourceProducer(prodNum).Id());
+		}
+
+		optsStr = optsStr.substr(0, optsStr.size()-1);
+
 		optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
 		optsStr += " param: " + requestedParam.Name();
 		optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
@@ -197,14 +205,6 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	return theInfos[0];
 
 }
-
-/*
- * FromFile()
- *
- * Get data and metadata from a file. Returns a vector of infos, mainly because one grib file can
- * contain many grib messages. If read file is querydata, the vector size is always one (or zero if the
- * read fails).
- */
 
 vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, const search_options& options, bool readContents, bool readPackedData)
 {

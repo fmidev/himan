@@ -52,7 +52,7 @@ bool grib::ToFile(shared_ptr<info> anInfo, const string& outputFile, HPFileType 
 		anInfo->ResetTime();
 
 		while (anInfo->NextTime())
-	{
+		{
 			anInfo->ResetLevel();
 
 			while (anInfo->NextLevel())
@@ -214,16 +214,18 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	if (!itsGrib->Open(theInputFile))
 	{
-		throw runtime_error(ClassName() + ": Opening file '" + theInputFile + "' failed");
+		itsLogger->Error("Opening file '" + theInputFile + "' failed");
+		return infos;
 	}
 
 	itsLogger->Debug("Reading file '" + theInputFile + "'");
 
 	int foundMessageNo = 0;
 
-	if (options.configuration->SourceProducer().Centre() == kHPMissingInt)
+	if (options.prod.Centre() == kHPMissingInt)
 	{
-		throw runtime_error(ClassName() + ": Process and centre information for producer " + boost::lexical_cast<string> (options.configuration->SourceProducer().Id()) + " not found from neons");
+		itsLogger->Error("Process and centre information for producer " + boost::lexical_cast<string> (options.prod.Id()) + " are undefined");
+		return infos;
 	}
 
 	while (itsGrib->NextMessage())
@@ -242,10 +244,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		long centre = itsGrib->Message()->Centre();
 		long process = itsGrib->Message()->Process();
 
-		if (options.configuration->SourceProducer().Process() != process || options.configuration->SourceProducer().Centre() != centre)
+		if (options.prod.Process() != process || options.prod.Centre() != centre)
 		{
-			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer().Process()) + " vs " + boost::lexical_cast<string> (process));
-			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (options.configuration->SourceProducer().Centre()) + " vs " + boost::lexical_cast<string> (centre));
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (options.prod.Process()) + " vs " + boost::lexical_cast<string> (process));
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string> (options.prod.Centre()) + " vs " + boost::lexical_cast<string> (centre));
 			//continue;
 		}
 
@@ -266,7 +268,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			long category = itsGrib->Message()->ParameterCategory();
 			long discipline = itsGrib->Message()->ParameterDiscipline();
-			long process = options.configuration->SourceProducer().Process();
+			long process = options.prod.Process();
 		
 			p.Name(n->GribParameterName(number, category, discipline, process));
 
@@ -274,7 +276,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			p.GribDiscipline(discipline);
 			p.GribCategory(category);
 
-			if (p.Name() == "T-C" && options.configuration->SourceProducer().Centre() == 7)
+			if (p.Name() == "T-C" && options.prod.Centre() == 7)
 			{
 				p.Name("T-K");
 			}
