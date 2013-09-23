@@ -219,12 +219,24 @@ void configuration::ResetSourceProducer() const
 	itsSourceProducerIterator->Reset();
 }
 
-producer configuration::SourceProducer() const
+const producer& configuration::SourceProducer(size_t theIndexNumber) const
 {
-	return itsSourceProducerIterator->At();
+	if (theIndexNumber != static_cast<size_t> (kHPMissingInt))
+	{
+		return itsSourceProducerIterator->At(theIndexNumber);
+	}
+	else
+	{
+		return itsSourceProducerIterator->At();
+	}
 }
 
-producer configuration::TargetProducer() const
+size_t configuration::SizeSourceProducers() const
+{
+	return itsSourceProducerIterator->Size();
+}
+
+const producer& configuration::TargetProducer() const
 {
 	return itsTargetProducer;
 }

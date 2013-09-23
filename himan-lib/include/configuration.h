@@ -58,17 +58,92 @@ public:
 	HPFileType OutputFileType() const;
 	void OutputFileType(HPFileType theOutputFileType);
 
+	/**
+	 * @brief Set source producers (create iterator)
+	 *
+	 * This function is not thread safe as configuration class is in effect
+	 * a global variable.
+	 *
+	 * @param theSourceProducers Vector of producers
+	 */
+
 	void SourceProducers(std::vector<producer> theSourceProducers);
-	producer SourceProducer() const;
+
+	/**
+	 * @brief Get current source producer
+	 *
+	 * @return const reference to the current source producer
+	 */
+
+	const producer& SourceProducer(size_t theIndexNumber = kHPMissingInt) const;
+
+	/**
+	 * @brief Search for source producer given as argument, if found set iterator
+	 * position to that and return true
+	 *
+	 * This function is not thread safe as configuration class is in effect
+	 * a global variable.
+	 *
+	 * @param theSourceProducer
+	 * @return True if found, false if not
+	 */
 
 	bool SourceProducer(const producer& theSourceProducer);
-	bool NextSourceProducer() const; // THIS SHOULD NOT BE CONST ??
-	bool FirstSourceProducer() const; // THIS SHOULD NOT BE CONST ??
-	void ResetSourceProducer() const;
-	size_t SizeSourceProducers() const;
-	
-	producer TargetProducer() const;
 
+	/**
+	 * @brief Advance iterator by one
+	 *
+	 * This function is not thread safe as configuration class is in effect
+	 * a global variable.
+	 *
+	 * @return True if not at last source producer
+	 */
+
+	bool NextSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+
+	/**
+	 * @brief Goto first source producer
+	 *
+	 * This function is not thread safe as configuration class is in effect
+	 * a global variable.
+	 *
+	 * @return True if iterator has at least one source producer
+	 */
+
+	bool FirstSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+
+	/**
+	 * @brief Reset source producer iterator
+	 *
+	 * This function is not thread safe as configuration class is in effect
+	 * a global variable.
+	 *
+	 */
+
+	void ResetSourceProducer() const;
+
+	/**
+	 * @brief Return number of source producers
+	 * 
+	 * @return Number of source producers
+	 */
+
+	size_t SizeSourceProducers() const;
+
+	/**
+	 * @brief Get target producer
+	 *
+	 * @return const reference to to the target producer
+	 */
+
+	const producer& TargetProducer() const;
+
+	/**
+	 * @brief Set target producer
+	 * 
+	 * @param theTargetProducer New target producer
+	 */
+	
 	void TargetProducer(const producer& theTargetProducer);
 
 	/**
