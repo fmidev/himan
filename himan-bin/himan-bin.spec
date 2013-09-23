@@ -9,7 +9,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 13.9.3
+Version: 13.9.23
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Sep 23 2013  Mikko Partio <mikko.partio@fmi.fi> - 13.9.23-1.el6.fmi
+- Changes in configuration and json_parser
 * Tue Sep  3 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.3-1.el6.fmi
 - Fix bug that crashes himan (unresolved cuda-symbols at excutable)
 * Fri Aug 30 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.8.30-1.el6.fmi
