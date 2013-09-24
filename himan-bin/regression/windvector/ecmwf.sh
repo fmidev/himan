@@ -42,7 +42,7 @@ else
   exit 1
 fi
 
-print "windvector EC on GPU .... SOON"
+echo "windvector EC on GPU .... SOON"
 exit 0
 
 if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
