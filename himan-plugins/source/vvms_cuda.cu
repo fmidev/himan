@@ -58,8 +58,6 @@ __global__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ d
 void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& datas)
 {
 
-	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
-
 	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate device arrays

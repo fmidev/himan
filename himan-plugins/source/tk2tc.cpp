@@ -170,7 +170,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 
 	myTargetInfo->FirstParam();
 
-	bool useCudaInThisThread = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(conf, threadIndex);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{

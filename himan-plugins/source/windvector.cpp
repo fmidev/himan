@@ -231,12 +231,16 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 }
 
-void windvector::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void windvector::Run(shared_ptr<info> myTargetInfo,
+			   shared_ptr<const plugin_configuration> conf,
+			   unsigned short threadIndex)
 {
+
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
 		Calculate(myTargetInfo, conf, threadIndex);
 	}
+
 }
 
 /*
@@ -296,8 +300,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	level sourceLevel = compiled_plugin_base::LevelTransform(conf->SourceProducer(), UParam, myTargetInfo->PeakLevel(0));
 
-	bool useCudaInThisThread = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
-
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(conf, threadIndex);
+	
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -689,7 +693,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		 * Clone info-instance to writer since it might change our descriptor places		 
 		 */
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
 
 		if (conf->FileWriteOption() != kSingleFile)

@@ -55,9 +55,6 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(const double* __restrict
 
 void himan::plugin::dewpoint_cuda::DoCuda(dewpoint_cuda_options& opts, dewpoint_cuda_data& datas)
 {
-
-	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
-
 	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate device arrays

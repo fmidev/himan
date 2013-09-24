@@ -52,10 +52,6 @@ __global__ void himan::plugin::tk2tc_cuda::Calculate(const double* __restrict__ 
 void himan::plugin::tk2tc_cuda::DoCuda(tk2tc_cuda_options& opts, tk2tc_cuda_data& datas)
 {
 
-	int deviceId = (opts.threadIndex <= 32) ? 0 : 1;
-	
-	CUDA_CHECK(cudaSetDevice(deviceId));
-
 	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate device arrays

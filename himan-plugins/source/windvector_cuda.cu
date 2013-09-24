@@ -227,8 +227,6 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ dU, 
 void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windvector_cuda_data& datas)
 {
 
-	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
-	
 	// Allocate host arrays and convert input data to double
 
 	size_t N = opts.sizeY*opts.sizeX;
