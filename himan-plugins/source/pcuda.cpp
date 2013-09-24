@@ -31,5 +31,22 @@ himan::HPVersionNumber pcuda::ComputeCapability() const
 	return HPVersionNumber(boost::lexical_cast<unsigned short> (devProp.major), boost::lexical_cast<unsigned short> (devProp.minor));
 }
 
+bool pcuda::SetDevice(int deviceId) const
+{
+	cudaError_t err;
+
+	if ((err = cudaSetDevice(deviceId)) != cudaSuccess)
+	{
+		itsLogger->Error("Failed to choose device #" + boost::lexical_cast<string> (deviceId));
+		return false;
+	}
+
+	if ((err = cudaSetDeviceFlags(cudaDeviceMapHost)) != cudaSuccess)
+	{
+		itsLogger->Error("Failed to set flags for device #" + boost::lexical_cast<string> (deviceId));
+	}
+
+	return true;	
+}
 
 #endif

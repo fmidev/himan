@@ -63,7 +63,8 @@ public:
     void Capabilities() const;
     int LibraryVersion() const;
     HPVersionNumber ComputeCapability() const;
-
+    bool SetDevice(int deviceId) const;
+	
 #endif
 
 private:
