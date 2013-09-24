@@ -124,6 +124,16 @@ protected:
 
 	void WriteToFile(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> targetInfo);
 
+	/**
+	 * @brief Determine if cuda can be used in this thread, and if so
+	 * set the environment.
+	 *
+	 * @param conf Plugin configuration
+	 * @param threadIndex Thread index number, starting from 1
+	 */
+	
+	bool GetAndSetCuda(std::shared_ptr<const configuration> conf, int threadIndex);
+
 private:
     HPDimensionType itsLeadingDimension;
     std::shared_ptr<info> itsFeederInfo;

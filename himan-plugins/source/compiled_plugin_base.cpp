@@ -14,6 +14,7 @@
 
 #include "neons.h"
 #include "writer.h"
+#include "pcuda.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -277,4 +278,17 @@ void compiled_plugin_base::WriteToFile(shared_ptr<const plugin_configuration> co
 	}
 
 	tempInfo.reset();
+}
+
+bool compiled_plugin_base::GetAndSetCuda(shared_ptr<const configuration> conf, int threadIndex)
+{
+	bool ret = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
+
+	if (ret)
+	{
+		shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+		p->SetDevice(threadIndex-1);
+	}
+
+	return ret;
 }
