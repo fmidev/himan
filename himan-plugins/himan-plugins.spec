@@ -9,7 +9,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.9.23
+Version: 13.9.25
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -83,6 +83,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Sep 25 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.25-1.el6.fmi
+- Another fix for HIMAN-16
+* Tue Sep 24 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.24-1.el6.fmi
+- Fix for HIMAN-16
 * Mon Sep 23 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.23-1.el6.fmi
 - Fix for HIMAN-15
 * Thu Sep  5 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.5-1.el6.fmi
