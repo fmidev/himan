@@ -32,10 +32,6 @@ public:
     {
         return "himan::json_parser";
     }
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
 
 private:
 
