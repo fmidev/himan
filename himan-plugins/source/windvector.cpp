@@ -701,4 +701,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			WriteToFile(conf, myTargetInfo);
 		}
 	}
+
+	if (useCudaInThisThread)
+	{
+		compiled_plugin_base::ResetCuda();
+	}
 }

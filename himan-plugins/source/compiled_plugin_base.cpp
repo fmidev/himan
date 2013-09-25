@@ -28,20 +28,20 @@ mutex itsAdjustDimensionMutex;
 
 unsigned short compiled_plugin_base::ThreadCount(short userThreadCount) const
 {
-    unsigned int coreCount = boost::thread::hardware_concurrency(); // Number of cores
+	unsigned int coreCount = boost::thread::hardware_concurrency(); // Number of cores
 
-    unsigned short threadCount = MAX_THREADS;
+	unsigned short threadCount = MAX_THREADS;
 
-    if (userThreadCount > 0)
-    {
-    	threadCount = userThreadCount;
-    }
-    else if (MAX_THREADS > coreCount)
-    {
-    	threadCount = static_cast<unsigned short> (coreCount);
-    }
+	if (userThreadCount > 0)
+	{
+		threadCount = userThreadCount;
+	}
+	else if (MAX_THREADS > coreCount)
+	{
+		threadCount = static_cast<unsigned short> (coreCount);
+	}
 
-    return threadCount;
+	return threadCount;
 }
 
 
@@ -52,22 +52,22 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 	 * Logic of interpolating values:
 	 *
 	 * 1) If source and target grids are equal, meaning that the grid AND the area
-	 *    properties are effectively the same, do not interpolate. Instead return
-	 *    the value of the source grid point that matches the ordering number of the
-	 *    target grid point (ie. target grid point #1 --> source grid point #1 etc).
+	 *	properties are effectively the same, do not interpolate. Instead return
+	 *	the value of the source grid point that matches the ordering number of the
+	 *	target grid point (ie. target grid point #1 --> source grid point #1 etc).
 	 *
 	 * 2) If actual interpolation is needed, first get the *grid* coordinates of the
-	 *    latlon target point. Then check if those grid coordinates are very close
-	 *    to a grid point -- if so, return the value of the grid point. This serves two
-	 *    purposes:
-	 *    - We don't need to interpolate if the distance between requested grid point
-	 *      and actual grid point is small enough, saving some CPU cycles
-	 *    - Sometimes when the requested grid point is close to grid edge, floating
-	 *      point inaccuracies might move it outside the grid. If this happens, the
-	 *      interpolation fails even though initially the grid point is valid.
+	 *	latlon target point. Then check if those grid coordinates are very close
+	 *	to a grid point -- if so, return the value of the grid point. This serves two
+	 *	purposes:
+	 *	- We don't need to interpolate if the distance between requested grid point
+	 *	  and actual grid point is small enough, saving some CPU cycles
+	 *	- Sometimes when the requested grid point is close to grid edge, floating
+	 *	  point inaccuracies might move it outside the grid. If this happens, the
+	 *	  interpolation fails even though initially the grid point is valid.
 	 *
 	 * 3) If requested source grid point is not near and actual grid point, interpolate
-	 *    the value of the point.
+	 *	the value of the point.
 	 */
 
 	// Step 1)
@@ -101,66 +101,66 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 bool compiled_plugin_base::AdjustLeadingDimension(shared_ptr<info> myTargetInfo)
 {
 
-    lock_guard<mutex> lock(itsAdjustDimensionMutex);
+	lock_guard<mutex> lock(itsAdjustDimensionMutex);
 
-    // Leading dimension can be: time or level
+	// Leading dimension can be: time or level
 
-    if (itsLeadingDimension == kTimeDimension)
-    {
-        if (!itsFeederInfo->NextTime())
-        {
-            return false;
-        }
+	if (itsLeadingDimension == kTimeDimension)
+	{
+		if (!itsFeederInfo->NextTime())
+		{
+			return false;
+		}
 
-        myTargetInfo->Time(itsFeederInfo->Time());
-    }
-    else if (itsLeadingDimension == kLevelDimension)
-    {
-        if (!itsFeederInfo->NextLevel())
-        {
-            return false;
-        }
+		myTargetInfo->Time(itsFeederInfo->Time());
+	}
+	else if (itsLeadingDimension == kLevelDimension)
+	{
+		if (!itsFeederInfo->NextLevel())
+		{
+			return false;
+		}
 
-        myTargetInfo->Level(itsFeederInfo->Level());
-    }
-    else
-    {
-        throw runtime_error(ClassName() + ": Invalid dimension type: " + boost::lexical_cast<string> (itsLeadingDimension));
-    }
+		myTargetInfo->Level(itsFeederInfo->Level());
+	}
+	else
+	{
+		throw runtime_error(ClassName() + ": Invalid dimension type: " + boost::lexical_cast<string> (itsLeadingDimension));
+	}
 
-    return true;
+	return true;
 }
 
 bool compiled_plugin_base::AdjustNonLeadingDimension(shared_ptr<info> myTargetInfo)
 {
-    if (itsLeadingDimension == kTimeDimension)
-    {
-        return myTargetInfo->NextLevel();
-    }
-    else if (itsLeadingDimension == kLevelDimension)
-    {
-        return myTargetInfo->NextTime();
-    }
-    else
-    {
-        throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
-    }
+	if (itsLeadingDimension == kTimeDimension)
+	{
+		return myTargetInfo->NextLevel();
+	}
+	else if (itsLeadingDimension == kLevelDimension)
+	{
+		return myTargetInfo->NextTime();
+	}
+	else
+	{
+		throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
+	}
 }
 
 void compiled_plugin_base::ResetNonLeadingDimension(shared_ptr<info> myTargetInfo)
 {
-    if (itsLeadingDimension == kTimeDimension)
-    {
-        myTargetInfo->ResetLevel();
-    }
-    else if (itsLeadingDimension == kLevelDimension)
-    {
-        myTargetInfo->ResetTime();
-    }
-    else
-    {
-        throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
-    }
+	if (itsLeadingDimension == kTimeDimension)
+	{
+		myTargetInfo->ResetLevel();
+	}
+	else if (itsLeadingDimension == kLevelDimension)
+	{
+		myTargetInfo->ResetTime();
+	}
+	else
+	{
+		throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
+	}
 }
 
 himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceProducer,
@@ -291,4 +291,10 @@ bool compiled_plugin_base::GetAndSetCuda(shared_ptr<const configuration> conf, i
 	}
 
 	return ret;
+}
+
+void compiled_plugin_base::ResetCuda() const
+{
+	shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	p->Reset();
 }

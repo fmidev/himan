@@ -23,14 +23,14 @@ class compiled_plugin_base
 public:
 
 	compiled_plugin_base() {}
-    inline virtual ~compiled_plugin_base() {}
+	inline virtual ~compiled_plugin_base() {}
 
-    compiled_plugin_base(const compiled_plugin_base& other) = delete;
-    compiled_plugin_base& operator=(const compiled_plugin_base& other) = delete;
+	compiled_plugin_base(const compiled_plugin_base& other) = delete;
+	compiled_plugin_base& operator=(const compiled_plugin_base& other) = delete;
 
 protected:
 
-    virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
+	virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
 
 	/**
 	 * @brief Determine used thread count
@@ -134,9 +134,15 @@ protected:
 	
 	bool GetAndSetCuda(std::shared_ptr<const configuration> conf, int threadIndex);
 
+	/**
+	 * @brief Reset GPU card state
+     */
+	
+	void ResetCuda() const;
+
 private:
-    HPDimensionType itsLeadingDimension;
-    std::shared_ptr<info> itsFeederInfo;
+	HPDimensionType itsLeadingDimension;
+	std::shared_ptr<info> itsFeederInfo;
 };
 
 } // namespace plugin
