@@ -41,12 +41,26 @@ bool pcuda::SetDevice(int deviceId) const
 		return false;
 	}
 
+	// cudaDeviceMapHost is needed for zero copy memory
+	
 	if ((err = cudaSetDeviceFlags(cudaDeviceMapHost)) != cudaSuccess)
 	{
 		itsLogger->Error("Failed to set flags for device #" + boost::lexical_cast<string> (deviceId));
+		itsLogger->Error("Return code: " + boost::lexical_cast<string> (err));
+		return false;
 	}
 
 	return true;	
+}
+
+void pcuda::Reset() const
+{
+	cudaError_t err;
+
+	if ((err = cudaDeviceReset()) != cudaSuccess)
+	{
+		itsLogger->Error("cudaDeviceReset return error (probably from earlier async call)!");
+	}
 }
 
 #endif
