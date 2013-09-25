@@ -1,6 +1,8 @@
 #ifndef CUDA_HELPER_H
 #define CUDA_HELPER_H
 
+#include <iostream>
+
 #ifdef HAVE_CUDA
 
 void CheckCudaError(cudaError_t errarg, const char* file, const int line);
