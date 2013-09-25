@@ -6,6 +6,7 @@
  */
 
 #include "packed_data.h"
+#include "cuda_helper.h"
 
 #ifdef HAVE_CUDA
 
@@ -15,7 +16,7 @@ void packed_data::Set(unsigned char* newData, size_t newPackedLength, size_t new
 {
 	if (packedLength)
 	{
-		cudaFreeHost(data);
+		CUDA_CHECK(cudaFreeHost(data));
 	}
 
 	packedLength = newPackedLength;
@@ -27,7 +28,7 @@ void packed_data::Bitmap(int* newBitmap, size_t newBitmapLength)
 {
 	if (newBitmapLength)
 	{
-		cudaFreeHost(bitmap);
+		CUDA_CHECK(cudaFreeHost(bitmap));
 	}
 
 	bitmapLength = newBitmapLength;
@@ -43,11 +44,11 @@ void packed_data::Resize(size_t newPackedLength, size_t newUnpackedLength)
 
 	unsigned char* newData = 0;
 
-	cudaHostAlloc(reinterpret_cast<void**> (&newData), packedLength * sizeof(unsigned char), cudaHostAllocMapped);
+	CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&newData), packedLength * sizeof(unsigned char), cudaHostAllocMapped));
 
 	memcpy(newData, data, packedLength * sizeof(unsigned char));
 
-	cudaFreeHost(data);
+	CUDA_CHECK(cudaFreeHost(data));
 
 	data = newData;
 	
@@ -66,7 +67,7 @@ packed_data::packed_data(const packed_data& other)
 	{
 
 #ifndef __CUDACC__
-		cudaHostAlloc(reinterpret_cast<void**> (&data), packedLength * sizeof(unsigned char), cudaHostAllocMapped);
+		CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&data), packedLength * sizeof(unsigned char), cudaHostAllocMapped));
 
 		memcpy(data, other.data, packedLength * sizeof(unsigned char));
 #endif
@@ -88,14 +89,14 @@ void packed_data::Clear()
 {
 	if (packedLength)
 	{
-		cudaFreeHost(data);
+		CUDA_CHECK(cudaFreeHost(data));
 		packedLength = 0;
 		unpackedLength = 0;
 	}
 
 	if (bitmapLength)
 	{
-		cudaFreeHost(bitmap);
+		CUDA_CHECK(cudaFreeHost(bitmap));
 		bitmapLength = 0;
 	}
 }
