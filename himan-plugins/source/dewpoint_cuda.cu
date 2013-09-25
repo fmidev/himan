@@ -8,8 +8,6 @@
 #include "cuda_helper.h"
 #include "dewpoint_cuda.h"
 
-#define MAPPED_PINNED
-
 const double RW = 461.5; // Vesihoyryn kaasuvakio (J / K kg)
 const double L = 2.5e6; // Veden hoyrystymislampo (J / kg)
 const double RW_div_L = RW / L;
