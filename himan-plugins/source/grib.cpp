@@ -18,6 +18,7 @@ using namespace himan::plugin;
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
+#include "pcuda.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -594,7 +595,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			len = itsGrib->Message()->PackedValuesLength();
 
-			itsLogger->Debug("Current CUDA device id: " + CudaDeviceId());
+			shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+
+			itsLogger->Debug("Current CUDA device id: " + p->GetDevice());
 			
 			unsigned char* data = 0, *bitmap = 0;
 			int* unpackedBitmap;
