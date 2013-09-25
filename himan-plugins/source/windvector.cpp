@@ -301,6 +301,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 	level sourceLevel = compiled_plugin_base::LevelTransform(conf->SourceProducer(), UParam, myTargetInfo->PeakLevel(0));
 
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(conf, threadIndex);
+
+	if (useCudaInThisThread)
+	{
+		myThreadedLogger->Debug("Will use Cuda");
+	}
 	
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
