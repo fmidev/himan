@@ -140,6 +140,12 @@ protected:
 	
 	void ResetCuda() const;
 
+	/**
+     * @return Id of current active GPU
+     */
+	
+	int CudaDeviceId() const;
+
 private:
 	HPDimensionType itsLeadingDimension;
 	std::shared_ptr<info> itsFeederInfo;

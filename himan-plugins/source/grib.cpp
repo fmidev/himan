@@ -592,11 +592,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		if (readPackedData && itsGrib->Message()->PackingType() == "grid_simple")
 		{
-			itsLogger->Trace("Retrieving packed data from grib");
-
 			len = itsGrib->Message()->PackedValuesLength();
 
-			unsigned char* data, *bitmap;
+			itsLogger->Debug("Current CUDA device id: " + CudaDeviceId());
+			
+			unsigned char* data = 0, *bitmap = 0;
 			int* unpackedBitmap;
 			
 			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&data), len * sizeof(unsigned char), cudaHostAllocMapped));
@@ -604,7 +604,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			// Get packed values from grib
 			
 			itsGrib->Message()->PackedValues(data);
-		
+
+			itsLogger->Debug("Retrieved " + boost::lexical_cast<string> (len) + " bytes of packed data from grib");
+			
 			double bsf = itsGrib->Message()->BinaryScaleFactor();
 			double dsf = itsGrib->Message()->DecimalScaleFactor();
 			double rv = itsGrib->Message()->ReferenceValue();

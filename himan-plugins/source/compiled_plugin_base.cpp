@@ -298,3 +298,9 @@ void compiled_plugin_base::ResetCuda() const
 	shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 	p->Reset();
 }
+
+int compiled_plugin_base::CudaDeviceId() const
+{
+	shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	return p->GetDevice();
+}

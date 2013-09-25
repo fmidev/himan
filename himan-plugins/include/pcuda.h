@@ -64,6 +64,7 @@ public:
 	int LibraryVersion() const;
 	HPVersionNumber ComputeCapability() const;
 	bool SetDevice(int deviceId) const;
+	int GetDevice() const;
 	void Reset() const;
 
 	

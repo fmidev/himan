@@ -59,8 +59,23 @@ void pcuda::Reset() const
 
 	if ((err = cudaDeviceReset()) != cudaSuccess)
 	{
-		itsLogger->Error("cudaDeviceReset return error (probably from earlier async call)!");
+		itsLogger->Error("cudaDeviceReset() returned error (probably from earlier async call)!");
 	}
+}
+
+int pcuda::GetDevice() const
+{
+	cudaError_t err;
+
+	int ret = kHPMissingInt;
+
+	if ((err = cudaGetDevice(&ret)) != cudaSuccess)
+	{
+		itsLogger->Error("cudaGetDevice() returned error");
+		return kHPMissingInt;
+	}
+
+	return ret;
 }
 
 #endif
