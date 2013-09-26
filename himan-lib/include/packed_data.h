@@ -23,7 +23,7 @@ namespace himan
 {
 struct packed_data 
 {
-       	bool HasData() const { return false; }
+	   	bool HasData() const { return false; }
 };
 }
 
@@ -57,8 +57,8 @@ struct packed_data
 	 *
 	 * This is defined for both gcc and nvcc separately
 	 * 
-     * @param other packed_data instance that we are copying from
-     */
+	 * @param other packed_data instance that we are copying from
+	 */
 	
 	CUDA_HOST
 	packed_data(const packed_data& other);

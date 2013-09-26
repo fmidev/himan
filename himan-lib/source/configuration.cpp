@@ -187,7 +187,7 @@ void configuration::ThreadCount(short theThreadCount)
 std::string configuration::ConfigurationFile() const
 {
 	return itsConfigurationFile;
-};
+}
 
 void configuration::ConfigurationFile(const std::string& theConfigurationFile)
 {
