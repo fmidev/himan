@@ -253,6 +253,8 @@ enum HPPrecipitationForm
 	kSnow,
 	kFreezingDrizzle,
 	kFreezingRain,
+	kGraupel,
+	kHail,
 	kUnknownPrecipitationForm = 10
 };
 
@@ -263,6 +265,8 @@ const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormT
 		(kSnow, "snow")
 		(kFreezingDrizzle, "freezing drizzle")
 		(kFreezingRain, "freezing rain")
+		(kGraupel, "graupel")
+		(kHail, "hail")
 		(kUnknownPrecipitationForm, "unknown");
 
 
