@@ -38,7 +38,7 @@ class grid
 				point theBottomLeft,
 				point theTopRight,
 				point theSouthPole = point(),
-				double theOrientation = kHPMissingFloat);
+				double theOrientation = kHPMissingValue);
 
 		~grid() { }
 

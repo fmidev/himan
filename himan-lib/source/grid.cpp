@@ -20,9 +20,9 @@ grid::grid()
 	, itsPackedData()
 	, itsScanningMode(kUnknownScanningMode)
 	, itsUVRelativeToGrid(false)
-	, itsOrientation(kHPMissingFloat)
-	, itsDi(kHPMissingFloat)
-	, itsDj(kHPMissingFloat)
+	, itsOrientation(kHPMissingValue)
+	, itsDi(kHPMissingValue)
+	, itsDj(kHPMissingValue)
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
@@ -43,8 +43,8 @@ grid::grid(HPScanningMode theScanningMode,
 	, itsTopRight(theTopRight)
 	, itsSouthPole(theSouthPole)
 	, itsOrientation(theOrientation)
-	, itsDi(kHPMissingFloat)
-	, itsDj(kHPMissingFloat)
+	, itsDi(kHPMissingValue)
+	, itsDj(kHPMissingValue)
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
@@ -98,7 +98,7 @@ void grid::Di(double theDi)
 
 double grid::Di() const
 {
-	if (itsDi == kHPMissingFloat)
+	if (itsDi == kHPMissingValue)
 	{
 		assert(itsBottomLeft.X() != static_cast<size_t> (kHPMissingInt));
 		assert(itsTopRight.X() != static_cast<size_t> (kHPMissingInt));
@@ -115,7 +115,7 @@ void grid::Dj(double theDj)
 
 double grid::Dj() const
 {
-	if (itsDj == kHPMissingFloat)
+	if (itsDj == kHPMissingValue)
 	{
 		assert(itsBottomLeft.Y() != kHPMissingInt);
 		assert(itsTopRight.Y() != kHPMissingInt);
@@ -217,8 +217,8 @@ point grid::SouthPole() const
 
 point grid::FirstGridPoint() const
 {
-	double x = kHPMissingFloat;
-	double y = kHPMissingFloat;
+	double x = kHPMissingValue;
+	double y = kHPMissingValue;
 
 	if (itsProjection == kStereographicProjection)
 	{
@@ -227,10 +227,10 @@ point grid::FirstGridPoint() const
 		return itsBottomLeft;
 	}
 
-	assert(itsBottomLeft.X() != kHPMissingFloat);
-	assert(itsBottomLeft.Y() != kHPMissingFloat);
-	assert(itsTopRight.X() != kHPMissingFloat);
-	assert(itsTopRight.Y() != kHPMissingFloat);
+	assert(itsBottomLeft.X() != kHPMissingValue);
+	assert(itsBottomLeft.Y() != kHPMissingValue);
+	assert(itsTopRight.X() != kHPMissingValue);
+	assert(itsTopRight.Y() != kHPMissingValue);
 	assert(Ni() > 0);
 	assert(Nj() > 0);
 

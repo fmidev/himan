@@ -83,7 +83,7 @@ private:
 	double itsY;
 };
 
-inline point::point() : itsX(kHPMissingFloat), itsY(kHPMissingFloat)
+inline point::point() : itsX(kHPMissingValue), itsY(kHPMissingValue)
 {
 }
 

@@ -81,19 +81,19 @@ void info::Init()
 
 //    itsAB = std::vector<double>;
 
-    itsBottomLeft = point(kHPMissingFloat, kHPMissingFloat);
-    itsTopRight = point(kHPMissingFloat, kHPMissingFloat);
-    itsSouthPole = point(kHPMissingFloat, kHPMissingFloat);
+    itsBottomLeft = point(kHPMissingValue, kHPMissingValue);
+    itsTopRight = point(kHPMissingValue, kHPMissingValue);
+    itsSouthPole = point(kHPMissingValue, kHPMissingValue);
 
-    itsOrientation = kHPMissingFloat;
+    itsOrientation = kHPMissingValue;
     itsStepSizeOverOneByte = false;
     itsUVRelativeToGrid = false;
 
     itsNi = 0;
     itsNj = 0;
 
-    itsDi = kHPMissingFloat;
-    itsDj = kHPMissingFloat;
+    itsDi = kHPMissingValue;
+    itsDj = kHPMissingValue;
 }
 
 std::ostream& info::Write(std::ostream& file) const
@@ -146,7 +146,7 @@ void info::Create()
             	Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
             	Grid()->Data()->Resize(itsNi,itsNj);
 
-            	if (itsDi != kHPMissingFloat && itsDj != kHPMissingFloat)
+            	if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
             	{
             		Grid()->Di(itsDi);
             		Grid()->Dj(itsDj);

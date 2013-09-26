@@ -35,7 +35,8 @@ using boost::assign::map_list_of;
 // Define some constants
 
 const int kHPMissingInt = 999999;
-const float kHPMissingFloat = -999.f; // Hmmh?
+const double kHPMissingValue = -999.;
+
 // const float kFloatEpsilon = std::numeric_limits<float>::epsilon();
 
 // Define different plugin types
