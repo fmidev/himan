@@ -99,7 +99,7 @@ void info::Init()
 std::ostream& info::Write(std::ostream& file) const
 {
 
-    file << "<" << ClassName() << " " << Version() << ">" << endl;
+    file << "<" << ClassName() << ">" << endl;
 
     file << itsProducer;
 

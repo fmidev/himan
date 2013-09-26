@@ -102,7 +102,7 @@ void producer::TableVersion(long theTableVersion)
 std::ostream& producer::Write(std::ostream& file) const
 {
 
-	file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	file << "<" << ClassName() << ">" << std::endl;
 
 	file << "__itsFmiProducerId__ " << itsFmiProducerId << std::endl;
 	file << "__itsProcess__ " << itsProcess << std::endl;

@@ -48,12 +48,7 @@ public:
 
   std::string ClassName() const
   {
-	  return "himan::info::iterator";
-  }
-
-  HPVersionNumber Version() const
-  {
-	  return HPVersionNumber(0, 1);
+	  return "himan::iterator";
   }
 
   /**
@@ -253,7 +248,7 @@ public:
 
   std::ostream& Write(std::ostream& file) const
   {
-	  file << "<" << ClassName() << " " << Version() << ">" << std::endl;
+	  file << "<" << ClassName() << ">" << std::endl;
 	  file << "__itsIndex__ " << itsIndex << std::endl;
 	  file << "__itsSize__ " << itsElements.size() << std::endl;
 
@@ -298,11 +293,6 @@ public:
     std::string ClassName() const
     {
         return "himan::info";
-    }
-
-    HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
     }
 
     std::ostream& Write(std::ostream& file) const;

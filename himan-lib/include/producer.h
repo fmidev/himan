@@ -33,11 +33,6 @@ public:
         return "himan::producer";
     }
 
-    HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
-
     std::ostream& Write(std::ostream& file) const;
 
     void Centre(long theCentre);

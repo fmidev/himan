@@ -766,6 +766,8 @@ bool grid::DataIsPacked() const
 
 ostream& grid::Write(std::ostream& file) const
 {
+	file << "<" << ClassName() << ">" << std::endl;
+
 	file << *itsData;
 	file << "__dataIsPacked__ " << DataIsPacked() << endl;
 	file << "__itsScanningMode__ " << itsScanningMode << endl;
