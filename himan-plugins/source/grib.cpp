@@ -597,7 +597,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-			itsLogger->Debug("Current CUDA device id: " + p->GetDevice());
+			itsLogger->Debug("Current CUDA device id: " + boost::lexical_cast<string> (p->GetDevice()));
 			
 			unsigned char* data = 0, *bitmap = 0;
 			int* unpackedBitmap;
