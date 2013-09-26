@@ -307,7 +307,7 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(shared_ptr<info> info, bo
 
     if (theActiveOnly)
     {
-        lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", info->Level().Value()));
+        lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", static_cast<float> (info->Level().Value())));
     }
     else
     {
@@ -316,7 +316,7 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(shared_ptr<info> info, bo
 
         while (info->NextLevel())
         {
-            lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", info->Level().Value()));
+            lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", static_cast<float> (info->Level().Value())));
         }
     }
 
