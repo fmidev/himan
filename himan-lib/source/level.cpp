@@ -12,53 +12,52 @@
 using namespace himan;
 
 level::level()
-    : itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel())), itsIndex(kHPMissingInt)
+    : itsType(kUnknownLevel), itsValue(kHPMissingValue), itsIndex(kHPMissingInt), itsName("")
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
-level::level(HPLevelType theType, float theValue, const std::string& theName)
-    : itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(static_cast<FmiLevelType> (theType), theValue)))
+level::level(HPLevelType theType, double theValue, const std::string& theName)
+    : itsType(theType)
+	, itsValue(theValue)
     , itsIndex(kHPMissingInt)
+	, itsName(theName)
 {
-    if (!theName.empty())
-    {
-        itsLevel->SetName(theName);
-    }
-
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
-level::level(HPLevelType theType, float theValue, int theIndex, const std::string& theName)
-    : itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(static_cast<FmiLevelType> (theType), theValue)))
+level::level(HPLevelType theType, double theValue, int theIndex, const std::string& theName)
+    : itsType(theType)
+	, itsValue(theValue)
     , itsIndex(theIndex)
+	, itsName(theName)
 {
-    if (!theName.empty())
-    {
-        itsLevel->SetName(theName);
-    }
-
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level::level(const NFmiLevel& theLevel)
-    : itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(theLevel)))
+    : itsType(static_cast<HPLevelType> (theLevel.LevelType()))
+	, itsValue(static_cast<double> (theLevel.LevelValue()))
     , itsIndex(kHPMissingInt)
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level::level(const level& other)
-    : itsLevel(std::unique_ptr<NFmiLevel> (new NFmiLevel(*other.itsLevel)))
+    : itsType(other.itsType)
+	, itsValue(other.itsValue)
     , itsIndex(other.itsIndex)
+	, itsName(other.itsName)
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level& level::operator=(const level& other)
 {
-    itsLevel = std::unique_ptr<NFmiLevel> (new NFmiLevel(*other.itsLevel));
-    itsIndex = other.itsIndex;
+    itsType = other.itsType;
+	itsValue = other.itsValue;
+	itsIndex = other.itsIndex;
+	itsName = other.itsName;
 
     return *this;
 }
@@ -79,14 +78,14 @@ bool level::operator!=(const level& other)
     return !(*this == other);
 }
 
-void level::Value(float theValue)
+void level::Value(double theValue)
 {
-    itsLevel->LevelValue(theValue);
+    itsValue = theValue;
 }
 
-float level::Value() const
+double level::Value() const
 {
-    return itsLevel->LevelValue();
+    return itsValue;
 }
 
 int level::Index() const
@@ -101,33 +100,32 @@ void level::Index(int theIndex)
 
 HPLevelType level::Type() const
 {
-    return HPLevelType(itsLevel->LevelType());
+    return itsType;
 }
-/*
+
 void level::Type(HPLevelType theLevelType)
 {
-	itsLevel->LevelType(theLevelType);
+	itsType = theLevelType;
 }
-*/
 
 std::string level::Name() const
 {
-    return static_cast<std::string> (itsLevel->GetName());
+    return itsName;
 }
 
 void level::Name(const std::string& theName)
 {
-    itsLevel->SetName(theName);
+    itsName = theName;
 }
 
 std::ostream& level::Write(std::ostream& file) const
 {
 
-    file << "<" << ClassName() << " " << Version() << ">" << std::endl;
-    file << "__itsType__ " << itsLevel->LevelType() << std::endl;
+    file << "<" << ClassName() << ">" << std::endl;
+    file << "__itsType__ " << HPLevelTypeToString.at(itsType) << std::endl;
     file << "__itsIndex__ " << itsIndex << std::endl;
-    file << "__itsValue__ " << itsLevel->LevelValue() << std::endl;
-    file << "__itsName__ " << Name() << std::endl;
+    file << "__itsValue__ " << itsValue << std::endl;
+    file << "__itsName__ " << itsName << std::endl;
 
     return file;
 }

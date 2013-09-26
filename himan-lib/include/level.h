@@ -4,7 +4,7 @@
  * @date Nov 30, 2012
  * @author partio
  *
- * @brief Level metadata for himan. Uses NFmiLevel for some features.
+ * @brief Level metadata for himan.
  */
 
 #ifndef LEVEL_H
@@ -23,8 +23,8 @@ public:
 
     level();
     level(const NFmiLevel& theLevel);
-    level(HPLevelType theType, float theValue, const std::string& theName = "");
-    level(HPLevelType theType, float theValue, int theIndex, const std::string& theName = "");
+    level(HPLevelType theType, double theValue, const std::string& theName = "");
+    level(HPLevelType theType, double theValue, int theIndex, const std::string& theName = "");
 
     ~level() {}
     level(const level& other);
@@ -35,11 +35,6 @@ public:
         return "himan::level";
     }
 
-    HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
-
     bool operator==(const level& other);
     bool operator!=(const level& other);
 
@@ -47,12 +42,13 @@ public:
      * @brief Set level values (for pressure levels)
      */
 
-    void Value(float theLevelValue);
+    void Value(double theLevelValue);
 
     /**
      * @return Level value (for pressure levels)
      */
-    float Value() const;
+
+    double Value() const;
 
     /**
      * @brief Set level index number
@@ -65,10 +61,15 @@ public:
 
     int Index() const;
 
-    //void Type(HPLevelType theType);
+	/**
+	 * @brief Set Level type
+     * @param theType
+     */
+	
+    void Type(HPLevelType theLevelType);
 
     /**
-     * @return Level type
+     * @return Return level type
      * @see himan_common.h
      */
 
@@ -89,10 +90,12 @@ public:
     std::ostream& Write(std::ostream& file) const;
 
 private:
+	std::unique_ptr<logger> itsLogger;
 
-    std::unique_ptr<NFmiLevel> itsLevel;
-    std::unique_ptr<logger> itsLogger;
+    HPLevelType itsType;
+	double itsValue;
     int itsIndex;
+	std::string itsName;
 };
 
 inline
