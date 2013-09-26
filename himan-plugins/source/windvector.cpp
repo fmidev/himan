@@ -296,10 +296,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	myTargetInfo->ParamIndex(0);
 
-	// Fetch source level definition
-
-	level sourceLevel = compiled_plugin_base::LevelTransform(conf->SourceProducer(), UParam, myTargetInfo->PeakLevel(0));
-
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(conf, threadIndex);
 
 	if (useCudaInThisThread)
@@ -315,6 +311,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 		shared_ptr<info> UInfo;
 		shared_ptr<info> VInfo;
+
+		// Fetch source level definition
+
+		level sourceLevel = LevelTransform(conf->SourceProducer(), UParam, myTargetInfo->Level());
 
 		try
 		{
