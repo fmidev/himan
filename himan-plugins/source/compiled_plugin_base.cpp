@@ -171,7 +171,7 @@ himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceP
 	level sourceLevel = targetLevel;
 
 	string levelName = HPLevelTypeToString.at(targetLevel.Type());
-	string key = boost::lexical_cast<string> (sourceProducer.Id()) + "_" + levelName;
+	string key = boost::lexical_cast<string> (sourceProducer.Id()) + "_" + levelName + "_" + targetParam.Name();
 
 	// Return value from cache if present
 	
