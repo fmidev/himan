@@ -168,7 +168,31 @@ himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceP
 													const himan::level& targetLevel) const
 {
 
-	level sourceLevel;
+	level sourceLevel = targetLevel;
+
+	string levelName = HPLevelTypeToString.at(targetLevel.Type());
+	string key = boost::lexical_cast<string> (sourceProducer.Id()) + "_" + levelName;
+
+	// Return value from cache if present
+	
+	try
+	{
+		sourceLevel.Type(itsLevelTransformMap.at(key));
+
+		sourceLevel.Name(levelName);
+
+		if (sourceLevel.Type() == kGround)
+		{
+			sourceLevel.Value(0);
+		}
+
+		return sourceLevel;
+
+	}
+	catch (...)
+	{
+
+	}
 
 	if (sourceProducer.TableVersion() != kHPMissingInt)
 	{
@@ -208,6 +232,8 @@ himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceP
 	{
 		sourceLevel = targetLevel;
 	}
+
+	itsLevelTransformMap[key] = sourceLevel.Type();
 
 	return sourceLevel;
 }

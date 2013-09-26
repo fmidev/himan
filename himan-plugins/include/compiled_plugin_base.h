@@ -18,6 +18,8 @@ namespace himan
 namespace plugin
 {
 
+typedef std::map<std::string, HPLevelType> level_transform;
+
 class compiled_plugin_base
 {
 public:
@@ -147,6 +149,8 @@ protected:
 	int CudaDeviceId() const;
 
 private:
+	mutable level_transform itsLevelTransformMap;
+
 	HPDimensionType itsLeadingDimension;
 	std::shared_ptr<info> itsFeederInfo;
 };
