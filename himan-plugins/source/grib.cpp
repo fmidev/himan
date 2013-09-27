@@ -89,13 +89,31 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 
 		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(anInfo->Producer().Id());
 
-		itsGrib->Message()->Centre(boost::lexical_cast<long> (producermap["ident_id"]));
-		itsGrib->Message()->Process(boost::lexical_cast<long> (producermap["model_id"]));
-
-		if (edition == 1)
+		if (!producermap["ident_id"].empty() && !producermap["model_id"].empty())
 		{
-			itsGrib->Message()->Table2Version(boost::lexical_cast<long> (producermap["no_vers"]));
+			itsGrib->Message()->Centre(boost::lexical_cast<long> (producermap["ident_id"]));
+			itsGrib->Message()->Process(boost::lexical_cast<long> (producermap["model_id"]));
+
+			if (edition == 1)
+			{
+				itsGrib->Message()->Table2Version(boost::lexical_cast<long> (producermap["no_vers"]));
+			}
 		}
+		else
+		{
+			string producerId = boost::lexical_cast<string> (anInfo->Producer().Id());
+			itsLogger->Warning("Unable to get process and centre information from Neons for producer " + producerId);
+			itsLogger->Warning("Setting process to " + producerId + " and centre to 86");
+			itsGrib->Message()->Centre(86);
+			itsGrib->Message()->Process(anInfo->Producer().Id());
+
+			if (edition == 1)
+			{
+				itsLogger->Warning("Setting table2version to 203");
+				itsGrib->Message()->Table2Version(203);
+			}
+		}
+		
 	}
 	else
 	{
