@@ -20,11 +20,13 @@
 #include <boost/program_options.hpp>
 
 #ifdef DEBUG
-#include "timer_factory.h"
+//#include "timer_factory.h"
 #endif
 
 #define HIMAN_AUXILIARY_INCLUDE
+
 #include "pcuda.h"
+
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
@@ -106,7 +108,15 @@ int main(int argc, char** argv)
 
 		aLogger->Info("Calculating " + pc->Name());
 
-		aPlugin->Process(pc);
+		try
+		{
+			aPlugin->Process(pc);
+		}
+		catch (const exception& e)
+		{
+			aLogger->Fatal(string("Caught exception: ") + e.what());
+			exit(1);
+		}
 
 		if (pc->StatisticsEnabled())
 		{
