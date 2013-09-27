@@ -858,7 +858,7 @@ void grib::WriteTime(std::shared_ptr<const info> anInfo)
 	 * time in hours) we must convert them to the same unit, in harmonies case minute.
 	 */
 
-	if (anInfo->Param().Aggregation().AggregationType() != kUnknownAggregationType)
+	if (anInfo->Param().Aggregation().Type() != kUnknownAggregationType)
 	{
 		long timeRangeValue = 1;
 		long unitForTimeRange = 1;
@@ -974,13 +974,13 @@ void grib::WriteParameter(std::shared_ptr<const info> anInfo)
 		itsGrib->Message()->ParameterCategory(anInfo->Param().GribCategory());
 		itsGrib->Message()->ParameterDiscipline(anInfo->Param().GribDiscipline()) ;
 
-		if (anInfo->Param().Aggregation().AggregationType() != kUnknownAggregationType)
+		if (anInfo->Param().Aggregation().Type() != kUnknownAggregationType)
 		{
 			itsGrib->Message()->ProductDefinitionTemplateNumber(8);
 
 			long type;
 
-			switch (anInfo->Param().Aggregation().AggregationType())
+			switch (anInfo->Param().Aggregation().Type())
 			{
 				default:
 				case kAverage:

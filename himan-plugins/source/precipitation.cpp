@@ -63,7 +63,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	baseParam.GribDiscipline(0);
 	baseParam.GribCategory(1);
 	baseParam.GribParameter(8);
-	baseParam.Aggregation().AggregationType(kAccumulation);
+	baseParam.Aggregation().Type(kAccumulation);
 	baseParam.Aggregation().TimeResolution(kHourResolution);
 
 	if (conf->Exists("rr1h") && conf->GetValue("rr1h") == "true")
