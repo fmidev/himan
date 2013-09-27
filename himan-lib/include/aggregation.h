@@ -30,8 +30,8 @@ public:
         return "himan::aggregation";
     }
 
-	HPAggregationType AggregationType() const;
-	void AggregationType(HPAggregationType theAggregationTypeType);
+	HPAggregationType Type() const;
+	void Type(HPAggregationType theType);
 
 	HPTimeResolution TimeResolution() const;
 	void TimeResolution(HPTimeResolution theTimeResolution);
@@ -43,7 +43,7 @@ public:
 
 private:
 
-	HPAggregationType itsAggregationType;
+	HPAggregationType itsType;
 	HPTimeResolution itsTimeResolution;
 	int itsTimeResolutionValue;
 };

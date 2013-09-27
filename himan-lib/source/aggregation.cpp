@@ -10,19 +10,19 @@
 using namespace himan;
 
 aggregation::aggregation()
-	: itsAggregationType(kUnknownAggregationType)
+	: itsType(kUnknownAggregationType)
 	, itsTimeResolution(kUnknownTimeResolution)
 	, itsTimeResolutionValue(kHPMissingInt)
 {}
 
-aggregation::aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theTimeResolutionValue)
-	: itsAggregationType(theAggregationType)
+aggregation::aggregation(HPAggregationType theType, HPTimeResolution theTimeResolution, int theTimeResolutionValue)
+	: itsType(theType)
 	, itsTimeResolution(theTimeResolution)
 	, itsTimeResolutionValue(theTimeResolutionValue)
 {}
 
 aggregation::aggregation(const aggregation& other)
-	: itsAggregationType(other.itsAggregationType)
+	: itsType(other.itsType)
 	, itsTimeResolution(other.itsTimeResolution)
 	, itsTimeResolutionValue(other.itsTimeResolutionValue)
 {}
@@ -31,19 +31,19 @@ aggregation& aggregation::operator=(const aggregation& other)
 {
 	itsTimeResolutionValue = other.itsTimeResolutionValue;
 	itsTimeResolution = other.itsTimeResolution;
-	itsAggregationType = other.itsAggregationType;
+	itsType = other.itsType;
 
 	return *this;
 }
 
-HPAggregationType aggregation::AggregationType() const
+HPAggregationType aggregation::Type() const
 {
-	return itsAggregationType;
+	return itsType;
 }
 
-void aggregation::AggregationType(HPAggregationType theAggregationType)
+void aggregation::Type(HPAggregationType theType)
 {
-	itsAggregationType = theAggregationType;
+	itsType = theType;
 }
 
 HPTimeResolution aggregation::TimeResolution() const
@@ -70,7 +70,7 @@ std::ostream& aggregation::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
-	file << "__itsAggregationType__ " << itsAggregationType << std::endl;
+	file << "__itsType__ " << itsType << std::endl;
 	file << "__itsTimeResolution__ " << itsTimeResolution << std::endl;
 	file << "__itsTimeResolutionValue__ " << itsTimeResolutionValue << std::endl;
 	
