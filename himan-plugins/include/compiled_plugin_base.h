@@ -8,7 +8,7 @@
 #ifndef COMPILED_PLUGIN_BASE_H
 #define COMPILED_PLUGIN_BASE_H
 
-#include <NFmiGrid.h>
+//#include <NFmiGrid.h>
 #include "info.h"
 #include "plugin_configuration.h"
 #include <mutex>
@@ -40,7 +40,7 @@ protected:
 	 * @param userThreadCount Number of threads specified by user, -1 if it's not specified
 	 */
 
-	unsigned short ThreadCount(short userThreadCount) const;
+	short ThreadCount(short userThreadCount) const;
 
 	/**
 	 * @brief Interpolates value to point, or gets the value directly if grids are equal

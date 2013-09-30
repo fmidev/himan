@@ -41,7 +41,7 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 
 	// Get number of threads to use
 
-	unsigned short threadCount = ThreadCount(conf->ThreadCount());
+	short threadCount = ThreadCount(conf->ThreadCount());
 
 	if (conf->StatisticsEnabled())
 	{
@@ -109,9 +109,7 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 	 * Each thread will have a copy of the target info.
 	 */
 
-	unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-	for (size_t i = 0; i < threadCount; i++)
+	for (short i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");

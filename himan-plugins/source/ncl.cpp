@@ -37,7 +37,7 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	// Get number of threads to use
 
-	unsigned short threadCount = ThreadCount(conf->ThreadCount());
+	short threadCount = ThreadCount(conf->ThreadCount());
 
 	if (conf->StatisticsEnabled())
 	{
@@ -126,7 +126,7 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 	 */
 
 
-	for (size_t i = 0; i < threadCount; i++)
+	for (short i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
@@ -241,8 +241,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			processTimer->Start();
 		}
 		
-		int missingCount = 0;
-		int count = 0;
+		size_t missingCount = 0;
+		size_t count = 0;
 
 		/*
 		 * Converting original grid-data to newbase grid

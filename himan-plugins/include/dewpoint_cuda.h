@@ -25,7 +25,7 @@ struct dewpoint_cuda_options
 {
 	size_t N;
 	unsigned short cudaDeviceIndex;
-	int missingValuesCount;
+	size_t missingValuesCount;
 	double TBase;
 	bool pT;
 	bool pRH;

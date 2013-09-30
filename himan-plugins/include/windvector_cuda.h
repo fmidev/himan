@@ -56,7 +56,7 @@ struct windvector_cuda_options
 	bool vectorCalculation;
 	bool needRotLatLonGridRotation;
 	unsigned short cudaDeviceIndex;
-	int missingValuesCount;
+	size_t missingValuesCount;
 	bool pU;
 	bool pV;
 	bool jScansPositive;

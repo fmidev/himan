@@ -25,7 +25,7 @@ struct fog_cuda_options
 {
 	size_t N;
 	unsigned short cudaDeviceIndex;
-	int missingValuesCount;
+	size_t missingValuesCount;
 	bool pDTC2M;
 	bool pTKGround;
 	bool pFF10M;

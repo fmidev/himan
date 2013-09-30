@@ -21,16 +21,16 @@
 using namespace std;
 using namespace himan::plugin;
 
-const unsigned int MAX_THREADS = 12; //<! Max number of threads we allow
+const short MAX_THREADS = 12; //<! Max number of threads we allow
 const double kInterpolatedValueEpsilon = 0.00001; //<! Max difference between two grid points (if smaller, points are considered the same)
 
 mutex itsAdjustDimensionMutex;
 
-unsigned short compiled_plugin_base::ThreadCount(short userThreadCount) const
+short compiled_plugin_base::ThreadCount(short userThreadCount) const
 {
-	unsigned int coreCount = boost::thread::hardware_concurrency(); // Number of cores
+	short coreCount = static_cast<short> (boost::thread::hardware_concurrency()); // Number of cores
 
-	unsigned short threadCount = MAX_THREADS;
+	short threadCount = MAX_THREADS;
 
 	if (userThreadCount > 0)
 	{
@@ -38,7 +38,7 @@ unsigned short compiled_plugin_base::ThreadCount(short userThreadCount) const
 	}
 	else if (MAX_THREADS > coreCount)
 	{
-		threadCount = static_cast<unsigned short> (coreCount);
+		threadCount = coreCount;
 	}
 
 	return threadCount;
@@ -202,7 +202,7 @@ himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceP
 
 		HPLevelType lvlType = kUnknownLevel;
 
-		float lvlValue = targetLevel.Value();
+		double lvlValue = targetLevel.Value();
 
 		if (lvlName == "GROUND")
 		{
@@ -242,7 +242,7 @@ bool compiled_plugin_base::SetAB(shared_ptr<info> myTargetInfo, shared_ptr<info>
 {
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{
-		int index = myTargetInfo->ParamIndex();
+		size_t index = myTargetInfo->ParamIndex();
 
 		myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
 

@@ -87,7 +87,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 	{
 		n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(anInfo->Producer().Id());
+		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo->Producer().Id()));
 
 		if (!producermap["ident_id"].empty() && !producermap["model_id"].empty())
 		{
@@ -164,7 +164,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 
 	//itsGrib->Message()->BitsPerValue(16);
 
-	itsGrib->Message()->Values(anInfo->Data()->Values(), anInfo->Ni() * anInfo->Nj());
+	itsGrib->Message()->Values(anInfo->Data()->Values(), static_cast<long> (anInfo->Ni() * anInfo->Nj()));
 
 	if (edition == 2)
 	{
@@ -212,7 +212,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 
 	if (!AB.empty())
 	{
-		itsGrib->Message()->NV(AB.size());
+		itsGrib->Message()->NV(static_cast<long> (AB.size()));
 		itsGrib->Message()->PV(AB, AB.size());
 	}
 
@@ -468,7 +468,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 		 	long nv = itsGrib->Message()->NV();
 		 	long lev = itsGrib->Message()->LevelValue();
-			ab = itsGrib->Message()->PV(nv, lev);
+			ab = itsGrib->Message()->PV(static_cast<size_t> (nv), static_cast<size_t> (lev));
 		}
 
 		// END VALIDATION OF SEARCH PARAMETERS
@@ -504,8 +504,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		 * Get area information from grib.
 		 */
 
-		size_t ni = itsGrib->Message()->SizeX();
-		size_t nj = itsGrib->Message()->SizeY();
+		size_t ni = static_cast<size_t> (itsGrib->Message()->SizeX());
+		size_t nj = static_cast<size_t> (itsGrib->Message()->SizeY());
 
 		switch (itsGrib->Message()->NormalizedGridType())
 		{
@@ -635,12 +635,12 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			auto packed = std::make_shared<simple_packed> (bpv, util::ToPower(bsf,2), util::ToPower(-dsf, 10), rv);
 
-			packed->Set(data, len, itsGrib->Message()->SizeX() * itsGrib->Message()->SizeY());
+			packed->Set(data, len, static_cast<size_t> (itsGrib->Message()->SizeX() * itsGrib->Message()->SizeY()));
 
 			if (itsGrib->Message()->Bitmap())
 			{
 				size_t bitmap_len =itsGrib->Message()->BytesLength("bitmap");
-				size_t bitmap_size = ceil(bitmap_len/8);
+				size_t bitmap_size = static_cast<size_t> (ceil(bitmap_len/8));
 
 				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&unpackedBitmap), bitmap_len * sizeof(int), cudaHostAllocMapped));
 
@@ -692,7 +692,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len) const
 {
-	size_t i, v = 1, idx = 0;
+	size_t i, idx = 0;
+	int v = 1;
 	short j = 0;
 
 	for (i = 0; i < len; i++)
@@ -795,8 +796,8 @@ void grib::WriteAreaAndGrid(std::shared_ptr<const info> anInfo)
 			break;
 	}
 
-	itsGrib->Message()->SizeX(anInfo->Ni());
-	itsGrib->Message()->SizeY(anInfo->Nj());
+	itsGrib->Message()->SizeX(static_cast<long> (anInfo->Ni()));
+	itsGrib->Message()->SizeY(static_cast<long> (anInfo->Nj()));
 
 	bool iNegative = itsGrib->Message()->IScansNegatively();
 	bool jPositive = itsGrib->Message()->JScansPositively();

@@ -26,7 +26,7 @@ struct tk2tc_cuda_options
 	size_t N;
 	bool pTK;
 	unsigned short threadIndex;
-	int missingValuesCount;
+	size_t missingValuesCount;
 	
 	tk2tc_cuda_options() : pTK(false), missingValuesCount(0) {}
 };

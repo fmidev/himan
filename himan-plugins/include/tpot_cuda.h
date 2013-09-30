@@ -27,7 +27,7 @@ struct tpot_cuda_options
 	bool pT;
 	bool pP;
 	unsigned short cudaDeviceIndex;
-	int missingValuesCount;
+	size_t missingValuesCount;
 	double TBase;
 	double PScale;
 	double PConst;

@@ -36,7 +36,7 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	// Get number of threads to use
 
-	unsigned short threadCount = ThreadCount(conf->ThreadCount());
+	short threadCount = ThreadCount(conf->ThreadCount());
 
 	if (conf->StatisticsEnabled())
 	{
@@ -107,7 +107,7 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Each thread will have a copy of the target info.
 	 */
 
-	for (size_t i = 0; i < threadCount; i++)
+	for (short i = 0; i < threadCount; i++)
 	{
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
@@ -231,8 +231,8 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_
 		shared_ptr<NFmiGrid> TgGrid(TgInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> FfGrid(FfInfo->Grid()->ToNewbaseGrid());
 
-		int missingCount = 0;
-		int count = 0;
+		size_t missingCount = 0;
+		size_t count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
