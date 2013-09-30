@@ -82,7 +82,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configura
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
 
-	itsLogger->Debug("Parsing configuration file '" + conf->ConfigurationFile() + "'");
+	itsLogger->Trace("Parsing configuration file '" + conf->ConfigurationFile() + "'");
 
 	boost::property_tree::ptree pt;
 
@@ -372,7 +372,7 @@ void json_parser::ParseTime(const producer& sourceProducer,
 		{
 			shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-			map<string,string> prod = n->NeonsDB().GetProducerDefinition(sourceProducer.Id());
+			map<string,string> prod = n->NeonsDB().GetProducerDefinition(static_cast<unsigned long> (sourceProducer.Id()));
 
 			if (prod.empty())
 			{
@@ -754,7 +754,7 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 
 			producer prod(pid);
 
-			map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(pid);
+			map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (pid));
 
 			if (!prodInfo.empty())
 			{
@@ -776,7 +776,7 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 
 		long pid = boost::lexical_cast<long> (pt.get<string>("target_producer"));
 
-		map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(pid);
+		map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (pid));
 
 		producer prod (pid);
 

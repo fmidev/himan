@@ -19,6 +19,7 @@ param::param()
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
+	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -32,6 +33,7 @@ param::param(const std::string& theName, unsigned long theUnivId)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
+	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -45,6 +47,7 @@ param::param(const std::string& theName)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
+	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -70,6 +73,7 @@ param::param(const std::string& theName,
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
 	, itsUnit(kUnknownUnit)
+	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -83,6 +87,7 @@ param::param(const param& other)
 	, itsGribTableVersion(other.itsGribTableVersion)
 	, itsGribIndicatorOfParameter(other.itsGribIndicatorOfParameter)
 	, itsUnit(other.itsUnit)
+	, itsMissingValue(other.itsMissingValue)
 	, itsAggregation(other.itsAggregation)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
@@ -97,6 +102,7 @@ param& param::operator=(const param& other)
 	itsGribTableVersion = other.itsGribTableVersion;
 	itsGribIndicatorOfParameter = other.itsGribIndicatorOfParameter;
 	itsUnit = other.itsUnit;
+	itsMissingValue = other.itsMissingValue;
 	itsAggregation = other.itsAggregation;
 
 	return *this;

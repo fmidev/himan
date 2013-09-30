@@ -8,16 +8,14 @@
 #ifndef STATISTICS_H
 #define STATISTICS_H
 
-//#include "NFmiODBC.h"
 #include "timer_factory.h"
 #include "raw_time.h"
 
-#if defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
+#if ! defined __clang__ && defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
 #include <cstdatomic>
 #else
 #include <atomic>
 #endif
-
 
 namespace himan
 {
@@ -55,8 +53,8 @@ public:
 
 	bool Enabled() const;
 
-	void UsedThreadCount(size_t theThreadCount);
-	void UsedGPUCount(size_t theGPUCount);
+	void UsedThreadCount(short theThreadCount);
+	void UsedGPUCount(short theGPUCount);
 
 	size_t FetchingTime() const;
 	
@@ -75,8 +73,8 @@ private:
 	std::atomic<size_t> itsCacheHitCount;
 
 	std::shared_ptr<timer> itsTimer;
-	size_t itsUsedThreadCount;
-	size_t itsUsedGPUCount;
+	short itsUsedThreadCount;
+	short itsUsedGPUCount;
 	
 
 };

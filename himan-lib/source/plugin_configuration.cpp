@@ -149,15 +149,15 @@ void plugin_configuration::WriteStatistics()
 
 	// Statistics from class statistics
 	
-	size_t elapsedTime = itsStatistics->itsTimer->GetTime();
+	size_t elapsedTime = static_cast<size_t> (itsStatistics->itsTimer->GetTime());
 
 	size_t threadCountDivisor = itsStatistics->itsUsedThreadCount;
 
-	if (itsLeadingDimension == kTimeDimension && itsInfo->SizeTimes() < itsStatistics->itsUsedThreadCount)
+	if (itsLeadingDimension == kTimeDimension && itsInfo->SizeTimes() < static_cast<size_t> (itsStatistics->itsUsedThreadCount))
 	{
 		threadCountDivisor = itsInfo->SizeTimes();
 	}
-	else if (itsLeadingDimension == kLevelDimension && itsInfo->SizeLevels() < itsStatistics->itsUsedThreadCount)
+	else if (itsLeadingDimension == kLevelDimension && itsInfo->SizeLevels() < static_cast<size_t> (itsStatistics->itsUsedThreadCount))
 	{
 		threadCountDivisor = itsInfo->SizeLevels();
 	}

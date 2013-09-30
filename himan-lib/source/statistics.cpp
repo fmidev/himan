@@ -89,12 +89,12 @@ void statistics::Init()
 	itsCacheMissCount = 0;
 }
 
-void statistics::UsedThreadCount(size_t theUsedThreadCount)
+void statistics::UsedThreadCount(short theUsedThreadCount)
 {
 	itsUsedThreadCount = theUsedThreadCount;
 }
 
-void statistics::UsedGPUCount(size_t theUsedGPUCount)
+void statistics::UsedGPUCount(short theUsedGPUCount)
 {
 	itsUsedGPUCount = theUsedGPUCount;
 }
