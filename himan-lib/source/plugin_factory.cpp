@@ -226,7 +226,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
     itsPluginFactory.push_back(mc);
 
-    itsLogger->Debug("Load " + thePluginFileName);
+    itsLogger->Trace("Load " + thePluginFileName);
 
     return true;
 }
