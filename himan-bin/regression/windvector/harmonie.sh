@@ -35,3 +35,52 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
   fi
 
 fi
+
+rm -f FF-MS*grib DD-D*grib
+
+$HIMAN -d 5 -f windvector_harmonie_wind.json -t grib harmonie_wind_source.grib -s harmonie_nocuda --no-cuda
+
+grib_compare -A 0.01 harmonie_wind_result_FF.grib ./FF-MS_hybrid_15_rll_290_594_0_120.grib
+
+if [ $? -eq 0 ];then
+  echo windvector/harmonie wind speed success on CPU
+else
+  echo windvector/harmonie wind speed failed on CPU
+  exit 1
+fi
+
+grib_compare -A 1 harmonie_wind_result_DD.grib ./DD-D_hybrid_15_rll_290_594_0_120.grib
+
+if [ $? -eq 0 ];then
+  echo windvector/harmonie wind direction success on CPU
+else
+  echo windvector/harmonie wind direction failed on CPU
+  exit 1
+fi
+
+if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
+
+  rm -f FF-MS*.grib DD-D*grib
+
+  $HIMAN -d 5 -f windvector_harmonie_wind.json -t grib -s harmonie_cuda harmonie_wind_source.grib
+
+  grib_compare -b referenceValue -A 0.001 harmonie_wind_result_FF.grib ./FF-MS_hybrid_15_rll_290_594_0_120.grib
+
+  if [ $? -eq 0 ];then
+    echo windvector/harmonie wind speed success GPU
+  else
+    echo windvector/harmonie wind speed failed GPU
+    exit 1
+  fi
+
+  grib_compare -A 1 harmonie_wind_result_DD.grib ./DD-D_hybrid_15_rll_290_594_0_120.grib
+
+  if [ $? -eq 0 ];then
+    echo windvector/harmonie wind direction success on GPU
+  else
+    echo windvector/harmonie wind direction failed on GPU
+    exit 1
+  fi
+
+fi
+
