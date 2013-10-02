@@ -9,7 +9,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 13.9.23
+Version: 13.10.2
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -19,7 +19,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 13.8.16
+Requires: himan-lib >= 13.10.2
 BuildRequires: redhat-rpm-config
 
 %if %{distnum} == 5
@@ -33,6 +33,7 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: scons
 BuildRequires: boost-devel >= 1.52
 BuildRequires: libsmartmet-newbase >= 12.4.18-1
+Requires: cuda-core-libs-5-5
 
 Provides: himan
 
@@ -59,7 +60,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
-* Mon Sep 23 2013  Mikko Partio <mikko.partio@fmi.fi> - 13.9.23-1.el6.fmi
+* Wed Oct  2 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.2-1.el6.fmi
+- Changes in himan-lib
+* Mon Sep 23 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.23-1.el6.fmi
 - Changes in configuration and json_parser
 * Tue Sep  3 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.3-1.el6.fmi
 - Fix bug that crashes himan (unresolved cuda-symbols at excutable)
