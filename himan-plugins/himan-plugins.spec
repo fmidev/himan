@@ -9,7 +9,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.9.25
+Version: 13.10.2
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -83,6 +83,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Oct  2 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.2-1.el6.fmi
+- Fix for preform_pressure
+* Thu Sep 26 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.26-1.el6.fmi
+- Fix for windvector hybrid level handling
 * Wed Sep 25 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.25-1.el6.fmi
 - Another fix for HIMAN-16
 * Tue Sep 24 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.24-1.el6.fmi
