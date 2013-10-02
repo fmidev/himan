@@ -305,7 +305,8 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		if (e == 1)
 		{
 			// unique key violation
-
+			query.str("");
+			
 			query	<< "UPDATE " << table_name << " SET "
 					<< "file_location = '" << theFileName << "', "
 					<< "file_server = '" << host << "' "
