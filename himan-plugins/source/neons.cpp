@@ -276,6 +276,12 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		host = string(hostname);
 	}
 
+	/*
+	 * We have our own error loggings for unique key violations
+	 */
+	
+	itsNeonsDB->Verbose(false);
+	
 	query  << "INSERT INTO " << table_name
 		   << " (dset_id, parm_name, lvl_type, lvl1_lvl2, fcst_per, eps_specifier, file_location, file_server) "
 		   << "VALUES ("
@@ -299,17 +305,42 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		if (e == 1)
 		{
 			// unique key violation
-			itsLogger->Debug("Unique key violation when inserting to '" + table_name + "' -- data is already loaded");
+
+			query	<< "UPDATE " << table_name << " SET "
+					<< "file_location = '" << theFileName << "', "
+					<< "file_server = '" << host << "' "
+					<< "eps_specifier = '" << eps_specifier << "' "
+					<< "WHERE "
+					<< "dset_id = " << dset_id
+					<< " AND parm_name = '" << resultInfo->Param().Name() << "'"
+					<< " AND lvl_type = upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "')"
+					<< " AND lvl1_lvl2 = " << resultInfo->Level().Value()
+					<< " AND fcst_per = " << resultInfo->Time().Step();
+
+			try
+			{
+				itsNeonsDB->Execute(query.str());
+				itsNeonsDB->Commit();
+			}
+			catch (int e)
+			{
+				itsLogger->Fatal("Error code: " + boost::lexical_cast<string> (e));
+				itsLogger->Fatal("Query: " + query.str());
+
+				itsNeonsDB->Rollback();
+
+				exit(1);
+			}
 		}
 		else
 		{
 			itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
 			itsLogger->Error("Query: " + query.str());
+
+			itsNeonsDB->Rollback();
+
+			return false;
 		}
-
-		itsNeonsDB->Rollback();
-
-		return false;
 	}
 
 	itsLogger->Info("Saved information on file '" + theFileName + "' to neons");
