@@ -414,9 +414,15 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 				// Unit conversions
 
+				//<! TODO: Kertoimet tietokannasta!
+				
 				T -= kKelvin;
 				T850 -= kKelvin;
 				T925 -= kKelvin;
+
+				RH *= 100;
+				RH700 *= 100;
+				RH925 *= 100;
 
 				// 850-1000hPa paksuus [m]
 				// source data is m^2/s^2 --> convert result to m by multiplying with 1/g
