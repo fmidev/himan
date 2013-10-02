@@ -309,7 +309,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 			
 			query	<< "UPDATE " << table_name << " SET "
 					<< "file_location = '" << theFileName << "', "
-					<< "file_server = '" << host << "' "
+					<< "file_server = '" << host << "', "
 					<< "eps_specifier = '" << eps_specifier << "' "
 					<< "WHERE "
 					<< "dset_id = " << dset_id
