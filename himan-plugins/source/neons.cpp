@@ -287,7 +287,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		   << "VALUES ("
 		   << dset_id << ", "
 		   << "'" << resultInfo->Param().Name() << "', "
-		   << "upper('" << resultInfo->Level().Name() << "'), "
+		   << "upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "'), "
 		   << resultInfo->Level().Value() << ", "
 		   << resultInfo->Time().Step() << ", "
 		   << "'" << eps_specifier << "', "
@@ -305,23 +305,48 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		if (e == 1)
 		{
 			// unique key violation
-			query.str("");
 			
-			query	<< "UPDATE " << table_name << " SET "
-					<< "file_location = '" << theFileName << "', "
-					<< "file_server = '" << host << "', "
-					<< "eps_specifier = '" << eps_specifier << "' "
-					<< "WHERE "
-					<< "dset_id = " << dset_id
-					<< " AND parm_name = '" << resultInfo->Param().Name() << "'"
-					<< " AND lvl_type = upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "')"
-					<< " AND lvl1_lvl2 = " << resultInfo->Level().Value()
-					<< " AND fcst_per = " << resultInfo->Time().Step();
-
 			try
 			{
+
+				/*
+				 * Neons table definition has invalid primary key definition:
+				 *
+				 * file_location and file_server are a part of the primary key meaning that
+				 * a table can have multiple versions of a single file from multiple servers.
+				 * This is unfortunate and to bypass it we must first delete all versions
+				 * of the file and then INSERT again.
+				 */
+
+				query.str("");
+
+				query	<< "DELETE FROM " << table_name << " WHERE "
+						<< "dset_id = " << dset_id
+						<< " AND parm_name = '" << resultInfo->Param().Name() << "'"
+						<< " AND lvl_type = upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "')"
+						<< " AND lvl1_lvl2 = " << resultInfo->Level().Value()
+						<< " AND fcst_per = " << resultInfo->Time().Step();
+
 				itsNeonsDB->Execute(query.str());
+				
+				query.str("");
+
+				query	<< "INSERT INTO " << table_name
+						<< " (dset_id, parm_name, lvl_type, lvl1_lvl2, fcst_per, eps_specifier, file_location, file_server) "
+						<< "VALUES ("
+						<< dset_id << ", "
+						<< "'" << resultInfo->Param().Name() << "', "
+						<< "upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "'), "
+						<< resultInfo->Level().Value() << ", "
+						<< resultInfo->Time().Step() << ", "
+						<< "'" << eps_specifier << "', "
+						<< "'" << theFileName << "', "
+						<< "'" << host << "')";
+
+				itsNeonsDB->Execute(query.str());
+
 				itsNeonsDB->Commit();
+				
 			}
 			catch (int e)
 			{
