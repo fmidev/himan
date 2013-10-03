@@ -85,18 +85,24 @@ libraries = []
 
 libraries.append('himan')
 libraries.append('smartmet_newbase')
-libraries.append('boost_program_options')
-libraries.append('boost_regex')
-libraries.append('boost_filesystem')
-libraries.append('boost_system')
 libraries.append('rt')
 libraries.append('z')
 libraries.append('bz2')
 
+env.Append(LIBS = libraries)
+
+boost_libraries = [ 'boost_program_options', 'boost_filesystem', 'boost_system', 'boost_regex' ]
+
+for lib in boost_libraries:
+	libfile = '/usr/lib64/lib' + lib + '.a'
+
+	if not os.path.isfile(libfile):
+		libfile = '/usr/lib64/lib' + lib + '-mt.a'
+
+	env.Append(LIBS=env.File(libfile))
+
 if have_cuda:
 	libraries.append('cudart')
-
-env.Append(LIBS = libraries)
 
 # CFLAGS
 
