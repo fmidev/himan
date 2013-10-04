@@ -123,7 +123,10 @@ void kindex::Process(std::shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	WriteToFile(conf, targetInfo);
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+		WriteToFile(conf, targetInfo);
+	}
 }
 
 void kindex::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)

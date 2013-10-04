@@ -128,7 +128,10 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	WriteToFile(conf, targetInfo);
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+		WriteToFile(conf, targetInfo);
+	}
 }
 
 void hybrid_pressure::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)

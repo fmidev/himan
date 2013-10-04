@@ -130,7 +130,10 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	WriteToFile(conf, targetInfo);
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+		WriteToFile(conf, targetInfo);
+	}
 
 }
 

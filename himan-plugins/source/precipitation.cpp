@@ -171,7 +171,10 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	WriteToFile(conf, targetInfo);
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+		WriteToFile(conf, targetInfo);
+	}
 }
 
 void precipitation::Run(shared_ptr<info> myTargetInfo,

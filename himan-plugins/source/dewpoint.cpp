@@ -132,7 +132,10 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	WriteToFile(conf, targetInfo);
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+		WriteToFile(conf, targetInfo);
+	}
 }
 
 void dewpoint::Run(shared_ptr<info> myTargetInfo,

@@ -149,7 +149,10 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	WriteToFile(conf, targetInfo);
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+		WriteToFile(conf, targetInfo);
+	}
 }
 
 void ncl::Run(shared_ptr<info> myTargetInfo,

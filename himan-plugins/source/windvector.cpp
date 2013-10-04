@@ -227,8 +227,11 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
 	}
 
-	WriteToFile(conf, targetInfo);
-
+	if (conf->FileWriteOption() == kSingleFile)
+	{
+		WriteToFile(conf, targetInfo);
+	}
+	
 }
 
 void windvector::Run(shared_ptr<info> myTargetInfo,
