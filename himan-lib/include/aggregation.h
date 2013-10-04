@@ -25,6 +25,9 @@ public:
 	aggregation(const aggregation& other);
 	aggregation& operator=(const aggregation& other);
 
+	bool operator==(const aggregation& other);
+	bool operator!=(const aggregation& other);
+
 	std::string ClassName() const
     {
         return "himan::aggregation";

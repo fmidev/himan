@@ -36,6 +36,35 @@ aggregation& aggregation::operator=(const aggregation& other)
 	return *this;
 }
 
+bool aggregation::operator==(const aggregation& other)
+{
+	if (this == &other)
+	{
+		return true;
+	}
+
+	if (itsType != other.itsType)
+	{
+		return false;
+	}
+
+	if (itsTimeResolution != other.itsTimeResolution)
+	{
+		return false;
+	}
+
+	if (itsTimeResolutionValue != other.itsTimeResolutionValue)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool aggregation::operator!=(const aggregation& other)
+{
+	return !(*this == other);
+}
 HPAggregationType aggregation::Type() const
 {
 	return itsType;

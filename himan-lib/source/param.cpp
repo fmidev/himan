@@ -154,6 +154,11 @@ bool param::operator==(const param& other)
 		return false;
 	}
 
+	if (itsAggregation != other.itsAggregation)
+	{
+		return false;
+	}
+	
 	return true;
 }
 
