@@ -181,58 +181,60 @@ void info::Create(shared_ptr<grid> baseGrid)
 
 }
 
-void info::Merge(vector<shared_ptr<info>>& otherInfos)
+void info::Merge(shared_ptr<info> otherInfo)
 {
 
     Reset();
 
-	for (size_t i = 0; i < otherInfos.size(); i++)
-	{
-		auto otherInfo = otherInfos[i];
-		
-		otherInfo->Reset();
+	otherInfo->Reset();
 
-		while (otherInfo->NextTime())
+	while (otherInfo->NextTime())
+	{
+		if (itsTimeIterator->Add(otherInfo->Time())) // no duplicates
 		{
-			if (itsTimeIterator->Add(otherInfo->Time())) // no duplicates
+			itsDimensionMatrix->SizeX(itsDimensionMatrix->SizeX()+1);
+		}
+
+		Time(otherInfo->Time());
+
+		otherInfo->ResetLevel();
+
+		while (otherInfo->NextLevel())
+		{
+			if (itsLevelIterator->Add(otherInfo->Level())) // no duplicates
 			{
-				itsDimensionMatrix->SizeX(itsDimensionMatrix->SizeX()+1);
+				itsDimensionMatrix->SizeY(itsDimensionMatrix->SizeY()+1);
 			}
 
-			Time(otherInfo->Time());
+			Level(otherInfo->Level());
 
-			otherInfo->ResetLevel();
-			
-			while (otherInfo->NextLevel())
+			otherInfo->ResetParam();
+
+			while (otherInfo->NextParam())
 			{
-				if (itsLevelIterator->Add(otherInfo->Level())) // no duplicates
+				if (!itsParamIterator->Add(otherInfo->Param())) // no duplicates
 				{
-					itsDimensionMatrix->SizeY(itsDimensionMatrix->SizeY()+1);
+					continue;
 				}
 
-				Level(otherInfo->Level());
+				itsDimensionMatrix->SizeZ(itsDimensionMatrix->SizeZ()+1);
 
-				otherInfo->ResetParam();
+				Param(otherInfo->Param());
 
-				while (otherInfo->NextParam())
-					// Create empty placeholders
-				{
-					if (!itsParamIterator->Add(otherInfo->Param())) // no duplicates
-					{
-						continue;
-					}
-
-					itsDimensionMatrix->SizeZ(itsDimensionMatrix->SizeZ()+1);
-
-					Param(otherInfo->Param());
-					
-					Grid(make_shared<grid> (*otherInfo->Grid()));
-				}
+				Grid(make_shared<grid> (*otherInfo->Grid()));
 			}
 		}
 	}
+}
 
 
+void info::Merge(vector<shared_ptr<info>>& otherInfos)
+{
+
+	for (size_t i = 0; i < otherInfos.size(); i++)
+	{
+		Merge(otherInfos[i]);
+	}
 }
 
 const producer& info::Producer() const

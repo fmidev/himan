@@ -104,7 +104,7 @@ public:
   {
 	  if (itsIndex == kIteratorResetValue)
 	  {
-		  itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;    // Reset() has been called before this function
+		  itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1;	// Reset() has been called before this function
 	  }
 
 	  else
@@ -137,7 +137,7 @@ public:
   {
 	  if (itsIndex == kIteratorResetValue)
 	  {
-		  itsIndex = 0;    // Reset() has been called before this function
+		  itsIndex = 0;	// Reset() has been called before this function
 	  }
 
 	  else
@@ -304,380 +304,387 @@ class info
 
 public:
 
-    friend class json_parser;
+	friend class json_parser;
 
-    info();
-    ~info();
+	info();
+	~info();
 
-    /**
-     * @brief Copy constructor for info class. Will preserve data backend.
+	/**
+	 * @brief Copy constructor for info class. Will preserve data backend.
 
-     * New info has the same data backend matrix as the original one.
-     * This means that multiple threads can access the same data with
-     * different infos ( --> descriptor positions ). Clone will have the
-     * same initial descriptor positions.
-     */
+	 * New info has the same data backend matrix as the original one.
+	 * This means that multiple threads can access the same data with
+	 * different infos ( --> descriptor positions ). Clone will have the
+	 * same initial descriptor positions.
+	 */
 
-    info(const info& other);
+	info(const info& other);
 
-    info& operator=(const info& other) = delete;
+	info& operator=(const info& other) = delete;
 
-    std::string ClassName() const
-    {
-        return "himan::info";
-    }
+	std::string ClassName() const
+	{
+		return "himan::info";
+	}
 
-    std::ostream& Write(std::ostream& file) const;
+	std::ostream& Write(std::ostream& file) const;
+
+	/**
+	 * @brief Merge @param to 'this' info
+	 * @param otherInfo
+	 */
+
+	void Merge(std::shared_ptr<info> otherInfo);
 
 	/**
 	 * @brief Merge all infos in @param to 'this' info
-     * @param otherInfos
-     */
+	 * @param otherInfos
+	 */
 
 	void Merge(std::vector<std::shared_ptr<info>>& otherInfos);
 
-    /**
-     * @return Number of point along X axis
-     */
+	/**
+	 * @return Number of point along X axis
+	 */
 
-    size_t Ni() const;
+	size_t Ni() const;
 
-    /**
-     * @return Number of point along Y axis
-     */
+	/**
+	 * @return Number of point along Y axis
+	 */
 
-    size_t Nj() const;
+	size_t Nj() const;
 
-    /**
-     * @return Distance between two points in X axis in degrees
-     */
+	/**
+	 * @return Distance between two points in X axis in degrees
+	 */
 
-    double Di() const;
+	double Di() const;
 
-    /**
-     * @return Distance between two points in Y axis in degrees
-     */
+	/**
+	 * @return Distance between two points in Y axis in degrees
+	 */
 
-    double Dj() const;
+	double Dj() const;
 
-    /**
-     * @brief Initialize parameter iterator with new parameters
-     * @param theParams A vector containing new parameter information for this info
-     */
+	/**
+	 * @brief Initialize parameter iterator with new parameters
+	 * @param theParams A vector containing new parameter information for this info
+	 */
 
-    void Params(const std::vector<param>& theParams);
+	void Params(const std::vector<param>& theParams);
 
-    /**
-     * @brief Replace current parameter iterator with a new one
-     * @param theParamIterator New parameter iterator
-     */
+	/**
+	 * @brief Replace current parameter iterator with a new one
+	 * @param theParamIterator New parameter iterator
+	 */
 
-    void ParamIterator(const param_iter& theParamIterator);
+	void ParamIterator(const param_iter& theParamIterator);
 
-    /**
-     * @brief Initialize level iterator with new levels
-     * @param theLevels A vector containing new level information for this info
-     */
+	/**
+	 * @brief Initialize level iterator with new levels
+	 * @param theLevels A vector containing new level information for this info
+	 */
 
-    void Levels(const std::vector<level>& theLevels);
+	void Levels(const std::vector<level>& theLevels);
 
-    /**
-     * @brief Replace current level iterator with a new one
-     * @param theLevelIterator New level iterator
-     */
+	/**
+	 * @brief Replace current level iterator with a new one
+	 * @param theLevelIterator New level iterator
+	 */
 
-    void LevelIterator(const level_iter& theLevelIterator);
+	void LevelIterator(const level_iter& theLevelIterator);
 
-    /**
-     * @brief Initialize time iterator with new times
-     * @param theTimes A vector containing new time information for this info
-     */
+	/**
+	 * @brief Initialize time iterator with new times
+	 * @param theTimes A vector containing new time information for this info
+	 */
 
-    void Times(const std::vector<forecast_time>& theTimes);
+	void Times(const std::vector<forecast_time>& theTimes);
 
-    /**
-     * @brief Replace current time iterator with a new one
-     * @param theTimeIterator New time iterator
-     */
+	/**
+	 * @brief Replace current time iterator with a new one
+	 * @param theTimeIterator New time iterator
+	 */
 
-    void TimeIterator(const time_iter& theTimeIterator);
+	void TimeIterator(const time_iter& theTimeIterator);
 
-    /**
-     * @brief Initialize data backend with correct number of matrices
-     *
-     * Function will create a number of matrices to
-     * hold the data. The number of the matrices depends on the size
-     * of times, params and levels.
-     */
+	/**
+	 * @brief Initialize data backend with correct number of matrices
+	 *
+	 * Function will create a number of matrices to
+	 * hold the data. The number of the matrices depends on the size
+	 * of times, params and levels.
+	 */
 
-    void Create();
-    void Create(std::shared_ptr<grid> baseGrid);
+	void Create();
+	void Create(std::shared_ptr<grid> baseGrid);
 
-    void Producer(long theFmiProducerID);
-    void Producer(const producer& theProducer);
-    const producer& Producer() const;
+	void Producer(long theFmiProducerID);
+	void Producer(const producer& theProducer);
+	const producer& Producer() const;
 
-    /**
-     * @brief Return info-wide origin time if it exists
-     * @return Origin time
-     */
+	/**
+	 * @brief Return info-wide origin time if it exists
+	 * @return Origin time
+	 */
 
-    raw_time OriginDateTime() const;
-    void OriginDateTime(const std::string& theOriginDateTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
+	raw_time OriginDateTime() const;
+	void OriginDateTime(const std::string& theOriginDateTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 
 	void First();
 
-    /**
-     * @brief Reset all descriptors
-     */
+	/**
+	 * @brief Reset all descriptors
+	 */
 
-    void Reset();
+	void Reset();
 
-    /**
-     * @see iterator#Reset
-     */
+	/**
+	 * @see iterator#Reset
+	 */
 
-    void ResetParam();
+	void ResetParam();
 
-    /**
-     * @see iterator#Next
-     */
+	/**
+	 * @see iterator#Next
+	 */
 
-    bool NextParam();
+	bool NextParam();
 
-    /**
-     * @see iterator#First
-     */
+	/**
+	 * @see iterator#First
+	 */
 
-    bool FirstParam();
+	bool FirstParam();
 
-    /**
-     * @brief Set parameter iterator to position indicated by the function argument
-     * @see iterator#Set
-     */
+	/**
+	 * @brief Set parameter iterator to position indicated by the function argument
+	 * @see iterator#Set
+	 */
 
-    bool Param(const param& theRequiredParam);
-    void ParamIndex(size_t theParamIndex);
-    size_t ParamIndex() const;
-    param& Param() const;
-    param& PeakParam(size_t theIndex) const;
+	bool Param(const param& theRequiredParam);
+	void ParamIndex(size_t theParamIndex);
+	size_t ParamIndex() const;
+	param& Param() const;
+	param& PeakParam(size_t theIndex) const;
 
-    size_t SizeParams() const;
+	size_t SizeParams() const;
 
-    /**
-     * @see iterator#Reset
-     */
+	/**
+	 * @see iterator#Reset
+	 */
 
-    void ResetLevel();
+	void ResetLevel();
 
-    /**
-     * @see iterator#Next
-     */
+	/**
+	 * @see iterator#Next
+	 */
 
-    bool NextLevel();
+	bool NextLevel();
 
-    /**
-     * @see iterator#Previous
-     */
+	/**
+	 * @see iterator#Previous
+	 */
 
-    bool PreviousLevel();
+	bool PreviousLevel();
 
-    /**
-     * @see iterator#First
-     */
+	/**
+	 * @see iterator#First
+	 */
 
-    bool FirstLevel();
+	bool FirstLevel();
 
-    /**
-     * @see iterator#Last
-     */
+	/**
+	 * @see iterator#Last
+	 */
 
-    bool LastLevel();
-    /**
-     * @brief Set level iterator to position indicated by the function argument
-     * @see iterator#Set
-     */
+	bool LastLevel();
+	/**
+	 * @brief Set level iterator to position indicated by the function argument
+	 * @see iterator#Set
+	 */
 
-    bool Level(const level& theLevel);
-    void LevelIndex(size_t theLevelIndex);
-    size_t LevelIndex() const;
-    level& Level() const;
-    level& PeakLevel(size_t theIndex) const;
+	bool Level(const level& theLevel);
+	void LevelIndex(size_t theLevelIndex);
+	size_t LevelIndex() const;
+	level& Level() const;
+	level& PeakLevel(size_t theIndex) const;
 
-    size_t SizeLevels() const;
+	size_t SizeLevels() const;
 
-    /**
-     * @see iterator#Reset
-     */
+	/**
+	 * @see iterator#Reset
+	 */
 
-    void ResetTime();
+	void ResetTime();
 
-    /**
-     * @see iterator#Next
-     */
+	/**
+	 * @see iterator#Next
+	 */
 
-    bool NextTime();
+	bool NextTime();
 
-    /**
-     * @see iterator#Previous
-     */
+	/**
+	 * @see iterator#Previous
+	 */
 
-    bool PreviousTime();
+	bool PreviousTime();
 
-    /**
-     * @see iterator#First
-     */
+	/**
+	 * @see iterator#First
+	 */
 
-    bool FirstTime();
+	bool FirstTime();
 
-    /**
-     * @see iterator#Last
-     */
+	/**
+	 * @see iterator#Last
+	 */
 
-    bool LastTime();
+	bool LastTime();
 
-    /**
-     * @brief Set time iterator to position indicated by the function argument
-     * @see iterator#Set
-     */
+	/**
+	 * @brief Set time iterator to position indicated by the function argument
+	 * @see iterator#Set
+	 */
 
-    bool Time(const forecast_time& theTime);
-    void TimeIndex(size_t theTimeIndex);
-    size_t TimeIndex() const;
-    forecast_time& Time() const;
-    forecast_time& PeakTime(size_t theIndex) const;
+	bool Time(const forecast_time& theTime);
+	void TimeIndex(size_t theTimeIndex);
+	size_t TimeIndex() const;
+	forecast_time& Time() const;
+	forecast_time& PeakTime(size_t theIndex) const;
 
-    size_t SizeTimes() const;
+	size_t SizeTimes() const;
 
-    /**
-     * @brief Set location iterator to given index value. No limit-checking is made.
-     */
+	/**
+	 * @brief Set location iterator to given index value. No limit-checking is made.
+	 */
 
-    void LocationIndex(size_t theLocationIndex);
-    size_t LocationIndex() const;
-    void ResetLocation();
-    bool NextLocation();
-    bool FirstLocation();
-    bool PreviousLocation();
-    bool LastLocation();
-    size_t LocationIndex();
+	void LocationIndex(size_t theLocationIndex);
+	size_t LocationIndex() const;
+	void ResetLocation();
+	bool NextLocation();
+	bool FirstLocation();
+	bool PreviousLocation();
+	bool LastLocation();
+	size_t LocationIndex();
 
-    /**
-     * @return Current data matrix
-     */
+	/**
+	 * @return Current data matrix
+	 */
 
-    std::shared_ptr<grid> Grid() const;
+	std::shared_ptr<grid> Grid() const;
 
-    /**
-     * @brief Return data matrix from the given time/level/param indexes
-     *
-     * @note Function argument order is important!
-     *
-     * @return Data matrix pointed by the given function arguments.
-     */
+	/**
+	 * @brief Return data matrix from the given time/level/param indexes
+	 *
+	 * @note Function argument order is important!
+	 *
+	 * @return Data matrix pointed by the given function arguments.
+	 */
 
-    std::shared_ptr<grid> Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
+	std::shared_ptr<grid> Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
 
-    /**
-     * @brief Replace current grid with the function argument
-     * @param d shared pointer to a grid instance
-     */
+	/**
+	 * @brief Replace current grid with the function argument
+	 * @param d shared pointer to a grid instance
+	 */
 
-    void Grid(std::shared_ptr<grid> d);
+	void Grid(std::shared_ptr<grid> d);
 
-    /**
-     * @brief Shortcut to get the current data matrix
-     * @return Current data matrix
-     */
+	/**
+	 * @brief Shortcut to get the current data matrix
+	 * @return Current data matrix
+	 */
 
-    std::shared_ptr<unpacked> Data() const;
+	std::shared_ptr<unpacked> Data() const;
 
-    /**
-     * @brief Replace whole meta matrix with a new one
-     * @param m shared pointer to n meta matrix
-     */
+	/**
+	 * @brief Replace whole meta matrix with a new one
+	 * @param m shared pointer to n meta matrix
+	 */
 	
-    void Data(std::shared_ptr<matrix_t> m);
+	void Data(std::shared_ptr<matrix_t> m);
 
-    /**
-     * @brief Return size of meta matrix. Is the same as times*params*levels.
-     *
-     */
+	/**
+	 * @brief Return size of meta matrix. Is the same as times*params*levels.
+	 *
+	 */
 
-    size_t DimensionSize() const;
+	size_t DimensionSize() const;
 
-    /**
-     * @brief Set the data value pointed by the iterators with a new one
-     * @return True if assignment was succesfull
-     */
+	/**
+	 * @brief Set the data value pointed by the iterators with a new one
+	 * @return True if assignment was succesfull
+	 */
 
-    bool Value(double theValue);
+	bool Value(double theValue);
 
-    /**
-     * @return Data value pointed by the iterators
-     */
+	/**
+	 * @return Data value pointed by the iterators
+	 */
 
-    double Value() const;
+	double Value() const;
 
-    bool StepSizeOverOneByte() const;
-    void StepSizeOverOneByte(bool theStepSizeOverOneByte);
+	bool StepSizeOverOneByte() const;
+	void StepSizeOverOneByte(bool theStepSizeOverOneByte);
 
-    HPProjectionType Projection() const;
+	HPProjectionType Projection() const;
 
 private:
 
-    void Init();
+	void Init();
 
-    /*
-     * START GLOBAL CONFIGURATION FILE PARAMETERS
-     *
-     * These variables are needed when parsing configuration file.
-     * Later on they are used to create the correct data structure.
-     * They should *not* be referred to when calculating or reading/
-     * writing data (that's why they are private).
-     */
+	/*
+	 * START GLOBAL CONFIGURATION FILE PARAMETERS
+	 *
+	 * These variables are needed when parsing configuration file.
+	 * Later on they are used to create the correct data structure.
+	 * They should *not* be referred to when calculating or reading/
+	 * writing data (that's why they are private).
+	 */
 
-    HPProjectionType itsProjection;
+	HPProjectionType itsProjection;
 
-    point itsBottomLeft;
-    point itsTopRight;
-    point itsSouthPole;
+	point itsBottomLeft;
+	point itsTopRight;
+	point itsSouthPole;
 
-    double itsOrientation;
+	double itsOrientation;
 
-    HPScanningMode itsScanningMode;
-    size_t itsNi;
-    size_t itsNj;
+	HPScanningMode itsScanningMode;
+	size_t itsNi;
+	size_t itsNj;
 
-    double itsDi;
-    double itsDj;
+	double itsDi;
+	double itsDj;
 
-    bool itsUVRelativeToGrid;
+	bool itsUVRelativeToGrid;
 
-    /* END GLOBAL CONFIGURATION PARAMETERS */
+	/* END GLOBAL CONFIGURATION PARAMETERS */
 
-    std::shared_ptr<level_iter> itsLevelIterator;
-    std::shared_ptr<time_iter> itsTimeIterator;
-    std::shared_ptr<param_iter> itsParamIterator;
+	std::shared_ptr<level_iter> itsLevelIterator;
+	std::shared_ptr<time_iter> itsTimeIterator;
+	std::shared_ptr<param_iter> itsParamIterator;
 
-    std::shared_ptr<matrix_t> itsDimensionMatrix;
+	std::shared_ptr<matrix_t> itsDimensionMatrix;
 
-    std::unique_ptr<logger> itsLogger;
+	std::unique_ptr<logger> itsLogger;
 
-    producer itsProducer;
+	producer itsProducer;
 
-    raw_time itsOriginDateTime;
+	raw_time itsOriginDateTime;
 
-    size_t itsLocationIndex;
+	size_t itsLocationIndex;
 
-    bool itsStepSizeOverOneByte;
+	bool itsStepSizeOverOneByte;
 
 };
 
 inline
 std::ostream& operator<<(std::ostream& file, const info& ob)
 {
-    return ob.Write(file);
+	return ob.Write(file);
 }
 
 } // namespace himan
