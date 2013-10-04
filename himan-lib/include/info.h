@@ -191,7 +191,7 @@ public:
    *
    */
 
-  bool Set(const T theElement)
+  bool Set(const T& theElement)
   {
 
 	  for (size_t i = 0; i < itsElements.size(); i++)
@@ -240,6 +240,38 @@ public:
   friend std::ostream& operator<<(std::ostream& file, iterator<T> & ob)
   {
 	  return ob.Write(file);
+  }
+
+  /**
+   * @brief Add element to iterator
+   *
+   * NOTE: This function DOES NOT change the size of itsDimensionMatrix! That
+   * needs to be done separately!
+   *
+   * @param newElement Element to be added
+   * @param strict Define whether to allow duplicate values (false = allow)
+   * @return True if adding was succesfull
+   */
+  
+  bool Add(const T& newElement, bool strict = true)
+  {
+	  if (strict)
+	  {
+		  size_t tempIndex = itsIndex;
+
+		  if (Set(newElement))
+		  {
+			  itsIndex = tempIndex;
+			  return false;
+		  }
+
+		  itsIndex = tempIndex;
+	  
+	  }
+
+	  itsElements.push_back(newElement);
+
+	  return true;
   }
 
   /**
@@ -296,6 +328,13 @@ public:
     }
 
     std::ostream& Write(std::ostream& file) const;
+
+	/**
+	 * @brief Merge all infos in @param to 'this' info
+     * @param otherInfos
+     */
+
+	void Merge(std::vector<std::shared_ptr<info>>& otherInfos);
 
     /**
      * @return Number of point along X axis
@@ -557,6 +596,7 @@ public:
      * @brief Replace whole meta matrix with a new one
      * @param m shared pointer to n meta matrix
      */
+	
     void Data(std::shared_ptr<matrix_t> m);
 
     /**
@@ -564,10 +604,7 @@ public:
      *
      */
 
-    size_t DimensionSize() const
-    {
-        return itsDimensionMatrix->Size();
-    }
+    size_t DimensionSize() const;
 
     /**
      * @brief Set the data value pointed by the iterators with a new one

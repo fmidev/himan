@@ -181,6 +181,60 @@ void info::Create(shared_ptr<grid> baseGrid)
 
 }
 
+void info::Merge(vector<shared_ptr<info>>& otherInfos)
+{
+
+    Reset();
+
+	for (size_t i = 0; i < otherInfos.size(); i++)
+	{
+		auto otherInfo = otherInfos[i];
+		
+		otherInfo->Reset();
+
+		while (otherInfo->NextTime())
+		{
+			if (itsTimeIterator->Add(otherInfo->Time())) // no duplicates
+			{
+				itsDimensionMatrix->SizeX(itsDimensionMatrix->SizeX()+1);
+			}
+
+			Time(otherInfo->Time());
+
+			otherInfo->ResetLevel();
+			
+			while (otherInfo->NextLevel())
+			{
+				if (itsLevelIterator->Add(otherInfo->Level())) // no duplicates
+				{
+					itsDimensionMatrix->SizeY(itsDimensionMatrix->SizeY()+1);
+				}
+
+				Level(otherInfo->Level());
+
+				otherInfo->ResetParam();
+
+				while (otherInfo->NextParam())
+					// Create empty placeholders
+				{
+					if (!itsParamIterator->Add(otherInfo->Param())) // no duplicates
+					{
+						continue;
+					}
+
+					itsDimensionMatrix->SizeZ(itsDimensionMatrix->SizeZ()+1);
+
+					Param(otherInfo->Param());
+					
+					Grid(make_shared<grid> (*otherInfo->Grid()));
+				}
+			}
+		}
+	}
+
+
+}
+
 const producer& info::Producer() const
 {
     return itsProducer;
@@ -560,4 +614,9 @@ HPProjectionType info::Projection() const
 {
 	// unsafe: will crash if grid is not set?
 	return Grid()->Projection();
+}
+
+size_t info::DimensionSize() const
+{
+	return itsDimensionMatrix->Size();
 }
