@@ -15,6 +15,12 @@
 #include "himan_common.h"
 #include "logger.h"
 
+#if defined __clang__
+
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+
+#endif
+
 /**
  * @namespace himan
  * @brief Bottom-level namespace for all himan-related stuff
