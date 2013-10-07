@@ -50,7 +50,7 @@ grid::grid(HPScanningMode theScanningMode,
 }
 
 grid::grid(const grid& other)
-	: itsData(new unpacked(other.Ni(), other.Nj()))
+	: itsData(new unpacked(*other.itsData))
 {
 	itsScanningMode = other.itsScanningMode;
 	itsUVRelativeToGrid = other.itsUVRelativeToGrid;

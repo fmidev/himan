@@ -19,7 +19,22 @@
 #include "point.h"
 #include "logger.h"
 #include "matrix.h"
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#pragma clang diagnostic ignored "-Winvalid-source-encoding"
+
 #include <NFmiGrid.h>
+
+#pragma clang diagnostic pop
+
+#else
+
+#include <NFmiGrid.h>
+
+#endif
+
 #include "packed_data.h"
 #include <boost/variant.hpp>
 
@@ -45,13 +60,10 @@ class grid
 		/**
 		 * @brief Copy constructor for grid
 		 *
-		 * TODO: Currently creates a new data matrix with same dimensions as the
-		 * one that's it's being copied from, but does not copy the contents. Should
-		 * we do as we do with info-class, ie copy metadata but share the pointer to
-		 * the data, or should we copy the data. Initial feeling is that latter is the
-		 * correct behaviour.
-		 * 
-		 * @param other
+		 * When grid is copied, the contents (ie. class d_matrix_t) is copied as
+		 * well.
+		 *
+		 * @param other 
 		 */
 		
 		grid(const grid& other);
