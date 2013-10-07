@@ -69,6 +69,11 @@ protected:
 		itsLeadingDimension = theLeadingDimension;
 	}
 
+	HPDimensionType Dimension() const
+	{
+		return itsLeadingDimension;
+	}
+	
 	void FeederInfo(std::shared_ptr<info> theFeederInfo)
 	{
 		itsFeederInfo = theFeederInfo;
