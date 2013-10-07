@@ -102,12 +102,10 @@ himan::HPFileType util::FileType(const string& theFile)
 
     ifstream f(theFile.c_str(), ios::in | ios::binary);
 
-    char* content;
+    long keywordLength = 4;
 
-    short keywordLength = 4;
-
-    content = static_cast<char*> (malloc((keywordLength + 1) * sizeof(char)));
-
+	char content[keywordLength];
+	
     f.read(content, keywordLength);
 
     HPFileType ret = kUnknownFile;
@@ -126,9 +124,7 @@ himan::HPFileType util::FileType(const string& theFile)
 
         keywordLength = 5;
 
-        free(content);
-
-        content = static_cast<char*> (malloc((keywordLength + 1) * sizeof(char)));
+		char content[keywordLength];
 
         f.read(content, keywordLength);
 
@@ -138,8 +134,6 @@ himan::HPFileType util::FileType(const string& theFile)
         }
 
     }
-
-    free (content);
 
     return ret;
 }
@@ -557,4 +551,9 @@ HPPrecipitationForm util::PrecipitationForm(double T, double RH)
 	}
 
 	return ret;
+}
+
+double util::SaturationWaterVapourPressure(double T)
+{
+	return exp(1.809851 + 17.27 * T / (T + 237.3));
 }

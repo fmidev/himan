@@ -227,6 +227,16 @@ const std::vector<double> LCL(double P, double T, double TD);
 
 HPPrecipitationForm PrecipitationForm(double T, double RH);
 
+/**
+ * @brief Calculate saturation vapour pressure (mbar) over water
+ *
+ * @param T Temperature in Celsius
+ * @return Pressure
+ */
+
+double SaturationWaterVapourPressure(double T);
+
+
 } // namespace util
 } // namespace himan
 
