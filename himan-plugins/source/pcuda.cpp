@@ -37,7 +37,8 @@ bool pcuda::SetDevice(int deviceId) const
 
 	if ((err = cudaSetDevice(deviceId)) != cudaSuccess)
 	{
-		itsLogger->Error("Failed to select device #" + boost::lexical_cast<string> (deviceId));
+		itsLogger->Warning("Failed to select device #" + boost::lexical_cast<string> (deviceId));
+		itsLogger->Warning("Has another CUDA process reserved the card?");
 		return false;
 	}
 
