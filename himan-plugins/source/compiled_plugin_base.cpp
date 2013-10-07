@@ -315,12 +315,6 @@ bool compiled_plugin_base::GetAndSetCuda(shared_ptr<const configuration> conf, i
 		shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 		ret = p->SetDevice(threadIndex-1);
-		if (!ret)
-		{
-			// Setting device failed -- probably it is already in use by another process
-
-			conf->UseCuda(false);
-		}
 	}
 
 	return ret;
