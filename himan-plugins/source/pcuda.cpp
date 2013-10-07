@@ -37,7 +37,7 @@ bool pcuda::SetDevice(int deviceId) const
 
 	if ((err = cudaSetDevice(deviceId)) != cudaSuccess)
 	{
-		itsLogger->Error("Failed to choose device #" + boost::lexical_cast<string> (deviceId));
+		itsLogger->Error("Failed to select device #" + boost::lexical_cast<string> (deviceId));
 		return false;
 	}
 
