@@ -11,6 +11,7 @@
 #include <thread>
 #include <sstream>
 #include "util.h"
+#include "unistd.h" // getuid())
 
 using namespace std;
 using namespace himan::plugin;
@@ -32,24 +33,21 @@ void neons::InitPool()
 {
 	NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
 
-	char* host;
-
-	host = getenv("HOSTNAME");
-
-	// TODO: a smarter way to check if we are in production server
-
-	if (host != NULL)
+	uid_t uid = getuid();
+	
+	if (uid == 1459) // weto
 	{
-		if (string(host) == "gogol.fmi.fi" || string(host) == "tolstoi.fmi.fi")
-		{
-			NFmiNeonsDBPool::Instance()->ExternalAuthentication(true);
-			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
-		}
-		else if (string(host) == "jeera.fmi.fi" || string(host) == "sahrami.fmi.fi")
+		char* base = getenv("MASALA_BASE");
+
+		if (string(base) == "/masala")
 		{
 			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
 			NFmiNeonsDBPool::Instance()->Username("wetodb");
 			NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
+		}
+		else
+		{
+			itsLogger->Warning("Program executed as uid 1459 ('weto') but MASALA_BASE not set");
 		}
 	}
 }
