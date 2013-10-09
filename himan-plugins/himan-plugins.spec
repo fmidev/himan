@@ -9,7 +9,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.10.2
+Version: 13.10.9
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -75,6 +75,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libpreform_pressure.so
 %{_libdir}/himan-plugins/libquerydata.so
 %{_libdir}/himan-plugins/librain_type.so
+%{_libdir}/himan-plugins/librelative_humidity.so
 %{_libdir}/himan-plugins/libseaicing.so
 %{_libdir}/himan-plugins/libtk2tc.so
 %{_libdir}/himan-plugins/libtpot.so
@@ -83,6 +84,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Oct  9 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.9-1.el6.fmi
+- Support kurkuma.fmi.fi
+* Tue Oct  8 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.8-1.el6.fmi
+- relative_humidity plugin
 * Wed Oct  2 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.2-1.el6.fmi
 - Fix for preform_pressure
 * Thu Sep 26 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.26-1.el6.fmi
