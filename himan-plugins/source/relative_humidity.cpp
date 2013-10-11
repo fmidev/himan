@@ -23,10 +23,11 @@ using namespace himan::plugin;
 const double b = 17.27;
 const double c = 237.3;
 const double d = 1.8;
+const double e = 0.622; // ratio molecular weight of water vapor /dry air
 
 relative_humidity::relative_humidity()
 {
-	itsClearTextFormula = "RH = 100 * (exp(d + b * (TD / (TD + c))) / (exp(d + b) * (T / (T + c))))";
+	itsClearTextFormula = "RH = 100 *  (P * Q / 0.622 / es) * (P - es) / (P - Q * P / 0.622)";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("relative_humidity"));
 
@@ -286,7 +287,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 				
 				double es = util::Es(T) ;
 
-				double RH = (P * Q / 0.622 / es) * (P - es) / (P - Q * P / 0.622);
+				double RH = (P * Q / e / es) * (P - es) / (P - Q * P / e);
 
 				if (RH > 1.0)
 				{
