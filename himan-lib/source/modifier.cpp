@@ -128,7 +128,7 @@ void modifier_max::Calculate(double theValue, double theHeight)
 
 	itsResult->ParamIndex(0);
 
-	if (IsMissingValue(itsResult->Value())
+	if (IsMissingValue(itsResult->Value()))
 	{
 		itsResult->Value(theValue);
 		itsResult->ParamIndex(1);
@@ -167,7 +167,7 @@ void modifier_min::Calculate(double theValue, double theHeight)
 
 	itsResult->ParamIndex(0);
 
-	if (IsMissingValue(itsResult->Value())
+	if (IsMissingValue(itsResult->Value()))
 	{
 		itsResult->Value(theValue);
 		itsResult->ParamIndex(1);
@@ -284,7 +284,7 @@ void modifier_sum::Calculate(double theValue, double theHeight)
 
 	itsResult->ParamIndex(0); // Max
 
-	if (IsMissingValue(itsResult->Value()) // First value
+	if (IsMissingValue(itsResult->Value())) // First value
 	{
 		itsResult->Value(theValue);
 	}
