@@ -388,3 +388,61 @@ string neons::GribParameterName(long fmiParameterId, long category, long discipl
 	string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, category, discipline, producer);
 	return paramName;   
 }
+
+string neons::ProducerMetaData(long producerId, const string& attribute) const
+{
+	string ret;
+
+	if (attribute == "last hybrid level number")
+	{
+		switch (producerId)
+		{
+			case 1:
+			case 3:
+			case 230:
+				ret = "65";
+			break;
+
+			case 130:
+			case 240:
+				ret = "137";
+				break;
+
+			default:
+				throw runtime_error(ClassName() + ": Producer not supported");
+				break;
+
+		}
+	}
+	else if (attribute == "first hybrid level number")
+	{
+		switch (producerId)
+		{
+			case 1:
+			case 3:
+			case 130:
+			case 230:
+			case 240:
+				ret = "1";
+				break;
+
+			default:
+				throw runtime_error(ClassName() + ": Producer not supported");
+				break;
+
+		}
+	}
+	else
+	{
+		throw runtime_error(ClassName() + ": Attribute not recognized");
+	}
+
+	return ret;
+
+	
+	// In the future maybe something like this:
+
+	//Init();
+	
+	//string query = "SELECT value FROM producers_eav WHERE producer_id = " + boost::lexical_cast<string> (producerId) + " AND attribute = '" + attribute + "'";
+}

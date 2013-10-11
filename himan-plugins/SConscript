@@ -22,7 +22,7 @@ if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
 
 # List all auxiliary plugins
 
-auxiliary_plugins = ['cache','fetcher','grib','neons','pcuda','querydata','writer']
+auxiliary_plugins = ['cache','fetcher','grib','hitool','neons','pcuda','querydata','writer']
 
 # List all compiled plugins that have only CPU implementation here
 

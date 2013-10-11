@@ -87,6 +87,16 @@ public:
 
 	NFmiNeonsDB& NeonsDB();
 
+	/**
+	 * @brief Fetch producer metadata from neons (eventually)
+	 *
+     * @param producerId Producer id
+     * @param attribute
+     * @return String containing the result, empty string if attribute is not found
+     */
+	
+	std::string ProducerMetaData(long producerId, const std::string& attribute) const;
+
 private:
 
 	/**
