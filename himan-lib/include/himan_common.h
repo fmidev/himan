@@ -18,7 +18,7 @@
 // Work around "passing 'T' chooses 'int' over 'unsigned int'" warnings when T
 // is an enum type:
 
-#if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)) && ! __CUDACC__
+#if !defined __clang__ && defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)) && ! __CUDACC__
 #pragma GCC diagnostic ignored "-Wsign-promo"
 #endif
 
@@ -181,6 +181,7 @@ enum HPExceptionType
 	kUnknownException = 0,
 	kFileMetaDataNotFound,
 	kFileDataNotFound,
+	kFunctionNotImplemented
 };
 
 /**
@@ -232,7 +233,17 @@ enum HPAggregationType
 	kAccumulation,
 	kMaximum,
 	kMinimum,
-	kDifference
+	kDifference,
+
+	/*
+	 * Parameters refer to another parameter minimum and maximum value, used in modifier.
+	 * Not a perfect way to describe the relationship between two separate parameters
+	 * but as we don't have combined parameters this is maybe the nicest way to do it.
+	*/
+
+	kExternalMinimum,
+	kExternalMaximum
+
 };
 
 const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToString = map_list_of
@@ -242,6 +253,20 @@ const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToStr
 		(kMaximum, "maximum")
 		(kMinimum, "minimum")
 		(kDifference, "difference");
+
+enum HPModifierType
+{
+	kUnknownModifierType = 0,
+	kAverageModifier,
+	kAccumulationModifier,
+	kMaximumModifier,
+	kMinimumModifier,
+	kDifferenceModifier,
+	kMaximumMinimumModifier,
+	kCountModifier,
+	kFindHeightModifier,
+	kFindValueModifier
+};
 
 /// Precipitation forms as agreed by FMI
 
