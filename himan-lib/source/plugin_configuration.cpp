@@ -151,7 +151,7 @@ void plugin_configuration::WriteStatistics()
 	
 	size_t elapsedTime = static_cast<size_t> (itsStatistics->itsTimer->GetTime());
 
-	size_t threadCountDivisor = itsStatistics->itsUsedThreadCount;
+	size_t threadCountDivisor = static_cast<size_t> (itsStatistics->itsUsedThreadCount);
 
 	if (itsLeadingDimension == kTimeDimension && itsInfo->SizeTimes() < static_cast<size_t> (itsStatistics->itsUsedThreadCount))
 	{
