@@ -208,34 +208,17 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 	bool dataFoundFromRRParam = true; // Assume that we have parameter RR-KGM2 present
 
+	level groundLevel(kHeight, 0 ,"HEIGHT");
+
+	groundLevel = LevelTransform(conf->SourceProducer(), param("RR-KGM2"), groundLevel);
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
 		{
 			shared_ptr<info> RRInfo;
 
-			int paramStep;
-
-			if (myTargetInfo->Param().Name() == "RR-1-MM")
-			{
-				paramStep = 1;
-			}
-			else if (myTargetInfo->Param().Name() == "RR-3-MM")
-			{
-				paramStep = 3;
-			}
-			else if (myTargetInfo->Param().Name() == "RR-6-MM")
-			{
-				paramStep = 6;
-			}
-			else if (myTargetInfo->Param().Name() == "RR-12-MM")
-			{
-				paramStep = 12;
-			}
-			else
-			{
-				throw runtime_error(ClassName() + ": Unsupported parameter: " + myTargetInfo->Param().Name());
-			}
+			int paramStep = myTargetInfo->Param().Aggregation().TimeResolutionValue();
 
 			if (myTargetInfo->Time().StepResolution() != kHourResolution)
 			{
@@ -251,17 +234,42 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 				forecast_time prevTimeStep = myTargetInfo->Time();
 
+#ifdef EMULATE_ZERO_TIMESTEP_DATA
+
+				If model does not provide data for timestep 0 and we want to emulate
+				that by providing a zero-grid, enable this pre-process block
+
+				if (prevTimeStep.Step() == paramStep)
+				{
+					/*
+					 * If current timestep equals to target param aggregation time value, 
+					 * use constant 0 field as previous data.
+					 *
+					 * For example for param RR-3-H if step is 3.
+					 */
+
+					prevInfo = make_shared<info> (*myTargetInfo);
+					vector<param> temp = { param("RR-KGM2") };
+					prevInfo->Params(temp);
+					prevInfo->Create();
+					prevInfo->First();
+					prevInfo->Grid()->Data()->Fill(0);
+
+				}				
+				else 
+#endif
+					
 				if (prevTimeStep.Step() >= paramStep && prevTimeStep.Step() - paramStep >= 0)
 				{
 					prevTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -paramStep);
 
-					prevInfo = FetchSourcePrecipitation(conf,prevTimeStep,myTargetInfo->Level(),dataFoundFromRRParam);
+					prevInfo = FetchSourcePrecipitation(conf,prevTimeStep,groundLevel,dataFoundFromRRParam);
 				}
 				else
 				{
 					// Unable to get data for this step, as target time is smaller than step time
 					// (f.ex fcst_per = 2, and target parameter is rr3h
-			
+
 					myThreadedLogger->Info("Not calculating " + myTargetInfo->Param().Name() + " for step " + boost::lexical_cast<string> (prevTimeStep.Step()));
 
 					if (conf->StatisticsEnabled())
@@ -270,11 +278,11 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 
-					/*
-					 * If we want to write empty files to disk, comment out the following code
-					 */
+#ifdef WRITE_EMPTY_FILES
 
 					/*
+					 * If empty files need to be written to disk, enable the following code
+					 */
 
 					myTargetInfo->Data()->Fill(kFloatMissing);
 
@@ -284,14 +292,15 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 						w->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
 					}
-					*/
+
+#endif
 
 					continue;
 				}
 
 				// Get data for current step
 
-				RRInfo = FetchSourcePrecipitation(conf,myTargetInfo->Time(),myTargetInfo->Level(),dataFoundFromRRParam);
+				RRInfo = FetchSourcePrecipitation(conf,myTargetInfo->Time(),groundLevel,dataFoundFromRRParam);
 
 			}
 			catch (HPExceptionType e)
