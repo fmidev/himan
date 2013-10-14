@@ -406,6 +406,13 @@ void json_parser::ParseTime(const producer& sourceProducer,
 
 	/* Check time steps */
 
+	/*
+	 * Three ways of providing information on steps:
+	 * - hours
+	 * - start_hour + stop_hour + step
+	 * - start_minute + stop_minute + step
+     */
+
 	try
 	{
 
@@ -438,31 +445,41 @@ void json_parser::ParseTime(const producer& sourceProducer,
 
 		anInfo->Times(theTimes);
 
+		return;
+
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		// hours was not specified
-		// check if start/stop times are
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+	}
 
-		int start = boost::lexical_cast<int> (pt.get<string>("start_hour"));
-		int stop = boost::lexical_cast<int> (pt.get<string>("stop_hour"));
-		int step = boost::lexical_cast<int> (pt.get<string>("step"));
+	// hours was not specified
+	// check if start/stop times are
 
-		string unit = pt.get<string>("step_unit");
+	// First check step_unit which is deprecated and issue warning
+	try
+	{
+		string stepUnit = pt.get<string>("step_unit");
 
-		if (unit != "hour" && unit != "minute")
+		if (!stepUnit.empty())
 		{
-			throw runtime_error("Step unit '" + unit + "' not supported");
+			itsLogger->Warning("Key 'step_unit' is deprecated");
 		}
+	}
+	catch (exception& e)
+	{}
+
+
+	try
+	{
+		int start = pt.get<int>("start_hour");
+		int stop = pt.get<int>("stop_hour");
+		int step = pt.get<int>("step");
 
 		HPTimeResolution stepResolution = kHourResolution;
-
-		if (unit == "minute")
-		{
-			start *= 60;
-			stop *= 60;
-			stepResolution = kMinuteResolution;
-		}
 
 		if (stop > 1<<8)
 		{
@@ -491,7 +508,54 @@ void json_parser::ParseTime(const producer& sourceProducer,
 
 		anInfo->Times(theTimes);
 
+		return;
+
 	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+	}
+	
+	try
+	{
+		// try start_minute/stop_minute
+
+		int start = pt.get<int>("start_minute");
+		int stop = pt.get<int>("stop_minute");
+		int step = pt.get<int>("step");
+
+		HPTimeResolution stepResolution = kMinuteResolution;
+
+		if (stop > 1<<8)
+		{
+			anInfo->StepSizeOverOneByte(true);
+		}
+
+		int curtime = start;
+
+		vector<forecast_time> theTimes;
+
+		do
+		{
+
+			forecast_time theTime (shared_ptr<raw_time> (new raw_time(originDateTime, mask)),
+								   shared_ptr<raw_time> (new raw_time(originDateTime, mask)));
+
+			theTime.ValidDateTime()->Adjust(stepResolution, curtime);
+
+			theTime.StepResolution(stepResolution);
+
+			theTimes.push_back(theTime);
+
+			curtime += step;
+
+		} while (curtime <= stop);
+
+		anInfo->Times(theTimes);
+	}	
 	catch (exception& e)
 	{
 		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
@@ -807,8 +871,8 @@ void json_parser::ParseLevels(shared_ptr<info> anInfo, const boost::property_tre
 	try
 	{
 
-		string levelTypeStr = pt.get<std::string>("leveltype");
-		string levelValuesStr = pt.get<std::string>("levels");
+		string levelTypeStr = pt.get<string>("leveltype");
+		string levelValuesStr = pt.get<string>("levels");
 
 		vector<level> levels = LevelsFromString(levelTypeStr, levelValuesStr);
 
