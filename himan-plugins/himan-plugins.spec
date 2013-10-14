@@ -9,7 +9,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.10.9
+Version: 13.10.14
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -64,6 +64,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libfetcher.so
 %{_libdir}/himan-plugins/libfog.so
 %{_libdir}/himan-plugins/libgrib.so
+%{_libdir}/himan-plugins/libhitool.so
 %{_libdir}/himan-plugins/libhybrid_height.so
 %{_libdir}/himan-plugins/libhybrid_pressure.so
 %{_libdir}/himan-plugins/libicing.so
@@ -84,6 +85,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct 14 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.14-1.el6.fmi
+- Leveltype fixes in hybrid_pressure and precipitation
+- Add hitool-plugin
 * Wed Oct  9 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.9-1.el6.fmi
 - Support kurkuma.fmi.fi
 * Tue Oct  8 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.8-1.el6.fmi
