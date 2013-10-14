@@ -9,7 +9,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 13.10.2
+Version: 13.10.14
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -58,6 +58,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Oct 14 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.14-1.el6.fmi
+- Fix to HIMAN-13
+* Tue Oct  8 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.8-1.el6.fmi
+- Small changes
 * Wed Oct  2 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.2-1.el6.fmi
 - Small changes wrt logging
 * Thu Sep 26 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.6-1.el6.fmi
