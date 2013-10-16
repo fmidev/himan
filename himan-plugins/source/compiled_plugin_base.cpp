@@ -9,6 +9,7 @@
 #include "compiled_plugin_base.h"
 #include <boost/thread.hpp>
 #include "plugin_factory.h"
+#include "logger_factory.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -274,6 +275,15 @@ void compiled_plugin_base::StoreGrib1ParameterDefinitions(vector<param> params, 
 	for (unsigned int i = 0; i < params.size(); i++)
 	{
 		long parm_id = n->NeonsDB().GetGridParameterId(table2Version, params[i].Name());
+
+		if (parm_id == -1)
+		{
+			unique_ptr<logger> aLogger = std::unique_ptr<logger> (himan::logger_factory::Instance()->GetLog("compiled_plugin_base"));
+
+			aLogger->Warning("Grib1 parameter definitions not found from Neons");
+			aLogger->Warning("table2Version is " + boost::lexical_cast<string> (table2Version) + ", parm_name is " + params[i].Name());
+		}
+
 		params[i].GribIndicatorOfParameter(parm_id);
 		params[i].GribTableVersion(table2Version);
 	}
