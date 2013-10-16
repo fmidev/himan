@@ -14,6 +14,14 @@
 namespace himan
 {
 
+/**
+ * @class modifier
+ *
+ * Modifier is a tool to calculate different kinds of statistics from an input
+ * data set. The layout is heavily influenced (or copied) from NFmiModifier,
+ * but adjusted for himan.
+ */
+	
 class modifier
 {
 	public:
