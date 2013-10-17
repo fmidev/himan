@@ -305,7 +305,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 		   	p.Unit(kK);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "Pa s-1")
+		else if (itsGrib->Message()->ParameterUnit() == "Pa s-1" || itsGrib->Message()->ParameterUnit() == "Pa s**-1" )
 		{
 		   	p.Unit(kPas);
 		}
@@ -332,6 +332,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		else if (itsGrib->Message()->ParameterUnit() == "m**2 s**-2")
 		{
 			p.Unit(kGph);
+		}
+		else if (itsGrib->Message()->ParameterUnit() == "kg kg**-1")
+		{
+			p.Unit(kKgkg);
 		}
 		else
 		{
