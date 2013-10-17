@@ -86,7 +86,7 @@ double modifier::MinimumHeight() const
 	throw kFunctionNotImplemented;
 }
 
-void modifier::Clear()
+void modifier::Clear(double fillValue)
 {
 	for (itsResult->ResetTime(); itsResult->NextTime();)
 	{
@@ -94,7 +94,7 @@ void modifier::Clear()
 		{
 			for (itsResult->ResetParam(); itsResult->NextParam();)
 			{
-				itsResult->Grid()->Data()->Fill(kHPMissingValue);
+				itsResult->Grid()->Data()->Fill(fillValue);
 			}
 		}
 	}
@@ -302,40 +302,144 @@ double modifier_sum::Height() const
 
 /* ----------------- */
 
-double modifier_mean::Value() const
+void modifier_mean::Init(std::shared_ptr<const info> sourceInfo)
 {
-	itsResult->ParamIndex(0);
-	return itsResult->Value() / static_cast<double> (0); // INTENTIONAL FOR NOW
+	itsResult = std::shared_ptr<info> (new info(*sourceInfo));
+	itsResult->Create();
+
+	Clear();
+
+	itsResult->First();
+
+	itsValuesCount.resize(itsResult->Grid()->Size());
+	
+	std::fill(itsValuesCount.begin(), itsValuesCount.end(), kHPMissingInt);
+
 }
 
-/* ----------------- */
-/*
-void modifier_count::Calculate(double theValue, double theHeight)
-{
-	itsValuesCount++;
 
+void modifier_mean::Calculate(double theValue, double theHeight)
+{
 	if (IsMissingValue(theValue))
 	{
-		itsMissingValuesCount++;
 		return;
 	}
 
-	if (theValue >= itsLowerLimit && theValue <= itsUpperLimit)
+	modifier_sum::Calculate(theValue, theHeight);
+
+	itsResult->ParamIndex(0);
+
+	if (IsMissingValue(itsResult->Value())) // First value
 	{
-		itsRequestedValuesCount++;
+		//itsResult->Value(theValue);
+		itsValuesCount[itsResult->LocationIndex()] = 1;
+	}
+	else
+	{
+		//double val = itsResult->Value();
+		size_t count = itsValuesCount[itsResult->LocationIndex()];
+
+		//itsResult->Value(theValue+val);
+		itsValuesCount[itsResult->LocationIndex()] = count++;
 	}
 }
 
-double modifier_count::Value() const
+std::shared_ptr<info> modifier_mean::Results() const
 {
-	return static_cast<double> (itsRequestedValuesCount);
+	itsResult->ParamIndex(0);
+
+	for (itsResult->ResetLocation(); itsResult->NextLocation();)
+	{
+		double val = itsResult->Value();
+		size_t count = itsValuesCount[itsResult->LocationIndex()];
+
+		if (val != kHPMissingValue && count != static_cast<size_t> (kHPMissingInt))
+		{
+			itsResult->Value(val / static_cast<double> (count));
+		}		
+	}
+
+	return itsResult;
+}
+
+/* ----------------- */
+
+void modifier_count::Init(std::shared_ptr<const info> sourceInfo)
+{
+	itsResult = std::shared_ptr<info> (new info(*sourceInfo));
+	itsResult->Create();
+
+	Clear(0.);
+
+	itsResult->First();
+
+	itsLowerValueThreshold.resize(itsResult->Grid()->Size());
+
+	std::fill(itsLowerValueThreshold.begin(), itsLowerValueThreshold.end(), kHPMissingValue);
+
+}
+
+void modifier_count::Calculate(double theValue, double theHeight)
+{
+	size_t locationIndex = itsResult->LocationIndex();
+
+	itsFindValue->LocationIndex(locationIndex);
+
+	double findValue = itsFindValue->Value();
+
+	itsResult->ParamIndex(0); // We are interested in the value here
+
+	if (IsMissingValue(theValue) || IsMissingValue(findValue))
+	{
+		return;
+	}
+
+	double lowerValueThreshold = itsLowerValueThreshold[locationIndex];
+
+	if (IsMissingValue(lowerValueThreshold))
+	{
+		itsLowerValueThreshold[locationIndex] = theValue;
+		return;
+	}
+
+	/**
+	 *
+	 * If lower value is found and current value is above wanted value, wanted value
+	 * is found.
+	 *
+	 * Made up example
+	 *
+	 * How many times does value 11 exist inside a value range
+	 *
+	 * Input data set:
+	 *
+	 * Value
+	 *
+	 * 10
+	 * --- Value 11 is found between these levels" --
+	 * 12
+	 *  9
+	 *  9
+	 * --- Value 11 is found between these levels! --
+	 * 16	 
+	 * 17
+	 *
+	 */
+
+	if (lowerValueThreshold <= findValue && theValue >= findValue)
+	{
+		itsResult->Value() == kHPMissingValue ? itsResult->Value(1) : itsResult->Value(itsResult->Value() + 1);
+
+		return;
+	}
+
+	itsLowerValueThreshold[locationIndex] = theValue;
 }
 
 double modifier_count::Height() const
 {
 	throw kFunctionNotImplemented;
 }
-*/
 
 /* ----------------- */
 

@@ -44,7 +44,7 @@ class modifier
 		virtual double MaximumHeight() const;
 
 		virtual void Calculate(double theValue, double theHeight) = 0;
-		virtual void Clear();
+		virtual void Clear(double fillValue = kHPMissingValue);
 
 		bool ReturnHeight() const;
 		void ReturnHeight(bool theReturnHeight);
@@ -135,6 +135,7 @@ class modifier_sum : public modifier
 		virtual std::string ClassName() const { return "himan::plugin::modifier_sum"; }
 
 		virtual double Height() const;
+
 		virtual void Calculate(double theValue, double theHeight);
 };
 
@@ -146,23 +147,33 @@ class modifier_mean : public modifier_sum
 
 		virtual std::string ClassName() const { return "himan::plugin::modifier_mean"; }
 
-		virtual double Value() const;
+		virtual void Calculate(double theValue, double theHeight);
+
+		virtual std::shared_ptr<info> Results() const;
+
+		virtual void Init(std::shared_ptr<const himan::info> sourceInfo);
+
+	private:
+		std::vector<size_t> itsValuesCount;
 };
 
 class modifier_count : public modifier
 {
 	public:
-		modifier_count() : modifier(), itsRequestedValuesCount(0) {}
+		modifier_count() : modifier() {}
 		virtual ~modifier_count() {}
 
 		virtual std::string ClassName() const { return "himan::plugin::modifier_count"; }
 
 		virtual double Height() const;
-		virtual double Value() const;
+
 		virtual void Calculate(double theValue, double theHeight);
 
+		virtual void Init(std::shared_ptr<const himan::info> sourceInfo);
+
 	private:
-		size_t itsRequestedValuesCount;
+		std::vector<double> itsLowerValueThreshold;
+
 };
 
 class modifier_findheight : public modifier
