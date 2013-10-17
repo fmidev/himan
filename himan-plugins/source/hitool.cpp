@@ -163,8 +163,10 @@ shared_ptr<info> hitool::VerticalExtremeValue(hitool_search_options& opts)
 
 	ret->First();
 
+#ifndef NDEBUG
 	size_t retGridSize = ret->Grid()->Size();
-
+#endif
+	
 	for (int levelValue = lastHybridLevel; levelValue >= firstHybridLevel; levelValue--)
 	{
 		level currentLevel(kHybrid, levelValue, "HYBRID");
