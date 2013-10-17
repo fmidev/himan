@@ -9,13 +9,28 @@
 #include "querydata.h"
 #include "logger_factory.h"
 #include <fstream>
+
+#ifdef __clang__
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#pragma clang diagnostic ignored "-Winvalid-source-encoding"
+#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+
+#endif
+
 #include <NFmiQueryData.h>
 #include <NFmiTimeList.h>
 #include <NFmiLatLonArea.h>
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
-#include <NFmiGrid.h>
 #include <NFmiQueryDataUtil.h>
+
+#ifdef __clang__
+
+#pragma clang diagnostic pop
+
+#endif
 
 using namespace std;
 using namespace himan::plugin;
@@ -78,7 +93,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HP
 
     NFmiFastQueryInfo qinfo = qdata.get();
 
-    qinfo.SetProducer(NFmiProducer(theInfo->Producer().Id(), theInfo->Producer().Name()));
+    qinfo.SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo->Producer().Id()), theInfo->Producer().Name()));
 
     /*
      * At the same time check that we have only constant-sized grids
@@ -326,6 +341,5 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(shared_ptr<info> info, bo
 
 shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const search_options& options, bool readContents)
 {
-	itsLogger->Fatal("Function FromFile() not implemented yet");
-	exit(1);
+	throw runtime_error(ClassName() + ": Function FromFile() not implemented yet");
 }
