@@ -166,7 +166,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 	// Required source parameters
 
 	param TParam("T-K");
-	param PParam("P-PA");
+	params PParam = { param("P-PA"), param("P-HPA") };
 	param VVParam("VV-PAS");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (threadIndex)));

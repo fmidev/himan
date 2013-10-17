@@ -32,6 +32,8 @@ namespace himan
 namespace plugin
 {
 
+typedef std::vector<himan::param> params;
+
 class fetcher : public auxiliary_plugin
 {
 public:
@@ -54,8 +56,21 @@ public:
 
     virtual HPVersionNumber Version() const
     {
-        return HPVersionNumber(0, 1);
+        return HPVersionNumber(1, 0);
     }
+
+
+	/**
+	 *
+     * @param config
+     * @param requestedValidTime
+     * @param requestedLevel
+     * @param requestedParams
+     * @param readPackedData
+     * @return
+     */
+
+    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const params& requestedParams, bool readPackedData = false);
 
 	/**
 	 *
@@ -64,9 +79,13 @@ public:
      * @param requestedLevel
      * @param requestedParam
 	 * @param readPackedData Whether to read unpacked data (from grib only!). Caller must do unpacking.
+     * @param controlWaitTime Whether this function should control wait times if they are specified.
+	 * Default is true, will be set to false if this function is called from multi-param Fetch()
      * @return
      */
-    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam, bool readPackedData = false);
+
+    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam, bool readPackedData = false, bool controlWaitTime = true);
+
 
 private:
 

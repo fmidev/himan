@@ -27,7 +27,7 @@
 using namespace himan::plugin;
 using namespace std;
 
-const unsigned int sleepSeconds = 10;
+const unsigned int SLEEPSECONDS = 10;
 
 shared_ptr<cache> itsCache;
 
@@ -39,8 +39,62 @@ fetcher::fetcher()
 shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config,
 										const forecast_time& requestedTime,
 										const level& requestedLevel,
-										const param& requestedParam,
+										const params& requestedParams,
 										bool readPackedData)
+{
+	unsigned int waitedSeconds = 0;
+
+	shared_ptr<info> ret;
+	
+	do
+	{
+		for (size_t i = 0; i < requestedParams.size(); i++)
+		{
+			try
+			{
+				ret = Fetch(config, requestedTime, requestedLevel, requestedParams[i], readPackedData, false);
+				
+				return ret;
+			}
+			catch (const HPExceptionType& e)
+			{
+				if (e != kFileDataNotFound)
+				{
+					throw e;
+				}
+			}
+			catch (const exception& e)
+			{
+				throw e;
+			}
+
+		}
+		if (config->FileWaitTimeout() > 0)
+		{
+			itsLogger->Debug("Sleeping for " + boost::lexical_cast<string> (SLEEPSECONDS) + " seconds (cumulative: " + boost::lexical_cast<string> (waitedSeconds) + ")");
+
+			if (!config->ReadDataFromDatabase())
+			{
+				itsLogger->Warning("file_wait_timeout specified but file read from Neons is disabled");
+			}
+
+			sleep(SLEEPSECONDS);
+		}
+
+		waitedSeconds += SLEEPSECONDS;
+	}
+	while (waitedSeconds < config->FileWaitTimeout() * 60);
+	
+	return ret;
+}
+
+
+shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config,
+										const forecast_time& requestedTime,
+										const level& requestedLevel,
+										const param& requestedParam,
+										bool readPackedData,
+										bool controlWaitTime)
 {
 
 	unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
@@ -143,21 +197,21 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			}
 		}
 
-		if (config->FileWaitTimeout() > 0)
+		if (controlWaitTime && config->FileWaitTimeout() > 0)
 		{
-			itsLogger->Debug("Sleeping for " + boost::lexical_cast<string> (sleepSeconds) + " seconds (cumulative: " + boost::lexical_cast<string> (waitedSeconds) + ")");
+			itsLogger->Debug("Sleeping for " + boost::lexical_cast<string> (SLEEPSECONDS) + " seconds (cumulative: " + boost::lexical_cast<string> (waitedSeconds) + ")");
 
 			if (!config->ReadDataFromDatabase())
 			{
 				itsLogger->Warning("file_wait_timeout specified but file read from Neons is disabled");
 			}
 
-			sleep(sleepSeconds);
+			sleep(SLEEPSECONDS);
 		}
 
-		waitedSeconds += sleepSeconds;
+		waitedSeconds += SLEEPSECONDS;
 	}
-	while (waitedSeconds < config->FileWaitTimeout() * 60);
+	while (controlWaitTime && waitedSeconds < config->FileWaitTimeout() * 60);
 
 	if (config->StatisticsEnabled())
 	{
