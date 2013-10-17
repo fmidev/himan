@@ -415,10 +415,27 @@ public:
 	 * Function will create a number of matrices to
 	 * hold the data. The number of the matrices depends on the size
 	 * of times, params and levels.
+	 *
+	 * Note! Create() [without any arguments] should only be called
+	 * when creating info based on the arguments read from configuration
+	 * file! If Create() is called on info that is for example created from
+	 * a grib file, the function will abort.
+	 *
+ 	 * Will preserve iterator positions.
 	 */
 
 	void Create();
 	void Create(std::shared_ptr<grid> baseGrid);
+
+	/**
+	 * @brief Will reset data backend, ie. create new data that is not attached
+	 * to any other info instance. The data contens will be the same as in the old
+	 * info.
+	 *
+	 * Will preserve iterator positions.
+     */
+
+	void ReGrid();
 
 	void Producer(long theFmiProducerID);
 	void Producer(const producer& theProducer);

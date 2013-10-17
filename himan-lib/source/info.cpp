@@ -61,7 +61,6 @@ info::info(const info& other)
 	// Data backend is SHARED
 	itsDimensionMatrix = other.itsDimensionMatrix;
 
-
 	itsLocationIndex = other.itsLocationIndex;
 
 	itsProducer = other.itsProducer;
@@ -130,7 +129,17 @@ std::ostream& info::Write(std::ostream& file) const
 void info::Create()
 {
     itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
+
+	size_t timeIndex = itsTimeIterator->Index();
+	size_t levelIndex = itsLevelIterator->Index();
+	size_t paramIndex = itsParamIterator->Index();
+
     Reset();
+
+	// Disallow Create() to be called if info is not originated from a configuration file
+
+	assert(itsScanningMode != kUnknownScanningMode);
+	assert(itsProjection != kUnknownProjection);
 
     while (NextTime())
     {
@@ -155,12 +164,67 @@ void info::Create()
         }
     }
 
+	itsTimeIterator->Set(timeIndex);
+	itsLevelIterator->Set(levelIndex);
+	itsParamIterator->Set(paramIndex);
+}
+
+void info::ReGrid()
+{
+	auto newDimensionMatrix = make_shared<matrix_t> (itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size());
+
+	// Current iterator position, will restore these after regrid has been made
+	
+	size_t timeIndex = itsTimeIterator->Index();
+	size_t levelIndex = itsLevelIterator->Index();
+	size_t paramIndex = itsParamIterator->Index();
+
+    Reset();
+
+    while (NextTime())
+    {
+        ResetLevel();
+
+        while (NextLevel())
+        {
+            ResetParam();
+
+            while (NextParam())
+                // Create empty placeholders
+            {
+				assert(Grid());
+				
+            	auto newGrid = make_shared<grid> (*Grid());
+
+            	if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
+            	{
+            		newGrid->Di(itsDi);
+            		newGrid->Dj(itsDj);
+            	}
+
+				newDimensionMatrix->Set(TimeIndex(), LevelIndex(), ParamIndex(), newGrid);
+
+            }
+        }
+    }
+
+	itsDimensionMatrix = newDimensionMatrix;
+	
+	itsTimeIterator->Set(timeIndex);
+	itsLevelIterator->Set(levelIndex);
+	itsParamIterator->Set(paramIndex);
+	
 }
 
 void info::Create(shared_ptr<grid> baseGrid)
 {
 
     itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
+
+	size_t timeIndex = itsTimeIterator->Index();
+	size_t levelIndex = itsLevelIterator->Index();
+	size_t paramIndex = itsParamIterator->Index();
+
     Reset();
 
     while (NextTime())
@@ -179,6 +243,9 @@ void info::Create(shared_ptr<grid> baseGrid)
         }
     }
 
+	itsTimeIterator->Set(timeIndex);
+	itsLevelIterator->Set(levelIndex);
+	itsParamIterator->Set(paramIndex);
 }
 
 void info::Merge(shared_ptr<info> otherInfo)
@@ -559,6 +626,7 @@ shared_ptr<grid> info::Grid(size_t timeIndex, size_t levelIndex, size_t paramInd
 
 shared_ptr<d_matrix_t> info::Data() const
 {
+	assert(Grid()->Data());
 	return Grid()->Data();
 }
 
