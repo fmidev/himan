@@ -214,18 +214,30 @@ double Gammas(double P, double T);
 const std::vector<double> LCL(double P, double T, double TD);
 
 /**
- * @brief Determine precipitation form from temperature and relative humidity
- * 
- * So-called "Koistinen formula".
+ * @brief Determine precipitation form from water probability
  *
- * https://wiki.fmi.fi/download/attachments/21139101/IL_olomuototuote_JK.ppt
+ * Water probability is determined with "Koistinen formula."
  * 
  * @param T Surface temperature in C
- * @param RH Surface relative humidity in &
+ * @param RH Surface relative humidity in %
  * @return Precipitation form: rain, snow or sleet
  */
 
 HPPrecipitationForm PrecipitationForm(double T, double RH);
+
+/**
+ * @brief Calculate water probability based on T and RH
+ * 
+ * So-called "Koistinen formula"
+ * 
+ * https://wiki.fmi.fi/download/attachments/21139101/IL_olomuototuote_JK.ppt
+ * 
+ * @param T Surface temperature in C
+ * @param RH Surface relative humidity in %
+ * @return Water probability
+ */
+
+double WaterProbability(double T, double RH);
 
 /**
  * @brief Calculate saturation vapour pressure (mbar) over water

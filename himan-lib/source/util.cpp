@@ -531,9 +531,14 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 	return ret;
 }
 
+double util::WaterProbability(double T, double RH)
+{
+	return 1 / (1 + exp(22 - 2.7 * T - 0.2 * RH));
+}
+
 HPPrecipitationForm util::PrecipitationForm(double T, double RH)
 {
-	const double probWater = 1 / (1 + exp(22 - 2.7 * T - 0.2 * RH));
+	const double probWater = WaterProbability(T, RH);
 
 	HPPrecipitationForm ret = kUnknownPrecipitationForm;
 
