@@ -77,14 +77,13 @@ void cache::SplitToPool(const shared_ptr<info> anInfo)
 
 	shared_ptr<grid> aGrid = anInfo->Grid();
 
-	shared_ptr<info> newInfo (new info(*anInfo));
+	auto newInfo = make_shared<info> (*anInfo);
 
 	newInfo->Params(params);
 	newInfo->Levels(levels);
 	newInfo->Times(times);
-	newInfo->Create();
+	newInfo->Create(aGrid);
 	newInfo->First();
-	newInfo->Grid(aGrid);
 
 	string uniqueName = UniqueName(newInfo);
 
