@@ -33,7 +33,6 @@ struct hitool_search_options
 	std::shared_ptr<const plugin_configuration> conf;
 	bool returnHeight;
 	size_t findNthValue;
-	double findValue;
 	std::shared_ptr<const info> findValueInfo;
 
 	hitool_search_options(const param& theWantedParam,
@@ -101,7 +100,7 @@ public:
 private:
 	std::shared_ptr<modifier> CreateModifier(hitool_search_options& opts, std::vector<himan::param>& params);
 
-	valueheight __GetData(const std::shared_ptr<const plugin_configuration> conf,
+	valueheight GetData(const std::shared_ptr<const plugin_configuration> conf,
 																	const level& wantedLevel,
 																	const param& wantedParam,
 																	const forecast_time& wantedTime);

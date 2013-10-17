@@ -142,9 +142,16 @@ shared_ptr<info> hitool::VerticalExtremeValue(hitool_search_options& opts)
 
 	auto mod = CreateModifier(opts, params);
 	
-	// CREATE TARGET INFO
-	
-	shared_ptr<info> ret (new info(*opts.conf->Info()));
+	/*
+	 * Modifier needs an info instance where it will store its data.
+	 * This info will be returned from this function.
+	 *
+	 * We'll use the plugin_configuration info as a base and just change
+	 * the parameters. Calling Create() will re-grid the info using
+	 * configuration file arguments.
+	 */
+
+	auto ret = make_shared<info>(*opts.conf->Info());
 
 	ret->Params(params);
 	
@@ -154,66 +161,51 @@ shared_ptr<info> hitool::VerticalExtremeValue(hitool_search_options& opts)
 
 	mod->Init(ret);
 
+	ret->First();
+
+	size_t retGridSize = ret->Grid()->Size();
+
 	for (int levelValue = lastHybridLevel; levelValue >= firstHybridLevel; levelValue--)
 	{
 		level currentLevel(kHybrid, levelValue, "HYBRID");
 
 		//itsLogger->Debug("Current level: " + boost::lexical_cast<string> (currentLevel.Value()));
 
-		valueheight data = __GetData(opts.conf, currentLevel, opts.wantedParam, opts.wantedTime);
+		valueheight data = GetData(opts.conf, currentLevel, opts.wantedParam, opts.wantedTime);
 
 		auto values = data.first;
 		auto heights = data.second;
 
-		assert(heights->Grid()->Size() == ret->Grid()->Size());
-		assert(values->Grid()->Size() == ret->Grid()->Size());
-		
-		if (opts.firstLevelValueInfo)
-		{
-			assert(opts.firstLevelValueInfo->Grid()->Size() == ret->Grid()->Size());
-			opts.firstLevelValueInfo->First();
+		assert(heights->Grid()->Size() == retGridSize);
+		assert(values->Grid()->Size() == retGridSize);
 
-			assert(opts.lastLevelValueInfo);
-		}
+		assert(opts.firstLevelValueInfo);
+		assert(opts.lastLevelValueInfo);
 
-		if (opts.lastLevelValueInfo)
-		{
-			assert(opts.lastLevelValueInfo->Grid()->Size() == ret->Grid()->Size());
-			opts.lastLevelValueInfo->First();
+		assert(opts.firstLevelValueInfo->Grid()->Size() == retGridSize);
+		opts.firstLevelValueInfo->First();
 
-			assert(opts.firstLevelValueInfo);
-		}
+		assert(opts.lastLevelValueInfo->Grid()->Size() == retGridSize);
+		opts.lastLevelValueInfo->First();
 
 		mod->ResetLocation();
 
 		values->First(); values->ResetLocation();
 		heights->First(); heights->ResetLocation();
 
-		while (mod->NextLocation() && values->NextLocation() && heights->NextLocation())
+		while (mod->NextLocation() && values->NextLocation() && heights->NextLocation() && opts.firstLevelValueInfo->NextLocation() && opts.lastLevelValueInfo->NextLocation())
 		{
 
-			double lowerThreshold, upperThreshold;
-			
-			if (opts.firstLevelValueInfo)
+			double lowerThreshold = opts.firstLevelValueInfo->Value();
+			double upperThreshold = opts.lastLevelValueInfo->Value();
+
+			if (lowerThreshold != kHPMissingValue && lowerThreshold != kFloatMissing)
 			{
-				opts.firstLevelValueInfo->NextLocation();
-				opts.lastLevelValueInfo->NextLocation();
-
-				lowerThreshold = opts.firstLevelValueInfo->Value();
-				upperThreshold = opts.lastLevelValueInfo->Value();
-
-				if (lowerThreshold != kHPMissingValue && lowerThreshold != kFloatMissing)
-				{
-					continue;
-				}
-				else if (upperThreshold != kHPMissingValue && upperThreshold != kFloatMissing)
-				{
-					continue;
-				}
+				continue;
 			}
-			else
+			else if (upperThreshold != kHPMissingValue && upperThreshold != kFloatMissing)
 			{
-				throw runtime_error(ClassName() + ": firstLevelValueInfo not set");
+				continue;
 			}
 
 			double v = values->Value();
@@ -240,7 +232,7 @@ shared_ptr<info> hitool::VerticalExtremeValue(hitool_search_options& opts)
 	return mod->Results();
 }
 
-valueheight hitool::__GetData(const shared_ptr<const plugin_configuration> conf,
+valueheight hitool::GetData(const shared_ptr<const plugin_configuration> conf,
 																const level& wantedLevel,
 																const param& wantedParam,
 																const forecast_time& wantedTime)
@@ -522,7 +514,7 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 
 	itsLogger->Info("Searching for mean vertical velocity in stratus");
 
-	opts.wantedParam = param("VVMS-MMS");
+	opts.wantedParam = param("VV-MS");
 	opts.lastLevelValueInfo = stratusTop;
 
 	itsFirstLevelValueBase = itsLastLevelValueBase = 0;
@@ -559,6 +551,7 @@ shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration
 	}
 
 	auto minLevel = make_shared<info> (*freezingLevel);
+	minLevel->ReGrid();
 	
 	// Rajoitetaan min. lämpötilan haku (ylimmän) nollarajan alapuolelle
 
@@ -578,7 +571,9 @@ shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration
 	}
 
 	auto constData = make_shared<info> (*freezingLevel);
-	constData->Create(); 
+
+	constData->ReGrid();
+	constData->First();
 	constData->Grid()->Data()->Fill(0);
 
 	// Min lämpötila ja sen korkeus [m]
