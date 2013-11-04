@@ -417,6 +417,13 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			}
 		}
 
+		/*
+		 * Newbase normalizes scanning mode to bottom left -- if that's not what
+		 * the target scanning mode is, we have to swap the data back.
+		 */
+
+		SwapTo(myTargetInfo, kBottomLeft);
+
 		if (conf->StatisticsEnabled())
 		{
 			processTimer->Stop();
