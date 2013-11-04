@@ -254,10 +254,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 		bool firstLevel = true;
 
-		myTargetInfo->Data()->Fill(0);
-
-			
-		
+		myTargetInfo->Data()->Fill(kFloatMissing);		
 		
 		HInfo->ResetLocation();
 		TInfo->ResetLocation();
@@ -275,10 +272,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 		{
 
 			targetGrid->Reset();		
-			myTargetInfo->FirstLocation();	
-			
-			 //minneköhän tää pitäis pistää
-			//itsLogger->Debug("kierros woop " +  boost::lexical_cast<string> (count) );
+			myTargetInfo->ResetLocation();	
 
 			shared_ptr<NFmiGrid> HGrid(HInfo->Grid()->ToNewbaseGrid());
 			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
@@ -292,11 +286,30 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			}
 
 
-			bool equalGrids = (	*myTargetInfo->Grid() == *HInfo->Grid() 
-								&& *myTargetInfo->Grid() == *TInfo->Grid() 
-								&& ( firstLevel || ( *myTargetInfo->Grid() == *prevHInfo->Grid() && *myTargetInfo->Grid() == *prevTInfo->Grid() ) ) );
+			bool equalGrids = 	(	
+									*myTargetInfo->Grid() == *HInfo->Grid() && 
+									*myTargetInfo->Grid() == *TInfo->Grid() && 	
+									( 	
+										firstLevel ||
+										( 	*myTargetInfo->Grid() == *prevHInfo->Grid() && 
+											*myTargetInfo->Grid() == *prevTInfo->Grid() 
+										)
+							   		) 
+								);
 
-			while ( myTargetInfo->NextLocation() && targetGrid->Next() && HGrid->Next() && TGrid->Next() && ( firstLevel || (prevHGrid->Next() && prevTGrid->Next() ) ) )
+			while 	( 
+						myTargetInfo->NextLocation() && 
+						targetGrid->Next() && 
+						HGrid->Next() && 
+						TGrid->Next() && 
+						( 
+							firstLevel || 
+							(
+								prevHGrid->Next() && 
+								prevTGrid->Next() 
+							) 
+						) 
+					)
 			{
 				count++;
 		
@@ -319,7 +332,17 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 					InterpolateToPoint(targetGrid, prevTGrid, equalGrids, prevTemp);
 				}
 
-				if (height == kFloatMissing || temp == kFloatMissing || (!firstLevel && ( prevHeight == kFloatMissing || prevTemp == kFloatMissing)))
+				if 	(
+						height == kFloatMissing || 
+						temp == kFloatMissing || 
+						(
+							!firstLevel && 
+							( 
+								prevHeight == kFloatMissing || 
+								prevTemp == kFloatMissing
+							)
+						)
+					)
 				{
 					missingCount++;
 
@@ -332,7 +355,6 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 				if (targetHeight == 0)
 				{
-					//itsLogger->Debug("level: " + boost::lexical_cast<string> (height));
 					
 					if (temp < targetTemperature)
 					{
@@ -351,10 +373,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 				else if (targetHeight != 0 && temp > targetTemperature)
 				{
 					targetHeight = 0;
-				}
+				}				
 
-		
-				//itsLogger->Debug("level: " + boost::lexical_cast<string> (targetHeight));
 				if (!myTargetInfo->Value(targetHeight))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
