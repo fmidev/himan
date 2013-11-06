@@ -370,7 +370,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 					}
 				}
 				//Inversiotilanteessa pelastetaan vielä pisteitä uudelleen laskentaan
-				else if (targetHeight != 0 && temp > targetTemperature)
+				else if (targetHeight != 0 && temp >= targetTemperature)
 				{
 					targetHeight = 0;
 				}				
