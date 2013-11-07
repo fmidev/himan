@@ -5,8 +5,8 @@
  * @author: partio
  */
 
-#ifndef DEWPOINT_H
-#define DEWPOINT_H
+#ifndef PRECIPITATION_H
+#define PRECIPITATION_H
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
@@ -54,7 +54,10 @@ public:
 private:
 
 	void Run(std::shared_ptr<info>, std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
-	void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
+	void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex, std::shared_ptr<info> curRRInfo, std::shared_ptr<info> prevRRInfo);
+
+	std::shared_ptr<himan::info> GetSourceDataForSum(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, bool& dataFoundFromRRParam);
+	std::shared_ptr<himan::info> GetSourceDataForRate(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, bool& dataFoundFromRRParam, bool forward);
 
 	/**
 	 * @brief Overcoat for fetching source data. By default will first try fetch data
@@ -70,7 +73,7 @@ private:
 	 * @return himan::info contain source data
 	 */
 
-	std::shared_ptr<info> FetchSourcePrecipitation(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, bool& dataFoundFromRRParam);
+	std::shared_ptr<info> FetchSourcePrecipitation(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, bool& dataFoundFromRRParam);
 
 	/**
 	 * @brief Fetching source data from cumulative precipitation parameter (RR-KGM2, 50)
@@ -83,7 +86,7 @@ private:
 	 * @return himan::info contain source data
 	 */
 
-	std::shared_ptr<info> FetchSourceRR(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel);
+	std::shared_ptr<info> FetchSourceRR(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, const level& wantedLevel);
 
 	/**
 	 * @brief Fetching source data from convective (RRC-KGM2) and large scale (RRR-KGM2) precipitation parameters
@@ -96,7 +99,7 @@ private:
 	 * @return himan::info contain source data
 	 */
 
-	std::shared_ptr<info> FetchSourceConvectiveAndLSRR(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel);
+	std::shared_ptr<info> FetchSourceConvectiveAndLSRR(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, const level& wantedLevel);
 
 };
 
@@ -110,5 +113,4 @@ extern "C" std::shared_ptr<himan_plugin> create()
 } // namespace plugin
 } // namespace himan
 
-
-#endif /* DEWPOINT_H */
+#endif /* PRECIPITATION_H */
