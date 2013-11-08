@@ -690,3 +690,10 @@ size_t info::DimensionSize() const
 {
 	return itsDimensionMatrix->Size();
 }
+
+void info::ReplaceParam(const param& theParam)
+{
+	param& p = itsParamIterator->At();
+
+	p = theParam;
+}

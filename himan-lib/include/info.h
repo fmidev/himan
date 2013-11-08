@@ -485,7 +485,8 @@ public:
 	size_t ParamIndex() const;
 	param& Param() const;
 	param& PeakParam(size_t theIndex) const;
-
+	void ReplaceParam(const param& theParam);
+	
 	size_t SizeParams() const;
 
 	/**
