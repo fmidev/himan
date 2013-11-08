@@ -122,15 +122,6 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(baseParam);
 	}
 
-	if (conf->Exists("rr") && conf->GetValue("rr") == "true")
-	{
-		baseParam.Name("RRR-KGM2");
-		baseParam.UnivId(49);
-		baseParam.Aggregation().TimeResolutionValue(1);
-
-		params.push_back(baseParam);
-	}
-
 	if (conf->Exists("snr") && conf->GetValue("snr") == "true")
 	{
 		baseParam.Name("SNR-KGM2");
@@ -221,7 +212,7 @@ void precipitation::Run(shared_ptr<info> myTargetInfo,
 	// Thread scope variables for source data; useful when calculating rate
 	// when step > 1 and using only one thread
 
-	// g++ support C++11-style thread-local variables only at version 4.8
+	// g++ supports C++11-style thread-local variables only at version 4.8
 
 	shared_ptr<himan::info> curRRInfo;
 	shared_ptr<himan::info> prevRRInfo;
@@ -271,12 +262,12 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 			if (isRRCalculation && (curRRInfo && myTargetInfo->Time().Step() > curRRInfo->Time().Step()))
 			{
 				prevRRInfo = curRRInfo;
-				curRRInfo = nullptr;
+				curRRInfo.reset();
 			}
 			else if (!isRRCalculation)
 			{
-				prevRRInfo = nullptr;
-				curRRInfo = nullptr;
+				prevRRInfo.reset();
+				curRRInfo.reset();
 			}
 
 			/*
@@ -302,21 +293,14 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 					myThreadedLogger->Debug("Searching for previous time step data");
 					prevRRInfo = GetSourceDataForRate(conf, myTargetInfo, dataFoundFromRRParam, false);
 				}
-				else
-				{
-					myThreadedLogger->Debug("Previous data step is " + boost::lexical_cast<string> (prevRRInfo->Time().Step()));
-				}
-
+	
 				// Next VALID data
 				if (!curRRInfo)
 				{
 					myThreadedLogger->Debug("Searching for next time step data");
 					curRRInfo = GetSourceDataForRate(conf, myTargetInfo, dataFoundFromRRParam, true);
 				}
-				else
-				{
-					myThreadedLogger->Debug("Next data step is " + boost::lexical_cast<string> (curRRInfo->Time().Step()));
-				}
+
 			}
 			else
 			{
@@ -335,6 +319,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 				if (myTargetInfo->Time().Step() >= paramStep)
 				{
+					// Data from previous time step
 					if (!prevRRInfo)
 					{
 						forecast_time prevTimeStep = myTargetInfo->Time();
@@ -367,7 +352,8 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 						}
 #endif
 					}
-
+					
+					// Data from current time step
 					if (!curRRInfo)
 					{
 						curRRInfo = GetSourceDataForSum(conf, myTargetInfo, myTargetInfo->Time(), dataFoundFromRRParam);
@@ -408,8 +394,8 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 				continue;
 			}
 
-			myThreadedLogger->Debug("Previous data step is " + boost::lexical_cast<string> (prevRRInfo->Time().Step()));
-			myThreadedLogger->Debug("Current/next data step is " + boost::lexical_cast<string> (curRRInfo->Time().Step()));
+			myThreadedLogger->Trace("Previous data step is " + boost::lexical_cast<string> (prevRRInfo->Time().Step()));
+			myThreadedLogger->Trace("Current/next data step is " + boost::lexical_cast<string> (curRRInfo->Time().Step()));
 
 			myThreadedLogger->Info("Calculating parameter " + myTargetInfo->Param().Name() + " time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
 												  " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
