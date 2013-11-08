@@ -299,7 +299,8 @@ void compiled_plugin_base::WriteToFile(shared_ptr<const plugin_configuration> co
 
 	if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
 	{
-		// if info holds multiple parameters, we must loop over them all
+		// If info holds multiple parameters, we must loop over them all
+		// Note! We only loop over the parameters, not over the times or levels!
 
 		tempInfo->ResetParam();
 

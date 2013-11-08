@@ -308,40 +308,37 @@ void hitool::Scale(double theScale)
 std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime)
 {
 
-	param stratusBaseParam("STRATUS-BASE-M");
-	param stratusTopParam("STRATUS-TOP-M");
-	param stratusTopTempParam("STRATUS-TOP-T-K");
-	param stratusMeanTempParam("STRATUS-MEAN-T-K");
+	const param stratusBaseParam("STRATUS-BASE-M");
+	const param stratusTopParam("STRATUS-TOP-M");
+	const param stratusTopTempParam("STRATUS-TOP-T-K");
+	const param stratusMeanTempParam("STRATUS-MEAN-T-K");
+	const param stratusUpperLayerRHParam("STRATUS-UPPER-LAYER-RH-PRCNT");
+	const param stratusVerticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MS");
 
-	std::vector<param> params { stratusBaseParam, stratusTopParam, stratusTopTempParam, stratusMeanTempParam };
-	
-	auto ret = make_shared<info> (*conf->Info());
+	vector<param> params = { param("FAKE-PARAM") };
+	vector<forecast_time> times = { wantedTime };
+	vector<level> levels = { level(kUnknownLevel, 0, "FAKE-LEVEL") };
 
-	conf->FirstSourceProducer();
+	auto constData1 = make_shared<info> (*conf->Info());
+	constData1->Params(params);
+	constData1->Times(times);
+	constData1->Levels(levels);
 
-	ret->Producer(conf->SourceProducer());
-	ret->Params(params);
+	constData1->Create();
+	constData1->First();
+	constData1->Grid()->Data()->Fill(0);
 
 	// Create data backend
-
-	ret->Create();
 
 	const double stLimit = 500.;
 	//const double fzStLimit = 800.;
 	const double layer = 2000.;
 	const double stCover = 50.;
 	const double drydz = 1500.;
-
-	auto constData1 = make_shared<info> (*ret);
-	param p("AS-DF"); // Param name does not matter here
-	vector<param> pvec = { p };
-
-	constData1->Params(pvec);
-	constData1->Create(); constData1->First();
-	constData1->Grid()->Data()->Fill(0);
-
+	
 	auto constData2 = make_shared<info> (*constData1);
-	constData2->Create(); constData2->First();
+	constData2->ReGrid();
+	constData2->First();
 	constData2->Grid()->Data()->Fill(stLimit);
 
 	// N-kynnysarvot stratuksen ala- ja ylärajalle [%] (tarkkaa stCover arvoa ei aina löydy)
@@ -369,8 +366,6 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 
 	for (baseThreshold->ResetLocation(); baseThreshold->NextLocation();)
 	{
-		//assert(baseThreshold->Value() != kHPMissingValue);
-
 		if (baseThreshold->Value() == kHPMissingValue || baseThreshold->Value() < stCover)
 		{
 			baseThreshold->Value(stCover);
@@ -418,7 +413,10 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	//stratusBase->Params(p);
 	
 	stratusBase->First();
-
+	stratusBase->ReplaceParam(stratusBaseParam);
+	//stratusBase->NextParam();
+	//stratusBase->ReplaceParam(stratusBaseParam);
+	
 	size_t missing = 0;
 
 	for (stratusBase->ResetLocation(); stratusBase->NextLocation();)
@@ -443,6 +441,7 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	auto stratusTop = VerticalExtremeValue(opts);
 
 	stratusTop->First();
+	stratusTop->ReplaceParam(stratusTopParam);
 
 	missing = 0;
 	
@@ -473,6 +472,7 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	auto upperLayerRH = VerticalExtremeValue(opts);
 
 	upperLayerRH->First();
+	upperLayerRH->ReplaceParam(stratusUpperLayerRHParam);
 
 	missing = 0;
 
@@ -499,7 +499,10 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 
 	auto stratusTopTemp = VerticalExtremeValue(opts);
 
-	itsLogger->Info("Searching for stratus mean temperatue");
+	stratusTopTemp->First();
+	stratusTopTemp->ReplaceParam(stratusTopTempParam);
+
+	itsLogger->Info("Searching for stratus mean temperature");
 
 	// St:n keskimääräinen lämpötila (poissulkemaan kylmät <-10C stratukset, joiden toppi >-10C) (jäätävä tihku)
 	//VAR stTavg = VERTZ_AVG(T_EC,Base+50,Top-50)
@@ -510,6 +513,9 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	opts.lastLevelValueInfo = stratusBase;
 
 	auto stratusMeanTemp = VerticalExtremeValue(opts);
+
+	stratusMeanTemp->First();
+	stratusMeanTemp->ReplaceParam(stratusMeanTempParam);
 
 	// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
 	//VAR wAvg = VERTZ_AVG(W_EC,Base,Top)
@@ -523,91 +529,228 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 
 	auto stratusVerticalVelocity = VerticalExtremeValue(opts);
 
+	stratusVerticalVelocity->First();
+	stratusVerticalVelocity->ReplaceParam(stratusVerticalVelocityParam);
+
 	vector<shared_ptr<info>> datas = { stratusTop, upperLayerRH, stratusTopTemp, stratusMeanTemp, stratusVerticalVelocity };
 
 	stratusBase->Merge(datas);
-	
+
 	return stratusBase;
 }
 
 shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime)
 {
 
-	const double freezingAreadz = 100.;
-	// Kerroksen paksuus pinnasta, josta etsitään min. lämpötilaa [m]
-	const double minLayer = 1100.;
+	const param minusAreaParam("MINUS-AREA-T-C");
+	const param plusArea1Param("PLUS-AREA-1-T-C");
+	const param plusArea2Param("PLUS-AREA-2-T-C");
+
+	vector<param> params = { param("FAKE-PARAM") };
+	vector<forecast_time> times = { wantedTime };
+	vector<level> levels = { level(kUnknownLevel, 0, "FAKE-LEVEL") };
 	
-	// Mallin (korkein) nollaraja [m]
+	auto constData1 = make_shared<info> (*conf->Info());
+	constData1->Params(params);
+	constData1->Times(times);
+	constData1->Levels(levels);
 
-	shared_ptr<info> freezingLevel;
-	
-	shared_ptr<plugin::fetcher> f = dynamic_pointer_cast <plugin::fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	constData1->Create();
+	constData1->First();
+	constData1->Grid()->Data()->Fill(0);
 
-	try
-	{
-		freezingLevel = f->Fetch(conf,	wantedTime,	level(kHeight, 0), param("H0C-M"));
-	}
-	catch (const HPExceptionType& e)
-	{
-		throw e;
-	}
+	auto constData2 = make_shared<info> (*constData1);
+	constData2->ReGrid();
+	constData2->First();
+	constData2->Grid()->Data()->Fill(5000);
 
-	auto minLevel = make_shared<info> (*freezingLevel);
-	minLevel->ReGrid();
-	
-	// Rajoitetaan min. lämpötilan haku (ylimmän) nollarajan alapuolelle
-
-	freezingLevel->First(); freezingLevel->ResetLocation();
-	minLevel->First(); minLevel->ResetLocation();
-
-	while (freezingLevel->NextLocation() && minLevel->NextLocation())
-	{
-		if (freezingLevel->Value() < minLayer)
-		{
-			minLevel->Value(freezingLevel->Value() - freezingAreadz);
-		}
-		else
-		{
-			minLevel->Value(minLayer);
-		}
-	}
-
-	auto constData = make_shared<info> (*freezingLevel);
-
-	constData->ReGrid();
-	constData->First();
-	constData->Grid()->Data()->Fill(0);
-
-	// Min lämpötila ja sen korkeus [m]
+	auto constData3 = make_shared<info> (*constData2);
+	constData1->ReGrid();
 
 	hitool_search_options opts (param("T-K"),
 									wantedTime,
 									kHybrid,
-									constData,
-									minLevel,
-									kMinimumModifier,
+									constData1,
+									constData2,
+									kCountModifier,
 									conf,
 									true,
 									1
 	);
 
-	itsLogger->Info("Searching for freezing area min temperature");
+	opts.findValueInfo = constData3;
+	
+	itsBase = -273.15;
 
-	auto Tmin = VerticalExtremeValue(opts);
-//VAR Tmin = VERTZ_MIN(T_EC,0,MinLayer)
-//VAR TminH = VERTZ_MINH(T_EC,0,MinLayer)
-	constData->Grid()->Data()->Fill(100);
-	opts.lastLevelValueInfo = freezingLevel;
+	// 0-kohtien lkm pinnasta (yläraja 5km, jotta ylinkin nollakohta varmasti löytyy)
 
-	itsLogger->Info("Searching for freezing area max temperature");
+	auto numZeroLevels = VerticalExtremeValue(opts);
+	
+	//nZeroLevel = VERTZ_FINDC(T_EC,0,5000,0)
 
-	auto Tmax = VerticalExtremeValue(opts);
+	numZeroLevels->First();
+
+	/* Check which values we have. Will slow down processing a bit but
+	 * will make subsequent code much easier to understand.
+	 */
+
+	bool haveOne = false;
+	bool haveTwo = false;
+	bool haveThree = false;
+
+	for (numZeroLevels->ResetLocation(); numZeroLevels->NextLocation();)
+	{
+		size_t numZeroLevel = numZeroLevels->Value();
+
+		if (numZeroLevel == 1)
+		{
+			haveOne = true;
+		}
+		else if (numZeroLevel == 2)
+		{
+			haveTwo = true;
+		}
+		else if (numZeroLevel == 3)
+		{
+			haveThree = true;
+		}
+
+		if (haveOne && haveTwo && haveThree)
+		{
+			break;
+		}
+	}
+
+	// Get necessary source data based on loop data above
+
+	shared_ptr<info> zeroLevel1, zeroLevel2, zeroLevel3;
+	shared_ptr<info> Tavg1, Tavg2, Tavg3;
+
+	if (haveOne)
+	{
+		itsLogger->Info("Searching for first zero level height");
 		
-// Max lämpötila ja sen korkeus [m]
-//VAR Tmax = VERTZ_MAX(T_EC,100,FZlevel)
-//VAR TmaxH = VERTZ_MAXH(T_EC,100,FZlevel)
+		// Find height of first zero level
+		opts.wantedModifier = kFindHeightModifier;
 
-	Tmin->Merge(Tmax);
+		zeroLevel1 = VerticalExtremeValue(opts);
 
-	return Tmin;
+		opts.lastLevelValueInfo = zeroLevel1;
+		opts.wantedModifier = kAverageModifier;
+
+		Tavg1 = VerticalExtremeValue(opts);
+	}
+
+	if (haveTwo)
+	{
+		assert(haveOne);
+
+		itsLogger->Info("Searching for second zero level height");
+
+		// Find height of second zero level
+
+		opts.wantedModifier = kFindHeightModifier;
+		opts.findNthValue = 2;
+
+		zeroLevel2 = VerticalExtremeValue(opts);
+
+		assert(zeroLevel1);
+
+		opts.firstLevelValueInfo = zeroLevel1;
+		opts.lastLevelValueInfo = zeroLevel2;
+		opts.wantedModifier = kAverageModifier;
+
+		Tavg2 = VerticalExtremeValue(opts);
+	}
+
+	if (haveThree)
+	{
+		assert(haveOne);
+		assert(haveTwo);
+
+		itsLogger->Info("Searching for third zero level height");
+
+		// Find height of third zero level
+
+		opts.wantedModifier = kFindHeightModifier;
+		opts.findNthValue = 3;
+
+		zeroLevel3 = VerticalExtremeValue(opts);
+
+		assert(zeroLevel1);
+		assert(zeroLevel2);
+
+		opts.firstLevelValueInfo = zeroLevel1;
+		opts.lastLevelValueInfo = zeroLevel2;
+		opts.wantedModifier = kAverageModifier;
+
+		Tavg3 = VerticalExtremeValue(opts);
+	}
+
+	auto plusArea1 = make_shared<info> (*numZeroLevels);
+	plusArea1->ReGrid();
+	plusArea1->Grid()->Data()->Fill(kHPMissingValue);
+
+	auto minusArea = make_shared<info> (*plusArea1);
+	minusArea->ReGrid();
+
+	auto plusArea2 = make_shared<info> (*plusArea1);
+	plusArea2->ReGrid();
+
+	for (numZeroLevels->ResetLocation(); numZeroLevels->NextLocation(); )
+	{
+		size_t numZeroLevel = numZeroLevels->Value();
+		size_t locationIndex = numZeroLevels->LocationIndex();
+		
+		plusArea1->LocationIndex(locationIndex);
+		plusArea2->LocationIndex(locationIndex);
+		minusArea->LocationIndex(locationIndex);
+
+		if (numZeroLevel == 0)
+		{
+			continue;
+		}
+		if (numZeroLevel == 1)
+		{
+			zeroLevel1->LocationIndex(locationIndex);
+			Tavg1->LocationIndex(locationIndex);
+			plusArea1->Value(zeroLevel1->Value() * Tavg1->Value());
+		}
+		else if (numZeroLevel == 2)
+		{
+			zeroLevel1->LocationIndex(locationIndex);
+			zeroLevel2->LocationIndex(locationIndex);
+
+			Tavg1->LocationIndex(locationIndex);
+			Tavg2->LocationIndex(locationIndex);
+
+			plusArea1->Value((zeroLevel2->Value() - zeroLevel1->Value()) * Tavg2->Value());
+			minusArea->Value(zeroLevel1->Value() * Tavg1->Value());
+		}
+		else if (numZeroLevel == 3)
+		{
+			zeroLevel1->LocationIndex(locationIndex);
+			zeroLevel2->LocationIndex(locationIndex);
+			zeroLevel3->LocationIndex(locationIndex);
+
+			Tavg1->LocationIndex(locationIndex);
+			Tavg2->LocationIndex(locationIndex);
+			Tavg3->LocationIndex(locationIndex);
+
+			plusArea2->Value((zeroLevel3->Value() - zeroLevel2->Value()) * Tavg2->Value());
+			plusArea1->Value(zeroLevel1->Value() * Tavg1->Value() + plusArea2->Value());
+			minusArea->Value((zeroLevel2->Value() - zeroLevel1->Value()) * Tavg3->Value());
+		}
+		
+	}
+	
+	minusArea->ReplaceParam(minusAreaParam);
+	plusArea1->ReplaceParam(plusArea1Param);
+	plusArea2->ReplaceParam(plusArea2Param);
+	
+	vector<shared_ptr<info>> snafu = { plusArea1, plusArea2 };
+
+	minusArea->Merge(snafu);
+
+	return minusArea;
 }
