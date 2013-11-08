@@ -18,6 +18,7 @@ def read(FILE,POINT):
 	print "File: " + FILE
 	
 	msgno = 0
+	count = grib_count_in_file(gribfile)
 	
 	while True:   
 
@@ -26,7 +27,8 @@ def read(FILE,POINT):
 		if grib is None:
 			break
 
-		print "Reading msg " + str(msgno)
+		if count > 1:
+			print "Reading msg " + str(msgno)
 
 		values = grib_get_values(grib)
 
@@ -45,22 +47,32 @@ def read(FILE,POINT):
 	gribfile.close()
 
 def main():
-	if len(sys.argv) < 2 or len(sys.argv) > 3:
-		print "usage: read.py file [ point_number_to_test ]"
+	if len(sys.argv) < 2 :
+		print "usage: read.py file1 [ file2 file3 ... ] [ point_number_to_test ]"
 		sys.exit(1)
 
 	try:
 
-		FILE=""
+		arglen=len(sys.argv)
+
 		POINT=None
 
-		if len(sys.argv) == 2:
-			FILE=sys.argv[1]
-		elif len(sys.argv) == 3:
-			POINT=sys.argv[2]
-			FILE=sys.argv[1]
+		try:
+			POINT = sys.argv[arglen-1]
+		except:
+			noop
+		i=1
 
-		read(FILE,POINT)
+		reduction=0
+
+		if POINT != None:
+			reduction=1
+			
+		for i in xrange(1, arglen-reduction):
+			file=sys.argv[i]
+
+			read(file,POINT)
+
 	except GribInternalError,err:
 		print >>sys.stderr,err.msg
 
