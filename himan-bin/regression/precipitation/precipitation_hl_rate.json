@@ -6,13 +6,13 @@
 	"stop_hour" : "25",
 	"step" : "1",
 	"file_write" : "multiple",
-	"origintime" : "2013-05-16 00:00:00",
+	"origintime" : "2013-11-08 00:00:00",
 	"read_data_from_database" : "false",
 	"processqueue" : [
 	{
 		"leveltype" : "height",
 		"levels" : "0",
-		"plugins" : [ { "name" : "precipitation", "rr3h" : true, "rr6h" : true } ]
+		"plugins" : [ { "name" : "precipitation", "rr" : true, "rrl" : true, "rrc" : true, "snr" : true } ]
 	} 
 	]
 }
