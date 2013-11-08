@@ -48,32 +48,16 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
 private:
 
 	void Run(std::shared_ptr<info>, std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
-	void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex, std::shared_ptr<info> curRRInfo, std::shared_ptr<info> prevRRInfo);
+	void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
 
-	std::shared_ptr<himan::info> GetSourceDataForSum(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, bool& dataFoundFromRRParam);
-	std::shared_ptr<himan::info> GetSourceDataForRate(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, bool& dataFoundFromRRParam, bool forward);
-
-	/**
-	 * @brief Overcoat for fetching source data. By default will first try fetch data
-	 * from cumulative precipitation parameter (RR-KGM2), if data is not found function
-	 * will try to fetch data from cumulative and large scale precipitation parameters.
-	 *
-	 * Will pass throw'd exceptions to calling function
-	 *
-	 * @param conf himan configuration
-	 * @param wantedTime Wanted time
-	 * @param wantedLevel Wanted level
-	 * @param dataFoundFromRRParam If true, data will first be search from cumulative precipitation parameter (RR-KGM2, 50)
-	 * @return himan::info contain source data
-	 */
-
-	std::shared_ptr<info> FetchSourcePrecipitation(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, bool& dataFoundFromRRParam);
+	std::shared_ptr<himan::info> GetSourceDataForSum(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime);
+	std::shared_ptr<himan::info> GetSourceDataForRate(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, bool forward);
 
 	/**
 	 * @brief Fetching source data from cumulative precipitation parameter (RR-KGM2, 50)
@@ -86,20 +70,7 @@ private:
 	 * @return himan::info contain source data
 	 */
 
-	std::shared_ptr<info> FetchSourceRR(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, const level& wantedLevel);
-
-	/**
-	 * @brief Fetching source data from convective (RRC-KGM2) and large scale (RRR-KGM2) precipitation parameters
-	 *
-	 * Will pass throw'd exceptions to calling function
-
-	 * @param conf himan configuration
-	 * @param wantedTime Wanted time
-	 * @param wantedLevel Wanted level
-	 * @return himan::info contain source data
-	 */
-
-	std::shared_ptr<info> FetchSourceConvectiveAndLSRR(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, const level& wantedLevel);
+	std::shared_ptr<info> FetchSourceRR(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime);
 
 };
 

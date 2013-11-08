@@ -28,13 +28,23 @@ precipitation::precipitation()
 	itsClearTextFormula = "RRsum = RR_cur - RR_prev; RR = (RR_cur - RR_prev) / step";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("precipitation"));
+
+	// Define source parameters for each output parameter
 	
-	sourceParameters["rr1h"] = "RR-KGM2";
-	sourceParameters["rr3h"] = "RR-KGM2";
-	sourceParameters["rr6h"] = "RR-KGM2";
-	sourceParameters["rr12h"] = "RR-KGM2";
-	sourceParameters["rr"] = "RR-KGM2";
-	sourceParameters["snr"] = "SNACC-KGM2";
+	// General precipitation (liquid + solid)
+	sourceParameters["RR-1-MM"] = "RR-KGM2";
+	sourceParameters["RR-3-MM"] = "RR-KGM2";
+	sourceParameters["RR-6-MM"] = "RR-KGM2";
+	sourceParameters["RR-12-MM"] = "RR-KGM2";
+	sourceParameters["RRR-KGM2"] = "RR-KGM2";
+	sourceParameters["RRRC-KGM2"] = "RRC-KGM2";
+	sourceParameters["RRRL-KGM2"] = "RRL-KGM2";
+
+	// Snow
+	sourceParameters["SNR-KGM2"] = "SNACC-KGM2";
+	sourceParameters["SNRC-KGM2"] = "SNC-KGM2";
+	sourceParameters["SNRL-KGM2"] = "SNL-KGM2";
+
 
 }
 
@@ -122,10 +132,48 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(baseParam);
 	}
 
+	if (conf->Exists("rrc") && conf->GetValue("rrc") == "true")
+	{
+		baseParam.Name("RRRC-KGM2");
+		baseParam.UnivId(201);
+		baseParam.Aggregation().TimeResolutionValue(1);
+
+		params.push_back(baseParam);
+	}
+
+	if (conf->Exists("rrl") && conf->GetValue("rrl") == "true")
+	{
+		baseParam.Name("RRRL-KGM2");
+		baseParam.UnivId(200);
+		baseParam.Aggregation().TimeResolutionValue(1);
+
+		params.push_back(baseParam);
+	}
+
+	// Snow
+	
 	if (conf->Exists("snr") && conf->GetValue("snr") == "true")
 	{
 		baseParam.Name("SNR-KGM2");
 		baseParam.UnivId(264);
+		baseParam.Aggregation().TimeResolutionValue(1);
+
+		params.push_back(baseParam);
+	}
+
+	if (conf->Exists("snrc") && conf->GetValue("snrc") == "true")
+	{
+		baseParam.Name("SNRC-KGM2");
+		baseParam.UnivId(269);
+		baseParam.Aggregation().TimeResolutionValue(1);
+
+		params.push_back(baseParam);
+	}
+
+	if (conf->Exists("snrl") && conf->GetValue("snrl") == "true")
+	{
+		baseParam.Name("SNRL-KGM2");
+		baseParam.UnivId(268);
 		baseParam.Aggregation().TimeResolutionValue(1);
 
 		params.push_back(baseParam);
@@ -209,17 +257,9 @@ void precipitation::Run(shared_ptr<info> myTargetInfo,
 				shared_ptr<const plugin_configuration> conf,
 				unsigned short threadIndex)
 {
-	// Thread scope variables for source data; useful when calculating rate
-	// when step > 1 and using only one thread
-
-	// g++ supports C++11-style thread-local variables only at version 4.8
-
-	shared_ptr<himan::info> curRRInfo;
-	shared_ptr<himan::info> prevRRInfo;
-
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
-		Calculate(myTargetInfo, conf, threadIndex, curRRInfo, prevRRInfo);
+		Calculate(myTargetInfo, conf, threadIndex);
 	}
 
 }
@@ -232,9 +272,7 @@ void precipitation::Run(shared_ptr<info> myTargetInfo,
 
 void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 					 shared_ptr<const plugin_configuration> conf,
-					 unsigned short threadIndex,
-					shared_ptr<info> curRRInfo,
-					shared_ptr<info> prevRRInfo)
+					 unsigned short threadIndex)
 {
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("precipitationThread #" + boost::lexical_cast<string> (threadIndex)));
@@ -243,33 +281,19 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 	myTargetInfo->FirstParam();
 
-	bool dataFoundFromRRParam = true; // Assume that we have parameter RR-KGM2 present
-
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
 		{
 			
 			bool isRRCalculation = (myTargetInfo->Param().Name() == "RRR-KGM2" || myTargetInfo->Param().Name() == "SNR-KGM2");
-
-			/*
-			 * Move current data to previous data and fetch new current data IF
-			 *
-			 * - calculating SUM
-			 * - calculating RATE and current step is larger than current source data step
-			 */
 			
-			if (isRRCalculation && (curRRInfo && myTargetInfo->Time().Step() > curRRInfo->Time().Step()))
-			{
-				prevRRInfo = curRRInfo;
-				curRRInfo.reset();
-			}
-			else if (!isRRCalculation)
-			{
-				prevRRInfo.reset();
-				curRRInfo.reset();
-			}
+			// Have to re-fetch infos each time since we might have to change element
+			// from liquid to snow so we need also different source parameters
 
+			shared_ptr<himan::info> curRRInfo;
+			shared_ptr<himan::info> prevRRInfo;
+			
 			/*
 			 * Two modes of operation:
 			 *
@@ -291,14 +315,14 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 				if (!prevRRInfo)
 				{
 					myThreadedLogger->Debug("Searching for previous time step data");
-					prevRRInfo = GetSourceDataForRate(conf, myTargetInfo, dataFoundFromRRParam, false);
+					prevRRInfo = GetSourceDataForRate(conf, myTargetInfo, false);
 				}
 	
 				// Next VALID data
-				if (!curRRInfo)
+				if (prevRRInfo && !curRRInfo)
 				{
 					myThreadedLogger->Debug("Searching for next time step data");
-					curRRInfo = GetSourceDataForRate(conf, myTargetInfo, dataFoundFromRRParam, true);
+					curRRInfo = GetSourceDataForRate(conf, myTargetInfo, true);
 				}
 
 			}
@@ -326,7 +350,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 						prevTimeStep.ValidDateTime()->Adjust(prevTimeStep.StepResolution(), -paramStep);
 
-						prevRRInfo = GetSourceDataForSum(conf, myTargetInfo, prevTimeStep, dataFoundFromRRParam);
+						prevRRInfo = FetchSourceRR(conf, myTargetInfo, prevTimeStep);
 
 #ifdef EMULATE_ZERO_TIMESTEP_DATA
 
@@ -356,7 +380,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 					// Data from current time step
 					if (!curRRInfo)
 					{
-						curRRInfo = GetSourceDataForSum(conf, myTargetInfo, myTargetInfo->Time(), dataFoundFromRRParam);
+						curRRInfo = FetchSourceRR(conf, myTargetInfo, myTargetInfo->Time());
 					}
 				}
 			}
@@ -375,6 +399,8 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 					conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 				}
 
+				myTargetInfo->Data()->Fill(kFloatMissing);
+
 #ifdef WRITE_EMPTY_FILES
 
 				/*
@@ -391,11 +417,12 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 				}
 
 #endif
+
 				continue;
 			}
 
-			myThreadedLogger->Trace("Previous data step is " + boost::lexical_cast<string> (prevRRInfo->Time().Step()));
-			myThreadedLogger->Trace("Current/next data step is " + boost::lexical_cast<string> (curRRInfo->Time().Step()));
+			myThreadedLogger->Debug("Previous data step is " + boost::lexical_cast<string> (prevRRInfo->Time().Step()));
+			myThreadedLogger->Debug("Current/next data step is " + boost::lexical_cast<string> (curRRInfo->Time().Step()));
 
 			myThreadedLogger->Info("Calculating parameter " + myTargetInfo->Param().Name() + " time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
 												  " level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
@@ -421,63 +448,60 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 			string deviceType = "CPU";
 
+			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
+			myTargetInfo->ResetLocation();
+
+			targetGrid->Reset();
+			prevGrid->Reset();
+
+			while (myTargetInfo->NextLocation() && targetGrid->Next() && prevGrid->Next())
 			{
-				assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+				count++;
 
-				myTargetInfo->ResetLocation();
+				double RRcur = kFloatMissing;
+				double RRprev = kFloatMissing;
 
-				targetGrid->Reset();
-				prevGrid->Reset();
+				InterpolateToPoint(targetGrid, RRGrid, equalGrids, RRcur);
+				InterpolateToPoint(targetGrid, prevGrid, equalGrids, RRprev);
 
-				while (myTargetInfo->NextLocation() && targetGrid->Next() && prevGrid->Next())
+				if (RRcur == kFloatMissing || RRprev == kFloatMissing)
 				{
-					count++;
+					missingCount++;
 
-					double RRcur = kFloatMissing;
-					double RRprev = kFloatMissing;
-
-					InterpolateToPoint(targetGrid, RRGrid, equalGrids, RRcur);
-					InterpolateToPoint(targetGrid, prevGrid, equalGrids, RRprev);
-
-					if (RRcur == kFloatMissing || RRprev == kFloatMissing)
-					{
-						missingCount++;
-
-						myTargetInfo->Value(kFloatMissing);
-						continue;
-					}
-
-					double RR = RRcur - RRprev;
-
-					if (myTargetInfo->Param().Name() == "RRR-KGM2")
-					{
-						long step = curRRInfo->Time().Step() - prevRRInfo->Time().Step();
-
-						RR /= static_cast<double> (step);
-					}
-
-					if (RR < 0)
-					{
-						RR = 0;
-					}
-
-					RR *= scaleFactor;
-
-					if (!myTargetInfo->Value(RR))
-					{
-						throw runtime_error(ClassName() + ": Failed to set value to matrix");
-					}
-
+					myTargetInfo->Value(kFloatMissing);
+					continue;
 				}
 
-				/*
-				 * Newbase normalizes scanning mode to bottom left -- if that's not what
-				 * the target scanning mode is, we have to swap the data back.
-				 */
+				double RR = RRcur - RRprev;
 
-				SwapTo(myTargetInfo, kBottomLeft);
+				if (myTargetInfo->Param().Name() == "RRR-KGM2")
+				{
+					long step = curRRInfo->Time().Step() - prevRRInfo->Time().Step();
+
+					RR /= static_cast<double> (step);
+				}
+
+				if (RR < 0)
+				{
+					RR = 0;
+				}
+
+				RR *= scaleFactor;
+
+				if (!myTargetInfo->Value(RR))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
 
 			}
+
+			/*
+			 * Newbase normalizes scanning mode to bottom left -- if that's not what
+			 * the target scanning mode is, we have to swap the data back.
+			 */
+
+			SwapTo(myTargetInfo, kBottomLeft);
 
 			if (conf->StatisticsEnabled())
 			{
@@ -491,25 +515,23 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 			* Clone info-instance to writer since it might change our descriptor places
 			*/
 
-			myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+			myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		}
 
-			if (conf->FileWriteOption() != kSingleFile)
-			{
-				WriteToFile(conf, myTargetInfo);
-			}
+		// Write all parameters to disk
+			
+		if (conf->FileWriteOption() != kSingleFile)
+		{
+			WriteToFile(conf, myTargetInfo);
 		}
 	}
 }
 
-shared_ptr<himan::info> precipitation::GetSourceDataForRate(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, bool& dataFoundFromRRParam, bool forward)
+shared_ptr<himan::info> precipitation::GetSourceDataForRate(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, bool forward)
 {
 	shared_ptr<info> RRInfo;
 
-	/*
-	 * With RR we don't set param step
-	 */
-	
-	int paramStep = 6; // by default look for 12 hours (time steps) forward or backward
+	int paramStep = 6; // by default look for 6 hours (time steps) forward or backward
 
 	int i = 0;
 
@@ -530,134 +552,57 @@ shared_ptr<himan::info> precipitation::GetSourceDataForRate(shared_ptr<const plu
 	{
 		int step = i++;
 
-		try
+		forecast_time wantedTimeStep = myTargetInfo->Time();
+
+		if (!forward)
 		{
-
-			forecast_time wantedTimeStep = myTargetInfo->Time();
-
-			if (!forward)
-			{
-				step *= -1;
-			}
+			step *= -1;
+		}
 			
-			wantedTimeStep.ValidDateTime()->Adjust(kHourResolution, step);
+		wantedTimeStep.ValidDateTime()->Adjust(kHourResolution, step);
 
-			RRInfo = FetchSourcePrecipitation(conf,myTargetInfo,wantedTimeStep,dataFoundFromRRParam);
-
-		}
-		catch (HPExceptionType e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-			}
-		}
+		RRInfo = FetchSourceRR(conf,myTargetInfo,wantedTimeStep);
 
 	}
 
 	return RRInfo;
 }
 
-shared_ptr<himan::info> precipitation::GetSourceDataForSum(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, bool& dataFoundFromRRParam)
+shared_ptr<himan::info> precipitation::FetchSourceRR(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime)
 {
+	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+
+	level groundLevel(kHeight, 0 ,"HEIGHT");
+	
+	param sourceParam(sourceParameters[myTargetInfo->Param().Name()]);
+
+	groundLevel = LevelTransform(conf->SourceProducer(), sourceParam, groundLevel);
+
+	// Must have source parameter for target parameter defined in map sourceParameters
+	assert(!sourceParameters[myTargetInfo->Param().Name()].empty());
+
 	shared_ptr<info> RRInfo;
 	
 	try
 	{
-		RRInfo = FetchSourcePrecipitation(conf,myTargetInfo,wantedTime,dataFoundFromRRParam);
+		RRInfo = f->Fetch(conf,
+						wantedTime,
+						groundLevel,
+						param(sourceParameters[myTargetInfo->Param().Name()]));
 	}
 	catch (HPExceptionType e)
 	{
-		switch (e)
-		{
-			case kFileDataNotFound:
-				break;
-
-			default:
-				throw runtime_error(ClassName() + ": Unable to proceed");
-				break;
-		}
-	}
-
-	return RRInfo;
-}
-
-shared_ptr<himan::info> precipitation::FetchSourcePrecipitation(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, bool& dataFoundFromRRParam)
-{
-
-	level groundLevel(kHeight, 0 ,"HEIGHT");
-	param sourceParam(sourceParameters[myTargetInfo->Param().Name()]);
-	
-	groundLevel = LevelTransform(conf->SourceProducer(), sourceParam, groundLevel);
-
-	try
-	{
-		if (dataFoundFromRRParam)
-		{
-
-			return FetchSourceRR(conf,myTargetInfo,wantedTime,groundLevel);
-
-		}
-		else
-		{
-			return FetchSourceConvectiveAndLSRR(conf,myTargetInfo,wantedTime,groundLevel);
-		}
-	}
-	catch (HPExceptionType e)
-	{
-
-		if (e == kFileDataNotFound && dataFoundFromRRParam)
-		{
-			try
-			{
-
-
-				shared_ptr<info> i = FetchSourceConvectiveAndLSRR(conf,myTargetInfo,wantedTime,groundLevel);
-
-				dataFoundFromRRParam = false;
-
-				return i;
-
-			}
-			catch (HPExceptionType e)
-			{
-				throw e;
-			}
-
-		}
-		else
+		if (e != kFileDataNotFound)
 		{
 			throw e;
 		}
 	}
 
-	throw runtime_error(ClassName() + ": We should never be here but compiler forces this statement");
-}
-
-
-shared_ptr<himan::info> precipitation::FetchSourceRR(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, const level& wantedLevel)
-{
-	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
-	try
-	{
-		return f->Fetch(conf,
-						wantedTime,
-						wantedLevel,
-						param("RR-KGM2"));
-		}
-	catch (HPExceptionType e)
-	{
-		throw e;
-	}
+	return RRInfo;
 
 }
 
+/*
 shared_ptr<himan::info> precipitation::FetchSourceConvectiveAndLSRR(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, const level& wantedLevel)
 {
 	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -666,18 +611,27 @@ shared_ptr<himan::info> precipitation::FetchSourceConvectiveAndLSRR(shared_ptr<c
 	shared_ptr<himan::info> LSInfo;
 	shared_ptr<himan::info> RRInfo;
 
+	param ConvectiveParam("RRC-KGM2"), LSParam("RRR-KGM2");
+
+	if (myTargetInfo->Param().Name() == "SNR-KGM2")
+	{
+		ConvectiveParam.Name("SNC-KGM2");
+		LSParam.Name("SNL-KGM2");
+
+	}
+
 	try
 	{
 
 		ConvectiveInfo = f->Fetch(conf,
 						wantedTime,
 						wantedLevel,
-						param("RRC-KGM2"));
+						ConvectiveParam);
 
 		LSInfo = f->Fetch(conf,
 						wantedTime,
 						wantedLevel,
-						param("RRR-KGM2"));
+						LSParam);
 	}
 	catch (HPExceptionType e)
 	{
@@ -701,3 +655,4 @@ shared_ptr<himan::info> precipitation::FetchSourceConvectiveAndLSRR(shared_ptr<c
 
 	return RRInfo;
 }
+*/
