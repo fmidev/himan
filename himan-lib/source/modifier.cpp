@@ -395,6 +395,8 @@ void modifier_count::Calculate(double theValue, double theHeight)
 
 	double lowerValueThreshold = itsLowerValueThreshold[locationIndex];
 
+	// First level
+
 	if (IsMissingValue(lowerValueThreshold))
 	{
 		itsLowerValueThreshold[locationIndex] = theValue;
@@ -426,14 +428,16 @@ void modifier_count::Calculate(double theValue, double theHeight)
 	 * The answer is: two times (as far as we know).
 	 */
 
+	// Set lower value already for the next level
+	
+	itsLowerValueThreshold[locationIndex] = theValue;
+	
 	if (lowerValueThreshold <= findValue && theValue >= findValue)
 	{
 		itsResult->Value() == kFloatMissing ? itsResult->Value(1) : itsResult->Value(itsResult->Value() + 1);
-
-		return;
 	}
 
-	itsLowerValueThreshold[locationIndex] = theValue;
+	
 }
 
 double modifier_count::Height() const
@@ -527,6 +531,9 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 	 * 
 	 */
 
+	itsLowerValueThreshold[locationIndex] = theValue;
+	itsLowerHeightThreshold[locationIndex] = theHeight;
+	
 	if (lowerValueThreshold <= findValue && theValue >= findValue)
 	{
 		double actualHeight = NFmiInterpolation::Linear(findValue, lowerValueThreshold, theValue, lowerHeightThreshold, theHeight);
@@ -534,12 +541,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 		itsResult->Value(actualHeight);
 		itsResult->ParamIndex(0);
 		itsResult->Value(findValue);
-		
-		return;
 	}
-
-	itsLowerValueThreshold[locationIndex] = theValue;
-	itsLowerHeightThreshold[locationIndex] = theHeight;
 	
 }
 
@@ -613,21 +615,17 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 	 *
 	 */
 
+	itsLowerValueThreshold[locationIndex] = theValue;
+	itsLowerHeightThreshold[locationIndex] = theHeight;
+	
 	if (lowerHeightThreshold <= findValue && theHeight >= findValue)
 	{
-		//double actualHeight = NFmiInterpolation::Linear(findValue, lowerValueThreshold, theValue, lowerHeightThreshold, theHeight);
 		double actualValue = NFmiInterpolation::Linear(findValue, lowerHeightThreshold, theHeight, lowerValueThreshold, theValue);
 
 		itsResult->Value(actualValue);
 		itsResult->ParamIndex(1);
 		itsResult->Value(findValue);
-
-		return;
 	}
-
-	itsLowerValueThreshold[locationIndex] = theValue;
-	itsLowerHeightThreshold[locationIndex] = theHeight;
-
 }
 
 void modifier_findvalue::Init(std::shared_ptr<const info> sourceInfo)
