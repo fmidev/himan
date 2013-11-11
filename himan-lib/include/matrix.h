@@ -102,7 +102,7 @@ public:
 		{
 			double d = theValues[i];
 
-			if (d == itsMissingValue)
+			if (d == kFloatMissing)
 			{
 				missing++;
 				continue;
