@@ -284,6 +284,11 @@ public:
 	  file << "__itsIndex__ " << itsIndex << std::endl;
 	  file << "__itsSize__ " << itsElements.size() << std::endl;
 
+	  for (size_t i = 0; i < itsElements.size(); i++)
+	  {
+		  file << itsElements[i];
+	  }
+
 	  return file;
   }
 
