@@ -123,7 +123,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(baseParam);
 	}
 
-	if (conf->Exists("rr") && conf->GetValue("rr") == "true")
+	if (conf->Exists("rrr") && conf->GetValue("rrr") == "true")
 	{
 		baseParam.Name("RRR-KGM2");
 		baseParam.UnivId(49);
@@ -132,7 +132,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(baseParam);
 	}
 
-	if (conf->Exists("rrc") && conf->GetValue("rrc") == "true")
+	if (conf->Exists("rrrc") && conf->GetValue("rrc") == "true")
 	{
 		baseParam.Name("RRRC-KGM2");
 		baseParam.UnivId(201);
@@ -141,7 +141,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(baseParam);
 	}
 
-	if (conf->Exists("rrl") && conf->GetValue("rrl") == "true")
+	if (conf->Exists("rrrl") && conf->GetValue("rrl") == "true")
 	{
 		baseParam.Name("RRRL-KGM2");
 		baseParam.UnivId(200);
@@ -399,24 +399,9 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 					conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 				}
 
+				// Will write empty file
+				
 				myTargetInfo->Data()->Fill(kFloatMissing);
-
-#ifdef WRITE_EMPTY_FILES
-
-				/*
-				 * If empty files need to be written to disk, enable the following code
-				 */
-
-				myTargetInfo->Data()->Fill(kFloatMissing);
-
-				if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
-				{
-					shared_ptr<writer> w = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
-
-					w->ToFile(shared_ptr<info> (new info(*myTargetInfo)), conf);
-				}
-
-#endif
 
 				continue;
 			}
@@ -601,58 +586,3 @@ shared_ptr<himan::info> precipitation::FetchSourceRR(shared_ptr<const plugin_con
 	return RRInfo;
 
 }
-
-/*
-shared_ptr<himan::info> precipitation::FetchSourceConvectiveAndLSRR(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime, const level& wantedLevel)
-{
-	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
-	shared_ptr<himan::info> ConvectiveInfo;
-	shared_ptr<himan::info> LSInfo;
-	shared_ptr<himan::info> RRInfo;
-
-	param ConvectiveParam("RRC-KGM2"), LSParam("RRR-KGM2");
-
-	if (myTargetInfo->Param().Name() == "SNR-KGM2")
-	{
-		ConvectiveParam.Name("SNC-KGM2");
-		LSParam.Name("SNL-KGM2");
-
-	}
-
-	try
-	{
-
-		ConvectiveInfo = f->Fetch(conf,
-						wantedTime,
-						wantedLevel,
-						ConvectiveParam);
-
-		LSInfo = f->Fetch(conf,
-						wantedTime,
-						wantedLevel,
-						LSParam);
-	}
-	catch (HPExceptionType e)
-	{
-		throw e;
-	}
-
-	ConvectiveInfo->ResetLocation();
-	LSInfo->ResetLocation();
-
-	assert(*ConvectiveInfo->Grid() == *LSInfo->Grid());
-
-	RRInfo->Data()->Resize(ConvectiveInfo->Data()->SizeX(),LSInfo->Data()->SizeY());
-
-	while (ConvectiveInfo->NextLocation() && LSInfo->NextLocation() && RRInfo->NextLocation())
-	{
-		double C = ConvectiveInfo->Value();
-		double LS = LSInfo->Value();
-
-		RRInfo->Value(C+LS);
-	}
-
-	return RRInfo;
-}
-*/
