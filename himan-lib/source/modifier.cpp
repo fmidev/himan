@@ -324,23 +324,23 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		return;
 	}
 
-	modifier_sum::Calculate(theValue, theHeight);
-
-	itsResult->ParamIndex(0);
+	itsResult->ParamIndex(0); // Max
 
 	if (IsMissingValue(itsResult->Value())) // First value
 	{
-		//itsResult->Value(theValue);
+		itsResult->Value(theValue);
 		itsValuesCount[itsResult->LocationIndex()] = 1;
 	}
 	else
 	{
-		//double val = itsResult->Value();
-		size_t count = itsValuesCount[itsResult->LocationIndex()];
+		double val = itsResult->Value();
+		itsResult->Value(theValue+val);
 
-		//itsResult->Value(theValue+val);
-		itsValuesCount[itsResult->LocationIndex()] = count++;
-	}
+		size_t count = itsValuesCount[itsResult->LocationIndex()];
+		count++;
+
+		itsValuesCount[itsResult->LocationIndex()] = count;
+	}	
 }
 
 std::shared_ptr<info> modifier_mean::Results() const
@@ -461,11 +461,11 @@ void modifier_findheight::Init(std::shared_ptr<const info> sourceInfo)
 
 	itsResult->First();
 
-	itsLowerValueThreshold.resize(itsResult->Grid()->Size());
-	itsLowerHeightThreshold.resize(itsResult->Grid()->Size());
+	itsPreviousValue.resize(itsResult->Grid()->Size());
+	itsPreviousHeight.resize(itsResult->Grid()->Size());
 
-	std::fill(itsLowerValueThreshold.begin(), itsLowerValueThreshold.end(), kFloatMissing);
-	std::fill(itsLowerHeightThreshold.begin(), itsLowerHeightThreshold.end(), kFloatMissing);
+	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), kFloatMissing);
+	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), kFloatMissing);
 
 }
 
@@ -490,13 +490,14 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 		throw std::runtime_error("NthValue other than 1");
 	}
 
-	double lowerValueThreshold = itsLowerValueThreshold[locationIndex];
-	double lowerHeightThreshold = itsLowerHeightThreshold[locationIndex];
+	double previousValue = itsPreviousValue[locationIndex];
+	double previousHeight = itsPreviousHeight[locationIndex];
 
-	if (IsMissingValue(lowerValueThreshold))
+	itsPreviousValue[locationIndex] = theValue;
+	itsPreviousHeight[locationIndex] = theHeight;
+
+	if (IsMissingValue(previousValue))
 	{
-		itsLowerValueThreshold[locationIndex] = theValue;
-		itsLowerHeightThreshold[locationIndex] = theHeight;
 		return;
 	}
 
@@ -531,13 +532,10 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 	 * 
 	 */
 
-	itsLowerValueThreshold[locationIndex] = theValue;
-	itsLowerHeightThreshold[locationIndex] = theHeight;
-	
-	if (lowerValueThreshold <= findValue && theValue >= findValue)
+	if ((previousValue <= findValue && theValue >= findValue) || (previousValue >= findValue && theValue <= findValue))
 	{
-		double actualHeight = NFmiInterpolation::Linear(findValue, lowerValueThreshold, theValue, lowerHeightThreshold, theHeight);
-		
+		double actualHeight = NFmiInterpolation::Linear(findValue, previousValue, theValue, previousHeight, theHeight);
+
 		itsResult->Value(actualHeight);
 		itsResult->ParamIndex(0);
 		itsResult->Value(findValue);

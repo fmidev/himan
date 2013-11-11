@@ -191,8 +191,8 @@ class modifier_findheight : public modifier
 		virtual void Init(std::shared_ptr<const himan::info> sourceInfo);
 
 	private:
-		std::vector<double> itsLowerValueThreshold;
-		std::vector<double> itsLowerHeightThreshold;
+		std::vector<double> itsPreviousValue;
+		std::vector<double> itsPreviousHeight;
 
 		size_t itsValuesFound;
 };
