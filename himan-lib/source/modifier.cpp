@@ -102,7 +102,7 @@ void modifier::Clear(double fillValue)
 
 bool modifier::IsMissingValue(double theValue) const
 {
-	if (theValue == kFloatMissing)
+	if (theValue == kFloatMissing || theValue == kHPMissingValue)
 	{
 		return true;
 	}
@@ -159,7 +159,6 @@ double modifier_max::MaximumHeight() const
 
 void modifier_min::Calculate(double theValue, double theHeight)
 {
-
 	if (IsMissingValue(theValue))
 	{
 		return;
@@ -424,6 +423,7 @@ void modifier_count::Calculate(double theValue, double theHeight)
 	 * 16	 
 	 * 17
 	 *
+	 * The answer is: two times (as far as we know).
 	 */
 
 	if (lowerValueThreshold <= findValue && theValue >= findValue)
