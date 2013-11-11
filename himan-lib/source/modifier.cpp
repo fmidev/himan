@@ -102,7 +102,7 @@ void modifier::Clear(double fillValue)
 
 bool modifier::IsMissingValue(double theValue) const
 {
-	if (theValue == kFloatMissing || theValue == kHPMissingValue)
+	if (theValue == kFloatMissing || theValue == kFloatMissing)
 	{
 		return true;
 	}
@@ -352,7 +352,7 @@ std::shared_ptr<info> modifier_mean::Results() const
 		double val = itsResult->Value();
 		size_t count = itsValuesCount[itsResult->LocationIndex()];
 
-		if (val != kHPMissingValue && count != static_cast<size_t> (kHPMissingInt))
+		if (val != kFloatMissing && count != static_cast<size_t> (kHPMissingInt))
 		{
 			itsResult->Value(val / static_cast<double> (count));
 		}		
@@ -374,7 +374,7 @@ void modifier_count::Init(std::shared_ptr<const info> sourceInfo)
 
 	itsLowerValueThreshold.resize(itsResult->Grid()->Size());
 
-	std::fill(itsLowerValueThreshold.begin(), itsLowerValueThreshold.end(), kHPMissingValue);
+	std::fill(itsLowerValueThreshold.begin(), itsLowerValueThreshold.end(), kFloatMissing);
 
 }
 
@@ -428,7 +428,7 @@ void modifier_count::Calculate(double theValue, double theHeight)
 
 	if (lowerValueThreshold <= findValue && theValue >= findValue)
 	{
-		itsResult->Value() == kHPMissingValue ? itsResult->Value(1) : itsResult->Value(itsResult->Value() + 1);
+		itsResult->Value() == kFloatMissing ? itsResult->Value(1) : itsResult->Value(itsResult->Value() + 1);
 
 		return;
 	}
@@ -460,8 +460,8 @@ void modifier_findheight::Init(std::shared_ptr<const info> sourceInfo)
 	itsLowerValueThreshold.resize(itsResult->Grid()->Size());
 	itsLowerHeightThreshold.resize(itsResult->Grid()->Size());
 
-	std::fill(itsLowerValueThreshold.begin(), itsLowerValueThreshold.end(), kHPMissingValue);
-	std::fill(itsLowerHeightThreshold.begin(), itsLowerHeightThreshold.end(), kHPMissingValue);
+	std::fill(itsLowerValueThreshold.begin(), itsLowerValueThreshold.end(), kFloatMissing);
+	std::fill(itsLowerHeightThreshold.begin(), itsLowerHeightThreshold.end(), kFloatMissing);
 
 }
 
@@ -642,7 +642,7 @@ void modifier_findvalue::Init(std::shared_ptr<const info> sourceInfo)
 	itsLowerValueThreshold.resize(itsResult->Grid()->Size());
 	itsLowerHeightThreshold.resize(itsResult->Grid()->Size());
 
-	std::fill(itsLowerValueThreshold.begin(), itsLowerValueThreshold.end(), kHPMissingValue);
-	std::fill(itsLowerHeightThreshold.begin(), itsLowerHeightThreshold.end(), kHPMissingValue);
+	std::fill(itsLowerValueThreshold.begin(), itsLowerValueThreshold.end(), kFloatMissing);
+	std::fill(itsLowerHeightThreshold.begin(), itsLowerHeightThreshold.end(), kFloatMissing);
 
 }

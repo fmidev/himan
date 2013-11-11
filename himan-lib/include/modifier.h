@@ -44,7 +44,7 @@ class modifier
 		virtual double MaximumHeight() const;
 
 		virtual void Calculate(double theValue, double theHeight) = 0;
-		virtual void Clear(double fillValue = kHPMissingValue);
+		virtual void Clear(double fillValue = kFloatMissing);
 
 		bool ReturnHeight() const;
 		void ReturnHeight(bool theReturnHeight);
