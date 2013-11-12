@@ -1,11 +1,11 @@
 /**
- * @file precipitation.cpp
+ * @file split_sum.cpp
  *
  * @date Jan 28, 2012
  * @author partio
  */
 
-#include "precipitation.h"
+#include "split_sum.h"
 #include <iostream>
 #include "plugin_factory.h"
 #include "logger_factory.h"
@@ -23,15 +23,15 @@ using namespace himan::plugin;
 
 map<string,string> sourceParameters;
 
-precipitation::precipitation()
+split_sum::split_sum()
 {
-	itsClearTextFormula = "RRsum = RR_cur - RR_prev; RR = (RR_cur - RR_prev) / step";
+	itsClearTextFormula = "Hourly_sum = SUM_cur - SUM_prev; Rate = (SUM_cur - SUM_prev) / step";
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("precipitation"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("split_sum"));
 
 	// Define source parameters for each output parameter
 	
-	// General precipitation (liquid + solid)
+	// General split_sum (liquid + solid)
 	sourceParameters["RR-1-MM"] = "RR-KGM2";
 	sourceParameters["RR-3-MM"] = "RR-KGM2";
 	sourceParameters["RR-6-MM"] = "RR-KGM2";
@@ -48,7 +48,7 @@ precipitation::precipitation()
 
 }
 
-void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
+void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	unique_ptr<timer> aTimer;
@@ -70,7 +70,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
-	 * Set target parameter to precipitation.
+	 * Set target parameter to split_sum.
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
@@ -229,7 +229,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
 
-		boost::thread* t = new boost::thread(&precipitation::Run,
+		boost::thread* t = new boost::thread(&split_sum::Run,
 											 this,
 											 shared_ptr<info> (new info(*targetInfo)),
 											 conf,
@@ -253,7 +253,7 @@ void precipitation::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 }
 
-void precipitation::Run(shared_ptr<info> myTargetInfo,
+void split_sum::Run(shared_ptr<info> myTargetInfo,
 				shared_ptr<const plugin_configuration> conf,
 				unsigned short threadIndex)
 {
@@ -270,12 +270,12 @@ void precipitation::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void precipitation::Calculate(shared_ptr<info> myTargetInfo,
+void split_sum::Calculate(shared_ptr<info> myTargetInfo,
 					 shared_ptr<const plugin_configuration> conf,
 					 unsigned short threadIndex)
 {
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("precipitationThread #" + boost::lexical_cast<string> (threadIndex)));
+	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("split_sumThread #" + boost::lexical_cast<string> (threadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);
 
@@ -297,11 +297,11 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 			/*
 			 * Two modes of operation:
 			 *
-			 * 1) When calculating precipitation sums, always get the previous
+			 * 1) When calculating split_sum sums, always get the previous
 			 * step value from the current step and get both values (current and
 			 * previous). If either can't be found, skip time step.
 			 *
-			 * 2) When calculating precipitation rate, get the first data that's
+			 * 2) When calculating split_sum rate, get the first data that's
 			 * earlier or same than current time step and the next data that's
 			 * later or same than the current time step. Then calculate rate
 			 * based on those values.
@@ -350,7 +350,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 						prevTimeStep.ValidDateTime()->Adjust(prevTimeStep.StepResolution(), -paramStep);
 
-						prevRRInfo = FetchSourceRR(conf, myTargetInfo, prevTimeStep);
+						prevRRInfo = FetchSourceData(conf, myTargetInfo, prevTimeStep);
 
 #ifdef EMULATE_ZERO_TIMESTEP_DATA
 
@@ -380,7 +380,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 					// Data from current time step
 					if (!curRRInfo)
 					{
-						curRRInfo = FetchSourceRR(conf, myTargetInfo, myTargetInfo->Time());
+						curRRInfo = FetchSourceData(conf, myTargetInfo, myTargetInfo->Time());
 					}
 				}
 			}
@@ -424,7 +424,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 
 			double scaleFactor = 1.;
 
-			// EC gives precipitation in meters, we are calculating millimeters
+			// EC gives split_sum in meters, we are calculating millimeters
 
 			if (curRRInfo->Param().Unit() == kM)
 			{
@@ -512,7 +512,7 @@ void precipitation::Calculate(shared_ptr<info> myTargetInfo,
 	}
 }
 
-shared_ptr<himan::info> precipitation::GetSourceDataForRate(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, bool forward)
+shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, bool forward)
 {
 	shared_ptr<info> RRInfo;
 
@@ -546,14 +546,14 @@ shared_ptr<himan::info> precipitation::GetSourceDataForRate(shared_ptr<const plu
 			
 		wantedTimeStep.ValidDateTime()->Adjust(kHourResolution, step);
 
-		RRInfo = FetchSourceRR(conf,myTargetInfo,wantedTimeStep);
+		RRInfo = FetchSourceData(conf,myTargetInfo,wantedTimeStep);
 
 	}
 
 	return RRInfo;
 }
 
-shared_ptr<himan::info> precipitation::FetchSourceRR(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime)
+shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime)
 {
 	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
