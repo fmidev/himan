@@ -14,7 +14,7 @@
 	{
 		"leveltype" : "ground",
 		"levels" : "0",
-		"plugins" : [ { "name" : "precipitation", "rr1h" : true } ]
+		"plugins" : [ { "name" : "split_sum", "rr1h" : true } ]
 	} 
 	]
 }

@@ -12,7 +12,7 @@
 	{
 		"leveltype" : "height",
 		"levels" : "0",
-		"plugins" : [ { "name" : "precipitation", "rr" : true, "rrl" : true, "rrc" : true, "snr" : true } ]
+		"plugins" : [ { "name" : "split_sum", "rrr" : true, "rrrl" : true, "rrrc" : true, "snr" : true } ]
 	} 
 	]
 }
