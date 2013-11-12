@@ -33,7 +33,7 @@ def read(FILE,POINT):
 		values = grib_get_values(grib)
 
 		if POINT != None:
-			print str(int(POINT)) + " " + str(values[int(POINT)])
+			print str(POINT) + " " + str(values[int(POINT)])
 		else:
 			for i in xrange(len(values)):
 				value = values[i]
@@ -58,9 +58,11 @@ def main():
 		POINT=None
 
 		try:
-			POINT = sys.argv[arglen-1]
-		except:
-			noop
+			POINT = int(sys.argv[arglen-1])
+		except ValueError:
+			POINT = None
+			pass
+
 		i=1
 
 		reduction=0
