@@ -93,7 +93,15 @@ int main(int argc, char** argv)
 
 		std::shared_ptr<plugin_configuration> pc = plugins[i];
 
-		shared_ptr<plugin::compiled_plugin> aPlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc->Name()));
+		string pluginName = pc->Name();
+
+		if (pluginName == "precipitation")
+		{
+			aLogger->Warning("Plugin 'precipitation' is deprecated -- use 'split_sum' instead'");
+			pluginName = "split_sum";
+		}
+		
+		auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pluginName));
 
 		if (!aPlugin)
 		{
