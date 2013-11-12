@@ -1,10 +1,5 @@
 #!/bin/sh
 
-echo "this test will work only when hybrid_pressure produces parameter P-PA, or when"
-echo "vvms-plugin accepts parameter P-HPA"
-
-exit 0
-
 set -x
 
 if [ -z "$HIMAN" ]; then
