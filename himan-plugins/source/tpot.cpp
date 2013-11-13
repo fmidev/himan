@@ -230,6 +230,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 	myTargetInfo->FirstParam();
 
+	params PParam = { param("P-PA"), param("P-HPA") };
+	
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -264,7 +266,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				PInfo = theFetcher->Fetch(conf,
 											myTargetInfo->Time(),
 											myTargetInfo->Level(),
-											param("P-PA"));
+											PParam);
 
 				if (PInfo->Param().Unit() == kPa)
 				{
@@ -341,6 +343,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			itsLogger->Warning("tpot@cuda not supported for now");
 		}
 
+		// Force CPU
+		
 		if (false)
 		{
 			deviceType = "GPU";
