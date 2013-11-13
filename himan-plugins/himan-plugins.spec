@@ -9,7 +9,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 13.10.14
+Version: 13.11.13
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -22,7 +22,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.10.4
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-BuildRequires: boost-devel >= 1.52
+BuildRequires: boost-devel >= 1.54
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 12.4.18-1
 BuildRequires: grib_api-devel >= 1.10.4
@@ -72,12 +72,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libpcuda.so
-%{_libdir}/himan-plugins/libprecipitation.so
+%{_libdir}/himan-plugins/libpreform_hybrid.so
 %{_libdir}/himan-plugins/libpreform_pressure.so
 %{_libdir}/himan-plugins/libquerydata.so
 %{_libdir}/himan-plugins/librain_type.so
 %{_libdir}/himan-plugins/librelative_humidity.so
 %{_libdir}/himan-plugins/libseaicing.so
+%{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libtk2tc.so
 %{_libdir}/himan-plugins/libtpot.so
 %{_libdir}/himan-plugins/libvvms.so
@@ -85,6 +86,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Nov 13 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.11.13-1.el6.fmi
+- Source parameter fixes for tpot and icing
+* Tue Nov 12 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.11.12-1.el6.fmi
+- New plugin preform_hybrid (not finished yet)
+- Rename plugin 'precipitation' to 'split_sum'
+- Fix for split_sum ground level determination
+- Other bugfixes
 * Mon Oct 14 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.14-1.el6.fmi
 - Leveltype fixes in hybrid_pressure and precipitation
 - Add hitool-plugin
