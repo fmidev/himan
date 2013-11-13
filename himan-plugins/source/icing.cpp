@@ -153,7 +153,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 	// Required source parameters
 
 	param TParam("T-K");
-	param VvParam("VV-MMS");
+	params VvParam = { param("VV-MS"), param("VV-MMS")};
 	param ClParam("CLDWAT-KGKG");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
@@ -172,6 +172,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 		shared_ptr<info> VvInfo;
 		shared_ptr<info> ClInfo;
 
+		double VvScale = 1; // Assume we'll have VV-MMS
+		
 		try
 		{
 			// Source info for T
@@ -186,6 +188,16 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 								 myTargetInfo->Level(),
 								 VvParam);
 
+			if (VvInfo)
+			{
+				VvInfo->First();
+
+				if (VvInfo->Param().Name() == "VV-MS")
+				{
+					VvScale = 1000;
+				}
+			}
+			
 			// Source info for FF
 			ClInfo = theFetcher->Fetch(conf,
 								 myTargetInfo->Time(),
@@ -273,7 +285,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 			int tCor = kHPMissingInt;
 
 			T = T - TBase;
-
+			Vv *= VvScale;
+			
 			// Vertical velocity correction factor
 
 			if (Vv < 0)
