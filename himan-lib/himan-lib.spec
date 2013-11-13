@@ -9,7 +9,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 13.10.14
+Version: 13.11.12
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -32,7 +32,6 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: libsmartmet-newbase >= 12.4.18-1
 BuildRequires: scons
 BuildRequires: boost-devel >= 1.52
-
 Provides: libhiman.so
 
 %description
@@ -58,6 +57,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Nov 12 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.11.12-1.el6.fmi
+- Changes in modifier
 * Mon Oct 14 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.14-1.el6.fmi
 - Fix to HIMAN-13
 * Tue Oct  8 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.8-1.el6.fmi
