@@ -73,6 +73,7 @@ else:
 	librarypaths.append(workspace + '/himan-lib/build/debug')
 
 librarypaths.append('/usr/lib64')
+librarypaths.append('/usr/lib64/oracle')
 
 if have_cuda:
 	librarypaths.append(cuda_toolkit_path + '/lib64')
@@ -88,6 +89,11 @@ libraries.append('smartmet_newbase')
 libraries.append('rt')
 libraries.append('z')
 libraries.append('bz2')
+libraries.append('clntsh')
+
+if have_cuda:
+	libraries.append('cudart')
+
 
 env.Append(LIBS = libraries)
 
@@ -101,8 +107,7 @@ for lib in boost_libraries:
 
 	env.Append(LIBS=env.File(libfile))
 
-if have_cuda:
-	libraries.append('cudart')
+
 
 # CFLAGS
 

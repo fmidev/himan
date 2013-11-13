@@ -9,7 +9,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 13.10.2
+Version: 13.11.13
 Release: 1.%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -34,11 +34,10 @@ BuildRequires: scons
 BuildRequires: boost-devel >= 1.52
 BuildRequires: libsmartmet-newbase >= 12.4.18-1
 Requires: cuda-core-libs-5-5
-
 Provides: himan
 
 %description
-FMI himan -- hila manipulaatio -- executable
+FMI himan -- hilojen manipulaatio -- executable
 
 %prep
 rm -rf $RPM_BUILD_ROOT
@@ -60,6 +59,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Wed Nov 13 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.11.13-1.el6.fmi
+- Fix crashing himan caused by missing cudar and clntsh libraries at linking stage
+* Tue Nov 12 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.11.12-1.el6.fmi
+- Extra support for renamed plugin 'precipitation' (new name 'split_sum')
 * Wed Oct  2 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.2-1.el6.fmi
 - Changes in himan-lib
 * Mon Sep 23 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.9.23-1.el6.fmi
