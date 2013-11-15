@@ -654,6 +654,8 @@ public:
 
 	HPProjectionType Projection() const;
 
+    std::string ToCacheString();
+
 private:
 
 	void Init();
