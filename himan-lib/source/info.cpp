@@ -697,3 +697,18 @@ void info::ReplaceParam(const param& theParam)
 
 	p = theParam;
 }
+
+string info::ToCacheString()
+{
+    string uniqueName = "";
+    uniqueName += Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S") + '_';
+    uniqueName += Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S") + '_';
+    uniqueName += Param().Name() + '_';
+    uniqueName += boost::lexical_cast<string> (Projection()) + '_';
+    uniqueName += boost::lexical_cast<string> (Grid()->BottomLeft().X()) + '_';
+    uniqueName += boost::lexical_cast<string> (Grid()->BottomLeft().Y()) + '_';
+    uniqueName += boost::lexical_cast<string>(Level().Value()) + '_';
+    uniqueName += HPLevelTypeToString.at(Level().Type());
+    return uniqueName;
+}
+
