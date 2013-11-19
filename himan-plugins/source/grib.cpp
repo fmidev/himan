@@ -278,7 +278,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			long no_vers = itsGrib->Message()->Table2Version();
 
-			p.Name(n->GribParameterName(number, no_vers));
+			p.Name(n->GribParameterName(number, no_vers, itsGrib->Message()->TimeRangeIndicator()));
 			p.GribParameter(number);
 			p.GribTableVersion(no_vers);
 				
@@ -313,7 +313,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 		   	p.Unit(kPrcnt);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "m s**-1")
+		else if (itsGrib->Message()->ParameterUnit() == "m s**-1" || itsGrib->Message()->ParameterUnit() == "m s-k1")
 		{
 			p.Unit(kMs);
 		}

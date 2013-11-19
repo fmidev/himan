@@ -74,9 +74,10 @@ public:
 	/**
 	 *  \par fmiParameterId - parameter number
 	 *  \par codeTableVersion  - code table number
+	 *  \par timeRangeIndicator - time range indicator (grib 1)
 	 */
 
-	std::string GribParameterName(const long fmiParameterId,const long codeTableVersion);
+	std::string GribParameterName(const long fmiParameterId,const long codeTableVersion, long timeRangeIndicator);
 	std::string GribParameterName(const long fmiParameterId,const long category, const long discipline, const long producer);
 
 	/**

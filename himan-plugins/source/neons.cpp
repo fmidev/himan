@@ -372,11 +372,11 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	return true;
 }
 
-string neons::GribParameterName(long fmiParameterId, long codeTableVersion)
+string neons::GribParameterName(long fmiParameterId, long codeTableVersion, long timeRangeIndicator)
 {	
 	Init();
 	
-	string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, codeTableVersion);
+	string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, codeTableVersion, timeRangeIndicator);
 	return paramName; 
 	
 }
@@ -385,7 +385,7 @@ string neons::GribParameterName(long fmiParameterId, long category, long discipl
 {
 	Init();
 	
-	string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, category, discipline, producer);
+	string paramName = itsNeonsDB->GetGridParameterNameForGrib2(fmiParameterId, category, discipline, producer);
 	return paramName;   
 }
 
@@ -423,7 +423,7 @@ string neons::ProducerMetaData(long producerId, const string& attribute) const
 			case 130:
 			case 230:
 			case 240:
-				ret = "1";
+				ret = "25";
 				break;
 
 			default:
