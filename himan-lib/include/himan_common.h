@@ -112,7 +112,9 @@ enum HPParameterUnit
 	kM, // meters
 	kMm, // millimeters
 	kGph, // geopotential height, m^2 / s^2
-	kKgkg // kg/kg
+	kKgkg, // kg/kg
+	kJm2, // J per square meter
+	kKgm2 // kg/m^2
 };
 
 enum HPLevelType
