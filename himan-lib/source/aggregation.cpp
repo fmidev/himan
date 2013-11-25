@@ -99,8 +99,8 @@ std::ostream& aggregation::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
-	file << "__itsType__ " << itsType << std::endl;
-	file << "__itsTimeResolution__ " << itsTimeResolution << std::endl;
+	file << "__itsType__ " << itsType << " (" << HPAggregationTypeToString.at(itsType) << ")" << std::endl;
+	file << "__itsTimeResolution__ " << itsTimeResolution << " (" << HPTimeResolutionToString.at(itsTimeResolution) << ")" << std::endl;
 	file << "__itsTimeResolutionValue__ " << itsTimeResolutionValue << std::endl;
 	
 	return file;
