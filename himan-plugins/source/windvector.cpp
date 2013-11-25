@@ -712,6 +712,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	if (useCudaInThisThread)
 	{
-		compiled_plugin_base::ResetCuda();
+		//compiled_plugin_base::ResetCuda();
 	}
 }
