@@ -278,10 +278,40 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			long no_vers = itsGrib->Message()->Table2Version();
 
-			p.Name(n->GribParameterName(number, no_vers, itsGrib->Message()->TimeRangeIndicator()));
+			long timeRangeIndicator = itsGrib->Message()->TimeRangeIndicator();
+
+			if (no_vers == 1 && process == 3 && centre == 86)
+			{
+				/*
+				 * Change timeRangeIndicator for old Arome for parameter fetch
+				 * query: the database has definitions only for timeRangeIndicator 0
+				 * and since new Harmonie is in production next week there's no
+				 * use to insert all the parameter definitions for
+				 * timeRangeIndicator 10.
+				 *
+				 * When old Arome (Finland area) is not in production anymore,
+				 * this piece of code can be removed.
+				 */
+				
+				timeRangeIndicator = 0;
+				
+			}
+
+			string parmName = n->GribParameterName(number, no_vers, timeRangeIndicator);
+
+			if (parmName.empty())
+			{
+				itsLogger->Warning("Parameter name not found from Neons for no_vers: " +
+							boost::lexical_cast<string> (no_vers) + ", number: " +
+							boost::lexical_cast<string> (number) + ", timeRangeIndicator: " +
+							boost::lexical_cast<string> (timeRangeIndicator));
+			}
+
+			p.Name(parmName);
+			
 			p.GribParameter(number);
 			p.GribTableVersion(no_vers);
-				
+
 		}
 		else
 		{
@@ -301,41 +331,51 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			}
 		}
 
-		if (itsGrib->Message()->ParameterUnit() == "K")
+		string unit = itsGrib->Message()->ParameterUnit();
+		
+		if (unit == "K")
 		{
 		   	p.Unit(kK);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "Pa s-1" || itsGrib->Message()->ParameterUnit() == "Pa s**-1" )
+		else if (unit == "Pa s-1" || unit == "Pa s**-1" )
 		{
 		   	p.Unit(kPas);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "%")
+		else if (unit == "%")
 		{
 		   	p.Unit(kPrcnt);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "m s**-1" || itsGrib->Message()->ParameterUnit() == "m s-k1")
+		else if (unit == "m s**-1" || unit == "m s-k1")
 		{
 			p.Unit(kMs);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "m")
+		else if (unit == "m")
 		{
 			p.Unit(kM);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "mm")
+		else if (unit == "mm")
 		{
 			p.Unit(kMm);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "Pa")
+		else if (unit == "Pa")
 		{
 			p.Unit(kPa);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "m**2 s**-2")
+		else if (unit == "m**2 s**-2")
 		{
 			p.Unit(kGph);
 		}
-		else if (itsGrib->Message()->ParameterUnit() == "kg kg**-1")
+		else if (unit == "kg kg**-1")
 		{
 			p.Unit(kKgkg);
+		}
+		else if (unit == "J m**-2")
+		{
+			p.Unit(kJm2);
+		}
+		else if (unit == "kg m**-2")
+		{
+			p.Unit(kKgm2);
 		}
 		else
 		{
@@ -344,7 +384,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		if (p != options.param)
 		{
-			itsLogger->Trace("Parameter does not match: " + options.param.Name() + " vs " + p.Name());
+			itsLogger->Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() + " (found)");
 			continue;
 		}
 
@@ -366,26 +406,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			dataTime = "0" + dataTime;
 		}
 
-		/* Determine time step */
-
-		long step;
-
-		if (itsGrib->Message()->TimeRangeIndicator() == 10)
-		{
-			long P1 = itsGrib->Message()->P1();
-			long P2 = itsGrib->Message()->P2();
-
-			step = (P1 << 8 ) | P2;
-		}
-		else
-		{
-			step = itsGrib->Message()->EndStep();
-
-			if (itsGrib->Message()->Edition() == 2)
-			{
-				step = itsGrib->Message()->ForecastTime();
-			}
-		}
+		long step = itsGrib->Message()->NormalizedStep(true, true);
 		
 		string originDateTimeStr = dataDate + dataTime;
 
@@ -393,13 +414,28 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		forecast_time t (originDateTime, originDateTime);
 
-		long unitOfTimeRange = itsGrib->Message()->UnitOfTimeRange();
+		long unitOfTimeRange = itsGrib->Message()->NormalizedUnitOfTimeRange();
 
-		HPTimeResolution timeResolution = kHourResolution;
+		HPTimeResolution timeResolution = kUnknownTimeResolution;
 
-		if (unitOfTimeRange == 0)
+		switch (unitOfTimeRange)
 		{
-			timeResolution = kMinuteResolution;
+			case 1:
+			case 10:
+			case 11:
+			case 12:
+				timeResolution = kHourResolution;
+				break;
+				
+			case 0:
+			case 13:
+			case 14:
+				timeResolution = kMinuteResolution;
+				break;
+
+			default:
+				itsLogger->Warning("Unsupported unit of time range: " + boost::lexical_cast<string> (timeResolution));
+				break;
 		}
 
 		t.StepResolution(timeResolution);
@@ -411,6 +447,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			itsLogger->Trace("Times do not match");
 			itsLogger->Trace("OriginDateTime: " + options.time.OriginDateTime()->String() + " (requested) vs " + t.OriginDateTime()->String() + " (found)");
 			itsLogger->Trace("ValidDateTime: " + options.time.ValidDateTime()->String() + " (requested) vs " + t.ValidDateTime()->String() + " (found)");
+			itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(options.time.StepResolution())) + " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) + " (found)");
+
 			continue;
 		}
 
@@ -889,7 +927,7 @@ void grib::WriteTime(std::shared_ptr<const info> anInfo)
 				}
 				else if (timeResolutionValue == 12)
 				{
-					unitForTimeRange = 12; // 1 hours
+					unitForTimeRange = 12; // 12 hours
 				}
 				else
 				{
