@@ -84,7 +84,31 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		waitedSeconds += SLEEPSECONDS;
 	}
 	while (waitedSeconds < config->FileWaitTimeout() * 60);
+
+	string optsStr = "producer(s): ";
+
+	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+	{
+		optsStr += boost::lexical_cast<string> (config->SourceProducer(prodNum).Id()) + ",";
+	}
+
+	optsStr = optsStr.substr(0, optsStr.size()-1);
+
+	optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
+
+	optsStr += " param(s): ";
 	
+	for (size_t i = 0; i < requestedParams.size(); i++)
+	{
+		optsStr += requestedParams[i].Name() + ",";
+	}
+
+	optsStr = optsStr.substr(0, optsStr.size()-1);
+
+	optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
+
+	itsLogger->Warning("No valid data found with given search options " + optsStr);
+
 	return ret;
 }
 
@@ -118,7 +142,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			
 			const search_options opts (requestedTime, requestedParam, requestedLevel, sourceProd, config);
 
-			itsLogger->Trace("Current producer: " + sourceProd.Name());
+			// itsLogger->Trace("Current producer: " + sourceProd.Name());
 
 			if (config->UseCache())
 			{
@@ -226,20 +250,26 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (theInfos.size() == 0)
 	{
-		string optsStr = "producer(s): ";
+		// If this function is called from multi-param Fetch(), do not print
+		// any messages yet since we might have another source param coming
 
-		for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+		if (controlWaitTime)
 		{
-			optsStr += boost::lexical_cast<string> (config->SourceProducer(prodNum).Id()) + ",";
+			string optsStr = "producer(s): ";
+
+			for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+			{
+				optsStr += boost::lexical_cast<string> (config->SourceProducer(prodNum).Id()) + ",";
+			}
+
+			optsStr = optsStr.substr(0, optsStr.size()-1);
+
+			optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
+			optsStr += " param: " + requestedParam.Name();
+			optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
+
+			itsLogger->Warning("No valid data found with given search options " + optsStr);
 		}
-
-		optsStr = optsStr.substr(0, optsStr.size()-1);
-
-		optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
-		optsStr += " param: " + requestedParam.Name();
-		optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
-
-		itsLogger->Warning("No valid data found with given search options " + optsStr);
 
 		throw kFileDataNotFound;
 	}
