@@ -109,7 +109,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	itsLogger->Warning("No valid data found with given search options " + optsStr);
 
-	return ret;
+	throw kFileDataNotFound;
+
 }
 
 
