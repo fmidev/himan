@@ -40,4 +40,23 @@ else
   exit 1
 fi
 
+rm -f RADGLO*
+
+$HIMAN -d 5 -f radiation_harmonie.json -t grib ./harmonie_source_rad.grib --no-cuda -s harmonie_nocuda
+
+grib_compare harmonie_result_radglo_15.grib RADGLO-WM2_height_0_rll_290_594_0_015.grib
+
+if [ $? -ne 0 ];then
+  echo radiation/harmonie failed on CPU
+  exit 1
+fi
+
+grib_compare harmonie_result_radglo_30.grib RADGLO-WM2_height_0_rll_290_594_0_030.grib
+
+if [ $? -eq 0 ];then
+  echo radiation/harmonie success on CPU!
+else
+  echo radiation/harmonie failed on CPU
+  exit 1
+fi
 
