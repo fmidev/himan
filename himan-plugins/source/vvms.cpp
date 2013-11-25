@@ -223,7 +223,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 							PParam,
 							conf->UseCudaForPacking() && useCudaInThisThread);
 
-				if (PInfo->Param().Unit() == kHPa)
+				if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
 				{
 					PScale = 100;
 				}

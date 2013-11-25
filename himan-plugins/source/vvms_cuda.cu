@@ -50,7 +50,7 @@ __global__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ d
 		}
 		else
 		{
-			VVMS[idx] = 287 * -dVV[idx] * (opts.TBase + dT[idx]) / (9.81 * P);
+			VVMS[idx] = 287 * -dVV[idx] * (opts.TBase + dT[idx]) / (9.81 * P * opts.PScale);
 		}
 	}
 }
