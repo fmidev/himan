@@ -846,10 +846,10 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 
 		if (!prodInfo.empty())
 		{
-                        prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
-                        prod.Name(prodInfo["ref_prod"]);
-                        prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
-                        prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
+			prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
+			prod.Name(prodInfo["ref_prod"]);
+			prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
+			prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
 		}
 		// conf->TargetProducer(prod);
 
