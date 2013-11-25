@@ -165,7 +165,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 	// Required source parameters
 
 	param TParam("T-K");
-	param PParam("P-HPA");
+	params PParams = { param("P-HPA"), param("P-PA") };
 	param QParam("Q-KGKG");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("relative_humidityThread #" + boost::lexical_cast<string> (threadIndex)));
@@ -184,7 +184,8 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 
 		double TBase = 0;
 		//double TDBase = 0;
-
+		double PScale = 1;
+		
 		shared_ptr<info> TInfo;
 		shared_ptr<info> PInfo;
 		shared_ptr<info> QInfo;
@@ -200,7 +201,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 			PInfo = f->Fetch(conf,
 								myTargetInfo->Time(),
 								myTargetInfo->Level(),
-								PParam,
+								PParams,
 								conf->UseCudaForPacking() && useCudaInThisThread);
 
 			QInfo = f->Fetch(conf,
@@ -240,6 +241,11 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 		if (TInfo->Param().Unit() == kK)
 		{
 			TBase = -273.15;
+		}
+
+		if (PInfo->Param().Unit() == kPa)
+		{
+			PScale = 100;
 		}
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
@@ -284,6 +290,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 				}
 
 				T += TBase;
+				P *= PScale;
 				
 				double es = util::Es(T) ;
 
