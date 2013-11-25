@@ -400,7 +400,7 @@ size_t info::SizeParams() const
 	return itsParamIterator->Size();
 }
 
-param& info::PeakParam(size_t theIndex) const
+param& info::PeekParam(size_t theIndex) const
 {
 	return itsParamIterator->At(theIndex);
 }
@@ -471,7 +471,7 @@ size_t info::SizeLevels() const
 	return itsLevelIterator->Size();
 }
 
-level& info::PeakLevel(size_t theIndex) const
+level& info::PeekLevel(size_t theIndex) const
 {
 	return itsLevelIterator->At(theIndex);
 }
@@ -526,7 +526,7 @@ size_t info::SizeTimes() const
 	return itsTimeIterator->Size();
 }
 
-forecast_time& info::PeakTime(size_t theIndex) const
+forecast_time& info::PeekTime(size_t theIndex) const
 {
 	return itsTimeIterator->At(theIndex);
 }
@@ -698,6 +698,7 @@ void info::ReplaceParam(const param& theParam)
 	p = theParam;
 }
 
+/*
 string info::ToCacheString()
 {
     string uniqueName = "";
@@ -711,4 +712,4 @@ string info::ToCacheString()
     uniqueName += HPLevelTypeToString.at(Level().Type());
     return uniqueName;
 }
-
+*/

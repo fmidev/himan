@@ -489,7 +489,7 @@ public:
 	void ParamIndex(size_t theParamIndex);
 	size_t ParamIndex() const;
 	param& Param() const;
-	param& PeakParam(size_t theIndex) const;
+	param& PeekParam(size_t theIndex) const;
 	void ReplaceParam(const param& theParam);
 	
 	size_t SizeParams() const;
@@ -532,7 +532,7 @@ public:
 	void LevelIndex(size_t theLevelIndex);
 	size_t LevelIndex() const;
 	level& Level() const;
-	level& PeakLevel(size_t theIndex) const;
+	level& PeekLevel(size_t theIndex) const;
 
 	size_t SizeLevels() const;
 
@@ -575,7 +575,7 @@ public:
 	void TimeIndex(size_t theTimeIndex);
 	size_t TimeIndex() const;
 	forecast_time& Time() const;
-	forecast_time& PeakTime(size_t theIndex) const;
+	forecast_time& PeekTime(size_t theIndex) const;
 
 	size_t SizeTimes() const;
 
@@ -654,7 +654,7 @@ public:
 
 	HPProjectionType Projection() const;
 
-    std::string ToCacheString();
+    // std::string ToCacheString();
 
 private:
 
