@@ -280,7 +280,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			long timeRangeIndicator = itsGrib->Message()->TimeRangeIndicator();
 
-			if (no_vers == 1 && process == 3 && centre == 86)
+			if (timeRangeIndicator == 10)
 			{
 				/*
 				 * Change timeRangeIndicator for old Arome for parameter fetch
