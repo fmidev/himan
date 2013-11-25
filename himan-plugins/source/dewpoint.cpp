@@ -176,6 +176,9 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(conf, threadIndex);
 
+	// Force use of CPU since cuda does not handle RHScale yet!
+	useCudaInThisThread = false;
+	
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -183,7 +186,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		double TBase = 0;
-
+		double RHScale = 1;
+		
 		shared_ptr<info> TInfo;
 		shared_ptr<info> RHInfo;
 
@@ -230,7 +234,12 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 		
 		SetAB(myTargetInfo, TInfo);
 
-		assert(RHInfo->Param().Unit() == kPrcnt);
+		if (RHInfo->Param().Unit() != kPrcnt)
+		{
+			// If unit cannot be detected, assume the values are from 0 .. 1
+			RHScale = 100;
+			myThreadedLogger->Warning("Unable to determine unit for relative humidity -- assuming values are from 0 to 1");
+		}
 
 		if (TInfo->Param().Unit() == kC)
 		{
@@ -251,7 +260,6 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 		string deviceType;
 
 #ifdef HAVE_CUDA
-		
 		if (useCudaInThisThread && equalGrids)
 		{
 
@@ -355,7 +363,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 					continue;
 				}
 
-				double TD = ((T+TBase) / (1 - ((T+TBase) * log(RH) * (RW_div_L)))) - 273.15 + TBase;
+				double TD = ((T+TBase) / (1 - ((T+TBase) * log(RHScale * RH) * (RW_div_L)))) - 273.15 + TBase;
 
 				if (!myTargetInfo->Value(TD))
 				{
