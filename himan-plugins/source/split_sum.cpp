@@ -70,9 +70,9 @@ split_sum::split_sum()
 	sourceParameters["SNRL-KGM2"] = { param("SNL-KGM2") };
 
 	// Radiation
-	sourceParameters["RADGLO-WM2"] = { param("RADGLOA-JM2"), param("RADGLO-WM2") };
-	sourceParameters["RADLW-WM2"] = { param("RADLWA-JM2"), param("RADLW-WM2") };
-	sourceParameters["RTOPLW-WM2"] = { param("RTOPLWA-JM2"), param("RTOPLW-WM2") };
+	sourceParameters["RADGLO-WM2"] = { param("RADGLOA-JM2") }; //, param("RADGLO-WM2") };
+	sourceParameters["RADLW-WM2"] = { param("RADLWA-JM2") }; // , param("RADLW-WM2") };
+	sourceParameters["RTOPLW-WM2"] = { param("RTOPLWA-JM2") }; //, param("RTOPLW-WM2") };
 
 }
 
@@ -813,12 +813,12 @@ shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const plugin_
 	}
 
 	int i = 0;
-	
-	if (CALCULATE_AVERAGE_RATE)
-	{
+
+	if (!forward || (CALCULATE_AVERAGE_RATE && myTargetInfo->Param().Name() != "RRR-KGM2"))
+	{ 
 		i = targetStep;
 	}
-
+	
 	for (; !SumInfo && i <= steps + targetStep; i += step)
 	{
 		int curstep = i;
