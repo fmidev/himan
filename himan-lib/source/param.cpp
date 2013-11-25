@@ -154,7 +154,7 @@ bool param::operator==(const param& other)
 		return false;
 	}
 
-	if (itsAggregation != other.itsAggregation)
+	if (itsAggregation.Type() != kUnknownAggregationType && other.itsAggregation.Type() != kUnknownAggregationType && itsAggregation != other.itsAggregation)
 	{
 		return false;
 	}
