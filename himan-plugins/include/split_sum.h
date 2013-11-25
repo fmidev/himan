@@ -65,10 +65,11 @@ private:
 	 * @param conf himan configuration
 	 * @param myTargetInfo Result info of calculation (will not be modified in this function)
 	 * @param forward Whether to search forward in time for next data
+	 * @param targetStep The step of the target info; source data step must equal or large than this 
 	 * @return Requested data
 	 */
 
-	std::shared_ptr<himan::info> GetSourceDataForRate(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, bool forward);
+	std::shared_ptr<himan::info> GetSourceDataForRate(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, bool forward, int targetStep);
 
 	/**
 	 * @brief Fetching source data from cumulative parameter
