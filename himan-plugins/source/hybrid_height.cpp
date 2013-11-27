@@ -97,6 +97,10 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	Dimension(conf->LeadingDimension());
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(theRequestedParam);
+	/*
+	 * For hybrid height we must go through the levels backwards.
+	 */
+	FeederInfo()->LevelOrder(kBottomToTop);
 
 	if (conf->StatisticsEnabled())
 	{
@@ -143,7 +147,8 @@ void hybrid_height::Run(shared_ptr<info> myTargetInfo,
 				unsigned short threadIndex)
 {
 
-	while (AdjustLeadingDimensionHH(myTargetInfo))
+	//myTargetInfo->LevelOrder(kBottomToTop);
+	while (AdjustLeadingDimension(myTargetInfo))
 	{
 		Calculate(myTargetInfo, conf, threadIndex);
 	}
@@ -178,7 +183,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 	*/
 	level prevLevel;
 
-	while (AdjustNonLeadingDimensionHH(myTargetInfo))
+	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
