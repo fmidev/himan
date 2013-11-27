@@ -44,6 +44,7 @@ info::info(const info& other)
 	itsProjection = other.itsProjection;
 	itsOrientation = other.itsOrientation;
 	itsScanningMode = other.itsScanningMode;
+    itsLevelOrder = other.itsLevelOrder;
 
 	itsBottomLeft = other.itsBottomLeft;
 	itsTopRight = other.itsTopRight;
@@ -77,6 +78,7 @@ void info::Init()
 
     itsProjection = kUnknownProjection;
     itsScanningMode = kUnknownScanningMode;
+    itsLevelOrder = kTopToBottom;
 
 //    itsAB = std::vector<double>;
 
@@ -140,6 +142,7 @@ void info::Create()
 
 	assert(itsScanningMode != kUnknownScanningMode);
 	assert(itsProjection != kUnknownProjection);
+    assert(itsLevelOrder != kUnknownLevelOrder);
 
     while (NextTime())
     {
@@ -405,9 +408,17 @@ param& info::PeekParam(size_t theIndex) const
 	return itsParamIterator->At(theIndex);
 }
 
+void info::LevelOrder(HPLevelOrder levelOrder)
+{
+    itsLevelOrder = levelOrder;
+}
+
 bool info::NextLevel()
 {
-    return itsLevelIterator->Next();
+    if (itsLevelOrder == kBottomToTop)
+        return itsLevelIterator->Previous();
+    else
+        return itsLevelIterator->Next();
 }
 
 bool info::PreviousLevel()

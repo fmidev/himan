@@ -179,6 +179,13 @@ const boost::unordered_map<HPScanningMode,const char*> HPScanningModeToString = 
 		(kBottomLeft, "+x+y")
 		(kBottomRight, "-x-y");
 
+enum HPLevelOrder
+{
+	kUnknownLevelOrder = 0,
+	kTopToBottom = 1,
+	kBottomToTop = 2 
+};
+
 enum HPExceptionType
 {
 	kUnknownException = 0,

@@ -534,6 +534,8 @@ public:
 	level& Level() const;
 	level& PeekLevel(size_t theIndex) const;
 
+	void LevelOrder(HPLevelOrder levelOrder);
+
 	size_t SizeLevels() const;
 
 	/**
@@ -678,6 +680,8 @@ private:
 	double itsOrientation;
 
 	HPScanningMode itsScanningMode;
+	HPLevelOrder itsLevelOrder;
+
 	size_t itsNi;
 	size_t itsNj;
 
