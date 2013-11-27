@@ -86,8 +86,14 @@ protected:
 	}
 
 	bool AdjustLeadingDimension(std::shared_ptr<info> myTargetInfo);
-	bool AdjustNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
+	bool AdjustNonLeadingDimension(std::shared_ptr<info> myTargetInfo);	
 	void ResetNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
+
+	/**
+	 * Special cases for hybrid_height ( level iterator goes backwards eg. 65-->1)
+	 */
+	bool AdjustLeadingDimensionHH(std::shared_ptr<info> myTargetInfo);
+	bool AdjustNonLeadingDimensionHH(std::shared_ptr<info> myTargetInfo);
 
 	/**
 	 * @brief Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.

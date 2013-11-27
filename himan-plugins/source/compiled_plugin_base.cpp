@@ -148,6 +148,55 @@ bool compiled_plugin_base::AdjustNonLeadingDimension(shared_ptr<info> myTargetIn
 	}
 }
 
+bool compiled_plugin_base::AdjustLeadingDimensionHH(shared_ptr<info> myTargetInfo)
+{
+
+	lock_guard<mutex> lock(itsAdjustDimensionMutex);
+
+	// Leading dimension can be: time or level
+
+	if (itsLeadingDimension == kTimeDimension)
+	{
+		if (!itsFeederInfo->NextTime())
+		{
+			return false;
+		}
+
+		myTargetInfo->Time(itsFeederInfo->Time());
+	}
+	else if (itsLeadingDimension == kLevelDimension)
+	{
+		if (!itsFeederInfo->PreviousLevel())
+		{
+			return false;
+		}
+
+		myTargetInfo->Level(itsFeederInfo->Level());
+	}
+	else
+	{
+		throw runtime_error(ClassName() + ": Invalid dimension type: " + boost::lexical_cast<string> (itsLeadingDimension));
+	}
+
+	return true;
+}
+
+bool compiled_plugin_base::AdjustNonLeadingDimensionHH(shared_ptr<info> myTargetInfo)
+{
+	if (itsLeadingDimension == kTimeDimension)
+	{
+		return myTargetInfo->PreviousLevel();
+	}
+	else if (itsLeadingDimension == kLevelDimension)
+	{
+		return myTargetInfo->NextTime();
+	}
+	else
+	{
+		throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
+	}
+}
+
 void compiled_plugin_base::ResetNonLeadingDimension(shared_ptr<info> myTargetInfo)
 {
 	if (itsLeadingDimension == kTimeDimension)

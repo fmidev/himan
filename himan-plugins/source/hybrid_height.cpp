@@ -143,7 +143,7 @@ void hybrid_height::Run(shared_ptr<info> myTargetInfo,
 				unsigned short threadIndex)
 {
 
-	while (AdjustLeadingDimension(myTargetInfo))
+	while (AdjustLeadingDimensionHH(myTargetInfo))
 	{
 		Calculate(myTargetInfo, conf, threadIndex);
 	}
@@ -176,218 +176,232 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 	/*
 		pitääkö tunnistaa tuottaja?
 	*/
+	level prevLevel;
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	while (AdjustNonLeadingDimensionHH(myTargetInfo))
 	{
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
+		bool firstLevel(false);
+		
+		//only works with hirlam for now
+		//itsLogger->Debug("level: " 
+		if ( myTargetInfo->Level().Value() == 65)
+		{
+			firstLevel = true;
+		}
+		else
+		{
+			prevLevel = level(myTargetInfo->Level());
+			prevLevel.Value(myTargetInfo->Level().Value() + 1);
 
-		level prevLevel = myTargetInfo->Level();
+			prevLevel.Index(prevLevel.Index() + 1);
+		}
 
-		bool firstLevel(true);
-		for ( myTargetInfo->ResetLevel(); myTargetInfo->PreviousLevel(); )
-		{			
-			shared_ptr<info> PInfo;
-			shared_ptr<info> TInfo;			
-			shared_ptr<info> prevPInfo;
-			shared_ptr<info> prevTInfo;
-			shared_ptr<info> prevHInfo;
 
-			try
+
+		shared_ptr<info> PInfo;
+		shared_ptr<info> TInfo;			
+		shared_ptr<info> prevPInfo;
+		shared_ptr<info> prevTInfo;
+		shared_ptr<info> prevHInfo;
+
+		try
+		{
+
+			forecast_time& fTime = myTargetInfo->Time();
+			if (!firstLevel)
 			{
+				prevTInfo = FetchPrevious(conf, fTime, prevLevel, param("T-K"));
+				prevPInfo = FetchPrevious(conf, fTime, prevLevel, param("P-HPA"));
+				prevHInfo = FetchPrevious(conf, fTime, prevLevel, param("HL-M"));
+			}
+			else 
+			{
+				prevPInfo = FetchPrevious(conf, fTime, H0, param("P-PA"));
+				prevTInfo = FetchPrevious(conf, fTime, H2, param("T-K"));
+			}
+			//prevLevel = myTargetInfo->Level();
 
-				forecast_time& fTime = myTargetInfo->Time();
-				if (!firstLevel)
-				{
-					prevTInfo = FetchPrevious(conf, fTime, prevLevel, param("T-K"));
-					prevPInfo = FetchPrevious(conf, fTime, prevLevel, param("P-HPA"));
-					prevHInfo = FetchPrevious(conf, fTime, prevLevel, param("HL-M"));
-				}
-				else 
-				{
-					prevTInfo = FetchPrevious(conf, fTime, H2, param("T-K"));
-					prevPInfo = FetchPrevious(conf, fTime, H0, param("P-PA"));
-				}
-				prevLevel = myTargetInfo->Level();
+			PInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 myTargetInfo->Level(),
+								 PParam);
+				
+			TInfo = theFetcher->Fetch(conf,
+								 myTargetInfo->Time(),
+								 myTargetInfo->Level(),
+								 TParam);			
 
-				PInfo = theFetcher->Fetch(conf,
-									 myTargetInfo->Time(),
-									 myTargetInfo->Level(),
-									 PParam);
+		}
+		catch (HPExceptionType e)
+		{
+			switch (e)
+			{
+				case kFileDataNotFound:
+					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+					myTargetInfo->Data()->Fill(kFloatMissing);
+
+					if (conf->StatisticsEnabled())
+					{
+						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					}
 					
-				TInfo = theFetcher->Fetch(conf,
-									 myTargetInfo->Time(),
-									 myTargetInfo->Level(),
-									 TParam);			
+					continue;
+					break;
 
+				default:
+					throw runtime_error(ClassName() + ": Unable to proceed");
+					break;
 			}
-			catch (HPExceptionType e)
-			{
-				switch (e)
-				{
-					case kFileDataNotFound:
-						itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-						myTargetInfo->Data()->Fill(kFloatMissing);
+		}
 
-						if (conf->StatisticsEnabled())
-						{
-							conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-							conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-						}
-						
-						continue;
-						break;
+		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
-					default:
-						throw runtime_error(ClassName() + ": Unable to proceed");
-						break;
-				}
-			}
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Start();
+		}
 
-			unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
 
-			if (conf->StatisticsEnabled())
-			{
-				processTimer->Start();
-			}
+		SetAB(myTargetInfo, TInfo);
 
-			assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
+		size_t missingCount = 0;
+		size_t count = 0;
 
-			SetAB(myTargetInfo, TInfo);
+		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> prevPGrid(prevPInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> prevTGrid(prevTInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> prevHGrid;
+		
+		if (!firstLevel )
+			prevHGrid = shared_ptr<NFmiGrid>(prevHInfo->Grid()->ToNewbaseGrid());
 
-			size_t missingCount = 0;
-			size_t count = 0;
+		bool equalGrids = ( *myTargetInfo->Grid() == *prevTInfo->Grid() && *myTargetInfo->Grid() == *prevPInfo->Grid() && *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() ); //&& *myTargetInfo->Grid() == *T2mInfo->Grid() && *myTargetInfo->Grid() == *P0mInfo->Grid() );
 
-			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> prevPGrid(prevPInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> prevTGrid(prevTInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> prevHGrid;
-			
-			if (!firstLevel )
-				prevHGrid = shared_ptr<NFmiGrid>(prevHInfo->Grid()->ToNewbaseGrid());
+		if (!firstLevel)
+			equalGrids = ( equalGrids && *myTargetInfo->Grid() == *prevHInfo->Grid() );
 
-			bool equalGrids = ( *myTargetInfo->Grid() == *prevTInfo->Grid() && *myTargetInfo->Grid() == *prevPInfo->Grid() && *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() ); //&& *myTargetInfo->Grid() == *T2mInfo->Grid() && *myTargetInfo->Grid() == *P0mInfo->Grid() );
+		string deviceType = "CPU";
 
-			if (!firstLevel)
-				equalGrids = ( equalGrids && *myTargetInfo->Grid() == *prevHInfo->Grid() );
+		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-			string deviceType = "CPU";
+		myTargetInfo->ResetLocation();
 
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+		targetGrid->Reset();
 
-			myTargetInfo->ResetLocation();
+		prevPGrid->Reset();
+		prevTGrid->Reset();
+		if (!firstLevel)
+			prevHGrid->Reset();
 
-			targetGrid->Reset();
-
-			prevPGrid->Reset();
-			prevTGrid->Reset();
-			if (!firstLevel)
-				prevHGrid->Reset();
-
-			while (	myTargetInfo->NextLocation() && 
+		while (	myTargetInfo->NextLocation() && 
 				targetGrid->Next() && 
 				prevTGrid->Next() && 
-				prevPGrid->Next())
+				prevPGrid->Next() )
+		{
+
+			count++;
+
+			double T = kFloatMissing;
+			double P = kFloatMissing;
+			double prevP = kFloatMissing;
+			double prevT = kFloatMissing;
+			double prevH = kFloatMissing;
+
+			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+			InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+			InterpolateToPoint(targetGrid, prevPGrid, equalGrids, prevP);		
+			InterpolateToPoint(targetGrid, prevTGrid, equalGrids, prevT);
+		
+			if (!firstLevel)
 			{
-
-				count++;
-
-				double T = kFloatMissing;
-				double P = kFloatMissing;
-				double prevP = kFloatMissing;
-				double prevT = kFloatMissing;
-				double prevH = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-				InterpolateToPoint(targetGrid, prevPGrid, equalGrids, prevP);		
-				InterpolateToPoint(targetGrid, prevTGrid, equalGrids, prevT);
-			
-				if (!firstLevel)
-				{
-					prevHGrid->Next();
-					InterpolateToPoint(targetGrid, prevHGrid, equalGrids, prevH);
-					
-					if (prevH == kFloatMissing )
-					{
-						missingCount++;
-
-						myTargetInfo->Value(kFloatMissing);
-						continue;
-					}
-				}
-
-				if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )
+				prevHGrid->Next();
+				InterpolateToPoint(targetGrid, prevHGrid, equalGrids, prevH);
+				
+				if (prevH == kFloatMissing )
 				{
 					missingCount++;
 
 					myTargetInfo->Value(kFloatMissing);
 					continue;
 				}
-
-
-				if (firstLevel)
-				{
-					prevP /= 100.f;
-				}
-
-				double Tave = ( T + prevT ) / 2;
-				double deltaZ = (287 / 9.81) * Tave * log(prevP / P);
-
-				double totalHeight(0);
-
-				if (firstLevel)
-				{
-					totalHeight = deltaZ;		
-				}
-				else
-					totalHeight = prevH + deltaZ;
-
-				if (!myTargetInfo->Value(totalHeight))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
-				}
-			
 			}
 
-			firstLevel = false;
-
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
-
-			SwapTo(myTargetInfo, kBottomLeft);
-
-			if (conf->StatisticsEnabled())
+			if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )
 			{
-				processTimer->Stop();
-				conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+				missingCount++;
+
+				myTargetInfo->Value(kFloatMissing);
+				continue;
+			}
+
+
+			if (firstLevel)
+			{
+				prevP /= 100.f;
+			}
+
+			double Tave = ( T + prevT ) / 2;
+			double deltaZ = (287 / 9.81) * Tave * log(prevP / P);
+
+			double totalHeight(0);
+
+			if (firstLevel)
+			{
+				totalHeight = deltaZ;		
+			}
+			else
+			{	
+				totalHeight = prevH + deltaZ;
+			}
+
+			if (!myTargetInfo->Value(totalHeight))
+			{
+				throw runtime_error(ClassName() + ": Failed to set value to matrix");
+			}
+		
+		}
+
+		firstLevel = false;
+
+		/*
+		 * Newbase normalizes scanning mode to bottom left -- if that's not what
+		 * the target scanning mode is, we have to swap the data back.
+		 */
+
+		SwapTo(myTargetInfo, kBottomLeft);
+
+		if (conf->StatisticsEnabled())
+		{
+			processTimer->Stop();
+			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
 #ifdef DEBUG
-				itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
+			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
 
-				conf->Statistics()->AddToMissingCount(missingCount);
-				conf->Statistics()->AddToValueCount(count);
+			conf->Statistics()->AddToMissingCount(missingCount);
+			conf->Statistics()->AddToValueCount(count);
 
-			}
+		}
 
-			/*
-			 * Now we are done for this level
-			 *
-			 * Clone info-instance to writer since it might change our descriptor places
-			 * */
+		/*
+		 * Now we are done for this level
+		 *
+		 * Clone info-instance to writer since it might change our descriptor places
+		 * */
 
-			myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-			if (conf->FileWriteOption() != kSingleFile)
-			{
-				WriteToFile(conf, myTargetInfo);
-			}
+		if (conf->FileWriteOption() != kSingleFile)
+		{
+			WriteToFile(conf, myTargetInfo);
 		}
 	}
 }
