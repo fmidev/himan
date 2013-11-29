@@ -252,6 +252,26 @@ aggregation& param::Aggregation()
 	return itsAggregation;
 }
 
+double param::Base() const
+{
+	return itsParam->Base();
+}
+
+void param::Base(double theBase)
+{
+	itsParam->Base(static_cast<float> (theBase));
+}
+
+double param::Scale() const
+{
+	return itsParam->Scale();
+}
+
+void param::Scale(double theScale)
+{
+	itsParam->Scale(static_cast<float> (theScale));
+}
+
 std::ostream& param::Write(std::ostream& file) const
 {
 

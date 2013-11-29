@@ -112,7 +112,13 @@ public:
     void Unit(HPParameterUnit theUnit);
 
 	aggregation& Aggregation();
-	
+
+	double Base() const;
+	void Base(double theBase);
+
+	double Scale() const;
+	void Scale(double theScale);
+
     std::ostream& Write(std::ostream& file) const;
 
 private:
