@@ -423,12 +423,18 @@ bool info::NextLevel()
 
 bool info::PreviousLevel()
 {
-    return itsLevelIterator->Previous();
+    if (itsLevelOrder == kBottomToTop)
+        return itsLevelIterator->Next();
+    else
+        return itsLevelIterator->Previous();
 }
 
 bool info::LastLevel()
 {
-    return itsLevelIterator->Last();
+    if (itsLevelOrder == kBottomToTop)
+        return itsLevelIterator->First();
+    else
+        return itsLevelIterator->Last();
 }
 
 void info::First()
@@ -454,7 +460,10 @@ void info::ResetLevel()
 
 bool info::FirstLevel()
 {
-    return itsLevelIterator->First();
+    if (itsLevelOrder == kBottomToTop)
+        return itsLevelIterator->Last();
+    else
+        return itsLevelIterator->First();
 }
 
 size_t info::LevelIndex() const
