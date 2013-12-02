@@ -11,6 +11,9 @@
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
 
+#define HIMAN_AUXILIARY_INCLUDE
+#include "neons.h"
+#undef HIMAN_AUXILIARY_INCLUDE
 namespace himan
 {
 namespace plugin
@@ -49,7 +52,7 @@ private:
     void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short threadIndex);
 
     std::shared_ptr<info> FetchPrevious(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
-
+    int itsBottomLevel;
 };
 
 // the class factory
