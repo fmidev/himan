@@ -32,7 +32,6 @@ hybrid_height::hybrid_height()
 
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-
 	unique_ptr<timer> aTimer;
 
 	// Get number of threads to use
@@ -101,6 +100,8 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * For hybrid height we must go through the levels backwards.
 	 */
 	FeederInfo()->LevelOrder(kBottomToTop);
+	shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(230, "last hybrid level number"));
 
 	if (conf->StatisticsEnabled())
 	{
@@ -162,7 +163,6 @@ void hybrid_height::Run(shared_ptr<info> myTargetInfo,
 
 void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
 {
-
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
 	param GPParam("P-PA");
@@ -192,7 +192,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		
 		//only works with hirlam for now
 		//itsLogger->Debug("level: " 
-		if ( myTargetInfo->Level().Value() == 65)
+		if ( myTargetInfo->Level().Value() == itsBottomLevel )
 		{
 			firstLevel = true;
 		}
