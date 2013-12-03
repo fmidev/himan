@@ -11,9 +11,6 @@
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-#include "neons.h"
-#undef HIMAN_AUXILIARY_INCLUDE
 namespace himan
 {
 namespace plugin

@@ -15,6 +15,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
+#include "neons.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
