@@ -22,41 +22,6 @@ namespace plugin
 
 typedef std::pair<std::shared_ptr<info>, std::shared_ptr<info>> valueheight;
 
-struct hitool_search_options
-{
-	himan::param wantedParam;
-	himan::forecast_time wantedTime;
-	himan::HPLevelType wantedLevelType;
-	std::shared_ptr<info> firstLevelValueInfo;
-	std::shared_ptr<info> lastLevelValueInfo;
-	himan::HPModifierType wantedModifier;
-	std::shared_ptr<const plugin_configuration> conf;
-	bool returnHeight;
-	size_t findNthValue;
-	std::shared_ptr<const info> findValueInfo;
-
-	hitool_search_options(const param& theWantedParam,
-							const forecast_time& theWantedTime,
-							HPLevelType theWantedLevelType,
-							std::shared_ptr<info> theFirstLevelValueInfo,
-							std::shared_ptr<info> theLastLevelValueInfo,
-							HPModifierType theWantedModifier,
-							std::shared_ptr<const plugin_configuration> theConf,
-							bool theReturnHeight,
-							size_t theFindNthValue)
-		: wantedParam(theWantedParam)
-		, wantedTime(theWantedTime)
-		, wantedLevelType(theWantedLevelType)
-		, firstLevelValueInfo(theFirstLevelValueInfo)
-		, lastLevelValueInfo(theLastLevelValueInfo)
-		, wantedModifier(theWantedModifier)
-		, returnHeight(theReturnHeight)
-		, findNthValue(theFindNthValue)
-	{
-		conf = theConf;
-	}
-};
-
 class hitool : public auxiliary_plugin
 {
 public:
@@ -126,9 +91,9 @@ private:
 							HPLevelType wantedLevelType,
 							const param& sourceParam,
 							const param& targetParam,
-							const std::shared_ptr<info> firstLevelValueInfo,
-							const std::shared_ptr<info> lastLevelValueInfo,
-							const std::shared_ptr<info> findValueInfo = 0,
+							const std::shared_ptr<info> firstLevelValueInfo = std::shared_ptr<info> (),
+							const std::shared_ptr<info> lastLevelValueInfo = std::shared_ptr<info> (),
+							const std::shared_ptr<info> findValueInfo = std::shared_ptr<info> (),
 							size_t findNth = 1) const;
 
 	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime) const;

@@ -539,7 +539,7 @@ shared_ptr<info> hitool::VerticalMinimum(const param& wantedParam,
 {
 	//parm.Aggregation(kMinimum);
 	
-	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo, 0, findNth);
+	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo, shared_ptr<info> (), findNth);
 }
 
 shared_ptr<info> hitool::VerticalMaximum(const param& wantedParam,
@@ -549,7 +549,7 @@ shared_ptr<info> hitool::VerticalMaximum(const param& wantedParam,
 {
 	//parm.Aggregation(kMinimum);
 
-	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo, 0, findNth);
+	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo, shared_ptr<info> (), findNth);
 }
 
 shared_ptr<info> hitool::VerticalAverage(const param& wantedParam,
@@ -574,7 +574,7 @@ shared_ptr<info> hitool::VerticalValue(const param& wantedParam,
 {
 	//parm.Aggregation(kMinimum);
 
-	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, param("HL-M"), wantedParam, 0, 0);
+	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, param("HL-M"), wantedParam);
 }
 
 void hitool::Time(const forecast_time& theTime)
