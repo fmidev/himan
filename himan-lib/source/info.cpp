@@ -216,7 +216,8 @@ void info::ReGrid()
 	itsTimeIterator->Set(timeIndex);
 	itsLevelIterator->Set(levelIndex);
 	itsParamIterator->Set(paramIndex);
-	
+
+	First(); // "Factory setting," prevents lots of core dumps
 }
 
 void info::Create(shared_ptr<grid> baseGrid)
