@@ -720,7 +720,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	if (infos.size())
 	{
 		// This will be broken when/if we return multiple infos from this function
-		itsLogger->Trace("Data found from message " + boost::lexical_cast<string> (foundMessageNo) + "/" + boost::lexical_cast<string> (itsGrib->MessageCount()));
+		itsLogger->Trace("Data found from message " + boost::lexical_cast<string> (foundMessageNo));
 	}
 
 	return infos;
