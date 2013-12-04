@@ -62,6 +62,7 @@ class hitool : public auxiliary_plugin
 public:
 
     hitool();
+	hitool(std::shared_ptr<plugin_configuration> conf);
 
     virtual ~hitool() {};
 
@@ -80,34 +81,61 @@ public:
         return HPVersionNumber(0, 1);
     }
 
-	std::shared_ptr<info> VerticalExtremeValue(hitool_search_options& opts);
+	/**
+	 * @brief Find maximum value of a given parameter in a given height range
+	 */
 
-	double Base() const;
-	void Base(double theBase);
+	std::shared_ptr<info> VerticalMaximum(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, size_t findNth = 1) const;
 
-	double Scale() const;
-	void Scale(double theScale);
+	/**
+	 * @brief Find minimum value of a given parameter in a given height range
+	 */
 
-	double FirstLevelValueBase() const;
-	double LastLevelValueBase() const;
+	std::shared_ptr<info> VerticalMinimum(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, size_t findNth = 1) const;
+	std::shared_ptr<info> VerticalAverage(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo) const;
+	std::shared_ptr<info> VerticalHeight(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, const std::shared_ptr<info> findValueInfo , size_t findNth = 1) const;
 
-	void FirstLevelValueBase(double theBase);
-	void LastLevelValueBase(double theBase);
+	/**
+	 * @brief Find value of parameter from given height
+	 *
+	 * Only for hybrid levels.
+	 * 
+	 */
+	
+	std::shared_ptr<info> VerticalValue(const param& wantedParam, const std::shared_ptr<info> findValueInfo) const;
+
+	/**
+	 * @brief Find the number of occurrences of a given parameter value in a given height range
+	 *
+	 * Only for hybrid levels.
+	 */
+
+	std::shared_ptr<info> VerticalCount(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, const std::shared_ptr<info> findValueInfo) const;
 
 	std::shared_ptr<info> Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime);
 	std::shared_ptr<info> FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime);
 
-private:
-	std::shared_ptr<modifier> CreateModifier(hitool_search_options& opts, std::vector<himan::param>& params);
 
-	valueheight GetData(const std::shared_ptr<const plugin_configuration> conf,
-																	const level& wantedLevel,
-																	const param& wantedParam,
-																	const forecast_time& wantedTime);
-	double itsScale;
-	double itsBase;
-	double itsFirstLevelValueBase;
-	double itsLastLevelValueBase;
+	void Time(const forecast_time& theTime);
+	void Configuration(const std::shared_ptr<const plugin_configuration> conf);
+
+private:
+	std::shared_ptr<modifier> CreateModifier(HPModifierType modifierType) const;
+
+	std::shared_ptr<info> VerticalExtremeValue(std::shared_ptr<modifier> mod,
+							HPLevelType wantedLevelType,
+							const param& sourceParam,
+							const param& targetParam,
+							const std::shared_ptr<info> firstLevelValueInfo,
+							const std::shared_ptr<info> lastLevelValueInfo,
+							const std::shared_ptr<info> findValueInfo = 0,
+							size_t findNth = 1) const;
+
+	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime) const;
+
+	std::shared_ptr<const plugin_configuration> itsConfiguration;
+	forecast_time itsTime;
+	
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
