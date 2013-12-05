@@ -62,6 +62,9 @@ class modifier
 			return false;
 		}
 
+		size_t FindNth() const;
+		void FindNth(size_t theNth);
+		
 	protected:
 
 		//bool itsReturnHeight;
@@ -184,8 +187,10 @@ class modifier_findheight : public modifier
 	private:
 		std::vector<double> itsPreviousValue;
 		std::vector<double> itsPreviousHeight;
-
+		std::vector<size_t> itsFoundNValues;
+		
 		size_t itsValuesFound;
+
 };
 
 class modifier_findvalue : public modifier

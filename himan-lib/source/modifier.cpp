@@ -105,6 +105,16 @@ void modifier::FindValue(std::shared_ptr<const info> theFindValue)
 	itsFindValue->First();
 }
 
+size_t modifier::FindNth() const
+{
+	return itsFindNthValue;
+}
+
+void modifier::FindNth(size_t theNth)
+{
+	itsFindNthValue = theNth;
+}
+
 /* ----------------- */
 
 void modifier_max::Calculate(double theValue, double theHeight)
@@ -392,12 +402,14 @@ void modifier_findheight::Init(std::shared_ptr<const info> sourceInfo)
 
 	itsResult->First();
 
-	itsPreviousValue.resize(itsResult->Grid()->Size());
-	itsPreviousHeight.resize(itsResult->Grid()->Size());
-
+	itsPreviousValue.resize(itsResult->Grid()->Size(), kFloatMissing);
+	itsPreviousHeight.resize(itsResult->Grid()->Size(), kFloatMissing);
+	itsFoundNValues.resize(itsResult->Grid()->Size(), 0);
+/*
 	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), kFloatMissing);
 	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), kFloatMissing);
-
+	std::fill(itsFoundNValues.begin(), itsFoundNValues.end(), 0);
+*/
 }
 
 void modifier_findheight::Calculate(double theValue, double theHeight)
@@ -409,20 +421,19 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 	
 	double findValue = itsFindValue->Value();
 	
-	//itsResult->ParamIndex(1); // We are interested in the height here
-
 	if (IsMissingValue(theValue) || !IsMissingValue(itsResult->Value()) || IsMissingValue(findValue))
 	{
 		return;
 	}
 
-	if (itsFindNthValue != 1)
+	if (fabs(theValue - findValue) < 1e-5)
 	{
-		throw std::runtime_error("NthValue other than 1");
+		itsResult->Value(theHeight);
+		return;
 	}
 
-	double previousValue = itsPreviousValue[locationIndex];
-	double previousHeight = itsPreviousHeight[locationIndex];
+	double previousValue = double(itsPreviousValue[locationIndex]);
+	double previousHeight = double(itsPreviousHeight[locationIndex]);
 
 	itsPreviousValue[locationIndex] = theValue;
 	itsPreviousHeight[locationIndex] = theHeight;
@@ -466,10 +477,24 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 	if ((previousValue <= findValue && theValue >= findValue) || (previousValue >= findValue && theValue <= findValue))
 	{
 		double actualHeight = NFmiInterpolation::Linear(findValue, previousValue, theValue, previousHeight, theHeight);
-std::cout << "actual height " << actualHeight << std::endl;
-		itsResult->Value(actualHeight);
+		
+		if (actualHeight != kFloatMissing)
+		{
+			itsFoundNValues[locationIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[locationIndex])
+			{
+				itsResult->Value(actualHeight);
+			}
+		}
+		else
+		{
+		/*	std::cout << "actual height " << actualHeight << ", findValue " << findValue << " prev value " << previousValue << " theValue "
+					<< theValue << " prevHeight " << previousHeight << " theHeight " << theHeight << std::endl;*/
+
+		}
 	}
-	
+
 }
 
 /* ----------------- */
