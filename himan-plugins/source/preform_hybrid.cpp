@@ -76,6 +76,8 @@ const double waterToSleet = 0.5;  // alkup. PK:n arvo oli 0.5
 const double sleetToWater = 0.8;  // alkup. PK:n arvo oli 0.8
 const double sleetToSnow = 0.2;   // alkup. PK:n arvo oli 0.2
 
+const double wMax = 50;
+
 preform_hybrid::preform_hybrid()
 {
 	itsClearTextFormula = "<algorithm>";
@@ -261,10 +263,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
+	h->Configuration(conf);
+	
 	const param stratusBaseParam("STRATUS-BASE-M");
 	const param stratusTopParam("STRATUS-TOP-M");
 	const param stratusTopTempParam("STRATUS-TOP-T-K");
 	const param stratusMeanTempParam("STRATUS-MEAN-T-K");
+	const param stratusMeanCloudinessParam("STRATUS-MEAN-N-PRCNT");
 	const param stratusUpperLayerRHParam("STRATUS-UPPER-LAYER-RH-PRCNT");
 	const param stratusVerticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MS");
 
@@ -278,6 +283,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
+		h->Time(myTargetInfo->Time());
+		
 		// Source infos
 
 		shared_ptr<info> RRInfo, TInfo, RHInfo;
@@ -328,15 +335,17 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 		size_t missingCount = 0;
 		size_t count = 0;
 
+		auto stratus = h->Stratus(conf, myTargetInfo->Time());
+		stratus->First();
+
+		myThreadedLogger->Info("Stratus calculated");
+
+		
 		auto freezingArea = h->FreezingArea(conf, myTargetInfo->Time());
 		freezingArea->First();
 
 		myThreadedLogger->Info("Freezing area calculated");
 
-		auto stratus = h->Stratus(conf, myTargetInfo->Time());
-		stratus->First();
-
-		myThreadedLogger->Info("Stratus calculated");
 		
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
@@ -375,6 +384,18 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 				assert(stratus->Param(stratusUpperLayerRHParam));
 				double upperLayerRH = stratus->Value();
 
+				assert(stratus->Param(stratusVerticalVelocityParam));
+				double wAvg = stratus->Value();
+
+				assert(stratus->Param(stratusMeanCloudinessParam));
+				double Navg = stratus->Value();
+
+				assert(stratus->Param(stratusMeanTempParam));
+				double stTavg = stratus->Value();
+
+				assert(stratus->Param(stratusTopTempParam));
+				double Ttop = stratus->Value();
+				
 				assert(freezingArea->Param(plusArea1Param));
 				double plusArea1 = freezingArea->Value();
 
@@ -390,14 +411,16 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 				double T = TInfo->Value();
 				double RH = RHInfo->Value();
 
-				double wAvg = kFloatMissing;
-				double wMax = kFloatMissing;
-				double Navg = kFloatMissing;
-				double Ttop = kFloatMissing;
-				double stTavg = kFloatMissing;
-
-				// if (base == kHPMissingValue || top == kHPMissingValue || upperLayerRH == kHPMissingValue)
-				if (base == kFloatMissing || top == kFloatMissing || upperLayerRH == kFloatMissing || plusArea1 == kFloatMissing || plusArea2 == kFloatMissing || minusArea == kFloatMissing)
+				//InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
+				//InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+				
+				if (base == kFloatMissing || 
+						top == kFloatMissing ||
+						upperLayerRH == kFloatMissing ||
+						wAvg == kFloatMissing ||
+						RR == kFloatMissing ||
+						RR == 0 || // No rain --> no rain type
+						T == kFloatMissing)
 				{
 					missingCount++;
 
@@ -407,31 +430,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 				cout << "Stratus base " << base << " top " << top << " RH " << upperLayerRH << " ";
 				cout << "Freezing area plus1 " << plusArea1 << " plus2 " << plusArea2 << " minus " << minusArea << endl;
 
-				assert(base != kFloatMissing);
-				assert(top != kFloatMissing);
-				assert(upperLayerRH != kFloatMissing);
-
 				int PreForm = static_cast<int> (kFloatMissing);
-
-				//InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
-
-				// No rain --> no rain type
-
-				if (RR == 0)
-				{
-					missingCount++;
-
-					continue;
-				}
-
-				//InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-
-				if (T == kFloatMissing)
-				{
-					missingCount++;
-
-					continue;
-				}
 
 				// Unit conversions
 
@@ -455,47 +454,52 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 				{
 					PreForm = kFreezingDrizzle;
 				}
-				else if (RR > 0.1 && plusArea1 > fzraPA && minusArea < fzraMA && T <= 0)
+				
+				if (plusArea1 != kFloatMissing && minusArea != kFloatMissing)
 				{
-					PreForm = kFreezingRain;
-				}
-				else if (plusArea1 > waterArea)
-				{
-					if (RR < dzLim && base < baseLimit && (top - base) > stLimit && Navg > Nlimit && upperLayerRH < dryLimit)
+						
+					if (RR > 0.1 && plusArea1 > fzraPA && minusArea < fzraMA && T <= 0)
 					{
-						PreForm = kDrizzle;
+						PreForm = kFreezingRain;
 					}
-					else
+					else if (plusArea1 > waterArea)
 					{
-						PreForm = kRain;
-
-						if (probWater < waterToSleet)
-						{
-							PreForm = kSleet;
-						}
-					}
-				}
-
-				// We probably should have else if here !
-
-				if (plusArea1 > snowArea && plusArea1 <= waterArea)
-				{
-					PreForm = kSleet;
-
-					if (probWater > sleetToWater)
-					{
-						if (RR < dzLim && base < baseLimit && (top-base) > stLimit && Navg > Nlimit && upperLayerRH < dryLimit)
+						if (RR < dzLim && base < baseLimit && (top - base) > stLimit && Navg > Nlimit && upperLayerRH < dryLimit)
 						{
 							PreForm = kDrizzle;
 						}
 						else
 						{
 							PreForm = kRain;
+
+							if (probWater < waterToSleet)
+							{
+								PreForm = kSleet;
+							}
 						}
 					}
-					else if (probWater < sleetToSnow)
+
+					// We probably should have else if here !
+
+					if (plusArea1 > snowArea && plusArea1 <= waterArea)
 					{
-						PreForm = kSnow;
+						PreForm = kSleet;
+
+						if (probWater > sleetToWater)
+						{
+							if (RR < dzLim && base < baseLimit && (top-base) > stLimit && Navg > Nlimit && upperLayerRH < dryLimit)
+							{
+								PreForm = kDrizzle;
+							}
+							else
+							{
+								PreForm = kRain;
+							}
+						}
+						else if (probWater < sleetToSnow)
+						{
+							PreForm = kSnow;
+						}
 					}
 				}
 
