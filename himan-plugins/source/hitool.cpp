@@ -215,17 +215,18 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 							const param& targetParam,
 							const shared_ptr<info> firstLevelValueInfo,
 							const shared_ptr<info> lastLevelValueInfo,
-							const shared_ptr<info> findValueInfo,
-							size_t findNth) const
+							const shared_ptr<info> findValueInfo) const
 {
 	shared_ptr<plugin::neons> n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
 	assert(wantedLevelType == kHybrid);
 
+	// Move this to convenience functions?
 	if (findValueInfo)
 	{
 		mod->FindValue(findValueInfo);
 	}
+
 	// Should we loop over all producers ?
 
 	producer prod = itsConfiguration->SourceProducer(0);
@@ -560,27 +561,26 @@ shared_ptr<info> hitool::VerticalHeight(const param& wantedParam,
 
 //	wantedParam.Aggregation(kMinimum);
 
-	return VerticalExtremeValue(CreateModifier(kFindHeightModifier), kHybrid, wantedParam, param("HL-M"), firstLevelValueInfo, lastLevelValueInfo, findValueInfo, findNth);
+	auto modifier = CreateModifier(kFindHeightModifier);
+	modifier->FindNth(findNth);
+
+	return VerticalExtremeValue(modifier, kHybrid, wantedParam, param("HL-M"), firstLevelValueInfo, lastLevelValueInfo, findValueInfo);
 }
 
 shared_ptr<info> hitool::VerticalMinimum(const param& wantedParam,
 						const shared_ptr<info> firstLevelValueInfo,
-						const shared_ptr<info> lastLevelValueInfo,
-						size_t findNth) const
+						const shared_ptr<info> lastLevelValueInfo) const
 {
 	//parm.Aggregation(kMinimum);
-	
-	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo, shared_ptr<info> (), findNth);
+	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo, shared_ptr<info> ());
 }
 
 shared_ptr<info> hitool::VerticalMaximum(const param& wantedParam,
 						const shared_ptr<info> firstLevelValueInfo,
-						const shared_ptr<info> lastLevelValueInfo,
-						size_t findNth) const
+						const shared_ptr<info> lastLevelValueInfo) const
 {
 	//parm.Aggregation(kMinimum);
-
-	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo, shared_ptr<info> (), findNth);
+	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo, shared_ptr<info> ());
 }
 
 shared_ptr<info> hitool::VerticalAverage(const param& wantedParam,
@@ -652,26 +652,30 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	param wantedParam("N-0TO1");
 	wantedParam.Base(0); wantedParam.Scale(100);
 
+	/**
+	 * Etsitään parametrin N minimiarvo korkeusvälillä 0 .. stLimit (=500)
+     */
+
 	itsLogger->Info("Searching for stratus lower limit");
 
 	auto baseThreshold = VerticalMinimum(wantedParam, constData1, constData2);
 	
-	// Etsitaan parametrin N minimiarvo välillä 0 .. stLimit
-
-	//auto baseThreshold = VerticalExtremeValue(opts);
-
 	baseThreshold->First();
 
 	for (baseThreshold->ResetLocation(); baseThreshold->NextLocation();)
 	{
 		if (baseThreshold->Value() == kFloatMissing || baseThreshold->Value() < stCover)
 		{
-			baseThreshold->Value(stCover);
+			baseThreshold->Value(stCover); // Why do we force this value?
 		}
 	}
 
 	constData1->Grid()->Data()->Fill(stLimit);
 	constData2->Grid()->Data()->Fill(layer);
+
+	/**
+	 * Etsitään parametrin N minimiarvo korkeusvälillä stLimit (=500) .. layer (=2000)
+     */
 
 	itsLogger->Info("Searching for stratus upper limit");
 
@@ -685,7 +689,7 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 
 		if (topThreshold->Value() < stCover)
 		{
-			topThreshold->Value(stCover);
+			topThreshold->Value(stCover); // Why do we force this value?
 		}
 	}
 
@@ -699,6 +703,10 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 
 	//opts.wantedModifier = kFindHeightModifier;
 	//opts.findValueInfo = baseThreshold;
+
+	/**
+	 * Etsitään parametrin N ensimmäisen baseThreshold-arvon korkeus väliltä 0 .. layer (=2000)
+	 */
 
 	itsLogger->Info("Searching for stratus base accurate value");
 
@@ -721,14 +729,17 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	}
 
 	itsLogger->Debug("Stratus base number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusBase->Grid()->Size()));
-
-	itsLogger->Info("Searching for stratus top accurate value");
-
+	
 	constData1->Grid()->Data()->Fill(0);
 	constData2->Grid()->Data()->Fill(layer);
 
 	//VAR Top = VERTZ_FINDH(N_EC,0,Layer,TopThreshold,0)
 
+	/**
+	 * Etsitään parametrin N viimeisen topThreshold-arvon korkeus väliltä 0 .. layer (=2000)
+	 */
+
+	itsLogger->Info("Searching for stratus top accurate value");
 	auto stratusTop = VerticalHeight(wantedParam, constData1, constData2, topThreshold, 0);
 
 	//auto stratusTop = VerticalExtremeValue(opts);

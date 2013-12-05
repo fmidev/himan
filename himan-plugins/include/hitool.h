@@ -50,13 +50,13 @@ public:
 	 * @brief Find maximum value of a given parameter in a given height range
 	 */
 
-	std::shared_ptr<info> VerticalMaximum(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, size_t findNth = 1) const;
+	std::shared_ptr<info> VerticalMaximum(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo) const;
 
 	/**
 	 * @brief Find minimum value of a given parameter in a given height range
 	 */
 
-	std::shared_ptr<info> VerticalMinimum(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, size_t findNth = 1) const;
+	std::shared_ptr<info> VerticalMinimum(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo) const;
 	std::shared_ptr<info> VerticalAverage(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo) const;
 	std::shared_ptr<info> VerticalHeight(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, const std::shared_ptr<info> findValueInfo , size_t findNth = 1) const;
 
@@ -93,8 +93,7 @@ private:
 							const param& targetParam,
 							const std::shared_ptr<info> firstLevelValueInfo = std::shared_ptr<info> (),
 							const std::shared_ptr<info> lastLevelValueInfo = std::shared_ptr<info> (),
-							const std::shared_ptr<info> findValueInfo = std::shared_ptr<info> (),
-							size_t findNth = 1) const;
+							const std::shared_ptr<info> findValueInfo = std::shared_ptr<info> ()) const;
 
 	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime) const;
 
