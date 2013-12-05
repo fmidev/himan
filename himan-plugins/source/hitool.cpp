@@ -265,8 +265,33 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	const double base = sourceParam.Base();
 	const double scale = sourceParam.Scale();
 
+	// When all grid points have been finished, ie. the heights read from data
+	// are higher than upper level value, stop processing
+	
+	vector<bool> finishedLocations;
+	finishedLocations.resize(ret->Grid()->Size(), false);
+
 	for (int levelValue = lastHybridLevel; levelValue >= firstHybridLevel; levelValue--)
 	{
+
+		size_t numFinishedLocations = 0;
+
+		for (size_t i = 0; i < finishedLocations.size(); i++)
+		{
+			if (finishedLocations[i])
+			{
+				numFinishedLocations++;
+			}
+		}
+
+		itsLogger->Debug("Height above limits for " + boost::lexical_cast<string> (numFinishedLocations) +
+			"/" + boost::lexical_cast<string> (finishedLocations.size()) + " grid points");
+
+		if (numFinishedLocations == finishedLocations.size())
+		{
+			break;
+		}
+
 		level currentLevel(kHybrid, levelValue, "HYBRID");
 
 		itsLogger->Debug("Current level: " + boost::lexical_cast<string> (currentLevel.Value()));
@@ -294,11 +319,17 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		
 		values->First(); values->ResetLocation();
 		heights->First(); heights->ResetLocation();
-		
+
+	
 		while (mod->NextLocation() && values->NextLocation() && heights->NextLocation())
 		{
 			assert(values->LocationIndex() == heights->LocationIndex());
 
+			if (finishedLocations[values->LocationIndex()])
+			{
+				continue;
+			}
+			
 			double v = values->Value();
 			double h = heights->Value();
 
@@ -330,7 +361,6 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			{
 				continue;
 			}
-			if (values->LocationIndex() == 1 ) cout << lowerHeight << " < " << h << " < " << upperHeight << endl;
 
 			if (h < lowerHeight)
 			{
@@ -339,6 +369,7 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 			if (h > upperHeight)
 			{
+				finishedLocations[values->LocationIndex()] = true;
 				continue;
 			}
 
