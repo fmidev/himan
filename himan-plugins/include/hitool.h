@@ -77,9 +77,8 @@ public:
 
 	std::shared_ptr<info> VerticalCount(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, const std::shared_ptr<info> findValueInfo) const;
 
-	std::shared_ptr<info> Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime);
-	std::shared_ptr<info> FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime);
-
+	std::shared_ptr<info> Stratus();
+	std::shared_ptr<info> FreezingArea();
 
 	void Time(const forecast_time& theTime);
 	void Configuration(const std::shared_ptr<const plugin_configuration> conf);

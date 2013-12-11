@@ -21,7 +21,11 @@
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
+using namespace himan;
 using namespace himan::plugin;
+
+void Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info> result);
+void FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info> result);
 
 // Korkein sallittu pilven alarajan korkeus, jotta kysessä stratus [m]
 const double baseLimit = 300.;
@@ -261,10 +265,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 
 //	bool useCudaInThisThread = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
 
-	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
-
-	h->Configuration(conf);
-	
 	const param stratusBaseParam("STRATUS-BASE-M");
 	const param stratusTopParam("STRATUS-TOP-M");
 	const param stratusTopTempParam("STRATUS-TOP-T-K");
@@ -277,6 +277,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 	const param plusArea1Param("PLUS-AREA-1-T-C");
 	const param plusArea2Param("PLUS-AREA-2-T-C");
 
+	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+
+	h->Configuration(conf);
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -284,7 +288,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		h->Time(myTargetInfo->Time());
-		
+
 		// Source infos
 
 		shared_ptr<info> RRInfo, TInfo, RHInfo;
@@ -335,17 +339,33 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 		size_t missingCount = 0;
 		size_t count = 0;
 
-		auto stratus = h->Stratus(conf, myTargetInfo->Time());
-		stratus->First();
-
-		myThreadedLogger->Info("Stratus calculated");
-
-		
-		auto freezingArea = h->FreezingArea(conf, myTargetInfo->Time());
-		freezingArea->First();
-
+		//shared_ptr<info> stratus;
+		auto freezingArea = h->FreezingArea();
 		myThreadedLogger->Info("Freezing area calculated");
 
+		auto stratus = h->Stratus();
+
+		freezingArea->First();
+		stratus->First();
+
+//		Stratus(conf, myTargetInfo->Time(), stratus);
+
+		//shared_ptr<info> freezingArea;
+//		FreezingArea(conf, myTargetInfo->Time(), freezingArea);
+
+		//boost::thread t1(&Stratus, conf, myTargetInfo->Time(), stratus);
+		//boost::thread t2(&FreezingArea, conf, myTargetInfo->Time(), freezingArea);
+
+		//t1.join();
+		//t2.join();
+/*
+		FreezingArea(conf, myTargetInfo->Time(), freezingArea);
+		cout << *freezingArea;
+
+
+		Stratus(conf, myTargetInfo->Time(), stratus);
+		*/
+		myThreadedLogger->Info("Stratus calculated");
 		
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
@@ -427,9 +447,11 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 					continue;
 				}
 
-				cout << "Stratus base " << base << " top " << top << " RH " << upperLayerRH << " ";
+				cout << "Stratus base " << base << " top " << top << " RH " << upperLayerRH << " vvAvg" << wAvg << " RR " << RR << endl;
 				cout << "Freezing area plus1 " << plusArea1 << " plus2 " << plusArea2 << " minus " << minusArea << endl;
 
+				assert(upperLayerRH <= 100);
+				
 				int PreForm = static_cast<int> (kFloatMissing);
 
 				// Unit conversions
@@ -538,4 +560,27 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 		}
 
 	}
+}
+
+void FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info> result)
+{
+	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+
+	h->Configuration(conf);
+	h->Time(ftime);
+
+	result = h->FreezingArea();
+}
+
+void Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info> result)
+{
+	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+	auto l = unique_ptr<logger> (logger_factory::Instance()->GetLog("thread " + boost::lexical_cast<string> (boost::this_thread::get_id())));
+	
+	l->Debug("calculating Stratus");
+	h->Configuration(conf);
+	h->Time(ftime);
+
+	result = h->Stratus();
+
 }

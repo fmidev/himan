@@ -272,7 +272,7 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	vector<bool> finishedLocations;
 	finishedLocations.resize(ret->Grid()->Size(), false);
 
-	for (int levelValue = lastHybridLevel; levelValue >= firstHybridLevel; levelValue--)
+	for (int levelValue = lastHybridLevel; levelValue >= firstHybridLevel && !mod->CalculationFinished(); levelValue--)
 	{
 
 		size_t numFinishedLocations = 0;
@@ -284,10 +284,7 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 				numFinishedLocations++;
 			}
 		}
-
-		itsLogger->Debug("Height above limits for " + boost::lexical_cast<string> (numFinishedLocations) +
-			"/" + boost::lexical_cast<string> (finishedLocations.size()) + " grid points");
-
+		
 		if (numFinishedLocations == finishedLocations.size())
 		{
 			break;
@@ -295,7 +292,8 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		level currentLevel(kHybrid, levelValue, "HYBRID");
 
-		itsLogger->Debug("Current level: " + boost::lexical_cast<string> (currentLevel.Value()));
+		itsLogger->Debug("Level " + boost::lexical_cast<string> (currentLevel.Value()) + ": height range crossed for " + boost::lexical_cast<string> (numFinishedLocations) +
+			"/" + boost::lexical_cast<string> (finishedLocations.size()) + " grid points");
 
 		valueheight data = GetData(currentLevel, sourceParam, itsTime);
 
@@ -321,9 +319,13 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		values->First(); values->ResetLocation();
 		heights->First(); heights->ResetLocation();
 
-	
+		
 		while (mod->NextLocation() && values->NextLocation() && heights->NextLocation())
 		{
+			if (values->LocationIndex() != heights->LocationIndex())
+			{
+				cout << values->LocationIndex() << " " << heights->LocationIndex() << endl;
+			}
 			assert(values->LocationIndex() == heights->LocationIndex());
 
 			if (finishedLocations[values->LocationIndex()])
@@ -383,126 +385,6 @@ shared_ptr<info> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	return mod->Result();
 }
 
-/*
-
- shared_ptr<info> hitool::VerticalExtremeValue(hitool_search_options& opts)
-{
-	shared_ptr<plugin::neons> n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-	if (!opts.returnHeight)
-	{
-		//mod->ReturnHeight(false);
-		throw runtime_error(ClassName() + ": Must return height for now");
-	}
-
-	assert(opts.wantedLevelType == kHybrid);
-
-	// Should we loop over all producers ?
-
-	opts.conf->FirstSourceProducer();
-
-	// first means first in sorted order, ie smallest number ie the highest level
-
-	long firstHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(opts.conf->SourceProducer().Id(), "first hybrid level number"));
-	long lastHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(opts.conf->SourceProducer().Id(), "last hybrid level number"));
-
-	vector<param> params;
-
-	auto mod = CreateModifier(opts, params);
-*/
-	/*
-	 * Modifier needs an info instance where it will store its data.
-	 * This info will be returned from this function.
-	 *
-	 * We'll use the plugin_configuration info as a base and just change
-	 * the parameters. Calling Create() will re-grid the info using
-	 * configuration file arguments.
-	 */
-/*
-	auto ret = make_shared<info>(*opts.conf->Info());
-
-	ret->Params(params);
-
-	// Create data backend
-
-	ret->Create();
-
-	mod->Init(ret);
-
-	ret->First();
-
-#ifndef NDEBUG
-	size_t retGridSize = ret->Grid()->Size();
-#endif
-
-	for (int levelValue = lastHybridLevel; levelValue >= firstHybridLevel; levelValue--)
-	{
-		level currentLevel(kHybrid, levelValue, "HYBRID");
-
-		//itsLogger->Debug("Current level: " + boost::lexical_cast<string> (currentLevel.Value()));
-
-		valueheight data = GetData(opts.conf, currentLevel, opts.wantedParam, opts.wantedTime);
-
-		auto values = data.first;
-		auto heights = data.second;
-
-		assert(heights->Grid()->Size() == retGridSize);
-		assert(values->Grid()->Size() == retGridSize);
-
-		assert(opts.firstLevelValueInfo);
-		assert(opts.lastLevelValueInfo);
-
-		assert(opts.firstLevelValueInfo->Grid()->Size() == retGridSize);
-		opts.firstLevelValueInfo->ResetLocation();
-
-		assert(opts.lastLevelValueInfo->Grid()->Size() == retGridSize);
-		opts.lastLevelValueInfo->ResetLocation();
-
-		mod->ResetLocation();
-
-		values->First(); values->ResetLocation();
-		heights->First(); heights->ResetLocation();
-
-		while (mod->NextLocation() && values->NextLocation() && heights->NextLocation() && opts.firstLevelValueInfo->NextLocation() && opts.lastLevelValueInfo->NextLocation())
-		{
-
-			double lowerThreshold = opts.firstLevelValueInfo->Value();
-			double upperThreshold = opts.lastLevelValueInfo->Value();
-
-			if (lowerThreshold == kFloatMissing || lowerThreshold == kFloatMissing)
-			{
-				continue;
-			}
-			else if (upperThreshold == kFloatMissing || upperThreshold == kFloatMissing)
-			{
-				continue;
-			}
-
-			double v = values->Value();
-			double h = heights->Value();
-
-			// Check that we are in given height range
-
-			if (h < lowerThreshold + itsFirstLevelValueBase)
-			{
-				continue;
-			}
-
-			if (h > upperThreshold + itsLastLevelValueBase)
-			{
-				break;
-			}
-
-			v = v * itsScale + itsBase;
-
-			mod->Calculate(v, h);
-		}
-	}
-
-	return mod->Results();
-}
-
- */
 valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	const forecast_time& wantedTime) const
 {
 
@@ -613,7 +495,7 @@ void hitool::Time(const forecast_time& theTime)
 	itsTime = theTime;
 }
 
-std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime)
+shared_ptr<info> hitool::Stratus()
 {
 
 	const param stratusBaseParam("STRATUS-BASE-M");
@@ -625,10 +507,10 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	const param stratusVerticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MS");
 
 	vector<param> params = { param("FAKE-PARAM") };
-	vector<forecast_time> times = { wantedTime };
+	vector<forecast_time> times = { itsTime };
 	vector<level> levels = { level(kUnknownLevel, 0, "FAKE-LEVEL") };
 
-	auto constData1 = make_shared<info> (*conf->Info());
+	auto constData1 = make_shared<info> (*itsConfiguration->Info());
 	constData1->Params(params);
 	constData1->Times(times);
 	constData1->Levels(levels);
@@ -699,10 +581,6 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	//  stratukselle; joskus siis tuloksena on virheellisesti Base=top)
 
 	constData1->Grid()->Data()->Fill(0);
-	//constData2->Grid()->Data()->Fill(layer);
-
-	//opts.wantedModifier = kFindHeightModifier;
-	//opts.findValueInfo = baseThreshold;
 
 	/**
 	 * Etsitään parametrin N ensimmäisen baseThreshold-arvon korkeus väliltä 0 .. layer (=2000)
@@ -812,7 +690,7 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 
 	stratusMeanN->ReplaceParam(stratusMeanCloudinessParam);
 
-	itsLogger->Info("Searching for stratus top temperatue");
+	itsLogger->Info("Searching for stratus top temperature");
 
 	// Stratuksen Topin lämpötila (jäätävä tihku)
 	//VAR TTop = VERTZ_GET(T_EC,Top)
@@ -845,13 +723,7 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 			constData2->Value(stratusBase->Value() - 50);
 		}
 	}
-	/*itsFirstLevelValueBase = 50;
-	itsLastLevelValueBase = -50;
-	opts.firstLevelValueInfo = stratusBase;
-	opts.lastLevelValueInfo = stratusBase;
-
-	auto stratusMeanTemp = VerticalExtremeValue(opts);
-*/
+	
 	auto stratusMeanTemp = VerticalAverage(wantedParam, constData1, constData2);
 	
 	stratusMeanTemp->First();
@@ -864,6 +736,8 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 
 	wantedParam = param("VV-MS");
 
+	wantedParam.Scale(1000); // mm/s
+	
 	//auto stratusVerticalVelocity = VerticalExtremeValue(opts);
 	auto stratusVerticalVelocity = VerticalAverage(wantedParam, stratusBase, stratusTop);
 
@@ -877,7 +751,7 @@ std::shared_ptr<info> hitool::Stratus(std::shared_ptr<const plugin_configuration
 	return stratusBase;
 }
 
-shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime)
+shared_ptr<info> hitool::FreezingArea()
 {
 
 	const param minusAreaParam("MINUS-AREA-T-C");
@@ -885,10 +759,10 @@ shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration
 	const param plusArea2Param("PLUS-AREA-2-T-C");
 
 	vector<param> params = { param("FAKE-PARAM") };
-	vector<forecast_time> times = { wantedTime };
+	vector<forecast_time> times = { itsTime };
 	vector<level> levels = { level(kUnknownLevel, 0, "FAKE-LEVEL") };
 	
-	auto constData1 = make_shared<info> (*conf->Info());
+	auto constData1 = make_shared<info> (*itsConfiguration->Info());
 	constData1->Params(params);
 	constData1->Times(times);
 	constData1->Levels(levels);
@@ -1028,7 +902,17 @@ shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration
 		{
 			zeroLevel1->LocationIndex(locationIndex);
 			Tavg1->LocationIndex(locationIndex);
-			plusArea1->Value(zeroLevel1->Value() * Tavg1->Value());
+
+			double zl = zeroLevel1->Value(), ta = Tavg1->Value();
+			double pa = kFloatMissing;
+
+			if (zl != kFloatMissing && ta != kFloatMissing)
+			{
+				pa = zl * ta;
+			}
+
+			plusArea1->Value(pa);
+
 		}
 		else if (numZeroLevel == 2)
 		{
@@ -1038,8 +922,23 @@ shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration
 			Tavg1->LocationIndex(locationIndex);
 			Tavg2->LocationIndex(locationIndex);
 
-			plusArea1->Value((zeroLevel2->Value() - zeroLevel1->Value()) * Tavg2->Value());
-			minusArea->Value(zeroLevel1->Value() * Tavg1->Value());
+			double zl1 = zeroLevel1->Value(), ta1 = Tavg1->Value();
+			double zl2 = zeroLevel2->Value(), ta2 = Tavg2->Value();
+			double pa = kFloatMissing, ma = kFloatMissing;
+
+			if (zl2 != kFloatMissing && zl1 != kFloatMissing && ta2 != kFloatMissing)
+			{
+				pa = (zl2 - zl1) * ta2;
+			}
+
+			plusArea1->Value(pa);
+
+			if (zl1 != kFloatMissing && ta1 != kFloatMissing)
+			{
+				ma = zl1 * ta1;
+			}
+
+			minusArea->Value(ma);
 		}
 		else if (numZeroLevel == 3)
 		{
@@ -1051,9 +950,31 @@ shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration
 			Tavg2->LocationIndex(locationIndex);
 			Tavg3->LocationIndex(locationIndex);
 
-			plusArea2->Value((zeroLevel3->Value() - zeroLevel2->Value()) * Tavg2->Value());
-			plusArea1->Value(zeroLevel1->Value() * Tavg1->Value() + plusArea2->Value());
-			minusArea->Value((zeroLevel2->Value() - zeroLevel1->Value()) * Tavg3->Value());
+			double zl1 = zeroLevel1->Value(), ta1 = Tavg1->Value();
+			double zl2 = zeroLevel2->Value(), ta2 = Tavg2->Value();
+			double zl3 = zeroLevel3->Value(), ta3 = Tavg2->Value();
+
+			double pa1 = kFloatMissing, pa2 = kFloatMissing, ma = kFloatMissing;
+
+			if (zl1 != kFloatMissing && zl2 != kFloatMissing && ta2 != kFloatMissing)
+			{
+				pa2 = (zl3 - zl2) * ta2;
+			}
+
+			plusArea2->Value(pa2);
+
+			if (zl1 != kFloatMissing && pa2 != kFloatMissing && ta1 != kFloatMissing)
+			{
+				pa1 = zl1 * ta1 + pa2;
+			}
+			plusArea1->Value(pa1);
+
+			if (zl2 != kFloatMissing && zl1 != kFloatMissing && ta3 != kFloatMissing)
+			{
+				ma = (zl2 - zl1) * ta3;
+			}
+			
+			minusArea->Value(ma);
 		}
 		
 	}
@@ -1067,6 +988,7 @@ shared_ptr<info> hitool::FreezingArea(std::shared_ptr<const plugin_configuration
 	minusArea->Merge(snafu);
 
 	return minusArea;
+
 }
 
 void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
