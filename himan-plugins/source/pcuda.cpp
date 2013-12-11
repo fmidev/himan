@@ -46,9 +46,12 @@ bool pcuda::SetDevice(int deviceId) const
 	
 	if ((err = cudaSetDeviceFlags(cudaDeviceMapHost)) != cudaSuccess)
 	{
-		itsLogger->Error("Failed to set flags for device #" + boost::lexical_cast<string> (deviceId));
-		itsLogger->Error("Return code: " + boost::lexical_cast<string> (err));
-		return false;
+		if (err != cudaErrorSetOnActiveProcess)
+		{
+			itsLogger->Error("Failed to set flags for device #" + boost::lexical_cast<string> (deviceId));
+			itsLogger->Error("Return code: " + boost::lexical_cast<string> (err));
+			return false;
+		}
 	}
 
 	return true;	
