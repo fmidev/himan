@@ -259,10 +259,8 @@ void modifier_mean::Init(std::shared_ptr<const info> sourceInfo)
 
 	itsResult->First();
 
-	itsValuesCount.resize(itsResult->Grid()->Size());
+	itsValuesCount.resize(itsResult->Grid()->Size(), 0);
 	
-	std::fill(itsValuesCount.begin(), itsValuesCount.end(), kHPMissingInt);
-
 }
 
 
@@ -273,37 +271,29 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		return;
 	}
 
-	//itsResult->ParamIndex(0); // Max
+	itsValuesCount[itsResult->LocationIndex()] += 1;
 
 	if (IsMissingValue(itsResult->Value())) // First value
 	{
-		itsResult->Value(theValue);
-		itsValuesCount[itsResult->LocationIndex()] = 1;
+		itsResult->Value(theValue);	
 	}
 	else
 	{
-		double val = itsResult->Value();
-		itsResult->Value(theValue+val);
-
-		size_t count = itsValuesCount[itsResult->LocationIndex()];
-		count++;
-
-		itsValuesCount[itsResult->LocationIndex()] = count;
+		itsResult->Value(itsResult->Value() + theValue);
 	}	
 }
 
 std::shared_ptr<info> modifier_mean::Result() const
 {
-	//itsResult->ParamIndex(0);
-
 	for (itsResult->ResetLocation(); itsResult->NextLocation();)
 	{
 		double val = itsResult->Value();
 		size_t count = itsValuesCount[itsResult->LocationIndex()];
 
-		if (val != kFloatMissing && count != static_cast<size_t> (kHPMissingInt))
+		if (!IsMissingValue(val) && count != 0)
 		{
 			itsResult->Value(val / static_cast<double> (count));
+// if (itsResult->LocationIndex() < 10) std::cout << itsResult->LocationIndex() << " " << val << " " << count << std::endl;
 		}		
 	}
 
@@ -405,11 +395,6 @@ void modifier_findheight::Init(std::shared_ptr<const info> sourceInfo)
 	itsPreviousValue.resize(itsResult->Grid()->Size(), kFloatMissing);
 	itsPreviousHeight.resize(itsResult->Grid()->Size(), kFloatMissing);
 	itsFoundNValues.resize(itsResult->Grid()->Size(), 0);
-/*
-	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), kFloatMissing);
-	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), kFloatMissing);
-	std::fill(itsFoundNValues.begin(), itsFoundNValues.end(), 0);
-*/
 }
 
 void modifier_findheight::Calculate(double theValue, double theHeight)
@@ -480,18 +465,20 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 		
 		if (actualHeight != kFloatMissing)
 		{
-			itsFoundNValues[locationIndex] += 1;
+			if (itsFindNthValue != 0)
+			{
+				itsFoundNValues[locationIndex] += 1;
 
-			if (itsFindNthValue == itsFoundNValues[locationIndex])
+				if (itsFindNthValue == itsFoundNValues[locationIndex])
+				{
+					itsResult->Value(actualHeight);
+					itsValuesFound++;
+				}
+			}
+			else
 			{
 				itsResult->Value(actualHeight);
 			}
-		}
-		else
-		{
-		/*	std::cout << "actual height " << actualHeight << ", findValue " << findValue << " prev value " << previousValue << " theValue "
-					<< theValue << " prevHeight " << previousHeight << " theHeight " << theHeight << std::endl;*/
-
 		}
 	}
 
@@ -572,7 +559,11 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 	{
 		double actualValue = NFmiInterpolation::Linear(findValue, previousHeight, theHeight, previousValue, theValue);
 
-		itsResult->Value(actualValue);
+		if (actualValue != kFloatMissing)
+		{
+			itsResult->Value(actualValue);
+			itsValuesFound++;
+		}
 	}
 }
 

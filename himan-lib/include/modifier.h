@@ -41,10 +41,7 @@ class modifier
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing) = 0;
 		virtual void Clear(double fillValue = kFloatMissing);
-/*
-		bool ReturnHeight() const;
-		void ReturnHeight(bool theReturnHeight);
-*/
+
 		virtual bool IsMissingValue(double theValue) const;
 
 		void FindValue(std::shared_ptr<const info> theFindValue);
