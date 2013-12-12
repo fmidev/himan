@@ -59,22 +59,11 @@ double modifier::MaximumValue() const
 	throw kFunctionNotImplemented;
 }
 
-/*double modifier::Height() const
+bool modifier::CalculationFinished() const
 {
-	itsResult->ParamIndex(1);
-	return itsResult->Value();
+		return false;
 }
 
-double modifier::MaximumHeight() const
-{
-	throw kFunctionNotImplemented;
-}
-
-double modifier::MinimumHeight() const
-{
-	throw kFunctionNotImplemented;
-}
-*/
 void modifier::Clear(double fillValue)
 {
 	for (itsResult->ResetTime(); itsResult->NextTime();)
@@ -293,7 +282,6 @@ std::shared_ptr<info> modifier_mean::Result() const
 		if (!IsMissingValue(val) && count != 0)
 		{
 			itsResult->Value(val / static_cast<double> (count));
-// if (itsResult->LocationIndex() < 10) std::cout << itsResult->LocationIndex() << " " << val << " " << count << std::endl;
 		}		
 	}
 

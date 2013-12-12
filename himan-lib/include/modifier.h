@@ -52,12 +52,9 @@ class modifier
 		void ResetLocation();
 		size_t LocationIndex() const;
 
-		std::shared_ptr<info> Result() const;
+		virtual std::shared_ptr<info> Result() const;
 
-		virtual bool CalculationFinished() const
-		{
-			return false;
-		}
+		virtual bool CalculationFinished() const;
 
 		size_t FindNth() const;
 		void FindNth(size_t theNth);
