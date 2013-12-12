@@ -434,7 +434,7 @@ public:
 
 	/**
 	 * @brief Will reset data backend, ie. create new data that is not attached
-	 * to any other info instance. The data contens will be the same as in the old
+	 * to any other info instance. The data content will be the same as in the old
 	 * info.
 	 *
 	 * Will preserve iterator positions.
