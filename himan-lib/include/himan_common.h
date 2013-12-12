@@ -262,7 +262,9 @@ const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToStr
 		(kAccumulation, "accumulation")
 		(kMaximum, "maximum")
 		(kMinimum, "minimum")
-		(kDifference, "difference");
+		(kDifference, "difference")
+		(kExternalMinimum, "external minimum")
+		(kExternalMaximum, "external maximum");
 
 enum HPModifierType
 {
@@ -345,6 +347,63 @@ std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers)
 {
 	return vers.Write(file);
 }
+
+namespace constants {
+
+	/**
+	 * @brief One degree celsius in Kelvins
+	 */
+
+	const double kKelvin = 273.16;
+
+	/**
+	 * @brief Gas constant for water vapor (J / K kg)
+	 */
+
+	const double kRw = 461.5;
+
+	/**
+	 * @brief Latent heat for water (J / kg)
+	 *
+	 * http://glossary.ametsoc.org/wiki/Latent_heat
+	 */
+
+	const double kL = 2.5e6;
+
+	/**
+	 * @brief One radian in degrees (180 / PI)
+	 */
+
+	const double kRad = 57.29577951307855;
+
+	/**
+	 * @brief One degree in radians (PI / 180)
+	 */
+
+	const double kDeg = 0.017453292519944;
+
+	/**
+	 * @brief Dimensionless ratio of the specific gas constant of dry air to the specific gas constant for water vapor, ie kRd / kRw
+	 *
+	 *
+	 * http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate
+	 */
+
+	const double kEp = 0.622;
+
+	/**
+	 * @brief Specific gas constant of dry air (J / K kg)
+	 */
+
+	const double kRd = 287;
+
+	/**
+	 * @brief Specific heat of dry air at constant pressure (J / K kg)
+	 */
+
+	const double kCp = 1003.5;
+
+} // namespace constants
 
 } // namespace himan
 

@@ -16,12 +16,7 @@
 using namespace himan;
 using namespace std;
 
-const double kDegToRad = 0.017453292519944; // PI / 180
-const double kKelvin = 273.15;
 
-// ideal gas law
-
-const double kEp = 0.623;
 
 string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const info> info)
 {
@@ -266,21 +261,21 @@ point util::UVToEarthRelative(const point& regPoint, const point& rotPoint, cons
 		newSouthPole = southPole;
 	}
 
-	double southPoleY = kDegToRad * (newSouthPole.Y()+90);
+	double southPoleY = kDeg * (newSouthPole.Y()+90);
 	double sinPoleY, cosPoleY;
 
 	sincos(southPoleY, &sinPoleY, &cosPoleY);
 
-	double cosRegY = cos(kDegToRad * regPoint.Y()); // zcyreg
+	double cosRegY = cos(constants::kDeg * regPoint.Y()); // zcyreg
 
-	double zxmxc = kDegToRad * (regPoint.X() - newSouthPole.X());
+	double zxmxc = kDeg * (regPoint.X() - newSouthPole.X());
 
 	double sinxmxc, cosxmxc;
 
 	sincos(zxmxc, &sinxmxc, &cosxmxc);
 
-	double rotXRad = kDegToRad * rotPoint.X();
-	double rotYRad = kDegToRad * rotPoint.Y();
+	double rotXRad = kDeg * rotPoint.X();
+	double rotYRad = kDeg * rotPoint.Y();
 
 	double sinRotX, cosRotX;
 	sincos(rotXRad, &sinRotX, &cosRotX);
@@ -314,22 +309,22 @@ point util::UVToGridRelative(const himan::point& regPoint, const himan::point& r
 		newSouthPole = southPole;
 	}
 
-	double sinPoleY = sin(kDegToRad * (newSouthPole.Y()+90)); // zsyc
-	double cosPoleY = cos(kDegToRad * (newSouthPole.Y()+90)); // zcyc
+	double sinPoleY = sin(constants::kDeg * (newSouthPole.Y()+90)); // zsyc
+	double cosPoleY = cos(constants::kDeg * (newSouthPole.Y()+90)); // zcyc
 
-	//double sinRegX = sin(kDegToRad * regPoint.X()); // zsxreg
-	//double cosRegX = cos(kDegToRad * regPoint.X()); // zcxreg
-	double sinRegY = sin(kDegToRad * regPoint.Y()); // zsyreg
-	double cosRegY = cos(kDegToRad * regPoint.Y()); // zcyreg
+	//double sinRegX = sin(constants::kDeg * regPoint.X()); // zsxreg
+	//double cosRegX = cos(constants::kDeg * regPoint.X()); // zcxreg
+	double sinRegY = sin(constants::kDeg * regPoint.Y()); // zsyreg
+	double cosRegY = cos(constants::kDeg * regPoint.Y()); // zcyreg
 
-	double zxmxc = kDegToRad * (regPoint.X() - newSouthPole.X());
+	double zxmxc = constants::kDeg * (regPoint.X() - newSouthPole.X());
 	double sinxmxc = sin(zxmxc); // zsxmxc
 	double cosxmxc = cos(zxmxc); // zcxmxc
 
-	double sinRotX = sin(kDegToRad * rotPoint.X()); // zsxrot
-	double cosRotX = cos(kDegToRad * rotPoint.X()); // zcxrot
-	//double sinRotY = sin(kDegToRad * rotPoint.Y()); // zsyrot
-	double cosRotY = cos(kDegToRad * rotPoint.Y()); // zcyrot
+	double sinRotX = sin(constants::kDeg * rotPoint.X()); // zsxrot
+	double cosRotX = cos(constants::kDeg * rotPoint.X()); // zcxrot
+	//double sinRotY = sin(constants::kDeg * rotPoint.Y()); // zsyrot
+	double cosRotY = cos(constants::kDeg * rotPoint.Y()); // zcyrot
 
 	double PA = cosPoleY * sinxmxc * sinRotX + cosxmxc * cosRotX;
 	double PB = cosPoleY * cosxmxc * sinRegY * sinRotX - sinPoleY * cosRegY * sinRotX - sinxmxc * sinRegY * cosRotX;
@@ -352,8 +347,8 @@ point util::UVToGeographical(double longitude, const point& stereoUV)
 		return point(0,0);
 	}
 
-	double sinLon = sin(longitude * kDegToRad);
-	double cosLon = cos(longitude * kDegToRad);
+	double sinLon = sin(longitude * constants::kDeg);
+	double cosLon = cos(longitude * constants::kDeg);
 
 	U = stereoUV.X() * cosLon + stereoUV.Y() * sinLon;
 	V = -stereoUV.X() * sinLon + stereoUV.Y() * cosLon;
@@ -439,20 +434,16 @@ double util::Gammas(double P, double T)
 	// http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate ?
 	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
 	
-	const double R = 287; // gas constant, J/kg/K
-	const double CP = 1004; // specific heat at constant pressure, J/kg/K
-	const double L = 2.5e6; // heat of vaporization of water, J/kg
-
-	double Q = kEp * util::Es(T) / P;
+	double Q = constants::kEp * util::Es(T) / P;
 
 	// unit changes
 	
 	P *= 100; // hpa --> pa
-	T += kKelvin; // c --> k
+	T += constants::kKelvin; // c --> k
 
-	double A = R * T / CP / P * (1+L*Q/R/T);
+	double A = constants::kRd * T / constants::kCp / P * (1+constants::kL*Q/constants::kRd/T);
 	
-	return A / (1 + kEp / CP * (pow(L, 2) / R * Q / pow(T,2)));
+	return A / (1 + constants::kEp / constants::kCp * (pow(constants::kL, 2) / constants::kRd * Q / pow(T,2)));
 }
 
 const std::vector<double> util::LCL(double P, double T, double TD)
@@ -467,8 +458,8 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 	
 	double E0 = Es(TD);
 
-	double Q = kEp * E0 / P;
-	double C = (T+kKelvin) / pow(E0, kRCp);
+	double Q = constants::kEp * E0 / P;
+	double C = (T+constants::kKelvin) / pow(E0, kRCp);
 	
 	double TLCL = kFloatMissing;
 	double PLCL = kFloatMissing;
@@ -484,10 +475,10 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 	{
 		double TEs = C * pow(Es(T), kRCp);
 
-		if (fabs(TEs - (T+kKelvin)) < 0.05)
+		if (fabs(TEs - (T+constants::kKelvin)) < 0.05)
 		{
 			TLCL = T;
-			PLCL = pow(((TLCL+kKelvin)/(Torig+kKelvin)), (1/kRCp)) * P;
+			PLCL = pow(((TLCL+constants::kKelvin)/(Torig+constants::kKelvin)), (1/kRCp)) * P;
 
 			ret[0] = PLCL;
 			ret[1] = TLCL;
@@ -497,7 +488,7 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 		}
 		else
 		{
-			Tstep = min((TEs - T - kKelvin) / (2 * (nq+1)), 15.);
+			Tstep = min((TEs - T - constants::kKelvin) / (2 * (nq+1)), 15.);
 			T -= Tstep;
 		}
 	}
@@ -511,14 +502,14 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 
 	while (++nq <= 500)
 	{
-		if ((C * pow(Es(T), kRCp)-(T+kKelvin)) > 0)
+		if ((C * pow(Es(T), kRCp)-(T+constants::kKelvin)) > 0)
 		{
 			T -= Tstep;
 		}
 		else
 		{
 			TLCL = T;
-			PLCL = pow((TLCL + kKelvin) / (Torig+kKelvin), (1/kRCp)) * Porig;
+			PLCL = pow((TLCL + constants::kKelvin) / (Torig+constants::kKelvin), (1/kRCp)) * Porig;
 
 			ret[0] = PLCL;
 			ret[1] = TLCL;
