@@ -50,6 +50,7 @@ private:
 
     std::shared_ptr<info> FetchPrevious(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
     int itsBottomLevel;
+    bool fast;
 };
 
 // the class factory

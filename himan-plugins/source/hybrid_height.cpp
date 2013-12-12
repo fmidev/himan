@@ -111,6 +111,11 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		aTimer->Start();
 	}
 
+	if (!conf->BePrecise())
+	{
+		fast = true;
+	}
+
 	/*
 	 * Each thread will have a copy of the target info.
 	 */
@@ -190,6 +195,10 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		bool firstLevel(false);
+		if (fast)
+		{
+			firstLevel = true;
+		}
 		
 		//only works with hirlam for now
 		//itsLogger->Debug("level: " 
@@ -374,7 +383,10 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		
 		}
 
-		firstLevel = false;
+		if (!fast)
+		{
+			firstLevel = false;
+		}
 
 		/*
 		 * Newbase normalizes scanning mode to bottom left -- if that's not what
