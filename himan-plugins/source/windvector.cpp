@@ -27,8 +27,6 @@ using namespace himan::plugin;
 #include "windvector_cuda.h"
 #include "cuda_helper.h"
 
-const double kRadToDeg = 57.29577951307855; // 180 / PI
-
 windvector::windvector()
 	: itsCalculationTarget(kUnknownElement)
 	, itsVectorCalculation(false)
@@ -646,7 +644,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				if (speed > 0)
 				{
-					dir = kRadToDeg * atan2(U,V) + directionOffset;
+					dir = himan::constants::kRad * atan2(U,V) + directionOffset;
 
 					// reduce the angle
 					dir = fmod(dir,360);

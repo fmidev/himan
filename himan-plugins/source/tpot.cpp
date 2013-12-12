@@ -27,10 +27,6 @@ using namespace himan::plugin;
 #include "cuda_helper.h"
 #include "util.h"
 
-const double Cp = 1004; // specific heat at constant pressure
-const double ZLc = 2.5e6; // latent heat of vaporization J/kg (=Rd)
-const double e = 0.622; // Rd/Rv
-
 tpot::tpot()
 : itsThetaCalculation(false)
 , itsThetaWCalculation(false)
@@ -629,9 +625,9 @@ double tpot::ThetaE(double P, double T, double TD, double theta)
 	}
 
 	double ZEs = util::Es(TLCL);
-	double ZQs = e * (ZEs / (P - ZEs));
+	double ZQs = himan::constants::kEp * (ZEs / (P - ZEs));
 
-	double value = theta * exp(ZLc * ZQs / Cp / (TLCL + 273.15));
+	double value = theta * exp(himan::constants::kL * ZQs / himan::constants::kCp / (TLCL + 273.15));
 
 	return value;
 

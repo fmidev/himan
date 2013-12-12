@@ -23,7 +23,6 @@ using namespace himan::plugin;
 const double b = 17.27;
 const double c = 237.3;
 const double d = 1.8;
-const double e = 0.622; // ratio molecular weight of water vapor /dry air
 
 relative_humidity::relative_humidity()
 {
@@ -294,7 +293,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 				
 				double es = util::Es(T) ;
 
-				double RH = (P * Q / e / es) * (P - es) / (P - Q * P / e);
+				double RH = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 
 				if (RH > 1.0)
 				{

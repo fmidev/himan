@@ -22,9 +22,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-const double RW = 461.5; // Vesihoyryn kaasuvakio (J / K kg)
-const double L = 2.5e6; // Veden hoyrystymislampo (J / kg)
-const double RW_div_L = RW / L;
+const double Rw_div_L = himan::constants::kRw / himan::constants::kL;
 
 dewpoint::dewpoint()
 {
@@ -363,7 +361,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 					continue;
 				}
 
-				double TD = ((T+TBase) / (1 - ((T+TBase) * log(RHScale * RH) * (RW_div_L)))) - 273.15 + TBase;
+				double TD = ((T+TBase) / (1 - ((T+TBase) * log(RHScale * RH) * (Rw_div_L)))) - 273.15 + TBase;
 
 				if (!myTargetInfo->Value(TD))
 				{
