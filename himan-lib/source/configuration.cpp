@@ -42,6 +42,7 @@ configuration::configuration(const configuration& other)
 	itsCudaDeviceCount = other.itsCudaDeviceCount;
 	
 	itsUseCache = other.itsUseCache;
+	itsBePrecise = other.itsBePrecise;
 
 	itsLeadingDimension = other.itsLeadingDimension;
 	itsThreadCount = other.itsThreadCount;
@@ -117,6 +118,7 @@ void configuration::Init()
 	itsConfigurationFile = "";
 	itsUseCudaForPacking = true;
 	itsUseCache = true;
+	itsBePrecise = false;
 }
 
 HPFileType configuration::OutputFileType() const
@@ -269,6 +271,16 @@ bool configuration::UseCache() const
 void configuration::UseCache(bool theUseCache)
 {
 	itsUseCache = theUseCache;
+}
+
+bool configuration::BePrecise() const
+{
+	return itsBePrecise;
+}
+
+void configuration::BePrecise(bool theBePrecise)
+{
+	itsBePrecise = theBePrecise;
 }
 
 std::string configuration::SourceGeomName() const
