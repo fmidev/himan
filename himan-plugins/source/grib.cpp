@@ -826,8 +826,9 @@ void grib::WriteAreaAndGrid(std::shared_ptr<const info> anInfo)
 			itsGrib->Message()->Y0(anInfo->Grid()->BottomLeft().Y());
 
 			itsGrib->Message()->GridOrientation(anInfo->Grid()->Orientation());
-			itsGrib->Message()->XLengthInMeters(anInfo->Grid()->Di() * (anInfo->Grid()->Ni() - 1));
-			itsGrib->Message()->YLengthInMeters(anInfo->Grid()->Dj() * (anInfo->Grid()->Nj() - 1));
+
+			itsGrib->Message()->XLengthInMeters(anInfo->Grid()->Di());
+			itsGrib->Message()->YLengthInMeters(anInfo->Grid()->Dj());
 			break;
 		}
 
