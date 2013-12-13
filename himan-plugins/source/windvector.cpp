@@ -608,6 +608,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					 * 2. Get coordinates of current grid point in grid-relative form
 					 * 3. Call function UVToEarthRelative() that transforms U and V from grid-relative
 					 *    to earth-relative
+					 *
+					 * NFmiRotatedLatLonArea will give the normal latlon coordinates with LatLon()
+					 * function, so we need force the regular point to rotated point with ToRotLatLon().
+					 *
 					 */
 
 					assert(UGrid->Area()->ClassId() == kNFmiRotatedLatLonArea);
