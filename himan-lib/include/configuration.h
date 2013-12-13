@@ -193,9 +193,6 @@ public:
 	bool UseCache() const;
 	void UseCache(bool theUseCache);
 
-	bool BePrecise() const;
-	void BePrecise(bool theBePrecise);
-
 	std::string SourceGeomName() const;
 
 	void StoreCudaDeviceCount();
@@ -233,8 +230,6 @@ protected:
 
 	bool itsUseCudaForPacking;
 	bool itsUseCache;
-
-	bool itsBePrecise;
 
 	short itsCudaDeviceCount;
 

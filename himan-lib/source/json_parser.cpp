@@ -244,27 +244,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
-
-	// Check global precise option
-
-	try
-	{
-		string theBePrecise = pt.get<string>("precise");
-
-		if (ParseBoolean(theBePrecise))
-		{
-			conf->BePrecise(true);
-		}
-
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
-	}
 	/* Check processqueue */
 
 	std::vector<std::shared_ptr<info> > infoQueue;
