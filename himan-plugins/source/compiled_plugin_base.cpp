@@ -58,14 +58,14 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 	 *	target grid point (ie. target grid point #1 --> source grid point #1 etc).
 	 *
 	 * 2) If actual interpolation is needed, first get the *grid* coordinates of the
-	 *	latlon target point. Then check if those grid coordinates are very close
-	 *	to a grid point -- if so, return the value of the grid point. This serves two
-	 *	purposes:
+	 *	latlon target point in the *source* grid. Then check if those grid coordinates
+	 *  are very close to an actual grid point -- if so, return the value of the grid
+	 *  point. This serves two purposes:
 	 *	- We don't need to interpolate if the distance between requested grid point
 	 *	  and actual grid point is small enough, saving some CPU cycles
 	 *	- Sometimes when the requested grid point is close to grid edge, floating
 	 *	  point inaccuracies might move it outside the grid. If this happens, the
-	 *	  interpolation fails even though initially the grid point is valid.
+	 *	  interpolation fails even though the grid point is valid.
 	 *
 	 * 3) If requested source grid point is not near and actual grid point, interpolate
 	 *	the value of the point.
@@ -79,13 +79,15 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 		return true;
 	}
 
-	const NFmiPoint targetLatLonPoint = targetGrid->LatLon();
-	const NFmiPoint sourceGridPoint = targetGrid->LatLonToGrid(targetLatLonPoint.X(), targetLatLonPoint.Y());
-
 	// Step 2)
 
-	bool noInterpolation = (fabs(sourceGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
-		 fabs(sourceGridPoint.Y() - round(sourceGridPoint.Y())) < kInterpolatedValueEpsilon);
+	const NFmiPoint targetLatLonPoint = targetGrid->LatLon();
+	const NFmiPoint sourceGridPoint = sourceGrid->LatLonToGrid(targetLatLonPoint);
+
+	bool noInterpolation = (
+						fabs(sourceGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
+						fabs(sourceGridPoint.Y() - round(sourceGridPoint.Y())) < kInterpolatedValueEpsilon
+	);
 
 	if (noInterpolation)
 	{
@@ -95,7 +97,7 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 
 	// Step 3)
 
-	return sourceGrid->InterpolateToLatLonPoint(targetLatLonPoint, value);
+	return sourceGrid->InterpolateToGridPoint(sourceGridPoint, value);
 
 }
 
