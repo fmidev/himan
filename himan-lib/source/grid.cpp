@@ -100,6 +100,8 @@ double grid::Di() const
 {
 	if (itsDi == kHPMissingValue)
 	{
+		assert(itsProjection != kStereographicProjection);
+		
 		assert(itsBottomLeft.X() != static_cast<size_t> (kHPMissingInt));
 		assert(itsTopRight.X() != static_cast<size_t> (kHPMissingInt));
 		itsDi = fabs((itsBottomLeft.X() - itsTopRight.X()) / (static_cast<double> (Ni())-1));
@@ -117,6 +119,8 @@ double grid::Dj() const
 {
 	if (itsDj == kHPMissingValue)
 	{
+		assert(itsProjection != kStereographicProjection);
+
 		assert(itsBottomLeft.Y() != kHPMissingInt);
 		assert(itsTopRight.Y() != kHPMissingInt);
 		itsDj = fabs((itsBottomLeft.Y() - itsTopRight.Y()) / (static_cast<double> (Nj())-1));
