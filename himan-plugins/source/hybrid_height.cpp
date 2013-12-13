@@ -24,7 +24,7 @@ using namespace himan::plugin;
 
 const string itsName("hybrid_height");
 
-hybrid_height::hybrid_height()
+hybrid_height::hybrid_height() : itsFastMode(false)
 {
 	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
@@ -111,9 +111,9 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		aTimer->Start();
 	}
 
-	if (!conf->BePrecise())
+	if (!conf->Exists("fast_mode") && conf->GetValue("fast_mode") == "true")
 	{
-		fast = true;
+		itsFastMode = true;
 	}
 
 	/*
@@ -195,7 +195,8 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		bool firstLevel(false);
-		if (fast)
+		
+		if (itsFastMode)
 		{
 			firstLevel = true;
 		}
@@ -383,7 +384,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const pl
 		
 		}
 
-		if (!fast)
+		if (!itsFastMode)
 		{
 			firstLevel = false;
 		}
