@@ -261,21 +261,21 @@ point util::UVToEarthRelative(const point& regPoint, const point& rotPoint, cons
 		newSouthPole = southPole;
 	}
 
-	double southPoleY = kDeg * (newSouthPole.Y()+90);
+	double southPoleY = constants::kDeg * (newSouthPole.Y()+90);
 	double sinPoleY, cosPoleY;
 
 	sincos(southPoleY, &sinPoleY, &cosPoleY);
 
 	double cosRegY = cos(constants::kDeg * regPoint.Y()); // zcyreg
 
-	double zxmxc = kDeg * (regPoint.X() - newSouthPole.X());
+	double zxmxc = constants::kDeg * (regPoint.X() - newSouthPole.X());
 
 	double sinxmxc, cosxmxc;
 
 	sincos(zxmxc, &sinxmxc, &cosxmxc);
 
-	double rotXRad = kDeg * rotPoint.X();
-	double rotYRad = kDeg * rotPoint.Y();
+	double rotXRad = constants::kDeg * rotPoint.X();
+	double rotYRad = constants::kDeg * rotPoint.Y();
 
 	double sinRotX, cosRotX;
 	sincos(rotXRad, &sinRotX, &cosRotX);
