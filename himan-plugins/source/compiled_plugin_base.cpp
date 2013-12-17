@@ -67,7 +67,7 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 	 *	  point inaccuracies might move it outside the grid. If this happens, the
 	 *	  interpolation fails even though the grid point is valid.
 	 *
-	 * 3) If requested source grid point is not near and actual grid point, interpolate
+	 * 3) If requested source grid point is not near an actual grid point, interpolate
 	 *	the value of the point.
 	 */
 
