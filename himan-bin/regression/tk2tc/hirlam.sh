@@ -37,3 +37,14 @@ else
   echo "no cuda device found for cuda tests"
 fi
 
+$HIMAN -d 5 -f tk2tc_hl_pres.json -t grib --no-cuda -s tk2tc_hl_pres_nocuda hl_source_pres.grib
+
+grib_compare hl_result_pres.grib tk2tc_hl_pres.json.grib
+
+if [ $? -eq 0 ];then
+  echo tk2tc_pres/hl success!
+else
+  echo tk2tc_pres/hl failed
+  exit 1
+fi
+

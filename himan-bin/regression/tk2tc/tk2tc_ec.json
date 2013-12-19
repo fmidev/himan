@@ -1,10 +1,4 @@
 {
-	"_INFO":{
-            "modified":"28 Jan 2013",
-            "author": "partio",
-            "description": "EC Hirlam surface and pressure fields"
-        },
-    
 	"target_geom_name" : "MTEDIT125",
 	"source_producer" : "131",
 	"target_producer" : "240",
