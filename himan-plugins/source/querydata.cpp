@@ -37,17 +37,17 @@ using namespace himan::plugin;
 
 querydata::querydata()
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("querydata"));
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("querydata"));
 }
 
 bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileWriteOption fileWriteOption)
 {
 
-    ofstream out(theOutputFile.c_str());
+	ofstream out(theOutputFile.c_str());
 
-    /*
-     * Create required descriptors
-     */
+	/*
+	 * Create required descriptors
+	 */
 
 	bool activeOnly = true;
 
@@ -56,171 +56,175 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HP
 		activeOnly = false;
 	}
 
-    NFmiParamDescriptor pdesc = CreateParamDescriptor(theInfo, activeOnly);
-    NFmiTimeDescriptor tdesc = CreateTimeDescriptor(theInfo, activeOnly);
-    NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(theInfo);
-    NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(theInfo, activeOnly);
+	NFmiParamDescriptor pdesc = CreateParamDescriptor(theInfo, activeOnly);
+	NFmiTimeDescriptor tdesc = CreateTimeDescriptor(theInfo, activeOnly);
+	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(theInfo);
+	NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(theInfo, activeOnly);
 
-    assert(pdesc.Size());
-    assert(tdesc.Size());
-    assert(hdesc.Size());
-    assert(vdesc.Size());
+	assert(pdesc.Size());
+	assert(tdesc.Size());
+	assert(hdesc.Size());
+	assert(vdesc.Size());
 
-    if (pdesc.Size() == 0)
-    {
-        itsLogger->Error("No valid parameters found");
-        return false;
-    }
-    else if (tdesc.Size() == 0)
-    {
-        itsLogger->Error("No valid times found");
-        return false;
-    }
-    else if (hdesc.Size() == 0)
-    {
-        itsLogger->Error("No valid times found");
-        return false;
-    }
-    else if (vdesc.Size() == 0)
-    {
-        itsLogger->Error("No valid times found");
-        return false;
-    }
+	if (pdesc.Size() == 0)
+	{
+		itsLogger->Error("No valid parameters found");
+		return false;
+	}
+	else if (tdesc.Size() == 0)
+	{
+		itsLogger->Error("No valid times found");
+		return false;
+	}
+	else if (hdesc.Size() == 0)
+	{
+		itsLogger->Error("No valid times found");
+		return false;
+	}
+	else if (vdesc.Size() == 0)
+	{
+		itsLogger->Error("No valid times found");
+		return false;
+	}
 
-    NFmiFastQueryInfo qi(pdesc, tdesc, hdesc, vdesc);
+	NFmiFastQueryInfo qi(pdesc, tdesc, hdesc, vdesc);
 
-    unique_ptr<NFmiQueryData> qdata (NFmiQueryDataUtil::CreateEmptyData(qi));
+	unique_ptr<NFmiQueryData> qdata (NFmiQueryDataUtil::CreateEmptyData(qi));
 
-    NFmiFastQueryInfo qinfo = qdata.get();
+	NFmiFastQueryInfo qinfo = qdata.get();
 
-    qinfo.SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo->Producer().Id()), theInfo->Producer().Name()));
+	qinfo.SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo->Producer().Id()), theInfo->Producer().Name()));
 
-    /*
-     * At the same time check that we have only constant-sized grids
-     */
-
-#ifndef NDEBUG
-    size_t size = 0;
-    string firstOriginTime;
-
-    bool first = true;
-#endif
-
-    if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
-    {
-        // Should user Param(arg) Level(arg) Time(arg) here !
-        qinfo.FirstParam();
-        qinfo.FirstLevel();
-        qinfo.FirstTime();
-
-        theInfo->ResetLocation();
-        qinfo.ResetLocation();
-
-        assert(theInfo->Data()->Size() == qinfo.Size());
-
-        while (theInfo->NextLocation() && qinfo.NextLocation())
-        {
-            qinfo.FloatValue(static_cast<float> (theInfo->Value()));
-        }
-    }
-    else
-    {
-    	/*
-    	 * info-class (like grib) support many different grid types, the "worst" case being that
-    	 * all info-class grid elements are different from each other (different producer,grid,area,time etc).
-    	 * querydata on the other does not support this, so we should check that all elements are equal
-    	 * before writing querydata.
-    	 */
-
-        theInfo->ResetTime();
-        qinfo.ResetTime();
-
-        while (theInfo->NextTime() && qinfo.NextTime())
-        {
+	/*
+	 * At the same time check that we have only constant-sized grids
+	 */
 
 #ifndef NDEBUG
+	size_t size = 0;
+	string firstOriginTime;
 
-        	if (first)
-        	{
-        		firstOriginTime = theInfo->Time().OriginDateTime()->String();
-        	}
-        	else
-        	{
-        		assert(firstOriginTime == theInfo->Time().OriginDateTime()->String());
-        	}
-
+	bool first = true;
 #endif
-        	theInfo->ResetLevel();
-            qinfo.ResetLevel();
 
-            while (theInfo->NextLevel() && qinfo.NextLevel())
-            {
-                theInfo->ResetParam();
-                qinfo.ResetParam();
+	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
+	{
+		assert(theInfo->Grid()->ScanningMode() == kBottomLeft);
 
-                while (theInfo->NextParam() && qinfo.NextParam())
-                {
-                    theInfo->ResetLocation();
-                    qinfo.ResetLocation();
+		// Should user Param(arg) Level(arg) Time(arg) here !
+		qinfo.FirstParam();
+		qinfo.FirstLevel();
+		qinfo.FirstTime();
+
+		theInfo->ResetLocation();
+		qinfo.ResetLocation();
+
+		assert(theInfo->Data()->Size() == qinfo.Size());
+
+		while (theInfo->NextLocation() && qinfo.NextLocation())
+		{
+			qinfo.FloatValue(static_cast<float> (theInfo->Value()));
+		}
+	}
+	else
+	{
+		/*
+		 * info-class (like grib) support many different grid types, the "worst" case being that
+		 * all info-class grid elements are different from each other (different producer,grid,area,time etc).
+		 * querydata on the other does not support this, so we should check that all elements are equal
+		 * before writing querydata.
+		 */
+
+		theInfo->ResetTime();
+		qinfo.ResetTime();
+
+		while (theInfo->NextTime() && qinfo.NextTime())
+		{
 
 #ifndef NDEBUG
 
-                    if (first)
-                    {
-                        first = false;
-                        size = theInfo->Data()->Size();
-                    }
-                    else
-                    {
-                        assert(theInfo->Data()->Size() == size);
-                    }
+			if (first)
+			{
+				firstOriginTime = theInfo->Time().OriginDateTime()->String();
+			}
+			else
+			{
+				assert(firstOriginTime == theInfo->Time().OriginDateTime()->String());
+			}
+
+#endif
+			theInfo->ResetLevel();
+			qinfo.ResetLevel();
+
+			while (theInfo->NextLevel() && qinfo.NextLevel())
+			{
+				theInfo->ResetParam();
+				qinfo.ResetParam();
+
+				while (theInfo->NextParam() && qinfo.NextParam())
+				{
+					assert(theInfo->Grid()->ScanningMode() == kBottomLeft);
+					
+					theInfo->ResetLocation();
+					qinfo.ResetLocation();
+
+#ifndef NDEBUG
+
+					if (first)
+					{
+						first = false;
+						size = theInfo->Data()->Size();
+					}
+					else
+					{
+						assert(theInfo->Data()->Size() == size);
+					}
 
 #endif
 
-                    while (theInfo->NextLocation() && qinfo.NextLocation())
-                    {
-                        qinfo.FloatValue(static_cast<float> (theInfo->Value()));
-                    }
-                }
-            }
-        }
-    }
+					while (theInfo->NextLocation() && qinfo.NextLocation())
+					{
+						qinfo.FloatValue(static_cast<float> (theInfo->Value()));
+					}
+				}
+			}
+		}
+	}
 
-    out << *qdata;
+	out << *qdata;
 
-    itsLogger->Info("Wrote file '" + theOutputFile + "'");
+	itsLogger->Info("Wrote file '" + theOutputFile + "'");
 
-    return true;
+	return true;
 
 }
 
 NFmiTimeDescriptor querydata::CreateTimeDescriptor(shared_ptr<info> info, bool theActiveOnly)
 {
 
-    /*
-     * Create time descriptor
-     */
+	/*
+	 * Create time descriptor
+	 */
 
-    NFmiTimeList tlist;
+	NFmiTimeList tlist;
 
-    if (theActiveOnly)
-    {
-        tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%Y%m%d")),
-                                  boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%H%M"))));
-    }
-    else
-    {
-        info->ResetTime();
+	if (theActiveOnly)
+	{
+		tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%Y%m%d")),
+								  boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%H%M"))));
+	}
+	else
+	{
+		info->ResetTime();
 
-        while (info->NextTime())
-        {
-            tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%Y%m%d")),
-                                      boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%H%M"))));
-        }
+		while (info->NextTime())
+		{
+			tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%Y%m%d")),
+									  boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%H%M"))));
+		}
 
-    }
+	}
 
-    return NFmiTimeDescriptor(tlist.FirstTime(), tlist);
+	return NFmiTimeDescriptor(tlist.FirstTime(), tlist);
 
 }
 
@@ -229,34 +233,34 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool
 {
 
 
-    /*
-     * Create parameter descriptor
-     */
+	/*
+	 * Create parameter descriptor
+	 */
 
-    NFmiParamBag pbag;
+	NFmiParamBag pbag;
 
-    if (theActiveOnly)
-    {
-        assert(info->Param().UnivId());
+	if (theActiveOnly)
+	{
+		assert(info->Param().UnivId());
 
-        pbag.Add(NFmiDataIdent(NFmiParam(info->Param().UnivId(), info->Param().Name())));
+		pbag.Add(NFmiDataIdent(NFmiParam(info->Param().UnivId(), info->Param().Name())));
 
-    }
-    else
-    {
-        info->ResetParam();
+	}
+	else
+	{
+		info->ResetParam();
 
-        while (info->NextParam())
-        {
+		while (info->NextParam())
+		{
 
-            assert(info->Param().UnivId());
+			assert(info->Param().UnivId());
 
-            pbag.Add(NFmiDataIdent(NFmiParam(info->Param().UnivId(), info->Param().Name())));
+			pbag.Add(NFmiDataIdent(NFmiParam(info->Param().UnivId(), info->Param().Name())));
 
-        }
-    }
+		}
+	}
 
-    return NFmiParamDescriptor(pbag);
+	return NFmiParamDescriptor(pbag);
 
 
 }
@@ -264,78 +268,78 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool
 NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
 {
 
-    NFmiArea* theArea = 0;
+	NFmiArea* theArea = 0;
 
-    // Assume all grids in the info have equal projections
+	// Assume all grids in the info have equal projections
 
-    switch (info->Grid()->Projection())
-    {
-    case kLatLonProjection:
-    {
-        theArea = new NFmiLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-                                     NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()));
+	switch (info->Grid()->Projection())
+	{
+	case kLatLonProjection:
+	{
+		theArea = new NFmiLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+									 NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()));
 
-        break;
-    }
+		break;
+	}
 
-    case kRotatedLatLonProjection:
-    {
-        theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-                                            NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()),
-                                            NFmiPoint(info->Grid()->SouthPole().X(), info->Grid()->SouthPole().Y()),
-                                            NFmiPoint(0.,0.), // default values
-                                            NFmiPoint(1.,1.), // default values
-                                            true);
+	case kRotatedLatLonProjection:
+	{
+		theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+											NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()),
+											NFmiPoint(info->Grid()->SouthPole().X(), info->Grid()->SouthPole().Y()),
+											NFmiPoint(0.,0.), // default values
+											NFmiPoint(1.,1.), // default values
+											true);
 
-        break;
-    }
+		break;
+	}
 
-    case kStereographicProjection:
-    {
+	case kStereographicProjection:
+	{
 		theArea = new NFmiStereographicArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
 											info->Grid()->Di() * static_cast<double> ((info->Grid()->Ni()-1)),
 											info->Grid()->Dj() * static_cast<double> ((info->Grid()->Nj()-1)),
 											info->Grid()->Orientation());
 
-        break;
+		break;
 
-    }
+	}
 
-    default:
-        itsLogger->Error("No supported projection found");
-        return NFmiHPlaceDescriptor();
-        break;
-    }
+	default:
+		itsLogger->Error("No supported projection found");
+		return NFmiHPlaceDescriptor();
+		break;
+	}
 
-    NFmiGrid theGrid (theArea, info->Grid()->Ni(), info->Grid()->Nj());
+	NFmiGrid theGrid (theArea, info->Grid()->Ni(), info->Grid()->Nj());
 
-    delete theArea;
+	delete theArea;
 
-    return NFmiHPlaceDescriptor(theGrid);
+	return NFmiHPlaceDescriptor(theGrid);
 
 }
 
 NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(shared_ptr<info> info, bool theActiveOnly)
 {
 
-    NFmiLevelBag lbag;
+	NFmiLevelBag lbag;
 
-    if (theActiveOnly)
-    {
-        lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", static_cast<float> (info->Level().Value())));
-    }
-    else
-    {
+	if (theActiveOnly)
+	{
+		lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", static_cast<float> (info->Level().Value())));
+	}
+	else
+	{
 
-        info->ResetLevel();
+		info->ResetLevel();
 
-        while (info->NextLevel())
-        {
-            lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", static_cast<float> (info->Level().Value())));
-        }
-    }
+		while (info->NextLevel())
+		{
+			lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", static_cast<float> (info->Level().Value())));
+		}
+	}
 
-    return NFmiVPlaceDescriptor(lbag);
+	return NFmiVPlaceDescriptor(lbag);
 
 }
 
