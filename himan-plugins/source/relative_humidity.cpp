@@ -184,6 +184,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 		double TBase = 0;
 		//double TDBase = 0;
 		double PScale = 1;
+		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 		
 		shared_ptr<info> TInfo;
 		shared_ptr<info> PInfo;
@@ -197,11 +198,14 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 								TParam,
 								conf->UseCudaForPacking() && useCudaInThisThread);
 
-			PInfo = f->Fetch(conf,
+			if (!isPressureLevel)
+			{
+				PInfo = f->Fetch(conf,
 								myTargetInfo->Time(),
 								myTargetInfo->Level(),
 								PParams,
 								conf->UseCudaForPacking() && useCudaInThisThread);
+			}
 
 			QInfo = f->Fetch(conf,
 								myTargetInfo->Time(),
@@ -242,22 +246,28 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 			TBase = -273.15;
 		}
 
-		if (PInfo->Param().Unit() == kPa)
+		if (!isPressureLevel && PInfo->Param().Unit() == kPa)
 		{
 			PScale = 100;
 		}
 
+		shared_ptr<NFmiGrid> PGrid;
+
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> QGrid(QInfo->Grid()->ToNewbaseGrid());
 
+		if (!isPressureLevel)
+		{
+			PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
+		}
+		
 		size_t missingCount = 0;
 		size_t count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && *myTargetInfo->Grid() == *QInfo->Grid() && *myTargetInfo->Grid() == *PInfo->Grid());
+		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && *myTargetInfo->Grid() == *QInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
 
 		string deviceType;
 
@@ -277,9 +287,17 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo,
 				double Q = kFloatMissing;
 
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
 				InterpolateToPoint(targetGrid, QGrid, equalGrids, Q);
 
+				if (isPressureLevel)
+				{
+					P = myTargetInfo->Level().Value();
+				}
+				else
+				{
+					InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				}
+				
 				if (T == kFloatMissing || P == kFloatMissing || Q == kFloatMissing)
 				{
 					missingCount++;
