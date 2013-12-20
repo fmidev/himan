@@ -54,11 +54,6 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
   fi
 fi
 
-# interpolated results differ currently quite much from hilpp results
-# reason for this is not known yet
-
-exit 0
-
 $HIMAN -d 5 -f windvector_hl_staggered.json -t grib hl_staggered_source.grib --no-cuda -s hl_stag_nocuda
 
 grib_compare -A 0.01 hl_staggered_result_FF.grib ./FF-MS_hybrid_55_polster_290_225_0_025.grib
