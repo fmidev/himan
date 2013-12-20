@@ -627,7 +627,28 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		else
 		{
 
-			pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(himan::point(itsGrib->Message()->X0(), itsGrib->Message()->Y0()), ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement(), m);
+			himan::point firstPoint(itsGrib->Message()->X0(), itsGrib->Message()->Y0());
+
+			if (centre == 98 && firstPoint.X() == 180)
+			{
+
+				/**
+				 * Global EC data area is defined as
+				 *
+				 * latitudeOfFirstGridPointInDegrees = 90;
+				 * longitudeOfFirstGridPointInDegrees = 180;
+				 * latitudeOfLastGridPointInDegrees = 0;
+				 * longitudeOfLastGridPointInDegrees = 180;
+				 *
+				 * This area makes no sense, normalize the first value to -180.
+				 */
+
+				assert(m == kBottomLeft || m == kTopLeft); // Want to make sure we always read from left to right
+				
+				firstPoint.X(-180.);
+			}
+
+			pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message()->iDirectionIncrement(),itsGrib->Message()->jDirectionIncrement(), m);
 
 			newGrid->BottomLeft(coordinates.first);
 			newGrid->TopRight(coordinates.second);
