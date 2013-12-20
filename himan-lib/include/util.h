@@ -13,6 +13,7 @@
 #include "himan_common.h"
 #include "info.h"
 #include <mutex>
+#include <tuple>
 
 namespace himan
 {
@@ -82,7 +83,7 @@ std::pair<point,point> CoordinatesFromFirstGridPoint(const point& firstPoint,  d
 
 
 /**
- * @brief If U and V components of wind are grid relative, transform them to be earth-relative.
+ * @brief Calculate coefficients for transforming U and V from grid relative to earth relative.
  *
  * Algorithm by J.E. HAUGEN (HIRLAM JUNE -92), modified by K. EEROLA
  * Algorithm originally defined in hilake/TURNDD.F
@@ -94,14 +95,13 @@ std::pair<point,point> CoordinatesFromFirstGridPoint(const point& firstPoint,  d
  * @param regPoint Latlon coordinates of the point in question in earth-relative form
  * @param rotPoint Latlon coordinates of the point in question in grid-relative form
  * @param southPole Latlon coordinates of south pole
- * @param UV U and V in grid-relative form
- * @return U and V in earth-relative form
+ * @return Four coefficients for transforming U and V
  */
 
-himan::point UVToEarthRelative(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole, const himan::point& UV);
+std::tuple<double,double,double,double> EarthRelativeUVCoefficients(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole);
 
 /**
- * @brief If U and V components of wind are earth relative, transform them to be grid-relative.
+ * @brief Calculate coefficients for transforming U and V from earth relative to grid relative.
  *
  * Algorithm by J.E. HAUGEN (HIRLAM JUNE -92), modified by K. EEROLA
  * Algorithm originally defined in hilake/TURNDD.F
@@ -113,11 +113,10 @@ himan::point UVToEarthRelative(const himan::point& regPoint, const himan::point&
  * @param regPoint Latlon coordinates of the point in question in earth-relative form
  * @param rotPoint Latlon coordinates of the point in question in grid-relative form
  * @param southPole Latlon coordinates of south pole
- * @param UV U and V in earth-relative form
- * @return U and V in grid-relative form
+ * @return Four coefficients for transforming U and V
  */
 
-himan::point UVToGridRelative(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole, const himan::point& UV);
+std::tuple<double,double,double,double> GridRelativeUVCoefficients(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole);
 
 /**
  * @brief If U and V components of a parameter are grid relative, transform them to be earth-relative
@@ -247,7 +246,6 @@ double WaterProbability(double T, double RH);
  */
 
 double SaturationWaterVapourPressure(double T);
-
 
 } // namespace util
 } // namespace himan

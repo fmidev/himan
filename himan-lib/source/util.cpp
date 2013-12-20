@@ -246,9 +246,8 @@ pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, d
 
 }
 
-point util::UVToEarthRelative(const point& regPoint, const point& rotPoint, const point& southPole, const point& UV)
+tuple<double,double,double,double> util::EarthRelativeUVCoefficients(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole)
 {
-
 	point newSouthPole;
 
 	if (southPole.Y() > 0)
@@ -288,13 +287,12 @@ point util::UVToEarthRelative(const point& regPoint, const point& rotPoint, cons
 	double PC = (-sinPoleY) * sinRotX / cosRegY;
 	double PD = (cosPoleY * cosRotY - sinPoleY * cosRotX * sinRotY) / cosRegY;
 
-	double U = PA * UV.X() + PB * UV.Y();
-	double V = PC * UV.X() + PD * UV.Y();
+	return make_tuple(PA,PB,PC,PD);
 
-	return point(U,V);
+
 }
 
-point util::UVToGridRelative(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole, const himan::point& UV)
+tuple<double,double,double,double> util::GridRelativeUVCoefficients(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole)
 {
 
 	point newSouthPole;
@@ -331,10 +329,8 @@ point util::UVToGridRelative(const himan::point& regPoint, const himan::point& r
 	double PC = sinPoleY * sinxmxc / cosRotY;
 	double PD = (sinPoleY * cosxmxc * sinRegY + cosPoleY * cosRegY) / cosRotY;
 
-	double U = PA * UV.X() + PB * UV.Y();
-	double V = PC * UV.X() + PD * UV.Y();
+	return make_tuple(PA,PB,PC,PD);
 
-	return point(U,V);
 }
 
 point util::UVToGeographical(double longitude, const point& stereoUV)
