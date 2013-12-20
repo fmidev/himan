@@ -541,12 +541,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-			UGrid->InterpolationMethod(kNearestPoint);
-			VGrid->InterpolationMethod(kNearestPoint);
-
 			myTargetInfo->ResetLocation();
 
 			targetGrid->Reset();
+			//UGrid->InterpolationMethod(kNearestPoint);
+			//VGrid->InterpolationMethod(kNearestPoint);
 
 			while (myTargetInfo->NextLocation() && targetGrid->Next())
 			{
@@ -585,7 +584,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 				 */
 				
 				double speed = sqrt(U*U + V*V);
-
+	
 				/*
 				 * The order of parameters in infos is and must be always:
 				 * index 0 : speed parameter
@@ -601,37 +600,84 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					continue;
 				}
 				
-				if (needRotLatLonGridRotation)
+				if (UGrid->Area()->ClassId() == kNFmiRotatedLatLonArea)
 				{
-					/*
-					 * 1. Get coordinates of current grid point in earth-relative form
-					 * 2. Get coordinates of current grid point in grid-relative form
-					 * 3. Call function UVToEarthRelative() that transforms U and V from grid-relative
-					 *    to earth-relative
-					 *
-					 * NFmiRotatedLatLonArea will give the normal latlon coordinates with LatLon()
-					 * function, so we need force the regular point to rotated point with ToRotLatLon().
-					 *
-					 */
-
-					assert(UGrid->Area()->ClassId() == kNFmiRotatedLatLonArea);
-
 					const point regPoint(targetGrid->LatLon());
 
+					// We use UGrid area to do to the rotation even though UGrid area might be
+					// different from VGrid area (ie. Hirlam), but that does not matter
+					
 					const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (UGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
 
-					point regUV = util::UVToEarthRelative(regPoint, rotPoint, UInfo->Grid()->SouthPole(), point(U,V));
+					double newU = kFloatMissing, newV = kFloatMissing;
+
+					if (targetGrid->Area()->ClassId() == kNFmiRotatedLatLonArea)
+					{
+
+						/*
+						* 1. Get coordinates of current grid point in earth-relative form
+						* 2. Get coordinates of current grid point in grid-relative form
+						* 3. Call function UVToEarthRelative() that transforms U and V from grid-relative
+						*    to earth-relative
+						*
+						* NFmiRotatedLatLonArea will give the normal latlon coordinates with LatLon()
+						* function, so we need force the regular point to rotated point with ToRotLatLon().
+						*
+						*/
+
+						tuple<double,double,double,double> coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+
+						newU = get<0> (coeffs) * U + get<1> (coeffs) * V;
+						newV = get<2> (coeffs) * U + get<3> (coeffs) * V;
+						
+					}
+					else if (targetGrid->Area()->ClassId() == kNFmiStereographicArea)
+					{
+						/*
+						 * This modification of the PA,PB,PC,PD coefficients has been
+						 * copied from INTROT.F.
+						 */
+
+						double cosL, sinL;
+
+						double ang = reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude();
+						double cLon = regPoint.X();
+						
+						sincos((ang - cLon) * himan::constants::kDeg, &sinL, &cosL);
+
+						tuple<double,double,double,double> coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+
+						double PA = get<0> (coeffs) * cosL - get<1> (coeffs) * sinL;
+						double PB = get<0> (coeffs) * sinL + get<1> (coeffs) * cosL;
+						double PC = get<2> (coeffs) * cosL - get<3> (coeffs) * sinL;
+						double PD = get<2> (coeffs) * sinL + get<3> (coeffs) * cosL;
+						
+						newU = PA * U + PB * V;
+						newV = PC * U + PD * V;
+
+					}
+					else
+					{
+						myThreadedLogger->Error("Invalid target projection: " + string(HPProjectionTypeToString.at(myTargetInfo->Grid()->Projection())));
+						return;
+					}
 
 					// Wind speed should the same with both forms of U and V
 
-					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+					assert(fabs(sqrt(U*U+V*V) - sqrt(newU*newU + newV * newV)) < 0.001);
 
-					U = regUV.X();
-					V = regUV.Y();
+					U = newU;
+					V = newV;
 
 				}
-				else if (needStereographicGridRotation)
+				else if (UGrid->Area()->ClassId() != kNFmiLatLonArea)
 				{
+					myThreadedLogger->Error("Invalid source projection: " + string(HPProjectionTypeToString.at(UInfo->Grid()->Projection())));
+					return;
+					
+					/*
+					 * This code should work in theory but it's not enabled because it is not tested.
+
 					assert(UGrid->Area()->ClassId() == kNFmiStereographicArea);
 
 					double centralLongitude = (reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude());
@@ -640,8 +686,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 					// Wind speed should the same with both forms of U and V
 
-					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.005);
+					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
 
+					U = regUV.X();
+					V = regUV.Y();
+					*/
 				}
 
 				double dir = 0;
@@ -686,7 +735,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 			for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
 			{
-
 				SwapTo(myTargetInfo, kBottomLeft);
 			}
 		}
@@ -710,10 +758,5 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		{
 			WriteToFile(conf, myTargetInfo);
 		}
-	}
-
-	if (useCudaInThisThread)
-	{
-		//compiled_plugin_base::ResetCuda();
 	}
 }
