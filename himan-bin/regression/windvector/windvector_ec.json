@@ -14,12 +14,6 @@
 		"leveltype" : "height",
 		"levels" : "10",
 		"plugins" : [ { "name" : "windvector" } ]
-	},
-	{
-		"target_geom_name" : "MTNOR025",
-		"leveltype" : "height",
-		"levels" : "10",
-		"plugins" : [ { "name" : "windvector" } ]
-	} 
+	}
 	]
 }
