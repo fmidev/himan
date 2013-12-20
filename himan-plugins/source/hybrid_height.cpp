@@ -97,6 +97,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	Dimension(conf->LeadingDimension());
 	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
 	FeederInfo()->Param(theRequestedParam);
+
 	/*
 	 * For hybrid height we must go through the levels backwards.
 	 */
@@ -114,6 +115,14 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (!conf->Exists("fast_mode") && conf->GetValue("fast_mode") == "true")
 	{
 		itsFastMode = true;
+	}
+	else
+	{
+		// When doing exact calculation we must do them sequentially starting from
+		// surface closest to ground because every surface's value is depended
+		// on the surface below it. Therefore we cannot parallelize the calculation.
+		
+		threadCount = 1;
 	}
 
 	/*
