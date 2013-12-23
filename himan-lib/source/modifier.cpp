@@ -15,6 +15,8 @@ modifier::modifier()
 
 const std::vector<double>& modifier::Result() const
 {
+	assert(itsResult.size());
+	
 	return itsResult;
 }
 
@@ -69,7 +71,6 @@ void modifier::Value(double theValue)
 
 void modifier::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
 {
-
 	if (itsResult.size() == 0)
 	{
 		assert(theData.size() == theHeights.size());
@@ -344,16 +345,17 @@ bool modifier_findheight::CalculationFinished() const
 
 void modifier_findheight::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
 {
-
 	if (itsResult.size() == 0)
 	{
 		assert(theData.size() == theHeights.size());
+		assert(theData.size());
 
 		itsResult.resize(theData.size(), kFloatMissing);
-
 		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 		itsFoundNValues.resize(itsResult.size(), 0);
+
+		itsValuesFound = 0;
 	}
 }
 
@@ -463,6 +465,8 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 
 		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
+
+		itsValuesFound = 0;
 	}
 }
 
