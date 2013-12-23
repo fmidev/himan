@@ -50,15 +50,15 @@ public:
 	 * @brief Find maximum value of a given parameter in a given height range
 	 */
 
-	std::shared_ptr<info> VerticalMaximum(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo) const;
+	std::vector<double> VerticalMaximum(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
 
 	/**
 	 * @brief Find minimum value of a given parameter in a given height range
 	 */
 
-	std::shared_ptr<info> VerticalMinimum(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo) const;
-	std::shared_ptr<info> VerticalAverage(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo) const;
-	std::shared_ptr<info> VerticalHeight(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, const std::shared_ptr<info> findValueInfo , size_t findNth = 1) const;
+	std::vector<double> VerticalMinimum(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
+	std::vector<double> VerticalAverage(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
+	std::vector<double> VerticalHeight(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo, const std::vector<double>& findValueInfo , size_t findNth = 1) const;
 
 	/**
 	 * @brief Find value of parameter from given height
@@ -67,7 +67,7 @@ public:
 	 * 
 	 */
 	
-	std::shared_ptr<info> VerticalValue(const param& wantedParam, const std::shared_ptr<info> findValueInfo) const;
+	std::vector<double> VerticalValue(const param& wantedParam, const std::vector<double>& findValueInfo) const;
 
 	/**
 	 * @brief Find the number of occurrences of a given parameter value in a given height range
@@ -75,7 +75,7 @@ public:
 	 * Only for hybrid levels.
 	 */
 
-	std::shared_ptr<info> VerticalCount(const param& wantedParam, const std::shared_ptr<info> firstLevelValueInfo, const std::shared_ptr<info> lastLevelValueInfo, const std::shared_ptr<info> findValueInfo) const;
+	std::vector<double> VerticalCount(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo, const std::vector<double>& findValueInfo) const;
 
 	std::shared_ptr<info> Stratus();
 	std::shared_ptr<info> FreezingArea();
@@ -86,13 +86,13 @@ public:
 private:
 	std::shared_ptr<modifier> CreateModifier(HPModifierType modifierType) const;
 
-	std::shared_ptr<info> VerticalExtremeValue(std::shared_ptr<modifier> mod,
+	std::vector<double> VerticalExtremeValue(std::shared_ptr<modifier> mod,
 							HPLevelType wantedLevelType,
 							const param& sourceParam,
 							const param& targetParam,
-							const std::shared_ptr<info> firstLevelValueInfo = std::shared_ptr<info> (),
-							const std::shared_ptr<info> lastLevelValueInfo = std::shared_ptr<info> (),
-							const std::shared_ptr<info> findValueInfo = std::shared_ptr<info> ()) const;
+							const std::vector<double>& firstLevelValueInfo = std::vector<double>(),
+							const std::vector<double>& lastLevelValueInfo = std::vector<double>(),
+							const std::vector<double>& findValueInfo = std::vector<double>()) const;
 
 	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime) const;
 
