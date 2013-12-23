@@ -13,50 +13,9 @@ modifier::modifier()
 {
 }
 
-void modifier::Init(std::shared_ptr<const info> sourceInfo)
-{
-	itsResult = std::shared_ptr<info> (new info(*sourceInfo));
-	itsResult->Create();
-	
-	Clear();
-
-	itsResult->First();
-}
-
-std::shared_ptr<info> modifier::Result() const
+const std::vector<double>& modifier::Result() const
 {
 	return itsResult;
-}
-
-bool modifier::NextLocation()
-{
-	return itsResult->NextLocation();
-}
-
-void modifier::ResetLocation()
-{
-	itsResult->ResetLocation();
-}
-
-size_t modifier::LocationIndex() const
-{
-	return itsResult->LocationIndex();
-}
-
-double modifier::Value() const
-{
-	itsResult->ParamIndex(0);
-	return itsResult->Value();
-}
-
-double modifier::MinimumValue() const
-{
-	throw kFunctionNotImplemented;
-}
-
-double modifier::MaximumValue() const
-{
-	throw kFunctionNotImplemented;
 }
 
 bool modifier::CalculationFinished() const
@@ -66,21 +25,12 @@ bool modifier::CalculationFinished() const
 
 void modifier::Clear(double fillValue)
 {
-	for (itsResult->ResetTime(); itsResult->NextTime();)
-	{
-		for (itsResult->ResetLevel(); itsResult->NextLevel();)
-		{
-			for (itsResult->ResetParam(); itsResult->NextParam();)
-			{
-				itsResult->Grid()->Data()->Fill(fillValue);
-			}
-		}
-	}
+	std::fill(itsResult.begin(), itsResult.end(), fillValue);
 }
 
 bool modifier::IsMissingValue(double theValue) const
 {
-	if (theValue == kFloatMissing || theValue == kFloatMissing)
+	if (theValue == kFloatMissing)
 	{
 		return true;
 	}
@@ -88,10 +38,9 @@ bool modifier::IsMissingValue(double theValue) const
 	return false;
 }
 
-void modifier::FindValue(std::shared_ptr<const info> theFindValue)
+void modifier::FindValue(const std::vector<double>& theFindValue)
 {
-	itsFindValue = std::make_shared<info> (*theFindValue);
-	itsFindValue->First();
+	itsFindValue = theFindValue;
 }
 
 size_t modifier::FindNth() const
@@ -104,6 +53,59 @@ void modifier::FindNth(size_t theNth)
 	itsFindNthValue = theNth;
 }
 
+double modifier::Value() const
+{
+	assert(itsIndex < itsResult.size());
+	
+	return itsResult[itsIndex];
+}
+
+void modifier::Value(double theValue)
+{
+	assert(itsIndex < itsResult.size());
+
+	itsResult[itsIndex] = theValue;
+}
+
+void modifier::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
+{
+
+	if (itsResult.size() == 0)
+	{
+		assert(theData.size() == theHeights.size());
+
+		itsResult.resize(theData.size(), kFloatMissing);
+
+	}
+}
+
+void modifier::Process(const std::vector<double>& theData, const std::vector<double>& theHeights)
+{
+
+	Init(theData, theHeights);
+	
+	assert(itsResult.size() == theData.size() && itsResult.size() == theHeights.size());
+
+	for (itsIndex = 0; itsIndex < itsResult.size(); itsIndex++)
+	{
+		Calculate(theData[itsIndex], theHeights[itsIndex]);
+	}
+}
+
+std::ostream& modifier::Write(std::ostream& file) const
+{
+	file << "<" << ClassName() << ">" << std::endl;
+
+	file << "__itsMissingValuesAllowed__ " << itsMissingValuesAllowed << std::endl;
+	file << "__itsFindValue__ size " << itsFindValue.size() << std::endl;
+	file << "__itsFindNthValue__ " << itsFindNthValue << std::endl;
+	file << "__itsResult__ size " << itsResult.size() << std::endl;
+	file << "__itsIndex__ " << itsIndex << std::endl;
+
+
+	return file;
+}
+
 /* ----------------- */
 
 void modifier_max::Calculate(double theValue, double theHeight)
@@ -114,24 +116,10 @@ void modifier_max::Calculate(double theValue, double theHeight)
 		return;
 	}
 
-	//itsResult->FirstParam();
-
-	if (IsMissingValue(itsResult->Value()))
+	if (IsMissingValue(Value()) || theValue > Value())
 	{
-		itsResult->Value(theValue);
+		Value(theValue);
 	}
-	else
-	{
-		if (theValue > itsResult->Value())
-		{
-			itsResult->Value(theValue);
-		}
-	}
-}
-
-double modifier_max::MaximumValue() const
-{
-	return Value();
 }
 
 /* ----------------- */
@@ -143,27 +131,30 @@ void modifier_min::Calculate(double theValue, double theHeight)
 		return;
 	}
 
-	//itsResult->ParamIndex(0);
-
-	if (IsMissingValue(itsResult->Value()))
+	if (IsMissingValue(Value()) || theValue < Value())
 	{
-		itsResult->Value(theValue);
+		Value(theValue);
 	}
-	else
-	{
-		if (theValue < itsResult->Value())
-		{
-			itsResult->Value(theValue);
-		}
-	}
-}
-
-double modifier_min::MinimumValue() const
-{
-	return Value();
 }
 
 /* ----------------- */
+
+void modifier_maxmin::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
+{
+	if (itsResult.size() == 0)
+	{
+		assert(theData.size() == theHeights.size());
+
+		itsResult.resize(theData.size(), kFloatMissing);
+		itsMaximumResult.resize(theData.size(), kFloatMissing);
+	}
+}
+
+const std::vector<double>& modifier_maxmin::Result() const
+{
+	itsResult.insert(itsResult.end(), itsMaximumResult.begin(), itsMaximumResult.end());
+	return itsResult;
+}
 
 void modifier_maxmin::Calculate(double theValue, double theHeight)
 {
@@ -172,47 +163,25 @@ void modifier_maxmin::Calculate(double theValue, double theHeight)
 		return;
 	}
 
-	itsResult->ParamIndex(0); // Max
-
 	// Set min == max
-	
-	if (IsMissingValue(itsResult->Value()))
+
+	if (IsMissingValue(Value()))
 	{
-		itsResult->Value(theValue);
-		itsResult->ParamIndex(1);
-		itsResult->Value(theValue);
+		itsResult[itsIndex] = theValue;
+		itsMaximumResult[itsIndex] = theValue;
 	}
 	else
 	{
-		if (theValue > itsResult->Value())
+		if (theValue > itsMaximumResult[itsIndex])
 		{
-			itsResult->Value(theValue);
+			itsMaximumResult[itsIndex] = theValue;
 		}
 
-		itsResult->ParamIndex(1); // Min
-
-		if (theValue < itsResult->Value())
+		if (theValue < itsResult[itsIndex])
 		{
-			itsResult->Value(theValue);
+			itsResult[itsIndex] = theValue;
 		}
 	}
-}
-
-double modifier_maxmin::Value() const
-{
-	throw kFunctionNotImplemented;
-}
-
-double modifier_maxmin::MinimumValue() const
-{
-	itsResult->ParamIndex(1);
-	return itsResult->Value();
-}
-
-double modifier_maxmin::MaximumValue() const
-{
-	itsResult->ParamIndex(0);
-	return itsResult->Value();
 }
 
 /* ----------------- */
@@ -224,34 +193,31 @@ void modifier_sum::Calculate(double theValue, double theHeight)
 		return;
 	}
 
-	//itsResult->ParamIndex(0);
-
-	if (IsMissingValue(itsResult->Value())) // First value
+	if (IsMissingValue(Value())) // First value
 	{
-		itsResult->Value(theValue);
+		Value(theValue);
 	}
 	else
 	{
-		double val = itsResult->Value();
-		itsResult->Value(theValue+val);
+		double val = Value();
+		Value(theValue+val);
 	}
 }
 
 /* ----------------- */
 
-void modifier_mean::Init(std::shared_ptr<const info> sourceInfo)
+void modifier_mean::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
 {
-	itsResult = std::shared_ptr<info> (new info(*sourceInfo));
-	itsResult->Create();
 
-	Clear();
+	if (itsResult.size() == 0)
+	{
+		assert(theData.size() == theHeights.size());
 
-	itsResult->First();
+		itsResult.resize(theData.size(), kFloatMissing);
 
-	itsValuesCount.resize(itsResult->Grid()->Size(), 0);
-	
+		itsValuesCount.resize(itsResult.size(), 0);
+	}
 }
-
 
 void modifier_mean::Calculate(double theValue, double theHeight)
 {
@@ -260,28 +226,30 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		return;
 	}
 
-	itsValuesCount[itsResult->LocationIndex()] += 1;
+	itsValuesCount[itsIndex] += 1;
 
-	if (IsMissingValue(itsResult->Value())) // First value
+	if (IsMissingValue(Value())) // First value
 	{
-		itsResult->Value(theValue);	
+		Value(theValue);
 	}
 	else
 	{
-		itsResult->Value(itsResult->Value() + theValue);
+		double val = Value();
+		Value(val + theValue);
 	}	
 }
 
-std::shared_ptr<info> modifier_mean::Result() const
+const std::vector<double>& modifier_mean::Result() const
 {
-	for (itsResult->ResetLocation(); itsResult->NextLocation();)
+
+	for (size_t i = 0; i < itsResult.size(); i++)
 	{
-		double val = itsResult->Value();
-		size_t count = itsValuesCount[itsResult->LocationIndex()];
+		double val = itsResult[i];
+		size_t count = itsValuesCount[i];
 
 		if (!IsMissingValue(val) && count != 0)
 		{
-			itsResult->Value(val / static_cast<double> (count));
+			itsResult[i] = val / static_cast<double> (count);
 		}		
 	}
 
@@ -290,39 +258,34 @@ std::shared_ptr<info> modifier_mean::Result() const
 
 /* ----------------- */
 
-void modifier_count::Init(std::shared_ptr<const info> sourceInfo)
+void modifier_count::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
 {
-	itsResult = std::shared_ptr<info> (new info(*sourceInfo));
-	itsResult->Create();
 
-	Clear(0.);
+	if (itsResult.size() == 0)
+	{
+		assert(theData.size() == theHeights.size());
 
-	itsResult->First();
+		itsResult.resize(theData.size(), 0);
 
-	itsPreviousValue.resize(itsResult->Grid()->Size());
-
-	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), kFloatMissing);
-
+		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
+	}
 }
+
 
 void modifier_count::Calculate(double theValue, double theHeight)
 {
-	size_t locationIndex = itsResult->LocationIndex();
-
-	itsFindValue->LocationIndex(locationIndex);
-
-	double findValue = itsFindValue->Value();
-
-	itsResult->ParamIndex(0); // We are interested in the value here
+	assert(itsFindValue.size());
+	
+	double findValue = itsFindValue[itsIndex];
 
 	if (IsMissingValue(theValue) || IsMissingValue(findValue))
 	{
 		return;
 	}
 
-	double previousValue = itsPreviousValue[locationIndex];
+	double previousValue = itsPreviousValue[itsIndex];
 
-	itsPreviousValue[locationIndex] = theValue;
+	itsPreviousValue[itsIndex] = theValue;
 
 	// First level
 
@@ -356,60 +319,67 @@ void modifier_count::Calculate(double theValue, double theHeight)
 	 * The answer is: two times (as far as we know).
 	 */
 	
-	if (previousValue <= findValue && theValue >= findValue)
+	if ((previousValue <= findValue && theValue >= findValue) // updward trend
+			||
+		(previousValue >= findValue && theValue <= findValue)) // downward trend
 	{
-		itsResult->Value() == kFloatMissing ? itsResult->Value(1) : itsResult->Value(itsResult->Value() + 1);
-	}
-
-	
+		Value() == kFloatMissing ? Value(1) : Value(Value() + 1);
+	}	
 }
 
 /* ----------------- */
 
-bool modifier_findheight::CalculationFinished() const
+void modifier_findheight::Clear(double fillValue)
 {
-	return itsValuesFound == itsResult->Grid()->Size();
+	std::fill(itsResult.begin(), itsResult.end(), fillValue);
+	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), fillValue);
+	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), fillValue);
+	std::fill(itsFoundNValues.begin(), itsFoundNValues.end(), 0);
 }
 
-void modifier_findheight::Init(std::shared_ptr<const info> sourceInfo)
+bool modifier_findheight::CalculationFinished() const
 {
-	itsResult = std::shared_ptr<info> (new info(*sourceInfo));
-	itsResult->ReGrid();
+	return itsValuesFound == itsResult.size();
+}
 
-	Clear();
+void modifier_findheight::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
+{
 
-	itsResult->First();
+	if (itsResult.size() == 0)
+	{
+		assert(theData.size() == theHeights.size());
 
-	itsPreviousValue.resize(itsResult->Grid()->Size(), kFloatMissing);
-	itsPreviousHeight.resize(itsResult->Grid()->Size(), kFloatMissing);
-	itsFoundNValues.resize(itsResult->Grid()->Size(), 0);
+		itsResult.resize(theData.size(), kFloatMissing);
+
+		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
+		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
+		itsFoundNValues.resize(itsResult.size(), 0);
+	}
 }
 
 void modifier_findheight::Calculate(double theValue, double theHeight)
 {
 
-	size_t locationIndex = itsResult->LocationIndex();
+	assert(itsFindValue.size());
 	
-	itsFindValue->LocationIndex(locationIndex);
+	double findValue = itsFindValue[itsIndex];
 	
-	double findValue = itsFindValue->Value();
-	
-	if (IsMissingValue(theValue) || !IsMissingValue(itsResult->Value()) || IsMissingValue(findValue))
+	if (IsMissingValue(theValue) || IsMissingValue(findValue) || (itsFindNthValue > 0 && !IsMissingValue(Value())))
 	{
 		return;
 	}
 
 	if (fabs(theValue - findValue) < 1e-5)
 	{
-		itsResult->Value(theHeight);
+		Value(theHeight);
 		return;
 	}
 
-	double previousValue = double(itsPreviousValue[locationIndex]);
-	double previousHeight = double(itsPreviousHeight[locationIndex]);
+	double previousValue = itsPreviousValue[itsIndex];
+	double previousHeight = itsPreviousHeight[itsIndex];
 
-	itsPreviousValue[locationIndex] = theValue;
-	itsPreviousHeight[locationIndex] = theHeight;
+	itsPreviousValue[itsIndex] = theValue;
+	itsPreviousHeight[itsIndex] = theHeight;
 
 	if (IsMissingValue(previousValue))
 	{
@@ -450,22 +420,23 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 	if ((previousValue <= findValue && theValue >= findValue) || (previousValue >= findValue && theValue <= findValue))
 	{
 		double actualHeight = NFmiInterpolation::Linear(findValue, previousValue, theValue, previousHeight, theHeight);
-		
+
 		if (actualHeight != kFloatMissing)
 		{
 			if (itsFindNthValue != 0)
 			{
-				itsFoundNValues[locationIndex] += 1;
+				itsFoundNValues[itsIndex] += 1;
 
-				if (itsFindNthValue == itsFoundNValues[locationIndex])
+				if (itsFindNthValue == itsFoundNValues[itsIndex])
 				{
-					itsResult->Value(actualHeight);
+					Value(actualHeight);
 					itsValuesFound++;
 				}
 			}
 			else
 			{
-				itsResult->Value(actualHeight);
+				// Search for the last value
+				Value(actualHeight);
 			}
 		}
 	}
@@ -474,37 +445,47 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 
 /* ----------------- */
 
+void modifier_findvalue::Clear(double fillValue)
+{
+	std::fill(itsResult.begin(), itsResult.end(), fillValue);
+	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), fillValue);
+	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), fillValue);
+}
+
+void modifier_findvalue::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
+{
+
+	if (itsResult.size() == 0)
+	{
+		assert(theData.size() == theHeights.size());
+
+		itsResult.resize(theData.size(), kFloatMissing);
+
+		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
+		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
+	}
+}
+
 bool modifier_findvalue::CalculationFinished() const
 {
-	return itsValuesFound == itsResult->Grid()->Size();
+	return itsValuesFound == itsResult.size();
 }
 
 void modifier_findvalue::Calculate(double theValue, double theHeight)
 {
 
-	size_t locationIndex = itsResult->LocationIndex();
+	double findHeight = itsFindValue[itsIndex];
 
-	itsFindValue->LocationIndex(locationIndex);
-
-	double findValue = itsFindValue->Value();
-
-	//itsResult->ParamIndex(0); // We are interested in the value here
-
-	if (IsMissingValue(theValue) || !IsMissingValue(itsResult->Value()) || IsMissingValue(findValue))
+	if (IsMissingValue(theValue) || !IsMissingValue(Value()) || IsMissingValue(findHeight))
 	{
 		return;
 	}
 
-	if (itsFindNthValue != 1)
-	{
-		throw std::runtime_error("NthValue other than 1");
-	}
+	double previousValue = itsPreviousValue[itsIndex];
+	double previousHeight = itsPreviousHeight[itsIndex];
 
-	double previousValue = itsPreviousValue[locationIndex];
-	double previousHeight = itsPreviousHeight[locationIndex];
-
-	itsPreviousValue[locationIndex] = theValue;
-	itsPreviousHeight[locationIndex] = theHeight;
+	itsPreviousValue[itsIndex] = theValue;
+	itsPreviousHeight[itsIndex] = theHeight;
 
 	if (IsMissingValue(previousValue))
 	{	
@@ -543,31 +524,17 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 	 *
 	 */
 
-	if (previousHeight <= findValue && theHeight >= findValue)
+	if ((previousHeight <= findHeight && theHeight >= findHeight) // upward trend
+			||
+		(previousHeight >= findHeight && theHeight <= findHeight)) // downward trend
 	{
-		double actualValue = NFmiInterpolation::Linear(findValue, previousHeight, theHeight, previousValue, theValue);
+		double actualValue = NFmiInterpolation::Linear(findHeight, previousHeight, theHeight, previousValue, theValue);
 
 		if (actualValue != kFloatMissing)
 		{
-			itsResult->Value(actualValue);
+			Value(actualValue);
 			itsValuesFound++;
 		}
 	}
 }
 
-void modifier_findvalue::Init(std::shared_ptr<const info> sourceInfo)
-{
-	itsResult = std::shared_ptr<info> (new info(*sourceInfo));
-	itsResult->Create();
-
-	Clear();
-
-	itsResult->First();
-
-	itsPreviousValue.resize(itsResult->Grid()->Size());
-	itsPreviousHeight.resize(itsResult->Grid()->Size());
-
-	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), kFloatMissing);
-	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), kFloatMissing);
-
-}

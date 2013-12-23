@@ -20,6 +20,9 @@ namespace himan
  * Modifier is a tool to calculate different kinds of statistics from an input
  * data set. The layout is heavily influenced (or copied) from NFmiModifier,
  * but adjusted for himan.
+ *
+ * This is the parent class in a hierarchy, all operation-depended functionality
+ * is implemented in child-classes.
  */
 	
 class modifier
@@ -31,45 +34,49 @@ class modifier
 
 		// Compiler will create cctor and =, nothing but PODs here
 		
-		virtual std::string ClassName() const { return "himan::plugin::modifier"; }
-
-		//virtual bool BoolOperation(float theValue);
-
-		virtual double Value() const;
-		virtual double MinimumValue() const;
-		virtual double MaximumValue() const;
+		virtual std::string ClassName() const { return "himan::modifier"; }
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing) = 0;
 		virtual void Clear(double fillValue = kFloatMissing);
 
 		virtual bool IsMissingValue(double theValue) const;
 
-		void FindValue(std::shared_ptr<const info> theFindValue);
+		void FindValue(const std::vector<double>& theFindValue);
 
-		virtual void Init(std::shared_ptr<const himan::info> sourceInfo);
-
-		bool NextLocation();
-		void ResetLocation();
-		size_t LocationIndex() const;
-
-		virtual std::shared_ptr<info> Result() const;
+		virtual const std::vector<double>& Result() const;
 
 		virtual bool CalculationFinished() const;
 
 		size_t FindNth() const;
 		void FindNth(size_t theNth);
-		
-	protected:
+	
+		void Process(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
-		//bool itsReturnHeight;
+		std::ostream& Write(std::ostream& file) const;
+
+	protected:
+		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+		virtual double Value() const;
+		virtual void Value(double theValue);
 		bool itsMissingValuesAllowed;
 
-		std::shared_ptr<info> itsFindValue;
+		std::vector<double> itsFindValue;
 		size_t itsFindNthValue;
 
-		std::shared_ptr<info> itsResult;
+		mutable std::vector<double> itsResult; // variable is modified in some Result() const functions
+		size_t itsIndex;
 
 };
+
+inline
+std::ostream& operator<<(std::ostream& file, const modifier& ob)
+{
+	return ob.Write(file);
+}
+
+/**
+ * @class Calculates the maximum value in a given height range
+ */
 
 class modifier_max : public modifier
 {
@@ -77,11 +84,15 @@ class modifier_max : public modifier
 		modifier_max() : modifier() {}
 		virtual ~modifier_max() {}
 
-		virtual std::string ClassName() const { return "himan::plugin::modifier_max"; }
+		virtual std::string ClassName() const { return "himan::modifier_max"; }
 
-		virtual double MaximumValue() const;
+		//virtual double MaximumValue() const;
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 };
+
+/**
+ * @class Calculates minimum value in a given height range
+ */
 
 class modifier_min : public modifier
 {
@@ -89,11 +100,15 @@ class modifier_min : public modifier
 		modifier_min() : modifier() {}
 		virtual ~modifier_min() {}
 
-		virtual std::string ClassName() const { return "himan::plugin::modifier_min"; }
+		virtual std::string ClassName() const { return "himan::modifier_min"; }
 
-		virtual double MinimumValue() const;
+		//virtual double MinimumValue() const;
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 };
+
+/**
+ * @class Calculates the maximum and minimum values in a given height range
+ */
 
 class modifier_maxmin : public modifier
 {
@@ -101,18 +116,26 @@ class modifier_maxmin : public modifier
 		modifier_maxmin() : modifier() {}
 		virtual ~modifier_maxmin() {}
 
-		virtual std::string ClassName() const { return "himan::plugin::modifier_maxmin"; }
+		virtual std::string ClassName() const { return "himan::modifier_maxmin"; }
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 
-		virtual double Value() const;
+		virtual const std::vector<double>& Result() const;
+
+		//virtual double Value() const;
 		
-		virtual double MinimumValue() const;
-		virtual double MaximumValue() const;
+		//virtual double MinimumValue() const;
+		//virtual double MaximumValue() const;
 
 	private:
-		
+		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+
+		std::vector<double> itsMaximumResult;
 };
+
+/**
+ * @class Calculate the sum of values in a given height range
+ */
 
 class modifier_sum : public modifier
 {
@@ -120,12 +143,14 @@ class modifier_sum : public modifier
 		modifier_sum() : modifier() {}
 		virtual ~modifier_sum() {}
 
-		virtual std::string ClassName() const { return "himan::plugin::modifier_sum"; }
-
-		//virtual double Value() const;
+		virtual std::string ClassName() const { return "himan::modifier_sum"; }
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 };
+
+/**
+ * @class Calculate the mean of values in a given height range
+ */
 
 class modifier_mean : public modifier_sum
 {
@@ -133,17 +158,21 @@ class modifier_mean : public modifier_sum
 		modifier_mean() : modifier_sum() {}
 		virtual ~modifier_mean() {}
 
-		virtual std::string ClassName() const { return "himan::plugin::modifier_mean"; }
+		virtual std::string ClassName() const { return "himan::modifier_mean"; }
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 
-		virtual std::shared_ptr<info> Result() const;
-
-		virtual void Init(std::shared_ptr<const himan::info> sourceInfo);
+		virtual const std::vector<double>& Result() const;
 
 	private:
+		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+
 		std::vector<size_t> itsValuesCount;
 };
+
+/**
+ * @class Count the number of values in a given height range
+ */
 
 class modifier_count : public modifier
 {
@@ -151,18 +180,29 @@ class modifier_count : public modifier
 		modifier_count() : modifier() {}
 		virtual ~modifier_count() {}
 
-		virtual std::string ClassName() const { return "himan::plugin::modifier_count"; }
+		virtual std::string ClassName() const { return "himan::modifier_count"; }
 
 		//virtual double Height() const;
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 
-		virtual void Init(std::shared_ptr<const himan::info> sourceInfo);
-
 	private:
+		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+
 		std::vector<double> itsPreviousValue;
 
 };
+
+/**
+ * @class Find height of a given value.
+ *
+ * By default class will calculate the height of the first value occurred. This can
+ * be changed by setting itsFindNthValue. If value is zero, the last occurrence will
+ * be returned.
+ *
+ * Note! Unlike NFmiModifier, if user has requested the height of 3rd value and that
+ * is not found, value will be missing value (newbase gives the height of 2nd found value).
+ */
 
 class modifier_findheight : public modifier
 {
@@ -170,15 +210,17 @@ class modifier_findheight : public modifier
 		modifier_findheight() : modifier(), itsValuesFound(0) {}
 		virtual ~modifier_findheight() {}
 
-		virtual std::string ClassName() const { return "himan::plugin::modifier_findheight"; }
+		virtual std::string ClassName() const { return "himan::modifier_findheight"; }
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 
 		virtual bool CalculationFinished() const;
 
-		virtual void Init(std::shared_ptr<const himan::info> sourceInfo);
+		virtual void Clear(double fillValue = kFloatMissing);
 
 	private:
+		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+
 		std::vector<double> itsPreviousValue;
 		std::vector<double> itsPreviousHeight;
 		std::vector<size_t> itsFoundNValues;
@@ -187,21 +229,27 @@ class modifier_findheight : public modifier
 
 };
 
+/**
+ * @class Find value of parameter in a given height
+ */
+
 class modifier_findvalue : public modifier
 {
 	public:
 		modifier_findvalue() : modifier(), itsValuesFound(0) {}
 		virtual ~modifier_findvalue() {}
 
-		virtual std::string ClassName() const { return "himan::plugin::modifier_findvalue"; }
+		virtual std::string ClassName() const { return "himan::::modifier_findvalue"; }
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 
 		virtual bool CalculationFinished() const;
 
-		virtual void Init(std::shared_ptr<const himan::info> sourceInfo);
+		virtual void Clear(double fillValue = kFloatMissing);
 
 	private:
+		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+
 		std::vector<double> itsPreviousValue;
 		std::vector<double> itsPreviousHeight;
 
