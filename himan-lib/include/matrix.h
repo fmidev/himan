@@ -193,9 +193,23 @@ public:
 		itsDepth = theDepth;
 	}
 
-	const T* Values() const
+	/**
+	 * @brief Return const pointer to data as POD
+     * @return const pointer to data
+     */
+	const T* ValuesAsPOD() const
 	{
 		return &itsData[0];
+	}
+
+	/**
+	 * @brief Return reference to data (in c++ style)
+     * @return const reference to data
+     */
+	
+	const std::vector<T>& Values() const
+	{
+		return itsData;
 	}
 
 	friend std::ostream& operator<<(std::ostream& file, const matrix<T> & ob)
@@ -223,7 +237,34 @@ public:
 		std::lock_guard<std::mutex> lock(itsValueMutex);
 
 		assert(itsData.size() == len);
+		
+		if (itsData.size() != len)
+		{
+			return false;
+		}
+
 		itsData.assign(arr, arr + len);
+		return true;
+	}
+
+	/**
+	 * @brief Set value of whole matrix
+	 * 
+	 * The size of the new data must be equal to size of old data
+	 * 
+     * @param theData
+     * @return 
+     */
+	bool Set(const std::vector<T>& theData)
+	{
+		assert(itsData.size() == theData.size());
+
+		if (itsData.size() != theData.size())
+		{
+			return false;
+		}
+		itsData = theData;
+
 		return true;
 	}
 
@@ -249,6 +290,11 @@ public:
 
 		assert(Index(x,y,z) < itsData.size());
 
+		if (Index(x,y,z) >= itsData.size())
+		{
+			return false;
+		}
+		
 		itsData[Index(x,y,z)] = theValue;
 
 		return true;
@@ -274,6 +320,11 @@ public:
 
 		assert(theIndex < itsData.size());
 
+		if (theIndex >= itsData.size())
+		{
+			return false;
+		}
+		
 		itsData[theIndex] = theValue;
 
 		return true;
@@ -326,8 +377,6 @@ private:
 	T itsMissingValue;
 	
 	std::mutex itsValueMutex;
-
-
 };
 
 
