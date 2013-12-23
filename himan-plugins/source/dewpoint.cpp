@@ -287,7 +287,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 			}
 			else
 			{
-				datas.T = const_cast<double*> (TInfo->Grid()->Data()->Values());
+				datas.T = const_cast<double*> (TInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			if (RHInfo->Grid()->DataIsPacked())
@@ -304,7 +304,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 			}
 			else
 			{
-				datas.RH = const_cast<double*> (RHInfo->Grid()->Data()->Values());
+				datas.RH = const_cast<double*> (RHInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			dewpoint_cuda::DoCuda(opts, datas);
