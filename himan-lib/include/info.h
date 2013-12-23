@@ -421,15 +421,25 @@ public:
 	 * hold the data. The number of the matrices depends on the size
 	 * of times, params and levels.
 	 *
-	 * Note! Create() [without any arguments] should only be called
-	 * when creating info based on the arguments read from configuration
-	 * file! If Create() is called on info that is for example created from
-	 * a grib file, the function will abort.
+	 * This function will create grid class based on information read
+	 * from configuration file! If Create() is called on info that is for example
+	 * created from a grib file, the function will abort.
 	 *
- 	 * Will preserve iterator positions.
+ 	 * Will *not* preserve iterator positions.
 	 */
 
 	void Create();
+
+	/**
+	 * @brief Initialize data backend with correct number of matrices
+	 *
+	 * Function will create a number of matrices to
+	 * hold the data. The number of the matrices depends on the size
+	 * of times, params and levels.
+	 *
+ 	 * Will *not* preserve iterator positions.
+	 */
+
 	void Create(std::shared_ptr<grid> baseGrid);
 
 	/**
@@ -437,7 +447,7 @@ public:
 	 * to any other info instance. The data content will be the same as in the old
 	 * info.
 	 *
-	 * Will preserve iterator positions.
+	 * Will *not* preserve iterator positions.
      */
 
 	void ReGrid();

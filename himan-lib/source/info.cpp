@@ -132,10 +132,6 @@ void info::Create()
 {
     itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
 
-	size_t timeIndex = itsTimeIterator->Index();
-	size_t levelIndex = itsLevelIterator->Index();
-	size_t paramIndex = itsParamIterator->Index();
-
     Reset();
 
 	// Disallow Create() to be called if info is not originated from a configuration file
@@ -167,9 +163,7 @@ void info::Create()
         }
     }
 
-	itsTimeIterator->Set(timeIndex);
-	itsLevelIterator->Set(levelIndex);
-	itsParamIterator->Set(paramIndex);
+	First();
 }
 
 void info::ReGrid()
@@ -213,10 +207,6 @@ void info::Create(shared_ptr<grid> baseGrid)
 
     itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
 
-	size_t timeIndex = itsTimeIterator->Index();
-	size_t levelIndex = itsLevelIterator->Index();
-	size_t paramIndex = itsParamIterator->Index();
-
     Reset();
 
     while (NextTime())
@@ -235,9 +225,7 @@ void info::Create(shared_ptr<grid> baseGrid)
         }
     }
 
-	itsTimeIterator->Set(timeIndex);
-	itsLevelIterator->Set(levelIndex);
-	itsParamIterator->Set(paramIndex);
+	First();
 }
 
 void info::Merge(shared_ptr<info> otherInfo)
