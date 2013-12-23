@@ -14,6 +14,8 @@
 namespace himan
 {
 
+const size_t kReset = std::numeric_limits<size_t>::max();
+
 /**
  * @class modifier
  *
@@ -50,7 +52,7 @@ class modifier
 		size_t FindNth() const;
 		void FindNth(size_t theNth);
 	
-		void Process(const std::vector<double>& theData, const std::vector<double>& theHeights);
+		virtual void Process(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
 		std::ostream& Write(std::ostream& file) const;
 
@@ -127,7 +129,7 @@ class modifier_maxmin : public modifier
 		//virtual double MinimumValue() const;
 		//virtual double MaximumValue() const;
 
-	private:
+	protected:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
 		std::vector<double> itsMaximumResult;
@@ -164,7 +166,7 @@ class modifier_mean : public modifier_sum
 
 		virtual const std::vector<double>& Result() const;
 
-	private:
+	protected:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
 		std::vector<size_t> itsValuesCount;
@@ -186,7 +188,7 @@ class modifier_count : public modifier
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 
-	private:
+	protected:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
 		std::vector<double> itsPreviousValue;
@@ -207,7 +209,7 @@ class modifier_count : public modifier
 class modifier_findheight : public modifier
 {
 	public:
-		modifier_findheight() : modifier(), itsValuesFound(0) {}
+		modifier_findheight() : modifier(), itsValuesFound(kReset) {}
 		virtual ~modifier_findheight() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_findheight"; }
@@ -218,7 +220,7 @@ class modifier_findheight : public modifier
 
 		virtual void Clear(double fillValue = kFloatMissing);
 
-	private:
+	protected:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
 		std::vector<double> itsPreviousValue;
@@ -236,7 +238,7 @@ class modifier_findheight : public modifier
 class modifier_findvalue : public modifier
 {
 	public:
-		modifier_findvalue() : modifier(), itsValuesFound(0) {}
+		modifier_findvalue() : modifier(), itsValuesFound(kReset) {}
 		virtual ~modifier_findvalue() {}
 
 		virtual std::string ClassName() const { return "himan::::modifier_findvalue"; }
