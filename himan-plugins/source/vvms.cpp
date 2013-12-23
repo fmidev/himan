@@ -304,7 +304,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			}
 			else
 			{
-				datas.T = const_cast<double*> (TInfo->Grid()->Data()->Values());
+				datas.T = const_cast<double*> (TInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			if (VVInfo->Grid()->DataIsPacked())
@@ -322,7 +322,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 			}
 			else
 			{
-				datas.VV = const_cast<double*> (VVInfo->Grid()->Data()->Values());
+				datas.VV = const_cast<double*> (VVInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			if (!isPressureLevel)
@@ -341,7 +341,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo,
 				}
 				else
 				{
-					datas.P = const_cast<double*> (PInfo->Grid()->Data()->Values());
+					datas.P = const_cast<double*> (PInfo->Grid()->Data()->ValuesAsPOD());
 				}
 
 			}

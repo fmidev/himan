@@ -164,7 +164,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 
 	//itsGrib->Message()->BitsPerValue(16);
 
-	itsGrib->Message()->Values(anInfo->Data()->Values(), static_cast<long> (anInfo->Ni() * anInfo->Nj()));
+	itsGrib->Message()->Values(anInfo->Data()->ValuesAsPOD(), static_cast<long> (anInfo->Ni() * anInfo->Nj()));
 
 	if (edition == 2)
 	{

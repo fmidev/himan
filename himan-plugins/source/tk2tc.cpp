@@ -261,7 +261,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo,
 			}
 			else
 			{
-				datas.TK = const_cast<double*> (TInfo->Grid()->Data()->Values());
+				datas.TK = const_cast<double*> (TInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			tk2tc_cuda::DoCuda(opts, datas);

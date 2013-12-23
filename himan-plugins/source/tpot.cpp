@@ -370,7 +370,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			}
 			else
 			{
-				datas.T = const_cast<double*> (TInfo->Grid()->Data()->Values());
+				datas.T = const_cast<double*> (TInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			if (!isPressureLevel)
@@ -389,7 +389,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 				}
 				else
 				{
-					datas.P = const_cast<double*> (PInfo->Grid()->Data()->Values());
+					datas.P = const_cast<double*> (PInfo->Grid()->Data()->ValuesAsPOD());
 				}
 
 			}

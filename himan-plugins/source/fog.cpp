@@ -288,7 +288,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			}
 			else
 			{
-				datas.DTC2M = const_cast<double*> (dewInfo->Grid()->Data()->Values());
+				datas.DTC2M = const_cast<double*> (dewInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			if (groundInfo->Grid()->DataIsPacked())
@@ -305,7 +305,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			}
 			else
 			{
-				datas.TKGround = const_cast<double*> (groundInfo->Grid()->Data()->Values());
+				datas.TKGround = const_cast<double*> (groundInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			if (windInfo->Grid()->DataIsPacked())
@@ -322,7 +322,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 			}
 			else
 			{
-				datas.FF10M = const_cast<double*> (windInfo->Grid()->Data()->Values());
+				datas.FF10M = const_cast<double*> (windInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
 			fog_cuda::DoCuda(opts, datas);
