@@ -20,6 +20,11 @@ grid::grid()
 	, itsPackedData()
 	, itsScanningMode(kUnknownScanningMode)
 	, itsUVRelativeToGrid(false)
+	, itsProjection(kUnknownProjection)
+	, itsAB()
+	, itsBottomLeft()
+	, itsTopRight()
+	, itsSouthPole()
 	, itsOrientation(kHPMissingValue)
 	, itsDi(kHPMissingValue)
 	, itsDj(kHPMissingValue)
@@ -39,6 +44,7 @@ grid::grid(HPScanningMode theScanningMode,
 	, itsScanningMode(theScanningMode)
 	, itsUVRelativeToGrid(theUVRelativeToGrid)
 	, itsProjection(theProjection)
+	, itsAB()
 	, itsBottomLeft(theBottomLeft)
 	, itsTopRight(theTopRight)
 	, itsSouthPole(theSouthPole)
@@ -50,7 +56,6 @@ grid::grid(HPScanningMode theScanningMode,
 }
 
 grid::grid(const grid& other)
-	: itsData(new unpacked(*other.itsData))
 {
 	itsScanningMode = other.itsScanningMode;
 	itsUVRelativeToGrid = other.itsUVRelativeToGrid;
@@ -62,6 +67,11 @@ grid::grid(const grid& other)
 	itsOrientation = other.itsOrientation;
 	itsDi = other.itsDi;
 	itsDj = other.itsDj;
+
+	if (other.itsData)
+	{
+		itsData = make_shared<unpacked> (*other.itsData);
+	}
 
 	if (other.itsPackedData)
 	{
