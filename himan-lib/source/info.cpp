@@ -176,12 +176,6 @@ void info::ReGrid()
 {
 	auto newDimensionMatrix = make_shared<matrix_t> (itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size());
 
-	// Current iterator position, will restore these after regrid has been made
-	
-	size_t timeIndex = itsTimeIterator->Index();
-	size_t levelIndex = itsLevelIterator->Index();
-	size_t paramIndex = itsParamIterator->Index();
-
     Reset();
 
     while (NextTime())
@@ -196,9 +190,8 @@ void info::ReGrid()
                 // Create empty placeholders
             {
 				assert(Grid());
-				
-            	auto newGrid = make_shared<grid> (*Grid());
 
+            	auto newGrid = make_shared<grid> (*Grid());
             	if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
             	{
             		newGrid->Di(itsDi);
@@ -212,12 +205,7 @@ void info::ReGrid()
     }
 
 	itsDimensionMatrix = newDimensionMatrix;
-	
-	itsTimeIterator->Set(timeIndex);
-	itsLevelIterator->Set(levelIndex);
-	itsParamIterator->Set(paramIndex);
-
-	First(); // "Factory setting," prevents lots of core dumps
+	First(); // "Factory setting"
 }
 
 void info::Create(shared_ptr<grid> baseGrid)
