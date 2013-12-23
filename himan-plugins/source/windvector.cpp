@@ -424,7 +424,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			}
 			else
 			{
-				datas.u = const_cast<double*> (UInfo->Data()->Values());
+				datas.u = const_cast<double*> (UInfo->Data()->ValuesAsPOD());
 			}
 
 			if (VInfo->Grid()->DataIsPacked())
@@ -442,7 +442,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			}
 			else
 			{
-				datas.v = const_cast<double*> (VInfo->Data()->Values());
+				datas.v = const_cast<double*> (VInfo->Data()->ValuesAsPOD());
 			}
 
 			opts.vectorCalculation = itsVectorCalculation;
@@ -611,7 +611,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 					double newU = kFloatMissing, newV = kFloatMissing;
 
-					if (targetGrid->Area()->ClassId() == kNFmiRotatedLatLonArea)
+					if (targetGrid->Area()->ClassId() == kNFmiRotatedLatLonArea || targetGrid->Area()->ClassId() == kNFmiLatLonArea)
 					{
 
 						/*
@@ -707,15 +707,22 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 				}
 
-#ifndef HIL_PP_DD_COMPATIBILITY_MODE
+#ifdef HIL_PP_DD_COMPATIBILITY_MODE
+				
+				double windVector = round(dir/10) + 100 * round(speed);
+				dir = 10 * (static_cast<int> (round(windVector)) % 100);
+				
+#endif
+
 				myTargetInfo->ParamIndex(1);
 				myTargetInfo->Value(round(dir));
-#endif
 				
 				if (itsVectorCalculation)
 				{
 
+#ifndef HIL_PP_DD_COMPATIBILITY_MODE
 					double windVector = round(dir/10) + 100 * round(speed);
+#endif
 
 					myTargetInfo->ParamIndex(2);
 
@@ -723,13 +730,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					{
 						throw runtime_error(ClassName() + ": Failed to set value to matrix");
 					}
-	
-#ifdef HIL_PP_DD_COMPATIBILITY_MODE
-					dir = 10 * (static_cast<int> (round(windVector)) % 100);
-
-					myTargetInfo->ParamIndex(1);
-					myTargetInfo->Value(dir);
-#endif
 				}
 			}
 
