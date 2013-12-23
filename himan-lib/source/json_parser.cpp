@@ -244,6 +244,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
+
 	/* Check processqueue */
 
 	std::vector<std::shared_ptr<info> > infoQueue;
@@ -253,7 +254,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	BOOST_FOREACH(boost::property_tree::ptree::value_type &element, pq)
 	{
 		std::shared_ptr<info> anInfo (new info(*baseInfo));
-		anInfo->Create(); // Reset data backend
 
 		try
 		{
