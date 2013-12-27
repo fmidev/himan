@@ -43,13 +43,15 @@ using namespace himan::plugin;
  * this could be a configuration file option?
  */
 
-bool CALCULATE_AVERAGE_RATE = true;
+// Default behaviour changed 27.12.2013 (HIMAN-26) // partio
+
+bool CALCULATE_AVERAGE_RATE = false;
 
 map<string,params> sourceParameters;
 
 split_sum::split_sum()
 {
-	itsClearTextFormula = "Hourly_sum = SUM_cur - SUM_prev; Rate = (SUM_next - SUM_prev) / (step * 2)";
+	itsClearTextFormula = "Hourly_sum = SUM_cur - SUM_prev; Rate = (SUM_cur - SUM_prev) / step";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("split_sum"));
 
