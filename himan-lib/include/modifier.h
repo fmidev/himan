@@ -42,6 +42,8 @@ class modifier
 		virtual bool IsMissingValue(double theValue) const;
 
 		void FindValue(const std::vector<double>& theFindValue);
+		void LowerHeight(const std::vector<double>& theLowerHeight);
+		void UpperHeight(const std::vector<double>& theUpperHeight);
 
 		virtual const std::vector<double>& Result() const;
 
@@ -54,17 +56,27 @@ class modifier
 
 		std::ostream& Write(std::ostream& file) const;
 
+		size_t HeightsCrossed() const;
+		
 	protected:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+
+		/**
+		 * @brief Function checks that data is not missing and falls within the given height range.
+		 */
+		virtual bool Evaluate(double theValue, double theHeight);
 		virtual double Value() const;
 		virtual void Value(double theValue);
 		bool itsMissingValuesAllowed;
 
+		std::vector<double> itsLowerHeight;
+		std::vector<double> itsUpperHeight;
 		std::vector<double> itsFindValue;
 		size_t itsFindNthValue;
 
 		mutable std::vector<double> itsResult; // variable is modified in some Result() const functions
 		size_t itsIndex;
+		std::vector<bool> itsOutOfBoundHeights;
 
 };
 

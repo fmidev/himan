@@ -22,6 +22,11 @@ const std::vector<double>& modifier::Result() const
 
 bool modifier::CalculationFinished() const
 {
+	if (itsResult.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size())
+	{
+		return true;
+	}
+	
 	return false;
 }
 
@@ -43,6 +48,16 @@ bool modifier::IsMissingValue(double theValue) const
 void modifier::FindValue(const std::vector<double>& theFindValue)
 {
 	itsFindValue = theFindValue;
+}
+
+void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
+{
+	itsLowerHeight = theLowerHeight;
+}
+
+void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
+{
+	itsUpperHeight = theUpperHeight;
 }
 
 size_t modifier::FindNth() const
@@ -76,10 +91,36 @@ void modifier::Init(const std::vector<double>& theData, const std::vector<double
 		assert(theData.size() == theHeights.size());
 
 		itsResult.resize(theData.size(), kFloatMissing);
-
+		itsOutOfBoundHeights.resize(theData.size(), false);
 	}
 }
 
+bool modifier::Evaluate(double theValue, double theHeight)
+{
+
+	assert(itsIndex < itsOutOfBoundHeights.size());
+
+	assert(theHeight != kFloatMissing);
+	
+	if (itsOutOfBoundHeights[itsIndex] == true || IsMissingValue(itsUpperHeight[itsIndex]) || theHeight > itsUpperHeight[itsIndex] || IsMissingValue(itsLowerHeight[itsIndex]))
+	{
+		itsOutOfBoundHeights[itsIndex] = true;
+		return false;
+	}
+
+	if (theHeight < itsLowerHeight[itsIndex])
+	{
+		// height is not in the given height range
+		return false;
+	}
+
+	if (IsMissingValue(theValue))
+	{
+		return false;
+	}
+
+	return true;
+}
 void modifier::Process(const std::vector<double>& theData, const std::vector<double>& theHeights)
 {
 
@@ -89,8 +130,25 @@ void modifier::Process(const std::vector<double>& theData, const std::vector<dou
 
 	for (itsIndex = 0; itsIndex < itsResult.size(); itsIndex++)
 	{
-		Calculate(theData[itsIndex], theHeights[itsIndex]);
+		double theValue = theData[itsIndex], theHeight = theHeights[itsIndex];
+
+		/*
+		 * Evaluate() function is separated from Calculate() because Evaluate() is the
+		 * same for all classes and therefore needs to defined only once
+		 */
+		
+		if (!Evaluate(theValue, theHeight))
+		{
+			continue;
+		}
+		
+		Calculate(theValue, theHeight);
 	}
+}
+
+size_t modifier::HeightsCrossed() const
+{
+	return static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true));
 }
 
 std::ostream& modifier::Write(std::ostream& file) const
@@ -148,6 +206,7 @@ void modifier_maxmin::Init(const std::vector<double>& theData, const std::vector
 
 		itsResult.resize(theData.size(), kFloatMissing);
 		itsMaximumResult.resize(theData.size(), kFloatMissing);
+		itsOutOfBoundHeights.resize(theData.size(), false);
 	}
 }
 
@@ -217,16 +276,14 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 		itsResult.resize(theData.size(), kFloatMissing);
 
 		itsValuesCount.resize(itsResult.size(), 0);
+
+		itsOutOfBoundHeights.resize(theData.size(), false);
+
 	}
 }
 
 void modifier_mean::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-
 	itsValuesCount[itsIndex] += 1;
 
 	if (IsMissingValue(Value())) // First value
@@ -250,7 +307,7 @@ const std::vector<double>& modifier_mean::Result() const
 
 		if (!IsMissingValue(val) && count != 0)
 		{
-			itsResult[i] = val / static_cast<double> (count);
+			itsResult[i] = val / static_cast<double> (count); // std::cout << val << "/" << count << " = " << itsResult[i] << std::endl;
 		}		
 	}
 
@@ -269,6 +326,9 @@ void modifier_count::Init(const std::vector<double>& theData, const std::vector<
 		itsResult.resize(theData.size(), 0);
 
 		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
+
+		itsOutOfBoundHeights.resize(itsResult.size(), false);
+
 	}
 }
 
@@ -340,7 +400,7 @@ void modifier_findheight::Clear(double fillValue)
 
 bool modifier_findheight::CalculationFinished() const
 {
-	return (itsResult.size() && itsValuesFound == itsResult.size());
+	return (itsResult.size() && (itsValuesFound == itsResult.size() || static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size()));
 }
 
 void modifier_findheight::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
@@ -354,6 +414,7 @@ void modifier_findheight::Init(const std::vector<double>& theData, const std::ve
 		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 		itsFoundNValues.resize(itsResult.size(), 0);
+		itsOutOfBoundHeights.resize(itsResult.size(), false);
 
 		itsValuesFound = 0;
 	}
@@ -466,13 +527,44 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 
+		itsOutOfBoundHeights.resize(itsResult.size(), false);
+
+		// Fake lower && upper heights
+
+		double lowestHeight = 1e38;
+		double highestHeight = -1;
+
+		assert(itsFindValue.size());
+		
+		for (size_t i = 0; i < itsFindValue.size(); i++)
+		{
+			double h = itsFindValue[i];
+
+			if (h == kFloatMissing)
+			{
+				continue;
+			}
+
+			if (h > highestHeight)
+			{
+				highestHeight = h;
+			}
+			if (h < lowestHeight)
+			{
+				lowestHeight = h;
+			}
+		}
+
+		itsLowerHeight.resize(itsResult.size(), lowestHeight);
+		itsUpperHeight.resize(itsResult.size(), highestHeight);
+
 		itsValuesFound = 0;
 	}
 }
 
 bool modifier_findvalue::CalculationFinished() const
 {
-	return (itsResult.size() && itsValuesFound == itsResult.size());
+	return (itsResult.size() && (itsValuesFound == itsResult.size() || static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size()));
 }
 
 void modifier_findvalue::Calculate(double theValue, double theHeight)
@@ -484,6 +576,13 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 
 	if (IsMissingValue(theValue) || !IsMissingValue(Value()) || IsMissingValue(findHeight))
 	{
+		return;
+	}
+
+	if (fabs(theHeight - findHeight) < 1e-5)
+	{
+		Value(theValue);
+		itsValuesFound++;
 		return;
 	}
 
