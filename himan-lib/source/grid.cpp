@@ -75,7 +75,7 @@ grid::grid(const grid& other)
 
 	if (other.itsPackedData)
 	{
-		itsPackedData = shared_ptr<packed_data> (new packed_data(*other.itsPackedData));
+		itsPackedData = make_shared<packed_data> (*other.itsPackedData);
 	}
 
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
