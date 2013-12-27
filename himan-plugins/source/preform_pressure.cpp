@@ -39,8 +39,6 @@ const double TopTlimit = -12;
 const double dzLim = 0.3;
 const double FZdzLim = 0.2;
 
-const double kKelvin = 273.15;
-
 preform_pressure::preform_pressure()
 {
 	itsClearTextFormula = "<algorithm>";
@@ -328,9 +326,9 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 				//<! TODO: Kertoimet tietokannasta!
 				
-				T -= kKelvin;
-				T850 -= kKelvin;
-				T925 -= kKelvin;
+				T -= himan::constants::kKelvin;
+				T850 -= himan::constants::kKelvin;
+				T925 -= himan::constants::kKelvin;
 
 				RH *= 100;
 				RH700 *= 100;
@@ -364,7 +362,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				{
 					// tihkua: "ei (satavaa) keskipilveä ja pinnan lähellä kosteaa pienellä sadeintensiteetillä"
 
-					if ((RH700 < 80) && (RH925 > 90) && (RH > 95) && (RR <= dzLim))
+					if ((RH700 < 80) && (RH925 > 90) && (RH > 90) && (RR <= dzLim))
 				    {
 						PreForm = kDrizzle;
 					}
@@ -377,8 +375,6 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 						/* Use Koistinen formula to possibly change form to sleet or snow
 						 * The same formula is in util::PrecipitationForm(), but here we
 						 * use different limits to determine the form.
-						 *
-						 * TODO: Ask why 0.5 is used.
 						 */
 
 						const double probWater = 1 / (1 + exp(22 - 2.7 * T - 0.2 * RH));
