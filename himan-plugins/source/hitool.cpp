@@ -88,17 +88,28 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 							HPLevelType wantedLevelType,
 							const param& sourceParam,
 							const param& targetParam,
-							const vector<double>& firstLevelValueInfo,
-							const vector<double>& lastLevelValueInfo,
-							const vector<double>& findValueInfo) const
+							const vector<double>& lowerHeight,
+							const vector<double>& upperHeight,
+							const vector<double>& findValue) const
 {
 	shared_ptr<plugin::neons> n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 	assert(wantedLevelType == kHybrid);
 
 	// Move this to convenience functions?
-	if (findValueInfo.size())
+
+	if (findValue.size())
 	{
-		mod->FindValue(findValueInfo);
+		mod->FindValue(findValue);
+	}
+
+	if (lowerHeight.size())
+	{
+		mod->LowerHeight(lowerHeight);
+	}
+
+	if (upperHeight.size())
+	{
+		mod->UpperHeight(upperHeight);
 	}
 
 	// Should we loop over all producers ?
@@ -110,18 +121,10 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	long firstHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
 	long lastHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
 
-
-//	const double base = sourceParam.Base();
-//	const double scale = sourceParam.Scale();
-
-
 	for (int levelValue = lastHybridLevel; levelValue >= firstHybridLevel && !mod->CalculationFinished(); levelValue--)
 	{
 
 		level currentLevel(kHybrid, levelValue, "HYBRID");
-
-		//itsLogger->Debug("Level " + boost::lexical_cast<string> (currentLevel.Value()) + ": height range crossed for " + boost::lexical_cast<string> (numFinishedLocations) +
-		//	"/" + boost::lexical_cast<string> (finishedLocations.size()) + " grid points");
 
 		valueheight data = GetData(currentLevel, sourceParam, itsTime);
 
@@ -135,70 +138,13 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		mod->Process(values->Grid()->Data()->Values(), heights->Grid()->Data()->Values());
 
-		/*while (mod->NextLocation() && values->NextLocation() && heights->NextLocation())
-		{
-			if (values->LocationIndex() != heights->LocationIndex())
-			{
-				cout << values->LocationIndex() << " " << heights->LocationIndex() << endl;
-			}
-			assert(values->LocationIndex() == heights->LocationIndex());
+		size_t heightsCrossed = mod->HeightsCrossed();
 
-			if (finishedLocations[values->LocationIndex()])
-			{
-				continue;
-			}
-			
-			double v = values->Value();
-			double h = heights->Value();
+		itsLogger->Debug("Level " + boost::lexical_cast<string> (currentLevel.Value()) + ": height range crossed for " + boost::lexical_cast<string> (heightsCrossed) +
+			"/" + boost::lexical_cast<string> (values->Data()->Size()) + " grid points");
 
-			if (h == kFloatMissing)
-			{
-				continue;
-			}
-
-			double lowerHeight = h + 1;
-			double upperHeight = h - 1;
-
-			if (firstLevelValueInfo)
-			{
-				firstLevelValueInfo->NextLocation();
-				lowerHeight = firstLevelValueInfo->Value();
-			}
-
-			if (lastLevelValueInfo)
-			{
-				lastLevelValueInfo->NextLocation();
-				upperHeight = lastLevelValueInfo->Value();
-			}
-
-			if (lowerHeight == kFloatMissing || lowerHeight == kHPMissingValue)
-			{
-				continue;
-			}
-			else if (upperHeight == kFloatMissing || upperHeight == kHPMissingValue)
-			{
-				continue;
-			}
-
-			if (h < lowerHeight)
-			{
-				continue;
-			}
-
-			if (h > upperHeight)
-			{
-				finishedLocations[values->LocationIndex()] = true;
-				continue;
-			}
-
-			v = v * scale + base;
-
-			mod->Calculate(v, h);
-		}
-		 */
 	}
 
-	//ret->Grid()->Data()->Set(mod->Result());
 	return mod->Result();
 }
 
@@ -291,6 +237,13 @@ vector<double> hitool::VerticalAverage(const param& wantedParam,
 	return VerticalExtremeValue(CreateModifier(kAverageModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo);
 }
 
+vector<double> hitool::VerticalSum(const param& wantedParam,
+						const vector<double>& firstLevelValueInfo,
+						const vector<double>& lastLevelValueInfo) const
+{
+	return VerticalExtremeValue(CreateModifier(kAccumulationModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo);
+}
+
 vector<double> hitool::VerticalCount(const param& wantedParam,
 						const vector<double>& firstLevelValueInfo,
 						const vector<double>& lastLevelValueInfo,
@@ -303,7 +256,7 @@ vector<double> hitool::VerticalValue(const param& wantedParam, const vector<doub
 {
 	//parm.Aggregation(kMinimum);
 
-	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, param("HL-M"), wantedParam);
+	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, param("HL-M"), wantedParam, vector<double> (), vector<double> (), heightInfo);
 }
 
 void hitool::Time(const forecast_time& theTime)
@@ -504,6 +457,18 @@ shared_ptr<info> hitool::Stratus()
 	auto stratusMeanN = VerticalAverage(wantedParam, stratusBase, stratusTop);
 	//auto stratusMeanN = VerticalExtremeValue(opts);
 
+	missing = 0;
+
+	for (size_t i = 0; i < stratusMeanN.size(); i++)
+	{
+		if (stratusMeanN[i] == kFloatMissing)
+		{
+			missing++;
+		}
+	}
+
+	itsLogger->Debug("Stratus mean cloudiness number of missing values: " + boost::lexical_cast<string> (missing)+ "/" + boost::lexical_cast<string> (stratusMeanN.size()));
+
 	ret->Param(meanCloudinessParam);
 	ret->Data()->Set(stratusMeanN);
 	
@@ -516,6 +481,18 @@ shared_ptr<info> hitool::Stratus()
 	
 	//auto stratusTopTemp = VerticalExtremeValue(opts);
 	auto stratusTopTemp = VerticalValue(wantedParam, stratusTop);
+
+	missing = 0;
+
+	for (size_t i = 0; i < stratusTopTemp.size(); i++)
+	{
+		if (stratusTopTemp[i] == kFloatMissing)
+		{
+			missing++;
+		}
+	}
+
+	itsLogger->Debug("Stratus top temperature number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusTopTemp.size()));
 
 	ret->Param(topTempParam);
 	ret->Data()->Set(stratusTopTemp);
@@ -538,12 +515,26 @@ shared_ptr<info> hitool::Stratus()
 			constData2[i] = stratusBase[i] - 50;
 		}
 	}
-	
+
 	auto stratusMeanTemp = VerticalAverage(wantedParam, constData1, constData2);
 
-	ret->Param(meanTempParam);
-	ret->Data()->Set(stratusMeanTemp);
+	missing = 0;
+
+	for (size_t i = 0; i < stratusMeanTemp.size(); i++)
+	{
+		if (stratusMeanTemp[i] == kFloatMissing)
+		{
+			missing++;
+		}
+	}
+
+	itsLogger->Debug("Stratus mean temperature number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusMeanTemp.size()));
 	
+	assert(ret->Param(meanTempParam));
+	ret->Data()->Set(stratusMeanTemp);
+	cout << *ret->Data();
+
+	exit(1);
 	// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
 	//VAR wAvg = VERTZ_AVG(W_EC,Base,Top)
 
@@ -552,6 +543,18 @@ shared_ptr<info> hitool::Stratus()
 	wantedParam = param("VV-MS");
 
 	auto stratusVerticalVelocity = VerticalAverage(wantedParam, stratusBase, stratusTop);
+
+	missing = 0;
+
+	for (size_t i = 0; i < stratusVerticalVelocity.size(); i++)
+	{
+		if (stratusVerticalVelocity[i] == kFloatMissing)
+		{
+			missing++;
+		}
+	}
+
+	itsLogger->Debug("Stratus vertical velocity number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusVerticalVelocity.size()));
 
 	ret->Param(verticalVelocityParam);
 	ret->Data()->Set(stratusVerticalVelocity);
@@ -696,7 +699,7 @@ shared_ptr<info> hitool::FreezingArea()
 
 			if (zl != kFloatMissing && ta != kFloatMissing)
 			{
-				pa = zl * ta;
+				pa = zl * (ta - himan::constants::kKelvin);
 			}
 
 			plusArea1[i] = pa;
@@ -710,7 +713,7 @@ shared_ptr<info> hitool::FreezingArea()
 
 			if (zl2 != kFloatMissing && zl1 != kFloatMissing && ta2 != kFloatMissing)
 			{
-				pa = (zl2 - zl1) * ta2;
+				pa = (zl2 - zl1) * (ta2 - himan::constants::kKelvin);
 			}
 
 			plusArea1[i] = pa;
@@ -732,21 +735,21 @@ shared_ptr<info> hitool::FreezingArea()
 
 			if (zl1 != kFloatMissing && zl2 != kFloatMissing && ta2 != kFloatMissing)
 			{
-				pa2 = (zl3 - zl2) * ta2;
+				pa2 = (zl3 - zl2) * (ta2 - himan::constants::kKelvin);
 			}
 
 			plusArea2[i] = pa2;
 
 			if (zl1 != kFloatMissing && pa2 != kFloatMissing && ta1 != kFloatMissing)
 			{
-				pa1 = zl1 * ta1 + pa2;
+				pa1 = zl1 * (ta1 - himan::constants::kKelvin) + pa2;
 			}
 
 			plusArea1[i] = pa1;
 
 			if (zl2 != kFloatMissing && zl1 != kFloatMissing && ta3 != kFloatMissing)
 			{
-				ma = (zl2 - zl1) * ta3;
+				ma = (zl2 - zl1) * (ta3 - himan::constants::kKelvin);
 			}
 			
 			minusArea[i] = ma;
