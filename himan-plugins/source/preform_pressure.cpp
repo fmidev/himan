@@ -51,27 +51,10 @@ preform_pressure::preform_pressure()
 
 void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 
 	/*
-	 * Set target parameter to preform_pressure.
+	 * Set target parameter to precipitation form.
 	 *
 	 * We need to specify grib and querydata parameter information
 	 * since we don't know which one will be the output format.
@@ -99,87 +82,18 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 	targetParam.GribCategory(1);
 	targetParam.GribParameter(19);
 
-	if (conf->OutputFileType() == kGRIB2)
+	if (itsConfiguration->OutputFileType() == kGRIB2)
 	{
 		itsLogger->Error("GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not lossless");
 		return;
 	}
 
 	params.push_back(targetParam);
+
+	SetParams(params);
+
+	Start();
 	
-	// GRIB 1
-
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(params, targetInfo->Producer().TableVersion());
-	}
-
-	targetInfo->Params(params);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->ParamIndex(0);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&preform_pressure::Run,
-											 this,
-											 shared_ptr<info> (new info(*targetInfo)),
-											 conf,
-											 i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-}
-
-void preform_pressure::Run(shared_ptr<info> myTargetInfo,
-			   shared_ptr<const plugin_configuration> conf,
-			   unsigned short threadIndex)
-{
-
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
-
 }
 
 /*
@@ -188,9 +102,7 @@ void preform_pressure::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void preform_pressure::Calculate(shared_ptr<info> myTargetInfo,
-					 shared_ptr<const plugin_configuration> conf,
-					 unsigned short threadIndex)
+void preform_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -202,9 +114,9 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 	param ZParam("Z-M2S2");
 	param RRParam("RR-1-MM"); // one hour prec -- should we interpolate in forecast step is 3/6 hours ?
 
-	conf->FirstSourceProducer();
+	itsConfiguration->FirstSourceProducer();
 	
-	level groundLevel = LevelTransform(conf->SourceProducer(), TParam, level(kHeight, 2));
+	level groundLevel = LevelTransform(itsConfiguration->SourceProducer(), TParam, level(kHeight, 2));
 
 	level surface0mLevel(kHeight, 0);
 	level surface2mLevel(kHeight, 2);
@@ -244,53 +156,53 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 		try
 		{
-			TInfo = aFetcher->Fetch(conf,
+			TInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 groundLevel,
 								 TParam);
 
 			assert(TInfo->Param().Unit() == kK);
 
-			T850Info = aFetcher->Fetch(conf,
+			T850Info = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 P850,
 								 TParam);
 
 			assert(T850Info->Param().Unit() == kK);
 
-			T925Info = aFetcher->Fetch(conf,
+			T925Info = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 P925,
 								 TParam);
 
 			assert(T925Info->Param().Unit() == kK);
 
-			RHInfo = aFetcher->Fetch(conf,
+			RHInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 surface2mLevel,
 								 RHParam);
 
-			RH700Info = aFetcher->Fetch(conf,
+			RH700Info = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 P700,
 								 RHParam);
 
-			RH925Info = aFetcher->Fetch(conf,
+			RH925Info = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 P925,
 								 RHParam);
 
-			Z850Info = aFetcher->Fetch(conf,
+			Z850Info = aFetcher->Fetch(itsConfiguration,
 					 myTargetInfo->Time(),
 					 P850,
 					 ZParam);
 
-			Z1000Info = aFetcher->Fetch(conf,
+			Z1000Info = aFetcher->Fetch(itsConfiguration,
 					 myTargetInfo->Time(),
 					 P1000,
 					 ZParam);
 
-			RRInfo = aFetcher->Fetch(conf,
+			RRInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 surface0mLevel,
 								 RRParam);
@@ -304,10 +216,10 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing);
 
-					if (conf->StatisticsEnabled())
+					if (itsConfiguration->StatisticsEnabled())
 					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 
 					continue;
@@ -518,10 +430,10 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 		}
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 		}
 
 		/*
@@ -532,9 +444,9 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 
 	}

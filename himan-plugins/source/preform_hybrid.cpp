@@ -34,12 +34,6 @@ const double baseLimit = 300.;
 const double stLimit = 500.;
 const double fzStLimit = 800.;
 
-// Kerroksen paksuus pinnasta [m], josta etsitään stratusta (min. BaseLimit+FZstLimit)
-const double layer = 2000.;
-
-// Oletus N-kynnysarvo vaaditulle min. stratuksen määrälle [%] (50=yli puoli taivasta)
-const double stCover = 50.;
-
 // Kylmin sallittu stratuksen topin T ja kylmin sallittu st:n keskim. T [C] jäätävässä tihkussa
 const double stTlimit = -12.;
 
@@ -53,9 +47,6 @@ const double sfcMin = -10.;
 // Max. sallittu keskim. RH-arvo (suht. kosteus) stratuksen yläpuoliselle kerrokselle [%] (jäätävässä) tihkussa
 const double dryLimit = 70.;
 
-// Kynnysarvo vaaditulle stratuksen yläpuolisen kuivan kerroksen paksuudelle [m] (jäätävässä) tihkussa
-const double drydz = 1500.;
-
 // Paksuuden raja-arvot vesi- ja lumisateelle [m]
 const double waterLim = 1300.;
 const double snowLim = 1288.;
@@ -64,8 +55,6 @@ const double snowLim = 1288.;
 // (pienemmällä jäätävän tihkun raja-arvolla voi hieman rajoittaa sen esiintymistä)
 const double dzLim = 0.3;
 const double FZdzLim = 0.2;
-
-const double kKelvin = 273.15;
 
 const double fzraMA = -100.;
 const double fzraPA = 100.;
@@ -92,24 +81,9 @@ preform_hybrid::preform_hybrid()
 
 void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 {
+	// Initialize plugin
 
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-	
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 
 	/*
 	 * Set target parameter to preform_hybrid.
@@ -140,28 +114,15 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 	targetParam.GribCategory(1);
 	targetParam.GribParameter(19);
 
-	if (conf->OutputFileType() == kGRIB2)
+	if (itsConfiguration->OutputFileType() == kGRIB2)
 	{
 		itsLogger->Error("GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not lossless");
 		return;
 	}
 
 	params.push_back(targetParam);
-	
-	// GRIB 1
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(params, targetInfo->Producer().TableVersion());
-	}
-
-	targetInfo->Params(params);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
+	SetParams(params);
 
 	/*
 	 * Initialize parent class functions for dimension handling
@@ -173,59 +134,8 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 		Dimension(kTimeDimension);
 	}
 
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->ParamIndex(0);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
+	Start();
 	
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&preform_hybrid::Run,
-											 this,
-											 shared_ptr<info> (new info(*targetInfo)),
-											 conf,
-											 i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-}
-
-void preform_hybrid::Run(shared_ptr<info> myTargetInfo,
-			   shared_ptr<const plugin_configuration> conf,
-			   unsigned short threadIndex)
-{
-
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
-
 }
 
 /*
@@ -234,11 +144,8 @@ void preform_hybrid::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
-					 shared_ptr<const plugin_configuration> conf,
-					 unsigned short threadIndex)
+void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
 	assert(fzStLimit >= stLimit);
 
 	shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -279,7 +186,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
-	h->Configuration(conf);
+	h->Configuration(itsConfiguration);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
@@ -295,17 +202,17 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 		
 		try
 		{
-			RRInfo = aFetcher->Fetch(conf,
+			RRInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 surface0mLevel,
 								 RRParam);
 
-			TInfo = aFetcher->Fetch(conf,
+			TInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 surface0mLevel,
 								 TParam);
 
-			RHInfo = aFetcher->Fetch(conf,
+			RHInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 surface2mLevel,
 								 RHParam);
@@ -319,10 +226,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing);
 
-					if (conf->StatisticsEnabled())
+					if (itsConfiguration->StatisticsEnabled())
 					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 
 					continue;
@@ -338,12 +245,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 
 		size_t missingCount = 0;
 		size_t count = 0;
+		auto stratus = h->Stratus();
 
 		//shared_ptr<info> stratus;
 		auto freezingArea = h->FreezingArea();
 		myThreadedLogger->Info("Freezing area calculated");
 
-		auto stratus = h->Stratus();
 
 		freezingArea->First();
 		stratus->First();
@@ -456,7 +363,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 
 				// Unit conversions
 
-				T -= kKelvin;
+				T -= himan::constants::kKelvin;
+				Navg *= 100;
 
 				const double probWater = util::WaterProbability(T, RH);
 
@@ -540,10 +448,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 
 		}
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 		}
 
 		/*
@@ -554,11 +462,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo,
 
 		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
-
 	}
 }
 

@@ -9,7 +9,7 @@
 #define COMPILED_PLUGIN_BASE_H
 
 //#include <NFmiGrid.h>
-#include "info.h"
+#include "compiled_plugin.h"
 #include "plugin_configuration.h"
 #include <mutex>
 
@@ -24,7 +24,7 @@ class compiled_plugin_base
 {
 public:
 
-	compiled_plugin_base() {}
+	compiled_plugin_base();
 	inline virtual ~compiled_plugin_base() {}
 
 	compiled_plugin_base(const compiled_plugin_base& other) = delete;
@@ -33,14 +33,6 @@ public:
 protected:
 
 	virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
-
-	/**
-	 * @brief Determine used thread count
-	 *
-	 * @param userThreadCount Number of threads specified by user, -1 if it's not specified
-	 */
-
-	short ThreadCount(short userThreadCount) const;
 
 	/**
 	 * @brief Interpolates value to point, or gets the value directly if grids are equal
@@ -62,6 +54,11 @@ protected:
 
 	/**
 	 * @brief Set leading dimension
+	 *
+	 * Functionality of this function could be replaced just by exposing the variable
+	 * itsLeadingDimension to all child classes but as all other access to this
+	 * variable is through functions (ie adjusting the dimensions), it is
+	 * better not to allow direct access to have some consistency.
 	 */
 
 	void Dimension(HPDimensionType theLeadingDimension)
@@ -73,22 +70,36 @@ protected:
 	{
 		return itsLeadingDimension;
 	}
-	
-	void FeederInfo(std::shared_ptr<info> theFeederInfo)
-	{
-		itsFeederInfo = theFeederInfo;
-		itsFeederInfo->Reset();
-	}
 
-	std::shared_ptr<info> FeederInfo() const
-	{
-		return itsFeederInfo;
-	}
+	/**
+	 * @brief Advance leading dimension (time or level) by one, called by threads
+	 *
+	 * This function is protected with a mutex as it is responsible for distributing
+	 * time steps or levels for processing to all calling threads.
+	 *
+     * @param myTargetInfo Threads own copy of target info
+     * @return True if thread has more items to process
+     */
 
 	bool AdjustLeadingDimension(std::shared_ptr<info> myTargetInfo);
-	bool AdjustNonLeadingDimension(std::shared_ptr<info> myTargetInfo);	
-	void ResetNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
 
+	/**
+	 * @brief Adjust non-leading dimension (time of level) by one, called by threads
+	 *
+	 * This function is not protected with a mutex since all threads have exclusive
+	 * access to their own info class instances' non-leading dimension. It is
+	 * implemented in base class however because the information what is the
+	 * leading dimension is located here.
+	 *
+     * @param myTargetInfo Threads own copy of target info
+     * @return
+     */
+
+	bool AdjustNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
+
+	
+	void ResetNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
+ 
 	/**
 	 * @brief Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.
 	 *
@@ -114,22 +125,15 @@ protected:
 	bool SwapTo(std::shared_ptr<info> myTargetInfo, HPScanningMode targetScanningMode);
 
 	/**
-	 * @brief Retrieve grib 1 parameter information from neons
+	 * @brief Write plugin contents to file.
 	 *
-	 * @param params vector containing all the parameters
-	 * @param table2Version table2version of the producer
-	 */
-
-	void StoreGrib1ParameterDefinitions(std::vector<param> params, long table2Version);
-
-	/**
-	 * @brief Write plugin contents to file
+	 * Function will determine whether it needs to write whole info or just active
+	 * parts of it. Function will preserve iterator positions.
 	 *
-	 * @param conf configuration
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	void WriteToFile(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> targetInfo);
+	void WriteToFile(std::shared_ptr<const info> targetInfo);
 
 	/**
 	 * @brief Determine if cuda can be used in this thread, and if so
@@ -153,11 +157,72 @@ protected:
 	
 	int CudaDeviceId() const;
 
-private:
-	mutable level_transform itsLevelTransformMap;
+	/**
+	 * @brief Entry point for threads.
+	 *
+	 * This function will handle jobs (ie. times, levels to process) to each thread.
+	 * 
+     * @param myTargetInfo A threads own info instance
+     * @param threadIndex 
+     */
+	
+	virtual void Run(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
+	/**
+	 * @brief Initialize compiled_plugin_base and set internal state.
+	 *
+     * @param conf
+     */
+
+	virtual void Init(std::shared_ptr<const plugin_configuration> conf);
+
+	/**
+	 * @brief Set target params
+	 *
+	 * Function will fetch grib1 definitions from neons if necessary, and will
+	 * create the data backend for the resulting info.
+	 *
+     * @param params vector of target parameters
+     */
+
+	virtual void SetParams(std::vector<param>& params);
+
+
+	/**
+	 * @brief Record timing info and write info contents to disk
+	 */
+
+	virtual void Finish();
+
+	/**
+	 * @brief Top level entry point for per-thread calculation
+	 *
+	 * This function will abort since the plugins must define the processing
+	 * themselves.
+	 *
+     * @param myTargetInfo A threads own info instance
+     * @param threadIndex
+     */
+	
+	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex) ;
+
+	/**
+	 * @brief Start threaded calculation
+     */
+
+	virtual void Start();
+
+	std::shared_ptr<info> itsInfo;
+	std::shared_ptr<const plugin_configuration> itsConfiguration;
+	short itsThreadCount;
+
+private:
+	std::unique_ptr<timer> itsTimer;
+	mutable level_transform itsLevelTransformMap;
+	std::unique_ptr<logger> itsBaseLogger;
+	bool itsPluginIsInitialized;
 	HPDimensionType itsLeadingDimension;
-	std::shared_ptr<info> itsFeederInfo;
+
 };
 
 } // namespace plugin

@@ -40,24 +40,7 @@ tpot::tpot()
 
 void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 
 	/*
 	 * Set target parameter to potential temperature
@@ -73,7 +56,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	if (conf->Exists("theta") && conf->GetValue("theta") == "true")
+	if (itsConfiguration->Exists("theta") && itsConfiguration->GetValue("theta") == "true")
 	{
 		itsThetaCalculation = true;
 
@@ -88,7 +71,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 		theParams.push_back(p);
 	}
 
-	if (conf->Exists("thetaw") && conf->GetValue("thetaw") == "true")
+	if (itsConfiguration->Exists("thetaw") && itsConfiguration->GetValue("thetaw") == "true")
 	{
 		itsThetaWCalculation = true;
 
@@ -105,7 +88,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 		theParams.push_back(p);
 	}
 
-	if (conf->Exists("thetae") && conf->GetValue("thetae") == "true")
+	if (itsConfiguration->Exists("thetae") && itsConfiguration->GetValue("thetae") == "true")
 	{
 		itsThetaECalculation = true;
 
@@ -138,74 +121,9 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 		theParams.push_back(p);
 	}
 
-	// GRIB 1
+	SetParams(theParams);
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
-	}
-
-	targetInfo->Params(theParams);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->ParamIndex(0); // Set index to first param (it doesn't matter which one, as long as its set
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-
-		aTimer->Start();
-	}
-	
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&tpot::Run,
-											 this,
-											 shared_ptr<info> (new info(*targetInfo)),
-											 conf,
-											 i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-	
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-
-}
-
-void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
-{
-
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
+	Start();
 
 }
 
@@ -215,7 +133,7 @@ void tpot::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configurat
  * This function does the actual calculation.
  */
 
-void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -251,7 +169,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 		try
 		{
 
-			TInfo = theFetcher->Fetch(conf,
+			TInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
 										myTargetInfo->Level(),
 										param("T-K"));
@@ -259,7 +177,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			if (!isPressureLevel)
 			{
 				// Source info for P
-				PInfo = theFetcher->Fetch(conf,
+				PInfo = theFetcher->Fetch(itsConfiguration,
 											myTargetInfo->Time(),
 											myTargetInfo->Level(),
 											PParam);
@@ -274,7 +192,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 			if (itsThetaWCalculation || itsThetaECalculation)
 			{
-				TDInfo = theFetcher->Fetch(conf,
+				TDInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
 										myTargetInfo->Level(),
 										param("TD-C"));
@@ -291,10 +209,10 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 
-					if (conf->StatisticsEnabled())
+					if (itsConfiguration->StatisticsEnabled())
 					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 
 					continue;
@@ -334,7 +252,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 #ifdef HAVE_CUDA
 
-		if (conf->UseCuda() && equalGrids && threadIndex <= conf->CudaDeviceCount())
+		if (itsConfiguration->UseCuda() && equalGrids && threadIndex <= itsConfiguration->CudaDeviceCount())
 		{
 			itsLogger->Warning("tpot@cuda not supported for now");
 		}
@@ -522,10 +440,10 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 			SwapTo(myTargetInfo, kBottomLeft);
 		}
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 		}
 
 		/*
@@ -537,9 +455,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_conf
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 
 	}

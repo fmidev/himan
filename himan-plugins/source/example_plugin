@@ -32,27 +32,10 @@ example_plugin::example_plugin()
 
 void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	unsigned short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-	
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 
 	/*
-	 * Set target parameter to potential temperature
+	 * Set target parameter to ???
 	 * - name PARM_NAME
 	 * - univ_id UNIV_ID
 	 * - grib2 descriptor X'Y'Z
@@ -83,76 +66,9 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	theParams.push_back(theRequestedParam);
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
-	}
+	SetParams(theParams);
 
-	targetInfo->Params(theParams);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(theRequestedParam);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-	
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-	
-	for (size_t i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&example_plugin::Run,
-								this,
-								shared_ptr<info> (new info(*targetInfo)),
-								conf,
-								i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-}
-
-void example_plugin::Run(shared_ptr<info> myTargetInfo,
-				shared_ptr<const plugin_configuration> conf,
-				unsigned short threadIndex)
-{
-
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
+	Start();
 }
 
 /*
@@ -161,7 +77,7 @@ void example_plugin::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void example_plugin::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));

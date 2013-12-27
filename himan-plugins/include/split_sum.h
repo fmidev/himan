@@ -52,9 +52,7 @@ public:
 	}
 
 private:
-
-	void Run(std::shared_ptr<info>, std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
-	void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
+	void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
 	/**
 	 * @brief Fetch source data for a rate calculation.
@@ -69,7 +67,7 @@ private:
 	 * @return Requested data
 	 */
 
-	std::shared_ptr<himan::info> GetSourceDataForRate(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, bool forward, int targetStep);
+	std::shared_ptr<himan::info> GetSourceDataForRate(std::shared_ptr<const info> myTargetInfo, bool forward, int targetStep);
 
 	/**
 	 * @brief Fetching source data from cumulative parameter
@@ -80,7 +78,7 @@ private:
 	 * @return himan::info contain source data, empty if no data found
 	 */
 
-	std::shared_ptr<info> FetchSourceData(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime);
+	std::shared_ptr<info> FetchSourceData(std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime);
 
 };
 

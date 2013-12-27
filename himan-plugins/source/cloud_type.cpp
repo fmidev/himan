@@ -32,26 +32,11 @@ cloud_type::cloud_type()
 void cloud_type::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
-	unique_ptr<timer> aTimer;
+	Init(conf);
 
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
 
 	/*
-	 * Set target parameter to potential temperature
+	 * Set target parameter to cloud type
 	 * - name CLDSYM-N
 	 * - univ_id 328
 	 * - grib2 descriptor 0'6'8
@@ -72,81 +57,12 @@ void cloud_type::Process(std::shared_ptr<const plugin_configuration> conf)
 	theRequestedParam.GribParameter(8);
 
 	theParams.push_back(theRequestedParam);
-	
-	// GRIB 1
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
-	}
+	SetParams(theParams);
 
-	targetInfo->Params(theParams);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(theRequestedParam);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&cloud_type::Run,
-								this,
-								shared_ptr<info> (new info(*targetInfo)),
-								conf,
-								i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
+	Start();
 }
 
-void cloud_type::Run(shared_ptr<info> myTargetInfo,
-				shared_ptr<const plugin_configuration> conf,
-				unsigned short threadIndex)
-{
-
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
-}
 
 /*
  * Calculate()
@@ -154,7 +70,7 @@ void cloud_type::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -196,37 +112,37 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		try
 		{
 			// Source info for T2m
-			T2mInfo = theFetcher->Fetch(conf,
+			T2mInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 T2mLevel,
 								 TParam);
 			// Source info for N
-			NInfo = theFetcher->Fetch(conf,
+			NInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 NKLevel,
 								 NParam);
 			// Source info for kIndex
-			KInfo = theFetcher->Fetch(conf,
+			KInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 NKLevel,
 								 KParam);
 			// Source info for T850
-			T850Info = theFetcher->Fetch(conf,
+			T850Info = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 RH850Level,
 								 TParam);	
 			// Source info for RH850
-			RH850Info = theFetcher->Fetch(conf,
+			RH850Info = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 RH850Level,
 								 RHParam);				
 			// Source info for RH700
-			RH700Info = theFetcher->Fetch(conf,
+			RH700Info = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 RH700Level,
 								 RHParam);
 			// Source info for RH500
-			RH500Info = theFetcher->Fetch(conf,
+			RH500Info = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 RH500Level,
 								 RHParam);
@@ -240,10 +156,10 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing);
 
-					if (conf->StatisticsEnabled())
+					if (itsConfiguration->StatisticsEnabled())
 					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 					
 					continue;
@@ -257,7 +173,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
 			processTimer->Start();
 		}
@@ -598,17 +514,17 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		SwapTo(myTargetInfo, kBottomLeft);
 
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
 			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
 #ifdef DEBUG
 			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
 
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 
 		}
 
@@ -620,9 +536,9 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 	}
 }

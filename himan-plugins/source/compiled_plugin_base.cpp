@@ -22,29 +22,13 @@
 using namespace std;
 using namespace himan::plugin;
 
-const short MAX_THREADS = 12; //<! Max number of threads we allow
 const double kInterpolatedValueEpsilon = 0.00001; //<! Max difference between two grid points (if smaller, points are considered the same)
-
 mutex itsAdjustDimensionMutex;
 
-short compiled_plugin_base::ThreadCount(short userThreadCount) const
+compiled_plugin_base::compiled_plugin_base() : itsPluginIsInitialized(false)
 {
-	short coreCount = static_cast<short> (boost::thread::hardware_concurrency()); // Number of cores
-
-	short threadCount = MAX_THREADS;
-
-	if (userThreadCount > 0)
-	{
-		threadCount = userThreadCount;
-	}
-	else if (MAX_THREADS > coreCount)
-	{
-		threadCount = coreCount;
-	}
-
-	return threadCount;
+	itsBaseLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("compiled_plugin_base"));
 }
-
 
 bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetGrid, shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value)
 {
@@ -110,21 +94,21 @@ bool compiled_plugin_base::AdjustLeadingDimension(shared_ptr<info> myTargetInfo)
 
 	if (itsLeadingDimension == kTimeDimension)
 	{
-		if (!itsFeederInfo->NextTime())
+		if (!itsInfo->NextTime())
 		{
 			return false;
 		}
 
-		myTargetInfo->Time(itsFeederInfo->Time());
+		myTargetInfo->Time(itsInfo->Time());
 	}
 	else if (itsLeadingDimension == kLevelDimension)
 	{
-		if (!itsFeederInfo->NextLevel())
+		if (!itsInfo->NextLevel())
 		{
 			return false;
 		}
 
-		myTargetInfo->Level(itsFeederInfo->Level());
+		myTargetInfo->Level(itsInfo->Level());
 	}
 	else
 	{
@@ -270,36 +254,15 @@ bool compiled_plugin_base::SwapTo(shared_ptr<info> myTargetInfo, HPScanningMode 
 	return true;
 }
 
-void compiled_plugin_base::StoreGrib1ParameterDefinitions(vector<param> params, long table2Version)
-{
-	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-	for (unsigned int i = 0; i < params.size(); i++)
-	{
-		long parm_id = n->NeonsDB().GetGridParameterId(table2Version, params[i].Name());
-
-		if (parm_id == -1)
-		{
-			unique_ptr<logger> aLogger = std::unique_ptr<logger> (himan::logger_factory::Instance()->GetLog("compiled_plugin_base"));
-
-			aLogger->Warning("Grib1 parameter definitions not found from Neons");
-			aLogger->Warning("table2Version is " + boost::lexical_cast<string> (table2Version) + ", parm_name is " + params[i].Name());
-		}
-
-		params[i].GribIndicatorOfParameter(parm_id);
-		params[i].GribTableVersion(table2Version);
-	}
-}
-
-void compiled_plugin_base::WriteToFile(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> targetInfo)
+void compiled_plugin_base::WriteToFile(shared_ptr<const info> targetInfo)
 {
 	shared_ptr<writer> aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
 	// writing might modify iterator positions --> create a copy
 
-	shared_ptr<info> tempInfo(new info(*targetInfo));
+	auto tempInfo = make_shared<info> (*targetInfo);
 
-	if (conf->FileWriteOption() == kNeons || conf->FileWriteOption() == kMultipleFiles)
+	if (itsConfiguration->FileWriteOption() == kNeons || itsConfiguration->FileWriteOption() == kMultipleFiles)
 	{
 		// If info holds multiple parameters, we must loop over them all
 		// Note! We only loop over the parameters, not over the times or levels!
@@ -308,15 +271,13 @@ void compiled_plugin_base::WriteToFile(shared_ptr<const plugin_configuration> co
 
 		while (tempInfo->NextParam())
 		{
-			aWriter->ToFile(tempInfo, conf);
+			aWriter->ToFile(tempInfo, itsConfiguration);
 		}
 	}
-	else if (conf->FileWriteOption() == kSingleFile)
+	else if (itsConfiguration->FileWriteOption() == kSingleFile)
 	{
-		aWriter->ToFile(tempInfo, conf, conf->ConfigurationFile());
+		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
 	}
-
-	tempInfo.reset();
 }
 
 bool compiled_plugin_base::GetAndSetCuda(shared_ptr<const configuration> conf, int threadIndex)
@@ -343,4 +304,182 @@ int compiled_plugin_base::CudaDeviceId() const
 {
 	shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 	return p->GetDevice();
+}
+
+void compiled_plugin_base::Start()
+{
+	if (!itsPluginIsInitialized)
+	{
+		itsBaseLogger->Error("Start() called before Init()");
+		return;
+	}
+	
+	boost::thread_group g;
+
+	/*
+	 * Each thread will have a copy of the target info.
+	 */
+
+	for (short i = 0; i < itsThreadCount; i++)
+	{
+
+		printf("Info::compiled_pluging: Thread %d starting\n", (i + 1)); // Printf is thread safe
+
+		boost::thread* t = new boost::thread(&compiled_plugin_base::Run,
+											 this,
+											 std::make_shared<info> (*itsInfo),
+											 i + 1);
+
+		g.add_thread(t);
+
+	}
+
+	g.join_all();
+
+	Finish();
+}
+
+void compiled_plugin_base::Init(shared_ptr<const plugin_configuration> conf)
+{
+
+	const short MAX_THREADS = 12; //<! Max number of threads we allow
+
+	itsConfiguration = conf;
+
+	if (itsConfiguration->StatisticsEnabled())
+	{
+		itsTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+		itsTimer->Start();
+		itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
+		itsConfiguration->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
+	}
+
+	// Determine thread count
+
+	short coreCount = static_cast<short> (boost::thread::hardware_concurrency()); // Number of cores
+
+	itsThreadCount = MAX_THREADS;
+
+	// If user has specified thread count, always use that
+	if (conf->ThreadCount() > 0)
+	{
+		itsThreadCount = conf->ThreadCount();
+	}
+	// we don't want to use all cores in a server by default
+	else if (MAX_THREADS > coreCount)
+	{
+		itsThreadCount = coreCount;
+	}
+
+	itsInfo = itsConfiguration->Info();
+
+	itsPluginIsInitialized = true;
+}
+
+void compiled_plugin_base::Run(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+{
+	while (AdjustLeadingDimension(myTargetInfo))
+	{
+		Calculate(myTargetInfo, threadIndex);
+	}
+}
+
+void compiled_plugin_base::Finish()
+{
+
+	if (itsConfiguration->StatisticsEnabled())
+	{
+		itsTimer->Stop();
+		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer->GetTime());
+	}
+
+	if (itsConfiguration->FileWriteOption() == kSingleFile)
+	{
+		WriteToFile(itsInfo);
+	}
+}
+
+
+void compiled_plugin_base::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+{
+	itsBaseLogger->Fatal("Top level calculate called");
+	exit(1);
+}
+
+void compiled_plugin_base::SetParams(std::vector<param>& params)
+{
+	if (params.empty())
+	{
+		itsBaseLogger->Fatal("size of target parameter vector is zero");
+		exit(1);
+	}
+	
+	// GRIB 1
+
+	if (itsConfiguration->OutputFileType() == kGRIB1)
+	{
+		auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		for (unsigned int i = 0; i < params.size(); i++)
+		{
+			long table2Version = itsInfo->Producer().TableVersion();
+			long parm_id = n->NeonsDB().GetGridParameterId(table2Version, params[i].Name());
+
+			if (parm_id == -1)
+			{
+				itsBaseLogger->Warning("Warning::util: Grib1 parameter definitions not found from Neons");
+				itsBaseLogger->Warning("table2Version is " + boost::lexical_cast<string> (table2Version) + ", parm_name is " + params[i].Name());
+			}
+
+			params[i].GribIndicatorOfParameter(parm_id);
+			params[i].GribTableVersion(table2Version);
+		}
+	}
+
+	itsInfo->Params(params);
+
+	/*
+	 * Create data structures.
+	 */
+
+	itsInfo->Create();
+
+	/*
+	 * Set leading dimension, iterators must be reseted since they are at
+	 * first position after Create()
+	 */
+
+	itsLeadingDimension = itsConfiguration->LeadingDimension();
+	itsInfo->Reset();
+
+	/*
+	 * Do not launch more threads than there are things to calculate.
+	 */
+
+	if (itsLeadingDimension == kTimeDimension)
+	{
+		if (itsInfo->SizeTimes() < static_cast<size_t> (itsThreadCount))
+		{
+			itsThreadCount = static_cast<short> (itsInfo->SizeTimes());
+			itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
+		}
+	}
+	else if (itsLeadingDimension == kLevelDimension)
+	{
+		if (itsInfo->SizeLevels() < static_cast<size_t> (itsThreadCount))
+		{
+			itsThreadCount = static_cast<short> (itsInfo->SizeLevels());
+			itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
+		}
+	}
+	/*
+	 * At this point plugin initialization is considered to be done
+	 */
+
+	if (itsConfiguration->StatisticsEnabled())
+	{
+		itsTimer->Stop();
+		itsConfiguration->Statistics()->AddToInitTime(itsTimer->GetTime());
+		itsTimer->Start();
+	}
 }

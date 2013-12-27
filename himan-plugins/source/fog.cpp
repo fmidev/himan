@@ -33,26 +33,10 @@ fog::fog()
 
 void fog::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 
 	/*
-	 * Set target parameter to potential temperature
+	 * Set target parameter to fog
 	 * - name PARM_NAME
 	 * - univ_id UNIV_ID
 	 * - grib2 descriptor 0'6'8
@@ -74,79 +58,10 @@ void fog::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	theParams.push_back(theRequestedParam);
 
-	// GRIB 1
+	SetParams(theParams);
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
-	}
-	
-	targetInfo->Params(theParams);
+	Start();
 
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(theRequestedParam);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&fog::Run,
-								this,
-								shared_ptr<info> (new info(*targetInfo)),
-								conf,
-								i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-
-}
-
-void fog::Run(shared_ptr<info> myTargetInfo,
-				shared_ptr<const plugin_configuration> conf,
-				unsigned short threadIndex)
-{
-
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
 }
 
 /*
@@ -155,7 +70,7 @@ void fog::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -193,17 +108,17 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 		try
 		{
 
-			groundInfo = theFetcher->Fetch(conf,
+			groundInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 ground,
 								 groundParam);
 			
-			dewInfo = theFetcher->Fetch(conf,
+			dewInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 h2m,
 								 dewParam);
 
-			windInfo = theFetcher->Fetch(conf,
+			windInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 h10m,
 								 windParam);
@@ -217,10 +132,10 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing);
 
-					if (conf->StatisticsEnabled())
+					if (itsConfiguration->StatisticsEnabled())
 					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 					
 					continue;
@@ -234,7 +149,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
 			processTimer->Start();
 		}
@@ -261,7 +176,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 #ifdef HAVE_CUDA
 
-		if (conf->UseCuda() && equalGrids && threadIndex <= conf->CudaDeviceCount())
+		if (itsConfiguration->UseCuda() && equalGrids && threadIndex <= itsConfiguration->CudaDeviceCount())
 		{
 
 			deviceType = "GPU";
@@ -424,17 +339,17 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 		SwapTo(myTargetInfo, kBottomLeft);
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
 			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
 #ifdef DEBUG
 			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
 
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 
 		}
 
@@ -446,9 +361,9 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 	}
 }

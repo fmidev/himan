@@ -50,9 +50,7 @@ public:
     }
    
 private:
-
-    void Run(std::shared_ptr<info>, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
-    void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
+    virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
 	HPTargetType itsCalculationTarget;
 	bool itsVectorCalculation;

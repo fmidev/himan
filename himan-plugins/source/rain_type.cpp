@@ -36,26 +36,10 @@ rain_type::rain_type()
 
 void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 
 	/*
-	 * Set target parameter to potential temperature
+	 * Set target parameter to ???
 	 * - name PARM_NAME
 	 * - univ_id UNIV_ID
 	 * - grib2 descriptor X'Y'Z
@@ -71,6 +55,11 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	// GRIB 2
 
+	if (itsConfiguration->OutputFileType() == kGRIB2)
+	{
+		itsLogger->Error("Unable to write output to GRIB2");
+		return;
+	}
 	/*
 	 * theRequestedParam.GribDiscipline(X);
 	 * theRequestedParam.GribCategory(Y);
@@ -81,74 +70,9 @@ void rain_type::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	theParams.push_back(theRequestedParam);
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
-	}
+	SetParams(theParams);
 
-	targetInfo->Params(theParams);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(theRequestedParam);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&rain_type::Run,
-								this,
-								shared_ptr<info> (new info(*targetInfo)),
-								conf,
-								i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-}
-
-void rain_type::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
-{
-
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
+	Start();
 }
 
 /*
@@ -157,7 +81,7 @@ void rain_type::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_confi
  * This function does the actual calculation.
  */
 
-void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -211,11 +135,11 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 			{
 				forecast_time prevTimeStep = myTargetInfo->Time();
 				prevTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -paramStep);				
-				prevRRInfo = FetchSourceRR(conf,prevTimeStep,myTargetInfo->Level());
+				prevRRInfo = FetchSourceRR(prevTimeStep,myTargetInfo->Level());
 
 				forecast_time nextTimeStep = myTargetInfo->Time();
 				nextTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), paramStep);				
-				nextRRInfo = FetchSourceRR(conf,prevTimeStep,myTargetInfo->Level());
+				nextRRInfo = FetchSourceRR(prevTimeStep,myTargetInfo->Level());
 
 			}
 			catch (HPExceptionType e)
@@ -226,10 +150,10 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 						myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 						myTargetInfo->Data()->Fill(kFloatMissing);
 
-						if (conf->StatisticsEnabled())
+						if (itsConfiguration->StatisticsEnabled())
 						{
-							conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-							conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+							itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+							itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 						}
 
 						continue;
@@ -247,31 +171,31 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 			 *	Parameter infos are made here
 			 *
 			 */
-			PInfo = theFetcher->Fetch(conf,
+			PInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 PLevel,
 								 PParam);
-			Z850Info = theFetcher->Fetch(conf,
+			Z850Info = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 Z850Level,
 								 ZParam);
-			NInfo = theFetcher->Fetch(conf,
+			NInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 PLevel,
 								 NParam);
-			TInfo = theFetcher->Fetch(conf,
+			TInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 T2Level,
 								 TParam);
-			CloudInfo = theFetcher->Fetch(conf,
+			CloudInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 PLevel,
 								 CloudParam);
-			KindexInfo = theFetcher->Fetch(conf,
+			KindexInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 PLevel,
 								 KindexParam);
-            T850Info = theFetcher->Fetch(conf,
+            T850Info = theFetcher->Fetch(itsConfiguration,
                                  myTargetInfo->Time(),
                                  Z850Level,
                                  TParam);
@@ -286,10 +210,10 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing);
 
-					if (conf->StatisticsEnabled())
+					if (itsConfiguration->StatisticsEnabled())
 					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 					
 					continue;
@@ -303,7 +227,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
 			processTimer->Start();
 		}
@@ -587,17 +511,17 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 			}
 
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
 			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
 #ifdef DEBUG
 			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
 #endif
 
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 
 		}
 
@@ -609,20 +533,20 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 	}
 }
 
-shared_ptr<himan::info> rain_type::FetchSourceRR(shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel)
+shared_ptr<himan::info> rain_type::FetchSourceRR(const forecast_time& wantedTime, const level& wantedLevel)
 {
 	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
 	try
 	{
-		return f->Fetch(conf,
+		return f->Fetch(itsConfiguration,
 						wantedTime,
 						wantedLevel,
 						param("RR-1-MM"));

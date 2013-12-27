@@ -96,8 +96,7 @@ private:
 	
 	double ThetaE(double P, double T, double TD, double theta);
 
-	void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
-	void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
+	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short theThreadIndex);
 
 	bool itsThetaCalculation;
 	bool itsThetaWCalculation;

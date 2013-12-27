@@ -33,24 +33,7 @@ icing::icing()
 
 void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-	
-	shared_ptr<info> targetInfo = conf->Info();
-
-	boost::thread_group g;
+	Init(conf);
 
 	/*
 	 * Set target parameter to icing
@@ -70,73 +53,9 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	theParams.push_back(theRequestedParam);
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
-	}
+	SetParams(theParams);
 
-	targetInfo->Params(theParams);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(theRequestedParam);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&icing::Run,
-											 this,
-											 shared_ptr<info> (new info(*targetInfo)),
-											 conf,
-											 i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-}
-
-void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
-{
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, theThreadIndex);
-	}
+	Start();
 }
 
 /*
@@ -145,7 +64,7 @@ void icing::Run(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configura
  * This function does the actual calculation.
  */
 
-void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short theThreadIndex)
+void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -177,13 +96,13 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 		try
 		{
 			// Source info for T
-			TInfo = theFetcher->Fetch(conf,
+			TInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 TParam);
 				
 			// Source info for Tg
-			VvInfo = theFetcher->Fetch(conf,
+			VvInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 VvParam);
@@ -199,7 +118,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 			}
 			
 			// Source info for FF
-			ClInfo = theFetcher->Fetch(conf,
+			ClInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 ClParam);
@@ -213,10 +132,10 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 
-				if (conf->StatisticsEnabled())
+				if (itsConfiguration->StatisticsEnabled())
 				{
-					conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-					conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 				}
 
 				continue;
@@ -230,7 +149,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 
 		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
 			processTimer->Start();
 		}
@@ -387,16 +306,16 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 
 		SwapTo(myTargetInfo, kBottomLeft);
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
 			processTimer->Stop();
-			conf->Statistics()->AddToProcessingTime(processTimer->GetTime());
+			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
 
 #ifdef DEBUG
 			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
 #endif
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 		}
 
 		/*
@@ -407,9 +326,9 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_con
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 	}
 }

@@ -44,11 +44,9 @@ public:
     }
 
 private:
+    virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
-	void Run(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short threadIndex);
-    void Calculate(std::shared_ptr<info> myTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short threadIndex);
-
-    std::shared_ptr<info> FetchPrevious(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
+    std::shared_ptr<info> FetchPrevious(const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
     int itsBottomLevel;
     bool itsFastMode;
 };

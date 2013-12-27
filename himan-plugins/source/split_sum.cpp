@@ -78,24 +78,7 @@ split_sum::split_sum()
 
 void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 
 	/*
 	 * Set target parameter to split_sum.
@@ -107,7 +90,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> params;
 
-	if (conf->Exists("rr1h") && conf->GetValue("rr1h") == "true")
+	if (itsConfiguration->Exists("rr1h") && itsConfiguration->GetValue("rr1h") == "true")
 	{
 		param parm;
 		parm.Name("RR-1-MM");
@@ -125,7 +108,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	}
 
-	if (conf->Exists("rr3h") && conf->GetValue("rr3h") == "true")
+	if (itsConfiguration->Exists("rr3h") && itsConfiguration->GetValue("rr3h") == "true")
 	{
 		param parm;
 		parm.Name("RR-3-MM");
@@ -142,7 +125,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("rr6h") && conf->GetValue("rr6h") == "true")
+	if (itsConfiguration->Exists("rr6h") && itsConfiguration->GetValue("rr6h") == "true")
 	{
 		param parm;
 		parm.Name("RR-6-MM");
@@ -159,7 +142,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("rr12h") && conf->GetValue("rr12h") == "true")
+	if (itsConfiguration->Exists("rr12h") && itsConfiguration->GetValue("rr12h") == "true")
 	{
 		param parm;
 		parm.Name("RR-12-MM");
@@ -176,7 +159,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("rrr") && conf->GetValue("rrr") == "true")
+	if (itsConfiguration->Exists("rrr") && itsConfiguration->GetValue("rrr") == "true")
 	{
 		param parm;
 		parm.Name("RRR-KGM2");
@@ -189,7 +172,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("rrrc") && conf->GetValue("rrc") == "true")
+	if (itsConfiguration->Exists("rrrc") && itsConfiguration->GetValue("rrc") == "true")
 	{
 		param parm;
 		parm.Name("RRRC-KGM2");
@@ -202,7 +185,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("rrrl") && conf->GetValue("rrl") == "true")
+	if (itsConfiguration->Exists("rrrl") && itsConfiguration->GetValue("rrl") == "true")
 	{
 		param parm;
 		parm.Name("RRRL-KGM2");
@@ -217,7 +200,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	// Snow
 	
-	if (conf->Exists("snr") && conf->GetValue("snr") == "true")
+	if (itsConfiguration->Exists("snr") && itsConfiguration->GetValue("snr") == "true")
 	{
 		param parm;
 		parm.Name("SNR-KGM2");
@@ -230,7 +213,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("snrc") && conf->GetValue("snrc") == "true")
+	if (itsConfiguration->Exists("snrc") && itsConfiguration->GetValue("snrc") == "true")
 	{
 		param parm;
 		parm.Name("SNRC-KGM2");
@@ -243,7 +226,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("snrl") && conf->GetValue("snrl") == "true")
+	if (itsConfiguration->Exists("snrl") && itsConfiguration->GetValue("snrl") == "true")
 	{
 		param parm;
 		parm.Name("SNRL-KGM2");
@@ -259,7 +242,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Radiation
 	// These are RATES not SUMS
 
-	if (conf->Exists("glob") && conf->GetValue("glob") == "true")
+	if (itsConfiguration->Exists("glob") && itsConfiguration->GetValue("glob") == "true")
 	{
 		param parm;
 		parm.Name("RADGLO-WM2");
@@ -272,7 +255,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("lw") && conf->GetValue("lw") == "true")
+	if (itsConfiguration->Exists("lw") && itsConfiguration->GetValue("lw") == "true")
 	{
 		param parm;
 		parm.Name("RADLW-WM2");
@@ -285,7 +268,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (conf->Exists("toplw") && conf->GetValue("toplw") == "true")
+	if (itsConfiguration->Exists("toplw") && itsConfiguration->GetValue("toplw") == "true")
 	{
 		param parm;
 		parm.Name("RTOPLW-WM2");
@@ -321,78 +304,10 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	// GRIB 1
+	SetParams(params);
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(params, targetInfo->Producer().TableVersion());
-	}
-
-	targetInfo->Params(params);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->ParamIndex(0);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&split_sum::Run,
-											 this,
-											 shared_ptr<info> (new info(*targetInfo)),
-											 conf,
-											 i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-}
-
-void split_sum::Run(shared_ptr<info> myTargetInfo,
-				shared_ptr<const plugin_configuration> conf,
-				unsigned short threadIndex)
-{
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
-
+	Start();
+	
 }
 
 /*
@@ -401,9 +316,7 @@ void split_sum::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void split_sum::Calculate(shared_ptr<info> myTargetInfo,
-					 shared_ptr<const plugin_configuration> conf,
-					 unsigned short threadIndex)
+void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("split_sumThread #" + boost::lexical_cast<string> (threadIndex)));
@@ -510,13 +423,13 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo,
 
 				// Previous VALID data
 				myThreadedLogger->Debug("Searching for previous time step data");
-				prevSumInfo = GetSourceDataForRate(conf, myTargetInfo, false, targetStep);
+				prevSumInfo = GetSourceDataForRate(myTargetInfo, false, targetStep);
 	
 				// Next VALID data
 				if (prevSumInfo)
 				{
 					myThreadedLogger->Debug("Searching for next time step data");
-					curSumInfo = GetSourceDataForRate(conf, myTargetInfo, true, targetStep);
+					curSumInfo = GetSourceDataForRate(myTargetInfo, true, targetStep);
 				}
 
 			}
@@ -545,7 +458,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo,
 
 					prevTimeStep.ValidDateTime()->Adjust(prevTimeStep.StepResolution(), -paramStep);
 
-					prevSumInfo = FetchSourceData(conf, myTargetInfo, prevTimeStep);
+					prevSumInfo = FetchSourceData(myTargetInfo, prevTimeStep);
 
 				}
 					
@@ -554,7 +467,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo,
 
 				if (prevSumInfo)
 				{
-					curSumInfo = FetchSourceData(conf, myTargetInfo, myTargetInfo->Time());
+					curSumInfo = FetchSourceData(myTargetInfo, myTargetInfo->Time());
 				}
 			}
 
@@ -566,10 +479,10 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo,
 
 				myTargetInfo->Data()->Fill(kFloatMissing);
 
-				if (conf->StatisticsEnabled())
+				if (itsConfiguration->StatisticsEnabled())
 				{
-					conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-					conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 				}
 
 				// Will write empty file
@@ -719,10 +632,10 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo,
 
 			SwapTo(myTargetInfo, kBottomLeft);
 
-			if (conf->StatisticsEnabled())
+			if (itsConfiguration->StatisticsEnabled())
 			{
-				conf->Statistics()->AddToMissingCount(missingCount);
-				conf->Statistics()->AddToValueCount(count);
+				itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+				itsConfiguration->Statistics()->AddToValueCount(count);
 			}
 
 			/*
@@ -736,14 +649,14 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo,
 
 		// Write all parameters to disk
 			
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 	}
 }
 
-shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, bool forward, int targetStep)
+shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const info> myTargetInfo, bool forward, int targetStep)
 {
 	shared_ptr<info> SumInfo;
 
@@ -822,9 +735,7 @@ shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const plugin_
 	for (; !SumInfo && i <= steps + targetStep; i += step)
 	{
 		int curstep = i;
-
-		//*= step;
-		
+	
 		forecast_time wantedTimeStep = myTargetInfo->Time();
 
 		if (!forward)
@@ -839,18 +750,18 @@ shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const plugin_
 			continue;
 		}
 
-		SumInfo = FetchSourceData(conf,myTargetInfo,wantedTimeStep);
+		SumInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
 
 	}
 
 	return SumInfo;
 }
 
-shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const plugin_configuration> conf, shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime)
+shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime)
 {
 	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-	level groundLevel(kHeight, 0 ,"HEIGHT");
+	level wantedLevel(kHeight, 0 ,"HEIGHT");
 
 	// Transform ground level based on only the first source parameter
 
@@ -860,15 +771,22 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const plugin_confi
 
 	assert(!params.empty());
 
-	groundLevel = LevelTransform(conf->SourceProducer(), params[0], groundLevel);
+	if (myTargetInfo->Param().Name() == "RTOPLW-WM2")
+	{
+		wantedLevel = level(kTopOfAtmosphere, 0, "TOP");
+	}
+	else
+	{
+		wantedLevel = LevelTransform(itsConfiguration->SourceProducer(), params[0], wantedLevel);
+	}
 
 	shared_ptr<info> SumInfo;
 	
 	try
 	{
-		SumInfo = f->Fetch(conf,
+		SumInfo = f->Fetch(itsConfiguration,
 						wantedTime,
-						groundLevel,
+						wantedLevel,
 						sourceParameters[myTargetInfo->Param().Name()]);
 	}
 	catch (HPExceptionType e)
@@ -887,7 +805,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const plugin_confi
 
 		SumInfo = make_shared<info> (*myTargetInfo);
 		vector<forecast_time> times = { wantedTime };
-		vector<level> levels = { groundLevel };
+		vector<level> levels = { wantedLevel };
 		vector<param> params = { sourceParameters[myTargetInfo->Param().Name()][0] };
 
 		SumInfo->Params(params);

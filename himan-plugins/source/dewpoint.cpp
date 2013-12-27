@@ -35,23 +35,7 @@ dewpoint::dewpoint()
 void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 {
 
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 	
 	/*
 	 * Set target parameter to potential temperature
@@ -73,78 +57,9 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 
 	params.push_back(requestedParam);
 
-	// GRIB 1
+	SetParams(params);
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(params, targetInfo->Producer().TableVersion());
-	}
-
-	targetInfo->Params(params);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->Param(requestedParam);
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-		aTimer->Start();
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&dewpoint::Run,
-											 this,
-											 shared_ptr<info> (new info(*targetInfo)),
-											 conf,
-											 i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
-}
-
-void dewpoint::Run(shared_ptr<info> myTargetInfo,
-			   const shared_ptr<const plugin_configuration> conf,
-			   unsigned short threadIndex)
-{
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
-
+	Start();
 }
 
 /*
@@ -153,9 +68,7 @@ void dewpoint::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
-					 const shared_ptr<const plugin_configuration> conf,
-					 unsigned short threadIndex)
+void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	
@@ -172,7 +85,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 	myTargetInfo->FirstParam();
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(conf, threadIndex);
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
 
 	// Force use of CPU since cuda does not handle RHScale yet!
 	useCudaInThisThread = false;
@@ -191,17 +104,17 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 		try
 		{
-			TInfo = f->Fetch(conf,
+			TInfo = f->Fetch(itsConfiguration,
 								myTargetInfo->Time(),
 								myTargetInfo->Level(),
 								TParam,
-								conf->UseCudaForPacking() && useCudaInThisThread);
+								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 
-			RHInfo = f->Fetch(conf,
+			RHInfo = f->Fetch(itsConfiguration,
 								myTargetInfo->Time(),
 								myTargetInfo->Level(),
 								RHParam,
-								conf->UseCudaForPacking() && useCudaInThisThread);
+								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 
 
 		}
@@ -213,10 +126,10 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 
-					if (conf->StatisticsEnabled())
+					if (itsConfiguration->StatisticsEnabled())
 					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 
 					continue;
@@ -378,10 +291,10 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 			SwapTo(myTargetInfo, kBottomLeft);
 		}
 
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 		}
 		
 		/*
@@ -392,9 +305,9 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo,
 
 		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 	}
 }

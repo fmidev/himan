@@ -51,10 +51,8 @@ public:
     }
 
 private:
-
-    void Run(std::shared_ptr<info>, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
-    void Calculate(std::shared_ptr<info> theTargetInfo, std::shared_ptr<const plugin_configuration> theConfiguration, unsigned short theThreadIndex);
-    std::shared_ptr<info> FetchPrevious(std::shared_ptr<const plugin_configuration> conf, const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
+    virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+    std::shared_ptr<info> FetchPrevious(const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
 
     int targetTemperature;
 };

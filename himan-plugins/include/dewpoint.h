@@ -52,9 +52,7 @@ public:
     }
 
 private:
-
-    void Run(std::shared_ptr<info>, const std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
-    void Calculate(std::shared_ptr<info> myTargetInfo, const std::shared_ptr<const plugin_configuration> conf, unsigned short threadIndex);
+    virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
 };
 

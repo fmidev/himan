@@ -39,23 +39,7 @@ windvector::windvector()
 
 void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
-	unique_ptr<timer> aTimer;
-
-	// Get number of threads to use
-
-	short threadCount = ThreadCount(conf->ThreadCount());
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-		aTimer->Start();
-		conf->Statistics()->UsedThreadCount(threadCount);
-		conf->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
-	}
-
-	boost::thread_group g;
-
-	shared_ptr<info> targetInfo = conf->Info();
+	Init(conf);
 
 	/*
 	 * Set target parameter to windvector
@@ -71,12 +55,12 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	param requestedSpeedParam;
 	param requestedVectorParam;
 
-	if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
+	if (itsConfiguration->Exists("do_vector") && itsConfiguration->GetValue("do_vector") == "true")
 	{
 		itsVectorCalculation = true;
 	}
 
-	if (conf->Exists("for_ice") && conf->GetValue("for_ice") == "true")
+	if (itsConfiguration->Exists("for_ice") && itsConfiguration->GetValue("for_ice") == "true")
 	{
 		requestedSpeedParam = param("IFF-MS", 389);
 		requestedDirParam = param("IDD-D", 390);
@@ -93,7 +77,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		itsCalculationTarget = kIce;
 
-		if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
+		if (itsConfiguration->Exists("do_vector") && itsConfiguration->GetValue("do_vector") == "true")
 		{
 			itsLogger->Error("Unable to calculate vector for ice");
 		}
@@ -101,7 +85,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		theParams.push_back(requestedSpeedParam);
 		theParams.push_back(requestedDirParam);
 	}
-	else if (conf->Exists("for_sea") && conf->GetValue("for_sea") == "true")
+	else if (itsConfiguration->Exists("for_sea") && itsConfiguration->GetValue("for_sea") == "true")
 	{
 		requestedSpeedParam = param("SFF-MS", 163);
 		requestedDirParam = param("SDD-D", 164);
@@ -116,7 +100,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		itsCalculationTarget = kSea;
 
-		if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
+		if (itsConfiguration->Exists("do_vector") && itsConfiguration->GetValue("do_vector") == "true")
 		{
 			itsLogger->Error("Unable to calculate vector for sea");
 		}
@@ -124,7 +108,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		theParams.push_back(requestedSpeedParam);
 		theParams.push_back(requestedDirParam);
 	}
-	else if (conf->Exists("for_gust") && conf->GetValue("for_gust") == "true")
+	else if (itsConfiguration->Exists("for_gust") && itsConfiguration->GetValue("for_gust") == "true")
 	{
 		requestedSpeedParam = param("FFG-MS", 417);
 		
@@ -134,7 +118,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		itsCalculationTarget = kGust;
 
-		if (conf->Exists("do_vector") && conf->GetValue("do_vector") == "true")
+		if (itsConfiguration->Exists("do_vector") && itsConfiguration->GetValue("do_vector") == "true")
 		{
 			itsLogger->Error("Unable to calculate vector for wind gust");
 		}
@@ -168,80 +152,10 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		itsCalculationTarget = kWind;
 	}
 
-	if (conf->OutputFileType() == kGRIB1)
-	{
-		StoreGrib1ParameterDefinitions(theParams, targetInfo->Producer().TableVersion());
-	}
+	SetParams(theParams);
 
-	targetInfo->Params(theParams);
-
-	/*
-	 * Create data structures.
-	 */
-
-	targetInfo->Create();
-
-	/*
-	 * Initialize parent class functions for dimension handling
-	 */
-
-	Dimension(conf->LeadingDimension());
-	FeederInfo(shared_ptr<info> (new info(*targetInfo)));
-	FeederInfo()->ParamIndex(0); // Set index to first param (it doesn't matter which one, as long as its set
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToInitTime(aTimer->GetTime());
-
-		aTimer->Start();
-
-	}
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
-	for (short i = 0; i < threadCount; i++)
-	{
-
-		itsLogger->Info("Thread " + boost::lexical_cast<string> (i + 1) + " starting");
-
-		boost::thread* t = new boost::thread(&windvector::Run,
-								this,
-								shared_ptr<info> (new info(*targetInfo)),
-								conf,
-								i + 1);
-
-		g.add_thread(t);
-
-	}
-
-	g.join_all();
-
-	if (conf->StatisticsEnabled())
-	{
-		aTimer->Stop();
-		conf->Statistics()->AddToProcessingTime(aTimer->GetTime());
-	}
-
-	if (conf->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(conf, targetInfo);
-	}
+	Start();
 	
-}
-
-void windvector::Run(shared_ptr<info> myTargetInfo,
-			   shared_ptr<const plugin_configuration> conf,
-			   unsigned short threadIndex)
-{
-
-	while (AdjustLeadingDimension(myTargetInfo))
-	{
-		Calculate(myTargetInfo, conf, threadIndex);
-	}
-
 }
 
 /*
@@ -250,7 +164,7 @@ void windvector::Run(shared_ptr<info> myTargetInfo,
  * This function does the actual calculation.
  */
 
-void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugin_configuration> conf, unsigned short threadIndex)
+void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -297,7 +211,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 	myTargetInfo->ParamIndex(0);
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(conf, threadIndex);
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
 
 	if (useCudaInThisThread)
 	{
@@ -315,23 +229,23 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 
 		// Fetch source level definition
 
-		level sourceLevel = LevelTransform(conf->SourceProducer(), UParam, myTargetInfo->Level());
+		level sourceLevel = LevelTransform(itsConfiguration->SourceProducer(), UParam, myTargetInfo->Level());
 
 		try
 		{
 			// Source info for U
-			UInfo = theFetcher->Fetch(conf,
+			UInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
 										sourceLevel,
 										UParam,
-										conf->UseCudaForPacking() && useCudaInThisThread);
+										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 				
 			// Source info for V
-			VInfo = theFetcher->Fetch(conf,
+			VInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
 										sourceLevel,
 										VParam,
-										conf->UseCudaForPacking() && useCudaInThisThread);
+										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 				
 		}
 		catch (HPExceptionType e)
@@ -343,10 +257,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
 
-					if (conf->StatisticsEnabled())
+					if (itsConfiguration->StatisticsEnabled())
 					{
-						conf->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						conf->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 					}
 
 					continue;
@@ -739,10 +653,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 			}
 		}
 		
-		if (conf->StatisticsEnabled())
+		if (itsConfiguration->StatisticsEnabled())
 		{
-			conf->Statistics()->AddToMissingCount(missingCount);
-			conf->Statistics()->AddToValueCount(count);
+			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
+			itsConfiguration->Statistics()->AddToValueCount(count);
 		}
 
 		/*
@@ -754,9 +668,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, shared_ptr<const plugi
 		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
 
-		if (conf->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(conf, myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 	}
 }
