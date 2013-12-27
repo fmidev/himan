@@ -65,23 +65,16 @@ packed_data::packed_data(const packed_data& other)
 
 	if (other.packedLength)
 	{
-
-#ifndef __CUDACC__
 		CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&data), packedLength * sizeof(unsigned char), cudaHostAllocMapped));
 
 		memcpy(data, other.data, packedLength * sizeof(unsigned char));
-#endif
-
 	}
 
 	if (other.bitmapLength)
 	{
-
-#ifndef __CUDACC__
 		cudaHostAlloc(reinterpret_cast<void**> (&bitmap), bitmapLength * sizeof(int), cudaHostAllocMapped);
 
 		memcpy(bitmap, other.bitmap, bitmapLength * sizeof(int));
-#endif
 	}
 }
 
