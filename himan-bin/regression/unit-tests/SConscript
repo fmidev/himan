@@ -1,0 +1,14 @@
+# SConscript for himan unit-tests
+
+Import('env')
+import os
+
+objects = []
+
+for file in Glob('source/*.cpp'):
+        s=os.path.basename(str(file)).replace(".cpp","")
+        obj='obj/'+ s
+	objects = env.Object(obj, file)
+	env.Program(target = s, source = objects)
+#	env.Program(target = s, source = env.File(file))
+
