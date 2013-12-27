@@ -3,7 +3,6 @@
  *
  * @date Sep 5, 2013
  * @author partio
- *
  */
 
 #include "preform_hybrid.h"
@@ -47,21 +46,18 @@ const double sfcMin = -10.;
 // Max. sallittu keskim. RH-arvo (suht. kosteus) stratuksen yläpuoliselle kerrokselle [%] (jäätävässä) tihkussa
 const double dryLimit = 70.;
 
-// Paksuuden raja-arvot vesi- ja lumisateelle [m]
-const double waterLim = 1300.;
-const double snowLim = 1288.;
-
 // Raja-arvot tihkun ja jäätävän tihkun max intensiteetille [mm/h]
 // (pienemmällä jäätävän tihkun raja-arvolla voi hieman rajoittaa sen esiintymistä)
 const double dzLim = 0.3;
 const double FZdzLim = 0.2;
 
+// Raja-arvot pinnan pakkaskerroksen (MA) ja sen yläpuolisen sulamiskerroksen (PA) pinta-alalle jäätävässä sateessa [mC]
 const double fzraMA = -100.;
 const double fzraPA = 100.;
 
 // Pinnan yläpuolisen plussakerroksen pinta-alan raja-arvot [mC, "metriastetta"]:
 const double waterArea = 300;  // alkup. PK:n arvo oli 300
-const double snowArea = 50;    // alkup. PK:n arvo oli 50
+const double snowArea = 50;	// alkup. PK:n arvo oli 50
 
 // Raja-arvot Koistisen olomuotokaavalle (probWater):
 // Huom! Käytetään alla sekä IF- että ELSEIF-haaroissa.
@@ -69,6 +65,7 @@ const double waterToSleet = 0.5;  // alkup. PK:n arvo oli 0.5
 const double sleetToWater = 0.8;  // alkup. PK:n arvo oli 0.8
 const double sleetToSnow = 0.2;   // alkup. PK:n arvo oli 0.2
 
+// Max sallittu nousuliike st:ssa [mm/s]
 const double wMax = 50;
 
 preform_hybrid::preform_hybrid()
@@ -286,11 +283,20 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			myTargetInfo->ResetLocation();
 			stratus->ResetLocation();
+			TInfo->ResetLocation();
+			RRInfo->ResetLocation();
+			RHInfo->ResetLocation();
 			freezingArea->ResetLocation();
 
 			targetGrid->Reset();
 
 			myTargetInfo->Grid()->Data()->Fill(kFloatMissing);
+
+			assert(myTargetInfo->SizeLocations() == stratus->SizeLocations());
+			assert(myTargetInfo->SizeLocations() == freezingArea->SizeLocations());
+			assert(myTargetInfo->SizeLocations() == TInfo->SizeLocations());
+			assert(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
+			assert(myTargetInfo->SizeLocations() == RHInfo->SizeLocations());
 
 			while (myTargetInfo->NextLocation()	&& targetGrid->Next()
 						&& stratus->NextLocation()
@@ -341,38 +347,51 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				//InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
 				//InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 				
-				if (base == kFloatMissing || 
-						top == kFloatMissing ||
-						upperLayerRH == kFloatMissing ||
-						wAvg == kFloatMissing ||
-						RR == kFloatMissing ||
-						RR == 0 || // No rain --> no rain type
-						T == kFloatMissing)
+				if (	base == kFloatMissing ||
+						top				== kFloatMissing ||
+						upperLayerRH	== kFloatMissing ||
+						wAvg			== kFloatMissing ||
+						RR				== kFloatMissing ||
+						RR				== 0 || // No rain --> no rain type
+						T				== kFloatMissing ||
+						stTavg			== kFloatMissing ||
+						Ttop			== kFloatMissing)
 				{
 					missingCount++;
 
 					continue;
 				}
 
-				cout << "Stratus base " << base << " top " << top << " RH " << upperLayerRH << " vvAvg" << wAvg << " RR " << RR << endl;
-				cout << "Freezing area plus1 " << plusArea1 << " plus2 " << plusArea2 << " minus " << minusArea << endl;
-
-				assert(upperLayerRH <= 100);
-				
-				int PreForm = static_cast<int> (kFloatMissing);
+				double PreForm = kFloatMissing;
 
 				// Unit conversions
 
 				T -= himan::constants::kKelvin;
-				Navg *= 100;
+				Ttop -= himan::constants::kKelvin;
+				stTavg -= himan::constants::kKelvin;
+				
+				RH *= 100; // --> %
+				Navg *= 100; // --> %
+
+				wAvg *= 1000; // m/s --> mm/s
+
+				cout << "Stratus base " << base << " top " << top << " upperLayerRH " << upperLayerRH << " vvAvg " << wAvg << " stTavg " << stTavg << " Ttop " << Ttop << endl;
+
+				if (plusArea1 != kFloatMissing ||plusArea2 != kFloatMissing ||minusArea != kFloatMissing)
+					cout << "Freezing area plus1 " << plusArea1 << " plus2 " << plusArea2 << " minus " << minusArea << endl;
+
+				cout << "Navg " << Navg << " T " << T << " RH " << RH << " RR " << RR << endl;
+				assert(upperLayerRH < 101);
 
 				const double probWater = util::WaterProbability(T, RH);
 
 				// Start algorithm
 
+				// Possible values: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
+
 				if ((RR <= FZdzLim) && 
 					(base < baseLimit) &&
-					(top - base >= fzStLimit) &&
+					((top - base) >= fzStLimit) &&
 					(wAvg < wMax) &&
 					(wAvg >= 0) &&
 					(Navg > Nlimit) &&
