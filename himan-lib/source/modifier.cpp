@@ -22,7 +22,7 @@ const std::vector<double>& modifier::Result() const
 
 bool modifier::CalculationFinished() const
 {
-		return false;
+	return false;
 }
 
 void modifier::Clear(double fillValue)
@@ -340,7 +340,7 @@ void modifier_findheight::Clear(double fillValue)
 
 bool modifier_findheight::CalculationFinished() const
 {
-	return itsValuesFound == itsResult.size();
+	return (itsResult.size() && itsValuesFound == itsResult.size());
 }
 
 void modifier_findheight::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
@@ -362,8 +362,8 @@ void modifier_findheight::Init(const std::vector<double>& theData, const std::ve
 void modifier_findheight::Calculate(double theValue, double theHeight)
 {
 
-	assert(itsFindValue.size());
-	
+	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+
 	double findValue = itsFindValue[itsIndex];
 	
 	if (IsMissingValue(theValue) || IsMissingValue(findValue) || (itsFindNthValue > 0 && !IsMissingValue(Value())))
@@ -472,12 +472,14 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 
 bool modifier_findvalue::CalculationFinished() const
 {
-	return itsValuesFound == itsResult.size();
+	return (itsResult.size() && itsValuesFound == itsResult.size());
 }
 
 void modifier_findvalue::Calculate(double theValue, double theHeight)
 {
 
+	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+	
 	double findHeight = itsFindValue[itsIndex];
 
 	if (IsMissingValue(theValue) || !IsMissingValue(Value()) || IsMissingValue(findHeight))
