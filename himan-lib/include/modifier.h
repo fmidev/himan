@@ -14,8 +14,6 @@
 namespace himan
 {
 
-const size_t kReset = std::numeric_limits<size_t>::max();
-
 /**
  * @class modifier
  *
@@ -209,7 +207,7 @@ class modifier_count : public modifier
 class modifier_findheight : public modifier
 {
 	public:
-		modifier_findheight() : modifier(), itsValuesFound(kReset) {}
+		modifier_findheight() : modifier(), itsValuesFound(0) {}
 		virtual ~modifier_findheight() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_findheight"; }
@@ -238,7 +236,7 @@ class modifier_findheight : public modifier
 class modifier_findvalue : public modifier
 {
 	public:
-		modifier_findvalue() : modifier(), itsValuesFound(kReset) {}
+		modifier_findvalue() : modifier(), itsValuesFound(0) {}
 		virtual ~modifier_findvalue() {}
 
 		virtual std::string ClassName() const { return "himan::::modifier_findvalue"; }
