@@ -121,6 +121,7 @@ enum HPLevelType
 {
 	kUnknownLevel = 0,
 	kGround = 1,
+	kTopOfAtmosphere = 8,
 	kPressure = 100,
 	kMeanSea = 102,
 	kHeight = 105,
@@ -138,6 +139,7 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_li
 		(kHybrid, "hybrid")
 		(kGndLayer, "gndlayer")
 		(kDepth, "depth")
+		(kTopOfAtmosphere, "top of atmosphere")
 		;
 
 enum HPFileWriteOption
