@@ -611,6 +611,11 @@ size_t info::LocationIndex()
     return itsLocationIndex;
 }
 
+size_t info::SizeLocations() const
+{
+	return Data()->Size();
+}
+
 shared_ptr<grid> info::Grid() const
 {
     return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex());

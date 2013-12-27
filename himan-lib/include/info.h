@@ -604,6 +604,8 @@ public:
 	bool LastLocation();
 	size_t LocationIndex();
 
+	size_t SizeLocations() const;
+
 	/**
 	 * @return Current data matrix
 	 */
