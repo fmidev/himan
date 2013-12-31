@@ -178,12 +178,14 @@ std::ostream& modifier::Write(std::ostream& file) const
 	file << "<" << ClassName() << ">" << std::endl;
 
 	file << "__itsMissingValuesAllowed__ " << itsMissingValuesAllowed << std::endl;
-	file << "__itsFindValue__ size " << itsFindValue.size() << std::endl;
 	file << "__itsFindNthValue__ " << itsFindNthValue << std::endl;
-	file << "__itsResult__ size " << itsResult.size() << std::endl;
 	file << "__itsIndex__ " << itsIndex << std::endl;
-
-
+	file << "__itsResult__ size " << itsResult.size() << std::endl;
+	file << "__itsFindValue__ size " << itsFindValue.size() << std::endl;
+	file << "__itsLowerHeight__ size " << itsLowerHeight.size() << std::endl;
+	file << "__itsUpperHeight__ size " << itsUpperHeight.size() << std::endl;
+	file << "__itsOutOfBoundHeights__ size " << itsOutOfBoundHeights.size() << std::endl;
+	
 	return file;
 }
 
@@ -385,7 +387,8 @@ void modifier_count::Calculate(double theValue, double theHeight)
 			||
 		(previousValue >= findValue && theValue <= findValue)) // downward trend
 	{
-		Value() == kFloatMissing ? Value(1) : Value(Value() + 1);
+		double val = Value();
+		Value() == kFloatMissing ? Value(1) : Value(val + 1);
 	}	
 }
 
@@ -430,12 +433,6 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 	
 	if (IsMissingValue(findValue) || (itsFindNthValue > 0 && !IsMissingValue(Value())))
 	{
-		return;
-	}
-
-	if (fabs(theValue - findValue) < 1e-5)
-	{
-		Value(theHeight);
 		return;
 	}
 
@@ -577,13 +574,6 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 
 	if (!IsMissingValue(Value()) || IsMissingValue(findHeight))
 	{
-		return;
-	}
-
-	if (fabs(theHeight - findHeight) < 1e-5)
-	{
-		Value(theValue);
-		itsValuesFound++;
 		return;
 	}
 
