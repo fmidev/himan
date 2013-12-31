@@ -416,7 +416,6 @@ shared_ptr<info> hitool::Stratus()
 	
 	for (size_t i = 0; 	i < constData1.size(); i++)
 	{
-
 		if (stratusTop[i] == kFloatMissing)
 		{
 			constData1[i] = kFloatMissing;
@@ -430,7 +429,6 @@ shared_ptr<info> hitool::Stratus()
 	}
 
 	//VERTZ_AVG(RH_EC,Top+100,Top+DRYdz)
-	//auto upperLayerRH = VerticalExtremeValue(opts);
 	auto upperLayerRH = VerticalAverage(wantedParam, constData1, constData2);
 
 	ret->Param(upperLayerRHParam);
@@ -512,7 +510,7 @@ shared_ptr<info> hitool::Stratus()
 		else
 		{
 			constData1[i] = stratusBase[i] + 50;
-			constData2[i] = stratusBase[i] - 50;
+			constData2[i] = stratusTop[i] - 50;
 		}
 	}
 
@@ -532,9 +530,7 @@ shared_ptr<info> hitool::Stratus()
 	
 	assert(ret->Param(meanTempParam));
 	ret->Data()->Set(stratusMeanTemp);
-	cout << *ret->Data();
 
-	exit(1);
 	// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
 	//VAR wAvg = VERTZ_AVG(W_EC,Base,Top)
 
