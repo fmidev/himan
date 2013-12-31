@@ -43,9 +43,9 @@ using namespace himan::plugin;
  * this could be a configuration file option?
  */
 
-// Default behaviour changed 27.12.2013 (HIMAN-26) // partio
+// Default behavior changed 27.12.2013 (HIMAN-26) // partio
 
-bool CALCULATE_AVERAGE_RATE = false;
+const bool CALCULATE_AVERAGE_RATE = false;
 
 map<string,params> sourceParameters;
 
@@ -550,41 +550,6 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 			}
 
-			if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
-			{
-				/*
-				 * If target time resolution is minute, we probably still
-				 * want to calculate HOURLY rates.
-				 *
-				 * When resolution is hour, the basic unit of calculation
-				 * is one hour. When it is minute, the basic unit is one
-				 * minute. As it is not very useful to calculate rates
-				 * per minute, we have adjust it here and try to be
-				 * smarter than the user calling us.
-				 *
-				 * So, when time resolution is minute and larger than
-				 * 15 minutes, divide the results with 1.
-				 *
-				 * The result then is, that if target step is 15,
-				 * we calculate (for step 120)
-				 *
-				 * (DATA_STEP 120 - DATA_STEP 105) / 1
-				 *
-				 * which gives the correct result.
-				 *
-				 * If the target step is 60, we have (for step 120)
-				 *
-				 * (DATA_STEP 120 - DATA_STEP 60) / 1
-				 *
-				 * which gives the correct result.
-				 *
-				 */
-
-				//assert(myTargetInfo->Time().Step() >= 15);
-
-				//step = 1;
-			}
-
 			while (myTargetInfo->NextLocation() && targetGrid->Next() && currentGrid->Next() && prevGrid->Next())
 			{
 				count++;
@@ -605,12 +570,9 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 				double sum = currentSum - previousSum;
 
-				if (isRateCalculation)
+				if (sum > 0 && isRateCalculation && step != 1)
 				{
-					if (step != 1)
-					{
-						sum /= step;
-					}
+					sum /= step;
 				}
 
 				if (sum < 0)
@@ -729,6 +691,10 @@ shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const info> m
 
 	int i = 0;
 
+	/*
+	 * Parameter RRR-KGM2 is always calculated with 'normal' mode (no averaging).
+	 */
+	
 	if (!forward || (CALCULATE_AVERAGE_RATE && myTargetInfo->Param().Name() != "RRR-KGM2"))
 	{ 
 		i = targetStep;
