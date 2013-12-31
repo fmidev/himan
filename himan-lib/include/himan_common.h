@@ -176,6 +176,7 @@ enum HPScanningMode
 };
 
 const boost::unordered_map<HPScanningMode,const char*> HPScanningModeToString = map_list_of
+		(kUnknownScanningMode, "unknown")
 		(kTopLeft, "+x-y")
 		(kTopRight, "+x+y")
 		(kBottomLeft, "+x+y")
@@ -187,6 +188,11 @@ enum HPLevelOrder
 	kTopToBottom = 1,
 	kBottomToTop = 2 
 };
+
+const boost::unordered_map<HPLevelOrder,const char*> HPLevelOrderToString = map_list_of
+	(kUnknownLevelOrder, "unknown")
+	(kTopToBottom, "to to bottom")
+	(kBottomToTop, "bottom to top");
 
 enum HPExceptionType
 {
