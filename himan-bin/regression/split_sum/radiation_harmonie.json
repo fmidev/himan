@@ -1,0 +1,20 @@
+{
+	"target_geom_name" : "AROME022",
+	"source_geom_name" : "AROME022",
+	"source_producer" : "199",
+	"target_producer" : "210",
+	"start_minute" : "15",
+	"stop_minute" : "30",
+	"step" : "15",
+	"file_write" : "multiple",
+	"origintime" : "2013-11-23 06:00:00",
+	"read_data_from_database" : "false",
+	"use_cache" : false,
+	"processqueue" : [
+	{
+		"leveltype" : "height",
+		"levels" : "0",
+		"plugins" : [ { "name" : "split_sum", "glob" : true } ]
+	} 
+	]
+}
