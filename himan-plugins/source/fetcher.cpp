@@ -319,13 +319,12 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
 
 		case kQueryData:
 		{
-
 			curInfos = FromQueryData(inputFile, options, readContents);
 			break;
 		}
 
 		case kNetCDF:
-			cout << "File is NetCDF" << endl;
+			itsLogger->Error("File is NetCDF");
 			break;
 
 		default:
