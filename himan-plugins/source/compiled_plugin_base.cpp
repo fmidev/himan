@@ -327,7 +327,7 @@ void compiled_plugin_base::Start()
 
 		boost::thread* t = new boost::thread(&compiled_plugin_base::Run,
 											 this,
-											 std::make_shared<info> (*itsInfo),
+											 make_shared<info> (*itsInfo),
 											 i + 1);
 
 		g.add_thread(t);
@@ -350,7 +350,6 @@ void compiled_plugin_base::Init(shared_ptr<const plugin_configuration> conf)
 	{
 		itsTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 		itsTimer->Start();
-		itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
 		itsConfiguration->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
 	}
 
@@ -373,10 +372,12 @@ void compiled_plugin_base::Init(shared_ptr<const plugin_configuration> conf)
 
 	itsInfo = itsConfiguration->Info();
 
+	itsLeadingDimension = itsConfiguration->LeadingDimension();
+	
 	itsPluginIsInitialized = true;
 }
 
-void compiled_plugin_base::Run(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void compiled_plugin_base::Run(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
@@ -445,11 +446,9 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 	itsInfo->Create();
 
 	/*
-	 * Set leading dimension, iterators must be reseted since they are at
-	 * first position after Create()
+	 * Iterators must be reseted since they are at first position after Create()
 	 */
 
-	itsLeadingDimension = itsConfiguration->LeadingDimension();
 	itsInfo->Reset();
 
 	/*
@@ -461,7 +460,6 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		if (itsInfo->SizeTimes() < static_cast<size_t> (itsThreadCount))
 		{
 			itsThreadCount = static_cast<short> (itsInfo->SizeTimes());
-			itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
 		}
 	}
 	else if (itsLeadingDimension == kLevelDimension)
@@ -469,15 +467,17 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		if (itsInfo->SizeLevels() < static_cast<size_t> (itsThreadCount))
 		{
 			itsThreadCount = static_cast<short> (itsInfo->SizeLevels());
-			itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
 		}
 	}
+	
 	/*
-	 * At this point plugin initialization is considered to be done
+	 * From the timing perspective at this point plugin initialization is
+	 * considered to be done
 	 */
 
 	if (itsConfiguration->StatisticsEnabled())
 	{
+		itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
 		itsTimer->Stop();
 		itsConfiguration->Statistics()->AddToInitTime(itsTimer->GetTime());
 		itsTimer->Start();
