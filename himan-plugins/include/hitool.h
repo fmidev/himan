@@ -57,6 +57,8 @@ public:
 	 */
 
 	std::vector<double> VerticalMinimum(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
+
+	std::vector<double> VerticalSum(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
 	std::vector<double> VerticalAverage(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
 	std::vector<double> VerticalHeight(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo, const std::vector<double>& findValueInfo , size_t findNth = 1) const;
 
