@@ -385,6 +385,10 @@ param& info::PeekParam(size_t theIndex) const
 	return itsParamIterator->At(theIndex);
 }
 
+HPLevelOrder info::LevelOrder() const
+{
+	return itsLevelOrder;
+}
 void info::LevelOrder(HPLevelOrder levelOrder)
 {
     itsLevelOrder = levelOrder;
