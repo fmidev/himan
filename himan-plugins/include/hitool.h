@@ -50,17 +50,17 @@ public:
 	 * @brief Find maximum value of a given parameter in a given height range
 	 */
 
-	std::vector<double> VerticalMaximum(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
+	std::vector<double> VerticalMaximum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
 	/**
 	 * @brief Find minimum value of a given parameter in a given height range
 	 */
 
-	std::vector<double> VerticalMinimum(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
+	std::vector<double> VerticalMinimum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
-	std::vector<double> VerticalSum(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
-	std::vector<double> VerticalAverage(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo) const;
-	std::vector<double> VerticalHeight(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo, const std::vector<double>& findValueInfo , size_t findNth = 1) const;
+	std::vector<double> VerticalSum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+	std::vector<double> VerticalAverage(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+	std::vector<double> VerticalHeight(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue , size_t findNth = 1) const;
 
 	/**
 	 * @brief Find value of parameter from given height
@@ -69,7 +69,7 @@ public:
 	 * 
 	 */
 	
-	std::vector<double> VerticalValue(const param& wantedParam, const std::vector<double>& findValueInfo) const;
+	std::vector<double> VerticalValue(const param& wantedParam, const std::vector<double>& findValue) const;
 
 	/**
 	 * @brief Find the number of occurrences of a given parameter value in a given height range
@@ -77,7 +77,7 @@ public:
 	 * Only for hybrid levels.
 	 */
 
-	std::vector<double> VerticalCount(const param& wantedParam, const std::vector<double>& firstLevelValueInfo, const std::vector<double>& lastLevelValueInfo, const std::vector<double>& findValueInfo) const;
+	std::vector<double> VerticalCount(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue) const;
 
 	std::shared_ptr<info> Stratus();
 	std::shared_ptr<info> FreezingArea();
@@ -90,11 +90,10 @@ private:
 
 	std::vector<double> VerticalExtremeValue(std::shared_ptr<modifier> mod,
 							HPLevelType wantedLevelType,
-							const param& sourceParam,
-							const param& targetParam,
-							const std::vector<double>& firstLevelValueInfo = std::vector<double>(),
-							const std::vector<double>& lastLevelValueInfo = std::vector<double>(),
-							const std::vector<double>& findValueInfo = std::vector<double>()) const;
+							const param& wantedParam,
+							const std::vector<double>& firstLevelValue = std::vector<double>(),
+							const std::vector<double>& lastLevelValue = std::vector<double>(),
+							const std::vector<double>& findValue = std::vector<double>()) const;
 
 	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime) const;
 

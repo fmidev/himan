@@ -177,9 +177,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	const param stratusUpperLayerRHParam("STRATUS-UPPER-LAYER-RH-PRCNT");
 	const param stratusVerticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MS");
 
-	const param minusAreaParam("MINUS-AREA-T-C");
-	const param plusArea1Param("PLUS-AREA-1-T-C");
-	const param plusArea2Param("PLUS-AREA-2-T-C");
+	const param minusAreaParam("MINUS-AREA-T-K");
+	const param plusArea1Param("PLUS-AREA-1-T-K");
+	// const param plusArea2Param("PLUS-AREA-2-T-K");
 
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
@@ -242,15 +242,18 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		size_t missingCount = 0;
 		size_t count = 0;
-		auto stratus = h->Stratus();
 
 		//shared_ptr<info> stratus;
-		auto freezingArea = h->FreezingArea();
-		myThreadedLogger->Info("Freezing area calculated");
 
+		auto freezingArea = h->FreezingArea();
 
 		freezingArea->First();
+		myThreadedLogger->Info("Freezing area calculated");
+
+		auto stratus = h->Stratus();
 		stratus->First();
+
+		myThreadedLogger->Info("Stratus calculated");
 
 //		Stratus(conf, myTargetInfo->Time(), stratus);
 
@@ -269,7 +272,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		Stratus(conf, myTargetInfo->Time(), stratus);
 		*/
-		myThreadedLogger->Info("Stratus calculated");
 		
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
@@ -332,8 +334,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				assert(freezingArea->Param(plusArea1Param));
 				double plusArea1 = freezingArea->Value();
 
-				assert(freezingArea->Param(plusArea2Param));
-				double plusArea2 = freezingArea->Value();
+				// assert(freezingArea->Param(plusArea2Param));
+				// double plusArea2 = freezingArea->Value();
 
 				assert(freezingArea->Param(minusAreaParam));
 				double minusArea = freezingArea->Value();
@@ -372,15 +374,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				
 				RH *= 100; // --> %
 				Navg *= 100; // --> %
-
 				wAvg *= 1000; // m/s --> mm/s
 
-				cout << "Stratus base " << base << " top " << top << " upperLayerRH " << upperLayerRH << " vvAvg " << wAvg << " stTavg " << stTavg << " Ttop " << Ttop << endl;
-
-				if (plusArea1 != kFloatMissing ||plusArea2 != kFloatMissing ||minusArea != kFloatMissing)
-					cout << "Freezing area plus1 " << plusArea1 << " plus2 " << plusArea2 << " minus " << minusArea << endl;
-
-				cout << "Navg " << Navg << " T " << T << " RH " << RH << " RR " << RR << endl;
 				assert(upperLayerRH < 101);
 
 				const double probWater = util::WaterProbability(T, RH);
@@ -398,13 +393,18 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					(Ttop > stTlimit) &&
 					(stTavg > stTlimit) &&
 					(T > sfcMin) &&
-					(T < sfcMax) &&
+					(T <= sfcMax) &&
 					(upperLayerRH < dryLimit))
 				{
 					PreForm = kFreezingDrizzle;
 				}
 				
-				if (plusArea1 != kFloatMissing && minusArea != kFloatMissing)
+				// 2. jäätävää vesisadetta?
+				// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros?
+				// (Huom. hyvin paksu pakkaskerros (tai ohut sulamiskerros) -> oikeasti jääjyväsiä/ice pellets fzra sijaan)
+				// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
+				
+				else if (plusArea1 != kFloatMissing && minusArea != kFloatMissing)
 				{
 						
 					if (RR > 0.1 && plusArea1 > fzraPA && minusArea < fzraMA && T <= 0)
@@ -413,7 +413,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					}
 					else if (plusArea1 > waterArea)
 					{
-						if (RR < dzLim && base < baseLimit && (top - base) > stLimit && Navg > Nlimit && upperLayerRH < dryLimit)
+						if ((RR < dzLim) && (base < baseLimit) && (top - base) > stLimit && (Navg > Nlimit) && upperLayerRH < dryLimit)
 						{
 							PreForm = kDrizzle;
 						}
@@ -429,14 +429,18 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					}
 
 					// We probably should have else if here !
+					
+					// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
 
-					if (plusArea1 > snowArea && plusArea1 <= waterArea)
+					if (plusArea1 >= snowArea && plusArea1 <= waterArea)
 					{
 						PreForm = kSleet;
 
 						if (probWater > sleetToWater)
 						{
-							if (RR < dzLim && base < baseLimit && (top-base) > stLimit && Navg > Nlimit && upperLayerRH < dryLimit)
+							// Tihkuksi jos riittävän paksu stratus heikolla sateen intensiteetillä
+							
+							if (RR < dzLim && base < baseLimit && (top-base) > stLimit && (Navg > Nlimit) && upperLayerRH < dryLimit)
 							{
 								PreForm = kDrizzle;
 							}
@@ -452,6 +456,11 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					}
 				}
 
+				if (plusArea1 < snowArea || plusArea1 == kFloatMissing)
+				{
+					PreForm = kSnow;
+				}
+				
 				if (!myTargetInfo->Value(PreForm))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");

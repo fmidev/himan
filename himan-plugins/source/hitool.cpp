@@ -86,8 +86,7 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 
 vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 							HPLevelType wantedLevelType,
-							const param& sourceParam,
-							const param& targetParam,
+							const param& wantedParam,
 							const vector<double>& lowerHeight,
 							const vector<double>& upperHeight,
 							const vector<double>& findValue) const
@@ -126,7 +125,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		level currentLevel(kHybrid, levelValue, "HYBRID");
 
-		valueheight data = GetData(currentLevel, sourceParam, itsTime);
+		valueheight data = GetData(currentLevel, wantedParam, itsTime);
 
 		auto values = data.first;
 		auto heights = data.second;
@@ -198,65 +197,58 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 /* CONVENIENCE FUNCTIONS */
 
 vector<double> hitool::VerticalHeight(const param& wantedParam,
-						const vector<double>& firstLevelValueInfo,
-						const vector<double>& lastLevelValueInfo,
-						const vector<double>& findValueInfo,
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue,
+						const vector<double>& findValue,
 						size_t findNth) const
 {
-
-//	wantedParam.Aggregation(kMinimum);
-
 	auto modifier = CreateModifier(kFindHeightModifier);
 	modifier->FindNth(findNth);
 
-	return VerticalExtremeValue(modifier, kHybrid, wantedParam, param("HL-M"), firstLevelValueInfo, lastLevelValueInfo, findValueInfo);
+	return VerticalExtremeValue(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
 }
 
 vector<double> hitool::VerticalMinimum(const param& wantedParam,
-						const vector<double>& firstLevelValueInfo,
-						const vector<double>& lastLevelValueInfo)const
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue)const
 {
-	//parm.Aggregation(kMinimum);
-	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo);
+	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid,  wantedParam, firstLevelValue, lastLevelValue);
 }
 
 vector<double> hitool::VerticalMaximum(const param& wantedParam,
-						const vector<double>& firstLevelValueInfo,
-						const vector<double>& lastLevelValueInfo) const
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue) const
 {
-	//parm.Aggregation(kMinimum);
-	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo);
+	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
 }
 
 vector<double> hitool::VerticalAverage(const param& wantedParam,
-						const vector<double>& firstLevelValueInfo,
-						const vector<double>& lastLevelValueInfo) const
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue) const
 {
-	//parm.Aggregation(kMinimum);
-
-	return VerticalExtremeValue(CreateModifier(kAverageModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo);
+	return VerticalExtremeValue(CreateModifier(kAverageModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
 }
 
 vector<double> hitool::VerticalSum(const param& wantedParam,
-						const vector<double>& firstLevelValueInfo,
-						const vector<double>& lastLevelValueInfo) const
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue) const
 {
-	return VerticalExtremeValue(CreateModifier(kAccumulationModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo);
+	return VerticalExtremeValue(CreateModifier(kAccumulationModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
 }
 
 vector<double> hitool::VerticalCount(const param& wantedParam,
-						const vector<double>& firstLevelValueInfo,
-						const vector<double>& lastLevelValueInfo,
-						const vector<double>& findValueInfo) const
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue,
+						const vector<double>& findValue) const
 {
-	return VerticalExtremeValue(CreateModifier(kAverageModifier), kHybrid, wantedParam, wantedParam, firstLevelValueInfo, lastLevelValueInfo);
+	return VerticalExtremeValue(CreateModifier(kCountModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
 }
 
 vector<double> hitool::VerticalValue(const param& wantedParam, const vector<double>& heightInfo) const
 {
 	//parm.Aggregation(kMinimum);
 
-	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, param("HL-M"), wantedParam, vector<double> (), vector<double> (), heightInfo);
+	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, wantedParam, vector<double> (), vector<double> (), heightInfo);
 }
 
 void hitool::Time(const forecast_time& theTime)
@@ -279,13 +271,26 @@ shared_ptr<info> hitool::Stratus()
 	// Kynnysarvo vaaditulle stratuksen yläpuolisen kuivan kerroksen paksuudelle [m] (jäätävässä) tihkussa:
 	const double drydz = 1500.;
 	
-	const param baseParam("STRATUS-BASE-M");
-	const param topParam("STRATUS-TOP-M");
-	const param topTempParam("STRATUS-TOP-T-K");
-	const param meanTempParam("STRATUS-MEAN-T-K");
-	const param meanCloudinessParam("STRATUS-MEAN-N-PRCNT");
-	const param upperLayerRHParam("STRATUS-UPPER-LAYER-RH-PRCNT");
-	const param verticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MS");
+	param baseParam("STRATUS-BASE-M");
+	baseParam.Unit(kM);
+
+	param topParam("STRATUS-TOP-M");
+	topParam.Unit(kM);
+	
+	param topTempParam("STRATUS-TOP-T-K");
+	topTempParam.Unit(kK);
+
+	param meanTempParam("STRATUS-MEAN-T-K");
+	meanTempParam.Unit(kK);
+
+	param meanCloudinessParam("STRATUS-MEAN-N-PRCNT");
+	meanCloudinessParam.Unit(kPrcnt);
+
+	param upperLayerRHParam("STRATUS-UPPER-LAYER-RH-PRCNT");
+	upperLayerRHParam.Unit(kPrcnt);
+
+	param verticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MS");
+	verticalVelocityParam.Unit(kMs);
 
 	vector<param> params = { baseParam, topParam, topTempParam, meanTempParam, meanCloudinessParam, upperLayerRHParam, verticalVelocityParam };
 	vector<forecast_time> times = { itsTime };
@@ -382,8 +387,6 @@ shared_ptr<info> hitool::Stratus()
 	
 	fill(constData2.begin(), constData2.end(), layer);
 
-	//VAR Top = VERTZ_FINDH(N_EC,0,Layer,TopThreshold,0)
-
 	/**
 	 * Etsitään parametrin N viimeisen topThreshold-arvon korkeus väliltä 0 .. layer (=2000)
 	 */
@@ -477,7 +480,6 @@ shared_ptr<info> hitool::Stratus()
 
 	wantedParam = param("T-K");
 	
-	//auto stratusTopTemp = VerticalExtremeValue(opts);
 	auto stratusTopTemp = VerticalValue(wantedParam, stratusTop);
 
 	missing = 0;
@@ -561,9 +563,14 @@ shared_ptr<info> hitool::Stratus()
 shared_ptr<info> hitool::FreezingArea()
 {
 
-	const param minusAreaParam("MINUS-AREA-T-C");
-	const param plusArea1Param("PLUS-AREA-1-T-C");
-	const param plusArea2Param("PLUS-AREA-2-T-C");
+	param minusAreaParam("MINUS-AREA-T-K");
+	minusAreaParam.Unit(kK);
+
+	param plusArea1Param("PLUS-AREA-1-T-K");
+	plusArea1Param.Unit(kK);
+
+	param plusArea2Param("PLUS-AREA-2-T-K");
+	plusArea2Param.Unit(kK);
 
 	vector<param> params = { minusAreaParam, plusArea1Param, plusArea2Param };
 	vector<forecast_time> times = { itsTime };
@@ -575,22 +582,26 @@ shared_ptr<info> hitool::FreezingArea()
 	ret->Times(times);
 	ret->Create();
 
-	vector<double> constData1;
-
-	constData1.resize(ret->Data()->Size(), 0);
+	vector<double> constData1(ret->Data()->Size(), 0);
 
 	auto constData2 = constData1;
 	fill(constData2.begin(), constData2.end(), 5000);
 
 	auto constData3 = constData1;
-	fill(constData2.begin(), constData2.end(), 273.15); // 0C
+	fill(constData3.begin(), constData3.end(), himan::constants::kKelvin); // 0C
 
 	// 0-kohtien lkm pinnasta (yläraja 5km, jotta ylinkin nollakohta varmasti löytyy)
 	param wantedParam ("T-K");
-	//wantedParam.Base(-273.15);
-	
+
+	itsLogger->Info("Counting number of zero levels");
+
 	auto numZeroLevels = VerticalCount(wantedParam, constData1, constData2, constData3);
 
+	for (size_t i = 0; i < numZeroLevels.size(); i++)
+	{
+		assert(numZeroLevels[i] != kFloatMissing);
+	}
+	
 	//nZeroLevel = VERTZ_FINDC(T_EC,0,5000,0)
 
 	/* Check which values we have. Will slow down processing a bit but
@@ -603,7 +614,7 @@ shared_ptr<info> hitool::FreezingArea()
 
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
-		size_t val = numZeroLevels[i];
+		size_t val = static_cast<size_t> (numZeroLevels[i]);
 
 		if (val == 1)
 		{
@@ -647,8 +658,10 @@ shared_ptr<info> hitool::FreezingArea()
 
 		zeroLevel1 = VerticalHeight(wantedParam, constData1, constData2, constData3, 1);
 
-		Tavg1 = VerticalAverage(wantedParam, constData1, zeroLevel1);
+		itsLogger->Info("Searching for average temperature between ground level and first zero level");
 
+		Tavg1 = VerticalAverage(wantedParam, constData1, zeroLevel1);
+		
 	}
 
 	if (haveTwo)
@@ -660,6 +673,8 @@ shared_ptr<info> hitool::FreezingArea()
 		zeroLevel2 = VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
 
 		assert(zeroLevel1.size());
+
+		itsLogger->Info("Searching for average temperature between first and second zero level");
 
 		Tavg2_two = VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 	}
@@ -675,7 +690,12 @@ shared_ptr<info> hitool::FreezingArea()
 		assert(zeroLevel1.size());
 		assert(zeroLevel2.size());
 
+		itsLogger->Info("Searching for average temperature between second and third zero level");
+
 		Tavg2_three = VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
+
+		itsLogger->Info("Searching for average temperature between first and third zero level");
+
 		Tavg3 = VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 	}
 
@@ -716,7 +736,7 @@ shared_ptr<info> hitool::FreezingArea()
 
 			if (zl1 != kFloatMissing && ta1 != kFloatMissing)
 			{
-				ma = zl1 * ta1;
+				ma = zl1 * (ta1 - himan::constants::kKelvin);
 			}
 
 			minusArea[i] = ma;
