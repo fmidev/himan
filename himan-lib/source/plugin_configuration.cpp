@@ -130,7 +130,8 @@ void plugin_configuration::WriteStatistics()
 
 	cout << "Level type:\t\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
 	cout << "Level count:\t\t" << itsInfo->SizeLevels() << endl;
-
+	cout << "Level order:\t\t" << HPLevelOrderToString.at(itsInfo->LevelOrder()) << endl;
+	
 	// assuming even time step
 
 	cout << "Time step:\t\t" << itsInfo->Time().Step() << endl;
@@ -148,28 +149,13 @@ void plugin_configuration::WriteStatistics()
 	cout << "Plugin:\t\t\t" << itsName << endl;
 
 	// Statistics from class statistics
+
+	// total elapsed time
 	
 	size_t elapsedTime = static_cast<size_t> (itsStatistics->itsTimer->GetTime());
 
-	size_t threadCountDivisor = static_cast<size_t> (itsStatistics->itsUsedThreadCount);
-
-	if (itsLeadingDimension == kTimeDimension && itsInfo->SizeTimes() < static_cast<size_t> (itsStatistics->itsUsedThreadCount))
-	{
-		threadCountDivisor = itsInfo->SizeTimes();
-	}
-	else if (itsLeadingDimension == kLevelDimension && itsInfo->SizeLevels() < static_cast<size_t> (itsStatistics->itsUsedThreadCount))
-	{
-		threadCountDivisor = itsInfo->SizeLevels();
-	}
-
-	if (threadCountDivisor == 0)
-	{
-		itsLogger->Warning("Unable to print statistics due to invalid value for threadcount (0) -- somebody forgot to configure their plugin?");
-		return;
-	}
-	
-	int fetchingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsFetchingTime)/static_cast<double>(threadCountDivisor)/static_cast<double> (elapsedTime));
-	int processingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsProcessingTime-itsStatistics->itsFetchingTime/threadCountDivisor)/static_cast<double> (elapsedTime));
+	int fetchingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsFetchingTime)/static_cast<double>(itsStatistics->itsUsedThreadCount)/static_cast<double> (elapsedTime));
+	int processingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsProcessingTime-itsStatistics->itsFetchingTime/itsStatistics->itsUsedThreadCount)/static_cast<double> (elapsedTime));
 	int initTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsInitTime)/static_cast<double> (elapsedTime));
 
 	int writingTimePercentage = 0;
@@ -183,7 +169,7 @@ void plugin_configuration::WriteStatistics()
 	}
 	else
 	{
-		writingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsWritingTime/threadCountDivisor)/static_cast<double> (elapsedTime));
+		writingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsWritingTime/itsStatistics->itsUsedThreadCount)/static_cast<double> (elapsedTime));
 		writingThreads = ", average over used threads";
 	}
 
@@ -193,9 +179,9 @@ void plugin_configuration::WriteStatistics()
 		<< "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
 		<< "Elapsed time:\t\t" <<  elapsedTime << " microseconds" << endl
 		<< "Plugin init time\t" << itsStatistics->itsInitTime << " microseconds, single thread (" << initTimePercentage << "%)" << endl
-		<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/threadCountDivisor << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
-		<< "Process time:\t\t" << itsStatistics->itsProcessingTime/threadCountDivisor << " microseconds, total over used threads (" << processingTimePercentage << "%)" << endl
-		<< "Writing time:\t\t" << itsStatistics->itsWritingTime/threadCountDivisor << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
+		<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/itsStatistics->itsUsedThreadCount << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
+		<< "Process time:\t\t" << itsStatistics->itsProcessingTime/itsStatistics->itsUsedThreadCount << " microseconds, total over used threads (" << processingTimePercentage << "%)" << endl
+		<< "Writing time:\t\t" << itsStatistics->itsWritingTime/itsStatistics->itsUsedThreadCount << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
 		<< "Values:\t\t\t" << itsStatistics->itsValueCount << endl
 		<< "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
 		<< "PPS:\t\t\t" << 1000*1000*static_cast<double>(itsStatistics->itsValueCount)/static_cast<double>(elapsedTime) << endl;
