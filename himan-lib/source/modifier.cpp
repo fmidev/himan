@@ -101,26 +101,48 @@ bool modifier::Evaluate(double theValue, double theHeight)
 	assert(itsIndex < itsOutOfBoundHeights.size());
 
 	assert(theHeight != kFloatMissing);
+
+	/*
+	 * "upper" value relates to it being higher in the atmosphere
+	 * meaning its value is higher.
+	 *
+	 * ie. lower limit 10, upper limit 100
+	 *
+	 * From this it follows that valid height is lower than upper limit and
+	 * higher than lower limit
+	 *
+	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
+	 * need to be changed.
+	*/
 	
-	if (itsOutOfBoundHeights[itsIndex] == true || IsMissingValue(itsUpperHeight[itsIndex]) || theHeight > itsUpperHeight[itsIndex] || IsMissingValue(itsLowerHeight[itsIndex]))
+	double upperLimit = itsUpperHeight[itsIndex];
+	double lowerLimit = itsLowerHeight[itsIndex];
+
+	if (itsOutOfBoundHeights[itsIndex] == true)
 	{
+		return false;
+	}
+	else if (theHeight > upperLimit  || IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+	{
+		// height is above given height range OR either level value is missing: stop processing of this grid point
 		itsOutOfBoundHeights[itsIndex] = true;
 		return false;
 	}
-
-	if (theHeight < itsLowerHeight[itsIndex])
+	else if (theHeight < itsLowerHeight[itsIndex])
 	{
-		// height is not in the given height range
+		// height is below given height range, do not cancel calculation yet
 		return false;
 	}
-
-	if (IsMissingValue(theValue))
+	else if (IsMissingValue(theValue))
 	{
 		return false;
 	}
+
+	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
 
 	return true;
 }
+
 void modifier::Process(const std::vector<double>& theData, const std::vector<double>& theHeights)
 {
 
@@ -141,7 +163,7 @@ void modifier::Process(const std::vector<double>& theData, const std::vector<dou
 		{
 			continue;
 		}
-		
+
 		Calculate(theValue, theHeight);
 	}
 }
@@ -169,12 +191,6 @@ std::ostream& modifier::Write(std::ostream& file) const
 
 void modifier_max::Calculate(double theValue, double theHeight)
 {
-
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-
 	if (IsMissingValue(Value()) || theValue > Value())
 	{
 		Value(theValue);
@@ -185,11 +201,6 @@ void modifier_max::Calculate(double theValue, double theHeight)
 
 void modifier_min::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-
 	if (IsMissingValue(Value()) || theValue < Value())
 	{
 		Value(theValue);
@@ -218,11 +229,6 @@ const std::vector<double>& modifier_maxmin::Result() const
 
 void modifier_maxmin::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-
 	// Set min == max
 
 	if (IsMissingValue(Value()))
@@ -248,11 +254,6 @@ void modifier_maxmin::Calculate(double theValue, double theHeight)
 
 void modifier_sum::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-
 	if (IsMissingValue(Value())) // First value
 	{
 		Value(theValue);
@@ -277,7 +278,7 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 
 		itsValuesCount.resize(itsResult.size(), 0);
 
-		itsOutOfBoundHeights.resize(theData.size(), false);
+		itsOutOfBoundHeights.resize(itsResult.size(), false);
 
 	}
 }
@@ -286,20 +287,20 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 {
 	itsValuesCount[itsIndex] += 1;
 
-	if (IsMissingValue(Value())) // First value
+	double val = Value();
+
+	if (IsMissingValue(val)) // First value
 	{
 		Value(theValue);
 	}
 	else
 	{
-		double val = Value();
 		Value(val + theValue);
 	}	
 }
 
 const std::vector<double>& modifier_mean::Result() const
 {
-
 	for (size_t i = 0; i < itsResult.size(); i++)
 	{
 		double val = itsResult[i];
@@ -307,8 +308,8 @@ const std::vector<double>& modifier_mean::Result() const
 
 		if (!IsMissingValue(val) && count != 0)
 		{
-			itsResult[i] = val / static_cast<double> (count); // std::cout << val << "/" << count << " = " << itsResult[i] << std::endl;
-		}		
+			itsResult[i] = val / static_cast<double> (count); 
+		}
 	}
 
 	return itsResult;
@@ -339,7 +340,7 @@ void modifier_count::Calculate(double theValue, double theHeight)
 	
 	double findValue = itsFindValue[itsIndex];
 
-	if (IsMissingValue(theValue) || IsMissingValue(findValue))
+	if (IsMissingValue(findValue))
 	{
 		return;
 	}
@@ -427,7 +428,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 
 	double findValue = itsFindValue[itsIndex];
 	
-	if (IsMissingValue(theValue) || IsMissingValue(findValue) || (itsFindNthValue > 0 && !IsMissingValue(Value())))
+	if (IsMissingValue(findValue) || (itsFindNthValue > 0 && !IsMissingValue(Value())))
 	{
 		return;
 	}
@@ -574,7 +575,7 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 	
 	double findHeight = itsFindValue[itsIndex];
 
-	if (IsMissingValue(theValue) || !IsMissingValue(Value()) || IsMissingValue(findHeight))
+	if (!IsMissingValue(Value()) || IsMissingValue(findHeight))
 	{
 		return;
 	}
