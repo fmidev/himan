@@ -83,6 +83,11 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		// on the surface below it. Therefore we cannot parallelize the calculation.
 		
 		itsThreadCount = 1;
+		
+		if (itsConfiguration->StatisticsEnabled())
+		{
+			itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
+		}
 	}
 
 	Start();
