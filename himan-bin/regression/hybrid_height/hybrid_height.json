@@ -7,11 +7,12 @@
      "interpolate_time" : "no",
      "file_write" : "single",
 
+
      "processqueue" : [
          {
              "leveltype" : "hybrid",
              "levels" : "64",
-             "plugins" : [ { "name" : "hybrid_height" } ]
+             "plugins" : [ { "name" : "hybrid_height", "fast_mode" : "false" } ]
          }
 
      ]
