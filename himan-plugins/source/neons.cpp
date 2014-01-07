@@ -423,7 +423,7 @@ string neons::ProducerMetaData(long producerId, const string& attribute) const
 			case 130:
 			case 230:
 			case 240:
-				ret = "25";
+				ret = "1";
 				break;
 
 			default:
