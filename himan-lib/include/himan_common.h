@@ -191,7 +191,7 @@ enum HPLevelOrder
 
 const boost::unordered_map<HPLevelOrder,const char*> HPLevelOrderToString = map_list_of
 	(kUnknownLevelOrder, "unknown")
-	(kTopToBottom, "to to bottom")
+	(kTopToBottom, "top to bottom")
 	(kBottomToTop, "bottom to top");
 
 enum HPExceptionType
