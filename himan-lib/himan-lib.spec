@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 13.12.11
+Version: 14.1.7
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -23,9 +23,9 @@ BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
 %endif
 
-BuildRequires: libsmartmet-newbase >= 12.4.18-1
+BuildRequires: libsmartmet-newbase >= 13.9.26
 BuildRequires: scons
-BuildRequires: boost-devel >= 1.52
+BuildRequires: boost-devel >= 1.54
 Provides: libhiman.so
 
 %description
@@ -51,6 +51,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Jan  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.1.7-1.fmi
+- Accumulated changes in many classes wrt hybrid_height and preform_hybrid
+- Link with grib_api 1.11.0
 * Wed Dec 11 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.12.1-1.fmi
 - Changes in modifier
 * Mon Nov 25 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.11.25-1.fmi
