@@ -23,8 +23,8 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-void Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info> result);
-void FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info> result);
+void Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result);
+void FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result);
 
 // Korkein sallittu pilven alarajan korkeus, jotta kysessä stratus [m]
 const double baseLimit = 300.;
@@ -243,35 +243,27 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		size_t missingCount = 0;
 		size_t count = 0;
 
-		//shared_ptr<info> stratus;
+		shared_ptr<info> stratus;
+		shared_ptr<info> freezingArea;
 
-		auto freezingArea = h->FreezingArea();
+		/*
+		 * Spinoff thread will calculate freezing area while main thread calculates
+		 * stratus.
+		 *
+		 * The constructor of std::thread (and boost::thread) deduces argument types
+		 * and stores them *by value*.
+		 */
+		
+		boost::thread t(&FreezingArea, itsConfiguration, myTargetInfo->Time(), boost::ref(freezingArea));
+
+		Stratus(itsConfiguration, myTargetInfo->Time(), stratus);
+
+		t.join();
 
 		freezingArea->First();
-		myThreadedLogger->Info("Freezing area calculated");
-
-		auto stratus = h->Stratus();
 		stratus->First();
 
-		myThreadedLogger->Info("Stratus calculated");
-
-//		Stratus(conf, myTargetInfo->Time(), stratus);
-
-		//shared_ptr<info> freezingArea;
-//		FreezingArea(conf, myTargetInfo->Time(), freezingArea);
-
-		//boost::thread t1(&Stratus, conf, myTargetInfo->Time(), stratus);
-		//boost::thread t2(&FreezingArea, conf, myTargetInfo->Time(), freezingArea);
-
-		//t1.join();
-		//t2.join();
-/*
-		FreezingArea(conf, myTargetInfo->Time(), freezingArea);
-		cout << *freezingArea;
-
-
-		Stratus(conf, myTargetInfo->Time(), stratus);
-		*/
+		myThreadedLogger->Info("Stratus and freezing area calculated");
 		
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
@@ -348,17 +340,18 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				//InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
 				//InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-				
-				if (	base == kFloatMissing ||
-						top				== kFloatMissing ||
-						upperLayerRH	== kFloatMissing ||
-						wAvg			== kFloatMissing ||
-						RR				== kFloatMissing ||
-						RR				== 0 || // No rain --> no rain type
-						T				== kFloatMissing ||
-						stTavg			== kFloatMissing ||
-						Ttop			== kFloatMissing)
+
+				if (RR == kFloatMissing || RR == 0)
 				{
+					// No rain --> no rain type
+					missingCount++;
+
+					continue;
+				}
+				else if (T == kFloatMissing || RH == kFloatMissing)
+				{
+					// These variables come directly from database and should
+					// not have missing values in regular conditions
 					missingCount++;
 
 					continue;
@@ -367,36 +360,68 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				double PreForm = kFloatMissing;
 
 				// Unit conversions
-
-				T -= himan::constants::kKelvin;
-				Ttop -= himan::constants::kKelvin;
-				stTavg -= himan::constants::kKelvin;
 				
-				RH *= 100; // --> %
-				Navg *= 100; // --> %
-				wAvg *= 1000; // m/s --> mm/s
+				T -= himan::constants::kKelvin;
+				RH *= 100; // 0..1 --> %
 
-				assert(upperLayerRH < 101);
+				if (Ttop != kFloatMissing)
+				{
+					Ttop -= himan::constants::kKelvin;
+				}
+
+				if (stTavg != kFloatMissing)
+				{
+					stTavg -= himan::constants::kKelvin;
+				}
+
+				if (Navg != kFloatMissing)
+				{
+					Navg *= 100; // --> %
+				}
+
+				if (wAvg != kFloatMissing)
+				{
+					wAvg *= 1000; // m/s --> mm/s
+				}
+
+				bool thickStratusWithLightPrecipitation = (	base			!= kFloatMissing &&
+															top				!= kFloatMissing &&
+															Navg			!= kFloatMissing &&
+															upperLayerRH	!= kFloatMissing &&
+															RR				<= dzLim &&
+															base			< baseLimit &&
+															(top - base)	> stLimit &&
+															Navg			> Nlimit &&
+															upperLayerRH	< dryLimit);
 
 				const double probWater = util::WaterProbability(T, RH);
 
 				// Start algorithm
+				// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
-				// Possible values: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
-
-				if ((RR <= FZdzLim) && 
-					(base < baseLimit) &&
-					((top - base) >= fzStLimit) &&
-					(wAvg < wMax) &&
-					(wAvg >= 0) &&
-					(Navg > Nlimit) &&
-					(Ttop > stTlimit) &&
-					(stTavg > stTlimit) &&
-					(T > sfcMin) &&
-					(T <= sfcMax) &&
-					(upperLayerRH < dryLimit))
+				if (	base			!=	kFloatMissing &&
+						top				!= kFloatMissing &&
+						upperLayerRH	!= kFloatMissing &&
+						wAvg			!= kFloatMissing &&
+						Navg			!= kFloatMissing &&
+						stTavg			!= kFloatMissing &&
+						Ttop			!= kFloatMissing)
 				{
-					PreForm = kFreezingDrizzle;
+
+					if ((RR <= FZdzLim) &&
+						(base < baseLimit) &&
+						((top - base) >= fzStLimit) &&
+						(wAvg < wMax) &&
+						(wAvg >= 0) &&
+						(Navg > Nlimit) &&
+						(Ttop > stTlimit) &&
+						(stTavg > stTlimit) &&
+						(T > sfcMin) &&
+						(T <= sfcMax) &&
+						(upperLayerRH < dryLimit))
+					{
+						PreForm = kFreezingDrizzle;
+					}
 				}
 				
 				// 2. jäätävää vesisadetta?
@@ -404,7 +429,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// (Huom. hyvin paksu pakkaskerros (tai ohut sulamiskerros) -> oikeasti jääjyväsiä/ice pellets fzra sijaan)
 				// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
 				
-				else if (plusArea1 != kFloatMissing && minusArea != kFloatMissing)
+				if (PreForm == kFloatMissing && plusArea1 != kFloatMissing && minusArea != kFloatMissing)
 				{
 						
 					if (RR > 0.1 && plusArea1 > fzraPA && minusArea < fzraMA && T <= 0)
@@ -413,7 +438,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					}
 					else if (plusArea1 > waterArea)
 					{
-						if ((RR < dzLim) && (base < baseLimit) && (top - base) > stLimit && (Navg > Nlimit) && upperLayerRH < dryLimit)
+						if (thickStratusWithLightPrecipitation)
 						{
 							PreForm = kDrizzle;
 						}
@@ -427,9 +452,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 							}
 						}
 					}
-
-					// We probably should have else if here !
-					
+			
 					// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
 
 					if (plusArea1 >= snowArea && plusArea1 <= waterArea)
@@ -440,7 +463,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 						{
 							// Tihkuksi jos riittävän paksu stratus heikolla sateen intensiteetillä
 							
-							if (RR < dzLim && base < baseLimit && (top-base) > stLimit && (Navg > Nlimit) && upperLayerRH < dryLimit)
+							if (thickStratusWithLightPrecipitation)
 							{
 								PreForm = kDrizzle;
 							}
@@ -456,10 +479,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					}
 				}
 
-				if (plusArea1 < snowArea || plusArea1 == kFloatMissing)
+				if (PreForm == kFloatMissing && (plusArea1 < snowArea || plusArea1 == kFloatMissing))
 				{
 					PreForm = kSnow;
 				}
+
+				// FINISHED
 				
 				if (!myTargetInfo->Value(PreForm))
 				{
@@ -497,7 +522,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	}
 }
 
-void FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info> result)
+void FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result)
 {
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
@@ -505,14 +530,13 @@ void FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_ti
 	h->Time(ftime);
 
 	result = h->FreezingArea();
+
 }
 
-void Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info> result)
+void Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result)
 {
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
-	auto l = unique_ptr<logger> (logger_factory::Instance()->GetLog("thread " + boost::lexical_cast<string> (boost::this_thread::get_id())));
 	
-	l->Debug("calculating Stratus");
 	h->Configuration(conf);
 	h->Time(ftime);
 
