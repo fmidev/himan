@@ -30,6 +30,7 @@ const string itsName("rain_type");
 
 rain_type::rain_type()
 {
+	itsClearTextFormula = "<algorithm>";
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
@@ -88,23 +89,18 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	// Required source parameters
 
-	/*
-	 * eg. param PParam("P-Pa"); for pressure in pascals
-	 *
-	 */
-
 	param ZParam("Z-M2S2");
 	param NParam("N-0TO1");
 	param TParam("T-K");
-	param PParam("P-PA");
 	param CloudParam("CLDSYM-N");
 	param PrecParam("RR-1-MM");
 	param KindexParam("KINDEX-N");
 
+	// ..and their levels
+	level Z1000Level(himan::kPressure, 1000, "PRESSURE");
     level Z850Level(himan::kPressure, 850, "PRESSURE");
     level T2Level(himan::kHeight, 2, "HEIGHT");
-    level PLevel(himan::kHeight, 0, "HEIGHT");
-
+    level NLevel(himan::kHeight, 0, "HEIGHT");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
@@ -118,28 +114,27 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		int paramStep = 1;
-		shared_ptr<info> PInfo;
+		shared_ptr<info> Z1000Info;
 		shared_ptr<info> Z850Info;
         shared_ptr<info> T850Info;
 		shared_ptr<info> NInfo;
 		shared_ptr<info> TInfo;
 		shared_ptr<info> CloudInfo;
 		shared_ptr<info> KindexInfo;
-		shared_ptr<info> prevRRInfo;
-		shared_ptr<info> nextRRInfo;
+		shared_ptr<info> RRInfo;
+		shared_ptr<info> NextRRInfo;
 		
 		try
 		{
-			// Fetch previous rain. Calculate average from these.
+			// Fetch current and next rain.
 			try
 			{
-				forecast_time prevTimeStep = myTargetInfo->Time();
-				prevTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -paramStep);				
-				prevRRInfo = FetchSourceRR(prevTimeStep,myTargetInfo->Level());
+				forecast_time timeStep = myTargetInfo->Time();				
+				RRInfo = FetchSourceRR(timeStep,myTargetInfo->Level());
 
 				forecast_time nextTimeStep = myTargetInfo->Time();
 				nextTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), paramStep);				
-				nextRRInfo = FetchSourceRR(prevTimeStep,myTargetInfo->Level());
+				NextRRInfo = FetchSourceRR(nextTimeStep,myTargetInfo->Level());
 
 			}
 			catch (HPExceptionType e)
@@ -171,17 +166,17 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 			 *	Parameter infos are made here
 			 *
 			 */
-			PInfo = theFetcher->Fetch(itsConfiguration,
+			Z1000Info = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
-								 PLevel,
-								 PParam);
+								 Z1000Level,
+								 ZParam);
 			Z850Info = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 Z850Level,
 								 ZParam);
 			NInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
-								 PLevel,
+								 NLevel,
 								 NParam);
 			TInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
@@ -189,11 +184,11 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 								 TParam);
 			CloudInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
-								 PLevel,
+								 NLevel,
 								 CloudParam);
 			KindexInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
-								 PLevel,
+								 NLevel,
 								 KindexParam);
             T850Info = theFetcher->Fetch(itsConfiguration,
                                  myTargetInfo->Time(),
@@ -241,20 +236,25 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		 */
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> Z1000Grid(Z1000Info->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> Z850Grid(Z850Info->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> NGrid(NInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> CloudGrid(CloudInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> KindexGrid(KindexInfo->Grid()->ToNewbaseGrid());
         shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
-        shared_ptr<NFmiGrid> PrevRRGrid(prevRRInfo->Grid()->ToNewbaseGrid());
-        shared_ptr<NFmiGrid> NextRRGrid(nextRRInfo->Grid()->ToNewbaseGrid());
+        shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
+        shared_ptr<NFmiGrid> NextRRGrid(NextRRInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = (		*myTargetInfo->Grid() == *PInfo->Grid() &&
+		bool equalGrids = (		*myTargetInfo->Grid() == *Z1000Info->Grid() &&
                                 *myTargetInfo->Grid() == *Z850Info->Grid() &&
+                                *myTargetInfo->Grid() == *NInfo->Grid() &&
                                 *myTargetInfo->Grid() == *TInfo->Grid() &&
-								*myTargetInfo->Grid() == *CloudInfo->Grid());
+								*myTargetInfo->Grid() == *CloudInfo->Grid() &&
+								*myTargetInfo->Grid() == *KindexInfo->Grid() &&
+								*myTargetInfo->Grid() == *T850Info->Grid() &&
+								*myTargetInfo->Grid() == *RRInfo->Grid() &&
+								*myTargetInfo->Grid() == *NextRRInfo->Grid());
 
 
 		string deviceType;
@@ -279,24 +279,22 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 				double N;
 				double T;
+				double Z1000;	
                 double T850;
 				double Z850;
-				double P;
-				double cloudType = 704; // hil_pp:n oletusarvo
 				double cloud;
-				double reltopo;
-				double prevRR;
-				double nextRR;
 				double kindex;
+				double RR;
+				double nextRR;
 
 				InterpolateToPoint(targetGrid, NGrid, equalGrids, N);
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				InterpolateToPoint(targetGrid, Z1000Grid, equalGrids, Z1000);
+				InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
 				InterpolateToPoint(targetGrid, Z850Grid, equalGrids, Z850);
 				InterpolateToPoint(targetGrid, CloudGrid, equalGrids, cloud);
 				InterpolateToPoint(targetGrid, KindexGrid, equalGrids, kindex);
-                InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
-                InterpolateToPoint(targetGrid, PrevRRGrid, equalGrids, prevRR);
+                InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
                 InterpolateToPoint(targetGrid, NextRRGrid, equalGrids, nextRR);
 			
 				if (T == kFloatMissing )
@@ -307,36 +305,31 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 					continue;
 				}
 
-				// Koska P1 on 1000Mba, pitää z tehdä paineesta
-				// Sen kautta sitten lasketaan reltopo
-				reltopo = util::RelativeTopography(1000, 850, P, Z850);
+				double reltopo = util::RelativeTopography(1000, 850, Z1000, Z850);
 				
-				double rain = 0; // sateen saakoodi, oletus pouta
+				double rain = 0; // default, no rain
+				double cloudType = 1; // default
 
-				// Laske intensiteetti ensin, sitten päättele WaWa-koodi
-				// Voi olla, että tässä on väärä sade
-
+				// from rain intensity determine WaWa-code
 				
-				if (nextRR > 0.01 && prevRR > 0.01 )
+				if (nextRR > 0.01 && RR > 0.01 )
 				{
 					rain = 60;
 				}
-				if (nextRR > 0.1 && prevRR > 0.1 ) 
+				if (nextRR > 0.1 && RR > 0.1 ) 
 				{
                    	rain = 61;
 				}
-				if (nextRR > 1 && prevRR > 1 ) 
+				if (nextRR > 1 && RR > 1 ) 
 				{
                     rain = 63;
 				}
-				if (nextRR > 3 && prevRR > 3) 
+				if (nextRR > 3 && RR > 3) 
 				{
                     rain = 65;
 				}
 
-				// Pilvikoodista päätellään pilvityyppi
-				// Päättelyketju vielä puutteellinen, logiikan voi ehkä siirtää 
-				// cloud_type plugarista
+				// cloud code determines cloud type
 
 				N *= 100;
 
@@ -345,8 +338,9 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 					cloudType = 2;  // sade alapilvesta
 				}
 				else if (cloud == 2307 && N > 70 )
+				{
 					cloudType = 2;
-
+				}
 				else if (cloud == 3604) 
 				{
 				    cloudType = 3;	// sade paksusta pilvesta
@@ -372,7 +366,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
       		    }
 
 				
-				// Sitten itse HSADE
+				// from here HSADE1-N
 
 				if (rain >= 60 && rain <= 65) 
 				{
@@ -385,7 +379,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
                      	}
                      	else if (reltopo > 1300) 
                      	{
-					   		//rain = rain;   // Vesi
+					   		// rain = rain;   // Vesi
 					 	}
 					 	else 
 					 	{
@@ -479,8 +473,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
                   	{
                     	rain = 0;
                   	}
-
-                
+               
 
 	                if (reltopo >= 1289) // Lopuksi jäätävä sade
 	                {
@@ -492,11 +485,11 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	                	{
 					    	rain = 67;
 	                	}
-	                	else if (rain >= 50 && rain <= 51 && T <= 270.15)
+	                	else if (rain >= 50 && rain <= 51 && T <= 273.15)
 	                	{
 					    	rain = 56;
 	                	}
-	                	else if (rain >= 52 && rain <= 55 && T <= 270.15)
+	                	else if (rain >= 52 && rain <= 55 && T <= 273.15)
 	                  	{
 					    	rain = 57;
 	                	}
