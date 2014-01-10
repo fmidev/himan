@@ -82,7 +82,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	param NParam("N-0TO1");
 	param KParam("KINDEX-N");
 
-	level T2mLevel(himan::kHeight, 2, "HEIGHT");
+	level T0mLevel(himan::kHeight, 0, "HEIGHT");
 	level NKLevel(himan::kHeight, 0, "HEIGHT");
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
 	level RH700Level(himan::kPressure, 700, "PRESSURE");
@@ -101,7 +101,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		shared_ptr<info> T2mInfo;
+		shared_ptr<info> T0mInfo;
 		shared_ptr<info> NInfo;
 		shared_ptr<info> KInfo;
 		shared_ptr<info> T850Info;
@@ -111,10 +111,10 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		
 		try
 		{
-			// Source info for T2m
-			T2mInfo = theFetcher->Fetch(itsConfiguration,
+			// Source info for T0m
+			T0mInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
-								 T2mLevel,
+								 T0mLevel,
 								 TParam);
 			// Source info for N
 			NInfo = theFetcher->Fetch(itsConfiguration,
@@ -187,7 +187,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		 */
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> T2mGrid(T2mInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> T0mGrid(T0mInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> NGrid(NInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> KGrid(KInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
@@ -199,7 +199,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 							*myTargetInfo->Grid() == *RH700Info->Grid() &&
 							*myTargetInfo->Grid() == *RH500Info->Grid() &&
 							*myTargetInfo->Grid() == *T850Info->Grid() &&
-							*myTargetInfo->Grid() == *T2mInfo->Grid() &&
+							*myTargetInfo->Grid() == *T0mInfo->Grid() &&
 							*myTargetInfo->Grid() == *NInfo->Grid() &&
 							*myTargetInfo->Grid() == *KInfo->Grid());
 
@@ -210,7 +210,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		myTargetInfo->ResetLocation();
 
 		targetGrid->Reset();
-		T2mGrid->Reset();
+		T0mGrid->Reset();
 		NGrid->Reset();
 		KGrid->Reset();
 		T850Grid->Reset();
@@ -220,7 +220,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		while ( myTargetInfo->NextLocation() && 
 				targetGrid->Next() &&
-				T2mGrid->Next() &&
+				T0mGrid->Next() &&
 				NGrid->Next() &&
 				KGrid->Next() &&
 				T850Grid->Next() &&
@@ -231,7 +231,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 			count++;
 
-			double T2m = kFloatMissing;
+			double T0m = kFloatMissing;
 			double N = kFloatMissing;
 			double kIndex = kFloatMissing;
 			double T850 = kFloatMissing;
@@ -239,7 +239,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			double RH700 = kFloatMissing;
 			double RH500 = kFloatMissing;
 
-			InterpolateToPoint(targetGrid, T2mGrid, equalGrids, T2m);
+			InterpolateToPoint(targetGrid, T0mGrid, equalGrids, T0m);
 			InterpolateToPoint(targetGrid, NGrid, equalGrids, N);
 			InterpolateToPoint(targetGrid, KGrid, equalGrids, kIndex);
 			InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
@@ -247,7 +247,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			InterpolateToPoint(targetGrid, RH700Grid, equalGrids, RH700);
 			InterpolateToPoint(targetGrid, RH500Grid, equalGrids, RH500);
 
-			if ( T2m == kFloatMissing || N == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing || RH850 == kFloatMissing || RH700 == kFloatMissing || RH500 == kFloatMissing )
+			if ( T0m == kFloatMissing || N == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing || RH850 == kFloatMissing || RH700 == kFloatMissing || RH500 == kFloatMissing )
 			{
 				missingCount++;
 
@@ -259,11 +259,11 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			int cloudCode = 704;
 			//int cloudType = 1;
 
-			double TBase = 273.15;
-			T2m = T2m - TBase;
+			double TBase = himan::constants::kKelvin;
+			T0m = T0m - TBase;
 			T850 = T850 - TBase;
 			
-			int lowConvection = util::LowConvection(T2m, T850);
+			int lowConvection = util::LowConvection(T0m, T850);
 			
 			//data comes as 0..1 instead of 0-100%
 			N *= 100;
