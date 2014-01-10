@@ -163,13 +163,15 @@ double ToPower(double value, double power);
 double RelativeTopography(int level1, int level2, double z1, double z2);
 
 /**
- * @brief Calculates low convection for a point.
+ * @brief Checks the stability of surface and 850hPa level
+ * 0 = no convection
+ * 1 = low convection during on sea
+ * 2 = low convection during summer on land
  * @param T2m Value of 2m temperature
  * @param T850 Value of temperature at 850 hPa pressure level
- * @return convection value
+ * @return convection value.
  */
 int LowConvection(double T2m, double T850);
-
 
 /**
  * @brief Calculate water vapor saturated pressure in hPa
