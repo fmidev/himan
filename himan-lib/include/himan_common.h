@@ -359,10 +359,10 @@ std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers)
 namespace constants {
 
 	/**
-	 * @brief One degree celsius in Kelvins
+	 * @brief Zero degrees celsius in Kelvins
 	 */
 
-	const double kKelvin = 273.16;
+	const double kKelvin = 273.15;
 
 	/**
 	 * @brief Gas constant for water vapor (J / K kg)
