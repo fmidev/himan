@@ -167,11 +167,12 @@ double RelativeTopography(int level1, int level2, double z1, double z2);
  * 0 = no convection
  * 1 = low convection during on sea
  * 2 = low convection during summer on land
- * @param T2m Value of 2m temperature
+ * T0m height was commented as 2m, but calculated as 0m temperature in hil_pp
+ * @param T0m Value of 0m temperature
  * @param T850 Value of temperature at 850 hPa pressure level
  * @return convection value.
  */
-int LowConvection(double T2m, double T850);
+int LowConvection(double T0m, double T850);
 
 /**
  * @brief Calculate water vapor saturated pressure in hPa

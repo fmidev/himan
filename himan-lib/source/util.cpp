@@ -391,14 +391,14 @@ double util::RelativeTopography(int level1, int level2, double z1, double z2)
 	return topography;
 }
 
-int util::LowConvection(double T2m, double T850)
+int util::LowConvection(double T0m, double T850)
 {
-	// Lability during summer (T2m > 8C)
-	if ( T2m >= 8 && T2m - T850 >= 10 ) 
+	// Lability during summer (T0m > 8C)
+	if ( T0m >= 8 && T0m - T850 >= 10 ) 
 		return 2;
 	
 	// Lability during winter (T850 < 0C) Probably above sea
-	else if ( T2m >= 0 && T850 <= 0 && T2m - T850 >= 10 ) 
+	else if ( T0m >= 0 && T850 <= 0 && T0m - T850 >= 10 ) 
 		return 1;
 	
 	return 0;
