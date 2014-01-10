@@ -277,15 +277,15 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 				 *
 				 */
 
-				double N;
-				double T;
-				double Z1000;	
-                double T850;
-				double Z850;
-				double cloud;
-				double kindex;
-				double RR;
-				double nextRR;
+				double N = kFloatMissing;
+				double T = kFloatMissing;
+				double Z1000 = kFloatMissing;	
+                double T850 = kFloatMissing;
+				double Z850 = kFloatMissing;
+				double cloud = kFloatMissing;
+				double kindex = kFloatMissing;
+				double RR = kFloatMissing;
+				double nextRR = kFloatMissing;
 
 				InterpolateToPoint(targetGrid, NGrid, equalGrids, N);
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
@@ -297,7 +297,9 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
                 InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
                 InterpolateToPoint(targetGrid, NextRRGrid, equalGrids, nextRR);
 			
-				if (T == kFloatMissing )
+				if (N == kFloatMissing || T == kFloatMissing || Z1000 == kFloatMissing
+					|| T850 == kFloatMissing|| cloud == kFloatMissing|| kindex == kFloatMissing
+					|| RR == kFloatMissing || nextRR == kFloatMissing)
 				{
 					missingCount++;
 
@@ -352,6 +354,8 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 				}
 
 				// Ukkoset
+				double TBase = 273.15;
+               	T850 = T850 - TBase;
 
 				if ( cloudType == 2 && T850 < -9 )
       				cloudType = 5;  // lumisade
@@ -473,7 +477,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
                   	{
                     	rain = 0;
                   	}
-               
+     
 
 	                if (reltopo >= 1289) // Lopuksi jäätävä sade
 	                {
