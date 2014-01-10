@@ -206,7 +206,7 @@ void kindex::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIn
 			}
 
 			double kIndex;
-			double TBase = 273.15;
+			double TBase = himan::constants::kKelvin;
 
 			T850 = T850 - TBase;
 			T700 = T700 - TBase;

@@ -298,7 +298,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
                 InterpolateToPoint(targetGrid, NextRRGrid, equalGrids, nextRR);
 			
 				if (N == kFloatMissing || T == kFloatMissing || Z1000 == kFloatMissing
-					|| T850 == kFloatMissing|| cloud == kFloatMissing|| kindex == kFloatMissing
+					|| T850 == kFloatMissing || cloud == kFloatMissing || kindex == kFloatMissing
 					|| RR == kFloatMissing || nextRR == kFloatMissing)
 				{
 					missingCount++;
@@ -354,8 +354,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 				}
 
 				// Ukkoset
-				double TBase = 273.15;
-               	T850 = T850 - TBase;
+               	T850 = T850 - himan::constants::kKelvin;
 
 				if ( cloudType == 2 && T850 < -9 )
       				cloudType = 5;  // lumisade
