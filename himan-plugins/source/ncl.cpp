@@ -16,6 +16,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
+#include "neons.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -54,6 +55,11 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 	theRequestedParam.GribCategory(3);
 	theRequestedParam.GribParameter(6);
 
+	shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+
+	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(230, "last hybrid level number"));
+
+
 	if (itsConfiguration->Exists("temp") && itsConfiguration->GetValue("temp") == "-20" )
 	{
     	theRequestedParam.Name("HM20C-M");
@@ -90,7 +96,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	param HParam("HL-M");
 	param TParam("T-K");
 
-	int levelNumber = 65;
+	int levelNumber = itsBottomLevel;
 
 	level HLevel(himan::kHybrid, static_cast<float> (levelNumber), "HYBRID");
 
@@ -164,7 +170,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		bool firstLevel = true;
 
-		myTargetInfo->Data()->Fill(kFloatMissing);		
+		myTargetInfo->Data()->Fill(-1);		
 		
 		HInfo->ResetLocation();
 		TInfo->ResetLocation();
@@ -223,18 +229,32 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			{
 				count++;
 		
-
-				double height = kFloatMissing;
-				double temp = kFloatMissing;
-				double prevHeight = kFloatMissing;
-				double prevTemp = kFloatMissing;
+				
+				double height(kFloatMissing);
+				double temp(kFloatMissing);
+				double prevHeight(kFloatMissing);
+				double prevTemp(kFloatMissing);
 
 				double targetHeight = myTargetInfo->Value();
 
 				assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-				InterpolateToPoint(targetGrid, HGrid, equalGrids, height);
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, temp);
+				
+				if (targetHeight != -1)
+				{
+					
+					// if (temp >= targetTemperature)
+					// {
+					//  	targetHeight = -1;
+					// }
+					{
+						continue;
+					}
+				}
+
+				InterpolateToPoint(targetGrid, HGrid, equalGrids, height);
+				
 
 				if (!firstLevel)
 				{
@@ -260,30 +280,34 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 					continue;
 				}
 
-				temp -= 273.15;
-				prevTemp -= 273.15;
+				temp -= himan::constants::kKelvin;
+				prevTemp -= himan::constants::kKelvin;
 
-				if (targetHeight == 0)
+				// if (targetHeight == -1)
+				// {	
+				if (temp < targetTemperature)
 				{
-					
-					if (temp < targetTemperature)
+
+					if (!firstLevel)
 					{
-						if (!firstLevel)
-						{
-							double p_rel = (targetTemperature - temp) / (prevTemp - temp);
-							targetHeight = height + (prevHeight - height) * p_rel;
-						}
-						else
-						{
-							targetHeight = kFloatMissing;
-						}
+						double p_rel = (targetTemperature - temp) / (prevTemp - temp);
+						targetHeight = height + (prevHeight - height) * p_rel;
+					}
+
+					else
+					{
+						targetHeight = kFloatMissing;
 					}
 				}
-				//Inversiotilanteessa pelastetaan vielä pisteitä uudelleen laskentaan
-				else if (targetHeight != 0 && temp >= targetTemperature)
+				else 
 				{
-					targetHeight = 0;
-				}				
+					continue;
+				}
+				// }
+				// else if (targetHeight == kFloatMissing && temp >= targetTemperature)
+				// {
+				// 	targetHeight = -1;
+				// }
 
 				if (!myTargetInfo->Value(targetHeight))
 				{
@@ -303,7 +327,24 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 
 			firstLevel = false;
+
+			if (CountValues(myTargetInfo))
+			{
+				break;
+			}
 		} 
+
+		/*
+		 * Replaces all unset values
+		 */
+		myTargetInfo->ResetLocation();
+		while(myTargetInfo->NextLocation())
+		{
+			if ( myTargetInfo->Value() == -1)
+			{
+				myTargetInfo->Value(kFloatMissing);
+			}
+		}
 
 		/*
 		 * Newbase normalizes scanning mode to bottom left -- if that's not what
@@ -356,4 +397,14 @@ shared_ptr<himan::info> ncl::FetchPrevious(const forecast_time& wantedTime, cons
 		throw e;
 	}
 
+}
+bool ncl::CountValues(const shared_ptr<himan::info> values)
+{
+	size_t s = values->Data()->Size();
+	for (size_t j = 0; j < s; j++)
+	{
+		if (values->Data()->At(j) == -1)
+			return false;
+	}
+	return true;
 }

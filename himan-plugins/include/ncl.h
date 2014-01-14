@@ -53,7 +53,8 @@ public:
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
     std::shared_ptr<info> FetchPrevious(const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
-
+    bool CountValues(const std::shared_ptr<himan::info> values);
+    int itsBottomLevel;
     int targetTemperature;
 };
 
