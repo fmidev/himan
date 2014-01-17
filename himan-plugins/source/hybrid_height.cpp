@@ -71,22 +71,23 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
 
 	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(230, "last hybrid level number"));
+	itsUseGeopotential = (itsConfiguration->SourceProducer().Id() == 1);
 
 	if (!itsConfiguration->Exists("fast_mode") && itsConfiguration->GetValue("fast_mode") == "true")
 	{
 		itsFastMode = true;
 	}
-	else
+	else if (!itsUseGeopotential)
 	{
 		// When doing exact calculation we must do them sequentially starting from
 		// surface closest to ground because every surface's value is depended
-		// on the surface below it. Therefore we cannot parallelize the calculation.
+		// on the surface below it. Therefore we cannot parallelize the calculation
+		// on level basis.
 		
-		itsThreadCount = 1;
-		
-		if (itsConfiguration->StatisticsEnabled())
+		if (Dimension() != kTimeDimension)
 		{
-			itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
+			itsLogger->Info("Changing leading_dimension to time");
+			Dimension(kTimeDimension);
 		}
 	}
 
@@ -104,12 +105,13 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 {
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-	param GPParam("P-PA");
-	param PParam("P-HPA");
-	param TParam("T-K");
+	const param GPParam("P-PA");
+	const param PParam("P-HPA");
+	const param TParam("T-K");
+	const param ZParam("Z-M2S2");
 	
-	level H2(himan::kHeight, 2, "HEIGHT");
-	level H0(himan::kHeight, 0, "HEIGHT");
+	const level H2(himan::kHeight, 2, "HEIGHT");
+	const level H0(himan::kHeight, 0, "HEIGHT");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
 
@@ -129,14 +131,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 		bool firstLevel(false);
 		
-		if (itsFastMode)
-		{
-			firstLevel = true;
-		}
-		
-		//only works with hirlam for now
-		//itsLogger->Debug("level: " 
-		if ( myTargetInfo->Level().Value() == itsBottomLevel )
+		if (itsFastMode || myTargetInfo->Level().Value() == itsBottomLevel)
 		{
 			firstLevel = true;
 		}
@@ -149,61 +144,72 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		}
 
 
-
 		shared_ptr<info> PInfo;
 		shared_ptr<info> TInfo;			
 		shared_ptr<info> prevPInfo;
 		shared_ptr<info> prevTInfo;
 		shared_ptr<info> prevHInfo;
+		shared_ptr<info> GPInfo;
+		shared_ptr<info> zeroGPInfo;
+
+		vector<info> sources ;
 
 		try
 		{
-
-			forecast_time& fTime = myTargetInfo->Time();
-			if (!firstLevel)
+			const forecast_time fTime = myTargetInfo->Time();
+			
+			if (itsUseGeopotential)
 			{
-				prevTInfo = FetchPrevious(fTime, prevLevel, param("T-K"));
-				prevPInfo = FetchPrevious(fTime, prevLevel, param("P-HPA"));
-				prevHInfo = FetchPrevious(fTime, prevLevel, param("HL-M"));
-			}
-			else 
-			{
-				prevPInfo = FetchPrevious(fTime, H0, param("P-PA"));
-				prevTInfo = FetchPrevious(fTime, H2, param("T-K"));
-			}
-			//prevLevel = myTargetInfo->Level();
+				GPInfo = FetchPrevious(fTime, myTargetInfo->Level(), ZParam);
+				zeroGPInfo = FetchPrevious(fTime, H0, ZParam);
+			
+				SetAB(myTargetInfo, GPInfo);
 
-			PInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 PParam);
-				
-			TInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 TParam);			
+			}
+			else
+			{
+
+				if (!firstLevel)
+				{
+					prevTInfo = FetchPrevious(fTime, prevLevel, param("T-K"));
+					prevPInfo = FetchPrevious(fTime, prevLevel, param("P-HPA"));
+					prevHInfo = FetchPrevious(fTime, prevLevel, param("HL-M"));
+				}
+				else
+				{
+					prevPInfo = FetchPrevious(fTime, H0, param("P-PA"));
+					prevTInfo = FetchPrevious(fTime, H2, param("T-K"));
+				}
+
+				PInfo = FetchPrevious(fTime, myTargetInfo->Level(), PParam);
+				TInfo = FetchPrevious(fTime, myTargetInfo->Level(), TParam);
+
+				assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
+
+				SetAB(myTargetInfo, TInfo);
+
+			}
+
 
 		}
-		catch (HPExceptionType e)
+		catch (const HPExceptionType& e)
 		{
-			switch (e)
+			if (e == kFileDataNotFound)
 			{
-				case kFileDataNotFound:
-					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing);
+				itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+				myTargetInfo->Data()->Fill(kFloatMissing);
 
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-					
-					continue;
-					break;
+				if (itsConfiguration->StatisticsEnabled())
+				{
+					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+				}
 
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
+				continue;
+			}
+			else
+			{
+				throw e;
 			}
 		}
 
@@ -214,27 +220,47 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			processTimer->Start();
 		}
 
-		assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
-
-		SetAB(myTargetInfo, TInfo);
-
 		size_t missingCount = 0;
 		size_t count = 0;
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> prevPGrid(prevPInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> prevTGrid(prevTInfo->Grid()->ToNewbaseGrid());
+
+		shared_ptr<NFmiGrid> PGrid;
+		shared_ptr<NFmiGrid> prevPGrid;
+		shared_ptr<NFmiGrid> TGrid;
+		shared_ptr<NFmiGrid> prevTGrid;
 		shared_ptr<NFmiGrid> prevHGrid;
+		shared_ptr<NFmiGrid> GPGrid;
+		shared_ptr<NFmiGrid> zeroGPGrid;
+
+		bool equalGrids = false;
 		
-		if (!firstLevel )
-			prevHGrid = shared_ptr<NFmiGrid>(prevHInfo->Grid()->ToNewbaseGrid());
+		if (itsUseGeopotential)
+		{
+			GPGrid = make_shared<NFmiGrid> (*GPInfo->Grid()->ToNewbaseGrid());
+			zeroGPGrid = make_shared<NFmiGrid> (*zeroGPInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = ( *myTargetInfo->Grid() == *prevTInfo->Grid() && *myTargetInfo->Grid() == *prevPInfo->Grid() && *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() ); //&& *myTargetInfo->Grid() == *T2mInfo->Grid() && *myTargetInfo->Grid() == *P0mInfo->Grid() );
+			equalGrids = (*myTargetInfo->Grid() == *zeroGPInfo->Grid() && *myTargetInfo->Grid() == *GPInfo->Grid()) ;
+		}
+		else
+		{
+			PGrid = make_shared<NFmiGrid> (*PInfo->Grid()->ToNewbaseGrid());
+			prevPGrid = make_shared<NFmiGrid> (*prevPInfo->Grid()->ToNewbaseGrid());
+			TGrid = make_shared<NFmiGrid> (*TInfo->Grid()->ToNewbaseGrid());
+			prevTGrid = make_shared<NFmiGrid> (*prevTInfo->Grid()->ToNewbaseGrid());
 
-		if (!firstLevel)
-			equalGrids = ( equalGrids && *myTargetInfo->Grid() == *prevHInfo->Grid() );
+			if (!firstLevel)
+			{
+				prevHGrid = make_shared<NFmiGrid> (*prevHInfo->Grid()->ToNewbaseGrid());
+
+				equalGrids = ( *myTargetInfo->Grid() == *prevTInfo->Grid() && *myTargetInfo->Grid() == *prevPInfo->Grid() && *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() ); //&& *myTargetInfo->Grid() == *T2mInfo->Grid() && *myTargetInfo->Grid() == *P0mInfo->Grid() );
+
+				if (!firstLevel)
+				{
+					equalGrids = ( equalGrids && *myTargetInfo->Grid() == *prevHInfo->Grid() );
+				}
+			}
+		}
 
 		string deviceType = "CPU";
 
@@ -244,15 +270,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 		targetGrid->Reset();
 
-		prevPGrid->Reset();
-		prevTGrid->Reset();
-		if (!firstLevel)
-			prevHGrid->Reset();
-
-		while (	myTargetInfo->NextLocation() && 
-				targetGrid->Next() && 
-				prevTGrid->Next() && 
-				prevPGrid->Next() )
+		while (myTargetInfo->NextLocation() && targetGrid->Next())
 		{
 
 			count++;
@@ -262,6 +280,29 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			double prevP = kFloatMissing;
 			double prevT = kFloatMissing;
 			double prevH = kFloatMissing;
+
+			if (itsUseGeopotential)
+			{
+				double GP = kFloatMissing, zeroGP = kFloatMissing;
+
+				InterpolateToPoint(targetGrid, GPGrid, equalGrids, GP);
+				InterpolateToPoint(targetGrid, zeroGPGrid, equalGrids, zeroGP);
+
+				double height = kFloatMissing;
+
+				if (GP != kFloatMissing && zeroGP != kFloatMissing)
+				{
+					height = (GP - zeroGP) * himan::constants::kIg;
+				}
+				else
+				{
+					missingCount++;
+				}
+
+				myTargetInfo->Value(height);
+
+				continue;
+			}
 
 			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 			InterpolateToPoint(targetGrid, PGrid, equalGrids, P);

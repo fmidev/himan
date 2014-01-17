@@ -33,29 +33,31 @@ public:
 		return "himan::plugin::hybrid_height";
 	}
 
-    virtual HPPluginClass PluginClass() const
-    {
-        return kCompiled;
-    }
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
 
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
 
 private:
-    virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
-    std::shared_ptr<info> FetchPrevious(const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
-    int itsBottomLevel;
-    bool itsFastMode;
+	std::shared_ptr<info> FetchPrevious(const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
+	int itsBottomLevel;
+	bool itsFastMode;
+	bool itsUseGeopotential;
+
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<hybrid_height> (new hybrid_height());
+	return std::shared_ptr<hybrid_height> (new hybrid_height());
 }
 
 } // namespace plugin
