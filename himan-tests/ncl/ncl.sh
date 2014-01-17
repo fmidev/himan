@@ -6,7 +6,7 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan-bin/himan"
 fi
 
-rm -f HL-M_*
+rm -f H0C-M_*
 
 $HIMAN -d 5 -f ncl.json -t grib height_himan.grib t.grib
 
