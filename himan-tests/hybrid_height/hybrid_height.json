@@ -1,12 +1,11 @@
 {
-     "target_geom_name" : "RCR068",
+     "target_geom_name" : "MTHIPS25",
      "source_producer" : "1",
      "target_producer" : "230",
      "hours" : "3",
-     "origintime" : "2013-11-27 06:00:00",
-     "interpolate_time" : "no",
-     "file_write" : "single",
-
+     "origintime" : "2014-01-17 00:00:00",
+     "file_write" : "multiple",
+     "read_data_from_database": false,
 
      "processqueue" : [
          {
