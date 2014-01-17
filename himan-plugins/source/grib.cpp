@@ -557,10 +557,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		case 5:
 			newGrid->Projection(kStereographicProjection);
-			
+
 			newGrid->Orientation(itsGrib->Message()->GridOrientation());
-			newGrid->Di(itsGrib->Message()->XLengthInMeters() / (ni - 1));
-			newGrid->Dj(itsGrib->Message()->YLengthInMeters() / (nj - 1));
+			newGrid->Di(itsGrib->Message()->XLengthInMeters());
+			newGrid->Dj(itsGrib->Message()->YLengthInMeters());
 			break;
 
 		case 10:
@@ -622,7 +622,16 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				continue;
 			}
 
-			newGrid->BottomLeft(himan::point(itsGrib->Message()->X0(),itsGrib->Message()->Y0()));
+			const point first(itsGrib->Message()->X0(),itsGrib->Message()->Y0());
+
+			newGrid->BottomLeft(first);
+
+			assert(newGrid->ScanningMode() == kBottomLeft);
+			
+			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(first, newGrid->Orientation(), ni, nj, newGrid->Di(), newGrid->Dj());
+
+			newGrid->TopRight(coordinates.second);
+		
 		}
 		else
 		{
