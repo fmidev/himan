@@ -411,6 +411,19 @@ namespace constants {
 
 	const double kCp = 1003.5;
 
+
+	/**
+	 * @brief Gravity constant approximation (m/s^2)
+	 */
+
+	const double kG = 9.80665;
+
+	/**
+	 * @brief Inverse g constant (ie. 1/g)
+	 */
+
+	const double kIg = 0.10197;
+	
 } // namespace constants
 
 } // namespace himan
