@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 14.1.7
+Version: 14.1.20
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -51,6 +51,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Jan 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.1.20-1.fmi
+- Fixes for util::RelativeTopgraphy()
 * Tue Jan  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.1.7-1.fmi
 - Accumulated changes in many classes wrt hybrid_height and preform_hybrid
 - Link with grib_api 1.11.0
