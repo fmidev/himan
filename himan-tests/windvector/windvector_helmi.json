@@ -1,5 +1,7 @@
 {
-	"target_geom_name" : "HELMI",
+	"bbox" : "16.717,56.742,30.379,66.177",
+	"ni" : "415",
+	"nj" : "556",
 	"source_producer" : "152",
 	"target_producer" : "152",
 	"start_hour" : "10",
