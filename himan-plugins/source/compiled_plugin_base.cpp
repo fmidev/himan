@@ -428,7 +428,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 			if (parm_id == -1)
 			{
-				itsBaseLogger->Warning("Warning::util: Grib1 parameter definitions not found from Neons");
+				itsBaseLogger->Warning("Grib1 parameter definitions not found from Neons");
 				itsBaseLogger->Warning("table2Version is " + boost::lexical_cast<string> (table2Version) + ", parm_name is " + params[i].Name());
 			}
 
