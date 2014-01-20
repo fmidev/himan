@@ -89,7 +89,11 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> params;
 
-	param targetParam("PRECFORM2-N", 57);
+	// Feikkiparametrinimi ja -numero koska alkuperainen on preform_pressurelle varattu!
+	// Uusi neons-rakenne ehka sallii meidan tallentaa eri laskentatavoilla tuotetut
+	// parametrit samalle numerolle
+
+	param targetParam("PRECFORM2-N", 10059);
 
 	/*
 	 * !!! HUOM !!!
