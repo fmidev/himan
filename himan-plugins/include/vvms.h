@@ -53,6 +53,7 @@ public:
 
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	double itsScale;
 
 };
 

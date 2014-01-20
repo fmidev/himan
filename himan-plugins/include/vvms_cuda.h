@@ -32,8 +32,9 @@ struct vvms_cuda_options
 	bool pP;
 	unsigned short cudaDeviceIndex;
 	size_t missingValuesCount;
+	double scale;
 	
-	vvms_cuda_options() : isConstantPressure(false), pT(false), pVV(false), pP(false), missingValuesCount(0) {}
+	vvms_cuda_options() : isConstantPressure(false), pT(false), pVV(false), pP(false), missingValuesCount(0), scale(1) {}
 };
 
 struct vvms_cuda_data

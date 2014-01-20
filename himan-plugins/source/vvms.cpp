@@ -23,7 +23,7 @@ using namespace himan::plugin;
 #include "vvms_cuda.h"
 #include "cuda_helper.h"
 
-vvms::vvms()
+vvms::vvms() : itsScale(1)
 {
 	itsClearTextFormula = "w = -(ver) * 287 * T * (9.81*p)";
 
@@ -48,6 +48,12 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	param theRequestedParam ("VV-MS", 143);
 
+	if (itsConfiguration->Exists("millimeters") && itsConfiguration->GetValue("millimeters") == "true")
+	{
+		theRequestedParam = param("VV-MMS", 43);
+		itsScale = 1000;
+	}
+	
 	// GRIB 2
 
 	theRequestedParam.GribDiscipline(0);
@@ -262,6 +268,8 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
 			}
 
+			opts.scale = itsScale;
+			
 			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.VVMS), opts.N * sizeof(double), cudaHostAllocMapped));
 
 			vvms_cuda::DoCuda(opts, datas);
@@ -342,9 +350,9 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 					continue;
 				}
 
-				double VVms = 287 * -VV * (T + TBase) / (9.81 * P * PScale);
+				double w = itsScale * (287 * -VV * (T + TBase) / (himan::constants::kG * P * PScale));
 
-				if (!myTargetInfo->Value(VVms))
+				if (!myTargetInfo->Value(w))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
