@@ -97,6 +97,13 @@ private:
 
 	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime) const;
 
+	/**
+	 * @brief Approximate heights (in meters) for each model level.
+	 *
+	 */
+
+	level LevelForHeight(const producer& prod, double height) const;
+
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	forecast_time itsTime;
 	

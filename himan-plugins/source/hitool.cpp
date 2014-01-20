@@ -83,6 +83,19 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 	return mod;
 }
 
+level hitool::LevelForHeight(const producer& prod, double height) const
+{
+
+	switch (prod.Id())
+	{
+		case 1:
+		case 230:
+
+			break;
+	}
+	
+	return level();
+}
 
 vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 							HPLevelType wantedLevelType,
@@ -321,7 +334,8 @@ shared_ptr<info> hitool::Stratus()
 	
 	for (size_t i = 0; i < baseThreshold.size(); i++)
 	{
-		if (baseThreshold[i] == kFloatMissing || baseThreshold[i] < stCover)
+		assert(baseThreshold[i] != kFloatMissing);
+		if (baseThreshold[i] < stCover)
 		{
 			baseThreshold[i] = stCover;
 		}
@@ -343,7 +357,8 @@ shared_ptr<info> hitool::Stratus()
 
 	for (size_t i = 0; i < topThreshold.size(); i++)
 	{
-		if (baseThreshold[i] == kFloatMissing || topThreshold[i] < stCover)
+		assert(topThreshold[i] != kFloatMissing);
+		if (topThreshold[i] < stCover)
 		{
 			topThreshold[i] = stCover;
 		}
@@ -385,7 +400,7 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Debug("Stratus base number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusBase.size()));
 	
-	fill(constData2.begin(), constData2.end(), layer);
+	// fill(constData2.begin(), constData2.end(), layer);
 
 	/**
 	 * Etsitään parametrin N viimeisen topThreshold-arvon korkeus väliltä 0 .. layer (=2000)
@@ -668,11 +683,11 @@ shared_ptr<info> hitool::FreezingArea()
 	{
 		itsLogger->Info("Searching for second zero level height and value");
 
+		assert(haveOne);
+		
 		// Find height of second zero level
 
 		zeroLevel2 = VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
-
-		assert(zeroLevel1.size());
 
 		itsLogger->Info("Searching for average temperature between first and second zero level");
 
@@ -683,12 +698,11 @@ shared_ptr<info> hitool::FreezingArea()
 	{
 		itsLogger->Info("Searching for third zero level height and value");
 
+		assert(haveOne && haveTwo);
+		
 		// Find height of third zero level
 
 		zeroLevel3 = VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
-
-		assert(zeroLevel1.size());
-		assert(zeroLevel2.size());
 
 		itsLogger->Info("Searching for average temperature between second and third zero level");
 
@@ -702,13 +716,10 @@ shared_ptr<info> hitool::FreezingArea()
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
 		size_t numZeroLevel = numZeroLevels[i];
-		
-		if (numZeroLevel == 0)
-		{
-			continue;
-		}
 
-		else if (numZeroLevel == 1)
+		// Pintakerros plussalla (1 nollaraja)
+
+		if (numZeroLevel == 1)
 		{
 			double zl = zeroLevel1[i], ta = Tavg1[i];
 			double pa = kFloatMissing;
@@ -721,6 +732,9 @@ shared_ptr<info> hitool::FreezingArea()
 			plusArea1[i] = pa;
 
 		}
+		
+		// Pintakerros pakkasella, ylempänä T>0 kerros (2 nollarajaa)
+
 		else if (numZeroLevel == 2)
 		{
 			double zl1 = zeroLevel1[i], ta1 = Tavg1[i];
@@ -741,6 +755,9 @@ shared_ptr<info> hitool::FreezingArea()
 
 			minusArea[i] = ma;
 		}
+
+		// Pintakerroksen lisäksi ylempänä toinen T>0 kerros, joiden välissä pakkaskerros (3 nollarajaa)
+
 		else if (numZeroLevel == 3)
 		{
 			double zl1 = zeroLevel1[i], ta1 = Tavg1[i];
@@ -751,7 +768,7 @@ shared_ptr<info> hitool::FreezingArea()
 
 			if (zl1 != kFloatMissing && zl2 != kFloatMissing && ta2 != kFloatMissing)
 			{
-				pa2 = (zl3 - zl2) * (ta2 - himan::constants::kKelvin);
+				pa2 = (zl3 - zl2) * (ta2 - himan::constants::kKelvin); // "aloft"
 			}
 
 			plusArea2[i] = pa2;

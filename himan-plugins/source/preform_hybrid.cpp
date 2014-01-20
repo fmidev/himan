@@ -5,6 +5,9 @@
  * @author partio
  */
 
+#define AND &&
+#define OR ||
+
 #include "preform_hybrid.h"
 #include <iostream>
 #include "plugin_factory.h"
@@ -49,7 +52,7 @@ const double dryLimit = 70.;
 // Raja-arvot tihkun ja jäätävän tihkun max intensiteetille [mm/h]
 // (pienemmällä jäätävän tihkun raja-arvolla voi hieman rajoittaa sen esiintymistä)
 const double dzLim = 0.3;
-const double FZdzLim = 0.2;
+const double fzdzLim = 0.2;
 
 // Raja-arvot pinnan pakkaskerroksen (MA) ja sen yläpuolisen sulamiskerroksen (PA) pinta-alalle jäätävässä sateessa [mC]
 const double fzraMA = -100.;
@@ -58,12 +61,6 @@ const double fzraPA = 100.;
 // Pinnan yläpuolisen plussakerroksen pinta-alan raja-arvot [mC, "metriastetta"]:
 const double waterArea = 300;  // alkup. PK:n arvo oli 300
 const double snowArea = 50;	// alkup. PK:n arvo oli 50
-
-// Raja-arvot Koistisen olomuotokaavalle (probWater):
-// Huom! Käytetään alla sekä IF- että ELSEIF-haaroissa.
-const double waterToSleet = 0.5;  // alkup. PK:n arvo oli 0.5
-const double sleetToWater = 0.8;  // alkup. PK:n arvo oli 0.8
-const double sleetToSnow = 0.2;   // alkup. PK:n arvo oli 0.2
 
 // Max sallittu nousuliike st:ssa [mm/s]
 const double wMax = 50;
@@ -92,7 +89,7 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> params;
 
-	param targetParam("PRECFORM-N", 57);
+	param targetParam("PRECFORM2-N", 57);
 
 	/*
 	 * !!! HUOM !!!
@@ -394,12 +391,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 															Navg			> Nlimit &&
 															upperLayerRH	< dryLimit);
 
-				const double probWater = util::WaterProbability(T, RH);
-
 				// Start algorithm
 				// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
-				if (	base			!=	kFloatMissing &&
+				// 1. jäätävää tihkua? (tai lumijyväsiä)
+				
+				if (	base			!=kFloatMissing &&
 						top				!= kFloatMissing &&
 						upperLayerRH	!= kFloatMissing &&
 						wAvg			!= kFloatMissing &&
@@ -408,7 +405,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 						Ttop			!= kFloatMissing)
 				{
 
-					if ((RR <= FZdzLim) &&
+					if ((RR <= fzdzLim) &&
 						(base < baseLimit) &&
 						((top - base) >= fzStLimit) &&
 						(wAvg < wMax) &&
@@ -424,20 +421,23 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					}
 				}
 				
-				// 2. jäätävää vesisadetta?
+				// 2. jäätävää vesisadetta? (tai jääjyväsiä (ice pellets), jos pakkaskerros hyvin paksu, ja/tai sulamiskerros ohut)
 				// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros?
-				// (Huom. hyvin paksu pakkaskerros (tai ohut sulamiskerros) -> oikeasti jääjyväsiä/ice pellets fzra sijaan)
 				// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
 				
-				if (PreForm == kFloatMissing && plusArea1 != kFloatMissing && minusArea != kFloatMissing)
+				if (PreForm == kFloatMissing AND plusArea1 != kFloatMissing AND minusArea != kFloatMissing AND RR > 0.1 && plusArea1 > fzraPA && minusArea < fzraMA && T <= 0 AND ((upperLayerRH > dryLimit) OR (upperLayerRH == kFloatMissing)))
 				{
-						
-					if (RR > 0.1 && plusArea1 > fzraPA && minusArea < fzraMA && T <= 0)
-					{
-						PreForm = kFreezingRain;
-					}
-					else if (plusArea1 > waterArea)
-					{
+					PreForm = kFreezingRain;
+				}
+
+				// Tihkua tai vettä jos "riitävän paksu lämmin kerros pinnan yläpuolella"
+
+				if (PreForm == kFloatMissing)
+				{
+					 if (plusArea1 != kFloatMissing AND plusArea1 > waterArea)
+					 {
+						// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
+						// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään mukana)
 						if (thickStratusWithLightPrecipitation)
 						{
 							PreForm = kDrizzle;
@@ -445,43 +445,21 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 						else
 						{
 							PreForm = kRain;
-
-							if (probWater < waterToSleet)
-							{
-								PreForm = kSleet;
-							}
 						}
 					}
 			
 					// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
 
-					if (plusArea1 >= snowArea && plusArea1 <= waterArea)
+					if (plusArea1 != kFloatMissing && plusArea1 >= snowArea AND plusArea1 <= waterArea)
 					{
 						PreForm = kSleet;
-
-						if (probWater > sleetToWater)
-						{
-							// Tihkuksi jos riittävän paksu stratus heikolla sateen intensiteetillä
-							
-							if (thickStratusWithLightPrecipitation)
-							{
-								PreForm = kDrizzle;
-							}
-							else
-							{
-								PreForm = kRain;
-							}
-						}
-						else if (probWater < sleetToSnow)
-						{
-							PreForm = kSnow;
-						}
 					}
-				}
 
-				if (PreForm == kFloatMissing && (plusArea1 < snowArea || plusArea1 == kFloatMissing))
-				{
-					PreForm = kSnow;
+					// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
+					if ((plusArea1 != kFloatMissing AND plusArea1<snowArea) OR (plusArea1 == kFloatMissing) OR (T < 0))
+					{
+						PreForm = kSnow;
+					}
 				}
 
 				// FINISHED
