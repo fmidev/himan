@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.1.7
+Version: 14.1.20
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -80,6 +80,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.1.20-1.fmi
+- Fixes in rain_type
+- New formula for hirlam in hybrid_height
+- Fixes in ncl
+- New formula for preform_pressure and preform_hybrid
+- Fix in grib when reading polster
+- Tuning for fmidb (HIMAN-17)
 * Tue Jan  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.1.7-1.fmi
 - Change in split_sum rate calculation (HIMAN-26)
 - Lots of internal changes related to boilerplate code removal (HIMAN-28) 
