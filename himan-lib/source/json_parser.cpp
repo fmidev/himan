@@ -569,6 +569,8 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 	/* First check for neons style geom name */
 
+	bool haveArea = false;
+	
 	try
 	{
 		string geom = pt.get<string>("target_geom_name");
@@ -654,6 +656,8 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 		{
 			throw runtime_error(ClassName() + ": Unknown geometry '" + geom + "' found");
 		}
+
+		haveArea = true;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -681,101 +685,148 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 		throw runtime_error(string("Error parsing area information: ") + e.what());
 	}
 
-	if (!conf->itsTargetGeomName.empty())
+	if (haveArea)
 	{
+		// using neons style geom_name we get all information, even grid size
 		return;
 	}
-	
+
+	// Target geometry is still not set, check for bbox
+
+	try
+	{
+		vector<string> coordinates = util::Split(pt.get<string>("bbox"), ",", false);
+
+		// hard coded projection to latlon
+		
+		anInfo->itsProjection = kLatLonProjection;
+
+		anInfo->itsBottomLeft = point(boost::lexical_cast<double>(coordinates[0]), boost::lexical_cast<double>(coordinates[1]));
+		anInfo->itsTopRight = point(boost::lexical_cast<double>(coordinates[2]), boost::lexical_cast<double>(coordinates[3]));
+
+		haveArea = true;
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing bbox: ") + e.what());
+	}
+
 	// Check for manual definition of area
-
-	try
+	
+	if (!haveArea)
 	{
-		string projection = pt.get<string>("projection");
 
-		if (projection == "latlon")
+		try
 		{
-			anInfo->itsProjection = kLatLonProjection;
+			string projection = pt.get<string>("projection");
+
+			if (projection == "latlon")
+			{
+				anInfo->itsProjection = kLatLonProjection;
+			}
+			else if (projection == "rotated_latlon")
+			{
+				anInfo->itsProjection = kRotatedLatLonProjection;
+			}
+			else if (projection == "stereographic")
+			{
+				anInfo->itsProjection = kStereographicProjection;
+			}
+			else
+			{
+				throw runtime_error(ClassName() + ": Unknown projection: " + projection);
+			}
+
 		}
-		else if (projection == "rotated_latlon")
+		catch (boost::property_tree::ptree_bad_path& e)
 		{
-			anInfo->itsProjection = kRotatedLatLonProjection;
+			throw runtime_error(string("Projection definition not found: ") + e.what());
 		}
-		else if (projection == "stereographic")
+		catch (exception& e)
 		{
-			anInfo->itsProjection = kStereographicProjection;
+			throw runtime_error(string("Error parsing projection: ") + e.what());
 		}
-		else
+
+		try
 		{
-			throw runtime_error(ClassName() + ": Unknown projection: " + projection);
+			anInfo->itsBottomLeft = point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude"));
+			anInfo->itsTopRight = point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude"));
 		}
-
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		throw runtime_error(string("Projection definition not found: ") + e.what());
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing projection: ") + e.what());
-	}
-
-	try
-	{
-		anInfo->itsBottomLeft = point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude"));
-		anInfo->itsTopRight = point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude"));
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		throw runtime_error(string("Area corner definitions not found: ") + e.what());
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing area corners: ") + e.what());
-	}
-
-	/* Check orientation */
-
-	try
-	{
-		anInfo->itsOrientation = pt.get<double>("orientation");
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		if (anInfo->itsProjection == kStereographicProjection)
+		catch (boost::property_tree::ptree_bad_path& e)
 		{
-			throw runtime_error(string("Orientation not found for stereographic projection: ") + e.what());
+			throw runtime_error(string("Area corner definitions not found: ") + e.what());
 		}
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing area orientation: ") + e.what());
-	}
-
-	/* Check south pole coordinates */
-
-	try
-	{
-		anInfo->itsSouthPole = point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude"));
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		if (anInfo->itsProjection == kRotatedLatLonProjection)
+		catch (exception& e)
 		{
-			throw runtime_error(string("South pole coordinates not found for rotated latlon projection: ") + e.what());
+			throw runtime_error(string("Error parsing area corners: ") + e.what());
+		}
+
+		/* Check orientation */
+
+		try
+		{
+			anInfo->itsOrientation = pt.get<double>("orientation");
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			if (anInfo->itsProjection == kStereographicProjection)
+			{
+				throw runtime_error(string("Orientation not found for stereographic projection: ") + e.what());
+			}
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing area orientation: ") + e.what());
+		}
+
+		/* Check south pole coordinates */
+
+		try
+		{
+			anInfo->itsSouthPole = point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude"));
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			if (anInfo->itsProjection == kRotatedLatLonProjection)
+			{
+				throw runtime_error(string("South pole coordinates not found for rotated latlon projection: ") + e.what());
+			}
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing south pole location: ") + e.what());
 		}
 	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing south pole location: ") + e.what());
-	}
 
-	/* Check grid definitions */
+	/* Finally check grid definitions */
 
 	try
 	{
 		anInfo->itsNi = pt.get<size_t>("ni");
 		anInfo->itsNj = pt.get<size_t>("nj");
 
+		
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		throw runtime_error(string("Grid definitions not found: ") + e.what());
+
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing grid dimensions: ") + e.what());
+	}
+
+	// Default scanningmode to +x+y
+	
+	anInfo->itsScanningMode = kBottomLeft;
+	
+	try
+	{
 		string mode = pt.get<string> ("scanning_mode");
 
 		if (mode == "+x-y")
@@ -793,12 +844,11 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		throw runtime_error(string("Grid definitions not found: ") + e.what());
-
+		// Do nothing
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing grid dimensions: ") + e.what());
+		throw runtime_error(string("Error parsing scanning mode: ") + e.what());
 	}
 
 }
