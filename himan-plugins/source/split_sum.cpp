@@ -755,7 +755,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 		SumInfo = f->Fetch(itsConfiguration,
 						wantedTime,
 						wantedLevel,
-						sourceParameters[myTargetInfo->Param().Name()]);
+						params);
 	}
 	catch (HPExceptionType e)
 	{

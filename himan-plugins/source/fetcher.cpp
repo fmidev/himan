@@ -329,7 +329,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
 
 		default:
 			// Unknown file type, cannot proceed
-			throw runtime_error("Input file is neither GRID, NetCDF nor QueryData");
+			throw runtime_error("Input file is neither GRIB, NetCDF nor QueryData");
 			break;
 		}
 
