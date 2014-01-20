@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 14.1.20
-Release: 1.fmi
+Release: 2.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -80,6 +80,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.1.20-2.fmi
+- Add millimeter-support to vvms
 * Mon Jan 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.1.20-1.fmi
 - Fixes in rain_type
 - New formula for hirlam in hybrid_height
