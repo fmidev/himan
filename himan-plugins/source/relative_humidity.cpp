@@ -156,9 +156,9 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 			TBase = -273.15;
 		}
 
-		if (!isPressureLevel && PInfo->Param().Unit() == kPa)
+		if (!isPressureLevel && (PInfo->Param().Name() == "P-PA" || PInfo->Param().Unit() == kPa))
 		{
-			PScale = 100;
+			PScale = 0.01;
 		}
 
 		shared_ptr<NFmiGrid> PGrid;
@@ -218,7 +218,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 				T += TBase;
 				P *= PScale;
-				
+
 				double es = util::Es(T) ;
 
 				double RH = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
