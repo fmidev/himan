@@ -75,6 +75,12 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
     	
     }
 
+	if (Dimension() != kTimeDimension)
+	{
+		itsLogger->Info("Changing leading_dimension to time");
+		Dimension(kTimeDimension);
+	}
+
 	theParams.push_back(theRequestedParam);
 
 	SetParams(theParams);
@@ -283,8 +289,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				temp -= himan::constants::kKelvin;
 				prevTemp -= himan::constants::kKelvin;
 
-				// if (targetHeight == -1)
-				// {	
+				if (targetHeight == -1)
+				{	
 				if (temp < targetTemperature)
 				{
 
@@ -299,15 +305,15 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 						targetHeight = kFloatMissing;
 					}
 				}
-				else 
-				{
-					continue;
+				//else 
+				//{
+				//	continue;
+				//}
 				}
-				// }
-				// else if (targetHeight == kFloatMissing && temp >= targetTemperature)
-				// {
-				// 	targetHeight = -1;
-				// }
+				else if (targetHeight == kFloatMissing && temp >= targetTemperature)
+				{
+					targetHeight = -1;
+				}
 
 				if (!myTargetInfo->Value(targetHeight))
 				{
