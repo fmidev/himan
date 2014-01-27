@@ -133,7 +133,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	long firstHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
 	long lastHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
 
-	for (int levelValue = lastHybridLevel; levelValue >= firstHybridLevel && !mod->CalculationFinished(); levelValue--)
+	for (long levelValue = lastHybridLevel; levelValue >= firstHybridLevel && !mod->CalculationFinished(); levelValue--)
 	{
 
 		level currentLevel(kHybrid, levelValue, "HYBRID");
@@ -715,7 +715,7 @@ shared_ptr<info> hitool::FreezingArea()
 
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
-		size_t numZeroLevel = numZeroLevels[i];
+		short numZeroLevel = static_cast<short> (numZeroLevels[i]);
 
 		// Pintakerros plussalla (1 nollaraja)
 
