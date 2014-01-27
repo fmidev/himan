@@ -476,7 +476,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 					// ollaanko ~1500-3000m merenpinnasta (850<pintapaine<700)?
 					// (riittävän paksu) sulamiskerros 700hPa:ssa (tai pakkaskerros sen alla)?
 
-					if ((PreForm=kFloatMissing) AND (P <= 850+stH) AND (P > 700+stH) AND (T700 > 0))
+					if ((PreForm == kFloatMissing) AND (P <= 850+stH) AND (P > 700+stH) AND (T700 > 0))
 					{  
 						PreForm = kFreezingRain;
 					}
