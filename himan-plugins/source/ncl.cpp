@@ -169,11 +169,6 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		size_t missingCount = 0;
 		size_t count = 0;
 
-		/*
-		 * Converting original grid-data to newbase grid
-		 *
-		 */
-
 		bool firstLevel = true;
 
 		myTargetInfo->Data()->Fill(-1);		
@@ -219,22 +214,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 							   		) 
 								);
 
-			while 	( 
-						myTargetInfo->NextLocation() && 
-						targetGrid->Next() && 
-						HGrid->Next() && 
-						TGrid->Next() && 
-						( 
-							firstLevel || 
-							(
-								prevHGrid->Next() && 
-								prevTGrid->Next() 
-							) 
-						) 
-					)
+			while 	(myTargetInfo->NextLocation() && targetGrid->Next() )
 			{
-				count++;
-		
 				
 				double height(kFloatMissing);
 				double temp(kFloatMissing);
@@ -246,21 +227,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, temp);
-				
-				if (targetHeight != -1)
-				{
-					
-					// if (temp >= targetTemperature)
-					// {
-					//  	targetHeight = -1;
-					// }
-					{
-						continue;
-					}
-				}
-
 				InterpolateToPoint(targetGrid, HGrid, equalGrids, height);
-				
 
 				if (!firstLevel)
 				{
@@ -289,32 +256,73 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				temp -= himan::constants::kKelvin;
 				prevTemp -= himan::constants::kKelvin;
 
-				if (targetHeight == -1)
-				{	
-				if (temp < targetTemperature)
+				if (targetHeight != -1)
 				{
 
-					if (!firstLevel)
+					if (temp >= targetTemperature) // && levelNumber >= (itsBottomLevel - 5))
 					{
-						double p_rel = (targetTemperature - temp) / (prevTemp - temp);
-						targetHeight = height + (prevHeight - height) * p_rel;
-					}
+						/*
+						 * Lowest 5 model levels and "inversion fix".
+						 *
+						 * Especially in winter time surface inversion is common: temperature
+						 * close to ground surfaceis colder than the temperature above it.
+						 * This inversion is usually very limited in height, maybe 10 .. 200
+						 * meters. When calculating height of zero level, we can take into
+						 * account this inversion so we test if the temperature at lowest level
+						 * is already below target temperature (0 or -20), and if that is the
+						 * situation we do not directly set height to kFloatMissing but
+						 * move onwards and only if the temperature stays below target for
+						 * the first 5 levels (in Hirlam lowest hybrid levels are spaced ~30m
+						 * apart) we can say that surface inversion does not exist and the
+						 * air temperature is simply too cold for this target temperature.
+						 *
+						 * In order to imitate hilake however the inversion fix limitation for
+						 * bottom 5 has been disabled, since what hilake does is it applies
+						 * the fix as long as the process is running, at least up to hybrid
+						 * level 29 which on Hirlam is on average 3700m above ground.
+						 *
+						 * This seems like a non-optimal approach but this is how hilake
+						 * does it and until we have confirmation that the inversion
+						 * height should be limited, use the hilake way also in himan.
+						 *
+						 * Inversion: http://blogi.foreca.fi/2012/01/pakkanen-ja-inversio/
+						 */
 
-					else
-					{
-						targetHeight = kFloatMissing;
+						myTargetInfo->Value(-1);
+
 					}
+					
+					// No inversion fix, value already found for this gridpoint
+					// (real value or missing value)
+
+					continue;
 				}
-				//else 
-				//{
-				//	continue;
-				//}
-				}
-				else if (targetHeight == kFloatMissing && temp >= targetTemperature)
+
+				if ((firstLevel && temp < targetTemperature) || (prevTemp < targetTemperature && temp < targetTemperature))
 				{
-					targetHeight = -1;
+					/*
+					 * Height is below ground (first model level) or its so cold
+					 * in the lower atmosphere that we cannot find the requested
+					 * temperature, set height to to missing value.
+					 */
+					
+					targetHeight = kFloatMissing;
+				}				
+				else if (prevTemp > targetTemperature && temp < targetTemperature)
+				{
+					// Found value, interpolate
+					
+					double p_rel = (targetTemperature - temp) / (prevTemp - temp);
+					targetHeight = height + (prevHeight - height) * p_rel;
+				}
+				else
+				{
+					// Too warm
+					continue;
 				}
 
+				count++;
+				
 				if (!myTargetInfo->Value(targetHeight))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
@@ -343,6 +351,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		/*
 		 * Replaces all unset values
 		 */
+
 		myTargetInfo->ResetLocation();
 		while(myTargetInfo->NextLocation())
 		{
