@@ -473,7 +473,7 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 			PLCL = pow(((TLCL+constants::kKelvin)/(Torig+constants::kKelvin)), (1/kRCp)) * P;
 
 			ret[0] = PLCL;
-			ret[1] = TLCL;
+			ret[1] = (TLCL == kFloatMissing) ? kFloatMissing : TLCL - constants::kKelvin; // C
 			ret[2] = Q;
 
 			return ret;
@@ -503,8 +503,8 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 			TLCL = T;
 			PLCL = pow((TLCL + constants::kKelvin) / (Torig+constants::kKelvin), (1/kRCp)) * Porig;
 
-			ret[0] = PLCL;
-			ret[1] = TLCL;
+			ret[0] = PLCL; // HPa
+			ret[1] = (TLCL == kFloatMissing) ? kFloatMissing : TLCL - constants::kKelvin; // C
 			ret[2] = Q;
 
 			break;
