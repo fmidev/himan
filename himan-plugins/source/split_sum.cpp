@@ -71,6 +71,12 @@ split_sum::split_sum()
 	sourceParameters["SNRC-KGM2"] = { param("SNC-KGM2") };
 	sourceParameters["SNRL-KGM2"] = { param("SNL-KGM2") };
 
+	// Graupel
+	sourceParameters["GRR-MMH"] = { param("GR-KGM2") };
+
+	// Solid (snow + graupel + hail)
+	sourceParameters["RRRS-KGM2"] = { param("RRS-KGM2") };
+
 	// Radiation
 	sourceParameters["RADGLO-WM2"] = { param("RADGLOA-JM2"), param("RADGLO-WM2") };
 	sourceParameters["RADLW-WM2"] = { param("RADLWA-JM2"), param("RADLW-WM2") };
@@ -197,6 +203,36 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		parm.GribCategory(1);
 		parm.GribParameter(54);
 		
+		params.push_back(parm);
+	}
+
+	// Graupel
+
+	if (itsConfiguration->Exists("grr") && itsConfiguration->GetValue("grr") == "true")
+	{
+		param parm;
+		parm.Name("GRR-MMH");
+		parm.UnivId(200);
+
+		parm.GribDiscipline(0);
+		parm.GribCategory(1);
+		parm.GribParameter(54);
+
+		params.push_back(parm);
+	}
+
+	// Solid
+
+	if (itsConfiguration->Exists("rrrs") && itsConfiguration->GetValue("rrrs") == "true")
+	{
+		param parm;
+		parm.Name("RRRS-KGM2");
+		parm.UnivId(200);
+
+		parm.GribDiscipline(0);
+		parm.GribCategory(1);
+		parm.GribParameter(54);
+
 		params.push_back(parm);
 	}
 
@@ -347,7 +383,9 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 										parmName == "RRRC-KGM2" ||
 										parmName == "SNR-KGM2" ||
 										parmName == "SNRC-KGM2" ||
-										parmName == "SNRL-KGM2");
+										parmName == "SNRL-KGM2" ||
+										parmName == "GRR-MMH" ||
+										parmName == "RRRS-KGM2");
 
 			// Have to re-fetch infos each time since we might have to change element
 			// from liquid to snow to radiation so we need also different source parameters
@@ -393,24 +431,35 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 					 * source data. We have to extrapolate the step to previous data
 					 * from the step to next data.
 					 *
-					 * Of course we need to *have* next time step in order to do this
-					 * (meaning that if this calculation is done for only a single
-					 * time step, we will fail).
+					 * Of course we need to *have* next time step in order to do this.
+					 * In order to work around the problem, we guess that we could
+					 * have data in some time step and let the Fetch() function
+					 * deal with it.
 					 */
 
-					if (myTargetInfo->SizeTimes() == 1)
-					{
-						itsLogger->Error("Rate cannot be calculate to a single time step");
-						return;
-					}
-					
 					previousTime = myTargetInfo->Time();
 					
-					forecast_time nextTime = myTargetInfo->PeekTime(timeIndex+1);
+					if (myTargetInfo->SizeTimes() == 1)
+					{
+						if (previousTime.StepResolution() == kHourResolution)
+						{
+							previousTime.ValidDateTime()->Adjust(kHourResolution, -1);
+						}
+						else
+						{
+							previousTime.ValidDateTime()->Adjust(kMinuteResolution, -15);
+						}						
+					}
+					else
+					{
 
-					int diff = nextTime.Step() - myTargetInfo->Time().Step();
+					
+						forecast_time nextTime = myTargetInfo->PeekTime(timeIndex+1);
 
-					previousTime.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -diff);
+						int diff = nextTime.Step() - myTargetInfo->Time().Step();
+
+						previousTime.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -diff);
+					}
 				}
 				else
 				{
