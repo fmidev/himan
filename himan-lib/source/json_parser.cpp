@@ -245,7 +245,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
 
-	/* Check processqueue */
+	/* 
+	 * Check processqueue.
+	 *
+	 * Some configuration elements might be replicated here; if so they will overwrite
+	 * those specified in the upper level.
+	 */
 
 	std::vector<std::shared_ptr<info> > infoQueue;
 
