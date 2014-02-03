@@ -252,8 +252,8 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 			PInfo = aFetcher->Fetch(itsConfiguration,
 					 myTargetInfo->Time(),
-					 groundLevel,
-					 ZParam);
+					 surface0mLevel,
+					 PParam);
 
 			RRInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
