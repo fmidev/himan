@@ -323,7 +323,7 @@ void compiled_plugin_base::Start()
 	for (short i = 0; i < itsThreadCount; i++)
 	{
 
-		printf("Info::compiled_pluging: Thread %d starting\n", (i + 1)); // Printf is thread safe
+		printf("Info::compiled_plugin: Thread %d starting\n", (i + 1)); // Printf is thread safe
 
 		boost::thread* t = new boost::thread(&compiled_plugin_base::Run,
 											 this,
