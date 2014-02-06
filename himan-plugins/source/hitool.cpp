@@ -302,7 +302,7 @@ shared_ptr<info> hitool::Stratus()
 	param upperLayerRHParam("STRATUS-UPPER-LAYER-RH-PRCNT");
 	upperLayerRHParam.Unit(kPrcnt);
 
-	param verticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MS");
+	param verticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MMS");
 	verticalVelocityParam.Unit(kMs);
 
 	vector<param> params = { baseParam, topParam, topTempParam, meanTempParam, meanCloudinessParam, upperLayerRHParam, verticalVelocityParam };
@@ -553,7 +553,7 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Info("Searching for mean vertical velocity in stratus");
 
-	wantedParam = param("VV-MS");
+	wantedParam = param("VV-MMS");
 
 	auto stratusVerticalVelocity = VerticalAverage(wantedParam, stratusBase, stratusTop);
 

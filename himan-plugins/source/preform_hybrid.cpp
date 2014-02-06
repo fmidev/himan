@@ -176,7 +176,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	const param stratusMeanTempParam("STRATUS-MEAN-T-K");
 	const param stratusMeanCloudinessParam("STRATUS-MEAN-N-PRCNT");
 	const param stratusUpperLayerRHParam("STRATUS-UPPER-LAYER-RH-PRCNT");
-	const param stratusVerticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MS");
+	const param stratusVerticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MMS");
 
 	const param minusAreaParam("MINUS-AREA-T-K");
 	const param plusArea1Param("PLUS-AREA-1-T-K");
@@ -378,11 +378,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				if (Navg != kFloatMissing)
 				{
 					Navg *= 100; // --> %
-				}
-
-				if (wAvg != kFloatMissing)
-				{
-					wAvg *= 1000; // m/s --> mm/s
 				}
 
 				bool thickStratusWithLightPrecipitation = (	base			!= kFloatMissing &&
