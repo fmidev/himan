@@ -499,7 +499,6 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 					paramStep *= 60;
 				}
 
-
 				// Skip early steps if necessary
 
 				if (myTargetInfo->Time().Step() >= paramStep)
@@ -580,12 +579,22 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 			if (isRadiationCalculation)
 			{
 
-				// Radiation unit is W/m^2 which is J/s/m^2, so we need to
-				// convert time to seconds
+				/*
+				 * Radiation unit is W/m^2 which is J/s/m^2, so we need to convert
+				 * time to seconds.
+				 *
+				 * Here we do the same minute <--> hour switch than we do with
+				 * precipitation rates: because smartmet views harmonie data
+				 * only at one hour steps, we cannot calculate the radiation power
+				 * every 15 minutes. We have to calculate the value from the past
+				 * hour, not past 15 minutes. So in the case of Harmonie we
+				 * divide the cumulative value with 60*60 seconds instead of
+				 * 15*60 seconds.
+				 */
 
 				if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
 				{
-					step *= 60;
+					step = 3600;
 				}
 				else if (myTargetInfo->Time().StepResolution() == kHourResolution)
 				{
@@ -599,6 +608,41 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 			}
 
+			else if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
+			{
+				/*
+				 * For precipitation:
+				 *
+				 * If calculating for Harmonie, use hour as base time unit!
+				 * This has been agreed with AK.
+				 *
+				 * This is how its *should* be done, but it's not:
+				 *
+				 * --- THIS IS HOW IT SHOULD BE DONE BUT ITS NOT ---
+				 *
+				 * If target time resolution is hour, the basic time unit
+				 * is one hour.
+				 * If target time resolution is minute, the basic time unit
+				 * is 15 minutes.
+				 *
+				 * For example, ECMWF:
+				 *
+				 * (DATA_STEP_240 - DATA_STEP_234) / (BASIC_TIME_UNIT * STEP)
+				 *
+				 * --> (DATA_STEP_240 - DATA_STEP_234) / (6 * 1 hour)
+				 *
+				 * For example, Harmonie:
+				 *
+				 * (DATA_STEP_120 - DATA_STEP_105) / (STEP / BASIC_TIME_UNIT * STEP)
+				 *
+				 * --> (DATA_STEP_120 - DATA_STEP_105) / 1
+				 *
+				 * --- THIS IS HOW IT SHOULD BE DONE BUT ITS NOT ---
+				 */
+
+				step = 1;
+			}
+			
 			while (myTargetInfo->NextLocation() && targetGrid->Next() && currentGrid->Next() && prevGrid->Next())
 			{
 				count++;
@@ -624,7 +668,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 					sum /= step;
 				}
 
-				if (sum < 0)
+				if (!isRadiationCalculation && sum < 0)
 				{
 					sum = 0;
 				}
@@ -731,7 +775,9 @@ shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const info> m
 
 	if (timeResolution == kMinuteResolution)
 	{
-		step = 15; // Time step is 15 minutes (ie harmonie)
+		step = 60;	// Forecast step is 15 (ie Harmonie), but it has been agreed
+					// with AKS that we'll use one hour since editor displays
+					// only hourly data.
 	}
 	else if (timeResolution != kHourResolution)
 	{
@@ -746,13 +792,14 @@ shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const info> m
 	
 	if (!forward || (CALCULATE_AVERAGE_RATE && myTargetInfo->Param().Name() != "RRR-KGM2"))
 	{ 
-		i = targetStep;
+		//i = targetStep;
+		i = step;
 	}
-	
-	for (; !SumInfo && i <= steps + targetStep; i += step)
+
+	for (; !SumInfo && i <= steps*step; i += step)
 	{
 		int curstep = i;
-	
+
 		forecast_time wantedTimeStep = myTargetInfo->Time();
 
 		if (!forward)
@@ -819,7 +866,6 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 	if (!SumInfo && wantedTime.Step() == 0)
 	{
-
 		SumInfo = make_shared<info> (*myTargetInfo);
 		vector<forecast_time> times = { wantedTime };
 		vector<level> levels = { wantedLevel };
