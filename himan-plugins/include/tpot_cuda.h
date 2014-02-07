@@ -12,7 +12,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "simple_packed.h"
+#include "info_simple.h"
 
 namespace himan
 {
@@ -21,34 +21,44 @@ namespace plugin
 namespace tpot_cuda
 {
 
-struct tpot_cuda_options
+struct options
 {
+	info_simple* t;
+	info_simple* td;
+	info_simple* p;
+	info_simple* tp;
+	info_simple* tpw;
+	info_simple* tpe;
+
 	size_t N;
-	bool pT;
-	bool pP;
-	unsigned short cudaDeviceIndex;
-	size_t missingValuesCount;
-	double TBase;
-	double PScale;
-	double PConst;
-	bool isConstantPressure;
-	
-	tpot_cuda_options() : pT(false), pP(false), missingValuesCount(0) {}
+	size_t missing;
+	double t_base;
+	double td_base;
+	double p_scale;
+	double p_const;
+	bool is_constant_pressure;
+	bool theta;
+	bool thetaw;
+	bool thetae;
+
+	options() : N(0), missing(0), t_base(0), td_base(0), p_scale(1), is_constant_pressure(false), theta(false), thetaw(false), thetae(false) {}
 };
 
-struct tpot_cuda_data
-{
-	double* T;
-	double* P;
-	double* Tp;
+void Process(options& options);
 
-	simple_packed* pT;
-	simple_packed* pP;
+#ifdef __CUDACC__
+__global__ void Calculate(const double* __restrict__ d_t, const double* __restrict__ d_p, const double* __restrict__ d_td, double* __restrict__ d_tp, double* __restrict__ d_tpw, double* __restrict__ d_tpe, options opts, int* d_missing);
+__device__ void Theta(const double* __restrict__ d_t, const double* __restrict__ d_p, double* __restrict__ d_tp, options opts, int* d_missing, int idx);
+__device__ void ThetaW(const double* __restrict__ d_t, const double* __restrict__ d_p, const double* __restrict__ d_td, double* __restrict__ d_tpw, options opts, int* d_missing, int idx);
+__device__ void LCL(double P, double T, double TD, double* Pout, double* Tout);
+__device__ void Gammas(double P, double T, double* out);
+__device__ void Es(double T, double *out);
 
-	tpot_cuda_data() : T(0), P(0), Tp(0), pT(0), pP(0) {}
-};
 
-void DoCuda(tpot_cuda_options& options, tpot_cuda_data& datas);
+#endif
+
+const double kFloaMissing = 32700.;
+
 
 } // namespace tpot_cuda
 } // namespace plugin

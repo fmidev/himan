@@ -10,6 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
+#include "tpot_cuda.h"
 
 namespace himan
 {
@@ -48,14 +49,13 @@ private:
 	/**
 	 * @brief Calculate "dry" potential temperature with poissons equation.
 	 * 
-	 * Note that input and output temperature to this function are in Celsius, but
-	 * the formula itself requires Kelvins!
+	 * Note that input is in Celsius, but the output is in Kelvins!
 	 *
 	 * http://san.hufs.ac.kr/~gwlee/session3/potential.html
 	 *
 	 * @param P Pressure in hPa
 	 * @param T Temperature in C
-	 * @return Potential temperature in C
+	 * @return Potential temperature in K
 	 */
 
 	double Theta(double P, double T);
@@ -97,6 +97,8 @@ private:
 	double ThetaE(double P, double T, double TD, double theta);
 
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short theThreadIndex);
+	std::unique_ptr<tpot_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> PInfo, std::shared_ptr<info> TDInfo);
+	void CudaFinish(std::unique_ptr<tpot_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> PInfo, std::shared_ptr<info> TDInfo);
 
 	bool itsThetaCalculation;
 	bool itsThetaWCalculation;

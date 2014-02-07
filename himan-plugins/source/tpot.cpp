@@ -145,7 +145,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	myTargetInfo->FirstParam();
 
 	params PParam = { param("P-PA"), param("P-HPA") };
-	
+
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -153,8 +155,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		double PScale = 1;
-		double TBase = 273.15;
-		double TDBase  = 273.15;
+		double TBase = 0;
+		double TDBase  = 0;
 		
 		// Source infos
 		shared_ptr<info> TInfo;
@@ -182,9 +184,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 											myTargetInfo->Level(),
 											PParam);
 
-				if (PInfo->Param().Unit() == kPa)
+				if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
 				{
-					PScale = 0.01;
+					PScale = 100;
 				}
 
 				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
@@ -230,12 +232,12 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		if (TInfo->Param().Unit() == kC)
 		{
-			TBase = 273.15;
+			TBase = himan::constants::kKelvin;
 		}
 
 		if (TDInfo && TDInfo->Param().Unit() == kC)
 		{
-			TBase = 273.15;
+			TBase = himan::constants::kKelvin;
 		}
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
@@ -251,99 +253,18 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		string deviceType;
 
 #ifdef HAVE_CUDA
-
-		if (itsConfiguration->UseCuda() && equalGrids && threadIndex <= itsConfiguration->CudaDeviceCount())
-		{
-			itsLogger->Warning("tpot@cuda not supported for now");
-		}
-
-		// Force CPU
-		
-		if (false)
+		if (useCudaInThisThread && equalGrids && false)
 		{
 			deviceType = "GPU";
 
-			tpot_cuda::tpot_cuda_options opts;
-			tpot_cuda::tpot_cuda_data datas;
+			auto opts = CudaPrepare(myTargetInfo, TInfo, PInfo, TDInfo);
 
-			opts.N = TGrid->Size();
+			tpot_cuda::Process(*opts);
 
-			opts.isConstantPressure = isPressureLevel;
-			opts.TBase = TBase;
-			opts.PScale = PScale;
-			opts.cudaDeviceIndex = static_cast<unsigned short> (threadIndex-1);
-						
-			if (TInfo->Grid()->DataIsPacked())
-			{
-				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+			count = opts->N;
+			missingCount = opts->missing;
 
-				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
-
-				datas.pT = t.get();
-
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
-
-				opts.pT = true;
-
-			}
-			else
-			{
-				datas.T = const_cast<double*> (TInfo->Grid()->Data()->ValuesAsPOD());
-			}
-
-			if (!isPressureLevel)
-			{
-				if (PInfo->Grid()->DataIsPacked())
-				{
-					assert(PInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
-					
-					datas.pP = p.get();
-
-					CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.P), opts.N * sizeof(double), cudaHostAllocMapped));
-
-					opts.pP = true;
-				}
-				else
-				{
-					datas.P = const_cast<double*> (PInfo->Grid()->Data()->ValuesAsPOD());
-				}
-
-			}
-			else
-			{
-				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
-			}
-
-			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.Tp), opts.N * sizeof(double), cudaHostAllocMapped));
-
-			tpot_cuda::DoCuda(opts, datas);
-
-			myTargetInfo->Data()->Set(datas.Tp, opts.N);
-
-			CUDA_CHECK(cudaFreeHost(datas.Tp));
-
-			assert(TInfo->Grid()->ScanningMode() && (isPressureLevel || PInfo->Grid()->ScanningMode() == TInfo->Grid()->ScanningMode()));
-
-			missingCount = opts.missingValuesCount;
-			count = opts.N;
-
-			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
-
-			if (TInfo->Grid()->DataIsPacked())
-			{
-				TInfo->Data()->Set(datas.T, opts.N);
-				TInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.T));
-			}
-
-			if (!opts.isConstantPressure && PInfo->Grid()->DataIsPacked())
-			{
-				PInfo->Data()->Set(datas.P, opts.N);
-				PInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.P));
-			}
+			CudaFinish(move(opts), myTargetInfo, TInfo, PInfo, TDInfo);
 
 		}
 		else
@@ -368,7 +289,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 				if (isPressureLevel)
 				{
-					P = myTargetInfo->Level().Value();
+					P = myTargetInfo->Level().Value() * 100;
 				}
 				else
 				{
@@ -388,9 +309,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 					continue;
 				}
 
-				T -= TBase; // to Celsius
-				TD -= TDBase; // to Celsius
-				P /= PScale; // to hPa
+				T -= TBase; // to Kelvin
+				TD -= TDBase; // to Kelvin
+				P *= PScale; // to Pa
 
 				double value = kFloatMissing;
 				double theta = kFloatMissing;
@@ -409,8 +330,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				
 				if (itsThetaWCalculation)
 				{
+					
 					value = ThetaW(P, T, TD);
-
 					myTargetInfo->Param(param("TPW-K"));
 
 					if (!myTargetInfo->Value(value))
@@ -465,37 +386,41 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 double tpot::Theta(double P, double T)
 {
-	double value = (T+273.15) * pow((1000 / P), 0.28586) - 273.15;
+
+	double value = T * pow((1000 / (P*0.01)), 0.28586);
+
 	return value;
 }
 
 double tpot::ThetaW(double P, double T, double TD)
 {
-   const double Pstep = 500;
+   const double Pstep = 500; // Pa
    double value = kFloatMissing;
 
    // Search LCL level
 
    vector<double> LCL = util::LCL(P, T, TD);
 
-   double Tint = LCL[1];
-   double Pint = LCL[0];
+   double Pint = LCL[0]; // Pa
+   double Tint = LCL[1]; // K
+
+   int i = 0;
 
    if (Tint == kFloatMissing || Pint == kFloatMissing)
    {
-	   value = kFloatMissing;
+	   return kFloatMissing;
    }
    else
    {
-       Pint *= 100; // back to Pa
+	   /*
+		* Units: Temperature in Kelvins, Pressure in Pascals
+		*/
 
 	   double T0 = Tint;
 
-	   int i = 0;
-
 	   double Z = kFloatMissing;
 
-	   while (++i < 500)
+	   while (++i < 500) // usually we don't reach this value
 	   {
 		   double TA = Tint;
 
@@ -508,8 +433,8 @@ double tpot::ThetaW(double P, double T, double TD)
 			   Z = 2 * Pstep;
 		   }
 
-		   // Gammas() takes hPa
-		   Tint = T0 + util::Gammas(Pint/100, Tint) * Z;
+		   // Gammas() takes Pa
+		   Tint = T0 + util::Gammas(Pint, Tint) * Z;
 
 		   if (i > 2)
 		   {
@@ -525,6 +450,8 @@ double tpot::ThetaW(double P, double T, double TD)
 		   }
 	   }
    }
+
+   assert(value == value); // check NaN
 
    return value;
 }
@@ -542,11 +469,93 @@ double tpot::ThetaE(double P, double T, double TD, double theta)
 		theta = Theta(P, T);
 	}
 
-	double ZEs = util::Es(TLCL);
-	double ZQs = himan::constants::kEp * (ZEs / (P - ZEs));
+	double Es = util::Es(TLCL);
+	double ZQs = himan::constants::kEp * (Es / (P - Es));
 
-	double value = theta * exp(himan::constants::kL * ZQs / himan::constants::kCp / (TLCL + 273.15));
+	double value = theta * exp(himan::constants::kL * ZQs / himan::constants::kCp / (TLCL));
 
 	return value;
 
 }
+
+unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> PInfo, shared_ptr<info> TDInfo)
+{
+	unique_ptr<tpot_cuda::options> opts(new tpot_cuda::options);
+
+	opts->is_constant_pressure = (myTargetInfo->Level().Type() == kPressure);
+
+	opts->t = TInfo->ToSimple();
+	opts->tp = myTargetInfo->ToSimple();
+
+	opts->theta = itsThetaCalculation;
+	opts->thetaw = itsThetaWCalculation;
+	opts->thetae = itsThetaECalculation;
+
+	if (!opts->is_constant_pressure)
+	{
+		opts->p = PInfo->ToSimple();
+
+		if (PInfo->Param().Unit() == kPa || PInfo->Param().Name() == "P-PA")
+		{
+			opts->p_scale = 100;
+		}
+	}
+	else
+	{
+		opts->p_const = myTargetInfo->Level().Value() * 100; // Pa
+	}
+
+	if (TDInfo)
+	{
+		opts->td = TDInfo->ToSimple();
+
+		if (TDInfo->Param().Unit() == kC)
+		{
+			opts->td_base = himan::constants::kKelvin;
+		}
+	}
+
+	opts->N = opts->t->size_x * opts->t->size_y;
+
+	if (TInfo->Param().Unit() == kC)
+	{
+		opts->t_base = himan::constants::kKelvin;
+	}
+
+	return opts;
+}
+
+void tpot::CudaFinish(unique_ptr<tpot_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> PInfo, shared_ptr<info> TDInfo)
+{
+	// Copy data back to infos
+
+	myTargetInfo->Data()->Set(opts->tp->values, opts->N);
+	opts->tp->free_values();
+
+	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+
+	if (TInfo->Grid()->IsPackedData())
+	{
+		TInfo->Data()->Set(opts->t->values, opts->N);
+		TInfo->Grid()->PackedData()->Clear();
+		opts->t->free_values();
+	}
+
+	if (PInfo && PInfo->Grid()->IsPackedData())
+	{
+		PInfo->Data()->Set(opts->p->values, opts->N);
+		PInfo->Grid()->PackedData()->Clear();
+		opts->p->free_values();
+	}
+
+	if (TDInfo && TDInfo->Grid()->IsPackedData())
+	{
+		TDInfo->Data()->Set(opts->p->values, opts->N);
+		TDInfo->Grid()->PackedData()->Clear();
+		opts->td->free_values();
+	}
+	
+	// opts is destroyed after leaving this function
+
+}
+
