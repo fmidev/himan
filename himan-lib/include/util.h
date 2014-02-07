@@ -183,8 +183,8 @@ int LowConvection(double T0m, double T850);
  * If temperature is less than -5, use ice instead of water for
  * calculations.
  *
- * @param T Temperature in C
- * @return Saturated water vapor pressure in hPa
+ * @param T Temperature in K
+ * @return Saturated water vapor pressure in Pa
  */
 
 double Es(double T);
@@ -194,9 +194,9 @@ double Es(double T);
  *
  * Original author AK Sarkanen May 1985.
  * 
- * @param P Pressure in hPa
- * @param T Temperature in C
- * @return Lapse rate in C/km
+ * @param P Pressure in Pa
+ * @param T Temperature in K
+ * @return Lapse rate in K/km
  */
 
 double Gammas(double P, double T);
@@ -207,10 +207,10 @@ double Gammas(double P, double T);
  *
  * Original author AK Sarkanen/Kalle Eerola
  *
- * @param P Pressure in hPa
- * @param T Temperature in C
- * @param TD Dew point temperature in C
- * @return Pressure, temperature and specific humidity (g/kg) for LCL (in this order).
+ * @param P Pressure in Pa
+ * @param T Temperature in K
+ * @param TD Dew point temperature in K
+ * @return Pressure (Pa), temperature (K) and specific humidity (g/kg) for LCL (in this order).
  */
 
 const std::vector<double> LCL(double P, double T, double TD);

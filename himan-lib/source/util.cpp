@@ -408,6 +408,8 @@ double util::Es(double T)
 {
 	double Es;
 
+	T -= himan::constants::kKelvin;
+
 	if (T > -5)
 	{
 		Es = 6.107 * pow(10, (7.5*T/(237.0+T)));
@@ -417,7 +419,9 @@ double util::Es(double T)
 		Es = 6.107 * pow(10, (9.5*T/(265.5+T)));
 	}
 
-	return Es;
+	assert(Es == Es); // check NaN
+	
+	return 100 * Es; // Pa
 
 }
 
@@ -425,16 +429,15 @@ double util::Gammas(double P, double T)
 {
 	// http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate ?
 	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
+
+	// specific humidity: http://glossary.ametsoc.org/wiki/Specific_humidity
 	
-	double Q = constants::kEp * util::Es(T) / P;
+	double Q = constants::kEp * (util::Es(T) * 0.01) / (P*0.01);
 
 	// unit changes
 	
-	P *= 100; // hpa --> pa
-	T += constants::kKelvin; // c --> k
-
 	double A = constants::kRd * T / constants::kCp / P * (1+constants::kL*Q/constants::kRd/T);
-	
+
 	return A / (1 + constants::kEp / constants::kCp * (pow(constants::kL, 2) / constants::kRd * Q / pow(T,2)));
 }
 
@@ -445,14 +448,16 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 	double Tstep = 0.05;
 
 	const double kRCp = 0.286;
+
+	P *= 0.01; // HPa
 	
 	// saturated vapor pressure
 	
-	double E0 = Es(TD);
+	double E0 = Es(TD) * 0.01; // HPa
 
 	double Q = constants::kEp * E0 / P;
-	double C = (T+constants::kKelvin) / pow(E0, kRCp);
-	
+	double C = T / pow(E0, kRCp);
+
 	double TLCL = kFloatMissing;
 	double PLCL = kFloatMissing;
 
@@ -465,22 +470,22 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 
 	while (++nq < 100)
 	{
-		double TEs = C * pow(Es(T), kRCp);
+		double TEs = C * pow(Es(T)*0.01, kRCp);
 
-		if (fabs(TEs - (T+constants::kKelvin)) < 0.05)
+		if (fabs(TEs - T) < 0.05)
 		{
 			TLCL = T;
-			PLCL = pow(((TLCL+constants::kKelvin)/(Torig+constants::kKelvin)), (1/kRCp)) * P;
+			PLCL = pow((TLCL/Torig), (1/kRCp)) * P;
 
-			ret[0] = PLCL;
-			ret[1] = (TLCL == kFloatMissing) ? kFloatMissing : TLCL - constants::kKelvin; // C
+			ret[0] = PLCL * 100; // Pa
+			ret[1] = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // K
 			ret[2] = Q;
 
 			return ret;
 		}
 		else
 		{
-			Tstep = min((TEs - T - constants::kKelvin) / (2 * (nq+1)), 15.);
+			Tstep = min((TEs - T) / (2 * (nq+1)), 15.);
 			T -= Tstep;
 		}
 	}
@@ -491,20 +496,20 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 	Tstep = 0.1;
 
 	nq = 0;
-
+	
 	while (++nq <= 500)
 	{
-		if ((C * pow(Es(T), kRCp)-(T+constants::kKelvin)) > 0)
+		if ((C * pow(Es(T)*0.01, kRCp)-T) > 0)
 		{
 			T -= Tstep;
 		}
 		else
 		{
 			TLCL = T;
-			PLCL = pow((TLCL + constants::kKelvin) / (Torig+constants::kKelvin), (1/kRCp)) * Porig;
+			PLCL = pow(TLCL / Torig, (1/kRCp)) * Porig;
 
-			ret[0] = PLCL; // HPa
-			ret[1] = (TLCL == kFloatMissing) ? kFloatMissing : TLCL - constants::kKelvin; // C
+			ret[0] = PLCL * 100; // Pa
+			ret[1] = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // K
 			ret[2] = Q;
 
 			break;
