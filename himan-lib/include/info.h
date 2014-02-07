@@ -21,6 +21,7 @@
 #include "point.h"
 #include "grid.h"
 #include <vector>
+#include "info_simple.h"
 
 namespace himan
 {
@@ -673,6 +674,14 @@ public:
 	void StepSizeOverOneByte(bool theStepSizeOverOneByte);
 
 	HPProjectionType Projection() const;
+
+	/**
+	 * @brief Stupify this info to a C-style struct
+	 * 
+     * @return
+     */
+
+	info_simple* ToSimple() const;
 
 private:
 

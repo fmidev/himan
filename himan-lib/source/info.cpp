@@ -704,18 +704,54 @@ void info::ReplaceParam(const param& theParam)
 	p = theParam;
 }
 
-/*
-string info::ToCacheString()
+info_simple* info::ToSimple() const
 {
-    string uniqueName = "";
-    uniqueName += Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S") + '_';
-    uniqueName += Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S") + '_';
-    uniqueName += Param().Name() + '_';
-    uniqueName += boost::lexical_cast<string> (Projection()) + '_';
-    uniqueName += boost::lexical_cast<string> (Grid()->BottomLeft().X()) + '_';
-    uniqueName += boost::lexical_cast<string> (Grid()->BottomLeft().Y()) + '_';
-    uniqueName += boost::lexical_cast<string>(Level().Value()) + '_';
-    uniqueName += HPLevelTypeToString.at(Level().Type());
-    return uniqueName;
+	info_simple* ret = new info_simple();
+
+	ret->size_x = Data()->SizeX();
+	ret->size_y = Data()->SizeY();
+
+	ret->di = Grid()->Di();
+	ret->dj = Grid()->Dj();
+
+	ret->first_lat = Grid()->FirstGridPoint().Y();
+	ret->first_lon = Grid()->FirstGridPoint().X();
+
+	ret->south_pole_lat = Grid()->SouthPole().Y();
+	ret->south_pole_lon = Grid()->SouthPole().X();
+
+	if (Grid()->ScanningMode() == kTopLeft)
+	{
+		ret->j_scans_positive = false;
+	}
+	else if (Grid()->ScanningMode() != kBottomLeft)
+	{
+		throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " + string(HPScanningModeToString.at(Grid()->ScanningMode())));
+	}
+
+	if (Grid()->IsPackedData())
+	{
+
+		/*
+		 * If grid has packed data, shallow-copy a pointer to that data to 'ret'.
+		 * Also allocate page-locked memory for the unpacked data.
+		 */
+
+		assert(Grid()->PackedData()->ClassName() == "simple_packed");
+		
+		shared_ptr<simple_packed> v = dynamic_pointer_cast<simple_packed> (Grid()->PackedData());
+
+		ret->packed_values = v.get();
+		ret->create();
+
+	}
+	else
+	{
+		// Shallow-copy pointer to unpacked data. Note: this is not page-locked.
+
+		ret->values = const_cast<double*> (Data()->ValuesAsPOD());
+		ret->is_page_locked = false;
+	}
+
+	return ret;
 }
-*/
