@@ -21,27 +21,60 @@ namespace plugin
 namespace tk2tc_cuda
 {
 
-struct tk2tc_cuda_options
+	void CheckCudaError(cudaError_t errarg, const char* file, const int line);
+void CheckCudaErrorString(const char* errstr, const char* file,	const int line);
+
+#define CUDA_CHECK(errarg)	 CheckCudaError(errarg, __FILE__, __LINE__)
+#define CUDA_CHECK_ERROR_MSG(errstr) CheckCudaErrorString(errstr, __FILE__, __LINE__)
+
+inline void CheckCudaError(cudaError_t errarg, const char* file, const int line)
+{
+	if(errarg)
+	{
+		std::cerr << "Error at " << file << "(" << line << "): " << cudaGetErrorString(errarg) << std::endl;
+		exit(1);
+	}
+}
+
+
+inline void CheckCudaErrorString(const char* errstr, const char* file,	const int line)
+{
+	cudaError_t err = cudaGetLastError();
+
+	if(err != cudaSuccess)
+	{
+		std::cerr	<< "Error: "
+					<< errstr
+					<< " "
+					<< file
+					<< " at ("
+					<< line
+					<< "): "
+					<< cudaGetErrorString(err)
+					<< std::endl;
+
+		exit(1);
+	}
+}
+
+struct options
 {
 	size_t N;
-	bool pTK;
-	unsigned short threadIndex;
-	size_t missingValuesCount;
-	
-	tk2tc_cuda_options() : pTK(false), missingValuesCount(0) {}
+	size_t missing;
+	double scale;
+	double base;
+
+	double *source;
+	double *dest;
+	simple_packed* p;
+
+	options() : N(0), missing(0), scale(1), base(0), source(0), dest(0), p(0) {}
 };
 
-struct tk2tc_cuda_data
-{
-	double* TK;
-	double* TC;
+void Process(options& opts);
 
-	simple_packed* pTK;
+__global__ void Calculate(const double* __restrict__ d_source, double* __restrict__ d_dest, options opts, int* d_missing);
 
-	tk2tc_cuda_data() : pTK() {}
-};
-
-void DoCuda(tk2tc_cuda_options& options, tk2tc_cuda_data& datas);
 
 } // namespace tk2tc_cuda
 } // namespace plugin

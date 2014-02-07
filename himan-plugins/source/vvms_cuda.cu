@@ -6,138 +6,102 @@
 #include <cuda_runtime.h>
 
 #include "vvms_cuda.h"
-#include "cuda_helper.h"
 
-namespace himan
-{
-
-namespace plugin
-{
-
-namespace vvms_cuda
-{
-
-__global__ void Calculate(const double* __restrict__ dT,
-							const double* __restrict__ dVV,
-							const double* __restrict__ dP,
-							double* __restrict__ dVVOut,
-							vvms_cuda_options opts,
-							int* dMissingValuesCount);
-
-} // namespace vvms_cuda
-} // namespace plugin
-} // namespace himan
-
-
-__global__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ dT,
-														const double* __restrict__ dVV,
-														const double* __restrict__ dP,
-														double* __restrict__ VVMS,
-														vvms_cuda_options opts,
-														int* dMissingValuesCount)
+__global__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ d_t,
+														const double* __restrict__ d_vv,
+														const double* __restrict__ d_p,
+														double* __restrict__ d_vv_ms,
+														options opts,
+														int* d_missing)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
 	{
-		double P = (opts.isConstantPressure) ? opts.PConst : dP[idx];
+		double P = (opts.is_constant_pressure) ? opts.p_const : d_p[idx];
 
-		if (dT[idx] == kFloatMissing || dVV[idx] == kFloatMissing || P == kFloatMissing)
+		if (d_t[idx] == kFloatMissing || d_vv[idx] == kFloatMissing || P == kFloatMissing)
 		{
-			atomicAdd(dMissingValuesCount, 1);
-			VVMS[idx] = kFloatMissing;
+			atomicAdd(d_missing, 1);
+			d_vv_ms[idx] = kFloatMissing;
 		}
 		else
 		{
-			VVMS[idx] = opts.scale * (287 * -dVV[idx] * (opts.TBase + dT[idx]) / (9.80665 * P * opts.PScale));
+			d_vv_ms[idx] = opts.vv_ms_scale * (287 * -d_vv[idx] * (opts.t_base + d_t[idx]) / (9.80665 * P * opts.p_scale));
 		}
 	}
 }
 
-void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& datas)
+void himan::plugin::vvms_cuda::Process(options& opts)
 {
+
+	cudaStream_t stream;
+
+	CUDA_CHECK(cudaStreamCreate(&stream));
 
 	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate device arrays
 
-	double* dT = NULL;
-	double* dP = NULL;
-	double* dVV = NULL;
-	double* dVVMS = NULL;
+	double* d_t = 0;
+	double* d_p = 0;
+	double* d_vv = 0;
+	double* d_vv_ms = 0;
 
-	int *dMissingValuesCount = NULL;
+	int* d_missing = 0;
 
-	CUDA_CHECK(cudaMalloc((void **) &dMissingValuesCount, sizeof(int)));
+	CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
+	CUDA_CHECK(cudaMalloc((void **) &d_vv_ms, memsize));
 
-	CUDA_CHECK(cudaHostGetDevicePointer(&dVVMS, datas.VVMS, 0));
-
-	if (opts.pT)
+	if (opts.t->packed_values)
 	{
-		CUDA_CHECK(cudaHostGetDevicePointer(&dT, datas.T, 0));
-
+		d_t = opts.t->packed_values->Unpack(&stream);
+		CUDA_CHECK(cudaMemcpyAsync(opts.t->values, d_t, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMalloc((void **) &dT, memsize));
-		CUDA_CHECK(cudaMemcpy(dT, datas.T, memsize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMalloc((void **) &d_t, memsize));
+		CUDA_CHECK(cudaMemcpyAsync(d_t, opts.t->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 
-	if (opts.pVV)
+	if (opts.vv->packed_values)
 	{
-		CUDA_CHECK(cudaHostGetDevicePointer(&dVV, datas.VV, 0));
-
+		d_vv = opts.vv->packed_values->Unpack(&stream);
+		CUDA_CHECK(cudaMemcpyAsync(opts.vv->values, d_vv, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMalloc((void **) &dVV, memsize));
-		CUDA_CHECK(cudaMemcpy(dVV, datas.VV, memsize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMalloc((void **) &d_vv, memsize));
+		CUDA_CHECK(cudaMemcpyAsync(d_vv, opts.vv->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 
-	if (!opts.isConstantPressure)
+	if (!opts.is_constant_pressure)
 	{
-		if (opts.pP)
+		if (opts.p->packed_values)
 		{
-			CUDA_CHECK(cudaHostGetDevicePointer(&dP, datas.P, 0));
-
+			d_p = opts.p->packed_values->Unpack(&stream);
+			CUDA_CHECK(cudaMemcpyAsync(opts.p->values, d_p, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &dP, memsize));
-			CUDA_CHECK(cudaMemcpy(dP, datas.P, memsize, cudaMemcpyHostToDevice));
+			CUDA_CHECK(cudaMalloc((void **) &d_p, memsize));
+			CUDA_CHECK(cudaMemcpyAsync(d_p, opts.p->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 	}
 
 	int src=0;
 
-	CUDA_CHECK(cudaMemcpy(dMissingValuesCount, &src, sizeof(int), cudaMemcpyHostToDevice));
+	CUDA_CHECK(cudaMemcpyAsync(d_missing, &src, sizeof(int), cudaMemcpyHostToDevice, stream));
 
 	// dims
 
 	const int blockSize = 512;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
-	cudaStream_t stream;
+	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	CUDA_CHECK(cudaStreamCreate(&stream));
-
-	if (opts.pT)
-	{
-		datas.pT->Unpack(dT, &stream);
-	}
-
-	if (opts.pVV)
-	{
-		datas.pVV->Unpack(dVV, &stream);
-	}
-
-	if (opts.pP)
-	{
-		datas.pP->Unpack(dP, &stream);
-	}
-
-	Calculate <<< gridSize, blockSize, 0, stream >>> (dT, dVV, dP, dVVMS, opts, dMissingValuesCount);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t, d_vv, d_p, d_vv_ms, opts, d_missing);
 	
 	// block until the device has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -145,23 +109,20 @@ void himan::plugin::vvms_cuda::DoCuda(vvms_cuda_options& opts, vvms_cuda_data& d
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// Retrieve result from device
-	CUDA_CHECK(cudaMemcpy(&opts.missingValuesCount, dMissingValuesCount, sizeof(int), cudaMemcpyDeviceToHost));
+	CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(opts.vv_ms->values, d_vv_ms, memsize, cudaMemcpyDeviceToHost, stream));
 
-	if (!opts.pT)
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+	
+	CUDA_CHECK(cudaFree(d_t));
+	CUDA_CHECK(cudaFree(d_vv));
+	CUDA_CHECK(cudaFree(d_vv_ms));
+
+	if (d_p)
 	{
-		CUDA_CHECK(cudaFree(dT));
+		CUDA_CHECK(cudaFree(d_p));
 	}
 
-	if (!opts.pVV)
-	{
-		CUDA_CHECK(cudaFree(dVV));
-	}
-
-	if (!opts.isConstantPressure && !opts.pP)
-	{
-		CUDA_CHECK(cudaFree(dP));
-	}
-
-	CUDA_CHECK(cudaFree(dMissingValuesCount));
+	CUDA_CHECK(cudaFree(d_missing));
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }

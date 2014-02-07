@@ -1,9 +1,8 @@
 /**
+ * @file vvms.h
  *
- * vvms.h
- *
- *  Created on: Dec 21, 2012
- *      Author: partio
+ * @date Dec 21, 2012
+ * @author partio
  */
 
 #ifndef VVMS_H
@@ -11,6 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
+#include "vvms_cuda.h"
 
 namespace himan
 {
@@ -53,6 +53,9 @@ public:
 
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void CudaFinish(std::unique_ptr<vvms_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> VVInfo, std::shared_ptr<info> PInfo);
+	std::unique_ptr<vvms_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> VVInfo, std::shared_ptr<info> PInfo);
+
 	double itsScale;
 
 };

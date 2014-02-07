@@ -178,7 +178,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		
 		if (TInfo->Param().Unit() == kC)
 		{
-			TBase = 273.15;
+			TBase = himan::constants::kKelvin;
 		}
 
 		size_t missingCount = 0;
@@ -195,116 +195,14 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			deviceType = "GPU";
 			
-			vvms_cuda::vvms_cuda_options opts;
-			vvms_cuda::vvms_cuda_data datas;
+			auto opts = CudaPrepare(myTargetInfo, TInfo, VVInfo, PInfo);
 
-			opts.isConstantPressure = isPressureLevel;
-			opts.TBase = TBase;
-			opts.PScale = PScale;
-			opts.cudaDeviceIndex = static_cast<unsigned short> (threadIndex-1);
+			vvms_cuda::Process(*opts);
 
-			opts.N = TInfo->Grid()->Size();
+			count = opts->N;
+			missingCount = opts->missing;
 
-			cudaMallocHost(reinterpret_cast<void**> (&datas.VVMS), opts.N * sizeof(double));
-
-			if (TInfo->Grid()->DataIsPacked())
-			{
-				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
-
-				datas.pT = t.get();
-
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
-
-				opts.pT = true;
-
-			}
-			else
-			{
-				datas.T = const_cast<double*> (TInfo->Grid()->Data()->ValuesAsPOD());
-			}
-
-			if (VVInfo->Grid()->DataIsPacked())
-			{
-				assert(VVInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-				shared_ptr<simple_packed> vv = dynamic_pointer_cast<simple_packed> (VVInfo->Grid()->PackedData());
-
-				datas.pVV = vv.get();
-
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.VV), opts.N * sizeof(double), cudaHostAllocMapped));
-
-				opts.pVV = true;
-
-			}
-			else
-			{
-				datas.VV = const_cast<double*> (VVInfo->Grid()->Data()->ValuesAsPOD());
-			}
-
-			if (!isPressureLevel)
-			{
-				if (PInfo->Grid()->DataIsPacked())
-				{
-					assert(PInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-					shared_ptr<simple_packed> p = dynamic_pointer_cast<simple_packed> (PInfo->Grid()->PackedData());
-					
-					datas.pP = p.get();
-
-					CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.P), opts.N * sizeof(double), cudaHostAllocMapped));
-
-					opts.pP = true;
-				}
-				else
-				{
-					datas.P = const_cast<double*> (PInfo->Grid()->Data()->ValuesAsPOD());
-				}
-
-			}
-			else
-			{
-				opts.PConst = myTargetInfo->Level().Value() * 100; // Pa
-			}
-
-			opts.scale = itsScale;
-			
-			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.VVMS), opts.N * sizeof(double), cudaHostAllocMapped));
-
-			vvms_cuda::DoCuda(opts, datas);
-				
-			myTargetInfo->Data()->Set(datas.VVMS, opts.N);
-
-			assert(TInfo->Grid()->ScanningMode() == VVInfo->Grid()->ScanningMode() && (isPressureLevel || VVInfo->Grid()->ScanningMode() == PInfo->Grid()->ScanningMode()));
-
-			missingCount = opts.missingValuesCount;
-			count = opts.N;
-
-			CUDA_CHECK(cudaFreeHost(datas.VVMS));
-
-			if (TInfo->Grid()->DataIsPacked())
-			{
-				TInfo->Data()->Set(datas.T, opts.N);
-				TInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.T));
-			}
-
-			if (VVInfo->Grid()->DataIsPacked())
-			{
-				VVInfo->Data()->Set(datas.VV, opts.N);
-				VVInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.VV));
-			}
-
-			if (!opts.isConstantPressure && PInfo->Grid()->DataIsPacked())
-			{
-				PInfo->Data()->Set(datas.P, opts.N);
-				PInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.P));
-			}
-
-			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+			CudaFinish(move(opts), myTargetInfo, TInfo, VVInfo, PInfo);
 
 		}
 		else
@@ -386,4 +284,79 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			WriteToFile(myTargetInfo);
 		}
 	}
+}
+
+unique_ptr<vvms_cuda::options> vvms::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> VVInfo, shared_ptr<info> PInfo)
+{
+	unique_ptr<vvms_cuda::options> opts(new vvms_cuda::options);
+
+	opts->is_constant_pressure = (myTargetInfo->Level().Type() == kPressure);
+
+	opts->t = TInfo->ToSimple();
+	opts->vv = VVInfo->ToSimple();
+	opts->vv_ms= myTargetInfo->ToSimple();
+
+	if (!opts->is_constant_pressure)
+	{
+		opts->p = PInfo->ToSimple();
+
+		if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
+		{
+			opts->p_scale = 100;
+		}
+	}
+	else
+	{
+		opts->p_const = myTargetInfo->Level().Value() * 100; // Pa
+	}
+
+	if (TInfo->Param().Unit() == kC)
+	{
+		opts->t_base = himan::constants::kKelvin;
+	}
+
+	opts->N = TInfo->Grid()->Size();
+
+	opts->vv_ms_scale = itsScale;
+
+	return opts;
+}
+
+void vvms::CudaFinish(unique_ptr<vvms_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> VVInfo, shared_ptr<info> PInfo)
+{
+	// Copy data back to infos
+
+	myTargetInfo->Data()->Set(opts->vv_ms->values, opts->N);
+	opts->vv_ms->free_values();
+
+	assert(TInfo->Grid()->ScanningMode() == VVInfo->Grid()->ScanningMode());
+
+	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+	
+	// Copy unpacked data to source info in case
+	// some other thread/plugin calls for this same data.
+	// Clear packed data now that it's been unpacked
+
+	if (TInfo->Grid()->IsPackedData())
+	{
+		TInfo->Data()->Set(opts->t->values, opts->N);
+		TInfo->Grid()->PackedData()->Clear();
+		opts->t->free_values();
+	}
+
+	if (VVInfo->Grid()->IsPackedData())
+	{
+		VVInfo->Data()->Set(opts->vv->values, opts->N);
+		VVInfo->Grid()->PackedData()->Clear();
+		opts->vv->free_values();
+	}
+
+	if (PInfo && PInfo->Grid()->IsPackedData())
+	{
+		PInfo->Data()->Set(opts->p->values, opts->N);
+		PInfo->Grid()->PackedData()->Clear();
+		opts->p->free_values();
+	}
+
+	// opts is destroyed after leaving this function
 }

@@ -10,6 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
+#include "tk2tc_cuda.h"
 
 namespace himan
 {
@@ -45,6 +46,11 @@ public:
 
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	std::unique_ptr<tk2tc_cuda::options> CudaPrepare(std::shared_ptr<info> sourceInfo);
+	void CudaFinish(std::unique_ptr<tk2tc_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
+
+	double itsBase;
+	double itsScale;
 };
 
 // the class factory

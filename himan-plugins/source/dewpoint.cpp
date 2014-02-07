@@ -16,9 +16,6 @@
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
-#include "dewpoint_cuda.h"
-#include "cuda_helper.h"
-
 using namespace std;
 using namespace himan::plugin;
 
@@ -86,9 +83,6 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 	myTargetInfo->FirstParam();
 
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
-
-	// Force use of CPU since cuda does not handle RHScale yet!
-	useCudaInThisThread = false;
 	
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
@@ -149,12 +143,11 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 		{
 			// If unit cannot be detected, assume the values are from 0 .. 1
 			RHScale = 100;
-			myThreadedLogger->Warning("Unable to determine unit for relative humidity -- assuming values are from 0 to 1");
 		}
 
 		if (TInfo->Param().Unit() == kC)
 		{
-			TBase = 273.15;
+			TBase = himan::constants::kKelvin;
 		}
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
@@ -176,75 +169,14 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 			deviceType = "GPU";
 
-			dewpoint_cuda::dewpoint_cuda_options opts;
-			dewpoint_cuda::dewpoint_cuda_data datas;
+			auto opts = CudaPrepare(myTargetInfo, TInfo, RHInfo); 
 
-			opts.N = TInfo->Data()->Size();
-			opts.cudaDeviceIndex = static_cast<unsigned short> (threadIndex-1);
+			dewpoint_cuda::Process(*opts);
 
-			opts.TBase = TBase;
+			missingCount = opts->missing;
+			count = opts->N;
 
-			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TD), opts.N * sizeof(double), cudaHostAllocMapped));
-			
-			if (TInfo->Grid()->DataIsPacked())
-			{
-				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-				shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
-
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.T), opts.N * sizeof(double), cudaHostAllocMapped));
-
-				datas.pT = t.get();
-
-				opts.pT = true;
-			}
-			else
-			{
-				datas.T = const_cast<double*> (TInfo->Grid()->Data()->ValuesAsPOD());
-			}
-
-			if (RHInfo->Grid()->DataIsPacked())
-			{
-				assert(RHInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-				shared_ptr<simple_packed> rh = dynamic_pointer_cast<simple_packed> (RHInfo->Grid()->PackedData());
-
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.RH), opts.N * sizeof(double), cudaHostAllocMapped));
-
-				datas.pRH = rh.get();
-
-				opts.pRH = true;
-			}
-			else
-			{
-				datas.RH = const_cast<double*> (RHInfo->Grid()->Data()->ValuesAsPOD());
-			}
-
-			dewpoint_cuda::DoCuda(opts, datas);
-
-			myTargetInfo->Data()->Set(datas.TD, opts.N);
-			assert(TInfo->Grid()->ScanningMode() == RHInfo->Grid()->ScanningMode());
-
-			missingCount = opts.missingValuesCount;
-			count = opts.N;
-			
-			CUDA_CHECK(cudaFreeHost(datas.TD));
-
-			if (TInfo->Grid()->DataIsPacked())
-			{
-				TInfo->Data()->Set(datas.T, opts.N);
-				TInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.T));
-			}
-
-			if (RHInfo->Grid()->DataIsPacked())
-			{
-				RHInfo->Data()->Set(datas.RH, opts.N);
-				RHInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.RH));
-			}
-
-			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+			CudaFinish(move(opts), myTargetInfo, TInfo, RHInfo);
 
 		}
 		else
@@ -274,7 +206,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 					continue;
 				}
 
-				double TD = ((T+TBase) / (1 - ((T+TBase) * log(RHScale * RH) * (Rw_div_L)))) - 273.15 + TBase;
+				double TD = ((T+TBase) / (1 - ((T+TBase) * log(RHScale * RH) * (Rw_div_L)))) - himan::constants::kKelvin + TBase;
 
 				if (!myTargetInfo->Value(TD))
 				{
@@ -310,4 +242,55 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			WriteToFile(myTargetInfo);
 		}
 	}
+}
+
+unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> RHInfo)
+{
+	unique_ptr<dewpoint_cuda::options> opts(new dewpoint_cuda::options);
+
+	opts->t = TInfo->ToSimple();
+	opts->rh = RHInfo->ToSimple();
+	opts->td = myTargetInfo->ToSimple();
+
+	opts->N = opts->td->size_x * opts->td->size_y;
+
+	if (TInfo->Param().Unit() == kC)
+	{
+		opts->t_base = himan::constants::kKelvin;
+	}
+
+	if (RHInfo->Param().Unit() != kPrcnt)
+	{
+		// If unit cannot be detected, assume the values are from 0 .. 1
+		opts->rh_scale = 100;
+	}
+
+	return opts;
+}
+
+void dewpoint::CudaFinish(unique_ptr<dewpoint_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> RHInfo)
+{
+	// Copy data back to infos
+
+	myTargetInfo->Data()->Set(opts->td->values, opts->N);
+	opts->td->free_values();
+
+	assert(TInfo->Grid()->ScanningMode() == RHInfo->Grid()->ScanningMode());
+
+	if (TInfo->Grid()->IsPackedData())
+	{
+		TInfo->Data()->Set(opts->t->values, opts->N);
+		TInfo->Grid()->PackedData()->Clear();
+		opts->t->free_values();
+	}
+
+	if (RHInfo->Grid()->IsPackedData())
+	{
+		RHInfo->Data()->Set(opts->rh->values, opts->N);
+		RHInfo->Grid()->PackedData()->Clear();
+		opts->rh->free_values();
+	}
+
+	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+
 }

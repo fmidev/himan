@@ -11,7 +11,7 @@
 #define VVMS_CUDA_H
 #ifdef HAVE_CUDA
 
-#include "simple_packed.h"
+#include "info_simple.h"
 
 namespace himan
 {
@@ -20,40 +20,30 @@ namespace plugin
 namespace vvms_cuda
 {
 
-struct vvms_cuda_options
+struct options
 {
+	info_simple* t;
+	info_simple* p;
+	info_simple* vv;
+	info_simple* vv_ms;
+
 	size_t N;
-	double PConst;
-	double TBase;
-	double PScale;
-	bool isConstantPressure;
-	bool pT;
-	bool pVV;
-	bool pP;
-	unsigned short cudaDeviceIndex;
-	size_t missingValuesCount;
-	double scale;
+	double p_const;
+	double t_base;
+	double p_scale;
+	bool is_constant_pressure;
+	size_t missing;
+	double vv_ms_scale;
 	
-	vvms_cuda_options() : isConstantPressure(false), pT(false), pVV(false), pP(false), missingValuesCount(0), scale(1) {}
+	options() : N(0), p_const(0), t_base(0), p_scale(1), is_constant_pressure(false), missing(0), vv_ms_scale(1) {}
 };
 
-struct vvms_cuda_data
-{
-	double* T;
-	double* P;
-	double* VV;
-	double* VVMS;
+void Process(options& opts);
 
-	simple_packed* pT;
-	simple_packed* pVV;
-	simple_packed* pP;
-
-	vvms_cuda_data() : T(0), P(0), VV(0), pT(), pVV(), pP() {}
-
-};
-
-
-void DoCuda(vvms_cuda_options& options, vvms_cuda_data& datas);
+#ifdef __CUDACC__
+__global__ void Calculate(const double* __restrict__ d_t, const double* __restrict__ d_vv, const double* __restrict__ d_p, double* __restrict__ d_vv_ms,
+							options opts, int* d_missing);
+#endif
 
 } // namespace vvms_cuda
 } // namespace plugin

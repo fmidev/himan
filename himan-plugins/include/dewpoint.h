@@ -10,6 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
+#include "dewpoint_cuda.h"
 
 namespace himan
 {
@@ -53,6 +54,9 @@ public:
 
 private:
     virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	std::unique_ptr<dewpoint_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> RHInfo);
+	void CudaFinish(std::unique_ptr<dewpoint_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> RHInfo);
+
 
 };
 

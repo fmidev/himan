@@ -21,10 +21,10 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "tk2tc_cuda.h"
 #include "cuda_helper.h"
 
-tk2tc::tk2tc()
+
+tk2tc::tk2tc() : itsBase(-273.15), itsScale(1)
 {
 	itsClearTextFormula = "Tc = Tk - 273.15";
 
@@ -97,17 +97,17 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		// Source info for T
 
-		shared_ptr<info> TInfo;
+		shared_ptr<info> sourceInfo;
 
 		try
 		{
-			TInfo = aFetcher->Fetch(itsConfiguration,
+			sourceInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 myTargetInfo->Level(),
 								 TParam,
 								 itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 
-			assert(TInfo->Param().Unit() == kK);
+			assert(sourceInfo->Param().Unit() == kK);
 
 		}
 		catch (HPExceptionType e)
@@ -133,15 +133,15 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			}
 		}
 
-		SetAB(myTargetInfo, TInfo);
+		SetAB(myTargetInfo, sourceInfo);
 
 		size_t missingCount = 0;
 		size_t count = 0;
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGrid(sourceInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid());
+		bool equalGrids = (*myTargetInfo->Grid() == *sourceInfo->Grid());
 
 		string deviceType;
 
@@ -150,55 +150,16 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 	
 			deviceType = "GPU";
-			
-			tk2tc_cuda::tk2tc_cuda_options opts;
-			tk2tc_cuda::tk2tc_cuda_data datas;
 
-			opts.N = TGrid->Size();
+			auto opts = CudaPrepare(sourceInfo);
 
-			opts.threadIndex = threadIndex;
+			tk2tc_cuda::Process(*opts);
 
-			cudaMallocHost(reinterpret_cast<void**> (&datas.TC), opts.N * sizeof(double));
+			missingCount = opts->missing;
+			count = opts->N;
 
-			if (TInfo->Grid()->DataIsPacked())
-			{
-				assert(TInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+			CudaFinish(move(opts), myTargetInfo, sourceInfo);
 
-				shared_ptr<simple_packed> s = dynamic_pointer_cast<simple_packed> (TInfo->Grid()->PackedData());
-
-				datas.pTK = s.get();
-
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TK), opts.N * sizeof(double), cudaHostAllocMapped));
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.TC), opts.N * sizeof(double), cudaHostAllocMapped));
-
-				opts.pTK = true;
-			}
-			else
-			{
-				datas.TK = const_cast<double*> (TInfo->Grid()->Data()->ValuesAsPOD());
-			}
-
-			tk2tc_cuda::DoCuda(opts, datas);
-
-			myTargetInfo->Data()->Set(datas.TC, opts.N);
-
-			SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
-			
-			missingCount = opts.missingValuesCount;
-			count = opts.N;
-
-			if (TInfo->Grid()->DataIsPacked())
-			{
-				// Copy unpacked data to info class matrix so that when this class is put
-				// to cache, it will have the unpacked version of data
-				
-				TInfo->Data()->Set(datas.TK, opts.N);
-
-				TInfo->Grid()->PackedData()->Clear();
-
-				CUDA_CHECK(cudaFreeHost(datas.TK));
-				CUDA_CHECK(cudaFreeHost(datas.TC));
-			}
 		}
 		else
 #endif
@@ -266,4 +227,51 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 
 	}
+}
+
+unique_ptr<tk2tc_cuda::options> tk2tc::CudaPrepare(shared_ptr<info> sourceInfo)
+{
+	unique_ptr<tk2tc_cuda::options> opts(new tk2tc_cuda::options);
+
+	opts->N = sourceInfo->Data()->Size();
+
+	opts->base = itsBase;
+	opts->scale = itsScale;
+
+	CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&opts->dest), opts->N * sizeof(double)));
+
+	if (sourceInfo->Grid()->IsPackedData())
+	{
+		assert(sourceInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+		shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (sourceInfo->Grid()->PackedData());
+
+		CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&opts->source), opts->N * sizeof(double)));
+
+		opts->p = t.get();
+	}
+	else
+	{
+		opts->source = const_cast<double*> (sourceInfo->Grid()->Data()->ValuesAsPOD());
+	}
+
+	return opts;
+}
+
+void tk2tc::CudaFinish(unique_ptr<tk2tc_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> sourceInfo)
+{
+	// Copy data back to infos
+
+	myTargetInfo->Data()->Set(opts->dest, opts->N);
+	CUDA_CHECK(cudaFreeHost(opts->dest));
+
+	if (sourceInfo->Grid()->IsPackedData())
+	{
+		sourceInfo->Data()->Set(opts->source, opts->N);
+		sourceInfo->Grid()->PackedData()->Clear();
+		CUDA_CHECK(cudaFreeHost(opts->source));
+	}
+
+	SwapTo(myTargetInfo, sourceInfo->Grid()->ScanningMode());
+
 }

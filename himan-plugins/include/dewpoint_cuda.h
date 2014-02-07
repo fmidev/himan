@@ -1,10 +1,8 @@
 /**
- * File:   dewpoint_cuda.h
- * Author: partio
+ * @file   dewpoint_cuda.h
+ * @author partio
  *
- * Created on February 17, 2013, 3:32 PM
- * 
- * List of extern functions compiled by nvcc for plugins (compiled by gcc)
+ * @date February 17, 2013, 3:32 PM
  */
 
 #ifndef DEWPOINT_CUDA_H
@@ -12,7 +10,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "simple_packed.h"
+#include "info_simple.h"
 
 namespace himan
 {
@@ -21,31 +19,25 @@ namespace plugin
 namespace dewpoint_cuda
 {
 
-struct dewpoint_cuda_options
+struct options
 {
+	info_simple* t;
+	info_simple* rh;
+	info_simple* td;
+
 	size_t N;
-	unsigned short cudaDeviceIndex;
-	size_t missingValuesCount;
-	double TBase;
-	bool pT;
-	bool pRH;
-	
-	dewpoint_cuda_options() : missingValuesCount(0), pT(false), pRH(false) {}
+	size_t missing;
+	double t_base;
+	double rh_scale;
+
+	options() : N(0), missing(0), t_base(0), rh_scale(1) {}
 };
 
-struct dewpoint_cuda_data
-{
-	double* T;
-	double* RH;
-	double* TD;
-	simple_packed* pT;
-	simple_packed* pRH;
+void Process(options& opts);
 
-	dewpoint_cuda_data() : T(0), RH(0), TD(0), pT(0), pRH(0) {}
-
-};
-
-void DoCuda(dewpoint_cuda_options& options, dewpoint_cuda_data& datas);
+#ifdef __CUDACC__
+__global__ void Calculate(const double* __restrict__ d_t, const double* __restrict__ d_rh, double* __restrict__ d_td, options opts, int* d_missing);
+#endif
 
 } // namespace dewpoint_cuda
 } // namespace plugin
