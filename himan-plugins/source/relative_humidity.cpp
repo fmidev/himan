@@ -92,7 +92,6 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		double TBase = 0;
-		//double TDBase = 0;
 		double PScale = 1;
 		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 		
@@ -153,7 +152,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 		if (TInfo->Param().Unit() == kK)
 		{
-			TBase = -273.15;
+			TBase = -constants::kKelvin;
 		}
 
 		if (!isPressureLevel && (PInfo->Param().Name() == "P-PA" || PInfo->Param().Unit() == kPa))
@@ -216,10 +215,12 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 					continue;
 				}
 
+				// Pressure needs to be hPa and temperature C
+				
+				double es = util::Es(T) * 0.01;
+
 				T += TBase;
 				P *= PScale;
-
-				double es = util::Es(T) ;
 
 				double RH = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 
