@@ -16,7 +16,6 @@
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
-#include "fog_cuda.h"
 #include "cuda_helper.h"
 
 using namespace std;
@@ -174,7 +173,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		string deviceType;
 
-#ifdef HAVE_CUDA
+#if 0
 
 		if (itsConfiguration->UseCuda() && equalGrids && threadIndex <= itsConfiguration->CudaDeviceCount())
 		{
@@ -189,7 +188,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.F), opts.N * sizeof(double), cudaHostAllocMapped));
 			
-			if (dewInfo->Grid()->DataIsPacked())
+			if (dewInfo->Grid()->IsPackedData())
 			{
 				assert(dewInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
@@ -206,7 +205,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				datas.DTC2M = const_cast<double*> (dewInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
-			if (groundInfo->Grid()->DataIsPacked())
+			if (groundInfo->Grid()->IsPackedData())
 			{
 				assert(groundInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
@@ -223,7 +222,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				datas.TKGround = const_cast<double*> (groundInfo->Grid()->Data()->ValuesAsPOD());
 			}
 
-			if (windInfo->Grid()->DataIsPacked())
+			if (windInfo->Grid()->IsPackedData())
 			{
 				assert(windInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
@@ -251,21 +250,21 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			
 			CUDA_CHECK(cudaFreeHost(datas.F));
 
-			if (dewInfo->Grid()->DataIsPacked())
+			if (dewInfo->Grid()->IsPackedData())
 			{
 				dewInfo->Data()->Set(datas.DTC2M, opts.N);
 				dewInfo->Grid()->PackedData()->Clear();
 				CUDA_CHECK(cudaFreeHost(datas.DTC2M));
 			}
 
-			if (groundInfo->Grid()->DataIsPacked())
+			if (groundInfo->Grid()->IsPackedData())
 			{
 				groundInfo->Data()->Set(datas.TKGround, opts.N);
 				groundInfo->Grid()->PackedData()->Clear();
 				CUDA_CHECK(cudaFreeHost(datas.TKGround));
 			}
 
-			if (windInfo->Grid()->DataIsPacked())
+			if (windInfo->Grid()->IsPackedData())
 			{
 				windInfo->Data()->Set(datas.FF10M, opts.N);
 				windInfo->Grid()->PackedData()->Clear();
