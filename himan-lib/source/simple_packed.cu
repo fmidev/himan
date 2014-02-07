@@ -12,23 +12,41 @@
 using namespace himan;
 
 __host__
-void simple_packed::Unpack(double* d_u, cudaStream_t* stream)
+double* simple_packed::Unpack(cudaStream_t* stream)
 {
+	if (!packedLength)
+	{
+		return 0;
+	}
+	
 	int blockSize = 512;
 	int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
-	
+
+	double* d_u = 0; // device-unpacked data
 	unsigned char* d_p = 0; // device-packed data
 	int* d_b = 0; // device-bitmap
 
-	// These are allocated with cudaHostAlloc zero-copy pinned memory
-	CUDA_CHECK(cudaHostGetDevicePointer(&d_p, data, 0));
+	CUDA_CHECK(cudaMalloc((void**) (&d_u), unpackedLength * sizeof(double)));
+
+	CUDA_CHECK(cudaMalloc((void**) (&d_p), packedLength * sizeof(unsigned char)));
+	CUDA_CHECK(cudaMemcpyAsync(d_p, data, packedLength * sizeof(unsigned char), cudaMemcpyHostToDevice, *stream));
 
 	if (HasBitmap())
 	{
-		CUDA_CHECK(cudaHostGetDevicePointer(&d_b, bitmap, 0));
+		CUDA_CHECK(cudaMalloc((void**) (&d_b), bitmapLength * sizeof(int)));
+		CUDA_CHECK(cudaMemcpyAsync(d_b, bitmap, packedLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
 	}
 	
 	simple_packed_util::Unpack <<< gridSize, blockSize, 0, *stream >>> (d_p, d_u, d_b, coefficients, HasBitmap(), unpackedLength);
+
+	CUDA_CHECK(cudaFree(d_p));
+
+	if (HasBitmap())
+	{
+		CUDA_CHECK(cudaFree(d_b));
+	}
+
+	return d_u;
 
 }
 
@@ -39,7 +57,7 @@ void simple_packed_util::Unpack(unsigned char* d_p, double* d_u, int* d_b, simpl
 
 	if (idx < N)
 	{
-		if (coeff.bitsPerValue % 8)
+		if (coeff.bitsPerValue % 8) // modulo is expensive but "Compiler will convert literal power-of-2 divides to bitwise shifts"
 		{
 			UnpackUnevenBytes(d_p, d_u, d_b, coeff, hasBitmap, idx);
 		}

@@ -54,9 +54,19 @@ struct simple_packed : packed_data
 
 #ifdef __CUDACC__
 	// Functions that are only visible for nvcc compiler
-	
+
+	/**
+	 * @brief Function will unpack binary array (unsigned char) to double array.
+	 *
+	 * Function is synchronous due to implicit synchronization caused by cudaFree().
+	 *
+	 * Note! Return pointer to double array RESIDES IN DEVICE MEMORY. The caller
+	 * is responsible for managing the memory.
+	 *
+	 */
+
 	__host__
-	void Unpack(double* d_u, cudaStream_t* stream);
+	double* Unpack(cudaStream_t* stream);
 
 	__device__
 	void UnpackUnevenBytes(double* __restrict__ d_u, int idx);
