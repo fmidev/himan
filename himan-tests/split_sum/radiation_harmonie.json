@@ -1,15 +1,14 @@
 {
-	"target_geom_name" : "AROME022",
-	"source_geom_name" : "AROME022",
+	"target_geom_name" : "HARMONIE022",
+	"source_geom_name" : "HARMONIE022",
 	"source_producer" : "199",
 	"target_producer" : "210",
-	"start_minute" : "15",
-	"stop_minute" : "30",
+	"start_minute" : "60",
+	"stop_minute" : "75",
 	"step" : "15",
 	"file_write" : "multiple",
-	"origintime" : "2013-11-23 06:00:00",
+	"origintime" : "2014-02-07 03:00:00",
 	"read_data_from_database" : "false",
-	"use_cache" : false,
 	"processqueue" : [
 	{
 		"leveltype" : "height",
