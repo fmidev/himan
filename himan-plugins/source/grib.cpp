@@ -689,8 +689,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			unsigned char* data = 0, *bitmap = 0;
 			int* unpackedBitmap;
-			
-			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&data), len * sizeof(unsigned char), cudaHostAllocMapped));
+
+			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&data), len * sizeof(unsigned char)));
 
 			// Get packed values from grib
 			
@@ -712,7 +712,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				size_t bitmap_len =itsGrib->Message()->BytesLength("bitmap");
 				size_t bitmap_size = static_cast<size_t> (ceil(bitmap_len/8));
 
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&unpackedBitmap), bitmap_len * sizeof(int), cudaHostAllocMapped));
+				CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&unpackedBitmap), bitmap_len * sizeof(int)));
 
 				bitmap = new unsigned char[bitmap_size];
 
