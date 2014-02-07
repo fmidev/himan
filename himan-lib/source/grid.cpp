@@ -768,7 +768,7 @@ void grid::PackedData(shared_ptr<packed_data> thePackedData)
 	itsPackedData = thePackedData;
 }
 
-bool grid::DataIsPacked() const
+bool grid::IsPackedData() const
 {
 	if (itsPackedData && itsPackedData->HasData())
 	{
@@ -783,7 +783,7 @@ ostream& grid::Write(std::ostream& file) const
 	file << "<" << ClassName() << ">" << std::endl;
 
 	file << *itsData;
-	file << "__dataIsPacked__ " << DataIsPacked() << endl;
+	file << "__dataIsPacked__ " << IsPackedData() << endl;
 	file << "__itsScanningMode__ " << itsScanningMode << endl;
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
 	file << "__itsProjection__ " << itsProjection << endl;

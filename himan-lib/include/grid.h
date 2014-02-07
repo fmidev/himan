@@ -249,7 +249,7 @@ class grid
 		void PackedData(std::shared_ptr<packed_data> thePackedData);
 		std::shared_ptr<packed_data> PackedData() const;
 		
-		bool DataIsPacked() const;
+		bool IsPackedData() const;
 
 		/**
 		 * @brief Swap data from one scanning mode to another in-place.
