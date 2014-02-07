@@ -54,7 +54,7 @@ __global__ void himan::plugin::fog_cuda::Calculate( const double* __restrict__ d
 
 void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& datas)
 {
-
+#if 0
 	CUDA_CHECK(cudaSetDevice(opts.cudaDeviceIndex));
 
 	size_t memsize = opts.N * sizeof(double);
@@ -159,5 +159,5 @@ void himan::plugin::fog_cuda::DoCuda(fog_cuda_options& opts, fog_cuda_data& data
 
 	CUDA_CHECK(cudaFree(dMissingValuesCount));
 	CUDA_CHECK(cudaStreamDestroy(stream));
-
+#endif
 }
