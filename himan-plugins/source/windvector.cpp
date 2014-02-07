@@ -24,8 +24,13 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "windvector_cuda.h"
 #include "cuda_helper.h"
+
+typedef tuple<double,double,double,double> coefficients;
+
+// std::thread_local is implemented only in g++ 4.8 !
+
+boost::thread_specific_ptr <map<size_t, coefficients>> myCoefficientCache;
 
 windvector::windvector()
 	: itsCalculationTarget(kUnknownElement)
@@ -169,6 +174,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
+	if (!myCoefficientCache.get())
+	{
+		myCoefficientCache.reset(new map<size_t, coefficients>());
+	}
+
 	// Required source parameters
 
 	param UParam;
@@ -292,9 +302,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		bool equalGrids = (*myTargetInfo->Grid() == *UInfo->Grid() && *myTargetInfo->Grid() == *VInfo->Grid());
 
+		if (!equalGrids && UInfo->Grid()->IsPackedData())
+		{
+			cout << "ASDF ASDF ASDF\n";
+		}
+
 		assert(UInfo->Grid()->Projection() == VInfo->Grid()->Projection());
 
-		bool needRotLatLonGridRotation = (UInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
 		bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
 
 		string deviceType;
@@ -306,141 +320,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 			assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->Projection() == kRotatedLatLonProjection);
 			
-			windvector_cuda::windvector_cuda_options opts;
-			windvector_cuda::windvector_cuda_data datas;
+			auto opts = CudaPrepare(myTargetInfo, UInfo, VInfo);
 
-			if (myTargetInfo->Grid()->ScanningMode() == kTopLeft)
-			{
-				opts.jScansPositive = false;
-			}
-			else if (myTargetInfo->Grid()->ScanningMode() != kBottomLeft)
-			{
-				throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " + string(HPScanningModeToString.at(myTargetInfo->Grid()->ScanningMode())));
-			}
+			windvector_cuda::Process(*opts);
 
-			opts.sizeX = myTargetInfo->Grid()->Data()->SizeX();
-			opts.sizeY = myTargetInfo->Grid()->Data()->SizeY();
+			count = opts->N;
+			missingCount = opts->missing;
 
-			size_t N = opts.sizeX*opts.sizeY;
-
-			if (UInfo->Grid()->DataIsPacked())
-			{
-				assert(UInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-				shared_ptr<simple_packed> u = dynamic_pointer_cast<simple_packed> (UInfo->Grid()->PackedData());
-
-				datas.pU = u.get();
-
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.u), N * sizeof(double), cudaHostAllocMapped));
-
-				opts.pU = true;
-
-			}
-			else
-			{
-				datas.u = const_cast<double*> (UInfo->Data()->ValuesAsPOD());
-			}
-
-			if (VInfo->Grid()->DataIsPacked())
-			{
-				assert(VInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-				shared_ptr<simple_packed> v = dynamic_pointer_cast<simple_packed> (VInfo->Grid()->PackedData());
-
-				datas.pV = v.get();
-
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.v), N * sizeof(double), cudaHostAllocMapped));
-
-				opts.pV = true;
-
-			}
-			else
-			{
-				datas.v = const_cast<double*> (VInfo->Data()->ValuesAsPOD());
-			}
-
-			opts.vectorCalculation = itsVectorCalculation;
-			opts.needRotLatLonGridRotation = needRotLatLonGridRotation;
-			opts.targetType = itsCalculationTarget;
-
-			CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.speed), N * sizeof(double), cudaHostAllocMapped));
-
-			if (itsCalculationTarget != kGust)
-			{
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.dir), N * sizeof(double), cudaHostAllocMapped));
-			}
-
-			if (opts.vectorCalculation)
-			{
-				CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**> (&datas.vector), N * sizeof(double), cudaHostAllocMapped));
-			}
-
-			opts.firstLatitude = myTargetInfo->Grid()->FirstGridPoint().Y();
-			opts.firstLongitude = myTargetInfo->Grid()->FirstGridPoint().X();
-			opts.southPoleLat = myTargetInfo->Grid()->SouthPole().Y();
-			opts.southPoleLon = myTargetInfo->Grid()->SouthPole().X();
-
-			opts.di = myTargetInfo->Grid()->Di();
-			opts.dj = myTargetInfo->Grid()->Dj();
-
-			opts.cudaDeviceIndex = static_cast<unsigned short> (threadIndex-1);
-
-			windvector_cuda::DoCuda(opts, datas);
-
-			count = N;
-			missingCount = opts.missingValuesCount;
-
-			myTargetInfo->ParamIndex(0);
-			myTargetInfo->Data()->Set(datas.speed, N);
-
-			if (itsCalculationTarget != kGust)
-			{
-				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Data()->Set(datas.dir, N);
-			}
-
-			if (itsVectorCalculation)
-			{
-				myTargetInfo->ParamIndex(2);
-				myTargetInfo->Data()->Set(datas.vector, N);
-			}
-
-			// Copy unpacked data to source info in case
-			// some other thread/plugin calls for this same data.
-			// Clear packed data now that it's been unpacked
-
-			if (UInfo->Grid()->DataIsPacked())
-			{
-				UInfo->Data()->Set(datas.u, N);
-				UInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.u));
-			}
-
-			if (VInfo->Grid()->DataIsPacked())
-			{
-				VInfo->Data()->Set(datas.v, N);
-				VInfo->Grid()->PackedData()->Clear();
-				CUDA_CHECK(cudaFreeHost(datas.v));
-			}			
-						
-			CUDA_CHECK(cudaFreeHost(datas.speed));
-
-			if (opts.targetType != kGust)
-			{
-				CUDA_CHECK(cudaFreeHost(datas.dir));
-			}
-
-			if (opts.vectorCalculation)
-			{
-				CUDA_CHECK(cudaFreeHost(datas.vector));
-			}
-			
-			assert(UInfo->Grid()->ScanningMode() == VInfo->Grid()->ScanningMode());
-			
-			for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
-			{
-				SwapTo(myTargetInfo, UInfo->Grid()->ScanningMode());
-			}
+			CudaFinish(move(opts), myTargetInfo, UInfo, VInfo);
 
 		}
 		else
@@ -539,7 +426,17 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 						*
 						*/
 
-						tuple<double,double,double,double> coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+						coefficients coeffs;
+
+						if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
+						{
+							coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
+						}
+						else
+						{
+							coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+							(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
+						}
 
 						newU = get<0> (coeffs) * U + get<1> (coeffs) * V;
 						newV = get<2> (coeffs) * U + get<3> (coeffs) * V;
@@ -559,7 +456,17 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 						
 						sincos((ang - cLon) * himan::constants::kDeg, &sinL, &cosL);
 
-						tuple<double,double,double,double> coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+						coefficients coeffs;
+
+						if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
+						{
+							coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
+						}
+						else
+						{
+							coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+							(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
+						}
 
 						double PA = get<0> (coeffs) * cosL - get<1> (coeffs) * sinL;
 						double PB = get<0> (coeffs) * sinL + get<1> (coeffs) * cosL;
@@ -673,4 +580,85 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			WriteToFile(myTargetInfo);
 		}
 	}
+}
+
+unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> UInfo, shared_ptr<info> VInfo)
+{
+	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
+
+	opts->vector_calculation = itsVectorCalculation;
+	opts->need_grid_rotation = (UInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());;
+	opts->target_type = itsCalculationTarget;
+
+	opts->u = UInfo->ToSimple();
+	opts->v = VInfo->ToSimple();
+	
+	myTargetInfo->ParamIndex(0);
+	opts->speed = myTargetInfo->ToSimple();
+
+	if (opts->target_type != kGust)
+	{
+		myTargetInfo->ParamIndex(1);
+		opts->dir = myTargetInfo->ToSimple();
+	}
+
+	if (opts->vector_calculation)
+	{
+		myTargetInfo->ParamIndex(2);
+		opts->vector = myTargetInfo->ToSimple();
+	}
+
+	opts->N = opts->speed->size_x*opts->speed->size_y;
+
+	return opts;
+}
+
+void windvector::CudaFinish(unique_ptr<windvector_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> UInfo, shared_ptr<info> VInfo)
+{
+	// Copy data back to infos
+
+	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Data()->Set(opts->speed->values, opts->N);
+	opts->speed->free_values();
+
+	if (itsCalculationTarget != kGust)
+	{
+		myTargetInfo->ParamIndex(1);
+		myTargetInfo->Data()->Set(opts->dir->values, opts->N);
+		opts->dir->free_values();
+	}
+
+	if (itsVectorCalculation)
+	{
+		myTargetInfo->ParamIndex(2);
+		myTargetInfo->Data()->Set(opts->vector->values, opts->N);
+		opts->vector->free_values();
+	}
+
+	assert(UInfo->Grid()->ScanningMode() == VInfo->Grid()->ScanningMode());
+
+	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
+	{
+		SwapTo(myTargetInfo, UInfo->Grid()->ScanningMode());
+	}
+
+	// Copy unpacked data to source info in case
+	// some other thread/plugin calls for this same data.
+	// Clear packed data now that it's been unpacked
+
+	if (UInfo->Grid()->IsPackedData())
+	{
+		UInfo->Data()->Set(opts->u->values, opts->N);
+		UInfo->Grid()->PackedData()->Clear();
+		opts->u->free_values();
+	}
+
+	if (VInfo->Grid()->IsPackedData())
+	{
+		VInfo->Data()->Set(opts->v->values, opts->N);
+		VInfo->Grid()->PackedData()->Clear();
+		opts->v->free_values();
+	}
+
+	// opts is destroyed after leaving this function
 }

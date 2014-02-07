@@ -11,11 +11,11 @@
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
 
-#define WINDVECTOR_HEADER_INCLUDE
+//#define WINDVECTOR_HEADER_INCLUDE
 
 #include "windvector_cuda.h" // need to have this here because of HPTargetType
 
-#undef WINDVECTOR_HEADER_INCLUDE
+//#undef WINDVECTOR_HEADER_INCLUDE
 
 namespace himan
 {
@@ -51,8 +51,10 @@ public:
    
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void CudaFinish(std::unique_ptr<windvector_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> RHInfo);
+	std::unique_ptr<windvector_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> UInfo, std::shared_ptr<info> VInfo);
 
-	HPTargetType itsCalculationTarget;
+	HPWindVectorTargetType itsCalculationTarget;
 	bool itsVectorCalculation;
 
 

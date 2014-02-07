@@ -1,18 +1,23 @@
-/* 
- * File:   windvector_cuda.h
- * Author: partio
+/**
+ * @file   windvector_cuda.h
+ * @author partio
  *
- * Created on March 14, 2013, 2:17 PM
+ * @date March 14, 2013, 2:17 PM
  */
 
-#if defined WINDVECTOR_HEADER_INCLUDE || defined __CUDACC__ // don't want to pollute whole namespace with this s*it
+#ifndef WINDVECTOR_CUDA_H
+#define	WINDVECTOR_CUDA_H
+
+#ifdef HAVE_CUDA
+
+#include "info_simple.h"
 
 namespace himan
 {
 namespace plugin
 {
 
-enum HPTargetType
+enum HPWindVectorTargetType
 {
 	kUnknownElement = 0,
 	kWind,
@@ -21,74 +26,44 @@ enum HPTargetType
 	kIce
 };
 
-} // namespace plugin
-} // namespace himan
-
-
-#endif
-
-#ifndef WINDVECTOR_HEADER_INCLUDE
-#ifndef WINDVECTOR_CUDA_H
-#define	WINDVECTOR_CUDA_H
-
-#ifdef HAVE_CUDA
-
-#include "simple_packed.h"
-
-namespace himan
-{
-namespace plugin
-{
 namespace windvector_cuda
 {
 
-struct windvector_cuda_options
+struct options
 {
-	size_t sizeX;
-	size_t sizeY;
-	double firstLatitude;
-	double firstLongitude;
-	double di;
-	double dj;
-	double southPoleLat;
-	double southPoleLon;
-	HPTargetType targetType;
-	bool vectorCalculation;
-	bool needRotLatLonGridRotation;
-	unsigned short cudaDeviceIndex;
-	size_t missingValuesCount;
-	bool pU;
-	bool pV;
-	bool jScansPositive;
+	info_simple* u;
+	info_simple* v;
+	info_simple* speed;
+	info_simple* dir;
+	info_simple* vector;
 
-	windvector_cuda_options() 
-		: targetType(kUnknownElement)
-		, vectorCalculation(false)
-		, needRotLatLonGridRotation(false)
-		, missingValuesCount(0)
-		, pU(false)
-		, pV(false)
-		, jScansPositive(true)
+	HPWindVectorTargetType target_type;
+	bool vector_calculation;
+	bool need_grid_rotation;
+	size_t missing;
+	size_t N;
+
+	options() 
+		: target_type(kUnknownElement)
+		, vector_calculation(false)
+		, need_grid_rotation(false)
+		, missing(0)
+		, N(0)
 	{}
 
+	
 };
 
-struct windvector_cuda_data
-{
-	double* u;
-	double* v;
-	double* speed;
-	double* dir;
-	double* vector;
-	simple_packed* pU;
-	simple_packed* pV;
 
-	windvector_cuda_data() : u(0), v(0), speed(0), dir(0), vector(0), pU(0), pV(0) {}
+void Process(options& opts);
 
-};
 
-void DoCuda(windvector_cuda_options& opts, windvector_cuda_data& data);
+#ifdef __CUDACC__
+__global__ void Calculate(const double* __restrict__ d_u, const double* __restrict__ d_v, double* __restrict__ d_speed, double* __restrict__ d_dir, double* __restrict__ d_vector,
+							options opts, int* d_missing);
+__global__ void Rotate(double* __restrict__ dU, double* __restrict__ dV, info_simple opts);
 
+#endif
 
 } // namespace windvector_cuda
 } // namespace plugin
@@ -96,4 +71,3 @@ void DoCuda(windvector_cuda_options& opts, windvector_cuda_data& data);
 
 #endif  /* HAVE_CUDA */
 #endif	/* WINDVECTOR_CUDA_H */
-#endif  /* WINDVECTOR_HEADER_INCLUDE */

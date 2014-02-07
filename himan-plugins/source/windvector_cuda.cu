@@ -18,61 +18,40 @@
 const double kRadToDeg = 57.29577951307855; // 180 / PI
 const double kDegToRad = 0.017453292519944; // PI / 180
 
-namespace himan
-{
-
-namespace plugin
-{
-
-namespace windvector_cuda
-{
-
-__global__ void Rotate(double* __restrict__ dU, double* __restrict__ dV, windvector_cuda_options opts);
-__global__ void Calculate(const double* __restrict__ dU,
-							const double* __restrict__ dV,
-							double* __restrict__ dSpeed,
-							double* __restrict__ dDir,
-							double* __restrict__ dVector,
-							windvector_cuda_options opts, int* dMissingValueCount);
-
-} // namespace windvector_cuda
-} // namespace plugin
-} // namespace himan
-
 /*
  * Calculate results. At this point it as assumed that U and V are in correct form.
  */
 
-__global__ void himan::plugin::windvector_cuda::Calculate(const double* __restrict__ dU,
-															const double* __restrict__ dV,
-															double* __restrict__ dSpeed,
-															double* __restrict__ dDir,
-															double* __restrict__ dVector,
-															windvector_cuda_options opts,
-															int* dMissingValuesCount)
+__global__ void himan::plugin::windvector_cuda::Calculate(const double* __restrict__ d_u,
+															const double* __restrict__ d_v,
+															double* __restrict__ d_speed,
+															double* __restrict__ d_dir,
+															double* __restrict__ d_vector,
+															options opts,
+															int* d_missing)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.sizeX*opts.sizeY)
+	if (idx < opts.N)
 	{
-		double U = dU[idx], V = dV[idx];
+		double U = d_u[idx], V = d_v[idx];
 
 		if (U == kFloatMissing || V == kFloatMissing)
 		{
-			dSpeed[idx] = kFloatMissing;
+			d_speed[idx] = kFloatMissing;
 
-			if (opts.targetType != kGust)
+			if (opts.target_type != kGust)
 			{
-				dDir[idx] = kFloatMissing;
+				d_dir[idx] = kFloatMissing;
 			}
 
-			if (opts.vectorCalculation)
+			if (opts.vector_calculation)
 			{
-				dVector[idx] = kFloatMissing;
+				d_vector[idx] = kFloatMissing;
 			}
 
-			atomicAdd(dMissingValuesCount, 1);
+			atomicAdd(d_missing, 1);
 
 		}
 		else
@@ -80,18 +59,18 @@ __global__ void himan::plugin::windvector_cuda::Calculate(const double* __restri
 
 			double speed = sqrt(U*U + V*V);
 
-			dSpeed[idx] = speed;
+			d_speed[idx] = speed;
 
 			double dir = 0;	// Direction is double although we round the result so that it *could* be int as well.
 								// This is because if we use int the windvector calculation will have a small bias due
 								// to int decimal value truncation.
 
-			if (opts.targetType != kGust)
+			if (opts.target_type != kGust)
 			{
 
 				int offset = 180;
 
-				if (opts.targetType == kSea || opts.targetType == kIce)
+				if (opts.target_type == kSea || opts.target_type == kIce)
 				{
 					offset = 0;
 				}
@@ -126,12 +105,12 @@ __global__ void himan::plugin::windvector_cuda::Calculate(const double* __restri
 
 				}
 
-				dDir[idx] = round(dir);
+				d_dir[idx] = round(dir);
 			}
 
-			if (opts.vectorCalculation)
+			if (opts.vector_calculation)
 			{
-				dVector[idx] = round(dir/10) + 100 * round(speed);
+				d_vector[idx] = round(dir/10) + 100 * round(speed);
 			}
 		}
 	}
@@ -146,36 +125,36 @@ __global__ void himan::plugin::windvector_cuda::Calculate(const double* __restri
  *
  */
 
-__global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ dU, double* __restrict__ dV, windvector_cuda_options opts)
+__global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u, double* __restrict__ d_v, info_simple opts)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.sizeX*opts.sizeY)
+	if (idx < opts.size_x * opts.size_y)
 	{
 
-		double U = dU[idx];
-		double V = dV[idx];
+		double U = d_u[idx];
+		double V = d_v[idx];
 
 		if (U != himan::kFloatMissing && V != himan::kFloatMissing)
 		{
 			int j;
 			
-			if (opts.jScansPositive)
+			if (opts.j_scans_positive)
 			{
-				j = floor(static_cast<double> (idx/opts.sizeX));
+				j = floor(static_cast<double> (idx/opts.size_x));
 			}
 			else
 			{
-				j = opts.sizeY - floor(static_cast<double> (idx/opts.sizeX));
+				j = opts.size_y - floor(static_cast<double> (idx/opts.size_x));
 			}
 
-			int i = idx - j * opts.sizeX;
+			int i = idx - j * opts.size_x;
 
-			double lon = opts.firstLongitude + i * opts.di;
-			double lat = opts.firstLatitude + j * opts.dj;
+			double lon = opts.first_lon + i * opts.di;
+			double lat = opts.first_lat + j * opts.dj;
 
-			double SinYPole = sin((opts.southPoleLat + 90.) * kDegToRad);
-			double CosYPole = cos((opts.southPoleLat + 90.) * kDegToRad);
+			double SinYPole = sin((opts.south_pole_lat + 90.) * kDegToRad);
+			double CosYPole = cos((opts.south_pole_lat + 90.) * kDegToRad);
 
 			double SinXRot, CosXRot, SinYRot, CosYRot;
 
@@ -198,13 +177,15 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ dU, 
 			double XReg = acos(CosXReg) * kRadToDeg;
 
 			if (SinXReg < 0.)
+			{
 				XReg = -XReg;
+			}
 
-			XReg += opts.southPoleLon;
+			XReg += opts.south_pole_lon;
 
 			// UV to earth relative
 
-			double zxmxc = kDegToRad * (XReg - opts.southPoleLon);
+			double zxmxc = kDegToRad * (XReg - opts.south_pole_lon);
 
 			double sinxmxc, cosxmxc;
 
@@ -218,94 +199,85 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ dU, 
 			double newU = PA * U + PB * V;
 			double newV = PC * U + PD * V;
 
-			dU[idx] = newU;
-			dV[idx] = newV;
+			d_u[idx] = newU;
+			d_v[idx] = newV;
 		}
 	}
 }
 
-void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windvector_cuda_data& datas)
+void himan::plugin::windvector_cuda::Process(options& opts)
 {
-
-	// Allocate host arrays and convert input data to double
-
-	size_t N = opts.sizeY*opts.sizeX;
-
-	// Allocate device arrays
-
-	double* dU = 0;
-	double* dV = 0;
-	double* dSpeed = 0;
-	double* dDir = 0;
-	double* dVector = 0;
-	
-	int* dMissingValuesCount = 0;
-
-	CUDA_CHECK(cudaMalloc((void **) &dMissingValuesCount, sizeof(int)));
-
-	CUDA_CHECK(cudaHostGetDevicePointer(&dSpeed, datas.speed, 0));
-
-	if (opts.targetType != kGust)
-	{
-		CUDA_CHECK(cudaHostGetDevicePointer(&dDir, datas.dir, 0));
-	}
-
-	if (opts.vectorCalculation)
-	{
-		CUDA_CHECK(cudaHostGetDevicePointer(&dVector, datas.vector, 0));
-	}
-
-	size_t memsize = opts.sizeX*opts.sizeY*sizeof(double);
-
-	if (opts.pU)
-	{
-		CUDA_CHECK(cudaHostGetDevicePointer(&dU, datas.u, 0));
-	}
-	else
-	{
-		CUDA_CHECK(cudaMalloc((void **) &dU, memsize));
-		CUDA_CHECK(cudaMemcpy(dU, datas.u, memsize, cudaMemcpyHostToDevice));
-	}
-
-	if (opts.pV)
-	{
-		CUDA_CHECK(cudaHostGetDevicePointer(&dV, datas.v, 0));
-	}
-	else
-	{
-		CUDA_CHECK(cudaMalloc((void **) &dV, memsize));
-		CUDA_CHECK(cudaMemcpy(dV, datas.v, memsize, cudaMemcpyHostToDevice));
-	}
-	
-	int src=0;
-
-	CUDA_CHECK(cudaMemcpy(dMissingValuesCount, &src, sizeof(int), cudaMemcpyHostToDevice));
-
-	// dims
-
-	const int blockSize = 128;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
-
-	// Better do this once here than millions of times in the kernel
-
-	if (opts.southPoleLat > 0)
-	{
-		opts.southPoleLat = -opts.southPoleLat;
-		opts.southPoleLon = 0;
-	}
 
 	cudaStream_t stream;
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	if (opts.pU)
+	// Allocate device arrays
+
+	double* d_u = 0;
+	double* d_v = 0;
+	double* d_speed = 0;
+	double* d_dir = 0;
+	double* d_vector = 0;
+	
+	int* d_missing = 0;
+
+	// Allocate memory on device
+
+	size_t memsize = opts.N*sizeof(double);
+
+	CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
+	CUDA_CHECK(cudaMalloc((void **) &d_speed, memsize));
+
+	if (opts.target_type != kGust)
 	{
-		datas.pU->Unpack(dU, &stream);
+		CUDA_CHECK(cudaMalloc((void **) &d_dir, memsize));
 	}
 
-	if (opts.pV)
+	if (opts.vector_calculation)
 	{
-		datas.pV->Unpack(dV, &stream);
+		CUDA_CHECK(cudaMalloc((void **) &d_vector, memsize));
+	}
+
+	// Copy data to device
+
+	if (opts.u->packed_values)
+	{
+		// Unpack data and copy it back to host, we need it because its put back to cache
+		d_u = opts.u->packed_values->Unpack(&stream);
+		CUDA_CHECK(cudaMemcpyAsync(opts.u, d_u, memsize, cudaMemcpyDeviceToHost, stream));
+	}
+	else
+	{
+		CUDA_CHECK(cudaMalloc((void **) &d_u, memsize));
+		CUDA_CHECK(cudaMemcpyAsync(d_u, opts.u->values, memsize, cudaMemcpyHostToDevice, stream));
+	}
+
+	if (opts.v->packed_values)
+	{
+		// Unpack data and copy it back to host, we need it because its put back to cache
+		d_v = opts.v->packed_values->Unpack(&stream);
+		CUDA_CHECK(cudaMemcpyAsync(opts.v->values, d_v, memsize, cudaMemcpyDeviceToHost, stream));
+	}
+	else
+	{
+		CUDA_CHECK(cudaMalloc((void **) &d_v, memsize));
+		CUDA_CHECK(cudaMemcpyAsync(d_v, opts.v->values, memsize, cudaMemcpyHostToDevice, stream));
+	}
+
+	int src=0;
+
+	CUDA_CHECK(cudaMemcpyAsync(d_missing, &src, sizeof(int), cudaMemcpyHostToDevice, stream));
+
+	// dims
+
+	const int blockSize = 128;
+	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
+
+	if (opts.u->south_pole_lat > 0)
+	{
+		opts.u->south_pole_lat = -opts.u->south_pole_lat;
+		opts.u->south_pole_lon = 0;
 	}
 
 	/*
@@ -313,12 +285,14 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 	 * direction for it.
 	*/
 
-	if (opts.targetType != kGust && opts.needRotLatLonGridRotation)
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+	
+	if (opts.target_type != kGust && opts.need_grid_rotation)
 	{
-		Rotate <<< gridSize, blockSize, 0, stream >>> (dU, dV, opts);
+		Rotate <<< gridSize, blockSize, 0, stream >>> (d_u, d_v, *opts.u);
 	}
 	
-	Calculate <<< gridSize, blockSize, 0, stream >>> (dU, dV, dSpeed, dDir, dVector, opts, dMissingValuesCount);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (d_u, d_v, d_speed, d_dir, d_vector, opts, d_missing);
 
 	// block until the stream has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -327,19 +301,40 @@ void himan::plugin::windvector_cuda::DoCuda(windvector_cuda_options& opts, windv
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
-	CUDA_CHECK(cudaMemcpy(&opts.missingValuesCount, dMissingValuesCount, sizeof(int), cudaMemcpyDeviceToHost));
+	CUDA_CHECK(cudaMemcpyAsync(opts.speed->values, d_speed, memsize, cudaMemcpyDeviceToHost, stream));
 
-	if (!opts.pU)
+	if (opts.target_type != kGust)
 	{
-		CUDA_CHECK(cudaFree(dU));
+		CUDA_CHECK(cudaMemcpyAsync(opts.dir->values, d_dir, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 
-	if (!opts.pV)
+	if (opts.vector_calculation)
 	{
-		CUDA_CHECK(cudaFree(dV));
+		CUDA_CHECK(cudaMemcpyAsync(opts.vector->values, d_vector, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 
-	CUDA_CHECK(cudaFree(dMissingValuesCount));
+	CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
 
-	CUDA_CHECK(cudaStreamDestroy(stream));
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	// Free device memory
+
+	CUDA_CHECK(cudaFree(d_u));
+	CUDA_CHECK(cudaFree(d_v));
+
+	CUDA_CHECK(cudaFree(d_speed));
+	
+	if (d_dir)
+	{
+		CUDA_CHECK(cudaFree(d_dir));
+	}
+
+	if (d_vector)
+	{
+		CUDA_CHECK(cudaFree(d_vector));
+	}
+	
+	CUDA_CHECK(cudaFree(d_missing));
+
+	CUDA_CHECK(cudaStreamDestroy(stream)); // this blocks
 }
