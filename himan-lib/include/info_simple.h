@@ -11,6 +11,8 @@
 #include "simple_packed.h"
 #include "cuda_helper.h"
 
+#ifdef HAVE_CUDA
+
 namespace himan
 {
 
@@ -121,26 +123,9 @@ struct info_simple
 
 };
 
-/*struct info_simple_list
-{
-	std::vector<info_simple*> list;
-
-	info_simple_list()
-	{}
-
-	info_simple_list (const info_simple_list& other)
-	{
-		list.resize(other.list.size());
-
-		for (size_t i = 0; i < list.size(); i++)
-		{
-			// shallow copy
-			list[i] = new info_simple(*other.list[i]);
-		}
-	}
-};*/
-
 }
+
+#endif // /* HAVE_CUDA */
 
 #endif	/* INFO_SIMPLE_H */
 

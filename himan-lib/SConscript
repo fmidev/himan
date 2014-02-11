@@ -30,10 +30,11 @@ for file in Glob('source/*.cpp'):
         obj='obj/'+ s.replace(".cpp","")
 	objects += env.SharedObject(obj, file)
 
-for file in Glob('source/*.cu'):
-        s=os.path.basename(str(file))
-        obj='obj/cu_'+ s.replace(".cu","")
-	objects += env.SharedObject(obj, file)
+if have_cuda:
+	for file in Glob('source/*.cu'):
+        	s=os.path.basename(str(file))
+	        obj='obj/cu_'+ s.replace(".cu","")
+		objects += env.SharedObject(obj, file)
 
 lib = env.SharedLibrary(directory = 'lib', target = 'himan', source = objects)
 

@@ -675,6 +675,8 @@ public:
 
 	HPProjectionType Projection() const;
 
+#ifdef HAVE_CUDA
+
 	/**
 	 * @brief Stupify this info to a C-style struct
 	 * 
@@ -683,6 +685,8 @@ public:
 
 	info_simple* ToSimple() const;
 
+#endif
+	
 private:
 
 	void Init();

@@ -704,6 +704,8 @@ void info::ReplaceParam(const param& theParam)
 	p = theParam;
 }
 
+#ifdef HAVE_CUDA
+
 info_simple* info::ToSimple() const
 {
 	info_simple* ret = new info_simple();
@@ -755,3 +757,5 @@ info_simple* info::ToSimple() const
 
 	return ret;
 }
+
+#endif
