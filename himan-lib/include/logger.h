@@ -18,10 +18,11 @@ namespace himan
 class logger
 {
 public:
-    ~logger() {}
-
+    logger();
     logger(const std::string& theUserName, HPDebugState theDebugState);
 
+    ~logger() {}
+	
     void Trace(const std::string& msg)
     {
         if (itsDebugState <= kTraceMsg)
