@@ -11,6 +11,11 @@
 
 using namespace himan;
 
+plugin_container::plugin_container()
+	: itsLibraryHandle(0)
+{
+}
+
 plugin_container::plugin_container(void* theLibraryHandle, std::shared_ptr<plugin::himan_plugin> thePlugin)
     : itsPlugin(thePlugin),
       itsLibraryHandle(theLibraryHandle)
@@ -25,8 +30,8 @@ std::shared_ptr<plugin::himan_plugin> plugin_container::Plugin()
 std::shared_ptr<plugin::himan_plugin> plugin_container::Clone()
 {
     ::dlerror(); // clear error handle
-
-    //plugin::create_t* create_plugin = (plugin::create_t*) dlsym(itsLibraryHandle, "create");
+ 
+    assert(itsLibraryHandle);
     plugin::create_t* create_plugin = reinterpret_cast<plugin::create_t*> (dlsym(itsLibraryHandle, "create"));
 
     if (!create_plugin)
@@ -48,7 +53,8 @@ void* plugin_container::Library()
 plugin_container::~plugin_container()
 {
 
-    // Close so
+    // Close libraries
+    // This function is called only when himan exits
 
     if (dlclose(itsLibraryHandle) != 0)
     {
