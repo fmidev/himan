@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.1.27
+Version: 14.2.11
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -80,6 +80,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Feb 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.11-1.fmi
+- Bugfix for preform_hybrid
+- tpot results in correct unit (kelvin)
+- Change split_sum calculation logic when calculating for Harmonie
+- BIG change in cuda calculation
+* Mon Feb  3 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.3-1.fmi
+- Bugfix for preform_pressure
+- Add support for solid precipitation and graupel for split_sum
 * Mon Jan 27 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.1.27-1.fmi
 - Fix for relative humidity pressure scaling 
 - Bugfix for preform_pressure
