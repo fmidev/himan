@@ -9,8 +9,8 @@
 #define	WINDVECTOR_CUDA_H
 
 #ifdef HAVE_CUDA
-
 #include "info_simple.h"
+#endif
 
 namespace himan
 {
@@ -25,6 +25,8 @@ enum HPWindVectorTargetType
 	kSea,
 	kIce
 };
+
+#ifdef HAVE_CUDA
 
 namespace windvector_cuda
 {
@@ -66,8 +68,10 @@ __global__ void Rotate(double* __restrict__ dU, double* __restrict__ dV, info_si
 #endif
 
 } // namespace windvector_cuda
+
+#endif  /* HAVE_CUDA */
+
 } // namespace plugin
 } // namespace himan
 
-#endif  /* HAVE_CUDA */
 #endif	/* WINDVECTOR_CUDA_H */

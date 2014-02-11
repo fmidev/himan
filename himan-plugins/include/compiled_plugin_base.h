@@ -152,12 +152,6 @@ protected:
 	void ResetCuda() const;
 
 	/**
-     * @return Id of current active GPU
-     */
-	
-	int CudaDeviceId() const;
-
-	/**
 	 * @brief Entry point for threads.
 	 *
 	 * This function will handle jobs (ie. times, levels to process) to each thread.

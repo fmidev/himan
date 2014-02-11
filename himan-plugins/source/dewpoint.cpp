@@ -244,6 +244,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 	}
 }
 
+#ifdef HAVE_CUDA
+
 unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> RHInfo)
 {
 	unique_ptr<dewpoint_cuda::options> opts(new dewpoint_cuda::options);
@@ -294,3 +296,5 @@ void dewpoint::CudaFinish(unique_ptr<dewpoint_cuda::options> opts, shared_ptr<in
 	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 
 }
+
+#endif

@@ -145,7 +145,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	myTargetInfo->FirstParam();
 
 	params PParam = { param("P-PA"), param("P-HPA") };
-
+	
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
@@ -174,7 +174,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			TInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
 										myTargetInfo->Level(),
-										param("T-K"));
+										param("T-K"),
+										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 
 			if (!isPressureLevel)
 			{
@@ -182,7 +183,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				PInfo = theFetcher->Fetch(itsConfiguration,
 											myTargetInfo->Time(),
 											myTargetInfo->Level(),
-											PParam);
+											PParam,
+											itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 
 				if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
 				{
@@ -197,7 +199,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				TDInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
 										myTargetInfo->Level(),
-										param("TD-C"));
+										param("TD-C"),
+										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 
 				TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
 
@@ -478,6 +481,8 @@ double tpot::ThetaE(double P, double T, double TD, double theta)
 
 }
 
+#ifdef HAVE_CUDA
+
 unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> PInfo, shared_ptr<info> TDInfo)
 {
 	unique_ptr<tpot_cuda::options> opts(new tpot_cuda::options);
@@ -559,3 +564,4 @@ void tpot::CudaFinish(unique_ptr<tpot_cuda::options> opts, shared_ptr<info> myTa
 
 }
 
+#endif

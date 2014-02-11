@@ -286,6 +286,8 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	}
 }
 
+#ifdef HAVE_CUDA
+
 unique_ptr<vvms_cuda::options> vvms::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> VVInfo, shared_ptr<info> PInfo)
 {
 	unique_ptr<vvms_cuda::options> opts(new vvms_cuda::options);
@@ -360,3 +362,5 @@ void vvms::CudaFinish(unique_ptr<vvms_cuda::options> opts, shared_ptr<info> myTa
 
 	// opts is destroyed after leaving this function
 }
+
+#endif

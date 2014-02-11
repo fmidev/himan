@@ -282,6 +282,7 @@ void compiled_plugin_base::WriteToFile(shared_ptr<const info> targetInfo)
 
 bool compiled_plugin_base::GetAndSetCuda(shared_ptr<const configuration> conf, int threadIndex)
 {
+#ifdef HAVE_CUDA
 	bool ret = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
 
 	if (ret)
@@ -290,20 +291,19 @@ bool compiled_plugin_base::GetAndSetCuda(shared_ptr<const configuration> conf, i
 
 		ret = p->SetDevice(threadIndex-1);
 	}
-
+#else
+	bool ret = false;
+#endif
+	
 	return ret;
 }
 
 void compiled_plugin_base::ResetCuda() const
 {
+#ifdef HAVE_CUDA
 	shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 	p->Reset();
-}
-
-int compiled_plugin_base::CudaDeviceId() const
-{
-	shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
-	return p->GetDevice();
+#endif
 }
 
 void compiled_plugin_base::Start()

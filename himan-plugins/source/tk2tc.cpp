@@ -229,6 +229,8 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	}
 }
 
+#ifdef HAVE_CUDA
+
 unique_ptr<tk2tc_cuda::options> tk2tc::CudaPrepare(shared_ptr<info> sourceInfo)
 {
 	unique_ptr<tk2tc_cuda::options> opts(new tk2tc_cuda::options);
@@ -275,3 +277,5 @@ void tk2tc::CudaFinish(unique_ptr<tk2tc_cuda::options> opts, shared_ptr<info> my
 	SwapTo(myTargetInfo, sourceInfo->Grid()->ScanningMode());
 
 }
+
+#endif

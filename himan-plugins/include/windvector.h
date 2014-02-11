@@ -51,9 +51,11 @@ public:
    
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+#ifdef HAVE_CUDA
 	void CudaFinish(std::unique_ptr<windvector_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> RHInfo);
 	std::unique_ptr<windvector_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> UInfo, std::shared_ptr<info> VInfo);
-
+#endif
+	
 	HPWindVectorTargetType itsCalculationTarget;
 	bool itsVectorCalculation;
 

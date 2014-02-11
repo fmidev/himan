@@ -54,9 +54,10 @@ public:
 
 private:
     virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+#ifdef HAVE_CUDA
 	std::unique_ptr<dewpoint_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> RHInfo);
 	void CudaFinish(std::unique_ptr<dewpoint_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> RHInfo);
-
+#endif
 
 };
 

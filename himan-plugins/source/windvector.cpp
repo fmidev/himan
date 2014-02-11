@@ -309,11 +309,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		assert(UInfo->Grid()->Projection() == VInfo->Grid()->Projection());
 
-		bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
-
 		string deviceType;
 
 #ifdef HAVE_CUDA
+		bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
+
 		if (useCudaInThisThread && equalGrids && !needStereographicGridRotation)
 		{
 			deviceType = "GPU";
@@ -582,6 +582,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	}
 }
 
+#ifdef HAVE_CUDA
+
 unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> UInfo, shared_ptr<info> VInfo)
 {
 	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
@@ -662,3 +664,5 @@ void windvector::CudaFinish(unique_ptr<windvector_cuda::options> opts, shared_pt
 
 	// opts is destroyed after leaving this function
 }
+
+#endif
