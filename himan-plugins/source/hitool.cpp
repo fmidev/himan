@@ -545,7 +545,7 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Debug("Stratus mean temperature number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusMeanTemp.size()));
 	
-	assert(ret->Param(meanTempParam));
+	ret->Param(meanTempParam);
 	ret->Data()->Set(stratusMeanTemp);
 
 	// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
@@ -612,10 +612,12 @@ shared_ptr<info> hitool::FreezingArea()
 
 	auto numZeroLevels = VerticalCount(wantedParam, constData1, constData2, constData3);
 
+#ifdef DEBUG
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
 		assert(numZeroLevels[i] != kFloatMissing);
 	}
+#endif
 	
 	//nZeroLevel = VERTZ_FINDC(T_EC,0,5000,0)
 

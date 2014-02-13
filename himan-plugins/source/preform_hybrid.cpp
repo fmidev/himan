@@ -168,8 +168,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	myTargetInfo->FirstParam();
 
-//	bool useCudaInThisThread = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
-
 	const param stratusBaseParam("STRATUS-BASE-M");
 	const param stratusTopParam("STRATUS-TOP-M");
 	const param stratusTopTempParam("STRATUS-TOP-T-K");
@@ -239,8 +237,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			}
 		}
 
-		//SetAB(myTargetInfo, TInfo);
-
 		size_t missingCount = 0;
 		size_t count = 0;
 
@@ -268,215 +264,241 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
-		string deviceType;
+		string deviceType = "CPU";
 
+		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+
+		myTargetInfo->ResetLocation();
+		stratus->ResetLocation();
+		TInfo->ResetLocation();
+		RRInfo->ResetLocation();
+		RHInfo->ResetLocation();
+		freezingArea->ResetLocation();
+
+		targetGrid->Reset();
+
+		myTargetInfo->Grid()->Data()->Fill(kFloatMissing);
+
+		assert(myTargetInfo->SizeLocations() == stratus->SizeLocations());
+		assert(myTargetInfo->SizeLocations() == freezingArea->SizeLocations());
+		assert(myTargetInfo->SizeLocations() == TInfo->SizeLocations());
+		assert(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
+		assert(myTargetInfo->SizeLocations() == RHInfo->SizeLocations());
+
+		while (myTargetInfo->NextLocation()	&& targetGrid->Next()
+					&& stratus->NextLocation()
+					&& freezingArea->NextLocation()
+					&& TInfo->NextLocation()
+					&& RRInfo->NextLocation()
+					&& RHInfo->NextLocation())
 		{
 
-			deviceType = "CPU";
+			count++;
 
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+			stratus->Param(stratusBaseParam);
+			double base = stratus->Value();
 
-			myTargetInfo->ResetLocation();
-			stratus->ResetLocation();
-			TInfo->ResetLocation();
-			RRInfo->ResetLocation();
-			RHInfo->ResetLocation();
-			freezingArea->ResetLocation();
+			stratus->Param(stratusTopParam);
+			double top = stratus->Value();
 
-			targetGrid->Reset();
+			stratus->Param(stratusUpperLayerRHParam);
+			double upperLayerRH = stratus->Value();
 
-			myTargetInfo->Grid()->Data()->Fill(kFloatMissing);
+			stratus->Param(stratusVerticalVelocityParam);
+			double wAvg = stratus->Value();
 
-			assert(myTargetInfo->SizeLocations() == stratus->SizeLocations());
-			assert(myTargetInfo->SizeLocations() == freezingArea->SizeLocations());
-			assert(myTargetInfo->SizeLocations() == TInfo->SizeLocations());
-			assert(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
-			assert(myTargetInfo->SizeLocations() == RHInfo->SizeLocations());
+			stratus->Param(stratusMeanCloudinessParam);
+			double Navg = stratus->Value();
 
-			while (myTargetInfo->NextLocation()	&& targetGrid->Next()
-						&& stratus->NextLocation()
-						&& freezingArea->NextLocation()
-						&& TInfo->NextLocation()
-						&& RRInfo->NextLocation()
-						&& RHInfo->NextLocation())
+			stratus->Param(stratusMeanTempParam);
+			double stTavg = stratus->Value();
+
+			stratus->Param(stratusTopTempParam);
+			double Ttop = stratus->Value();
+
+			freezingArea->Param(plusArea1Param);
+			double plusArea1 = freezingArea->Value();
+
+			// freezingArea->Param(plusArea2Param);
+			// double plusArea2 = freezingArea->Value();
+
+			freezingArea->Param(minusAreaParam);
+			double minusArea = freezingArea->Value();
+
+			// Data retrieved directly from database
+
+			double RR = RRInfo->Value();
+			double T = TInfo->Value();
+			double RH = RHInfo->Value();
+
+			//InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
+			//InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+
+			if (RR == kFloatMissing || RR == 0)
+			{
+				// No rain --> no rain type
+				missingCount++;
+
+				continue;
+			}
+			else if (T == kFloatMissing || RH == kFloatMissing)
+			{
+				// These variables come directly from database and should
+				// not have missing values in regular conditions
+				missingCount++;
+
+				continue;
+			}
+
+			double PreForm = kFloatMissing;
+
+			// Unit conversions
+
+			T -= himan::constants::kKelvin; // K --> C
+			RH *= 100; // 0..1 --> %
+
+			if (Ttop != kFloatMissing)
+			{
+				Ttop -= himan::constants::kKelvin;
+			}
+
+			if (stTavg != kFloatMissing)
+			{
+				stTavg -= himan::constants::kKelvin;
+			}
+
+			if (Navg != kFloatMissing)
+			{
+				Navg *= 100; // --> %
+			}
+/*
+			cout	<< "base\t\t" << base << endl
+					<< "top\t\t" << top << endl
+					<< "Navg\t\t" << Navg << endl
+					<< "upperLayerRH\t" << upperLayerRH << endl
+					<< "RR\t\t" << RR << endl
+					<< "stTavg\t\t" << stTavg << endl
+					<< "T\t\t" << T << endl
+					<< "RH\t\t" << RH << endl
+					<< "plusArea1\t" << plusArea1 << endl
+					<< "minusArea\t" << minusArea << endl
+					<< "wAvg\t\t" << wAvg << endl
+					<< "baseLimit\t" << baseLimit << endl
+					<< "topLimit\t" << stLimit << endl
+					<< "Nlimit\t\t" << Nlimit << endl
+					<< "dryLimit\t" << dryLimit << endl
+					<< "waterArea\t" << waterArea << endl
+					<< "snowArea\t" << snowArea << endl
+					<< "wMax\t\t" << wMax << endl
+					<< "sfcMin\t\t" << sfcMin << endl
+					<< "sfcMax\t\t" << sfcMax << endl
+					<< "fzdzLim\t" << fzdzLim << endl
+					<< "fzStLimit\t" << fzStLimit << endl
+					<< "fzraPA\t\t" << fzraPA << endl
+					<< "fzraMA\t\t" << fzraMA << endl;
+*/
+			bool thickStratusWithLightPrecipitation = (	base			!= kFloatMissing &&
+														top				!= kFloatMissing &&
+														Navg			!= kFloatMissing &&
+														upperLayerRH	!= kFloatMissing &&
+														RR				<= dzLim &&
+														base			< baseLimit &&
+														(top - base)	> stLimit &&
+														Navg			> Nlimit &&
+														upperLayerRH	< dryLimit);
+
+			// Start algorithm
+			// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
+
+			// 1. jäätävää tihkua? (tai lumijyväsiä)
+
+			if (	base			!= kFloatMissing &&
+					top				!= kFloatMissing &&
+					upperLayerRH	!= kFloatMissing &&
+					wAvg			!= kFloatMissing &&
+					Navg			!= kFloatMissing &&
+					stTavg			!= kFloatMissing &&
+					Ttop			!= kFloatMissing)
 			{
 
-				count++;
-
-				assert(stratus->Param(stratusBaseParam));
-				double base = stratus->Value();
-
-				assert(stratus->Param(stratusTopParam));
-				double top = stratus->Value();
-
-				assert(stratus->Param(stratusUpperLayerRHParam));
-				double upperLayerRH = stratus->Value();
-
-				assert(stratus->Param(stratusVerticalVelocityParam));
-				double wAvg = stratus->Value();
-
-				assert(stratus->Param(stratusMeanCloudinessParam));
-				double Navg = stratus->Value();
-
-				assert(stratus->Param(stratusMeanTempParam));
-				double stTavg = stratus->Value();
-
-				assert(stratus->Param(stratusTopTempParam));
-				double Ttop = stratus->Value();
-				
-				assert(freezingArea->Param(plusArea1Param));
-				double plusArea1 = freezingArea->Value();
-
-				// assert(freezingArea->Param(plusArea2Param));
-				// double plusArea2 = freezingArea->Value();
-
-				assert(freezingArea->Param(minusAreaParam));
-				double minusArea = freezingArea->Value();
-
-				// Data retrieved directly from database
-
-				double RR = RRInfo->Value();
-				double T = TInfo->Value();
-				double RH = RHInfo->Value();
-
-				//InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
-				//InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-
-				if (RR == kFloatMissing || RR == 0)
+				if ((RR <= fzdzLim) AND
+					(base < baseLimit) AND
+					((top - base) >= fzStLimit) AND
+					(wAvg < wMax) AND
+					(wAvg >= 0) AND
+					(Navg > Nlimit) AND
+					(Ttop > stTlimit) AND
+					(stTavg > stTlimit) AND
+					(T > sfcMin) AND
+					(T <= sfcMax) AND
+					(upperLayerRH < dryLimit))
 				{
-					// No rain --> no rain type
-					missingCount++;
-
-					continue;
-				}
-				else if (T == kFloatMissing || RH == kFloatMissing)
-				{
-					// These variables come directly from database and should
-					// not have missing values in regular conditions
-					missingCount++;
-
-					continue;
-				}
-
-				double PreForm = kFloatMissing;
-
-				// Unit conversions
-				
-				T -= himan::constants::kKelvin;
-				RH *= 100; // 0..1 --> %
-
-				if (Ttop != kFloatMissing)
-				{
-					Ttop -= himan::constants::kKelvin;
-				}
-
-				if (stTavg != kFloatMissing)
-				{
-					stTavg -= himan::constants::kKelvin;
-				}
-
-				if (Navg != kFloatMissing)
-				{
-					Navg *= 100; // --> %
-				}
-
-				bool thickStratusWithLightPrecipitation = (	base			!= kFloatMissing &&
-															top				!= kFloatMissing &&
-															Navg			!= kFloatMissing &&
-															upperLayerRH	!= kFloatMissing &&
-															RR				<= dzLim &&
-															base			< baseLimit &&
-															(top - base)	> stLimit &&
-															Navg			> Nlimit &&
-															upperLayerRH	< dryLimit);
-
-				// Start algorithm
-				// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
-
-				// 1. jäätävää tihkua? (tai lumijyväsiä)
-				
-				if (	base			!=kFloatMissing &&
-						top				!= kFloatMissing &&
-						upperLayerRH	!= kFloatMissing &&
-						wAvg			!= kFloatMissing &&
-						Navg			!= kFloatMissing &&
-						stTavg			!= kFloatMissing &&
-						Ttop			!= kFloatMissing)
-				{
-
-					if ((RR <= fzdzLim) &&
-						(base < baseLimit) &&
-						((top - base) >= fzStLimit) &&
-						(wAvg < wMax) &&
-						(wAvg >= 0) &&
-						(Navg > Nlimit) &&
-						(Ttop > stTlimit) &&
-						(stTavg > stTlimit) &&
-						(T > sfcMin) &&
-						(T <= sfcMax) &&
-						(upperLayerRH < dryLimit))
-					{
-						PreForm = kFreezingDrizzle;
-					}
-				}
-				
-				// 2. jäätävää vesisadetta? (tai jääjyväsiä (ice pellets), jos pakkaskerros hyvin paksu, ja/tai sulamiskerros ohut)
-				// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros?
-				// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
-				
-				if (PreForm == kFloatMissing AND plusArea1 != kFloatMissing AND minusArea != kFloatMissing AND RR > 0.1 && plusArea1 > fzraPA && minusArea < fzraMA && T <= 0 AND ((upperLayerRH > dryLimit) OR (upperLayerRH == kFloatMissing)))
-				{
-					PreForm = kFreezingRain;
-				}
-
-				// Tihkua tai vettä jos "riitävän paksu lämmin kerros pinnan yläpuolella"
-
-				if (PreForm == kFloatMissing)
-				{
-					 if (plusArea1 != kFloatMissing AND plusArea1 > waterArea)
-					 {
-						// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
-						// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään mukana)
-						if (thickStratusWithLightPrecipitation)
-						{
-							PreForm = kDrizzle;
-						}
-						else
-						{
-							PreForm = kRain;
-						}
-					}
-			
-					// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
-
-					if (plusArea1 != kFloatMissing && plusArea1 >= snowArea AND plusArea1 <= waterArea)
-					{
-						PreForm = kSleet;
-					}
-
-					// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
-					if ((plusArea1 != kFloatMissing AND plusArea1<snowArea) OR (plusArea1 == kFloatMissing) OR (T < 0))
-					{
-						PreForm = kSnow;
-					}
-				}
-
-				// FINISHED
-				
-				if (!myTargetInfo->Value(PreForm))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					PreForm = kFreezingDrizzle;
 				}
 			}
 
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
+			// 2. jäätävää vesisadetta? (tai jääjyväsiä (ice pellets), jos pakkaskerros hyvin paksu, ja/tai sulamiskerros ohut)
+			// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros?
+			// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
 
-			SwapTo(myTargetInfo, kBottomLeft);
+			if (	PreForm == kFloatMissing AND
+					plusArea1 != kFloatMissing AND
+					minusArea != kFloatMissing AND
+					RR > 0.1 AND
+					plusArea1 > fzraPA AND
+					minusArea < fzraMA AND
+					T <= 0 AND
+					((upperLayerRH > dryLimit) OR (upperLayerRH == kFloatMissing)))
+			{
+				PreForm = kFreezingRain;
+			}
 
+			// Tihkua tai vettä jos "riitävän paksu lämmin kerros pinnan yläpuolella"
+
+			if (PreForm == kFloatMissing)
+			{
+				 if (plusArea1 != kFloatMissing AND plusArea1 > waterArea)
+				 {
+					// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
+					// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään mukana)
+					if (thickStratusWithLightPrecipitation)
+					{
+						PreForm = kDrizzle;
+					}
+					else
+					{
+						PreForm = kRain;
+					}
+				}
+
+				// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
+
+				if (plusArea1 != kFloatMissing && plusArea1 >= snowArea AND plusArea1 <= waterArea)
+				{
+					PreForm = kSleet;
+				}
+
+				// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
+				if ((plusArea1 != kFloatMissing AND plusArea1 < snowArea) OR (plusArea1 == kFloatMissing) OR (T < 0))
+				{
+					PreForm = kSnow;
+				}
+			}
+
+			// FINISHED
+
+			if (!myTargetInfo->Value(PreForm))
+			{
+				throw runtime_error(ClassName() + ": Failed to set value to matrix");
+			}
 		}
+
+		/*
+		 * Newbase normalizes scanning mode to bottom left -- if that's not what
+		 * the target scanning mode is, we have to swap the data back.
+		 */
+
+		SwapTo(myTargetInfo, kBottomLeft);
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
