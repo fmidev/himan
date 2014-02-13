@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.2.11
+Version: 14.2.13
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: jasper-libs
-Requires: grib_api >= 1.10.4
+Requires: grib_api >= 1.11.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
 BuildRequires: boost-devel >= 1.54
 BuildRequires: scons
@@ -80,6 +80,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Feb 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.13-1.fmi
+- Bugfix for preform_hybrid and hitool
 * Tue Feb 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.11-1.fmi
 - Bugfix for preform_hybrid
 - tpot results in correct unit (kelvin)
