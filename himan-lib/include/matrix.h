@@ -16,6 +16,7 @@
 
 namespace himan
 {
+class grid;
 
 template<class T>
 class matrix
@@ -363,11 +364,41 @@ public:
 		itsDepth=0;
 	}
 
+	bool IsMissing(size_t theIndex) const
+	{
+		return CheckMissing(itsData, theIndex);
+	}
+
+	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const
+	{
+		return IsMissing(Index(theX, theY, theZ));
+	}
+
 private:
 
-	inline size_t Index(size_t x, size_t y, size_t z) const
+	size_t Index(size_t x, size_t y, size_t z) const
 	{
 		return z * itsWidth * itsHeight + y * itsWidth + x;
+	}
+
+	bool CheckMissing(const std::vector<double>& theData, size_t theIndex) const
+	{
+		// No checking of limits
+
+		return (theData[theIndex] == itsMissingValue);
+	}
+
+	bool CheckMissing(const std::vector<std::shared_ptr<himan::grid>>& theData, size_t theIndex) const
+	{
+		// No checking of limits
+
+		if (theData[theIndex])
+		{
+			return false;
+		}
+
+		return true;
+		
 	}
 
 	std::vector<T> itsData;
