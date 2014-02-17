@@ -371,7 +371,7 @@ namespace constants {
 	const double kRw = 461.5;
 
 	/**
-	 * @brief Latent heat for water (J / kg)
+	 * @brief Latent heat for water vaporization or condensation (J / kg)
 	 *
 	 * http://glossary.ametsoc.org/wiki/Latent_heat
 	 */
