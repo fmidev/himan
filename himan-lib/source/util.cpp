@@ -438,7 +438,30 @@ double util::Gammas(double P, double T)
 	
 	double A = constants::kRd * T / constants::kCp / P * (1+constants::kL*Q/constants::kRd/T);
 
-	return A / (1 + constants::kEp / constants::kCp * (pow(constants::kL, 2) / constants::kRd * Q / pow(T,2)));
+	return A / (1 + constants::kEp / constants::kCp * (constants::kL * constants::kL / constants::kRd * Q / (T*T)));
+}
+
+double util::Gammaw(double P, double T)
+{
+	// DALR = dT/dZ = g / Cp
+	// MALR = dT/dz = DALR / (1 + L/Cp*dWs/dT)
+
+	/*
+	 * Constants:
+	 * - g = 9.81
+	 * - Cp = 1003.5
+	 * - L = 2.5e6
+	 *
+	 * Variables:
+	 * - dWs = saturation mixing ratio = util::MixingRatio()
+	 */
+
+	double r = MixingRatio(T, P);
+	
+	double numerator = constants::kG * (1 + (constants::kL * r) / (constants::kRd * T));
+	double denominator = constants::kCp + ((constants::kL*constants::kL * r * constants::kEp) / (constants::kRd * T * T));
+
+	return numerator / denominator;
 }
 
 const std::vector<double> util::LCL(double P, double T, double TD)
@@ -545,8 +568,45 @@ HPPrecipitationForm util::PrecipitationForm(double T, double RH)
 
 	return ret;
 }
-
+/*
 double util::SaturationWaterVapourPressure(double T)
 {
-	return exp(1.809851 + 17.27 * T / (T + 237.3));
+	T -= constants::kKelvin;
+	
+	return 100 * exp(1.809851 + 17.27 * T / (T + 237.3));
+}
+
+double util::WaterVapourPressure(double T, double TW, double P, bool aspirated)
+{
+	T -= constants::kKelvin;
+	TW -= constants::kKelvin;
+	P *= 0.01:
+				
+	double vpwtr = kFloatMissing;
+
+	double factor = 7.99e-4;
+
+	if (aspirated)
+	{
+		factor = 6.66e-4;
+	}
+
+	vpwtr = SaturationWaterVapourPressure(TW) - factor * P * (T - TW);
+
+	if (vpwtr < 0)
+	{
+		vpwtr = 1e-35;
+	}
+	
+	return vpwtr;
+}
+*/
+
+double util::MixingRatio(double T, double P)
+{
+	double E = Es(T) * 0.01; // hPa
+
+	P *= 0.01;
+	
+	return 621.97 * E / (P - E); // Return Pa
 }

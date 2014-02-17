@@ -175,7 +175,7 @@ double RelativeTopography(int level1, int level2, double z1, double z2);
 int LowConvection(double T0m, double T850);
 
 /**
- * @brief Calculate water vapor saturated pressure in hPa
+ * @brief Calculate water vapor saturated pressure in Pa
  *
  * Equation found in f.ex. Smithsonian meteorological tables or
  * http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
@@ -183,8 +183,10 @@ int LowConvection(double T0m, double T850);
  * If temperature is less than -5, use ice instead of water for
  * calculations.
  *
+ * If T is actually TD, actual water vapor pressure is calculated
+ *
  * @param T Temperature in K
- * @return Saturated water vapor pressure in Pa
+ * @return (Saturated) water vapor pressure in Pa
  */
 
 double Es(double T);
@@ -200,6 +202,20 @@ double Es(double T);
  */
 
 double Gammas(double P, double T);
+
+/**
+ * @brief Calculate moist-adiabatic lapse rate (MALR).
+ * 
+ * Also known as saturated adiabatic lapse rate (SALR)
+ * 
+ * http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate
+ *
+ * @param P Pressure in Pa
+ * @param T Temperature in K
+ * @return Lapse rate in K/km
+ */
+
+double Gammaw(double P, double T);
 
 /**
  * @brief Calculates the temperature, pressure and specific humidity (Q) of
@@ -242,13 +258,30 @@ HPPrecipitationForm PrecipitationForm(double T, double RH);
 double WaterProbability(double T, double RH);
 
 /**
- * @brief Calculate saturation vapour pressure (mbar) over water
+ * @brief Calculate saturation vapour pressure (Pa) over water
  *
- * @param T Temperature in Celsius
- * @return Pressure
+ * @param T Temperature in Kelvin
+ * @return Pressure in Pa
  */
 
-double SaturationWaterVapourPressure(double T);
+//double SaturationWaterVapourPressure(double T);
+//double WaterVapurPressure(double T, double TW, double P, bool aspirated = false);
+
+/**
+ * @brief Calculate saturated mixing ratio
+ *
+ * If T is actually TD, actual mixing ratio is calculated.
+ *
+ * http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
+ *
+ * @param T Temperature or dewpoint temperature in K
+ * @param P Pressure in Pa
+ * @return Mixing ration in g/kg
+ */
+
+double MixingRatio(double T, double P);
+//double SaturationMixingRatio(double T, double TW, double P, bool aspirated = false);
+
 
 } // namespace util
 } // namespace himan
