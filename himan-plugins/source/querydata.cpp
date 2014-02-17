@@ -42,12 +42,7 @@ querydata::querydata()
 
 bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileWriteOption fileWriteOption)
 {
-
 	ofstream out(theOutputFile.c_str());
-
-	/*
-	 * Create required descriptors
-	 */
 
 	bool activeOnly = true;
 
@@ -56,9 +51,31 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HP
 		activeOnly = false;
 	}
 
+	auto qdata = CreateQueryData(theInfo, activeOnly);
+
+	if (!qdata)
+	{
+		return false;
+	}
+
+	out << *qdata;
+
+	itsLogger->Info("Wrote file '" + theOutputFile + "'");
+
+	return true;
+	
+}
+
+shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, bool activeOnly)
+{
+	
+	/*
+	 * Create required descriptors
+	 */
+
 	NFmiParamDescriptor pdesc = CreateParamDescriptor(theInfo, activeOnly);
 	NFmiTimeDescriptor tdesc = CreateTimeDescriptor(theInfo, activeOnly);
-	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(theInfo);
+	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(theInfo, activeOnly);
 	NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(theInfo, activeOnly);
 
 	assert(pdesc.Size());
@@ -66,30 +83,32 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HP
 	assert(hdesc.Size());
 	assert(vdesc.Size());
 
+	shared_ptr<NFmiQueryData> qdata;
+	
 	if (pdesc.Size() == 0)
 	{
 		itsLogger->Error("No valid parameters found");
-		return false;
+		return qdata;
 	}
 	else if (tdesc.Size() == 0)
 	{
 		itsLogger->Error("No valid times found");
-		return false;
+		return qdata;
 	}
 	else if (hdesc.Size() == 0)
 	{
 		itsLogger->Error("No valid times found");
-		return false;
+		return qdata;
 	}
 	else if (vdesc.Size() == 0)
 	{
 		itsLogger->Error("No valid times found");
-		return false;
+		return qdata;
 	}
 
 	NFmiFastQueryInfo qi(pdesc, tdesc, hdesc, vdesc);
 
-	unique_ptr<NFmiQueryData> qdata (NFmiQueryDataUtil::CreateEmptyData(qi));
+	qdata = make_shared<NFmiQueryData> (*NFmiQueryDataUtil::CreateEmptyData(qi));
 
 	NFmiFastQueryInfo qinfo = qdata.get();
 
@@ -106,7 +125,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HP
 	bool first = true;
 #endif
 
-	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
+	if (activeOnly)
 	{
 		assert(theInfo->Grid()->ScanningMode() == kBottomLeft);
 
@@ -162,11 +181,19 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HP
 
 				while (theInfo->NextParam() && qinfo.NextParam())
 				{
-					assert(theInfo->Grid()->ScanningMode() == kBottomLeft);
 					
-					theInfo->ResetLocation();
-					qinfo.ResetLocation();
+					if (theInfo->Dimensions()->IsMissing(theInfo->TimeIndex(), theInfo->LevelIndex(), theInfo->ParamIndex()))
+					{
+						// No data in info
+						
+						continue;
+					}
 
+					assert(theInfo->Grid()->ScanningMode() == kBottomLeft);
+
+					qinfo.ResetLocation();
+					theInfo->ResetLocation();
+					
 #ifndef NDEBUG
 
 					if (first)
@@ -190,11 +217,8 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HP
 		}
 	}
 
-	out << *qdata;
 
-	itsLogger->Info("Wrote file '" + theOutputFile + "'");
-
-	return true;
+	return qdata;
 
 }
 
@@ -265,50 +289,94 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool
 
 }
 
-NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info)
+NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bool activeOnly)
 {
+
+	/*
+	 * If whole info is converted to querydata, we need to check that if info contains
+	 * more than one element, the grids of each element must be equal!
+	 */
+	
+	if (!activeOnly && info->SizeTimes() * info->SizeParams() * info->SizeLevels() > 1)
+	{
+		info->ResetTime();
+		shared_ptr<grid> firstGrid;
+
+		while (info->NextTime())
+		{
+
+			info->ResetLevel();
+
+			while (info->NextLevel())
+			{
+
+				info->ResetParam();
+
+				while (info->NextParam())
+				{
+
+					if (!firstGrid)
+					{
+						firstGrid = info->Grid();
+						continue;
+					}
+
+					if (info->Dimensions()->IsMissing(info->TimeIndex(), info->LevelIndex(), info->ParamIndex()))
+					{
+						continue;
+					}
+
+					if (*firstGrid != *info->Grid())
+					{
+						itsLogger->Error("All grids in info are not equal, unable to write querydata");
+						exit(1); // not sure what to do here!
+					}
+
+					assert(info->Grid()->ScanningMode() == kBottomLeft);
+				}
+			}
+		}
+	}
 
 	NFmiArea* theArea = 0;
 
-	// Assume all grids in the info have equal projections
-
 	switch (info->Grid()->Projection())
 	{
-	case kLatLonProjection:
-	{
-		theArea = new NFmiLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-									 NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()));
+		case kLatLonProjection:
+		{
+			theArea = new NFmiLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+										 NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()));
 
-		break;
-	}
+			break;
+		}
 
-	case kRotatedLatLonProjection:
-	{
-		theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-											NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()),
-											NFmiPoint(info->Grid()->SouthPole().X(), info->Grid()->SouthPole().Y()),
-											NFmiPoint(0.,0.), // default values
-											NFmiPoint(1.,1.), // default values
-											true);
+		case kRotatedLatLonProjection:
+		{
+			theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+												NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()),
+												NFmiPoint(info->Grid()->SouthPole().X(), info->Grid()->SouthPole().Y()),
+												NFmiPoint(0.,0.), // default values
+												NFmiPoint(1.,1.), // default values
+												true);
 
-		break;
-	}
+			break;
+		}
 
-	case kStereographicProjection:
-	{
-		theArea = new NFmiStereographicArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-											info->Grid()->Di() * static_cast<double> ((info->Grid()->Ni()-1)),
-											info->Grid()->Dj() * static_cast<double> ((info->Grid()->Nj()-1)),
-											info->Grid()->Orientation());
+		case kStereographicProjection:
+		{
+			theArea = new NFmiStereographicArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
+												info->Grid()->Di() * static_cast<double> ((info->Grid()->Ni()-1)),
+												info->Grid()->Dj() * static_cast<double> ((info->Grid()->Nj()-1)),
+												info->Grid()->Orientation());
 
-		break;
+			break;
 
-	}
+		}
 
-	default:
-		itsLogger->Error("No supported projection found");
-		return NFmiHPlaceDescriptor();
-		break;
+		default:
+			itsLogger->Error("No supported projection found");
+			return NFmiHPlaceDescriptor();
+			break;
 	}
 
 	NFmiGrid theGrid (theArea, info->Grid()->Ni(), info->Grid()->Nj());
@@ -346,4 +414,137 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(shared_ptr<info> info, bo
 shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const search_options& options, bool readContents)
 {
 	throw runtime_error(ClassName() + ": Function FromFile() not implemented yet");
+}
+
+shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
+{
+	auto newInfo = make_shared<info> ();
+	auto newGrid = make_shared<grid> ();
+
+	NFmiQueryInfo* qi = theData->Info();
+
+	newInfo->Producer(producer(230, 86, 230, "HIMAN"));
+	
+	// Times
+
+	vector<forecast_time> theTimes;
+
+	raw_time originTime(string(qi->OriginTime().ToStr(kYYYYMMDDHHMM)), "%Y%m%d%H%M");
+	
+	for (qi->ResetTime(); qi->NextTime(); )
+	{
+		raw_time ct(string(qi->Time().ToStr(kYYYYMMDDHHMM)), "%Y%m%d%H%M");
+
+		forecast_time t(originTime, ct);
+		theTimes.push_back(t);
+	}
+
+	newInfo->Times(theTimes);
+
+	// Levels
+
+	vector<level> theLevels;
+
+	for (qi->ResetLevel(); qi->NextLevel(); )
+	{
+		HPLevelType lt = kUnknownLevel;
+
+		switch (qi->Level()->LevelType())
+		{
+			case kFmiHybridLevel:
+				lt = kHybrid;
+				break;
+
+			case kFmiHeight:
+				lt = kHeight;
+				break;
+
+			case kFmiPressure:
+				lt = kPressure;
+				break;
+
+			case kFmiNoLevelType:
+			case kFmiAnyLevelType:
+				break;
+				
+			default:
+				throw runtime_error("Unknown level type in querydata: " + boost::lexical_cast<string> (qi->Level()->LevelType()));
+				break;
+		}
+
+		level l(lt, qi->Level()->LevelValue());
+
+		theLevels.push_back(l);
+	}
+
+	newInfo->Levels(theLevels);
+
+	// Parameters
+
+	vector<himan::param> theParams;
+
+	for (qi->ResetParam(); qi->NextParam(); )
+	{
+		param p (string(qi->Param().GetParamName()), qi->Param().GetParamIdent());
+		theParams.push_back(p);
+	}
+
+	newInfo->Params(theParams);
+
+	// Grid
+
+	newGrid->ScanningMode(kBottomLeft);
+	newGrid->UVRelativeToGrid(false);
+
+	switch (qi->Area()->ClassId())
+	{
+		case kNFmiLatLonArea:
+			newGrid->Projection(kLatLonProjection);
+			break;
+
+		case kNFmiRotatedLatLonArea:
+			newGrid->Projection(kRotatedLatLonProjection);
+			newGrid->SouthPole(reinterpret_cast<const NFmiRotatedLatLonArea*> (qi->Area())->SouthernPole());
+			break;
+
+		case kNFmiStereographicArea:
+			newGrid->Projection(kStereographicProjection);
+			newGrid->Orientation(reinterpret_cast<const NFmiStereographicArea*> (qi->Area())->Orientation());
+			//newGrid->Di(reinterpret_cast<const NFmiStereographicArea*> (qi->Area())->);
+			//newGrid->Dj(itsGrib->Message()->YLengthInMeters());
+
+			break;
+	}
+
+	size_t ni = qi->Grid()->XNumber();
+	size_t nj = qi->Grid()->YNumber();
+	
+	newGrid->BottomLeft(qi->Area()->BottomLeftLatLon());
+	newGrid->TopRight(qi->Area()->TopRightLatLon());
+
+	newInfo->Create(newGrid);
+
+	// Copy data
+
+	for (newInfo->ResetTime(), qi->ResetTime(); newInfo->NextTime() && qi->NextTime();)
+	{
+		for (newInfo->ResetLevel(), qi->ResetLevel(); newInfo->NextLevel() && qi->NextLevel();)
+		{
+			for (newInfo->ResetParam(), qi->ResetParam(); newInfo->NextParam() && qi->NextParam();)
+			{
+				shared_ptr<unpacked> dm = shared_ptr<unpacked> (new unpacked(ni, nj));
+
+				size_t i;
+				
+				for (qi->ResetLocation(), i = 0; qi->NextLocation() && i < ni*nj; i++)
+				{
+					dm->Set(i, static_cast<double> (qi->FloatValue()));
+				}
+
+				newInfo->Grid()->Data(dm);
+			}
+		}
+	}
+	return newInfo;
+
 }
