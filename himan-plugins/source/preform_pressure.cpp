@@ -413,6 +413,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				//<! TODO: Kertoimet tietokannasta!
 				
 				T -= himan::constants::kKelvin;
+				T700 -= himan::constants::kKelvin;
 				T850 -= himan::constants::kKelvin;
 				T925 -= himan::constants::kKelvin;
 
@@ -426,12 +427,35 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				// 850-1000hPa paksuus [m]
 				// source data is m^2/s^2 --> convert result to m by multiplying with 1/g
 				const double dz850 = (Z850 - Z1000) * himan::constants::kIg;
-
+				/*
+				cout	<< "T\t\t" << T << endl
+						<< "T700\t\t" << T700 << endl
+						<< "T850\t\t" << T850 << endl
+						<< "T925\t\t" << T925 << endl
+						<< "RH\t\t" << RH << endl
+						<< "RH700\t\t" << RH700 << endl
+						<< "RH850\t\t" << RH850 << endl
+						<< "RH925\t\t" << RH925 << endl
+						<< "RH700\t\t" << RH700 << endl
+						<< "P\t\t" << P << endl
+						<< "W850\t\t" << W850 << endl
+						<< "W925\t\t" << W925 << endl
+						<< "RR\t\t" << RR << endl
+						<< "dz850\t\t" << dz850 << endl
+						<< "stH\t\t" << stH << endl
+						<< "sfcMin\t\t" << sfcMin << endl
+						<< "sfcMax\t\t" << sfcMax << endl
+						<< "fzdzLim\t" << fzdzLim << endl
+						<< "wMax\t\t" << wMax << endl
+						<< "stTlimit\t" << stTlimit << endl
+						<< "snowThickness\t" << snowThickness << endl
+						<< "waterThickness\t" << waterThickness << endl;
+				 */
 				// (0=tihku, 1=vesi, 2=räntä, 3=lumi, 4=jäätävä tihku, 5=jäätävä sade)
 
 				// jäätävää tihkua: "-10<T2m<=0, pakkasstratus (pinnassa/sen yläpuolella pakkasta & kosteaa), päällä ei (satavaa) keskipilveä, sade heikkoa"
 
-				if ((T <= sfcMax) AND (T > sfcMin) AND (RH700 < 80) AND (RH > 90) AND (RR < fzdzLim))
+				if ((T <= sfcMax) AND (T > sfcMin) AND (RH700 < 80) AND (RH > 90) AND (RR <= fzdzLim))
 				{
 					// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925),
 					// tai kun Psfc ei (enää) löydy (eli ei mp-dataa, 6-10vrk)?
@@ -460,7 +484,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 					// tai kun Psfc ei (enää) löydy (eli ei mp-dataa, 6-10vrk)?
 					// (riittävän paksu) sulamiskerros 925hPa:ssa (tai pakkaskerros sen alla)?
 
-					if ((P > 925+stH) AND ((T925 > 0) OR (T850 > 0)))
+					if ((P > (925+stH)) AND ((T925 > 0) OR (T850 > 0)))
 					{  
 						PreForm = kFreezingRain;
 					}
@@ -468,7 +492,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 					// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
 					// (riittävän paksu) sulamiskerros 850hPa:ssa (tai pakkaskerros sen alla)?
 
-					else if ((P <= 925+stH) AND (P > 850+stH) AND (T850 > 0))
+					else if ((P <= (925+stH)) AND (P > (850+stH)) AND (T850 > 0))
 					{  
 						PreForm = kFreezingRain ;
 					}
@@ -561,7 +585,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 						  // {  PreForm=3 }
 					}
 				}
-				
+
 				if (!myTargetInfo->Value(PreForm))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
