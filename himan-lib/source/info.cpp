@@ -235,6 +235,10 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 	otherInfo->Reset();
 
+	// X = time
+	// Y = level
+	// Z = param
+	
 	while (otherInfo->NextTime())
 	{
 		if (itsTimeIterator->Add(otherInfo->Time())) // no duplicates
@@ -259,12 +263,10 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 			while (otherInfo->NextParam())
 			{
-				if (!itsParamIterator->Add(otherInfo->Param())) // no duplicates
+				if (itsParamIterator->Add(otherInfo->Param())) // no duplicates
 				{
-					continue;
+					itsDimensionMatrix->SizeZ(itsDimensionMatrix->SizeZ()+1);
 				}
-
-				itsDimensionMatrix->SizeZ(itsDimensionMatrix->SizeZ()+1);
 
 				Param(otherInfo->Param());
 
@@ -759,3 +761,8 @@ info_simple* info::ToSimple() const
 }
 
 #endif
+
+const shared_ptr<const matrix_t> info::Dimensions() const
+{
+	return itsDimensionMatrix;
+}
