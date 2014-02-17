@@ -40,7 +40,7 @@ class iterator
 {
 public:
 
-	iterator<T>() {}
+	iterator<T>() : itsIndex(kIteratorResetValue) {}
 	iterator<T>(const std::vector<T>& theElements)
 	{
 		itsElements = theElements;
@@ -256,7 +256,7 @@ public:
 	 *
 	 * @param newElement Element to be added
 	 * @param strict Define whether to allow duplicate values (false = allow)
-	 * @return True if adding was succesfull
+	 * @return True if adding was successful
 	 */
 
 	bool Add(const T& newElement, bool strict = true)
@@ -454,7 +454,7 @@ public:
 	 * info.
 	 *
 	 * Will *not* preserve iterator positions.
-		 */
+	 */
 
 	void ReGrid();
 
@@ -686,7 +686,9 @@ public:
 	info_simple* ToSimple() const;
 
 #endif
-	
+
+	const std::shared_ptr<const matrix_t> Dimensions() const;
+
 private:
 
 	void Init();
