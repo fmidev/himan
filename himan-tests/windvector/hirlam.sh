@@ -62,7 +62,7 @@ if [ $? -eq 0 ];then
   echo windvector/hirlam staggered grid wind speed success!
 else
   echo windvector/hirlam staggered grid wind speed failed
-#  exit 1
+  exit 1
 fi
 
 grib_compare -A 0.01 hl_staggered_result_DD.grib ./DD-D_hybrid_55_polster_290_225_0_025.grib
@@ -71,5 +71,32 @@ if [ $? -eq 0 ];then
   echo windvector/hirlam staggered grid wind direction success!
 else
   echo windvector/hirlam staggered grid wind direction failed
-#  exit 1
+  exit 1
 fi
+
+if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
+
+  # Do the same test with cuda enabled; since the calculation cannot be made with cuda we must 
+  # no the unpacking in cuda but calculation in cpu. results should be identical.
+
+  $HIMAN -d 5 -f windvector_hl_staggered.json -t grib hl_staggered_source.grib -s hl_stag_cuda
+
+  grib_compare -A 0.01 hl_staggered_result_FF.grib ./FF-MS_hybrid_55_polster_290_225_0_025.grib
+
+  if [ $? -eq 0 ];then
+    echo windvector/hirlam staggered grid wind speed success!
+  else
+    echo windvector/hirlam staggered grid wind speed failed
+    exit 1
+  fi
+
+  grib_compare -A 0.01 hl_staggered_result_DD.grib ./DD-D_hybrid_55_polster_290_225_0_025.grib
+
+  if [ $? -eq 0 ];then
+    echo windvector/hirlam staggered grid wind direction success!
+  else
+    echo windvector/hirlam staggered grid wind direction failed
+    exit 1
+  fi
+fi
+
