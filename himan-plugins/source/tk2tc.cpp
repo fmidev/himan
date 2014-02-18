@@ -8,9 +8,7 @@
 #include "tk2tc.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
-#include "timer_factory.h"
 #include <boost/lexical_cast.hpp>
-#include <boost/thread.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -146,6 +144,17 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		string deviceType;
 
 #ifdef HAVE_CUDA
+
+		// If we read packed data but grids are not equal we cannot use cuda
+		// for calculations (our cuda routines do not know how to interpolate)
+
+		if (!equalGrids && sourceInfo->Grid()->IsPackedData())
+		{
+			myThreadedLogger->Debug("Unpacking for CPU calculation");
+
+			Unpack({sourceInfo});
+		}
+
 		if (useCudaInThisThread && equalGrids)
 		{
 	

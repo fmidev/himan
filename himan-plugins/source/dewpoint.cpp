@@ -164,6 +164,17 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 		string deviceType;
 
 #ifdef HAVE_CUDA
+
+		// If we read packed data but grids are not equal we cannot use cuda
+		// for calculations (our cuda routines do not know how to interpolate)
+
+		if (!equalGrids && (TInfo->Grid()->IsPackedData() || RHInfo->Grid()->IsPackedData()))
+		{
+			myThreadedLogger->Debug("Unpacking for CPU calculation");
+
+			Unpack({TInfo, RHInfo});
+		}
+
 		if (useCudaInThisThread && equalGrids)
 		{
 

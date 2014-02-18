@@ -191,6 +191,22 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		string deviceType;
 
 #ifdef HAVE_CUDA
+
+		// If we read packed data but grids are not equal we cannot use cuda
+		// for calculations (our cuda routines do not know how to interpolate)
+
+		if (!equalGrids && (TInfo->Grid()->IsPackedData() || VVInfo->Grid()->IsPackedData() || (PInfo && PInfo->Grid()->IsPackedData())))
+		{
+			myThreadedLogger->Debug("Unpacking for CPU calculation");
+
+			Unpack({TInfo, VVInfo});
+
+			if (PInfo)
+			{
+				Unpack({PInfo});
+			}	
+		}
+
 		if (useCudaInThisThread && equalGrids)
 		{
 			deviceType = "GPU";
