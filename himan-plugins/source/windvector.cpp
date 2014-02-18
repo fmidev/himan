@@ -315,6 +315,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		if (!equalGrids && (UInfo->Grid()->IsPackedData() || VInfo->Grid()->IsPackedData()))
 		{
+			myThreadedLogger->Debug("Unpacking for CPU calculation");
 			Unpack({UInfo, VInfo});
 		}
 
