@@ -40,6 +40,7 @@ configuration::configuration(const configuration& other)
 	itsUseCuda = other.itsUseCuda;
 	itsUseCudaForPacking = other.itsUseCudaForPacking;
 	itsCudaDeviceCount = other.itsCudaDeviceCount;
+	itsCudaDeviceId = other.itsCudaDeviceId;
 	
 	itsUseCache = other.itsUseCache;
 
@@ -82,6 +83,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << "__itsConfigurationFile__ " << itsConfigurationFile << std::endl;
 
+	file << "__itsCudaDeviceId__ " << itsCudaDeviceId << std::endl;
 	file << "__itsUseCudaForPacking__ " << itsUseCudaForPacking << std::endl;
 
 	file << "__itsUseCache__ " << itsUseCache << std::endl;
@@ -117,6 +119,7 @@ void configuration::Init()
 	itsConfigurationFile = "";
 	itsUseCudaForPacking = true;
 	itsUseCache = true;
+	itsCudaDeviceId = 0;
 }
 
 HPFileType configuration::OutputFileType() const
@@ -276,11 +279,10 @@ std::string configuration::SourceGeomName() const
 	return itsSourceGeomName;
 }
 
-void configuration::StoreCudaDeviceCount()
+void configuration::CudaDeviceCount(short theCudaDeviceCount)
 {
-	std::shared_ptr<plugin::pcuda> p = std::dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-	itsCudaDeviceCount = static_cast<short> (p->DeviceCount());
+	itsCudaDeviceCount = theCudaDeviceCount;
 }
 
 bool configuration::HaveCuda() const
@@ -291,4 +293,14 @@ bool configuration::HaveCuda() const
 short configuration::CudaDeviceCount() const
 {
 	return itsCudaDeviceCount;
+}
+
+short configuration::CudaDeviceId() const
+{
+	return itsCudaDeviceId;
+}
+
+void configuration::CudaDeviceId(short theCudaDeviceId) 
+{
+	itsCudaDeviceId = theCudaDeviceId;
 }

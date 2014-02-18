@@ -173,6 +173,10 @@ public:
 	void FileWaitTimeout(unsigned short theFileWaitTimeout);
 	unsigned short FileWaitTimeout() const;
 
+	/**
+	 * @brief Top level function for CUDA calculation
+	 * @return True if CUDA can be used (does not tell IF it's used)
+	 */
 	bool UseCuda() const;
 	void UseCuda(bool theUseCuda);
 
@@ -187,6 +191,11 @@ public:
 	void StatisticsLabel(const std::string& theStatisticsLabel);
 	std::string StatisticsLabel() const;
 
+	/**
+	 * @brief Top level function for CUDA grib packing and unpacking.
+     * @return True if CUDA can be used (does not tell IF it's used)
+     */
+	
 	bool UseCudaForPacking() const;
 	void UseCudaForPacking(bool theUseCudaForPacking);
 
@@ -195,9 +204,31 @@ public:
 
 	std::string SourceGeomName() const;
 
-	void StoreCudaDeviceCount();
+	/**
+	 * @brief Store number of CUDA devices found
+     */
+
+	void CudaDeviceCount(short theCudaDeviceCount);
+
+	/**
+	 * @brief Check if we have any CUDA-enabled devices available
+     * @return True if there is at least one CUDA enable device present
+     */
+
 	bool HaveCuda() const;
+
+	/**
+	 * @return Number of CUDA enabled devices found
+	 */
+
 	short CudaDeviceCount() const;
+
+	/**
+	 * @return Id of the selected CUDA device
+	 */
+
+	short CudaDeviceId() const;
+	void CudaDeviceId(short theCudaDeviceId);
 
 protected:
 	
@@ -234,6 +265,8 @@ protected:
 	short itsCudaDeviceCount;
 
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
+
+	short itsCudaDeviceId;
 };
 
 
