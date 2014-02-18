@@ -33,6 +33,7 @@ tpot::tpot()
 , itsThetaECalculation(false)
 {
 	itsClearTextFormula = "TP = Tk * pow((1000/P), 0.286) ; TPW calculated with LCL ; TPE = X"; 
+	itsCudaEnabledCalculation = true;
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpot"));
 

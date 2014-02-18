@@ -26,6 +26,7 @@ using namespace himan::plugin;
 vvms::vvms() : itsScale(1)
 {
 	itsClearTextFormula = "w = -(ver) * 287 * T * (9.81*p)";
+	itsCudaEnabledCalculation = true;
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("vvms"));
 

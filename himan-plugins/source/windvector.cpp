@@ -37,6 +37,7 @@ windvector::windvector()
 	, itsVectorCalculation(false)
 {
 	itsClearTextFormula = "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * round(speed)";
+	itsCudaEnabledCalculation = true;
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvector"));
 

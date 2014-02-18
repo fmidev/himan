@@ -24,7 +24,7 @@ class compiled_plugin : public himan_plugin
 {
 public:
 
-    compiled_plugin() {}
+    compiled_plugin() : itsCudaEnabledCalculation(false) {}
 
     virtual ~compiled_plugin() {}
 
@@ -39,9 +39,15 @@ public:
         itsClearTextFormula = theClearTextFormula;
     }
 
+	bool CudaEnabledCalculation() const
+	{
+		return itsCudaEnabledCalculation;
+	}
+
 protected:
 
     std::string itsClearTextFormula;
+	bool itsCudaEnabledCalculation;
 
 };
 

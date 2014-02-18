@@ -25,6 +25,7 @@ using namespace himan::plugin;
 tk2tc::tk2tc() : itsBase(-273.15), itsScale(1)
 {
 	itsClearTextFormula = "Tc = Tk - 273.15";
+	itsCudaEnabledCalculation = true;
 
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("tk2tc"));
 }

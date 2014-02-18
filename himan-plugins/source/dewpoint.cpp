@@ -24,6 +24,7 @@ const double Rw_div_L = himan::constants::kRw / himan::constants::kL;
 dewpoint::dewpoint()
 {
 	itsClearTextFormula = "Td = T / (1 - (T * ln(RH)*(Rw/L)))";
+	itsCudaEnabledCalculation = true;
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("dewpoint"));
 
