@@ -290,6 +290,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		}		
 				
 		// if source producer is Hirlam, we must de-stagger U and V grid
+		// edit: Nope, do not de-stagger but interpolate
 
 		/*if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
 		{
@@ -308,6 +309,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 #ifdef HAVE_CUDA
 		bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
+
+		// If we read packed data but grids are not equal we cannot use cuda
+		// for calculations (our cuda routines do not know how to interpolate)
+
+		if (!equalGrids && (UInfo->Grid()->IsPackedData() || VInfo->Grid()->IsPackedData()))
+		{
+			Unpack({UInfo, VInfo});
+		}
 
 		if (useCudaInThisThread && equalGrids && !needStereographicGridRotation)
 		{
