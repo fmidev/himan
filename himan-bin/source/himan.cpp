@@ -277,9 +277,9 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (opt.count("cuda-device-id"))
 	{
-		if (cudaDeviceId < conf->CudaDeviceCount())
+		if (cudaDeviceId >= conf->CudaDeviceCount() || cudaDeviceId < 0)
 		{
-			cerr << "cuda device id " << cudaDeviceId << " requested, number of available cuda devices is " << conf->CudaDeviceCount() << endl;
+			cerr << "cuda device id " << cudaDeviceId << " requested, allowed maximum cuda device id is " << conf->CudaDeviceCount()-1 << endl;
 			cerr << "cuda mode is disabled" << endl;
 			conf->UseCuda(false);
 			conf->UseCudaForPacking(false);
