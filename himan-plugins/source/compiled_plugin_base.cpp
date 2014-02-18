@@ -483,3 +483,34 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		itsTimer->Start();
 	}
 }
+
+#ifdef HAVE_CUDA
+void compiled_plugin_base::Unpack(initializer_list<shared_ptr<info>> infos)
+{
+	for (auto it = infos.begin(); it != infos.end(); ++it)
+	{
+		shared_ptr<info> tempInfo = *it;
+
+		if (tempInfo->Grid()->PackedData()->packedLength == 0)
+		{
+			// This particular info does not have packed data
+			continue;
+		}
+
+		assert(tempInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+		double* arr;
+		size_t N = tempInfo->Grid()->PackedData()->unpackedLength;
+
+		assert(N);
+
+		CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&arr), sizeof(double) * N));
+
+		dynamic_pointer_cast<simple_packed> (tempInfo->Grid()->PackedData())->Unpack(arr, N);
+
+		tempInfo->Data()->Set(arr, N);
+
+		CUDA_CHECK(cudaFreeHost(arr));
+	}
+}
+#endif

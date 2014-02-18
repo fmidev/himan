@@ -206,6 +206,20 @@ protected:
 
 	virtual void Start();
 
+#ifdef HAVE_CUDA
+	/**
+	 * @brief Unpack grib data
+	 *
+	 * This function should be called if the source data is packed but cuda cannot
+	 * be used in calculation. If the calculation is done with cuda, the unpacking
+	 * is also made there.
+	 * 
+     * @param infos List of shared_ptr<info> 's that have packed data
+     */
+
+	void Unpack(std::initializer_list<std::shared_ptr<info>> infos);
+#endif
+	
 	std::shared_ptr<info> itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	short itsThreadCount;
