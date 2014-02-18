@@ -15,7 +15,7 @@ const size_t level_count = 4;
 vector<vector<double>> values_all;
 vector<vector<double>> heights_all;
 
-void vdump(vector<double> vec)
+void vdump(const vector<double>& vec)
 {
 	int j = 0;
 
@@ -31,7 +31,7 @@ void vdump(vector<double> vec)
 	}
 }
 
-void dump(vector<vector<double>> vec)
+void dump(const vector<vector<double>>& vec)
 {
 	
 	for (size_t i = 0; i < vec.size(); i++)
