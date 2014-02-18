@@ -19,10 +19,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 
-#ifdef DEBUG
-//#include "timer_factory.h"
-#endif
-
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "pcuda.h"
@@ -160,6 +156,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	string confFile = "";
 	string statisticsLabel = "";
 	vector<string> auxFiles;
+	short int cudaDeviceId = 0;
 	
 	himan::HPDebugState debugState = himan::kDebugMsg;
 
@@ -175,10 +172,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	("threads,j", po::value(&threadCount), "number of started threads")
 	("list-plugins,l", "list all defined plugins")
 	("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
-	("no-cuda", "disable cuda extensions")
-	("cuda-properties", "print cuda device properties of platform (if any)")
 	("statistics,s", po::value(&statisticsLabel), "record statistics information")
-	("no-cuda-packing", "do not use cuda for packing and unpacking grib data")
+	("no-cuda", "disable all cuda extensions")
+	("no-cuda-packing", "disable cuda packing and unpacking of grib data")
+	("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
+	("cuda-properties", "print cuda device properties of platform (if any)")
 	;
 
 	po::positional_options_description p;
@@ -233,25 +231,37 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (opt.count("version"))
 	{
-		cout << "himan version " << __DATE__ << " " << __TIME__ << endl;
+		cout << "himan-bin version " << __DATE__ << " " << __TIME__ << endl;
 		exit(1);
 	}
 
+	shared_ptr<plugin::pcuda> cuda;
+
+#ifndef HAVE_CUDA
 	if (opt.count("cuda-properties"))
 	{
-#ifndef HAVE_CUDA
 		cout << "CUDA support turned off at compile time" << endl;
-#else
-		shared_ptr<plugin::pcuda> p = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
-		p->Capabilities();
-#endif
 		exit(1);
 	}
 
-#ifndef HAVE_CUDA
 	conf->UseCuda(false);
 	conf->UseCudaForPacking(false);
+	conf->CudaDeviceCount(0);
+
+	if (opt.count("cuda-device-id"))
+	{
+		cerr << "CUDA support turned off at compile time" << endl;
+	}
+
 #else
+	cuda = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	
+	if (opt.count("cuda-properties"))
+	{
+		cuda->Capabilities();
+		exit(1);
+	}
+
 	if (opt.count("no-cuda-packing"))
 	{
 		conf->UseCudaForPacking(false);
@@ -262,9 +272,22 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCuda(false);
 		conf->UseCudaForPacking(false);
 	}
-#endif
 
-	conf->StoreCudaDeviceCount();
+	conf->CudaDeviceCount(static_cast<short> (cuda->DeviceCount()));
+
+	if (opt.count("cuda-device-id"))
+	{
+		if (cudaDeviceId < conf->CudaDeviceCount())
+		{
+			cerr << "cuda device id " << cudaDeviceId << " requested, number of available cuda devices is " << conf->CudaDeviceCount() << endl;
+			cerr << "cuda mode is disabled" << endl;
+			conf->UseCuda(false);
+			conf->UseCudaForPacking(false);
+		}
+		
+		conf->CudaDeviceId(cudaDeviceId);
+	}
+#endif
 
 	if (!outfileType.empty())
 	{
@@ -314,6 +337,10 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 			{
 
 				case kCompiled:
+					if (dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->CudaEnabledCalculation())
+					{
+						cout << "\tcuda-enabled\n";
+					}
 					cout << "\ttype compiled (hard-coded) --> " << dynamic_pointer_cast<plugin::compiled_plugin> (thePlugins[i])->Formula() << endl;
 					break;
 
