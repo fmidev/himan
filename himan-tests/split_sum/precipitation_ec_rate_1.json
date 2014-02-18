@@ -1,0 +1,21 @@
+{
+	"target_geom_name" : "ECEDIT125",
+	"source_geom_name" : "ECEDIT125",
+	"source_producer" : "131",
+	"target_producer" : "240",
+	"start_hour" : "4",
+	"stop_hour" : "6",
+	"step" : "1",
+	"step_unit" : "hour",
+	"file_write" : "multiple",
+	"origintime" : "2014-02-18 00:00:00",
+	"read_data_from_database" : "false",
+	"processqueue" : [
+	{
+		"leveltype" : "ground",
+		"levels" : "0",
+		"plugins" : [ { "name" : "split_sum", "rrr" : true } ]
+	} 
+	]
+}
+
