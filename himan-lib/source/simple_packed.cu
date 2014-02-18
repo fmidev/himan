@@ -30,7 +30,7 @@ double* simple_packed::Unpack(cudaStream_t* stream)
 		CUDA_CHECK(cudaStreamCreate(stream));
 		destroyStream = true;
 	}
-	
+
 	int blockSize = 512;
 	int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
 
@@ -46,9 +46,10 @@ double* simple_packed::Unpack(cudaStream_t* stream)
 	if (HasBitmap())
 	{
 		CUDA_CHECK(cudaMalloc((void**) (&d_b), bitmapLength * sizeof(int)));
-		CUDA_CHECK(cudaMemcpyAsync(d_b, bitmap, packedLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_b, bitmap, bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
+		CUDA_CHECK(cudaStreamSynchronize(*stream));
 	}
-	
+
 	simple_packed_util::Unpack <<< gridSize, blockSize, 0, *stream >>> (d_p, d_u, d_b, coefficients, HasBitmap(), unpackedLength);
 
 	CUDA_CHECK(cudaFree(d_p));
@@ -63,7 +64,7 @@ double* simple_packed::Unpack(cudaStream_t* stream)
 		CUDA_CHECK(cudaStreamDestroy(*stream));
 		delete stream;
 	}
-	
+
 	return d_u;
 
 }
