@@ -302,11 +302,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		bool equalGrids = (*myTargetInfo->Grid() == *UInfo->Grid() && *myTargetInfo->Grid() == *VInfo->Grid());
 
-		if (!equalGrids && UInfo->Grid()->IsPackedData())
-		{
-			cout << "ASDF ASDF ASDF\n";
-		}
-
 		assert(UInfo->Grid()->Projection() == VInfo->Grid()->Projection());
 
 		string deviceType;
