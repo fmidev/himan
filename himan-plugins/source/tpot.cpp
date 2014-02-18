@@ -273,7 +273,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			}
 		}
 
-		if (useCudaInThisThread && equalGrids && false)
+		if (useCudaInThisThread && equalGrids && (itsThetaCalculation && !itsThetaWCalculation && !itsThetaECalculation))
 		{
 			deviceType = "GPU";
 

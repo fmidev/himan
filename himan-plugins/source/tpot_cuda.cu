@@ -47,7 +47,7 @@ __device__ void himan::plugin::tpot_cuda::Theta(const double* __restrict__ d_t,
 	}
 	else
 	{
-		d_tp[idx] = (opts.t_base + d_t[idx]) * powf((1000 / (opts.p_scale * P)), 0.28586);
+		d_tp[idx] = (opts.t_base + d_t[idx]) * pow((1000 / (0.01 * P * opts.p_scale)), 0.28586);
 	}
 
 }
