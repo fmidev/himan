@@ -18,13 +18,25 @@ double* simple_packed::Unpack(cudaStream_t* stream)
 	{
 		return 0;
 	}
+
+	// We need to create a stream if no stream is specified since dereferencing
+	// a null pointer is, well, not a good thing.
+
+	bool destroyStream = false;
+	
+	if (!stream)
+	{
+		stream = new cudaStream_t;
+		CUDA_CHECK(cudaStreamCreate(stream));
+		destroyStream = true;
+	}
 	
 	int blockSize = 512;
 	int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
 
-	double* d_u = 0; // device-unpacked data
-	unsigned char* d_p = 0; // device-packed data
-	int* d_b = 0; // device-bitmap
+	double*			d_u = 0; // device-unpacked data
+	unsigned char*	d_p = 0; // device-packed data
+	int*			d_b = 0; // device-bitmap
 
 	CUDA_CHECK(cudaMalloc((void**) (&d_u), unpackedLength * sizeof(double)));
 
@@ -46,6 +58,12 @@ double* simple_packed::Unpack(cudaStream_t* stream)
 		CUDA_CHECK(cudaFree(d_b));
 	}
 
+	if (destroyStream)
+	{
+		CUDA_CHECK(cudaStreamDestroy(*stream));
+		delete stream;
+	}
+	
 	return d_u;
 
 }

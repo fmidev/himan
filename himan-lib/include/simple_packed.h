@@ -52,26 +52,49 @@ struct simple_packed : packed_data
 
 	virtual std::string ClassName() const { return "simple_packed"; }
 
-#ifdef __CUDACC__
-	// Functions that are only visible for nvcc compiler
+#ifndef __CUDACC__
+	/**
+	 * @brief Unpack binary array (unsigned char) to double array.
+	 *
+	 * This function is visible to host side compiler (ie. gcc).
+	 *
+	 * This function calls Unpack(cudaStream_t*) to do the actual heavy lifting.
+	 *
+	 * Note! Argument arr should point to HOST MEMORY.
+	 *
+     * @param arr Pointer to already allocated memory
+     * @param N Size of the chunk of memory
+     */
 
+	void Unpack(double* arr, size_t N);
+
+#endif
+	
 	/**
 	 * @brief Function will unpack binary array (unsigned char) to double array.
 	 *
 	 * Function is synchronous due to implicit synchronization caused by cudaFree().
 	 *
-	 * Note! Return pointer to double array RESIDES IN DEVICE MEMORY. The caller
-	 * is responsible for managing the memory.
+	 * Note! Return pointer to double array RESIDES IN DEVICE MEMORY. Therefore this
+	 * function should *NEVER* be called directly from a host thread.
+	 *
+	 * The caller is responsible for managing the memory.
+	 *
+	 * @param stream Cuda stream for execution. If 0 is given, function will create a temporary stream.
+	 * @return Pointer to device memory.
 	 *
 	 */
 
-	__host__
-	double* Unpack(cudaStream_t* stream);
+	CUDA_HOST
+	virtual double* Unpack(cudaStream_t* stream);
 
-	__device__
+#ifdef __CUDACC__
+	// Functions that are only visible for nvcc compiler
+
+	CUDA_DEVICE
 	void UnpackUnevenBytes(double* __restrict__ d_u, int idx);
 
-	__device__
+	CUDA_DEVICE
 	void UnpackFullBytes(double* __restrict__ d_u, int idx);
 #endif
 	
