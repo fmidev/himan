@@ -245,7 +245,7 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
 		d_u = opts.u->packed_values->Unpack(&stream);
-		CUDA_CHECK(cudaMemcpyAsync(opts.u, d_u, memsize, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(opts.u->values, d_u, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
