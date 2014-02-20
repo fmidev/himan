@@ -641,7 +641,7 @@ shared_ptr<info> hitool::FreezingArea()
 		{
 			haveTwo = true;
 		}
-		else if (val == 3)
+		else if (val >= 3)
 		{
 			haveThree = true;
 		}
