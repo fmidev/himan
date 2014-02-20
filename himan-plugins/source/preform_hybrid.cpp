@@ -479,7 +479,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				}
 
 				// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
-				if ((plusArea1 != kFloatMissing AND plusArea1 < snowArea) OR (plusArea1 == kFloatMissing) OR (T < 0))
+				// 20.2.2014: Ehto "OR T<0" poistettu (muuten ajoittain lunta, jos hyvin ohut pakkaskerros pinnassa)
+
+				 if ((plusArea1 != kFloatMissing AND plusArea1 < snowArea) OR (plusArea1 == kFloatMissing))
 				{
 					PreForm = kSnow;
 				}
