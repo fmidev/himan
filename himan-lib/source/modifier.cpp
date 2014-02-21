@@ -114,9 +114,21 @@ bool modifier::Evaluate(double theValue, double theHeight)
 	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
 	 * need to be changed.
 	*/
-	
-	double upperLimit = itsUpperHeight[itsIndex];
-	double lowerLimit = itsLowerHeight[itsIndex];
+
+	// Absurd default limits if user has not specified any limits
+
+	double upperLimit = 1e38;
+	double lowerLimit = -1e38;
+
+	if (!itsUpperHeight.empty())
+	{
+		upperLimit = itsUpperHeight[itsIndex];
+	}
+
+	if (!itsLowerHeight.empty())
+	{
+		lowerLimit = itsLowerHeight[itsIndex];
+	}
 
 	if (itsOutOfBoundHeights[itsIndex] == true)
 	{
@@ -128,7 +140,7 @@ bool modifier::Evaluate(double theValue, double theHeight)
 		itsOutOfBoundHeights[itsIndex] = true;
 		return false;
 	}
-	else if (theHeight < itsLowerHeight[itsIndex])
+	else if (theHeight < lowerLimit)
 	{
 		// height is below given height range, do not cancel calculation yet
 		return false;
