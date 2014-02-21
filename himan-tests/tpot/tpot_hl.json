@@ -12,7 +12,7 @@
 	{
 		"leveltype" : "pressure",
 		"levels" : "850",
-		"plugins" : [ { "name" : "tpot", "theta" : true, "thetaw" : true } ]
+		"plugins" : [ { "name" : "tpot", "theta" : true } ]
 	} 
 	]
 }
