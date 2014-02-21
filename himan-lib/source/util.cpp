@@ -420,10 +420,11 @@ double util::Es(double T)
 	}
 
 	assert(Es == Es); // check NaN
-	
+
 	return 100 * Es; // Pa
 
 }
+
 
 double util::Gammas(double P, double T)
 {
@@ -433,8 +434,6 @@ double util::Gammas(double P, double T)
 	// specific humidity: http://glossary.ametsoc.org/wiki/Specific_humidity
 	
 	double Q = constants::kEp * (util::Es(T) * 0.01) / (P*0.01);
-
-	// unit changes
 	
 	double A = constants::kRd * T / constants::kCp / P * (1+constants::kL*Q/constants::kRd/T);
 
@@ -610,3 +609,4 @@ double util::MixingRatio(double T, double P)
 	
 	return 621.97 * E / (P - E); // Return Pa
 }
+
