@@ -48,11 +48,12 @@ void Process(options& options);
 
 #ifdef __CUDACC__
 __global__ void Calculate(const double* __restrict__ d_t, const double* __restrict__ d_p, const double* __restrict__ d_td, double* __restrict__ d_tp, double* __restrict__ d_tpw, double* __restrict__ d_tpe, options opts, int* d_missing);
-__device__ void Theta(const double* __restrict__ d_t, const double* __restrict__ d_p, double* __restrict__ d_tp, options opts, int* d_missing, int idx);
-__device__ void ThetaW(const double* __restrict__ d_t, const double* __restrict__ d_p, const double* __restrict__ d_td, double* __restrict__ d_tpw, options opts, int* d_missing, int idx);
+__device__ double Theta(double T, double P, options opts, int* d_missing);
+__device__ double ThetaW(double T, double P, double TD, options opts, int* d_missing);
+__device__ double ThetaE(double T, double P, double TD, options opts, int* d_missing);
 __device__ void LCL(double P, double T, double TD, double* Pout, double* Tout);
-__device__ void Gammas(double P, double T, double* out);
-__device__ void Es(double T, double *out);
+__device__ double Gammas(double P, double T);
+__device__ double Es(double T);
 
 
 #endif

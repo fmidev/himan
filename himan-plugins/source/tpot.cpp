@@ -95,7 +95,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		itsLogger->Trace("ThetaE calculation requested");
 
-		param p("TPE-K", 99999);
+		param p("TPE-K", 129);
 
 		// Sharing number with thetaw!
 
@@ -145,7 +145,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->FirstParam();
 
-	params PParam = { param("P-PA"), param("P-HPA") };
+	const params PParam = { param("P-PA"), param("P-HPA") };
+	const params TDParam = { param("TD-C"), param("TD-K") };
 	
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
 
@@ -163,9 +164,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		shared_ptr<info> TInfo;
 		shared_ptr<info> PInfo;
 		shared_ptr<info> TDInfo;
-
-		shared_ptr<NFmiGrid> PGrid;
-		shared_ptr<NFmiGrid> TDGrid;
 
 		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
@@ -191,8 +189,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				{
 					PScale = 100;
 				}
-
-				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
 			}
 
 			if (itsThetaWCalculation || itsThetaECalculation)
@@ -200,10 +196,9 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				TDInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
 										myTargetInfo->Level(),
-										param("TD-C"),
+										TDParam,
 										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 
-				TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
 
 			}
 		}
@@ -245,7 +240,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TDGrid, PGrid;
 
 		size_t missingCount = 0;
 		size_t count = 0;
@@ -272,8 +267,23 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				Unpack({PInfo});
 			}
 		}
+#endif
 
-		if (useCudaInThisThread && equalGrids && (itsThetaCalculation && !itsThetaWCalculation && !itsThetaECalculation))
+		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+
+		if (TDInfo)
+		{
+			TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
+		}
+
+		if (PInfo)
+		{
+			PGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
+		}
+
+#ifdef HAVE_CUDA
+		
+		if (useCudaInThisThread && equalGrids)
 		{
 			deviceType = "GPU";
 
@@ -333,7 +343,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				TD -= TDBase; // to Kelvin
 				P *= PScale; // to Pa
 
-				double value = kFloatMissing;
 				double theta = kFloatMissing;
 
 				if (itsThetaCalculation)
@@ -350,8 +359,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				
 				if (itsThetaWCalculation)
 				{
-					
-					value = ThetaW(P, T, TD);
+					double value = ThetaW(P, T, TD);
+
 					myTargetInfo->Param(param("TPW-K"));
 
 					if (!myTargetInfo->Value(value))
@@ -362,7 +371,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				
 				if (itsThetaECalculation)
 				{
-					value = ThetaE(P, T, TD, theta);
+					double value = ThetaE(P, T, TD, theta);
 					
 					myTargetInfo->Param(param("TPE-K"));
 
@@ -418,9 +427,8 @@ double tpot::ThetaW(double P, double T, double TD)
    double value = kFloatMissing;
 
    // Search LCL level
-
    vector<double> LCL = util::LCL(P, T, TD);
-
+ 
    double Pint = LCL[0]; // Pa
    double Tint = LCL[1]; // K
 
@@ -481,20 +489,27 @@ double tpot::ThetaE(double P, double T, double TD, double theta)
 	vector<double> LCL = util::LCL(P, T, TD);
 
 	double TLCL = LCL[1];
-
+	
 	if (theta == kFloatMissing)
 	{
 		// theta was not calculated in this plugin session :(
 
 		theta = Theta(P, T);
+
+		if (theta == kFloatMissing)
+		{
+			return theta;
+		}
 	}
 
-	double Es = util::Es(TLCL);
-	double ZQs = himan::constants::kEp * (Es / (P - Es));
+	theta -= constants::kKelvin;
+	
+	double Es = util::Es(TLCL) * 0.01;
+	double ZQs = himan::constants::kEp * (Es / (P*0.01 - Es));
 
 	double value = theta * exp(himan::constants::kL * ZQs / himan::constants::kCp / (TLCL));
 
-	return value;
+	return value + constants::kKelvin;
 
 }
 
@@ -507,11 +522,30 @@ unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, 
 	opts->is_constant_pressure = (myTargetInfo->Level().Type() == kPressure);
 
 	opts->t = TInfo->ToSimple();
-	opts->tp = myTargetInfo->ToSimple();
 
 	opts->theta = itsThetaCalculation;
+
+	if (opts->theta)
+	{
+		myTargetInfo->Param(param("TP-K"));
+		opts->tp = myTargetInfo->ToSimple();
+	}
+
 	opts->thetaw = itsThetaWCalculation;
+
+	if (opts->thetaw)
+	{
+		myTargetInfo->Param(param("TPW-K"));
+		opts->tpw = myTargetInfo->ToSimple();
+	}
+
 	opts->thetae = itsThetaECalculation;
+
+	if (opts->thetae)
+	{
+		myTargetInfo->Param(param("TPE-K")); 
+		opts->tpe = myTargetInfo->ToSimple();
+	}
 
 	if (!opts->is_constant_pressure)
 	{
@@ -551,10 +585,33 @@ void tpot::CudaFinish(unique_ptr<tpot_cuda::options> opts, shared_ptr<info> myTa
 {
 	// Copy data back to infos
 
-	myTargetInfo->Data()->Set(opts->tp->values, opts->N);
-	opts->tp->free_values();
+	if (opts->theta)
+	{
+		myTargetInfo->Param(param("TP-K"));
+		myTargetInfo->Data()->Set(opts->tp->values, opts->N);
+		opts->tp->free_values();
 
-	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+
+	}
+	
+	if (opts->thetaw)
+	{
+		myTargetInfo->Param(param("TPW-K"));
+		myTargetInfo->Data()->Set(opts->tpw->values, opts->N);
+		opts->tpw->free_values();
+
+		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+	}
+
+	if (opts->thetae)
+	{
+		myTargetInfo->Param(param("TPE-K"));
+		myTargetInfo->Data()->Set(opts->tpe->values, opts->N);
+		opts->tpe->free_values();
+
+		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+	}
 
 	if (TInfo->Grid()->IsPackedData())
 	{
@@ -572,7 +629,7 @@ void tpot::CudaFinish(unique_ptr<tpot_cuda::options> opts, shared_ptr<info> myTa
 
 	if (TDInfo && TDInfo->Grid()->IsPackedData())
 	{
-		TDInfo->Data()->Set(opts->p->values, opts->N);
+		TDInfo->Data()->Set(opts->td->values, opts->N);
 		TDInfo->Grid()->PackedData()->Clear();
 		opts->td->free_values();
 	}
