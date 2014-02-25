@@ -367,7 +367,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		}
 	}
 
-	itsLogger->Info("Saved information on file '" + theFileName + "' to neons");
+	itsLogger->Trace("Saved information on file '" + theFileName + "' to neons");
 
 	return true;
 }
