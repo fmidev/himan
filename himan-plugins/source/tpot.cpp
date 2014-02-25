@@ -225,7 +225,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			}
 		}
 
-		assert(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB() && PInfo->Grid()->AB() == TDInfo->Grid()->AB())));
+		assert(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB()) && (!TDInfo || (PInfo->Grid()->AB() == TDInfo->Grid()->AB()))));
 
 		SetAB(myTargetInfo, TInfo);
 
@@ -236,18 +236,18 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		if (TDInfo && TDInfo->Param().Unit() == kC)
 		{
-			TBase = himan::constants::kKelvin;
+			TDBase = himan::constants::kKelvin;
 		}
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TDGrid, PGrid;
 
 		size_t missingCount = 0;
 		size_t count = 0;
 
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
 		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
+
+		if (TDInfo)
+		{
+			equalGrids == equalGrids && *myTargetInfo->Grid() == *TDInfo->Grid();
+		}
 
 		string deviceType;
 
@@ -267,21 +267,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				Unpack({PInfo});
 			}
 		}
-#endif
-
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-
-		if (TDInfo)
-		{
-			TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
-		}
-
-		if (PInfo)
-		{
-			PGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
-		}
-
-#ifdef HAVE_CUDA
 		
 		if (useCudaInThisThread && equalGrids)
 		{
@@ -300,6 +285,22 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		else
 #endif
 		{
+
+			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> TDGrid, PGrid;
+			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+
+			if (TDInfo)
+			{
+				TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
+			}
+
+			if (PInfo)
+			{
+				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
+			}
+
+			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
 			deviceType = "CPU";
 
@@ -329,6 +330,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				if (itsThetaWCalculation || itsThetaECalculation)
 				{
 					InterpolateToPoint(targetGrid, TDGrid, equalGrids, TD);
+					TD -= TDBase; // to Kelvin
 				}
 
 				if (T == kFloatMissing || P == kFloatMissing || ((itsThetaECalculation || itsThetaWCalculation) && TD == kFloatMissing))
@@ -340,7 +342,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				}
 
 				T -= TBase; // to Kelvin
-				TD -= TDBase; // to Kelvin
 				P *= PScale; // to Pa
 
 				double theta = kFloatMissing;
@@ -555,7 +556,7 @@ unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, 
 	{
 		opts->p = PInfo->ToSimple();
 
-		if (PInfo->Param().Unit() == kPa || PInfo->Param().Name() == "P-PA")
+		if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
 		{
 			opts->p_scale = 100;
 		}

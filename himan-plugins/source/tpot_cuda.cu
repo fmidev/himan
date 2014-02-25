@@ -28,7 +28,7 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 		}
 		if (opts.thetaw)
 		{
-			d_tpw[idx] = ThetaW(d_t[idx], P, d_td[idx], opts, d_missing);
+			d_tpw[idx] = ThetaW(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts, d_missing);
 		}
 		if (opts.thetae)
 		{
