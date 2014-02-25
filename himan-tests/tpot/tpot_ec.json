@@ -1,18 +1,18 @@
 {
-	"target_geom_name" : "MTEDIT125",
+	"target_geom_name" : "ECEDIT125",
 	"source_target_geom_name" : "ECEDIT125",
 	"source_producer" : "131",
 	"target_producer" : "240",
 	"hours" : "3",
 	"file_write" : "multiple",
-	"origintime" : "2013-05-12 12:00:00",
-	"read_data_from_database" : "true",
+	"origintime" : "2014-02-20 00:00:00",
+	"read_data_from_database" : "false",
 
 	"processqueue" : [
 	{
 		"leveltype" : "pressure",
-		"levels" : "700,850",
-		"plugins" : [ { "name" : "tpot" } ]
+		"levels" : "850",
+		"plugins" : [ { "name" : "dewpoint" }, { "name" : "tpot", "thetaw" : true } ]
 	} 
 	]
 }

@@ -1,5 +1,5 @@
 #!/bin/sh
-exit 0
+
 set -x
 
 if [ -z "$HIMAN" ]; then
@@ -8,16 +8,9 @@ fi
 
 rm -f TPW-K*.grib
 
-$HIMAN -d 5 -f tpot_ec.json -t grib ec_source.grib --no-cuda -s ec_nocuda
+$HIMAN -d 5 -f tpot_ec.json source_ec.grib --no-cuda -s ec_nocuda
 
-grib_compare ec_result_700.grib TPW-K_pressure_700_rll_161_177_0_003.grib
-
-if [ $? -ne 0 ];then
-  echo tpot/ec failed on CPU
-  exit 1
-fi
-
-grib_compare ec_result_850.grib TPW-K_pressure_700_rll_161_177_0_003.grib
+grib_compare ec_result.grib TPW-K_pressure_850_rll_161_177_0_003.grib
 
 if [ $? -eq 0 ];then
   echo tpot/ec success on CPU!
@@ -30,16 +23,9 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
   rm -f TPW-K*.grib
 
-  $HIMAN -d 5 -f tpot_ec.json -t grib source.grib -s ec_cuda
+  $HIMAN -d 5 -f tpot_ec.json source_ec.grib -s ec_cuda
 
-  grib_compare ec_result_700.grib ./TPW-K_pressure_850_rll_161_177_0_003.grib
-
-  if [ $? -ne 0 ];then
-    echo tpot/hl failed on GPU
-    exit 1
-  fi
-
-  grib_compare ec_result_850.grib ./TPW-K_pressure_850_rll_161_177_0_003-CPU.grib
+  grib_compare -A 0.4 ec_result.grib ./TPW-K_pressure_850_rll_161_177_0_003.grib
 
   if [ $? -eq 0 ];then
     echo tpot/ec success on GPU!
