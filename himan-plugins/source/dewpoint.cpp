@@ -36,10 +36,7 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 	Init(conf);
 	
 	/*
-	 * Set target parameter to potential temperature
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
+	 * Set target parameter to dewpoint.
 	 *
 	 */
 
@@ -146,9 +143,11 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			RHScale = 100;
 		}
 
-		if (TInfo->Param().Unit() == kC)
+		// Formula assumes T == Celsius
+
+		if (TInfo->Param().Unit() == kK)
 		{
-			TBase = himan::constants::kKelvin;
+			TBase = -himan::constants::kKelvin;
 		}
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
@@ -199,7 +198,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			myTargetInfo->ResetLocation();
 
 			targetGrid->Reset();
-
+			
 			while (myTargetInfo->NextLocation() && targetGrid->Next())
 			{
 				count++;
@@ -218,7 +217,19 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 					continue;
 				}
 
-				double TD = ((T+TBase) / (1 - ((T+TBase) * log(RHScale * RH) * (Rw_div_L)))) - himan::constants::kKelvin + TBase;
+				T += TBase;
+				RH *= RHScale;
+
+				double TD = kFloatMissing;
+
+				if (RH > 50)
+				{
+					TD = T - ((100 - RH) * 0.2) + constants::kKelvin;
+				}
+				else
+				{
+					TD = T / (1 - (T * log(RH) * (Rw_div_L))) + constants::kKelvin;
+				}
 
 				if (!myTargetInfo->Value(TD))
 				{
@@ -268,9 +279,9 @@ unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTarg
 
 	opts->N = opts->td->size_x * opts->td->size_y;
 
-	if (TInfo->Param().Unit() == kC)
+	if (TInfo->Param().Unit() == kK)
 	{
-		opts->t_base = himan::constants::kKelvin;
+		opts->t_base = -himan::constants::kKelvin;
 	}
 
 	if (RHInfo->Param().Unit() != kPrcnt)

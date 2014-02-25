@@ -31,7 +31,17 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(const double* __restrict
 		}
 		else
 		{
-			d_td[idx] = ((d_t[idx]+opts.t_base) / (1 - ((d_t[idx]+opts.t_base) * log(d_rh[idx] * opts.rh_scale) * (RW_div_L)))) - K + opts.t_base;
+			// Branching, but first branch is so much simpler in terms of calculation complexity
+			// so it's probably worth it
+
+			if (d_rh[idx] > 50)
+			{
+				d_td[idx] = (d_t[idx]+opts.t_base) - ((100 - opts.rh_scale*d_rh[idx])*0.2) + K;
+			}
+			else
+			{
+				d_td[idx] = ((d_t[idx]+opts.t_base) / (1 - ((d_t[idx]+opts.t_base) * log(d_rh[idx] * opts.rh_scale) * (RW_div_L)))) + K;
+			}
 		}
 	}
 }
