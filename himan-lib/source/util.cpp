@@ -437,7 +437,7 @@ double util::Gammas(double P, double T)
 	
 	double A = constants::kRd * T / constants::kCp / P * (1+constants::kL*Q/constants::kRd/T);
 
-	return A / (1 + constants::kEp / constants::kCp * (constants::kL * constants::kL / constants::kRd * Q / (T*T)));
+	return A / (1 + constants::kEp / constants::kCp * (constants::kL * constants::kL) / constants::kRd * Q / (T*T));
 }
 
 double util::Gammaw(double P, double T)
