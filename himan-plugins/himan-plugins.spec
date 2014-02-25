@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.2.13
-Release: 1.fmi
+Version: 14.2.25
+Release: 2.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -80,6 +80,19 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Feb 25 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.25-2.fmi
+- Bugfix for tpot/hybrid (OPER-494)
+* Tue Feb 25 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.25-1.fmi
+- Add flag for separating cuda-enabled plugins
+- Fixes for tpot@cuda
+- Fixes for preform_hybrid
+- Add automatic level conversion to fetcher
+- Bugfix and optimization for dewpoint
+* Tue Feb 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.18-1.fmi
+- Fix for HIMAN-21
+* Mon Feb 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.17-1.fmi
+- Bugfix for preform_pressure (HIMAN-38)
+- Add functionality to querydata
 * Thu Feb 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.13-1.fmi
 - Bugfix for preform_hybrid and hitool
 * Tue Feb 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.11-1.fmi
