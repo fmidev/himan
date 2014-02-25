@@ -150,14 +150,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			TBase = -himan::constants::kKelvin;
 		}
 
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> RHGrid(RHInfo->Grid()->ToNewbaseGrid());
-
 		size_t missingCount = 0;
 		size_t count = 0;
-
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
 		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && *myTargetInfo->Grid() == *RHInfo->Grid());
 
@@ -194,6 +188,12 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 #endif
 		{
 			deviceType = "CPU";
+
+			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> RHGrid(RHInfo->Grid()->ToNewbaseGrid());
+
+			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
 			myTargetInfo->ResetLocation();
 

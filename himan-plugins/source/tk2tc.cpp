@@ -138,7 +138,6 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		size_t count = 0;
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(sourceInfo->Grid()->ToNewbaseGrid());
 
 		bool equalGrids = (*myTargetInfo->Grid() == *sourceInfo->Grid());
 
@@ -177,6 +176,8 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			deviceType = "CPU";
 
+			shared_ptr<NFmiGrid> sourceGrid(sourceInfo->Grid()->ToNewbaseGrid());
+
 			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
 			myTargetInfo->ResetLocation();
@@ -188,11 +189,11 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 				count++;
 
-				double T = kFloatMissing;
+				double value = kFloatMissing;
 
-				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+				InterpolateToPoint(targetGrid, sourceGrid, equalGrids, value);
 
-				if (T == kFloatMissing)
+				if (value == kFloatMissing)
 				{
 					missingCount++;
 
@@ -200,9 +201,9 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 					continue;
 				}
 
-				double TC = T - 273.15;
+				double newValue = value - constants::kKelvin;
 
-				if (!myTargetInfo->Value(TC))
+				if (!myTargetInfo->Value(newValue))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
