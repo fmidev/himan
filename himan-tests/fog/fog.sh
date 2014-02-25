@@ -16,9 +16,10 @@ if [ $? -eq 0 ];then
   echo fog success on CPU!
 else
   echo fog failed on CPU
-  #exit 1
+  exit 1
 fi
 
+exit 0
 if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
   mv fog.json.grib fog.json-CPU.grib
