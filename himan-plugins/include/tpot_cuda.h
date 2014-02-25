@@ -51,7 +51,7 @@ __global__ void Calculate(const double* __restrict__ d_t, const double* __restri
 __device__ double Theta(double T, double P, options opts, int* d_missing);
 __device__ double ThetaW(double T, double P, double TD, options opts, int* d_missing);
 __device__ double ThetaE(double T, double P, double TD, options opts, int* d_missing);
-__device__ void LCL(double P, double T, double TD, double* Pout, double* Tout);
+__device__ void LCL(double P, double T, double TD, double& Pout, double& Tout);
 __device__ double Gammas(double P, double T);
 __device__ double Es(double T);
 

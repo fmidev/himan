@@ -4,9 +4,8 @@
 
 // CUDA runtime
 #include <cuda_runtime.h>
-
+#include "stdio.h"
 #include "tpot_cuda.h"
-//#include "stdio.h"
 
 __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d_t,
 													const double* __restrict__ d_p,
@@ -25,7 +24,7 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 
 		if (opts.theta)
 		{
-			d_tp[idx] = Theta(d_t[idx], P, opts, d_missing);
+			d_tp[idx] = Theta(opts.t_base + d_t[idx], P * opts.p_scale, opts, d_missing);
 		}
 		if (opts.thetaw)
 		{
@@ -33,7 +32,7 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 		}
 		if (opts.thetae)
 		{
-			d_tpe[idx] = ThetaE(d_t[idx], P, d_td[idx], opts, d_missing);
+			d_tpe[idx] = ThetaE(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts, d_missing);
 		}
 
 	}
@@ -54,7 +53,7 @@ __device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options op
 	}
 	else
 	{
-		theta = (opts.t_base + T) * pow((1000 / (0.01 * P * opts.p_scale)), 0.28586);
+		theta = T * pow((1000 / (0.01 * P)), 0.28586);
 	}
 
 	return theta;
@@ -63,61 +62,64 @@ __device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options op
 
 __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD, options opts, int* d_missing)
 {
-	
-	const double Pstep = 500; // Pa
+
 	double value = kFloatMissing;
 
-	// Search LCL level
-
-	double Tint = 0, Pint = 0;
-
-	LCL(P, T, TD, &Pint, &Tint);
-
-	int i = 0;
-
-	if (Tint != kFloatMissing && Pint != kFloatMissing)
+	if (T == kFloatMissing || P == kFloatMissing || TD == kFloatMissing)
 	{
+		atomicAdd(d_missing, 1);
+	}
+	else
+	{
+		const double Pstep = 500; // Pa
 
-		/*
-		* Units: Temperature in Kelvins, Pressure in Pascals
-		*/
+		// Search LCL level
 
-		Tint += 273.15;
-		Pint *= 100;
+		double Tint = 0, Pint = 0;
 
-		double T0 = Tint;
+		LCL(P, T, TD, Pint, Tint);
 
-		double Z = kFloatMissing;
+		int i = 0;
 
-		while (++i < 500) // usually we don't reach this value
+		if (Tint != kFloatMissing && Pint != kFloatMissing)
 		{
-			double TA = Tint;
 
-			if (i <= 2)
+			/*
+			* Units: Temperature in Kelvins, Pressure in Pascals
+			*/
+
+			double T0 = Tint;
+
+			double Z = kFloatMissing;
+
+			while (++i < 500) // usually we don't reach this value
 			{
-				Z = i * Pstep/2;
-			}
-			else
-			{
-				Z = 2 * Pstep;
-			}
+				double TA = Tint;
 
-			// Gammas() takes hPa
-			double Q = Gammas(Pint * 0.01, Tint - 273.15);
+				if (i <= 2)
+				{
+					Z = i * Pstep/2;
+				}
+				else
+				{
+					Z = 2 * Pstep;
+				}
 
-			Tint = T0 + Q * Z;
+				// Gammas() takes hPa
+				Tint = T0 + Gammas(Pint, Tint) * Z;
 
-			if (i > 2)
-			{
-				T0 = TA;
-			}
+				if (i > 2)
+				{
+					T0 = TA;
+				}
 
-			Pint += Pstep;
+				Pint += Pstep;
 
-			if (Pint >= 1e5)
-			{
-				value = Tint - 273.15;
-				break;
+				if (Pint >= 1e5)
+				{
+					value = Tint;
+					break;
+				}
 			}
 		}
 	}
@@ -128,22 +130,38 @@ __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD
 __device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD, options opts, int* d_missing)
 {
 
-	// Search LCL level
+	double value = kFloatMissing;
 
-	double TLCL = 0, PLCL = 0;
-	const double kEp = 0.622;
-	const double kL = 2.5e6;
-	const double kCp = 1003.5;
-	
-	LCL(P, T, TD, &PLCL, &TLCL);
+	if (T == kFloatMissing || P == kFloatMissing || TD == kFloatMissing)
+	{
+		atomicAdd(d_missing, 1);
+	}
+	else
+	{
+		// Search LCL level
 
-	double theta = Theta(T, P, opts, 0) - 273.15;
+		double TLCL = 0, PLCL = 0;
+		const double kEp = 0.622;
+		const double kL = 2.5e6;
+		const double kCp = 1003.5;
 
-	double ZEs = Es(TLCL) * 0.01;
-	double ZQs = kEp * (ZEs / (P*0.01 - ZEs));
+		LCL(P, T, TD, PLCL, TLCL);
 
-	return 273.15 + theta * exp(kL * ZQs / kCp / (TLCL));
+		if (TLCL != kFloatMissing)
+		{
+			double theta = Theta(T, P, opts, 0) - 273.15; // C
 
+			// No need to check theta for kFloatMissing since Theta() always returns
+			// value if T and P are != kFloatMissing
+		
+			double ZEs = Es(TLCL) * 0.01;
+			double ZQs = kEp * (ZEs / (P*0.01 - ZEs));
+
+			value = 273.15 + theta * exp(kL * ZQs / kCp / (TLCL));
+		}
+	}
+
+	return value;
 }
 
 void himan::plugin::tpot_cuda::Process(options& opts)
@@ -285,7 +303,7 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }
 
-__device__ void himan::plugin::tpot_cuda::LCL(double P, double T, double TD, double* Pout, double* Tout)
+__device__ void himan::plugin::tpot_cuda::LCL(double P, double T, double TD, double& Pout, double& Tout)
 {
 	// starting T step
 
@@ -318,10 +336,9 @@ __device__ void himan::plugin::tpot_cuda::LCL(double P, double T, double TD, dou
 			TLCL = T;
 			PLCL = pow((TLCL / Torig), (1/kRCp)) * P;
 
-			*Pout = PLCL * 100; // Pa
-			*Tout = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // C
-			//ret[2] = Q;
-	
+			Pout = PLCL * 100; // Pa
+			Tout = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // C
+
 			return;
 		}
 		else
@@ -339,10 +356,9 @@ __device__ void himan::plugin::tpot_cuda::LCL(double P, double T, double TD, dou
 	nq = 0;
 
 	double Porig = P;
-	//printf ("SLOW LCL\n");
-	while (++nq <= 100)
+
+	while (++nq <= 500)
 	{
-		//printf("%f\n", C * pow(Qa*0.01, kRCp) - T );
 		if (C * pow(Es(T)*0.01, kRCp) - T > 0)
 		{
 			T -= Tstep;
@@ -352,13 +368,13 @@ __device__ void himan::plugin::tpot_cuda::LCL(double P, double T, double TD, dou
 			TLCL = T;
 			PLCL = pow((TLCL / Torig), (1/kRCp)) * Porig;
 
-			*Pout = PLCL * 100; // Pa
-			*Tout = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // C
-			//ret[2] = Q;
+			Pout = PLCL * 100; // Pa
+			Tout = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // C
 
 			break;
 		}
 	}
+
 
 }
 
@@ -392,7 +408,7 @@ __device__ double himan::plugin::tpot_cuda::Gammas(double P, double T)
 
 	double Q = kEp * (Es(T) * 0.01) / (P * 0.01);
 
-	double A = kRd * T / kCp / P * (1+2.5e6*Q/kRd/T);
+	double A = kRd * T / kCp / P * (1+kL*Q/kRd/T);
 
-	return A / (1 + kEp / kCp * ((kL*kL) / kRd * Q / (T*T)));
+	return A / (1 + kEp / kCp * (kL*kL / kRd * Q / (T*T)));
 }

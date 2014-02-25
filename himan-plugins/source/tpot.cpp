@@ -372,7 +372,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				if (itsThetaECalculation)
 				{
 					double value = ThetaE(P, T, TD, theta);
-					
+
 					myTargetInfo->Param(param("TPE-K"));
 
 					if (!myTargetInfo->Value(value))
@@ -415,7 +415,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 double tpot::Theta(double P, double T)
 {
-
 	double value = T * pow((1000 / (P*0.01)), 0.28586);
 
 	return value;
@@ -423,65 +422,66 @@ double tpot::Theta(double P, double T)
 
 double tpot::ThetaW(double P, double T, double TD)
 {
-   const double Pstep = 500; // Pa
-   double value = kFloatMissing;
+	const double Pstep = 500; // Pa
+	double value = kFloatMissing;
 
-   // Search LCL level
-   vector<double> LCL = util::LCL(P, T, TD);
- 
-   double Pint = LCL[0]; // Pa
-   double Tint = LCL[1]; // K
+	// Search LCL level
+	vector<double> LCL = util::LCL(P, T, TD);
 
-   int i = 0;
+	double Pint = LCL[0]; // Pa
+	double Tint = LCL[1]; // K
 
-   if (Tint == kFloatMissing || Pint == kFloatMissing)
-   {
-	   return kFloatMissing;
-   }
-   else
-   {
-	   /*
-		* Units: Temperature in Kelvins, Pressure in Pascals
-		*/
+	int i = 0;
 
-	   double T0 = Tint;
+	if (Tint == kFloatMissing || Pint == kFloatMissing)
+	{
+		return kFloatMissing;
+	}
+	else
+	{
 
-	   double Z = kFloatMissing;
+		/*
+		 * Units: Temperature in Kelvins, Pressure in Pascals
+		 */
 
-	   while (++i < 500) // usually we don't reach this value
-	   {
-		   double TA = Tint;
+		double T0 = Tint;
 
-		   if (i <= 2)
-		   {
-			   Z = i * Pstep/2;
-		   }
-		   else
-		   {
-			   Z = 2 * Pstep;
-		   }
+		double Z = kFloatMissing;
 
-		   // Gammas() takes Pa
-		   Tint = T0 + util::Gammas(Pint, Tint) * Z;
+		while (++i < 500) // usually we don't reach this value
+		{
+			double TA = Tint;
 
-		   if (i > 2)
-		   {
-			   T0 = TA;
-		   }
+			if (i <= 2)
+			{
+				Z = i * Pstep/2;
+			}
+			else
+			{
+				Z = 2 * Pstep;
+			}
 
-		   Pint += Pstep;
+			// Gammas() takes Pa
+			Tint = T0 + util::Gammas(Pint, Tint) * Z;
 
-		   if (Pint >= 1e5)
-		   {
-			   value = Tint;
-			   break;
-		   }
-	   }
-   }
+			if (i > 2)
+			{
+				T0 = TA;
+			}
 
-   assert(value == value); // check NaN
+			Pint += Pstep;
 
-   return value;
+			if (Pint >= 1e5)
+			{
+				value = Tint;
+				break;
+			}
+		}
+	}
+
+	assert(value == value); // check NaN
+
+	return value;
 }
 
 double tpot::ThetaE(double P, double T, double TD, double theta)
@@ -489,8 +489,12 @@ double tpot::ThetaE(double P, double T, double TD, double theta)
 	vector<double> LCL = util::LCL(P, T, TD);
 
 	double TLCL = LCL[1];
-	
-	if (theta == kFloatMissing)
+
+	if (TLCL == kFloatMissing)
+	{
+		return kFloatMissing;
+	}
+	else if (theta == kFloatMissing)
 	{
 		// theta was not calculated in this plugin session :(
 
