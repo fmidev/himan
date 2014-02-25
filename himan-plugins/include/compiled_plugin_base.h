@@ -18,8 +18,6 @@ namespace himan
 namespace plugin
 {
 
-typedef std::map<std::string, HPLevelType> level_transform;
-
 class compiled_plugin_base
 {
 public:
@@ -100,17 +98,6 @@ protected:
 	
 	void ResetNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
  
-	/**
-	 * @brief Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.
-	 *
-	 * @param sourceProducer
-	 * @param targetParam
-	 * @param targetLevel
-	 * @return Level that matches level 'targetLevel' on producer 'sourceProducuer', or targetLevel.
-	 */
-
-	level LevelTransform(const himan::producer& sourceProducer, const himan::param& targetParam, const himan::level& targetLevel) const;
-
 	/**
 	 * @brief Copy AB values from source to dest info
 	 */
@@ -226,7 +213,6 @@ protected:
 
 private:
 	std::unique_ptr<timer> itsTimer;
-	mutable level_transform itsLevelTransformMap;
 	std::unique_ptr<logger> itsBaseLogger;
 	bool itsPluginIsInitialized;
 	HPDimensionType itsLeadingDimension;

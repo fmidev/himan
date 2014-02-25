@@ -79,10 +79,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	param QParam("Q-KGKG");
 	level PLevel(himan::kHeight, 0, "HEIGHT");
 
-	// Some models have height 0 defined as ground 0 (we all know which ones)
-	
-	PLevel = LevelTransform(itsConfiguration->SourceProducer(), PParam, PLevel);
-
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("hybrid_pressureThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);

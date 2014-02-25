@@ -136,7 +136,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 	
 	itsConfiguration->FirstSourceProducer();
 	
-	level groundLevel = LevelTransform(itsConfiguration->SourceProducer(), TParam, level(kHeight, 2));
+	level groundLevel(kHeight, 2);
 
 	level surface0mLevel(kHeight, 0);
 	level surface2mLevel(kHeight, 2);

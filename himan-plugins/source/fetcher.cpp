@@ -32,6 +32,7 @@ const unsigned int SLEEPSECONDS = 10;
 shared_ptr<cache> itsCache;
 
 fetcher::fetcher()
+	: itsDoLevelTransform(true)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
@@ -131,7 +132,25 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	
 	vector<shared_ptr<info>> theInfos;
 	unsigned int waitedSeconds = 0;
-		
+
+	level newLevel = requestedLevel;
+	
+	if (itsDoLevelTransform &&
+			(requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
+	{
+		newLevel = LevelTransform(config->SourceProducer(), requestedParam, requestedLevel);
+
+		if (newLevel != requestedLevel)
+		{
+			itsLogger->Trace("Transform level " + string(HPLevelTypeToString.at(requestedLevel.Type()))
+						+ "/" + boost::lexical_cast<string> (requestedLevel.Value())
+						+ " to " + HPLevelTypeToString.at(newLevel.Type())
+						+ "/" + boost::lexical_cast<string> (newLevel.Value())
+						+ " for producer " + boost::lexical_cast<string> (config->SourceProducer().Id())
+						+ ", parameter " + requestedParam.Name());
+		}
+	}
+	
 	do
 	{
 		// Loop over all source producers if more than one specified
@@ -141,7 +160,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		
 			producer sourceProd(config->SourceProducer(prodNum));
 			
-			const search_options opts (requestedTime, requestedParam, requestedLevel, sourceProd, config);
+			const search_options opts (requestedTime, requestedParam, newLevel, sourceProd, config);
 
 			// itsLogger->Trace("Current producer: " + sourceProd.Name());
 
@@ -277,7 +296,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	// assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
 
-	assert((theInfos[0]->Level()) == requestedLevel);
+	assert((theInfos[0]->Level()) == newLevel);
 
 	assert((theInfos[0]->Time()) == requestedTime);
 
@@ -379,4 +398,61 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 	theInfos.push_back(i);
 
 	return theInfos;
+}
+
+himan::level fetcher::LevelTransform(const producer& sourceProducer, const param& targetParam,	const level& targetLevel) const
+{
+
+	level sourceLevel = targetLevel;
+
+	if (sourceProducer.TableVersion() != kHPMissingInt)
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		string lvlName = n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
+
+		HPLevelType lvlType = kUnknownLevel;
+
+		double lvlValue = targetLevel.Value();
+
+		if (lvlName == "GROUND")
+		{
+			lvlType = kGround;
+			lvlValue = 0;
+		}
+		else if (lvlName == "PRESSURE")
+		{
+			lvlType = kPressure;
+		}
+		else if (lvlName == "HYBRID")
+		{
+			lvlType = kHybrid;
+		}
+		else if (lvlName == "HEIGHT")
+		{
+			lvlType = kHeight;
+		}
+		else
+		{
+			throw runtime_error(ClassName() + ": Unknown level type: " + lvlName);
+		}
+
+		sourceLevel = level(lvlType, lvlValue, lvlName);
+	}
+	else
+	{
+		sourceLevel = targetLevel;
+	}
+
+	return sourceLevel;
+}
+
+void fetcher::DoLevelTransform(bool theDoLevelTransform)
+{
+	itsDoLevelTransform = theDoLevelTransform;
+}
+
+bool fetcher::DoLevelTransform() const
+{
+	return itsDoLevelTransform;
 }

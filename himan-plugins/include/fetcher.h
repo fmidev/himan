@@ -56,37 +56,53 @@ public:
 
     virtual HPVersionNumber Version() const
     {
-        return HPVersionNumber(1, 0);
+        return HPVersionNumber(1, 1);
     }
 
-
 	/**
+	 * @brief Multi-param overcoat for the other Fetch() function
 	 *
-     * @param config
+	 * Will return the first param found.
+	 *
+     * @param config Plugin configuration
      * @param requestedValidTime
      * @param requestedLevel
-     * @param requestedParams
+     * @param requestedParams List of wanted params
      * @param readPackedData
-     * @return
+     * @return Data for first param found.
      */
 
     std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const params& requestedParams, bool readPackedData = false);
 
 	/**
+	 * @brief Fetch data based on given arguments.
+	 * 
+ 	 * Data can be defined in command line when himan started, or it can be already
+	 * in cache or it can be fetched from neons.
 	 *
-     * @param config
+	 * Will throw kFileDataNotFound if data is not found.
+	 *
+     * @param config Plugin configuration
      * @param requestedValidTime
      * @param requestedLevel
      * @param requestedParam
 	 * @param readPackedData Whether to read unpacked data (from grib only!). Caller must do unpacking.
      * @param controlWaitTime Whether this function should control wait times if they are specified.
 	 * Default is true, will be set to false if this function is called from multi-param Fetch()
-     * @return
+     * @return shared_ptr to info-instance
      */
 
     std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam, bool readPackedData = false, bool controlWaitTime = true);
 
+	/**
+	 * @brief Set flag for level transform
+	 *
+     * @param theDoLevelTransform If false, level transform is not made
+     */
 
+	void DoLevelTransform(bool theDoLevelTransform);
+	bool DoLevelTransform() const;
+	
 private:
 
     std::vector<std::shared_ptr<info>> FromCache(const search_options& options);
@@ -140,7 +156,21 @@ private:
 
     std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, const search_options& options, bool readContents = true);
 
+	/**
+	 * @brief Map level definitions between models and code tables
+	 *
+	 * Ie. Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.
+	 * 
+     * @param sourceProducer Id of source producer
+     * @param targetParam
+     * @param targetLevel
+     * @return New level. If mapping is not found, new level == targetLevel.
+     */
+	
+	level LevelTransform(const producer& sourceProducer, const param& targetParam, const level& targetLevel) const;
+	
     HPFileType FileType(const std::string& theInputFile);
+	bool itsDoLevelTransform; //<! Default true
 
 };
 

@@ -839,10 +839,6 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 	{
 		wantedLevel = level(kTopOfAtmosphere, 0, "TOP");
 	}
-	else
-	{
-		wantedLevel = LevelTransform(itsConfiguration->SourceProducer(), params[0], wantedLevel);
-	}
 
 	shared_ptr<info> SumInfo;
 	

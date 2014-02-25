@@ -156,11 +156,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	level surface0mLevel(kHeight, 0);
 
-	// surface0mLevel = LevelTransform(); TOTEUTA TÄMÄ
-	
 	level surface2mLevel(kHeight, 2);
-
-	//level groundLevel = LevelTransform(conf->SourceProducer(), TParam, level(kHeight, 2));
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("preformHybridThread #" + boost::lexical_cast<string> (threadIndex)));
 

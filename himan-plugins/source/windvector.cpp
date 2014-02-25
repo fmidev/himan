@@ -238,23 +238,19 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		shared_ptr<info> UInfo;
 		shared_ptr<info> VInfo;
 
-		// Fetch source level definition
-
-		level sourceLevel = LevelTransform(itsConfiguration->SourceProducer(), UParam, myTargetInfo->Level());
-
 		try
 		{
 			// Source info for U
 			UInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
-										sourceLevel,
+										myTargetInfo->Level(),
 										UParam,
 										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 				
 			// Source info for V
 			VInfo = theFetcher->Fetch(itsConfiguration,
 										myTargetInfo->Time(),
-										sourceLevel,
+										myTargetInfo->Level(),
 										VParam,
 										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 				

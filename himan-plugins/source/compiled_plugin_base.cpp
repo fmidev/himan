@@ -16,6 +16,7 @@
 #include "neons.h"
 #include "writer.h"
 #include "pcuda.h"
+#include "cache.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -150,81 +151,6 @@ void compiled_plugin_base::ResetNonLeadingDimension(shared_ptr<info> myTargetInf
 	}
 }
 
-himan::level compiled_plugin_base::LevelTransform(const himan::producer& sourceProducer,
-													const himan::param& targetParam,
-													const himan::level& targetLevel) const
-{
-
-	level sourceLevel = targetLevel;
-
-	string levelName = HPLevelTypeToString.at(targetLevel.Type());
-	string key = boost::lexical_cast<string> (sourceProducer.Id()) + "_" + levelName + "_" + targetParam.Name();
-
-	// Return value from cache if present
-	
-	try
-	{
-		sourceLevel.Type(itsLevelTransformMap.at(key));
-
-		sourceLevel.Name(levelName);
-
-		if (sourceLevel.Type() == kGround)
-		{
-			sourceLevel.Value(0);
-		}
-
-		return sourceLevel;
-
-	}
-	catch (...)
-	{
-
-	}
-
-	if (sourceProducer.TableVersion() != kHPMissingInt)
-	{
-		shared_ptr<neons> n = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		string lvlName = n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
-
-		HPLevelType lvlType = kUnknownLevel;
-
-		double lvlValue = targetLevel.Value();
-
-		if (lvlName == "GROUND")
-		{
-			lvlType = kGround;
-			lvlValue = 0;
-		}
-		else if (lvlName == "PRESSURE")
-		{
-			lvlType = kPressure;
-		}
-		else if (lvlName == "HYBRID")
-		{
-			lvlType = kHybrid;
-		}
-		else if (lvlName == "HEIGHT")
-		{
-			lvlType = kHeight;
-		}
-		else
-		{
-			throw runtime_error(ClassName() + ": Unknown level type: " + lvlName);
-		}
-
-		sourceLevel = level(lvlType, lvlValue, lvlName);
-	}
-	else
-	{
-		sourceLevel = targetLevel;
-	}
-
-	itsLevelTransformMap[key] = sourceLevel.Type();
-
-	return sourceLevel;
-}
-
 bool compiled_plugin_base::SetAB(shared_ptr<info> myTargetInfo, shared_ptr<info> sourceInfo)
 {
 	if (myTargetInfo->Level().Type() == kHybrid)
@@ -283,13 +209,13 @@ void compiled_plugin_base::WriteToFile(shared_ptr<const info> targetInfo)
 bool compiled_plugin_base::GetAndSetCuda(shared_ptr<const configuration> conf, int threadIndex)
 {
 #ifdef HAVE_CUDA
-	bool ret = conf->UseCuda() && threadIndex <= conf->CudaDeviceCount();
+	bool ret = conf->UseCuda() && conf->CudaDeviceId() < conf->CudaDeviceCount();
 
 	if (ret)
 	{
 		shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-		ret = p->SetDevice(threadIndex-1);
+		ret = p->SetDevice(conf->CudaDeviceId());
 	}
 #else
 	bool ret = false;
