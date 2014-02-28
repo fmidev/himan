@@ -61,12 +61,12 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			{
 				if (e != kFileDataNotFound)
 				{
-					throw e;
+					throw;
 				}
 			}
 			catch (const exception& e)
 			{
-				throw e;
+				throw;
 			}
 
 		}
@@ -134,23 +134,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	unsigned int waitedSeconds = 0;
 
 	level newLevel = requestedLevel;
-	
-	if (itsDoLevelTransform &&
-			(requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
-	{
-		newLevel = LevelTransform(config->SourceProducer(), requestedParam, requestedLevel);
 
-		if (newLevel != requestedLevel)
-		{
-			itsLogger->Trace("Transform level " + string(HPLevelTypeToString.at(requestedLevel.Type()))
-						+ "/" + boost::lexical_cast<string> (requestedLevel.Value())
-						+ " to " + HPLevelTypeToString.at(newLevel.Type())
-						+ "/" + boost::lexical_cast<string> (newLevel.Value())
-						+ " for producer " + boost::lexical_cast<string> (config->SourceProducer().Id())
-						+ ", parameter " + requestedParam.Name());
-		}
-	}
-	
 	do
 	{
 		// Loop over all source producers if more than one specified
@@ -159,6 +143,22 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		{
 		
 			producer sourceProd(config->SourceProducer(prodNum));
+
+			if (itsDoLevelTransform &&
+					(requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
+			{
+				newLevel = LevelTransform(sourceProd, requestedParam, requestedLevel);
+
+				if (newLevel != requestedLevel)
+				{
+					itsLogger->Trace("Transform level " + string(HPLevelTypeToString.at(requestedLevel.Type()))
+								+ "/" + boost::lexical_cast<string> (requestedLevel.Value())
+								+ " to " + HPLevelTypeToString.at(newLevel.Type())
+								+ "/" + boost::lexical_cast<string> (newLevel.Value())
+								+ " for producer " + boost::lexical_cast<string> (config->SourceProducer().Id())
+								+ ", parameter " + requestedParam.Name());
+				}
+			}
 			
 			const search_options opts (requestedTime, requestedParam, newLevel, sourceProd, config);
 
