@@ -50,6 +50,8 @@ public:
 
 private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	double WithQ(double T, double Q, double P);
+	double WithTD(double T, double TD);
 
 };
 

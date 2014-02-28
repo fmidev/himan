@@ -73,9 +73,10 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	// Required source parameters
 
-	param TParam("T-K");
-	params PParams = { param("P-HPA"), param("P-PA") };
-	param QParam("Q-KGKG");
+	const param TParam("T-K");
+	const params PParams = { param("P-HPA"), param("P-PA") };
+	const param QParam("Q-KGKG");
+	const param TDParam("TD-C");
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("relative_humidityThread #" + boost::lexical_cast<string> (threadIndex)));
 	
@@ -92,12 +93,16 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
 		double TBase = 0;
+		double TDBase = 0;
 		double PScale = 1;
 		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 		
 		shared_ptr<info> TInfo;
+		shared_ptr<info> TDInfo;
 		shared_ptr<info> PInfo;
 		shared_ptr<info> QInfo;
+
+		// Temperature is always needed
 
 		try
 		{
@@ -105,21 +110,6 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 								myTargetInfo->Time(),
 								myTargetInfo->Level(),
 								TParam,
-								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-
-			if (!isPressureLevel)
-			{
-				PInfo = f->Fetch(itsConfiguration,
-								myTargetInfo->Time(),
-								myTargetInfo->Level(),
-								PParams,
-								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-			}
-
-			QInfo = f->Fetch(itsConfiguration,
-								myTargetInfo->Time(),
-								myTargetInfo->Level(),
-								QParam,
 								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 
 		}
@@ -146,7 +136,79 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 			}
 		}
 
-		assert(TInfo->Grid()->AB() == PInfo->Grid()->AB());
+		// First try to calculate using Q and P
+
+		bool calculateWithTD = false;
+		
+		try
+		{
+			QInfo = f->Fetch(itsConfiguration,
+								myTargetInfo->Time(),
+								myTargetInfo->Level(),
+								QParam,
+								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+			if (!isPressureLevel)
+			{
+				PInfo = f->Fetch(itsConfiguration,
+								myTargetInfo->Time(),
+								myTargetInfo->Level(),
+								PParams,
+								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+			}
+		}
+		catch (HPExceptionType& e)
+		{
+			switch (e)
+			{
+				case kFileDataNotFound:
+					calculateWithTD = true;
+					break;
+
+				default:
+					throw runtime_error(ClassName() + ": Unable to proceed");
+					break;
+			}
+		}
+
+		if (calculateWithTD)
+		{
+			try
+			{
+
+				TDInfo = f->Fetch(itsConfiguration,
+								myTargetInfo->Time(),
+								myTargetInfo->Level(),
+								TDParam,
+								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+
+			}
+			catch (HPExceptionType& e)
+			{
+				switch (e)
+				{
+					case kFileDataNotFound:
+						itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+						myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
+
+						if (itsConfiguration->StatisticsEnabled())
+						{
+							itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
+							itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
+						}
+
+						continue;
+						break;
+
+					default:
+						throw runtime_error(ClassName() + ": Unable to proceed");
+						break;
+				}
+			}
+		}
+
+		assert(!PInfo || TInfo->Grid()->AB() == PInfo->Grid()->AB());
+		assert(!TDInfo || TInfo->Grid()->AB() == TDInfo->Grid()->AB());
+		assert(!QInfo || TInfo->Grid()->AB() == QInfo->Grid()->AB());
 		
 		SetAB(myTargetInfo, TInfo);
 
@@ -155,28 +217,46 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 			TBase = -constants::kKelvin;
 		}
 
-		if (!isPressureLevel && (PInfo->Param().Name() == "P-PA" || PInfo->Param().Unit() == kPa))
+		if (TDInfo && TDInfo->Param().Unit() == kK)
+		{
+			TDBase = -constants::kKelvin;
+		}
+
+		if (!calculateWithTD && !isPressureLevel && (PInfo->Param().Name() == "P-PA" || PInfo->Param().Unit() == kPa))
 		{
 			PScale = 0.01;
 		}
 
 		shared_ptr<NFmiGrid> PGrid;
+		shared_ptr<NFmiGrid> QGrid;
+		shared_ptr<NFmiGrid> TDGrid;
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> QGrid(QInfo->Grid()->ToNewbaseGrid());
 
-		if (!isPressureLevel)
+		if (calculateWithTD)
 		{
-			PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
+			TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
 		}
-		
+		else
+		{
+			QGrid = shared_ptr<NFmiGrid> (QInfo->Grid()->ToNewbaseGrid());
+			
+			if (!isPressureLevel)
+			{
+				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
+			}
+		}
+	
 		size_t missingCount = 0;
 		size_t count = 0;
 
 		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && *myTargetInfo->Grid() == *QInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
+		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && 
+							(!QInfo || (*myTargetInfo->Grid() == *QInfo->Grid())) &&
+							(!PInfo || (*myTargetInfo->Grid() == *PInfo->Grid())) &&
+							(!TDInfo || (*myTargetInfo->Grid() == *TDInfo->Grid())));
 
 		string deviceType;
 
@@ -192,37 +272,62 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 				count++;
 
 				double T = kFloatMissing;
+				double TD = kFloatMissing;
 				double P = kFloatMissing;
 				double Q = kFloatMissing;
+				double RH = kFloatMissing;
 
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-				InterpolateToPoint(targetGrid, QGrid, equalGrids, Q);
 
-				if (isPressureLevel)
-				{
-					P = myTargetInfo->Level().Value();
-				}
-				else
-				{
-					InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-				}
-				
-				if (T == kFloatMissing || P == kFloatMissing || Q == kFloatMissing)
+				if (T == kFloatMissing)
 				{
 					missingCount++;
 
 					myTargetInfo->Value(kFloatMissing);
 					continue;
 				}
-
-				// Pressure needs to be hPa and temperature C
 				
-				double es = util::Es(T) * 0.01;
-
 				T += TBase;
-				P *= PScale;
 
-				double RH = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
+				if (calculateWithTD)
+				{
+					InterpolateToPoint(targetGrid, TDGrid, equalGrids, TD);
+
+					if (TD == kFloatMissing)
+					{
+						missingCount++;
+
+						myTargetInfo->Value(kFloatMissing);
+						continue;
+					}
+
+					TD += TDBase;
+					RH = WithTD(T, TD);
+				}
+				else
+				{
+					if (isPressureLevel)
+					{
+						P = myTargetInfo->Level().Value();
+					}
+					else
+					{
+						InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+					}
+
+					InterpolateToPoint(targetGrid, QGrid, equalGrids, Q);
+
+					if (P == kFloatMissing || Q == kFloatMissing)
+					{
+						missingCount++;
+
+						myTargetInfo->Value(kFloatMissing);
+						continue;
+					}
+
+					P *= PScale;
+					RH = WithQ(T, Q, P);
+				}
 
 				if (RH > 1.0)
 				{
@@ -270,3 +375,24 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		}
 	}
 }
+
+inline
+double relative_humidity::WithQ(double T, double Q, double P)
+{
+	// Pressure needs to be hPa and temperature C
+
+	double es = util::Es(T + constants::kKelvin) * 0.01;
+	
+	return (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
+}
+
+inline
+double relative_humidity::WithTD(double T, double TD)
+{
+	const double b = 17.27;
+	const double c = 237.3;
+	const double d = 1.8;
+
+	return exp(d + b * (TD / (TD + c))) / exp(d + b * (T / (T + c)));
+}
+
