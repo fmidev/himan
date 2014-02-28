@@ -136,7 +136,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 								 TParam);
 			
 		}
-		catch (HPExceptionType e)
+		catch (HPExceptionType& e)
 		{
 			switch (e)
 			{
@@ -388,7 +388,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		 * Clone info-instance to writer since it might change our descriptor places
 		 * */
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
 		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
@@ -407,9 +407,9 @@ shared_ptr<himan::info> ncl::FetchPrevious(const forecast_time& wantedTime, cons
 						wantedLevel,
 						wantedParam);
    	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
-		throw e;
+		throw;
 	}
 
 }

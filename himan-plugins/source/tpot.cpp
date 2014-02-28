@@ -202,7 +202,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			}
 		}
-		catch (HPExceptionType e)
+		catch (HPExceptionType& e)
 		{
 			switch (e)
 			{
@@ -404,7 +404,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		 *
 		 */
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
 		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
@@ -423,7 +423,7 @@ double tpot::Theta(double P, double T)
 
 double tpot::ThetaW(double P, double T, double TD)
 {
-	const double Pstep = 500; // Pa
+	
 	double value = kFloatMissing;
 
 	// Search LCL level
@@ -432,8 +432,6 @@ double tpot::ThetaW(double P, double T, double TD)
 	double Pint = LCL[0]; // Pa
 	double Tint = LCL[1]; // K
 
-	int i = 0;
-
 	if (Tint == kFloatMissing || Pint == kFloatMissing)
 	{
 		return kFloatMissing;
@@ -441,6 +439,9 @@ double tpot::ThetaW(double P, double T, double TD)
 	else
 	{
 
+		const double Pstep = 500; // Pa
+		int i = 0;
+		
 		/*
 		 * Units: Temperature in Kelvins, Pressure in Pascals
 		 */

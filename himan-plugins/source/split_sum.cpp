@@ -849,11 +849,11 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 						wantedLevel,
 						params);
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 

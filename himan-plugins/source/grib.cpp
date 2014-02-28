@@ -677,17 +677,15 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		 * Read data from grib *
 		 */
 
-		size_t len = 0;
-
 #if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
 
 		if (readPackedData && itsGrib->Message()->PackingType() == "grid_simple")
 		{
-			len = itsGrib->Message()->PackedValuesLength();
+			size_t len = itsGrib->Message()->PackedValuesLength();
 
 			shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-			unsigned char* data = 0, *bitmap = 0;
+			unsigned char* data = 0;
 			int* unpackedBitmap;
 
 			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&data), len * sizeof(unsigned char)));
@@ -714,7 +712,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 				CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&unpackedBitmap), bitmap_len * sizeof(int)));
 
-				bitmap = new unsigned char[bitmap_size];
+				unsigned char* bitmap = new unsigned char[bitmap_size];
 
 				itsGrib->Message()->Bytes("bitmap", bitmap);
 
@@ -731,7 +729,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 #endif
 		if (readContents)
 		{
-			len = itsGrib->Message()->ValuesLength();
+			size_t len = itsGrib->Message()->ValuesLength();
 
 			double* d = itsGrib->Message()->Values();
 

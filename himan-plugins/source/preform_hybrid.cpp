@@ -210,7 +210,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 								 RHParam);
 
 		}
-		catch (HPExceptionType e)
+		catch (HPExceptionType& e)
 		{
 			switch (e)
 			{

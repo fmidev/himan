@@ -152,8 +152,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		shared_ptr<info> GPInfo;
 		shared_ptr<info> zeroGPInfo;
 
-		vector<info> sources ;
-
 		try
 		{
 			const forecast_time fTime = myTargetInfo->Time();
@@ -209,7 +207,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			}
 			else
 			{
-				throw e;
+				throw;
 			}
 		}
 
@@ -390,7 +388,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		 * Clone info-instance to writer since it might change our descriptor places
 		 * */
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
 		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
@@ -410,9 +408,9 @@ shared_ptr<himan::info> hybrid_height::FetchPrevious(const forecast_time& wanted
 						wantedLevel,
 						wantedParam);
    	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
-		throw e;
+		throw;
 	}
 
 }

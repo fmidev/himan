@@ -148,7 +148,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 								 RHParam);
 
 		}
-		catch (HPExceptionType e)
+		catch (HPExceptionType& e)
 		{
 			switch (e)
 			{
@@ -534,7 +534,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		 * Clone info-instance to writer since it might change our descriptor places
 		 * */
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
 		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{

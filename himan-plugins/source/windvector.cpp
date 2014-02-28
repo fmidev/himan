@@ -255,7 +255,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 				
 		}
-		catch (HPExceptionType e)
+		catch (HPExceptionType& e)
 		{
 		
 			switch (e)

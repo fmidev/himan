@@ -137,7 +137,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 				NextRRInfo = FetchSourceRR(nextTimeStep,myTargetInfo->Level());
 
 			}
-			catch (HPExceptionType e)
+			catch (HPExceptionType& e)
 			{
 				switch (e)
 				{
@@ -197,7 +197,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 
 		}
-		catch (HPExceptionType e)
+		catch (HPExceptionType& e)
 		{
 			switch (e)
 			{
@@ -527,7 +527,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		 * Clone info-instance to writer since it might change our descriptor places
 		 * */
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
 
 		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
@@ -547,9 +547,9 @@ shared_ptr<himan::info> rain_type::FetchSourceRR(const forecast_time& wantedTime
 						wantedLevel,
 						param("RR-1-MM"));
    	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
-		throw e;
+		throw;
 	}
 
 }

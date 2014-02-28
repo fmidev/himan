@@ -193,7 +193,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		return false;
 	}
 
-	string process = row[0];
+	// string process = row[0];
 
 	//string centre = row[1];
 	//string model_name = row[2];
