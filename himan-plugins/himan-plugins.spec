@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.2.25
+Version: 14.2.28
 Release: 2.fmi
 License: FMI
 Group: Development/Tools
@@ -80,6 +80,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Feb 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.28-12fmi
+- Fix HIMAN-22
+* Fri Feb 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.28-1.fmi
+- fetcher: do level transform separately for each producer (of more than one present)
 * Tue Feb 25 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.25-2.fmi
 - Bugfix for tpot/hybrid (OPER-494)
 * Tue Feb 25 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.25-1.fmi
