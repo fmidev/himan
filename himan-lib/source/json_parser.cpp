@@ -252,8 +252,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	 * those specified in the upper level.
 	 */
 
-	std::vector<std::shared_ptr<info> > infoQueue;
-
 	boost::property_tree::ptree& pq = pt.get_child("processqueue");
 
 	BOOST_FOREACH(boost::property_tree::ptree::value_type &element, pq)

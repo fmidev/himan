@@ -139,8 +139,6 @@ himan::HPFileType util::FileType(const string& theFile)
 vector<string> util::Split(const string& s, const std::string& delims, bool fill)
 {
 
-    string item;
-
     vector<string> orig_elems;
 
     boost::split(orig_elems, s, boost::is_any_of(delims));
@@ -406,7 +404,13 @@ int util::LowConvection(double T0m, double T850)
 
 double util::Es(double T)
 {
+	assert(T == T); // check NaN
 	double Es;
+
+	if (T == kFloatMissing)
+	{
+		return kFloatMissing;
+	}
 
 	T -= himan::constants::kKelvin;
 
@@ -428,7 +432,6 @@ double util::Es(double T)
 
 double util::Gammas(double P, double T)
 {
-	// http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate ?
 	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
 
 	// specific humidity: http://glossary.ametsoc.org/wiki/Specific_humidity
@@ -456,9 +459,10 @@ double util::Gammaw(double P, double T)
 	 */
 
 	double r = MixingRatio(T, P);
+	const double kL = 2.256e6;
 	
-	double numerator = constants::kG * (1 + (constants::kL * r) / (constants::kRd * T));
-	double denominator = constants::kCp + ((constants::kL*constants::kL * r * constants::kEp) / (constants::kRd * T * T));
+	double numerator = constants::kG * (1 + (kL * r) / (constants::kRd * T));
+	double denominator = constants::kCp + ((kL*kL * r * constants::kEp) / (constants::kRd * T * T));
 
 	return numerator / denominator;
 }
@@ -606,7 +610,7 @@ double util::MixingRatio(double T, double P)
 	double E = Es(T) * 0.01; // hPa
 
 	P *= 0.01;
-	
+
 	return 621.97 * E / (P - E); // Return Pa
 }
 
