@@ -127,12 +127,12 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 	// Required source parameters
 
-	param TParam("T-K");
-	param RHParam("RH-PRCNT");
-	param ZParam("Z-M2S2");
-	param RRParam("RR-1-MM"); // one hour prec -- should we interpolate if forecast step is 3/6 hours ?
-	param PParam("P-PA");
-	param WParam("VV-MMS");
+	const param TParam("T-K");
+	const param RHParam("RH-PRCNT");
+	const param ZParam("Z-M2S2");
+	const param RRParam("RR-1-MM"); // one hour prec -- should we interpolate if forecast step is 3/6 hours ?
+	const params PParams({param("P-PA"), param("PGR-PA")});
+	const params WParams({param ("VV-MMS"), param("VV-MS")});
 	
 	itsConfiguration->FirstSourceProducer();
 	
@@ -243,17 +243,17 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 			W925Info = aFetcher->Fetch(itsConfiguration,
 						 myTargetInfo->Time(),
 						 P925,
-						 WParam);
+						 WParams);
 
 			W850Info = aFetcher->Fetch(itsConfiguration,
 					 myTargetInfo->Time(),
 					 P850,
-					 WParam);
+					 WParams);
 
 			PInfo = aFetcher->Fetch(itsConfiguration,
 					 myTargetInfo->Time(),
 					 surface0mLevel,
-					 PParam);
+					 PParams);
 
 			RRInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
