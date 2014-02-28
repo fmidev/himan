@@ -341,6 +341,15 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 			targetGrid->Reset();
 
+			double WScale = 1;
+
+			if (W850Info->Param().Name() == "VV-MS")
+			{
+				WScale = 1000;
+			}
+
+			assert(W850Info->Param().Name() == W925Info->Param().Name());
+
 			while (myTargetInfo->NextLocation() && targetGrid->Next())
 			{
 
@@ -374,6 +383,8 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 				if (RR == 0)
 				{
+					missingCount++;
+
 					myTargetInfo->Value(kFloatMissing);
 					continue;
 				}
@@ -423,6 +434,9 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				RH925 *= 100;
 
 				P *= 0.01;
+
+				W850 *= WScale;
+				W925 *= WScale;
 
 				// 850-1000hPa paksuus [m]
 				// source data is m^2/s^2 --> convert result to m by multiplying with 1/g
