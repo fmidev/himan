@@ -1,0 +1,20 @@
+{
+	"source_geom_name" : "ECEUR025",
+	"target_geom_name" : "MTEUR025",
+	"source_producer" : "131",
+	"target_producer" : "240",
+	"start_hour" : "6",
+	"stop_hour" : "6",
+	"step" : "1",
+	"step_unit" : "hour",
+	"file_write" : "multiple",
+	"origintime" : "2014-02-28 00:00:00",
+	"read_data_from_database" : "false",
+	"processqueue" : [
+	{
+		"leveltype" : "height",
+		"levels" : "2",
+		"plugins" : [ { "name" : "relative_humidity" } ]
+	} 
+	]
+}
