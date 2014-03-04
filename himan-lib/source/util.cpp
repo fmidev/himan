@@ -21,10 +21,10 @@ using namespace std;
 string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const info> info)
 {
 
-    ostringstream fileName;
-    ostringstream base;
+	ostringstream fileName;
+	ostringstream base;
 
-    base.str(".");
+	base.str(".");
 
 	// For neons get base directory
 
@@ -45,11 +45,11 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 		}
 
 		base <<	"/"
-             << info->Producer().Centre()
-             << "_"
-             << info->Producer().Process()
-             << "/"
-             << info->Time().OriginDateTime()->String("%Y%m%d%H%M");
+			 << info->Producer().Centre()
+			 << "_"
+			 << info->Producer().Process()
+			 << "/"
+			 << info->Time().OriginDateTime()->String("%Y%m%d%H%M");
 
 	}
 
@@ -59,22 +59,22 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 	{
 		fileName	<< base.str()
 					<< "/"
-                    << info->Param().Name()
-                    << "_"
-                    << HPLevelTypeToString.at(info->Level().Type())
-                    << "_"
-                    << info->Level().Value()
-                    << "_"
-                    << HPProjectionTypeToString.at(info->Grid()->Projection())
-                    << "_"
-                    << info->Ni()
-                    << "_"
-                    << info->Nj()
-                    << "_0_"
-                    << setw(3)
-                    << setfill('0')
-                    << info->Time().Step()
-                    ;
+					<< info->Param().Name()
+					<< "_"
+					<< HPLevelTypeToString.at(info->Level().Type())
+					<< "_"
+					<< info->Level().Value()
+					<< "_"
+					<< HPProjectionTypeToString.at(info->Grid()->Projection())
+					<< "_"
+					<< info->Ni()
+					<< "_"
+					<< info->Nj()
+					<< "_0_"
+					<< setw(3)
+					<< setfill('0')
+					<< info->Time().Step()
+					;
 
 	}
 	else
@@ -86,51 +86,51 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 					<< "TODO.file";
 	}
 
-    return fileName.str();
+	return fileName.str();
 
 }
 
 himan::HPFileType util::FileType(const string& theFile)
 {
 
-    using namespace std;
+	using namespace std;
 
-    ifstream f(theFile.c_str(), ios::in | ios::binary);
+	ifstream f(theFile.c_str(), ios::in | ios::binary);
 
-    long keywordLength = 4;
+	long keywordLength = 4;
 
 	char content[keywordLength];
 	
-    f.read(content, keywordLength);
+	f.read(content, keywordLength);
 
-    HPFileType ret = kUnknownFile;
+	HPFileType ret = kUnknownFile;
 
-    if (strncmp(content, "GRIB", 4) == 0)
-    {
-        ret = kGRIB;
-    }
-    else if (strncmp(content, "CDF", 3) == 0)
-    {
-        ret = kNetCDF;
-    }
-    else
-    {
-        // Not GRIB or NetCDF, keep on searching
+	if (strncmp(content, "GRIB", 4) == 0)
+	{
+		ret = kGRIB;
+	}
+	else if (strncmp(content, "CDF", 3) == 0)
+	{
+		ret = kNetCDF;
+	}
+	else
+	{
+		// Not GRIB or NetCDF, keep on searching
 
-        keywordLength = 5;
+		keywordLength = 5;
 
 		char content[keywordLength];
 
-        f.read(content, keywordLength);
+		f.read(content, keywordLength);
 
-        if (strncmp(content, "QINFO", 5) == 0)
-        {
-            ret = kQueryData;
-        }
+		if (strncmp(content, "QINFO", 5) == 0)
+		{
+			ret = kQueryData;
+		}
 
-    }
+	}
 
-    return ret;
+	return ret;
 }
 
 
@@ -139,48 +139,64 @@ himan::HPFileType util::FileType(const string& theFile)
 vector<string> util::Split(const string& s, const std::string& delims, bool fill)
 {
 
-    vector<string> orig_elems;
+	vector<string> orig_elems;
 
-    boost::split(orig_elems, s, boost::is_any_of(delims));
+	boost::split(orig_elems, s, boost::is_any_of(delims));
 
-    if (!fill || orig_elems.size() == 0)
-    {
-        return orig_elems;
-    }
+	if (!fill || orig_elems.size() == 0)
+	{
+		return orig_elems;
+	}
 
-    vector<string> filled_elems;
-    vector<string> splitted_elems;
+	vector<string> filled_elems;
+	vector<string> splitted_elems;
 
-    vector<string>::iterator it;
+	vector<string>::iterator it;
 
-    for (it = orig_elems.begin(); it != orig_elems.end(); )
-    {
+	for (it = orig_elems.begin(); it != orig_elems.end(); )
+	{
 
-        boost::split(splitted_elems, *it, boost::is_any_of("-"));
+		boost::split(splitted_elems, *it, boost::is_any_of("-"));
 
-        if (splitted_elems.size() == 2)
-        {
-            it = orig_elems.erase(it);
+		if (splitted_elems.size() == 2)
+		{
+			it = orig_elems.erase(it);
 
-            for (int i = boost::lexical_cast<int> (splitted_elems[0]); i <= boost::lexical_cast<int> (splitted_elems[1]); i++)
-            {
-                filled_elems.push_back(boost::lexical_cast<string> (i));
-            }
-        }
-        else
-        {
-            ++it;
-        }
-    }
+			for (int i = boost::lexical_cast<int> (splitted_elems[0]); i <= boost::lexical_cast<int> (splitted_elems[1]); i++)
+			{
+				filled_elems.push_back(boost::lexical_cast<string> (i));
+			}
+		}
+		else
+		{
+			++it;
+		}
+	}
 
-    vector<string> all_elems;
+	vector<string> all_elems;
 
-    all_elems.reserve(orig_elems.size() + filled_elems.size());
+	all_elems.reserve(orig_elems.size() + filled_elems.size());
 
-    all_elems.insert(all_elems.end(), orig_elems.begin(), orig_elems.end());
-    all_elems.insert(all_elems.end(), filled_elems.begin(), filled_elems.end());
+	all_elems.insert(all_elems.end(), orig_elems.begin(), orig_elems.end());
+	all_elems.insert(all_elems.end(), filled_elems.begin(), filled_elems.end());
 
-    return all_elems;
+	return all_elems;
+}
+
+string util::Join(const vector<string> &elements, const string& delim)
+{
+	ostringstream s;
+
+	for (size_t i = 0; i < elements.size(); i++)
+	{
+		if (i != 0)
+		{
+			s << delim;
+		}
+		s << elements[i];
+	}
+	
+	return s.str();
 }
 
 pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj, HPScanningMode scanningMode)
@@ -356,14 +372,14 @@ double util::ToPower(double value, double power)
 
   while(value < 0)
   {
-    divisor /= power;
-    value++;
+	divisor /= power;
+	value++;
   }
 
   while(value > 0)
   {
-    divisor *= power;
-    value--;
+	divisor *= power;
+	value--;
   }
 
   return divisor;
@@ -371,20 +387,20 @@ double util::ToPower(double value, double power)
 
 double util::RelativeTopography(int level1, int level2, double z1, double z2)
 {
-    
-	int coefficient = 1;
-    double topography;
-    double height1, height2;
-    
-    if (level1 > level2) 
-    {
-      coefficient = -1;
-    }
 
-    height1 = z1 * 0.10197; // convert to metres z/9.81
-    height2 = z2 * 0.10197;
-    
-    topography = coefficient * (height1 - height2); 
+	int coefficient = 1;
+	double topography;
+	double height1, height2;
+
+	if (level1 > level2)
+	{
+	  coefficient = -1;
+	}
+
+	height1 = z1 * 0.10197; // convert to metres z/9.81
+	height2 = z2 * 0.10197;
+
+	topography = coefficient * (height1 - height2);
 
 	return topography;
 }
@@ -614,3 +630,71 @@ double util::MixingRatio(double T, double P)
 	return 621.97 * E / (P - E); // Return Pa
 }
 
+double util::DryLift(double P, double T, double targetP)
+{
+	return T * pow((targetP / P), 0.286);
+}
+
+double util::MoistLift(double P, double T, double TD, double targetP)
+{
+	// Search LCL level
+	vector<double> LCL = util::LCL(P, T, TD);
+
+	double Pint = LCL[0]; // Pa
+	double Tint = LCL[1]; // K
+
+	// Start moist lifting from LCL height
+
+	double value = kFloatMissing;
+
+	if (Tint == kFloatMissing || Pint == kFloatMissing)
+	{
+		return kFloatMissing;
+	}
+	else
+	{
+		/*
+		 * Units: Temperature in Kelvins, Pressure in Pascals
+		 */
+
+		double T0 = Tint;
+
+		//double Z = kFloatMissing;
+
+		int i = 0;
+		const double Pstep = 100; // Pa
+
+		while (++i < 500) // usually we don't reach this value
+		{
+			double TA = Tint;
+/*
+			if (i <= 2)
+			{
+				Z = i * Pstep/2;
+			}
+			else
+			{
+				Z = 2 * Pstep;
+			}
+*/
+			// Gammaw() takes Pa
+			//Tint = T0 - util::Gammaw(Pint, Tint) * Z;
+			Tint = T0 - util::Gammaw(Pint, Tint) * Pstep;
+
+			if (i > 2)
+			{
+				T0 = TA;
+			}
+
+			Pint -= Pstep;
+//			cout << "Tint " << Tint << " Pint " << Pint << endl;
+			if (Pint <= targetP)
+			{
+				value = Tint;
+				break;
+			}
+		}
+	}
+
+	return value;
+}

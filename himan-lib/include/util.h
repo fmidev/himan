@@ -50,6 +50,15 @@ std::string MakeFileName(HPFileWriteOption fileWriteOption, std::shared_ptr <con
 std::vector<std::string> Split(const std::string& s, const std::string& delims, bool fill);
 
 /**
+ * @brief Join a string-vector with given delimiter
+ * @param elmements vector of strings
+ * @param delim delimiter
+ * @return Concatenated string
+ */
+
+std::string Join(const std::vector<std::string>& elements, const std::string& delim);
+
+/**
  * @brief Calculate area coordinates from first gridpoint, scanning mode, grid size and distance between two gridpoints.
  *
  * Works for (rotated) latlon projections only!
@@ -282,6 +291,33 @@ double WaterProbability(double T, double RH);
 double MixingRatio(double T, double P);
 //double SaturationMixingRatio(double T, double TW, double P, bool aspirated = false);
 
+/**
+ * @brief Lift a parcel of air moist-adiabatically to wanted pressure
+ *
+ * Function will calculate LCL from given arguments and starts
+ * lifting from that pressure and temperature.
+ *
+ * @param P Initial pressure in Pascals
+ * @param T Initial temperature in Kelvins
+ * @param TD Initial dewpoint temperature in Kelvins
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+double MoistLift(double P, double T, double TD, double targetP);
+
+/**
+ * @brief Lift a parcel of air dry adiabatically to wanted pressure
+ *
+ * Poissons equation is used
+ *
+ * @param P Initial pressure in Pascals
+ * @param T Initial temperature in Kelvins
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+double DryLift(double P, double T, double targetP);
 
 } // namespace util
 } // namespace himan
