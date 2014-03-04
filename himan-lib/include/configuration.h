@@ -202,7 +202,7 @@ public:
 	bool UseCache() const;
 	void UseCache(bool theUseCache);
 
-	std::string SourceGeomName() const;
+	std::vector<std::string> SourceGeomNames() const;
 
 	/**
 	 * @brief Store number of CUDA devices found
@@ -253,7 +253,7 @@ protected:
 	short itsThreadCount;
 
 	std::string itsTargetGeomName;
-	std::string itsSourceGeomName;
+	std::vector<std::string> itsSourceGeomNames;
 	
 	producer itsTargetProducer;
 

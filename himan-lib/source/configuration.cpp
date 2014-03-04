@@ -48,7 +48,7 @@ configuration::configuration(const configuration& other)
 	itsThreadCount = other.itsThreadCount;
 
 	itsTargetGeomName = other.itsTargetGeomName;
-	itsSourceGeomName = other.itsSourceGeomName;
+	itsSourceGeomNames = other.itsSourceGeomNames;
 	
 	itsTargetProducer = other.itsTargetProducer;
 
@@ -67,18 +67,22 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << itsTargetProducer;
 
-	file << "__itsOutputFileType__ " << itsOutputFileType << std::endl;
-	file << "__itsFileWriteOption__ " << itsFileWriteOption << std::endl;
+	file << "__itsOutputFileType__ " << HPFileTypeToString.at(itsOutputFileType) << std::endl;
+	file << "__itsFileWriteOption__ " << HPFileWriteOptionToString.at(itsFileWriteOption) << std::endl;
 	file << "__itsUseCuda__ " << itsUseCuda << std::endl;
 	file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
 	file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
-	file << "__itsLeadingDimension__ " << itsLeadingDimension << std::endl;
+	file << "__itsLeadingDimension__ " << HPDimensionTypeToString.at(itsLeadingDimension) << std::endl;
 
 	file << "__itsThreadCount__ " << itsThreadCount << std::endl;
 
 	file << "__itsTargetGeomName__ " << itsTargetGeomName << std::endl;
-	file << "__itsSourceGeomName__ " << itsSourceGeomName << std::endl;
-	
+
+	for (size_t i = 0; i < itsSourceGeomNames.size(); i++)
+	{
+		file << "__itsSourceGeomName__ " << itsSourceGeomNames[i] << std::endl;
+	}
+
 	file << "__itsStatisticsLabel__ " << itsStatisticsLabel << std::endl;
 
 	file << "__itsConfigurationFile__ " << itsConfigurationFile << std::endl;
@@ -115,7 +119,6 @@ void configuration::Init()
 	itsLeadingDimension = kTimeDimension;
 	itsThreadCount = -1;
 	itsTargetGeomName = "";
-	itsSourceGeomName = "";
 	itsConfigurationFile = "";
 	itsUseCudaForPacking = true;
 	itsUseCache = true;
@@ -274,9 +277,9 @@ void configuration::UseCache(bool theUseCache)
 	itsUseCache = theUseCache;
 }
 
-std::string configuration::SourceGeomName() const
+std::vector<std::string> configuration::SourceGeomNames() const
 {
-	return itsSourceGeomName;
+	return itsSourceGeomNames;
 }
 
 void configuration::CudaDeviceCount(short theCudaDeviceCount)

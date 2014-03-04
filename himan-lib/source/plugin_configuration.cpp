@@ -6,6 +6,7 @@
  */
 
 #include "plugin_configuration.h"
+#include "util.h"
 
 using namespace himan;
 using namespace std;
@@ -122,7 +123,8 @@ void plugin_configuration::WriteStatistics()
 	cout << "Origin time:\t\t" << itsInfo->OriginDateTime().String() << endl;
 
 	cout << "Target geom_name:\t" << itsTargetGeomName << endl;
-	cout << "Source geom_name:\t" << itsSourceGeomName << endl;
+	
+	cout << "Source geom_name:\t" << util::Join(itsSourceGeomNames, ",") << endl;
 	
 	// Hoping we have iterators set
 
