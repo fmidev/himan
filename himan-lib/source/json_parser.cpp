@@ -245,6 +245,39 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
 
+	// Check global file_type option
+
+	try
+	{
+		string theFileType = boost::to_upper_copy(pt.get<string>("file_type"));
+
+		if (theFileType == "GRIB")
+		{
+			conf->itsOutputFileType = kGRIB;
+		}
+		else if (theFileType == "GRIB2")
+		{
+			conf->itsOutputFileType = kGRIB2;
+		}
+		else if (theFileType == "FQD" || theFileType == "QUERYDATA")
+		{
+			conf->itsOutputFileType = kQueryData;
+		}
+		else
+		{
+			throw runtime_error("Invalid option for 'file_type': " + theFileType);
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
+
+
 	/* 
 	 * Check processqueue.
 	 *
@@ -296,6 +329,40 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			throw runtime_error(string("Error parsing meta information: ") + e.what());
 		}
 
+		// Check local file_type option
+
+		HPFileType delayedFileType = conf->itsOutputFileType;
+				
+		try
+		{
+			string theFileType = boost::to_upper_copy(element.second.get<string>("file_type"));
+
+			if (theFileType == "GRIB")
+			{
+				delayedFileType = kGRIB;
+			}
+			else if (theFileType == "GRIB2")
+			{
+				delayedFileType = kGRIB2;
+			}
+			else if (theFileType == "FQD" || theFileType == "QUERYDATA")
+			{
+				delayedFileType = kQueryData;
+			}
+			else
+			{
+				throw runtime_error("Invalid option for 'file_type': " + theFileType);
+			}
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing meta information: ") + e.what());
+		}
+
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
 
 		if (plugins.empty())
@@ -308,6 +375,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			shared_ptr<plugin_configuration> pc = make_shared<plugin_configuration> (*conf);
 
 			pc->UseCache(delayedUseCache);
+			pc->itsOutputFileType = delayedFileType;
 			
 			if (plugin.second.empty())
 			{
@@ -675,9 +743,7 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 	try
 	{
-		string geom = pt.get<string>("source_geom_name");
-
-		conf->itsSourceGeomName = geom;
+		conf->itsSourceGeomNames = util::Split(pt.get<string>("source_geom_name"), ",", false);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
