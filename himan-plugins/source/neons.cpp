@@ -66,12 +66,27 @@ vector<string> neons::Files(const search_options& options)
 	long no_vers = options.prod.TableVersion();
 
 	string level_name = HPLevelTypeToString.at(options.level.Type());
-	
-	vector<vector<string> > gridgeoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime, options.configuration->SourceGeomName());
+
+	vector<vector<string> > gridgeoms;
+	vector<string> sourceGeoms = options.configuration->SourceGeomNames();
+
+	if (sourceGeoms.empty())
+	{
+		// Get all geometries
+		gridgeoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime);
+	}
+	else
+	{
+		for (size_t i = 0; i < sourceGeoms.size(); i++)
+		{
+			vector<vector<string>> geoms = itsNeonsDB->GetGridGeoms(ref_prod, analtime, sourceGeoms[i]);
+			gridgeoms.insert(gridgeoms.end(), geoms.begin(), geoms.end());
+		}
+	}
 
 	if (gridgeoms.empty())
 	{
-		itsLogger->Warning("No geometries found for producer " + ref_prod + ", analysistime " + analtime + ", source geom name '" + options.configuration->SourceGeomName() +"'");
+		itsLogger->Warning("No geometries found for producer " + ref_prod + ", analysistime " + analtime + ", source geom name '" + util::Join(sourceGeoms, ",") +"'");
 		return files;
 	}
 
