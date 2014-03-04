@@ -130,7 +130,10 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 	const param TParam("T-K");
 	const param RHParam("RH-PRCNT");
 	const param ZParam("Z-M2S2");
-	const param RRParam("RR-1-MM"); // one hour prec -- should we interpolate if forecast step is 3/6 hours ?
+
+	// Default to one hour precipitation, will change this later on if necessary
+	param RRParam("RR-1-MM");
+	
 	const params PParams({param("P-PA"), param("PGR-PA")});
 	const params WParams({param ("VV-MMS"), param("VV-MS")});
 	
@@ -158,6 +161,15 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+
+		if (myTargetInfo->Time().Step() == 3)
+		{
+			RRParam.Name("RR-3-MM");
+		}
+		else if (myTargetInfo->Time().Step() == 6)
+		{
+			RRParam.Name("RR-6-MM");
+		}
 
 		// Source infos
 
@@ -327,8 +339,6 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 							(*myTargetInfo->Grid() == *W925Info->Grid())
 							);
 
-		assert(equalGrids);
-		
 		string deviceType;
 
 		{
