@@ -205,6 +205,32 @@ protected:
      */
 
 	void Unpack(std::initializer_list<std::shared_ptr<info>> infos);
+
+	/**
+	 * @brief Copy data from info_simple to actual info, clear memory and 
+	 * put the result to cache (optionally).
+	 *
+	 * Function has two slightly different calling types:
+	 * 1) A parameter has been calculated on GPU and the results have been stored
+	 *    to info_simple. This function will copy data to info and release the
+	 *    page-locked memory of info_simple. In this calling type the resulting
+	 *    data is not written to cache at this point, because it will be written
+	 *    to cache when it is written to disk.
+	 *
+	 * 2) A source parameter for a calculation has been read in packed format from
+	 *    grib and has been unpacked at GPU. This function will copy the unpacked
+	 *    source data from info_simple to info, release page-locked memory of
+	 *    info_simple and clear the packed data array from info. Then it will also
+	 *    write the source data to cache since it might be needed by some other
+	 *    plugin.
+	 * 
+     * @param anInfo Target info
+     * @param aSimpleInfo Source info_simple
+	 * @param writeToCache If true info will be written to cache
+     */
+	
+	void CopyDataFromSimpleInfo(std::shared_ptr<info> anInfo, info_simple* aSimpleInfo, bool writeToCache);
+
 #endif
 	
 	std::shared_ptr<info> itsInfo;

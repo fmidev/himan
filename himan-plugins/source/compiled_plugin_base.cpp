@@ -413,13 +413,15 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 #ifdef HAVE_CUDA
 void compiled_plugin_base::Unpack(initializer_list<shared_ptr<info>> infos)
 {
+	auto c = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+
 	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{
 		shared_ptr<info> tempInfo = *it;
 
 		if (tempInfo->Grid()->PackedData()->packedLength == 0)
 		{
-			// This particular info does not have packed data
+			// Safeguard: This particular info does not have packed data
 			continue;
 		}
 
@@ -437,6 +439,33 @@ void compiled_plugin_base::Unpack(initializer_list<shared_ptr<info>> infos)
 		tempInfo->Data()->Set(arr, N);
 
 		CUDA_CHECK(cudaFreeHost(arr));
+
+		tempInfo->Grid()->PackedData()->Clear();
+
+		if (itsConfiguration->UseCache())
+		{
+			c->Insert(tempInfo);
+		}
+	}
+}
+
+void compiled_plugin_base::CopyDataFromSimpleInfo(shared_ptr<info> anInfo, info_simple* aSimpleInfo, bool writeToCache)
+{
+	assert(aSimpleInfo);
+	
+	anInfo->Data()->Set(aSimpleInfo->values, aSimpleInfo->size_x * aSimpleInfo->size_y);
+
+	if (anInfo->Grid()->IsPackedData())
+	{
+		anInfo->Grid()->PackedData()->Clear();
+	}
+	
+	aSimpleInfo->free_values();
+
+	if (writeToCache && itsConfiguration->UseCache())
+	{
+		auto c = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+		c->Insert(anInfo);
 	}
 }
 #endif
