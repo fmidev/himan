@@ -345,8 +345,7 @@ void vvms::CudaFinish(unique_ptr<vvms_cuda::options> opts, shared_ptr<info> myTa
 {
 	// Copy data back to infos
 
-	myTargetInfo->Data()->Set(opts->vv_ms->values, opts->N);
-	opts->vv_ms->free_values();
+	CopyDataFromSimpleInfo(myTargetInfo, opts->vv_ms, false);
 
 	assert(TInfo->Grid()->ScanningMode() == VVInfo->Grid()->ScanningMode());
 
@@ -358,23 +357,17 @@ void vvms::CudaFinish(unique_ptr<vvms_cuda::options> opts, shared_ptr<info> myTa
 
 	if (TInfo->Grid()->IsPackedData())
 	{
-		TInfo->Data()->Set(opts->t->values, opts->N);
-		TInfo->Grid()->PackedData()->Clear();
-		opts->t->free_values();
+		CopyDataFromSimpleInfo(TInfo, opts->t, true);
 	}
 
 	if (VVInfo->Grid()->IsPackedData())
 	{
-		VVInfo->Data()->Set(opts->vv->values, opts->N);
-		VVInfo->Grid()->PackedData()->Clear();
-		opts->vv->free_values();
+		CopyDataFromSimpleInfo(VVInfo, opts->vv, true);
 	}
 
 	if (PInfo && PInfo->Grid()->IsPackedData())
 	{
-		PInfo->Data()->Set(opts->p->values, opts->N);
-		PInfo->Grid()->PackedData()->Clear();
-		opts->p->free_values();
+		CopyDataFromSimpleInfo(PInfo, opts->p, true);
 	}
 
 	// opts is destroyed after leaving this function

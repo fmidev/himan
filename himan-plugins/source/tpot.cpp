@@ -594,50 +594,39 @@ void tpot::CudaFinish(unique_ptr<tpot_cuda::options> opts, shared_ptr<info> myTa
 	if (opts->theta)
 	{
 		myTargetInfo->Param(param("TP-K"));
-		myTargetInfo->Data()->Set(opts->tp->values, opts->N);
-		opts->tp->free_values();
+		CopyDataFromSimpleInfo(myTargetInfo, opts->tp, false);
 
 		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
-
 	}
 	
 	if (opts->thetaw)
 	{
 		myTargetInfo->Param(param("TPW-K"));
-		myTargetInfo->Data()->Set(opts->tpw->values, opts->N);
-		opts->tpw->free_values();
+		CopyDataFromSimpleInfo(myTargetInfo, opts->tpw, false);
 
-		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
-	}
+		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());	}
 
 	if (opts->thetae)
 	{
 		myTargetInfo->Param(param("TPE-K"));
-		myTargetInfo->Data()->Set(opts->tpe->values, opts->N);
-		opts->tpe->free_values();
+		CopyDataFromSimpleInfo(myTargetInfo, opts->tpe, false);
 
 		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 	}
 
 	if (TInfo->Grid()->IsPackedData())
 	{
-		TInfo->Data()->Set(opts->t->values, opts->N);
-		TInfo->Grid()->PackedData()->Clear();
-		opts->t->free_values();
+		CopyDataFromSimpleInfo(TInfo, opts->t, true);
 	}
 
 	if (PInfo && PInfo->Grid()->IsPackedData())
 	{
-		PInfo->Data()->Set(opts->p->values, opts->N);
-		PInfo->Grid()->PackedData()->Clear();
-		opts->p->free_values();
+		CopyDataFromSimpleInfo(PInfo, opts->p, true);
 	}
 
 	if (TDInfo && TDInfo->Grid()->IsPackedData())
 	{
-		TDInfo->Data()->Set(opts->td->values, opts->N);
-		TDInfo->Grid()->PackedData()->Clear();
-		opts->td->free_values();
+		CopyDataFromSimpleInfo(TDInfo, opts->td, true);
 	}
 	
 	// opts is destroyed after leaving this function
