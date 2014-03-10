@@ -8,6 +8,8 @@
 #include "simple_packed.h"
 #include "cuda_helper.h"
 
+#ifdef HAVE_CUDA
+
 void himan::simple_packed::Unpack(double* arr, size_t N)
 {
 	if (!packedLength)
@@ -23,3 +25,5 @@ void himan::simple_packed::Unpack(double* arr, size_t N)
 	CUDA_CHECK(cudaFree(d_arr));
 
 }
+
+#endif
