@@ -67,6 +67,12 @@ void cache::Insert(shared_ptr<himan::info> anInfo, bool activeOnly)
 
 void cache::SplitToPool(const shared_ptr<info> anInfo)
 {
+
+	if (anInfo->Grid()->IsPackedData())
+	{
+		itsLogger->Debug("Ignoring cache push for packed data");
+		return;
+	}
 	vector<param> params;
 	vector<level> levels;
 	vector<forecast_time> times;
@@ -75,14 +81,12 @@ void cache::SplitToPool(const shared_ptr<info> anInfo)
 	levels.push_back(anInfo->Level());
 	times.push_back(anInfo->Time());
 
-	shared_ptr<grid> aGrid = anInfo->Grid();
-
 	auto newInfo = make_shared<info> (*anInfo);
 
 	newInfo->Params(params);
 	newInfo->Levels(levels);
 	newInfo->Times(times);
-	newInfo->Create(aGrid);
+	newInfo->Create(anInfo->Grid());
 	newInfo->First();
 
 	string uniqueName = UniqueName(newInfo);
