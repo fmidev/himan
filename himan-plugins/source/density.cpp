@@ -1,13 +1,13 @@
 /**
- * @file example_plugin.cpp
+ * @file density.cpp
  *
- * Template for future plugins.
+ * Computes desity for dry air from pressure and temperature using the ideal gas law.
  *
- * @date Apr 10, 2013
- * @author peramaki
+ * @date Mar 11, 2014
+ * @author Tack
  */
 
-#include "example_header.h"
+#include "density.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
@@ -22,15 +22,15 @@
 using namespace std;
 using namespace himan::plugin;
 
-const string itsName("example_plugin");
+const string itsName("density");
 
-example_plugin::example_plugin()
+density::density()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
 
 }
 
-void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
+void density::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
@@ -47,16 +47,15 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	//param theRequestedParam(PARM_ NAME, UNIV_ID);
+	param theRequestedParam("RHO-KGM3", 9999);
 
 	// GRIB 2
 
-	/*
-	 * theRequestedParam.GribDiscipline(X);
-	 * theRequestedParam.GribCategory(Y);
-	 * theRequestedParam.GribParameter(Z);
-	 */
-
+	
+	theRequestedParam.GribDiscipline(0);
+	theRequestedParam.GribCategory(3);
+	theRequestedParam.GribParameter(10);
+	
 	// GRIB 1
 
 	/*
@@ -77,7 +76,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
 	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
@@ -89,7 +88,8 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	 *
 	 */
 
-	param exampleParam("quantity-unit_name");
+	param PParam("P-PA");
+	param TParam("T-K");
 	// ----	
 
 
@@ -104,22 +104,21 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
 
-		shared_ptr<info> exampleInfo;
+		shared_ptr<info> PInfo;
+		shared_ptr<info> TInfo;
 		try
 		{
-			/*
-			 *	Parameter infos are made here
-			 *
-			 */
-
-			// Source info for exampleParam
-			exampleInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 exampleParam);
+			// Source info for PParam and TParam
+			PInfo = theFetcher->Fetch(itsConfiguration,
+							myTargetInfo->Time(),
+							myTargetInfo->Level(),
+							PParam);
+			TInfo = theFetcher->Fetch(itsConfiguration,
+							myTargetInfo->Time(),
+							myTargetInfo->Level(),
+							TParam);
 			
 			// ----
-
 		}
 		catch (HPExceptionType e)
 		{
@@ -160,45 +159,14 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		 */
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> exampleGrid(exampleInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = (*myTargetInfo->Grid() == *exampleInfo->Grid() );
+		bool equalGrids = (*myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid());
 
 
 		string deviceType;
 
-
-		if (conf->UseCuda() && equalGrids && threadIndex <= conf->CudaDeviceCount())
-		{
-	
-			deviceType = "GPU";
-
-			size_t N = exampleGrid->Size();
-
-			float* exampleOut = new float[N]; // array that cuda devices will store data
-			double* infoData = new double[N]; // array that's stored to info instance
-
-			example_cuda::DoCuda(exampleGrid->DataPool()->Data(), exampleOut, N, threadIndex-1);
-
-			for (size_t i = 0; i < N; i++)
-			{
-				infoData[i] = static_cast<float> (exampleOut[i]);
-
-				if (infoData[i] == kFloatMissing)
-				{
-					missingCount++;
-				}
-
-				count++;
-			}
-
-			myTargetInfo->Data()->Set(infoData, N);
-
-			delete [] infoData;
-			delete [] exampleOut;
-
-		}
-		else
 		{
 
 			deviceType = "CPU";
@@ -218,25 +186,26 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				 * interpolation happens here
 				 *
 				 */
-				double example = kFloatMissing;
+				double P = kFloatMissing;
+				double T = kFloatMissing;
 
-				InterpolateToPoint(targetGrid, exampleGrid, equalGrids, example);
+				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 
-				if (example == kFloatMissing )
+				if (P == kFloatMissing || T == kFloatMissing )
 				{
 					missingCount++;
 
 					myTargetInfo->Value(kFloatMissing);
 					continue;
 				}
-
-				/*
-				 * Calculations go here
-				 *
-				 */
 				
+				// actual calculation of the density using the ideal gas law
+				double rho;
+				
+				rho = P / (constants::kRd * T);
 
-				if (!myTargetInfo->Value(example))
+				if (!myTargetInfo->Value(rho))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
 				}
