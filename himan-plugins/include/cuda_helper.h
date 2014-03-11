@@ -5,6 +5,12 @@
 
 #ifdef HAVE_CUDA
 
+namespace himan
+{
+#ifdef __CUDACC__
+const double kFloatMissing = 32700;
+#endif
+
 void CheckCudaError(cudaError_t errarg, const char* file, const int line);
 void CheckCudaErrorString(const char* errstr, const char* file,	const int line);
 
@@ -40,18 +46,14 @@ inline void CheckCudaErrorString(const char* errstr, const char* file,	const int
 		exit(1);
 	}
 }
-
-#ifdef __CUDACC__
-
+} // namespace himan
+#if 0
 #include "packed_data.h"
 
 namespace himan
 {
 
 const float kFloatMissing = 32700.f;
-
-#define BitMask1(i)	(1u << i)
-#define BitTest(n,i)	!!((n) & BitMask1(i))
 
 inline __host__ void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* unpacked, size_t len)
 {
@@ -71,80 +73,7 @@ inline __host__ void UnpackBitmap(const unsigned char* __restrict__ bitmap, int*
   }
 }
 
-inline __device__ void SetBitOn(unsigned char* p, long bitp)
-{
-  p += bitp/8;
-  *p |= (1u << (7-((bitp)%8)));
-}
-
-inline __device__ void SetBitOff( unsigned char* p, long bitp)
-{
-  p += bitp/8;
-  *p &= ~(1u << (7-((bitp)%8)));
-}
-
-
-// ----------- NOTE -----------
-// PACKING FUNCTION DO NOT WORK YET
-
-inline __device__ void SimplePackUnevenBytes(const double* d_u, unsigned char* d_p,
-									size_t values_len, int bpv, double bsf, double dsf, double rv, int idx)
-{
-
-	double x=(((d_u[idx]*dsf)-rv)*bsf)+0.5;
-	long bitp=bpv*idx;
-
-	long  i = 0;
-
-	for (i=bpv-1; i >= 0; i--)
-	{
-		if(BitTest(static_cast<unsigned long> (x),i))
-		{
-			SetBitOn(d_p, bitp);
-		}
-		else
-		{
-			SetBitOff(d_p, bitp);
-		}
-	}
-}
-
-inline __device__ void SimplePackFullBytes(const double* d_u, unsigned char* d_p,
-									size_t values_len, int bpv, double bsf, double dsf, double rv, int idx)
-{
-
-	int blen=0;
-	unsigned char* encoded = d_p + idx * static_cast<int> (bpv/8);
-
-	blen = bpv;
-	double x = ((((d_u[idx]*dsf)-rv)*bsf)+0.5);
-	unsigned long unsigned_val = (unsigned long)x;
-	while(blen >= 8)
-	{
-		blen -= 8;
-		*encoded = (unsigned_val >> blen);
-		encoded++;
-		//*off += idx*8;
-
-	}
-}
-
-inline __device__ void SimplePack(const double* d_u, unsigned char* d_p,
-									size_t values_len, int bpv, double bsf, double dsf, double rv, int idx)
-{
-
-	if (bpv%8)
-	{
-		SimplePackUnevenBytes(d_u, d_p, values_len, bpv, bsf, dsf, rv, idx);
-	}
-	else
-	{
-		SimplePackFullBytes(d_u, d_p, values_len, bpv, bsf, dsf, rv, idx);
-	}
-}
-
 } // namespace himan
-
-#endif // __CUDACC__
+#endif
 #endif // HAVE_CUDA
 #endif // CUDA_HELPER_H
