@@ -622,21 +622,18 @@ void windvector::CudaFinish(unique_ptr<windvector_cuda::options> opts, shared_pt
 	// Copy data back to infos
 
 	myTargetInfo->ParamIndex(0);
-	myTargetInfo->Data()->Set(opts->speed->values, opts->N);
-	opts->speed->free_values();
-
+	CopyDataFromSimpleInfo(myTargetInfo, opts->speed, false);
+	
 	if (itsCalculationTarget != kGust)
 	{
 		myTargetInfo->ParamIndex(1);
-		myTargetInfo->Data()->Set(opts->dir->values, opts->N);
-		opts->dir->free_values();
+		CopyDataFromSimpleInfo(myTargetInfo, opts->dir, false);
 	}
 
 	if (itsVectorCalculation)
 	{
 		myTargetInfo->ParamIndex(2);
-		myTargetInfo->Data()->Set(opts->vector->values, opts->N);
-		opts->vector->free_values();
+		CopyDataFromSimpleInfo(myTargetInfo, opts->vector, false);
 	}
 
 	assert(UInfo->Grid()->ScanningMode() == VInfo->Grid()->ScanningMode());
@@ -652,16 +649,12 @@ void windvector::CudaFinish(unique_ptr<windvector_cuda::options> opts, shared_pt
 
 	if (UInfo->Grid()->IsPackedData())
 	{
-		UInfo->Data()->Set(opts->u->values, opts->N);
-		UInfo->Grid()->PackedData()->Clear();
-		opts->u->free_values();
+		CopyDataFromSimpleInfo(UInfo, opts->u, true);
 	}
 
 	if (VInfo->Grid()->IsPackedData())
 	{
-		VInfo->Data()->Set(opts->v->values, opts->N);
-		VInfo->Grid()->PackedData()->Clear();
-		opts->v->free_values();
+		CopyDataFromSimpleInfo(VInfo, opts->v, true);
 	}
 
 	// opts is destroyed after leaving this function

@@ -47,7 +47,7 @@ public:
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 #ifdef HAVE_CUDA
-	std::unique_ptr<tk2tc_cuda::options> CudaPrepare(std::shared_ptr<info> sourceInfo);
+	std::unique_ptr<tk2tc_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
 	void CudaFinish(std::unique_ptr<tk2tc_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
 #endif
 

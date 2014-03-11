@@ -5,9 +5,8 @@
 // CUDA runtime
 #include <cuda_runtime.h>
 
-//#include "cuda_helper.h"
+#include "cuda_helper.h"
 #include "tk2tc_cuda.h"
-const float kFloatMissing = 32700.f;
 
 __global__ void himan::plugin::tk2tc_cuda::Calculate(const double* __restrict__ d_source,
 														double* __restrict__ d_dest,
@@ -55,15 +54,15 @@ void himan::plugin::tk2tc_cuda::Process(options& opts)
 
 	// Copy data to device
 
-	if (opts.p)
+	if (opts.source->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		d_source = opts.p->Unpack(&stream);
-		CUDA_CHECK(cudaMemcpyAsync(opts.source, d_source, memsize, cudaMemcpyDeviceToHost, stream));
+		d_source = opts.source->packed_values->Unpack(&stream);
+		CUDA_CHECK(cudaMemcpyAsync(opts.source->values, d_source, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMemcpyAsync(d_source, opts.source, memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_source, opts.source->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 
 	int src = 0;
@@ -75,6 +74,8 @@ void himan::plugin::tk2tc_cuda::Process(options& opts)
 	const int blockSize = 512;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
 	Calculate <<< gridSize, blockSize, 0, stream >>> (d_source, d_dest, opts, d_missing);
 
 	// block until the stream has completed
@@ -85,7 +86,7 @@ void himan::plugin::tk2tc_cuda::Process(options& opts)
 
 	// Retrieve result from device
 	CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(opts.dest, d_dest, memsize, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(opts.dest->values, d_dest, memsize, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 

@@ -12,7 +12,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "simple_packed.h"
+#include "info_simple.h"
 
 namespace himan
 {
@@ -64,11 +64,10 @@ struct options
 	double scale;
 	double base;
 
-	double *source;
-	double *dest;
-	simple_packed* p;
+	info_simple* source;
+	info_simple* dest;
 
-	options() : N(0), missing(0), scale(1), base(0), source(0), dest(0), p(0) {}
+	options() : N(0), missing(0), scale(1), base(0), source(0), dest(0) {}
 };
 
 void Process(options& opts);

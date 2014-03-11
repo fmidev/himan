@@ -297,23 +297,18 @@ void dewpoint::CudaFinish(unique_ptr<dewpoint_cuda::options> opts, shared_ptr<in
 {
 	// Copy data back to infos
 
-	myTargetInfo->Data()->Set(opts->td->values, opts->N);
-	opts->td->free_values();
+	CopyDataFromSimpleInfo(myTargetInfo, opts->td, false);
 
 	assert(TInfo->Grid()->ScanningMode() == RHInfo->Grid()->ScanningMode());
 
 	if (TInfo->Grid()->IsPackedData())
 	{
-		TInfo->Data()->Set(opts->t->values, opts->N);
-		TInfo->Grid()->PackedData()->Clear();
-		opts->t->free_values();
+		CopyDataFromSimpleInfo(TInfo, opts->t, true);
 	}
 
 	if (RHInfo->Grid()->IsPackedData())
 	{
-		RHInfo->Data()->Set(opts->rh->values, opts->N);
-		RHInfo->Grid()->PackedData()->Clear();
-		opts->rh->free_values();
+		CopyDataFromSimpleInfo(RHInfo, opts->rh, false);
 	}
 
 	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());

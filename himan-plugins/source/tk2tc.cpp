@@ -160,7 +160,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	
 			deviceType = "GPU";
 
-			auto opts = CudaPrepare(sourceInfo);
+			auto opts = CudaPrepare(myTargetInfo, sourceInfo);
 
 			tk2tc_cuda::Process(*opts);
 
@@ -242,7 +242,7 @@ void tk2tc::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 #ifdef HAVE_CUDA
 
-unique_ptr<tk2tc_cuda::options> tk2tc::CudaPrepare(shared_ptr<info> sourceInfo)
+unique_ptr<tk2tc_cuda::options> tk2tc::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> sourceInfo)
 {
 	unique_ptr<tk2tc_cuda::options> opts(new tk2tc_cuda::options);
 
@@ -253,20 +253,8 @@ unique_ptr<tk2tc_cuda::options> tk2tc::CudaPrepare(shared_ptr<info> sourceInfo)
 
 	CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&opts->dest), opts->N * sizeof(double)));
 
-	if (sourceInfo->Grid()->IsPackedData())
-	{
-		assert(sourceInfo->Grid()->PackedData()->ClassName() == "simple_packed");
-
-		shared_ptr<simple_packed> t = dynamic_pointer_cast<simple_packed> (sourceInfo->Grid()->PackedData());
-
-		CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&opts->source), opts->N * sizeof(double)));
-
-		opts->p = t.get();
-	}
-	else
-	{
-		opts->source = const_cast<double*> (sourceInfo->Grid()->Data()->ValuesAsPOD());
-	}
+	opts->source = sourceInfo->ToSimple();
+	opts->dest = myTargetInfo->ToSimple();
 
 	return opts;
 }
@@ -275,14 +263,11 @@ void tk2tc::CudaFinish(unique_ptr<tk2tc_cuda::options> opts, shared_ptr<info> my
 {
 	// Copy data back to infos
 
-	myTargetInfo->Data()->Set(opts->dest, opts->N);
-	CUDA_CHECK(cudaFreeHost(opts->dest));
+	CopyDataFromSimpleInfo(myTargetInfo, opts->dest, false);
 
 	if (sourceInfo->Grid()->IsPackedData())
 	{
-		sourceInfo->Data()->Set(opts->source, opts->N);
-		sourceInfo->Grid()->PackedData()->Clear();
-		CUDA_CHECK(cudaFreeHost(opts->source));
+		CopyDataFromSimpleInfo(sourceInfo, opts->source, true);
 	}
 
 	SwapTo(myTargetInfo, sourceInfo->Grid()->ScanningMode());
