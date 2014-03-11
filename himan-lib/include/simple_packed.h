@@ -62,9 +62,9 @@ struct simple_packed : packed_data
 	 *
 	 * Note! Argument arr should point to HOST MEMORY.
 	 *
-     * @param arr Pointer to already allocated memory
-     * @param N Size of the chunk of memory
-     */
+	 * @param arr Pointer to already allocated memory
+	 * @param N Size of the chunk of memory
+	 */
 
 	void Unpack(double* arr, size_t N);
 
@@ -96,6 +96,7 @@ struct simple_packed : packed_data
 
 	CUDA_DEVICE
 	void UnpackFullBytes(double* __restrict__ d_u, int idx);
+
 #endif
 	
 	simple_packed_coefficients coefficients;
@@ -115,6 +116,21 @@ void UnpackFullBytes(unsigned char* __restrict__ d_p, double* __restrict__ d_u, 
 
 __device__
 void GetBitValue(unsigned char* p, long bitp, int *val);
+
+__global__
+void Pack(unsigned char* d_p, double* d_u, int* d_b, simple_packed_coefficients coeff, bool hasBitmap, size_t N);
+
+__device__
+void PackFullBytes(unsigned char* __restrict__ d_p, const double* __restrict__ d_u, size_t values_len, simple_packed_coefficients coeff, int idx);
+
+__device__
+void PackUnevenBytes(unsigned char* __restrict__ d_p, const double* __restrict__ d_u, size_t values_len, simple_packed_coefficients coeff, int idx);
+
+__device__
+void SetBitOn(unsigned char* p, long bitp);
+
+__device__
+void SetBitOff(unsigned char* p, long bitp);
 
 };
 

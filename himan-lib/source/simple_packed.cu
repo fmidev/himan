@@ -9,6 +9,11 @@
 
 #include "cuda_helper.h"
 
+#define BitTest(n,i)	!!((n) & BitMask1(i))
+#define BitMask1(i)	(1u << i)
+
+const double kFloatMissing = 32700;
+
 using namespace himan;
 
 __host__
@@ -85,6 +90,23 @@ void simple_packed_util::Unpack(unsigned char* d_p, double* d_u, int* d_b, simpl
 			UnpackFullBytes(d_p, d_u, d_b, coeff, hasBitmap, idx);
 		}
 	}
+}
+
+__device__
+double GetGribPower(long s,long n)
+{
+	double divisor = 1.0;
+	while(s < 0)
+	{
+		divisor /= n;
+		s++;
+	}
+	while(s > 0)
+	{
+		divisor *= n;
+		s--;
+	}
+	return divisor;
 }
 
 __device__
@@ -194,3 +216,87 @@ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict__ d_p, doub
 	}
 
 }
+
+__device__
+void simple_packed_util::PackUnevenBytes(unsigned char* __restrict__ d_p, const double* __restrict__ d_u,
+									size_t values_len, simple_packed_coefficients coeff, int idx)
+{
+
+	double decimal = GetGribPower(-coeff.decimalScaleFactor, 10);
+	double divisor = GetGribPower(-coeff.binaryScaleFactor, 2);
+
+	double x=(((d_u[idx]*decimal)-coeff.referenceValue)*divisor)+0.5;
+
+	// long bitp = coeff.bitsPerValue * idx;
+
+	long  i = 0;
+
+	for (i=coeff.bitsPerValue-1; i >= 0; i--)
+	{
+		if(BitTest(static_cast<unsigned long> (x),i))
+		{
+			SetBitOn(d_p, i);
+		}
+		else
+		{
+			SetBitOff(d_p, i);
+		}
+	}
+}
+
+__device__
+void simple_packed_util::PackFullBytes(unsigned char* __restrict__ d_p, const double* __restrict__ d_u,
+									size_t values_len, simple_packed_coefficients coeff, int idx)
+{
+
+	double decimal = GetGribPower(-coeff.decimalScaleFactor, 10);
+	double divisor = GetGribPower(-coeff.binaryScaleFactor, 2);
+	
+	// unsigned char* encoded = d_p + idx * static_cast<int> (coefficients.bpv/8);
+
+	double x = ((((d_u[idx]*decimal)-coeff.referenceValue)*divisor)+0.5);
+	unsigned long unsigned_val = (unsigned long)x;
+
+	unsigned char* encoded = &d_p[idx];
+
+	while(coeff.bitsPerValue >= 8)
+	{
+		coeff.bitsPerValue -= 8;
+		*encoded = (unsigned_val >> coeff.bitsPerValue);
+		encoded++;
+	}
+}
+
+
+__global__
+void simple_packed_util::Pack(unsigned char* d_p, double* d_u, int* d_b, simple_packed_coefficients coeff, bool hasBitmap, size_t N)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		if (coeff.bitsPerValue % 8) // modulo is expensive but "Compiler will convert literal power-of-2 divides to bitwise shifts"
+		{
+			PackUnevenBytes(d_p, d_u, N, coeff, idx);
+		}
+		else
+		{
+			PackFullBytes(d_p, d_u, N, coeff, idx);
+		}
+	}
+}
+
+__device__
+void simple_packed_util::SetBitOn(unsigned char* p, long bitp)
+{
+  p += bitp/8;
+  *p |= (1u << (7-((bitp)%8)));
+}
+
+__device__
+void simple_packed_util::SetBitOff( unsigned char* p, long bitp)
+{
+  p += bitp/8;
+  *p &= ~(1u << (7-((bitp)%8)));
+}
+
