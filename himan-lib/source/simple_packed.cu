@@ -12,8 +12,6 @@
 #define BitTest(n,i)	!!((n) & BitMask1(i))
 #define BitMask1(i)	(1u << i)
 
-const double kFloatMissing = 32700;
-
 using namespace himan;
 
 __host__
