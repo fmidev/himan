@@ -172,9 +172,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	const param stratusUpperLayerRHParam("STRATUS-UPPER-LAYER-RH-PRCNT");
 	const param stratusVerticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MMS");
 
-	const param minusAreaParam("MINUS-AREA-T-K");
-	const param plusArea1Param("PLUS-AREA-1-T-K");
-	// const param plusArea2Param("PLUS-AREA-2-T-K");
+	const param minusAreaParam("MINUS-AREA-MC");
+	const param plusAreaParam("PLUS-AREA-MC");
 
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
@@ -312,11 +311,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			stratus->Param(stratusTopTempParam);
 			double Ttop = stratus->Value();
 
-			freezingArea->Param(plusArea1Param);
-			double plusArea1 = freezingArea->Value();
-
-			// freezingArea->Param(plusArea2Param);
-			// double plusArea2 = freezingArea->Value();
+			freezingArea->Param(plusAreaParam);
+			double plusArea = freezingArea->Value();
 
 			freezingArea->Param(minusAreaParam);
 			double minusArea = freezingArea->Value();
@@ -438,10 +434,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
 
 			if (	PreForm == kFloatMissing AND
-					plusArea1 != kFloatMissing AND
+					plusArea != kFloatMissing AND
 					minusArea != kFloatMissing AND
 					RR > 0.1 AND
-					plusArea1 > fzraPA AND
+					plusArea > fzraPA AND
 					minusArea < fzraMA AND
 					T <= 0 AND
 					((upperLayerRH > dryLimit) OR (upperLayerRH == kFloatMissing)))
@@ -453,7 +449,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			if (PreForm == kFloatMissing)
 			{
-				 if (plusArea1 != kFloatMissing AND plusArea1 > waterArea)
+				 if (plusArea != kFloatMissing AND plusArea > waterArea)
 				 {
 					// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
 					// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään mukana)
@@ -469,7 +465,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
 
-				if (plusArea1 != kFloatMissing && plusArea1 >= snowArea AND plusArea1 <= waterArea)
+				if (plusArea != kFloatMissing && plusArea >= snowArea AND plusArea <= waterArea)
 				{
 					PreForm = kSleet;
 				}
@@ -477,7 +473,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
 				// 20.2.2014: Ehto "OR T<0" poistettu (muuten ajoittain lunta, jos hyvin ohut pakkaskerros pinnassa)
 
-				 if ((plusArea1 != kFloatMissing AND plusArea1 < snowArea) OR (plusArea1 == kFloatMissing))
+				 if (plusArea == kFloatMissing OR plusArea < snowArea)
 				{
 					PreForm = kSnow;
 				}

@@ -578,16 +578,15 @@ shared_ptr<info> hitool::Stratus()
 shared_ptr<info> hitool::FreezingArea()
 {
 
-	param minusAreaParam("MINUS-AREA-T-K");
-	minusAreaParam.Unit(kK);
+	const param minusAreaParam("MINUS-AREA-MC"); // metriastetta, mC
 
-	param plusArea1Param("PLUS-AREA-1-T-K");
-	plusArea1Param.Unit(kK);
+	const param plusAreaParam("PLUS-AREA-MC"); // metriastetta, mC
 
+	/*
 	param plusArea2Param("PLUS-AREA-2-T-K");
 	plusArea2Param.Unit(kK);
-
-	vector<param> params = { minusAreaParam, plusArea1Param, plusArea2Param };
+*/
+	vector<param> params = { minusAreaParam, plusAreaParam };
 	vector<forecast_time> times = { itsTime };
 	vector<level> levels = { level(kHeight, 0, "HEIGHT") };
 
@@ -606,6 +605,7 @@ shared_ptr<info> hitool::FreezingArea()
 	fill(constData3.begin(), constData3.end(), himan::constants::kKelvin); // 0C
 
 	// 0-kohtien lkm pinnasta (yläraja 5km, jotta ylinkin nollakohta varmasti löytyy)
+
 	param wantedParam ("T-K");
 
 	itsLogger->Info("Counting number of zero levels");
@@ -619,8 +619,6 @@ shared_ptr<info> hitool::FreezingArea()
 	}
 #endif
 	
-	//nZeroLevel = VERTZ_FINDC(T_EC,0,5000,0)
-
 	/* Check which values we have. Will slow down processing a bit but
 	 * will make subsequent code much easier to understand.
 	 */
@@ -628,6 +626,7 @@ shared_ptr<info> hitool::FreezingArea()
 	bool haveOne = false;
 	bool haveTwo = false;
 	bool haveThree = false;
+	bool haveFour = false;
 
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
@@ -641,12 +640,16 @@ shared_ptr<info> hitool::FreezingArea()
 		{
 			haveTwo = true;
 		}
-		else if (val >= 3)
+		else if (val == 3)
 		{
 			haveThree = true;
 		}
+		else if (val >= 4)
+		{
+			haveFour = true;
+		}
 
-		if (haveOne && haveTwo && haveThree)
+		if (haveOne && haveTwo && haveThree && haveFour)
 		{
 			break;
 		}
@@ -658,20 +661,18 @@ shared_ptr<info> hitool::FreezingArea()
 
 	auto zeroLevel2 = zeroLevel1;
 	auto zeroLevel3 = zeroLevel1;
+	auto zeroLevel4 = zeroLevel1;
 	auto Tavg1 = zeroLevel1;
 	auto Tavg2_two = zeroLevel1;
 	auto Tavg2_three = zeroLevel1;
+	auto Tavg2_four = zeroLevel1;
 	auto Tavg3 = zeroLevel1;
-	auto plusArea1 = zeroLevel1;
-	auto plusArea2 = zeroLevel1;
+	auto plusArea = zeroLevel1;
 	auto minusArea = zeroLevel1;
 
 	if (haveOne)
 	{
 		itsLogger->Info("Searching for first zero level height and value");
-		
-		// Find height of first zero level
-		  // ZeroLev1 = VERTZ_FINDH(T_EC,0,5000,0,1)
 
 		zeroLevel1 = VerticalHeight(wantedParam, constData1, constData2, constData3, 1);
 
@@ -687,8 +688,6 @@ shared_ptr<info> hitool::FreezingArea()
 
 		assert(haveOne);
 		
-		// Find height of second zero level
-
 		zeroLevel2 = VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
 
 		itsLogger->Info("Searching for average temperature between first and second zero level");
@@ -701,8 +700,6 @@ shared_ptr<info> hitool::FreezingArea()
 		itsLogger->Info("Searching for third zero level height and value");
 
 		assert(haveOne && haveTwo);
-		
-		// Find height of third zero level
 
 		zeroLevel3 = VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
 
@@ -715,91 +712,100 @@ shared_ptr<info> hitool::FreezingArea()
 		Tavg3 = VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 	}
 
+	if (haveFour)
+	{
+		itsLogger->Info("Searching for fourth zero level height and value");
+
+		zeroLevel4 = VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
+
+		itsLogger->Info("Searching for average temperature between third and fourth zero level");
+
+		Tavg2_four = VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
+
+	}
+	
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
 		short numZeroLevel = static_cast<short> (numZeroLevels[i]);
 
-		// Pintakerros plussalla (1 nollaraja)
+		// nollarajoja parillinen määrä (pintakerros pakkasella)
+		// nollarajoja on siis vähintään kaksi
 
-		if (numZeroLevel == 1)
+		double pa = kFloatMissing, ma = kFloatMissing;
+
+		if (numZeroLevel%2 == 0)
 		{
-			double zl = zeroLevel1[i], ta = Tavg1[i];
-			double pa = kFloatMissing;
+			double zl1 = zeroLevel1[i], zl2 = zeroLevel2[i];
+			double ta1 = Tavg1[i], ta2 = Tavg2_two[i];
+			
+			double paloft = kFloatMissing;
 
-			if (zl != kFloatMissing && ta != kFloatMissing)
+			if (zl1 != kFloatMissing && zl2 != kFloatMissing 
+					&& ta1 != kFloatMissing && ta2 != kFloatMissing)
 			{
-				pa = zl * (ta - himan::constants::kKelvin);
+				ma = zl1 * (ta1 - constants::kKelvin);
+				paloft = (zl2 - zl1) * (ta2 - constants::kKelvin);
 			}
 
-			plusArea1[i] = pa;
+			// Jos ylempänä toinen T>0 kerros, lasketaan myös sen koko (vähintään 4 nollarajaa)
+			// (mahdollisista vielä ylempänä olevista plussakerroksista ei välitetä)
+			
+			if (numZeroLevel >= 4)
+			{
+				double zl3 = zeroLevel3[i], zl4 = zeroLevel4[i];
+				ta2 = Tavg2_four[i];
+
+				if (zl3 != kFloatMissing && zl4 != kFloatMissing && ta2 != kFloatMissing)
+				{
+					paloft = paloft + (zl4 - zl3) * (ta2 - constants::kKelvin);
+				}
+			}
+
+			pa = paloft;
 
 		}
 		
-		// Pintakerros pakkasella, ylempänä T>0 kerros (2 nollarajaa)
+		// nollarajoja pariton määrä (pintakerros plussalla)
 
-		else if (numZeroLevel == 2)
+		else if (numZeroLevel%2 == 1)
 		{
 			double zl1 = zeroLevel1[i], ta1 = Tavg1[i];
-			double zl2 = zeroLevel2[i], ta2 = Tavg2_two[i];
-			double pa = kFloatMissing, ma = kFloatMissing;
-
-			if (zl2 != kFloatMissing && zl1 != kFloatMissing && ta2 != kFloatMissing)
-			{
-				pa = (zl2 - zl1) * (ta2 - himan::constants::kKelvin);
-			}
-
-			plusArea1[i] = pa;
+			double pasfc = kFloatMissing, paloft = kFloatMissing;
 
 			if (zl1 != kFloatMissing && ta1 != kFloatMissing)
 			{
-				ma = zl1 * (ta1 - himan::constants::kKelvin);
+				pasfc = zl1 * (ta1 - constants::kKelvin);
+				pa = pasfc;
 			}
 
-			minusArea[i] = ma;
+			// Jos ylempänä toinen T>0 kerros, lasketaan myös sen koko (vähintään 3 nollarajaa)
+			// (mahdollisista vielä ylempänä olevista plussakerroksista ei välitetä)
+
+			if (numZeroLevel >= 3)
+			{
+				double zl2 = zeroLevel2[i], zl3 = zeroLevel3[i];
+				double ta2 = Tavg2_three[i], ta3 = Tavg3[i];
+
+				if (zl2 != kFloatMissing && zl3 != kFloatMissing &&
+						ta2 != kFloatMissing && ta3 != kFloatMissing)
+				{
+					paloft = (zl3 - zl2) * (ta2 - constants::kKelvin);
+					pa = pasfc + paloft;
+
+					ma = (zl2 - zl1) * (ta3 - constants::kKelvin);
+				}
+			}
 		}
 
-		// Pintakerroksen lisäksi ylempänä toinen T>0 kerros, joiden välissä pakkaskerros (3 nollarajaa)
-
-		else if (numZeroLevel == 3)
-		{
-			double zl1 = zeroLevel1[i], ta1 = Tavg1[i];
-			double zl2 = zeroLevel2[i], ta2 = Tavg2_three[i];
-			double zl3 = zeroLevel3[i], ta3 = Tavg3[i];
-
-			double pa1 = kFloatMissing, pa2 = kFloatMissing, ma = kFloatMissing;
-
-			if (zl1 != kFloatMissing && zl2 != kFloatMissing && ta2 != kFloatMissing)
-			{
-				pa2 = (zl3 - zl2) * (ta2 - himan::constants::kKelvin); // "aloft"
-			}
-
-			plusArea2[i] = pa2;
-
-			if (zl1 != kFloatMissing && pa2 != kFloatMissing && ta1 != kFloatMissing)
-			{
-				pa1 = zl1 * (ta1 - himan::constants::kKelvin) + pa2;
-			}
-
-			plusArea1[i] = pa1;
-
-			if (zl2 != kFloatMissing && zl1 != kFloatMissing && ta3 != kFloatMissing)
-			{
-				ma = (zl2 - zl1) * (ta3 - himan::constants::kKelvin);
-			}
-			
-			minusArea[i] = ma;
-		}
-		
+		plusArea[i] = pa;
+		minusArea[i] = ma;
 	}
 
 	ret->Param(minusAreaParam);
 	ret->Data()->Set(minusArea);
 
-	ret->Param(plusArea1Param);
-	ret->Data()->Set(plusArea1);
-
-	ret->Param(plusArea2Param);
-	ret->Data()->Set(plusArea2);
+	ret->Param(plusAreaParam);
+	ret->Data()->Set(plusArea);
 
 	return ret;
 
