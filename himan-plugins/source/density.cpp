@@ -88,7 +88,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 	 *
 	 */
 
-	param PParam("P-PA");
+	params PParam = { param("P-PA"), param("P-HPA") };
 	param TParam("T-K");
 	// ----	
 
@@ -103,16 +103,31 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 	{
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		double PScale = 1;
 
 		shared_ptr<info> PInfo;
 		shared_ptr<info> TInfo;
+
+		shared_ptr<NFmiGrid> PGrid;
+		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
+
 		try
 		{
+			if(!isPressureLevel)
+			{
 			// Source info for PParam and TParam
-			PInfo = theFetcher->Fetch(itsConfiguration,
-							myTargetInfo->Time(),
-							myTargetInfo->Level(),
-							PParam);
+				PInfo = theFetcher->Fetch(itsConfiguration,
+								myTargetInfo->Time(),
+								myTargetInfo->Level(),
+								PParam);
+
+				if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
+				{
+					PScale = 100;
+				}
+		
+				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
+			}
 			TInfo = theFetcher->Fetch(itsConfiguration,
 							myTargetInfo->Time(),
 							myTargetInfo->Level(),
@@ -159,10 +174,9 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 		 */
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = (*myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid());
+		bool equalGrids = ((isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()) && *myTargetInfo->Grid() == *TInfo->Grid());
 
 
 		string deviceType;
@@ -189,7 +203,15 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 				double P = kFloatMissing;
 				double T = kFloatMissing;
 
-				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				if (isPressureLevel)
+				{
+					P = 100 * myTargetInfo->Level().Value();
+				}
+				else
+				{
+				 	InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				}
+
 				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
 
 				if (P == kFloatMissing || T == kFloatMissing )
@@ -203,7 +225,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 				// actual calculation of the density using the ideal gas law
 				double rho;
 				
-				rho = P / (constants::kRd * T);
+				rho = P * PScale / (constants::kRd * T);
 
 				if (!myTargetInfo->Value(rho))
 				{
