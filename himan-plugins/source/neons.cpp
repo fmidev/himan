@@ -86,7 +86,9 @@ vector<string> neons::Files(const search_options& options)
 
 	if (gridgeoms.empty())
 	{
-		itsLogger->Warning("No geometries found for producer " + ref_prod + ", analysistime " + analtime + ", source geom name '" + util::Join(sourceGeoms, ",") +"'");
+		itsLogger->Warning("No geometries found for producer " + ref_prod +
+		", analysistime " + analtime + ", source geom name(s) '" + util::Join(sourceGeoms, ",") +"', param " + options.param.Name());
+		
 		return files;
 	}
 
