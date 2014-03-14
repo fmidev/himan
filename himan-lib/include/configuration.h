@@ -28,7 +28,7 @@ public:
 	friend class json_parser;
 
 	configuration();
-	~configuration() {}
+	virtual ~configuration() {}
 
 	configuration(const configuration& other);
 	configuration& operator=(const configuration& other) = delete;
