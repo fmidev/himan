@@ -128,6 +128,8 @@ vector<string> neons::Files(const search_options& options)
 		
 		files.push_back(values[4]);
 
+		break; // discontinue loop on first positive match
+
 	}
 
 	return files;
@@ -420,7 +422,7 @@ string neons::ProducerMetaData(long producerId, const string& attribute) const
 				ret = "65";
 			break;
 
-			case 130:
+			case 131:
 			case 240:
 				ret = "137";
 				break;
@@ -437,7 +439,7 @@ string neons::ProducerMetaData(long producerId, const string& attribute) const
 		{
 			case 1:
 			case 3:
-			case 130:
+			case 131:
 			case 230:
 			case 240:
 				ret = "1";
