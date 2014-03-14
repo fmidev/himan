@@ -165,8 +165,8 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 			processTimer->Start();
 		}
 		
-		int missingCount = 0;
-		int count = 0;
+		size_t missingCount = 0;
+		size_t count = 0;
 
 		/*
 		 * Converting original grid-data to newbase grid
