@@ -139,13 +139,12 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		// Loop over all source producers if more than one specified
 
-		for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+		for (size_t prodNum = 0; prodNum < config->SizeSourceProducers() && theInfos.empty(); prodNum++)
 		{
-		
-			producer sourceProd(config->SourceProducer(prodNum));
 
-			if (itsDoLevelTransform &&
-					(requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
+			producer sourceProd(config->SourceProducer(prodNum));
+			
+			if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
 			{
 				newLevel = LevelTransform(sourceProd, requestedParam, requestedLevel);
 
@@ -155,90 +154,14 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 								+ "/" + boost::lexical_cast<string> (requestedLevel.Value())
 								+ " to " + HPLevelTypeToString.at(newLevel.Type())
 								+ "/" + boost::lexical_cast<string> (newLevel.Value())
-								+ " for producer " + boost::lexical_cast<string> (config->SourceProducer().Id())
+								+ " for producer " + boost::lexical_cast<string> (sourceProd.Id())
 								+ ", parameter " + requestedParam.Name());
 				}
-			}
+			}			
 			
 			const search_options opts (requestedTime, requestedParam, newLevel, sourceProd, config);
 
-			// itsLogger->Trace("Current producer: " + sourceProd.Name());
-
-			if (config->UseCache())
-			{
-
-				// 1. Fetch data from cache
-
-				if (!itsCache)
-				{
-					itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
-				}
-
-				theInfos = FromCache(opts);
-
-				if (theInfos.size())
-				{
-					itsLogger->Trace("Data found from cache");
-
-					if (config->StatisticsEnabled())
-					{
-						config->Statistics()->AddToCacheHitCount(1);
-					}
-
-					break;
-				}
-			}
-
-			/*
-			 *  2. Fetch data from auxiliary files specified at command line
-			 *
-			 *  Even if file_wait_timeout is specified, auxiliary files is searched
-			 *  only once.
-			 */
-
-			if (config->AuxiliaryFiles().size() && waitedSeconds == 0)
-			{
-				theInfos = FromFile(config->AuxiliaryFiles(), opts, true, readPackedData);
-
-				if (theInfos.size())
-				{
-					itsLogger->Trace("Data found from auxiliary file(s)");
-
-					if (config->StatisticsEnabled())
-					{
-						config->Statistics()->AddToCacheMissCount(1);
-					}
-
-					break;
-				}
-				else
-				{
-					itsLogger->Trace("Data not found from auxiliary file(s)");
-				}
-			}
-
-			// 3. Fetch data from Neons
-
-			vector<string> files;
-
-			if (config->ReadDataFromDatabase())
-			{
-				shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-
-				files = n->Files(opts);
-
-				if (!files.empty())
-				{
-					theInfos = FromFile(files, opts, true, readPackedData);
-
-					if (config->StatisticsEnabled())
-					{
-						config->Statistics()->AddToCacheMissCount(1);
-					}
-
-					break;
-				}
-			}
+			theInfos = FetchFromProducer(opts, readPackedData, (waitedSeconds == 0));
 		}
 
 		if (controlWaitTime && config->FileWaitTimeout() > 0)
@@ -255,7 +178,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		waitedSeconds += SLEEPSECONDS;
 	}
-	while (controlWaitTime && waitedSeconds < config->FileWaitTimeout() * 60);
+	while (theInfos.empty() && controlWaitTime && waitedSeconds < config->FileWaitTimeout() * 60);
 
 	if (config->StatisticsEnabled())
 	{
@@ -263,6 +186,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		config->Statistics()->AddToFetchingTime(t->GetTime());
 	}
+	
 	/*
 	 *  Safeguard; later in the code we do not check whether the data requested
 	 *  was actually what was requested.
@@ -432,6 +356,10 @@ himan::level fetcher::LevelTransform(const producer& sourceProducer, const param
 		{
 			lvlType = kHeight;
 		}
+		else if (lvlName == "TOP")
+		{
+			lvlType = kTopOfAtmosphere;
+		}
 		else
 		{
 			throw runtime_error(ClassName() + ": Unknown level type: " + lvlName);
@@ -455,4 +383,93 @@ void fetcher::DoLevelTransform(bool theDoLevelTransform)
 bool fetcher::DoLevelTransform() const
 {
 	return itsDoLevelTransform;
+}
+
+vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(const search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles)
+{
+
+	vector<shared_ptr<info>> ret;
+	
+	itsLogger->Trace("Current producer: " + boost::lexical_cast<string> (opts.prod.Id()));
+
+	// itsLogger->Trace("Current producer: " + sourceProd.Name());
+
+	if (opts.configuration->UseCache())
+	{
+
+		// 1. Fetch data from cache
+
+		if (!itsCache)
+		{
+			itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+		}
+
+		ret = FromCache(opts);
+
+		if (ret.size())
+		{
+			itsLogger->Trace("Data found from cache");
+
+			if (dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->StatisticsEnabled())
+			{
+				dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->Statistics()->AddToCacheHitCount(1);
+			}
+
+			return ret;
+		}
+	}
+
+	/*
+	 *  2. Fetch data from auxiliary files specified at command line
+	 *
+	 *  Even if file_wait_timeout is specified, auxiliary files is searched
+	 *  only once.
+	 */
+
+	if (!opts.configuration->AuxiliaryFiles().empty() && fetchFromAuxiliaryFiles)
+	{
+		ret = FromFile(opts.configuration->AuxiliaryFiles(), opts, true, readPackedData);
+
+		if (!ret.empty())
+		{
+			itsLogger->Trace("Data found from auxiliary file(s)");
+
+			if (dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->StatisticsEnabled())
+			{
+				dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->Statistics()->AddToCacheMissCount(1);
+			}
+
+			return ret;
+		}
+		else
+		{
+			itsLogger->Trace("Data not found from auxiliary file(s)");
+		}
+	}
+
+	// 3. Fetch data from Neons
+
+	vector<string> files;
+
+	if (opts.configuration->ReadDataFromDatabase())
+	{
+		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+
+		files = n->Files(opts);
+
+		if (!files.empty())
+		{
+			ret = FromFile(files, opts, true, readPackedData);
+
+			if (dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->StatisticsEnabled())
+			{
+				dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->Statistics()->AddToCacheMissCount(1);
+			}
+
+			return ret;
+		}
+	}
+
+	return ret;
+
 }

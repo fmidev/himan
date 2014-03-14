@@ -168,7 +168,17 @@ private:
      */
 	
 	level LevelTransform(const producer& sourceProducer, const param& targetParam, const level& targetLevel) const;
-	
+
+	/**
+	 * @brief Try to fetch data from a single producer
+	 *
+     * @param opts Search options
+     * @param readPackedData Determine whether to read packed data from grib
+     * @param fetchFromAuxiliaryFiles Determine whether to read data from aux files
+     * @return Vector of infos, zero sized if none found
+     */
+	std::vector<std::shared_ptr<info>> FetchFromProducer(const search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles);
+
     HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform; //<! Default true
 
