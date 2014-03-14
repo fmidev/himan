@@ -246,7 +246,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		if (TDInfo)
 		{
-			equalGrids == equalGrids && *myTargetInfo->Grid() == *TDInfo->Grid();
+			equalGrids = equalGrids && *myTargetInfo->Grid() == *TDInfo->Grid();
 		}
 
 		string deviceType;
