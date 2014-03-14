@@ -2,18 +2,18 @@
 	"source_geom_name" : "ECEUR025",
 	"target_geom_name" : "MTEUR025",
 	"source_producer" : "131",
-	"target_producer" : "240",
+	"target_producer" : "210",
 	"start_hour" : "6",
 	"stop_hour" : "6",
 	"step" : "1",
 	"step_unit" : "hour",
 	"file_write" : "multiple",
-	"origintime" : "2014-02-28 00:00:00",
+	"origintime" : "2014-03-14 00:00:00",
 	"read_data_from_database" : "false",
 	"processqueue" : [
 	{
-		"leveltype" : "height",
-		"levels" : "2",
+		"leveltype" : "pressure",
+		"levels" : "850",
 		"plugins" : [ { "name" : "density" } ]
 	} 
 	]
