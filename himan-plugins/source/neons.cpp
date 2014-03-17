@@ -417,7 +417,8 @@ string neons::ProducerMetaData(long producerId, const string& attribute) const
 		switch (producerId)
 		{
 			case 1:
-			case 3:
+			case 199:
+			case 210:
 			case 230:
 				ret = "65";
 			break;
@@ -438,8 +439,9 @@ string neons::ProducerMetaData(long producerId, const string& attribute) const
 		switch (producerId)
 		{
 			case 1:
-			case 3:
 			case 131:
+			case 199:
+			case 210:
 			case 230:
 			case 240:
 				ret = "1";
