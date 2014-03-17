@@ -469,3 +469,27 @@ void compiled_plugin_base::CopyDataFromSimpleInfo(shared_ptr<info> anInfo, info_
 	}
 }
 #endif
+
+bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<info>> infos)
+{
+	if (infos.size() <= 1)
+	{
+		throw kUnknownException;
+	}
+
+	auto it = infos.begin();
+	auto first = *it;
+	bool ret = false;
+	
+	for (++it; it != infos.end(); ++it)
+	{
+		ret = (*(first->Grid()) == *(*it)->Grid());
+
+		if (!ret)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}

@@ -232,6 +232,18 @@ protected:
 	void CopyDataFromSimpleInfo(std::shared_ptr<info> anInfo, info_simple* aSimpleInfo, bool writeToCache);
 
 #endif
+
+	/**
+	 * @brief Compare a number of grids to see if they are equale.
+	 *
+	 * Throws if number of grids is less than or equal to 1. Assumes iterators are in
+	 * place, only active grid is compared.
+	 * 
+     * @param grids List of infos
+     * @return True if all are equal
+     */
+	
+	bool CompareGrids(std::initializer_list<std::shared_ptr<info>> infos);
 	
 	std::shared_ptr<info> itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
