@@ -77,11 +77,25 @@ bool grib::ToFile(shared_ptr<info> anInfo, const string& outputFile, HPFileType 
 
 bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HPFileType fileType, bool appendToFile)
 {
-	const static long edition = static_cast<long> (fileType);
+	long edition = static_cast<long> (fileType);
+
+	string outFile = outputFile;
+
+	// Check levelvalue since that might force us to change file type!
+	
+	double levelValue = anInfo->Level().Value();
+
+	if (edition == 1 && levelValue > 127)
+	{
+		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
+		edition = 2;
+	
+		outFile = outFile + "2";
+	}
 
 	itsGrib->Message()->Edition(edition);
 
-	shared_ptr<neons> n; 
+	shared_ptr<neons> n;
 
 	if (anInfo->Producer().Centre() == kHPMissingInt)
 	{
@@ -140,7 +154,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 	
 	// Level
 
-	itsGrib->Message()->LevelValue(static_cast<long> (anInfo->Level().Value()));
+	itsGrib->Message()->LevelValue(levelValue);
 
 	// Himan levels equal to grib 1
 
@@ -216,10 +230,10 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 		itsGrib->Message()->PV(AB, AB.size());
 	}
 
-	itsGrib->Message()->Write(outputFile, appendToFile);
+	itsGrib->Message()->Write(outFile, appendToFile);
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
-	itsLogger->Info(verb + "file '" + outputFile + "'");
+	itsLogger->Info(verb + "file '" + outFile + "'");
 
 	return true;
 }
