@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 14.2.17
+Version: 14.3.17
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -51,6 +51,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Mar 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.17-1.fmi
+- Small change to configuration
+* Wed Mar 12 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.12-1.fmi
+- Updated configuration file options (source_geom_name, file_type)
+- Initial support for grib packing in cuda
+* Tue Feb 25 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.25-1.fmi
+- Add support for setting cuda device id
+* Tue Feb 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.18-1.fmi
+- Bugfixes
 * Mon Feb 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.17-1.fmi
 - Added functionality to util::
 - info::Merge() fixes
