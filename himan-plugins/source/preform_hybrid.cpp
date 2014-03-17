@@ -150,7 +150,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	// Required source parameters
 
-	param RRParam("RR-1-MM"); // one hour prec -- should we interpolate in forecast step is 3/6 hours ?
+	params RRParam({ param("RR-1-MM"), param("RRR-KGM2")}); // one hour prec OR precipitation rate (HHsade)
 	param TParam("T-K");
 	param RHParam("RH-PRCNT");
 
@@ -258,6 +258,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		myThreadedLogger->Info("Stratus and freezing area calculated");
 		
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> RHGrid(RHInfo->Grid()->ToNewbaseGrid());
 
 		string deviceType = "CPU";
 
@@ -279,6 +282,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		assert(myTargetInfo->SizeLocations() == TInfo->SizeLocations());
 		assert(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
 		assert(myTargetInfo->SizeLocations() == RHInfo->SizeLocations());
+
+		bool equalGrids = CompareGrids({myTargetInfo, RRInfo, RHInfo, TInfo});
 
 		while (myTargetInfo->NextLocation()	&& targetGrid->Next()
 					&& stratus->NextLocation()
@@ -317,14 +322,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			freezingArea->Param(minusAreaParam);
 			double minusArea = freezingArea->Value();
 
-			// Data retrieved directly from database
+			double RR = kFloatMissing;
+			double T = kFloatMissing;
+			double RH = kFloatMissing;
 
-			double RR = RRInfo->Value();
-			double T = TInfo->Value();
-			double RH = RHInfo->Value();
-
-			//InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
-			//InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+			InterpolateToPoint(targetGrid, RRGrid, equalGrids, RR);
+			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
+			InterpolateToPoint(targetGrid, RHGrid, equalGrids, RH);
 
 			if (RR == kFloatMissing || RR == 0)
 			{
