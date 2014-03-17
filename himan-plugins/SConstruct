@@ -96,7 +96,7 @@ env.Append(LIBPATH = library_paths)
 
 libraries = []
 
-libraries.append('smartmet_newbase')
+# libraries.append('smartmet_newbase')
 libraries.append('fmigrib')
 libraries.append('fmidb')
 libraries.append('jasper')
