@@ -148,8 +148,9 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			switch (e)
 			{
 				case kFileDataNotFound:
-					itsLogger->Warning("Parameter of height data not found for level " + boost::lexical_cast<string> (currentLevel.Value()));
-					continue;
+					throw;
+					//itsLogger->Warning("Parameter of height data not found for level " + boost::lexical_cast<string> (currentLevel.Value()));
+					//continue;
 					break;
 				default:
 					throw;
@@ -234,20 +235,38 @@ vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList,
 						const vector<double>& findValue,
 						size_t findNth) const
 {
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+
 	for (size_t i = 0; i < wantedParamList.size(); i++)
 	{
 		try
 		{
-			return VerticalHeight(wantedParamList[i], firstLevelValue, lastLevelValue, findValue, findNth);
+			return VerticalHeight(foundParam, firstLevelValue, lastLevelValue, findValue, findNth);
 		}
 		catch (const HPExceptionType& e)
 		{
-			if (e != kFileDataNotFound)
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " + wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
 			{
 				throw;
 			}
 		}
-
 	}
 
 	throw runtime_error("Data not found");
@@ -270,15 +289,34 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
 {
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+	
 	for (size_t i = 0; i < wantedParamList.size(); i++)
 	{
 		try
 		{
-			return VerticalMinimum(wantedParamList[i], firstLevelValue, lastLevelValue);
+			return VerticalMinimum(foundParam, firstLevelValue, lastLevelValue);
 		}
 		catch (const HPExceptionType& e)
 		{
-			if (e != kFileDataNotFound)
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " + wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
 			{
 				throw;
 			}
@@ -299,15 +337,34 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
 {
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+
 	for (size_t i = 0; i < wantedParamList.size(); i++)
 	{
 		try
 		{
-			return VerticalMaximum(wantedParamList[i], firstLevelValue, lastLevelValue);
+			return VerticalMaximum(foundParam, firstLevelValue, lastLevelValue);
 		}
 		catch (const HPExceptionType& e)
 		{
-			if (e != kFileDataNotFound)
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " + wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
 			{
 				throw;
 			}
@@ -329,15 +386,34 @@ vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
 {
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+
 	for (size_t i = 0; i < wantedParamList.size(); i++)
 	{
 		try
 		{
-			return VerticalAverage(wantedParamList[i], firstLevelValue, lastLevelValue);
+			return VerticalAverage(foundParam, firstLevelValue, lastLevelValue);
 		}
 		catch (const HPExceptionType& e)
 		{
-			if (e != kFileDataNotFound)
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " + wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
 			{
 				throw;
 			}
@@ -359,20 +435,38 @@ vector<double> hitool::VerticalSum(const vector<param>& wantedParamList,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
 {
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+	
 	for (size_t i = 0; i < wantedParamList.size(); i++)
 	{
 		try
 		{
-			return VerticalSum(wantedParamList[i], firstLevelValue, lastLevelValue);
+			return VerticalSum(foundParam, firstLevelValue, lastLevelValue);
 		}
 		catch (const HPExceptionType& e)
 		{
-			if (e != kFileDataNotFound)
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " + wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
 			{
 				throw;
 			}
 		}
-
 	}
 
 	throw runtime_error("Data not found");
@@ -390,20 +484,38 @@ vector<double> hitool::VerticalCount(const vector<param>& wantedParamList,
 						const vector<double>& lastLevelValue,
 						const vector<double>& findValue) const
 {
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+	
 	for (size_t i = 0; i < wantedParamList.size(); i++)
 	{
 		try
 		{
-			return VerticalCount(wantedParamList[i], firstLevelValue, lastLevelValue, findValue);
+			return VerticalCount(foundParam, firstLevelValue, lastLevelValue, findValue);
 		}
 		catch (const HPExceptionType& e)
 		{
-			if (e != kFileDataNotFound)
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " + wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
 			{
 				throw;
 			}
 		}
-
 	}
 
 	throw runtime_error("Data not found");
@@ -419,15 +531,34 @@ vector<double> hitool::VerticalCount(const param& wantedParam,
 
 vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const vector<double>& heightInfo) const
 {
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+
 	for (size_t i = 0; i < wantedParamList.size(); i++)
 	{
 		try
 		{
-			return VerticalValue(wantedParamList[i], heightInfo);
+			return VerticalValue(foundParam, heightInfo);
 		}
 		catch (const HPExceptionType& e)
 		{
-			if (e != kFileDataNotFound)
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " + wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
 			{
 				throw;
 			}
