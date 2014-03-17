@@ -105,9 +105,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 							const vector<double>& findValue) const
 {
 	shared_ptr<plugin::neons> n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-	assert(wantedLevelType == kHybrid);
 
-	// Move this to convenience functions?
+	assert(wantedLevelType == kHybrid);
 
 	if (findValue.size())
 	{
@@ -138,8 +137,26 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		level currentLevel(kHybrid, levelValue, "HYBRID");
 
-		valueheight data = GetData(currentLevel, wantedParam, itsTime);
+		valueheight data;
 
+		try
+		{
+			data = GetData(currentLevel, wantedParam, itsTime);
+		}
+		catch (const HPExceptionType& e)
+		{
+			switch (e)
+			{
+				case kFileDataNotFound:
+					itsLogger->Warning("Parameter of height data not found for level " + boost::lexical_cast<string> (currentLevel.Value()));
+					continue;
+					break;
+				default:
+					throw;
+					break;
+			}
+		}
+		
 		auto values = data.first;
 		auto heights = data.second;
 
@@ -189,16 +206,18 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 		switch (e)
 		{
 			case kFileDataNotFound:
-			break;
+				throw;
+				break;
 
 			default:
 				throw runtime_error("hitool: Unable to proceed");
-			break;
+				break;
 		}
 	}
 
 
-	assert(values && heights);
+	assert(values);
+	assert(heights);
 	assert(values->Grid()->Size() == heights->Grid()->Size());
 
 	// No Merge() here since that will mess up cache
@@ -208,6 +227,32 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 }
 
 /* CONVENIENCE FUNCTIONS */
+
+vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList,
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue,
+						const vector<double>& findValue,
+						size_t findNth) const
+{
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalHeight(wantedParamList[i], firstLevelValue, lastLevelValue, findValue, findNth);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				throw;
+			}
+		}
+
+	}
+
+	throw runtime_error("Data not found");
+	
+}
 
 vector<double> hitool::VerticalHeight(const param& wantedParam,
 						const vector<double>& firstLevelValue,
@@ -221,11 +266,56 @@ vector<double> hitool::VerticalHeight(const param& wantedParam,
 	return VerticalExtremeValue(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
 }
 
+vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList,
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue) const
+{
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalMinimum(wantedParamList[i], firstLevelValue, lastLevelValue);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				throw;
+			}
+		}
+	}
+
+	throw runtime_error("Data not found");
+}
+
 vector<double> hitool::VerticalMinimum(const param& wantedParam,
 						const vector<double>& firstLevelValue,
-						const vector<double>& lastLevelValue)const
+						const vector<double>& lastLevelValue) const
 {
 	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid,  wantedParam, firstLevelValue, lastLevelValue);
+}
+
+vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList,
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue) const
+{
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalMaximum(wantedParamList[i], firstLevelValue, lastLevelValue);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				throw;
+			}
+		}
+
+	}
+
+	throw runtime_error("Data not found");
 }
 
 vector<double> hitool::VerticalMaximum(const param& wantedParam,
@@ -235,6 +325,29 @@ vector<double> hitool::VerticalMaximum(const param& wantedParam,
 	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
 }
 
+vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList,
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue) const
+{
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalAverage(wantedParamList[i], firstLevelValue, lastLevelValue);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				throw;
+			}
+		}
+
+	}
+
+	throw runtime_error("Data not found");
+}
+
 vector<double> hitool::VerticalAverage(const param& wantedParam,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
@@ -242,11 +355,58 @@ vector<double> hitool::VerticalAverage(const param& wantedParam,
 	return VerticalExtremeValue(CreateModifier(kAverageModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
 }
 
+vector<double> hitool::VerticalSum(const vector<param>& wantedParamList,
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue) const
+{
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalSum(wantedParamList[i], firstLevelValue, lastLevelValue);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				throw;
+			}
+		}
+
+	}
+
+	throw runtime_error("Data not found");
+}
+
 vector<double> hitool::VerticalSum(const param& wantedParam,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
 {
 	return VerticalExtremeValue(CreateModifier(kAccumulationModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
+}
+
+vector<double> hitool::VerticalCount(const vector<param>& wantedParamList,
+						const vector<double>& firstLevelValue,
+						const vector<double>& lastLevelValue,
+						const vector<double>& findValue) const
+{
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalCount(wantedParamList[i], firstLevelValue, lastLevelValue, findValue);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				throw;
+			}
+		}
+
+	}
+
+	throw runtime_error("Data not found");
 }
 
 vector<double> hitool::VerticalCount(const param& wantedParam,
@@ -257,10 +417,28 @@ vector<double> hitool::VerticalCount(const param& wantedParam,
 	return VerticalExtremeValue(CreateModifier(kCountModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
 }
 
+vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const vector<double>& heightInfo) const
+{
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalValue(wantedParamList[i], heightInfo);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				throw;
+			}
+		}
+	}
+
+	throw runtime_error("Data not found");
+}
+
 vector<double> hitool::VerticalValue(const param& wantedParam, const vector<double>& heightInfo) const
 {
-	//parm.Aggregation(kMinimum);
-
 	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, wantedParam, vector<double> (), vector<double> (), heightInfo);
 }
 
@@ -322,7 +500,7 @@ shared_ptr<info> hitool::Stratus()
 
 	// N-kynnysarvot stratuksen ala- ja ylärajalle [%] (tarkkaa stCover arvoa ei aina löydy)
 
-	param wantedParam("N-0TO1");
+	vector<param> wantedParamList({param("N-0TO1"), param("N-PRCNT")});
 
 	/**
 	 * Etsitään parametrin N minimiarvo korkeusvälillä 0 .. stLimit (=500)
@@ -330,7 +508,7 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Info("Searching for stratus lower limit");
 
-	auto baseThreshold = VerticalMinimum(wantedParam, constData1, constData2);
+	auto baseThreshold = VerticalMinimum(wantedParamList, constData1, constData2);
 	
 	for (size_t i = 0; i < baseThreshold.size(); i++)
 	{
@@ -353,7 +531,7 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Info("Searching for stratus upper limit");
 
-	auto topThreshold = VerticalMinimum(wantedParam, constData1, constData2);
+	auto topThreshold = VerticalMinimum(wantedParamList, constData1, constData2);
 
 	for (size_t i = 0; i < topThreshold.size(); i++)
 	{
@@ -377,7 +555,7 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Info("Searching for stratus base accurate value");
 
-	auto stratusBase = VerticalHeight(wantedParam, constData1, constData2, baseThreshold);
+	auto stratusBase = VerticalHeight(wantedParamList, constData1, constData2, baseThreshold);
 
 	//VAR Base = VERTZ_FINDH(N_EC,0,Layer,BaseThreshold,1)
 
@@ -407,7 +585,7 @@ shared_ptr<info> hitool::Stratus()
 	 */
 
 	itsLogger->Info("Searching for stratus top accurate value");
-	auto stratusTop = VerticalHeight(wantedParam, constData1, constData2, topThreshold, 0);
+	auto stratusTop = VerticalHeight(wantedParamList, constData1, constData2, topThreshold, 0);
 
 	ret->Param(topParam);
 	ret->Data()->Set(stratusTop);
@@ -428,7 +606,7 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Info("Searching for humidity in layers above stratus top");
 
-	wantedParam = param("RH-PRCNT");
+	param wantedParam = param("RH-PRCNT");
 
 	assert(constData1.size() == constData2.size() && constData1.size() == stratusTop.size());
 	
@@ -468,9 +646,9 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Info("Searching for stratus mean cloudiness");
 
-	wantedParam = param("N-0TO1");
+	//wantedParamList = {param("N-0TO1"), param("N-PRCNT")};
 
-	auto stratusMeanN = VerticalAverage(wantedParam, stratusBase, stratusTop);
+	auto stratusMeanN = VerticalAverage(wantedParamList, stratusBase, stratusTop);
 	//auto stratusMeanN = VerticalExtremeValue(opts);
 
 	missing = 0;
@@ -493,7 +671,7 @@ shared_ptr<info> hitool::Stratus()
 	// Stratuksen Topin lämpötila (jäätävä tihku)
 	//VAR TTop = VERTZ_GET(T_EC,Top)
 
-	wantedParam = param("T-K");
+	wantedParam = { param("T-K") };
 	
 	auto stratusTopTemp = VerticalValue(wantedParam, stratusTop);
 

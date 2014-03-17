@@ -47,47 +47,211 @@ public:
     }
 
 	/**
+	 * @brief Return maximum value in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalMaximum(param, vector<double>, vector<double>, vector<double>)
+	 *
+     * @param wantedParamList List (vector) of wanted parameters
+    */
+
+	std::vector<double> VerticalMaximum(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
 	 * @brief Find maximum value of a given parameter in a given height range
+	 *
+	 * Only for hybrid levels
+	 * 
+	 * @param wantedParam Wanted parameter
+	 * @param firstLevelValue Lowest level value for each point, search will start here
+	 * @param lastLevelValue Highest level value for each point, search will stop here
+	 * @return Maximum value for each point
 	 */
 
 	std::vector<double> VerticalMaximum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
+
+	/**
+	 * @brief Return minimum value in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalMinimum(param, vector<double>, vector<double>, vector<double>)
+	 *
+     * @param wantedParamList List (vector) of wanted parameters
+    */
+
+	std::vector<double> VerticalMinimum(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
 	/**
 	 * @brief Find minimum value of a given parameter in a given height range
+	 *
+	 * @param wantedParam Wanted parameter
+	 * @param firstLevelValue Lowest level value for each point, search will start here
+	 * @param lastLevelValue Highest level value for each point, search will stop here
+	 * @return Minimum value for each point
 	 */
 
 	std::vector<double> VerticalMinimum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
+	/**
+	 * @brief Return sum in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalSum(param, vector<double>, vector<double>, vector<double>)
+	 *
+     * @param wantedParamList List (vector) of wanted parameters
+    */
+
+	std::vector<double> VerticalSum(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
+	 * @brief Calculate sum of values for each point in a given height range
+	 *
+     * @param wantedParam Wanted parameter
+     * @param firstLevelValue Lowest level value for each point, search will start here
+     * @param lastLevelValue Highest level value for each point, search will stop here
+     * @return Sum for each point
+     */
+	
 	std::vector<double> VerticalSum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
+	 * @brief Return average of values in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalAverage(param, vector<double>, vector<double>)
+	 *
+     * @param wantedParamList List (vector) of wanted parameters
+    */
+
+	std::vector<double> VerticalAverage(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
+	 * @brief Calculate average of values for each point in a given height range
+	 *
+     * @param wantedParam Wanted parameter
+     * @param firstLevelValue Lowest level value for each point, search will start here
+     * @param lastLevelValue Highest level value for each point, search will stop here
+     * @return Mean for each point
+     */
+
 	std::vector<double> VerticalAverage(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
+	 * @brief Return height for given value for the first parameter found.
+	 *
+	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
+	 *
+     * @param wantedParamList List (vector) of wanted parameters
+    */
+
+	std::vector<double> VerticalHeight(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue , size_t findNth = 1) const;
+
+	/**
+	 * @brief Find height of a given parameter value.
+	 *
+	 * Only for hybrid levels. A height between two levels is interpolated linearly.
+	 *
+	 * If findNth > 1 and value is not found (although lower count values are found),
+	 * value is set to kFloatMissing (unlike in smarttool).
+	 * 
+	 * @param wantedParam Wanted parameter
+	 * @param firstLevelValue Lowest level value for each point, search will start here
+     * @param lastLevelValue Highest level value for each point, search will stop here
+	 * @param findValue Wanted value for each point
+	 * @param findNth Return the height of Nth found value
+	 * @return Heights for given values for each point
+	 */
+
 	std::vector<double> VerticalHeight(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue , size_t findNth = 1) const;
+
+	/**
+	 * @brief Return value of parameter from given height for the first parameter found.
+	 *
+	 * Overcoat for VerticalValue(param, vector<double>)
+	 * 
+     * @return Values for given heights
+     */
+
+	std::vector<double> VerticalValue(const std::vector<param>& wantedParamList, const std::vector<double>& findValue) const;
 
 	/**
 	 * @brief Find value of parameter from given height
 	 *
-	 * Only for hybrid levels.
-	 * 
+	 * Only for hybrid levels. A value between two levels is interpolated linearly.
+	 *
+	 * @param wantedParam Wanted parameter
+	 * @param findValue Height for each point
+	 * @return Values for given heights for each point
 	 */
-	
+
 	std::vector<double> VerticalValue(const param& wantedParam, const std::vector<double>& findValue) const;
+
+	/**
+	 * @brief Find the number of occurrences of a given parameter value in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalCount(param, vector<double>, vector<double>, vector<double>)
+	 *
+     * @return Values for given heights
+     */
+
+	std::vector<double> VerticalCount(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue) const;
 
 	/**
 	 * @brief Find the number of occurrences of a given parameter value in a given height range
 	 *
 	 * Only for hybrid levels.
+	 *
+	 * @param wantedParam Wanter parameter
+	 * @param firstLevelValue Lowest level value for each point, search will start here
+	 * @param lastLevelValue Highest level value for each point, search will stop here
+	 * @param findValue Value to be searched for each point
+	 * @return Number of occurrences for each point
 	 */
 
 	std::vector<double> VerticalCount(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue) const;
 
+	/**
+	 * @brief Calculate properties of a stratus cloud
+	 * @return info containing multiple parameters describing stratus
+	 */
+
 	std::shared_ptr<info> Stratus();
+
+	/**
+	 * @brief Calculate freezing area information (number of zero level etc)
+	 */
+	
 	std::shared_ptr<info> FreezingArea();
 
+	/**
+	 * @brief Set current forecast time
+     * @param theTime Wanted time
+     */
+
 	void Time(const forecast_time& theTime);
+
+	/**
+	 * @brief Set configuration
+     * @param conf
+     */
 	void Configuration(const std::shared_ptr<const plugin_configuration> conf);
 
 private:
 	std::shared_ptr<modifier> CreateModifier(HPModifierType modifierType) const;
 
+	/**
+	 * @brief Aggregate vertical data
+	 *
+	 * This function is called by all Vertical* functions. Only hybrid levels for
+	 * now, will throw if data is not found.
+	 *
+	 * Actual calculation is done by the modifier (from himan-lib)
+	 *
+     * @param mod Modifier type
+     * @param wantedLevelType Wanted level type, only hybrid allowed
+     * @param wantedParam Wanted parameter
+     * @param firstLevelValue First (ie. lowest) level value, optional
+     * @param lastLevelValue Last (ie. highest) level value, optional
+     * @param findValue List of values that are searched, optional. This is passed to the modifier.
+     * @return vector
+     */
 	std::vector<double> VerticalExtremeValue(std::shared_ptr<modifier> mod,
 							HPLevelType wantedLevelType,
 							const param& wantedParam,
