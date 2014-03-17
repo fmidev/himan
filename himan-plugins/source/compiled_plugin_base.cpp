@@ -419,7 +419,7 @@ void compiled_plugin_base::Unpack(initializer_list<shared_ptr<info>> infos)
 	{
 		shared_ptr<info> tempInfo = *it;
 
-		if (tempInfo->Grid()->PackedData()->packedLength == 0)
+		if (!tempInfo->Grid()->PackedData() || tempInfo->Grid()->PackedData()->packedLength == 0)
 		{
 			// Safeguard: This particular info does not have packed data
 			continue;
