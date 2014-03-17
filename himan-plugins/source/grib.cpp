@@ -85,7 +85,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 	
 	double levelValue = anInfo->Level().Value();
 
-	if (edition == 1 && levelValue > 127)
+	if (edition == 1 && anInfo->Level().Type() == kHybrid && levelValue > 127)
 	{
 		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
 		edition = 2;
@@ -621,6 +621,20 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			newGrid->UVRelativeToGrid(itsGrib->Message()->UVRelativeToGrid());
 		}
 
+		double X0 = itsGrib->Message()->X0();
+		double Y0 = itsGrib->Message()->Y0();
+
+		// GRIB2 has longitude 0 .. 360, but in neons we have it -180 .. 180
+		//
+		// Make conversion for EC, but in the long run we should figure out how to
+		// handle grib 1 & grib 2 longitude values in a smart way. (a single geometry
+		// can have coordinates in both ways!)
+		
+		if (centre == 98 && itsGrib->Message()->Edition() == 2)
+		{
+			X0 -= 360;
+		}
+		
 		if (newGrid->Projection() == kStereographicProjection)
 		{
 			/*
@@ -636,7 +650,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				continue;
 			}
 
-			const point first(itsGrib->Message()->X0(),itsGrib->Message()->Y0());
+			const point first(X0, Y0);
 
 			newGrid->BottomLeft(first);
 
@@ -650,7 +664,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		else
 		{
 
-			himan::point firstPoint(itsGrib->Message()->X0(), itsGrib->Message()->Y0());
+			himan::point firstPoint(X0, Y0);
 
 			if (centre == 98 && firstPoint.X() == 180)
 			{
