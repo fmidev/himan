@@ -139,7 +139,7 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_li
 		(kHybrid, "hybrid")
 		(kGndLayer, "gndlayer")
 		(kDepth, "depth")
-		(kTopOfAtmosphere, "top of atmosphere")
+		(kTopOfAtmosphere, "top") // top of atmosphere
 		;
 
 enum HPFileWriteOption
