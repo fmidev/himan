@@ -70,7 +70,7 @@ void cache::SplitToPool(const shared_ptr<info> anInfo)
 
 	if (anInfo->Grid()->IsPackedData())
 	{
-		itsLogger->Debug("Ignoring cache push for packed data");
+		itsLogger->Trace("Ignoring cache push for packed data");
 		return;
 	}
 	vector<param> params;

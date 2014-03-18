@@ -726,7 +726,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			
 			itsGrib->Message()->PackedValues(data);
 
-			itsLogger->Debug("Retrieved " + boost::lexical_cast<string> (len) + " bytes of packed data from grib");
+			itsLogger->Trace("Retrieved " + boost::lexical_cast<string> (len) + " bytes of packed data from grib");
 			
 			double bsf = itsGrib->Message()->BinaryScaleFactor();
 			double dsf = itsGrib->Message()->DecimalScaleFactor();

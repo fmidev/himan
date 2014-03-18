@@ -161,6 +161,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 			switch (e)
 			{
 				case kFileDataNotFound:
+					myThreadedLogger->Debug("Q or P not found, trying calculation with TD");
 					calculateWithTD = true;
 					break;
 
