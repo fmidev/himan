@@ -668,7 +668,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 					sum /= step;
 				}
 
-				if (!isRadiationCalculation && sum < 0)
+				if (sum < 0 && parmName != "RTOPLW-WM2")
 				{
 					sum = 0;
 				}
