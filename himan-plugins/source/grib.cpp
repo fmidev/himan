@@ -476,6 +476,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			levelType = himan::kGround;
 			break;
 
+		case 8:
+			levelType = himan::kTop;
+			break;
+			
 		case 100:
 			levelType = himan::kPressure;
 			break;
