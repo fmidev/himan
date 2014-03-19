@@ -246,6 +246,8 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 			// Calculate rain rate
 			rain_rate = pow(Rho * Rain * rain_rate_factor, rain_rate_exponent);
 
+			assert(rain_rate == rain_rate);  // Checking NaN (note: assert() is defined only in debug builds)
+			
 			myTargetInfo->ParamIndex(0);
 
 			if (!myTargetInfo->Value(rain_rate))
@@ -255,6 +257,8 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 
 			// Calculate solid precipitation rate 
 			sprec_rate = pow(Rho * (Snow + Graupel) * snow_rate_factor, snow_rate_exponent);
+
+			assert(sprec_rate == sprec_rate); // Checking NaN (note: assert() is defined only in debug builds)
 
 			myTargetInfo->ParamIndex(1);
 
@@ -271,7 +275,6 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 		 */
 
 		SwapTo(myTargetInfo, kBottomLeft);
-
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
