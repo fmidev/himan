@@ -47,7 +47,7 @@ void density::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param theRequestedParam("RHO-KGM3", 9999);
+	param theRequestedParam("RHO-KGM3", 63);
 
 	// GRIB 2
 
@@ -98,7 +98,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 	ResetNonLeadingDimension(myTargetInfo);
 
 	myTargetInfo->FirstParam();
-
+	
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
