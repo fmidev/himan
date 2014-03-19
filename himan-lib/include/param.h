@@ -35,6 +35,7 @@ public:
     param(const std::string& theName);
     param(const std::string& theName, unsigned long theUnivId);
 
+    param(const std::string& theName, unsigned long theUnivId, long itsGribDiscipline, long itsGribCategory, long itsGribParameter);
     param(const std::string& theName, unsigned long theUnivId,
           float theScale,
           float theBase,

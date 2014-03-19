@@ -22,10 +22,10 @@ param::param()
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
-param::param(const std::string& theName, unsigned long theUnivId)
+param::param(const string& theName, unsigned long theUnivId)
 	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(theUnivId, NFmiString(theName))))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
@@ -36,10 +36,10 @@ param::param(const std::string& theName, unsigned long theUnivId)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
-param::param(const std::string& theName)
+param::param(const string& theName)
 	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, NFmiString(theName))))
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
@@ -50,14 +50,14 @@ param::param(const std::string& theName)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
-param::param(const std::string& theName,
+param::param(const string& theName,
 			 unsigned long theUnivId,
 			 float theScale,
 			 float theBase,
-			 const std::string& thePrecision,
+			 const string& thePrecision,
 			 FmiInterpolationMethod theInterpolationMethod)
 	: itsParam(unique_ptr<NFmiParam> (new NFmiParam (theUnivId,
 									  NFmiString(theName),
@@ -76,7 +76,21 @@ param::param(const std::string& theName,
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
+}
+
+param::param(const string& theName, unsigned long theUnivId, long theGribDiscipline, long theGribCategory, long theGribParameter)
+	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(theUnivId, NFmiString(theName))))
+	, itsGribParameter(theGribParameter)
+	, itsGribCategory(theGribCategory)
+	, itsGribDiscipline(theGribDiscipline)
+	, itsGribTableVersion(kHPMissingInt)
+	, itsGribIndicatorOfParameter(kHPMissingInt)
+	, itsUnit(kUnknownUnit)
+	, itsMissingValue(kHPMissingValue)
+	, itsAggregation()
+{
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const param& other)
@@ -90,7 +104,7 @@ param::param(const param& other)
 	, itsMissingValue(other.itsMissingValue)
 	, itsAggregation(other.itsAggregation)
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param& param::operator=(const param& other)
@@ -217,12 +231,12 @@ void param::UnivId(unsigned long theUnivId)
 	itsParam->SetIdent(theUnivId);
 }
 
-std::string param::Name() const
+string param::Name() const
 {
-	return std::string(itsParam->GetName());
+	return string(itsParam->GetName());
 }
 
-void param::Name(std::string theName)
+void param::Name(string theName)
 {
 	itsParam->SetName(NFmiString(theName));
 }
@@ -272,18 +286,18 @@ void param::Scale(double theScale)
 	itsParam->Scale(static_cast<float> (theScale));
 }
 
-std::ostream& param::Write(std::ostream& file) const
+ostream& param::Write(ostream& file) const
 {
 
-	file << "<" << ClassName() << ">" << std::endl;
-	file << "__itsName__ " << std::string(itsParam->GetName()) << std::endl;
-	file << "__itsUnivId__ " << itsParam->GetIdent() << std::endl;
-	file << "__itsGribParameter__ " << itsGribParameter << std::endl;
-	file << "__itsGribCategory__ " << itsGribCategory << std::endl;
-	file << "__itsGribDiscipline__ " << itsGribDiscipline << std::endl;
-	file << "__itsScale__ " << itsParam->Scale() << std::endl;
-	file << "__itsBase__ " << itsParam->Base() << std::endl;
-	file << "__itsUnit__ " << itsUnit << std::endl;
+	file << "<" << ClassName() << ">" << endl;
+	file << "__itsName__ " << string(itsParam->GetName()) << endl;
+	file << "__itsUnivId__ " << itsParam->GetIdent() << endl;
+	file << "__itsGribParameter__ " << itsGribParameter << endl;
+	file << "__itsGribCategory__ " << itsGribCategory << endl;
+	file << "__itsGribDiscipline__ " << itsGribDiscipline << endl;
+	file << "__itsScale__ " << itsParam->Scale() << endl;
+	file << "__itsBase__ " << itsParam->Base() << endl;
+	file << "__itsUnit__ " << itsUnit << endl;
 
 	file << itsAggregation;
 
