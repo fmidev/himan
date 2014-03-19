@@ -220,55 +220,46 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 			InterpolateToPoint(targetGrid, SnowGrid, equalGrids, Snow);
 			InterpolateToPoint(targetGrid, GraupelGrid, equalGrids, Graupel);
 
+			// Check if mixing ratio for rain is not missing
 			if (Rho == kFloatMissing || Rain == kFloatMissing)
 			{
 				missingCount++;
 				myTargetInfo->ParamIndex(0);
 				myTargetInfo->Value(kFloatMissing);
-				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Value(kFloatMissing);
-				continue;
-			}
+			} else {
+				// Calculate rain rate if mixing ratio is not missing. If mixing ratio is negative use 0.0 kg/kg instead.
+				double rain_rate;
+				rain_rate = pow(Rho * ((Rain >= 0.0) ? Rain : 0.0) * rain_rate_factor, rain_rate_exponent);
 
+				assert(rain_rate == rain_rate);  // Checking NaN (note: assert() is defined only in debug builds)
+			
+				myTargetInfo->ParamIndex(0);
+
+				if (!myTargetInfo->Value(rain_rate))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
+			}
+			// Check if mixing ratios for snow or graupel are not missing
 			if (Rho == kFloatMissing || Snow == kFloatMissing || Graupel == kFloatMissing)
 			{
 				missingCount++;
-				myTargetInfo->ParamIndex(0);
-				myTargetInfo->Value(kFloatMissing);
 				myTargetInfo->ParamIndex(1);
 				myTargetInfo->Value(kFloatMissing);
-				continue;
-			}
+			} else {
+				// Calculate solid precipitation rate if mixing ratios are not missing. If sum of mixing ratios is negative use 0.0 kg/kg instead.
+				double sprec_rate;
 
-			/*
-			 * Calculations go here
-			 *
-			 */
-			double rain_rate;
-			double sprec_rate;
-			
-			// Calculate rain rate
-			rain_rate = pow(Rho * ((Rain >= 0.0) ? Rain : 0.0) * rain_rate_factor, rain_rate_exponent);
+				sprec_rate = pow(Rho * (((Snow + Graupel) >= 0.0) ? (Snow + Graupel) : 0.0) * snow_rate_factor, snow_rate_exponent);
 
-			assert(rain_rate == rain_rate);  // Checking NaN (note: assert() is defined only in debug builds)
-			
-			myTargetInfo->ParamIndex(0);
+				assert(sprec_rate == sprec_rate); // Checking NaN (note: assert() is defined only in debug builds)
 
-			if (!myTargetInfo->Value(rain_rate))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
-			}
+				myTargetInfo->ParamIndex(1);
 
-			// Calculate solid precipitation rate 
-			sprec_rate = pow(Rho * (((Snow + Graupel) >= 0.0) ? (Snow + Graupel) : 0.0) * snow_rate_factor, snow_rate_exponent);
-
-			assert(sprec_rate == sprec_rate); // Checking NaN (note: assert() is defined only in debug builds)
-
-			myTargetInfo->ParamIndex(1);
-
-			if (!myTargetInfo->Value(sprec_rate))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				if (!myTargetInfo->Value(sprec_rate))
+				{
+					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				}
 			}
 		}
 
