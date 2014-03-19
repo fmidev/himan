@@ -225,12 +225,16 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 				missingCount++;
 				myTargetInfo->ParamIndex(0);
 				myTargetInfo->Value(kFloatMissing);
+				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Value(kFloatMissing);
 				continue;
 			}
 
-			if (Rho == kFloatMissing || Rain == kFloatMissing || Snow == kFloatMissing || Graupel == kFloatMissing)
+			if (Rho == kFloatMissing || Snow == kFloatMissing || Graupel == kFloatMissing)
 			{
 				missingCount++;
+				myTargetInfo->ParamIndex(0);
+				myTargetInfo->Value(kFloatMissing);
 				myTargetInfo->ParamIndex(1);
 				myTargetInfo->Value(kFloatMissing);
 				continue;
@@ -244,7 +248,7 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 			double sprec_rate;
 			
 			// Calculate rain rate
-			rain_rate = pow(Rho * Rain * rain_rate_factor, rain_rate_exponent);
+			rain_rate = pow(Rho * ((Rain >= 0.0) ? Rain : 0.0) * rain_rate_factor, rain_rate_exponent);
 
 			assert(rain_rate == rain_rate);  // Checking NaN (note: assert() is defined only in debug builds)
 			
@@ -256,7 +260,7 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 			}
 
 			// Calculate solid precipitation rate 
-			sprec_rate = pow(Rho * (Snow + Graupel) * snow_rate_factor, snow_rate_exponent);
+			sprec_rate = pow(Rho * (((Snow + Graupel) >= 0.0) ? (Snow + Graupel) : 0.0) * snow_rate_factor, snow_rate_exponent);
 
 			assert(sprec_rate == sprec_rate); // Checking NaN (note: assert() is defined only in debug builds)
 
