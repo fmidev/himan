@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.2.28
-Release: 2.fmi
+Version: 14.3.20
+Release: 1.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -54,6 +54,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libcloud_type.so
+%{_libdir}/himan-plugins/libdensity.so
 %{_libdir}/himan-plugins/libdewpoint.so
 %{_libdir}/himan-plugins/libfetcher.so
 %{_libdir}/himan-plugins/libfog.so
@@ -66,6 +67,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libpcuda.so
+%{_libdir}/himan-plugins/libprecipitation_rate.so
 %{_libdir}/himan-plugins/libpreform_hybrid.so
 %{_libdir}/himan-plugins/libpreform_pressure.so
 %{_libdir}/himan-plugins/libquerydata.so
@@ -80,7 +82,21 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Fri Feb 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.28-12fmi
+* Thu Mar 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.20-1.fmi
+- New plugin: precipitation_rate
+* Mon Mar 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.18-1.fmi
+- Minor fixes
+* Mon Mar 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.17-1.fmi
+- Bugfix in compiled_plugin_base::Unpack() (VALVONTA-112)
+- Multi-param overloads for hitool
+- Minor bugfixes
+* Wed Mar 12 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.12-1.fmi
+- New plugin: density
+- Bugfix for preform_hybrid
+- Attemping to fix HIMAN-25
+* Fri Feb 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.28-3.fmi
+- Support EC ground surface parameter PGR-PA for preform_pressure
+* Fri Feb 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.28-2.fmi
 - Fix HIMAN-22
 * Fri Feb 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.2.28-1.fmi
 - fetcher: do level transform separately for each producer (of more than one present)
