@@ -49,7 +49,7 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 
-	param theRequestedParam("ICING-N", 480);
+	param theRequestedParam("ICING-N", 480, 0, 19, 7);
 
 	theParams.push_back(theRequestedParam);
 
