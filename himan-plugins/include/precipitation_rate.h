@@ -20,7 +20,12 @@ namespace plugin
 /**
  * @class instant_precipitation
  *
- * @brief Calculate ...
+ * @brief Calculates the instant precipitation rate for rain and solid precipitation by the heuristic formuale
+ *         1. Rain_rate = (rho*WMR*1000/0.072)^(1/0.880)
+ *         2. SPre_rate = (rho*SMR*1000/0.250)^(1/0.900)
+ *        where rho is density, WMR is mixing ratio for water and SMR is mixing ratio for solid precipitation.
+ *
+ *        In case of negative mixing ratios the value is corrected to 0.0 kg/kg.
  *
  */
 
