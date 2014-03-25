@@ -150,6 +150,8 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		{
 			processTimer->Start();
 		}
+
+		SetAB(myTargetInfo, exampleInfo);
 		
 		size_t missingCount = 0;
 		size_t count = 0;

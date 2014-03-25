@@ -164,6 +164,8 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 		{
 			processTimer->Start();
 		}
+
+		SetAB(myTargetInfo, TInfo);
 		
 		size_t missingCount = 0;
 		size_t count = 0;
@@ -172,6 +174,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 		 * Converting original grid-data to newbase grid
 		 *
 		 */
+		SetAB(myTargetInfo, TInfo);
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
