@@ -6,7 +6,7 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan-bin/build/release/himan"
 fi
 
-#rm -f RHO-KGM3*.grib
+rm -f RHO-KGM3*.grib
 
 $HIMAN -d 5 -f density_harmonie.json -t grib --no-cuda harmonie_p_source.grib harmonie_t_source.grib
 
@@ -19,4 +19,4 @@ else
   exit 1
 fi
 
-#rm -f RHO-KGM3*.grib
+rm -f RHO-KGM3*.grib
