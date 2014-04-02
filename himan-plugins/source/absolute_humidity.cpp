@@ -37,7 +37,7 @@ void absolute_humidity::Process(std::shared_ptr<const plugin_configuration> conf
 	vector<param> theParams;
 
 	// First parameter - absolute humidity
-	param ABSH("ABSH-KGM3", 9999);
+	param ABSH("ABSH-KGM3", 1192);
 
 	// GRIB 2
 

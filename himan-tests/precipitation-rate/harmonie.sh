@@ -10,7 +10,7 @@ fi
 
 $HIMAN -d 4 -f absolute_humidity_harmonie.json -t grib harmonie_p_source.grib harmonie_t_source.grib harmonie_rain_source.grib harmonie_snow_source.grib harmonie_graupel_source.grib
 
-grib_compare ./RRRS-KGM2_hybrid_60_rll_290_594_0_360.grib result_solidpr_harmonie.grib
+grib_compare ./ABSH-KGM3_hybrid_60_rll_290_594_0_360.grib harmonie_result.grib
 VAR_1=$?
 
 if [ $VAR_1 -eq 0 ];then
