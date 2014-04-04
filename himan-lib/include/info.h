@@ -693,6 +693,23 @@ private:
 
 	void Init();
 
+	/**
+	 * @brief Re-create indexing of elements in meta-matrix if the dimensions
+	 * have changed.
+	 *
+	 * Because meta-matrix is a sparse matrix, if the dimension sizes are changed
+	 * (for example with Merge()), ie adding parameters, levels, times to an info
+	 * the ordering must also be changed accordingly.
+	 *
+	 * ReIndex() moves data around but does not copy (ie allocate new memory).
+	 *
+	 * @param xSize Old size of time iterator
+	 * @param ySize Old size of level iterator
+	 * @param zSize Old size of parameter iterator
+	*/
+	
+	void ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize);
+
 	/*
 	 * START GLOBAL CONFIGURATION FILE PARAMETERS
 	 *

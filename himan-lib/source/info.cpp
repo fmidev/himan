@@ -233,20 +233,26 @@ void info::Merge(shared_ptr<info> otherInfo)
 
     Reset();
 
-	otherInfo->Reset();
+	otherInfo->ResetTime();
 
 	// X = time
 	// Y = level
 	// Z = param
-	
+
 	while (otherInfo->NextTime())
 	{
 		if (itsTimeIterator->Add(otherInfo->Time())) // no duplicates
 		{
-			itsDimensionMatrix->SizeX(itsDimensionMatrix->SizeX()+1);
+			ReIndex(SizeTimes()-1,SizeLevels(),SizeParams());
 		}
 
-		Time(otherInfo->Time());
+		bool ret = Time(otherInfo->Time());
+
+		if (!ret)
+		{
+			itsLogger->Fatal("Unable to set time, merge failed");
+			exit(1);
+		}
 
 		otherInfo->ResetLevel();
 
@@ -254,10 +260,16 @@ void info::Merge(shared_ptr<info> otherInfo)
 		{
 			if (itsLevelIterator->Add(otherInfo->Level())) // no duplicates
 			{
-				itsDimensionMatrix->SizeY(itsDimensionMatrix->SizeY()+1);
+				ReIndex(SizeTimes(),SizeLevels()-1,SizeParams());
 			}
 
-			Level(otherInfo->Level());
+			ret = Level(otherInfo->Level());
+
+			if (!ret)
+			{
+				itsLogger->Fatal("Unable to set level, merge failed");
+				exit(1);
+			}
 
 			otherInfo->ResetParam();
 
@@ -265,10 +277,16 @@ void info::Merge(shared_ptr<info> otherInfo)
 			{
 				if (itsParamIterator->Add(otherInfo->Param())) // no duplicates
 				{
-					itsDimensionMatrix->SizeZ(itsDimensionMatrix->SizeZ()+1);
+					ReIndex(SizeTimes(),SizeLevels(),SizeParams()-1);
 				}
 
-				Param(otherInfo->Param());
+				ret = Param(otherInfo->Param());
+
+				if (!ret)
+				{
+					itsLogger->Fatal("Unable to set param, merge failed");
+					exit(1);
+				}
 
 				Grid(make_shared<grid> (*otherInfo->Grid()));
 			}
@@ -279,7 +297,6 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 void info::Merge(vector<shared_ptr<info>>& otherInfos)
 {
-
 	for (size_t i = 0; i < otherInfos.size(); i++)
 	{
 		Merge(otherInfos[i]);
@@ -645,7 +662,7 @@ void info::Data(shared_ptr<matrix_t> m)
 
 void info::Grid(shared_ptr<grid> d)
 {
-    itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()) = d;
+	itsDimensionMatrix->Set(TimeIndex(), LevelIndex(), ParamIndex(), d);
 }
 
 bool info::Value(double theValue)
@@ -765,4 +782,23 @@ info_simple* info::ToSimple() const
 const shared_ptr<const matrix_t> info::Dimensions() const
 {
 	return itsDimensionMatrix;
+}
+
+void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
+{
+	auto d = shared_ptr<matrix_t> (new matrix_t(SizeTimes(), SizeLevels(), SizeParams()));
+
+	for (size_t x = 0; x < oldXSize; x++)
+	{
+		for (size_t y = 0; y < oldYSize; y++)
+		{
+			for (size_t z = 0; z < oldZSize; z++)
+			{
+				size_t newIndex = z * SizeTimes() * SizeLevels() + y * SizeTimes() + x ;// Index(x,y,z,xSize, ySize);
+				d->Set(newIndex, Grid(x,y,z));
+			}
+		}
+	}
+
+	itsDimensionMatrix = d;
 }
