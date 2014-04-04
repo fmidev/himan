@@ -1066,6 +1066,11 @@ void grib::WriteParameter(std::shared_ptr<const info> anInfo)
 			}
 
 			parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message()->Table2Version(), anInfo->Param().Name());
+
+			if (parm_id == -1)
+			{
+				itsLogger->Warning("Parameter " + anInfo->Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo->Producer().TableVersion()) + " in neons");
+			}
 		}
 
 		itsGrib->Message()->ParameterNumber(parm_id);
