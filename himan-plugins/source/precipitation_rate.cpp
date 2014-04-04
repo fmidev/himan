@@ -48,7 +48,7 @@ void precipitation_rate::Process(std::shared_ptr<const plugin_configuration> con
 	vector<param> theParams;
 
 	// First parameter - rain
-	param RPRATE("RRR-KGM2", 49);
+	param RPRATE("RRI-KGM2", 1171);
 
 	// GRIB 2
 
@@ -59,7 +59,7 @@ void precipitation_rate::Process(std::shared_ptr<const plugin_configuration> con
 	theParams.push_back(RPRATE);
 
 	// Second parameter - snow/solid precipitation
-	param SPRATE("RRRS-KGM2", 200);
+	param SPRATE("RSI-KGM2", 1193);
 
 	// GRIB 2
 
