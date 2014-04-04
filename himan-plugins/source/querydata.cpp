@@ -109,10 +109,9 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 	NFmiFastQueryInfo qi(pdesc, tdesc, hdesc, vdesc);
 
 	qdata = make_shared<NFmiQueryData> (*NFmiQueryDataUtil::CreateEmptyData(qi));
+	qdata->Info()->SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo->Producer().Id()), theInfo->Producer().Name()));
 
 	NFmiFastQueryInfo qinfo = qdata.get();
-
-	qinfo.SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo->Producer().Id()), theInfo->Producer().Name()));
 
 	/*
 	 * At the same time check that we have only constant-sized grids
@@ -423,7 +422,10 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	NFmiQueryInfo* qi = theData->Info();
 
-	newInfo->Producer(producer(230, 86, 230, "HIMAN"));
+	producer p (230, 86, 230, "HIMAN");
+	p.TableVersion(203);
+	
+	newInfo->Producer(p);
 	
 	// Times
 
@@ -545,6 +547,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			}
 		}
 	}
+	
 	return newInfo;
 
 }
