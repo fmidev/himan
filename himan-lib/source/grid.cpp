@@ -782,7 +782,11 @@ ostream& grid::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
-	file << *itsData;
+	if (itsData)
+	{
+		file << *itsData;
+	}
+	
 	file << "__dataIsPacked__ " << IsPackedData() << endl;
 	file << "__itsScanningMode__ " << itsScanningMode << endl;
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
