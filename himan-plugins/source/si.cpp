@@ -249,7 +249,10 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		sourceInfo->First();
 
 		bool ret = sourceInfo->Param(TParam);
+
+#ifndef NDEBUG
 		assert(ret);
+#endif
 
 		sourceInfo->FirstTime();
 		assert(sourceInfo->SizeTimes() == 1);
