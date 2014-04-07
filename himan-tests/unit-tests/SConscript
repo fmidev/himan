@@ -10,5 +10,4 @@ for file in Glob('source/*.cpp'):
         obj='obj/'+ s
 	objects = env.Object(obj, file)
 	env.Program(target = s, source = objects)
-#	env.Program(target = s, source = env.File(file))
 

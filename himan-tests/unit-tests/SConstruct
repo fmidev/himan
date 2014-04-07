@@ -58,6 +58,7 @@ includes.append('include')
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
+includes.append('/usr/include/smartmet/smarttools')
 
 if have_cuda:
 	includes.append(cuda_toolkit_path + '/include')
@@ -70,8 +71,11 @@ librarypaths = []
 
 if RELEASE:
 	librarypaths.append(workspace + '/himan-lib/build/release')
+	librarypaths.append(workspace + '/himan-plugins/build/release')
+
 else:
 	librarypaths.append(workspace + '/himan-lib/build/debug')
+	librarypaths.append(workspace + '/himan-plugins/build/debug')
 
 librarypaths.append('/usr/lib64')
 librarypaths.append('/usr/lib64/oracle')
@@ -85,6 +89,10 @@ env.Append(LIBPATH = librarypaths)
 
 libraries = []
 
+# Do we really need to link all plugins here ?
+
+libraries.append('querydata')
+
 libraries.append('himan')
 libraries.append('smartmet_newbase')
 libraries.append('clntsh')
@@ -94,6 +102,11 @@ libraries.append('jasper')
 if have_cuda:
 	libraries.append('cudart')
 
+# plugins 
+libraries.append('hitool')
+libraries.append('fetcher')
+
+libraries.append('smartmet_smarttools')
 libraries.append('boost_unit_test_framework') # this needs to be dynamically linked
 
 env.Append(LIBS = libraries)
