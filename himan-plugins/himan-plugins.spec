@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.3.20
+Version: 14.4.7
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -52,6 +52,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,0644)
+%{_libdir}/himan-plugins/libabsolute_humidity.so
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libcloud_type.so
 %{_libdir}/himan-plugins/libdensity.so
@@ -73,7 +74,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libquerydata.so
 %{_libdir}/himan-plugins/librain_type.so
 %{_libdir}/himan-plugins/librelative_humidity.so
+%{_libdir}/himan-plugins/libroughness.so
 %{_libdir}/himan-plugins/libseaicing.so
+%{_libdir}/himan-plugins/libsi.so
 %{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libtk2tc.so
 %{_libdir}/himan-plugins/libtpot.so
@@ -82,6 +85,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Apr  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.3-1.fmi
+- Three new plugins: si, roughness and absolute_humidity
+- Parameter change in precipitation_rate
+* Wed Mar 26 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.26-1.fmi
+- Vertical coordinate fix for density and precipitation_rate
 * Thu Mar 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.20-1.fmi
 - New plugin: precipitation_rate
 * Mon Mar 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.18-1.fmi
