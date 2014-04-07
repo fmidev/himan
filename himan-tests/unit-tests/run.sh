@@ -1,5 +1,7 @@
 set -x
 
+export LD_LIBRARY_PATH=$HOME/workspace/himan-plugins/build/debug:$LD_LIBRARY_PATH
+
 path=$1
 
 if [ $? -eq 0 ]; then
