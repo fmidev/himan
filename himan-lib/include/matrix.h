@@ -51,6 +51,35 @@ public:
 
 		return *this;
 	}
+
+	bool operator==(const matrix& other) const
+	{
+		assert(itsData.size() == other.itsData.size());
+		
+		if (itsWidth	!= other.itsWidth ||
+			itsHeight	!= other.itsHeight ||
+			itsDepth	!= other.itsDepth ||
+			itsMissingValue != other.itsMissingValue)
+		{
+			return false;
+		}
+
+		for (size_t i = 0; i < itsData.size(); i++)
+		{
+			if (itsData[i] != other.itsData[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
+		
+	}
+
+	bool operator!=(const matrix& other) const
+	{
+		return !(*this == other);
+	}
 	
 	std::string ClassName() const
 	{
@@ -162,20 +191,17 @@ public:
 
 	void SizeX(size_t theWidth)
 	{
-		itsWidth = theWidth;
-		Resize(itsWidth, itsHeight, itsDepth);
+		Resize(theWidth, itsHeight, itsDepth);
 	}
 
 	void SizeY(size_t theHeight)
 	{
-		itsHeight = theHeight;
-		Resize(itsWidth, itsHeight, itsDepth);
+		Resize(itsWidth, theHeight, itsDepth);
 	}
 
 	void SizeZ(size_t theDepth)
 	{
-		itsDepth = theDepth;
-		Resize(itsWidth, itsHeight, itsDepth);
+		Resize(itsWidth, itsHeight, theDepth);
 	}
 
 	/**
@@ -188,7 +214,7 @@ public:
 
 	void Resize(size_t theWidth, size_t theHeight, size_t theDepth = 1)
 	{
-		itsData.resize(theWidth * theHeight * theDepth);
+		itsData.resize(theWidth * theHeight * theDepth, 0);
 		itsWidth = theWidth;
 		itsHeight = theHeight;
 		itsDepth = theDepth;
