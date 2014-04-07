@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 14.3.20
+Version: 14.4.7
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -51,6 +51,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Apr  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.7-1.fmi
+- Small changes
 * Thu Mar 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.20-1.fmi
 - Small changes
 * Tue Mar 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.18-1.fmi
