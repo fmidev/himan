@@ -248,7 +248,11 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		
 		sourceInfo->First();
 
-		bool ret = sourceInfo->Param(TParam);
+#ifndef NDEBUG
+		bool ret =
+#endif
+		
+		sourceInfo->Param(TParam);
 
 #ifndef NDEBUG
 		assert(ret);
