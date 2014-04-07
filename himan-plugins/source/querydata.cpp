@@ -216,7 +216,6 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 		}
 	}
 
-
 	return qdata;
 
 }
@@ -420,7 +419,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	auto newInfo = make_shared<info> ();
 	auto newGrid = make_shared<grid> ();
 
-	NFmiQueryInfo* qi = theData->Info();
+	NFmiQueryInfo qinfo = theData.get();
 
 	producer p (230, 86, 230, "HIMAN");
 	p.TableVersion(203);
@@ -431,11 +430,11 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	vector<forecast_time> theTimes;
 
-	raw_time originTime(string(qi->OriginTime().ToStr(kYYYYMMDDHHMM)), "%Y%m%d%H%M");
+	raw_time originTime(string(qinfo.OriginTime().ToStr(kYYYYMMDDHHMM)), "%Y%m%d%H%M");
 	
-	for (qi->ResetTime(); qi->NextTime(); )
+	for (qinfo.ResetTime(); qinfo.NextTime(); )
 	{
-		raw_time ct(string(qi->Time().ToStr(kYYYYMMDDHHMM)), "%Y%m%d%H%M");
+		raw_time ct(string(qinfo.Time().ToStr(kYYYYMMDDHHMM)), "%Y%m%d%H%M");
 
 		forecast_time t(originTime, ct);
 		theTimes.push_back(t);
@@ -447,11 +446,11 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	vector<level> theLevels;
 
-	for (qi->ResetLevel(); qi->NextLevel(); )
+	for (qinfo.ResetLevel(); qinfo.NextLevel(); )
 	{
 		HPLevelType lt = kUnknownLevel;
 
-		switch (qi->Level()->LevelType())
+		switch (qinfo.Level()->LevelType())
 		{
 			case kFmiHybridLevel:
 				lt = kHybrid;
@@ -470,11 +469,11 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 				break;
 				
 			default:
-				throw runtime_error("Unknown level type in querydata: " + boost::lexical_cast<string> (qi->Level()->LevelType()));
+				throw runtime_error("Unknown level type in querydata: " + boost::lexical_cast<string> (qinfo.Level()->LevelType()));
 				break;
 		}
 
-		level l(lt, qi->Level()->LevelValue());
+		level l(lt, qinfo.Level()->LevelValue());
 
 		theLevels.push_back(l);
 	}
@@ -485,9 +484,9 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	vector<himan::param> theParams;
 
-	for (qi->ResetParam(); qi->NextParam(); )
+	for (qinfo.ResetParam(); qinfo.NextParam(); )
 	{
-		param p (string(qi->Param().GetParamName()), qi->Param().GetParamIdent());
+		param p (string(qinfo.Param().GetParamName()), qinfo.Param().GetParamIdent());
 		theParams.push_back(p);
 	}
 
@@ -498,7 +497,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	newGrid->ScanningMode(kBottomLeft);
 	newGrid->UVRelativeToGrid(false);
 
-	switch (qi->Area()->ClassId())
+	switch (qinfo.Area()->ClassId())
 	{
 		case kNFmiLatLonArea:
 			newGrid->Projection(kLatLonProjection);
@@ -506,48 +505,54 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 		case kNFmiRotatedLatLonArea:
 			newGrid->Projection(kRotatedLatLonProjection);
-			newGrid->SouthPole(reinterpret_cast<const NFmiRotatedLatLonArea*> (qi->Area())->SouthernPole());
+			newGrid->SouthPole(reinterpret_cast<const NFmiRotatedLatLonArea*> (qinfo.Area())->SouthernPole());
 			break;
 
 		case kNFmiStereographicArea:
 			newGrid->Projection(kStereographicProjection);
-			newGrid->Orientation(reinterpret_cast<const NFmiStereographicArea*> (qi->Area())->Orientation());
-			//newGrid->Di(reinterpret_cast<const NFmiStereographicArea*> (qi->Area())->);
+			newGrid->Orientation(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->Orientation());
+			//newGrid->Di(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->);
 			//newGrid->Dj(itsGrib->Message()->YLengthInMeters());
 
 			break;
 	}
 
-	size_t ni = qi->Grid()->XNumber();
-	size_t nj = qi->Grid()->YNumber();
+	size_t ni = qinfo.Grid()->XNumber();
+	size_t nj = qinfo.Grid()->YNumber();
 	
-	newGrid->BottomLeft(qi->Area()->BottomLeftLatLon());
-	newGrid->TopRight(qi->Area()->TopRightLatLon());
+	newGrid->BottomLeft(qinfo.Area()->BottomLeftLatLon());
+	newGrid->TopRight(qinfo.Area()->TopRightLatLon());
 
 	newInfo->Create(newGrid);
 
 	// Copy data
 
-	for (newInfo->ResetTime(), qi->ResetTime(); newInfo->NextTime() && qi->NextTime();)
+	for (newInfo->ResetTime(), qinfo.ResetTime(); newInfo->NextTime() && qinfo.NextTime();)
 	{
-		for (newInfo->ResetLevel(), qi->ResetLevel(); newInfo->NextLevel() && qi->NextLevel();)
+		assert(newInfo->TimeIndex() == qinfo.TimeIndex());
+
+		for (newInfo->ResetLevel(), qinfo.ResetLevel(); newInfo->NextLevel() && qinfo.NextLevel();)
 		{
-			for (newInfo->ResetParam(), qi->ResetParam(); newInfo->NextParam() && qi->NextParam();)
+			assert(newInfo->LevelIndex() == qinfo.LevelIndex());
+
+			for (newInfo->ResetParam(), qinfo.ResetParam(); newInfo->NextParam() && qinfo.NextParam();)
 			{
-				shared_ptr<unpacked> dm = shared_ptr<unpacked> (new unpacked(ni, nj));
+				assert(newInfo->ParamIndex() == qinfo.ParamIndex());
+
+				auto dm = make_shared<unpacked> (ni, nj);
 
 				size_t i;
 				
-				for (qi->ResetLocation(), i = 0; qi->NextLocation() && i < ni*nj; i++)
+				for (qinfo.ResetLocation(), i = 0; qinfo.NextLocation() && i < ni*nj; i++)
 				{
-					dm->Set(i, static_cast<double> (qi->FloatValue()));
+					dm->Set(i, static_cast<double> (qinfo.FloatValue()));
 				}
 
 				newInfo->Grid()->Data(dm);
 			}
 		}
 	}
-	
+
 	return newInfo;
 
 }
