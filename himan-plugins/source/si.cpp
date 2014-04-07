@@ -25,6 +25,9 @@ using namespace himan::plugin;
 #include "NFmiQueryData.h"
 #include "NFmiSoundingIndexCalculator.h"
 
+#if 0
+// nicer way to convert between std::shared_ptr and boost::shared_ptr but does not work on gcc 4.4.7 :(
+
 boost::shared_ptr<NFmiQueryData> make_shared_ptr(std::shared_ptr<NFmiQueryData>& ptr)
 {
     return boost::shared_ptr<NFmiQueryData>(ptr.get(), [ptr](NFmiQueryData*) mutable {ptr.reset();});
@@ -34,6 +37,17 @@ std::shared_ptr<NFmiQueryData> make_shared_ptr(boost::shared_ptr<NFmiQueryData>&
 {
     return std::shared_ptr<NFmiQueryData>(ptr.get(), [ptr](NFmiQueryData*) mutable {ptr.reset();});
 }
+#endif
+
+// Define a null delete that's used when std::shared_ptr is converted to boost::shared_ptr or vice-versa.
+// The idea is that the new shared_ptr does not call delete when it goes out of scope since the original
+// shared_ptr does that.
+
+struct nullDeleter
+{
+	template <typename T>
+	void operator()(T*& ptr) {}
+};
 
 si::si() : itsBottomLevel(kHPMissingInt)
 {
@@ -106,8 +120,10 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		// Source infos
 
 		shared_ptr<info> sourceInfo;
-		
-		for (int levelNumber = itsBottomLevel; levelNumber >= itsTopLevel; levelNumber--)
+
+		bool haveData = true;
+
+		for (int levelNumber = itsTopLevel; haveData && levelNumber <= itsBottomLevel; levelNumber++)
 		{
 			level curLevel(kHybrid, levelNumber, "HYBRID");
 			
@@ -207,7 +223,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 							itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
 							itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
 						}
-
+						haveData = false;
 						continue;
 						break;
 
@@ -218,6 +234,11 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			}
 		}
 
+		if (!haveData)
+		{
+			break;
+		}
+		
 		size_t missingCount = 0;
 		size_t count = 0;
 
@@ -248,15 +269,17 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		shared_ptr<NFmiQueryData> qdata = q->CreateQueryData(sourceInfo, false);
 
 		// querydata: std::shared_ptr to boost::shared_ptr
-		boost::shared_ptr<NFmiQueryData> bqdata = make_shared_ptr(qdata);
-
+		// boost::shared_ptr<NFmiQueryData> bqdata = make_shared_ptr(qdata);
+		boost::shared_ptr<NFmiQueryData> bqdata (qdata.get(), nullDeleter());
+		
 		myThreadedLogger->Info("Calculating sounding index");
 		
 		// got boost::shared_ptr
 		boost::shared_ptr<NFmiQueryData> bsidata = NFmiSoundingIndexCalculator::CreateNewSoundingIndexData(bqdata, "ASDF", false, 0);
 
 		// querydata: boost::shared_ptr to std::shared_ptr
-		shared_ptr<NFmiQueryData> sidata = make_shared_ptr(bsidata);
+		//shared_ptr<NFmiQueryData> sidata = make_shared_ptr(bsidata);
+		shared_ptr<NFmiQueryData> sidata (bsidata.get(), nullDeleter());
 		
 		// querydata: convert to info
 		myTargetInfo = q->CreateInfo(sidata);
