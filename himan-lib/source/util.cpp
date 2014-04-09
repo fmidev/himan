@@ -49,8 +49,9 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 			 << "_"
 			 << info->Producer().Process()
 			 << "/"
-			 << info->Time().OriginDateTime()->String("%Y%m%d%H%M");
-
+			 << info->Time().OriginDateTime()->String("%Y%m%d%H%M")
+			 << "/"
+			 << info->Time().Step();
 	}
 
 	// Create a unique file name when creating multiple files from one info
