@@ -47,6 +47,7 @@ void relative_humidity::Process(shared_ptr<const plugin_configuration> conf)
 	vector<param> params;
 
 	param requestedParam ("RH-PRCNT", 13);
+	requestedParam.Unit(kPrcnt);
 
 	// GRIB 2
 

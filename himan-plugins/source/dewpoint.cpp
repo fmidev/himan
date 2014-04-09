@@ -43,7 +43,8 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 	vector<param> params;
 
 	param requestedParam ("TD-C", 10);
-
+	requestedParam.Unit(kK);
+	
 	// GRIB 2
 
 	requestedParam.GribDiscipline(0);
@@ -139,8 +140,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 		if (RHInfo->Param().Unit() != kPrcnt)
 		{
-			// If unit cannot be detected, assume the values are from 0 .. 1
-			RHScale = 100;
+			itsLogger->Warning("Unable to determine RH unit, assuming percent");
 		}
 
 		// Formula assumes T == Celsius
