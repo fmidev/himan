@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.4.7
+Version: 14.4.10
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -19,6 +19,7 @@ Requires: oracle-instantclient-basic >= 11.2.0.3.0
 BuildRequires: boost-devel >= 1.54
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 13.9.26
+BuildRequires: libsmartmet-smarttools >= 14.4.7
 BuildRequires: grib_api-devel >= 1.10.4
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-5-5
@@ -85,7 +86,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Thu Apr  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.3-1.fmi
+* Thu Apr 10 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.10-1.fmi
+- Add parameter unit to dewpoint and relative_humidity
+* Mon Apr  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.7-2.fmi
+- Link against smarttools
+* Mon Apr  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.7-1.fmi
 - Three new plugins: si, roughness and absolute_humidity
 - Parameter change in precipitation_rate
 * Wed Mar 26 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.26-1.fmi
