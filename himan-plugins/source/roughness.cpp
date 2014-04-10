@@ -35,7 +35,7 @@ void roughness::Process(std::shared_ptr<const plugin_configuration> conf)
 	Init(conf);
 
 	vector<param> theParams;
-	param theRequestedParam("SR-M", 83);
+	param theRequestedParam("SR-M", 283);
 
 	//param theRequestedParam(PARM_ NAME, UNIV_ID);
 
