@@ -99,8 +99,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	// Required source parameters
 
 	const param TParam("T-K");
-	//const param TDParam("TD-C");
-	const param PParam("P-HPA");
+	const params PParam({param("P-HPA"), param("P-PA")});
 	const param RHParam("RH-PRCNT");
 	const param HParam("HL-M");
 	const param FFParam("FF-MS");
@@ -146,6 +145,8 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 				tempInfo->Param().UnivId(4);
 
+				ScaleBase(tempInfo, 1, -constants::kKelvin);
+
 				if (!sourceInfo)
 				{
 					sourceInfo = tempInfo;
@@ -179,6 +180,11 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 				tempInfo->Param().UnivId(1);
 
+				if (tempInfo->Param().Name() == "P-PA")
+				{
+					ScaleBase(tempInfo, 0.01, 0);
+				}
+				
 				sourceInfo->Merge(tempInfo);
 
 				tempInfo.reset();
@@ -242,30 +248,6 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		size_t missingCount = 0;
 		size_t count = 0;
 
-		// Scale to correct units
-
-		itsLogger->Info("Scaling source data");
-		
-		sourceInfo->First();
-
-#ifndef NDEBUG
-		bool ret =
-#endif
-		
-		sourceInfo->Param(TParam);
-
-#ifndef NDEBUG
-		assert(ret);
-#endif
-
-		sourceInfo->FirstTime();
-		assert(sourceInfo->SizeTimes() == 1);
-		
-		for (sourceInfo->ResetLevel(); sourceInfo->NextLevel();)
-		{
-			ScaleBase(sourceInfo, 1, -constants::kKelvin);
-		}
-
 		// data read from neons does not have correct fmi producer id, copy producer
 		// info from target info
 		
@@ -275,6 +257,11 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		shared_ptr<NFmiQueryData> qdata = q->CreateQueryData(sourceInfo, false);
 
+#ifdef DEBUG
+		ofstream in("indata.fqd");
+		in << *qdata;
+#endif
+
 		// querydata: std::shared_ptr to boost::shared_ptr
 		// boost::shared_ptr<NFmiQueryData> bqdata = make_shared_ptr(qdata);
 		boost::shared_ptr<NFmiQueryData> bqdata (qdata.get(), nullDeleter());
@@ -283,6 +270,11 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		
 		// got boost::shared_ptr
 		boost::shared_ptr<NFmiQueryData> bsidata = NFmiSoundingIndexCalculator::CreateNewSoundingIndexData(bqdata, "ASDF", false, 0);
+
+#ifdef DEBUG
+		ofstream out("outdata.fqd");
+		out << *bsidata;
+#endif
 
 		// querydata: boost::shared_ptr to std::shared_ptr
 		//shared_ptr<NFmiQueryData> sidata = make_shared_ptr(bsidata);
