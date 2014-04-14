@@ -7,6 +7,7 @@
 
 #define AND &&
 #define OR ||
+#define MISS kFloatMissing
 
 #include "preform_hybrid.h"
 #include <iostream>
@@ -283,7 +284,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		assert(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
 		assert(myTargetInfo->SizeLocations() == RHInfo->SizeLocations());
 
-		bool equalGrids = CompareGrids({myTargetInfo, RRInfo, RHInfo, TInfo});
+		bool equalGrids = CompareGrids({myTargetInfo->Grid(), RRInfo->Grid(), RHInfo->Grid(), TInfo->Grid()});
 
 		while (myTargetInfo->NextLocation()	&& targetGrid->Next()
 					&& stratus->NextLocation()
@@ -437,24 +438,24 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros?
 			// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
 
-			if (	PreForm == kFloatMissing AND
-					plusArea != kFloatMissing AND
-					minusArea != kFloatMissing AND
-					RR > 0.1 AND
-					plusArea > fzraPA AND
-					minusArea < fzraMA AND
-					T <= 0 AND
-					((upperLayerRH > dryLimit) OR (upperLayerRH == kFloatMissing)))
+			if (PreForm == MISS AND
+				plusArea != MISS AND
+				minusArea != MISS AND
+				RR > 0.1 AND
+				plusArea > fzraPA AND
+				minusArea < fzraMA AND
+				T <= 0 AND
+				((upperLayerRH > dryLimit) OR (upperLayerRH == MISS)))
 			{
 				PreForm = kFreezingRain;
 			}
 
 			// Tihkua tai vettä jos "riitävän paksu lämmin kerros pinnan yläpuolella"
 
-			if (PreForm == kFloatMissing)
+			if (PreForm == MISS)
 			{
-				 if (plusArea != kFloatMissing AND plusArea > waterArea)
-				 {
+				if (plusArea != MISS AND plusArea > waterArea)
+				{
 					// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
 					// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään mukana)
 					if (thickStratusWithLightPrecipitation)
@@ -469,7 +470,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
 
-				if (plusArea != kFloatMissing && plusArea >= snowArea AND plusArea <= waterArea)
+				if (plusArea != MISS && plusArea >= snowArea AND plusArea <= waterArea)
 				{
 					PreForm = kSleet;
 				}
@@ -477,7 +478,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
 				// 20.2.2014: Ehto "OR T<0" poistettu (muuten ajoittain lunta, jos hyvin ohut pakkaskerros pinnassa)
 
-				 if (plusArea == kFloatMissing OR plusArea < snowArea)
+				if (plusArea == MISS OR plusArea < snowArea)
 				{
 					PreForm = kSnow;
 				}
