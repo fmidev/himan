@@ -227,7 +227,7 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 			rtype = rain_type(rainType);
 			rform = rain_form(rainType);
 			wtype = weather_type(rainType);
-	
+
 			if (rform == 1)
 			{   
 				if(rtype == 1)
@@ -390,6 +390,11 @@ double weather_symbol::rain_type(double rr) {
 	{
 		rain_type = 3;
 	}
+	else
+	{
+		throw runtime_error("Invalid value for rr: Fix me!");
+	}
+	
     return rain_type;
 }
 
