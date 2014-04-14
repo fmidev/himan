@@ -234,17 +234,23 @@ protected:
 #endif
 
 	/**
-	 * @brief Compare a number of grids to see if they are equale.
+	 * @brief Compare a number of grids to see if they are equal.
 	 *
-	 * Throws if number of grids is less than or equal to 1. Assumes iterators are in
-	 * place, only active grid is compared.
-	 * 
-     * @param grids List of infos
-     * @return True if all are equal
+     * @param grids List of grids
+     * @return True if all are equal, else false
      */
 	
-	bool CompareGrids(std::initializer_list<std::shared_ptr<info>> infos);
-	
+	bool CompareGrids(std::initializer_list<std::shared_ptr<grid>> grids);
+
+	/**
+	 * @brief Syntactic sugar: simple function to check if any of the arguments is a missing value
+	 *
+	 * @param values List of doubles
+	 * @return True if any of the values is missing value (kFloatMissing), otherwise false
+	 */
+
+	bool IsMissingValue(std::initializer_list<double> values);
+
 	std::shared_ptr<info> itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	short itsThreadCount;

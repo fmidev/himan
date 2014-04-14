@@ -470,26 +470,36 @@ void compiled_plugin_base::CopyDataFromSimpleInfo(shared_ptr<info> anInfo, info_
 }
 #endif
 
-bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<info>> infos)
+bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids)
 {
-	if (infos.size() <= 1)
+	if (grids.size() <= 1)
 	{
 		throw kUnknownException;
 	}
 
-	auto it = infos.begin();
+	auto it = grids.begin();
 	auto first = *it;
-	bool ret = false;
 	
-	for (++it; it != infos.end(); ++it)
+	for (++it; it != grids.end(); ++it)
 	{
-		ret = (*(first->Grid()) == *(*it)->Grid());
-
-		if (!ret)
+		if (*first != **it)
 		{
 			return false;
 		}
 	}
 
 	return true;
+}
+
+bool compiled_plugin_base::IsMissingValue(initializer_list<double> values)
+{
+	for (auto it = values.begin(); it != values.end(); ++it)
+	{
+		if (*it == kFloatMissing)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
