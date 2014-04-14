@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.4.10
+Version: 14.4.14
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -82,10 +82,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libtk2tc.so
 %{_libdir}/himan-plugins/libtpot.so
 %{_libdir}/himan-plugins/libvvms.so
+%{_libdir}/himan-plugins/libweather_symbol.so
 %{_libdir}/himan-plugins/libwindvector.so
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 14 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.14-1.fmi
+- New plugin: weather_symbol (beta) (HIMAN-36)
+- Changes to preform_pressure (HIMAN-48)
 * Thu Apr 10 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.10-1.fmi
 - Add parameter unit to dewpoint and relative_humidity
 * Mon Apr  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.7-2.fmi
