@@ -8,6 +8,7 @@
 
 #define AND &&
 #define OR ||
+#define MISS kFloatMissing
 
 #include "preform_pressure.h"
 #include <iostream>
@@ -25,10 +26,20 @@
 using namespace std;
 using namespace himan::plugin;
 
-// Paksuuden raja-arvot vesi- ja lumisateelle [m]
+// Olomuotopäättely pinta/peruspainepintadatalla tiivistettynä (tässä järjestyksessä):
+//
+// 0. Mallissa sadetta (RR>0; RR = rainfall + snowfall)
+// 1. Jäätävää tihkua, jos -10<T2m<=0C, pakkasstratus (~-10...-0) jossa nousuliikettä, sade heikkoa, ei satavaa keskipilveä
+// 2. Jäätävää vesisadetta, jos T2m<=0C ja pinnan yläpuolella on T>0C kerros, ja RR>0.1
+// 3. Lunta, jos snowfall/RR>0.8, tai T<=0C
+// 4. Räntää, jos 0.15<snowfall/RR<0.8
+// 5. Vettä tai tihkua, jos snowfall/RR<0.15
+// 5a. Tihkua, jos stratusta pienellä sadeintensiteetillä, eikä keskipilveä
 
-const double waterLim = 1300;
-const double snowLim = 1288;
+// Mallin lumisateen osuuden raja-arvot (kokonaissateesta) lumi/räntä/vesiolomuodoille
+
+const double waterLim = 0.15;
+const double snowLim = 0.8;
 
 // Vaadittu 2m lämpötilaväli (oltava näiden välissä) [C] jäätävässä tihkussa
 const double sfcMax = 0;
@@ -49,15 +60,6 @@ const double wMax = 50;
 // sulamiskerroksen (tai sen alapuolisen pakkaskerroksen) vähimmäispaksuus [hPa] jäätävässä sateessa
 // (olettaen, että stratuksen/sulamis-/pakkaskerroksen top on 925/850hPa:ssa)
 const double stH = 15;
-
-// Raja-arvot Koistisen olomuotokaavalle (probWater):
-const double sleetTOwater = 0.8;  // alkup. PK:n arvo oli 0.8
-const double sleetTOsnow = 0.2;   // alkup. PK:n arvo oli 0.2
-const double waterTOsleet = 0.5;  // alkup. PK:n arvo oli 0.5
-
-// Paksuuden raja-arvot vesi- ja lumisateelle [m]
-const double waterThickness = 1300;
-const double snowThickness = 1288;
 
 preform_pressure::preform_pressure()
 {
@@ -129,7 +131,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 	const param TParam("T-K");
 	const param RHParam("RH-PRCNT");
-	const param ZParam("Z-M2S2");
+	const param SNRParam("SNR-KGM2");
 
 	// Default to one hour precipitation, will change this later on if necessary
 	param RRParam("RR-1-MM");
@@ -183,14 +185,13 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 		shared_ptr<info> RH850Info;
 		shared_ptr<info> RH925Info;
 
-		shared_ptr<info> Z850Info;
-		shared_ptr<info> Z1000Info;
-
 		shared_ptr<info> W925Info;
 		shared_ptr<info> W850Info;
 
 		shared_ptr<info> RRInfo;
 		shared_ptr<info> PInfo;
+
+		shared_ptr<info> SNRInfo;
 
 		try
 		{
@@ -242,16 +243,6 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 								 P925,
 								 RHParam);
 
-			Z850Info = aFetcher->Fetch(itsConfiguration,
-					 myTargetInfo->Time(),
-					 P850,
-					 ZParam);
-
-			Z1000Info = aFetcher->Fetch(itsConfiguration,
-					 myTargetInfo->Time(),
-					 P1000,
-					 ZParam);
-
 			W925Info = aFetcher->Fetch(itsConfiguration,
 						 myTargetInfo->Time(),
 						 P925,
@@ -271,6 +262,11 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 								 myTargetInfo->Time(),
 								 surface0mLevel,
 								 RRParam);
+
+			SNRInfo = aFetcher->Fetch(itsConfiguration,
+								 myTargetInfo->Time(),
+								 surface0mLevel,
+								 SNRParam);
 
 		}
 		catch (HPExceptionType& e)
@@ -313,31 +309,19 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 		shared_ptr<NFmiGrid> RH850Grid(RH850Info->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> RH925Grid(RH925Info->Grid()->ToNewbaseGrid());
 
-		shared_ptr<NFmiGrid> Z850Grid(Z850Info->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> Z1000Grid(Z1000Info->Grid()->ToNewbaseGrid());
-
-		shared_ptr<NFmiGrid> W925Grid(RH925Info->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> W850Grid(Z850Info->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> W925Grid(W925Info->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> W850Grid(W850Info->Grid()->ToNewbaseGrid());
 
 		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
 
 		shared_ptr<NFmiGrid> RRGrid(RRInfo->Grid()->ToNewbaseGrid());
+		shared_ptr<NFmiGrid> SNRGrid(SNRInfo->Grid()->ToNewbaseGrid());
 
-		bool equalGrids = ((*myTargetInfo->Grid() == *TInfo->Grid()) &&
-							(*myTargetInfo->Grid() == *T700Info->Grid()) &&
-							(*myTargetInfo->Grid() == *T850Info->Grid()) &&
-							(*myTargetInfo->Grid() == *T925Info->Grid()) &&
-							(*myTargetInfo->Grid() == *RHInfo->Grid()) &&
-							(*myTargetInfo->Grid() == *RH700Info->Grid()) &&
-							(*myTargetInfo->Grid() == *RH850Info->Grid()) &&
-							(*myTargetInfo->Grid() == *RH925Info->Grid()) &&
-							(*myTargetInfo->Grid() == *Z850Info->Grid()) &&
-							(*myTargetInfo->Grid() == *Z1000Info->Grid()) &&
-							(*myTargetInfo->Grid() == *RRInfo->Grid()) &&
-							(*myTargetInfo->Grid() == *PInfo->Grid()) &&
-							(*myTargetInfo->Grid() == *W850Info->Grid()) &&
-							(*myTargetInfo->Grid() == *W925Info->Grid())
-							);
+		bool equalGrids = CompareGrids({myTargetInfo->Grid(), TInfo->Grid(), T700Info->Grid(),
+						T850Info->Grid(), T925Info->Grid(), RHInfo->Grid(),
+						RH700Info->Grid(), RH850Info->Grid(), RH925Info->Grid(),
+						RRInfo->Grid(), PInfo->Grid(), W850Info->Grid(),
+						W925Info->Grid(), SNRInfo->Grid()});
 
 		string deviceType;
 
@@ -375,15 +359,13 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				double RH850 = kFloatMissing;
 				double RH925 = kFloatMissing;
 
-				double Z850 = kFloatMissing;
-				double Z1000 = kFloatMissing;
-
 				double W850 = kFloatMissing;
 				double W925 = kFloatMissing;
 
 				double P = kFloatMissing;
 
 				double RR = kFloatMissing;
+				double SNR = kFloatMissing;
 
 				int PreForm = static_cast<int> (kFloatMissing);
 
@@ -409,19 +391,13 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				InterpolateToPoint(targetGrid, RH850Grid, equalGrids, RH850);
 				InterpolateToPoint(targetGrid, RH925Grid, equalGrids, RH925);
 
-				InterpolateToPoint(targetGrid, Z850Grid, equalGrids, Z850);
-				InterpolateToPoint(targetGrid, Z1000Grid, equalGrids, Z1000);
-
 				InterpolateToPoint(targetGrid, W850Grid, equalGrids, W850);
 				InterpolateToPoint(targetGrid, W925Grid, equalGrids, W925);
 
 				InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
+				InterpolateToPoint(targetGrid, SNRGrid, equalGrids, SNR);
 
-				if (T == kFloatMissing || T850 == kFloatMissing || T925 == kFloatMissing ||
-					RH == kFloatMissing || RH700 == kFloatMissing || RH925 == kFloatMissing ||
-					RH850 == kFloatMissing || T700 == kFloatMissing ||
-					Z850 == kFloatMissing || Z1000 == kFloatMissing || RR == kFloatMissing ||
-					P == kFloatMissing || W925 == kFloatMissing || W850 == kFloatMissing)
+				if (IsMissingValue({T, T850, T925, RH, RH700, RH925, RH850, T700, RR, P, W925, W850, SNR}))
 				{
 					missingCount++;
 
@@ -438,6 +414,9 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				T850 -= himan::constants::kKelvin;
 				T925 -= himan::constants::kKelvin;
 
+				// Dangerous unit conversion!
+				// Parameter name is RH-PRCNT but data is still 0 .. 1
+				
 				RH *= 100;
 				RH700 *= 100;
 				RH850 *= 100;
@@ -448,9 +427,6 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				W850 *= WScale;
 				W925 *= WScale;
 
-				// 850-1000hPa paksuus [m]
-				// source data is m^2/s^2 --> convert result to m by multiplying with 1/g
-				const double dz850 = (Z850 - Z1000) * himan::constants::kIg;
 				/*
 				cout	<< "T\t\t" << T << endl
 						<< "T700\t\t" << T700 << endl
@@ -460,20 +436,18 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 						<< "RH700\t\t" << RH700 << endl
 						<< "RH850\t\t" << RH850 << endl
 						<< "RH925\t\t" << RH925 << endl
-						<< "RH700\t\t" << RH700 << endl
 						<< "P\t\t" << P << endl
 						<< "W850\t\t" << W850 << endl
 						<< "W925\t\t" << W925 << endl
 						<< "RR\t\t" << RR << endl
-						<< "dz850\t\t" << dz850 << endl
 						<< "stH\t\t" << stH << endl
 						<< "sfcMin\t\t" << sfcMin << endl
 						<< "sfcMax\t\t" << sfcMax << endl
-						<< "fzdzLim\t" << fzdzLim << endl
+						<< "fzdzLim\t\t" << fzdzLim << endl
 						<< "wMax\t\t" << wMax << endl
 						<< "stTlimit\t" << stTlimit << endl
-						<< "snowThickness\t" << snowThickness << endl
-						<< "waterThickness\t" << waterThickness << endl;
+						<< "SNR\t\t" << SNR << endl;
+				exit(1);
 				 */
 				// (0=tihku, 1=vesi, 2=räntä, 3=lumi, 4=jäätävä tihku, 5=jäätävä sade)
 
@@ -498,10 +472,11 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 						PreForm = kFreezingDrizzle;
 					}
 				}
+
 				// jäätävää vesisadetta: "pinnassa pakkasta ja sulamiskerros pinnan lähellä"
 				// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
 
-				if ((PreForm == kFloatMissing) AND (RR > 0.1) AND (T <= 0) AND ((T925 > 0) OR (T850 > 0) OR (T700 > 0)))
+				if ((PreForm == MISS) AND (RR > 0.1) AND (T <= 0) AND ((T925 > 0) OR (T850 > 0) OR (T700 > 0)))
 				{
 
 					// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925)
@@ -524,92 +499,58 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 					// ollaanko ~1500-3000m merenpinnasta (850<pintapaine<700)?
 					// (riittävän paksu) sulamiskerros 700hPa:ssa (tai pakkaskerros sen alla)?
 
-					if ((PreForm == kFloatMissing) AND (P <= 850+stH) AND (P > 700+stH) AND (T700 > 0))
+					if ((P <= 850+stH) AND (P > 700+stH) AND (T700 > 0))
 					{  
 						PreForm = kFreezingRain;
 					}
 				}
 
-				/* Use Koistinen formula to possibly change form to sleet or snow
-				 * The same formula is in util::PrecipitationForm(), but here we
-				 * use different limits to determine the form.
-				 */
+				// lumisadetta: snowfall >=80% kokonaissateesta
 
-				const double probWater = util::WaterProbability(T, RH);
+				const double SNR_RR = SNR/RR;
 
-				// lumisadetta: "kylmä pinta/rajakerros"
-				// (lisätty ehto "OR T<=0" vähentämään paksuustulkinnan virhettä vuoristossa)
-				
-				if ((PreForm == kFloatMissing) AND ((dz850 < snowThickness) OR (T <= 0)))
+				if (PreForm == MISS AND (SNR_RR >= snowLim OR T <= 0))
 				{
 					PreForm = kSnow;
-
-					// Koistisen kaavan perusteella muutetaan lumi mahdollisesti rännäksi...
-
-					if ((probWater >= sleetTOsnow) AND (probWater <= sleetTOwater) AND (T > 0))
-					{
-						PreForm = kSleet ;
-					}
-					// ...tai vedeksi
-					if ((probWater > sleetTOwater) AND (T > 0))
-					{
-						PreForm = kRain ;
-					}
 				}
 
-				// räntää: "dz850-1000 snowLim ja waterLim välissä"
-				if ((PreForm == kFloatMissing) AND (dz850>=snowThickness) AND (dz850<=waterThickness) AND (T >= 0))
+				// räntää: snowfall 15...80% kokonaissateesta
+				if ((PreForm == MISS) AND (SNR_RR > waterLim) AND (SNR_RR<snowLim))
 				{
 					PreForm = kSleet;
-					// Koistisen kaavan perusteella muutetaan räntä mahdollisesti vedeksi...
-
-					if (probWater>sleetTOwater)
-					{
-						PreForm = kRain;
-					}
-					// ...tai lumeksi
-					else if (probWater < sleetTOsnow)
-					{
-						PreForm = kSnow;
-					}
 				}
 
-				// tihkua tai vesisadetta: "lämmin pinta/rajakerros"
-				if ((PreForm == kFloatMissing) AND (dz850 > waterThickness) AND (T >= 0))
+				// tihkua tai vesisadetta: Rain>=85% kokonaissateesta
+				if ((PreForm == MISS) AND (SNR_RR) <= waterLim)
 				{
 					// tihkua: "ei (satavaa) keskipilveä, pinnan lähellä kosteaa (stratus), sade heikkoa"
 					if ((RH700 < 80) AND (RH > 90) AND (RR <= dzLim))
 					{
-					  // ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925),
-					  // tai kun Psfc ei (enää) löydy (eli ei mp-dataa, 6-10vrk)?
-					  // stratus 925hPa:ssa?
-					  if ((P > 925) AND (RH925 > 90))
-					  {
-						  PreForm = kDrizzle;
-					  }
-					  // ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
-					  // stratus 850hPa:ssa?
-					  else if ((P <= 925) AND (P > 850) AND (RH850 > 90))
-					  {
-						  PreForm=kDrizzle;
-					  }
+						// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925),
+						// tai kun Psfc ei (enää) löydy (eli ei mp-dataa, 6-10vrk)?
+						// stratus 925hPa:ssa?
+
+						if ((P > 925) AND (RH925 > 90))
+						{  
+							PreForm = kDrizzle;
+						}
+
+						// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
+						// stratus 850hPa:ssa?
+						
+						else if ((P <= 925) AND (P > 850) AND (RH850 > 90))
+						{
+							PreForm = kDrizzle;
+						}
 					}
 
-					// muuten vesisadetta: "paksu satava pilvi"
-					if (PreForm == kFloatMissing)
+					// muuten vesisadetta:
+					if (PreForm == MISS)
 					{
-						  PreForm = kRain;
-						  // Koistisen kaavan perusteella muutetaan vesi mahdollisesti rännäksi...
-						  if (probWater < waterTOsleet)
-						  {
-							  PreForm=kSleet;
-						  }
-						  // ...tai lumeksi (ei käytössä, jottei lämpimissä kerroksissa tule lunta; toisaalta vuoristossa parantaisi tulosta?)
-						  // IF (probWater<sleetTOsnow)
-						  // {  PreForm=3 }
+						PreForm = kRain;
 					}
 				}
-
+				
 				if (!myTargetInfo->Value(PreForm))
 				{
 					throw runtime_error(ClassName() + ": Failed to set value to matrix");
