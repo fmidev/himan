@@ -39,6 +39,7 @@ struct packed_data
 
 #include <cuda_runtime_api.h>
 #include "himan_common.h"
+#include <string>
 
 namespace himan
 {
