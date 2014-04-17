@@ -1,8 +1,8 @@
-/*
- * himan_common.h
+/**
+ * @file himan_common.h
  *
- *  Created on: Nov 17, 2012
- *	  Author: partio
+ * @date Nov 17, 2012
+ * @author partio
  */
 
 #ifndef HIMAN_COMMON_H
@@ -22,22 +22,23 @@
 #pragma GCC diagnostic ignored "-Wsign-promo"
 #endif
 
+#ifndef __CUDACC__
 #include <ostream>
 #include <memory>
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
 
+namespace ba = boost::assign;
+
+#endif
+
 namespace himan
 {
-
-using boost::assign::map_list_of;
 
 // Define some constants
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = -999.;
-
-// const float kFloatEpsilon = std::numeric_limits<float>::epsilon();
 
 // Define different plugin types
 
@@ -73,13 +74,15 @@ enum HPFileType
 	kNetCDF
 };
 
-const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = ba::map_list_of
 		(kUnknownFile, "unknown")
 		(kGRIB1, "grib edition 1")
 		(kGRIB2, "grib edition 2")
 		(kGRIB, "grib edition 1 or 2")
 		(kQueryData, "QueryData")
 		(kNetCDF, "NetCDF");
+#endif
 
 // Define supported projections
 // Values equal to those in newbase
@@ -92,10 +95,12 @@ enum HPProjectionType
 	kStereographicProjection = 13
 };
 
-const boost::unordered_map<HPProjectionType,const char*> HPProjectionTypeToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPProjectionType,const char*> HPProjectionTypeToString = ba::map_list_of
 		(kLatLonProjection, "ll")
 		(kRotatedLatLonProjection, "rll")
 		(kStereographicProjection, "polster");
+#endif
 
 // Define supported parameter units
 
@@ -130,7 +135,8 @@ enum HPLevelType
 	kDepth = 160
 };
 
-const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = ba::map_list_of
 		(kUnknownLevel, "unknown")
 		(kGround, "ground")
 		(kPressure, "pressure")
@@ -141,6 +147,7 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = map_li
 		(kDepth, "depth")
 		(kTopOfAtmosphere, "top") // top of atmosphere
 		;
+#endif
 
 enum HPFileWriteOption
 {
@@ -150,12 +157,14 @@ enum HPFileWriteOption
 	kNeons
 };
 
-const boost::unordered_map<HPFileWriteOption,const char*> HPFileWriteOptionToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPFileWriteOption,const char*> HPFileWriteOptionToString = ba::map_list_of
 		(kUnknownFileWriteOption, "unknown")
 		(kSingleFile, "single file only")
 		(kMultipleFiles, "multiple files")
 		(kNeons, "write to neons")
 		;
+#endif
 
 // Values match to newbase
 
@@ -175,12 +184,14 @@ enum HPScanningMode
 
 };
 
-const boost::unordered_map<HPScanningMode,const char*> HPScanningModeToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPScanningMode,const char*> HPScanningModeToString = ba::map_list_of
 		(kUnknownScanningMode, "unknown")
 		(kTopLeft, "+x-y")
 		(kTopRight, "+x+y")
 		(kBottomLeft, "+x+y")
 		(kBottomRight, "-x-y");
+#endif
 
 enum HPLevelOrder
 {
@@ -189,10 +200,12 @@ enum HPLevelOrder
 	kBottomToTop = 2 
 };
 
-const boost::unordered_map<HPLevelOrder,const char*> HPLevelOrderToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPLevelOrder,const char*> HPLevelOrderToString = ba::map_list_of
 	(kUnknownLevelOrder, "unknown")
 	(kTopToBottom, "top to bottom")
 	(kBottomToTop, "bottom to top");
+#endif
 
 enum HPExceptionType
 {
@@ -218,12 +231,14 @@ enum HPDimensionType
 	kLocationDimension
 };
 
-const boost::unordered_map<HPDimensionType,const char*> HPDimensionTypeToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPDimensionType,const char*> HPDimensionTypeToString = ba::map_list_of
 		(kUnknownDimension, "unknown")
 		(kTimeDimension, "time dimension")
 		(kLevelDimension, "level dimension")
 		(kParamDimension, "param dimension")
 		(kLocationDimension, "location dimension");
+#endif
 
 enum HPTimeResolution
 {
@@ -232,10 +247,12 @@ enum HPTimeResolution
 	kMinuteResolution
 };
 
-const boost::unordered_map<HPTimeResolution,const char*> HPTimeResolutionToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPTimeResolution,const char*> HPTimeResolutionToString = ba::map_list_of
 		(kUnknownTimeResolution, "unknown")
 		(kHourResolution, "hour")
 		(kMinuteResolution, "minute");
+#endif
 
 enum HPPackingType
 {
@@ -264,7 +281,8 @@ enum HPAggregationType
 
 };
 
-const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToString = ba::map_list_of
 		(kUnknownAggregationType, "unknown")
 		(kAverage, "average")
 		(kAccumulation, "accumulation")
@@ -273,6 +291,7 @@ const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToStr
 		(kDifference, "difference")
 		(kExternalMinimum, "external minimum")
 		(kExternalMaximum, "external maximum");
+#endif
 
 enum HPModifierType
 {
@@ -303,7 +322,8 @@ enum HPPrecipitationForm
 	kUnknownPrecipitationForm = 10
 };
 
-const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormToString = map_list_of
+#ifndef __CUDACC__
+const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormToString = ba::map_list_of
 		(kDrizzle, "drizzle")
 		(kRain, "rain")
 		(kSleet, "sleet")
@@ -313,7 +333,7 @@ const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormT
 		(kGraupel, "graupel")
 		(kHail, "hail")
 		(kUnknownPrecipitationForm, "unknown");
-
+#endif
 
 /**
  * @struct HPVersionNumber
@@ -322,6 +342,7 @@ const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormT
  *
  */
 
+#ifndef __CUDACC__
 struct HPVersionNumber
 {
 	unsigned short itsMajorVersion;
@@ -355,6 +376,7 @@ std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers)
 {
 	return vers.Write(file);
 }
+#endif
 
 namespace constants {
 
@@ -423,6 +445,8 @@ namespace constants {
 	 */
 
 	const double kIg = 0.10197;
+
+	const double kRCp = 0.286;
 	
 } // namespace constants
 
