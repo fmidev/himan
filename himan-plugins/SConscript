@@ -26,7 +26,7 @@ auxiliary_plugins = ['cache','fetcher','grib','hitool','neons','pcuda','querydat
 
 # List all compiled plugins that have only CPU implementation here
 
-compiled_plugins = ['icing', 'kindex', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid_height', 'cloud_type', 'ncl', 'rain_type', 'preform_pressure', 'preform_hybrid', 'relative_humidity', 'density', 'precipitation_rate', 'absolute_humidity', 'roughness', 'si', 'weather_symbol']
+compiled_plugins = ['icing', 'stability', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid_height', 'cloud_type', 'ncl', 'rain_type', 'preform_pressure', 'preform_hybrid', 'relative_humidity', 'density', 'precipitation_rate', 'absolute_humidity', 'roughness', 'si', 'weather_symbol']
 
 # List all compiled plugins that have both CPU and GPU implementation here
 
