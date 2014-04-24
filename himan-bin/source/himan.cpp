@@ -94,6 +94,11 @@ int main(int argc, char** argv)
 			aLogger->Warning("Plugin 'precipitation' is deprecated -- use 'split_sum' instead'");
 			pc->Name("split_sum");
 		}
+		else if (pc->Name() == "kindex")
+		{
+			aLogger->Warning("Plugin 'kindex' is deprecated -- use 'stability' instead'");
+			pc->Name("stability");
+		}
 		
 		auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin > (plugin_factory::Instance()->Plugin(pc->Name()));
 
