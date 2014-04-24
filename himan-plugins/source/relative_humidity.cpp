@@ -268,21 +268,28 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		// If we read packed data but grids are not equal we cannot use cuda
 		// for calculations (our cuda routines do not know how to interpolate)
 
-		if (!equalGrids && (TInfo->Grid()->IsPackedData() || TDInfo->Grid()->IsPackedData() || QInfo->Grid()->IsPackedData() || PInfo->Grid()->IsPackedData()))
+		if (!equalGrids)
 		{
 			myThreadedLogger->Debug("Unpacking for CPU calculation");
 		
-			if (calculateWithTD)
+			if (TInfo && TInfo->Grid()->IsPackedData())
 			{
-				Unpack({TInfo,TDInfo});
+				Unpack(TInfo);
 			}
-			else if (isPressureLevel)
+
+			if (TDInfo && TDInfo->Grid()->IsPackedData())
 			{
-				Unpack({TInfo, QInfo});
+				Unpack(TDInfo);
 			}
-			else
+
+			if (QInfo && QInfo->Grid()->IsPackedData())
 			{
-				Unpack({TInfo, QInfo, PInfo});
+				Unpack(QInfo);
+			}
+
+			if (PInfo && PInfo->Grid()->IsPackedData())
+			{
+				Unpack(PInfo);
 			}
 		}
 
