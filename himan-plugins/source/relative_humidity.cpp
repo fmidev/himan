@@ -274,22 +274,22 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		
 			if (TInfo && TInfo->Grid()->IsPackedData())
 			{
-				Unpack(TInfo);
+				Unpack({TInfo});
 			}
 
 			if (TDInfo && TDInfo->Grid()->IsPackedData())
 			{
-				Unpack(TDInfo);
+				Unpack({TDInfo});
 			}
 
 			if (QInfo && QInfo->Grid()->IsPackedData())
 			{
-				Unpack(QInfo);
+				Unpack({QInfo});
 			}
 
 			if (PInfo && PInfo->Grid()->IsPackedData())
 			{
-				Unpack(PInfo);
+				Unpack({PInfo});
 			}
 		}
 
