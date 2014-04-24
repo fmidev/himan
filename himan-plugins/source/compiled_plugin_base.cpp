@@ -406,6 +406,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
 		itsTimer->Stop();
 		itsConfiguration->Statistics()->AddToInitTime(itsTimer->GetTime());
+		// Start process timing
 		itsTimer->Start();
 	}
 }
@@ -482,6 +483,11 @@ bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids
 	
 	for (++it; it != grids.end(); ++it)
 	{
+		if (!*it)
+		{
+			continue;
+		}
+		
 		if (*first != **it)
 		{
 			return false;
