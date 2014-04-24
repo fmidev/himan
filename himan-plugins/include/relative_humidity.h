@@ -10,7 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-
+#include "relative_humidity_cuda.h"
 namespace himan
 {
 namespace plugin
@@ -52,6 +52,15 @@ private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 	double WithQ(double T, double Q, double P);
 	double WithTD(double T, double TD);
+#ifdef HAVE_CUDA
+	std::unique_ptr<relative_humidity_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> TDInfo, double TDBase);
+	std::unique_ptr<relative_humidity_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, std::shared_ptr<info> PInfo, double PScale, double TBase);
+	std::unique_ptr<relative_humidity_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, double P, double TBase);
+
+	void CudaFinish(std::unique_ptr<relative_humidity_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> TDInfo);
+	void CudaFinish(std::unique_ptr<relative_humidity_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, std::shared_ptr<info> PInfo);
+
+#endif
 
 };
 

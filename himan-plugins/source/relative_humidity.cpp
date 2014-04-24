@@ -27,6 +27,7 @@ const double d = 1.8;
 relative_humidity::relative_humidity()
 {
 	itsClearTextFormula = "RH = 100 *  (P * Q / 0.622 / es) * (P - es) / (P - Q * P / 0.622)";
+	itsCudaEnabledCalculation = true;
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("relative_humidity"));
 
@@ -85,7 +86,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	myTargetInfo->FirstParam();
 
-	bool useCudaInThisThread = false;
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
@@ -262,6 +263,71 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 		string deviceType;
 
+#ifdef HAVE_CUDA
+
+		// If we read packed data but grids are not equal we cannot use cuda
+		// for calculations (our cuda routines do not know how to interpolate)
+
+		if (!equalGrids && (TInfo->Grid()->IsPackedData() || TDInfo->Grid()->IsPackedData() || QInfo->Grid()->IsPackedData() || PInfo->Grid()->IsPackedData()))
+		{
+			myThreadedLogger->Debug("Unpacking for CPU calculation");
+		
+			if (calculateWithTD)
+			{
+				Unpack({TInfo,TDInfo});
+			}
+			else if (isPressureLevel)
+			{
+				Unpack({TInfo, QInfo});
+			}
+			else
+			{
+				Unpack({TInfo, QInfo, PInfo});
+			}
+		}
+
+		if (useCudaInThisThread && equalGrids)
+		{
+	
+			deviceType = "GPU";
+
+			if (calculateWithTD)
+			{
+				auto opts = CudaPrepare(myTargetInfo, TInfo, TDInfo, TDBase);
+
+				relative_humidity_cuda::Process(*opts);
+
+				missingCount = opts->missing;
+				count = opts->N;
+
+				CudaFinish(move(opts), myTargetInfo, TInfo, TDInfo);
+			}
+			else if (isPressureLevel)
+			{
+				auto opts = CudaPrepare(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(), TBase);
+
+				relative_humidity_cuda::Process(*opts);
+
+				missingCount = opts->missing;
+				count = opts->N;
+
+				CudaFinish(move(opts), myTargetInfo, TInfo, QInfo);
+			}
+			else
+			{
+				auto opts = CudaPrepare(myTargetInfo, TInfo, QInfo, PInfo, PScale, TBase);
+
+				relative_humidity_cuda::Process(*opts);
+
+				missingCount = opts->missing;
+				count = opts->N;
+
+				CudaFinish(move(opts), myTargetInfo, TInfo, QInfo, PInfo);
+			}
+
+		}
+		else
+#endif
 		{
 			deviceType = "CPU";
 
@@ -397,4 +463,115 @@ double relative_humidity::WithTD(double T, double TD)
 
 	return exp(d + b * (TD / (TD + c))) / exp(d + b * (T / (T + c)));
 }
+#ifdef HAVE_CUDA
+// Case where RH is calculated from T and TD
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TDInfo, double TDBase)
+{
+	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
+	opts->N = TInfo->Data()->Size();
+	opts->select_case = 0;
+
+	opts->TDBase = TDBase;
+
+	opts->T = TInfo->ToSimple();
+	opts->TD = TDInfo->ToSimple();
+	opts->RH = myTargetInfo->ToSimple();
+
+	return opts;
+}
+// Case where RH is calculated from T, Q and P
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, shared_ptr<info> PInfo, double PScale, double TBase)
+{
+	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
+
+	opts->N = TInfo->Data()->Size();
+
+	opts->select_case = 1;
+
+	opts->kEp = constants::kEp;
+	opts->PScale = PScale;
+	opts->TBase = TBase;
+
+	opts->T = TInfo->ToSimple();
+	opts->P = PInfo->ToSimple();
+	opts->Q = QInfo->ToSimple();
+	opts->RH = myTargetInfo->ToSimple();
+
+	return opts;
+}
+// Case where RH is calculated for pressure levels from T and Q
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, double P_level, double TBase)
+{
+	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
+
+	opts->N = TInfo->Data()->Size();
+
+	opts->select_case = 2;
+
+	opts->TBase = TBase;
+
+	opts->P_level = P_level;
+	opts->T = TInfo->ToSimple();
+	opts->Q = QInfo->ToSimple();
+	opts->RH = myTargetInfo->ToSimple();
+
+	return opts;
+}
+// Copy data back to infos
+// Case where RH is calculated from (T and TD) or from (T and Q)
+void relative_humidity::CudaFinish(unique_ptr<relative_humidity_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TD_Q_Info)
+{
+	CopyDataFromSimpleInfo(myTargetInfo, opts->RH, false);
+
+	if (TInfo->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(TInfo, opts->T, true);
+	}
+
+	switch(opts->select_case)
+	{
+	case(0):
+	{
+		if (TD_Q_Info->Grid()->IsPackedData())
+		{
+			CopyDataFromSimpleInfo(TD_Q_Info, opts->TD, true);
+		}
+		break;
+	}
+	case(2):
+	{
+		if (TD_Q_Info->Grid()->IsPackedData())
+		{
+			CopyDataFromSimpleInfo(TD_Q_Info, opts->Q, true);
+		}
+		break;
+	}
+	}	
+	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+
+}
+// Case where RH is calculated from T, Q and P
+void relative_humidity::CudaFinish(unique_ptr<relative_humidity_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, shared_ptr<info> PInfo)
+{
+	CopyDataFromSimpleInfo(myTargetInfo, opts->RH, false);
+
+	if (TInfo->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(TInfo, opts->T, true);
+	}
+
+	if (QInfo->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(QInfo, opts->Q, true);
+	}
+
+	if (PInfo->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(PInfo, opts->P, true);
+	}
+
+	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
+
+}
+#endif
