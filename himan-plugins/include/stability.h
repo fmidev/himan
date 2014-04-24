@@ -109,10 +109,13 @@ public:
 	 * http://en.wikipedia.org/wiki/Lifted_index
 	 * 
 	 * @param T500 Temperature of 500 hPa isobar in Kelvins
+	 * @param T500m Temperature at 500m above ground in Kelvins
+	 * @param TD500m Dewpoint temperature at 500m above ground in Kelvins
+	 * @param P500m Pressure at 500m above ground in Pascals
 	 * @return Index value
 	 */
 
-	double LI(double T500) const;
+	double LI(double T500, double T500m, double TD500m, double P500m) const;
 
 	/**
 	 * @brief K-Index
