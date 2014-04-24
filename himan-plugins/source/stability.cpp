@@ -37,27 +37,27 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	// By default calculate only KINDEX
 	
-	if (itsConfiguration->Exists("kindex") && itsConfiguration->GetValue("kindex") == "false")
+	if (itsConfiguration->Exists("kindex") && itsConfiguration->GetValue("ki") == "false")
 	{
 		;
 	}
 	else
 	{
-		param ki("KINDEX-N", 80);
+		param ki("KINDEX-N", 80, 0, 7, 2);
 		theParams.push_back(ki);
 	}
 
 	if (itsConfiguration->Exists("si") && itsConfiguration->GetValue("si") != "true")
 	{
 		// Showalter Index
-		param si("SI-N", 4750);
+		param si("SI-N", 4750, 0, 7, 13);
 		theParams.push_back(si);
 	}
 
 	if (itsConfiguration->Exists("li") && itsConfiguration->GetValue("li") != "true")
 	{
 		// Lifted index
-		param li("LI-N", 4751);
+		param li("LI-N", 4751, 0, 7, 192);
 		theParams.push_back(li);
 	}
 
@@ -78,10 +78,21 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("tti") && itsConfiguration->GetValue("tti") != "true")
 	{
 		// Total Totals index
-		param tti("TTI-N", 4755);
+		param tti("TTI-N", 4755, 0, 7, 4);
 		theParams.push_back(tti);
 	}
 
+	if (itsConfiguration->Exists("srh") && itsConfiguration->GetValue("srh") != "true")
+	{
+		// Storm relative helicity 0 .. 1 km
+		param hlcy("HLCY-1-M2S2", 4773);
+		theParams.push_back(hlcy);
+
+		// Storm relative helicity 0 .. 3 km
+		hlcy = param("HLCY-M2S2", 4772, 0, 7, 8);
+		theParams.push_back(hlcy);
+	}
+	
 	SetParams(theParams);
 
 	Start();
