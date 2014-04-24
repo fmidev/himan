@@ -15,6 +15,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
+#include "hitool.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -47,42 +48,42 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 		theParams.push_back(ki);
 	}
 
-	if (itsConfiguration->Exists("si") && itsConfiguration->GetValue("si") != "true")
+	if (itsConfiguration->Exists("si") && itsConfiguration->GetValue("si") == "true")
 	{
 		// Showalter Index
 		param si("SI-N", 4750, 0, 7, 13);
 		theParams.push_back(si);
 	}
 
-	if (itsConfiguration->Exists("li") && itsConfiguration->GetValue("li") != "true")
+	if (itsConfiguration->Exists("li") && itsConfiguration->GetValue("li") == "true")
 	{
 		// Lifted index
 		param li("LI-N", 4751, 0, 7, 192);
 		theParams.push_back(li);
 	}
 
-	if (itsConfiguration->Exists("cti") && itsConfiguration->GetValue("cti") != "true")
+	if (itsConfiguration->Exists("cti") && itsConfiguration->GetValue("cti") == "true")
 	{
 		// Cross totals index
 		param cti("CTI-N", 4751);
 		theParams.push_back(cti);
 	}
 
-	if (itsConfiguration->Exists("vti") && itsConfiguration->GetValue("vti") != "true")
+	if (itsConfiguration->Exists("vti") && itsConfiguration->GetValue("vti") == "true")
 	{
 		// Vertical Totals index
 		param vti("VTI-N", 4754);
 		theParams.push_back(vti);
 	}
 
-	if (itsConfiguration->Exists("tti") && itsConfiguration->GetValue("tti") != "true")
+	if (itsConfiguration->Exists("tti") && itsConfiguration->GetValue("tti") == "true")
 	{
 		// Total Totals index
 		param tti("TTI-N", 4755, 0, 7, 4);
 		theParams.push_back(tti);
 	}
 
-	if (itsConfiguration->Exists("srh") && itsConfiguration->GetValue("srh") != "true")
+	if (itsConfiguration->Exists("srh") && itsConfiguration->GetValue("srh") == "true")
 	{
 		// Storm relative helicity 0 .. 1 km
 		param hlcy("HLCY-1-M2S2", 4773);
@@ -112,12 +113,16 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	// Required source parameters
 
 	param TParam("T-K");
-	param TdParam("TD-C");  
+	param TDParam("TD-C");
 
 	level T850Level(himan::kPressure, 850, "PRESSURE");
 	level T700Level(himan::kPressure, 700, "PRESSURE");
 	level T500Level(himan::kPressure, 500, "PRESSURE");
 
+	shared_ptr<hitool> h;
+	
+	vector<double> T500mVector, TD500mVector, P500mVector, H500mVector;
+	
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("stabilityThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
 	ResetNonLeadingDimension(myTargetInfo);
@@ -129,8 +134,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		shared_ptr<info> T850Info;
 		shared_ptr<info> T700Info;
 		shared_ptr<info> T500Info;
-		shared_ptr<info> Td850Info;
-		shared_ptr<info> Td700Info;
+		shared_ptr<info> TD850Info;
+		shared_ptr<info> TD700Info;
 
 		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
 		{
@@ -168,20 +173,20 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 									 TParam);
 					}
 
-					if (!Td850Info)
+					if (!TD850Info)
 					{
-						Td850Info = theFetcher->Fetch(itsConfiguration,
+						TD850Info = theFetcher->Fetch(itsConfiguration,
 									 myTargetInfo->Time(),
 									 T850Level,
-									 TdParam);
+									 TDParam);
 					}
 
-					if (!Td700Info)
+					if (!TD700Info)
 					{
-						Td700Info = theFetcher->Fetch(itsConfiguration,
+						TD700Info = theFetcher->Fetch(itsConfiguration,
 									 myTargetInfo->Time(),
 									 T700Level,
-									 TdParam);
+									 TDParam);
 					}
 				}
 				else if (parName == "SI-N")
@@ -202,12 +207,12 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 									 TParam);
 					}
 
-					if (!Td850Info)
+					if (!TD850Info)
 					{
-						Td850Info = theFetcher->Fetch(itsConfiguration,
+						TD850Info = theFetcher->Fetch(itsConfiguration,
 									 myTargetInfo->Time(),
 									 T850Level,
-									 TdParam);
+									 TDParam);
 					}
 				}
 				else if (parName == "LI-N")
@@ -219,6 +224,20 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 									 T500Level,
 									 TParam);
 					}
+
+					if (!h)
+					{
+						h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+						h->Configuration(itsConfiguration);
+						H500mVector.resize(myTargetInfo->SizeLocations(), 500.);
+					}
+
+					h->Time(myTargetInfo->Time());
+					
+					T500mVector = h->VerticalValue(param("T-K"), H500mVector);
+					TD500mVector = h->VerticalValue(param("TD-C"), H500mVector);
+					P500mVector = h->VerticalValue(param("P-PA"), H500mVector);
+
 				}
 				else if (parName == "CTI-N")
 				{
@@ -230,12 +249,12 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 									 TParam);
 					}
 
-					if (!Td850Info)
+					if (!TD850Info)
 					{
-						Td850Info = theFetcher->Fetch(itsConfiguration,
+						TD850Info = theFetcher->Fetch(itsConfiguration,
 									 myTargetInfo->Time(),
 									 T850Level,
-									 TdParam);
+									 TDParam);
 					}
 				}
 				else if (parName == "VTI-N")
@@ -266,12 +285,12 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 									 TParam);
 					}
 
-					if (!Td850Info)
+					if (!TD850Info)
 					{
-						Td850Info = theFetcher->Fetch(itsConfiguration,
+						TD850Info = theFetcher->Fetch(itsConfiguration,
 									 myTargetInfo->Time(),
 									 T850Level,
-									 TdParam);
+									 TDParam);
 					}
 
 					if (!T850Info)
@@ -313,8 +332,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			shared_ptr<NFmiGrid> T850Grid;
 			shared_ptr<NFmiGrid> T700Grid;
 			shared_ptr<NFmiGrid> T500Grid;
-			shared_ptr<NFmiGrid> Td850Grid(Td850Info->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> Td700Grid(Td700Info->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> TD850Grid(TD850Info->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> TD700Grid(TD700Info->Grid()->ToNewbaseGrid());
 
 			if (T850Info)
 			{
@@ -331,14 +350,14 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				T500Grid = shared_ptr<NFmiGrid> (T500Info->Grid()->ToNewbaseGrid());
 			}
 
-			if (Td850Info)
+			if (TD850Info)
 			{
-				Td850Grid = shared_ptr<NFmiGrid> (Td850Info->Grid()->ToNewbaseGrid());
+				TD850Grid = shared_ptr<NFmiGrid> (TD850Info->Grid()->ToNewbaseGrid());
 			}
 
-			if (Td700Info)
+			if (TD700Info)
 			{
-				Td700Grid = shared_ptr<NFmiGrid> (Td700Info->Grid()->ToNewbaseGrid());
+				TD700Grid = shared_ptr<NFmiGrid> (TD700Info->Grid()->ToNewbaseGrid());
 			}
 
 			size_t missingCount = 0;
@@ -347,8 +366,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
 
 			bool equalGrids = CompareGrids({myTargetInfo->Grid(), T850Info->Grid(),
-								T700Info->Grid(), T500Info->Grid(), Td850Info->Grid(),
-								Td700Info->Grid()});
+								T700Info->Grid(), T500Info->Grid(), TD850Info->Grid(),
+								TD700Info->Grid()});
 
 			myTargetInfo->ResetLocation();
 
@@ -363,8 +382,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				double T850 = kFloatMissing;
 				double T700 = kFloatMissing;
 				double T500 = kFloatMissing;
-				double Td850 = kFloatMissing;
-				double Td700 = kFloatMissing;
+				double TD850 = kFloatMissing;
+				double TD700 = kFloatMissing;
 
 				if (T850Grid)
 				{
@@ -381,62 +400,75 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 					InterpolateToPoint(targetGrid, T500Grid, equalGrids, T500);
 					assert(T500 > 0);
 				}
-				if (Td850Grid)
+				if (TD850Grid)
 				{
-					InterpolateToPoint(targetGrid, Td850Grid, equalGrids, Td850);
-					assert(Td850 > 0);
+					InterpolateToPoint(targetGrid, TD850Grid, equalGrids, TD850);
+					assert(TD850 > 0);
 				}
-				if (Td700Grid)
+				if (TD700Grid)
 				{
-					InterpolateToPoint(targetGrid, Td700Grid, equalGrids, Td700);
-					assert(Td700 > 0);
+					InterpolateToPoint(targetGrid, TD700Grid, equalGrids, TD700);
+					assert(TD700 > 0);
 				}
 
 				double value = kFloatMissing;
 				
 				if (parName == "KINDEX-N")
 				{
-					if (T850 == kFloatMissing || T700 == kFloatMissing || T500 == kFloatMissing || Td850 == kFloatMissing || Td700 == kFloatMissing)
+					if (T850 == kFloatMissing || T700 == kFloatMissing || T500 == kFloatMissing || TD850 == kFloatMissing || TD700 == kFloatMissing)
 					{
 						missingCount++;
 					}
 					else
 					{
-						value = KI(T850, T700, T500, Td850, Td700);
+						value = KI(T850, T700, T500, TD850, TD700);
+						
+						if (value != kFloatMissing)
+						{
+							// Normalizing value
+
+							value -= constants::kKelvin;
+						}
 					}
 
 				}
 				else if (parName == "SI-N")
 				{
-					if (T850 == kFloatMissing || T500 == kFloatMissing || Td850 == kFloatMissing)
+					if (T850 == kFloatMissing || T500 == kFloatMissing || TD850 == kFloatMissing)
 					{
 						missingCount++;
 					}
 					else
 					{
-						value = SI(T850, T500, Td850);
+						value = SI(T850, T500, TD850);
 					}
 				}
 				else if (parName == "LI-N")
 				{
+					size_t locationIndex = myTargetInfo->LocationIndex();
+
+					double T500m = T500mVector[locationIndex];
+					double TD500m = TD500mVector[locationIndex];
+					double P500m = P500mVector[locationIndex];
+
 					if (T500 == kFloatMissing)
 					{
 						missingCount++;
 					}
 					else
 					{
-						value = LI(T500);
+						value = LI(T500, T500m, TD500m, P500m);
 					}
 				}
 				else if (parName == "CTI-N")
 				{
-					if (T500 == kFloatMissing || Td850 == kFloatMissing)
+					if (T500 == kFloatMissing || TD850 == kFloatMissing)
 					{
 						missingCount++;
 					}
 					else
 					{
-						value = CTI(T500, Td850);
+						value = CTI(T500, TD850);
 					}
 				}
 				else if (parName == "VTI-N")
@@ -452,21 +484,14 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				}
 				else if (parName == "TTI-N")
 				{
-					if (T850 == kFloatMissing || T500 == kFloatMissing || Td850 == kFloatMissing)
+					if (T850 == kFloatMissing || T500 == kFloatMissing || TD850 == kFloatMissing)
 					{
 						missingCount++;
 					}
 					else
 					{
-						value = TTI(T850, T500, Td850);
+						value = TTI(T850, T500, TD850);
 					}
-				}
-
-				if (value != kFloatMissing)
-				{
-					// Normalizing value
-					
-					value -= constants::kKelvin;
 				}
 				
 				if (!myTargetInfo->Value(value))
@@ -475,13 +500,6 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				}
 
 			}
-
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
-
-			SwapTo(myTargetInfo, kBottomLeft);
 
 			if (itsConfiguration->StatisticsEnabled())
 			{
@@ -496,6 +514,11 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			 */
 
 			myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+		}
+
+		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
+		{
+			SwapTo(myTargetInfo, kBottomLeft);
 		}
 
 		if (itsConfiguration->FileWriteOption() != kSingleFile)
@@ -531,7 +554,7 @@ double stability::KI(double T850, double T700, double T500, double TD850, double
 }
 
 inline
-double stability::LI(double T500) const
+double stability::LI(double T500, double T500m, double TD500m, double P500m) const
 {
 	return kFloatMissing;
 }
@@ -550,17 +573,23 @@ double stability::SI(double T850, double T500, double TD850) const
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
 		// lifting
 
-		// DALR = 9.8C / km
 		double dryT = util::DryLift(T850, 85000, TARGET_PRESSURE);
-		si = T500 - dryT;
-
+		
+		if (dryT != kFloatMissing)
+		{
+			si = T500 - dryT;
+		}
 	}
 	else
 	{
+		// Grid point is inside or above cloud
+		
 		double wetT = util::MoistLift(85000, T850, TD850, TARGET_PRESSURE);
 
-		si = T500 - wetT;
-
+		if (wetT != kFloatMissing)
+		{
+			si = T500 - wetT;
+		}
 	}
 
 	return si;
