@@ -421,7 +421,9 @@ int util::LowConvection(double T0m, double T850)
 
 double util::Es(double T)
 {
-	assert(T == T); // check NaN
+	// Sanity checks
+	assert(T == T && T > 0 && T < 500); // check also NaN
+	
 	double Es;
 
 	if (T == kFloatMissing)
@@ -449,6 +451,11 @@ double util::Es(double T)
 
 double util::Gammas(double P, double T)
 {
+	// Sanity checks
+
+	assert(P > 10000);
+	assert(T > 0 && T < 500);
+
 	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
 
 	// specific humidity: http://glossary.ametsoc.org/wiki/Specific_humidity
@@ -462,9 +469,11 @@ double util::Gammas(double P, double T)
 
 double util::Gammaw(double P, double T)
 {
-	// DALR = dT/dZ = g / Cp
-	// MALR = dT/dz = DALR / (1 + L/Cp*dWs/dT)
+	// Sanity checks
 
+	assert(P > 10000);
+	assert(T > 0 && T < 500);
+	
 	/*
 	 * Constants:
 	 * - g = 9.81
@@ -476,7 +485,7 @@ double util::Gammaw(double P, double T)
 	 */
 
 	double r = MixingRatio(T, P);
-	const double kL = 2.256e6;
+	const double kL = 2.256e6; // Another kL !!!
 	
 	double numerator = constants::kG * (1 + (kL * r) / (constants::kRd * T));
 	double denominator = constants::kCp + ((kL*kL * r * constants::kEp) / (constants::kRd * T * T));
@@ -486,6 +495,12 @@ double util::Gammaw(double P, double T)
 
 const std::vector<double> util::LCL(double P, double T, double TD)
 {
+	// Sanity checks
+
+	assert(P > 10000);
+	assert(T > 0 && T < 500);
+	assert(TD > 0 && T < 500 && TD <= T);
+	
 	// starting T step
 
 	double Tstep = 0.05;
@@ -624,20 +639,35 @@ double util::WaterVapourPressure(double T, double TW, double P, bool aspirated)
 
 double util::MixingRatio(double T, double P)
 {
+	// Sanity checks
+	assert(P > 10000);
+	assert(T > 0 && T < 500);
+
 	double E = Es(T) * 0.01; // hPa
 
 	P *= 0.01;
 
-	return 621.97 * E / (P - E); // Return Pa
+	return 621.97 * E / (P - E);
 }
 
 double util::DryLift(double P, double T, double targetP)
 {
+	// Sanity checks
+	assert(P > 10000);
+	assert(T > 0 && T < 500);
+	assert(targetP > 10000);
+	
 	return T * pow((targetP / P), 0.286);
 }
 
 double util::MoistLift(double P, double T, double TD, double targetP)
 {
+	// Sanity checks
+	assert(P > 10000);
+	assert(T > 0 && T < 500);
+	assert(TD > 0 && TD < 500 && TD <= T);
+	assert(targetP > 10000);
+
 	// Search LCL level
 	vector<double> LCL = util::LCL(P, T, TD);
 
@@ -679,7 +709,6 @@ double util::MoistLift(double P, double T, double TD, double targetP)
 			}
 */
 			// Gammaw() takes Pa
-			//Tint = T0 - util::Gammaw(Pint, Tint) * Z;
 			Tint = T0 - util::Gammaw(Pint, Tint) * Pstep;
 
 			if (i > 2)
@@ -688,7 +717,7 @@ double util::MoistLift(double P, double T, double TD, double targetP)
 			}
 
 			Pint -= Pstep;
-//			cout << "Tint " << Tint << " Pint " << Pint << endl;
+
 			if (Pint <= targetP)
 			{
 				value = Tint;
