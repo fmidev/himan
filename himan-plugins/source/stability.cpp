@@ -11,6 +11,8 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include "util.h"
+#include <algorithm> // for std::transform
+#include <functional> // for std::plus
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -112,16 +114,18 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	// Required source parameters
 
-	param TParam("T-K");
-	param TDParam("TD-C");
-
+	const param TParam("T-K");
+	const param TDParam("TD-C");
+	const param HParam("HL-M");
+	
 	level T850Level(himan::kPressure, 850, "PRESSURE");
 	level T700Level(himan::kPressure, 700, "PRESSURE");
 	level T500Level(himan::kPressure, 500, "PRESSURE");
-
+	level groundLevel(himan::kHeight, 0, "HEIGHT");
+	
 	shared_ptr<hitool> h;
 	
-	vector<double> T500mVector, TD500mVector, P500mVector, H500mVector;
+	vector<double> T500mVector, TD500mVector, P500mVector, H0mVector, H500mVector;
 	
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("stabilityThread #" + boost::lexical_cast<string> (theThreadIndex)));
 
@@ -136,6 +140,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		shared_ptr<info> T500Info;
 		shared_ptr<info> TD850Info;
 		shared_ptr<info> TD700Info;
+		shared_ptr<info> HInfo;
 
 		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
 		{
@@ -225,18 +230,42 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 									 TParam);
 					}
 
+					// Fetch height of ground
+
+					HInfo = theFetcher->Fetch(itsConfiguration,
+									myTargetInfo->Time(),
+									groundLevel,
+									HParam);
+					
+					// Fetch average values of T, TD and P over vertical height range 0 ... 500m OVER GROUND
+					
 					if (!h)
 					{
 						h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 						h->Configuration(itsConfiguration);
+						
 						H500mVector.resize(myTargetInfo->SizeLocations(), 500.);
+					}
+
+					if (H0mVector.empty())
+					{
+						H0mVector = myTargetInfo->Data()->Values();
+					}
+
+					if (H500mVector.empty())
+					{
+						assert(!H0mVector.empty());
+
+						// True upper height = 500 meters + height of ground
+						transform(H0mVector.begin(), H0mVector.end(), H500mVector.begin(), H500mVector.begin(), plus<double>());
+
 					}
 
 					h->Time(myTargetInfo->Time());
 					
-					T500mVector = h->VerticalValue(param("T-K"), H500mVector);
-					TD500mVector = h->VerticalValue(param("TD-C"), H500mVector);
-					P500mVector = h->VerticalValue(param("P-PA"), H500mVector);
+					T500mVector = h->VerticalAverage(param("T-K"), H0mVector, H500mVector);
+					TD500mVector = h->VerticalAverage(param("TD-C"), H0mVector, H500mVector);
+					P500mVector = h->VerticalAverage(param("P-PA"), H0mVector, H500mVector);
 
 				}
 				else if (parName == "CTI-N")
@@ -556,7 +585,42 @@ double stability::KI(double T850, double T700, double T500, double TD850, double
 inline
 double stability::LI(double T500, double T500m, double TD500m, double P500m) const
 {
-	return kFloatMissing;
+	vector<double> LCL = util::LCL(50000, T500m, TD500m);
+
+	double li = kFloatMissing;
+
+	const double TARGET_PRESSURE = 50000;
+
+	if (LCL[0] == kFloatMissing)
+	{
+		return li;
+	}
+
+	if (LCL[0] <= 85000)
+	{
+		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
+		// lifting
+
+		double dryT = util::DryLift(P500m, T500m, TARGET_PRESSURE);
+
+		if (dryT != kFloatMissing)
+		{
+			li = T500 - dryT;
+		}
+	}
+	else
+	{
+		// Grid point is inside or above cloud
+
+		double wetT = util::MoistLift(P500m, T500m, TD500m, TARGET_PRESSURE);
+
+		if (wetT != kFloatMissing)
+		{
+			li = T500 - wetT;
+		}
+	}
+
+	return li;
 }
 
 inline
@@ -568,12 +632,17 @@ double stability::SI(double T850, double T500, double TD850) const
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (LCL[0] <= 850)
+	if (LCL[0] == kFloatMissing)
+	{
+		return si;
+	}
+	
+	if (LCL[0] <= 85000)
 	{
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
 		// lifting
 
-		double dryT = util::DryLift(T850, 85000, TARGET_PRESSURE);
+		double dryT = util::DryLift(85000, T850, TARGET_PRESSURE);
 		
 		if (dryT != kFloatMissing)
 		{
@@ -595,3 +664,10 @@ double stability::SI(double T850, double T500, double TD850) const
 	return si;
 }
 
+/*
+inline
+double si::StormRelativeHelicity(double UID, double VID, double U_lower, double U_higher, double V_lower, double V_higher)
+{
+	return ((UID - U_lower) * (V_lower - V_higher)) - ((VID - V_lower) * (U_lower - U_higher));
+}
+*/
