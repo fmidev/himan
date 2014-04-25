@@ -17,11 +17,15 @@ INSTALL_TARGET = /usr/bin
 
 # The rules
 
-all release debug:
-#	scons $(SCONS_FLAGS)
-#debug: 
-	scons $(SCONS_FLAGS) --debug-build
-	sh run.sh build/debug	
+all release:
+	scons $(SCONS_FLAGS)
+	if [ $(?) -ne 0 ]; then
+		sh run.sh build/release	
+	fi
+
+debug:
+	scons $(SCONS_FLAGS) --debug-build || exit 1
+	sh run.sh build/debug
 
 clean:
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~
