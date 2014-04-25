@@ -22,7 +22,11 @@
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
+using namespace himan;
 using namespace himan::plugin;
+
+void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result);
+void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result);
 
 stability::stability()
 {
@@ -40,7 +44,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	// By default calculate only KINDEX
 	
-	if (itsConfiguration->Exists("kindex") && itsConfiguration->GetValue("ki") == "false")
+	if (itsConfiguration->Exists("ki") && itsConfiguration->GetValue("ki") == "false")
 	{
 		;
 	}
@@ -116,7 +120,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	const param TParam("T-K");
 	const param TDParam("TD-C");
-	const param HParam("HL-M");
+	const param HParam("Z-M2S2");
+	const params PParam({param("P-HPA"), param("P-PA")});
 	
 	level T850Level(himan::kPressure, 850, "PRESSURE");
 	level T700Level(himan::kPressure, 700, "PRESSURE");
@@ -250,6 +255,10 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 					if (H0mVector.empty())
 					{
 						H0mVector = myTargetInfo->Data()->Values();
+
+						// multiply with 1/g
+						transform(H0mVector.begin(), H0mVector.end(), H0mVector.begin(), bind1st(multiplies<double>(), constants::kIg));
+
 					}
 
 					if (H500mVector.empty())
@@ -262,10 +271,13 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 					}
 
 					h->Time(myTargetInfo->Time());
-					
-					T500mVector = h->VerticalAverage(param("T-K"), H0mVector, H500mVector);
-					TD500mVector = h->VerticalAverage(param("TD-C"), H0mVector, H500mVector);
-					P500mVector = h->VerticalAverage(param("P-PA"), H0mVector, H500mVector);
+
+					boost::thread t1(&T500mSearch, itsConfiguration, myTargetInfo->Time(), H0mVector, H500mVector, boost::ref(T500mVector));
+					boost::thread t2(&TD500mSearch, itsConfiguration, myTargetInfo->Time(), H0mVector, H500mVector, boost::ref(TD500mVector));
+
+					P500mVector = h->VerticalAverage(PParam, H0mVector, H500mVector);
+
+					t1.join(); t2.join();
 
 				}
 				else if (parName == "CTI-N")
@@ -361,31 +373,39 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			shared_ptr<NFmiGrid> T850Grid;
 			shared_ptr<NFmiGrid> T700Grid;
 			shared_ptr<NFmiGrid> T500Grid;
-			shared_ptr<NFmiGrid> TD850Grid(TD850Info->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> TD700Grid(TD700Info->Grid()->ToNewbaseGrid());
+			shared_ptr<NFmiGrid> TD850Grid;
+			shared_ptr<NFmiGrid> TD700Grid;
 
+			bool equalGrids = true;
+			
 			if (T850Info)
 			{
+				equalGrids = equalGrids && CompareGrids({myTargetInfo->Grid(), T850Info->Grid()});
+				
 				T850Grid = shared_ptr<NFmiGrid> (T850Info->Grid()->ToNewbaseGrid());
 			}
 
 			if (T700Info)
 			{
+				equalGrids = equalGrids && CompareGrids({myTargetInfo->Grid(), T700Info->Grid()});
 				T700Grid = shared_ptr<NFmiGrid> (T700Info->Grid()->ToNewbaseGrid());
 			}
 
 			if (T500Info)
 			{
+				equalGrids = equalGrids && CompareGrids({myTargetInfo->Grid(), T500Info->Grid()});
 				T500Grid = shared_ptr<NFmiGrid> (T500Info->Grid()->ToNewbaseGrid());
 			}
 
 			if (TD850Info)
 			{
+				equalGrids = equalGrids && CompareGrids({myTargetInfo->Grid(), TD850Info->Grid()});
 				TD850Grid = shared_ptr<NFmiGrid> (TD850Info->Grid()->ToNewbaseGrid());
 			}
 
 			if (TD700Info)
 			{
+				equalGrids = equalGrids && CompareGrids({myTargetInfo->Grid(), TD700Info->Grid()});
 				TD700Grid = shared_ptr<NFmiGrid> (TD700Info->Grid()->ToNewbaseGrid());
 			}
 
@@ -393,10 +413,6 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			size_t count = 0;
 
 			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			bool equalGrids = CompareGrids({myTargetInfo->Grid(), T850Info->Grid(),
-								T700Info->Grid(), T500Info->Grid(), TD850Info->Grid(),
-								TD700Info->Grid()});
 
 			myTargetInfo->ResetLocation();
 
@@ -662,6 +678,28 @@ double stability::SI(double T850, double T500, double TD850) const
 	}
 
 	return si;
+}
+
+void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result)
+{
+	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+
+	h->Configuration(conf);
+	h->Time(ftime);
+
+	result = h->VerticalAverage(param("T-K"), H0mVector, H500mVector);
+
+}
+
+void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result)
+{
+	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+
+	h->Configuration(conf);
+	h->Time(ftime);
+
+	result = h->VerticalAverage(param("TD-C"), H0mVector, H500mVector);
+
 }
 
 /*
