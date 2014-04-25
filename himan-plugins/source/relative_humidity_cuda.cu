@@ -9,7 +9,7 @@
 #include "relative_humidity_cuda.h"
 
 // CUDA-kernel that computes RH from T and TD
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(double* __restrict__ d_T,
+__global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(const double* __restrict__ d_T,
 														double* __restrict__ d_TD,
 														double* __restrict__ d_RH,
 														options opts,
@@ -39,7 +39,7 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(double* __re
 
 // CUDA-kernel that computes RH from T, Q and P
 __global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(double* __restrict__ d_T,
-														double* __restrict__ d_Q,
+														const double* __restrict__ d_Q,
 														double* __restrict__ d_P,
 														double* __restrict__ d_ES,
 														double* __restrict__ d_RH,
@@ -78,7 +78,7 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(double* __re
 
 // CUDA-kernel that computes RH on pressure-level from T and Q
 __global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(double* __restrict__ d_T,
-														double* __restrict__ d_Q,
+														const double* __restrict__ d_Q,
 														double* __restrict__ d_ES,
 														double* __restrict__ d_RH,
 														options opts,
