@@ -499,7 +499,7 @@ const std::vector<double> util::LCL(double P, double T, double TD)
 
 	assert(P > 10000);
 	assert(T > 0 && T < 500);
-	assert(TD > 0 && T < 500 && TD <= T);
+	assert(TD > 0 && TD < 500);
 	
 	// starting T step
 
@@ -665,7 +665,7 @@ double util::MoistLift(double P, double T, double TD, double targetP)
 	// Sanity checks
 	assert(P > 10000);
 	assert(T > 0 && T < 500);
-	assert(TD > 0 && TD < 500 && TD <= T);
+	assert(TD > 0 && TD < 500);
 	assert(targetP > 10000);
 
 	// Search LCL level
