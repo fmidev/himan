@@ -23,6 +23,7 @@ using namespace himan::plugin;
 
 hybrid_pressure::hybrid_pressure()
 {
+	// Vertkoord_A and Vertkoord_B refer to full hybrid-level coefficients
 	itsClearTextFormula = "P = Vertkoord_A + P0 * Vertkoord_B";
 
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("hybrid_pressure"));
@@ -158,12 +159,17 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 		targetGrid->Reset();
 
-		// Vertical coordinates for hybrid levels
+		/* 
+		 * Vertical coordinates for full hybrid levels.
+		 * For Hirlam data, coefficients A and B are already interpolated to full level coefficients in the grib-file.
+		 * For Harmonie and ECMWF interpolation is done, when reading data from the grib-file. (NFmiGribMessage::PV)
+		 */
+
 		std::vector<double> ab = QInfo->Grid()->AB();
 
-	    double A = ab[0];
-	    double B = ab[1];
- 
+	    	double A = ab[0];
+	    	double B = ab[1];
+
 		while (myTargetInfo->NextLocation() && targetGrid->Next())
 		{
 			count++;
