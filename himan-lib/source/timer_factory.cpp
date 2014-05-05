@@ -9,24 +9,16 @@
 
 using namespace himan;
 
-timer_factory* timer_factory::itsInstance = NULL;
-
-timer_factory::~timer_factory()
-{
-    if (itsInstance)
-    {
-        delete itsInstance;
-    }
-}
+std::unique_ptr<timer_factory> timer_factory::itsInstance = NULL;
 
 timer_factory* timer_factory::Instance()
 {
     if (!itsInstance)
     {
-        itsInstance = new timer_factory();
+        itsInstance = std::unique_ptr<timer_factory> (new timer_factory());
     }
 
-    return itsInstance;
+    return itsInstance.get();
 }
 
 timer* timer_factory::GetTimer()

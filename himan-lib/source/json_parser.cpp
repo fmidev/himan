@@ -42,17 +42,17 @@ using namespace std;
  *
  */
 
-json_parser* json_parser::itsInstance = NULL;
+unique_ptr<json_parser> json_parser::itsInstance = NULL;
 
 json_parser* json_parser::Instance()
 {
 
 	if (!itsInstance)
 	{
-		itsInstance = new json_parser;
+		itsInstance = unique_ptr<json_parser> (new json_parser);
 	}
 
-	return itsInstance;
+	return itsInstance.get();
 }
 
 json_parser::json_parser()

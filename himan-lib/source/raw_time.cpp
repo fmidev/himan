@@ -74,6 +74,8 @@ std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, 
 
     s << theFormattedDateTime;
 
+    s.flush();
+	
     return s.str();
 
 }

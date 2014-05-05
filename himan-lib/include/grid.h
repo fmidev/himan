@@ -17,7 +17,6 @@
 #include <string>
 #include "himan_common.h"
 #include "point.h"
-#include "logger.h"
 #include "matrix.h"
 
 #ifdef __clang__
@@ -43,6 +42,7 @@ namespace himan
 
 typedef d_matrix_t unpacked;
 
+class logger;
 class grid
 {
 	public:
@@ -55,7 +55,7 @@ class grid
 				point theSouthPole = point(),
 				double theOrientation = kHPMissingValue);
 
-		~grid() { }
+		~grid() = default;
 
 		/**
 		 * @brief Copy constructor for grid

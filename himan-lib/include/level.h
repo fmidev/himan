@@ -10,12 +10,13 @@
 #ifndef LEVEL_H
 #define LEVEL_H
 
-#include "logger.h"
 #include "NFmiLevel.h"
+#include "himan_common.h"
 
 namespace himan
 {
 
+class logger;
 class level
 {
 
@@ -26,7 +27,7 @@ public:
     level(HPLevelType theType, double theValue, const std::string& theName = "");
     level(HPLevelType theType, double theValue, int theIndex, const std::string& theName = "");
 
-    ~level() {}
+    ~level() = default;
     level(const level& other);
     level& operator=(const level& other);
 

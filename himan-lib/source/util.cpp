@@ -12,11 +12,12 @@
 #include <sstream>
 #include <iomanip>
 #include <NFmiStereographicArea.h>
+#include "level.h"
+#include "param.h"
+#include "forecast_time.h"
 
 using namespace himan;
 using namespace std;
-
-
 
 string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const info> info)
 {
@@ -640,7 +641,7 @@ double util::WaterVapourPressure(double T, double TW, double P, bool aspirated)
 double util::MixingRatio(double T, double P)
 {
 	// Sanity checks
-	assert(P > 10000);
+	assert(P > 1000);
 	assert(T > 0 && T < 500);
 
 	double E = Es(T) * 0.01; // hPa
@@ -653,7 +654,7 @@ double util::MixingRatio(double T, double P)
 double util::DryLift(double P, double T, double targetP)
 {
 	// Sanity checks
-	assert(P > 10000);
+	assert(P > 1000);
 	assert(T > 0 && T < 500);
 	assert(targetP > 10000);
 	

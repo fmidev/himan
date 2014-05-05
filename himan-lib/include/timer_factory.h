@@ -9,6 +9,7 @@
 #define TIMER_FACTORY_H
 
 #include "timer.h"
+#include <memory>
 
 namespace himan
 {
@@ -19,23 +20,22 @@ class timer_factory
 public:
     static timer_factory* Instance();
 
-#ifndef __CUDACC__
     timer_factory(const timer_factory& other) = delete;
     timer_factory& operator=(const timer_factory& other) = delete;
-#endif
 
     timer* GetTimer();
 
+    ~timer_factory() = default;
+
 private:
     timer_factory() {}
-    ~timer_factory() ;
 
-#ifdef __CUDACC__
+/*#ifdef __CUDACC__
     timer_factory(const timer_factory& other);
     timer_factory& operator=(const timer_factory& other);
 #endif
-
-    static timer_factory* itsInstance;
+*/
+    static std::unique_ptr<timer_factory> itsInstance;
 };
 
 } // namespace himan
