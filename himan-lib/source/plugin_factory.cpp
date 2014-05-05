@@ -19,7 +19,7 @@
 using namespace himan;
 using namespace himan::plugin;
 
-std::unique_ptr<plugin_factory> plugin_factory::itsInstance = NULL;
+std::unique_ptr<plugin_factory> plugin_factory::itsInstance; 
 
 plugin_factory* plugin_factory::Instance()
 {

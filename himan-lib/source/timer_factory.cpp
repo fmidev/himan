@@ -9,7 +9,7 @@
 
 using namespace himan;
 
-std::unique_ptr<timer_factory> timer_factory::itsInstance = NULL;
+std::unique_ptr<timer_factory> timer_factory::itsInstance;
 
 timer_factory* timer_factory::Instance()
 {
