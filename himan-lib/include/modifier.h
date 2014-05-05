@@ -9,7 +9,6 @@
 #define	MODIFIER_H
 
 #include "himan_common.h"
-#include "info.h"
 
 namespace himan
 {

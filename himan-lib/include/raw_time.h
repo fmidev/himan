@@ -11,13 +11,14 @@
 #ifndef RAW_TIME_H
 #define RAW_TIME_H
 
+#include "himan_common.h"
 #include <boost/date_time.hpp>
-#include "logger.h"
 #include <stdexcept>
 
 namespace himan
 {
 
+class logger;
 class raw_time
 {
 
@@ -37,7 +38,7 @@ public:
     std::string ClassName() const
     {
         return "himan::raw_time";
-    };
+    }
 
     bool operator==(const raw_time& other);
     bool operator!=(const raw_time& other);
@@ -58,7 +59,6 @@ private:
     boost::posix_time::ptime itsDateTime;
 
 };
-
 
 inline
 std::ostream& operator<<(std::ostream& file, const raw_time& ob)

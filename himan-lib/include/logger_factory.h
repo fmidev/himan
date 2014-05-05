@@ -8,12 +8,15 @@
 #ifndef LOGGER_FACTORY_H
 #define LOGGER_FACTORY_H
 
-#include "logger.h"
 #include "himan_common.h"
+#include "logger.h" 	// Include logger.h here since logger_factory.h is used *everywhere*
+			// and by including logger.h we need only include one file. And besides
+			// logger.h isn't *that* big!
 
 namespace himan
 {
 
+class logger;
 class logger_factory
 {
 

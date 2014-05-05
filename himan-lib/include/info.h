@@ -12,16 +12,13 @@
 #ifndef INFO_H
 #define INFO_H
 
-#include "logger.h"
-#include "param.h"
-#include "level.h"
-#include "forecast_time.h"
+#include "raw_time.h"
 #include "himan_common.h"
 #include "producer.h"
-#include "point.h"
 #include "grid.h"
 #include <vector>
 #include "info_simple.h"
+#include <boost/lexical_cast.hpp>
 
 namespace himan
 {
@@ -304,11 +301,17 @@ private:
 
 };
 
+class forecast_time;
+class param;
+class level;
+class logger;
+
 typedef iterator<level> level_iter;
 typedef iterator<param> param_iter;
 typedef iterator<forecast_time> time_iter;
 typedef iterator<producer> producer_iter;
 typedef matrix <std::shared_ptr<grid> > matrix_t;
+
 
 class info
 {

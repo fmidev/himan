@@ -1,8 +1,8 @@
-/*
- * plugin_factory.h
+/**
+ * @file plugin_factory.h
  *
- *  Created on: Nov 20, 2012
- *      Author: partio
+ * @date Nov 20, 2012
+ * @author partio
  */
 
 #ifndef PLUGIN_FACTORY_H
@@ -10,8 +10,8 @@
 
 #include <vector>
 #include "plugin_container.h"
-#include "logger.h"
 #include <mutex>
+#include <memory>
 
 namespace himan
 {
@@ -28,14 +28,15 @@ public:
 
     std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName, bool theNewInstance = true);
 
+    ~plugin_factory() = default;
+
 private:
-    // Hide constructor and destructor
+    // Hide constructor
     plugin_factory();
-    ~plugin_factory();
 
-    plugin_factory(const plugin_factory&) {}
+    plugin_factory(const plugin_factory&) = delete;
 
-    static plugin_factory* itsInstance;
+    static std::unique_ptr<plugin_factory> itsInstance;
 
     void ReadPlugins();
 

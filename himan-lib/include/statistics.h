@@ -26,7 +26,7 @@ public:
 	friend class plugin_configuration;
 
 	statistics();
-	~statistics() {};
+	~statistics() = default;
 
 	statistics(const statistics& other);
 	statistics& operator=(const statistics& other) = delete;

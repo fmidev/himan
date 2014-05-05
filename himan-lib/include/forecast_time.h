@@ -9,7 +9,6 @@
 #ifndef FORECAST_TIME_H
 #define FORECAST_TIME_H
 
-#include "logger.h"
 #include "raw_time.h"
 #include <stdexcept>
 
@@ -22,6 +21,7 @@ namespace himan
  * @brief Describe a forecast time: origin time and valid (forecasted) time
  */
 
+class logger;
 class forecast_time
 {
 
@@ -33,7 +33,7 @@ public:
                   const std::string& theValidDateTime,
                   const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
-    ~forecast_time() {}
+    ~forecast_time() = default;
     forecast_time(const forecast_time& other);
     forecast_time& operator=(const forecast_time& other);
 

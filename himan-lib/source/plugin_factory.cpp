@@ -19,27 +19,24 @@
 using namespace himan;
 using namespace himan::plugin;
 
-plugin_factory* plugin_factory::itsInstance = NULL;
+std::unique_ptr<plugin_factory> plugin_factory::itsInstance = NULL;
 
 plugin_factory* plugin_factory::Instance()
 {
     if (!itsInstance)
     {
-        itsInstance = new plugin_factory();
+        itsInstance = std::unique_ptr<plugin_factory> (new plugin_factory());
     }
 
-    return itsInstance;
+    return itsInstance.get();
 }
-
 
 plugin_factory::plugin_factory() : itsPluginSearchPath()
 {
 
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("plugin_factory"));
 
-    char* path;
-
-    path = std::getenv("HIMAN_LIBRARY_PATH");
+    char* path = std::getenv("HIMAN_LIBRARY_PATH");
 
     if (path != NULL)
     {
@@ -58,9 +55,6 @@ plugin_factory::plugin_factory() : itsPluginSearchPath()
 
     ReadPlugins();
 }
-
-// Hide constructor
-plugin_factory::~plugin_factory() {}
 
 std::vector<std::shared_ptr<himan_plugin> > plugin_factory::Plugins(HPPluginClass pluginClass)
 {

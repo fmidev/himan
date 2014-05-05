@@ -4,6 +4,7 @@
  */
 
 #include "modifier.h"
+#include "NFmiInterpolation.h"
 
 using namespace himan;
 

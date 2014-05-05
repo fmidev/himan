@@ -5,6 +5,8 @@
  * @author partio
  */
 
+#include "level.h"
+#include "forecast_time.h"
 #include "plugin_configuration.h"
 #include "util.h"
 

@@ -9,7 +9,6 @@
 #define PLUGIN_CONFIGURATION_H
 
 #include "himan_common.h"
-#include <vector>
 #include <map>
 #include "statistics.h"
 #include "configuration.h"
@@ -29,7 +28,7 @@ public:
 	plugin_configuration(const configuration& theConfiguration);
 	plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions);
 
-	~plugin_configuration() {};
+	~plugin_configuration() = default;
 
     /**
      * @return Class name
@@ -42,16 +41,52 @@ public:
 
     std::ostream& Write(std::ostream& file) const;
 
+	/**
+	 * @brief Set plugin name
+     * @param theName New name
+     */
+
     void Name(const std::string& theName);
-    std::string Name() const;
+
+	/**
+	 *
+     * @return Plugin name
+     */
+	std::string Name() const;
+
+	/**
+	 * @brief Return a map of options defined for a plugin.
+	 *
+	 * Options are extra specifiers, for example with windvector one can specify
+	 * 'for_ice' = true, these options are stored here.
+	 *
+	 * @return const reference to options map
+	 */
 
     const std::map<std::string,std::string>& Options() const;
     void Options(const std::map<std::string,std::string>& theOptions);
 
+	/**
+	 * @brief Add new element to options map
+     * @param key Key name
+     * @param value Value
+     */
+	
     void AddOption(const std::string& key, const std::string& value);
 
+	/**
+	 * @brief Check if a key exists in options map
+	 */
+
     bool Exists(const std::string & key) const;
-    std::string GetValue(const std::string & key) const;
+
+	/**
+	 * @brief Get value for a given key
+     * @param key Key name
+     * @return Value as string
+     */
+
+	std::string GetValue(const std::string & key) const;
     
 	void Info(std::shared_ptr<info> theInfo);
 	std::shared_ptr<info> Info() const;

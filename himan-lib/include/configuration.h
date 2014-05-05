@@ -14,12 +14,12 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-#include "logger.h"
 #include "info.h"
 
 namespace himan
 {
 
+class logger;
 class configuration
 {
 

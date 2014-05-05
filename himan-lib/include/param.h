@@ -18,7 +18,6 @@
 #ifndef PARAM_H
 #define PARAM_H
 
-#include "logger.h"
 #include "aggregation.h"
 #include <NFmiParam.h>
 #include "NFmiGlobals.h" // FmiInterpolatioMethod
@@ -26,6 +25,7 @@
 namespace himan
 {
 
+class logger;
 class param
 {
 
@@ -42,7 +42,7 @@ public:
           const std::string& thePrecision = "%.1f",
           FmiInterpolationMethod theInterpolationMethod = kNearestPoint);
 
-    ~param() {}
+    ~param() = default;
 
     param(const param& other);
     param& operator=(const param& other);

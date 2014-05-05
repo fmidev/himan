@@ -28,15 +28,16 @@ public:
 
     std::vector<std::shared_ptr<plugin_configuration>> Parse(std::shared_ptr<configuration> conf);
 
-    virtual std::string ClassName() const
+    std::string ClassName() const
     {
         return "himan::json_parser";
     }
 
+    ~json_parser() = default;
+
 private:
 
     json_parser();
-    ~json_parser() {}
 
     std::vector<std::shared_ptr<plugin_configuration>> ParseConfigurationFile(std::shared_ptr<configuration> conf);
     void ParseAreaAndGrid(std::shared_ptr<configuration> conf, std::shared_ptr<info> baseInfo, const boost::property_tree::ptree& pt);
@@ -47,7 +48,7 @@ private:
     std::vector<level> LevelsFromString(const std::string& levelType, const std::string& levelValues) const;
     bool ParseBoolean(std::string& booleanValue);
 
-    static json_parser* itsInstance;
+    static std::unique_ptr<json_parser> itsInstance;
     std::unique_ptr<logger> itsLogger;
 
 };
