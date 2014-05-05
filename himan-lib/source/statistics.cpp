@@ -1,5 +1,6 @@
 /**
  * @file statistics.cpp
+ * @author partio
  */
 
 #include "statistics.h"

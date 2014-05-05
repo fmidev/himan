@@ -1,8 +1,8 @@
-/*
- * logger.h
+/**
+ * @file logger.h
  *
- *  Created on: Nov 20, 2012
- *      Author: partio
+ * @date Nov 20, 2012
+ * @author partio
  */
 
 #ifndef LOGGER_H
