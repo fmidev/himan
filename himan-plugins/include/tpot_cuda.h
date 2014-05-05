@@ -58,9 +58,6 @@ __device__ double Es(double T);
 
 #endif
 
-const double kFloaMissing = 32700.;
-
-
 } // namespace tpot_cuda
 } // namespace plugin
 } // namespace himan
