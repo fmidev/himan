@@ -9,6 +9,7 @@
 #include "plugin_factory.h"
 #include "hitool.h"
 #include <NFmiInterpolation.h>
+#include "forecast_time.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
