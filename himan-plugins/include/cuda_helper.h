@@ -7,15 +7,24 @@
 
 namespace himan
 {
-#ifdef __CUDACC__
-const double kFloatMissing = 32700;
-#endif
+
+/*
+ * Two very commonly used data types with cuda calculations.
+ * By defining double pointers __restrict__ we guarantee to the compiler
+ * that the pointers do not overlap in memory and enable the compiler to
+ * generate more efficient code. By adding the const specifier we can
+ * benefit from cuda read-only memory which is supposed to be (according
+ * to nvidia) faster than regular global memory.
+ */
+
+typedef const double* __restrict__ cdarr_t;
+typedef double* __restrict__ darr_t;
 
 void CheckCudaError(cudaError_t errarg, const char* file, const int line);
 void CheckCudaErrorString(const char* errstr, const char* file,	const int line);
 
-#define CUDA_CHECK(errarg)	 CheckCudaError(errarg, __FILE__, __LINE__)
-#define CUDA_CHECK_ERROR_MSG(errstr) CheckCudaErrorString(errstr, __FILE__, __LINE__)
+#define CUDA_CHECK(errarg)	 himan::CheckCudaError(errarg, __FILE__, __LINE__)
+#define CUDA_CHECK_ERROR_MSG(errstr) himan::CheckCudaErrorString(errstr, __FILE__, __LINE__)
 
 inline void CheckCudaError(cudaError_t errarg, const char* file, const int line)
 {
@@ -52,8 +61,6 @@ inline void CheckCudaErrorString(const char* errstr, const char* file,	const int
 
 namespace himan
 {
-
-const float kFloatMissing = 32700.f;
 
 inline __host__ void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* unpacked, size_t len)
 {
