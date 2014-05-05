@@ -14,6 +14,7 @@
 #include "himan_common.h"
 #include "plugin_configuration.h"
 #include "modifier.h"
+#include "forecast_time.h"
 
 namespace himan
 {
@@ -26,33 +27,33 @@ class hitool : public auxiliary_plugin
 {
 public:
 
-    hitool();
+	hitool();
 	hitool(std::shared_ptr<plugin_configuration> conf);
 
-    virtual ~hitool() {};
+	virtual ~hitool() {};
 
-    virtual std::string ClassName() const
-    {
-        return "himan::plugin::hitool";
-    }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::hitool";
+	}
 
-    virtual HPPluginClass PluginClass() const
-    {
-        return kAuxiliary;
-    }
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	}
 
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 0);
+	}
 
 	/**
 	 * @brief Return maximum value in a given height range for the first parameter found.
 	 *
 	 * Overcoat for VerticalMaximum(param, vector<double>, vector<double>, vector<double>)
 	 *
-     * @param wantedParamList List (vector) of wanted parameters
-    */
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
 
 	std::vector<double> VerticalMaximum(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
@@ -75,8 +76,8 @@ public:
 	 *
 	 * Overcoat for VerticalMinimum(param, vector<double>, vector<double>, vector<double>)
 	 *
-     * @param wantedParamList List (vector) of wanted parameters
-    */
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
 
 	std::vector<double> VerticalMinimum(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
@@ -96,19 +97,19 @@ public:
 	 *
 	 * Overcoat for VerticalSum(param, vector<double>, vector<double>, vector<double>)
 	 *
-     * @param wantedParamList List (vector) of wanted parameters
-    */
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
 
 	std::vector<double> VerticalSum(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
 	/**
 	 * @brief Calculate sum of values for each point in a given height range
 	 *
-     * @param wantedParam Wanted parameter
-     * @param firstLevelValue Lowest level value for each point, search will start here
-     * @param lastLevelValue Highest level value for each point, search will stop here
-     * @return Sum for each point
-     */
+	 * @param wantedParam Wanted parameter
+	 * @param firstLevelValue Lowest level value for each point, search will start here
+	 * @param lastLevelValue Highest level value for each point, search will stop here
+	 * @return Sum for each point
+	 */
 	
 	std::vector<double> VerticalSum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
@@ -117,19 +118,19 @@ public:
 	 *
 	 * Overcoat for VerticalAverage(param, vector<double>, vector<double>)
 	 *
-     * @param wantedParamList List (vector) of wanted parameters
-    */
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
 
 	std::vector<double> VerticalAverage(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
 	/**
 	 * @brief Calculate average of values for each point in a given height range
 	 *
-     * @param wantedParam Wanted parameter
-     * @param firstLevelValue Lowest level value for each point, search will start here
-     * @param lastLevelValue Highest level value for each point, search will stop here
-     * @return Mean for each point
-     */
+	 * @param wantedParam Wanted parameter
+	 * @param firstLevelValue Lowest level value for each point, search will start here
+	 * @param lastLevelValue Highest level value for each point, search will stop here
+	 * @return Mean for each point
+	 */
 
 	std::vector<double> VerticalAverage(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
@@ -138,8 +139,8 @@ public:
 	 *
 	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
 	 *
-     * @param wantedParamList List (vector) of wanted parameters
-    */
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
 
 	std::vector<double> VerticalHeight(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue , size_t findNth = 1) const;
 
@@ -153,7 +154,7 @@ public:
 	 * 
 	 * @param wantedParam Wanted parameter
 	 * @param firstLevelValue Lowest level value for each point, search will start here
-     * @param lastLevelValue Highest level value for each point, search will stop here
+	 * @param lastLevelValue Highest level value for each point, search will stop here
 	 * @param findValue Wanted value for each point
 	 * @param findNth Return the height of Nth found value
 	 * @return Heights for given values for each point
@@ -166,8 +167,8 @@ public:
 	 *
 	 * Overcoat for VerticalValue(param, vector<double>)
 	 * 
-     * @return Values for given heights
-     */
+	 * @return Values for given heights
+	 */
 
 	std::vector<double> VerticalValue(const std::vector<param>& wantedParamList, const std::vector<double>& findValue) const;
 
@@ -188,8 +189,8 @@ public:
 	 *
 	 * Overcoat for VerticalCount(param, vector<double>, vector<double>, vector<double>)
 	 *
-     * @return Values for given heights
-     */
+	 * @return Values for given heights
+	 */
 
 	std::vector<double> VerticalCount(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue) const;
 
@@ -222,15 +223,15 @@ public:
 
 	/**
 	 * @brief Set current forecast time
-     * @param theTime Wanted time
-     */
+	 * @param theTime Wanted time
+	 */
 
 	void Time(const forecast_time& theTime);
 
 	/**
 	 * @brief Set configuration
-     * @param conf
-     */
+	 * @param conf
+	 */
 	void Configuration(const std::shared_ptr<const plugin_configuration> conf);
 
 private:
@@ -244,14 +245,15 @@ private:
 	 *
 	 * Actual calculation is done by the modifier (from himan-lib)
 	 *
-     * @param mod Modifier type
-     * @param wantedLevelType Wanted level type, only hybrid allowed
-     * @param wantedParam Wanted parameter
-     * @param firstLevelValue First (ie. lowest) level value, optional
-     * @param lastLevelValue Last (ie. highest) level value, optional
-     * @param findValue List of values that are searched, optional. This is passed to the modifier.
-     * @return vector
-     */
+	 * @param mod Modifier type
+	 * @param wantedLevelType Wanted level type, only hybrid allowed
+	 * @param wantedParam Wanted parameter
+	 * @param firstLevelValue First (ie. lowest) level value, optional
+	 * @param lastLevelValue Last (ie. highest) level value, optional
+	 * @param findValue List of values that are searched, optional. This is passed to the modifier.
+	 * @return vector
+	 */
+
 	std::vector<double> VerticalExtremeValue(std::shared_ptr<modifier> mod,
 							HPLevelType wantedLevelType,
 							const param& wantedParam,
@@ -279,7 +281,7 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<hitool> (new hitool());
+	return std::shared_ptr<hitool> (new hitool());
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
