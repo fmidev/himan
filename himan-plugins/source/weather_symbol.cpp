@@ -328,7 +328,7 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 double weather_symbol::rain_form(double rr) {
   
     double rain_form;
-	if (rr <=67 || rr == 81 || rr == 82 || rr == 83 || rr == 95 || rr == 97)
+	if (rr <=67 || rr == 80 || rr == 81 || rr == 82 || rr == 95 || rr == 97)
 	{
         rain_form = 1;
 	}
@@ -367,10 +367,15 @@ double weather_symbol::weather_type(double rr) {
 	{
 		weather_type = 4;
 	}
-	else 
+	else if (rr == 0)
 	{
 		weather_type = 1;
 	}
+	else
+	{
+       throw runtime_error("Invalid value for rr: Fix me!");
+	}
+
 
     return weather_type;
 }
