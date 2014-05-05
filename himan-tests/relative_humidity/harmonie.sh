@@ -8,7 +8,7 @@ fi
 
 rm -f RH-PRCNT*.grib P-HPA*grib
 
-$HIMAN -d 5 -f relative_humidity_harmonie.json -t grib --no-cuda source_harmonie.grib
+$HIMAN -d 5 -j 1 -f relative_humidity_harmonie.json -t grib --no-cuda source_harmonie.grib
 
 grib_compare ./RH-PRCNT_hybrid_44_rll_290_594_0_1860.grib result_harmonie_1860.grib 
 

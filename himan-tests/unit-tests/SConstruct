@@ -19,7 +19,7 @@ RELEASE = (not DEBUG)
 
 # Workspace
 
-workspace = os.environ['HOME'] + "/workspace"
+workspace = os.environ['HOME'] + "/workspace/himan"
 
 if os.environ['HOME'] == "/home/weto":
 	workspace = os.environ['HOME'] + "/workspace/himan"
@@ -114,7 +114,7 @@ env.Append(LIBS = libraries)
 boost_libraries = [ 'boost_filesystem', 'boost_system', 'boost_regex', 'boost_iostreams', 'boost_thread' ]
 
 for lib in boost_libraries:
-	libfile = '/usr/lib/x86_64-linux-gnu/lib' + lib + '.a'
+	libfile = '/usr/local/lib/lib' + lib + '.a'
 
 	if not os.path.isfile(libfile):
 		libfile = '/usr/lib64/lib' + lib + '-mt.a'

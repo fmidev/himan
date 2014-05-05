@@ -8,7 +8,7 @@ fi
 
 rm -f RH-PRCNT_hybrid_65_rll_1030_816_0_00*.grib P-HPA*grib
 
-$HIMAN -d 5 -f relative_humidity_hirlam.json -t grib --no-cuda source_hirlam.grib
+$HIMAN -d 5 -j 1 -f relative_humidity_hirlam.json -t grib --no-cuda source_hirlam.grib
 
 grib_compare RH-PRCNT_hybrid_65_rll_1030_816_0_004.grib result_hirlam_4.grib 
 
