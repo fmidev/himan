@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 14.4.10
+Version: 14.5.6
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -51,6 +51,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue May  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.6-1.fmi
+- Add still unfinished namespace metutil
+- Replacing some #includes with forward declarations
+- Consistent way of implementing factories internal pointer handling
+* Tue Apr 29 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.29-1.fmi
+- Small changes
 * Thu Apr 10 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.10-1.fmi
 - Add forecast hour as sub directory to ref storage file name 
 * Mon Apr  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.7-1.fmi
