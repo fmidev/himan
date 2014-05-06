@@ -86,7 +86,9 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	myTargetInfo->FirstParam();
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
+	// Disable cuda until we are 100% confident the tests are working
+	//bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
+	bool useCudaInThisThread = false;
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
