@@ -48,7 +48,7 @@ protected:
 	 * @return Always true if no interpolation is made, otherwise returns the value given by newbase interpolation function
 	 */
 
-	bool InterpolateToPoint(std::shared_ptr<const NFmiGrid> targetGrid, std::shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value);
+	bool InterpolateToPoint(const std::shared_ptr<const NFmiGrid>& targetGrid, const std::shared_ptr<NFmiGrid>& sourceGrid, bool gridsAreEqual, double& value);
 
 	/**
 	 * @brief Set leading dimension
@@ -79,7 +79,7 @@ protected:
      * @return True if thread has more items to process
      */
 
-	bool AdjustLeadingDimension(std::shared_ptr<info> myTargetInfo);
+	bool AdjustLeadingDimension(const std::shared_ptr<info>& myTargetInfo);
 
 	/**
 	 * @brief Adjust non-leading dimension (time of level) by one, called by threads
@@ -93,23 +93,26 @@ protected:
      * @return
      */
 
-	bool AdjustNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
+	bool AdjustNonLeadingDimension(const std::shared_ptr<info>& myTargetInfo);
 
 	
-	void ResetNonLeadingDimension(std::shared_ptr<info> myTargetInfo);
+	void ResetNonLeadingDimension(const std::shared_ptr<info>& myTargetInfo);
  
 	/**
 	 * @brief Copy AB values from source to dest info
 	 */
 
-	bool SetAB(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
+	bool SetAB(const std::shared_ptr<info>& myTargetInfo, const std::shared_ptr<info>& sourceInfo);
 
 	/**
 	 * @brief Swap data ordering in a grid
 	 *
+	 * Can handle only swapping from bottom-left to top-right or vise versa. Swapping
+	 * is done in-place.
+	 *
 	 */
 
-	bool SwapTo(std::shared_ptr<info> myTargetInfo, HPScanningMode targetScanningMode);
+	bool SwapTo(const std::shared_ptr<info>& myTargetInfo, HPScanningMode targetScanningMode);
 
 	/**
 	 * @brief Write plugin contents to file.
@@ -120,17 +123,16 @@ protected:
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	void WriteToFile(std::shared_ptr<const info> targetInfo);
+	void WriteToFile(const std::shared_ptr<const info>& targetInfo);
 
 	/**
 	 * @brief Determine if cuda can be used in this thread, and if so
 	 * set the environment.
 	 *
-	 * @param conf Plugin configuration
 	 * @param threadIndex Thread index number, starting from 1
 	 */
 	
-	bool GetAndSetCuda(std::shared_ptr<const configuration> conf, int threadIndex);
+	bool GetAndSetCuda(int threadIndex);
 
 	/**
 	 * @brief Reset GPU card state
@@ -155,7 +157,7 @@ protected:
      * @param conf
      */
 
-	virtual void Init(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Init(const std::shared_ptr<const plugin_configuration>& conf);
 
 	/**
 	 * @brief Set target params
@@ -229,7 +231,7 @@ protected:
 	 * @param writeToCache If true info will be written to cache
      */
 	
-	void CopyDataFromSimpleInfo(std::shared_ptr<info> anInfo, info_simple* aSimpleInfo, bool writeToCache);
+	void CopyDataFromSimpleInfo(const std::shared_ptr<info>& anInfo, info_simple* aSimpleInfo, bool writeToCache);
 
 #endif
 

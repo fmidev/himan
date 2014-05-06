@@ -31,7 +31,7 @@ compiled_plugin_base::compiled_plugin_base() : itsPluginIsInitialized(false)
 	itsBaseLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("compiled_plugin_base"));
 }
 
-bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetGrid, shared_ptr<NFmiGrid> sourceGrid, bool gridsAreEqual, double& value)
+bool compiled_plugin_base::InterpolateToPoint(const shared_ptr<const NFmiGrid>& targetGrid, const shared_ptr<NFmiGrid>& sourceGrid, bool gridsAreEqual, double& value)
 {
 
 	/*
@@ -86,7 +86,7 @@ bool compiled_plugin_base::InterpolateToPoint(shared_ptr<const NFmiGrid> targetG
 
 }
 
-bool compiled_plugin_base::AdjustLeadingDimension(shared_ptr<info> myTargetInfo)
+bool compiled_plugin_base::AdjustLeadingDimension(const shared_ptr<info>& myTargetInfo)
 {
 
 	lock_guard<mutex> lock(itsAdjustDimensionMutex);
@@ -119,7 +119,7 @@ bool compiled_plugin_base::AdjustLeadingDimension(shared_ptr<info> myTargetInfo)
 	return true;
 }
 
-bool compiled_plugin_base::AdjustNonLeadingDimension(shared_ptr<info> myTargetInfo)
+bool compiled_plugin_base::AdjustNonLeadingDimension(const shared_ptr<info>& myTargetInfo)
 {
 	if (itsLeadingDimension == kTimeDimension)
 	{
@@ -135,7 +135,7 @@ bool compiled_plugin_base::AdjustNonLeadingDimension(shared_ptr<info> myTargetIn
 	}
 }
 
-void compiled_plugin_base::ResetNonLeadingDimension(shared_ptr<info> myTargetInfo)
+void compiled_plugin_base::ResetNonLeadingDimension(const shared_ptr<info>& myTargetInfo)
 {
 	if (itsLeadingDimension == kTimeDimension)
 	{
@@ -151,7 +151,7 @@ void compiled_plugin_base::ResetNonLeadingDimension(shared_ptr<info> myTargetInf
 	}
 }
 
-bool compiled_plugin_base::SetAB(shared_ptr<info> myTargetInfo, shared_ptr<info> sourceInfo)
+bool compiled_plugin_base::SetAB(const shared_ptr<info>& myTargetInfo, const shared_ptr<info>& sourceInfo)
 {
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{
@@ -165,7 +165,7 @@ bool compiled_plugin_base::SetAB(shared_ptr<info> myTargetInfo, shared_ptr<info>
 	return true;
 }
 
-bool compiled_plugin_base::SwapTo(shared_ptr<info> myTargetInfo, HPScanningMode targetScanningMode)
+bool compiled_plugin_base::SwapTo(const shared_ptr<info>& myTargetInfo, HPScanningMode targetScanningMode)
 {
 
 	if (myTargetInfo->Grid()->ScanningMode() != targetScanningMode)
@@ -180,7 +180,7 @@ bool compiled_plugin_base::SwapTo(shared_ptr<info> myTargetInfo, HPScanningMode 
 	return true;
 }
 
-void compiled_plugin_base::WriteToFile(shared_ptr<const info> targetInfo)
+void compiled_plugin_base::WriteToFile(const shared_ptr<const info>& targetInfo)
 {
 	shared_ptr<writer> aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
@@ -206,16 +206,19 @@ void compiled_plugin_base::WriteToFile(shared_ptr<const info> targetInfo)
 	}
 }
 
-bool compiled_plugin_base::GetAndSetCuda(shared_ptr<const configuration> conf, int threadIndex)
+bool compiled_plugin_base::GetAndSetCuda(int threadIndex)
 {
+	// This function used to have more logic with regards to thread index, but all that
+	// has been removed.
+	
 #ifdef HAVE_CUDA
-	bool ret = conf->UseCuda() && conf->CudaDeviceId() < conf->CudaDeviceCount();
+	bool ret = itsConfiguration->UseCuda() && itsConfiguration->CudaDeviceId() < itsConfiguration->CudaDeviceCount();
 
 	if (ret)
 	{
 		shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
-		ret = p->SetDevice(conf->CudaDeviceId());
+		ret = p->SetDevice(itsConfiguration->CudaDeviceId());
 	}
 #else
 	bool ret = false;
@@ -265,7 +268,7 @@ void compiled_plugin_base::Start()
 	Finish();
 }
 
-void compiled_plugin_base::Init(shared_ptr<const plugin_configuration> conf)
+void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration>& conf)
 {
 
 	const short MAX_THREADS = 12; //<! Max number of threads we allow
@@ -450,7 +453,7 @@ void compiled_plugin_base::Unpack(initializer_list<shared_ptr<info>> infos)
 	}
 }
 
-void compiled_plugin_base::CopyDataFromSimpleInfo(shared_ptr<info> anInfo, info_simple* aSimpleInfo, bool writeToCache)
+void compiled_plugin_base::CopyDataFromSimpleInfo(const shared_ptr<info>& anInfo, info_simple* aSimpleInfo, bool writeToCache)
 {
 	assert(aSimpleInfo);
 	
