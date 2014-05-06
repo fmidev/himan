@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.4.14
+Version: 14.5.6
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -65,7 +65,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libhybrid_height.so
 %{_libdir}/himan-plugins/libhybrid_pressure.so
 %{_libdir}/himan-plugins/libicing.so
-%{_libdir}/himan-plugins/libkindex.so
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libpcuda.so
@@ -79,6 +78,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libseaicing.so
 %{_libdir}/himan-plugins/libsi.so
 %{_libdir}/himan-plugins/libsplit_sum.so
+%{_libdir}/himan-plugins/libstability.so
 %{_libdir}/himan-plugins/libtk2tc.so
 %{_libdir}/himan-plugins/libtpot.so
 %{_libdir}/himan-plugins/libvvms.so
@@ -87,6 +87,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue May  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.6-1.fmi
+- weather_symbol finished (HIMAN-36)
+- kindex renamed to stability (HIMAN-49)
+- Changing shared_ptr<T> to const shared_ptr<T>& in many places (HIMAN-50)
+- Fix subtle bug with grib bitmap unpacking
+- Initial version of relative_humidity cuda calculation (not enabled yet)
 * Mon Apr 14 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.14-1.fmi
 - New plugin: weather_symbol (beta) (HIMAN-36)
 - Changes to preform_pressure (HIMAN-48)
