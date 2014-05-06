@@ -33,7 +33,7 @@ rm -f RH-PRCNT_hybrid_65_rll_1030_816_0_00*.grib P-HPA*grib
 
   $HIMAN -s cuda -d 5 -f relative_humidity_hirlam.json -t grib source_hirlam.grib
 
-grib_compare RH-PRCNT_hybrid_65_rll_1030_816_0_004.grib result_hirlam_4.grib
+  grib_compare -A 0.01 RH-PRCNT_hybrid_65_rll_1030_816_0_004.grib result_hirlam_4.grib
 
   if [ $? -eq 0 ];then
     echo relative_humidity/hirlam success on GPU!
