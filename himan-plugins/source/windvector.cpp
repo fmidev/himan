@@ -222,7 +222,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	myTargetInfo->ParamIndex(0);
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 
 	if (useCudaInThisThread)
 	{

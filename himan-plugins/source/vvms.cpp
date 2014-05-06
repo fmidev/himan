@@ -94,7 +94,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->FirstParam();
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{

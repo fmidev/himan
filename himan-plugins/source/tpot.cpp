@@ -148,7 +148,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const params PParam = { param("P-PA"), param("P-HPA") };
 	const params TDParam = { param("TD-C"), param("TD-K") };
 	
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(itsConfiguration, threadIndex);
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
