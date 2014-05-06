@@ -10,6 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
+#include "stability_cuda.h"
 
 namespace himan
 {
@@ -131,7 +132,12 @@ public:
 	double KI(double T500, double T700, double T850, double TD700, double TD850) const;
 
 private:
-	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void CudaFinish(std::unique_ptr<stability_cuda::options> opts, std::shared_ptr<info>& myTargetInfo, HPScanningMode sourceMode);
+	bool GetSourceData(std::shared_ptr<info>& T850Info, std::shared_ptr<info>& T700Info, std::shared_ptr<info>& T500Info, std::shared_ptr<info>& TD850Info, std::shared_ptr<info>& TD700Info, const std::shared_ptr<info>& myTargetInfo, bool useCudaInThisThread);
+	bool GetLISourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& T500mVector, std::vector<double>& TD500mVector, std::vector<double>& P500mVector, bool useCudaInThisThread);
+
+	bool itsLICalculation;
 
 };
 
