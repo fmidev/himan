@@ -303,7 +303,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 			if (calculateWithTD)
 			{
-				auto opts = CudaPrepare(myTargetInfo, TInfo, TDInfo, TDBase, TBase);
+				auto opts = CudaPrepareTTD(myTargetInfo, TInfo, TDInfo, TDBase, TBase);
 
 				relative_humidity_cuda::Process(*opts);
 
@@ -314,7 +314,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 			}
 			else if (isPressureLevel)
 			{
-				auto opts = CudaPrepare(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(), TBase);
+				auto opts = CudaPrepareTQ(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(), TBase);
 
 				relative_humidity_cuda::Process(*opts);
 
@@ -325,7 +325,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 			}
 			else
 			{
-				auto opts = CudaPrepare(myTargetInfo, TInfo, QInfo, PInfo, PScale, TBase);
+				auto opts = CudaPrepareTQP(myTargetInfo, TInfo, QInfo, PInfo, PScale, TBase);
 
 				relative_humidity_cuda::Process(*opts);
 
