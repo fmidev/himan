@@ -740,7 +740,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			if (itsGrib->Message()->Bitmap())
 			{
 				size_t bitmap_len =itsGrib->Message()->BytesLength("bitmap");
-				size_t bitmap_size = static_cast<size_t> (ceil(bitmap_len/8));
+				size_t bitmap_size = static_cast<size_t> (ceil(static_cast<double> (bitmap_len)/8));
+
+				itsLogger->Trace("Grib has bitmap, length " + boost::lexical_cast<string> (bitmap_len) + " size " + boost::lexical_cast<string> (bitmap_size) + " bytes");
 
 				CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&unpackedBitmap), bitmap_len * sizeof(int)));
 
@@ -748,7 +750,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 				itsGrib->Message()->Bytes("bitmap", bitmap);
 
-				UnpackBitmap(bitmap, unpackedBitmap, bitmap_size);
+				UnpackBitmap(bitmap, unpackedBitmap, bitmap_size, bitmap_len);
 				
 				packed->Bitmap(unpackedBitmap, bitmap_len);
 
@@ -768,6 +770,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			dm->Set(d, len);
 
 			free(d);
+
+			itsLogger->Trace("Retrieved " + boost::lexical_cast<string> (len * 8) + " bytes of unpacked data from grib");
+
 		}
 
 		newInfo->Grid()->Data(dm);
@@ -790,10 +795,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 #define BitMask1(i)	(1u << i)
 #define BitTest(n,i)	!!((n) & BitMask1(i))
 
-void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len) const
+void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen) const
 {
 	size_t i, idx = 0;
-	int v = 1;
+
 	short j = 0;
 
 	for (i = 0; i < len; i++)
@@ -802,10 +807,19 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 		{
 			if (BitTest(bitmap[i], j))
 			{
-				unpacked[idx] = v++;
+				unpacked[idx] = 1;
+			}
+			else
+			{
+				unpacked[idx] = 0;
 			}
 
-			idx++;
+			if (++idx >= unpackedLen)
+			{
+				// packed data might not be aligned nicely along byte boundaries --
+				// need to break from loop after final element has been processed
+				break;
+			}
 	    }
 	}
 }
