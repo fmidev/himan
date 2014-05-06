@@ -9,7 +9,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 14.3.17
+Version: 14.5.6
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -59,6 +59,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Tue May  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.6-1.fmi
+- Changes in himan-lib
+* Tue Apr 29 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.29-1.fmi
+- Extra support for renamed plugin 'kindex' (new name 'stability')
+* Mon Apr  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.4.7-1.fmi
+- Changes in himan-lib
+* Tue Mar 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.18-1.fmi
+- Changes in himan-lib
 * Mon Mar 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.17-1.fmi
 - Small change in himan-lib/configuration
 * Wed Mar 12 2014  Mikko Partio <mikko.partio@fmi.fi> - 14.3.12-1.fmi
