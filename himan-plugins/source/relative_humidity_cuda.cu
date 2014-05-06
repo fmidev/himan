@@ -9,7 +9,7 @@
 #include "relative_humidity_cuda.h"
 
 // CUDA-kernel that computes RH from T and TD
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(const double* __restrict__ d_T,
+__global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(double* __restrict__ d_T,
 														double* __restrict__ d_TD,
 														double* __restrict__ d_RH,
 														options opts,
@@ -31,6 +31,7 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(const double
 		else
 		{
 			d_TD[idx] += opts.TDBase;
+			d_T[idx] += opts.TBase;
 			d_RH[idx] = exp(d + b * (d_TD[idx] / (d_TD[idx] + c))) / exp(d + b * (d_T[idx] / (d_T[idx] + c)));
 			d_RH[idx] = fmax(fmin(1.0,d_RH[idx]),0.0)*100.0;
 		}
@@ -61,13 +62,13 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(double* __re
 			d_P[idx] *= opts.PScale;
 			d_T[idx] += opts.TBase;
 
-			if (d_T[idx] > -5)
+			if (d_T[idx] > -5.0)
 			{
-				d_ES[idx] = 6.107 * exp10(7.5*d_T[idx]/(237.0+d_T[idx]));
+				d_ES[idx] = 6.107 * exp10(7.5 * d_T[idx] / (237.0 + d_T[idx]));
 			}
 			else
 			{
-				d_ES[idx] = 6.107 * exp10(9.5*d_T[idx]/(265.5+d_T[idx]));
+				d_ES[idx] = 6.107 * exp10(9.5 * d_T[idx] / (265.5 + d_T[idx]));
 			}
 
 			d_RH[idx] = (d_P[idx] * d_Q[idx] / opts.kEp / d_ES[idx]) * (d_P[idx] - d_ES[idx]) / (d_P[idx] - d_Q[idx] * d_P[idx] / opts.kEp);
@@ -98,13 +99,13 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(double* __res
 		{
 			d_T[idx] += opts.TBase;
 
-			if (d_T[idx] > -5)
+			if (d_T[idx] > -5.0)
 			{
-				d_ES[idx] = 6.107 * exp10(7.5*d_T[idx]/(237.0+d_T[idx]));
+				d_ES[idx] = 6.107 * exp10(7.5 * d_T[idx] / (237.0 + d_T[idx]));
 			}
 			else
 			{
-				d_ES[idx] = 6.107 * exp10(9.5*d_T[idx]/(265.5+d_T[idx]));
+				d_ES[idx] = 6.107 * exp10(9.5 * d_T[idx] / (265.5 + d_T[idx]));
 			}
 
 			d_RH[idx] = (opts.P_level * d_Q[idx] / opts.kEp / d_ES[idx]) * (opts.P_level - d_ES[idx]) / (opts.P_level - d_Q[idx] * opts.P_level / opts.kEp);

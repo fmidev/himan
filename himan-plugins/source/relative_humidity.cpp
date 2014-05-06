@@ -214,6 +214,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		assert(!PInfo || TInfo->Grid()->AB() == PInfo->Grid()->AB());
 		assert(!TDInfo || TInfo->Grid()->AB() == TDInfo->Grid()->AB());
 		assert(!QInfo || TInfo->Grid()->AB() == QInfo->Grid()->AB());
+
 		
 		SetAB(myTargetInfo, TInfo);
 
@@ -302,7 +303,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 			if (calculateWithTD)
 			{
-				auto opts = CudaPrepare(myTargetInfo, TInfo, TDInfo, TDBase);
+				auto opts = CudaPrepare(myTargetInfo, TInfo, TDInfo, TDBase, TBase);
 
 				relative_humidity_cuda::Process(*opts);
 
@@ -474,7 +475,7 @@ double relative_humidity::WithTD(double T, double TD)
 }
 #ifdef HAVE_CUDA
 // Case where RH is calculated from T and TD
-unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TDInfo, double TDBase)
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TDInfo, double TDBase, double TBase)
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
@@ -482,6 +483,7 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shar
 	opts->select_case = 0;
 
 	opts->TDBase = TDBase;
+	opts->TBase = TBase;
 
 	opts->T = TInfo->ToSimple();
 	opts->TD = TDInfo->ToSimple();
