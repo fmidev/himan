@@ -475,7 +475,7 @@ double relative_humidity::WithTD(double T, double TD)
 }
 #ifdef HAVE_CUDA
 // Case where RH is calculated from T and TD
-unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TDInfo, double TDBase, double TBase)
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTTD( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TDInfo, double TDBase, double TBase)
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
@@ -492,7 +492,7 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shar
 	return opts;
 }
 // Case where RH is calculated from T, Q and P
-unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, shared_ptr<info> PInfo, double PScale, double TBase)
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQP( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, shared_ptr<info> PInfo, double PScale, double TBase)
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
@@ -512,7 +512,7 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shar
 	return opts;
 }
 // Case where RH is calculated for pressure levels from T and Q
-unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, double P_level, double TBase)
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQ( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, double P_level, double TBase)
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 

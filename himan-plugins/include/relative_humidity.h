@@ -53,9 +53,9 @@ private:
 	double WithQ(double T, double Q, double P);
 	double WithTD(double T, double TD);
 #ifdef HAVE_CUDA
-	std::unique_ptr<relative_humidity_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> TDInfo, double TDBase, double TBase);
-	std::unique_ptr<relative_humidity_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, std::shared_ptr<info> PInfo, double PScale, double TBase);
-	std::unique_ptr<relative_humidity_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, double P_level, double TBase);
+	std::unique_ptr<relative_humidity_cuda::options> CudaPrepareTTD(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> TDInfo, double TDBase, double TBase);
+	std::unique_ptr<relative_humidity_cuda::options> CudaPrepareTQP(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, std::shared_ptr<info> PInfo, double PScale, double TBase);
+	std::unique_ptr<relative_humidity_cuda::options> CudaPrepareTQ(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, double P_level, double TBase);
 
 	void CudaFinish(std::unique_ptr<relative_humidity_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> TDInfo);
 	void CudaFinish(std::unique_ptr<relative_humidity_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, std::shared_ptr<info> PInfo);
