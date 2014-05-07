@@ -180,7 +180,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (itsConfiguration->Exists("rrrc") && itsConfiguration->GetValue("rrc") == "true")
+	if (itsConfiguration->Exists("rrrc") && itsConfiguration->GetValue("rrrc") == "true")
 	{
 		param parm;
 		parm.Name("RRRC-KGM2");
@@ -193,7 +193,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-	if (itsConfiguration->Exists("rrrl") && itsConfiguration->GetValue("rrl") == "true")
+	if (itsConfiguration->Exists("rrrl") && itsConfiguration->GetValue("rrrl") == "true")
 	{
 		param parm;
 		parm.Name("RRRL-KGM2");
