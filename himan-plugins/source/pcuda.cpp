@@ -37,21 +37,9 @@ bool pcuda::SetDevice(int deviceId) const
 
 	if ((err = cudaSetDevice(deviceId)) != cudaSuccess)
 	{
-		itsLogger->Warning("Failed to select device #" + boost::lexical_cast<string> (deviceId));
+		itsLogger->Warning("Failed to select device #" + boost::lexical_cast<string> (deviceId) + ", error: " + cudaGetErrorString(err));
 		itsLogger->Warning("Has another CUDA process reserved the card?");
 		return false;
-	}
-
-	// cudaDeviceMapHost is needed for zero copy memory
-	
-	if ((err = cudaSetDeviceFlags(cudaDeviceMapHost)) != cudaSuccess)
-	{
-		if (err != cudaErrorSetOnActiveProcess)
-		{
-			itsLogger->Error("Failed to set flags for device #" + boost::lexical_cast<string> (deviceId));
-			itsLogger->Error("Return code: " + boost::lexical_cast<string> (err));
-			return false;
-		}
 	}
 
 	return true;	
