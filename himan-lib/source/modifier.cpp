@@ -54,11 +54,51 @@ void modifier::FindValue(const std::vector<double>& theFindValue)
 void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
 {
 	itsLowerHeight = theLowerHeight;
+#ifdef DEBUG
+	double min = 1e38, max = -1e38, mean = 0;
+	
+	for (size_t i = 0; i < itsLowerHeight.size(); i++)
+	{
+		double val = itsLowerHeight[i];
+
+		mean += val;
+		if (val > max)
+		{
+			max = val;
+		}
+		else if (val < min)
+		{
+			min = val;
+		}
+	}
+
+	std::cout << "itsLowerHeight min: " << min << " max: " << max << " mean: " << mean/static_cast<double> (itsLowerHeight.size()) << std::endl;
+#endif
 }
 
 void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 {
 	itsUpperHeight = theUpperHeight;
+#ifdef DEBUG
+	double min = 1e38, max = -1e38, mean = 0;
+	
+	for (size_t i = 0; i < itsUpperHeight.size(); i++)
+	{
+		double val = itsUpperHeight[i];
+
+		mean += val;
+		if (val > max)
+		{
+			max = val;
+		}
+		else if (val < min)
+		{
+			min = val;
+		}
+	}
+
+	std::cout << "itsUpperHeight min: " << min << " max: " << max << " mean: " << mean/static_cast<double> (itsLowerHeight.size()) << std::endl;
+#endif
 }
 
 size_t modifier::FindNth() const
@@ -176,7 +216,7 @@ void modifier::Process(const std::vector<double>& theData, const std::vector<dou
 		{
 			continue;
 		}
-
+		
 		Calculate(theValue, theHeight);
 	}
 }
