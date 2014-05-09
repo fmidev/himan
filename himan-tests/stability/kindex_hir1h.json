@@ -3,7 +3,7 @@
 	"source_producer" : "1",
 	"target_producer" : "230",
 	"hours" : "1",
-	"file_write" : "single",
+	"file_write" : "multiple",
 	"origintime" : "2013-02-26 06:00:00",
 	"read_data_from_database" : "false",
 
@@ -11,7 +11,7 @@
 	{
 		"leveltype" : "height",
 		"levels" : "0",
-		"plugins" : [ { "name" : "kindex" } ]
+		"plugins" : [ { "name" : "kindex", "li" : false} ]
 	} 
 	]
 }

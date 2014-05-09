@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ -z "$HIMAN" ]; then
-  export HIMAN=$(pwd)/../build/debug/himan
+  export HIMAN=$(pwd)/../himan-bin/build/debug/himan
 fi
 
 LOGDIR=/tmp

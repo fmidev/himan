@@ -3,10 +3,10 @@
 set -x
 
 if [ -z "$HIMAN" ]; then
-	export HIMAN="../../himan"
+	export HIMAN="../../himan-bin/himan"
 fi
 
-rm -f tk2tc_hl.json.grib tk2tc_hl.json-CPU.grib tk2tc_hl_pres.json.grib
+rm -f tk2tc_hl.json*grib tk2tc_hl_pres.json*.grib
 
 $HIMAN -d 5 -f tk2tc_hl.json -t grib --no-cuda -s tk2tc_hl_nocuda hl_source.grib
 
