@@ -44,8 +44,8 @@ void Process(options& opts);
 
 #ifdef __CUDACC__
 __global__ void CalculateTTD(double* __restrict__ d_T, double* __restrict__ d_TD, double* __restrict__ d_RH, options opts, int* d_missing);
-__global__ void CalculateTQP(double* __restrict__ d_T, const double* __restrict__ d_Q, double* __restrict__ d_P, double* __restrict__ d_ES, double* __restrict__ d_RH, options opts, int* d_missing);
-__global__ void CalculateTQ(double* __restrict__ d_T, const double* __restrict__ d_Q, double* __restrict__ d_ES, double* __restrict__ d_RH, options opts, int* d_missing);
+__global__ void CalculateTQP(const double* __restrict__ d_T, const double* __restrict__ d_Q, double* __restrict__ d_P, double* __restrict__ d_RH, options opts, int* d_missing);
+__global__ void CalculateTQ(const double* __restrict__ d_T, const double* __restrict__ d_Q, double* __restrict__ d_RH, options opts, int* d_missing);
 
 #endif
 

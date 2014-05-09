@@ -7,6 +7,8 @@
 
 #include "cuda_helper.h"
 #include "relative_humidity_cuda.h"
+#include "himan_common.h"
+#include "metutil.h"
 
 // CUDA-kernel that computes RH from T and TD
 __global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(double* __restrict__ d_T,
@@ -39,10 +41,9 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(double* __re
 }
 
 // CUDA-kernel that computes RH from T, Q and P
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(double* __restrict__ d_T,
+__global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(const double* __restrict__ d_T,
 														const double* __restrict__ d_Q,
 														double* __restrict__ d_P,
-														double* __restrict__ d_ES,
 														double* __restrict__ d_RH,
 														options opts,
 														int* d_missing)
@@ -60,27 +61,18 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(double* __re
 		else
 		{
 			d_P[idx] *= opts.PScale;
-			d_T[idx] += opts.TBase;
 
-			if (d_T[idx] > -5.0)
-			{
-				d_ES[idx] = 6.107 * exp10(7.5 * d_T[idx] / (237.0 + d_T[idx]));
-			}
-			else
-			{
-				d_ES[idx] = 6.107 * exp10(9.5 * d_T[idx] / (265.5 + d_T[idx]));
-			}
+			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
 
-			d_RH[idx] = (d_P[idx] * d_Q[idx] / opts.kEp / d_ES[idx]) * (d_P[idx] - d_ES[idx]) / (d_P[idx] - d_Q[idx] * d_P[idx] / opts.kEp);
+			d_RH[idx] = (d_P[idx] * d_Q[idx] / opts.kEp / ES) * (d_P[idx] - ES) / (d_P[idx] - d_Q[idx] * d_P[idx] / opts.kEp);
 			d_RH[idx] = fmax(fmin(1.0,d_RH[idx]),0.0)*100.0;
 		}
 	}
 }
 
 // CUDA-kernel that computes RH on pressure-level from T and Q
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(double* __restrict__ d_T,
+__global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(const double* __restrict__ d_T,
 														const double* __restrict__ d_Q,
-														double* __restrict__ d_ES,
 														double* __restrict__ d_RH,
 														options opts,
 														int* d_missing)
@@ -97,18 +89,9 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(double* __res
 		}
 		else
 		{
-			d_T[idx] += opts.TBase;
+			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
 
-			if (d_T[idx] > -5.0)
-			{
-				d_ES[idx] = 6.107 * exp10(7.5 * d_T[idx] / (237.0 + d_T[idx]));
-			}
-			else
-			{
-				d_ES[idx] = 6.107 * exp10(9.5 * d_T[idx] / (265.5 + d_T[idx]));
-			}
-
-			d_RH[idx] = (opts.P_level * d_Q[idx] / opts.kEp / d_ES[idx]) * (opts.P_level - d_ES[idx]) / (opts.P_level - d_Q[idx] * opts.P_level / opts.kEp);
+			d_RH[idx] = (opts.P_level * d_Q[idx] / opts.kEp / ES) * (opts.P_level - ES) / (opts.P_level - d_Q[idx] * opts.P_level / opts.kEp);
 			d_RH[idx] = fmax(fmin(1.0,d_RH[idx]),0.0)*100.0;
 		}
 	}
@@ -129,7 +112,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 	// Case where RH is calculated from T and TD
 	case 0:	
 	{
-		// Allocate device arrays
+		// Define device arrays
 
 		double* d_T = 0;
 		double* d_TD = 0;
@@ -137,8 +120,6 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		int* d_missing = 0;
 
 		// Allocate memory on device
-		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_TD, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
@@ -152,6 +133,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		}
 		else
 		{
+			CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 	
@@ -163,8 +145,10 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		}
 		else
 		{
+			CUDA_CHECK(cudaMalloc((void **) &d_TD, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_TD, opts.TD->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
+		
 		int src = 0;
 	
 		CUDA_CHECK(cudaMemcpyAsync(d_missing, &src, sizeof(int), cudaMemcpyHostToDevice, stream));
@@ -202,20 +186,15 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 	// Case where RH is calculated from T, Q and P
 	case 1:
 	{
-		// Allocate device arrays
+		// Define device arrays
 
 		double* d_T = 0;
 		double* d_Q = 0;
 		double* d_P = 0;
-		double* d_ES = 0;
 		double* d_RH = 0;
 		int* d_missing = 0;
 
 		// Allocate memory on device
-		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_P, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_ES, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
@@ -229,6 +208,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		}
 		else
 		{
+			CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 
@@ -240,6 +220,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		}
 		else
 		{
+			CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_Q, opts.Q->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 
@@ -251,6 +232,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		}
 		else
 		{
+			CUDA_CHECK(cudaMalloc((void **) &d_P, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_P, opts.P->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 
@@ -265,7 +247,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 	
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		CalculateTQP <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_P, d_ES, d_RH, opts, d_missing);
+		CalculateTQP <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_P, d_RH, opts, d_missing);
 
 		// block until the stream has completed
 		CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -284,7 +266,6 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK(cudaFree(d_T));
 		CUDA_CHECK(cudaFree(d_Q));
 		CUDA_CHECK(cudaFree(d_P));
-		CUDA_CHECK(cudaFree(d_ES));
 		CUDA_CHECK(cudaFree(d_RH));
 		CUDA_CHECK(cudaFree(d_missing));
 
@@ -293,18 +274,14 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 	// Case where RH is calculated for pressure levels from T and Q
 	case 2:
 	{
-		// Allocate device arrays
+		// Define device arrays
 
 		double* d_T = 0;
 		double* d_Q = 0;
 		double* d_RH = 0;
-		double* d_ES = 0;	
 		int* d_missing = 0;
 
 		// Allocate memory on device
-		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_ES, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
@@ -318,6 +295,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		}
 		else
 		{
+			CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 
@@ -329,6 +307,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		}
 		else
 		{
+			CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_Q, opts.Q->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 		int src = 0;
@@ -342,7 +321,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		CalculateTQ <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_ES, d_RH, opts, d_missing);
+		CalculateTQ <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_RH, opts, d_missing);
 
 		// block until the stream has completed
 		CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -360,7 +339,6 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 	
 		CUDA_CHECK(cudaFree(d_T));
 		CUDA_CHECK(cudaFree(d_Q));
-		CUDA_CHECK(cudaFree(d_ES));
 		CUDA_CHECK(cudaFree(d_RH));
 		CUDA_CHECK(cudaFree(d_missing));
 
