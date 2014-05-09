@@ -235,7 +235,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			count = opts->N;
 			missingCount = opts->missing;
 
-			CudaFinish(move(opts), myTargetInfo, T500Info->Grid()->ScanningMode());
+			CudaFinish(move(opts), myTargetInfo, T500Info, T700Info, T850Info, TD700Info, TD850Info);
 
 		}
 		else
@@ -293,6 +293,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				}
 				else
 				{
+
 					value = KI(T850, T700, T500, TD850, TD700) - constants::kKelvin;
 					myTargetInfo->Param(KIParam);
 					myTargetInfo->Value(value);
@@ -312,7 +313,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 					value = SI(T850, T500, TD850);
 					myTargetInfo->Param(SIParam);
 					myTargetInfo->Value(value);
-			
+
 					if (LICalculation)
 					{
 						size_t locationIndex = myTargetInfo->LocationIndex();
@@ -321,14 +322,22 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 						double TD500m = TD500mVector[locationIndex];
 						double P500m = P500mVector[locationIndex];
 
+						assert(T500m != kFloatMissing);
+						assert(TD500m != kFloatMissing);
+						assert(P500m != kFloatMissing);
+
 						if (T500m == kFloatMissing || TD500m == kFloatMissing || P500m == kFloatMissing)
 						{
 							missingCount++;
+							value = kFloatMissing;
 						}
 						else
 						{
 							value = LI(T500, T500m, TD500m, P500m);
 						}
+
+						myTargetInfo->Param(LIParam);
+						myTargetInfo->Value(value);
 					}
 				}
 			}
@@ -474,8 +483,24 @@ void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_tim
 	h->Configuration(conf);
 	h->Time(ftime);
 
+#ifdef DEBUG
+	assert(H0mVector.size() == H500mVector.size());
+	
+	for (size_t i = 0; i < result.size(); i++)
+	{
+		assert(H0mVector[i] != kFloatMissing);
+		assert(H500mVector[i] != kFloatMissing);
+	}
+#endif
+
 	result = h->VerticalAverage(param("T-K"), H0mVector, H500mVector);
 
+#ifdef DEBUG
+	for (size_t i = 0; i < result.size(); i++)
+	{
+		assert(result[i] != kFloatMissing);
+	}
+#endif
 }
 
 void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result)
@@ -499,8 +524,8 @@ double si::StormRelativeHelicity(double UID, double VID, double U_lower, double 
 
 #ifdef HAVE_CUDA
 
-void stability::CudaFinish(unique_ptr<stability_cuda::options> opts, shared_ptr<info>& myTargetInfo, HPScanningMode sourceMode)
-	//shared_ptr<info>& T500Info, shared_ptr<info>& T700Info, shared_ptr<info>& T850Info, shared_ptr<info>& TD700Info, shared_ptr<info>& TD850Info)
+void stability::CudaFinish(unique_ptr<stability_cuda::options> opts, shared_ptr<info>& myTargetInfo,
+	shared_ptr<info>& T500Info, shared_ptr<info>& T700Info, shared_ptr<info>& T850Info, shared_ptr<info>& TD700Info, shared_ptr<info>& TD850Info)
 {
 	// Copy data back to infos
 
@@ -533,13 +558,33 @@ void stability::CudaFinish(unique_ptr<stability_cuda::options> opts, shared_ptr<
 			CopyDataFromSimpleInfo(myTargetInfo, opts->tti, false);
 		}
 
-		SwapTo(myTargetInfo, sourceMode);
+		SwapTo(myTargetInfo, T500Info->Grid()->ScanningMode());
 	}
 
-//	if (T500Info && T500Info->Grid()->IsPackedData())
-//	{
-		//CopyDataFromSimpleInfo(T500Info, opts->t500, true);
-//	}
+	if (T500Info->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(T500Info, opts->t500, true);
+	}
+
+	if (T700Info->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(T700Info, opts->t700, true);
+	}
+
+	if (T850Info->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(T850Info, opts->t850, true);
+	}
+
+	if (TD700Info->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(TD700Info, opts->td700, true);
+	}
+
+	if (TD850Info->Grid()->IsPackedData())
+	{
+		CopyDataFromSimpleInfo(TD850Info, opts->td850, true);
+	}
 
 	// opts is destroyed after leaving this function
 }
@@ -631,48 +676,55 @@ bool stability::GetLISourceData(const shared_ptr<info>& myTargetInfo, vector<dou
 	try
 	{
 		auto theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-		
+
+		// Fetch Z uncompressed since it is not transferred to cuda
+
 		auto HInfo = theFetcher->Fetch(itsConfiguration,
 				myTargetInfo->Time(),
 				groundLevel,
 				HParam,
-				itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+				false);
 
-
-		// Fetch average values of T, TD and P over vertical height range 0 ... 500m OVER GROUND
 
 		auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
 		h->Configuration(itsConfiguration);
 
-		vector<double> H0mVector = HInfo->Data()->Values(); // .resize(myTargetInfo->SizeLocations(), 0.);
-		vector<double> H500mVector(myTargetInfo->SizeLocations(), 500.);
+		vector<double> H0mVector = HInfo->Grid()->Data()->Values();
+		vector<double> H500mVector(HInfo->SizeLocations());
 
-		if (H0mVector.empty())
+		for (size_t i = 0; i < H500mVector.size(); i++)
 		{
-			H0mVector = myTargetInfo->Data()->Values();
+			// H0mVector contains the height of ground (compared to MSL). Height can be negative
+			// (maybe even in real life (Netherlands?)), but in our case we use 0 as smallest height.
+			// TODO: check how it is in smarttools
 
-			// multiply with 1/g
-			transform(H0mVector.begin(), H0mVector.end(), H0mVector.begin(), bind1st(multiplies<double>(), constants::kIg));
+			H0mVector[i] *= constants::kIg;
 
-		}
-
-		if (H500mVector.empty())
-		{
-			assert(!H0mVector.empty());
-
-			// True upper height = 500 meters + height of ground
-			transform(H0mVector.begin(), H0mVector.end(), H500mVector.begin(), H500mVector.begin(), plus<double>());
-
+			if (H0mVector[i] < 0)
+			{
+				H0mVector[i] = 0;
+			}
+			
+			H500mVector[i] = H0mVector[i] + 500.;
 		}
 
 		h->Time(myTargetInfo->Time());
+
+		// Fetch average values of T, TD and P over vertical height range 0 ... 500m OVER GROUND
 
 		boost::thread t1(&T500mSearch, itsConfiguration, myTargetInfo->Time(), H0mVector, H500mVector, boost::ref(T500mVector));
 		boost::thread t2(&TD500mSearch, itsConfiguration, myTargetInfo->Time(), H0mVector, H500mVector, boost::ref(TD500mVector));
 
 		P500mVector = h->VerticalAverage(PParam, H0mVector, H500mVector);
 
+		assert(P500mVector[0] != kFloatMissing);
+
+		if (P500mVector[0] < 1500)
+		{
+			transform(P500mVector.begin(), P500mVector.end(), P500mVector.begin(), bind1st(multiplies<double>(), 100)); // hPa to Pa
+		}
+	
 		t1.join(); t2.join();
 
 	}
