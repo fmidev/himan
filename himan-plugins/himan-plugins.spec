@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.5.6
+Version: 14.5.9
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -87,6 +87,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri May  9 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.9-1.fmi
+- Bugfix in grib-plugin
+- Bugfix in stability-plugin/LI
+* Wed May  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.7-2.fmi
+- Bugfix in split_sum
+* Wed May  7 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.7-1.fmi
+- Cuda-enabled relative_humidity
+- Improved error logging in pcuda
 * Tue May  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.6-1.fmi
 - weather_symbol finished (HIMAN-36)
 - kindex renamed to stability (HIMAN-49)
