@@ -417,6 +417,8 @@ NFmiGrid* grid::ToNewbaseGrid() const
 		break;
 	}
 
+	assert(theArea);
+	
 	NFmiGrid* theGrid (new NFmiGrid(theArea, Ni(), Nj(), dir, interp));
 
 	size_t dataSize = itsData->Size();
@@ -430,10 +432,9 @@ NFmiGrid* grid::ToNewbaseGrid() const
 
 		// convert double array to float
 
-		for (unsigned int i = 0; i < dataSize; i++)
-		{
-			arr[i] = static_cast<float> (itsData->At(i));
-		}
+		const double* src = itsData->ValuesAsPOD();
+
+		copy(src, src + dataSize, arr);
 
 		if (!thePool.Init(dataSize, arr))
 		{
@@ -734,7 +735,9 @@ bool grid::Swap(HPScanningMode newScanningMode)
 
 	if ((itsScanningMode == kTopLeft && newScanningMode == kBottomLeft) || (itsScanningMode == kBottomLeft && newScanningMode == kTopLeft))
 	{
-		for (size_t y = 0; y < static_cast<size_t> (floor(Nj()/2)); y++)
+		size_t halfSize = static_cast<size_t> (floor(Nj()/2));
+		
+		for (size_t y = 0; y < halfSize; y++)
 		{
 			for (size_t x = 0; x < Ni(); x++)
 			{
