@@ -33,7 +33,11 @@ struct options
 	info_simple* vti;
 	info_simple* cti;
 	info_simple* tti;
-	
+
+	double* t500m;
+	double* td500m;
+	double* p500m;
+
 	size_t missing;
 	size_t N;
 
@@ -50,6 +54,11 @@ struct options
 		, vti(0)
 		, cti(0)
 		, tti(0)
+		, t500m(0)
+		, td500m(0)
+		, p500m(0)
+		, missing(0)
+		, N(0)
 	{}
 
 };
@@ -58,8 +67,10 @@ void Process(options& opts);
 
 #ifdef __CUDACC__
 void Prepare(info_simple* source, double* devptr, size_t memsize, cudaStream_t& stream);
+void Prepare(const double* source, double* devptr, size_t memsize, cudaStream_t& stream);
 
-__global__ void Calculate(cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700, darr_t d_ki, darr_t d_vti, darr_t d_cti, darr_t d_tti, darr_t d_si, darr_t d_li, options opts, int* d_missing);
+__global__ void Calculate(cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700, cdarr_t d_t500m, cdarr_t d_td500m, cdarr_t d_p500m,
+							darr_t d_ki, darr_t d_vti, darr_t d_cti, darr_t d_tti, darr_t d_si, darr_t d_li, options opts, int* d_missing);
 __device__ double SI(double T850, double T500, double TD850, int* d_missing);
 __device__ double LI(double T500, double T500m, double TD500m, double P500m, int* d_missing);
 
