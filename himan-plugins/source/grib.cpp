@@ -18,7 +18,6 @@ using namespace himan::plugin;
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
-#include "pcuda.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -714,8 +713,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		if (readPackedData && itsGrib->Message()->PackingType() == "grid_simple")
 		{
 			size_t len = itsGrib->Message()->PackedValuesLength();
-
-			shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 			unsigned char* data = 0;
 			int* unpackedBitmap;
