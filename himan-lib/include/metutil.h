@@ -477,13 +477,13 @@ double himan::metutil::Es_(double T)
 
 	if (T > -5)
 	{
-		Es = 6.107 * pow(10., (7.5*T/(237.0+T)));
+		Es = 6.107 * exp10(7.5*T/(237.0+T));
 	}
 	else
 	{
-		Es = 6.107 * pow(10., (9.5*T/(265.5+T)));
+		Es = 6.107 * exp10(9.5*T/(265.5+T));
 	}
-
+	
 	assert(Es == Es); // check NaN
 
 	return 100 * Es; // Pa
