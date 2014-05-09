@@ -3,7 +3,7 @@
 set -x
 
 if [ -z "$HIMAN" ]; then
-	export HIMAN="../../himan"
+	export HIMAN="../../himan-bin/himan"
 fi
 
 rm -f dewpoint_arome.json.grib dewpoint_arome.json-CPU.grib
