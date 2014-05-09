@@ -1,0 +1,19 @@
+{
+	"source_geom_name" : "ECEUR0125",
+	"target_geom_name" : "ECEUR0125",
+	"source_producer" : "131",
+	"target_producer" : "240",
+	"start_hour" : "9",
+	"stop_hour" : "9",
+	"step" : "1",
+	"file_write" : "multiple",
+	"origintime" : "2014-05-09 00:00:00",
+	"read_data_from_database" : "true",
+	"processqueue" : [
+	{
+		"leveltype" : "pressure",
+		"levels" : "700",
+		"plugins" : [ { "name" : "dewpoint" } ]
+	} 
+	]
+}
