@@ -63,7 +63,8 @@ class modifier
 		/**
 		 * @brief Function checks that data is not missing and falls within the given height range.
 		 */
-		virtual bool Evaluate(double theValue, double theHeight);
+
+		bool Evaluate(double theValue, double theHeight);
 		virtual double Value() const;
 		virtual void Value(double theValue);
 		bool itsMissingValuesAllowed;
