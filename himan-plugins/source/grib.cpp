@@ -794,7 +794,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen) const
 {
-	size_t i, idx = 0;
+	size_t i, idx = 0, v = 1;
 
 	short j = 0;
 
@@ -804,7 +804,7 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 		{
 			if (BitTest(bitmap[i], j))
 			{
-				unpacked[idx] = 1;
+				unpacked[idx] = v++;
 			}
 			else
 			{
