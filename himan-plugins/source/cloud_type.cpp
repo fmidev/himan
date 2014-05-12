@@ -77,10 +77,10 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	// Required source parameters
 
-	param TParam("T-K");
-	param RHParam("RH-PRCNT");
-	param NParam("N-0TO1");
-	param KParam("KINDEX-N");
+	const param TParam("T-K");
+	const param RHParam("RH-PRCNT");
+	const params NParams = { param("N-0TO1"), param("N-PRCNT") };
+	const param KParam("KINDEX-N");
 
 	level T0mLevel(himan::kHeight, 0, "HEIGHT");
 	level NKLevel(himan::kHeight, 0, "HEIGHT");
@@ -120,7 +120,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			NInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 NKLevel,
-								 NParam);
+								 NParams);
 			// Source info for kIndex
 			KInfo = theFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
@@ -267,6 +267,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			
 			//data comes as 0..1 instead of 0-100%
 			N *= 100;
+			
 			RH500 *= 100;
 			RH700 *= 100;
 			RH850 *= 100;
