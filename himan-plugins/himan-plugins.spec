@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.5.9
-Release: 1.fmi
+Version: 14.5.13
+Release: 2.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -87,6 +87,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue May 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.13-2.fmi
+- Bugfix in rain_type/ECMWF
+* Tue May 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.13-1.fmi
+- Bugfix in cloud_type/ECMWF
 * Fri May  9 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.9-1.fmi
 - Bugfix in grib-plugin
 - Bugfix in stability-plugin/LI
