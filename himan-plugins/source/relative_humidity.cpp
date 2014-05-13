@@ -9,7 +9,7 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "util.h"
+#include "metutil.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -457,7 +457,7 @@ double relative_humidity::WithQ(double T, double Q, double P)
 {
 	// Pressure needs to be hPa and temperature C
 
-	double es = util::Es(T + constants::kKelvin) * 0.01;
+	double es = metutil::Es_(T + constants::kKelvin) * 0.01;
 	
 	return (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 }

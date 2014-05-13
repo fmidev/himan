@@ -25,7 +25,7 @@ using namespace himan::plugin;
 
 #include "tpot_cuda.h"
 #include "cuda_helper.h"
-#include "util.h"
+#include "metutil.h"
 
 tpot::tpot()
 : itsThetaCalculation(false)
@@ -427,10 +427,10 @@ double tpot::ThetaW(double P, double T, double TD)
 	double value = kFloatMissing;
 
 	// Search LCL level
-	vector<double> LCL = util::LCL(P, T, TD);
+	lcl_t LCL = metutil::LCL_(P, T, TD);
 
-	double Pint = LCL[0]; // Pa
-	double Tint = LCL[1]; // K
+	double Pint = LCL.P; // Pa
+	double Tint = LCL.T; // K
 
 	if (Tint == kFloatMissing || Pint == kFloatMissing)
 	{
@@ -464,7 +464,7 @@ double tpot::ThetaW(double P, double T, double TD)
 			}
 
 			// Gammas() takes Pa
-			Tint = T0 + util::Gammas(Pint, Tint) * Z;
+			Tint = T0 + metutil::Gammas_(Pint, Tint) * Z;
 
 			if (i > 2)
 			{
@@ -488,11 +488,9 @@ double tpot::ThetaW(double P, double T, double TD)
 
 double tpot::ThetaE(double P, double T, double TD, double theta)
 {
-	vector<double> LCL = util::LCL(P, T, TD);
+	lcl_t LCL = metutil::LCL_(P, T, TD);
 
-	double TLCL = LCL[1];
-
-	if (TLCL == kFloatMissing)
+	if (LCL.T == kFloatMissing)
 	{
 		return kFloatMissing;
 	}
@@ -510,10 +508,10 @@ double tpot::ThetaE(double P, double T, double TD, double theta)
 
 	theta -= constants::kKelvin;
 	
-	double Es = util::Es(TLCL) * 0.01;
+	double Es = metutil::Es_(LCL.T) * 0.01;
 	double ZQs = himan::constants::kEp * (Es / (P*0.01 - Es));
 
-	double value = theta * exp(himan::constants::kL * ZQs / himan::constants::kCp / (TLCL));
+	double value = theta * exp(himan::constants::kL * ZQs / himan::constants::kCp / (LCL.T));
 
 	return value + constants::kKelvin;
 
