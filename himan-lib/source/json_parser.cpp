@@ -947,6 +947,10 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 				prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
 				prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
 			}
+			else
+			{
+				itsLogger->Warning("Unknown source producer: " + sourceProducersStr[i]);
+			}
 
 			sourceProducers.push_back(prod);
 		}
@@ -971,7 +975,10 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 			prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
 			prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
 		}
-		// conf->TargetProducer(prod);
+		else
+		{
+			itsLogger->Warning("Unknown target producer: " + pt.get<string>("target_producer"));
+		}
 
 		anInfo->itsProducer = prod;
 	}
