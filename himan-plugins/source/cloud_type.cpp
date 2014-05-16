@@ -267,8 +267,8 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			
 			//data comes as 0..1 instead of 0-100%
 			N *= 100;
-			
-			if (NInfo->Param().Name() == "N-0TO1")
+
+			if (myTargetInfo->Producer().Name() == "HL2MTA")
 			{
 				RH500 *= 100;
 				RH700 *= 100;
