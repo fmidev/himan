@@ -218,6 +218,10 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		RH700Grid->Reset();
 		RH500Grid->Reset();
 
+		int percentMultiplier = 1;
+		if (myTargetInfo->Producer().Name() == "HL2MTA")
+			percentMultiplier = 100;
+
 		while ( myTargetInfo->NextLocation() && 
 				targetGrid->Next() &&
 				T0mGrid->Next() &&
@@ -268,12 +272,9 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			//data comes as 0..1 instead of 0-100%
 			N *= 100;
 
-			if (myTargetInfo->Producer().Name() == "HL2MTA")
-			{
-				RH500 *= 100;
-				RH700 *= 100;
-				RH850 *= 100;
-			}
+			RH500 *= percentMultiplier;
+			RH700 *= percentMultiplier;
+			RH850 *= percentMultiplier;
 			
 			if ( N > 90 )
 			//Jos N = 90…100 % (pilvistä), niin
