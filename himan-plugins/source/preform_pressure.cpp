@@ -156,22 +156,11 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 
 	myTargetInfo->FirstParam();
 
-//	bool useCudaInThisThread = conf->UseCuda() AND threadIndex <= conf->CudaDeviceCount();
-
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
 		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
 								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		if (myTargetInfo->Time().Step() == 3)
-		{
-			RRParam.Name("RR-3-MM");
-		}
-		else if (myTargetInfo->Time().Step() == 6)
-		{
-			RRParam.Name("RR-6-MM");
-		}
 
 		// Source infos
 
