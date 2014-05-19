@@ -312,7 +312,6 @@ typedef iterator<forecast_time> time_iter;
 typedef iterator<producer> producer_iter;
 typedef matrix <std::shared_ptr<grid> > matrix_t;
 
-
 class info
 {
 
@@ -766,6 +765,8 @@ std::ostream& operator<<(std::ostream& file, const info& ob)
 {
 	return ob.Write(file);
 }
+
+typedef std::shared_ptr<info> info_t;
 
 } // namespace himan
 
