@@ -25,7 +25,7 @@ __global__ void himan::plugin::tk2tc_cuda::Calculate(const double* __restrict__ 
 		}
 		else
 		{
-			d_dest[idx] = opts.scale * (d_source[idx] + opts.base);
+			d_dest[idx] = opts.scale * d_source[idx] + opts.base;
 		}
 	}
 }
