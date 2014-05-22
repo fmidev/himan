@@ -10,7 +10,8 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
-#include "util.h"
+#include "metutil.h"
+#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -73,7 +74,7 @@ void cloud_type::Process(std::shared_ptr<const plugin_configuration> conf)
 void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
 	// Required source parameters
 
@@ -88,9 +89,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	level RH700Level(himan::kPressure, 700, "PRESSURE");
 	level RH500Level(himan::kPressure, 500, "PRESSURE");
 	
-	
-
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
 
 	ResetNonLeadingDimension(myTargetInfo);
 
@@ -219,8 +218,11 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		RH500Grid->Reset();
 
 		int percentMultiplier = 1;
+
 		if (myTargetInfo->Producer().Name() == "HL2MTA")
+		{
 			percentMultiplier = 100;
+		}
 
 		while ( myTargetInfo->NextLocation() && 
 				targetGrid->Next() &&
@@ -262,12 +264,8 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			//error codes from fortran
 			int cloudCode = 704;
 			//int cloudType = 1;
-
-			double TBase = himan::constants::kKelvin;
-			T0m = T0m - TBase;
-			T850 = T850 - TBase;
-			
-			int lowConvection = util::LowConvection(T0m, T850);
+		
+			int lowConvection = metutil::LowConvection_(T0m, T850);
 			
 			//data comes as 0..1 instead of 0-100%
 			N *= 100;
