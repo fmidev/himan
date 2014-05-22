@@ -359,9 +359,10 @@ point util::UVToGeographical(double longitude, const point& stereoUV)
 		return point(0,0);
 	}
 
-	double sinLon = sin(longitude * constants::kDeg);
-	double cosLon = cos(longitude * constants::kDeg);
+	double sinLon, cosLon;
 
+	sincos(longitude * constants::kDeg, &sinLon, &cosLon);
+	
 	U = stereoUV.X() * cosLon + stereoUV.Y() * sinLon;
 	V = -stereoUV.X() * sinLon + stereoUV.Y() * cosLon;
 
@@ -387,202 +388,7 @@ double util::ToPower(double value, double power)
   return divisor;
 }
 
-double util::RelativeTopography(int level1, int level2, double z1, double z2)
-{
-
-	int coefficient = 1;
-	double topography;
-	double height1, height2;
-
-	if (level1 > level2)
-	{
-	  coefficient = -1;
-	}
-
-	height1 = z1 * 0.10197; // convert to metres z/9.81
-	height2 = z2 * 0.10197;
-
-	topography = coefficient * (height1 - height2);
-
-	return topography;
-}
-
-int util::LowConvection(double T0m, double T850)
-{
-	// Lability during summer (T0m > 8C)
-	if ( T0m >= 8 && T0m - T850 >= 10 ) 
-		return 2;
-	
-	// Lability during winter (T850 < 0C) Probably above sea
-	else if ( T0m >= 0 && T850 <= 0 && T0m - T850 >= 10 ) 
-		return 1;
-	
-	return 0;
-}
-
-double util::Es(double T)
-{
-	// Sanity checks
-	assert(T == T && T > 0 && T < 500); // check also NaN
-	
-	double Es;
-
-	if (T == kFloatMissing)
-	{
-		return kFloatMissing;
-	}
-
-	T -= himan::constants::kKelvin;
-
-	if (T > -5)
-	{
-		Es = 6.107 * pow(10, (7.5*T/(237.0+T)));
-	}
-	else
-	{
-		Es = 6.107 * pow(10, (9.5*T/(265.5+T)));
-	}
-
-	assert(Es == Es); // check NaN
-
-	return 100 * Es; // Pa
-
-}
-
-
-double util::Gammas(double P, double T)
-{
-	// Sanity checks
-
-	assert(P > 10000);
-	assert(T > 0 && T < 500);
-
-	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
-
-	// specific humidity: http://glossary.ametsoc.org/wiki/Specific_humidity
-	
-	double Q = constants::kEp * (util::Es(T) * 0.01) / (P*0.01);
-	
-	double A = constants::kRd * T / constants::kCp / P * (1+constants::kL*Q/constants::kRd/T);
-
-	return A / (1 + constants::kEp / constants::kCp * (constants::kL * constants::kL) / constants::kRd * Q / (T*T));
-}
-
-double util::Gammaw(double P, double T)
-{
-	// Sanity checks
-
-	assert(P > 10000);
-	assert(T > 0 && T < 500);
-	
-	/*
-	 * Constants:
-	 * - g = 9.81
-	 * - Cp = 1003.5
-	 * - L = 2.5e6
-	 *
-	 * Variables:
-	 * - dWs = saturation mixing ratio = util::MixingRatio()
-	 */
-
-	double r = MixingRatio(T, P);
-	const double kL = 2.256e6; // Another kL !!!
-	
-	double numerator = constants::kG * (1 + (kL * r) / (constants::kRd * T));
-	double denominator = constants::kCp + ((kL*kL * r * constants::kEp) / (constants::kRd * T * T));
-
-	return numerator / denominator;
-}
-
-const std::vector<double> util::LCL(double P, double T, double TD)
-{
-	// Sanity checks
-
-	assert(P > 10000);
-	assert(T > 0 && T < 500);
-	assert(TD > 0 && TD < 500);
-	
-	// starting T step
-
-	double Tstep = 0.05;
-
-	const double kRCp = 0.286;
-
-	P *= 0.01; // HPa
-	
-	// saturated vapor pressure
-	
-	double E0 = Es(TD) * 0.01; // HPa
-
-	double Q = constants::kEp * E0 / P;
-	double C = T / pow(E0, kRCp);
-
-	double TLCL = kFloatMissing;
-	double PLCL = kFloatMissing;
-
-	double Torig = T;
-	double Porig = P;
-
-	short nq = 0;
-
-	std::vector<double> ret { kFloatMissing, kFloatMissing, kFloatMissing };
-
-	while (++nq < 100)
-	{
-		double TEs = C * pow(Es(T)*0.01, kRCp);
-
-		if (fabs(TEs - T) < 0.05)
-		{
-			TLCL = T;
-			PLCL = pow((TLCL/Torig), (1/kRCp)) * P;
-
-			ret[0] = PLCL * 100; // Pa
-			ret[1] = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // K
-			ret[2] = Q;
-
-			return ret;
-		}
-		else
-		{
-			Tstep = min((TEs - T) / (2 * (nq+1)), 15.);
-			T -= Tstep;
-		}
-	}
-
-	// Fallback to slower method
-
-	T = Torig;
-	Tstep = 0.1;
-
-	nq = 0;
-	
-	while (++nq <= 500)
-	{
-		if ((C * pow(Es(T)*0.01, kRCp)-T) > 0)
-		{
-			T -= Tstep;
-		}
-		else
-		{
-			TLCL = T;
-			PLCL = pow(TLCL / Torig, (1/kRCp)) * Porig;
-
-			ret[0] = PLCL * 100; // Pa
-			ret[1] = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // K
-			ret[2] = Q;
-
-			break;
-		}
-	}
-
-	return ret;
-}
-
-double util::WaterProbability(double T, double RH)
-{
-	return 1 / (1 + exp(22 - 2.7 * T - 0.2 * RH));
-}
-
+#ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
 HPPrecipitationForm util::PrecipitationForm(double T, double RH)
 {
 	const double probWater = WaterProbability(T, RH);
@@ -604,7 +410,7 @@ HPPrecipitationForm util::PrecipitationForm(double T, double RH)
 
 	return ret;
 }
-/*
+
 double util::SaturationWaterVapourPressure(double T)
 {
 	T -= constants::kKelvin;
@@ -636,96 +442,38 @@ double util::WaterVapourPressure(double T, double TW, double P, bool aspirated)
 	
 	return vpwtr;
 }
-*/
 
-double util::MixingRatio(double T, double P)
+#endif
+
+#ifdef HAVE_CUDA
+void util::Unpack(initializer_list<shared_ptr<grid>> grids)
 {
-	// Sanity checks
-	assert(P > 1000);
-	assert(T > 0 && T < 500);
-
-	double E = Es(T) * 0.01; // hPa
-
-	P *= 0.01;
-
-	return 621.97 * E / (P - E);
-}
-
-double util::DryLift(double P, double T, double targetP)
-{
-	// Sanity checks
-	assert(P > 1000);
-	assert(T > 0 && T < 500);
-	assert(targetP > 10000);
-	
-	return T * pow((targetP / P), 0.286);
-}
-
-double util::MoistLift(double P, double T, double TD, double targetP)
-{
-	// Sanity checks
-	assert(P > 10000);
-	assert(T > 0 && T < 500);
-	assert(TD > 0 && TD < 500);
-	assert(targetP > 10000);
-
-	// Search LCL level
-	vector<double> LCL = util::LCL(P, T, TD);
-
-	double Pint = LCL[0]; // Pa
-	double Tint = LCL[1]; // K
-
-	// Start moist lifting from LCL height
-
-	double value = kFloatMissing;
-
-	if (Tint == kFloatMissing || Pint == kFloatMissing)
+	for (auto it = grids.begin(); it != grids.end(); ++it)
 	{
-		return kFloatMissing;
-	}
-	else
-	{
-		/*
-		 * Units: Temperature in Kelvins, Pressure in Pascals
-		 */
+		shared_ptr<grid> tempGrid = *it;
 
-		double T0 = Tint;
-
-		//double Z = kFloatMissing;
-
-		int i = 0;
-		const double Pstep = 100; // Pa
-
-		while (++i < 500) // usually we don't reach this value
+		if (!tempGrid->PackedData())
 		{
-			double TA = Tint;
-/*
-			if (i <= 2)
-			{
-				Z = i * Pstep/2;
-			}
-			else
-			{
-				Z = 2 * Pstep;
-			}
-*/
-			// Gammaw() takes Pa
-			Tint = T0 - util::Gammaw(Pint, Tint) * Pstep;
-
-			if (i > 2)
-			{
-				T0 = TA;
-			}
-
-			Pint -= Pstep;
-
-			if (Pint <= targetP)
-			{
-				value = Tint;
-				break;
-			}
+			// Safeguard: This particular info does not have packed data
+			continue;
 		}
-	}
 
-	return value;
+		assert(tempGrid->PackedData()->ClassName() == "simple_packed");
+
+		double* arr;
+		size_t N = tempGrid->PackedData()->unpackedLength;
+
+		assert(N);
+
+		CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&arr), sizeof(double) * N));
+
+		dynamic_pointer_cast<simple_packed> (tempGrid->PackedData())->Unpack(arr, N);
+
+		tempGrid->Data()->Set(arr, N);
+
+		CUDA_CHECK(cudaFreeHost(arr));
+
+		tempGrid->PackedData()->Clear();
+	}
 }
+#endif

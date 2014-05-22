@@ -130,42 +130,20 @@ CUDA_DEVICE
 lcl_t LCL_(double P, double T, double TD);
 
 /**
- * @brief Determine precipitation form from water probability
- *
- * Water probability is determined with "Koistinen formula."
- * 
- * @param T Surface temperature in C
- * @param RH Surface relative humidity in %
- * @return Precipitation form: rain, snow or sleet
- */
-
-CUDA_DEVICE
-HPPrecipitationForm PrecipitationForm_(double T, double RH);
-
-/**
  * @brief Calculate water probability based on T and RH
  * 
  * So-called "Koistinen formula"
  * 
  * https://wiki.fmi.fi/download/attachments/21139101/IL_olomuototuote_JK.ppt
+ *
+ * Currently only CPU implementation exists.
  * 
- * @param T Surface temperature in C
+ * @param T Surface temperature in K
  * @param RH Surface relative humidity in %
  * @return Water probability
  */
 
-CUDA_DEVICE
 double WaterProbability_(double T, double RH);
-
-/**
- * @brief Calculate saturation vapour pressure (Pa) over water
- *
- * @param T Temperature in Kelvin
- * @return Pressure in Pa
- */
-
-//double SaturationWaterVapourPressure(double T);
-//double WaterVapurPressure(double T, double TW, double P, bool aspirated = false);
 
 /**
  * @brief Calculate saturated mixing ratio
@@ -220,6 +198,36 @@ void DryLift(cdarr_t P, cdarr_t T, darr_t result, double targetP, size_t N);
 
 CUDA_DEVICE
 double DryLift_(double P, double T, double targetP);
+
+/**
+ * @brief Calculates Relative Topography between the two given fields in Geop
+ *
+ *  Currently only CPU implementation exists.
+
+ * @param level1 Value of pressure level1 in Pa
+ * @param level2 Value of pressure level2 in Pa
+ * @param z1 Geopotential height of level1, Use pressure if level1 = 1000
+ * @param z2 Geopotential height of level2
+ * @return Relative Topography in Geopotential
+ */
+
+double RelativeTopography_(int level1, int level2, double z1, double z2);
+
+/**
+ * @brief Checks the stability of surface and 850hPa level
+ * 0 = no convection
+ * 1 = low convection during on sea
+ * 2 = low convection during summer on land
+ * T0m height was commented as 2m, but calculated as 0m temperature in hil_pp
+ *
+ * Currently only CPU implementation exists.
+ * 
+ * @param T0m Value of 0m temperature in K
+ * @param T850 Value of temperature at 850 hPa pressure level in K
+ * @return convection value.
+ */
+
+int LowConvection_(double T0m, double T850);
 
 #ifdef __CUDACC__
 

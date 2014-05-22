@@ -161,84 +161,17 @@ himan::point UVToGeographical(double longitude, const himan::point& stereoUV);
 double ToPower(double value, double power);
 
 /**
- * @brief Calculates Relative Topography between the two given fields in Geop
- * @param level1 Value of pressure level1
- * @param level2 Value of pressure level2
- * @param z1 Geopotential height of level1, Use pressure if level1 = 1000
- * @param z2 Geopotential height of level2
- * @return Relative Topography in Geopotential
+ * @brief Unpack grib simple_packing
+ *
+ * This function can be called on CPU to unpack the data on CUDA and return
+ * the results to CPU memory.
+ *
+ * @param grids List of grids that are unpacked.
  */
 
-double RelativeTopography(int level1, int level2, double z1, double z2);
+void Unpack(std::initializer_list<std::shared_ptr<grid>> grids);
 
-/**
- * @brief Checks the stability of surface and 850hPa level
- * 0 = no convection
- * 1 = low convection during on sea
- * 2 = low convection during summer on land
- * T0m height was commented as 2m, but calculated as 0m temperature in hil_pp
- * @param T0m Value of 0m temperature
- * @param T850 Value of temperature at 850 hPa pressure level
- * @return convection value.
- */
-int LowConvection(double T0m, double T850);
-
-/**
- * @brief Calculate water vapor saturated pressure in Pa
- *
- * Equation found in f.ex. Smithsonian meteorological tables or
- * http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
- *
- * If temperature is less than -5, use ice instead of water for
- * calculations.
- *
- * If T is actually TD, actual water vapor pressure is calculated
- *
- * @param T Temperature in K
- * @return (Saturated) water vapor pressure in Pa
- */
-
-double Es(double T);
-
-/**
- * @brief Calculates pseudo-adiabatic lapse rate
- *
- * Original author AK Sarkanen May 1985.
- * 
- * @param P Pressure in Pa
- * @param T Temperature in K
- * @return Lapse rate in K/km
- */
-
-double Gammas(double P, double T);
-
-/**
- * @brief Calculate moist-adiabatic lapse rate (MALR).
- * 
- * Also known as saturated adiabatic lapse rate (SALR)
- * 
- * http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate
- *
- * @param P Pressure in Pa
- * @param T Temperature in K
- * @return Lapse rate in K/km
- */
-
-double Gammaw(double P, double T);
-
-/**
- * @brief Calculates the temperature, pressure and specific humidity (Q) of
- * a parcel of air in LCL
- *
- * Original author AK Sarkanen/Kalle Eerola
- *
- * @param P Pressure in Pa
- * @param T Temperature in K
- * @param TD Dew point temperature in K
- * @return Pressure (Pa), temperature (K) and specific humidity (g/kg) for LCL (in this order).
- */
-
-const std::vector<double> LCL(double P, double T, double TD);
+#ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
 
 /**
  * @brief Determine precipitation form from water probability
@@ -252,19 +185,6 @@ const std::vector<double> LCL(double P, double T, double TD);
 
 HPPrecipitationForm PrecipitationForm(double T, double RH);
 
-/**
- * @brief Calculate water probability based on T and RH
- * 
- * So-called "Koistinen formula"
- * 
- * https://wiki.fmi.fi/download/attachments/21139101/IL_olomuototuote_JK.ppt
- * 
- * @param T Surface temperature in C
- * @param RH Surface relative humidity in %
- * @return Water probability
- */
-
-double WaterProbability(double T, double RH);
 
 /**
  * @brief Calculate saturation vapour pressure (Pa) over water
@@ -275,49 +195,7 @@ double WaterProbability(double T, double RH);
 
 //double SaturationWaterVapourPressure(double T);
 //double WaterVapurPressure(double T, double TW, double P, bool aspirated = false);
-
-/**
- * @brief Calculate saturated mixing ratio
- *
- * If T is actually TD, actual mixing ratio is calculated.
- *
- * http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
- *
- * @param T Temperature or dewpoint temperature in K
- * @param P Pressure in Pa
- * @return Mixing ration in g/kg
- */
-
-double MixingRatio(double T, double P);
-//double SaturationMixingRatio(double T, double TW, double P, bool aspirated = false);
-
-/**
- * @brief Lift a parcel of air moist-adiabatically to wanted pressure
- *
- * Function will calculate LCL from given arguments and starts
- * lifting from that pressure and temperature.
- *
- * @param P Initial pressure in Pascals
- * @param T Initial temperature in Kelvins
- * @param TD Initial dewpoint temperature in Kelvins
- * @param targetP Target pressure (where parcel is lifted) in Pascals
- * @return Parcel temperature in wanted pressure in Kelvins
- */
-
-double MoistLift(double P, double T, double TD, double targetP);
-
-/**
- * @brief Lift a parcel of air dry adiabatically to wanted pressure
- *
- * Poissons equation is used
- *
- * @param P Initial pressure in Pascals
- * @param T Initial temperature in Kelvins
- * @param targetP Target pressure (where parcel is lifted) in Pascals
- * @return Parcel temperature in wanted pressure in Kelvins
- */
-
-double DryLift(double P, double T, double targetP);
+#endif
 
 } // namespace util
 } // namespace himan
