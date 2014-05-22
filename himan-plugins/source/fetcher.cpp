@@ -226,6 +226,31 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	assert((theInfos[0]->Param()) == requestedParam);
 
+#ifdef FETCHER_INTERPOLATE
+	auto baseInfo = make_shared<info> (*config->Info());
+	baseInfo->First();
+
+	if (*theInfos[0]->Grid() != *baseInfo->Grid())
+	{
+		itsLogger->Trace("Interpolating area");
+		InterpolateArea(baseInfo->Grid(), {theInfos[0]->Grid()});
+	}
+	else if (theInfos[0]->Grid()->ScanningMode() != baseInfo->Grid()->ScanningMode())
+	{
+		// == operator does not test scanning mode !
+		itsLogger->Trace("Swapping area");
+		SwapTo(theInfos[0]->Grid(), baseInfo->Grid()->ScanningMode());
+	}
+	else
+	{
+		itsLogger->Trace("Grids are natively equal");
+	}
+
+	assert(*baseInfo->Grid() == *theInfos[0]->Grid());
+
+	baseInfo.reset();
+#endif
+
 	return theInfos[0];
 
 }
@@ -335,6 +360,12 @@ himan::level fetcher::LevelTransform(const producer& sourceProducer, const param
 
 		string lvlName = n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
 
+		if (lvlName.empty())
+		{
+			itsLogger->Trace("No level transformation found for param " + targetParam.Name() + " level " + HPLevelTypeToString.at(targetLevel.Type()));
+			return targetLevel;
+		}
+
 		HPLevelType lvlType = kUnknownLevel;
 
 		double lvlValue = targetLevel.Value();
@@ -359,6 +390,10 @@ himan::level fetcher::LevelTransform(const producer& sourceProducer, const param
 		else if (lvlName == "TOP")
 		{
 			lvlType = kTopOfAtmosphere;
+		}
+		else if (lvlName == "GNDLAYER")
+		{
+			lvlType = kGndLayer;
 		}
 		else
 		{
@@ -472,4 +507,116 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(const search_options&
 
 	return ret;
 
+}
+
+bool fetcher::InterpolateArea(const shared_ptr<grid>& base, initializer_list<shared_ptr<grid>> grids)
+{
+	if (grids.size() == 0)
+	{
+		throw kUnknownException;
+	}
+
+	const double kInterpolatedValueEpsilon = 0.00001; //<! Max difference between two grid points (if smaller, points are considered the same)
+
+	shared_ptr<NFmiGrid> baseGrid;
+
+	auto it = grids.begin();
+
+	for (; it != grids.end(); ++it)
+	{
+		if (!*it || *base == **it)
+		{
+			continue;
+		}
+
+		auto targetData = make_shared<d_matrix_t> (base->Data()->SizeX(), base->Data()->SizeY());
+
+		if (!baseGrid)
+		{
+			baseGrid = shared_ptr<NFmiGrid> (base->ToNewbaseGrid());
+		}
+
+		if ((*it)->IsPackedData())
+		{
+			// We need to unpack
+			util::Unpack({*it});
+
+			// Only unpacked and interpolated data is stored to cache
+			(*it)->PackedData()->Clear();
+		}
+		
+		auto interpGrid = shared_ptr<NFmiGrid> ((*it)->ToNewbaseGrid());
+
+		// interpGrid does the actual interpolation, results are stored to targetData
+
+		size_t i;
+		for (baseGrid->Reset(), i = 0; baseGrid->Next(); i++)
+		{
+			const NFmiPoint targetLatLonPoint = baseGrid->LatLon();
+			const NFmiPoint sourceGridPoint = interpGrid->LatLonToGrid(targetLatLonPoint);
+
+			bool noInterpolation = (
+						fabs(sourceGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
+						fabs(sourceGridPoint.Y() - round(sourceGridPoint.Y())) < kInterpolatedValueEpsilon
+			);
+
+			double value = kFloatMissing;
+
+			if (noInterpolation)
+			{
+				value = interpGrid->FloatValue(sourceGridPoint);
+			}
+			else
+			{
+				interpGrid->InterpolateToGridPoint(sourceGridPoint, value);
+			}
+
+			targetData->Set(i, value);
+
+		}
+
+		(*it)->Data(targetData);
+		(*it)->BottomLeft(base->BottomLeft());
+		(*it)->TopRight(base->TopRight());
+		(*it)->Projection(base->Projection());
+		(*it)->SouthPole(base->SouthPole());
+		(*it)->Orientation(base->Orientation());
+
+		// Newbase always normalizes data to +x+y
+		// So if source scanning mode is eg. +x-y, newbase has transformed that
+		// to +x+y but in info class the scanning mode is still marked as +x-y
+
+		if (base->ScanningMode() != kBottomLeft)
+		{
+			(*it)->ScanningMode(kBottomLeft);
+
+			SwapTo(*it, base->ScanningMode());
+		}
+		
+
+	}
+
+	return true;
+
+}
+
+bool fetcher::SwapTo(const shared_ptr<grid>& targetGrid, HPScanningMode targetScanningMode)
+{
+	if (targetGrid->ScanningMode() != targetScanningMode)
+	{
+		
+		// We should to swapping in cuda code but that functionality is missing as of 2014-05-16
+		if (targetGrid->IsPackedData())
+		{
+			util::Unpack({targetGrid});
+
+			// Remove packed data since that is still in wrong order
+			targetGrid->PackedData()->Clear();
+		}
+
+		targetGrid->Swap(targetScanningMode);
+		assert(targetScanningMode == targetGrid->ScanningMode());
+	}
+
+	return true;
 }

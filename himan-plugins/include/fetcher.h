@@ -1,8 +1,8 @@
-/*
- * fetcher.h
+/**
+ * @file fetcher.h
  *
- *  Created on: Nov 21, 2012
- *      Author: partio
+ * @date Nov 21, 2012
+ * @author partio
  *
  * Class purpose is to server as an intermediator between a
  * compiled plugin asking for data and the different plugins
@@ -31,8 +31,6 @@ namespace himan
 {
 namespace plugin
 {
-
-typedef std::vector<himan::param> params;
 
 class fetcher : public auxiliary_plugin
 {
@@ -179,6 +177,38 @@ private:
      */
 	std::vector<std::shared_ptr<info>> FetchFromProducer(const search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles);
 
+	/**
+	 * @brief Experimental function to perform area interpolation
+	 *
+	 * If target area is not identical to source area, perform area interpolation. Newbase
+	 * is used to do the actual job. If areas are same but with different scanning mode
+	 * only, data is swapped. If data is packed, it will be unpacked before interpolation.
+	 *
+	 * @param targetGrid Target area
+	 * @param grids List of source grids, all elements of list will be interpolated.
+	 * @return True if interpolation succeeds
+	 */
+
+	bool InterpolateArea(const std::shared_ptr<grid>& targetGrid, std::initializer_list<std::shared_ptr<grid>> grids);
+
+	/**
+	 * @brief Swap scanning mode if needed
+	 *
+	 * If source area != target area and interpolation is done, we might need to swap. This is because
+	 * newbase is used to do the interpolation, and newbase will always normalize the scanning mode to
+	 * bottom left. So if our target area is top left, we need to swap.
+	 *
+	 * Function will be a no-op if target grid scanning mode == wanted scanning mode.
+	 *
+	 * If target grid data is packed, function will unpack it.
+	 * 
+	 * @param targetGrid grid that's swapped
+	 * @param targetScanningMode The scanning mode that the grid is swapped to
+	 * @return True if swapping succeeds
+	 */
+
+	bool SwapTo(const std::shared_ptr<grid>& targetGrid, HPScanningMode targetScanningMode);
+
     HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform; //<! Default true
 
@@ -192,6 +222,8 @@ extern "C" std::shared_ptr<himan_plugin> create()
 {
     return std::shared_ptr<fetcher> (new fetcher());
 }
+
+typedef std::shared_ptr<fetcher> fetcher_t;
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
