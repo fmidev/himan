@@ -8,6 +8,7 @@
 #include "level.h"
 #include "logger_factory.h"
 #include <ostream>
+#include "NFmiLevel.h"
 
 using namespace himan;
 

@@ -10,8 +10,9 @@
 #ifndef LEVEL_H
 #define LEVEL_H
 
-#include "NFmiLevel.h"
 #include "himan_common.h"
+
+class NFmiLevel;
 
 namespace himan
 {
