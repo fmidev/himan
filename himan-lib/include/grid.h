@@ -19,23 +19,10 @@
 #include "point.h"
 #include "matrix.h"
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsign-conversion"
-#pragma clang diagnostic ignored "-Winvalid-source-encoding"
-
-#include <NFmiGrid.h>
-
-#pragma clang diagnostic pop
-
-#else
-
-#include <NFmiGrid.h>
-
-#endif
-
 #include "packed_data.h"
 #include <boost/variant.hpp>
+
+class NFmiGrid;
 
 namespace himan
 {

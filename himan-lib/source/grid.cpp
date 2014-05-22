@@ -11,6 +11,7 @@
 #include <NFmiStereographicArea.h>
 #include <NFmiLatLonArea.h>
 #include "logger_factory.h"
+#include <NFmiGrid.h>
 
 using namespace himan;
 using namespace std;
