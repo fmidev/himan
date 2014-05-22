@@ -9,9 +9,10 @@
 #include "rain_type.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
-#include "util.h"
+#include "metutil.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -27,10 +28,10 @@ const string itsName("rain_type");
 // Required source parameters
 
 const himan::param ZParam("Z-M2S2");
-const params NParams({himan::param("N-0TO1"), himan::param("N-PRCNT")});
+const himan::params NParams({himan::param("N-0TO1"), himan::param("N-PRCNT")});
 const himan::param TParam("T-K");
 const himan::param CloudParam("CLDSYM-N");
-const params PrecParams({himan::param("RR-1-MM"), himan::param("RRR-KGM2")});
+const himan::params PrecParams({himan::param("RR-1-MM"), himan::param("RRR-KGM2")});
 const himan::param KindexParam("KINDEX-N");
 
 // ..and their levels
@@ -294,7 +295,7 @@ void rain_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 				continue;
 			}
 
-			double reltopo = util::RelativeTopography(1000, 850, Z1000, Z850);
+			double reltopo = metutil::RelativeTopography_(1000, 850, Z1000, Z850);
 
 			double rain = 0; // default, no rain
 			double cloudType = 1; // default
