@@ -1,52 +1,39 @@
-/*
- * logger_factory.cpp
+/**
+ * @file logger_factory.cpp
  *
- *  Created on: Dec 17, 2012
- *      Author: partio
+ * @date Dec 17, 2012
+ * @author partio
  */
 
 #include "logger_factory.h"
 
 using namespace himan;
 
-logger_factory* logger_factory::itsInstance = NULL;
+std::unique_ptr<logger_factory> logger_factory::itsInstance;
 
-logger_factory::logger_factory() : itsDebugStateMain(kInfoMsg)
-{
-
-}
-
-logger_factory::~logger_factory()
-{
-    if (itsInstance)
-    {
-        delete itsInstance;
-    }
-}
+logger_factory::logger_factory() : itsDebugStateMain(kInfoMsg) {}
 
 logger_factory* logger_factory::Instance()
 {
-    if (!itsInstance)
-    {
-        itsInstance = new logger_factory();
-    }
+	if (!itsInstance)
+	{
+		itsInstance = std::unique_ptr<logger_factory> (new logger_factory());
+	}
 
-    return itsInstance;
+	return itsInstance.get();
 }
 
-logger* logger_factory::GetLog(const std::string& theUserName)
+std::unique_ptr<logger> logger_factory::GetLog(const std::string& theUserName)
 {
-    return new logger(theUserName, itsDebugStateMain);
+	return std::unique_ptr<logger> (new logger(theUserName, itsDebugStateMain)); // no make_unique in C++11 :(
 }
 
 void logger_factory::DebugState(HPDebugState theDebugState)
 {
-    itsDebugStateMain = theDebugState;
+	itsDebugStateMain = theDebugState;
 }
 
 HPDebugState logger_factory::DebugState()
 {
-    return itsDebugStateMain;
+	return itsDebugStateMain;
 }
-
-

@@ -1,8 +1,8 @@
-/*
- * logger_factory.h
+/**
+ * @file logger_factory.h
  *
- *  Created on: Dec 17, 2012
- *      Author: partio
+ * @date Dec 17, 2012
+ * @author partio
  */
 
 #ifndef LOGGER_FACTORY_H
@@ -21,22 +21,22 @@ class logger_factory
 {
 
 public:
-    static logger_factory* Instance();
+	static logger_factory* Instance();
 
-    logger_factory(const logger_factory& other) = delete;
-    logger_factory& operator=(const logger_factory& other) = delete;
+	logger_factory(const logger_factory& other) = delete;
+	logger_factory& operator=(const logger_factory& other) = delete;
 
-    logger* GetLog(const std::string& theUserName);
+	std::unique_ptr<logger> GetLog(const std::string& theUserName);
 
-    void DebugState(HPDebugState theDebugState);
-    HPDebugState DebugState();
+	void DebugState(HPDebugState theDebugState);
+	HPDebugState DebugState();
 
 private:
-    logger_factory();
-    ~logger_factory();
+	logger_factory();
+	~logger_factory() = default;
 
-    HPDebugState itsDebugStateMain;
-    static logger_factory* itsInstance;
+	HPDebugState itsDebugStateMain;
+	static std::unique_ptr<logger_factory> itsInstance;
 };
 
 } // namespace himan
