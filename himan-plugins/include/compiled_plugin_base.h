@@ -8,7 +8,6 @@
 #ifndef COMPILED_PLUGIN_BASE_H
 #define COMPILED_PLUGIN_BASE_H
 
-//#include <NFmiGrid.h>
 #include "compiled_plugin.h"
 #include "plugin_configuration.h"
 #include <mutex>
@@ -75,11 +74,11 @@ protected:
 	 * This function is protected with a mutex as it is responsible for distributing
 	 * time steps or levels for processing to all calling threads.
 	 *
-     * @param myTargetInfo Threads own copy of target info
-     * @return True if thread has more items to process
-     */
+	 * @param myTargetInfo Threads own copy of target info
+	 * @return True if thread has more items to process
+	 */
 
-	bool AdjustLeadingDimension(const std::shared_ptr<info>& myTargetInfo);
+	bool AdjustLeadingDimension(const info_t& myTargetInfo);
 
 	/**
 	 * @brief Adjust non-leading dimension (time of level) by one, called by threads
@@ -89,20 +88,20 @@ protected:
 	 * implemented in base class however because the information what is the
 	 * leading dimension is located here.
 	 *
-     * @param myTargetInfo Threads own copy of target info
-     * @return
-     */
+	 * @param myTargetInfo Threads own copy of target info
+	 * @return
+	 */
 
-	bool AdjustNonLeadingDimension(const std::shared_ptr<info>& myTargetInfo);
+	bool AdjustNonLeadingDimension(const info_t& myTargetInfo);
 
 	
-	void ResetNonLeadingDimension(const std::shared_ptr<info>& myTargetInfo);
+	void ResetNonLeadingDimension(const info_t& myTargetInfo);
  
 	/**
 	 * @brief Copy AB values from source to dest info
 	 */
 
-	bool SetAB(const std::shared_ptr<info>& myTargetInfo, const std::shared_ptr<info>& sourceInfo);
+	bool SetAB(const info_t& myTargetInfo, const info_t& sourceInfo);
 
 	/**
 	 * @brief Swap data ordering in a grid
@@ -112,7 +111,7 @@ protected:
 	 *
 	 */
 
-	bool SwapTo(const std::shared_ptr<info>& myTargetInfo, HPScanningMode targetScanningMode);
+	bool SwapTo(const info_t& myTargetInfo, HPScanningMode targetScanningMode);
 
 	/**
 	 * @brief Write plugin contents to file.
@@ -136,7 +135,7 @@ protected:
 
 	/**
 	 * @brief Reset GPU card state
-     */
+	 */
 	
 	void ResetCuda() const;
 
@@ -145,17 +144,17 @@ protected:
 	 *
 	 * This function will handle jobs (ie. times, levels to process) to each thread.
 	 * 
-     * @param myTargetInfo A threads own info instance
-     * @param threadIndex 
-     */
+	 * @param myTargetInfo A threads own info instance
+	 * @param threadIndex
+	 */
 	
-	virtual void Run(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	virtual void Run(info_t myTargetInfo, unsigned short threadIndex);
 
 	/**
 	 * @brief Initialize compiled_plugin_base and set internal state.
 	 *
-     * @param conf
-     */
+	 * @param conf
+	 */
 
 	virtual void Init(const std::shared_ptr<const plugin_configuration>& conf);
 
@@ -165,11 +164,20 @@ protected:
 	 * Function will fetch grib1 definitions from neons if necessary, and will
 	 * create the data backend for the resulting info.
 	 *
-     * @param params vector of target parameters
-     */
+	 * @param params vector of target parameters
+	 */
 
-	virtual void SetParams(std::vector<param>& params);
+	void SetParams(std::vector<param>& params);
 
+	/**
+	 * @brief Set target params
+	 *
+	 * Syntactic sugar for SetParams(vector<param>&)
+	 *
+	 * @param list of params
+	 */
+
+	void SetParams(std::initializer_list<param> params);
 
 	/**
 	 * @brief Record timing info and write info contents to disk
@@ -183,15 +191,15 @@ protected:
 	 * This function will abort since the plugins must define the processing
 	 * themselves.
 	 *
-     * @param myTargetInfo A threads own info instance
-     * @param threadIndex
-     */
+	 * @param myTargetInfo A threads own info instance
+	 * @param threadIndex
+	 */
 	
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex) ;
+	virtual void Calculate(info_t myTargetInfo, unsigned short threadIndex) ;
 
 	/**
 	 * @brief Start threaded calculation
-     */
+	 */
 
 	virtual void Start();
 
@@ -203,10 +211,10 @@ protected:
 	 * be used in calculation. If the calculation is done with cuda, the unpacking
 	 * is also made there.
 	 * 
-     * @param infos List of shared_ptr<info> 's that have packed data
-     */
+	 * @param infos List of shared_ptr<info> 's that have packed data
+	 */
 
-	void Unpack(std::initializer_list<std::shared_ptr<info>> infos);
+	void Unpack(std::initializer_list<info_t> infos);
 
 	/**
 	 * @brief Copy data from info_simple to actual info, clear memory and 
@@ -214,35 +222,35 @@ protected:
 	 *
 	 * Function has two slightly different calling types:
 	 * 1) A parameter has been calculated on GPU and the results have been stored
-	 *    to info_simple. This function will copy data to info and release the
-	 *    page-locked memory of info_simple. In this calling type the resulting
-	 *    data is not written to cache at this point, because it will be written
-	 *    to cache when it is written to disk.
+	 *	to info_simple. This function will copy data to info and release the
+	 *	page-locked memory of info_simple. In this calling type the resulting
+	 *	data is not written to cache at this point, because it will be written
+	 *	to cache when it is written to disk.
 	 *
 	 * 2) A source parameter for a calculation has been read in packed format from
-	 *    grib and has been unpacked at GPU. This function will copy the unpacked
-	 *    source data from info_simple to info, release page-locked memory of
-	 *    info_simple and clear the packed data array from info. Then it will also
-	 *    write the source data to cache since it might be needed by some other
-	 *    plugin.
+	 *	grib and has been unpacked at GPU. This function will copy the unpacked
+	 *	source data from info_simple to info, release page-locked memory of
+	 *	info_simple and clear the packed data array from info. Then it will also
+	 *	write the source data to cache since it might be needed by some other
+	 *	plugin.
 	 * 
-     * @param anInfo Target info
-     * @param aSimpleInfo Source info_simple
+	 * @param anInfo Target info
+	 * @param aSimpleInfo Source info_simple
 	 * @param writeToCache If true info will be written to cache
-     */
+	 */
 	
-	void CopyDataFromSimpleInfo(const std::shared_ptr<info>& anInfo, info_simple* aSimpleInfo, bool writeToCache);
+	void CopyDataFromSimpleInfo(const info_t& anInfo, info_simple* aSimpleInfo, bool writeToCache);
 
 #endif
 
 	/**
 	 * @brief Compare a number of grids to see if they are equal.
 	 *
-     * @param grids List of grids
-     * @return True if all are equal, else false
-     */
+	 * @param grids List of grids
+	 * @return True if all are equal, else false
+	 */
 	
-	bool CompareGrids(std::initializer_list<std::shared_ptr<grid>> grids);
+	bool CompareGrids(std::initializer_list<std::shared_ptr<grid>> grids) const;
 
 	/**
 	 * @brief Syntactic sugar: simple function to check if any of the arguments is a missing value
@@ -251,9 +259,35 @@ protected:
 	 * @return True if any of the values is missing value (kFloatMissing), otherwise false
 	 */
 
-	bool IsMissingValue(std::initializer_list<double> values);
+	bool IsMissingValue(std::initializer_list<double> values) const;
 
-	std::shared_ptr<info> itsInfo;
+	/**
+	 * @brief Fetch source data with given requirements
+	 *
+	 * Overcoat for Fetch(const forecast_time&, const level&, const param&, bool useCuda)
+	 *
+	 * @param theTime Wanted forecast time
+	 * @param theLevel Wanted level
+	 * @param theParams List of parameters (in a vector)
+	 * @param fetchPacked Flag for fetching data either packed or unpacked
+	 * @return shared_ptr<info> on success, null-pointer if data not found
+	 */
+
+	info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams, bool fetchPacked) const;
+
+	/**
+	 * @brief Fetch source data with given requirements
+	 *
+	 * @param theTime Wanted forecast time
+	 * @param theLevel Wanted level
+	 * @param theParams List of parameters (in a vector)
+	 * @param fetchPacked Flag for fetching data either packed or unpacked
+	 * @return shared_ptr<info> on success, null-pointer if data not found
+	 */
+
+	info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool fetchPacked) const;
+
+	info_t itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	short itsThreadCount;
 

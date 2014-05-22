@@ -10,9 +10,11 @@
 #include <boost/thread.hpp>
 #include "plugin_factory.h"
 #include "logger_factory.h"
+#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
+#include "fetcher.h"
 #include "neons.h"
 #include "writer.h"
 #include "pcuda.h"
@@ -21,6 +23,7 @@
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
+using namespace himan;
 using namespace himan::plugin;
 
 const double kInterpolatedValueEpsilon = 0.00001; //<! Max difference between two grid points (if smaller, points are considered the same)
@@ -86,7 +89,7 @@ bool compiled_plugin_base::InterpolateToPoint(const shared_ptr<const NFmiGrid>& 
 
 }
 
-bool compiled_plugin_base::AdjustLeadingDimension(const shared_ptr<info>& myTargetInfo)
+bool compiled_plugin_base::AdjustLeadingDimension(const info_t& myTargetInfo)
 {
 
 	lock_guard<mutex> lock(itsAdjustDimensionMutex);
@@ -119,7 +122,7 @@ bool compiled_plugin_base::AdjustLeadingDimension(const shared_ptr<info>& myTarg
 	return true;
 }
 
-bool compiled_plugin_base::AdjustNonLeadingDimension(const shared_ptr<info>& myTargetInfo)
+bool compiled_plugin_base::AdjustNonLeadingDimension(const info_t& myTargetInfo)
 {
 	if (itsLeadingDimension == kTimeDimension)
 	{
@@ -135,7 +138,7 @@ bool compiled_plugin_base::AdjustNonLeadingDimension(const shared_ptr<info>& myT
 	}
 }
 
-void compiled_plugin_base::ResetNonLeadingDimension(const shared_ptr<info>& myTargetInfo)
+void compiled_plugin_base::ResetNonLeadingDimension(const info_t& myTargetInfo)
 {
 	if (itsLeadingDimension == kTimeDimension)
 	{
@@ -151,7 +154,7 @@ void compiled_plugin_base::ResetNonLeadingDimension(const shared_ptr<info>& myTa
 	}
 }
 
-bool compiled_plugin_base::SetAB(const shared_ptr<info>& myTargetInfo, const shared_ptr<info>& sourceInfo)
+bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourceInfo)
 {
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{
@@ -165,7 +168,7 @@ bool compiled_plugin_base::SetAB(const shared_ptr<info>& myTargetInfo, const sha
 	return true;
 }
 
-bool compiled_plugin_base::SwapTo(const shared_ptr<info>& myTargetInfo, HPScanningMode targetScanningMode)
+bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode targetScanningMode)
 {
 
 	if (myTargetInfo->Grid()->ScanningMode() != targetScanningMode)
@@ -182,7 +185,7 @@ bool compiled_plugin_base::SwapTo(const shared_ptr<info>& myTargetInfo, HPScanni
 
 void compiled_plugin_base::WriteToFile(const shared_ptr<const info>& targetInfo)
 {
-	shared_ptr<writer> aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+	auto aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
 	// writing might modify iterator positions --> create a copy
 
@@ -216,7 +219,7 @@ bool compiled_plugin_base::GetAndSetCuda(int threadIndex)
 
 	if (ret)
 	{
-		shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+		auto p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 
 		ret = p->SetDevice(itsConfiguration->CudaDeviceId());
 	}
@@ -230,7 +233,7 @@ bool compiled_plugin_base::GetAndSetCuda(int threadIndex)
 void compiled_plugin_base::ResetCuda() const
 {
 #ifdef HAVE_CUDA
-	shared_ptr<pcuda> p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+	auto p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 	p->Reset();
 #endif
 }
@@ -306,7 +309,7 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration>& co
 	itsPluginIsInitialized = true;
 }
 
-void compiled_plugin_base::Run(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
@@ -330,10 +333,22 @@ void compiled_plugin_base::Finish()
 }
 
 
-void compiled_plugin_base::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void compiled_plugin_base::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
 	itsBaseLogger->Fatal("Top level calculate called");
 	exit(1);
+}
+
+void compiled_plugin_base::SetParams(initializer_list<param> params)
+{
+	vector<param> paramVec;
+
+	for (auto it = params.begin(); it != params.end(); ++it)
+	{
+		paramVec.push_back(*it);
+	}
+
+	SetParams(paramVec);
 }
 
 void compiled_plugin_base::SetParams(std::vector<param>& params)
@@ -412,16 +427,20 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		// Start process timing
 		itsTimer->Start();
 	}
+
+	ResetNonLeadingDimension(itsInfo);
+	itsInfo->FirstParam();
+
 }
 
 #ifdef HAVE_CUDA
-void compiled_plugin_base::Unpack(initializer_list<shared_ptr<info>> infos)
+void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 {
 	auto c = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
 
 	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{
-		shared_ptr<info> tempInfo = *it;
+		info_t tempInfo = *it;
 
 		if (!tempInfo->Grid()->PackedData() || tempInfo->Grid()->PackedData()->packedLength == 0)
 		{
@@ -453,7 +472,7 @@ void compiled_plugin_base::Unpack(initializer_list<shared_ptr<info>> infos)
 	}
 }
 
-void compiled_plugin_base::CopyDataFromSimpleInfo(const shared_ptr<info>& anInfo, info_simple* aSimpleInfo, bool writeToCache)
+void compiled_plugin_base::CopyDataFromSimpleInfo(const info_t& anInfo, info_simple* aSimpleInfo, bool writeToCache)
 {
 	assert(aSimpleInfo);
 	
@@ -474,7 +493,7 @@ void compiled_plugin_base::CopyDataFromSimpleInfo(const shared_ptr<info>& anInfo
 }
 #endif
 
-bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids)
+bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids) const
 {
 	if (grids.size() <= 1)
 	{
@@ -500,7 +519,7 @@ bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids
 	return true;
 }
 
-bool compiled_plugin_base::IsMissingValue(initializer_list<double> values)
+bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
 {
 	for (auto it = values.begin(); it != values.end(); ++it)
 	{
@@ -512,3 +531,42 @@ bool compiled_plugin_base::IsMissingValue(initializer_list<double> values)
 
 	return false;
 }
+
+info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const params& theParams, bool fetchPacked) const
+{
+	info_t ret;
+	
+	for (size_t i = 0; i < theParams.size(); i++)
+	{
+		ret = Fetch(theTime, theLevel, theParams[i], fetchPacked);
+
+		if (ret)
+		{
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
+info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool fetchPacked) const
+{
+	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+
+	info_t ret;
+
+	try
+	{
+		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, itsConfiguration->UseCudaForPacking() && fetchPacked);
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error(ClassName() + ": Unable to proceed");
+		}
+	}
+
+	return ret;
+}
+
