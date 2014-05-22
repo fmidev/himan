@@ -12,6 +12,7 @@
 #include "metutil.h"
 #include <algorithm> // for std::transform
 #include <functional> // for std::plus
+#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -124,8 +125,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	ResetNonLeadingDimension(myTargetInfo);
 
-	// Cuda not raedy yet
-	// bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
+	//bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
 	bool useCudaInThisThread = false;
 	
 	myTargetInfo->FirstParam();
@@ -200,7 +200,6 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 			unique_ptr<stability_cuda::options> opts(new stability_cuda::options);
 
-			// T500 is needed always
 			opts->t500 = T500Info->ToSimple();
 			opts->t700 = T700Info->ToSimple();
 			opts->t850 = T850Info->ToSimple();
@@ -221,6 +220,10 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 			myTargetInfo->Param(param("SI-N"));
 			opts->si = myTargetInfo->ToSimple();
+
+			opts->t500m = &T500mVector[0];
+			opts->td500m = &TD500mVector[0];
+			opts->p500m = &P500mVector[0];
 
 			if (LICalculation)
 			{

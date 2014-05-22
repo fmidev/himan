@@ -22,7 +22,6 @@ __global__ void himan::plugin::stability_cuda::Calculate(cdarr_t d_t850, cdarr_t
 	{
 		d_ki[idx] = kFloatMissing;
 
-
 		double T850 = d_t850[idx];
 		double T700 = d_t700[idx];
 		double T500 = d_t500[idx];
@@ -201,51 +200,28 @@ void himan::plugin::stability_cuda::Process(options& opts)
 
 	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t850, d_t700, d_t500, d_td850, d_td700, d_t500m, d_td500m, d_p500m, d_ki, d_vti, d_cti, d_tti, d_si, d_li, opts, d_missing);
 
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
 	CUDA_CHECK(cudaMemcpyAsync(opts.ki->values, d_ki, memsize, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(opts.si->values, d_si, memsize, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
-	
 	
 	// block until the stream has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// Free device memory
 
-	if (d_t850)
-	{
-		CUDA_CHECK(cudaFree(d_t850));
-	}
-
-	if (d_t700)
-	{
-		CUDA_CHECK(cudaFree(d_t700));
-	}
-
-	if (d_t500)
-	{
-		CUDA_CHECK(cudaFree(d_t500));
-	}
-
-	if (d_td850)
-	{
-		CUDA_CHECK(cudaFree(d_td850));
-	}
-
-	if (d_td700)
-	{
-		CUDA_CHECK(cudaFree(d_td700));
-	}
-
-	if (d_si)
-	{
-		CUDA_CHECK(cudaFree(d_si));
-	}
-
-	if (d_ki)
-	{
-		CUDA_CHECK(cudaFree(d_ki));
-	}
+	CUDA_CHECK(cudaFree(d_t850));
+	CUDA_CHECK(cudaFree(d_t700));
+	CUDA_CHECK(cudaFree(d_t500));
+	CUDA_CHECK(cudaFree(d_td850));
+	CUDA_CHECK(cudaFree(d_td700));
+	CUDA_CHECK(cudaFree(d_si));
+	CUDA_CHECK(cudaFree(d_ki));
+	CUDA_CHECK(cudaFree(d_vti));
+	CUDA_CHECK(cudaFree(d_cti));
+	CUDA_CHECK(cudaFree(d_tti));
 
 	CUDA_CHECK(cudaFree(d_missing));
 

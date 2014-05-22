@@ -27,9 +27,9 @@ using namespace himan::plugin;
 grib::grib()
 {
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("grib"));
+	itsLogger = logger_factory::Instance()->GetLog("grib");
 
-	itsGrib = shared_ptr<NFmiGrib> (new NFmiGrib());
+	itsGrib = make_shared<NFmiGrib> ();
 }
 
 shared_ptr<NFmiGrib> grib::Reader()

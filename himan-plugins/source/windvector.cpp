@@ -14,6 +14,7 @@
 #include <math.h>
 #include "NFmiRotatedLatLonArea.h"
 #include "NFmiStereographicArea.h"
+#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -495,25 +496,31 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				}
 				else if (UGrid->Area()->ClassId() != kNFmiLatLonArea)
 				{
+					// This is not verified to work correctly!
 					myThreadedLogger->Error("Invalid source projection: " + string(HPProjectionTypeToString.at(UInfo->Grid()->Projection())));
 					return;
-					
+
+					const point regPoint(targetGrid->LatLon());
+
+					double angle = 180. + reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude();
+					double lon = regPoint.X();
+
 					/*
 					 * This code should work in theory but it's not enabled because it is not tested.
+					 */
 
 					assert(UGrid->Area()->ClassId() == kNFmiStereographicArea);
 
-					double centralLongitude = (reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude());
+					lon = lon - (angle - 180.);
 
-					point regUV = util::UVToGeographical(centralLongitude, point(U,V));
+					point regUV = util::UVToGeographical(lon, point(U,V));
 
 					// Wind speed should the same with both forms of U and V
 
 					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
-
+					
 					U = regUV.X();
 					V = regUV.Y();
-					*/
 				}
 
 				double dir = 0;
