@@ -19,6 +19,7 @@
 #include <vector>
 #include "info_simple.h"
 #include <boost/lexical_cast.hpp>
+#include "param.h"
 
 namespace himan
 {
