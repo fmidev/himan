@@ -147,6 +147,8 @@ std::ostream& operator<<(std::ostream& file, const param& ob)
     return ob.Write(file);
 }
 
+typedef std::vector<himan::param> params;
+
 } // namespace himan
 
 #endif /* PARAM_H */
