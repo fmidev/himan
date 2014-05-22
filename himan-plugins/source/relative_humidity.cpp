@@ -10,6 +10,7 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include "metutil.h"
+#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 

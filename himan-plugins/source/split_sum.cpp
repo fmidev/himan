@@ -11,6 +11,7 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <map>
+#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -47,7 +48,7 @@ using namespace himan::plugin;
 
 const bool CALCULATE_AVERAGE_RATE = false;
 
-map<string,params> sourceParameters;
+map<string,himan::params> sourceParameters;
 
 split_sum::split_sum()
 {

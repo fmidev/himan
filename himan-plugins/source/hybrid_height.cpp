@@ -11,6 +11,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <math.h>
+#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
