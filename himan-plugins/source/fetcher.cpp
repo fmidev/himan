@@ -536,6 +536,8 @@ bool fetcher::InterpolateArea(const shared_ptr<grid>& base, initializer_list<sha
 			baseGrid = shared_ptr<NFmiGrid> (base->ToNewbaseGrid());
 		}
 
+#ifdef HAVE_CUDA
+
 		if ((*it)->IsPackedData())
 		{
 			// We need to unpack
@@ -544,7 +546,7 @@ bool fetcher::InterpolateArea(const shared_ptr<grid>& base, initializer_list<sha
 			// Only unpacked and interpolated data is stored to cache
 			(*it)->PackedData()->Clear();
 		}
-		
+#endif		
 		auto interpGrid = shared_ptr<NFmiGrid> ((*it)->ToNewbaseGrid());
 
 		// interpGrid does the actual interpolation, results are stored to targetData
@@ -604,7 +606,8 @@ bool fetcher::SwapTo(const shared_ptr<grid>& targetGrid, HPScanningMode targetSc
 {
 	if (targetGrid->ScanningMode() != targetScanningMode)
 	{
-		
+
+#ifdef HAVE_CUDA		
 		// We should to swapping in cuda code but that functionality is missing as of 2014-05-16
 		if (targetGrid->IsPackedData())
 		{
@@ -613,7 +616,7 @@ bool fetcher::SwapTo(const shared_ptr<grid>& targetGrid, HPScanningMode targetSc
 			// Remove packed data since that is still in wrong order
 			targetGrid->PackedData()->Clear();
 		}
-
+#endif
 		targetGrid->Swap(targetScanningMode);
 		assert(targetScanningMode == targetGrid->ScanningMode());
 	}
