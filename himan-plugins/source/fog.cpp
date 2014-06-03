@@ -77,15 +77,27 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	// Required source parameters
 
-	//2m kastepiste
-	//10m tuulen nopeus
-	//alustan lämpötila
+	//2m dewpoint
+	//10m wind speed
+	//"platform" temperature
 
-	param groundParam("T-K");
+	params groundParam = { param("T-K"), param("TG-K") };
 	param dewParam("TD-C");
 	param windParam("FF-MS");
 	
-	level ground(himan::kHeight, 0, "HEIGHT");
+
+	level ground;
+
+	// this will come back to us
+	if ( itsConfiguration->SourceProducer().Id() == 131)
+	{
+		ground = level(himan::kGndLayer, 0, "GNDLAYER");
+	}
+	else
+	{
+		ground = level(himan::kHeight, 0, "HEIGHT");
+	}
+
 	level h2m(himan::kHeight, 2, "HEIGHT");
 	level h10m(himan::kHeight, 10, "HEIGHT");
 
