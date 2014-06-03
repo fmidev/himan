@@ -69,8 +69,8 @@ info::info(const info& other)
 	itsOriginDateTime = other.itsOriginDateTime;
 
 	itsStepSizeOverOneByte = other.itsStepSizeOverOneByte;
-
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
+	
+	itsLogger = logger_factory::Instance()->GetLog("info");
 }
 
 void info::Init()
@@ -79,8 +79,6 @@ void info::Init()
     itsProjection = kUnknownProjection;
     itsScanningMode = kUnknownScanningMode;
     itsLevelOrder = kTopToBottom;
-
-//    itsAB = std::vector<double>;
 
     itsBottomLeft = point(kHPMissingValue, kHPMissingValue);
     itsTopRight = point(kHPMissingValue, kHPMissingValue);
@@ -101,6 +99,8 @@ std::ostream& info::Write(std::ostream& file) const
 {
 
     file << "<" << ClassName() << ">" << endl;
+
+	file << "__itsLevelOrder__ " << HPLevelOrderToString.at(itsLevelOrder) << endl;
 
     file << itsProducer;
 
@@ -159,6 +159,8 @@ void info::Create()
             		Grid()->Di(itsDi);
             		Grid()->Dj(itsDj);
             	}
+
+            	Grid()->Data()->Fill(kFloatMissing);
             }
         }
     }

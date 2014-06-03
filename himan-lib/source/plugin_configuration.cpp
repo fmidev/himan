@@ -177,6 +177,8 @@ void plugin_configuration::WriteStatistics()
 		writingThreads = ", average over used threads";
 	}
 
+	assert(itsStatistics->itsValueCount >= itsStatistics->itsMissingValueCount);
+
 	cout << "Thread count:\t\t" <<  itsStatistics->itsUsedThreadCount << endl
 		<< "Used GPU count:\t\t" << itsStatistics->itsUsedGPUCount << endl
 		<< "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl

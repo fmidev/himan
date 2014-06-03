@@ -392,7 +392,9 @@ public:
 
 	bool IsMissing(size_t theIndex) const
 	{
-		return CheckMissing(itsData, theIndex);
+		// No checking of limits
+
+		return (itsData[theIndex] == itsMissingValue);
 	}
 
 	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const
@@ -400,31 +402,40 @@ public:
 		return IsMissing(Index(theX, theY, theZ));
 	}
 
+	/**
+	 * @brief Calculate missing values in data
+	 *
+	 * As for the performance of this function, a brief benchmark shows that with
+	 * optimization level -O2 it takes a bit more than 1ms to loop through 1M
+	 * elements. So Hirlam would be around 1ms with 840480 grid points and global
+	 * EC ~5ms with 4.5M grid points.
+	 *
+	 * The proportion of missing values in the data does not make any difference
+	 * in performance.
+	 * 
+     * @return Number of missing values in data.
+     */
+
+	size_t MissingCount() const
+	{
+		size_t missing = 0;
+
+		for (size_t i = 0; i < itsData.size(); i++)
+		{
+			if (IsMissing(i))
+			{
+				missing++;
+			}
+		}
+
+		return missing;
+	}
+
 private:
 
 	size_t Index(size_t x, size_t y, size_t z) const
 	{
 		return z * itsWidth * itsHeight + y * itsWidth + x;
-	}
-
-	bool CheckMissing(const std::vector<double>& theData, size_t theIndex) const
-	{
-		// No checking of limits
-
-		return (theData[theIndex] == itsMissingValue);
-	}
-
-	bool CheckMissing(const std::vector<std::shared_ptr<himan::grid>>& theData, size_t theIndex) const
-	{
-		// No checking of limits
-
-		if (theData[theIndex])
-		{
-			return false;
-		}
-
-		return true;
-		
 	}
 
 	std::vector<T> itsData;

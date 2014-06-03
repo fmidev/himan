@@ -691,7 +691,7 @@ public:
 #endif
 
 	const std::shared_ptr<const matrix_t> Dimensions() const;
-
+	
 private:
 
 	void Init();
@@ -757,8 +757,8 @@ private:
 
 	size_t itsLocationIndex;
 
-	bool itsStepSizeOverOneByte;
-
+	bool itsStepSizeOverOneByte; //!< TODO: Remove and implement in fmigrib
+	
 };
 
 inline
