@@ -31,6 +31,7 @@ public:
     ~level() = default;
     level(const level& other);
     level& operator=(const level& other);
+	operator std::string () const;
 
     std::string ClassName() const
     {

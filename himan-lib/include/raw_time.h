@@ -30,7 +30,8 @@ public:
     ~raw_time() {}
     raw_time(const raw_time& other);
     raw_time& operator=(const raw_time& other);
-
+	operator std::string () const;
+	
     std::string String(const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S") const;
 
     std::ostream& Write(std::ostream& file) const;

@@ -53,6 +53,11 @@ bool raw_time::operator!=(const raw_time&  other)
     return !(*this == other);
 }
 
+raw_time::operator std::string () const
+{
+	return String("%Y%m%d%H%M");
+}
+
 std::string raw_time::String(const std::string& theTimeMask) const
 {
     return FormatTime(itsDateTime, theTimeMask);

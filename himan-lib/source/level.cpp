@@ -9,6 +9,7 @@
 #include "logger_factory.h"
 #include <ostream>
 #include "NFmiLevel.h"
+#include <boost/lexical_cast.hpp>
 
 using namespace himan;
 
@@ -71,12 +72,17 @@ bool level::operator==(const level& other)
         return true;
     }
 
-    return (Type() == other.Type() && Value() == other.Value());
+    return (itsType == other.itsType && itsValue == other.itsValue);
 }
 
 bool level::operator!=(const level& other)
 {
     return !(*this == other);
+}
+
+level::operator std::string () const
+{
+	return static_cast<std::string> (HPLevelTypeToString.at(itsType)) + "/" + boost::lexical_cast<std::string> (itsValue);
 }
 
 void level::Value(double theValue)
