@@ -82,6 +82,8 @@ struct info_simple
 
 	std::string param;
 
+	size_t missing;
+
 	info_simple()
 		: size_x(0)
 		, size_y(0)
@@ -89,6 +91,7 @@ struct info_simple
 		, is_page_locked(false)
 		, values(0)
 		, packed_values(0)
+		, missing(0)
 	{}
 
 	bool create()
