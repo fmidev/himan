@@ -60,7 +60,7 @@ void fmi_weather_symbol_1::Calculate(shared_ptr<info> myTargetInfo, unsigned sho
 	// new parameters used...
 	param PrecformParam("PRECFORM-N");
 	param TotalPrecParam("RRR-KGM2");
-	param TotalCloudCoverParam("N-0TO1");
+	params TotalCloudCoverParam= { param("N-0TO1"), param("N-PRCNT") };
 	param LowCloudCoverParam("NL-PRCNT");
 	param MedCloudCoverParam("NM-PRCNT");
 	param HighCloudCoverParam("NH-PRCNT");
@@ -296,12 +296,12 @@ void fmi_weather_symbol_1::Calculate(shared_ptr<info> myTargetInfo, unsigned sho
 				{
 					// Total cloud cover less than 11%
 					if (totalCC <= 0.1) weather_symbol = 0; // clear: sun (moon and/or stars)
-					// !!!Attention, N-0TO1 is not percent. It's between 0 and 1!!!
-					else if ((lowCC + medCC) <= 10 && totalCC > 0.10) weather_symbol = 1; // thin high clouds: the sun and transparent cloud
-					else if ((lowCC + medCC) > 10 && totalCC > 0.10 && totalCC <= 0.30) weather_symbol = 2; // almost clear: the sun and the (small) light cloud
-					else if ((lowCC + medCC) > 10 && totalCC > 0.30 && totalCC <= 0.60) weather_symbol = 3; // Partly cloudy: the sun and the light cloud
-					else if ((lowCC + medCC) > 10 && totalCC > 0.60 && totalCC <= 0.80) weather_symbol = 4; // almost overcast: the sun and the (large) light cloud
-					else if ((lowCC + medCC) > 10 && totalCC > 0.80) weather_symbol = 5; // Cloudy: light cloud
+					// !!!Attention, N-0TO1 and NX-PRCNT are not percent. They're between 0 and 1!!!
+					else if ((lowCC + medCC) <= 0.10 && totalCC > 0.10) weather_symbol = 1; // thin high clouds: the sun and transparent cloud
+					else if ((lowCC + medCC) > 0.10 && totalCC > 0.10 && totalCC <= 0.30) weather_symbol = 2; // almost clear: the sun and the (small) light cloud
+					else if ((lowCC + medCC) > 0.10 && totalCC > 0.30 && totalCC <= 0.60) weather_symbol = 3; // Partly cloudy: the sun and the light cloud
+					else if ((lowCC + medCC) > 0.10 && totalCC > 0.60 && totalCC <= 0.80) weather_symbol = 4; // almost overcast: the sun and the (large) light cloud
+					else if ((lowCC + medCC) > 0.10 && totalCC > 0.80) weather_symbol = 5; // Cloudy: light cloud
 				}
 			}
 			// rainfall of > 0.02 mm/h
