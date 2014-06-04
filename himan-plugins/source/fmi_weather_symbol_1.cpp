@@ -270,7 +270,8 @@ void fmi_weather_symbol_1::Calculate(shared_ptr<info> myTargetInfo, unsigned sho
 			// for thunder
 			InterpolateToPoint(targetGrid, CloudGrid, equalGrids, cloud);
 
-			if (cloud == kFloatMissing || precForm == kFloatMissing || totalPrec == kFloatMissing || totalCC == kFloatMissing || lowCC == kFloatMissing || medCC == kFloatMissing || highCC == kFloatMissing || fog == kFloatMissing )
+			if (cloud == kFloatMissing || totalPrec == kFloatMissing || totalCC == kFloatMissing || lowCC == kFloatMissing || medCC == kFloatMissing || highCC == kFloatMissing || fog == kFloatMissing || T0m == kFloatMissing || 
+				kIndex == kFloatMissing || T850 == kFloatMissing || cloud == kFloatMissing )
 			{
 				missingCount++;
 
