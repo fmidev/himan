@@ -390,7 +390,7 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 			InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
 			InterpolateToPoint(targetGrid, SNRGrid, equalGrids, SNR);
 
-			if (IsMissingValue({T, T850, T925, RH, RH700, RH925, RH850, T700, RR, P, W925, W850, SNR}))
+			if (IsMissingValue({T, T850, T925, RH, RH700, RH925, RH850, T700, RR, P, W925, W850}))
 			{
 				missingCount++;
 
@@ -495,9 +495,15 @@ shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::I
 				}
 			}
 
-			// lumisadetta: snowfall >=80% kokonaissateesta
+			double SNR_RR = 0; // oletuksena kaikki sade vetta
+			
+			if (SNR != MISS)
+			{
+				// lasketaan oikea suhde vain jos lumidataa on (kesalla ei ole)
+				SNR_RR = SNR/RR;
+			}
 
-			const double SNR_RR = SNR/RR;
+			// lumisadetta: snowfall >=80% kokonaissateesta
 
 			if (PreForm == MISS AND (SNR_RR >= snowLim OR T <= 0))
 			{
