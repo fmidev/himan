@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.5.13
-Release: 2.fmi
+Version: 14.6.5
+Release: 1.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -59,6 +59,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libdensity.so
 %{_libdir}/himan-plugins/libdewpoint.so
 %{_libdir}/himan-plugins/libfetcher.so
+%{_libdir}/himan-plugins/libfmi_weather_symbol_1.so
 %{_libdir}/himan-plugins/libfog.so
 %{_libdir}/himan-plugins/libgrib.so
 %{_libdir}/himan-plugins/libhitool.so
@@ -87,6 +88,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jun  5 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.5-1.fmi
+- New plugin: fmi_weather_symbol_1 (HIMAN-52)
+- Bugfix in fog/ECMWF (STU-1366)
+- Bugfix in preform_pressure (HIMAN-55)
+* Fri May 16 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.16-1.fmi
+- Bugfix in cloud_type/ECMWF
 * Tue May 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.13-2.fmi
 - Bugfix in rain_type/ECMWF
 * Tue May 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.13-1.fmi
