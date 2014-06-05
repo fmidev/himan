@@ -4,16 +4,10 @@
      "source_producer" : "131,240",
      "target_producer" : "240",
      "hours" : "3",
-     "origintime" : "latest",
-     "interpolate_time" : "no",
+     "origintime" : "2014-06-03 00:00:00",
      "file_write" : "single",
-
+     "read_data_from_database" : false,
      "processqueue" : [
-        // {
-        // "leveltype" : "height",
-        // "levels" : "10",
-        // "plugins" : [ { "name" : "windvector" } ]
-        // },
          {
              "leveltype" : "height",
              "levels" : "0",
