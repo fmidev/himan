@@ -26,7 +26,7 @@ if os.environ['HOME'] == "/home/weto":
 	
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-5.5'
+cuda_toolkit_path = '/usr/local/cuda-6.0'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
 	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -58,6 +58,11 @@ includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 
+if os.environ.get('ORACLE_HOME') is None:
+        includes.append('/usr/include/oracle')
+else:
+        includes.append(os.environ.get('ORACLE_HOME') + '/rdbms/public')
+
 if have_cuda:
 	includes.append(cuda_toolkit_path + '/include')
 
@@ -85,19 +90,20 @@ env.Append(LIBPATH = librarypaths)
 libraries = []
 
 libraries.append('himan')
+libraries.append('smartmet_smarttools')
 libraries.append('smartmet_newbase')
 libraries.append('rt')
-libraries.append('z')
-libraries.append('bz2')
 libraries.append('clntsh')
-
-if have_cuda:
-	libraries.append('cudart')
-
+libraries.append('nnz11')
+libraries.append('jasper')
+libraries.append('grib_api')
 
 env.Append(LIBS = libraries)
 
-boost_libraries = [ 'boost_program_options', 'boost_filesystem', 'boost_system', 'boost_regex' ]
+if have_cuda:
+        env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
+
+boost_libraries = [ 'boost_program_options', 'boost_filesystem', 'boost_system', 'boost_regex', 'boost_iostreams', 'boost_thread' ]
 
 for lib in boost_libraries:
 	libfile = '/usr/lib64/lib' + lib + '.a'
@@ -107,7 +113,8 @@ for lib in boost_libraries:
 
 	env.Append(LIBS=env.File(libfile))
 
-
+env.Append(LIBS = [ 'z', 'bz2' ]) # for newbase
+env.Append(LIBS = [ 'dl', 'rt' ]) # for cudart_static
 
 # CFLAGS
 
@@ -155,7 +162,8 @@ env.Append(CCFLAGS = cflags_normal)
 
 # Linker flags
 
-env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-needed'])
+env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-needed' ,'-pthread'])
+
 # '-Wl,-rpath,.'
 
 # Defines
