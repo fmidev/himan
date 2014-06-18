@@ -9,7 +9,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 14.6.5
+Version: 14.6.18
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -19,7 +19,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 13.10.2
+Requires: himan-lib >= 14.6.18
 BuildRequires: redhat-rpm-config
 
 %if %{distnum} == 5
@@ -32,8 +32,8 @@ BuildRequires: gcc-c++ < 4.7
 
 BuildRequires: scons
 BuildRequires: boost-devel >= 1.54
-BuildRequires: libsmartmet-newbase >= 13.9.26
-Requires: cuda-core-libs-5-5
+BuildRequires: libsmartmet-newbase >= 14.4.10
+BuildRequires: cuda-6-0 
 Provides: himan
 
 %description
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Thu Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
+- Initial build with Cuda6 (HIMAN-57)
 * Thu Jun  5 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.5-1.fmi
 - Changes in himan-lib
 * Tue May  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.5.6-1.fmi
