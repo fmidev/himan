@@ -13,7 +13,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "transformer_cuda.h"
+// #include "transformer_cuda.h"
 #include "level.h"
 
 
