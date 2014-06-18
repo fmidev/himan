@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.6.5
+Version: 14.6.18
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -22,7 +22,7 @@ BuildRequires: libsmartmet-newbase >= 13.9.26
 BuildRequires: libsmartmet-smarttools >= 14.4.7
 BuildRequires: grib_api-devel >= 1.10.4
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-5-5
+BuildRequires: cuda-6-0
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
 %if %{distnum} == 5
@@ -82,12 +82,16 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libstability.so
 %{_libdir}/himan-plugins/libtk2tc.so
 %{_libdir}/himan-plugins/libtpot.so
+%{_libdir}/himan-plugins/libtransformer.so
 %{_libdir}/himan-plugins/libvvms.so
 %{_libdir}/himan-plugins/libweather_symbol.so
 %{_libdir}/himan-plugins/libwindvector.so
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
+- New plugin: transformer (HIMAN-37)
+- Initial build with Cuda6 (HIMAN-57)
 * Thu Jun  5 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.5-1.fmi
 - New plugin: fmi_weather_symbol_1 (HIMAN-52)
 - Bugfix in fog/ECMWF (STU-1366)
