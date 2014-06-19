@@ -1,0 +1,30 @@
+{
+	"_INFO":{
+            "modified":"28 Jan 2013",
+            "author": "partio",
+            "description": "Regression suite for tk2tc/gfs"
+        },
+    
+	"target_geom_name" : "GFS0500",
+	"source_producer" : "53",
+	"target_producer" : "53",
+	"hours" : "192",
+	"file_write" : "single",
+	"origintime" : "2013-04-09 18:00:00",
+	"read_data_from_database" : "false",
+
+	"processqueue" : [
+	{
+		"leveltype" : "pressure",
+		"levels" : "1000",
+		"plugins" : [ { "name" : "transformer",
+				"base" : "-273.15",
+				"scale" : "1.0",
+				"source_param" : "T-K",
+                                "target_param" : "T-C",
+				"target_univ_ID" : "4",
+                                "source_level_type" : "pressure",
+                                "source_levels" : "1000"  } ]
+	} 
+	]
+}
