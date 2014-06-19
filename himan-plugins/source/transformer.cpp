@@ -117,7 +117,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger->Warning("Target_param not specified. Exiting program.");
+		throw runtime_error("Transformer_plugin: target_param not specified.");
 		exit(1);
 	}
 
@@ -137,8 +137,8 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsSourceLevelType = itsConfiguration->GetValue("leveltype");
-		itsLogger->Warning("Source_level_type not specified, value set to leveltype");
+		throw runtime_error("Transformer_plugin: source_level_type not specified.");
+		exit(1);
 	}
 	
 	if(itsConfiguration->Options().count("source_levels"))
@@ -147,8 +147,8 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		SourceLevels = itsConfiguration->GetValue("levels");
-		itsLogger->Warning("Source_levels not specified, values set to target levels");
+		throw runtime_error("Transformer_plugin: source_level_type not specified.");
+		exit(1);
 	}
 	
 	// looks useful to use this function to create source_levels
@@ -260,6 +260,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 
 		bool equalGrids = (*myTargetInfo->Grid() == *sourceInfo->Grid());
+		bool levelOnly = (itsScale == 1.0 && itsBase == 0.0);
 
 		string deviceType;
 
@@ -323,11 +324,21 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 					continue;
 				}
 				
-				double newValue = value * itsScale + itsBase;
-
-				if (!myTargetInfo->Value(newValue))
+				if (!levelOnly)
 				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					double newValue = value * itsScale + itsBase;
+
+					if (!myTargetInfo->Value(newValue))
+					{
+						throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					}
+				}
+				else
+				{
+					if (!myTargetInfo->Value(value))
+					{
+						throw runtime_error(ClassName() + ": Failed to set value to matrix");
+					}
 				}
 			}
 
