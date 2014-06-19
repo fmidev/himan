@@ -53,8 +53,8 @@ private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
 	// Check and write json parameters needed for transformer plug-in to local variables.
-	void set_additional_parameters();
-        std::vector<level> LevelsFromString(const std::string& levelType, const std::string& levelValues) const;
+	void SetAdditionalParameters();
+	std::vector<level> LevelsFromString(const std::string& levelType, const std::string& levelValues) const;
 /*
 #ifdef HAVE_CUDA
 	std::unique_ptr<transformer_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);

@@ -79,7 +79,7 @@ vector<himan::level> transformer::LevelsFromString(const string& levelType, cons
 	return levels;
 }
 
-void transformer::set_additional_parameters()
+void transformer::SetAdditionalParameters()
 {
 	std::string itsSourceLevelType;
 	std::string SourceLevels;
@@ -158,7 +158,7 @@ void transformer::set_additional_parameters()
 void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
-	set_additional_parameters();
+	SetAdditionalParameters();
 
 	/*
 	 * Set target parameter to T
@@ -212,8 +212,6 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	myTargetInfo->FirstParam();
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
-
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -229,8 +227,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 			sourceInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 itsSourceLevels[myTargetInfo->LevelIndex()],
-								 InputParam,
-								 itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+								 InputParam);
 		}
 		catch (HPExceptionType& e)
 		{
@@ -325,7 +322,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 					myTargetInfo->Value(kFloatMissing);
 					continue;
 				}
-
+				
 				double newValue = value * itsScale + itsBase;
 
 				if (!myTargetInfo->Value(newValue))
