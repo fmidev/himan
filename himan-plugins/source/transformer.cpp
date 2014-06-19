@@ -176,10 +176,19 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	param requestedParam(itsTargetParam, itsTargetUnivID);
 
 	// GRIB 2
-	
-	//requestedParam.GribDiscipline(pt.get<string>("target_GribDiscipline"));
-	//requestedParam.GribCategory(pt.get<string>("target_GribCategory"));
-	//requestedParam.GribParameter(pt.get<string>("target_GribParameter"));
+        if (itsConfiguration->OutputFileType() == kGRIB2)
+	{
+		if (itsConfiguration->Options().count("GribDiscipline") && itsConfiguration->Options().count("GribCategory") && itsConfiguration->Options().count("GribParameter"))
+		{
+			requestedParam.GribDiscipline(boost::lexical_cast<int>(itsConfiguration->GetValue("GribDiscipline")));
+			requestedParam.GribCategory(boost::lexical_cast<int>(itsConfiguration->GetValue("GribCategory")));
+			requestedParam.GribParameter(boost::lexical_cast<int>(itsConfiguration->GetValue("GribParameter")));
+		}
+		else
+		{
+			throw runtime_error("Transformer_plugin: Grib2 output requested but Grib2 parameter specifiers for output parameter not given in json file.");
+		}
+	}	
 
 	// GRIB 1
 
