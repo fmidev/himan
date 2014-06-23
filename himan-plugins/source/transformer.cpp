@@ -104,7 +104,7 @@ void transformer::SetAdditionalParameters()
 
 	if(itsConfiguration->Options().count("target_univ_ID"))
 	{
-		itsTargetUnivID = boost::lexical_cast<int>(itsConfiguration->GetValue("target_univ_ID"));
+		itsTargetUnivID = boost::lexical_cast<int>(itsConfiguration->GetValue("target_univ_id"));
 	}
 	else
 	{
@@ -178,11 +178,11 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	// GRIB 2
         if (itsConfiguration->OutputFileType() == kGRIB2)
 	{
-		if (itsConfiguration->Options().count("GribDiscipline") && itsConfiguration->Options().count("GribCategory") && itsConfiguration->Options().count("GribParameter"))
+		if (itsConfiguration->Options().count("grib_discipline") && itsConfiguration->Options().count("grib_category") && itsConfiguration->Options().count("grib_parameter"))
 		{
-			requestedParam.GribDiscipline(boost::lexical_cast<int>(itsConfiguration->GetValue("GribDiscipline")));
-			requestedParam.GribCategory(boost::lexical_cast<int>(itsConfiguration->GetValue("GribCategory")));
-			requestedParam.GribParameter(boost::lexical_cast<int>(itsConfiguration->GetValue("GribParameter")));
+			requestedParam.GribDiscipline(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_discipline")));
+			requestedParam.GribCategory(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_category")));
+			requestedParam.GribParameter(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_parameter")));
 		}
 		else
 		{
