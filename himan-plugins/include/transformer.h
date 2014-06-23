@@ -13,7 +13,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-// #include "transformer_cuda.h"
+#include "transformer_cuda.h"
 #include "level.h"
 
 
@@ -55,12 +55,12 @@ private:
 	// Check and write json parameters needed for transformer plug-in to local variables.
 	void SetAdditionalParameters();
 	std::vector<level> LevelsFromString(const std::string& levelType, const std::string& levelValues) const;
-/*
+
 #ifdef HAVE_CUDA
 	std::unique_ptr<transformer_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
 	void CudaFinish(std::unique_ptr<transformer_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
 #endif
-*/
+
 
 	double itsBase;
 	double itsScale;

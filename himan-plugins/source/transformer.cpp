@@ -28,7 +28,7 @@ using namespace himan::plugin;
 transformer::transformer() : itsBase(0.0), itsScale(1.0), itsTargetUnivID(999)
 {
 	itsClearTextFormula = "target_param = source_param * itsScale + itsBase";
-	itsCudaEnabledCalculation = false;
+	itsCudaEnabledCalculation = true;
 
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("transformer"));
 }
@@ -221,6 +221,8 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	myTargetInfo->FirstParam();
 
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
+
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
@@ -236,7 +238,8 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 			sourceInfo = aFetcher->Fetch(itsConfiguration,
 								 myTargetInfo->Time(),
 								 itsSourceLevels[myTargetInfo->LevelIndex()],
-								 InputParam);
+								 InputParam,
+                                                                 itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
 		}
 		catch (HPExceptionType& e)
 		{
@@ -273,7 +276,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 		string deviceType;
 
-/*
+
 #ifdef HAVE_CUDA
 
 		// If we read packed data but grids are not equal we cannot use cuda
@@ -286,7 +289,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 			Unpack({sourceInfo});
 		}
 
-		if (useCudaInThisThread && equalGrids)
+		if (useCudaInThisThread && equalGrids && !levelOnly)
 		{
 	
 			deviceType = "GPU";
@@ -303,7 +306,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		}
 		else
 #endif
-*/
+
 		{
 
 			deviceType = "CPU";
@@ -382,7 +385,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	}
 }
 
-/*
+
 #ifdef HAVE_CUDA
 
 unique_ptr<transformer_cuda::options> transformer::CudaPrepare( shared_ptr<info> myTargetInfo, shared_ptr<info> sourceInfo)
@@ -416,4 +419,4 @@ void transformer::CudaFinish(unique_ptr<transformer_cuda::options> opts, shared_
 }
 
 #endif
-*/
+

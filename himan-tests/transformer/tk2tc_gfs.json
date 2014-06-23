@@ -22,9 +22,12 @@
 				"scale" : "1.0",
 				"source_param" : "T-K",
                                 "target_param" : "T-C",
-				"target_univ_ID" : "4",
+				"target_univ_id" : "4",
                                 "source_level_type" : "pressure",
-                                "source_levels" : "1000"  } ]
+                                "source_levels" : "1000",
+                                "grib_discipline" : "0",
+                                "grib_category" : "0",
+                                "grib_parameter" : "0" } ]
 	} 
 	]
 }
