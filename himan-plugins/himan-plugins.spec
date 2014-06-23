@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.6.18
+Version: 14.6.23
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -88,6 +88,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun 23 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.23-1.fmi
+- Fixes in transformer
 * Wed Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
 - New plugin: transformer (HIMAN-37)
 - Initial build with Cuda6 (HIMAN-57)
