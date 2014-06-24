@@ -8,52 +8,25 @@ using namespace himan;
 
 const double kEpsilon = 1e-3;
 
-BOOST_AUTO_TEST_CASE(LCL_SLOW)
+BOOST_AUTO_TEST_CASE(UV_TO_GEOGRAPHICAL)
 {
+	// Transform grid coordinates to lat and lon in stereographic projection
 
-        // "slow" calculation of LCL
+	himan::point stereoUV(8.484046, 3.804569);
+	double lon = 72.79;
 
-	std::vector<double> LCL = himan::util::LCL(85000,273.15 + 16.5828, 273.15 + -1.45402);
+	himan::point latlon = util::UVToGeographical(lon, stereoUV);
 
-	BOOST_CHECK_CLOSE(LCL[0], 64829.6, kEpsilon);
-	BOOST_CHECK_CLOSE(LCL[1], 273.15 + -5.01719, kEpsilon);
-}
+	BOOST_CHECK_CLOSE(latlon.X(), 6.144442, kEpsilon); 
+	BOOST_CHECK_CLOSE(latlon.Y(), -6.978511, kEpsilon); 
 
-BOOST_AUTO_TEST_CASE(LCL_FAST)
-{
+	stereoUV.X(-0.2453410);
+	stereoUV.Y(0.5808838);
+	lon = 23.39;
 
-        // fast calculation of LCL
+	latlon = util::UVToGeographical(lon, stereoUV);
 
-	std::vector<double> LCL = himan::util::LCL(85000,273.15 + 16.6453, 273.15 + -1.29777);
-
-	BOOST_CHECK_CLOSE(LCL[0], 64878.5986, kEpsilon);
-	BOOST_CHECK_CLOSE(LCL[1], 273.15 + -4.90058, kEpsilon);
-}
-
-BOOST_AUTO_TEST_CASE(SATURATED_MIXING_RATIO)
-{
-
-	// saturated mixing ratio
-
-	double r = util::MixingRatio(290, 98000);
-
-	BOOST_CHECK_CLOSE(r, 12.4395, kEpsilon);
-
-}
-
-BOOST_AUTO_TEST_CASE(ES)
-{
-
-	// water vapour pressure
-
-	double E = util::Es(285);
-
-	BOOST_CHECK_CLOSE(E, 1389.859, kEpsilon);
-
-	// negative temperatures
-
-	E = util::Es(266);
-
-	BOOST_CHECK_CLOSE(E, 333.356, kEpsilon);
+	BOOST_CHECK_CLOSE(latlon.X(), 5.4238806e-03, kEpsilon); 
+	BOOST_CHECK_CLOSE(latlon.Y(), 0.6305464, kEpsilon); 
 
 }
