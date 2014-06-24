@@ -9,10 +9,6 @@
 #include "cuda_helper.h"
 #include "metutil.h"
 
-/*
- * Calculate results. At this point it as assumed that U and V are in correct form.
- */
-
 __global__ void himan::plugin::stability_cuda::Calculate(cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700,
 		cdarr_t d_t500m, cdarr_t d_td500m, cdarr_t d_p500m, darr_t d_ki, darr_t d_vti, darr_t d_cti, darr_t d_tti, darr_t d_si, darr_t d_li, options opts, int* d_missing)
 {
@@ -20,6 +16,7 @@ __global__ void himan::plugin::stability_cuda::Calculate(cdarr_t d_t850, cdarr_t
 
 	if (idx < opts.N)
 	{
+
 		d_ki[idx] = kFloatMissing;
 
 		double T850 = d_t850[idx];
@@ -39,11 +36,11 @@ __global__ void himan::plugin::stability_cuda::Calculate(cdarr_t d_t850, cdarr_t
 			d_cti[idx] = TD850 - T500;
 			d_vti[idx] = T850 - T500;
 			d_tti[idx] = (TD850 - T500) + (T850 - T500); // CTI + VTI
-			d_si[idx] = SI(T850, T500, TD850, d_missing);
+			//d_si[idx] = SI(T850, T500, TD850, d_missing);
 
 			if (opts.li)
 			{
-				d_li[idx] = LI(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx], d_missing);
+				//d_li[idx] = LI(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx], d_missing);
 			}
 		}
 	}
@@ -161,20 +158,29 @@ void himan::plugin::stability_cuda::Process(options& opts)
 
 	CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
-	Prepare(opts.t500, d_t500, opts.N, stream);
-	Prepare(opts.t700, d_t700, opts.N, stream);
-	Prepare(opts.t850, d_t850, opts.N, stream);
-	Prepare(opts.td700, d_t700, opts.N, stream);
-	Prepare(opts.td850, d_t850, opts.N, stream);
+	Prepare(opts.t500, &d_t500, opts.N, stream);
+	Prepare(opts.t700, &d_t700, opts.N, stream);
+	Prepare(opts.t850, &d_t850, opts.N, stream);
+	Prepare(opts.td700, &d_td700, opts.N, stream);
+	Prepare(opts.td850, &d_td850, opts.N, stream);
 
+	assert(d_t500);
+	assert(d_t700);
+	assert(d_t850);
+	assert(d_td700);
+	assert(d_td850);
+	
 	if (opts.li)
 	{
-		Prepare(opts.t500m, d_t500, opts.N, stream);
-		Prepare(opts.td500m, d_t500, opts.N, stream);
-		Prepare(opts.p500m, d_t500, opts.N, stream);
+		Prepare(opts.t500m, d_t500m, opts.N, stream);
+		Prepare(opts.td500m, d_td500m, opts.N, stream);
+		Prepare(opts.p500m, d_p500m, opts.N, stream);
 
 		CUDA_CHECK(cudaMalloc((void**) &d_li, memsize));
 
+		assert(d_t500m);
+		assert(d_td500m);
+		assert(d_p500m);
 	}
 
 	int src=0;
@@ -183,7 +189,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 
 	// dims
 
-	const int blockSize = 128;
+	const int blockSize = 256;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
 	CUDA_CHECK(cudaMalloc((void**) &d_ki, memsize));
@@ -191,10 +197,6 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	CUDA_CHECK(cudaMalloc((void**) &d_cti, memsize));
 	CUDA_CHECK(cudaMalloc((void**) &d_tti, memsize));
 	CUDA_CHECK(cudaMalloc((void**) &d_si, memsize));
-
-	if (opts.li)
-	{
-	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -204,6 +206,14 @@ void himan::plugin::stability_cuda::Process(options& opts)
 
 	CUDA_CHECK(cudaMemcpyAsync(opts.ki->values, d_ki, memsize, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(opts.si->values, d_si, memsize, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(opts.cti->values, d_cti, memsize, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(opts.vti->values, d_vti, memsize, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(opts.tti->values, d_tti, memsize, cudaMemcpyDeviceToHost, stream));
+
+	if (opts.li)
+	{
+		CUDA_CHECK(cudaMemcpyAsync(opts.li->values, d_li, memsize, cudaMemcpyDeviceToHost, stream));
+	}
 
 	CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
 	
@@ -223,18 +233,23 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	CUDA_CHECK(cudaFree(d_cti));
 	CUDA_CHECK(cudaFree(d_tti));
 
+	if (opts.li)
+	{
+		CUDA_CHECK(cudaFree(d_li));
+	}
+	
 	CUDA_CHECK(cudaFree(d_missing));
 
 	CUDA_CHECK(cudaStreamDestroy(stream)); // this blocks
 }
 
-void himan::plugin::stability_cuda::Prepare(info_simple* source, double* devptr, size_t memsize, cudaStream_t& stream)
+void himan::plugin::stability_cuda::Prepare(info_simple* source, double** devptr, size_t memsize, cudaStream_t& stream)
 {
 	if (source->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		devptr = source->packed_values->Unpack(&stream);
-		CUDA_CHECK(cudaMemcpyAsync(source->values, devptr, memsize, cudaMemcpyDeviceToHost, stream));
+		*devptr = source->packed_values->Unpack(&stream);
+		CUDA_CHECK(cudaMemcpyAsync(source->values, *devptr, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{

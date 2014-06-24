@@ -66,7 +66,7 @@ struct options
 void Process(options& opts);
 
 #ifdef __CUDACC__
-void Prepare(info_simple* source, double* devptr, size_t memsize, cudaStream_t& stream);
+void Prepare(info_simple* source, double** devptr, size_t memsize, cudaStream_t& stream);
 void Prepare(const double* source, double* devptr, size_t memsize, cudaStream_t& stream);
 
 __global__ void Calculate(cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700, cdarr_t d_t500m, cdarr_t d_td500m, cdarr_t d_p500m,

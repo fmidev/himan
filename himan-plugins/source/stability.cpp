@@ -125,8 +125,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	ResetNonLeadingDimension(myTargetInfo);
 
-	//bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
-	bool useCudaInThisThread = false;
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
+	//bool useCudaInThisThread = false;
 	
 	myTargetInfo->FirstParam();
 
