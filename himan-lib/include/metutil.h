@@ -146,9 +146,10 @@ lcl_t LCL_(double P, double T, double TD);
 double WaterProbability_(double T, double RH);
 
 /**
- * @brief Calculate saturated mixing ratio
+ * @brief Calculate actual or saturated mixing ratio.
  *
- * If T is actually TD, actual mixing ratio is calculated.
+ * If first argument is temperature, saturated mixing ratio is calculated.
+ * If first argument is dewpoint temperature, actual mixing ratio is calculated.
  *
  * http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
  *
