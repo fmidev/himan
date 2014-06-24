@@ -7,7 +7,7 @@ import sys
 
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-5.5'
+cuda_toolkit_path = '/usr/local/cuda-6.0'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
         print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -26,11 +26,11 @@ auxiliary_plugins = ['cache','fetcher','grib','hitool','neons','pcuda','querydat
 
 # List all compiled plugins that have only CPU implementation here
 
-compiled_plugins = ['icing', 'stability', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid_height', 'cloud_type', 'ncl', 'rain_type', 'preform_pressure', 'preform_hybrid', 'density', 'precipitation_rate', 'absolute_humidity', 'roughness', 'si', 'weather_symbol', 'fmi_weather_symbol_1', 'transformer']
+compiled_plugins = ['icing', 'stability', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid_height', 'cloud_type', 'ncl', 'rain_type', 'preform_pressure', 'preform_hybrid', 'density', 'precipitation_rate', 'absolute_humidity', 'roughness', 'si', 'weather_symbol', 'fmi_weather_symbol_1']
 
 # List all compiled plugins that have both CPU and GPU implementation here
 
-cuda_plugins = ['dewpoint', 'tk2tc','tpot', 'fog', 'windvector', 'vvms', 'relative_humidity']
+cuda_plugins = ['dewpoint', 'tk2tc','tpot', 'fog', 'windvector', 'vvms', 'relative_humidity', 'transformer']
 
 if have_cuda:
 	env.Tool('cuda')
