@@ -148,13 +148,6 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 			}
 		}
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-		
 		assert(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
 
 		SetAB(myTargetInfo, TInfo);
@@ -309,12 +302,6 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
-#endif
 			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
 			itsConfiguration->Statistics()->AddToValueCount(count);
 		}

@@ -175,17 +175,9 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 			}
 		}
 		
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> CGrid(CInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> RTGrid(RTInfo->Grid()->ToNewbaseGrid());
-
 
 		size_t missingCount = 0;
 		size_t count = 0;
@@ -301,12 +293,6 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
-#endif
 			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
 			itsConfiguration->Statistics()->AddToValueCount(count);
 		}

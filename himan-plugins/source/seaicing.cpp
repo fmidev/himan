@@ -140,14 +140,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 				break;
 			}
 		}
-                
-                unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-		
+                	
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
 		shared_ptr<NFmiGrid> TgGrid(TgInfo->Grid()->ToNewbaseGrid());
@@ -214,17 +207,6 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 			}
 
 		}
-                
-        if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-
-		}
 
 		/*
 		 * Newbase normalizes scanning mode to bottom left -- if that's not what
@@ -235,12 +217,6 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
-#endif
 			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
 			itsConfiguration->Statistics()->AddToValueCount(count);
 		}

@@ -28,7 +28,6 @@ const string itsName("roughness");
 roughness::roughness()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
-
 }
 
 void roughness::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -135,13 +134,6 @@ void roughness::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 			}
 		}
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-		
 		SetAB(myTargetInfo, RoughTInfo);
 
 		size_t missingCount = 0;
@@ -221,16 +213,8 @@ void roughness::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
-#endif
-
 			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
 			itsConfiguration->Statistics()->AddToValueCount(count);
-
 		}
 
 		/*

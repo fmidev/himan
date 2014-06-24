@@ -11,7 +11,6 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "util.h"
 #include "metutil.h"
 #include "NFmiGrid.h"
 
@@ -183,13 +182,6 @@ void fmi_weather_symbol_1::Calculate(shared_ptr<info> myTargetInfo, unsigned sho
 				throw runtime_error(ClassName() + ": Unable to proceed");
 				break;
 			}
-		}
-		
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
 		}
 
 		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
@@ -409,12 +401,6 @@ void fmi_weather_symbol_1::Calculate(shared_ptr<info> myTargetInfo, unsigned sho
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on " + deviceType);
-#endif
 			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
 			itsConfiguration->Statistics()->AddToValueCount(count);
 		}

@@ -28,7 +28,6 @@ const string itsName("absolute_humidity");
 absolute_humidity::absolute_humidity()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
-
 }
 
 void absolute_humidity::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -139,13 +138,6 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 			}
 		}
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
 		SetAB(myTargetInfo, RhoInfo);
 		
 		int missingCount = 0;
@@ -224,16 +216,8 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
-#endif
-
 			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
 			itsConfiguration->Statistics()->AddToValueCount(count);
-
 		}
 
 		/*

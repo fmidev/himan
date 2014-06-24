@@ -170,13 +170,6 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			}
 		}
 
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
 		size_t missingCount = 0;
 		size_t count = 0;
 
@@ -224,15 +217,7 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			percentMultiplier = 100;
 		}
 
-		while ( myTargetInfo->NextLocation() && 
-				targetGrid->Next() &&
-				T0mGrid->Next() &&
-				NGrid->Next() &&
-				KGrid->Next() &&
-				T850Grid->Next() &&
-				RH850Grid->Next() &&
-				RH700Grid->Next() &&
-				RH500Grid->Next() )
+		while ( myTargetInfo->NextLocation() && targetGrid->Next() )
 		{
 
 			count++;
@@ -519,16 +504,8 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
-#endif
-
 			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
 			itsConfiguration->Statistics()->AddToValueCount(count);
-
 		}
 
 		/*
