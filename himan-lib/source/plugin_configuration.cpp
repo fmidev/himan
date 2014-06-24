@@ -183,11 +183,11 @@ void plugin_configuration::WriteStatistics()
 		<< "Used GPU count:\t\t" << itsStatistics->itsUsedGPUCount << endl
 		<< "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
 		<< "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
-		<< "Elapsed time:\t\t" <<  elapsedTime << " microseconds" << endl
-		<< "Plugin init time\t" << itsStatistics->itsInitTime << " microseconds, single thread (" << initTimePercentage << "%)" << endl
-		<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/itsStatistics->itsUsedThreadCount << " microseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
-		<< "Process time:\t\t" << itsStatistics->itsProcessingTime/itsStatistics->itsUsedThreadCount << " microseconds, total over used threads (" << processingTimePercentage << "%)" << endl
-		<< "Writing time:\t\t" << itsStatistics->itsWritingTime/itsStatistics->itsUsedThreadCount << " microseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
+		<< "Elapsed time:\t\t" <<  elapsedTime << " milliseconds" << endl
+		<< "Plugin init time\t" << itsStatistics->itsInitTime << " milliseconds, single thread (" << initTimePercentage << "%)" << endl
+		<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/itsStatistics->itsUsedThreadCount << " milliseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
+		<< "Process time:\t\t" << itsStatistics->itsProcessingTime/itsStatistics->itsUsedThreadCount << " milliseconds, total over used threads (" << processingTimePercentage << "%)" << endl
+		<< "Writing time:\t\t" << itsStatistics->itsWritingTime/itsStatistics->itsUsedThreadCount << " milliseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
 		<< "Values:\t\t\t" << itsStatistics->itsValueCount << endl
 		<< "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
 		<< "PPS:\t\t\t" << 1000*1000*static_cast<double>(itsStatistics->itsValueCount)/static_cast<double>(elapsedTime) << endl;
