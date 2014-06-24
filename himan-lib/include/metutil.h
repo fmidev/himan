@@ -387,8 +387,10 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	// Sanity checks
 
 	assert(P > 10000);
-	assert(T > 0 && T < 500);
-	assert(TD > 0 && TD < 500);
+	assert(T > 0);
+	assert(T < 500);
+	assert(TD > 0);
+	assert(TD < 500);
 
 	// starting T step
 
