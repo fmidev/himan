@@ -5,7 +5,6 @@
 	"start_hour" : "4",
 	"stop_hour" : "5",
 	"step" : "1",
-	"step_unit" : "hour",
 	"file_write" : "multiple",
 	"origintime" : "2013-10-07 00:00:00",
 	"read_data_from_database" : "false",

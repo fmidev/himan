@@ -42,23 +42,23 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
   grib_compare -b referenceValue -A 0.0001 vvms_hl_result_13.grib VV-MS_hybrid_65_rll_1030_816_0_013.grib
 
   if [ $? -ne 0 ];then
-    echo vvms/ec failed on GPU
+    echo vvms/hl failed on GPU
     exit 1
   fi
 
   grib_compare -b referenceValue -A 0.0001 vvms_hl_result_14.grib VV-MS_hybrid_65_rll_1030_816_0_014.grib
 
   if [ $? -ne 0 ];then
-    echo vvms/ec failed on GPU
+    echo vvms/hl failed on GPU
     exit 1
   fi
 
   grib_compare -b referenceValue -A 0.0001 vvms_hl_result_15.grib VV-MS_hybrid_65_rll_1030_816_0_015.grib
 
   if [ $? -eq 0 ];then
-    echo vvms/ec success GPU
+    echo vvms/hl success GPU
   else
-    echo vvms/ec failed on GPU
+    echo vvms/hl failed on GPU
     exit 1
   fi
 

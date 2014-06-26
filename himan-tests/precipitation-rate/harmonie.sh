@@ -3,7 +3,7 @@
 set -x
 
 if [ -z "$HIMAN" ]; then
-	export HIMAN="../../himan-bin/build/release/himan"
+	export HIMAN="../../himan-bin/himan"
 fi
 
 rm -f R*.grib

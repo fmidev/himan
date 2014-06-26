@@ -35,11 +35,18 @@ rm -f RH-PRCNT_hybrid_65_rll_1030_816_0_00*.grib P-HPA*grib
 
   grib_compare -b referenceValue -A 0.01 RH-PRCNT_hybrid_65_rll_1030_816_0_004.grib result_hirlam_4.grib
 
+  if [ $? -ne 0 ];then
+    echo relative_humidity/hirlam failed on GPU
+  fi
+
+  grib_compare -b referenceValue -A 0.01 RH-PRCNT_hybrid_65_rll_1030_816_0_005.grib result_hirlam_5.grib
+
   if [ $? -eq 0 ];then
     echo relative_humidity/hirlam success on GPU!
   else
     echo relative_humidity/hirlam failed on GPU
   fi
+
 else
   echo "no cuda device found for cuda tests"
 fi

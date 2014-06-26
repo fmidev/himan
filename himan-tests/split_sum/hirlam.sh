@@ -9,7 +9,7 @@ fi
 rm -f RR*grib
 
 
-$HIMAN -d 5 -f split_sum_hl.json -t grib hl_source.grib --no-cuda -s hl_nocuda
+$HIMAN -d 5 -f precipitation_hl.json -t grib hl_source.grib --no-cuda -s hl_nocuda
 
 grib_compare hl_result_3_24.grib RR-3-MM_height_0_rll_1030_816_0_024.grib
 
@@ -41,7 +41,7 @@ else
   exit 1
 fi
 
-$HIMAN -d 5 -f split_sum_hl_rate.json -t grib hl_source_rate.grib --no-cuda -s hl_nocuda
+$HIMAN -d 5 -f precipitation_hl_rate.json -t grib hl_source_rate.grib --no-cuda -s hl_nocuda
 
 grib_compare hl_result_rrr_24.grib RRR-KGM2_height_0_rll_1030_816_0_024.grib
 
