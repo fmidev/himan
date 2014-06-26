@@ -81,7 +81,7 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 	if (!CloudInfo || !PrecformInfo || !TotalPrecInfo || !TotalCloudCoverInfo || !LowCloudCoverInfo || !MedCloudCoverInfo || !HighCloudCoverInfo || !FogInfo || !T0mInfo || !T850Info || !KInfo)
 	{
-		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
 	}
 	
@@ -116,8 +116,7 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 		{
 				continue;
 		}
-
-
+		
 		weather_symbol = 0;
 		precType = rain_type(kIndex, T0m, T850); // calculate rain type index
 		fogIntensity = ( fog == 607 ? 1 : 0 ); // calculate fog intesity index

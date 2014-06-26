@@ -57,7 +57,7 @@ void roughness::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	if (!RoughTInfo || !RoughVInfo)
 	{
-		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
 	}
 
@@ -80,5 +80,5 @@ void roughness::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	}
 
-	myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 }

@@ -101,7 +101,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		
 		if (!TDInfo)
 		{
-			itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+			myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 			return;
 		}
 	}

@@ -150,7 +150,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 	if (!TInfo || !T700Info || !T850Info || !T925Info || !RHInfo || !RH700Info || !RH850Info || !RH925Info || !W925Info || !W850Info || !RRInfo || !PInfo || !SNRInfo)
 	{
-		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
 	}
 

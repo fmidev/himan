@@ -63,7 +63,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 	if (!TInfo || !TgInfo || !FfInfo)
 	{
-		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
 	}
 
