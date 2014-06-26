@@ -12,7 +12,7 @@
         {
                 "leveltype" : "height",
                 "levels" : "0",
-                "plugins" : [ { "name" : "fmi_weather_symbol_1" } ]
+                "plugins" : [ { "name" : "weather_code_2" } ]
         }
 	]
 }

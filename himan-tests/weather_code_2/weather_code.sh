@@ -3,7 +3,7 @@
 set -x
 
 if [ -z "$HIMAN" ]; then
-	export HIMAN="../../himan"
+	export HIMAN="../../himan-bin/himan"
 fi
 
 rm -f weather_symbol_hir1h.json.grib weather_symbol_ecmwf.json.grib
