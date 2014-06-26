@@ -52,7 +52,6 @@ public:
 
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-    std::shared_ptr<info> FetchSourceRR(const forecast_time& wantedTime, const level& wantedLevel);
 
 };
 
