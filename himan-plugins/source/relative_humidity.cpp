@@ -6,17 +6,11 @@
  */
 
 #include "relative_humidity.h"
-#include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include "metutil.h"
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -30,7 +24,7 @@ relative_humidity::relative_humidity()
 	itsClearTextFormula = "RH = 100 *  (P * Q / 0.622 / es) * (P - es) / (P - Q * P / 0.622)";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("relative_humidity"));
+	itsLogger = logger_factory::Instance()->GetLog("relative_humidity");
 
 }
 
@@ -38,28 +32,7 @@ void relative_humidity::Process(shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * Set target parameter to relative humidity
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 *
-	 */
-
-	vector<param> params;
-
-	param requestedParam ("RH-PRCNT", 13);
-	requestedParam.Unit(kPrcnt);
-
-	// GRIB 2
-
-	requestedParam.GribDiscipline(0);
-	requestedParam.GribCategory(1);
-	requestedParam.GribParameter(1);
-
-	params.push_back(requestedParam);
-
-	SetParams(params);
+	SetParams({param("RH-PRCNT", 13, 0, 1, 1)});
 
 	Start();
 }
@@ -72,385 +45,213 @@ void relative_humidity::Process(shared_ptr<const plugin_configuration> conf)
 
 void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {	
-	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
-	// Required source parameters
 
 	const param TParam("T-K");
 	const params PParams = { param("P-HPA"), param("P-PA") };
 	const param QParam("Q-KGKG");
 	const param TDParam("TD-C");
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("relative_humidityThread #" + boost::lexical_cast<string> (threadIndex)));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("relative_humidityThread #" + boost::lexical_cast<string> (threadIndex));
 	
-	ResetNonLeadingDimension(myTargetInfo);
-
-	myTargetInfo->FirstParam();
-
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
+
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+
+	double TBase = 0;
+	double TDBase = 0;
+	double PScale = 1;
+	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
+
+	// Temperature is always needed
+
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+
+	if (!TInfo)
 	{
+		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		return;
+	}
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+	// First try to calculate using Q and P
 
-		double TBase = 0;
-		double TDBase = 0;
-		double PScale = 1;
-		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
-		
-		shared_ptr<info> TInfo;
-		shared_ptr<info> TDInfo;
-		shared_ptr<info> PInfo;
-		shared_ptr<info> QInfo;
+	bool calculateWithTD = false;
 
-		// Temperature is always needed
-
-		try
-		{
-			TInfo = f->Fetch(itsConfiguration,
-								myTargetInfo->Time(),
-								myTargetInfo->Level(),
-								TParam,
-								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-
-		}
-		catch (HPExceptionType& e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-
-					continue;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-			}
-		}
-
-		// First try to calculate using Q and P
-
-		bool calculateWithTD = false;
-		
-		try
-		{
-			QInfo = f->Fetch(itsConfiguration,
-								myTargetInfo->Time(),
-								myTargetInfo->Level(),
-								QParam,
-								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-			if (!isPressureLevel)
-			{
-				PInfo = f->Fetch(itsConfiguration,
-								myTargetInfo->Time(),
-								myTargetInfo->Level(),
-								PParams,
-								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-			}
-		}
-		catch (HPExceptionType& e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					myThreadedLogger->Debug("Q or P not found, trying calculation with TD");
-					calculateWithTD = true;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-			}
-		}
-
-		if (calculateWithTD)
-		{
-			try
-			{
-
-				TDInfo = f->Fetch(itsConfiguration,
-								myTargetInfo->Time(),
-								myTargetInfo->Level(),
-								TDParam,
-								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-
-			}
-			catch (HPExceptionType& e)
-			{
-				switch (e)
-				{
-					case kFileDataNotFound:
-						itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-						myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-						if (itsConfiguration->StatisticsEnabled())
-						{
-							itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-							itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-						}
-
-						continue;
-						break;
-
-					default:
-						throw runtime_error(ClassName() + ": Unable to proceed");
-						break;
-				}
-			}
-		}
-
-		assert(!PInfo || TInfo->Grid()->AB() == PInfo->Grid()->AB());
-		assert(!TDInfo || TInfo->Grid()->AB() == TDInfo->Grid()->AB());
-		assert(!QInfo || TInfo->Grid()->AB() == QInfo->Grid()->AB());
-
-		
-		SetAB(myTargetInfo, TInfo);
-
-		if (TInfo->Param().Unit() == kK)
-		{
-			TBase = -constants::kKelvin;
-		}
-
-		if (TDInfo && TDInfo->Param().Unit() == kK)
-		{
-			TDBase = -constants::kKelvin;
-		}
-
-		if (!calculateWithTD && !isPressureLevel && (PInfo->Param().Name() == "P-PA" || PInfo->Param().Unit() == kPa))
-		{
-			PScale = 0.01;
-		}
-
-		shared_ptr<NFmiGrid> PGrid;
-		shared_ptr<NFmiGrid> QGrid;
-		shared_ptr<NFmiGrid> TDGrid;
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-
-		if (calculateWithTD)
-		{
-			TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
-		}
-		else
-		{
-			QGrid = shared_ptr<NFmiGrid> (QInfo->Grid()->ToNewbaseGrid());
-			
-			if (!isPressureLevel)
-			{
-				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
-			}
-		}
+	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	info_t PInfo;
 	
-		size_t missingCount = 0;
-		size_t count = 0;
+	if (!isPressureLevel)
+	{
+		PInfo = Fetch(forecastTime, forecastLevel, PParams, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	}
 
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
+	if (!QInfo || (!isPressureLevel && !PInfo))
+	{
+		myThreadedLogger->Debug("Q or P not found, trying calculation with TD");
+		calculateWithTD = true;
+	}
 
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && 
-							(!QInfo || (*myTargetInfo->Grid() == *QInfo->Grid())) &&
-							(!PInfo || (*myTargetInfo->Grid() == *PInfo->Grid())) &&
-							(!TDInfo || (*myTargetInfo->Grid() == *TDInfo->Grid())));
+	info_t TDInfo;
+	
+	if (calculateWithTD)
+	{
+		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+		
+		if (!TDInfo)
+		{
+			itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+			return;
+		}
+	}
 
-		string deviceType;
+	assert(!PInfo || TInfo->Grid()->AB() == PInfo->Grid()->AB());
+	assert(!TDInfo || TInfo->Grid()->AB() == TDInfo->Grid()->AB());
+	assert(!QInfo || TInfo->Grid()->AB() == QInfo->Grid()->AB());
+
+	SetAB(myTargetInfo, TInfo);
+
+	if (TInfo->Param().Unit() == kK)
+	{
+		TBase = -constants::kKelvin;
+	}
+
+	if (TDInfo && TDInfo->Param().Unit() == kK)
+	{
+		TDBase = -constants::kKelvin;
+	}
+
+	if (!calculateWithTD && !isPressureLevel && (PInfo->Param().Name() == "P-PA" || PInfo->Param().Unit() == kPa))
+	{
+		PScale = 0.01;
+	}
+
+	string deviceType;
 
 #ifdef HAVE_CUDA
 
-		// If we read packed data but grids are not equal we cannot use cuda
-		// for calculations (our cuda routines do not know how to interpolate)
+	if (useCudaInThisThread)
+	{
 
-		if (!equalGrids)
+		deviceType = "GPU";
+
+		if (calculateWithTD)
 		{
-			myThreadedLogger->Debug("Unpacking for CPU calculation");
-		
-			if (TInfo && TInfo->Grid()->IsPackedData())
-			{
-				Unpack({TInfo});
-			}
+			auto opts = CudaPrepareTTD(myTargetInfo, TInfo, TDInfo, TDBase, TBase);
 
-			if (TDInfo && TDInfo->Grid()->IsPackedData())
-			{
-				Unpack({TDInfo});
-			}
+			relative_humidity_cuda::Process(*opts);
 
-			if (QInfo && QInfo->Grid()->IsPackedData())
-			{
-				Unpack({QInfo});
-			}
+			CudaFinish(move(opts), myTargetInfo, TInfo, TDInfo);
+		}
+		else if (isPressureLevel)
+		{
+			auto opts = CudaPrepareTQ(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(), TBase);
 
-			if (PInfo && PInfo->Grid()->IsPackedData())
-			{
-				Unpack({PInfo});
-			}
+			relative_humidity_cuda::Process(*opts);
+
+			CudaFinish(move(opts), myTargetInfo, TInfo, QInfo);
+		}
+		else
+		{
+			auto opts = CudaPrepareTQP(myTargetInfo, TInfo, QInfo, PInfo, PScale, TBase);
+
+			relative_humidity_cuda::Process(*opts);
+
+			CudaFinish(move(opts), myTargetInfo, TInfo, QInfo, PInfo);
+		}
+	}
+	else
+#endif
+	{
+		deviceType = "CPU";
+
+		if (PInfo)
+		{
+			PInfo->ResetLocation();
 		}
 
-		if (useCudaInThisThread && equalGrids)
+		if (TDInfo)
 		{
-	
-			deviceType = "GPU";
+			TDInfo->ResetLocation();
+		}
+
+		if (QInfo)
+		{
+			QInfo->ResetLocation();
+		}
+
+		LOCKSTEP(myTargetInfo, TInfo)
+		{
+
+			double T = TInfo->Value();
+
+			if (T == kFloatMissing)
+			{
+				continue;
+			}
+
+			double TD = kFloatMissing;
+			double P = kFloatMissing;
+			double Q = kFloatMissing;
+			double RH = kFloatMissing;
+
+			T += TBase;
 
 			if (calculateWithTD)
 			{
-				auto opts = CudaPrepareTTD(myTargetInfo, TInfo, TDInfo, TDBase, TBase);
+				TDInfo->NextLocation();
+				TD = TDInfo->Value();
 
-				relative_humidity_cuda::Process(*opts);
+				if (TD == kFloatMissing)
+				{
+					continue;
+				}
 
-				missingCount = opts->missing;
-				count = opts->N;
-
-				CudaFinish(move(opts), myTargetInfo, TInfo, TDInfo);
-			}
-			else if (isPressureLevel)
-			{
-				auto opts = CudaPrepareTQ(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(), TBase);
-
-				relative_humidity_cuda::Process(*opts);
-
-				missingCount = opts->missing;
-				count = opts->N;
-
-				CudaFinish(move(opts), myTargetInfo, TInfo, QInfo);
+				RH = WithTD(T, TD + TDBase);
 			}
 			else
 			{
-				auto opts = CudaPrepareTQP(myTargetInfo, TInfo, QInfo, PInfo, PScale, TBase);
-
-				relative_humidity_cuda::Process(*opts);
-
-				missingCount = opts->missing;
-				count = opts->N;
-
-				CudaFinish(move(opts), myTargetInfo, TInfo, QInfo, PInfo);
-			}
-
-		}
-		else
-#endif
-		{
-			deviceType = "CPU";
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
-			{
-				count++;
-
-				double T = kFloatMissing;
-				double TD = kFloatMissing;
-				double P = kFloatMissing;
-				double Q = kFloatMissing;
-				double RH = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-
-				if (T == kFloatMissing)
+				if (isPressureLevel)
 				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-				
-				T += TBase;
-
-				if (calculateWithTD)
-				{
-					InterpolateToPoint(targetGrid, TDGrid, equalGrids, TD);
-
-					if (TD == kFloatMissing)
-					{
-						missingCount++;
-
-						myTargetInfo->Value(kFloatMissing);
-						continue;
-					}
-
-					TD += TDBase;
-					RH = WithTD(T, TD);
+					P = myTargetInfo->Level().Value(); // Pressure is needed as hPa, no scaling
 				}
 				else
 				{
-					if (isPressureLevel)
-					{
-						P = myTargetInfo->Level().Value();
-					}
-					else
-					{
-						InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-					}
-
-					InterpolateToPoint(targetGrid, QGrid, equalGrids, Q);
-
-					if (P == kFloatMissing || Q == kFloatMissing)
-					{
-						missingCount++;
-
-						myTargetInfo->Value(kFloatMissing);
-						continue;
-					}
-
-					P *= PScale;
-					RH = WithQ(T, Q, P);
+					PInfo->NextLocation();
+					P = PInfo->Value();
 				}
 
-				if (RH > 1.0)
+				QInfo->NextLocation();
+				Q = QInfo->Value();
+
+				if (P == kFloatMissing || Q == kFloatMissing)
 				{
-					RH = 1.0;
-				}
-				else if (RH < 0.0)
-				{
-					RH = 0.0;
+					continue;
 				}
 
-				RH *= 100;
-
-				if (!myTargetInfo->Value(RH))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
-				}
-
+				P *= PScale;
+				RH = WithQ(T, Q, P);
 			}
 
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
+			if (RH > 1.0)
+			{
+				RH = 1.0;
+			}
+			else if (RH < 0.0)
+			{
+				RH = 0.0;
+			}
 
-			SwapTo(myTargetInfo, kBottomLeft);
+			RH *= 100;
+
+			myTargetInfo->Value(RH);
 		}
 
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
-		
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 */
-
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
 	}
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+
 }
 
 inline
@@ -580,8 +381,6 @@ void relative_humidity::CudaFinish(unique_ptr<relative_humidity_cuda::options> o
 	{
 		CopyDataFromSimpleInfo(PInfo, opts->P, true);
 	}
-
-	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 
 }
 #endif

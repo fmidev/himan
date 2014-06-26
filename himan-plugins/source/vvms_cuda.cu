@@ -11,8 +11,7 @@ __global__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ d
 														const double* __restrict__ d_vv,
 														const double* __restrict__ d_p,
 														double* __restrict__ d_vv_ms,
-														options opts,
-														int* d_missing)
+														options opts)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -23,7 +22,6 @@ __global__ void himan::plugin::vvms_cuda::Calculate(const double* __restrict__ d
 
 		if (d_t[idx] == kFloatMissing || d_vv[idx] == kFloatMissing || P == kFloatMissing)
 		{
-			atomicAdd(d_missing, 1);
 			d_vv_ms[idx] = kFloatMissing;
 		}
 		else
@@ -49,9 +47,6 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 	double* d_vv = 0;
 	double* d_vv_ms = 0;
 
-	int* d_missing = 0;
-
-	CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 	CUDA_CHECK(cudaMalloc((void **) &d_vv_ms, memsize));
 
 	if (opts.t->packed_values)
@@ -90,10 +85,6 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 		}
 	}
 
-	int src=0;
-
-	CUDA_CHECK(cudaMemcpyAsync(d_missing, &src, sizeof(int), cudaMemcpyHostToDevice, stream));
-
 	// dims
 
 	const int blockSize = 512;
@@ -101,7 +92,7 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t, d_vv, d_p, d_vv_ms, opts, d_missing);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t, d_vv, d_p, d_vv_ms, opts);
 	
 	// block until the device has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -109,7 +100,7 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 	// Retrieve result from device
-	CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
+
 	CUDA_CHECK(cudaMemcpyAsync(opts.vv_ms->values, d_vv_ms, memsize, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -123,6 +114,5 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 		CUDA_CHECK(cudaFree(d_p));
 	}
 
-	CUDA_CHECK(cudaFree(d_missing));
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }

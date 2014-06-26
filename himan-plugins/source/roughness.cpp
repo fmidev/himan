@@ -8,17 +8,10 @@
  */
 
 #include "roughness.h"
-#include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include <boost/thread.hpp>
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -27,34 +20,16 @@ const string itsName("roughness");
 
 roughness::roughness()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
+	itsClearTextFormula = "roughness = terrain roughness + surface roughness";
+
+	itsLogger = logger_factory::Instance()->GetLog(itsName);
 }
 
 void roughness::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
-
-	vector<param> theParams;
-	param theRequestedParam("SR-M", 283);
-
-	//param theRequestedParam(PARM_ NAME, UNIV_ID);
-
-	// GRIB 2
-
-	theRequestedParam.GribDiscipline(2);
-	theRequestedParam.GribCategory(0);
-	theRequestedParam.GribParameter(1);
-
-	// GRIB 1
-
-	/*
-	 * GRIB 1 parameters go here
-	 *
-	 */
-
-	theParams.push_back(theRequestedParam);
-
-	SetParams(theParams);
+	
+	SetParams({param("SR-M", 283, 2, 0, 1)});
 
 	Start();
 }
@@ -67,167 +42,43 @@ void roughness::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void roughness::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
+	const param RoughTParam("SR-M"); // Surface roughness terrain contribution
+	const param RoughVParam("SRMOM-M"); // Surface roughness vegetation contribution
 
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
 
-	// Required source parameters
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	/*
-	 * eg. param PParam("P-Pa"); for pressure in pascals
-	 *
-	 */
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	param RoughTParam("SR-M"); // Surface roughness terrain contribution
-	param RoughVParam("SRMOM-M"); // Surface roughness vegetation contribution
-	// ----	
+	info_t RoughTInfo = Fetch(forecastTime, forecastLevel, RoughTParam, false);
+	info_t RoughVInfo = Fetch(forecastTime, forecastLevel, RoughVParam, false);
 
-
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
-
-	ResetNonLeadingDimension(myTargetInfo);
-
-	myTargetInfo->FirstParam();
-
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	if (!RoughTInfo || !RoughVInfo)
 	{
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		shared_ptr<info> RoughTInfo;
-		shared_ptr<info> RoughVInfo;
-		try
-		{
-
-			// Source info for RoughTParam and RoughVParam
-			RoughTInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 RoughTParam);
-
-			RoughVInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 RoughVParam);
-			// ----
-
-		}
-		catch (HPExceptionType e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing);
-
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-					
-					continue;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-			}
-		}
-
-		SetAB(myTargetInfo, RoughTInfo);
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		/*
-		 * Converting original grid-data to newbase grid
-		 *
-		 */
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> RoughTGrid(RoughTInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> RoughVGrid(RoughVInfo->Grid()->ToNewbaseGrid());
-
-		bool equalGrids = (*myTargetInfo->Grid() == *RoughTInfo->Grid() && *myTargetInfo->Grid() == *RoughVInfo->Grid());
-
-
-		string deviceType;
-
-		{
-
-			deviceType = "CPU";
-
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
-			{
-
-				count++;
-
-				/*
-				 * interpolation happens here
-				 *
-				 */
-				double RoughT = kFloatMissing;
-				double RoughV = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, RoughTGrid, equalGrids, RoughT);
-
-				InterpolateToPoint(targetGrid, RoughVGrid, equalGrids, RoughV);
-
-				if (RoughT == kFloatMissing || RoughV == kFloatMissing )
-				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-
-				/*
-				 * Calculations go here
-				 *
-				 */
-				RoughT+=RoughV;
-
-				if (!myTargetInfo->Value(RoughT))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
-				}
-			}
-
-		}
-
-
-
-		/*
-		 * Newbase normalizes scanning mode to bottom left -- if that's not what
-		 * the target scanning mode is, we have to swap the data back.
-		 */
-
-		SwapTo(myTargetInfo, kBottomLeft);
-
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
-
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 * */
-
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
+		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
 	}
+
+	string deviceType = "CPU";
+
+	LOCKSTEP(myTargetInfo, RoughTInfo, RoughVInfo)
+	{
+
+		double RoughT = RoughTInfo->Value();
+		double RoughV = RoughVInfo->Value();
+
+		if (RoughT == kFloatMissing || RoughV == kFloatMissing )
+		{
+			continue;
+		}
+
+		RoughT+=RoughV;
+
+		myTargetInfo->Value(RoughT);
+
+	}
+
+	myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 }

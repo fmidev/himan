@@ -6,6 +6,7 @@
 #include <cuda_runtime.h>
 #include "stdio.h"
 #include "tpot_cuda.h"
+#include "metutil.h"
 
 __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d_t,
 													const double* __restrict__ d_p,
@@ -13,8 +14,7 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 													double* __restrict__ d_tp,
 													double* __restrict__ d_tpw,
 													double* __restrict__ d_tpe,
-													options opts,
-													int* d_missing)
+													options opts)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -24,34 +24,25 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 
 		if (opts.theta)
 		{
-			d_tp[idx] = Theta(opts.t_base + d_t[idx], P * opts.p_scale, opts, d_missing);
+			d_tp[idx] = Theta(opts.t_base + d_t[idx], P * opts.p_scale, opts);
 		}
 		if (opts.thetaw)
 		{
-			d_tpw[idx] = ThetaW(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts, d_missing);
+			d_tpw[idx] = ThetaW(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts);
 		}
 		if (opts.thetae)
 		{
-			d_tpe[idx] = ThetaE(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts, d_missing);
+			d_tpe[idx] = ThetaE(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts);
 		}
 
 	}
 }
-__device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options opts,int* d_missing)
+__device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options opts)
 {
 
-	double theta;
+	double theta = kFloatMissing;
 	
-	if (T == kFloatMissing || P == kFloatMissing)
-	{
-		if (d_missing)
-		{
-			atomicAdd(d_missing, 1);
-		}
-		
-		theta = kFloatMissing;
-	}
-	else
+	if (T != kFloatMissing && P != kFloatMissing)
 	{
 		theta = T * pow((1000 / (0.01 * P)), 0.28586);
 	}
@@ -60,24 +51,22 @@ __device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options op
 
 }
 
-__device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD, options opts, int* d_missing)
+__device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD, options opts)
 {
 
 	double value = kFloatMissing;
 
-	if (T == kFloatMissing || P == kFloatMissing || TD == kFloatMissing)
+	if (T != kFloatMissing && P != kFloatMissing && TD != kFloatMissing)
 	{
-		atomicAdd(d_missing, 1);
-	}
-	else
-	{
+
 		const double Pstep = 500; // Pa
 
 		// Search LCL level
 
-		double Tint = 0, Pint = 0;
+		lcl_t LCL = himan::metutil::LCL_(P, T, TD);
 
-		LCL(P, T, TD, Pint, Tint);
+		double Tint = LCL.T;
+		double Pint = LCL.P;
 
 		int i = 0;
 
@@ -106,7 +95,7 @@ __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD
 				}
 
 				// Gammas() takes hPa
-				Tint = T0 + Gammas(Pint, Tint) * Z;
+				Tint = T0 + himan::metutil::Gammas_(Pint, Tint) * Z;
 
 				if (i > 2)
 				{
@@ -127,37 +116,32 @@ __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD
 	return value;
 }
 
-__device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD, options opts, int* d_missing)
+__device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD, options opts)
 {
 
 	double value = kFloatMissing;
 
-	if (T == kFloatMissing || P == kFloatMissing || TD == kFloatMissing)
-	{
-		atomicAdd(d_missing, 1);
-	}
-	else
+	if (T != kFloatMissing && P != kFloatMissing & TD != kFloatMissing)
 	{
 		// Search LCL level
 
-		double TLCL = 0, PLCL = 0;
 		const double kEp = 0.622;
 		const double kL = 2.5e6;
 		const double kCp = 1003.5;
 
-		LCL(P, T, TD, PLCL, TLCL);
+		lcl_t LCL = himan::metutil::LCL_(P, T, TD);
 
-		if (TLCL != kFloatMissing)
+		if (LCL.T != kFloatMissing)
 		{
-			double theta = Theta(T, P, opts, 0) - 273.15; // C
+			double theta = Theta(T, P, opts) - himan::constants::kKelvin; // C
 
 			// No need to check theta for kFloatMissing since Theta() always returns
 			// value if T and P are != kFloatMissing
 		
-			double ZEs = Es(TLCL) * 0.01;
+			double ZEs = himan::metutil::Es_(LCL.T) * 0.01;
 			double ZQs = kEp * (ZEs / (P*0.01 - ZEs));
 
-			value = 273.15 + theta * exp(kL * ZQs / kCp / (TLCL));
+			value = 273.15 + theta * exp(kL * ZQs / kCp / (LCL.T));
 		}
 	}
 
@@ -177,13 +161,9 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 	double* d_tpw = 0;
 	double* d_tpe = 0;
 
-	int* d_missing = 0;
-
 	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate memory on device
-
-	CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
 	if (opts.theta)
 	{
@@ -248,10 +228,6 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 		}
 	}
 	
-	int src=0;
-
-	CUDA_CHECK(cudaMemcpyAsync(d_missing, &src, sizeof(int), cudaMemcpyHostToDevice, stream));
-
 	// dims
 
 	const int blockSize = 512;
@@ -259,7 +235,7 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 		
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 	
-	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t, d_p, d_td, d_tp, d_tpw, d_tpe, opts, d_missing);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t, d_p, d_td, d_tp, d_tpw, d_tpe, opts);
 
 	// block until the device has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -271,7 +247,6 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// Retrieve result from device
-	CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
 
 	if (opts.theta)
 	{
@@ -291,8 +266,6 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 		CUDA_CHECK(cudaFree(d_tpe));
 	}
 
-
-	CUDA_CHECK(cudaFree(d_missing));
 	CUDA_CHECK(cudaFree(d_t));
 	
 	if (d_p)
@@ -300,9 +273,15 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 		CUDA_CHECK(cudaFree(d_p));
 	}
 
+	if (d_td)
+	{
+		CUDA_CHECK(cudaFree(d_td));
+	}
+
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }
 
+#if 0
 __device__ void himan::plugin::tpot_cuda::LCL(double P, double T, double TD, double& Pout, double& Tout)
 {
 	// starting T step
@@ -412,3 +391,4 @@ __device__ double himan::plugin::tpot_cuda::Gammas(double P, double T)
 
 	return A / (1 + kEp / kCp * (kL*kL / kRd * Q / (T*T)));
 }
+#endif

@@ -225,7 +225,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	assert((theInfos[0]->Time()) == requestedTime);
 
 	assert((theInfos[0]->Param()) == requestedParam);
-
+#define FETCHER_INTERPOLATE
 #ifdef FETCHER_INTERPOLATE
 	auto baseInfo = make_shared<info> (*config->Info());
 	baseInfo->First();

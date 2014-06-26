@@ -6,19 +6,11 @@
  */
 
 #include "weather_symbol.h"
-#include <iostream>
 #include <map>
-#include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "util.h"
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -42,10 +34,9 @@ const int snow[4][3] = {
         {0,43,53}
 }; 
 
-
 weather_symbol::weather_symbol()
 {
-	itsClearTextFormula = "weather_symbol = ";
+	itsClearTextFormula = "weather_symbol = <algorithm>";
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("weather_symbol"));
 
     // hilake: etsi_pilvi.F
@@ -80,23 +71,9 @@ void weather_symbol::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	/*
 	 * Set target parameter to weather_symbol
-	 * - name HESSAA-N
-	 * - univ_id 80
-	 * 
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 * (todo: we could check from conf but why bother?)
-	 *
 	 */
 
-	vector<param> theParams;
-
-	param theRequestedParam("HESSAA-N", 338);
-
-	theParams.push_back(theRequestedParam);
-
-	SetParams(theParams);
+	SetParams({param("HESSAA-N", 338)});
 
 	Start();
 }
@@ -110,8 +87,6 @@ void weather_symbol::Process(std::shared_ptr<const plugin_configuration> conf)
 void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
 	// Required source parameters
 
 	param CParam("CLDSYM-N");
@@ -119,197 +94,106 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 	level HLevel(himan::kHeight, 0, "HEIGHT");
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("weather_symbolThread #" + boost::lexical_cast<string> (theThreadIndex)));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("weather_symbolThread #" + boost::lexical_cast<string> (theThreadIndex));
 
-	ResetNonLeadingDimension(myTargetInfo);
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	myTargetInfo->FirstParam();
+	myThreadedLogger->Info("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) +
+								" level " + static_cast<string> (forecastLevel));
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	info_t CInfo = Fetch(forecastTime, HLevel, CParam, false);
+	info_t RTInfo = Fetch(forecastTime, HLevel, RTParam, false);
+
+	if (!CInfo || !RTInfo)
 	{
-
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		//myTargetInfo->Data()->Resize(conf->Ni(), conf->Nj());
-
-		shared_ptr<info> CInfo;
-		shared_ptr<info> RTInfo;
-
-		try
-		{
-			// Source info for clouds
-			CInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 HLevel,
-								 CParam);				
-			// Source info for hsade
-			RTInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 HLevel,
-								 RTParam);
-
-				
-		}
-		catch (HPExceptionType& e)
-		{
-
-			switch (e)
-			{
-			case kFileDataNotFound:
-				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-				if (itsConfiguration->StatisticsEnabled())
-				{
-					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-				}
-
-				continue;
-				break;
-
-			default:
-				throw runtime_error(ClassName() + ": Unable to proceed");
-				break;
-			}
-		}
-		
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> CGrid(CInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> RTGrid(RTInfo->Grid()->ToNewbaseGrid());
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-		bool equalGrids = (*myTargetInfo->Grid() == *CInfo->Grid() &&
-							*myTargetInfo->Grid() == *RTInfo->Grid());
-
-		myTargetInfo->ResetLocation();
-
-		targetGrid->Reset();
-
-		string deviceType = "CPU";
-
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
-		{
-			count++;
-
-			double cloudSymbol = kFloatMissing;
-			double rainType = kFloatMissing;
-			
-			InterpolateToPoint(targetGrid, CGrid, equalGrids, cloudSymbol);
-			InterpolateToPoint(targetGrid, RTGrid, equalGrids, rainType);
-
-
-			if (cloudSymbol == kFloatMissing || rainType == kFloatMissing )
-			{
-				missingCount++;
-
-				myTargetInfo->Value(kFloatMissing);  // No missing values
-				continue;
-			}
-
-			double weather_symbol;
-			double ctype, rtype, rform, wtype;
-		
-			weather_symbol = 0;
-			ctype = cloud_type(cloudSymbol);
-			rtype = rain_type(rainType);
-			rform = rain_form(rainType);
-			wtype = weather_type(rainType);
-
-			if (rform == 1)
-			{   
-				if(rtype == 1)
-				{
-					if (ctype > 0 && wtype > 0)
-					{
-						// jatkuva vesisade
-						weather_symbol = rain[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];					
-					}
-				}
-				else if (rtype == 2)
-				{
-					if (ctype > 0 && wtype > 0)
-					{
-						// kuurottainen vesisade
-						weather_symbol = rain[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
-					}
-				}
-				else if (rtype == 3)
-				{
-					if (ctype > 0 && wtype > 0)
-					{
-						// ukkonen ja vesisade
-						weather_symbol = thunder_and_rain[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
-						
-					}
-				}
-			}
-			else if (rform == 2) 
-			{
-				if(rtype == 1)
-				{
-					if (ctype > 0 && wtype > 0)
-					{
-						// jatkuva lumisade
-						weather_symbol = snow[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
-					}
-				}
-				else if (rtype == 2)
-				{
-					if (ctype > 0 && wtype > 0)
-					{
-						// kuurottainen lumisade
-						weather_symbol = snow[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
-					}
-				}
-				else if (rtype == 3)
-				{
-					if (ctype > 0 && wtype > 0)
-					{
-						// ukkonen ja lumisade
-						weather_symbol = snow[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
-					}
-				}
-			}
-
-			if (!myTargetInfo->Value(weather_symbol))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
-			}
-
-		}  
-
-		/*
-		 * Newbase normalizes scanning mode to bottom left -- if that's not what
-		 * the target scanning mode is, we have to swap the data back.
-		 */
-
-		SwapTo(myTargetInfo, kBottomLeft);
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
-		
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places		 
-		 */
-
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
+		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + boost::lexical_cast<string> (forecastLevel));
+		return;
 	}
+		
+	string deviceType = "CPU";
+
+	LOCKSTEP (myTargetInfo, CInfo, RTInfo)
+	{
+		double cloudSymbol = CInfo->Value();
+		double rainType = RTInfo->Value();
+			
+		if (cloudSymbol == kFloatMissing || rainType == kFloatMissing )
+		{
+			continue;
+		}
+
+		double weather_symbol;
+		double ctype, rtype, rform, wtype;
+		
+		weather_symbol = 0;
+		ctype = cloud_type(cloudSymbol);
+		rtype = rain_type(rainType);
+		rform = rain_form(rainType);
+		wtype = weather_type(rainType);
+
+		if (rform == 1)
+		{
+			if(rtype == 1)
+			{
+				if (ctype > 0 && wtype > 0)
+				{
+					// jatkuva vesisade
+					weather_symbol = rain[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
+				}
+			}
+			else if (rtype == 2)
+			{
+				if (ctype > 0 && wtype > 0)
+				{
+					// kuurottainen vesisade
+					weather_symbol = rain[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
+				}
+			}
+			else if (rtype == 3)
+			{
+				if (ctype > 0 && wtype > 0)
+				{
+					// ukkonen ja vesisade
+					weather_symbol = thunder_and_rain[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
+
+				}
+			}
+		}
+		else if (rform == 2)
+		{
+			if(rtype == 1)
+			{
+				if (ctype > 0 && wtype > 0)
+				{
+					// jatkuva lumisade
+					weather_symbol = snow[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
+				}
+			}
+			else if (rtype == 2)
+			{
+				if (ctype > 0 && wtype > 0)
+				{
+					// kuurottainen lumisade
+					weather_symbol = snow[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
+				}
+			}
+			else if (rtype == 3)
+			{
+				if (ctype > 0 && wtype > 0)
+				{
+					// ukkonen ja lumisade
+					weather_symbol = snow[static_cast<int>(wtype)-1][static_cast<int>(ctype)-1];
+				}
+			}
+		}
+
+		myTargetInfo->Value(weather_symbol);
+
+	}  
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+
 }
 
 double weather_symbol::rain_form(double rr) {

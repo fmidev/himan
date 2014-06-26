@@ -11,15 +11,9 @@
 #include "tpot.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
-#include "timer_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -36,7 +30,7 @@ tpot::tpot()
 	itsClearTextFormula = "TP = Tk * pow((1000/P), 0.286) ; TPW calculated with LCL ; TPE = X"; 
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpot"));
+	itsLogger = logger_factory::Instance()->GetLog("tpot");
 
 }
 
@@ -46,14 +40,6 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	/*
 	 * Set target parameter to potential temperature
-	 * - name TP-K
-	 * - univ_id 8
-	 * - grib2 descriptor 0'00'002
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 * (todo: we could check from conf but why bother?)
-	 *
 	 */
 
 	vector<param> theParams;
@@ -64,12 +50,8 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		itsLogger->Trace("Theta calculation requested");
 
-		param p("TP-K", 8);
+		param p("TP-K", 8, 0, 0, 2);
 
-		p.GribDiscipline(0);
-		p.GribCategory(0);
-		p.GribParameter(2);		
-		
 		theParams.push_back(p);
 	}
 
@@ -79,13 +61,9 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		itsLogger->Trace("ThetaW calculation requested");
 
-		param p("TPW-K", 9);
+		// Sharing GRIB2 number with thetae!
 
-		// Sharing number with thetae!
-
-		p.GribDiscipline(0);
-		p.GribCategory(0);
-		p.GribParameter(3);
+		param p("TPW-K", 9, 0, 0, 3);
 
 		theParams.push_back(p);
 	}
@@ -96,16 +74,11 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		itsLogger->Trace("ThetaE calculation requested");
 
-		param p("TPE-K", 129);
+		param p("TPE-K", 129, 0, 0, 3);
 
-		// Sharing number with thetaw!
-
-		p.GribDiscipline(0);
-		p.GribCategory(0);
-		p.GribParameter(3);
+		// Sharing GRIB2 number with thetaw!
 
 		theParams.push_back(p);
-
 	}
 
 	if (theParams.size() == 0)
@@ -114,11 +87,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		itsThetaCalculation = true;
 
-		param p("TP-K", 8);
-
-		p.GribDiscipline(0);
-		p.GribCategory(0);
-		p.GribParameter(2);
+		param p("TP-K", 8, 0, 0, 2);
 
 		theParams.push_back(p);
 	}
@@ -138,281 +107,154 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (threadIndex));
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (threadIndex)));
-
-	ResetNonLeadingDimension(myTargetInfo);
-
-	myTargetInfo->FirstParam();
-
+	const param TParam("T-K");
 	const params PParam = { param("P-PA"), param("P-HPA") };
 	const params TDParam = { param("TD-C"), param("TD-K") };
 	
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
-	{
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+	myThreadedLogger->Info("Calculating time " +static_cast<string> (*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-		double PScale = 1;
-		double TBase = 0;
-		double TDBase  = 0;
+	double PScale = 1;
+	double TBase = 0;
+	double TDBase  = 0;
 		
-		// Source infos
-		shared_ptr<info> TInfo;
-		shared_ptr<info> PInfo;
-		shared_ptr<info> TDInfo;
+	info_t TInfo = Fetch(forecastTime, forecastLevel, param("T-K"), itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	info_t TDInfo, PInfo;
 
-		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
+	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-		try
+	if (!isPressureLevel)
+	{
+		PInfo = Fetch(forecastTime, forecastLevel, PParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+
+		if (PInfo && (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA"))
 		{
+			PScale = 100;
+		}
+	}
 
-			TInfo = theFetcher->Fetch(itsConfiguration,
-										myTargetInfo->Time(),
-										myTargetInfo->Level(),
-										param("T-K"),
-										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	if (itsThetaWCalculation || itsThetaECalculation)
+	{
+		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	}
 
-			if (!isPressureLevel)
+	if (!TInfo || (!isPressureLevel && !PInfo) || ((itsThetaWCalculation || itsThetaECalculation) && !TDInfo))
+	{
+		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
+	}
+
+	assert(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB()) && (!TDInfo || (PInfo->Grid()->AB() == TDInfo->Grid()->AB()))));
+
+	SetAB(myTargetInfo, TInfo);
+
+	if (TInfo->Param().Unit() == kC)
+	{
+		TBase = -himan::constants::kKelvin;
+	}
+
+	if (TDInfo && TDInfo->Param().Unit() == kC)
+	{
+		TDBase = -himan::constants::kKelvin;
+	}
+
+	string deviceType;
+
+#ifdef HAVE_CUDA
+
+	if (useCudaInThisThread)
+	{
+		deviceType = "GPU";
+
+		auto opts = CudaPrepare(myTargetInfo, TInfo, PInfo, TDInfo);
+
+		tpot_cuda::Process(*opts);
+
+		CudaFinish(move(opts), myTargetInfo, TInfo, PInfo, TDInfo);
+
+	}
+	else
+#endif
+	{
+		deviceType = "CPU";
+
+		if (PInfo)
+		{
+			PInfo->ResetLocation();
+		}
+
+		if (TDInfo)
+		{
+			TDInfo->ResetLocation();
+		}
+
+		LOCKSTEP(myTargetInfo, TInfo)
+		{
+		
+			double T = TInfo->Value() + TBase; // to Kelvin
+			
+			double P = kFloatMissing, TD = kFloatMissing;
+
+			if (isPressureLevel)
 			{
-				// Source info for P
-				PInfo = theFetcher->Fetch(itsConfiguration,
-											myTargetInfo->Time(),
-											myTargetInfo->Level(),
-											PParam,
-											itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-
-				if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
-				{
-					PScale = 100;
-				}
+				P = myTargetInfo->Level().Value() * 100;
+			}
+			else
+			{
+				PInfo->NextLocation();
+				P = PInfo->Value() * PScale; // to Pa
 			}
 
 			if (itsThetaWCalculation || itsThetaECalculation)
 			{
-				TDInfo = theFetcher->Fetch(itsConfiguration,
-										myTargetInfo->Time(),
-										myTargetInfo->Level(),
-										TDParam,
-										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-
-
+				TDInfo->NextLocation();
+				TD = TDInfo->Value() + TDBase; // to Kelvin
 			}
-		}
-		catch (HPExceptionType& e)
-		{
-			switch (e)
+
+			if (T == kFloatMissing || P == kFloatMissing || ((itsThetaECalculation || itsThetaWCalculation) && TD == kFloatMissing))
 			{
-				case kFileDataNotFound:
-					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-
-					continue;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
+				continue;
 			}
-		}
 
-		assert(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB()) && (!TDInfo || (PInfo->Grid()->AB() == TDInfo->Grid()->AB()))));
+			double theta = kFloatMissing;
 
-		SetAB(myTargetInfo, TInfo);
-
-		if (TInfo->Param().Unit() == kC)
-		{
-			TBase = himan::constants::kKelvin;
-		}
-
-		if (TDInfo && TDInfo->Param().Unit() == kC)
-		{
-			TDBase = himan::constants::kKelvin;
-		}
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && (isPressureLevel || *myTargetInfo->Grid() == *PInfo->Grid()));
-
-		if (TDInfo)
-		{
-			equalGrids = equalGrids && *myTargetInfo->Grid() == *TDInfo->Grid();
-		}
-
-		string deviceType;
-
-#ifdef HAVE_CUDA
-
-		// If we read packed data but grids are not equal we cannot use cuda
-		// for calculations (our cuda routines do not know how to interpolate)
-
-		if (!equalGrids && (TInfo->Grid()->IsPackedData() || TDInfo->Grid()->IsPackedData() || (PInfo && PInfo->Grid()->IsPackedData())))
-		{
-			myThreadedLogger->Debug("Unpacking for CPU calculation");
-
-			Unpack({TInfo, TDInfo});
-
-			if (PInfo)
+			if (itsThetaCalculation)
 			{
-				Unpack({PInfo});
+				theta = Theta(P, T);
+
+				myTargetInfo->Param(param("TP-K"));
+
+				myTargetInfo->Value(theta);
 			}
-		}
-		
-		if (useCudaInThisThread && equalGrids)
-		{
-			deviceType = "GPU";
 
-			auto opts = CudaPrepare(myTargetInfo, TInfo, PInfo, TDInfo);
-
-			tpot_cuda::Process(*opts);
-
-			count = opts->N;
-			missingCount = opts->missing;
-
-			CudaFinish(move(opts), myTargetInfo, TInfo, PInfo, TDInfo);
-
-		}
-		else
-#endif
-		{
-
-			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> TDGrid, PGrid;
-			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-
-			if (TDInfo)
+			if (itsThetaWCalculation)
 			{
-				TDGrid = shared_ptr<NFmiGrid> (TDInfo->Grid()->ToNewbaseGrid());
+				double value = ThetaW(P, T, TD);
+
+				myTargetInfo->Param(param("TPW-K"));
+
+				myTargetInfo->Value(value);
 			}
 
-			if (PInfo)
+			if (itsThetaECalculation)
 			{
-				PGrid = shared_ptr<NFmiGrid> (PInfo->Grid()->ToNewbaseGrid());
+				double value = ThetaE(P, T, TD, theta);
+
+				myTargetInfo->Param(param("TPE-K"));
+
+				!myTargetInfo->Value(value);
 			}
-
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			deviceType = "CPU";
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
-			{
-				count++;
-
-				double T = kFloatMissing;
-				double P = kFloatMissing;
-				double TD = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-
-				if (isPressureLevel)
-				{
-					P = myTargetInfo->Level().Value() * 100;
-				}
-				else
-				{
-					InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-				}
-
-				if (itsThetaWCalculation || itsThetaECalculation)
-				{
-					InterpolateToPoint(targetGrid, TDGrid, equalGrids, TD);
-					TD -= TDBase; // to Kelvin
-				}
-
-				if (T == kFloatMissing || P == kFloatMissing || ((itsThetaECalculation || itsThetaWCalculation) && TD == kFloatMissing))
-				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-
-				T -= TBase; // to Kelvin
-				P *= PScale; // to Pa
-
-				double theta = kFloatMissing;
-
-				if (itsThetaCalculation)
-				{
-					theta = Theta(P, T);
-
-					myTargetInfo->Param(param("TP-K"));
-
-					if (!myTargetInfo->Value(theta))
-					{
-						throw runtime_error(ClassName() + ": Failed to set value to matrix");
-					}
-				}
-				
-				if (itsThetaWCalculation)
-				{
-					double value = ThetaW(P, T, TD);
-
-					myTargetInfo->Param(param("TPW-K"));
-
-					if (!myTargetInfo->Value(value))
-					{
-						throw runtime_error(ClassName() + ": Failed to set value to matrix");
-					}
-				}
-				
-				if (itsThetaECalculation)
-				{
-					double value = ThetaE(P, T, TD, theta);
-
-					myTargetInfo->Param(param("TPE-K"));
-
-					if (!myTargetInfo->Value(value))
-					{
-						throw runtime_error(ClassName() + ": Failed to set value to matrix");
-					}
-				}
-			}
-
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
-
-			SwapTo(myTargetInfo, kBottomLeft);
 		}
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
-
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 *
-		 */
-
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
-
 	}
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+
 }
 
 double tpot::Theta(double P, double T)
@@ -527,7 +369,6 @@ unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, 
 	opts->is_constant_pressure = (myTargetInfo->Level().Type() == kPressure);
 
 	opts->t = TInfo->ToSimple();
-
 	opts->theta = itsThetaCalculation;
 
 	if (opts->theta)
@@ -589,28 +430,23 @@ unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, 
 void tpot::CudaFinish(unique_ptr<tpot_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> PInfo, shared_ptr<info> TDInfo)
 {
 	// Copy data back to infos
-
+	
 	if (opts->theta)
 	{
 		myTargetInfo->Param(param("TP-K"));
 		CopyDataFromSimpleInfo(myTargetInfo, opts->tp, false);
-
-		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 	}
 	
 	if (opts->thetaw)
 	{
 		myTargetInfo->Param(param("TPW-K"));
 		CopyDataFromSimpleInfo(myTargetInfo, opts->tpw, false);
-
-		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());	}
+	}
 
 	if (opts->thetae)
 	{
 		myTargetInfo->Param(param("TPE-K"));
 		CopyDataFromSimpleInfo(myTargetInfo, opts->tpe, false);
-
-		SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
 	}
 
 	if (TInfo->Grid()->IsPackedData())

@@ -12,6 +12,83 @@
 #include "plugin_configuration.h"
 #include <mutex>
 
+/*
+ * Really nice pre-processor macros here
+ * What all this does is it'll change this
+ *
+ * LOCKSTEP(info1,info2,...)
+ *
+ * to this
+ *
+ * assert(info1); assert(info2);
+ * for (info1->ResetLocation(), info2->ResetLocation(); info->NextLocation() && info2->NextLocation();)
+ *
+ * The current maximum number of infos is 14 (thanks preform_pressure).
+ */
+
+#define VA_NARGS_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, N, ...) N
+#define VA_NARGS(...) VA_NARGS_IMPL(__VA_ARGS__, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+#define FULLY_EXPAND_PROPERTIES(count, ...) \
+  ASSERT ## count (__VA_ARGS__) \
+  for (RESET ## count (__VA_ARGS__) \
+  ; \
+  NEXT ## count (__VA_ARGS__) \
+  ;)
+
+#define SEMI_EXPAND_PROPERTIES(count, ...) FULLY_EXPAND_PROPERTIES(count, __VA_ARGS__)
+
+// this is the actual function called to expand properties
+#define LOCKSTEP(...) SEMI_EXPAND_PROPERTIES(VA_NARGS(__VA_ARGS__), __VA_ARGS__)
+
+// Here are the different expansions of MACA and MACB (the names are arbitrary)
+#define ACTUAL_MACRO_A(x) x->NextLocation()
+#define NEXT1(a) ACTUAL_MACRO_A(a)
+#define NEXT2(a,b) NEXT1(a) && ACTUAL_MACRO_A(b)
+#define NEXT3(a,b,c) NEXT2(a,b) && ACTUAL_MACRO_A(c)
+#define NEXT4(a,b,c,d) NEXT3(a,b,c) && ACTUAL_MACRO_A(d)
+#define NEXT5(a,b,c,d,e) NEXT4(a,b,c,d) && ACTUAL_MACRO_A(e)
+#define NEXT6(a,b,c,d,e,f) NEXT5(a,b,c,d,e) && ACTUAL_MACRO_A(f)
+#define NEXT7(a,b,c,d,e,f,g) NEXT6(a,b,c,d,e,f) && ACTUAL_MACRO_A(g)
+#define NEXT8(a,b,c,d,e,f,g,h) NEXT7(a,b,c,d,e,f,g) && ACTUAL_MACRO_A(h)
+#define NEXT9(a,b,c,d,e,f,g,h,i) NEXT8(a,b,c,d,e,f,g,h) && ACTUAL_MACRO_A(i)
+#define NEXT10(a,b,c,d,e,f,g,h,i,j) NEXT9(a,b,c,d,e,f,g,h,i) && ACTUAL_MACRO_A(j)
+#define NEXT11(a,b,c,d,e,f,g,h,i,j,k) NEXT10(a,b,c,d,e,f,g,h,i,j) && ACTUAL_MACRO_A(k)
+#define NEXT12(a,b,c,d,e,f,g,h,i,j,k,l) NEXT11(a,b,c,d,e,f,g,h,i,j,k) && ACTUAL_MACRO_A(l)
+#define NEXT13(a,b,c,d,e,f,g,h,i,j,k,l,m) NEXT12(a,b,c,d,e,f,g,h,i,j,k,l) && ACTUAL_MACRO_A(m)
+#define NEXT14(a,b,c,d,e,f,g,h,i,j,k,l,m,n) NEXT13(a,b,c,d,e,f,g,h,i,j,k,l,m) && ACTUAL_MACRO_A(n)
+
+#define ACTUAL_MACRO_B(x) x->ResetLocation()
+#define RESET1(a) ACTUAL_MACRO_B(a)
+#define RESET2(a,b) RESET1(a), ACTUAL_MACRO_B(b)
+#define RESET3(a,b,c) RESET2(a,b), ACTUAL_MACRO_B(c)
+#define RESET4(a,b,c,d) RESET3(a,b,c), ACTUAL_MACRO_B(d)
+#define RESET5(a,b,c,d,e) RESET4(a,b,c,d), ACTUAL_MACRO_B(e)
+#define RESET6(a,b,c,d,e,f) RESET5(a,b,c,d,e), ACTUAL_MACRO_B(f)
+#define RESET7(a,b,c,d,e,f,g) RESET6(a,b,c,d,e,f), ACTUAL_MACRO_B(g)
+#define RESET8(a,b,c,d,e,f,g,h) RESET7(a,b,c,d,e,f,g), ACTUAL_MACRO_B(h)
+#define RESET9(a,b,c,d,e,f,g,h,i) RESET8(a,b,c,d,e,f,g,h), ACTUAL_MACRO_B(i)
+#define RESET10(a,b,c,d,e,f,g,h,i,j) RESET9(a,b,c,d,e,f,g,h,i), ACTUAL_MACRO_B(j)
+#define RESET11(a,b,c,d,e,f,g,h,i,j,k) RESET10(a,b,c,d,e,f,g,h,i,j), ACTUAL_MACRO_B(k)
+#define RESET12(a,b,c,d,e,f,g,h,i,j,k,l) RESET11(a,b,c,d,e,f,g,h,i,j,k), ACTUAL_MACRO_B(l)
+#define RESET13(a,b,c,d,e,f,g,h,i,j,k,l,m) RESET12(a,b,c,d,e,f,g,h,i,j,k,l), ACTUAL_MACRO_B(m)
+#define RESET14(a,b,c,d,e,f,g,h,i,j,k,l,m,n) RESET13(a,b,c,d,e,f,g,h,i,j,k,l,m), ACTUAL_MACRO_B(n)
+
+#define ACTUAL_MACRO_C(x) assert(x);
+#define ASSERT1(a) ACTUAL_MACRO_C(a)
+#define ASSERT2(a,b) ASSERT1(a) ACTUAL_MACRO_C(b)
+#define ASSERT3(a,b,c) ASSERT2(a,b) ACTUAL_MACRO_C(c)
+#define ASSERT4(a,b,c,d) ASSERT3(a,b,c) ACTUAL_MACRO_C(d)
+#define ASSERT5(a,b,c,d,e) ASSERT4(a,b,c,d) ACTUAL_MACRO_C(e)
+#define ASSERT6(a,b,c,d,e,f) ASSERT5(a,b,c,d,e) ACTUAL_MACRO_C(f)
+#define ASSERT7(a,b,c,d,e,f,g) ASSERT6(a,b,c,d,e,f) ACTUAL_MACRO_C(g)
+#define ASSERT8(a,b,c,d,e,f,g,h) ASSERT7(a,b,c,d,e,f,g) ACTUAL_MACRO_C(h)
+#define ASSERT9(a,b,c,d,e,f,g,h,i) ASSERT8(a,b,c,d,e,f,g,h) ACTUAL_MACRO_C(i)
+#define ASSERT10(a,b,c,d,e,f,g,h,i,j) ASSERT9(a,b,c,d,e,f,g,h,i) ACTUAL_MACRO_C(j)
+#define ASSERT11(a,b,c,d,e,f,g,h,i,j,k) ASSERT10(a,b,c,d,e,f,g,h,i,j) ACTUAL_MACRO_C(k)
+#define ASSERT12(a,b,c,d,e,f,g,h,i,j,k,l) ASSERT11(a,b,c,d,e,f,g,h,i,j,k) ACTUAL_MACRO_C(l)
+#define ASSERT13(a,b,c,d,e,f,g,h,i,j,k,l,m) ASSERT12(a,b,c,d,e,f,g,h,i,j,k,l) ACTUAL_MACRO_C(m)
+#define ASSERT14(a,b,c,d,e,f,g,h,i,j,k,l,m,n) ASSERT13(a,b,c,d,e,f,g,h,i,j,k,l,m) ACTUAL_MACRO_C(n)
+
 namespace himan
 {
 namespace plugin
@@ -122,7 +199,7 @@ protected:
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	void WriteToFile(const std::shared_ptr<const info>& targetInfo);
+	void WriteToFile(const std::shared_ptr<const info>& targetInfo) const;
 
 	/**
 	 * @brief Determine if cuda can be used in this thread, and if so
@@ -183,7 +260,7 @@ protected:
 	 * @brief Record timing info and write info contents to disk
 	 */
 
-	virtual void Finish();
+	virtual void Finish() const;
 
 	/**
 	 * @brief Top level entry point for per-thread calculation

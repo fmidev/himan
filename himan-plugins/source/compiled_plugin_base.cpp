@@ -183,7 +183,7 @@ bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode tar
 	return true;
 }
 
-void compiled_plugin_base::WriteToFile(const shared_ptr<const info>& targetInfo)
+void compiled_plugin_base::WriteToFile(const shared_ptr<const info>& targetInfo) const
 {
 	auto aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
@@ -313,11 +313,27 @@ void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 {
 	while (AdjustLeadingDimension(myTargetInfo))
 	{
-		Calculate(myTargetInfo, threadIndex);
+		ResetNonLeadingDimension(myTargetInfo);
+
+		while (AdjustNonLeadingDimension(myTargetInfo))
+		{
+			Calculate(myTargetInfo, threadIndex);
+
+			if (itsConfiguration->FileWriteOption() != kSingleFile)
+			{
+				WriteToFile(myTargetInfo);
+			}
+
+			if (itsConfiguration->StatisticsEnabled())
+			{
+				itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data()->MissingCount());
+				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data()->Size());
+			}
+		}
 	}
 }
 
-void compiled_plugin_base::Finish()
+void compiled_plugin_base::Finish() const
 {
 
 	if (itsConfiguration->StatisticsEnabled())
@@ -428,7 +444,6 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		itsTimer->Start();
 	}
 
-	ResetNonLeadingDimension(itsInfo);
 	itsInfo->FirstParam();
 
 }
@@ -569,4 +584,3 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 	return ret;
 }
-

@@ -12,12 +12,13 @@
 #include "metutil.h"
 #include <algorithm> // for std::transform
 #include <functional> // for std::plus
-#include "NFmiGrid.h"
+#include "level.h"
+#include "forecast_time.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
-#include "fetcher.h"
 #include "hitool.h"
+#include "fetcher.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -50,7 +51,7 @@ stability::stability() : itsLICalculation(true)
 {
 	itsClearTextFormula = "<multiple algorithms>";
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("stability"));
+	itsLogger = logger_factory::Instance()->GetLog("stability");
 
 }
 
@@ -121,255 +122,152 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	vector<double> T500mVector, TD500mVector, P500mVector;
 	
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("stabilityThread #" + boost::lexical_cast<string> (theThreadIndex)));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("stabilityThread #" + boost::lexical_cast<string> (theThreadIndex));
 
-	ResetNonLeadingDimension(myTargetInfo);
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
-	//bool useCudaInThisThread = false;
+	//bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
+	bool useCudaInThisThread = false;
 	
-	myTargetInfo->FirstParam();
+	info_t T850Info, T700Info, T500Info, TD850Info, TD700Info;
+		
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	bool LICalculation = itsLICalculation;
+
+	if (!GetSourceData(T850Info, T700Info, T500Info, TD850Info, TD700Info, myTargetInfo, useCudaInThisThread))
 	{
-		shared_ptr<info> T850Info;
-		shared_ptr<info> T700Info;
-		shared_ptr<info> T500Info;
-		shared_ptr<info> TD850Info;
-		shared_ptr<info> TD700Info;
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
+	}
 		
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		bool LICalculation = itsLICalculation;
-
-		if (!GetSourceData(T850Info, T700Info, T500Info, TD850Info, TD700Info, myTargetInfo, useCudaInThisThread))
+	if (LICalculation)
+	{
+		if (!GetLISourceData(myTargetInfo, T500mVector, TD500mVector, P500mVector, useCudaInThisThread))
 		{
-			itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()) + " param KI");
-
-			for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
-			{
-				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-			}
-
-			if (itsConfiguration->StatisticsEnabled())
-			{
-				itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-			}
-
-			continue;
+			myThreadedLogger->Warning("Source data not found for param LI");
+			LICalculation = false;
 		}
-		
-		if (LICalculation)
-		{
-			if (!GetLISourceData(myTargetInfo, T500mVector, TD500mVector, P500mVector, useCudaInThisThread))
-			{
-				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()) + " param LI");
-				myTargetInfo->Param(param("LI-N"));
-				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-				if (itsConfiguration->StatisticsEnabled())
-				{
-					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-				}
-
-				LICalculation = false;
-			}
-		}
-		
-		bool equalGrids = CompareGrids({myTargetInfo->Grid(), T850Info->Grid(), T700Info->Grid(), T500Info->Grid(), TD850Info->Grid(), TD700Info->Grid()});
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		string deviceType = "CPU";
+	}
+	
+	string deviceType = "CPU";
 
 #ifdef HAVE_CUDA
 
-		if (!equalGrids)
+	if (useCudaInThisThread)
+	{
+		deviceType = "GPU";
+
+		unique_ptr<stability_cuda::options> opts(new stability_cuda::options);
+
+		opts->t500 = T500Info->ToSimple();
+		opts->t700 = T700Info->ToSimple();
+		opts->t850 = T850Info->ToSimple();
+		opts->td700 = TD700Info->ToSimple();
+		opts->td850 = TD850Info->ToSimple();
+
+		myTargetInfo->Param(param("KINDEX-N"));
+		opts->ki = myTargetInfo->ToSimple();
+
+		myTargetInfo->Param(param("VTI-N"));
+		opts->vti = myTargetInfo->ToSimple();
+
+		myTargetInfo->Param(param("CTI-N"));
+		opts->cti = myTargetInfo->ToSimple();
+
+		myTargetInfo->Param(param("TTI-N"));
+		opts->tti = myTargetInfo->ToSimple();
+
+		myTargetInfo->Param(param("SI-N"));
+		opts->si = myTargetInfo->ToSimple();
+
+		if (LICalculation)
 		{
-			myThreadedLogger->Debug("Unpacking for CPU calculation");
-			Unpack({T500Info, T700Info, T850Info, TD700Info, TD850Info});
-		}
-
-		else if (useCudaInThisThread)
-		{
-			deviceType = "GPU";
-
-			unique_ptr<stability_cuda::options> opts(new stability_cuda::options);
-
-			opts->t500 = T500Info->ToSimple();
-			opts->t700 = T700Info->ToSimple();
-			opts->t850 = T850Info->ToSimple();
-			opts->td700 = TD700Info->ToSimple();
-			opts->td850 = TD850Info->ToSimple();
-
-			myTargetInfo->Param(param("KINDEX-N"));
-			opts->ki = myTargetInfo->ToSimple();
-
-			myTargetInfo->Param(param("VTI-N"));
-			opts->vti = myTargetInfo->ToSimple();
-
-			myTargetInfo->Param(param("CTI-N"));
-			opts->cti = myTargetInfo->ToSimple();
-
-			myTargetInfo->Param(param("TTI-N"));
-			opts->tti = myTargetInfo->ToSimple();
-
-			myTargetInfo->Param(param("SI-N"));
-			opts->si = myTargetInfo->ToSimple();
-
 			opts->t500m = &T500mVector[0];
 			opts->td500m = &TD500mVector[0];
 			opts->p500m = &P500mVector[0];
 
+			myTargetInfo->Param(param("LI-N"));
+			opts->li = myTargetInfo->ToSimple();
+		}
+
+		opts->N = opts->t500->size_x * opts->t500->size_y;
+
+		stability_cuda::Process(*opts);
+
+		CudaFinish(move(opts), myTargetInfo, T500Info, T700Info, T850Info, TD700Info, TD850Info);
+
+	}
+	else
+#endif
+	{
+
+		LOCKSTEP(myTargetInfo, T850Info, T700Info, T500Info, TD850Info, TD700Info)
+		{
+
+			double T850 = T850Info->Value();
+			double T700 = T700Info->Value();
+			double T500 = T500Info->Value();
+			double TD850 = TD850Info->Value();
+			double TD700 = TD700Info->Value();
+
+			assert(T850 > 0);
+			assert(T700 > 0);
+			assert(T500 > 0);
+			assert(TD850 > 0);
+			assert(TD700 > 0);
+
+			double value = kFloatMissing;
+
+			if (T850 == kFloatMissing || T700 == kFloatMissing || T500 == kFloatMissing || TD850 == kFloatMissing || TD700 == kFloatMissing)
+			{
+				continue;
+			}
+
+			value = KI(T850, T700, T500, TD850, TD700) - constants::kKelvin;
+			myTargetInfo->Param(KIParam);
+			myTargetInfo->Value(value);
+
+			value = CTI(T500, TD850);
+			myTargetInfo->Param(CTIParam);
+			myTargetInfo->Value(value);
+
+			value = VTI(T850, T500);
+			myTargetInfo->Param(VTIParam);
+			myTargetInfo->Value(value);
+
+			value = TTI(T850, T500, TD850);
+			myTargetInfo->Param(TTIParam);
+			myTargetInfo->Value(value);
+
+			value = SI(T850, T500, TD850);
+			myTargetInfo->Param(SIParam);
+			myTargetInfo->Value(value);
+
 			if (LICalculation)
 			{
-				myTargetInfo->Param(param("LI-N"));
-				opts->li = myTargetInfo->ToSimple();
-			}
-	
-			opts->N = opts->t500->size_x * opts->t500->size_y;
+				size_t locationIndex = myTargetInfo->LocationIndex();
 
-			stability_cuda::Process(*opts);
+				double T500m = T500mVector[locationIndex];
+				double TD500m = TD500mVector[locationIndex];
+				double P500m = P500mVector[locationIndex];
 
-			count = opts->N;
-			missingCount = opts->missing;
+				assert(T500m != kFloatMissing);
+				assert(TD500m != kFloatMissing);
+				assert(P500m != kFloatMissing);
 
-			CudaFinish(move(opts), myTargetInfo, T500Info, T700Info, T850Info, TD700Info, TD850Info);
-
-		}
-		else
-#endif
-		{
-			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-
-			shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> T700Grid(T700Info->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> T500Grid(T500Info->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> TD850Grid(TD850Info->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> TD700Grid(TD700Info->Grid()->ToNewbaseGrid());
-
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
-			{
-				count++;
-
-				double T850 = kFloatMissing;
-				double T700 = kFloatMissing;
-				double T500 = kFloatMissing;
-				double TD850 = kFloatMissing;
-				double TD700 = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
-				assert(T850 > 0);
-
-				InterpolateToPoint(targetGrid, T700Grid, equalGrids, T700);
-				assert(T700 > 0);
-
-				InterpolateToPoint(targetGrid, T500Grid, equalGrids, T500);
-				assert(T500 > 0);
-
-				InterpolateToPoint(targetGrid, TD850Grid, equalGrids, TD850);
-				assert(TD850 > 0);
-
-				InterpolateToPoint(targetGrid, TD700Grid, equalGrids, TD700);
-				assert(TD700 > 0);
-				
-				double value = kFloatMissing;
-
-				if (T850 == kFloatMissing || T700 == kFloatMissing || T500 == kFloatMissing || TD850 == kFloatMissing || TD700 == kFloatMissing)
+				if (T500m != kFloatMissing && TD500m != kFloatMissing && P500m != kFloatMissing)
 				{
-					missingCount++;
+					value = LI(T500, T500m, TD500m, P500m);
 
-					for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
-					{
-						myTargetInfo->Value(kFloatMissing);
-					}
-				}
-				else
-				{
-
-					value = KI(T850, T700, T500, TD850, TD700) - constants::kKelvin;
-					myTargetInfo->Param(KIParam);
+					myTargetInfo->Param(LIParam);
 					myTargetInfo->Value(value);
-
-					value = CTI(T500, TD850);
-					myTargetInfo->Param(CTIParam);
-					myTargetInfo->Value(value);
-
-					value = VTI(T850, T500);
-					myTargetInfo->Param(VTIParam);
-					myTargetInfo->Value(value);
-
-					value = TTI(T850, T500, TD850);
-					myTargetInfo->Param(TTIParam);
-					myTargetInfo->Value(value);
-				
-					value = SI(T850, T500, TD850);
-					myTargetInfo->Param(SIParam);
-					myTargetInfo->Value(value);
-
-					if (LICalculation)
-					{
-						size_t locationIndex = myTargetInfo->LocationIndex();
-
-						double T500m = T500mVector[locationIndex];
-						double TD500m = TD500mVector[locationIndex];
-						double P500m = P500mVector[locationIndex];
-
-						assert(T500m != kFloatMissing);
-						assert(TD500m != kFloatMissing);
-						assert(P500m != kFloatMissing);
-
-						if (T500m == kFloatMissing || TD500m == kFloatMissing || P500m == kFloatMissing)
-						{
-							missingCount++;
-							value = kFloatMissing;
-						}
-						else
-						{
-							value = LI(T500, T500m, TD500m, P500m);
-						}
-
-						myTargetInfo->Param(LIParam);
-						myTargetInfo->Value(value);
-					}
 				}
 			}
-
-			if (itsConfiguration->StatisticsEnabled())
-			{
-				itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-				itsConfiguration->Statistics()->AddToValueCount(count);
-			}
-
-			/*
-			 * Now we are done for this level
-			 *
-			 * Clone info-instance to writer since it might change our descriptor places
-			 */
-
-			myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-		}
-
-		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
-		{
-			SwapTo(myTargetInfo, kBottomLeft);
-		}
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
 		}
 	}
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 }
 
 

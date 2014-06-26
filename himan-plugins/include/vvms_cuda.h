@@ -41,8 +41,7 @@ struct options
 void Process(options& opts);
 
 #ifdef __CUDACC__
-__global__ void Calculate(const double* __restrict__ d_t, const double* __restrict__ d_vv, const double* __restrict__ d_p, double* __restrict__ d_vv_ms,
-							options opts, int* d_missing);
+__global__ void Calculate(const double* __restrict__ d_t, const double* __restrict__ d_vv, const double* __restrict__ d_p, double* __restrict__ d_vv_ms, options opts);
 #endif
 
 } // namespace vvms_cuda

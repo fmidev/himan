@@ -7,27 +7,22 @@
  * @author peramaki
  */
 
-#include "example_header.h"
-#include "plugin_factory.h"
-#include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include <boost/thread.hpp>
 
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "example_header.h"
+#include "logger_factory.h"
+#include "level.h"
+#include "forecast_time.h"
+#include "logger_factory.h"
 
 using namespace std;
 using namespace himan::plugin;
 
-const string itsName("example_plugin");
-
 example_plugin::example_plugin()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
+	itsClearTextFormula = "y = ax + b";
 
+	itsLogger = logger_factory::Instance()->GetLog("example_plugin");
 }
 
 void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -35,19 +30,15 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 	Init(conf);
 
 	/*
-	 * Set target parameter to ???
-	 * - name PARM_NAME
-	 * - univ_id UNIV_ID
-	 * - grib2 descriptor X'Y'Z
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
+	 * Set target parameter properties
+	 * - name PARM_NAME, this name is found from neons. For example: T-K
+	 * - univ_id UNIV_ID, newbase-id, ie code table 204
+	 * - grib1 id must be in database
+	 * - grib2 descriptor X'Y'Z, http://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_table4-2.shtml
 	 *
 	 */
 
-	vector<param> theParams;
-
-	param theRequestedParam(PARM_NAME, UNIV_ID);
+	param theRequestedParam(PARM_NAME, UNIV_ID, GRIB2DISCIPLINE, GRIB2CATEGORY, GRIB2NUMBER);
 
 	// If this param is also used as a source param for other calculations
 	// (like for example dewpoint, relative humidity), unit should also be
@@ -55,24 +46,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	theRequestedParam.Unit(kSOME_UNIT);
 	
-	// GRIB 2
-
-	/*
-	 * theRequestedParam.GribDiscipline(X);
-	 * theRequestedParam.GribCategory(Y);
-	 * theRequestedParam.GribParameter(Z);
-	 */
-
-	// GRIB 1
-
-	/*
-	 * GRIB 1 parameters go here
-	 *
-	 */
-
-	theParams.push_back(theRequestedParam);
-
-	SetParams(theParams);
+	SetParams({theRequestedParam});
 
 	Start();
 }
@@ -86,207 +60,71 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
-	// Required source parameters
-
 	/*
+	 * Required source parameters
+	 *
 	 * eg. param PParam("P-Pa"); for pressure in pascals
 	 *
 	 */
 
-	param exampleParam("quantity-unit_name");
+	const param exampleParam("quantity-unit_name");
+
 	// ----	
 
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("example_pluginThread #" + boost::lexical_cast<string> (threadIndex)));
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
+	myThreadedLogger->Debug("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	ResetNonLeadingDimension(myTargetInfo);
-
-	myTargetInfo->FirstParam();
-
-	while (AdjustNonLeadingDimension(myTargetInfo))
-	{
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		shared_ptr<info> exampleInfo;
-		try
-		{
-			/*
-			 *	Parameter infos are made here
-			 *
-			 */
-
-			// Source info for exampleParam
-			exampleInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 exampleParam);
-			
-			// ----
-
-		}
-		catch (HPExceptionType e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing);
-
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-					
-					continue;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-			}
-		}
-
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
-		SetAB(myTargetInfo, exampleInfo);
-		
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		/*
-		 * Converting original grid-data to newbase grid
-		 *
-		 */
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> exampleGrid(exampleInfo->Grid()->ToNewbaseGrid());
-
-		bool equalGrids = (*myTargetInfo->Grid() == *exampleInfo->Grid() );
-
-
-		string deviceType;
-
-
-		if (conf->UseCuda() && equalGrids && threadIndex <= conf->CudaDeviceCount())
-		{
+	// Current time and level
 	
-			deviceType = "GPU";
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
+	
+	info_t exampleInfo = Fetch(forecastTime, forecastLevel, exampleParam);
 
-			size_t N = exampleGrid->Size();
-
-			float* exampleOut = new float[N]; // array that cuda devices will store data
-			double* infoData = new double[N]; // array that's stored to info instance
-
-			example_cuda::DoCuda(exampleGrid->DataPool()->Data(), exampleOut, N, threadIndex-1);
-
-			for (size_t i = 0; i < N; i++)
-			{
-				infoData[i] = static_cast<float> (exampleOut[i]);
-
-				if (infoData[i] == kFloatMissing)
-				{
-					missingCount++;
-				}
-
-				count++;
-			}
-
-			myTargetInfo->Data()->Set(infoData, N);
-
-			delete [] infoData;
-			delete [] exampleOut;
-
-		}
-		else
-		{
-
-			deviceType = "CPU";
-
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
-			{
-
-				count++;
-
-				/*
-				 * interpolation happens here
-				 *
-				 */
-				double example = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, exampleGrid, equalGrids, example);
-
-				if (example == kFloatMissing )
-				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-
-				/*
-				 * Calculations go here
-				 *
-				 */
-				
-
-				if (!myTargetInfo->Value(example))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
-				}
-			}
-
-		}
-
-
-
-		/*
-		 * Newbase normalizes scanning mode to bottom left -- if that's not what
-		 * the target scanning mode is, we have to swap the data back.
-		 */
-
-		SwapTo(myTargetInfo, kBottomLeft);
-
+	if (!exampleInfo)
+	{
+		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-
-#ifdef DEBUG
-			itsLogger->Debug("Calculation took " + boost::lexical_cast<string> (processTimer->GetTime()) + " microseconds on "  + deviceType);
-#endif
-
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-
+			// When time or level is skipped, all values are missing
+			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data()->Size());
+			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data()->Size());
 		}
 
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 * */
+		return;
 
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
 	}
+
+	// If calculating for hybrid levels, A/B vertical coordinates must be set
+	// (copied from source)
+	
+	SetAB(myTargetInfo, exampleInfo);
+
+	string deviceType = "CPU";
+
+	const double a = 0.125;
+	const double b = 15;
+
+	LOCKSTEP(myTargetInfo, exampleInfo)
+	{
+
+		double x = exampleInfo->Value();
+
+		if (IsMissing({example}))
+		{
+			continue;
+		}
+
+		/* Calculations go here */
+
+		double y = a * example + b;
+
+		myTargetInfo->Value(y);
+
+	}
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+
 }
