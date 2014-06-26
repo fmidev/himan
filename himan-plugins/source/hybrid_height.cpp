@@ -10,12 +10,9 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
-#include <math.h>
-#include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
-#include "fetcher.h"
 #include "neons.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
@@ -28,7 +25,7 @@ const string itsName("hybrid_height");
 hybrid_height::hybrid_height() : itsFastMode(false)
 {
 	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
+	itsLogger = logger_factory::Instance()->GetLog(itsName);
 
 }
 
@@ -36,32 +33,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * Set target parameter to HL-M
-	 * - name HL-M
-	 * - univ_id 3
-	 * 
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 *
-	 */
-
-	vector<param> theParams;
-
-	param theRequestedParam("HL-M", 3);
-
-	// GRIB 2
-
-	theRequestedParam.GribDiscipline(0);
-	theRequestedParam.GribCategory(3);
-	theRequestedParam.GribParameter(6);
-
-	// GRIB 1
-
-	theParams.push_back(theRequestedParam);
-
-	SetParams(theParams);
+	SetParams({param("HL-M", 3, 0, 3, 6)});
 
 	/*
 	 * For hybrid height we must go through the levels backwards.
@@ -105,7 +77,6 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
 	const param GPParam("P-PA");
 	const param PParam("P-HPA");
@@ -115,212 +86,140 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	const level H2(himan::kHeight, 2, "HEIGHT");
 	const level H0(himan::kHeight, 0, "HEIGHT");
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex)));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
 
-	ResetNonLeadingDimension(myTargetInfo);
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	myTargetInfo->FirstParam();
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	/*
 		pitääkö tunnistaa tuottaja?
 	*/
+
 	level prevLevel;
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
-	{
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		bool firstLevel(false);
+	bool firstLevel = false;
 		
-		if (itsFastMode || myTargetInfo->Level().Value() == itsBottomLevel)
+	if (itsFastMode || myTargetInfo->Level().Value() == itsBottomLevel)
+	{
+		firstLevel = true;
+	}
+	else
+	{
+		prevLevel = level(myTargetInfo->Level());
+		prevLevel.Value(myTargetInfo->Level().Value() + 1);
+
+		prevLevel.Index(prevLevel.Index() + 1);
+	}
+
+
+	info_t TInfo, PInfo, prevPInfo, prevTInfo, prevHInfo, GPInfo, zeroGPInfo;
+
+	if (itsUseGeopotential)
+	{
+		GPInfo = Fetch(forecastTime, forecastLevel, ZParam, false);
+		zeroGPInfo = Fetch(forecastTime, H0, ZParam, false);
+
+		SetAB(myTargetInfo, GPInfo);
+
+	}
+	else
+	{
+
+		if (!firstLevel)
 		{
-			firstLevel = true;
+			prevTInfo = Fetch(forecastTime, prevLevel, TParam, false);
+			prevPInfo = Fetch(forecastTime, prevLevel, PParam, false);
+			prevHInfo = Fetch(forecastTime, prevLevel, param("HL-M"), false);
 		}
 		else
 		{
-			prevLevel = level(myTargetInfo->Level());
-			prevLevel.Value(myTargetInfo->Level().Value() + 1);
-
-			prevLevel.Index(prevLevel.Index() + 1);
+			prevPInfo = Fetch(forecastTime, H0, GPParam, false);
+			prevTInfo = Fetch(forecastTime, H2, TParam, false);
 		}
 
+		PInfo = Fetch(forecastTime, forecastLevel, PParam, false);
+		TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
 
-		shared_ptr<info> PInfo;
-		shared_ptr<info> TInfo;			
-		shared_ptr<info> prevPInfo;
-		shared_ptr<info> prevTInfo;
-		shared_ptr<info> prevHInfo;
-		shared_ptr<info> GPInfo;
-		shared_ptr<info> zeroGPInfo;
+		assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
 
-		try
-		{
-			const forecast_time fTime = myTargetInfo->Time();
-			
-			if (itsUseGeopotential)
-			{
-				GPInfo = FetchPrevious(fTime, myTargetInfo->Level(), ZParam);
-				zeroGPInfo = FetchPrevious(fTime, H0, ZParam);
-			
-				SetAB(myTargetInfo, GPInfo);
+		SetAB(myTargetInfo, TInfo);
 
-			}
-			else
-			{
+	}
 
-				if (!firstLevel)
-				{
-					prevTInfo = FetchPrevious(fTime, prevLevel, param("T-K"));
-					prevPInfo = FetchPrevious(fTime, prevLevel, param("P-HPA"));
-					prevHInfo = FetchPrevious(fTime, prevLevel, param("HL-M"));
-				}
-				else
-				{
-					prevPInfo = FetchPrevious(fTime, H0, param("P-PA"));
-					prevTInfo = FetchPrevious(fTime, H2, param("T-K"));
-				}
+	if ((itsUseGeopotential && (!GPInfo || !zeroGPInfo)) || (!itsUseGeopotential && (!prevTInfo || !prevPInfo || !prevHInfo || !PInfo || !TInfo)))
+	{
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
+	}
+	
+	string deviceType = "CPU";
 
-				PInfo = FetchPrevious(fTime, myTargetInfo->Level(), PParam);
-				TInfo = FetchPrevious(fTime, myTargetInfo->Level(), TParam);
+	if (itsUseGeopotential)
+	{
+		GPInfo->ResetLocation();
+		zeroGPInfo->ResetLocation();
+	}
+	else
+	{
+		PInfo->ResetLocation();
+		TInfo->ResetLocation();
+		prevPInfo->ResetLocation();
+		prevTInfo->ResetLocation();
+		prevHInfo->ResetLocation();
+	}
 
-				assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
+	LOCKSTEP(myTargetInfo)
+	{
 
-				SetAB(myTargetInfo, TInfo);
-
-			}
-
-
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-				myTargetInfo->Data()->Fill(kFloatMissing);
-
-				if (itsConfiguration->StatisticsEnabled())
-				{
-					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-				}
-
-				continue;
-			}
-			else
-			{
-				throw;
-			}
-		}
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-
-		shared_ptr<NFmiGrid> PGrid;
-		shared_ptr<NFmiGrid> prevPGrid;
-		shared_ptr<NFmiGrid> TGrid;
-		shared_ptr<NFmiGrid> prevTGrid;
-		shared_ptr<NFmiGrid> prevHGrid;
-		shared_ptr<NFmiGrid> GPGrid;
-		shared_ptr<NFmiGrid> zeroGPGrid;
-
-		bool equalGrids = false;
-		
 		if (itsUseGeopotential)
 		{
-			GPGrid = make_shared<NFmiGrid> (*GPInfo->Grid()->ToNewbaseGrid());
-			zeroGPGrid = make_shared<NFmiGrid> (*zeroGPInfo->Grid()->ToNewbaseGrid());
+			GPInfo->NextLocation();
+			double GP = GPInfo->Value();
 
-			equalGrids = (*myTargetInfo->Grid() == *zeroGPInfo->Grid() && *myTargetInfo->Grid() == *GPInfo->Grid()) ;
-		}
-		else
-		{
-			PGrid = make_shared<NFmiGrid> (*PInfo->Grid()->ToNewbaseGrid());
-			prevPGrid = make_shared<NFmiGrid> (*prevPInfo->Grid()->ToNewbaseGrid());
-			TGrid = make_shared<NFmiGrid> (*TInfo->Grid()->ToNewbaseGrid());
-			prevTGrid = make_shared<NFmiGrid> (*prevTInfo->Grid()->ToNewbaseGrid());
-
-			if (!firstLevel)
+			zeroGPInfo->NextLocation();
+			double zeroGP = zeroGPInfo->Value();
+		
+			if (GP == kFloatMissing || zeroGP == kFloatMissing)
 			{
-				prevHGrid = make_shared<NFmiGrid> (*prevHInfo->Grid()->ToNewbaseGrid());
-
-				equalGrids = ( *myTargetInfo->Grid() == *prevTInfo->Grid() && *myTargetInfo->Grid() == *prevPInfo->Grid() && *myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *TInfo->Grid() ); //&& *myTargetInfo->Grid() == *T2mInfo->Grid() && *myTargetInfo->Grid() == *P0mInfo->Grid() );
-
-				if (!firstLevel)
-				{
-					equalGrids = ( equalGrids && *myTargetInfo->Grid() == *prevHInfo->Grid() );
-				}
-			}
-		}
-
-		string deviceType = "CPU";
-
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-		myTargetInfo->ResetLocation();
-
-		targetGrid->Reset();
-
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
-		{
-
-			count++;
-
-			double T = kFloatMissing;
-			double P = kFloatMissing;
-			double prevP = kFloatMissing;
-			double prevT = kFloatMissing;
-			double prevH = kFloatMissing;
-
-			if (itsUseGeopotential)
-			{
-				double GP = kFloatMissing, zeroGP = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, GPGrid, equalGrids, GP);
-				InterpolateToPoint(targetGrid, zeroGPGrid, equalGrids, zeroGP);
-
-				double height = kFloatMissing;
-
-				if (GP != kFloatMissing && zeroGP != kFloatMissing)
-				{
-					height = (GP - zeroGP) * himan::constants::kIg;
-				}
-				else
-				{
-					missingCount++;
-				}
-
-				myTargetInfo->Value(height);
-
 				continue;
 			}
 
-			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-			InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-			InterpolateToPoint(targetGrid, prevPGrid, equalGrids, prevP);		
-			InterpolateToPoint(targetGrid, prevTGrid, equalGrids, prevT);
-		
+			double height = (GP - zeroGP) * himan::constants::kIg;
+			
+			myTargetInfo->Value(height);
+		}
+		else
+		{
+			TInfo->NextLocation();
+			double T = TInfo->Value();
+
+			PInfo->NextLocation();
+			double P = PInfo->Value();
+
+			prevTInfo->NextLocation();
+			double prevT = prevTInfo->Value();
+
+			prevPInfo->NextLocation();
+			double prevP = prevPInfo->Value();
+
+			double prevH = kFloatMissing;
+			
 			if (!firstLevel)
 			{
-				prevHGrid->Next();
-				InterpolateToPoint(targetGrid, prevHGrid, equalGrids, prevH);
-				
+
+				prevHInfo->NextLocation();
+				prevH = prevHInfo->Value();
+
 				if (prevH == kFloatMissing )
 				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
 					continue;
 				}
 			}
 
 			if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )
 			{
-				missingCount++;
-
-				myTargetInfo->Value(kFloatMissing);
 				continue;
 			}
 
@@ -344,60 +243,16 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 				totalHeight = prevH + deltaZ;
 			}
 
-			if (!myTargetInfo->Value(totalHeight))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
-			}
-		
-		}
+			myTargetInfo->Value(totalHeight);
 
-		if (!itsFastMode)
-		{
-			firstLevel = false;
-		}
-
-		/*
-		 * Newbase normalizes scanning mode to bottom left -- if that's not what
-		 * the target scanning mode is, we have to swap the data back.
-		 */
-
-		SwapTo(myTargetInfo, kBottomLeft);
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
-
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 * */
-
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
 		}
 	}
-}
 
-shared_ptr<himan::info> hybrid_height::FetchPrevious(const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam)
-{
-	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
-	try
+	if (!itsFastMode)
 	{
-		return f->Fetch(itsConfiguration,
-						wantedTime,
-						wantedLevel,
-						wantedParam);
-   	}
-	catch (HPExceptionType& e)
-	{
-		throw;
+		firstLevel = false;
 	}
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 
 }

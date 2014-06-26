@@ -6,18 +6,10 @@
  */
 
 #include "icing.h"
-#include <iostream>
-#include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "util.h"
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -28,7 +20,7 @@ icing::icing()
 {
 	itsClearTextFormula = "Icing = round(log(500 * CW * 1000)) + VVcor + Tcor";
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icing"));
+	itsLogger = logger_factory::Instance()->GetLog("icing");
 
 }
 
@@ -36,25 +28,7 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * Set target parameter to icing
-	 * - name ICEIND-N
-	 * - univ_id 480
-	 * - grib2 descriptor 0'00'002
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 * (todo: we could check from conf but why bother?)
-	 *
-	 */
-
-	vector<param> theParams;
-
-	param theRequestedParam("ICING-N", 480, 0, 19, 7);
-
-	theParams.push_back(theRequestedParam);
-
-	SetParams(theParams);
+	SetParams({param("ICING-N", 480, 0, 19, 7)});
 
 	Start();
 }
@@ -67,256 +41,152 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
-
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
 	// Required source parameters
 
-	param TParam("T-K");
-	params VvParam = { param("VV-MS"), param("VV-MMS")};
-	param ClParam("CLDWAT-KGKG");
+	const param TParam("T-K");
+	const params VvParam = { param("VV-MS"), param("VV-MMS")};
+	const param ClParam("CLDWAT-KGKG");
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex)));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex));
 
-	ResetNonLeadingDimension(myTargetInfo);
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	myTargetInfo->FirstParam();
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
+	info_t VvInfo = Fetch(forecastTime, forecastLevel, VvParam, false);
+	info_t ClInfo = Fetch(forecastTime, forecastLevel, ClParam, false);
+
+	if (!TInfo || !VvInfo || !ClInfo)
+	{
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
+	}
+
+	double VvScale = 1; // Assume we'll have VV-MMS
+		
+	if (VvInfo->Param().Name() == "VV-MS")
+	{
+		VvScale = 1000;
+	}
+
+	assert(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
+
+	SetAB(myTargetInfo, TInfo);
+		
+	string deviceType = "CPU";
+		
+	LOCKSTEP(myTargetInfo, TInfo, VvInfo, ClInfo)
 	{
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		double T = TInfo->Value();
+		double Vv = VvInfo->Value();
+		double Cl = ClInfo->Value();
 
-		shared_ptr<info> TInfo;
-		shared_ptr<info> VvInfo;
-		shared_ptr<info> ClInfo;
-
-		double VvScale = 1; // Assume we'll have VV-MMS
-		
-		try
+		if (T == kFloatMissing || Vv == kFloatMissing || Cl == kFloatMissing)
 		{
-			// Source info for T
-			TInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 TParam);
-				
-			// Source info for Tg
-			VvInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 VvParam);
-
-			if (VvInfo)
-			{
-				VvInfo->First();
-
-				if (VvInfo->Param().Name() == "VV-MS")
-				{
-					VvScale = 1000;
-				}
-			}
-			
-			// Source info for FF
-			ClInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 ClParam);
-				
-		}
-		catch (HPExceptionType& e)
-		{
-			switch (e)
-			{
-			case kFileDataNotFound:
-				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-				if (itsConfiguration->StatisticsEnabled())
-				{
-					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-				}
-
-				continue;
-				break;
-
-			default:
-				throw runtime_error(ClassName() + ": Unable to proceed");
-				break;
-			}
+			continue;
 		}
 
-		assert(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
+		double Icing;
+		double TBase = constants::kKelvin;
+		int vCor = kHPMissingInt;
+		int tCor = kHPMissingInt;
 
-		SetAB(myTargetInfo, TInfo);
-		
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> VvGrid(VvInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> ClGrid(ClInfo->Grid()->ToNewbaseGrid());
+		T = T - TBase;
+		Vv *= VvScale;
 
-		size_t missingCount = 0;
-		size_t count = 0;
+		// Vertical velocity correction factor
 
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() &&
-							*myTargetInfo->Grid() == *VvInfo->Grid() &&
-							*myTargetInfo->Grid() == *ClInfo->Grid());
-
-		myTargetInfo->ResetLocation();
-
-		targetGrid->Reset();
-
-		string deviceType = "CPU";
-		
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
+		if (Vv < 0)
 		{
-			count++;
-
-			double T = kFloatMissing;
-			double Vv = kFloatMissing;
-			double Cl = kFloatMissing;
-
-			InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-			InterpolateToPoint(targetGrid, VvGrid, equalGrids, Vv);
-			InterpolateToPoint(targetGrid, ClGrid, equalGrids, Cl);
-
-			if (T == kFloatMissing || Vv == kFloatMissing || Cl == kFloatMissing)
-			{
-				missingCount++;
-
-				myTargetInfo->Value(kFloatMissing);
-				continue;
-			}
-
-			double Icing;
-			double TBase = 273.15;
-			int vCor = kHPMissingInt;
-			int tCor = kHPMissingInt;
-
-			T = T - TBase;
-			Vv *= VvScale;
-			
-			// Vertical velocity correction factor
-
-			if (Vv < 0)
-			{
-				vCor = -1;
-			}
-			else if ((Vv >= 0) && (Vv <= 50))
-			{
-				vCor = 0;
-			}
-			else if ((Vv >= 50) && (Vv <= 100))
-			{
-				vCor = 1;
-			}
-			else if ((Vv >= 100) && (Vv <= 200))
-			{
-				vCor = 2;
-			}
-			else if ((Vv >= 200) && (Vv <= 300))
-			{
-				vCor = 3;
-			}
-			else if ((Vv >= 300) && (Vv <= 1000))
-			{
-				vCor = 4;
-			}
-			else if (Vv > 1000)
-			{
-				vCor = 5;
-			}
-
-			// Temperature correction factor
-
-			if ((T <= 0) && (T > -1))
-			{
-				tCor = -2;
-			}
-			else if ((T <= -1) && (T > -2))
-			{
-				tCor = -1;
-			}
-			else if ((T <= -2) && (T > -3))
-			{
-				tCor = 0;
-			}
-			else if ((T <= -3) && (T > -12))
-			{
-				tCor = 1;
-			}
-			else if ((T <= -12) && (T > -15))
-			{
-				tCor = 0;
-			}
-			else if ((T <= -15) && (T > -18))
-			{
-				tCor = -1;
-			}
-			else if (T < -18)
-			{
-				tCor = -2;
-			}
-			else 
-			{
-				tCor = 0;
-			}
-
-			if ((Cl <= 0) || (T > 0))
-			{
-				Icing = 0;
-			}
-			else {
-				Icing = round(log(500 * Cl * 1000)) + vCor + tCor;
-			}
-
-			// Maximum and minimum values for index
-
-			if (Icing > 15)
-			{
-				Icing = 15;
-			}
-
-			if (Icing < 0)
-			{
-				Icing = 0;
-			}
-
-			if (!myTargetInfo->Value(Icing))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
-			}
-
+			vCor = -1;
+		}
+		else if ((Vv >= 0) && (Vv <= 50))
+		{
+			vCor = 0;
+		}
+		else if ((Vv >= 50) && (Vv <= 100))
+		{
+			vCor = 1;
+		}
+		else if ((Vv >= 100) && (Vv <= 200))
+		{
+			vCor = 2;
+		}
+		else if ((Vv >= 200) && (Vv <= 300))
+		{
+			vCor = 3;
+		}
+		else if ((Vv >= 300) && (Vv <= 1000))
+		{
+			vCor = 4;
+		}
+		else if (Vv > 1000)
+		{
+			vCor = 5;
 		}
 
-		/*
-		 * Newbase normalizes scanning mode to bottom left -- if that's not what
-		 * the target scanning mode is, we have to swap the data back.
-		 */
+		// Temperature correction factor
 
-		SwapTo(myTargetInfo, kBottomLeft);
-
-		if (itsConfiguration->StatisticsEnabled())
+		if ((T <= 0) && (T > -1))
 		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
+			tCor = -2;
+		}
+		else if ((T <= -1) && (T > -2))
+		{
+			tCor = -1;
+		}
+		else if ((T <= -2) && (T > -3))
+		{
+			tCor = 0;
+		}
+		else if ((T <= -3) && (T > -12))
+		{
+			tCor = 1;
+		}
+		else if ((T <= -12) && (T > -15))
+		{
+			tCor = 0;
+		}
+		else if ((T <= -15) && (T > -18))
+		{
+			tCor = -1;
+		}
+		else if (T < -18)
+		{
+			tCor = -2;
+		}
+		else
+		{
+			tCor = 0;
 		}
 
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places		 
-		 */
-
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
+		if ((Cl <= 0) || (T > 0))
 		{
-			WriteToFile(myTargetInfo);
+			Icing = 0;
 		}
+		else {
+			Icing = round(log(500 * Cl * 1000)) + vCor + tCor;
+		}
+
+		// Maximum and minimum values for index
+
+		if (Icing > 15)
+		{
+			Icing = 15;
+		}
+
+		if (Icing < 0)
+		{
+			Icing = 0;
+		}
+
+		myTargetInfo->Value(Icing);
 	}
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+
 }

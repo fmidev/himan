@@ -6,18 +6,12 @@
  */
 
 #include "cloud_type.h"
-#include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include "metutil.h"
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -26,7 +20,8 @@ const string itsName("cloud_type");
 
 cloud_type::cloud_type()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog(itsName));
+	itsClearTextFormula = "algorithm>";
+	itsLogger = logger_factory::Instance()->GetLog(itsName);
 
 }
 
@@ -35,31 +30,7 @@ void cloud_type::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	Init(conf);
 
-
-	/*
-	 * Set target parameter to cloud type
-	 * - name CLDSYM-N
-	 * - univ_id 328
-	 * - grib2 descriptor 0'6'8
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 *
-	 */
-
-	vector<param> theParams;
-
-	param theRequestedParam("CLDSYM-N", 328);
-
-	// GRIB 2
-	
-	theRequestedParam.GribDiscipline(0);
-	theRequestedParam.GribCategory(6);
-	theRequestedParam.GribParameter(8);
-
-	theParams.push_back(theRequestedParam);
-
-	SetParams(theParams);
+	SetParams({param("CLDSYM-N", 328, 0, 6, 8)});
 
 	Start();
 }
@@ -73,9 +44,6 @@ void cloud_type::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
-	auto theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
 	// Required source parameters
 
 	const param TParam("T-K");
@@ -91,434 +59,271 @@ void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	
 	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
 
-	ResetNonLeadingDimension(myTargetInfo);
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	myTargetInfo->FirstParam();
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, false);
+	info_t NInfo = Fetch(forecastTime, NKLevel, NParams, false);
+	info_t KInfo = Fetch(forecastTime, NKLevel, KParam, false);
+	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, false);
+	info_t RH850Info = Fetch(forecastTime, RH850Level, RHParam, false);
+	info_t RH700Info = Fetch(forecastTime, RH700Level, RHParam, false);
+	info_t RH500Info = Fetch(forecastTime, RH500Level, RHParam, false);
+
+	if (!T0mInfo || !NInfo || !KInfo || !T850Info || !RH850Info || !RH700Info || !RH500Info)
 	{
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
+	}
+	
+	string deviceType = "CPU";
 
-		shared_ptr<info> T0mInfo;
-		shared_ptr<info> NInfo;
-		shared_ptr<info> KInfo;
-		shared_ptr<info> T850Info;
-		shared_ptr<info> RH850Info;
-		shared_ptr<info> RH700Info;
-		shared_ptr<info> RH500Info;
-		
-		try
+	int percentMultiplier = 1;
+
+	if (myTargetInfo->Producer().Name() == "HL2MTA")
+	{
+		percentMultiplier = 100;
+	}
+
+	LOCKSTEP(myTargetInfo,T0mInfo,NInfo,KInfo,T850Info,RH850Info,RH700Info,RH500Info)
+	{
+
+
+		double T0m = T0mInfo->Value();
+		double N = NInfo->Value();
+		double kIndex = KInfo->Value();
+		double T850 = T850Info->Value();
+		double RH850 = RH850Info->Value();
+		double RH700 = RH700Info->Value();
+		double RH500 = RH500Info->Value();
+
+		if ( T0m == kFloatMissing || N == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing || RH850 == kFloatMissing || RH700 == kFloatMissing || RH500 == kFloatMissing )
 		{
-			// Source info for T0m
-			T0mInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 T0mLevel,
-								 TParam);
-			// Source info for N
-			NInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 NKLevel,
-								 NParams);
-			// Source info for kIndex
-			KInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 NKLevel,
-								 KParam);
-			// Source info for T850
-			T850Info = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 RH850Level,
-								 TParam);	
-			// Source info for RH850
-			RH850Info = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 RH850Level,
-								 RHParam);				
-			// Source info for RH700
-			RH700Info = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 RH700Level,
-								 RHParam);
-			// Source info for RH500
-			RH500Info = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 RH500Level,
-								 RHParam);
-
-		}
-		catch (HPExceptionType& e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing);
-
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-					
-					continue;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-			}
+			continue;
 		}
 
-		size_t missingCount = 0;
-		size_t count = 0;
+		//error codes from fortran
+		int cloudCode = 704;
 
-		/*
-		 * Converting original grid-data to newbase grid
-		 *
-		 */
+		int lowConvection = metutil::LowConvection_(T0m, T850);
 
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> T0mGrid(T0mInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> NGrid(NInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> KGrid(KInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> T850Grid(T850Info->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> RH850Grid(RH850Info->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> RH700Grid(RH700Info->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> RH500Grid(RH500Info->Grid()->ToNewbaseGrid());
+		//data comes as 0..1 instead of 0-100%
+		N *= 100;
 
-		bool equalGrids = (*myTargetInfo->Grid() == *RH850Info->Grid() &&
-							*myTargetInfo->Grid() == *RH700Info->Grid() &&
-							*myTargetInfo->Grid() == *RH500Info->Grid() &&
-							*myTargetInfo->Grid() == *T850Info->Grid() &&
-							*myTargetInfo->Grid() == *T0mInfo->Grid() &&
-							*myTargetInfo->Grid() == *NInfo->Grid() &&
-							*myTargetInfo->Grid() == *KInfo->Grid());
+		RH500 *= percentMultiplier;
+		RH700 *= percentMultiplier;
+		RH850 *= percentMultiplier;
 
-		string deviceType = "CPU";
-
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-		myTargetInfo->ResetLocation();
-
-		targetGrid->Reset();
-		T0mGrid->Reset();
-		NGrid->Reset();
-		KGrid->Reset();
-		T850Grid->Reset();
-		RH850Grid->Reset();
-		RH700Grid->Reset();
-		RH500Grid->Reset();
-
-		int percentMultiplier = 1;
-
-		if (myTargetInfo->Producer().Name() == "HL2MTA")
+		if ( N > 90 )
+		//Jos N = 90…100 % (pilvistä), niin
 		{
-			percentMultiplier = 100;
-		}
-
-		while ( myTargetInfo->NextLocation() && targetGrid->Next() )
-		{
-
-			count++;
-
-			double T0m = kFloatMissing;
-			double N = kFloatMissing;
-			double kIndex = kFloatMissing;
-			double T850 = kFloatMissing;
-			double RH850 = kFloatMissing;
-			double RH700 = kFloatMissing;
-			double RH500 = kFloatMissing;
-
-			InterpolateToPoint(targetGrid, T0mGrid, equalGrids, T0m);
-			InterpolateToPoint(targetGrid, NGrid, equalGrids, N);
-			InterpolateToPoint(targetGrid, KGrid, equalGrids, kIndex);
-			InterpolateToPoint(targetGrid, T850Grid, equalGrids, T850);
-			InterpolateToPoint(targetGrid, RH850Grid, equalGrids, RH850);
-			InterpolateToPoint(targetGrid, RH700Grid, equalGrids, RH700);
-			InterpolateToPoint(targetGrid, RH500Grid, equalGrids, RH500);
-
-			if ( T0m == kFloatMissing || N == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing || RH850 == kFloatMissing || RH700 == kFloatMissing || RH500 == kFloatMissing )
+			if ( RH500 > 65 )
 			{
-				missingCount++;
-
-				myTargetInfo->Value(kFloatMissing);
-				continue;
-			}
-
-			//error codes from fortran
-			int cloudCode = 704;
-			//int cloudType = 1;
-		
-			int lowConvection = metutil::LowConvection_(T0m, T850);
-			
-			//data comes as 0..1 instead of 0-100%
-			N *= 100;
-
-			RH500 *= percentMultiplier;
-			RH700 *= percentMultiplier;
-			RH850 *= percentMultiplier;
-			
-			if ( N > 90 )
-			//Jos N = 90…100 % (pilvistä), niin
-			{
-  				if ( RH500 > 65 )
-  				{
-  					cloudCode = 3502;
-  				}
-  				else 
-  				{
-  					cloudCode = 3306;
-  				}
-
-  				if ( RH700 > 80)
-  				{
-  					cloudCode = 3405;
-  				}
-
-  				if ( RH850 > 60 )
-  				{
-  					if ( RH700 > 80 )
-  					{
-  						cloudCode = 3604;
-  					//	cloudType = 3;
-						if (!myTargetInfo->Value(cloudCode))
-						{
-							throw runtime_error(ClassName() + ": Failed to set value to matrix");
-						}
-						continue;
-  					}
-  					else
-  					{
-  						cloudCode = 3307;
-  					//	cloudType= 2;
-  					}
-  				}
-
-  				//jos RH500 > 65, tulos 3502 (yläpilvi)
- 				//ellei, niin tulos 3306 (yhtenäinen alapilvi)
- 				//Jos kuitenkin RH700 > 80, tulos 3405 (keskipilvi)
- 				//Jos kuitenkin RH850 > 60, niin
-        			//jos RH700 > 80, tulos 3604 (paksut kerrospilvet) tyyppi = 3 (sade) > ulos
-			    		//ellei, niin tulos 3307 (alapilvi) tyyppi = 2
-				
-				if ( kIndex > 25 )
-				{
-					cloudCode = 3309;
-				//	cloudType = 4;
-				}
-				
-				else if ( kIndex > 20)
-				{
-					cloudCode = 2303;
-				//	cloudType = 4;
-				}
-				
-				else if ( kIndex > 15 )
-				{
-					cloudCode = 2302;
-				//	cloudType = 4;
-				}
-				else if ( lowConvection == 1 )
-				{
-					cloudCode = 2303;
-				//	cloudType = 4;
-				}
-				/*
-				Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
-				Jos kIndex > 20, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
-				Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4
-				Jos lowConvection = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
-				*/
-			
-			}
-			else if ( N > 50 )
-			//Jos N = 50…90 % (puolipilvistä tai pilvistä), niin
-			{
-				if ( RH500 > 65 )
-				{
-					cloudCode = 2501;
-				}
-
-				else 
-				{
-					cloudCode = 2305;
-				}
-
-				if ( RH700 > 80 )
-				{
-					cloudCode = 2403;
-				}
-
-				if ( RH850 > 80 ) 
-				{
-					cloudCode = 2307;
-
-				//	if ( N > 70 )
-				//		cloudType = 2;
-				}
-      			/*	jos RH500 > 65, tulos 2501 (cirrus)
-      				ellei, niin tulos 2305 (stratocumulus)
-      				Jos kuitenkin RH700 > 80, tulos 2403 (keskipilvi)
-      				Jos kuitenkin RH850 > 80, tulos 2307 (matala alapilvi)
-            			ja jos N > 70 %, tyyppi 2
-            	*/
-
-            	if ( kIndex > 25 )
-				{
-					cloudCode = 3309;
-				//	cloudType = 4;
-				}
-				
-				else if ( kIndex > 20 )
-				{
-					cloudCode = 2303;
-				//	cloudType = 4;
-				}
-				
-				else if ( kIndex > 15 )
-				{
-					cloudCode = 2302;
-				//	cloudType = 4;
-				}
-				else if ( lowConvection == 1 )
-				{
-					cloudCode = 2303;
-				//	cloudType = 4;
-				}
-				/*
-				Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
-		    	Jos kIndex > 20, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4		
-		    	Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4		
-				Jos lowConvection = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
-				*/
-			}
-			else if ( N > 10 )
-			//Jos N = 10… 50 % (hajanaista pilvisyyttä)
-			{
-				if ( RH500 > 60 )
-				{
-					cloudCode = 1501;
-				}
-
-				else
-				{
-					cloudCode = 1305;
-				}
-				
-				if ( RH700 > 70 )
-				{					
-					cloudCode = 1403;
-				}
-
-				if ( RH850 > 80 )
-				{
-					cloudCode = 1305;
-				}
-				
-      			//	jos RH500 > 60, niin tulos 1501 (ohutta cirrusta), muuten tulos 1305 (alapilveä)
-      			//	Jos RH700 > 70, tulos 1403 (keskipilveä)
-      			//	Jos RH850 > 80, tulos 1305 (alapilveä)
-
-				if ( kIndex > 25 )
-				{
-					cloudCode = 1309;
-				//	cloudType = 4;
-				}
-
-				else if ( kIndex > 20 )
-				{
-					cloudCode = 1303;
-				//	cloudType = 4;
-				}
-
-				else if ( kIndex > 15 )
-				{
-					cloudCode = 1302;
-				//	cloudType = 4;
-				}
-
-				else if ( lowConvection == 2 )
-				{
-					cloudCode = 1301;
-				}
-
-				else if ( lowConvection == 1 )
-				{
-					cloudCode = 1303;
-				//	cloudType = 4;
-				}
-
-				/*
-				Jos kIndex > 25, niin tulos 1309 (korkea kuuropilvi), tyyppi 4
-				Jos kIndex > 20, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
-				Jos kIndex > 15, niin tulos 1302 (konvektiopilvi), tyyppi 4
-				Jos lowConvection = 2, niin tulos 1301 (poutapilvi)
-				Jos lowConvection = 1, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
-				*/
+				cloudCode = 3502;
 			}
 			else
-				//Jos N 0…10 %
 			{
-      			//tulos 0. Jos lowConvection = 1, tulos 1303, tyyppi 4
-      			cloudCode = 0;
-      			if ( lowConvection == 1 )
-      			{
-      				cloudCode = 1303;
-      			//	cloudType = 4;
-      			}
-      		}
-			//Jälkikäsittely:
+				cloudCode = 3306;
+			}
 
-      		/*if ( cloudType == 2 && T850 < -9 )
-      			cloudType = 5;
-
-      		else if ( cloudType == 4 )
-      		{
-      			if (kIndex >= 37)
-      				cloudType = 45;
-
-      			else if (kIndex >= 27)
-      				cloudType = 35;
-      		}*/
-				/*Jos tyyppi = 2 ja T850 < -9, tyyppi = 5 (lumisade alapilvistä)
-				Jos tyyppi = 4, ja
-      				kIndex > 37, tyyppi = 45
-      				kIndex > 27, tyyppi = 35
-      				*/
-		
-
-			if (!myTargetInfo->Value(cloudCode))
+			if ( RH700 > 80)
 			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
+				cloudCode = 3405;
+			}
+
+			if ( RH850 > 60 )
+			{
+				if ( RH700 > 80 )
+				{
+					cloudCode = 3604;
+					myTargetInfo->Value(cloudCode);
+					continue;
+				}
+				else
+				{
+					cloudCode = 3307;
+				}
+			}
+
+			//jos RH500 > 65, tulos 3502 (yläpilvi)
+			//ellei, niin tulos 3306 (yhtenäinen alapilvi)
+			//Jos kuitenkin RH700 > 80, tulos 3405 (keskipilvi)
+			//Jos kuitenkin RH850 > 60, niin
+				//jos RH700 > 80, tulos 3604 (paksut kerrospilvet) tyyppi = 3 (sade) > ulos
+					//ellei, niin tulos 3307 (alapilvi) tyyppi = 2
+
+			if ( kIndex > 25 )
+			{
+				cloudCode = 3309;
+			//	cloudType = 4;
+			}
+
+			else if ( kIndex > 20)
+			{
+				cloudCode = 2303;
+			//	cloudType = 4;
+			}
+
+			else if ( kIndex > 15 )
+			{
+				cloudCode = 2302;
+			//	cloudType = 4;
+			}
+			else if ( lowConvection == 1 )
+			{
+				cloudCode = 2303;
+			//	cloudType = 4;
+			}
+			/*
+			Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
+			Jos kIndex > 20, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
+			Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4
+			Jos lowConvection = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
+			*/
+
+		}
+		else if ( N > 50 )
+		//Jos N = 50…90 % (puolipilvistä tai pilvistä), niin
+		{
+			if ( RH500 > 65 )
+			{
+				cloudCode = 2501;
+			}
+
+			else
+			{
+				cloudCode = 2305;
+			}
+
+			if ( RH700 > 80 )
+			{
+				cloudCode = 2403;
+			}
+
+			if ( RH850 > 80 )
+			{
+				cloudCode = 2307;
+
+			//	if ( N > 70 )
+			//		cloudType = 2;
+			}
+			/*	jos RH500 > 65, tulos 2501 (cirrus)
+				ellei, niin tulos 2305 (stratocumulus)
+				Jos kuitenkin RH700 > 80, tulos 2403 (keskipilvi)
+				Jos kuitenkin RH850 > 80, tulos 2307 (matala alapilvi)
+					ja jos N > 70 %, tyyppi 2
+			*/
+
+			if ( kIndex > 25 )
+			{
+				cloudCode = 3309;
+			//	cloudType = 4;
+			}
+
+			else if ( kIndex > 20 )
+			{
+				cloudCode = 2303;
+			//	cloudType = 4;
+			}
+
+			else if ( kIndex > 15 )
+			{
+				cloudCode = 2302;
+			//	cloudType = 4;
+			}
+			else if ( lowConvection == 1 )
+			{
+				cloudCode = 2303;
+			//	cloudType = 4;
+			}
+			/*
+			Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
+			Jos kIndex > 20, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
+			Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4
+			Jos lowConvection = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
+			*/
+		}
+		else if ( N > 10 )
+		//Jos N = 10… 50 % (hajanaista pilvisyyttä)
+		{
+			if ( RH500 > 60 )
+			{
+				cloudCode = 1501;
+			}
+
+			else
+			{
+				cloudCode = 1305;
+			}
+
+			if ( RH700 > 70 )
+			{
+				cloudCode = 1403;
+			}
+
+			if ( RH850 > 80 )
+			{
+				cloudCode = 1305;
+			}
+
+			//	jos RH500 > 60, niin tulos 1501 (ohutta cirrusta), muuten tulos 1305 (alapilveä)
+			//	Jos RH700 > 70, tulos 1403 (keskipilveä)
+			//	Jos RH850 > 80, tulos 1305 (alapilveä)
+
+			if ( kIndex > 25 )
+			{
+				cloudCode = 1309;
+			//	cloudType = 4;
+			}
+
+			else if ( kIndex > 20 )
+			{
+				cloudCode = 1303;
+			//	cloudType = 4;
+			}
+
+			else if ( kIndex > 15 )
+			{
+				cloudCode = 1302;
+			//	cloudType = 4;
+			}
+
+			else if ( lowConvection == 2 )
+			{
+				cloudCode = 1301;
+			}
+
+			else if ( lowConvection == 1 )
+			{
+				cloudCode = 1303;
+			//	cloudType = 4;
+			}
+
+			/*
+			Jos kIndex > 25, niin tulos 1309 (korkea kuuropilvi), tyyppi 4
+			Jos kIndex > 20, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
+			Jos kIndex > 15, niin tulos 1302 (konvektiopilvi), tyyppi 4
+			Jos lowConvection = 2, niin tulos 1301 (poutapilvi)
+			Jos lowConvection = 1, niin tulos 1303 (korkea konvektiopilvi), tyyppi 4
+			*/
+		}
+		else
+			//Jos N 0…10 %
+		{
+			//tulos 0. Jos lowConvection = 1, tulos 1303, tyyppi 4
+			cloudCode = 0;
+			if ( lowConvection == 1 )
+			{
+				cloudCode = 1303;
+			//	cloudType = 4;
 			}
 		}
-
-		/*
-		 * Newbase normalizes scanning mode to bottom left -- if that's not what
-		 * the target scanning mode is, we have to swap the data back.
-		 */
-
-		SwapTo(myTargetInfo, kBottomLeft);
-
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
-
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 * */
-
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
+		
+		myTargetInfo->Value(cloudCode);
 	}
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+
 }

@@ -6,18 +6,10 @@
  */
 
 #include "hybrid_pressure.h"
-#include <iostream>
-#include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "util.h"
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -27,7 +19,7 @@ hybrid_pressure::hybrid_pressure()
 	// Vertkoord_A and Vertkoord_B refer to full hybrid-level coefficients
 	itsClearTextFormula = "P = Vertkoord_A + P0 * Vertkoord_B";
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("hybrid_pressure"));
+	itsLogger = logger_factory::Instance()->GetLog("hybrid_pressure");
 
 }
 
@@ -35,30 +27,7 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * Set target parameter to P-HPA
-	 * - name P-HPA
-	 * - univ_id 1
-	 * 
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 *
-	 */
-
-	vector<param> theParams;
-
-	param theRequestedParam("P-HPA", 1);
-
-	// GRIB 2
-	
-	theRequestedParam.GribDiscipline(0);
-	theRequestedParam.GribCategory(3);
-	theRequestedParam.GribParameter(0);
-
-	theParams.push_back(theRequestedParam);
-
-	SetParams(theParams);
+	SetParams({param("P-HPA", 1, 0, 3, 0)});
 
 	Start();
 
@@ -73,158 +42,54 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	const param PParam("P-PA");
+	const param QParam("Q-KGKG");
+	const level PLevel(himan::kHeight, 0, "HEIGHT");
 
-	// Required source parameters
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("hybrid_pressureThread #" + boost::lexical_cast<string> (theThreadIndex));
 
-	param PParam("P-PA");
-	param QParam("Q-KGKG");
-	level PLevel(himan::kHeight, 0, "HEIGHT");
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("hybrid_pressureThread #" + boost::lexical_cast<string> (theThreadIndex)));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	ResetNonLeadingDimension(myTargetInfo);
+	info_t PInfo = Fetch(forecastTime, PLevel, PParam, false);
+	info_t QInfo = Fetch(forecastTime, PLevel, QParam, false);
 
-	myTargetInfo->FirstParam();
-
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	if (!PInfo || !QInfo)
 	{
-
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-
-		shared_ptr<info> PInfo;
-		shared_ptr<info> QInfo;
-		
-		try
-		{
-			// Source info for P
-			PInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 PLevel,
-								 PParam);
-			// Source info for Q
-			QInfo = theFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 myTargetInfo->Level(),
-								 QParam);
-
-		
-		}
-		catch (HPExceptionType& e)
-		{
-
-			switch (e)
-			{
-			case kFileDataNotFound:
-				itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-				myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-				if (itsConfiguration->StatisticsEnabled())
-				{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-				}
-
-				continue;
-				break;
-
-			default:
-				throw runtime_error(ClassName() + ": Unable to proceed");
-				break;
-			}
-		}
-
-		unique_ptr<timer> processTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Start();
-		}
-
-		SetAB(myTargetInfo, QInfo);
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> PGrid(PInfo->Grid()->ToNewbaseGrid());
-		shared_ptr<NFmiGrid> QGrid(QInfo->Grid()->ToNewbaseGrid());
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-		bool equalGrids = (*myTargetInfo->Grid() == *PInfo->Grid() && *myTargetInfo->Grid() == *QInfo->Grid());
-
-		myTargetInfo->ResetLocation();
-
-		targetGrid->Reset();
-
-		/* 
-		 * Vertical coordinates for full hybrid levels.
-		 * For Hirlam data, coefficients A and B are already interpolated to full level coefficients in the grib-file.
-		 * For Harmonie and ECMWF interpolation is done, when reading data from the grib-file. (NFmiGribMessage::PV)
-		 */
-
-		std::vector<double> ab = QInfo->Grid()->AB();
-
-	    	double A = ab[0];
-	    	double B = ab[1];
-
-		while (myTargetInfo->NextLocation() && targetGrid->Next())
-		{
-			count++;
-
-			double P = kFloatMissing;
-		
-			InterpolateToPoint(targetGrid, PGrid, equalGrids, P);
-
-			if (P == kFloatMissing)
-			{
-				missingCount++;
-
-				myTargetInfo->Value(kFloatMissing);  // No missing values
-				continue;
-			}
-
-			double hybrid_pressure;
-
-			hybrid_pressure = 0.01 * (A + P * B);
-
-			if (!myTargetInfo->Value(hybrid_pressure))
-			{
-				throw runtime_error(ClassName() + ": Failed to set value to matrix");
-			}
-
-		}
-
-		/*
-		 * Newbase normalizes scanning mode to bottom left -- if that's not what
-		 * the target scanning mode is, we have to swap the data back.
-		 */
-
-		SwapTo(myTargetInfo, kBottomLeft);
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			processTimer->Stop();
-			itsConfiguration->Statistics()->AddToProcessingTime(processTimer->GetTime());
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-
-		}
-
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places		 
-		 */
-
-		myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
 	}
+	
+	SetAB(myTargetInfo, QInfo);
+
+	/* 
+	 * Vertical coordinates for full hybrid levels.
+	 * For Hirlam data, coefficients A and B are already interpolated to full level coefficients in the grib-file.
+	 * For Harmonie and ECMWF interpolation is done, when reading data from the grib-file. (NFmiGribMessage::PV)
+	 */
+
+	std::vector<double> ab = QInfo->Grid()->AB();
+
+   	double A = ab[0];
+   	double B = ab[1];
+
+	LOCKSTEP(myTargetInfo, PInfo)
+	{
+		double P = PInfo->Value();
+		
+		if (P == kFloatMissing)
+		{
+			continue;
+		}
+
+		double hybrid_pressure = 0.01 * (A + P * B);
+
+		myTargetInfo->Value(hybrid_pressure);
+	}
+
+
+	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+
 }

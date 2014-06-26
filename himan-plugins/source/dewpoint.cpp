@@ -6,16 +6,10 @@
  */
 
 #include "dewpoint.h"
-#include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -27,7 +21,7 @@ dewpoint::dewpoint()
 	itsClearTextFormula = "Td = T / (1 - (T * ln(RH)*(Rw/L)))";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("dewpoint"));
+	itsLogger = logger_factory::Instance()->GetLog("dewpoint");
 
 }
 
@@ -41,20 +35,10 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 	 *
 	 */
 
-	vector<param> params;
-
-	param requestedParam ("TD-C", 10);
+	param requestedParam ("TD-C", 10, 0, 0, 6);
 	requestedParam.Unit(kK);
-	
-	// GRIB 2
 
-	requestedParam.GribDiscipline(0);
-	requestedParam.GribCategory(0);
-	requestedParam.GribParameter(6);
-
-	params.push_back(requestedParam);
-
-	SetParams(params);
+	SetParams({requestedParam});
 
 	Start();
 }
@@ -68,204 +52,98 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
+	const param TParam("T-K");
+	const param RHParam("RH-PRCNT");
+
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("dewpointThread #" + boost::lexical_cast<string> (threadIndex));
 	
-	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	// Required source parameters
-
-	param TParam("T-K");
-	param RHParam("RH-PRCNT");
-
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("dewpointThread #" + boost::lexical_cast<string> (threadIndex)));
-	
-	ResetNonLeadingDimension(myTargetInfo);
-
-	myTargetInfo->FirstParam();
-
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 	
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	double TBase = 0;
+	double RHScale = 1;
+		
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	info_t RHInfo = Fetch(forecastTime, forecastLevel, RHParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+
+	if (!TInfo || !RHInfo)
 	{
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
+	}
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		double TBase = 0;
-		double RHScale = 1;
+	assert(TInfo->Grid()->AB() == RHInfo->Grid()->AB());
 		
-		shared_ptr<info> TInfo;
-		shared_ptr<info> RHInfo;
+	SetAB(myTargetInfo, TInfo);
 
-		try
-		{
-			TInfo = f->Fetch(itsConfiguration,
-								myTargetInfo->Time(),
-								myTargetInfo->Level(),
-								TParam,
-								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	if (RHInfo->Param().Unit() != kPrcnt)
+	{
+		itsLogger->Warning("Unable to determine RH unit, assuming percent");
+	}
 
-			RHInfo = f->Fetch(itsConfiguration,
-								myTargetInfo->Time(),
-								myTargetInfo->Level(),
-								RHParam,
-								itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	// Formula assumes T == Celsius
 
+	if (TInfo->Param().Unit() == kK)
+	{
+		TBase = -himan::constants::kKelvin;
+	}
 
-		}
-		catch (HPExceptionType& e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
-
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-
-					continue;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-			}
-		}
-
-		assert(TInfo->Grid()->AB() == RHInfo->Grid()->AB());
-		
-		SetAB(myTargetInfo, TInfo);
-
-		if (RHInfo->Param().Unit() != kPrcnt)
-		{
-			itsLogger->Warning("Unable to determine RH unit, assuming percent");
-		}
-
-		// Formula assumes T == Celsius
-
-		if (TInfo->Param().Unit() == kK)
-		{
-			TBase = -himan::constants::kKelvin;
-		}
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		bool equalGrids = (*myTargetInfo->Grid() == *TInfo->Grid() && *myTargetInfo->Grid() == *RHInfo->Grid());
-
-		string deviceType;
+	string deviceType;
 
 #ifdef HAVE_CUDA
 
-		// If we read packed data but grids are not equal we cannot use cuda
-		// for calculations (our cuda routines do not know how to interpolate)
+	if (useCudaInThisThread)
+	{
 
-		if (!equalGrids && (TInfo->Grid()->IsPackedData() || RHInfo->Grid()->IsPackedData()))
-		{
-			myThreadedLogger->Debug("Unpacking for CPU calculation");
+		deviceType = "GPU";
 
-			Unpack({TInfo, RHInfo});
-		}
+		auto opts = CudaPrepare(myTargetInfo, TInfo, RHInfo); 
 
-		if (useCudaInThisThread && equalGrids)
-		{
+		dewpoint_cuda::Process(*opts);
 
-			deviceType = "GPU";
+		CudaFinish(move(opts), myTargetInfo, TInfo, RHInfo);
 
-			auto opts = CudaPrepare(myTargetInfo, TInfo, RHInfo); 
-
-			dewpoint_cuda::Process(*opts);
-
-			missingCount = opts->missing;
-			count = opts->N;
-
-			CudaFinish(move(opts), myTargetInfo, TInfo, RHInfo);
-
-		}
-		else
+	}
+	else
 #endif
-		{
-			deviceType = "CPU";
-
-			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> TGrid(TInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> RHGrid(RHInfo->Grid()->ToNewbaseGrid());
-
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
+	{
+		deviceType = "CPU";
 			
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
+		LOCKSTEP(myTargetInfo, TInfo, RHInfo)
+		{		
+
+			double T = TInfo->Value();
+			double RH = RHInfo->Value();
+
+			if (T == kFloatMissing || RH == kFloatMissing)
 			{
-				count++;
-
-				double T = kFloatMissing;
-				double RH = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, TGrid, equalGrids, T);
-				InterpolateToPoint(targetGrid, RHGrid, equalGrids, RH);
-
-				if (T == kFloatMissing || RH == kFloatMissing)
-				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-
-				T += TBase;
-				RH *= RHScale;
-
-				double TD = kFloatMissing;
-
-				if (RH > 50)
-				{
-					TD = T - ((100 - RH) * 0.2) + constants::kKelvin;
-				}
-				else
-				{
-					TD = T / (1 - (T * log(RH) * (Rw_div_L))) + constants::kKelvin;
-				}
-
-				if (!myTargetInfo->Value(TD))
-				{
-					throw runtime_error(ClassName() + ": Failed to set value to matrix");
-				}
-
+				continue;
 			}
 
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
+			T += TBase;
+			RH *= RHScale;
 
-			SwapTo(myTargetInfo, kBottomLeft);
-		}
+			double TD = kFloatMissing;
 
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
-		
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 */
+			if (RH > 50)
+			{
+				TD = T - ((100 - RH) * 0.2) + constants::kKelvin;
+			}
+			else
+			{
+				TD = T / (1 - (T * log(RH) * (Rw_div_L))) + constants::kKelvin;
+			}
 
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
+			myTargetInfo->Value(TD);
 
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
 		}
 	}
+	
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+
 }
 
 #ifdef HAVE_CUDA

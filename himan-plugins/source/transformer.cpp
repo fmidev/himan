@@ -11,26 +11,20 @@
 #include <boost/lexical_cast.hpp>
 #include "json_parser.h"
 #include "util.h"
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
+#include "level.h"
+#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
 
 #include "cuda_helper.h"
 
-
-transformer::transformer() : itsBase(0.0), itsScale(1.0), itsTargetUnivID(999)
+transformer::transformer() : itsBase(0.0), itsScale(1.0), itsTargetUnivID(9999)
 {
 	itsClearTextFormula = "target_param = source_param * itsScale + itsBase";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("transformer"));
+	itsLogger = logger_factory::Instance()->GetLog("transformer");
 }
 
 vector<himan::level> transformer::LevelsFromString(const string& levelType, const string& levelValues) const
@@ -108,7 +102,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger->Warning("Target_univ_ID not specified, using  default value 999");
+		itsLogger->Warning("Target_univ_ID not specified, using default value 9999");
 	}
 	
 	if(itsConfiguration->Options().count("target_param"))
@@ -209,180 +203,77 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	shared_ptr<fetcher> aFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
 	// Required source parameter
 
 	param InputParam(itsSourceParam);
 
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("transformerThread #" + boost::lexical_cast<string> (threadIndex)));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("transformerThread #" + boost::lexical_cast<string> (threadIndex));
 
-	ResetNonLeadingDimension(myTargetInfo);
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
-	myTargetInfo->FirstParam();
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	info_t sourceInfo = Fetch(forecastTime, itsSourceLevels[myTargetInfo->LevelIndex()], InputParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+
+	if (!sourceInfo)
 	{
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
+	}
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+	SetAB(myTargetInfo, sourceInfo);
 
-		// Source info for T
+	bool levelOnly = (itsScale == 1.0 && itsBase == 0.0);
 
-		shared_ptr<info> sourceInfo;
-
-		try
-		{
-			sourceInfo = aFetcher->Fetch(itsConfiguration,
-								 myTargetInfo->Time(),
-								 itsSourceLevels[myTargetInfo->LevelIndex()],
-								 InputParam,
-                                                                 itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-		}
-		catch (HPExceptionType& e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing);
-
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
-					
-					continue;
-					break;
-
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-			}
-		}
-
-		SetAB(myTargetInfo, sourceInfo);
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-
-		bool equalGrids = (*myTargetInfo->Grid() == *sourceInfo->Grid());
-		bool levelOnly = (itsScale == 1.0 && itsBase == 0.0);
-
-		string deviceType;
-
+	string deviceType;
 
 #ifdef HAVE_CUDA
 
-		// If we read packed data but grids are not equal we cannot use cuda
-		// for calculations (our cuda routines do not know how to interpolate)
+	if (useCudaInThisThread && !levelOnly)
+	{
 
-		if (!equalGrids && sourceInfo->Grid()->IsPackedData())
-		{
-			myThreadedLogger->Debug("Unpacking for CPU calculation");
+		deviceType = "GPU";
 
-			Unpack({sourceInfo});
-		}
+		auto opts = CudaPrepare(myTargetInfo, sourceInfo);
 
-		if (useCudaInThisThread && equalGrids && !levelOnly)
-		{
-	
-			deviceType = "GPU";
+		transformer_cuda::Process(*opts);
 
-			auto opts = CudaPrepare(myTargetInfo, sourceInfo);
-
-			transformer_cuda::Process(*opts);
-
-			missingCount = opts->missing;
-			count = opts->N;
-
-			CudaFinish(move(opts), myTargetInfo, sourceInfo);
-
-		}
-		else
-#endif
-
-		{
-
-			deviceType = "CPU";
-
-			shared_ptr<NFmiGrid> sourceGrid(sourceInfo->Grid()->ToNewbaseGrid());
-
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
-			{
-
-				count++;
-
-				double value = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, sourceGrid, equalGrids, value);
-
-				if (value == kFloatMissing)
-				{
-					missingCount++;
-
-					myTargetInfo->Value(kFloatMissing);
-					continue;
-				}
-				
-				if (!levelOnly)
-				{
-					double newValue = value * itsScale + itsBase;
-
-					if (!myTargetInfo->Value(newValue))
-					{
-						throw runtime_error(ClassName() + ": Failed to set value to matrix");
-					}
-				}
-				else
-				{
-					if (!myTargetInfo->Value(value))
-					{
-						throw runtime_error(ClassName() + ": Failed to set value to matrix");
-					}
-				}
-			}
-
-			/*
-			 * Newbase normalizes scanning mode to bottom left -- if that's not what
-			 * the target scanning mode is, we have to swap the data back.
-			 */
-
-			SwapTo(myTargetInfo, kBottomLeft);
-
-		}
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
-
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places
-		 */
-
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
+		CudaFinish(move(opts), myTargetInfo, sourceInfo);
 
 	}
+	else
+#endif
+	{
+		deviceType = "CPU";
+
+		LOCKSTEP(myTargetInfo, sourceInfo)
+		{
+
+			double value = sourceInfo->Value();
+
+			if (value == kFloatMissing)
+			{
+				continue;
+			}
+				
+			if (!levelOnly)
+			{
+				double newValue = value * itsScale + itsBase;
+
+				myTargetInfo->Value(newValue);
+			}
+			else
+			{
+				myTargetInfo->Value(value);
+			}
+
+		}
+	}
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 }
 
 
@@ -413,8 +304,6 @@ void transformer::CudaFinish(unique_ptr<transformer_cuda::options> opts, shared_
 	{
 		CopyDataFromSimpleInfo(sourceInfo, opts->source, true);
 	}
-
-	SwapTo(myTargetInfo, sourceInfo->Grid()->ScanningMode());
 
 }
 

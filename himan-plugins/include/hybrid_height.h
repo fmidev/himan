@@ -46,7 +46,6 @@ public:
 private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
-	std::shared_ptr<info> FetchPrevious(const forecast_time& wantedTime, const level& wantedLevel, const param& wantedParam);
 	int itsBottomLevel;
 	bool itsFastMode;
 	bool itsUseGeopotential;
