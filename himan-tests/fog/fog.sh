@@ -8,7 +8,7 @@ fi
 
 rm -f fog.json.grib fog.json-CPU.grib
 
-$HIMAN -f fog.json -t grib -a ff10m.grib ground.grib dew.grib --no-cuda
+$HIMAN -f fog.json -t grib -a ff10m.grib ground.grib dew.grib --no-cuda -d 5
 
 grib_compare result.grib fog.json.grib
 

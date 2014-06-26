@@ -8,7 +8,7 @@ fi
 
 rm -f fog_ecmwf.json.grib fog_ecmwf.json-CPU.grib
 
-$HIMAN -f fog_ecmwf.json -t grib -a ec_ff10m.grib ec_ground.grib ec_dew.grib --no-cuda
+$HIMAN -d 5 -s stat -f fog_ecmwf.json -t grib -a ec_ff10m.grib ec_ground.grib ec_dew.grib --no-cuda
 
 grib_compare result_ecmwf.grib fog_ecmwf.json.grib
 
