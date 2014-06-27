@@ -56,7 +56,7 @@ fi
 
 $HIMAN -d 5 -f windvector_hl_staggered.json -t grib hl_staggered_source.grib --no-cuda -s hl_stag_nocuda
 
-grib_compare -A 0.01 hl_staggered_result_FF.grib ./FF-MS_hybrid_55_polster_290_225_0_025.grib
+grib_compare -A 0.01 hl_staggered_result_FF.grib ./FF-MS_hybrid_55_polster_290_225_0_004.grib
 
 if [ $? -eq 0 ];then
   echo windvector/hirlam staggered grid wind speed success!
@@ -65,7 +65,7 @@ else
   exit 1
 fi
 
-grib_compare -A 0.01 hl_staggered_result_DD.grib ./DD-D_hybrid_55_polster_290_225_0_025.grib
+grib_compare -A 0.01 hl_staggered_result_DD.grib ./DD-D_hybrid_55_polster_290_225_0_004.grib
 
 if [ $? -eq 0 ];then
   echo windvector/hirlam staggered grid wind direction success!
@@ -81,7 +81,7 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
   $HIMAN -d 5 -f windvector_hl_staggered.json -t grib hl_staggered_source.grib -s hl_stag_cuda
 
-  grib_compare -A 0.01 hl_staggered_result_FF.grib ./FF-MS_hybrid_55_polster_290_225_0_025.grib
+  grib_compare -A 0.01 hl_staggered_result_FF.grib ./FF-MS_hybrid_55_polster_290_225_0_004.grib
 
   if [ $? -eq 0 ];then
     echo windvector/hirlam staggered grid wind speed success!
@@ -90,7 +90,7 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
     exit 1
   fi
 
-  grib_compare -A 0.01 hl_staggered_result_DD.grib ./DD-D_hybrid_55_polster_290_225_0_025.grib
+  grib_compare -A 0.01 hl_staggered_result_DD.grib ./DD-D_hybrid_55_polster_290_225_0_004.grib
 
   if [ $? -eq 0 ];then
     echo windvector/hirlam staggered grid wind direction success!
