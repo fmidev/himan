@@ -126,6 +126,7 @@ public:
 		double min = 1e38;
 		double max = -1e38;
 		double sum = 0;
+		size_t count = 0;
 		long missing = 0;
 
 		for (size_t i = 0; i < theValues.size(); i++)
@@ -141,11 +142,12 @@ public:
 			min = (min < d) ? min : d;
 			max = (max > d) ? max : d;
 			sum += d;
+			count++;
 		}
 
-		file << "__min__ " << min << std::endl;
-		file << "__max__ " << max << std::endl;
-		file << "__avg__ " << sum / static_cast<double> (theValues.size()) << std::endl;
+		file << "__min__ " << (min == 1e38 ? std::numeric_limits<double>::quiet_NaN() : min) << std::endl;
+		file << "__max__ " << (max == -1e38 ? std::numeric_limits<double>::quiet_NaN() : max) << std::endl;
+		file << "__avg__ " << (count == 0 ? std::numeric_limits<double>::quiet_NaN() : sum / static_cast<double> (count)) << std::endl;
 		file << "__missing__ " << missing << std::endl;
 	}
 
