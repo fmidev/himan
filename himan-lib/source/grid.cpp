@@ -792,9 +792,9 @@ ostream& grid::Write(std::ostream& file) const
 	}
 	
 	file << "__dataIsPacked__ " << IsPackedData() << endl;
-	file << "__itsScanningMode__ " << itsScanningMode << endl;
+	file << "__itsScanningMode__ " << HPScanningModeToString.at(itsScanningMode) << endl;
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
-	file << "__itsProjection__ " << itsProjection << endl;
+	file << "__itsProjection__ " << HPProjectionTypeToString.at(itsProjection) << endl;
 
 	for (size_t i = 0; i < itsAB.size(); i++)
 	{
