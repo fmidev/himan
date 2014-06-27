@@ -1,8 +1,8 @@
-/*
- * info.cpp
+/**
+ * @file info.cpp
  *
- *  Created on: Nov 22, 2012
- *      Author: partio
+ * @date Nov 22, 2012
+ * @author partio
  */
 
 #include "info.h"
@@ -160,7 +160,8 @@ void info::Create()
             		Grid()->Dj(itsDj);
             	}
 
-            	Grid()->Data()->Fill(kFloatMissing);
+				Data()->MissingValue(kFloatMissing);
+				Data()->Fill(kFloatMissing);
             }
         }
     }
