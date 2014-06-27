@@ -32,7 +32,7 @@ public:
 	 * for interpolation, this can be removed.
 	 */
 
-    point(const NFmiPoint& thePoint);
+	point(const NFmiPoint& thePoint);
 	~point() {}
 
 	point(const point& other);
@@ -61,22 +61,21 @@ public:
 	void X(double theX);
 	void Y(double theY);
 
-    std::ostream& Write(std::ostream& file) const
-    {
+	std::ostream& Write(std::ostream& file) const
+	{
 		file << "<" << ClassName() << ">" << std::endl;
 		file << "__itsX__ " << itsX << std::endl;
 		file << "__itsY__ " << itsY << std::endl;
 
 		return file;
-    }
+	}
 
-    /**
-     * @brief Create NFmiPoint from himan::point. If/when we don't use newbase
-     * for interpolation, this can be removed.
-     */
+	/**
+	 * @brief Create NFmiPoint from himan::point. If/when we don't use newbase
+	 * for interpolation, this can be removed.
+	 */
 
-    NFmiPoint ToNFmiPoint() const;
-
+	operator NFmiPoint () const;
 
 private:
 	double itsX;
@@ -142,14 +141,14 @@ inline void point::Y(double theY)
 	itsY = theY;
 }
 
-inline NFmiPoint point::ToNFmiPoint() const
-{
-	return NFmiPoint(itsX, itsY);
-}
-
 inline std::ostream& operator<<(std::ostream& file, const point& ob)
 {
-    return ob.Write(file);
+	return ob.Write(file);
+}
+
+inline point::operator NFmiPoint () const
+{
+	return NFmiPoint(itsX, itsY);
 }
 
 } // namespace himan
