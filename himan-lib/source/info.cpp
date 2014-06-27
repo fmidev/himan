@@ -804,3 +804,34 @@ void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
 
 	itsDimensionMatrix = d;
 }
+
+point info::LatLon() const
+{
+	assert(Grid()->Projection() == kLatLonProjection || Grid()->Projection() == kRotatedLatLonProjection);
+
+	if (itsLocationIndex == kIteratorResetValue)
+	{
+		itsLogger->Error("Location iterator position is not set");
+		return point();
+	}
+
+	double j;
+	point firstPoint = Grid()->FirstGridPoint();
+
+	if (Grid()->ScanningMode() == kBottomLeft) //opts.j_scans_positive)
+	{
+		j = floor(static_cast<double> (itsLocationIndex / Data()->SizeX()));
+	}
+	else if (Grid()->ScanningMode() == kTopLeft)
+	{
+		j = Grid()->Nj() - floor(static_cast<double> (itsLocationIndex / Data()->SizeX()));
+	}
+	else
+	{
+		throw runtime_error("Unsupported projection: " + string(HPScanningModeToString.at(Grid()->ScanningMode())));
+	}
+
+	double i = itsLocationIndex - j * Grid()->Ni();
+
+	return point(firstPoint.X() + i * Grid()->Di(), firstPoint.Y() + j * Grid()->Dj());
+}

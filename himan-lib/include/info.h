@@ -617,6 +617,17 @@ public:
 	size_t SizeLocations() const;
 
 	/**
+	 * @brief Return current latlon coordinates
+	 *
+	 * Does not currently support stereographic projection.
+	 * In rotated latlon projection function return coordinates in rotated form.
+	 *
+     * @return Latitude and longitude of current grid point
+     */
+
+	point LatLon() const;
+	
+	/**
 	 * @return Current data matrix
 	 */
 
