@@ -532,6 +532,9 @@ bool grid::Stagger(double xStaggerFactor, double yStaggerFactor)
 		return true;
 	}
 
+	itsLogger->Error("Stagger() not ready for production");
+	return false;
+	
 	point bottomLeft, topRight;
 
 	assert(itsProjection != kStereographicProjection);
