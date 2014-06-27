@@ -17,6 +17,8 @@
 
 //#undef WINDVECTOR_HEADER_INCLUDE
 
+class NFmiArea;
+
 namespace himan
 {
 namespace plugin
@@ -51,6 +53,7 @@ public:
    
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	std::unique_ptr<NFmiArea> ToNewbaseArea(std::shared_ptr<info> myTargetInfo) const;
 #ifdef HAVE_CUDA
 	void CudaFinish(std::unique_ptr<windvector_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> RHInfo);
 	std::unique_ptr<windvector_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> UInfo, std::shared_ptr<info> VInfo);

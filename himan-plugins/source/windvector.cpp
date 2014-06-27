@@ -7,20 +7,15 @@
 
 #include "windvector.h"
 #include <iostream>
-#include "plugin_factory.h"
-#include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include "util.h"
 #include <math.h>
+#include "logger_factory.h"
+#include "level.h"
+#include "forecast_time.h"
+#include "NFmiArea.h"
 #include "NFmiRotatedLatLonArea.h"
 #include "NFmiStereographicArea.h"
-#include "NFmiGrid.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;
@@ -40,7 +35,7 @@ windvector::windvector()
 	itsClearTextFormula = "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * round(speed)";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvector"));
+	itsLogger = logger_factory::Instance()->GetLog("windvector");
 
 }
 
@@ -50,14 +45,10 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	/*
 	 * Set target parameter to windvector
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 *
 	 */
 
 	vector<param> theParams;
-
+	
 	param requestedDirParam;
 	param requestedSpeedParam;
 	param requestedVectorParam;
@@ -69,96 +60,68 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->Exists("for_ice") && itsConfiguration->GetValue("for_ice") == "true")
 	{
-		requestedSpeedParam = param("IFF-MS", 389);
-		requestedDirParam = param("IDD-D", 390);
-
-		// GRIB 2
-
-		requestedSpeedParam.GribDiscipline(10);
-		requestedSpeedParam.GribCategory(2);
-		requestedSpeedParam.GribParameter(3);
-
-		requestedDirParam.GribDiscipline(10);
-		requestedDirParam.GribCategory(2);
-		requestedDirParam.GribParameter(2);
+		requestedSpeedParam = param("IFF-MS", 389, 10, 2, 3);
+		requestedDirParam = param("IDD-D", 390, 10, 2, 2);
 
 		itsCalculationTarget = kIce;
 
-		if (itsConfiguration->Exists("do_vector") && itsConfiguration->GetValue("do_vector") == "true")
+		if (itsVectorCalculation)
 		{
-			itsLogger->Error("Unable to calculate vector for ice");
+			itsLogger->Warning("Unable to calculate vector for ice");
 		}
 
-		theParams.push_back(requestedSpeedParam);
-		theParams.push_back(requestedDirParam);
 	}
 	else if (itsConfiguration->Exists("for_sea") && itsConfiguration->GetValue("for_sea") == "true")
 	{
-		requestedSpeedParam = param("SFF-MS", 163);
-		requestedDirParam = param("SDD-D", 164);
-
-		requestedSpeedParam.GribDiscipline(10);
-		requestedSpeedParam.GribCategory(1);
-		requestedSpeedParam.GribParameter(1);
-
-		requestedDirParam.GribDiscipline(10);
-		requestedDirParam.GribCategory(1);
-		requestedDirParam.GribParameter(0);
+		requestedSpeedParam = param("SFF-MS", 163, 10, 1, 1);
+		requestedDirParam = param("SDD-D", 164, 10, 1, 0);
 
 		itsCalculationTarget = kSea;
 
-		if (itsConfiguration->Exists("do_vector") && itsConfiguration->GetValue("do_vector") == "true")
+		if (itsVectorCalculation)
 		{
-			itsLogger->Error("Unable to calculate vector for sea");
+			itsLogger->Warning("Unable to calculate vector for sea");
 		}
 
-		theParams.push_back(requestedSpeedParam);
-		theParams.push_back(requestedDirParam);
 	}
 	else if (itsConfiguration->Exists("for_gust") && itsConfiguration->GetValue("for_gust") == "true")
 	{
-		requestedSpeedParam = param("FFG-MS", 417);
+		requestedSpeedParam = param("FFG-MS", 417, 0, 2, 22);
 		
-		requestedSpeedParam.GribDiscipline(0);
-		requestedSpeedParam.GribCategory(2);
-		requestedSpeedParam.GribParameter(22);
-
 		itsCalculationTarget = kGust;
 
-		if (itsConfiguration->Exists("do_vector") && itsConfiguration->GetValue("do_vector") == "true")
+		if (itsVectorCalculation)
 		{
-			itsLogger->Error("Unable to calculate vector for wind gust");
+			itsLogger->Warning("Unable to calculate vector for wind gust");
 		}
-
-		theParams.push_back(requestedSpeedParam);
-
 	}
 	else
 	{
 		// By default assume we'll calculate for wind
 
-		requestedDirParam = param("DD-D", 20);
-		requestedDirParam.GribDiscipline(0);
-		requestedDirParam.GribCategory(2);
-		requestedDirParam.GribParameter(0);
-
-		requestedSpeedParam = param("FF-MS", 21);
-		requestedSpeedParam.GribDiscipline(0);
-		requestedSpeedParam.GribCategory(2);
-		requestedSpeedParam.GribParameter(1);
-
-		theParams.push_back(requestedSpeedParam);
-		theParams.push_back(requestedDirParam);
+		requestedDirParam = param("DD-D", 20, 0, 2, 0);
+		requestedSpeedParam = param("FF-MS", 21, 0, 2, 1);
 
 		if (itsVectorCalculation)
 		{
-			requestedVectorParam = param("DF-MS", 22);
-			theParams.push_back(requestedVectorParam);
+			requestedVectorParam = param("DF-MS", 22);	
 		}
 		
 		itsCalculationTarget = kWind;
 	}
 
+	theParams.push_back(requestedSpeedParam);
+
+	if (itsCalculationTarget != kGust)
+	{
+		theParams.push_back(requestedDirParam);
+	}
+
+	if (itsVectorCalculation)
+	{
+		theParams.push_back(requestedVectorParam);
+	}
+	
 	SetParams(theParams);
 
 	Start();
@@ -173,8 +136,6 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
-	shared_ptr<fetcher> theFetcher = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
 	if (!myCoefficientCache.get())
 	{
@@ -217,377 +178,268 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			break;
 	}
 	
-	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string> (threadIndex)));
-
-	ResetNonLeadingDimension(myTargetInfo);
-
-	myTargetInfo->ParamIndex(0);
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string> (threadIndex));
 
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 
-	if (useCudaInThisThread)
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
+
+	myThreadedLogger->Info("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) +
+								" level " + static_cast<string> (forecastLevel));
+
+	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, useCudaInThisThread);
+	info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, useCudaInThisThread);
+
+	if (!UInfo || !VInfo)
 	{
-		myThreadedLogger->Debug("Will use Cuda");
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		return;
 	}
-	
-	while (AdjustNonLeadingDimension(myTargetInfo))
+
+	assert(UInfo->Grid()->AB() == VInfo->Grid()->AB());
+
+	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
 	{
-
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-
-		shared_ptr<info> UInfo;
-		shared_ptr<info> VInfo;
-
-		try
-		{
-			// Source info for U
-			UInfo = theFetcher->Fetch(itsConfiguration,
-										myTargetInfo->Time(),
-										myTargetInfo->Level(),
-										UParam,
-										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+		SetAB(myTargetInfo, UInfo);
+	}		
 				
-			// Source info for V
-			VInfo = theFetcher->Fetch(itsConfiguration,
-										myTargetInfo->Time(),
-										myTargetInfo->Level(),
-										VParam,
-										itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-				
-		}
-		catch (HPExceptionType& e)
-		{
-		
-			switch (e)
-			{
-				case kFileDataNotFound:
-					itsLogger->Info("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-					myTargetInfo->Data()->Fill(kFloatMissing); // Fill data with missing value
+	// if source producer is Hirlam, we must de-stagger U and V grid
+	// edit: Nope, do not de-stagger but interpolate
 
-					if (itsConfiguration->StatisticsEnabled())
-					{
-						itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Grid()->Size());
-						itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Grid()->Size());
-					}
+	/*if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
+	{
+		UInfo->Grid()->Stagger(-0.5, 0);
+		VInfo->Grid()->Stagger(0, -0.5);
+	}*/
 
-					continue;
-					break;
+	assert(UInfo->Grid()->Projection() == VInfo->Grid()->Projection());
 
-				default:
-					throw runtime_error(ClassName() + ": Unable to proceed");
-					break;
-				}
-		}
-
-		assert(UInfo->Grid()->AB() == VInfo->Grid()->AB());
-
-		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
-		{
-			SetAB(myTargetInfo, UInfo);
-		}		
-				
-		// if source producer is Hirlam, we must de-stagger U and V grid
-		// edit: Nope, do not de-stagger but interpolate
-
-		/*if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
-		{
-			UInfo->Grid()->Stagger(-0.5, 0);
-			VInfo->Grid()->Stagger(0, -0.5);
-		}*/
-
-		size_t missingCount = 0;
-		size_t count = 0;
-
-		bool equalGrids = (*myTargetInfo->Grid() == *UInfo->Grid() && *myTargetInfo->Grid() == *VInfo->Grid());
-
-		assert(UInfo->Grid()->Projection() == VInfo->Grid()->Projection());
-
-		string deviceType;
+	string deviceType;
 
 #ifdef HAVE_CUDA
-		bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
+	bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
 
-		// If we read packed data but grids are not equal we cannot use cuda
-		// for calculations (our cuda routines do not know how to interpolate)
+	if (useCudaInThisThread && !needStereographicGridRotation)
+	{
+		deviceType = "GPU";
 
-		if (!equalGrids && (UInfo->Grid()->IsPackedData() || VInfo->Grid()->IsPackedData()))
-		{
-			myThreadedLogger->Debug("Unpacking for CPU calculation");
-			Unpack({UInfo, VInfo});
-		}
-
-		if (useCudaInThisThread && equalGrids && !needStereographicGridRotation)
-		{
-			deviceType = "GPU";
-
-			assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->Projection() == kRotatedLatLonProjection);
+		assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->Projection() == kRotatedLatLonProjection);
 			
-			auto opts = CudaPrepare(myTargetInfo, UInfo, VInfo);
+		auto opts = CudaPrepare(myTargetInfo, UInfo, VInfo);
 
-			windvector_cuda::Process(*opts);
+		windvector_cuda::Process(*opts);
 
-			count = opts->N;
-			missingCount = opts->missing;
+		CudaFinish(move(opts), myTargetInfo, UInfo, VInfo);
 
-			CudaFinish(move(opts), myTargetInfo, UInfo, VInfo);
-
-		}
-		else
+	}
+	else
 #endif
+	{
+		deviceType = "CPU";
+
+		//UGrid->InterpolationMethod(kNearestPoint);
+		//VGrid->InterpolationMethod(kNearestPoint);
+
+		unique_ptr<NFmiArea> sourceArea = ToNewbaseArea(UInfo);
+		unique_ptr<NFmiArea> targetArea = ToNewbaseArea(myTargetInfo);
+
+		LOCKSTEP(myTargetInfo, UInfo, VInfo)
 		{
-			deviceType = "CPU";
+			double U = UInfo->Value();
+			double V = VInfo->Value();
 
-			shared_ptr<NFmiGrid> targetGrid(myTargetInfo->Grid()->ToNewbaseGrid());
-
-			shared_ptr<NFmiGrid> UGrid(UInfo->Grid()->ToNewbaseGrid());
-			shared_ptr<NFmiGrid> VGrid(VInfo->Grid()->ToNewbaseGrid());
-
-			assert(targetGrid->Size() == myTargetInfo->Data()->Size());
-
-			myTargetInfo->ResetLocation();
-
-			targetGrid->Reset();
-			//UGrid->InterpolationMethod(kNearestPoint);
-			//VGrid->InterpolationMethod(kNearestPoint);
-
-			while (myTargetInfo->NextLocation() && targetGrid->Next())
+			if (U == kFloatMissing || V == kFloatMissing)
 			{
-				count++;
+				continue;
+			}
 
-				double U = kFloatMissing;
-				double V = kFloatMissing;
-
-				InterpolateToPoint(targetGrid, UGrid, equalGrids, U);
-				InterpolateToPoint(targetGrid, VGrid, equalGrids, V);
-
-				if (U == kFloatMissing || V == kFloatMissing)
-				{
-					missingCount++;
-
-					myTargetInfo->ParamIndex(0);
-					myTargetInfo->Value(kFloatMissing);
-
-					if (itsCalculationTarget != kGust)
-					{
-						myTargetInfo->ParamIndex(1);
-						myTargetInfo->Value(kFloatMissing);
-					}
-
-					if (itsVectorCalculation)
-					{
-						myTargetInfo->ParamIndex(2);
-						myTargetInfo->Value(kFloatMissing);
-					}
-
-					continue;
-				}
-
-				/*
-				 * Speed can be calculated with rotated U and V components
-				 */
+			/*
+			 * Speed can be calculated with rotated U and V components
+			 */
 				
-				double speed = sqrt(U*U + V*V);
+			double speed = sqrt(U*U + V*V);
 	
-				/*
-				 * The order of parameters in infos is and must be always:
-				 * index 0 : speed parameter
-				 * index 1 : direction parameter (not available for gust)
-				 * index 2 : vector parameter (optional)
-				 */
+			/*
+			 * The order of parameters in infos is and must be always:
+			 * index 0 : speed parameter
+			 * index 1 : direction parameter (not available for gust)
+			 * index 2 : vector parameter (optional)
+			 */
 
-				myTargetInfo->ParamIndex(0);
-				myTargetInfo->Value(speed);
+			myTargetInfo->ParamIndex(0);
+			myTargetInfo->Value(speed);
 
-				if (itsCalculationTarget == kGust)
+			if (itsCalculationTarget == kGust)
+			{
+				continue;
+			}
+
+			if (UInfo->Grid()->Projection() == kRotatedLatLonProjection)
+			{
+				const point rotPoint = myTargetInfo->LatLon();
+
+				// We use UGrid area to do to the rotation even though UGrid area might be
+				// different from VGrid area (ie. Hirlam), but that does not matter
+
+				const point regPoint(reinterpret_cast<NFmiRotatedLatLonArea*> ((sourceArea.get()))->ToRegLatLon(static_cast<NFmiPoint> (rotPoint)));
+
+				double newU = kFloatMissing, newV = kFloatMissing;
+
+				if (myTargetInfo->Grid()->Projection() == kRotatedLatLonProjection || myTargetInfo->Grid()->Projection() == kLatLonProjection)
 				{
-					continue;
-				}
-				
-				if (UGrid->Area()->ClassId() == kNFmiRotatedLatLonArea)
-				{
-					const point regPoint(targetGrid->LatLon());
 
-					// We use UGrid area to do to the rotation even though UGrid area might be
-					// different from VGrid area (ie. Hirlam), but that does not matter
-					
-					const point rotPoint(reinterpret_cast<NFmiRotatedLatLonArea*> (UGrid->Area())->ToRotLatLon(regPoint.ToNFmiPoint()));
+					/*
+					* 1. Get coordinates of current grid point in earth-relative form
+					* 2. Get coordinates of current grid point in grid-relative form
+					* 3. Call function UVToEarthRelative() that transforms U and V from grid-relative
+					*    to earth-relative
+					*/
 
-					double newU = kFloatMissing, newV = kFloatMissing;
+					coefficients coeffs;
 
-					if (targetGrid->Area()->ClassId() == kNFmiRotatedLatLonArea || targetGrid->Area()->ClassId() == kNFmiLatLonArea)
+					if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
 					{
-
-						/*
-						* 1. Get coordinates of current grid point in earth-relative form
-						* 2. Get coordinates of current grid point in grid-relative form
-						* 3. Call function UVToEarthRelative() that transforms U and V from grid-relative
-						*    to earth-relative
-						*
-						* NFmiRotatedLatLonArea will give the normal latlon coordinates with LatLon()
-						* function, so we need force the regular point to rotated point with ToRotLatLon().
-						*
-						*/
-
-						coefficients coeffs;
-
-						if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
-						{
-							coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
-						}
-						else
-						{
-							coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
-							(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
-						}
-
-						newU = get<0> (coeffs) * U + get<1> (coeffs) * V;
-						newV = get<2> (coeffs) * U + get<3> (coeffs) * V;
-						
-					}
-					else if (targetGrid->Area()->ClassId() == kNFmiStereographicArea)
-					{
-						/*
-						 * This modification of the PA,PB,PC,PD coefficients has been
-						 * copied from INTROT.F.
-						 */
-
-						double cosL, sinL;
-
-						double ang = reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude();
-						double cLon = regPoint.X();
-						
-						sincos((ang - cLon) * himan::constants::kDeg, &sinL, &cosL);
-
-						coefficients coeffs;
-
-						if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
-						{
-							coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
-						}
-						else
-						{
-							coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
-							(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
-						}
-
-						double PA = get<0> (coeffs) * cosL - get<1> (coeffs) * sinL;
-						double PB = get<0> (coeffs) * sinL + get<1> (coeffs) * cosL;
-						double PC = get<2> (coeffs) * cosL - get<3> (coeffs) * sinL;
-						double PD = get<2> (coeffs) * sinL + get<3> (coeffs) * cosL;
-						
-						newU = PA * U + PB * V;
-						newV = PC * U + PD * V;
-
+						coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
 					}
 					else
 					{
-						myThreadedLogger->Error("Invalid target projection: " + string(HPProjectionTypeToString.at(myTargetInfo->Grid()->Projection())));
-						return;
+						coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+						(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
 					}
 
-					// Wind speed should the same with both forms of U and V
-
-					assert(fabs(sqrt(U*U+V*V) - sqrt(newU*newU + newV * newV)) < 0.001);
-
-					U = newU;
-					V = newV;
-
+					newU = get<0> (coeffs) * U + get<1> (coeffs) * V;
+					newV = get<2> (coeffs) * U + get<3> (coeffs) * V;
+						
 				}
-				else if (UGrid->Area()->ClassId() != kNFmiLatLonArea)
+				else if (myTargetInfo->Grid()->Projection() == kStereographicProjection)
 				{
-					// This is not verified to work correctly!
-					myThreadedLogger->Error("Invalid source projection: " + string(HPProjectionTypeToString.at(UInfo->Grid()->Projection())));
-					return;
-
-					const point regPoint(targetGrid->LatLon());
-
-					double angle = 180. + reinterpret_cast<NFmiStereographicArea*> (targetGrid->Area())->CentralLongitude();
-					double lon = regPoint.X();
-
 					/*
-					 * This code should work in theory but it's not enabled because it is not tested.
+					 * This modification of the PA,PB,PC,PD coefficients has been
+					 * copied from INTROT.F.
 					 */
 
-					assert(UGrid->Area()->ClassId() == kNFmiStereographicArea);
+					double cosL, sinL;
 
-					lon = lon - (angle - 180.);
+					double ang = reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->CentralLongitude();
+					double cLon = regPoint.X();
+						
+					sincos((ang - cLon) * himan::constants::kDeg, &sinL, &cosL);
 
-					point regUV = util::UVToGeographical(lon, point(U,V));
+					coefficients coeffs;
 
-					// Wind speed should the same with both forms of U and V
+					if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
+					{
+							coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
+					}
+					else
+					{
+						coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+						(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
+					}
 
-					assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
-					
-					U = regUV.X();
-					V = regUV.Y();
+					double PA = get<0> (coeffs) * cosL - get<1> (coeffs) * sinL;
+					double PB = get<0> (coeffs) * sinL + get<1> (coeffs) * cosL;
+					double PC = get<2> (coeffs) * cosL - get<3> (coeffs) * sinL;
+					double PD = get<2> (coeffs) * sinL + get<3> (coeffs) * cosL;
+						
+					newU = PA * U + PB * V;
+					newV = PC * U + PD * V;
+
 				}
-
-				double dir = 0;
-
-				if (speed > 0)
+				else
 				{
-					dir = himan::constants::kRad * atan2(U,V) + directionOffset;
-
-					// reduce the angle
-					dir = fmod(dir,360);
-					
-					// force it to be the positive remainder, so that 0 <= dir < 360
-					dir = fmod((dir + 360), 360);
-
+					myThreadedLogger->Error("Invalid target projection: " + string(HPProjectionTypeToString.at(myTargetInfo->Grid()->Projection())));
+					return;
 				}
+
+				// Wind speed should the same with both forms of U and V
+
+				assert(fabs(sqrt(U*U+V*V) - sqrt(newU*newU + newV * newV)) < 0.001);
+
+				U = newU;
+				V = newV;
+
+			}
+			else if (UInfo->Grid()->Projection() == kStereographicProjection)
+			{
+				//const point regPoint = myTargetInfo->LatLon();
+				throw runtime_error("Rotation of stereographic UV coordinates not confirmed yet");
+				double j;
+
+				if (myTargetInfo->Grid()->ScanningMode() == kBottomLeft) //opts.j_scans_positive)
+				{
+					j = floor(static_cast<double> (myTargetInfo->LocationIndex() / myTargetInfo->Data()->SizeX()));
+				}
+				else if (myTargetInfo->Grid()->ScanningMode() == kTopLeft)
+				{
+					j = static_cast<double> (myTargetInfo->Grid()->Nj()) - floor(static_cast<double> (myTargetInfo->LocationIndex()) / static_cast<double> (myTargetInfo->Data()->SizeX()));
+				}
+				else
+				{
+					throw runtime_error("Unsupported projection: " + string(HPScanningModeToString.at(myTargetInfo->Grid()->ScanningMode())));
+				}
+
+				double i = static_cast<double> (myTargetInfo->LocationIndex()) - j * static_cast<double> (myTargetInfo->Grid()->Ni());
+
+				i /= static_cast<double> (myTargetInfo->Data()->SizeX());
+				j /= static_cast<double> (myTargetInfo->Data()->SizeY());
+				
+				point regPoint(reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->ToLatLon(static_cast<NFmiPoint> (point(i,j))));
+				double angle = 180. + reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->CentralLongitude();
+				double lon = regPoint.X();
+
+				lon = lon - (angle - 180.);
+
+				point regUV = util::UVToGeographical(lon, point(U,V));
+
+				// Wind speed should the same with both forms of U and V
+
+				assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
+					
+				U = regUV.X();
+				V = regUV.Y();
+			}
+
+			double dir = 0;
+
+			if (speed > 0)
+			{
+				dir = himan::constants::kRad * atan2(U,V) + directionOffset;
+
+				// reduce the angle
+				dir = fmod(dir,360);
+					
+				// force it to be the positive remainder, so that 0 <= dir < 360
+				dir = fmod((dir + 360), 360);
+
+			}
 
 #ifdef HIL_PP_DD_COMPATIBILITY_MODE
 				
-				double windVector = round(dir/10) + 100 * round(speed);
-				dir = 10 * (static_cast<int> (round(windVector)) % 100);
+			double windVector = round(dir/10) + 100 * round(speed);
+			dir = 10 * (static_cast<int> (round(windVector)) % 100);
 				
 #endif
-
-				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Value(round(dir));
+			myTargetInfo->ParamIndex(1);
+			myTargetInfo->Value(round(dir));
 				
-				if (itsVectorCalculation)
-				{
+			if (itsVectorCalculation)
+			{
 
 #ifndef HIL_PP_DD_COMPATIBILITY_MODE
-					double windVector = round(dir/10) + 100 * round(speed);
+				double windVector = round(dir/10) + 100 * round(speed);
 #endif
 
-					myTargetInfo->ParamIndex(2);
+				myTargetInfo->ParamIndex(2);
 
-					if (!myTargetInfo->Value(windVector))
-					{
-						throw runtime_error(ClassName() + ": Failed to set value to matrix");
-					}
-				}
-			}
-
-			for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
-			{
-				SwapTo(myTargetInfo, kBottomLeft);
+				myTargetInfo->Value(windVector);
+			
 			}
 		}
-		
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(missingCount);
-			itsConfiguration->Statistics()->AddToValueCount(count);
-		}
 
-		/*
-		 * Now we are done for this level
-		 *
-		 * Clone info-instance to writer since it might change our descriptor places		 
-		 */
+		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missingCount) + "/" + boost::lexical_cast<string> (count));
-
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
-		{
-			WriteToFile(myTargetInfo);
-		}
 	}
 }
 
@@ -598,7 +450,7 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
 
 	opts->vector_calculation = itsVectorCalculation;
-	opts->need_grid_rotation = (UInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());;
+	opts->need_grid_rotation = (UInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
 	opts->target_type = itsCalculationTarget;
 
 	opts->u = UInfo->ToSimple();
@@ -643,13 +495,6 @@ void windvector::CudaFinish(unique_ptr<windvector_cuda::options> opts, shared_pt
 		CopyDataFromSimpleInfo(myTargetInfo, opts->vector, false);
 	}
 
-	assert(UInfo->Grid()->ScanningMode() == VInfo->Grid()->ScanningMode());
-
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
-	{
-		SwapTo(myTargetInfo, UInfo->Grid()->ScanningMode());
-	}
-
 	// Copy unpacked data to source info in case
 	// some other thread/plugin calls for this same data.
 	// Clear packed data now that it's been unpacked
@@ -668,3 +513,60 @@ void windvector::CudaFinish(unique_ptr<windvector_cuda::options> opts, shared_pt
 }
 
 #endif
+
+unique_ptr<NFmiArea> windvector::ToNewbaseArea(shared_ptr<info> myTargetInfo) const
+{
+
+	unique_ptr<NFmiArea> theArea;
+
+	// Newbase does not understand grib2 longitude coordinates
+
+	double bottomLeftLongitude = myTargetInfo->Grid()->BottomLeft().X();
+	double topRightLongitude = myTargetInfo->Grid()->TopRight().X();
+
+	if (bottomLeftLongitude > 180 || topRightLongitude > 180)
+	{
+		bottomLeftLongitude -= 180;
+		topRightLongitude -= 180;
+	}
+
+	switch (myTargetInfo->Grid()->Projection())
+	{
+		case kLatLonProjection:
+		{
+			theArea = unique_ptr<NFmiLatLonArea> (new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, myTargetInfo->Grid()->BottomLeft().Y()),
+										 NFmiPoint(topRightLongitude, myTargetInfo->Grid()->TopRight().Y())));
+
+			break;
+		}
+
+		case kRotatedLatLonProjection:
+		{
+			theArea = unique_ptr<NFmiRotatedLatLonArea> (new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, myTargetInfo->Grid()->BottomLeft().Y()),
+												NFmiPoint(topRightLongitude, myTargetInfo->Grid()->TopRight().Y()),
+												NFmiPoint(myTargetInfo->Grid()->SouthPole().X(), myTargetInfo->Grid()->SouthPole().Y()),
+												NFmiPoint(0.,0.), // default values
+												NFmiPoint(1.,1.), // default values
+												true));
+			break;
+		}
+
+		case kStereographicProjection:
+		{
+			theArea = unique_ptr<NFmiStereographicArea> (new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, myTargetInfo->Grid()->BottomLeft().Y()),
+												NFmiPoint(topRightLongitude, myTargetInfo->Grid()->TopRight().Y()),
+												myTargetInfo->Grid()->Orientation()));
+			break;
+
+		}
+
+		default:
+			throw runtime_error(ClassName() + ": No supported projection found");
+			break;
+	}
+
+	assert(theArea);
+
+	return theArea;
+
+}
