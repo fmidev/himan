@@ -114,7 +114,7 @@ public:
 	 *
 	 */
 
-	void PrintData(std::ostream& file, std::vector<double> theValues) const
+	void PrintData(std::ostream& file, const std::vector<double>& theValues) const
 	{
 
 		if (!itsData.size())
