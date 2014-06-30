@@ -1,0 +1,28 @@
+{
+    "source_geom_name" : "ECEDIT125",
+    "target_geom_name" : "MTEDIT125",
+    "source_producer" : "131,240",
+    "target_producer" : "240",
+    "hours" : "3",
+    "origintime" : "latest",
+    "interpolate_time" : "no",
+    "file_write" : "multiple",
+    "read_data_from_database" : "true",
+
+    "processqueue" : [
+        {
+            "leveltype" : "height",
+            "levels" : "0",
+            "plugins" : [ { "name" : "stability", "li" : "false" } ]
+        },
+        {
+            "leveltype" : "height",
+            "levels" : "0",
+            "plugins" : [ { "name" : "cloud_type" } ]
+        }
+
+    ]
+}
+
+
+
