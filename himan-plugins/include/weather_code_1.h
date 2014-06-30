@@ -1,12 +1,12 @@
 /*
- * rain_type.h
+ * weather_code_1.h
  *
  *  Created on: Apr 10, 2012
  *      Author: partio, perämäki
  */
 
-#ifndef RAIN_TYPE_H
-#define RAIN_TYPE_H
+#ifndef WEATHER_CODE_1_H
+#define WEATHER_CODE_1_H
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
@@ -17,27 +17,27 @@ namespace plugin
 {
 
 /**
- * @class rain_type
+ * @class weather_code_1
  *
  * @brief Calculate ...
  *
  */
 
-class rain_type : public compiled_plugin, private compiled_plugin_base
+class weather_code_1 : public compiled_plugin, private compiled_plugin_base
 {
 public:
-    rain_type();
+    weather_code_1();
 
-    inline virtual ~rain_type() {}
+    inline virtual ~weather_code_1() {}
 
-    rain_type(const rain_type& other) = delete;
-    rain_type& operator=(const rain_type& other) = delete;
+    weather_code_1(const weather_code_1& other) = delete;
+    weather_code_1& operator=(const weather_code_1& other) = delete;
 
     virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
     virtual std::string ClassName() const
     {
-        return "himan::plugin::rain_type";
+        return "himan::plugin::weather_code_1";
     }
 
     virtual HPPluginClass PluginClass() const
@@ -52,6 +52,7 @@ public:
 
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+    std::shared_ptr<info> FetchSourceRR(const forecast_time& wantedTime, const level& wantedLevel);
 
 };
 
@@ -59,10 +60,10 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<rain_type> (new rain_type());
+    return std::shared_ptr<weather_code_1> (new weather_code_1());
 }
 
 } // namespace plugin
 } // namespace himan
 
-#endif /* RAIN_TYPE_H */
+#endif /* weather_code_1_H */
