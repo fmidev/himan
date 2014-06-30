@@ -1,11 +1,11 @@
 /**
- * @file cloud_type.cpp
+ * @file cloud_code.cpp
  *
  * @date Jun 13, 2013
  * @author peramaki
  */
 
-#include "cloud_type.h"
+#include "cloud_code.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
@@ -16,16 +16,16 @@
 using namespace std;
 using namespace himan::plugin;
 
-const string itsName("cloud_type");
+const string itsName("cloud_code");
 
-cloud_type::cloud_type()
+cloud_code::cloud_code()
 {
 	itsClearTextFormula = "algorithm>";
 	itsLogger = logger_factory::Instance()->GetLog(itsName);
 
 }
 
-void cloud_type::Process(std::shared_ptr<const plugin_configuration> conf)
+void cloud_code::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 
 	Init(conf);
@@ -42,7 +42,7 @@ void cloud_type::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void cloud_type::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters
 

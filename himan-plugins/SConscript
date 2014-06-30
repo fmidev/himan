@@ -7,7 +7,7 @@ import sys
 
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-6.0'
+cuda_toolkit_path = '/usr/local/cuda-5.5/targets/x86_64-linux/lib'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
         print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -17,7 +17,7 @@ else:
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
+if os.path.isfile(cuda_toolkit_path + '/libcudart.so'):
 	have_cuda = True
 
 # List all auxiliary plugins
@@ -26,7 +26,7 @@ auxiliary_plugins = ['cache','fetcher','grib','hitool','neons','pcuda','querydat
 
 # List all compiled plugins that have only CPU implementation here
 
-compiled_plugins = ['icing', 'stability', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid_height', 'cloud_type', 'ncl', 'rain_type', 'preform_pressure', 'preform_hybrid', 'density', 'precipitation_rate', 'absolute_humidity', 'roughness', 'si', 'weather_symbol', 'weather_code_2']
+compiled_plugins = ['icing', 'stability', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid_height', 'cloud_code', 'ncl', 'rain_type', 'preform_pressure', 'preform_hybrid', 'density', 'precipitation_rate', 'absolute_humidity', 'roughness', 'weather_symbol']
 
 # List all compiled plugins that have both CPU and GPU implementation here
 
