@@ -42,7 +42,7 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 
-	const param PParam("P-PA");
+	const params PParam{ param("P-PA"), param("P-HPA")};
 	const param QParam("Q-KGKG");
 	const level PLevel(himan::kHeight, 0, "HEIGHT");
 
@@ -54,7 +54,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	info_t PInfo = Fetch(forecastTime, PLevel, PParam, false);
-	info_t QInfo = Fetch(forecastTime, PLevel, QParam, false);
+	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, false);
 
 	if (!PInfo || !QInfo)
 	{
