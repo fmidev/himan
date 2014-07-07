@@ -1,0 +1,25 @@
+{
+     "source_geom_name" : "MTEUR0125,ECEUR0125",
+     "target_geom_name" : "MTEUR0125",
+     "source_producer" : "131,240",
+     "target_producer" : "240",
+     "hours" : "3",
+     "origintime" : "2014-07-07 00:00:00",
+     //"origintime" : "latest",
+     "file_write" : "multiple",
+     //"read_data_from_database": false,
+
+     "processqueue" : [
+         // {
+         //     "leveltype" : "hybrid",
+         //     "levels" : "120-137",
+         //     "plugins" : [ { "name" : "hybrid_pressure" } ]
+         // },
+         {
+             "leveltype" : "hybrid",
+             "levels" : "125",
+             "plugins" : [ { "name" : "hybrid_height", "fast_mode" : "true" } ]
+         }
+
+     ]
+}
