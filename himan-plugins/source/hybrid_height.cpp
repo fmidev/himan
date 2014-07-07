@@ -79,12 +79,22 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 {
 
 	const param GPParam("P-PA");
-	const param PParam("P-HPA");
-	const param TParam("T-K");
+	const params PParam= {param("P-HPA"), param("P-PA")};
+	const params TParam = { param("T-K"), param("TG-K")};
 	const param ZParam("Z-M2S2");
 	
-	const level H2(himan::kHeight, 2, "HEIGHT");
-	const level H0(himan::kHeight, 0, "HEIGHT");
+	level H2;//(himan::kHeight, 2, "HEIGHT");
+	level H0;//(himan::kHeight, 0, "HEIGHT");
+	if ( itsConfiguration->SourceProducer().Id() == 131)
+	{
+		H2 = level(himan::kGndLayer, 0, "GROUND");
+		H0 = level(himan::kGndLayer, 0, "GNDLAYER");
+	}
+	else
+	{
+		H2 = level(himan::kHeight, 2, "HEIGHT");
+		H0 = level(himan::kHeight, 0, "HEIGHT");
+	}
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
 
