@@ -6,11 +6,11 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan-bin/himan"
 fi
 
-rm -f HL-M_*
+rm -f hybrid_height_ec.json.grib2
 
-$HIMAN -d 5 -f hybrid_height_ec.json -t grib hl_source_geop_ec.grib
+$HIMAN -d 5 -f hybrid_height_ec.json -t grib source_ec.grib
 
-grib_compare result_ec.grib HL-M_hybrid_64_polster_290_225_0_003.grib
+grib_compare result_ec.grib2 hybrid_height_ec.json.grib2
 
 if [ $? -eq 0 ];then
   echo hybrid_height/ec success!
