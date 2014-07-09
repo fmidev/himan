@@ -293,23 +293,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			long timeRangeIndicator = itsGrib->Message()->TimeRangeIndicator();
 
-			if (timeRangeIndicator == 10)
-			{
-				/*
-				 * Change timeRangeIndicator for old Arome for parameter fetch
-				 * query: the database has definitions only for timeRangeIndicator 0
-				 * and since new Harmonie is in production next week there's no
-				 * use to insert all the parameter definitions for
-				 * timeRangeIndicator 10.
-				 *
-				 * When old Arome (Finland area) is not in production anymore,
-				 * this piece of code can be removed.
-				 */
-				
-				timeRangeIndicator = 0;
-				
-			}
-
 			string parmName = n->GribParameterName(number, no_vers, timeRangeIndicator);
 
 			if (parmName.empty())
@@ -629,11 +612,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		// GRIB2 has longitude 0 .. 360, but in neons we have it -180 .. 180
 		//
-		// Make conversion for EC, but in the long run we should figure out how to
+		// Make conversion to GRIB1 style coordinates, but in the long run we should figure out how to
 		// handle grib 1 & grib 2 longitude values in a smart way. (a single geometry
 		// can have coordinates in both ways!)
 		
-		if (centre == 98 && itsGrib->Message()->Edition() == 2)
+		if (itsGrib->Message()->Edition() == 2)
 		{
 			X0 -= 360;
 		}
