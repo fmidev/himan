@@ -78,17 +78,17 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	const param GPParam("P-PA");
-	const params PParam= {param("P-HPA"), param("P-PA")};
-	const params TParam = { param("T-K"), param("TG-K")};
+	const params GPParam { param("PGR-PA"), param("P-PA") };
+	const param PParam("P-HPA");
+	const params TParam = { param("T-K"), param("TG-K") };
 	const param ZParam("Z-M2S2");
 	
 	level H2;//(himan::kHeight, 2, "HEIGHT");
 	level H0;//(himan::kHeight, 0, "HEIGHT");
 	if ( itsConfiguration->SourceProducer().Id() == 131)
 	{
-		H2 = level(himan::kGndLayer, 0, "GROUND");
-		H0 = level(himan::kGndLayer, 0, "GNDLAYER");
+		H2 = level(himan::kGround, 0, "GROUND");
+		H0 = level(himan::kGround, 0, "GROUND");
 	}
 	else
 	{
@@ -158,7 +158,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	}
 
-	if ((itsUseGeopotential && (!GPInfo || !zeroGPInfo)) || (!itsUseGeopotential && (!prevTInfo || !prevPInfo || !prevHInfo || !PInfo || !TInfo)))
+	if ((itsUseGeopotential && (!GPInfo || !zeroGPInfo)) || (!itsUseGeopotential && (!prevTInfo || !prevPInfo || ( !prevHInfo && !firstLevel ) || !PInfo || !TInfo)))
 	{
 		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
@@ -177,7 +177,10 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		TInfo->ResetLocation();
 		prevPInfo->ResetLocation();
 		prevTInfo->ResetLocation();
-		prevHInfo->ResetLocation();
+		if (!firstLevel)
+		{
+			prevHInfo->ResetLocation();
+		}
 	}
 
 	LOCKSTEP(myTargetInfo)
@@ -234,14 +237,19 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			}
 
 
-			if (firstLevel)
+			if (firstLevel )//&& !itsConfiguration->SourceProducer().Id() == 131)
 			{
 				prevP /= 100.f;
 			}
 
 			double Tave = ( T + prevT ) / 2;
+			cout << "prevP: ";
+			cout << prevP << endl;
+			cout << "P: ";
+			cout << P << endl;
 			double deltaZ = (287 / 9.81) * Tave * log(prevP / P);
-
+			cout << "D: ";
+			cout << deltaZ << endl;
 			double totalHeight(0);
 
 			if (firstLevel)
