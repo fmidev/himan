@@ -243,13 +243,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			}
 
 			double Tave = ( T + prevT ) / 2;
-			cout << "prevP: ";
-			cout << prevP << endl;
-			cout << "P: ";
-			cout << P << endl;
 			double deltaZ = (287 / 9.81) * Tave * log(prevP / P);
-			cout << "D: ";
-			cout << deltaZ << endl;
 			double totalHeight(0);
 
 			if (firstLevel)
