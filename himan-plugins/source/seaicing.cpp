@@ -33,7 +33,7 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 	SetParams({param("ICING-N", 480, 0, 0, 2)});
 
 	Start();
-	
+
 }
 
 /*
@@ -45,10 +45,23 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 
-	const param TParam("T-K");
+	const params TParam = {param("T-K"), param("TG-K")};
 	const level TLevel(himan::kHeight, 2, "HEIGHT");
-	const param FfParam("FF-MS");  // 10 meter wind
-	const level FfLevel(himan::kHeight, 10, "HEIGHT");
+  const param FfParam("FF-MS"); // 10 meter wind
+  const level FfLevel(himan::kHeight, 10, "HEIGHT");
+
+  level ground;
+
+  // this will come back to us
+  if ( itsConfiguration->SourceProducer().Id() == 131)
+  {
+       ground = level(himan::kGndLayer, 0, "GNDLAYER");
+  }
+  else
+  {
+       ground = level(himan::kHeight, 0, "HEIGHT");
+  }
+
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("seaicingThread #" + boost::lexical_cast<string> (theThreadIndex));
 
@@ -58,7 +71,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	info_t TInfo = Fetch(forecastTime, TLevel, TParam, false);
-	info_t TgInfo = Fetch(forecastTime, forecastLevel, TParam, false);
+	info_t TgInfo = Fetch(forecastTime, ground, TParam, false);
 	info_t FfInfo = Fetch(forecastTime, FfLevel, FfParam, false);
 
 	if (!TInfo || !TgInfo || !FfInfo)
@@ -68,7 +81,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 	}
 
 	string deviceType = "CPU";
-		
+
 	LOCKSTEP(myTargetInfo, TInfo, TgInfo, FfInfo)
 	{
 		double T = TInfo->Value();
