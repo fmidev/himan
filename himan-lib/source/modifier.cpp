@@ -338,6 +338,15 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 	}
 }
 
+/*
+ *  The method used here to calculate the vertical average is limited to calculate average values for grids with constant vertical grid spacing only.
+ *  Hybrid grids become denser close to the surface. This requires a more general method of calculation, i.e. the mean of a function (http://en.wikipedia.org/wiki/Mean_of_a_function).
+ *  In this function that would mean in the most simple case to replace: 
+ *  Value(val + theValue) -> Value(val + theValue*layer_depth)
+ *  itsResult[i] = val / static_cast<double> (count) -> itsResult[i] = val / (itsUpperHeight - itsLowerHeight)
+ *  But probably it's better to create a seperate modifier_integral class and let the average function call it and devide the result by (itsUpperHeight - itsLowerHeight).
+ */
+
 void modifier_mean::Calculate(double theValue, double theHeight)
 {
 	itsValuesCount[itsIndex] += 1;
