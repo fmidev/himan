@@ -19,17 +19,36 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "pcuda.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
-
 using namespace himan;
 using namespace std;
 
 void banner();
 shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
+
+struct plugin_timing
+{
+	std::string plugin_name;
+	unsigned short order_number; // plugin order number (if called more than once))
+	size_t time_elapsed; // elapsed time in ms
+};
+
+unsigned short HighestOrderNumber(const vector<plugin_timing>& timingList, const std::string& pluginName)
+{
+	unsigned short highest = 1;
+
+	for (size_t i = 0; i < timingList.size(); i++)
+	{
+		if (timingList[i].plugin_name == pluginName)
+		{
+			if (timingList[i].order_number >= highest)
+			{
+				highest = static_cast<unsigned short> (timingList[i].order_number+1);
+			}
+		}
+	}
+
+	return highest;
+}
 
 int main(int argc, char** argv)
 {
@@ -48,6 +67,13 @@ int main(int argc, char** argv)
 
 
 	unique_ptr<logger> aLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
+	unique_ptr<timer> aTimer;
+
+	if (!conf->StatisticsLabel().empty())
+	{
+		// This timer is used to measure time elapsed for each plugin call
+		aTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
+	}
 
 	/*
 	 * Initialize plugin factory before parsing configuration file. This prevents himan from
@@ -74,7 +100,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	conf.reset(); // we don't need this conf anymore, it was only used as a base for json_parser
+//	conf.reset(); // we don't need this conf anymore, it was only used as a base for json_parser
 	
 	banner();
 
@@ -84,10 +110,18 @@ int main(int argc, char** argv)
 
 	aLogger->Debug("Processqueue size: " + boost::lexical_cast<string> (plugins.size()));
 
+	vector<plugin_timing> pluginTimes;
+	size_t totalTime = 0;
+	
 	for (size_t i = 0; i < plugins.size(); i++)
 	{
 
 		shared_ptr<plugin_configuration> pc = plugins[i];
+
+		if (pc->StatisticsEnabled())
+		{
+			aTimer->Start();
+		}
 
 		if (pc->Name() == "precipitation")
 		{
@@ -128,8 +162,60 @@ int main(int argc, char** argv)
 		if (pc->StatisticsEnabled())
 		{
 			pc->WriteStatistics();
+
+			aTimer->Stop();
+			plugin_timing t;
+			t.plugin_name = pc->Name();
+			t.time_elapsed = aTimer->GetTime();
+			t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
+
+			totalTime += t.time_elapsed;
+			pluginTimes.push_back(t);
 		}
 
+	}
+
+	if (!conf->StatisticsLabel().empty())
+	{
+		// bubble sort
+
+		bool passed = true;
+
+		do
+		{
+			for (size_t i = 1; i < pluginTimes.size(); i++)
+			{
+				plugin_timing prev = pluginTimes[i-1], cur = pluginTimes[i];
+
+				if (prev.time_elapsed < cur.time_elapsed)
+				{
+					pluginTimes[i-1] = cur;
+					pluginTimes[i] = prev;
+					passed = false;
+				}
+			}
+		} while (!passed);
+		
+		cout << endl << "*** TOTAL timings for himan ***" << endl;
+		
+		for (size_t i = 0; i < pluginTimes.size(); i++)
+		{
+			plugin_timing t = pluginTimes[i];
+
+			cout << t.plugin_name ;
+
+			if (t.order_number > 1)
+			{
+				cout << " #" << t.order_number;
+			}
+
+			cout	<< (t.plugin_name.length() > 10 ? "\t\t" : "\t\t\t")
+					<< t.time_elapsed << " ms\t(" << static_cast<int> (((static_cast<double> (t.time_elapsed) / static_cast<double> (totalTime)) * 100)) << "%)" << endl;
+
+		}
+
+		cout	<< "------------------------------------" << endl
+				<< "Total duration:\t\t" << totalTime << " ms" << endl;
 	}
 
 	return 0;
@@ -143,6 +229,77 @@ void banner()
 			  << "************************************************" << endl
 			  << "* By the Power of Grayskull, I Have the Power! *" << endl
 			  << "************************************************" << endl << endl;
+
+}
+
+void CudaCapabilities()
+{
+	int devCount;
+
+	cudaError_t err = cudaGetDeviceCount(&devCount);
+
+	if (err == cudaErrorNoDevice || err == cudaErrorInsufficientDriver)
+	{
+		// No device or no driver present
+
+		devCount = 0;
+	}
+	
+	if (devCount == 0)
+	{
+		std::cout << "No CUDA devices found" << std::endl;
+		return;
+	}
+
+	int runtimeVersion, libraryVersion;
+
+	CUDA_CHECK(cudaRuntimeGetVersion(&runtimeVersion));
+	CUDA_CHECK(cudaDriverGetVersion(&libraryVersion));
+
+	std::cout << "#----------------------------------------------#" << std::endl;
+	std::cout << "CUDA library version " << libraryVersion/1000 << "." << (libraryVersion%100)/10 << std::endl;
+	std::cout << "CUDA runtime version " << runtimeVersion/1000 << "." << (runtimeVersion%100)/10 << std::endl;
+	std::cout << "There are " << devCount << " CUDA device(s)" << std::endl;
+	std::cout << "#----------------------------------------------#" << std::endl;
+
+	// Iterate through devices
+	for (int i = 0; i < devCount; ++i)
+	{
+		// Get device properties
+		std::cout << "CUDA Device #" << i << std::endl;
+
+		cudaDeviceProp devProp;
+		cudaGetDeviceProperties(&devProp, i);
+
+		std::cout << "Major revision number:\t\t" << devProp.major << std::endl
+			 << "Minor revision number:\t\t" << devProp.minor << std::endl
+			 << "Device name:\t\t\t" << devProp.name << std::endl
+			 << "Total global memory:\t\t" << devProp.totalGlobalMem << std::endl
+			 << "Total shared memory per block:\t" << devProp.sharedMemPerBlock << std::endl
+			 << "Total registers per block:\t" << devProp.regsPerBlock << std::endl
+			 << "Warp size:\t\t\t" << devProp.warpSize << std::endl
+			 << "Maximum memory pitch:\t\t" << devProp.memPitch << std::endl
+			 << "Maximum threads per block:\t" << devProp.maxThreadsPerBlock << std::endl;
+
+		for (int i = 0; i < 3; ++i)
+		{
+			std::cout << "Maximum dimension " << i << " of block:\t" << devProp.maxThreadsDim[i] << std::endl;
+		}
+
+		for (int i = 0; i < 3; ++i)
+		{
+			std::cout << "Maximum dimension " << i << " of grid:\t" << devProp.maxGridSize[i] << std::endl;
+		}
+
+		std::cout << "Clock rate:\t\t\t" << devProp.clockRate << std::endl
+			 << "Total constant memory:\t\t" << devProp.totalConstMem << std::endl
+			 << "Texture alignment:\t\t" << devProp.textureAlignment << std::endl
+			 << "Concurrent copy and execution:\t" << (devProp.deviceOverlap ? "Yes" : "No") << std::endl
+			 << "Number of multiprocessors:\t" << devProp.multiProcessorCount << std::endl
+			 << "Kernel execution timeout:\t" << (devProp.kernelExecTimeoutEnabled ? "Yes" : "No") << std::endl << std::endl;
+
+	}
+	std::cout << "#----------------------------------------------#" << std::endl;
 
 }
 
@@ -240,8 +397,6 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		exit(1);
 	}
 
-	shared_ptr<plugin::pcuda> cuda;
-
 #ifndef HAVE_CUDA
 	if (opt.count("cuda-properties"))
 	{
@@ -259,11 +414,10 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	}
 
 #else
-	cuda = dynamic_pointer_cast<plugin::pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
 	
 	if (opt.count("cuda-properties"))
 	{
-		cuda->Capabilities();
+		CudaCapabilities();
 		exit(1);
 	}
 
@@ -278,7 +432,20 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCudaForPacking(false);
 	}
 
-	conf->CudaDeviceCount(static_cast<short> (cuda->DeviceCount()));
+	// get cuda device count for this server
+
+	int devCount;
+
+	cudaError_t err = cudaGetDeviceCount(&devCount);
+
+	if (err == cudaErrorNoDevice || err == cudaErrorInsufficientDriver)
+	{
+		// No device or no driver present
+
+		devCount = 0;
+	}
+	
+	conf->CudaDeviceCount(static_cast<short> (devCount));
 
 	if (opt.count("cuda-device-id"))
 	{
