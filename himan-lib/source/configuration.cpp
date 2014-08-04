@@ -9,12 +9,6 @@
 #include "logger_factory.h"
 #include "plugin_factory.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "pcuda.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
-
 using namespace himan;
 
 configuration::configuration() : itsSourceProducerIterator(new producer_iter())
@@ -123,6 +117,7 @@ void configuration::Init()
 	itsUseCudaForPacking = true;
 	itsUseCache = true;
 	itsCudaDeviceId = 0;
+	itsStatisticsLabel = "";
 }
 
 HPFileType configuration::OutputFileType() const
