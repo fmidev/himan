@@ -17,7 +17,6 @@
 #include "fetcher.h"
 #include "neons.h"
 #include "writer.h"
-#include "pcuda.h"
 #include "cache.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
@@ -219,9 +218,14 @@ bool compiled_plugin_base::GetAndSetCuda(int threadIndex)
 
 	if (ret)
 	{
-		auto p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
+		cudaError_t err;
 
-		ret = p->SetDevice(itsConfiguration->CudaDeviceId());
+		if ((err = cudaSetDevice(itsConfiguration->CudaDeviceId())) != cudaSuccess)
+		{
+			cerr << ClassName() << "::Warning Failed to select device #" << itsConfiguration->CudaDeviceId() << ", error: " << cudaGetErrorString(err) << endl;
+			cerr << ClassName() << "::Warning Has another CUDA process reserved the card?\n";
+			ret = false;
+		}
 	}
 #else
 	bool ret = false;
@@ -233,8 +237,7 @@ bool compiled_plugin_base::GetAndSetCuda(int threadIndex)
 void compiled_plugin_base::ResetCuda() const
 {
 #ifdef HAVE_CUDA
-	auto p = dynamic_pointer_cast <pcuda> (plugin_factory::Instance()->Plugin("pcuda"));
-	p->Reset();
+	CUDA_CHECK(cudaDeviceReset());
 #endif
 }
 
