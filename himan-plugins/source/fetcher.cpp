@@ -225,8 +225,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	assert((theInfos[0]->Time()) == requestedTime);
 
 	assert((theInfos[0]->Param()) == requestedParam);
-#define FETCHER_INTERPOLATE
-#ifdef FETCHER_INTERPOLATE
+
 	auto baseInfo = make_shared<info> (*config->Info());
 	baseInfo->First();
 
@@ -239,7 +238,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		// == operator does not test scanning mode !
 		itsLogger->Trace("Swapping area");
-		SwapTo(theInfos[0]->Grid(), baseInfo->Grid()->ScanningMode());
+		theInfos[0]->Grid()->Swap(baseInfo->Grid()->ScanningMode());
+
 	}
 	else
 	{
@@ -249,7 +249,6 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	assert(*baseInfo->Grid() == *theInfos[0]->Grid());
 
 	baseInfo.reset();
-#endif
 
 	return theInfos[0];
 
@@ -513,22 +512,25 @@ bool fetcher::InterpolateArea(const shared_ptr<grid>& base, initializer_list<sha
 {
 	if (grids.size() == 0)
 	{
-		throw kUnknownException;
+		return false;
 	}
 
 	const double kInterpolatedValueEpsilon = 0.00001; //<! Max difference between two grid points (if smaller, points are considered the same)
 
+	// baseGrid is target_geom in json-file: it is the geometry that the user has
+	// requested
+	
 	shared_ptr<NFmiGrid> baseGrid;
 
-	auto it = grids.begin();
-
-	for (; it != grids.end(); ++it)
+	for (auto it = grids.begin(); it != grids.end(); ++it)
 	{
 		if (!*it || *base == **it)
 		{
 			continue;
 		}
 
+		// new data backend
+		
 		auto targetData = make_shared<d_matrix_t> (base->Data()->SizeX(), base->Data()->SizeY());
 
 		if (!baseGrid)
@@ -546,16 +548,17 @@ bool fetcher::InterpolateArea(const shared_ptr<grid>& base, initializer_list<sha
 			// Only unpacked and interpolated data is stored to cache
 			(*it)->PackedData()->Clear();
 		}
-#endif		
+#endif	
 		auto interpGrid = shared_ptr<NFmiGrid> ((*it)->ToNewbaseGrid());
 
 		// interpGrid does the actual interpolation, results are stored to targetData
 
 		size_t i;
+
 		for (baseGrid->Reset(), i = 0; baseGrid->Next(); i++)
 		{
-			const NFmiPoint targetLatLonPoint = baseGrid->LatLon();
-			const NFmiPoint sourceGridPoint = interpGrid->LatLonToGrid(targetLatLonPoint);
+			const NFmiPoint targetLatLonPoint = baseGrid->LatLon(); // Target point in latitude longitude coordinates
+			const NFmiPoint sourceGridPoint = interpGrid->LatLonToGrid(targetLatLonPoint); // Grid point that matches to said lat lon point in the source grid
 
 			bool noInterpolation = (
 						fabs(sourceGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
@@ -590,36 +593,20 @@ bool fetcher::InterpolateArea(const shared_ptr<grid>& base, initializer_list<sha
 
 		if (base->ScanningMode() != kBottomLeft)
 		{
+			HPScanningMode targetMode = base->ScanningMode();
+
+			// this is what newbase did to the data
+
 			(*it)->ScanningMode(kBottomLeft);
 
-			SwapTo(*it, base->ScanningMode());
-		}
-		
+			// let's swap it back
+			(*it)->Swap(targetMode);
 
+			assert(targetMode == (*it)->ScanningMode());
+
+		}
 	}
 
 	return true;
 
-}
-
-bool fetcher::SwapTo(const shared_ptr<grid>& targetGrid, HPScanningMode targetScanningMode)
-{
-	if (targetGrid->ScanningMode() != targetScanningMode)
-	{
-
-#ifdef HAVE_CUDA		
-		// We should to swapping in cuda code but that functionality is missing as of 2014-05-16
-		if (targetGrid->IsPackedData())
-		{
-			util::Unpack({targetGrid});
-
-			// Remove packed data since that is still in wrong order
-			targetGrid->PackedData()->Clear();
-		}
-#endif
-		targetGrid->Swap(targetScanningMode);
-		assert(targetScanningMode == targetGrid->ScanningMode());
-	}
-
-	return true;
 }
