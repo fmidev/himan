@@ -322,6 +322,63 @@ void modifier_sum::Calculate(double theValue, double theHeight)
 
 /* ----------------- */
 
+bool modifier_mean::Evaluate(double theValue, double theHeight)
+{
+
+	assert(itsIndex < itsOutOfBoundHeights.size());
+
+	assert(theHeight != kFloatMissing);
+
+	/*
+	 * "upper" value relates to it being higher in the atmosphere
+	 * meaning its value is higher.
+	 *
+	 * ie. lower limit 10, upper limit 100
+	 *
+	 * From this it follows that valid height is lower than upper limit and
+	 * higher than lower limit
+	 *
+	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
+	 * need to be changed.
+	 */
+
+	/*
+ 	 * upper/lower limit check moved from evaluate function to calculate for the averaging case
+	 */
+
+	double upperLimit = 1e38;
+	double lowerLimit = -1e38;
+
+	if (!itsUpperHeight.empty())
+	{
+		upperLimit = itsUpperHeight[itsIndex];
+	}
+
+	if (!itsLowerHeight.empty())
+	{
+		lowerLimit = itsLowerHeight[itsIndex];
+	}
+
+	if (itsOutOfBoundHeights[itsIndex] == true)
+	{
+		return false;
+	}
+	else if (IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+	{
+		// height is above given height range OR either level value is missing: stop processing of this grid point
+		itsOutOfBoundHeights[itsIndex] = true;
+		return false;
+	}
+	else if (IsMissingValue(theValue))
+	{
+		return false;
+	}
+
+	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
+
+	return true;
+}
+
 void modifier_mean::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
 {
 
@@ -330,8 +387,6 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 		assert(theData.size() == theHeights.size());
 
 		itsResult.resize(theData.size(), kFloatMissing);
-
-		itsValuesCount.resize(itsResult.size(), 0);
 
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
 
@@ -349,30 +404,48 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 
 void modifier_mean::Calculate(double theValue, double theHeight)
 {
-	itsValuesCount[itsIndex] += 1;
-
-	double val = Value();
-
-	if (IsMissingValue(val)) // First value
-	{
-		Value(theValue);
+	if (IsMissingValue(Value())) // First value
+	{		
+		Value(0);
 	}
-	else
-	{
-		Value(val + theValue);
-	}	
-}
 
+	double lowerHeight = itsLowerHeight[itsIndex];
+	double upperHeight = itsUpperHeight[itsIndex];
+
+	double previousValue = itsPreviousValue[itsIndex];
+	double previousHeight = itsPreviousHeight[itsIndex];
+
+	itsPreviousValue[itsIndex] = theValue;
+	itsPreviousHeight[itsIndex] = theHeight;
+
+
+	if (previousHeight <= lowerHeight && theHeight >= lowerHeight)
+	{
+		double val = Value();
+		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
+		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
+	}
+	else if (previousHeight <= upperHeight && theHeight >= upperHeight)
+	{
+		double val = Value();
+		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
+		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
+	}
+	else if (theHeight > lowerHeight && theHeight < upperHeight)
+	{
+		double val = Value();
+		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
+	}
+}
 const std::vector<double>& modifier_mean::Result() const
 {
 	for (size_t i = 0; i < itsResult.size(); i++)
 	{
 		double val = itsResult[i];
-		size_t count = itsValuesCount[i];
 
-		if (!IsMissingValue(val) && count != 0)
+		if (!IsMissingValue(val))
 		{
-			itsResult[i] = val / static_cast<double> (count); 
+			itsResult[i] = val / (itsUpperHeight[i] - itsLowerHeight[i]); 
 		}
 	}
 
@@ -693,6 +766,101 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 			Value(actualValue);
 			itsValuesFound++;
 		}
+	}
+}
+
+/* ----------------- */
+
+bool modifier_integral::Evaluate(double theValue, double theHeight)
+{
+
+	assert(itsIndex < itsOutOfBoundHeights.size());
+
+	assert(theHeight != kFloatMissing);
+
+	/*
+	 * "upper" value relates to it being higher in the atmosphere
+	 * meaning its value is higher.
+	 *
+	 * ie. lower limit 10, upper limit 100
+	 *
+	 * From this it follows that valid height is lower than upper limit and
+	 * higher than lower limit
+	 *
+	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
+	 * need to be changed.
+	 */
+
+	/*
+ 	 * upper/lower limit check moved from evaluate function to calculate for the integration case
+	 */
+
+	double upperLimit = 1e38;
+	double lowerLimit = -1e38;
+
+	if (!itsUpperHeight.empty())
+	{
+		upperLimit = itsUpperHeight[itsIndex];
+	}
+
+	if (!itsLowerHeight.empty())
+	{
+		lowerLimit = itsLowerHeight[itsIndex];
+	}
+
+	if (itsOutOfBoundHeights[itsIndex] == true)
+	{
+		return false;
+	}
+	else if (IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+	{
+		// height is above given height range OR either level value is missing: stop processing of this grid point
+		itsOutOfBoundHeights[itsIndex] = true;
+		return false;
+	}
+	else if (IsMissingValue(theValue))
+	{
+		return false;
+	}
+
+	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
+
+	return true;
+}
+
+void modifier_integral::Calculate(double theValue, double theHeight)
+{
+	if (IsMissingValue(Value())) // First value
+	{		
+		Value(0);
+	}
+
+	double lowerHeight = itsLowerHeight[itsIndex];
+	double upperHeight = itsUpperHeight[itsIndex];
+
+	double previousValue = itsPreviousValue[itsIndex];
+	double previousHeight = itsPreviousHeight[itsIndex];
+
+	itsPreviousValue[itsIndex] = theValue;
+	itsPreviousHeight[itsIndex] = theHeight;
+
+
+	if (previousHeight <= lowerHeight && theHeight >= lowerHeight)
+	{
+		double val = Value();
+		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
+		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
+	}
+	else if (previousHeight <= upperHeight && theHeight >= upperHeight)
+	{
+		double val = Value();
+		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
+		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
+	}
+	else if (theHeight > lowerHeight && theHeight < upperHeight)
+	{
+		double val = Value();
+		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
 	}
 }
 

@@ -64,7 +64,7 @@ class modifier
 		 * @brief Function checks that data is not missing and falls within the given height range.
 		 */
 
-		bool Evaluate(double theValue, double theHeight);
+		virtual bool Evaluate(double theValue, double theHeight);
 		virtual double Value() const;
 		virtual void Value(double theValue);
 		bool itsMissingValuesAllowed;
@@ -161,13 +161,37 @@ class modifier_sum : public modifier
 };
 
 /**
+ *  * @class Find the integral of a parameter between lower and upper height bounds. Integral is calculated by the trapezoidal rule.
+ *   */
+
+class modifier_integral : public modifier
+{
+	public:
+		modifier_integral() : modifier() {}
+		virtual ~modifier_integral() {}
+
+		virtual std::string ClassName() const { return "himan::::modifier_integral"; }
+		
+		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+
+
+
+	protected:
+		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+		virtual bool Evaluate(double theValue, double theHeight);
+
+		std::vector<double> itsPreviousValue;
+		std::vector<double> itsPreviousHeight;
+};
+
+/**
  * @class Calculate the mean of values in a given height range
  */
 
-class modifier_mean : public modifier_sum
+class modifier_mean : public modifier_integral
 {
 	public:
-		modifier_mean() : modifier_sum() {}
+		modifier_mean() : modifier_integral() {}
 		virtual ~modifier_mean() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_mean"; }
@@ -178,8 +202,7 @@ class modifier_mean : public modifier_sum
 
 	protected:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
-
-		std::vector<size_t> itsValuesCount;
+		virtual bool Evaluate(double theValue, double theHeight);
 };
 
 /**
