@@ -437,6 +437,7 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
 	}
 }
+
 const std::vector<double>& modifier_mean::Result() const
 {
 	for (size_t i = 0; i < itsResult.size(); i++)
@@ -450,6 +451,22 @@ const std::vector<double>& modifier_mean::Result() const
 	}
 
 	return itsResult;
+}
+
+bool modifier_mean::CalculationFinished()
+{
+	if (itsResult.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size())
+	{
+		return true;
+	}
+	
+	if (itsPreviousHeight > itsUpperHeight)
+	{
+		return true;
+	}
+
+	return false;
+
 }
 
 /* ----------------- */
@@ -864,3 +881,18 @@ void modifier_integral::Calculate(double theValue, double theHeight)
 	}
 }
 
+bool modifier_integral::CalculationFinished()
+{
+	if (itsResult.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size())
+	{
+		return true;
+	}
+	
+	if (itsPreviousHeight > itsUpperHeight)
+	{
+		return true;
+	}
+
+	return false;
+
+}
