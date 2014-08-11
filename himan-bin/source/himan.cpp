@@ -99,8 +99,6 @@ int main(int argc, char** argv)
 		aLogger->Fatal(e.what());
 		exit(1);
 	}
-
-//	conf.reset(); // we don't need this conf anymore, it was only used as a base for json_parser
 	
 	banner();
 
@@ -261,6 +259,12 @@ void CudaCapabilities()
 
 		devCount = 0;
 	}
+	else if (err != cudaSuccess)
+	{
+		std::cout << "cudaGetDeviceCount() returned error: " << cudaGetErrorString(err) << std::endl;
+		return;
+	}
+
 	
 	if (devCount == 0)
 	{
