@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.6.23
+Version: 14.8.11
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -54,11 +54,10 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libabsolute_humidity.so
 %{_libdir}/himan-plugins/libcache.so
-%{_libdir}/himan-plugins/libcloud_type.so
+%{_libdir}/himan-plugins/libcloud_code.so
 %{_libdir}/himan-plugins/libdensity.so
 %{_libdir}/himan-plugins/libdewpoint.so
 %{_libdir}/himan-plugins/libfetcher.so
-%{_libdir}/himan-plugins/libfmi_weather_symbol_1.so
 %{_libdir}/himan-plugins/libfog.so
 %{_libdir}/himan-plugins/libgrib.so
 %{_libdir}/himan-plugins/libhitool.so
@@ -67,27 +66,34 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libicing.so
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
-%{_libdir}/himan-plugins/libpcuda.so
 %{_libdir}/himan-plugins/libprecipitation_rate.so
 %{_libdir}/himan-plugins/libpreform_hybrid.so
 %{_libdir}/himan-plugins/libpreform_pressure.so
 %{_libdir}/himan-plugins/libquerydata.so
-%{_libdir}/himan-plugins/librain_type.so
 %{_libdir}/himan-plugins/librelative_humidity.so
 %{_libdir}/himan-plugins/libroughness.so
 %{_libdir}/himan-plugins/libseaicing.so
 %{_libdir}/himan-plugins/libsi.so
 %{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libstability.so
-%{_libdir}/himan-plugins/libtk2tc.so
 %{_libdir}/himan-plugins/libtpot.so
 %{_libdir}/himan-plugins/libtransformer.so
 %{_libdir}/himan-plugins/libvvms.so
 %{_libdir}/himan-plugins/libweather_symbol.so
+%{_libdir}/himan-plugins/libweather_code_1.so
+%{_libdir}/himan-plugins/libweather_code_2.so
 %{_libdir}/himan-plugins/libwindvector.so
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-1.fmi
+- Misc fixes WRT ECMWF
+- Removed pcuda plugin
+- Renamed fmi_weather_symbol_1 to weather_code_2
+- Rename rain_type to weather_code_1
+- Renamed cloud_type to cloud_code
+- Cuda support for transformer, stability
+- "Developer friendly" plugins
 * Mon Jun 23 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.23-1.fmi
 - Fixes in transformer
 * Wed Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
