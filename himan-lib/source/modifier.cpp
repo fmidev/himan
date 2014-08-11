@@ -411,8 +411,19 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		Value(0);
 	}
 
-	double lowerHeight = itsLowerHeight[itsIndex];
-	double upperHeight = itsUpperHeight[itsIndex];
+	double lowerHeight = -1e38;
+
+	if (!itsLowerHeight.empty())
+	{
+		lowerHeight=itsLowerHeight[itsIndex];
+	}
+
+	double upperHeight = 1e38;
+
+	if (!itsUpperHeight.empty())
+	{
+		upperHeight=itsUpperHeight[itsIndex];
+	}
 
 	double previousValue = itsPreviousValue[itsIndex];
 	double previousHeight = itsPreviousHeight[itsIndex];
@@ -421,19 +432,19 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 	itsPreviousHeight[itsIndex] = theHeight;
 
 
-	if (previousHeight <= lowerHeight && theHeight >= lowerHeight)
+	if (previousHeight < lowerHeight && theHeight > lowerHeight)
 	{
 		double val = Value();
 		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
 	}
-	else if (previousHeight <= upperHeight && theHeight >= upperHeight)
+	else if (previousHeight < upperHeight && theHeight > upperHeight)
 	{
 		double val = Value();
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
 	}
-	else if (theHeight > lowerHeight && theHeight < upperHeight)
+	else if (theHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
@@ -870,8 +881,19 @@ void modifier_integral::Calculate(double theValue, double theHeight)
 		Value(0);
 	}
 
-	double lowerHeight = itsLowerHeight[itsIndex];
-	double upperHeight = itsUpperHeight[itsIndex];
+	double lowerHeight = -1e38;
+
+	if (!itsLowerHeight.empty())
+	{
+		lowerHeight=itsLowerHeight[itsIndex];
+	}
+
+	double upperHeight = 1e38;
+
+	if (!itsUpperHeight.empty())
+	{
+		upperHeight=itsUpperHeight[itsIndex];
+	}
 
 	double previousValue = itsPreviousValue[itsIndex];
 	double previousHeight = itsPreviousHeight[itsIndex];
@@ -880,19 +902,19 @@ void modifier_integral::Calculate(double theValue, double theHeight)
 	itsPreviousHeight[itsIndex] = theHeight;
 
 
-	if (previousHeight <= lowerHeight && theHeight >= lowerHeight)
+	if (previousHeight < lowerHeight && theHeight > lowerHeight)
 	{
 		double val = Value();
 		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
 	}
-	else if (previousHeight <= upperHeight && theHeight >= upperHeight)
+	else if (previousHeight < upperHeight && theHeight > upperHeight)
 	{
 		double val = Value();
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
 	}
-	else if (theHeight > lowerHeight && theHeight < upperHeight)
+	else if (theHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
