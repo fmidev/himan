@@ -437,10 +437,18 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			
 			}
 		}
-
-		myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
-
 	}
+
+	size_t missing = 0, total = 0;
+
+	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
+	{
+		missing += myTargetInfo->Data()->MissingCount();
+		total += myTargetInfo->Data()->Size();
+	}
+	
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (total));
+
 }
 
 #ifdef HAVE_CUDA
