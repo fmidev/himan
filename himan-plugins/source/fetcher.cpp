@@ -238,6 +238,17 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		// == operator does not test scanning mode !
 		itsLogger->Trace("Swapping area");
+
+		if (theInfos[0]->Grid()->IsPackedData())
+		{
+			// must unpack before swapping
+
+			util::Unpack({theInfos[0]->Grid()});
+
+			// Only unpacked and interpolated data is stored to cache
+			theInfos[0]->Grid()->PackedData()->Clear();
+
+		}
 		theInfos[0]->Grid()->Swap(baseInfo->Grid()->ScanningMode());
 
 	}
