@@ -179,13 +179,16 @@ int main(int argc, char** argv)
 	{
 		// bubble sort
 
-		bool passed = true;
+		bool passed;
 
 		do
 		{
+			passed = true;
+
 			for (size_t i = 1; i < pluginTimes.size(); i++)
 			{
-				plugin_timing prev = pluginTimes[i-1], cur = pluginTimes[i];
+				plugin_timing prev = pluginTimes[i-1];
+				plugin_timing cur = pluginTimes[i];
 
 				if (prev.time_elapsed < cur.time_elapsed)
 				{
@@ -202,20 +205,34 @@ int main(int argc, char** argv)
 		{
 			plugin_timing t = pluginTimes[i];
 
-			cout << t.plugin_name ;
+			cout << t.plugin_name;
 
 			if (t.order_number > 1)
 			{
 				cout << " #" << t.order_number;
 			}
 
-			cout	<< (t.plugin_name.length() > 10 ? "\t\t" : "\t\t\t")
-					<< t.time_elapsed << " ms\t(" << static_cast<int> (((static_cast<double> (t.time_elapsed) / static_cast<double> (totalTime)) * 100)) << "%)" << endl;
+			string indent = "\t\t\t\t";
+
+			if (t.plugin_name.length() < 6)
+			{
+				indent = "\t\t\t";
+			}
+			else if (t.plugin_name.length() < 12)
+			{
+				indent = "\t\t";
+			}
+			else if (t.plugin_name.length() < 18)
+			{
+				indent = "\t";
+			}
+
+			cout << indent << t.time_elapsed << " ms\t(" << static_cast<int> (((static_cast<double> (t.time_elapsed) / static_cast<double> (totalTime)) * 100)) << "%)" << endl;
 
 		}
 
-		cout	<< "------------------------------------" << endl
-				<< "Total duration:\t\t" << totalTime << " ms" << endl;
+		cout	<< "------------------------------------" << endl;
+		cout	<< "Total duration:\t\t" << totalTime << " ms" << endl;
 	}
 
 	return 0;
