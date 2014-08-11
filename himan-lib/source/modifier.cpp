@@ -387,7 +387,9 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 		assert(theData.size() == theHeights.size());
 
 		itsResult.resize(theData.size(), kFloatMissing);
-
+		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
+		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
+	
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
 
 	}
@@ -787,6 +789,22 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 }
 
 /* ----------------- */
+
+void modifier_integral::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
+{
+
+	if (itsResult.size() == 0)
+	{
+		assert(theData.size() == theHeights.size());
+
+		itsResult.resize(theData.size(), kFloatMissing);
+		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
+		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
+	
+		itsOutOfBoundHeights.resize(itsResult.size(), false);
+
+	}
+}
 
 bool modifier_integral::Evaluate(double theValue, double theHeight)
 {
