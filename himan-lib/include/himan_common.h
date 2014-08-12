@@ -448,6 +448,12 @@ namespace constants {
 	const double kIg = 0.10197;
 
 	const double kRCp = 0.286;
+
+	/**
+ 	 * @brief von Karman constant
+ 	 */
+
+	const double kK = 0.41;	
 	
 } // namespace constants
 
