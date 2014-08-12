@@ -130,9 +130,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	{
 		GPInfo = Fetch(forecastTime, forecastLevel, ZParam, false);
 		zeroGPInfo = Fetch(forecastTime, H0, ZParam, false);
-
-		SetAB(myTargetInfo, GPInfo);
-
 	}
 	else
 	{
@@ -152,10 +149,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		PInfo = Fetch(forecastTime, forecastLevel, PParam, false);
 		TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
 
-		assert(PInfo->Grid()->AB() == TInfo->Grid()->AB());
-
-		SetAB(myTargetInfo, TInfo);
-
 	}
 
 	if ((itsUseGeopotential && (!GPInfo || !zeroGPInfo)) || (!itsUseGeopotential && (!prevTInfo || !prevPInfo || ( !prevHInfo && !firstLevel ) || !PInfo || !TInfo)))
@@ -168,15 +161,20 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	if (itsUseGeopotential)
 	{
+		SetAB(myTargetInfo, GPInfo);
+		
 		GPInfo->ResetLocation();
 		zeroGPInfo->ResetLocation();
 	}
 	else
 	{
+		SetAB(myTargetInfo, TInfo);
+		
 		PInfo->ResetLocation();
 		TInfo->ResetLocation();
 		prevPInfo->ResetLocation();
 		prevTInfo->ResetLocation();
+
 		if (!firstLevel)
 		{
 			prevHInfo->ResetLocation();
