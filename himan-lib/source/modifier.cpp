@@ -444,7 +444,7 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
 	}
-	else if (theHeight >= lowerHeight && theHeight <= upperHeight)
+	else if (previousHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
@@ -914,7 +914,7 @@ void modifier_integral::Calculate(double theValue, double theHeight)
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
 	}
-	else if (theHeight >= lowerHeight && theHeight <= upperHeight)
+	else if (previousHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
