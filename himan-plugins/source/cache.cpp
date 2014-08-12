@@ -190,5 +190,5 @@ shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)
 {
 	Lock lock(itsGetMutex);
 
-	return itsCache[uniqueName];
+	return make_shared<info> (*itsCache[uniqueName]);
 }
