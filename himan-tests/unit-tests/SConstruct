@@ -1,7 +1,7 @@
 #
 # SConscript for himan-bin
 
-import os
+import os, sys
 
 AddOption(
     '--debug-build',
@@ -19,7 +19,7 @@ RELEASE = (not DEBUG)
 
 # Workspace
 
-workspace = os.environ['HOME'] + "/workspace/himan"
+workspace = os.environ['HOME'] + "/workspace"
 
 if os.environ['HOME'] == "/home/weto":
 	workspace = os.environ['HOME'] + "/workspace/himan"
@@ -107,14 +107,13 @@ libraries.append('hitool')
 libraries.append('fetcher')
 
 libraries.append('smartmet_smarttools')
-libraries.append('boost_unit_test_framework') # this needs to be dynamically linked
 
 env.Append(LIBS = libraries)
 
-boost_libraries = [ 'boost_filesystem', 'boost_system', 'boost_regex', 'boost_iostreams', 'boost_thread' ]
+boost_libraries = [ 'boost_filesystem', 'boost_system', 'boost_regex', 'boost_iostreams', 'boost_thread', 'boost_unit_test_framework' ]
 
 for lib in boost_libraries:
-	libfile = '/usr/local/lib/lib' + lib + '.a'
+	libfile = '/usr/lib64/lib' + lib + '.a'
 
 	if not os.path.isfile(libfile):
 		libfile = '/usr/lib64/lib' + lib + '-mt.a'
