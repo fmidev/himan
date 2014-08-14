@@ -392,7 +392,6 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 	
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
-
 	}
 }
 
@@ -438,21 +437,22 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		double val = Value();
 		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
-		itsRange [i] += theHeight - lowerHeight;
+		itsRange[itsIndex] += theHeight - lowerHeight;
 	}
 	else if (previousHeight < upperHeight && theHeight > upperHeight)
 	{
 		double val = Value();
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
-                itsRange [i] += upperHeight - previousHeight;
+                itsRange[itsIndex] += upperHeight - previousHeight;
 	}
-	else if (previousHeight >= lowerHeight && theHeight <= upperHeight)
+	else if (!(previousHeight == kFloatMissing) && previousHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
-                itsRange [i] += theHeight - previousHeight;
+                itsRange[itsIndex] += theHeight - previousHeight;
 	}
+
 }
 
 const std::vector<double>& modifier_mean::Result() const
@@ -919,7 +919,7 @@ void modifier_integral::Calculate(double theValue, double theHeight)
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
 	}
-	else if (previousHeight >= lowerHeight && theHeight <= upperHeight)
+	else if (!(previousHeight == kFloatMissing) && previousHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
