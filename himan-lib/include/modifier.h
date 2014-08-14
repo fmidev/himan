@@ -205,6 +205,8 @@ class modifier_mean : public modifier_integral
 	protected:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 		virtual bool Evaluate(double theValue, double theHeight);
+
+		std::vector<double> itsRange;
 };
 
 /**

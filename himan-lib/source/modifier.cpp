@@ -387,6 +387,7 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 		assert(theData.size() == theHeights.size());
 
 		itsResult.resize(theData.size(), kFloatMissing);
+		itsRange.resize(theData.size(),0);
 		itsPreviousValue.resize(itsResult.size(), kFloatMissing);
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 	
@@ -437,17 +438,20 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		double val = Value();
 		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
+		itsRange [i] += theHeight - lowerHeight;
 	}
 	else if (previousHeight < upperHeight && theHeight > upperHeight)
 	{
 		double val = Value();
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
+                itsRange [i] += upperHeight - previousHeight;
 	}
 	else if (previousHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
+                itsRange [i] += theHeight - previousHeight;
 	}
 }
 
@@ -455,11 +459,12 @@ const std::vector<double>& modifier_mean::Result() const
 {
 	for (size_t i = 0; i < itsResult.size(); i++)
 	{
-		double val = itsResult[i];
+	
+	double val = itsResult[i];
 
 		if (!IsMissingValue(val))
 		{
-			itsResult[i] = val / (itsUpperHeight[i] - itsLowerHeight[i]); 
+			itsResult[i] = val / itsRange[i]; 
 		}
 	}
 
