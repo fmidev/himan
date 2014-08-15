@@ -74,7 +74,13 @@ void init()
 		values_all[i] = values;
 		heights_all[i] = heights;
 	}
-
+/*	
+	for (size_t j = 0; j < arr_size; j++)
+	{
+		lowerHeight.push_back();
+		upperHeight.push_back();
+	}
+*/
 /*
 	cout << "\t=== VALUES ===\n";
 	dump(values_all);
@@ -178,8 +184,8 @@ BOOST_AUTO_TEST_CASE(MODIFIER_MEAN)
 	auto result = mod->Result();
 
 	// vdump(result);
-	BOOST_REQUIRE(result[2] == 67);
-	BOOST_REQUIRE(result[18] == 123);
+	BOOST_REQUIRE(result[2] == 68);
+	BOOST_REQUIRE(result[18] == 132);
 
 }
 
