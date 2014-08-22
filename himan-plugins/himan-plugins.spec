@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.8.11
+Version: 14.8.22
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -86,6 +86,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Aug 22 2014  Mikko Partio <mikko.partio@fmi.fi> - 14.8.22-1.fmi
+- Hotfix for GFS/GEM longitude coordinate issue
+* Tue Aug 12 2014  Mikko Partio <mikko.partio@fmi.fi> - 14.8.12-1.fmi
+- Fixes to hybrid_height and cache
+* Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-2.fmi
+- Logging fix on windvector
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-1.fmi
 - Misc fixes WRT ECMWF
 - Removed pcuda plugin
