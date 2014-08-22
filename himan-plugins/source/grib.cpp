@@ -611,12 +611,13 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		double Y0 = itsGrib->Message()->Y0();
 
 		// GRIB2 has longitude 0 .. 360, but in neons we have it -180 .. 180
+		// NB! ONLY FOR EC! GFS and GEM geometries are in grib2 format
 		//
 		// Make conversion to GRIB1 style coordinates, but in the long run we should figure out how to
 		// handle grib 1 & grib 2 longitude values in a smart way. (a single geometry
 		// can have coordinates in both ways!)
 		
-		if (itsGrib->Message()->Edition() == 2)
+		if (itsGrib->Message()->Edition() == 2 && centre == 98)
 		{
 			X0 -= 360;
 		}
