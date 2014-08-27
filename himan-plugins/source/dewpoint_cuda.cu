@@ -36,11 +36,11 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(const double* __restrict
 
 			if (d_rh[idx] > 50)
 			{
-				d_td[idx] = (d_t[idx]+opts.t_base) - ((100 - opts.rh_scale*d_rh[idx])*0.2) + K;
+				d_td[idx] = (d_t[idx]+opts.t_base) - ((100 - opts.rh_scale*d_rh[idx])*0.2);
 			}
 			else
 			{
-				d_td[idx] = ((d_t[idx]+opts.t_base) / (1 - ((d_t[idx]+opts.t_base) * log(d_rh[idx] * opts.rh_scale) * (RW_div_L)))) + K;
+				d_td[idx] = ((d_t[idx]+opts.t_base) / (1 - ((d_t[idx]+opts.t_base) * log(d_rh[idx]/100 * opts.rh_scale) * (RW_div_L))));
 			}
 		}
 	}

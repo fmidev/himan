@@ -79,6 +79,12 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 		
 	SetAB(myTargetInfo, TInfo);
 
+    // Special case for harmonie
+    if (itsConfiguration->SourceProducer().Id() == 199)
+    { 
+		RHScale = 100;
+	} 
+
 	if (RHInfo->Param().Unit() != kPrcnt)
 	{
 		itsLogger->Warning("Unable to determine RH unit, assuming percent");
@@ -86,9 +92,10 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 	// Formula assumes T == Celsius
 
-	if (TInfo->Param().Unit() == kK)
+	if (TInfo->Param().Unit() == kC)
 	{
-		TBase = -himan::constants::kKelvin;
+
+		TBase = himan::constants::kKelvin;
 	}
 
 	string deviceType;
@@ -118,6 +125,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			double T = TInfo->Value();
 			double RH = RHInfo->Value();
 
+
 			if (T == kFloatMissing || RH == kFloatMissing)
 			{
 				continue;
@@ -130,11 +138,11 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 			if (RH > 50)
 			{
-				TD = T - ((100 - RH) * 0.2) + constants::kKelvin;
+				TD = T - ((100 - RH) * 0.2);
 			}
 			else
 			{
-				TD = T / (1 - (T * log(RH) * (Rw_div_L))) + constants::kKelvin;
+				TD = T / (1 - (T * log(RH/100) * (Rw_div_L)));
 			}
 
 			myTargetInfo->Value(TD);
@@ -158,9 +166,9 @@ unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTarg
 
 	opts->N = opts->td->size_x * opts->td->size_y;
 
-	if (TInfo->Param().Unit() == kK)
+	if (TInfo->Param().Unit() == kC)
 	{
-		opts->t_base = -himan::constants::kKelvin;
+		opts->t_base = himan::constants::kKelvin;
 	}
 
 	if (RHInfo->Param().Unit() != kPrcnt)
