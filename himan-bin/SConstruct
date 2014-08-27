@@ -21,7 +21,7 @@ RELEASE = (not DEBUG)
 
 workspace = os.environ['HOME'] + "/workspace"
 
-if os.environ['HOME'] == "/home/weto":
+if os.environ['HOME'] == "/home/dev/weto":
 	workspace = os.environ['HOME'] + "/workspace/himan"
 	
 # cuda toolkit path
