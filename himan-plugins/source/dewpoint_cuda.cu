@@ -7,11 +7,7 @@
 
 #include "cuda_helper.h"
 #include "dewpoint_cuda.h"
-
-const double RW = 461.5; // Vesihoyryn kaasuvakio (J / K kg)
-const double L = 2.5e6; // Veden hoyrystymislampo (J / kg)
-const double RW_div_L = RW / L;
-const double K = 273.15;
+#include "metutil.h"
 
 __global__ void himan::plugin::dewpoint_cuda::Calculate(const double* __restrict__ d_t,
 															const double* __restrict__ d_rh,
@@ -34,13 +30,15 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(const double* __restrict
 			// Branching, but first branch is so much simpler in terms of calculation complexity
 			// so it's probably worth it
 
-			if (d_rh[idx] > 50)
+			double RH = d_rh[idx] * opts.rh_scale;
+			
+			if (RH > 50)
 			{
-				d_td[idx] = (d_t[idx]+opts.t_base) - ((100 - opts.rh_scale*d_rh[idx])*0.2);
+				d_td[idx] = metutil::DewPointFromHighRH_(d_t[idx]+opts.t_base, RH);
 			}
 			else
 			{
-				d_td[idx] = ((d_t[idx]+opts.t_base) / (1 - ((d_t[idx]+opts.t_base) * log(d_rh[idx]/100 * opts.rh_scale) * (RW_div_L))));
+				d_td[idx] = metutil::DewPointFromLowRH_(d_t[idx]+opts.t_base, RH);
 			}
 		}
 	}

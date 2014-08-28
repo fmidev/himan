@@ -10,11 +10,10 @@
 #include <boost/lexical_cast.hpp>
 #include "level.h"
 #include "forecast_time.h"
+#include "metutil.h"
 
 using namespace std;
 using namespace himan::plugin;
-
-const double Rw_div_L = himan::constants::kRw / himan::constants::kL;
 
 dewpoint::dewpoint()
 {
@@ -138,11 +137,11 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 			if (RH > 50)
 			{
-				TD = T - ((100 - RH) * 0.2);
+				TD = metutil::DewPointFromHighRH_(T, RH);
 			}
 			else
 			{
-				TD = T / (1 - (T * log(RH/100) * (Rw_div_L)));
+				TD = metutil::DewPointFromLowRH_(T, RH);
 			}
 
 			myTargetInfo->Value(TD);
@@ -171,7 +170,7 @@ unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTarg
 		opts->t_base = himan::constants::kKelvin;
 	}
 
-	if (RHInfo->Param().Unit() != kPrcnt)
+	if (RHInfo->Param().Unit() != kPrcnt || itsConfiguration->SourceProducer().Id() == 199)
 	{
 		// If unit cannot be detected, assume the values are from 0 .. 1
 		opts->rh_scale = 100;
