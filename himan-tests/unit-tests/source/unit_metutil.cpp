@@ -102,13 +102,13 @@ BOOST_AUTO_TEST_CASE(DEWPOINT_LOW_RH)
 
 	double TD = metutil::DewPointFromLowRH_(292.5, 22);
 
-	BOOST_CHECK_CLOSE(TD, 292.3959, kEpsilon);
+	BOOST_CHECK_CLOSE(TD, 270.3936, kEpsilon);
 
 	// negative temperatures
 
 	TD = metutil::DewPointFromLowRH_(264, 42.0);
 
-	BOOST_CHECK_CLOSE(TD, 263.9865, kEpsilon);
+	BOOST_CHECK_CLOSE(TD, 253.2915, kEpsilon);
 
 }
 
