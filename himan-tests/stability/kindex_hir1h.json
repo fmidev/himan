@@ -11,7 +11,7 @@
 	{
 		"leveltype" : "height",
 		"levels" : "0",
-		"plugins" : [ { "name" : "kindex", "li" : false} ]
+		"plugins" : [ { "name" : "stability", "li" : false} ]
 	} 
 	]
 }
