@@ -469,7 +469,13 @@ namespace constants {
  	 */
 
 	const double kK = 0.41;	
+
+	/**
+	 * @brief Gas constant for water divided by latent heat (used in dewpoint)
+	 */
 	
+	const double kRw_div_L = himan::constants::kRw / himan::constants::kL;
+
 } // namespace constants
 
 } // namespace himan
