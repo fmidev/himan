@@ -3,7 +3,7 @@
 set -x
 
 if [ -z "$HIMAN" ]; then
-	export HIMAN="../../himan"
+	export HIMAN="../../himan-bin/himan"
 fi
 
 rm -f TPW-K*.grib
@@ -25,7 +25,7 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
   $HIMAN -d 5 -f tpot_ec.json source_ec.grib -s ec_cuda
 
-  grib_compare -A 0.4 ec_result.grib ./TPW-K_pressure_850_rll_161_177_0_003.grib
+  grib_compare -A 0.01 ec_result.grib ./TPW-K_pressure_850_rll_161_177_0_003.grib
 
   if [ $? -eq 0 ];then
     echo tpot/ec success on GPU!
