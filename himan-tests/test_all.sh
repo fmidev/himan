@@ -1,7 +1,11 @@
 #!/bin/sh
 
 if [ -z "$HIMAN" ]; then
-  export HIMAN=$(pwd)/../himan-bin/build/debug/himan
+  if [ "$1" = "release" ]; then 
+  	export HIMAN=$(pwd)/../himan-bin/build/release/himan
+  else
+    export HIMAN=$(pwd)/../himan-bin/build/debug/himan
+  fi
 fi
 
 LOGDIR=/tmp
