@@ -327,8 +327,7 @@ inline double himan::metutil::DewPointFromHighRH_(double T, double RH)
 CUDA_DEVICE
 inline double himan::metutil::DewPointFromLowRH_(double T, double RH)
 {
-	T -= constants::kKelvin;
-	return (T / (1 - (T * log(RH * 0.01) * constants::kRw_div_L))) + constants::kKelvin;
+	return (T / (1 - (T * log(RH * 0.01) * constants::kRw_div_L)));
 }
 
 CUDA_DEVICE
