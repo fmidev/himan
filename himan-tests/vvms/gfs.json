@@ -1,0 +1,24 @@
+{
+	"_INFO":{
+		"modified":"31 Jan 2013",
+		"author": "partio",
+		"description": "GFS vvms"
+	},
+	 
+	"target_geom_name" : "GFS0500",
+	"source_producer" : "53",
+	"target_producer" : "53",
+	"start_hour" : "192",
+	"stop_hour" : "192",
+	"step" : "1",
+	"file_write" : "multiple",
+	"origintime" : "2014-08-22 00:00:00",
+
+	"processqueue" : [
+	{
+		"leveltype" : "pressure",
+		"levels" : "925",
+		"plugins" : [ { "name" : "vvms" } ]
+	}
+	]
+}
