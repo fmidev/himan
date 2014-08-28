@@ -1,8 +1,8 @@
-/*
- * param.h
+/**
+ * @file param.h
  *
  *  Created on: Nov 27, 2012
- *      Author: partio
+ *	  Author: partio
  *
  * This class holds all necessary parameter information, basically referring to
  * those parameters defined in Neons.
@@ -19,8 +19,7 @@
 #define PARAM_H
 
 #include "aggregation.h"
-#include <NFmiParam.h>
-#include "NFmiGlobals.h" // FmiInterpolatioMethod
+#include "himan_common.h"
 
 namespace himan
 {
@@ -31,86 +30,85 @@ class param
 
 public:
 
-    param();
-    param(const std::string& theName);
-    param(const std::string& theName, unsigned long theUnivId);
+	param();
+	param(const std::string& theName);
+	param(const std::string& theName, unsigned long theUnivId);
 
-    param(const std::string& theName, unsigned long theUnivId, long itsGribDiscipline, long itsGribCategory, long itsGribParameter);
-    param(const std::string& theName, unsigned long theUnivId,
-          float theScale,
-          float theBase,
-          const std::string& thePrecision = "%.1f",
-          FmiInterpolationMethod theInterpolationMethod = kNearestPoint);
+	param(const std::string& theName, unsigned long theUnivId, long itsGribDiscipline, long itsGribCategory, long itsGribParameter);
+	param(const std::string& theName, unsigned long theUnivId,
+		  double theScale,
+		  double theBase,
+		  HPInterpolationMethod theInterpolationMethod = kNearestPoint);
 
-    ~param() = default;
+	~param();
 
-    param(const param& other);
-    param& operator=(const param& other);
+	param(const param& other);
+	param& operator=(const param& other);
 
-    std::string ClassName() const
-    {
-        return "himan::param";
-    }
+	std::string ClassName() const
+	{
+		return "himan::param";
+	}
 
-    bool operator==(const param& other);
-    bool operator!=(const param& other);
+	bool operator==(const param& other);
+	bool operator!=(const param& other);
 
-    /**
-     * @brief Set grib parameter number (grib2)
-     */
+	/**
+	 * @brief Set grib parameter number (grib2)
+	 */
 
-    void GribParameter(long theGribParameter);
-    long GribParameter() const;
+	void GribParameter(long theGribParameter);
+	long GribParameter() const;
 
-    /**
-     * @brief Set grib parameter discipline (grib2)
-     */
+	/**
+	 * @brief Set grib parameter discipline (grib2)
+	 */
 
-    void GribDiscipline(long theGribDiscipline);
-    long GribDiscipline() const;
+	void GribDiscipline(long theGribDiscipline);
+	long GribDiscipline() const;
 
-    /**
-     * @brief Set grib parameter category (grib2)
-     */
+	/**
+	 * @brief Set grib parameter category (grib2)
+	 */
 
-    void GribCategory(long theGribCategory);
-    long GribCategory() const;
+	void GribCategory(long theGribCategory);
+	long GribCategory() const;
 
-    /**
-     * @brief Set grib parameter table version number (grib1)
-     */
+	/**
+	 * @brief Set grib parameter table version number (grib1)
+	 */
 
-    void GribTableVersion(long theVersion);
-    long GribTableVersion() const;
+	void GribTableVersion(long theVersion);
+	long GribTableVersion() const;
 
-    /**
-     * @brief Set grib parameter number (grib1)
-     */
+	/**
+	 * @brief Set grib parameter number (grib1)
+	 */
 
-    void GribIndicatorOfParameter(long theGribIndicatorOfParameter);
-    long GribIndicatorOfParameter() const;
+	void GribIndicatorOfParameter(long theGribIndicatorOfParameter);
+	long GribIndicatorOfParameter() const;
 
-    /**
-     * @brief Set universal id (newbase)
-     */
+	/**
+	 * @brief Set universal id (newbase)
+	 */
 
-    unsigned long UnivId() const;
-    void UnivId(unsigned long theUnivId);
+	unsigned long UnivId() const;
+	void UnivId(unsigned long theUnivId);
 
-    /**
-     * @brief Set parameter name
-     */
+	/**
+	 * @brief Set parameter name
+	 */
 
-    void Name(std::string theName);
-    std::string Name() const;
+	void Name(const std::string& theName);
+	std::string Name() const;
 
-    /**
-     *
-     * @return Unit of parameter
-     */
+	/**
+	 *
+	 * @return Unit of parameter
+	 */
 
-    HPParameterUnit Unit() const;
-    void Unit(HPParameterUnit theUnit);
+	HPParameterUnit Unit() const;
+	void Unit(HPParameterUnit theUnit);
 
 	aggregation& Aggregation();
 
@@ -120,31 +118,44 @@ public:
 	double Scale() const;
 	void Scale(double theScale);
 
-    std::ostream& Write(std::ostream& file) const;
+	HPInterpolationMethod InterpolationMethod() const;
+	void InterpolationMethod(HPInterpolationMethod theInterpolationMethod);
+
+	long Id() const;
+	void Id(long theId);
+	
+	std::ostream& Write(std::ostream& file) const;
 
 private:
 
-    std::unique_ptr<NFmiParam> itsParam; //!< newbase param will hold name, univ_id and scale+base
+	long itsId; //<! neons id
+	std::string itsName; //!< neons name
+	double itsScale;
+	double itsBase;
+	long itsUnivId;
+	
+	long itsGribParameter; //!< Grib parameter number (only for grib2)
+	long itsGribCategory; //!< Grib parameter category (only for grib2)
+	long itsGribDiscipline; //!< Grib parameter discipline (only for grib2)
+	long itsGribTableVersion; //!< Grib table version (only in grib 1)
+	long itsGribIndicatorOfParameter; //!< Grib parameter number (only in grib 1)
 
-    long itsGribParameter; //!< Grib parameter number (only for grib2)
-    long itsGribCategory; //!< Grib parameter category (only for grib2)
-    long itsGribDiscipline; //!< Grib parameter discipline (only for grib2)
-    long itsGribTableVersion; //!< Grib table version (only in grib 1)
-    long itsGribIndicatorOfParameter; //!< Grib parameter number (only in grib 1)
-
-    HPParameterUnit itsUnit; //!< Unit of the parameter
-    double itsMissingValue; //!< Missing value
+	int itsVersion;
+	HPInterpolationMethod itsInterpolationMethod;
+	
+	HPParameterUnit itsUnit; //!< Unit of the parameter
+	double itsMissingValue; //!< Missing value
 
 	aggregation itsAggregation;
 	
-    std::unique_ptr<logger> itsLogger;
+	std::unique_ptr<logger> itsLogger;
 
 };
 
 inline
 std::ostream& operator<<(std::ostream& file, const param& ob)
 {
-    return ob.Write(file);
+	return ob.Write(file);
 }
 
 typedef std::vector<himan::param> params;

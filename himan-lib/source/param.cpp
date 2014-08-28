@@ -11,13 +11,21 @@
 using namespace himan;
 using namespace std;
 
+param::~param() {}
+
 param::param()
-	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, "HimanDefaultParam")))
+	: itsId(kHPMissingInt)
+	, itsName("XX-X")
+	, itsScale(1)
+	, itsBase(0)
+	, itsUnivId(kHPMissingInt)
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
+	, itsVersion(1)
+	, itsInterpolationMethod(kUnknownInterpolationMethod)
 	, itsUnit(kUnknownUnit)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
@@ -26,12 +34,18 @@ param::param()
 }
 
 param::param(const string& theName, unsigned long theUnivId)
-	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(theUnivId, NFmiString(theName))))
+	: itsId(kHPMissingInt)
+	, itsName(theName)
+	, itsScale(1)
+	, itsBase(0)
+	, itsUnivId(theUnivId)
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
+	, itsVersion(1)
+	, itsInterpolationMethod(kUnknownInterpolationMethod)
 	, itsUnit(kUnknownUnit)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
@@ -40,12 +54,18 @@ param::param(const string& theName, unsigned long theUnivId)
 }
 
 param::param(const string& theName)
-	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(kHPMissingInt, NFmiString(theName))))
+	: itsId(kHPMissingInt)
+	, itsName(theName)
+	, itsScale(1)
+	, itsBase(0)
+	, itsUnivId(kHPMissingInt)
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
+	, itsVersion(1)
+	, itsInterpolationMethod(kUnknownInterpolationMethod)
 	, itsUnit(kUnknownUnit)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
@@ -55,23 +75,21 @@ param::param(const string& theName)
 
 param::param(const string& theName,
 			 unsigned long theUnivId,
-			 float theScale,
-			 float theBase,
-			 const string& thePrecision,
-			 FmiInterpolationMethod theInterpolationMethod)
-	: itsParam(unique_ptr<NFmiParam> (new NFmiParam (theUnivId,
-									  NFmiString(theName),
-									  kFloatMissing,
-									  kFloatMissing,
-									  theScale,
-									  theBase,
-									  NFmiString(thePrecision),
-									  theInterpolationMethod)))
+			 double theScale,
+			 double theBase,
+			 HPInterpolationMethod theInterpolationMethod)
+	: itsId(kHPMissingInt)
+	, itsName(theName)
+	, itsScale(theScale)
+	, itsBase(theBase)
+	, itsUnivId(theUnivId)
 	, itsGribParameter(kHPMissingInt)
 	, itsGribCategory(kHPMissingInt)
 	, itsGribDiscipline(kHPMissingInt)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
+	, itsVersion(1)
+	, itsInterpolationMethod(theInterpolationMethod)
 	, itsUnit(kUnknownUnit)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
@@ -80,12 +98,18 @@ param::param(const string& theName,
 }
 
 param::param(const string& theName, unsigned long theUnivId, long theGribDiscipline, long theGribCategory, long theGribParameter)
-	: itsParam(unique_ptr<NFmiParam> (new NFmiParam(theUnivId, NFmiString(theName))))
+	: itsId(kHPMissingInt)
+	, itsName(theName)
+	, itsScale(1)
+	, itsBase(0)
+	, itsUnivId(theUnivId)
 	, itsGribParameter(theGribParameter)
 	, itsGribCategory(theGribCategory)
 	, itsGribDiscipline(theGribDiscipline)
 	, itsGribTableVersion(kHPMissingInt)
 	, itsGribIndicatorOfParameter(kHPMissingInt)
+	, itsVersion(1)
+	, itsInterpolationMethod(kUnknownInterpolationMethod)
 	, itsUnit(kUnknownUnit)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
@@ -94,12 +118,18 @@ param::param(const string& theName, unsigned long theUnivId, long theGribDiscipl
 }
 
 param::param(const param& other)
-	: itsParam(unique_ptr<NFmiParam> (new NFmiParam (*other.itsParam)))
+	: itsId(other.itsId)
+	, itsName(other.itsName)
+	, itsScale(other.itsScale)
+	, itsBase(other.itsBase)
+	, itsUnivId(other.itsUnivId)
 	, itsGribParameter(other.itsGribParameter)
 	, itsGribCategory(other.itsGribCategory)
 	, itsGribDiscipline(other.itsGribDiscipline)
 	, itsGribTableVersion(other.itsGribTableVersion)
 	, itsGribIndicatorOfParameter(other.itsGribIndicatorOfParameter)
+	, itsVersion(other.itsVersion)
+	, itsInterpolationMethod(other.itsInterpolationMethod)
 	, itsUnit(other.itsUnit)
 	, itsMissingValue(other.itsMissingValue)
 	, itsAggregation(other.itsAggregation)
@@ -109,12 +139,18 @@ param::param(const param& other)
 
 param& param::operator=(const param& other)
 {
-	itsParam = unique_ptr<NFmiParam> (new NFmiParam (*other.itsParam));
+	itsId = other.itsId;
+	itsName = other.itsName;
+	itsScale = other.itsScale;
+	itsBase = other.itsBase;
+	itsUnivId = other.itsUnivId;
 	itsGribParameter = other.itsGribParameter;
 	itsGribCategory = other.itsGribCategory;
 	itsGribDiscipline = other.itsGribDiscipline;
 	itsGribTableVersion = other.itsGribTableVersion;
 	itsGribIndicatorOfParameter = other.itsGribIndicatorOfParameter;
+	itsVersion = other.itsVersion;
+	itsInterpolationMethod = other.itsInterpolationMethod;
 	itsUnit = other.itsUnit;
 	itsMissingValue = other.itsMissingValue;
 	itsAggregation = other.itsAggregation;
@@ -129,7 +165,12 @@ bool param::operator==(const param& other)
 		return true;
 	}
 
-	if (Name() != other.Name())
+	if (itsId != other.itsId)
+	{
+		return false;
+	}
+	
+	if (itsName != other.itsName)
 	{
 		return false;
 	}
@@ -169,6 +210,11 @@ bool param::operator==(const param& other)
 	}
 
 	if (itsAggregation.Type() != kUnknownAggregationType && other.itsAggregation.Type() != kUnknownAggregationType && itsAggregation != other.itsAggregation)
+	{
+		return false;
+	}
+
+	if (itsVersion != other.itsVersion)
 	{
 		return false;
 	}
@@ -223,22 +269,22 @@ long param::GribIndicatorOfParameter() const
 
 unsigned long param::UnivId() const
 {
-	return itsParam->GetIdent();
+	return itsUnivId;
 }
 
 void param::UnivId(unsigned long theUnivId)
 {
-	itsParam->SetIdent(theUnivId);
+	itsUnivId = theUnivId;
 }
 
 string param::Name() const
 {
-	return string(itsParam->GetName());
+	return itsName;
 }
 
-void param::Name(string theName)
+void param::Name(const string& theName)
 {
-	itsParam->SetName(NFmiString(theName));
+	itsName = theName;
 }
 
 HPParameterUnit param::Unit() const
@@ -268,36 +314,59 @@ aggregation& param::Aggregation()
 
 double param::Base() const
 {
-	return itsParam->Base();
+	return itsBase;
 }
 
 void param::Base(double theBase)
 {
-	itsParam->Base(static_cast<float> (theBase));
+	itsBase = theBase;
 }
 
 double param::Scale() const
 {
-	return itsParam->Scale();
+	return itsScale;
 }
 
 void param::Scale(double theScale)
 {
-	itsParam->Scale(static_cast<float> (theScale));
+	itsScale = theScale;
 }
+
+long param::Id() const
+{
+	return itsId;
+}
+
+void param::Id(long theId)
+{
+	itsId = theId;
+}
+
+HPInterpolationMethod param::InterpolationMethod() const
+{
+	return itsInterpolationMethod;
+}
+
+void param::InterpolationMethod(HPInterpolationMethod theInterpolationMethod)
+{
+	itsInterpolationMethod = theInterpolationMethod;
+}
+
 
 ostream& param::Write(ostream& file) const
 {
 
 	file << "<" << ClassName() << ">" << endl;
-	file << "__itsName__ " << string(itsParam->GetName()) << endl;
-	file << "__itsUnivId__ " << itsParam->GetIdent() << endl;
+	file << "__itsName__ " << itsName << endl;
+	file << "__itsScale__ " << itsScale << endl;
+	file << "__itsBase__ " << itsBase << endl;
+	file << "__itsUnivId__ " << itsUnivId << endl;
 	file << "__itsGribParameter__ " << itsGribParameter << endl;
 	file << "__itsGribCategory__ " << itsGribCategory << endl;
 	file << "__itsGribDiscipline__ " << itsGribDiscipline << endl;
-	file << "__itsScale__ " << itsParam->Scale() << endl;
-	file << "__itsBase__ " << itsParam->Base() << endl;
 	file << "__itsUnit__ " << itsUnit << endl;
+	file << "__itsVersion__ " << itsVersion << endl;
+	file << "__itsInterpolationMethod__ " << HPInterpolationMethodToString.at(itsInterpolationMethod) << endl;
 
 	file << itsAggregation;
 
