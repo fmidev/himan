@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 14.8.11
-Release: 2.fmi
+Version: 14.8.28
+Release: 1.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -51,6 +51,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Aug 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.28-1.fmi
+- Dewpoint calculation moved to metutil
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-2.fmi
 - Fixes for modifier
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-1.fmi
