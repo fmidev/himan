@@ -123,6 +123,21 @@ enum HPParameterUnit
 	kKgm2 // kg/m^2
 };
 
+enum HPInterpolationMethod
+{
+	kUnknownInterpolationMethod = 0,
+	kBiLinear = 1,
+	kNearestPoint = 2,
+};
+
+#ifndef __CUDACC__
+const boost::unordered_map<HPInterpolationMethod,const char*> HPInterpolationMethodToString = ba::map_list_of
+		(kUnknownInterpolationMethod, "unknown")
+		(kBiLinear, "bi-linear")
+		(kNearestPoint, "nearest point")
+		;
+#endif
+
 enum HPLevelType
 {
 	kUnknownLevel = 0,
