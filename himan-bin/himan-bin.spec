@@ -9,8 +9,8 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 14.8.11
-Release: 2.fmi
+Version: 14.9.8
+Release: 1.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -59,6 +59,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Sep  8 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.8-1.fmi
+- Compling and linkin with -pie (HIMAN-51)
+* Mon Aug 12 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.12-1.fmi
+- Backwards compatibility for renamed plugins
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-2.fmi
 - Fix bug that forced himan to an eternal loop
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-1.fmi

@@ -156,13 +156,15 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 
 cflags = []
 cflags.append('-std=c++0x')
+cflags.append('-fPIC')
+cflags.append('-pie')
 
 env.Append(CCFLAGS = cflags)
 env.Append(CCFLAGS = cflags_normal)
 
 # Linker flags
 
-env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-needed' ,'-pthread'])
+env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-needed' ,'-pthread', '-pie'])
 
 # '-Wl,-rpath,.'
 
