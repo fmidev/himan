@@ -63,13 +63,25 @@ public:
 	 * Only for hybrid levels
 	 * 
 	 * @param wantedParam Wanted parameter
+	 * @param lowerHeight Lowest height for all points, search will start here
+	 * @param upperHeight Highest height for all points, search will stop here
+	 * @return Maximum value for each point
+	 */
+
+	std::vector<double> VerticalMaximum(const param& wantedParam, const double& lowerHeight, const double& upperHeight) const;
+
+	/**
+	 * @brief Find maximum value of a given parameter in a given height range
+	 *
+	 * Only for hybrid levels
+	 * 
+	 * @param wantedParam Wanted parameter
 	 * @param firstLevelValue Lowest level value for each point, search will start here
 	 * @param lastLevelValue Highest level value for each point, search will stop here
 	 * @return Maximum value for each point
 	 */
 
 	std::vector<double> VerticalMaximum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
-
 
 	/**
 	 * @brief Return minimum value in a given height range for the first parameter found.
@@ -80,6 +92,17 @@ public:
 	*/
 
 	std::vector<double> VerticalMinimum(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
+	 * @brief Find minimum value of a given parameter in a given height range
+	 *
+	 * @param wantedParam Wanted parameter
+	 * @param lowerHeight Lowest height value for all points, search will start here
+	 * @param upperHeight Highest height value for all points, search will stop here
+	 * @return Minimum value for each point
+	 */
+
+	std::vector<double> VerticalMinimum(const param& wantedParam, const double& lowerHeight, const double& upperHeight) const;
 
 	/**
 	 * @brief Find minimum value of a given parameter in a given height range
@@ -122,6 +145,17 @@ public:
 	*/
 
 	std::vector<double> VerticalAverage(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
+	 * @brief Calculate average of values for each point in a given height range
+	 *
+	 * @param wantedParam Wanted parameter
+	 * @param lowerHeight Lowest height value for all points, search will start here
+	 * @param upperHeight Highest height value for all points, search will stop here
+	 * @return Mean for each point
+	 */
+
+	std::vector<double> VerticalAverage(const param& wantedParam, const double& lowerHeight, const double& upperHeight) const;
 
 	/**
 	 * @brief Calculate average of values for each point in a given height range
@@ -171,6 +205,18 @@ public:
 	 */
 
 	std::vector<double> VerticalValue(const std::vector<param>& wantedParamList, const std::vector<double>& findValue) const;
+
+	/**
+	 * @brief Find value of parameter from given height
+	 *
+	 * Only for hybrid levels. A value between two levels is interpolated linearly.
+	 *
+	 * @param wantedParam Wanted parameter
+	 * @param findValue Height for all points
+	 * @return Values for given height for each point
+	 */
+
+	std::vector<double> VerticalValue(const param& wantedParam, const double& height) const;
 
 	/**
 	 * @brief Find value of parameter from given height

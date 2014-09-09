@@ -161,36 +161,6 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		auto values = data.first;
 		auto heights = data.second;
 
-		/*
-		 * This doesn't work as expected. Commented out until a fix or better way to implement this is found.
-		 *
-
-		if (findValue.size() == 1)
-		{
-			findValue.resize(values->Grid()->Size());
-			fill(findValue.begin(),findValue.end(), findValue[0]);
-
-			mod->FindValue(findValue);
-		}
-
-		if (lowerHeight.size() == 1)
-		{
-			lowerHeight.resize(values->Grid()->Size());
-			fill(lowerHeight.begin(),lowerHeight.end(), lowerHeight[0]);
-
-			mod->LowerHeight(lowerHeight);
-		}
-
-		if (upperHeight.size() == 1)
-		{
-			upperHeight.resize(values->Grid()->Size());
-			fill(upperHeight.begin(),upperHeight.end(), upperHeight[0]);
-
-			mod->UpperHeight(upperHeight);
-		}
-		 */
-	
-
 		assert(heights->Grid()->Size() == values->Grid()->Size());
 
 		values->First();
@@ -357,6 +327,16 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList,
 }
 
 vector<double> hitool::VerticalMinimum(const param& wantedParam,
+						const double& lowerHeight,
+						const double& upperHeight) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid,  wantedParam, firstLevelValue, lastLevelValue);
+}
+
+vector<double> hitool::VerticalMinimum(const param& wantedParam,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
 {
@@ -406,6 +386,16 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList,
 }
 
 vector<double> hitool::VerticalMaximum(const param& wantedParam,
+						const double& lowerHeight,
+						const double& upperHeight) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
+}
+
+vector<double> hitool::VerticalMaximum(const param& wantedParam,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
 {
@@ -452,6 +442,16 @@ vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList,
 	}
 
 	throw runtime_error("Data not found");
+}
+
+vector<double> hitool::VerticalAverage(const param& wantedParam,
+						const double& lowerHeight,
+						const double& upperHeight) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalExtremeValue(CreateModifier(kAverageModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
 }
 
 vector<double> hitool::VerticalAverage(const param& wantedParam,
@@ -596,6 +596,13 @@ vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const
 	}
 
 	throw runtime_error("Data not found");
+}
+
+vector<double> hitool::VerticalValue(const param& wantedParam, const double& height) const
+{
+	vector<double> heightInfo(itsConfiguration->Info()->Grid()->Size(), height);
+
+	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, wantedParam, vector<double> (), vector<double> (), heightInfo);
 }
 
 vector<double> hitool::VerticalValue(const param& wantedParam, const vector<double>& heightInfo) const
