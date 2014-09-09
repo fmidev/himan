@@ -161,6 +161,10 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		auto values = data.first;
 		auto heights = data.second;
 
+		/*
+		 * This doesn't work as expected. Commented out until a fix or better way to implement this is found.
+		 *
+
 		if (findValue.size() == 1)
 		{
 			findValue.resize(values->Grid()->Size());
@@ -184,7 +188,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 			mod->UpperHeight(upperHeight);
 		}
-
+		 */
 	
 
 		assert(heights->Grid()->Size() == values->Grid()->Size());
