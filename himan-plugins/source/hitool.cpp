@@ -161,6 +161,32 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		auto values = data.first;
 		auto heights = data.second;
 
+		if (findValue.size() == 1)
+		{
+			findValue.resize(values->Grid()->Size());
+			fill(findValue.begin(),findValue.end(), findValue[0]);
+
+			mod->FindValue(findValue);
+		}
+
+		if (lowerHeight.size() == 1)
+		{
+			lowerHeight.resize(values->Grid()->Size());
+			fill(lowerHeight.begin(),lowerHeight.end(), lowerHeight[0]);
+
+			mod->LowerHeight(lowerHeight);
+		}
+
+		if (upperHeight.size() == 1)
+		{
+			upperHeight.resize(values->Grid()->Size());
+			fill(upperHeight.begin(),upperHeight.end(), upperHeight[0]);
+
+			mod->UpperHeight(upperHeight);
+		}
+
+	
+
 		assert(heights->Grid()->Size() == values->Grid()->Size());
 
 		values->First();
@@ -644,6 +670,7 @@ shared_ptr<info> hitool::Stratus()
 	for (size_t i = 0; i < baseThreshold.size(); i++)
 	{
 		assert(baseThreshold[i] != kFloatMissing);
+
 		if (baseThreshold[i] < stCover)
 		{
 			baseThreshold[i] = stCover;
