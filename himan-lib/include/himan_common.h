@@ -163,6 +163,18 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = ba::ma
 		(kDepth, "depth")
 		(kTopOfAtmosphere, "top") // top of atmosphere
 		;
+
+const boost::unordered_map<std::string,HPLevelType> HPStringToLevelType = ba::map_list_of
+		("unknown",kUnknownLevel)
+		("ground",kGround)
+		("pressure",kPressure)
+		("meansea",kMeanSea)
+		("height",kHeight)
+		("hybrid",kHybrid)
+		("gndlayer",kGndLayer)
+		("depth",kDepth)
+		("top",kTopOfAtmosphere) // top of atmosphere
+		;
 #endif
 
 enum HPFileWriteOption

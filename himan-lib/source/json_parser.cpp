@@ -304,9 +304,9 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			ParseLevels(anInfo, element.second);
 		}
-		catch (...)
+		catch (exception& e)
 		{
-			throw runtime_error(ClassName() + ": Unable to proceed");
+			throw runtime_error(string("Error parsing level information: ") + e.what());
 		}
 
 		// Check local use_cache option
@@ -326,7 +326,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		}
 		catch (exception& e)
 		{
-			throw runtime_error(string("Error parsing meta information: ") + e.what());
+			throw runtime_error(string("Error parsing use_cache key: ") + e.what());
 		}
 
 		// Check local file_type option
@@ -1008,48 +1008,18 @@ void json_parser::ParseLevels(shared_ptr<info> anInfo, const boost::property_tre
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		throw runtime_error(string("Level definition not found: ") + e.what());
+		throw runtime_error(e.what());
 		// Something was not found; do nothing
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing level information: ") + e.what());
+		throw runtime_error(e.what());
 	}
 }
 
 vector<level> json_parser::LevelsFromString(const string& levelType, const string& levelValues) const
 {
-	string levelTypeUpper = levelType;
-	boost::to_upper(levelTypeUpper);
-
-	HPLevelType theLevelType;
-
-	if (levelTypeUpper == "HEIGHT")
-	{
-		theLevelType = kHeight;
-	}
-	else if (levelTypeUpper == "PRESSURE")
-	{
-		theLevelType = kPressure;
-	}
-	else if (levelTypeUpper == "HYBRID")
-	{
-		theLevelType = kHybrid;
-	}
-	else if (levelTypeUpper == "GROUND")
-	{
-		theLevelType = kGround;
-	}
-	else if (levelTypeUpper == "MEANSEA")
-	{
-		theLevelType = kMeanSea;
-	}
-	else
-	{
-		throw runtime_error("Unknown level type: " + levelType);
-	}
-
-	// can cause exception, what will happen then ?
+	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
 
 	vector<string> levelsStr = util::Split(levelValues, ",", true);
 
