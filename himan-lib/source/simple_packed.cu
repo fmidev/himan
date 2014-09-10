@@ -22,7 +22,11 @@ void simple_packed::Unpack(double* d_arr, size_t N, cudaStream_t* stream)
 		return;
 	}
 
-	assert(N == unpackedLength);
+	if (N != unpackedLength)
+	{
+		std::cerr << "Error::" << ClassName() << " Allocated memory size is different from data: " << N << " vs " << unpackedLength << std::endl;
+		return;
+	}
 	
 	// We need to create a stream if no stream is specified since dereferencing
 	// a null pointer is, well, not a good thing.
