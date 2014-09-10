@@ -56,12 +56,20 @@ void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
 	itsLowerHeight = theLowerHeight;
 #ifdef DEBUG
 	double min = 1e38, max = -1e38, mean = 0;
+	size_t count = 0;
 	
 	for (size_t i = 0; i < itsLowerHeight.size(); i++)
 	{
 		double val = itsLowerHeight[i];
 
+		if (IsMissingValue(val))
+		{
+			continue;
+		}
+
+		count++;
 		mean += val;
+
 		if (val > max)
 		{
 			max = val;
@@ -72,7 +80,14 @@ void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
 		}
 	}
 
-	std::cout << "itsLowerHeight min: " << min << " max: " << max << " mean: " << mean/static_cast<double> (itsLowerHeight.size()) << std::endl;
+	if (count == 0)
+	{
+		std::cout << "itsUpperHeight all values are missing" << std::endl;
+	}
+	else
+	{
+		std::cout << "itsLowerHeight min: " << min << " max: " << max << " mean: " << mean/static_cast<double> (count) << std::endl;
+	}
 #endif
 }
 
@@ -81,12 +96,20 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 	itsUpperHeight = theUpperHeight;
 #ifdef DEBUG
 	double min = 1e38, max = -1e38, mean = 0;
-	
+	size_t count = 0;
+
 	for (size_t i = 0; i < itsUpperHeight.size(); i++)
 	{
 		double val = itsUpperHeight[i];
 
+		if (IsMissingValue(val))
+		{
+			continue;
+		}
+		
+		count++;
 		mean += val;
+		
 		if (val > max)
 		{
 			max = val;
@@ -97,7 +120,14 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 		}
 	}
 
-	std::cout << "itsUpperHeight min: " << min << " max: " << max << " mean: " << mean/static_cast<double> (itsLowerHeight.size()) << std::endl;
+	if (count == 0)
+	{
+		std::cout << "itsUpperHeight all values are missing" << std::endl;
+	}
+	else
+	{
+		std::cout << "itsUpperHeight min: " << min << " max: " << max << " mean: " << mean/static_cast<double> (count) << std::endl;
+	}
 #endif
 }
 
@@ -616,7 +646,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 	{
 		return;
 	}
-
+	
 	/**
 	 *
 	 * If lower value is found and current value is above wanted value, do the interpolation.
