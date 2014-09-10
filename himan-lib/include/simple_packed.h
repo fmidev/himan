@@ -58,12 +58,12 @@ struct simple_packed : packed_data
 	 *
 	 * This function is visible to host side compiler (ie. gcc).
 	 *
-	 * This function calls Unpack(cudaStream_t*) to do the actual heavy lifting.
+	 * This function calls Unpack(double*, size_t, cudaStream_t*) to do the actual heavy lifting.
 	 *
 	 * Note! Argument arr should point to HOST MEMORY.
 	 *
-	 * @param arr Pointer to already allocated memory
-	 * @param N Size of the chunk of memory
+	 * @param arr Pointer to pre-allocated host memory
+	 * @param N Length of the data (not size)
 	 */
 
 	void Unpack(double* arr, size_t N);
@@ -75,11 +75,10 @@ struct simple_packed : packed_data
 	 *
 	 * Function is synchronous due to implicit synchronization caused by cudaFree().
 	 *
-	 * Note! Return pointer to double array RESIDES IN DEVICE MEMORY. Therefore this
-	 * function should *NEVER* be called directly from a host thread.
+	 * Note! Argument d_arr should point to DEVICE MEMORY.
 	 *
-	 * The caller is responsible for managing the memory.
-	 *
+	 * @param d_arr Pointer to pre-allocated device memory
+	 * @param N Length of allocated memory (not size)
 	 * @param stream Cuda stream for execution. If 0 is given, function will create a temporary stream.
 	 * @return Pointer to device memory.
 	 *
