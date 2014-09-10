@@ -380,36 +380,13 @@ himan::level fetcher::LevelTransform(const producer& sourceProducer, const param
 
 		double lvlValue = targetLevel.Value();
 
-		if (lvlName == "GROUND")
+		lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
+
+		if (lvlType == kGround)
 		{
-			lvlType = kGround;
 			lvlValue = 0;
 		}
-		else if (lvlName == "PRESSURE")
-		{
-			lvlType = kPressure;
-		}
-		else if (lvlName == "HYBRID")
-		{
-			lvlType = kHybrid;
-		}
-		else if (lvlName == "HEIGHT")
-		{
-			lvlType = kHeight;
-		}
-		else if (lvlName == "TOP")
-		{
-			lvlType = kTopOfAtmosphere;
-		}
-		else if (lvlName == "GNDLAYER")
-		{
-			lvlType = kGndLayer;
-		}
-		else
-		{
-			throw runtime_error(ClassName() + ": Unknown level type: " + lvlName);
-		}
-
+		
 		sourceLevel = level(lvlType, lvlValue, lvlName);
 	}
 	else
