@@ -10,7 +10,7 @@ rm -f T-C_*.grib
 
 $HIMAN -d 5 -f tk2tc_hl.json -t grib --no-cuda -s tk2tc_hl_nocuda hl_source.grib
 
-grib_compare hl_result.grib ./T-C_height_2_rll_1030_816_0_001.grib
+grib_compare -A 0.0001 hl_result.grib ./T-C_height_2_rll_1030_816_0_001.grib
 
 if [ $? -eq 0 ];then
   echo tk2tc/hl success!
@@ -39,7 +39,7 @@ fi
 
 $HIMAN -d 5 -f tk2tc_hl_pres.json -t grib --no-cuda -s tk2tc_hl_pres_nocuda hl_source_pres.grib
 
-grib_compare hl_result_pres.grib ./T-C_pressure_850_rll_582_448_0_001.grib
+grib_compare -A 0.0001 hl_result_pres.grib ./T-C_pressure_850_rll_582_448_0_001.grib
 
 if [ $? -eq 0 ];then
   echo tk2tc_pres/hl success!

@@ -10,7 +10,7 @@ rm -f tk2tc_gfs.json.grib2 tk2tc_gfs.json-CPU.grib2
 
 $HIMAN -d 5 -f tk2tc_gfs.json -t grib2 --no-cuda -s tk2tc_gfs_nocuda gfs_source.grib2
 
-grib_compare gfs_result.grib2 tk2tc_gfs.json.grib2
+grib_compare -A 0.0001 gfs_result.grib2 tk2tc_gfs.json.grib2
 
 if [ $? -eq 0 ];then
   echo tk2tc/gfs success!
