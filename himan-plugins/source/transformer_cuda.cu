@@ -57,7 +57,7 @@ void himan::plugin::transformer_cuda::Process(options& opts)
 	if (opts.source->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		d_source = opts.source->packed_values->Unpack(&stream);
+		opts.source->packed_values->Unpack(d_source, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.source->values, d_source, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else

@@ -48,39 +48,41 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 	double* d_vv_ms = 0;
 
 	CUDA_CHECK(cudaMalloc((void **) &d_vv_ms, memsize));
+	CUDA_CHECK(cudaMalloc((void **) &d_t, sizeof(double) * memsize));
+	CUDA_CHECK(cudaMalloc((void **) &d_vv, sizeof(double) * memsize));
+
 
 	if (opts.t->packed_values)
 	{
-		d_t = opts.t->packed_values->Unpack(&stream);
+		opts.t->packed_values->Unpack(d_t, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.t->values, d_t, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_t, memsize));
 		CUDA_CHECK(cudaMemcpyAsync(d_t, opts.t->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 
 	if (opts.vv->packed_values)
 	{
-		d_vv = opts.vv->packed_values->Unpack(&stream);
+		opts.vv->packed_values->Unpack(d_vv, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.vv->values, d_vv, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_vv, memsize));
 		CUDA_CHECK(cudaMemcpyAsync(d_vv, opts.vv->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 
 	if (!opts.is_constant_pressure)
 	{
+		CUDA_CHECK(cudaMalloc((void **) &d_p, sizeof(double) * memsize));
+
 		if (opts.p->packed_values)
 		{
-			d_p = opts.p->packed_values->Unpack(&stream);
+			opts.p->packed_values->Unpack(d_p, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.p->values, d_p, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_p, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_p, opts.p->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 	}

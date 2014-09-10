@@ -185,28 +185,30 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 		}
 	}
 
+	CUDA_CHECK(cudaMalloc((void **) &d_t, sizeof(double) * memsize));
+
 	if (opts.t->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		d_t = opts.t->packed_values->Unpack(&stream);
+		d_t = opts.t->packed_values->Unpack(d_t, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.t->values, d_t, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_t, memsize));
 		CUDA_CHECK(cudaMemcpyAsync(d_t, opts.t->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 
 	if (!opts.is_constant_pressure)
 	{
+		CUDA_CHECK(cudaMalloc((void **) &d_p, sizeof(double) * memsize));
+
 		if (opts.p->packed_values)
 		{
-			d_p = opts.p->packed_values->Unpack(&stream);
+			opts.p->packed_values->Unpack(d_p, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.p->values, d_p, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_p, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_p, opts.p->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 	}
@@ -215,15 +217,16 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 
 	if (opts.thetaw || opts.thetae)
 	{
+		CUDA_CHECK(cudaMalloc((void **) &d_td, sizeof(double) * memsize));
+
 		if (opts.td->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			d_td = opts.td->packed_values->Unpack(&stream);
+			opts.td->packed_values->Unpack(d_td, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.td->values, d_td, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_td, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_td, opts.td->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 	}

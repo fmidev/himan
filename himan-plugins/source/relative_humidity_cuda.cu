@@ -123,29 +123,30 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
+		CUDA_CHECK(cudaMalloc((void **) &d_T, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_TD, sizeof(double) * memsize));
+
 		// Copy data to device
 
 		if (opts.T->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			d_T = opts.T->packed_values->Unpack(&stream);
+			opts.T->packed_values->Unpack(d_T, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 	
 		if (opts.TD->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			d_TD = opts.TD->packed_values->Unpack(&stream);
+			opts.TD->packed_values->Unpack(d_TD, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.TD->values, d_TD, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_TD, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_TD, opts.TD->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 		
@@ -198,41 +199,42 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
+		CUDA_CHECK(cudaMalloc((void **) &d_T, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_Q, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_P, sizeof(double) * memsize));
+		
 		// Copy data to device
 
 		if (opts.T->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			d_T = opts.T->packed_values->Unpack(&stream);
+			opts.T->packed_values->Unpack(d_T, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 
 		if (opts.Q->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			d_Q = opts.Q->packed_values->Unpack(&stream);
+			opts.Q->packed_values->Unpack(d_Q, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.Q->values, d_Q, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_Q, opts.Q->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 
 		if (opts.P->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			d_P = opts.P->packed_values->Unpack(&stream);
+			opts.P->packed_values->Unpack(d_P, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.P->values, d_P, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_P, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_P, opts.P->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 
@@ -285,29 +287,30 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
+		CUDA_CHECK(cudaMalloc((void **) &d_T, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_Q, sizeof(double) * memsize));
+
 		// Copy data to device
 
 		if (opts.T->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			d_T = opts.T->packed_values->Unpack(&stream);
+			opts.T->packed_values->Unpack(d_T, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 
 		if (opts.Q->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			d_Q = opts.Q->packed_values->Unpack(&stream);
+			opts.Q->packed_values->Unpack(d_Q, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.Q->values, d_Q, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
 		{
-			CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
 			CUDA_CHECK(cudaMemcpyAsync(d_Q, opts.Q->values, memsize, cudaMemcpyHostToDevice, stream));
 		}
 		int src = 0;

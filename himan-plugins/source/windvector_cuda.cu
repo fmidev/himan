@@ -226,6 +226,9 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 
 	size_t memsize = opts.N*sizeof(double);
 
+	CUDA_CHECK(cudaMalloc((void **) &d_u, sizeof(double) * memsize));
+	CUDA_CHECK(cudaMalloc((void **) &d_v, sizeof(double) * memsize));
+
 	CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 	CUDA_CHECK(cudaMalloc((void **) &d_speed, memsize));
 
@@ -244,24 +247,22 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	if (opts.u->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		d_u = opts.u->packed_values->Unpack(&stream);
+		opts.u->packed_values->Unpack(d_u, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.u->values, d_u, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_u, memsize));
 		CUDA_CHECK(cudaMemcpyAsync(d_u, opts.u->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 
 	if (opts.v->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		d_v = opts.v->packed_values->Unpack(&stream);
+		opts.v->packed_values->Unpack(d_v, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.v->values, d_v, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_v, memsize));
 		CUDA_CHECK(cudaMemcpyAsync(d_v, opts.v->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 
