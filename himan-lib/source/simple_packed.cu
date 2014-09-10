@@ -15,13 +15,15 @@
 using namespace himan;
 
 __host__
-double* simple_packed::Unpack(double* d_arr, cudaStream_t* stream)
+void simple_packed::Unpack(double* d_arr, size_t N, cudaStream_t* stream)
 {
 	if (!packedLength)
 	{
-		return 0;
+		return;
 	}
 
+	assert(N == unpackedLength);
+	
 	// We need to create a stream if no stream is specified since dereferencing
 	// a null pointer is, well, not a good thing.
 

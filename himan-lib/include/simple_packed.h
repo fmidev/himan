@@ -86,7 +86,7 @@ struct simple_packed : packed_data
 	 */
 
 	CUDA_HOST
-	virtual double* Unpack(double* d_arr, cudaStream_t* stream);
+	virtual void Unpack(double* d_arr, size_t N, cudaStream_t* stream);
 
 #ifdef __CUDACC__
 	// Functions that are only visible for nvcc compiler
