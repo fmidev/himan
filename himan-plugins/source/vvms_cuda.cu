@@ -54,7 +54,7 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 
 	if (opts.t->packed_values)
 	{
-		opts.t->packed_values->Unpack(d_t, &stream);
+		opts.t->packed_values->Unpack(d_t, opts.N, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.t->values, d_t, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
@@ -64,7 +64,7 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 
 	if (opts.vv->packed_values)
 	{
-		opts.vv->packed_values->Unpack(d_vv, &stream);
+		opts.vv->packed_values->Unpack(d_vv, opts.N, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.vv->values, d_vv, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
@@ -78,7 +78,7 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 
 		if (opts.p->packed_values)
 		{
-			opts.p->packed_values->Unpack(d_p, &stream);
+			opts.p->packed_values->Unpack(d_p, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.p->values, d_p, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else

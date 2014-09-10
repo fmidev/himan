@@ -131,7 +131,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		if (opts.T->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.T->packed_values->Unpack(d_T, &stream);
+			opts.T->packed_values->Unpack(d_T, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
@@ -142,7 +142,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		if (opts.TD->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.TD->packed_values->Unpack(d_TD, &stream);
+			opts.TD->packed_values->Unpack(d_TD, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.TD->values, d_TD, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
@@ -208,7 +208,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		if (opts.T->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.T->packed_values->Unpack(d_T, &stream);
+			opts.T->packed_values->Unpack(d_T, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
@@ -219,7 +219,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		if (opts.Q->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.Q->packed_values->Unpack(d_Q, &stream);
+			opts.Q->packed_values->Unpack(d_Q, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.Q->values, d_Q, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
@@ -230,7 +230,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		if (opts.P->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.P->packed_values->Unpack(d_P, &stream);
+			opts.P->packed_values->Unpack(d_P, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.P->values, d_P, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
@@ -295,7 +295,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		if (opts.T->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.T->packed_values->Unpack(d_T, &stream);
+			opts.T->packed_values->Unpack(d_T, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
@@ -306,7 +306,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		if (opts.Q->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.Q->packed_values->Unpack(d_Q, &stream);
+			opts.Q->packed_values->Unpack(d_Q, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.Q->values, d_Q, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else

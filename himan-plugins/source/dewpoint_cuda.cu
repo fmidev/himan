@@ -70,7 +70,7 @@ void himan::plugin::dewpoint_cuda::Process(options& opts)
 	if (opts.t->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		opts.t->packed_values->Unpack(d_t, &stream);
+		opts.t->packed_values->Unpack(d_t, opts.N, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.t->values, d_t, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
@@ -81,7 +81,7 @@ void himan::plugin::dewpoint_cuda::Process(options& opts)
 	if (opts.rh->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		opts.rh->packed_values->Unpack(d_rh, &stream);
+		opts.rh->packed_values->Unpack(d_rh, opts.N, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.rh->values, d_rh, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else

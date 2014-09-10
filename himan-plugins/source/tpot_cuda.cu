@@ -190,7 +190,7 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 	if (opts.t->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		d_t = opts.t->packed_values->Unpack(d_t, &stream);
+		opts.t->packed_values->Unpack(d_t, opts.N, &stream);
 		CUDA_CHECK(cudaMemcpyAsync(opts.t->values, d_t, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
@@ -204,7 +204,7 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 
 		if (opts.p->packed_values)
 		{
-			opts.p->packed_values->Unpack(d_p, &stream);
+			opts.p->packed_values->Unpack(d_p, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.p->values, d_p, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
@@ -222,7 +222,7 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 		if (opts.td->packed_values)
 		{
 			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.td->packed_values->Unpack(d_td, &stream);
+			opts.td->packed_values->Unpack(d_td, opts.N, &stream);
 			CUDA_CHECK(cudaMemcpyAsync(opts.td->values, d_td, memsize, cudaMemcpyDeviceToHost, stream));
 		}
 		else
