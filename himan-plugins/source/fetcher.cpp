@@ -238,7 +238,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		// == operator does not test scanning mode !
 		itsLogger->Trace("Swapping area");
-
+#ifdef HAVE_CUDA
 		if (theInfos[0]->Grid()->IsPackedData())
 		{
 			// must unpack before swapping
@@ -249,6 +249,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			theInfos[0]->Grid()->PackedData()->Clear();
 
 		}
+#endif
 		theInfos[0]->Grid()->Swap(baseInfo->Grid()->ScanningMode());
 
 	}
