@@ -145,10 +145,13 @@ enum HPLevelType
 	kTopOfAtmosphere = 8,
 	kPressure = 100,
 	kMeanSea = 102,
+        kAltitude = 103,
 	kHeight = 105,
 	kHybrid = 109,
 	kGndLayer = 112,
-	kDepth = 160
+	kDepth = 160,
+	kEntireAtmosphere = 200,
+	kEntireOcean = 201
 };
 
 #ifndef __CUDACC__
@@ -157,11 +160,14 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = ba::ma
 		(kGround, "ground")
 		(kPressure, "pressure")
 		(kMeanSea, "meansea")
+                (kAltitude, "altitude")
 		(kHeight, "height")
 		(kHybrid, "hybrid")
 		(kGndLayer, "gndlayer")
 		(kDepth, "depth")
-		(kTopOfAtmosphere, "top") // top of atmosphere
+		(kTopOfAtmosphere, "top")
+		(kEntireAtmosphere, "entatm")
+		(kEntireOcean, "entocean")
 		;
 
 const boost::unordered_map<std::string,HPLevelType> HPStringToLevelType = ba::map_list_of
@@ -169,11 +175,14 @@ const boost::unordered_map<std::string,HPLevelType> HPStringToLevelType = ba::ma
 		("ground",kGround)
 		("pressure",kPressure)
 		("meansea",kMeanSea)
+                ("altitude",kAltitude)
 		("height",kHeight)
 		("hybrid",kHybrid)
 		("gndlayer",kGndLayer)
 		("depth",kDepth)
-		("top",kTopOfAtmosphere) // top of atmosphere
+		("top",kTopOfAtmosphere)
+		("entatm", kEntireAtmosphere)
+		("entocean", kEntireOcean)
 		;
 #endif
 
