@@ -388,6 +388,8 @@ double util::ToPower(double value, double power)
   return divisor;
 }
 
+
+
 #ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
 HPPrecipitationForm util::PrecipitationForm(double T, double RH)
 {
@@ -408,6 +410,40 @@ HPPrecipitationForm util::PrecipitationForm(double T, double RH)
 		ret = kSnow;
 	}
 
+	return ret;
+}
+
+himan::matrix<double> util::Convolution(const himan::matrix<double>& A, himan::matrix<double> B)
+{
+// find center position of kernel (half of kernel size)
+
+	himan::matrix<double> ret(A.SizeX,A.SizeY,1);
+ 	
+ 	size_t kCenterX = B.SizeX() / 2;
+	size_t kCenterY = B.SizeY() / 2;
+	for(size_t i=0; i < A.SizeY(); ++i)              // rows
+	{
+		for(size_t j=0; j < A.SizeX(); ++j)          // columns
+		{
+			for(size_t m=0; m < B.SizeY(); ++m)     // kernel rows
+ 			{
+				size_t mm = B.SizeY() - 1 - m;      // row index of flipped kernel
+ 				for(size_t n=0; n < B.SizeX(); ++n) // kernel columns
+				{
+	       	       	                size_t nn = B_SizeX() - 1 - n;  // column index of flipped kernel
+							    	    	        	        	            		            	            	                	
+                       	                // index of input signal, used for checking boundary
+                                        size_t ii = i + (m - kCenterY);
+	                                size_t jj = j + (n - kCenterX);
+        	                        // ignore input samples which are out of bound
+               	                        if( ii >= 0 && ii < A.SizeY() && jj >= 0 && jj < A.SizeX() )
+   	                       	        {
+						ret.Set(i,j,0,(A.At(ii,jj,0) * B.At(mm,nn,0) + ret.At()i,j,0));
+ 				    	}
+			    	}
+                       	}
+	 	}
+        }
 	return ret;
 }
 
