@@ -80,8 +80,6 @@ struct simple_packed : packed_data
 	 * @param d_arr Pointer to pre-allocated device memory
 	 * @param N Length of allocated memory (not size)
 	 * @param stream Cuda stream for execution. If 0 is given, function will create a temporary stream.
-	 * @return Pointer to device memory.
-	 *
 	 */
 
 	CUDA_HOST
