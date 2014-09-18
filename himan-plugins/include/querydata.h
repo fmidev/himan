@@ -90,7 +90,12 @@ public:
 	/**
 	 * @brief Create in-memory querydata from given info-instance
 	 *
-	 * @param theInfo
+	 * This function *MAY* modify data in info class while it's doing
+	 * conversion: sometimes the data needs to swapped to a form understood
+	 * by newbase. Function will eventually swap it back but if some other
+	 * thread accessed this data while it's swapped strange thinga will happen.
+	 * 
+	 * @param theInfo source data
 	 * @param activeOnly If set only the active part (current iterator positions) are read
 	 * @return shared pointer to querydata instance
 	 */
@@ -106,6 +111,15 @@ public:
 	std::shared_ptr<info> CreateInfo(std::shared_ptr<NFmiQueryData> theData) const;
 
 private:
+	/**
+	 * @brief Copy data from info to querydata
+	 * 
+     * @param theInfo
+     * @param theQueryData
+     * @return 
+     */
+	bool CopyData(const std::shared_ptr<info>& theInfo, NFmiFastQueryInfo& qinfo) const;
+
 	NFmiTimeDescriptor CreateTimeDescriptor(std::shared_ptr<info> info, bool activeOnly);
 	NFmiParamDescriptor CreateParamDescriptor(std::shared_ptr<info> info, bool activeOnly);
 	NFmiHPlaceDescriptor CreateHPlaceDescriptor(std::shared_ptr<info> info, bool activeOnly);

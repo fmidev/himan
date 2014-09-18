@@ -24,7 +24,6 @@
 #include <NFmiLatLonArea.h>
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
-#include <NFmiQueryDataUtil.h>
 
 #ifdef __clang__
 
@@ -68,7 +67,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HP
 
 shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, bool activeOnly)
 {
-	
+
 	/*
 	 * Create required descriptors
 	 */
@@ -97,18 +96,19 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 	}
 	else if (hdesc.Size() == 0)
 	{
-		itsLogger->Error("No valid times found");
+		itsLogger->Error("No valid grids found");
 		return qdata;
 	}
 	else if (vdesc.Size() == 0)
 	{
-		itsLogger->Error("No valid times found");
+		itsLogger->Error("No valid levels found");
 		return qdata;
 	}
 
 	NFmiFastQueryInfo qi(pdesc, tdesc, hdesc, vdesc);
 
-	qdata = make_shared<NFmiQueryData> (*NFmiQueryDataUtil::CreateEmptyData(qi));
+	qdata = make_shared<NFmiQueryData> (new NFmiQueryData(qi));
+    qdata->Init();
 	qdata->Info()->SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo->Producer().Id()), theInfo->Producer().Name()));
 
 	NFmiFastQueryInfo qinfo = qdata.get();
@@ -117,31 +117,14 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 	 * At the same time check that we have only constant-sized grids
 	 */
 
-#ifndef NDEBUG
-	size_t size = 0;
-	string firstOriginTime;
-
-	bool first = true;
-#endif
-
 	if (activeOnly)
 	{
-		assert(theInfo->Grid()->ScanningMode() == kBottomLeft);
 
-		// Should user Param(arg) Level(arg) Time(arg) here !
 		qinfo.FirstParam();
 		qinfo.FirstLevel();
 		qinfo.FirstTime();
 
-		theInfo->ResetLocation();
-		qinfo.ResetLocation();
-
-		assert(theInfo->Data()->Size() == qinfo.Size());
-
-		while (theInfo->NextLocation() && qinfo.NextLocation())
-		{
-			qinfo.FloatValue(static_cast<float> (theInfo->Value()));
-		}
+		CopyData(theInfo, qinfo);
 	}
 	else
 	{
@@ -158,18 +141,6 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 		while (theInfo->NextTime() && qinfo.NextTime())
 		{
 
-#ifndef NDEBUG
-
-			if (first)
-			{
-				firstOriginTime = theInfo->Time().OriginDateTime()->String();
-			}
-			else
-			{
-				assert(firstOriginTime == theInfo->Time().OriginDateTime()->String());
-			}
-
-#endif
 			theInfo->ResetLevel();
 			qinfo.ResetLevel();
 
@@ -183,41 +154,61 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 					
 					if (theInfo->Dimensions()->IsMissing(theInfo->TimeIndex(), theInfo->LevelIndex(), theInfo->ParamIndex()))
 					{
-						// No data in info
+						// No data in info (sparse info class)
 						
 						continue;
 					}
 
-					assert(theInfo->Grid()->ScanningMode() == kBottomLeft);
+					CopyData(theInfo, qinfo);
 
-					qinfo.ResetLocation();
-					theInfo->ResetLocation();
-					
-#ifndef NDEBUG
-
-					if (first)
-					{
-						first = false;
-						size = theInfo->Data()->Size();
-					}
-					else
-					{
-						assert(theInfo->Data()->Size() == size);
-					}
-
-#endif
-
-					while (theInfo->NextLocation() && qinfo.NextLocation())
-					{
-						qinfo.FloatValue(static_cast<float> (theInfo->Value()));
-					}
 				}
 			}
 		}
 	}
 
+	qdata->LatLonCache();
 	return qdata;
 
+}
+
+bool querydata::CopyData(const shared_ptr<info>& theInfo, NFmiFastQueryInfo& qinfo) const
+{
+	bool swapped = false;
+	HPScanningMode originalMode = theInfo->Grid()->ScanningMode();
+
+	if (originalMode == kTopLeft)
+	{
+		// For newbase we have swap data to kBottomLeft. We will
+		// have to create a copy of theInfo since we don't want to change
+		// that data.
+
+		swapped = true;
+
+		theInfo->Grid()->Swap(kBottomLeft);
+
+	}
+	else if (originalMode != kBottomLeft)
+	{
+		itsLogger->Fatal("Invalid scannignmode: " + string(HPScanningModeToString.at(originalMode)));
+		exit(1);
+	}
+
+	assert(theInfo->Data()->Size() == qinfo.Size());
+
+	theInfo->ResetLocation();
+	qinfo.ResetLocation();
+
+	while (theInfo->NextLocation() && qinfo.NextLocation())
+	{
+		qinfo.FloatValue(static_cast<float> (theInfo->Value()));
+	}
+
+	if (swapped)
+	{
+		theInfo->Grid()->Swap(originalMode);
+	}
+
+	return true;
 }
 
 NFmiTimeDescriptor querydata::CreateTimeDescriptor(shared_ptr<info> info, bool theActiveOnly)
@@ -238,8 +229,23 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(shared_ptr<info> info, bool t
 	{
 		info->ResetTime();
 
+		shared_ptr<raw_time> firstOriginTime;
+		
 		while (info->NextTime())
 		{
+			if (!firstOriginTime)
+			{
+				firstOriginTime = info->Time().OriginDateTime();
+			}
+			else
+			{
+				if (*firstOriginTime != *info->Time().OriginDateTime())
+				{
+					itsLogger->Error("Origintime is not the same for all grids in info");
+					return NFmiTimeDescriptor();
+				}
+			}
+			
 			tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%Y%m%d")),
 									  boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%H%M"))));
 		}
@@ -253,7 +259,6 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(shared_ptr<info> info, bool t
 
 NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool theActiveOnly)
 {
-
 
 	/*
 	 * Create parameter descriptor
@@ -284,7 +289,6 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool
 
 	return NFmiParamDescriptor(pbag);
 
-
 }
 
 NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bool activeOnly)
@@ -293,6 +297,8 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 	/*
 	 * If whole info is converted to querydata, we need to check that if info contains
 	 * more than one element, the grids of each element must be equal!
+	 *
+	 * TODO: interpolate to same grid if they are different ???
 	 */
 	
 	if (!activeOnly && info->SizeTimes() * info->SizeParams() * info->SizeLevels() > 1)
@@ -327,7 +333,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 					if (*firstGrid != *info->Grid())
 					{
 						itsLogger->Error("All grids in info are not equal, unable to write querydata");
-						exit(1); // not sure what to do here!
+						return NFmiHPlaceDescriptor();
 					}
 
 					assert(info->Grid()->ScanningMode() == kBottomLeft);
