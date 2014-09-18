@@ -388,31 +388,6 @@ double util::ToPower(double value, double power)
   return divisor;
 }
 
-
-
-#ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
-HPPrecipitationForm util::PrecipitationForm(double T, double RH)
-{
-	const double probWater = WaterProbability(T, RH);
-
-	HPPrecipitationForm ret = kUnknownPrecipitationForm;
-
-	if (probWater > 0.8)
-	{
-		ret = kRain;
-	}
-	else if (probWater >= 0.2 && probWater <= 0.8)
-	{
-		ret = kSleet;
-	}
-	else if (probWater < 0.2)
-	{
-		ret = kSnow;
-	}
-
-	return ret;
-}
-
 himan::matrix<double> util::Convolution(const himan::matrix<double>& A, himan::matrix<double> B)
 {
 // find center position of kernel (half of kernel size)
@@ -444,6 +419,29 @@ himan::matrix<double> util::Convolution(const himan::matrix<double>& A, himan::m
                        	}
 	 	}
         }
+	return ret;
+}
+
+#ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
+HPPrecipitationForm util::PrecipitationForm(double T, double RH)
+{
+	const double probWater = WaterProbability(T, RH);
+
+	HPPrecipitationForm ret = kUnknownPrecipitationForm;
+
+	if (probWater > 0.8)
+	{
+		ret = kRain;
+	}
+	else if (probWater >= 0.2 && probWater <= 0.8)
+	{
+		ret = kSleet;
+	}
+	else if (probWater < 0.2)
+	{
+		ret = kSnow;
+	}
+
 	return ret;
 }
 
