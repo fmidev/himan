@@ -178,18 +178,19 @@ private:
 	std::vector<std::shared_ptr<info>> FetchFromProducer(const search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles);
 
 	/**
-	 * @brief Experimental function to perform area interpolation
+	 * @brief Function to perform area interpolation
 	 *
 	 * If target area is not identical to source area, perform area interpolation. Newbase
-	 * is used to do the actual job. If areas are same but with different scanning mode
-	 * only, data is swapped. If data is packed, it will be unpacked before interpolation.
+	 * is used to do the actual job. If data is packed, it will be unpacked before interpolation.
 	 *
-	 * @param targetGrid Target area
-	 * @param grids List of source grids, all elements of list will be interpolated.
-	 * @return True if interpolation succeeds
+	 * Only the active part of infos is accessed; function does not move iterator positions.
+	 *
+	 * @param targetInfo Target info (ie. area)
+	 * @param infos List of source infos, all elements of list will be interpolated.
+	 * @return True if interpolation succeeds for all infos
 	 */
 
-	bool InterpolateArea(const std::shared_ptr<grid>& targetGrid, std::initializer_list<std::shared_ptr<grid>> grids);
+	bool InterpolateArea(const std::shared_ptr<info>& targetInfo, std::initializer_list<std::shared_ptr<info>> infos) const;
 
 	/**
 	 * @brief Swap scanning mode if needed

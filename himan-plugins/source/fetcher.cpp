@@ -13,6 +13,7 @@
 #include <boost/filesystem/operations.hpp>
 #include "timer_factory.h"
 #include "util.h"
+#include <NFmiQueryData.h>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -232,7 +233,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	if (*theInfos[0]->Grid() != *baseInfo->Grid())
 	{
 		itsLogger->Trace("Interpolating area");
-		InterpolateArea(baseInfo->Grid(), {theInfos[0]->Grid()});
+		InterpolateArea(baseInfo, {theInfos[0]});
 	}
 	else if (theInfos[0]->Grid()->ScanningMode() != baseInfo->Grid()->ScanningMode())
 	{
@@ -497,101 +498,87 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(const search_options&
 
 }
 
-bool fetcher::InterpolateArea(const shared_ptr<grid>& base, initializer_list<shared_ptr<grid>> grids)
+bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<shared_ptr<info>> infos) const
 {
-	if (grids.size() == 0)
+	if (infos.size() == 0)
 	{
 		return false;
 	}
 
-	const double kInterpolatedValueEpsilon = 0.00001; //<! Max difference between two grid points (if smaller, points are considered the same)
-
-	// baseGrid is target_geom in json-file: it is the geometry that the user has
+	// baseInfo geometry is target_geom in json-file: it is the geometry that the user has
 	// requested
-	
-	shared_ptr<NFmiGrid> baseGrid;
 
-	for (auto it = grids.begin(); it != grids.end(); ++it)
+	shared_ptr<NFmiQueryData> baseData;
+	NFmiFastQueryInfo baseInfo;
+
+	auto q = dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+
+	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{
-		if (!*it || *base == **it)
+		if (!(*it) || *(base->Grid()) == *((*it)->Grid()))
 		{
 			continue;
 		}
 
 		// new data backend
-		
+
 		auto targetData = make_shared<d_matrix_t> (base->Data()->SizeX(), base->Data()->SizeY());
 
-		if (!baseGrid)
+		if (!baseData)
 		{
-			baseGrid = shared_ptr<NFmiGrid> (base->ToNewbaseGrid());
+			baseData = q->CreateQueryData(base, true);
+			baseInfo = NFmiFastQueryInfo(baseData.get());
 		}
 
 #ifdef HAVE_CUDA
 
-		if ((*it)->IsPackedData())
+		if ((*it)->Grid()->IsPackedData())
 		{
 			// We need to unpack
-			util::Unpack({*it});
+			util::Unpack({(*it)->Grid()});
 
 			// Only unpacked and interpolated data is stored to cache
-			(*it)->PackedData()->Clear();
+			(*it)->Grid()->PackedData()->Clear();
 		}
-#endif	
-		auto interpGrid = shared_ptr<NFmiGrid> ((*it)->ToNewbaseGrid());
+#endif
+		// interpInfo does the actual interpolation, results are stored to targetData
 
-		// interpGrid does the actual interpolation, results are stored to targetData
+		auto interpData = q->CreateQueryData(*it, true);
+		NFmiFastQueryInfo interpInfo (interpData.get());
 
 		size_t i;
 
-		for (baseGrid->Reset(), i = 0; baseGrid->Next(); i++)
+		baseInfo.First();
+		
+		for (baseInfo.ResetLocation(), i = 0; baseInfo.NextLocation(); i++)
 		{
-			const NFmiPoint targetLatLonPoint = baseGrid->LatLon(); // Target point in latitude longitude coordinates
-			const NFmiPoint sourceGridPoint = interpGrid->LatLonToGrid(targetLatLonPoint); // Grid point that matches to said lat lon point in the source grid
-
-			bool noInterpolation = (
-						fabs(sourceGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
-						fabs(sourceGridPoint.Y() - round(sourceGridPoint.Y())) < kInterpolatedValueEpsilon
-			);
-
-			double value = kFloatMissing;
-
-			if (noInterpolation)
-			{
-				value = interpGrid->FloatValue(sourceGridPoint);
-			}
-			else
-			{
-				interpGrid->InterpolateToGridPoint(sourceGridPoint, value);
-			}
-
+			double value = interpInfo.InterpolatedValue(baseInfo.LatLon());
+			
 			targetData->Set(i, value);
-
 		}
 
-		(*it)->Data(targetData);
-		(*it)->BottomLeft(base->BottomLeft());
-		(*it)->TopRight(base->TopRight());
-		(*it)->Projection(base->Projection());
-		(*it)->SouthPole(base->SouthPole());
-		(*it)->Orientation(base->Orientation());
+		(*it)->Grid()->Data(targetData);
+		(*it)->Grid()->BottomLeft(base->Grid()->BottomLeft());
+		(*it)->Grid()->TopRight(base->Grid()->TopRight());
+		(*it)->Grid()->Projection(base->Grid()->Projection());
+		(*it)->Grid()->SouthPole(base->Grid()->SouthPole());
+		(*it)->Grid()->Orientation(base->Grid()->Orientation());
 
 		// Newbase always normalizes data to +x+y
-		// So if source scanning mode is eg. +x-y, newbase has transformed that
-		// to +x+y but in info class the scanning mode is still marked as +x-y
+		// So if source scanning mode is eg. +x-y, we have to swap the interpolated
+		// data to back to original scanningmode
 
-		if (base->ScanningMode() != kBottomLeft)
+		if (base->Grid()->ScanningMode() != kBottomLeft)
 		{
-			HPScanningMode targetMode = base->ScanningMode();
+			HPScanningMode targetMode = base->Grid()->ScanningMode();
 
 			// this is what newbase did to the data
-
-			(*it)->ScanningMode(kBottomLeft);
+			(*it)->Grid()->ScanningMode(kBottomLeft);
 
 			// let's swap it back
-			(*it)->Swap(targetMode);
+			(*it)->Grid()->Swap(targetMode);
 
-			assert(targetMode == (*it)->ScanningMode());
+			assert(targetMode == (*it)->Grid()->ScanningMode());
 
 		}
 	}
