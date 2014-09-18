@@ -388,6 +388,10 @@ double util::ToPower(double value, double power)
   return divisor;
 }
 
+/*
+ * commented out for further debugging outside himan
+ *
+
 himan::matrix<double> util::Convolution(const himan::matrix<double>& A, himan::matrix<double> B)
 {
 // find center position of kernel (half of kernel size)
@@ -420,7 +424,7 @@ himan::matrix<double> util::Convolution(const himan::matrix<double>& A, himan::m
 	 	}
         }
 	return ret;
-}
+}*/
 
 #ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
 HPPrecipitationForm util::PrecipitationForm(double T, double RH)
