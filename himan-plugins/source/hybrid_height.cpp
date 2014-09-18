@@ -78,17 +78,19 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	const params GPParam { param("PGR-PA"), param("P-PA") };
+	const params GPParam { param("LNSP-N") , param("P-PA") };
 	const param PParam("P-HPA");
-	const params TParam = { param("T-K"), param("TG-K") };
+	//const params TParam = { param("TG-K"), param("T-K") };
+	const param TParam("T-K");
+	const param TGParam("TG-K");
 	const param ZParam("Z-M2S2");
 	
 	level H2;//(himan::kHeight, 2, "HEIGHT");
 	level H0;//(himan::kHeight, 0, "HEIGHT");
 	if ( itsConfiguration->SourceProducer().Id() == 131)
 	{
-		H2 = level(himan::kGround, 0, "GROUND");
-		H0 = level(himan::kGround, 0, "GROUND");
+		H2 = level(himan::kHybrid, 137, "GROUND");
+		H0 = level(himan::kHybrid, 1, "LNSP");
 	}
 	else
 	{
@@ -102,10 +104,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	level forecastLevel = myTargetInfo->Level();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
-
-	/*
-		pitääkö tunnistaa tuottaja?
-	*/
 
 	level prevLevel;
 
@@ -133,7 +131,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	}
 	else
 	{
-
 		if (!firstLevel)
 		{
 			prevTInfo = Fetch(forecastTime, prevLevel, TParam, false);
@@ -142,8 +139,16 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		}
 		else
 		{
-			prevPInfo = Fetch(forecastTime, H0, GPParam, false);
-			prevTInfo = Fetch(forecastTime, H2, TParam, false);
+			if ( itsConfiguration->SourceProducer().Id() == 131 )
+			{
+				prevPInfo = Fetch(forecastTime, H0, GPParam, false);
+				prevTInfo = Fetch(forecastTime, H2, TParam, false);
+			}
+			else
+			{
+				prevPInfo = Fetch(forecastTime, H0, GPParam, false);
+				prevTInfo = Fetch(forecastTime, H2, TGParam, false);
+			}
 		}
 
 		PInfo = Fetch(forecastTime, forecastLevel, PParam, false);
@@ -219,29 +224,33 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			
 			if (!firstLevel)
 			{
-
 				prevHInfo->NextLocation();
 				prevH = prevHInfo->Value();
 
 				if (prevH == kFloatMissing )
 				{
-					continue;
+					continue; 
 				}
 			}
 
-			if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )
+			if ( prevT == kFloatMissing|| prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )
 			{
 				continue;
 			}
 
-
-			if (firstLevel )//&& !itsConfiguration->SourceProducer().Id() == 131)
+			if (firstLevel)
 			{
-				prevP /= 100.f;
+				if ( itsConfiguration->SourceProducer().Id() == 131 )
+				{
+					prevP = exp (prevP) * 0.01f;
+				}
+				else 
+				{
+					prevP *= 0.01f;
+				}
 			}
-
-			double Tave = ( T + prevT ) / 2;
-			double deltaZ = (287 / 9.81) * Tave * log(prevP / P);
+			
+			double deltaZ = 14.628 * (prevT + T) * (log(prevP/P));
 			double totalHeight(0);
 
 			if (firstLevel)
@@ -254,7 +263,6 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			}
 
 			myTargetInfo->Value(totalHeight);
-
 		}
 	}
 
