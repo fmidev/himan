@@ -150,7 +150,7 @@ __device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD
 
 void himan::plugin::tpot_cuda::Process(options& opts)
 {
-
+	
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
@@ -185,8 +185,8 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 		}
 	}
 
-	CUDA_CHECK(cudaMalloc((void **) &d_t, sizeof(double) * memsize));
-
+	CUDA_CHECK(cudaMalloc((void **) &d_t, memsize));
+	
 	if (opts.t->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
