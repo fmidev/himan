@@ -123,8 +123,8 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
-		CUDA_CHECK(cudaMalloc((void **) &d_T, sizeof(double) * memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_TD, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_TD, memsize));
 
 		// Copy data to device
 
@@ -199,9 +199,9 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
-		CUDA_CHECK(cudaMalloc((void **) &d_T, sizeof(double) * memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_Q, sizeof(double) * memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_P, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_P, memsize));
 		
 		// Copy data to device
 
@@ -287,8 +287,8 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
-		CUDA_CHECK(cudaMalloc((void **) &d_T, sizeof(double) * memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_Q, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
 
 		// Copy data to device
 

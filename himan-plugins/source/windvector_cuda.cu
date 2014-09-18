@@ -226,8 +226,8 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 
 	size_t memsize = opts.N*sizeof(double);
 
-	CUDA_CHECK(cudaMalloc((void **) &d_u, sizeof(double) * memsize));
-	CUDA_CHECK(cudaMalloc((void **) &d_v, sizeof(double) * memsize));
+	CUDA_CHECK(cudaMalloc((void **) &d_u, memsize));
+	CUDA_CHECK(cudaMalloc((void **) &d_v, memsize));
 
 	CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 	CUDA_CHECK(cudaMalloc((void **) &d_speed, memsize));

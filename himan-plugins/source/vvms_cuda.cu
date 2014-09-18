@@ -48,8 +48,8 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 	double* d_vv_ms = 0;
 
 	CUDA_CHECK(cudaMalloc((void **) &d_vv_ms, memsize));
-	CUDA_CHECK(cudaMalloc((void **) &d_t, sizeof(double) * memsize));
-	CUDA_CHECK(cudaMalloc((void **) &d_vv, sizeof(double) * memsize));
+	CUDA_CHECK(cudaMalloc((void **) &d_t, memsize));
+	CUDA_CHECK(cudaMalloc((void **) &d_vv, memsize));
 
 
 	if (opts.t->packed_values)
@@ -74,7 +74,7 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 
 	if (!opts.is_constant_pressure)
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_p, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_p, memsize));
 
 		if (opts.p->packed_values)
 		{

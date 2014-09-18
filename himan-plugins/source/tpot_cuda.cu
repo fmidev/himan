@@ -200,7 +200,7 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 
 	if (!opts.is_constant_pressure)
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_p, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_p, memsize));
 
 		if (opts.p->packed_values)
 		{
@@ -217,7 +217,7 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 
 	if (opts.thetaw || opts.thetae)
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_td, sizeof(double) * memsize));
+		CUDA_CHECK(cudaMalloc((void **) &d_td, memsize));
 
 		if (opts.td->packed_values)
 		{
