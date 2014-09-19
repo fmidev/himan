@@ -15,8 +15,9 @@ using namespace std;
 using namespace himan::plugin;
 
 seaicing::seaicing()
+	: global(false)
 {
-	itsClearTextFormula = "SeaIcing = FF * ( -0.35 -T2m ) / ( 1 + 0.3 * ( T0 + 0.35 ))";
+	itsClearTextFormula = "SeaIcing = FF * ( -sIndex -T2m ) / ( 1 + 0.3 * ( T0 + sIndex ))";
 
 	itsLogger = logger_factory::Instance()->GetLog("seaicing");
 
@@ -26,11 +27,17 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * Set target parameter to seaicing
-	 */
-
-	SetParams({param("ICING-N", 480, 0, 0, 2)});
+	if (itsConfiguration->Exists("global") && itsConfiguration->GetValue("global") == "true")
+	{
+		SetParams({param("SSICING-N", 10059, 0, 0, 2)});
+		global = true;
+	}
+	else
+	{
+		// By default baltic sea
+		SetParams({param("ICING-N", 480, 0, 0, 2)});
+		global = false;
+	}
 
 	Start();
 
@@ -45,12 +52,18 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 
-	const params TParam = {param("T-K"), param("TG-K")};
-	const level TLevel(himan::kHeight, 2, "HEIGHT");
+  const params TParam = {param("T-K"), param("TG-K")};
+  const level TLevel(himan::kHeight, 2, "HEIGHT");
   const param FfParam("FF-MS"); // 10 meter wind
   const level FfLevel(himan::kHeight, 10, "HEIGHT");
 
   level ground;
+  double saltinessIndex = 0.35;
+  
+  if (global) 
+  {
+  		saltinessIndex = 1.5;
+  }
 
   // this will come back to us
   if ( itsConfiguration->SourceProducer().Id() == 131)
@@ -106,7 +119,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		}
 		else
 		{
-			seaIcing = Ff * ( -0.35 -T ) / ( 1 + 0.3 * ( Tg + 0.35 ));
+			seaIcing = Ff * ( -saltinessIndex -T ) / ( 1 + 0.3 * ( Tg + saltinessIndex ));
 
 			if (seaIcing > 100)
 			{
