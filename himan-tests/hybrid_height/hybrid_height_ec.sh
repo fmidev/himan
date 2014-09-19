@@ -2,7 +2,7 @@
 
 set -x
 
-exit 0;
+#exit 0;
 
 if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan-bin/himan"
