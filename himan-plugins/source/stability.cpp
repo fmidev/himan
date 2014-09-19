@@ -663,14 +663,42 @@ bool stability::GetWindShearSourceData(const shared_ptr<info>& myTargetInfo, vec
 	auto lowerU = Us.first;
 	auto upperU = Us.second;
 
-	transform(lowerU.begin(), lowerU.end(), upperU.begin(), back_inserter(U06Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
 
 	auto Vs = Shear(itsConfiguration, myTargetInfo->Time(), param("V-MS"), 0, 6000);
 
 	auto lowerV = Vs.first;
 	auto upperV = Vs.second;
 
+#ifdef YES_WE_HAVE_GCC_WHICH_SUPPORTS_LAMBDAS
+	transform(lowerU.begin(), lowerU.end(), upperU.begin(), back_inserter(U06Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
 	transform(lowerV.begin(), lowerV.end(), upperV.begin(), back_inserter(V06Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
+#else
+	U06Vector.resize(lowerU.size(), kFloatMissing);
+	V06Vector.resize(lowerU.size(), kFloatMissing);
+
+	for (size_t i = 0; i < lowerU.size(); i++)
+	{
+		double l = lowerU[i];
+		double u = lowerV[i];
+
+		if (u == kFloatMissing || l == kFloatMissing)
+		{
+			continue;
+		}
+
+		U06Vector[i] = u - l;
+
+		l = lowerV[i];
+		u = upperV[i];
+
+		if (u == kFloatMissing || l == kFloatMissing)
+		{
+			continue;
+		}
+
+		V06Vector[i] = u - l;
+	}
+#endif
 
 #ifdef DEBUG
 	DumpVector(U06Vector);
@@ -680,16 +708,41 @@ bool stability::GetWindShearSourceData(const shared_ptr<info>& myTargetInfo, vec
 	// BS 0-1
 
 	Us = Shear(itsConfiguration, myTargetInfo->Time(), param("U-MS"), 0, 1000);
-
 	upperU = Us.second;
 
-	transform(lowerU.begin(), lowerU.end(), upperU.begin(), back_inserter(U01Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
-
 	Vs = Shear(itsConfiguration, myTargetInfo->Time(), param("V-MS"), 0, 1000);
-
 	upperV = Vs.second;
 
+#ifdef YES_WE_HAVE_GCC_WHICH_SUPPORTS_LAMBDAS
+	transform(lowerU.begin(), lowerU.end(), upperU.begin(), back_inserter(U01Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
 	transform(lowerV.begin(), lowerV.end(), upperV.begin(), back_inserter(V01Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
+#else
+	U01Vector.resize(lowerU.size(), kFloatMissing);
+	V01Vector.resize(lowerU.size(), kFloatMissing);
+
+	for (size_t i = 0; i < lowerU.size(); i++)
+	{
+		double l = lowerU[i];
+		double u = lowerV[i];
+
+		if (u == kFloatMissing || l == kFloatMissing)
+		{
+			continue;
+		}
+
+		U01Vector[i] = u - l;
+
+		l = lowerV[i];
+		u = upperV[i];
+
+		if (u == kFloatMissing || l == kFloatMissing)
+		{
+			continue;
+		}
+
+		V01Vector[i] = u - l;
+	}
+#endif
 
 #ifdef DEBUG
 	DumpVector(U01Vector);
