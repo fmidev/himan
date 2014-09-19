@@ -246,7 +246,7 @@ void modifier::Process(const std::vector<double>& theData, const std::vector<dou
 		{
 			continue;
 		}
-		
+
 		Calculate(theValue, theHeight);
 	}
 }
@@ -753,11 +753,15 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 			}
 		}
 
+		// Give some threshold to lowest and highest heights: 500 meters to both
+		
+		lowestHeight = fmax(0, lowestHeight-500);
+
 		itsLowerHeight.resize(itsResult.size(), lowestHeight);
-		itsUpperHeight.resize(itsResult.size(), highestHeight);
+		itsUpperHeight.resize(itsResult.size(), highestHeight+500);
 
 		itsValuesFound = 0;
-	}
+	} 
 }
 
 bool modifier_findvalue::CalculationFinished() const
@@ -784,7 +788,27 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 	itsPreviousHeight[itsIndex] = theHeight;
 
 	if (IsMissingValue(previousValue))
-	{	
+	{
+		// It's possible that the height requested is below the lowest hybrid level, meaning
+		// that we cannot interpolate the value. In this case clamp the value to the lowest
+		// hybrid level.
+		
+		// Clamp threshold is set to 30 meters: if the difference between requrested height
+		// and lowest hybrid level is larger that this then clamping is not done and
+		// kFloatMissing is the result
+
+		double diff = fabs(theHeight - findHeight);
+		if (findHeight < theHeight)
+		{
+			if (diff < 30)
+			{
+				Value(theValue);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
+			}
+		}
+
+		// previous was missing but the level we want is above current height
 		return;
 	}
 
@@ -824,13 +848,15 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 			||
 		(previousHeight >= findHeight && theHeight <= findHeight)) // downward trend
 	{
+		
 		double actualValue = NFmiInterpolation::Linear(findHeight, previousHeight, theHeight, previousValue, theValue);
 
 		if (actualValue != kFloatMissing)
 		{
 			Value(actualValue);
 			itsValuesFound++;
-		}
+			itsOutOfBoundHeights[itsIndex] = true;
+		}		
 	}
 }
 

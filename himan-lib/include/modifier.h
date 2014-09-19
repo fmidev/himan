@@ -278,7 +278,7 @@ class modifier_findvalue : public modifier
 		modifier_findvalue() : modifier(), itsValuesFound(0) {}
 		virtual ~modifier_findvalue() {}
 
-		virtual std::string ClassName() const { return "himan::::modifier_findvalue"; }
+		virtual std::string ClassName() const { return "himan::modifier_findvalue"; }
 
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 
