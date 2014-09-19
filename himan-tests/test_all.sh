@@ -52,6 +52,7 @@ for d in $(find . -maxdepth 1 -type d ! -name ".*" -print); do
 	        printf "%-15s\n" $RESULT
 		
 		if [ $ret -ne 0 ]; then
+			cat $LOGFILE
 			exit 1
 		fi
 		rm -f $LOGFILE
