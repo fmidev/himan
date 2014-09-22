@@ -426,6 +426,226 @@ himan::matrix<double> util::Convolution(const himan::matrix<double>& A, himan::m
 	return ret;
 }*/
 
+matrix<double> Filter2D(matrix<double>& A, matrix<double>& B)
+{
+	// find center position of kernel (half of kernel size)
+	matrix<double> ret(A.SizeX(),A.SizeY(),1);
+	double convolution_value; // accumulated value of the convolution at a given grid point in A
+	double kernel_weight_sum; // accumulated value of the kernel weights in B that are used to compute the convolution at given point A
+
+	int ASizeX = int(A.SizeX());
+	int ASizeY = int(A.SizeY());
+	int BSizeX = int(B.SizeX());
+	int BSizeY = int(B.SizeY());
+
+	int kCenterX = BSizeX / 2;
+	int kCenterY = BSizeY / 2;
+
+	// check if data contains missing values
+	if (A.MissingCount()==0) // if no missing values in the data we can use a faster algorithm
+	{
+		// calculate for inner field
+		// the weights are used as given on input
+		// assert (sum(B) == 1)
+		for(int i=kCenterX; i < ASizeX-kCenterX; ++i)	// rows
+		{
+			for(int j=kCenterY; j < ASizeY-kCenterY; ++j)	// columns
+			{
+		  		convolution_value = 0;
+		  		for(int m=0; m < BSizeX; ++m)	// kernel rows
+		  		{
+	            			int mm = BSizeX - 1 - m;	// row index of flipped kernel
+	           			for(int n=0; n < BSizeY; ++n)	// kernel columns
+	            			{
+						int nn = BSizeY - 1 - n;  // column index of flipped kernel
+
+			                	// index of input signal, used for checking boundary
+                	                	int ii = i + (m - kCenterX);
+                	                	int jj = j + (n - kCenterY);
+	               				convolution_value += A.At(ii,jj,0) * B.At(mm,nn,0);
+					}
+	                	}
+	                	ret.Set(i,j,0,convolution_value);
+			}
+		}
+	
+		// treat boundaries separately
+		// weights get adjusted so that the sum of weights for the active part of the kernel remains 1
+ 		// calculate for upper boundary
+		for(int i=0; i < ASizeX; ++i)              // rows
+	  	{
+	    		for(int j=0; j < kCenterY; ++j)          // columns
+	    		{
+				convolution_value = 0;
+				kernel_weight_sum = 0;
+	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+	       			{
+	            			int mm = BSizeX - 1 - m;      // row index of flipped kernel
+	
+					for(int n=0; n < BSizeY; ++n) // kernel columns
+	            			{
+	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel	    	
+
+						// index of input signal, used for checking boundary
+
+						int ii = i + (m - kCenterX);
+	                			int jj = j + (n - kCenterY);
+
+						// ignore input samples which are out of bound
+						if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+						{
+			  				convolution_value += A.At(ii,jj,0) * B.At(mm,nn,0);
+			  				kernel_weight_sum += B.At(mm,nn,0);
+						}
+	            			}
+	 			}
+	        		ret.Set(i,j,0,convolution_value/kernel_weight_sum);
+	    		}
+	  	}
+
+		// calculate for lower boundary
+		for(int i=0; i < ASizeX; ++i)              // rows
+	  	{
+	    		for(int j=ASizeY-kCenterY; j < ASizeY; ++j)          // columns
+	    		{
+				convolution_value = 0;
+				kernel_weight_sum = 0;
+	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+	        		{
+	            			int mm = BSizeX - 1 - m;      // row index of flipped kernel
+	
+	            			for(int n=0; n < BSizeY; ++n) // kernel columns
+	            			{
+	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+
+						// index of input signal, used for checking boundary
+						int ii = i + (m - kCenterX);
+	               		 		int jj = j + (n - kCenterY);
+
+						// ignore input samples which are out of bound
+						if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+						{
+			  				convolution_value += A.At(ii,jj,0) * B.At(mm,nn,0);
+			  				kernel_weight_sum += B.At(mm,nn,0);
+						}
+	            			}
+	        		}
+	        		ret.Set(i,j,0,convolution_value/kernel_weight_sum);
+	    		}
+	  	}
+
+		// calculate for left boundary
+		for(int i=0; i < kCenterX; ++i)              // rows
+	  	{
+	    		for(int j=0; j < ASizeY; ++j)          // columns
+	    		{
+				convolution_value = 0;
+				kernel_weight_sum = 0;
+	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+	        		{
+	            			int mm = BSizeX - 1 - m;      // row index of flipped kernel
+	
+	            			for(int n=0; n < BSizeY; ++n) // kernel columns
+	            			{
+	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+
+						// index of input signal, used for checking boundary
+						int ii = i + (m - kCenterX);
+	                			int jj = j + (n - kCenterY);
+
+						// ignore input samples which are out of bound
+						if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+						{
+			  				convolution_value += A.At(ii,jj,0) * B.At(mm,nn,0);
+			  				kernel_weight_sum += B.At(mm,nn,0);
+						}
+	            			}
+	        		}
+	        		ret.Set(i,j,0,convolution_value/kernel_weight_sum);
+	    		}
+	  	}
+
+		// calculate for right boundary
+		for(int i=ASizeX-kCenterX; i < ASizeX; ++i)              // rows
+	  	{
+	    		for(int j=0; j < ASizeY; ++j)          // columns
+	    		{
+				convolution_value = 0;
+				kernel_weight_sum = 0;
+	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+	        		{
+	            			int mm = BSizeX - 1 - m;      // row index of flipped kernel
+	
+	            			for(int n=0; n < BSizeY; ++n) // kernel columns
+	            			{
+	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+
+	                			// index of input signal, used for checking boundary
+	                 	                int ii = i + (m - kCenterX);
+	                 	                int jj = j + (n - kCenterY);
+
+				                // ignore input samples which are out of bound
+				                if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+						{
+			  				convolution_value += A.At(ii,jj,0) * B.At(mm,nn,0);
+			  				kernel_weight_sum += B.At(mm,nn,0);
+						}
+	            			}
+	        		}
+	        		ret.Set(i,j,0,convolution_value/kernel_weight_sum);
+	    		}
+	  	}
+	}
+	else	// data contains missing values
+	{
+		double kernel_missing_count;
+		for(int i=0; i < ASizeX; ++i)              // rows
+	  	{
+	    		for(int j=0; j < ASizeY; ++j)          // columns
+	    		{
+				convolution_value = 0;
+				kernel_weight_sum = 0;
+				kernel_missing_count = 0;
+	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+	        		{
+	            			int mm = BSizeX- 1 - m;      // row index of flipped kernel
+	
+	            			for(int n=0; n < BSizeY; ++n) // kernel columns
+	            			{
+	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+	
+	                			// index of input signal, used for checking boundary
+	                 	                int ii = i + (m - kCenterX);
+	                       	                int jj = j + (n - kCenterY);
+
+						// ignore input samples which are out of bound
+						if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+						{
+			  				if( A.IsMissing(ii,jj,0) )
+			  				{
+			    					kernel_missing_count++;
+			    					continue;
+			  				}
+	    
+			  				convolution_value += A.At(ii,jj,0) * B.At(mm,nn,0);
+			  				kernel_weight_sum += B.At(mm,nn,0);
+						}
+	            			}
+	        		}
+	        		if (kernel_missing_count < 3)
+				{
+		  			ret.Set(i,j,0,convolution_value/kernel_weight_sum); // if less than three values are missing in kernel fill gap by average of surrounding values
+				}
+				else
+				{
+		  			ret.Set(i,j,0,himan::kFloatMissing); // if three or more values are missing in kernel put kFloatMissing
+				}
+	    		}
+	  	}
+	}
+	return ret;
+}
+	
 #ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
 HPPrecipitationForm util::PrecipitationForm(double T, double RH)
 {
