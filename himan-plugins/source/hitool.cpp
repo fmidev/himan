@@ -9,6 +9,7 @@
 #include "plugin_factory.h"
 #include "hitool.h"
 #include <NFmiInterpolation.h>
+#include <algorithm>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -128,9 +129,35 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	producer prod = itsConfiguration->SourceProducer(0);
 	
 	// first means first in sorted order, ie smallest number ie the highest level
-	
+
 	long firstHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-	long lastHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	long lastHybridLevel = -1;
+
+	// Karkeaa haarukointia
+
+	switch (mod->Type())
+	{
+#if 0
+	case kFindValueModifier:
+		{
+			double min_value = *min_element(findValue.begin(), findValue.end());
+			// double max_value = *max_element(findValue.begin(), findValue.end());
+
+			if (min_value >= 6000.)
+			{
+				lastHybridLevel = 35;
+			}
+			else if (min_value >= 1000.)
+			{
+				lastHybridLevel = 55;
+			}
+		}
+			break;
+#endif
+		default:
+			lastHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+			break;
+	}
 
 	for (long levelValue = lastHybridLevel; levelValue >= firstHybridLevel && !mod->CalculationFinished(); levelValue--)
 	{
@@ -170,8 +197,10 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		size_t heightsCrossed = mod->HeightsCrossed();
 
-		itsLogger->Debug("Level " + boost::lexical_cast<string> (currentLevel.Value()) + ": height range crossed for " + boost::lexical_cast<string> (heightsCrossed) +
-			"/" + boost::lexical_cast<string> (values->Data()->Size()) + " grid points");
+		string msg = "Level " + boost::lexical_cast<string> (currentLevel.Value()) + ": height range crossed for " + boost::lexical_cast<string> (heightsCrossed) +
+			"/" + boost::lexical_cast<string> (values->Data()->Size()) + " grid points";
+
+		itsLogger->Debug(msg);
 
 	}
 
@@ -285,6 +314,16 @@ vector<double> hitool::VerticalHeight(const param& wantedParam,
 	return VerticalExtremeValue(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
 }
 
+vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, double lowerHeight, double upperHeight) const
+{
+	assert(!wantedParamList.empty());
+
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalMinimum(wantedParamList, firstLevelValue, lastLevelValue);
+}
+
 vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue) const
@@ -341,6 +380,16 @@ vector<double> hitool::VerticalMinimum(const param& wantedParam,
 						const vector<double>& lastLevelValue) const
 {
 	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid,  wantedParam, firstLevelValue, lastLevelValue);
+}
+
+vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, double lowerHeight, double upperHeight) const
+{
+	assert(!wantedParamList.empty());
+
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalMaximum(wantedParamList, firstLevelValue, lastLevelValue);
 }
 
 vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList,
@@ -400,6 +449,14 @@ vector<double> hitool::VerticalMaximum(const param& wantedParam,
 						const vector<double>& lastLevelValue) const
 {
 	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
+}
+
+vector<double> hitool::VerticalAverage(const params& wantedParamList, double lowerHeight, double upperHeight) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalAverage(wantedParamList, firstLevelValue, lastLevelValue);
 }
 
 vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList,
@@ -557,6 +614,15 @@ vector<double> hitool::VerticalCount(const param& wantedParam,
 						const vector<double>& findValue) const
 {
 	return VerticalExtremeValue(CreateModifier(kCountModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
+}
+
+vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, double wantedHeight) const
+{
+	assert(!wantedParamList.empty());
+
+	vector<double> heightInfo(itsConfiguration->Info()->Grid()->Size(), wantedHeight);
+
+	return VerticalValue(wantedParamList, heightInfo);
 }
 
 vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const vector<double>& heightInfo) const

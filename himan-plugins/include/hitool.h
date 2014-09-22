@@ -50,7 +50,17 @@ public:
 	/**
 	 * @brief Return maximum value in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalMaximum(param, vector<double>, vector<double>, vector<double>)
+	 * Overcoat for VerticalMaximum(params, vector<double>, vector<double>)
+	 *
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
+
+	std::vector<double> VerticalMaximum(const std::vector<param>& wantedParamList, double firstLevelValue, double lastLevelValue) const;
+
+	/**
+	 * @brief Return maximum value in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalMaximum(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	*/
@@ -84,9 +94,19 @@ public:
 	std::vector<double> VerticalMaximum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
 	/**
+	 * @brief Return maximum value in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalMinimum(params, vector<double>, vector<double>)
+	 *
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
+
+	std::vector<double> VerticalMinimum(const std::vector<param>& wantedParamList, double firstLevelValue, double lastLevelValue) const;
+
+	/**
 	 * @brief Return minimum value in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalMinimum(param, vector<double>, vector<double>, vector<double>)
+	 * Overcoat for VerticalMinimum(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	*/
@@ -135,6 +155,16 @@ public:
 	 */
 	
 	std::vector<double> VerticalSum(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
+	 * @brief Return average of values in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalAverage(params, double, double)
+	 *
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
+
+	std::vector<double> VerticalAverage(const std::vector<param>& wantedParamList, double lowerHeight, double upperHeight) const;
 
 	/**
 	 * @brief Return average of values in a given height range for the first parameter found.
@@ -195,6 +225,16 @@ public:
 	 */
 
 	std::vector<double> VerticalHeight(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue , size_t findNth = 1) const;
+
+	/**
+	 * @brief Return value of parameter from given height for the first parameter found.
+	 *
+	 * Overcoat for VerticalValue(params, double, double)
+	 *
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
+
+	std::vector<double> VerticalValue(const std::vector<param>& wantedParamList, double findValue) const;
 
 	/**
 	 * @brief Return value of parameter from given height for the first parameter found.
