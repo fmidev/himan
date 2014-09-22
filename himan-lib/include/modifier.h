@@ -56,8 +56,10 @@ class modifier
 		std::ostream& Write(std::ostream& file) const;
 
 		size_t HeightsCrossed() const;
+		HPModifierType Type() const;
 		
 	protected:
+		modifier(HPModifierType theModifierType);
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
 		/**
@@ -78,6 +80,8 @@ class modifier
 		size_t itsIndex;
 		std::vector<bool> itsOutOfBoundHeights;
 
+		HPModifierType itsModifierType;
+		
 };
 
 inline
@@ -93,7 +97,7 @@ std::ostream& operator<<(std::ostream& file, const modifier& ob)
 class modifier_max : public modifier
 {
 	public:
-		modifier_max() : modifier() {}
+		modifier_max() : modifier(kMaximumModifier) {}
 		virtual ~modifier_max() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_max"; }
@@ -109,12 +113,11 @@ class modifier_max : public modifier
 class modifier_min : public modifier
 {
 	public:
-		modifier_min() : modifier() {}
+		modifier_min() : modifier(kMinimumModifier) {}
 		virtual ~modifier_min() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_min"; }
 
-		//virtual double MinimumValue() const;
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 };
 
@@ -125,7 +128,7 @@ class modifier_min : public modifier
 class modifier_maxmin : public modifier
 {
 	public:
-		modifier_maxmin() : modifier() {}
+		modifier_maxmin() : modifier(kMaximumMinimumModifier) {}
 		virtual ~modifier_maxmin() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_maxmin"; }
@@ -152,7 +155,7 @@ class modifier_maxmin : public modifier
 class modifier_sum : public modifier
 {
 	public:
-		modifier_sum() : modifier() {}
+		modifier_sum() : modifier(kAccumulationModifier) {}
 		virtual ~modifier_sum() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_sum"; }
@@ -167,7 +170,7 @@ class modifier_sum : public modifier
 class modifier_integral : public modifier
 {
 	public:
-		modifier_integral() : modifier() {}
+		modifier_integral() : modifier(kIntegralModifier) {}
 		virtual ~modifier_integral() {}
 
 		virtual std::string ClassName() const { return "himan::::modifier_integral"; }
@@ -177,6 +180,8 @@ class modifier_integral : public modifier
 		virtual bool CalculationFinished();
 
 	protected:
+		modifier_integral(HPModifierType theModifierType) : modifier(theModifierType) {}
+
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 		virtual bool Evaluate(double theValue, double theHeight);
 
@@ -191,7 +196,7 @@ class modifier_integral : public modifier
 class modifier_mean : public modifier_integral
 {
 	public:
-		modifier_mean() : modifier_integral() {}
+		modifier_mean() : modifier_integral(kAverageModifier) {}
 		virtual ~modifier_mean() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_mean"; }
@@ -216,7 +221,7 @@ class modifier_mean : public modifier_integral
 class modifier_count : public modifier
 {
 	public:
-		modifier_count() : modifier() {}
+		modifier_count() : modifier(kCountModifier) {}
 		virtual ~modifier_count() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_count"; }
@@ -246,7 +251,7 @@ class modifier_count : public modifier
 class modifier_findheight : public modifier
 {
 	public:
-		modifier_findheight() : modifier(), itsValuesFound(0) {}
+		modifier_findheight() : modifier(kFindHeightModifier), itsValuesFound(0) {}
 		virtual ~modifier_findheight() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_findheight"; }
@@ -275,7 +280,7 @@ class modifier_findheight : public modifier
 class modifier_findvalue : public modifier
 {
 	public:
-		modifier_findvalue() : modifier(), itsValuesFound(0) {}
+		modifier_findvalue() : modifier(kFindValueModifier), itsValuesFound(0) {}
 		virtual ~modifier_findvalue() {}
 
 		virtual std::string ClassName() const { return "himan::modifier_findvalue"; }

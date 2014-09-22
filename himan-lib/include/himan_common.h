@@ -341,7 +341,8 @@ enum HPModifierType
 	kMaximumMinimumModifier,
 	kCountModifier,
 	kFindHeightModifier,
-	kFindValueModifier
+	kFindValueModifier,
+	kIntegralModifier
 };
 
 /// Precipitation forms as agreed by FMI

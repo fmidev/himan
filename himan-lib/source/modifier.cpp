@@ -11,6 +11,14 @@ using namespace himan;
 modifier::modifier()
 	: itsMissingValuesAllowed(false)
 	, itsFindNthValue(1) // first
+	, itsModifierType(kUnknownModifierType)
+{
+}
+
+modifier::modifier(HPModifierType theModifierType)
+	: itsMissingValuesAllowed(false)
+	, itsFindNthValue(1) // first
+	, itsModifierType(theModifierType)
 {
 }
 
@@ -273,6 +281,7 @@ std::ostream& modifier::Write(std::ostream& file) const
 }
 
 /* ----------------- */
+
 
 void modifier_max::Calculate(double theValue, double theHeight)
 {
