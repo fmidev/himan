@@ -27,7 +27,7 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-pair<vector<double>, vector<double>> Shear(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const param& wantedParam, double lowerHeight, double upperHeight);
+vector<double> Shear(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const param& wantedParam, double lowerHeight, double upperHeight);
 
 #ifdef DEBUG
 void DumpVector(const vector<double>& vec);
@@ -55,10 +55,10 @@ const level P700Level(himan::kPressure, 700, "PRESSURE");
 const level P500Level(himan::kPressure, 500, "PRESSURE");
 level groundLevel(himan::kHeight, 0, "HEIGHT");
 
-void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result);
-void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result);
+void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, vector<double>& result);
+void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, vector<double>& result);
 
-stability::stability() : itsLICalculation(false), itsBSCalculation(false)
+stability::stability() : itsLICalculation(false), itsBSCalculation(false), itsSRHCalculation(false)
 {
 	itsClearTextFormula = "<multiple algorithms>";
 
@@ -108,18 +108,14 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 		theParams.push_back(BS06Param);
 	}
 
-	/*
 	if (itsConfiguration->Exists("srh") && itsConfiguration->GetValue("srh") == "true")
 	{
 		// Storm relative helicity 0 .. 1 km
-		param hlcy("HLCY-1-M2S2", 4773);
-		theParams.push_back(hlcy);
+		theParams.push_back(SRH01Param);
 
 		// Storm relative helicity 0 .. 3 km
-		hlcy = param("HLCY-M2S2", 4772, 0, 7, 8);
-		theParams.push_back(hlcy);
+		theParams.push_back(SRH03Param);
 	}
-	*/
 	
 	SetParams(theParams);
 
@@ -135,7 +131,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 
-	vector<double> T500mVector, TD500mVector, P500mVector, U01Vector, V01Vector, U06Vector, V06Vector;
+	vector<double> T500mVector, TD500mVector, P500mVector, U01Vector, V01Vector, U06Vector, V06Vector, UidVector, VidVector;
 	
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("stabilityThread #" + boost::lexical_cast<string> (theThreadIndex));
 
@@ -151,6 +147,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	bool LICalculation = itsLICalculation;
 	bool BSCalculation = itsBSCalculation;
+	bool SRHCalculation = itsSRHCalculation;
 
 	if (!GetSourceData(T850Info, T700Info, T500Info, TD850Info, TD700Info, myTargetInfo, useCudaInThisThread))
 	{
@@ -173,6 +170,15 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		{
 			myThreadedLogger->Warning("Source data not found for param BulkShear");
 			BSCalculation = false;
+		}
+	}
+
+	if (SRHCalculation)
+	{
+		if (!GetSRHSourceData(myTargetInfo, UidVector, VidVector))
+		{
+			myThreadedLogger->Warning("Source data not found for param SRH");
+			SRHCalculation = false;
 		}
 	}
 
@@ -217,6 +223,20 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			opts->li = myTargetInfo->ToSimple();
 		}
 
+		if (BSCalculation)
+		{
+			opts->u01 = &U01Vector[0];
+			opts->v01 = &V01Vector[0];
+			opts->u06 = &U06Vector[0];
+			opts->v06 = &V06Vector[0];
+
+			myTargetInfo->Param(BS01Param);
+			opts->bs01 = myTargetInfo->ToSimple();
+			myTargetInfo->Param(BS06Param);
+			opts->bs06 = myTargetInfo->ToSimple();
+
+		}
+		
 		opts->N = opts->t500->size_x * opts->t500->size_y;
 
 		stability_cuda::Process(*opts);
@@ -250,23 +270,23 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				continue;
 			}
 
-			value = KI(T850, T700, T500, TD850, TD700) - constants::kKelvin;
+			value = metutil::KI_(T850, T700, T500, TD850, TD700);
 			myTargetInfo->Param(KIParam);
 			myTargetInfo->Value(value);
 
-			value = CTI(T500, TD850);
+			value = metutil::CTI_(T500, TD850);
 			myTargetInfo->Param(CTIParam);
 			myTargetInfo->Value(value);
 
-			value = VTI(T850, T500);
+			value = metutil::VTI_(T850, T500);
 			myTargetInfo->Param(VTIParam);
 			myTargetInfo->Value(value);
 
-			value = TTI(T850, T500, TD850);
+			value = metutil::TTI_(T850, T500, TD850);
 			myTargetInfo->Param(TTIParam);
 			myTargetInfo->Value(value);
 
-			value = SI(T850, T500, TD850);
+			value = metutil::SI_(T850, T500, TD850);
 			myTargetInfo->Param(SIParam);
 			myTargetInfo->Value(value);
 
@@ -284,7 +304,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 				if (T500m != kFloatMissing && TD500m != kFloatMissing && P500m != kFloatMissing)
 				{
-					value = LI(T500, T500m, TD500m, P500m);
+					value = metutil::LI_(T500, T500m, TD500m, P500m);
 
 					myTargetInfo->Param(LIParam);
 					myTargetInfo->Value(value);
@@ -308,7 +328,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 				if (U01 != kFloatMissing && V01 != kFloatMissing)
 				{
-					value = BulkShear(U01, V01);
+					value = metutil::BulkShear_(U01, V01);
 
 					myTargetInfo->Param(BS01Param);
 					myTargetInfo->Value(value);
@@ -316,10 +336,27 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 				if (U06 != kFloatMissing && V01 != kFloatMissing)
 				{
-					value = BulkShear(U06, V06);
+					value = metutil::BulkShear_(U06, V06);
 
 					myTargetInfo->Param(BS06Param);
 					myTargetInfo->Value(value);
+				}			
+			}
+
+			if (SRHCalculation)
+			{
+				size_t locationIndex = myTargetInfo->LocationIndex();
+
+				double Uid = UidVector[locationIndex];
+				double Vid = VidVector[locationIndex];
+
+				assert(Uid != kFloatMissing);
+				assert(Vid != kFloatMissing);
+
+				if (Uid != kFloatMissing && Vid != kFloatMissing)
+				{
+					
+					
 				}
 			}
 		}
@@ -328,138 +365,14 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 }
 
-
-inline
-double stability::CTI(double TD850, double T500) const
-{
-	return TD850 - T500;
-}
-
-inline
-double stability::VTI(double T850, double T500) const
-{
-	return T850 - T500;
-}
-
-inline
-double stability::TTI(double T850, double T500, double TD850) const
-{
-	return CTI(TD850, T500) + VTI(T850, T500);
-}
-
-inline
-double stability::KI(double T850, double T700, double T500, double TD850, double TD700) const
-{
-	return T850 - T500 + TD850 - (T700 - TD700);
-}
-
-inline
-double stability::LI(double T500, double T500m, double TD500m, double P500m) const
-{
-	lcl_t LCL = metutil::LCL_(50000, T500m, TD500m);
-
-	double li = kFloatMissing;
-
-	const double TARGET_PRESSURE = 50000;
-
-	if (LCL.P == kFloatMissing)
-	{
-		return li;
-	}
-
-	if (LCL.P <= 85000)
-	{
-		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
-		// lifting
-
-		double dryT = metutil::DryLift_(P500m, T500m, TARGET_PRESSURE);
-
-		if (dryT != kFloatMissing)
-		{
-			li = T500 - dryT;
-		}
-	}
-	else
-	{
-		// Grid point is inside or above cloud
-
-		double wetT = metutil::MoistLift_(P500m, T500m, TD500m, TARGET_PRESSURE);
-
-		if (wetT != kFloatMissing)
-		{
-			li = T500 - wetT;
-		}
-	}
-
-	return li;
-}
-
-inline
-double stability::SI(double T850, double T500, double TD850) const
-{
-	lcl_t LCL = metutil::LCL_(85000, T850, TD850);
-
-	double si = kFloatMissing;
-
-	const double TARGET_PRESSURE = 50000;
-
-	if (LCL.P == kFloatMissing)
-	{
-		return si;
-	}
-	
-	if (LCL.P <= 85000)
-	{
-		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
-		// lifting
-
-		double dryT = metutil::DryLift_(85000, T850, TARGET_PRESSURE);
-		
-		if (dryT != kFloatMissing)
-		{
-			si = T500 - dryT;
-		}
-	}
-	else
-	{
-		// Grid point is inside or above cloud
-		
-		double wetT = metutil::MoistLift_(85000, T850, TD850, TARGET_PRESSURE);
-
-		if (wetT != kFloatMissing)
-		{
-			si = T500 - wetT;
-		}
-	}
-
-	return si;
-}
-
-inline
-double stability::BulkShear(double U, double V)
-{
-	return sqrt(U*U + V*V) * 1.943844492; // converting to knots
-	
-}
-
-void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result)
+void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, vector<double>& result)
 {
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
 	h->Configuration(conf);
 	h->Time(ftime);
 
-#ifdef DEBUG
-	assert(H0mVector.size() == H500mVector.size());
-	
-	for (size_t i = 0; i < result.size(); i++)
-	{
-		assert(H0mVector[i] != kFloatMissing);
-		assert(H500mVector[i] != kFloatMissing);
-	}
-#endif
-
-	result = h->VerticalAverage(param("T-K"), H0mVector, H500mVector);
+	result = h->VerticalAverage(param("T-K"), 0, 500);
 
 #ifdef DEBUG
 	for (size_t i = 0; i < result.size(); i++)
@@ -469,14 +382,14 @@ void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_tim
 #endif
 }
 
-void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const vector<double>& H0mVector, const vector<double>& H500mVector, vector<double>& result)
+void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, vector<double>& result)
 {
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
 	h->Configuration(conf);
 	h->Time(ftime);
 
-	result = h->VerticalAverage(param("TD-C"), H0mVector, H500mVector);
+	result = h->VerticalAverage(param("TD-C"), 0, 500);
 
 }
 #if 0
@@ -522,8 +435,18 @@ void stability::CudaFinish(unique_ptr<stability_cuda::options> opts, shared_ptr<
 		{
 			CopyDataFromSimpleInfo(myTargetInfo, opts->tti, false);
 		}
-
-		SwapTo(myTargetInfo, T500Info->Grid()->ScanningMode());
+		else if (parmName == "TTI-N")
+		{
+			CopyDataFromSimpleInfo(myTargetInfo, opts->tti, false);
+		}
+		else if (parmName == "WSH-KT")
+		{
+			CopyDataFromSimpleInfo(myTargetInfo, opts->bs06, false);
+		}
+		else if (parmName == "WSH-1-KT")
+		{
+			CopyDataFromSimpleInfo(myTargetInfo, opts->bs01, false);
+		}
 	}
 
 	if (T500Info->Grid()->IsPackedData())
@@ -595,9 +518,14 @@ bool stability::GetSourceData(shared_ptr<info>& T850Info, shared_ptr<info>& T700
 
 bool stability::GetLISourceData(const shared_ptr<info>& myTargetInfo, vector<double>& T500mVector, vector<double>& TD500mVector, vector<double>& P500mVector)
 {
-		
-	// Fetch Z uncompressed since it is not transferred to cuda
 
+	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+
+	// Fetch Z uncompressed since it is not transferred to cuda
+#if 0
 	auto HInfo = Fetch(myTargetInfo->Time(), groundLevel, HParam, false);
 
 	if (!HInfo)
@@ -605,9 +533,6 @@ bool stability::GetLISourceData(const shared_ptr<info>& myTargetInfo, vector<dou
 		return false;
 	}
 
-	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
-
-	h->Configuration(itsConfiguration);
 
 	vector<double> H0mVector = HInfo->Grid()->Data()->Values();
 	vector<double> H500mVector(HInfo->SizeLocations());
@@ -629,14 +554,14 @@ bool stability::GetLISourceData(const shared_ptr<info>& myTargetInfo, vector<dou
 		H500mVector[i] = H0mVector[i] + 500.;
 	}
 
-	h->Time(myTargetInfo->Time());
-
+#endif
+		
 	// Fetch average values of T, TD and P over vertical height range 0 ... 500m OVER GROUND
 
-	boost::thread t1(&T500mSearch, itsConfiguration, myTargetInfo->Time(), H0mVector, H500mVector, boost::ref(T500mVector));
-	boost::thread t2(&TD500mSearch, itsConfiguration, myTargetInfo->Time(), H0mVector, H500mVector, boost::ref(TD500mVector));
+	boost::thread t1(&T500mSearch, itsConfiguration, myTargetInfo->Time(), boost::ref(T500mVector));
+	boost::thread t2(&TD500mSearch, itsConfiguration, myTargetInfo->Time(), boost::ref(TD500mVector));
 
-	P500mVector = h->VerticalAverage(PParam, H0mVector, H500mVector);
+	P500mVector = h->VerticalAverage(PParam, 0., 500.);
 
 	assert(P500mVector[0] != kFloatMissing);
 
@@ -658,47 +583,8 @@ bool stability::GetWindShearSourceData(const shared_ptr<info>& myTargetInfo, vec
 	h->Time(myTargetInfo->Time());
 
 	// BS 0-6
-	auto Us = Shear(itsConfiguration, myTargetInfo->Time(), param("U-MS"), 0, 6000);
-	
-	auto lowerU = Us.first;
-	auto upperU = Us.second;
-
-
-	auto Vs = Shear(itsConfiguration, myTargetInfo->Time(), param("V-MS"), 0, 6000);
-
-	auto lowerV = Vs.first;
-	auto upperV = Vs.second;
-
-#ifdef YES_WE_HAVE_GCC_WHICH_SUPPORTS_LAMBDAS
-	transform(lowerU.begin(), lowerU.end(), upperU.begin(), back_inserter(U06Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
-	transform(lowerV.begin(), lowerV.end(), upperV.begin(), back_inserter(V06Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
-#else
-	U06Vector.resize(lowerU.size(), kFloatMissing);
-	V06Vector.resize(lowerU.size(), kFloatMissing);
-
-	for (size_t i = 0; i < lowerU.size(); i++)
-	{
-		double l = lowerU[i];
-		double u = lowerV[i];
-
-		if (u == kFloatMissing || l == kFloatMissing)
-		{
-			continue;
-		}
-
-		U06Vector[i] = u - l;
-
-		l = lowerV[i];
-		u = upperV[i];
-
-		if (u == kFloatMissing || l == kFloatMissing)
-		{
-			continue;
-		}
-
-		V06Vector[i] = u - l;
-	}
-#endif
+	U06Vector = Shear(itsConfiguration, myTargetInfo->Time(), param("U-MS"), 0, 6000);
+	V06Vector = Shear(itsConfiguration, myTargetInfo->Time(), param("V-MS"), 0, 6000);
 
 #ifdef DEBUG
 	DumpVector(U06Vector);
@@ -707,42 +593,8 @@ bool stability::GetWindShearSourceData(const shared_ptr<info>& myTargetInfo, vec
 
 	// BS 0-1
 
-	Us = Shear(itsConfiguration, myTargetInfo->Time(), param("U-MS"), 0, 1000);
-	upperU = Us.second;
-
-	Vs = Shear(itsConfiguration, myTargetInfo->Time(), param("V-MS"), 0, 1000);
-	upperV = Vs.second;
-
-#ifdef YES_WE_HAVE_GCC_WHICH_SUPPORTS_LAMBDAS
-	transform(lowerU.begin(), lowerU.end(), upperU.begin(), back_inserter(U01Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
-	transform(lowerV.begin(), lowerV.end(), upperV.begin(), back_inserter(V01Vector), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
-#else
-	U01Vector.resize(lowerU.size(), kFloatMissing);
-	V01Vector.resize(lowerU.size(), kFloatMissing);
-
-	for (size_t i = 0; i < lowerU.size(); i++)
-	{
-		double l = lowerU[i];
-		double u = lowerV[i];
-
-		if (u == kFloatMissing || l == kFloatMissing)
-		{
-			continue;
-		}
-
-		U01Vector[i] = u - l;
-
-		l = lowerV[i];
-		u = upperV[i];
-
-		if (u == kFloatMissing || l == kFloatMissing)
-		{
-			continue;
-		}
-
-		V01Vector[i] = u - l;
-	}
-#endif
+	U01Vector = Shear(itsConfiguration, myTargetInfo->Time(), param("U-MS"), 0, 1000);
+	V01Vector = Shear(itsConfiguration, myTargetInfo->Time(), param("V-MS"), 0, 1000);
 
 #ifdef DEBUG
 	DumpVector(U01Vector);
@@ -753,12 +605,12 @@ bool stability::GetWindShearSourceData(const shared_ptr<info>& myTargetInfo, vec
 }
 
 
-pair<vector<double>, vector<double>> Shear(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const param& wantedParam, double lowerHeight, double upperHeight)
+vector<double> Shear(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const param& wantedParam, double lowerHeight, double upperHeight)
 {
 
-	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	//auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
-
+/*
 	auto height = f->Fetch(conf, ftime, level(kHeight, 0), param("Z-M2S2"), false);
 
 	h->Configuration(conf);
@@ -788,35 +640,40 @@ pair<vector<double>, vector<double>> Shear(shared_ptr<const plugin_configuration
 #endif
 
 	}
+*/
+	auto lowerValues = h->VerticalValue(wantedParam, lowerHeight);
+	auto upperValues = h->VerticalValue(wantedParam, upperHeight);
 
-	auto lowerValues = h->VerticalValue(wantedParam, lowerHeights);
-	auto upperValues = h->VerticalValue(wantedParam, upperHeights);
+//	auto lowerValues = h->VerticalValue(wantedParam, lowerHeights);
+//	auto upperValues = h->VerticalValue(wantedParam, upperHeights);
 
-	return make_pair(lowerValues, upperValues);
+	vector<double> ret(lowerValues.size(), kFloatMissing);
+
+#ifdef YES_WE_HAVE_GCC_WHICH_SUPPORTS_LAMBDAS
+	transform(lowerValues.begin(), lowerValues.end(), upperValues.begin(), back_inserter(U), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
+	transform(lowerValues.begin(), lowerValues.end(), upperValues.begin(), back_inserter(V), [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
+#else
+
+	for (size_t i = 0; i < lowerValues.size(); i++)
+	{
+		double l = lowerValues[i];
+		double u = upperValues[i];
+
+		if (u == kFloatMissing || l == kFloatMissing)
+		{
+			continue;
+		}
+
+		ret[i] = u - l;
+	}
+#endif
+	
+	return ret;
 }
 
-void StormRelativeHelicity(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime)
+bool stability::GetSRHSourceData(const shared_ptr<info>& myTargetInfo, vector<double>& Uid, vector<double>& Vid)
 {
-/*
-	const param SRH06("HLCY-M2S2");
-	const param SRH01("HLCY-1-M2S2");
 
-	vector<param> params = { SRH06, SRH01 };
-	vector<forecast_time> times = { itsTime };
-	vector<level> levels = { level(kHeight, 0, "HEIGHT") };
-
-	auto ret = make_shared<info> (*itsConfiguration->Info());
-	ret->Params(params);
-	ret->Levels(levels);
-	ret->Times(times);
-	ret->Create();
-
-	auto f = dynamic_pointer_cast <plugin::fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
-	param wantedParam ("Z-M2S2");
-
-	auto height = f->Fetch(itsConfiguration, itsTime, level(kHeight, 0), wantedParam);
-*/
 	// NOTES COPIED FROM SMARTTOOLS-LIBRARY
 
 	/* // **********  SRH calculation help from Pieter Groenemeijer ******************
@@ -854,6 +711,44 @@ void StormRelativeHelicity(shared_ptr<const plugin_configuration> conf, const fo
 
 	*/ // **********  SRH calculation help from Pieter Groenemeijer ******************
 
+	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+
+	// average wind
+	auto Uavg = h->VerticalAverage(param("U-MS"), 0, 6000);
+	auto Vavg = h->VerticalAverage(param("V-MS"), 0, 6000);
+
+	// shear
+	auto Ushear = Shear(itsConfiguration, myTargetInfo->Time(), param("U-MS"), 0, 6000);
+	auto Vshear = Shear(itsConfiguration, myTargetInfo->Time(), param("V-MS"), 0, 6000);
+
+	// shear unit vectors
+	Uid.resize(Ushear.size(), kFloatMissing);
+	Vid.resize(Vshear.size(), kFloatMissing);
+
+	assert(Uid.size() == Vid.size());
+	assert(Uid.size() == Uavg.size());
+
+	for (size_t i = 0; i < Ushear.size(); i++)
+	{
+		double u = Ushear[i];
+		double v = Vshear[i];
+
+		if (u == kFloatMissing || v == kFloatMissing)
+		{
+			continue;
+		}
+
+		double Uunit = u / sqrt(u*u + v*v);
+		double Vunit = v / sqrt(u*u + v*v);
+
+		Uid[i] = Uavg[i] - Vunit * 7.5;
+		Vid[i] = Vavg[i] - Uunit * 7.5;
+	}
+
+	return true;
 }
 
 #ifdef DEBUG

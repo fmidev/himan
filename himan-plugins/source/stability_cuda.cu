@@ -9,15 +9,18 @@
 #include "cuda_helper.h"
 #include "metutil.h"
 
-__global__ void himan::plugin::stability_cuda::Calculate(cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700,
-		cdarr_t d_t500m, cdarr_t d_td500m, cdarr_t d_p500m, darr_t d_ki, darr_t d_vti, darr_t d_cti, darr_t d_tti, darr_t d_si, darr_t d_li, options opts, int* d_missing)
+__global__ void himan::plugin::stability_cuda::Calculate(
+		cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700, // input for simple parameters
+		cdarr_t d_t500m, cdarr_t d_td500m, cdarr_t d_p500m,  // input for more advanced traditional stability parameters
+		cdarr_t d_u01, cdarr_t d_v01, cdarr_t d_u06, cdarr_t d_v06, // input for bulk shear
+		darr_t d_ki, darr_t d_vti, darr_t d_cti, darr_t d_tti, darr_t d_si, darr_t d_li, // output for traditional stability
+		darr_t d_bs01, darr_t d_bs06, // output for bulk shear
+		options opts, int* d_missing)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
 	{
-
-		d_ki[idx] = kFloatMissing;
 
 		double T850 = d_t850[idx];
 		double T700 = d_t700[idx];
@@ -32,98 +35,24 @@ __global__ void himan::plugin::stability_cuda::Calculate(cdarr_t d_t850, cdarr_t
 		else
 		{
 
-			d_ki[idx] = (T850 - T500 + TD850 - (T700 - TD700)) - himan::constants::kKelvin;
-			d_cti[idx] = TD850 - T500;
-			d_vti[idx] = T850 - T500;
-			d_tti[idx] = (TD850 - T500) + (T850 - T500); // CTI + VTI
-			d_si[idx] = SI(T850, T500, TD850, d_missing);
+			d_ki[idx] = himan::metutil::KI_(T850, T700, T500, TD850, TD700) - himan::constants::kKelvin;
+			d_cti[idx] = himan::metutil::CTI_(TD850, T500);
+			d_vti[idx] = himan::metutil::VTI_(T850, T500);
+			d_tti[idx] = himan::metutil::TTI_(T850, T500, TD850); // CTI + VTI
+			d_si[idx] = himan::metutil::SI_(T850, T500, TD850);
 
 			if (opts.li)
 			{
-				d_li[idx] = LI(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx], d_missing);
+				d_li[idx] = himan::metutil::LI_(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx]);
+			}
+
+			if (opts.bs01)
+			{
+				d_bs01[idx] = himan::metutil::BulkShear_(d_u01[idx], d_v01[idx]);
+				d_bs06[idx] = himan::metutil::BulkShear_(d_u06[idx], d_v06[idx]);
 			}
 		}
 	}
-}
-
-__device__
-double himan::plugin::stability_cuda::LI(double T500, double T500m, double TD500m, double P500m, int* d_missing)
-{
-	lcl_t LCL = metutil::LCL_(50000, T500m, TD500m);
-
-	double li = kFloatMissing;
-
-	const double TARGET_PRESSURE = 50000;
-
-	if (LCL.P == kFloatMissing)
-	{
-		return li;
-	}
-
-	if (LCL.P <= 85000)
-	{
-		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
-		// lifting
-
-		double dryT = metutil::DryLift_(P500m, T500m, TARGET_PRESSURE);
-
-		if (dryT != kFloatMissing)
-		{
-			li = T500 - dryT;
-		}
-	}
-	else
-	{
-		// Grid point is inside or above cloud
-
-		double wetT = metutil::MoistLift_(P500m, T500m, TD500m, TARGET_PRESSURE);
-
-		if (wetT != kFloatMissing)
-		{
-			li = T500 - wetT;
-		}
-	}
-
-	return li;
-}
-
-__device__
-double himan::plugin::stability_cuda::SI(double T850, double T500, double TD850, int* d_missing)
-{
-				
-	lcl_t LCL = himan::metutil::LCL_(85000., T850, TD850);
-
-	double si = kFloatMissing;
-	
-	if (LCL.P == kFloatMissing)
-	{
-		atomicAdd(d_missing, 1);
-	}
-	else if (LCL.P <= 85000.)
-	{
-		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
-		// lifting
-
-		double dryT = himan::metutil::DryLift_(85000., T850, 50000.);
-
-		if (dryT != kFloatMissing)
-		{
-			si = T500 - dryT;
-		}
-	}
-	else
-	{
-		// Grid point is inside or above cloud
-
-		double wetT = himan::metutil::MoistLift_(85000., T850, TD850, 50000.);
-
-		if (wetT != kFloatMissing)
-		{
-			si = T500 - wetT;
-		}
-	}
-
-	return si;
 }
 
 void himan::plugin::stability_cuda::Process(options& opts)
@@ -132,8 +61,6 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	cudaStream_t stream;
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
-
-	// Allocate device arrays
 
 	double* d_t500 = 0;
 	double* d_t700 = 0;
@@ -146,23 +73,29 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	double* d_vti = 0;
 	double* d_cti = 0;
 	double* d_tti = 0;
+	double* d_bs01 = 0;
+	double* d_bs06 = 0;
 	double* d_t500m = 0;
 	double* d_td500m = 0;
 	double* d_p500m = 0;
-	
-	int* d_missing = 0;
+	double* d_u01 = 0;
+	double* d_v01 = 0;
+	double* d_u06 = 0;
+	double* d_v06 = 0;
 
+	int* d_missing = 0;
+	
 	// Allocate memory on device
 
 	size_t memsize = opts.N*sizeof(double);
 
 	CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
 
-	Prepare(opts.t500, &d_t500, memsize, stream);
-	Prepare(opts.t700, &d_t700, memsize, stream);
-	Prepare(opts.t850, &d_t850, memsize, stream);
-	Prepare(opts.td700, &d_td700, memsize, stream);
-	Prepare(opts.td850, &d_td850, memsize, stream);
+	Prepare(opts.t500, d_t500, memsize, stream);
+	Prepare(opts.t700, d_t700, memsize, stream);
+	Prepare(opts.t850, d_t850, memsize, stream);
+	Prepare(opts.td700, d_td700, memsize, stream);
+	Prepare(opts.td850, d_td850, memsize, stream);
 
 	assert(d_t500);
 	assert(d_t700);
@@ -172,15 +105,24 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	
 	if (opts.li)
 	{
-		Prepare(opts.t500m, &d_t500m, memsize, stream);
-		Prepare(opts.td500m, &d_td500m, memsize, stream);
-		Prepare(opts.p500m, &d_p500m, memsize, stream);
+		Prepare(opts.t500m, d_t500m, memsize, stream);
+		Prepare(opts.td500m, d_td500m, memsize, stream);
+		Prepare(opts.p500m, d_p500m, memsize, stream);
 
 		CUDA_CHECK(cudaMalloc((void**) &d_li, memsize));
 
 		assert(d_t500m);
 		assert(d_td500m);
 		assert(d_p500m);
+	}
+
+	if (opts.bs01)
+	{
+		Prepare(opts.u01, d_u01, memsize, stream);
+		Prepare(opts.td500m, d_td500m, memsize, stream);
+		Prepare(opts.p500m, d_p500m, memsize, stream);
+
+		CUDA_CHECK(cudaMalloc((void**) &d_li, memsize));
 	}
 
 	int src=0;
@@ -200,7 +142,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t850, d_t700, d_t500, d_td850, d_td700, d_t500m, d_td500m, d_p500m, d_ki, d_vti, d_cti, d_tti, d_si, d_li, opts, d_missing);
+	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t850, d_t700, d_t500, d_td850, d_td700, d_t500m, d_td500m, d_p500m, d_u01, d_v01, d_u06, d_v06, d_ki, d_vti, d_cti, d_tti, d_si, d_li, d_bs01, d_bs06, opts, d_missing);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -243,24 +185,25 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	CUDA_CHECK(cudaStreamDestroy(stream)); // this blocks
 }
 
-void himan::plugin::stability_cuda::Prepare(info_simple* source, double** devptr, size_t memsize, cudaStream_t& stream)
+void himan::plugin::stability_cuda::Prepare(info_simple* source, double* devptr, size_t memsize, cudaStream_t& stream)
 {
+	CUDA_CHECK(cudaMalloc((void **) &devptr, memsize));
+	
 	if (source->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
-		*devptr = source->packed_values->Unpack(&stream);
-		CUDA_CHECK(cudaMemcpyAsync(source->values, *devptr, memsize, cudaMemcpyDeviceToHost, stream));
+		source->packed_values->Unpack(devptr, source->size_x * source->size_y, &stream);
+		CUDA_CHECK(cudaMemcpyAsync(source->values, &devptr, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
-	{
-		CUDA_CHECK(cudaMalloc((void **) &devptr, memsize));
-		CUDA_CHECK(cudaMemcpyAsync(*devptr, source->values, memsize, cudaMemcpyHostToDevice, stream));
+	{	
+		CUDA_CHECK(cudaMemcpyAsync(devptr, source->values, memsize, cudaMemcpyHostToDevice, stream));
 	}
 }
 
-void himan::plugin::stability_cuda::Prepare(const double* source, double** devptr, size_t memsize, cudaStream_t& stream)
+void himan::plugin::stability_cuda::Prepare(const double* source, double* devptr, size_t memsize, cudaStream_t& stream)
 {
 	assert(source);
-	CUDA_CHECK(cudaMalloc((void **) devptr, memsize));
-	CUDA_CHECK(cudaMemcpyAsync((void*) *devptr, (const void*)source, memsize, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMalloc((void **) &devptr, memsize));
+	CUDA_CHECK(cudaMemcpyAsync((void*) devptr, (const void*)source, memsize, cudaMemcpyHostToDevice, stream));
 }
