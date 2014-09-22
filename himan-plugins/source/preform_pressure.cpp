@@ -106,8 +106,13 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	const param RHParam("RH-PRCNT");
 	const param SNRParam("SNR-KGM2");
 
-	// Default to one hour precipitation, will change this later on if necessary
-	param RRParam("RR-1-MM");
+	// Source precipitation parameter is "precipitation rate" which by my definition is always either
+	// a) one hour precipitation, if forecast time step >= 1 hour
+	// b) forecast time step, if step < 1 hour (for example 15 minutes with harmonie)
+	//
+	// For backwards compatibility also support one hour precipitation
+	
+	params RRParams({param("RRR-KGM2"), param("RR-1-MM")});
 	
 	const params PParams({param("P-PA"), param("PGR-PA")});
 	const params WParams({param ("VV-MMS"), param("VV-MS")});
@@ -143,7 +148,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	info_t W925Info = Fetch(forecastTime, P925, WParams, false);
 	info_t W850Info = Fetch(forecastTime, P850, WParams, false);
 
-	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, false);
+	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParams, false);
 	info_t PInfo = Fetch(forecastTime, surface0mLevel, PParams, false);
 
 	info_t SNRInfo = Fetch(forecastTime, surface0mLevel, SNRParam, false);
