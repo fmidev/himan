@@ -388,7 +388,7 @@ double util::ToPower(double value, double power)
   return divisor;
 }
 
-matrix<double> Filter2D(matrix<double>& A, matrix<double>& B)
+matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 {
 	// find center position of kernel (half of kernel size)
 	matrix<double> ret(A.SizeX(),A.SizeY(),1);
@@ -403,6 +403,7 @@ matrix<double> Filter2D(matrix<double>& A, matrix<double>& B)
 	int kCenterX = BSizeX / 2;
 	int kCenterY = BSizeY / 2;
 
+	
 	// check if data contains missing values
 	if (A.MissingCount()==0) // if no missing values in the data we can use a faster algorithm
 	{
@@ -447,7 +448,6 @@ matrix<double> Filter2D(matrix<double>& A, matrix<double>& B)
 					for(int n=0; n < BSizeY; ++n) // kernel columns
 	            			{
 	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel	    	
-
 						// index of input signal, used for checking boundary
 
 						int ii = i + (m - kCenterX);
@@ -560,6 +560,7 @@ matrix<double> Filter2D(matrix<double>& A, matrix<double>& B)
 	}
 	else	// data contains missing values
 	{
+		std::cout << "Data contains missing values -> Choosing slow algorithm." << std::endl;
 		double kernel_missing_count;
 		for(int i=0; i < ASizeX; ++i)              // rows
 	  	{

@@ -178,7 +178,7 @@ void Unpack(std::initializer_list<std::shared_ptr<grid>> grids);
  * @return Data convolved by kernel
  */
 
-himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double> B);
+himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& B);
 
 #ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
 
