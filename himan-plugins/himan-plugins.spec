@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.8.22
+Version: 14.9.23
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -86,7 +86,18 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Fri Aug 22 2014  Mikko Partio <mikko.partio@fmi.fi> - 14.8.22-1.fmi
+* Tue Sep 23 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.23-1.fmi
+- Adding wind bulk shear to stability
+- New SSICING-N parameter for seaicing
+- Fixed hybrid_height for ECMWF
+- Pre-allocate memory for simple_packed::Unpack()
+- New interpolation method (NFmiQueryInfo::InterpolatedValue())
+- Improvements in querydata plugins
+- Improvoments in hitool (additional overloads)
+- Using HPStringToLevelType at transformer
+* Thu Aug 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.28-1.fmi
+- Fix for HIMAN-62
+* Fri Aug 22 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.22-1.fmi
 - Hotfix for GFS/GEM longitude coordinate issue
 * Tue Aug 12 2014  Mikko Partio <mikko.partio@fmi.fi> - 14.8.12-1.fmi
 - Fixes to hybrid_height and cache
