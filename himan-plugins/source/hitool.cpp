@@ -259,6 +259,19 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 /* CONVENIENCE FUNCTIONS */
 
 vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList,
+						double lowerHeight,
+						double upperHeight,
+						const vector<double>& findValue,
+						size_t findNth) const
+{
+	
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalHeight(wantedParamList, firstLevelValue, lastLevelValue, findValue, findNth);
+}
+
+vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList,
 						const vector<double>& firstLevelValue,
 						const vector<double>& lastLevelValue,
 						const vector<double>& findValue,
@@ -300,6 +313,18 @@ vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList,
 
 	throw runtime_error("Data not found");
 	
+}
+
+vector<double> hitool::VerticalHeight(const param& wantedParam,
+						double lowerHeight,
+						double upperHeight,
+						const vector<double>& findValue,
+						size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	
+	return VerticalHeight(wantedParam, firstLevelValue, lastLevelValue, findValue, findNth);
 }
 
 vector<double> hitool::VerticalHeight(const param& wantedParam,
