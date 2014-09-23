@@ -560,6 +560,7 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 		(*it)->Grid()->Projection(base->Grid()->Projection());
 		(*it)->Grid()->SouthPole(base->Grid()->SouthPole());
 		(*it)->Grid()->Orientation(base->Grid()->Orientation());
+		(*it)->Grid()->ScanningMode(base->Grid()->ScanningMode());
 
 		// Newbase always normalizes data to +x+y
 		// So if source scanning mode is eg. +x-y, we have to swap the interpolated
