@@ -29,35 +29,7 @@ transformer::transformer() : itsBase(0.0), itsScale(1.0), itsTargetUnivID(9999)
 
 vector<himan::level> transformer::LevelsFromString(const string& levelType, const string& levelValues) const
 {
-	string levelTypeUpper = levelType;
-	boost::to_upper(levelTypeUpper);
-
-	HPLevelType theLevelType;
-
-	if (levelTypeUpper == "HEIGHT")
-	{
-		theLevelType = kHeight;
-	}
-	else if (levelTypeUpper == "PRESSURE")
-	{
-		theLevelType = kPressure;
-	}
-	else if (levelTypeUpper == "HYBRID")
-	{
-		theLevelType = kHybrid;
-	}
-	else if (levelTypeUpper == "GROUND")
-	{
-		theLevelType = kGround;
-	}
-	else if (levelTypeUpper == "MEANSEA")
-	{
-		theLevelType = kMeanSea;
-	}
-	else
-	{
-		throw runtime_error("Unknown level type: " + levelType);
-	}
+	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
 
 	// can cause exception, what will happen then ?
 
