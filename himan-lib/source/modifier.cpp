@@ -264,6 +264,12 @@ size_t modifier::HeightsCrossed() const
 	return static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true));
 }
 
+HPModifierType modifier::Type() const
+{
+	return itsModifierType;
+}
+
+
 std::ostream& modifier::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
