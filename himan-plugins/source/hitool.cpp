@@ -755,7 +755,6 @@ shared_ptr<info> hitool::Stratus()
 	vector<double> constData1(ret->Data()->Size(), 0);
 	
 	auto constData2 = constData1;
-	fill(constData2.begin(), constData2.end(), stLimit);
 
 	// N-kynnysarvot stratuksen ala- ja ylärajalle [%] (tarkkaa stCover arvoa ei aina löydy)
 
@@ -763,11 +762,11 @@ shared_ptr<info> hitool::Stratus()
 
 	/**
 	 * Etsitään parametrin N minimiarvo korkeusvälillä 0 .. stLimit (=500)
-     */
+	 */
 
 	itsLogger->Info("Searching for stratus lower limit");
 
-	auto baseThreshold = VerticalMinimum(wantedParamList, constData1, constData2);
+	auto baseThreshold = VerticalMinimum(wantedParamList, 0, stLimit);
 	
 	for (size_t i = 0; i < baseThreshold.size(); i++)
 	{
@@ -782,16 +781,13 @@ shared_ptr<info> hitool::Stratus()
 	ret->Param(baseParam);
 	ret->Data()->Set(baseThreshold);
 
-	fill(constData1.begin(), constData1.end(), stLimit);
-	fill(constData2.begin(), constData2.end(), layer);
-
 	/**
 	 * Etsitään parametrin N minimiarvo korkeusvälillä stLimit (=500) .. layer (=2000)
-     */
+	 */
 
 	itsLogger->Info("Searching for stratus upper limit");
 
-	auto topThreshold = VerticalMinimum(wantedParamList, constData1, constData2);
+	auto topThreshold = VerticalMinimum(wantedParamList, stLimit, layer);
 
 	for (size_t i = 0; i < topThreshold.size(); i++)
 	{
@@ -807,15 +803,13 @@ shared_ptr<info> hitool::Stratus()
 	// (Huom. vertz-funktio hakee tarkkaa arvoa, jota ei aina löydy esim. heti pinnasta lähtevälle
 	//  stratukselle; joskus siis tuloksena on virheellisesti Base=top)
 
-	fill(constData1.begin(), constData1.end(), 0);
-
 	/**
 	 * Etsitään parametrin N ensimmäisen baseThreshold-arvon korkeus väliltä 0 .. layer (=2000)
 	 */
 
 	itsLogger->Info("Searching for stratus base accurate value");
 
-	auto stratusBase = VerticalHeight(wantedParamList, constData1, constData2, baseThreshold);
+	auto stratusBase = VerticalHeight(wantedParamList, 0, stLimit, baseThreshold);
 
 	//VAR Base = VERTZ_FINDH(N_EC,0,Layer,BaseThreshold,1)
 
@@ -838,14 +832,12 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Debug("Stratus base number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusBase.size()));
 	
-	// fill(constData2.begin(), constData2.end(), layer);
-
 	/**
 	 * Etsitään parametrin N viimeisen topThreshold-arvon korkeus väliltä 0 .. layer (=2000)
 	 */
 
 	itsLogger->Info("Searching for stratus top accurate value");
-	auto stratusTop = VerticalHeight(wantedParamList, constData1, constData2, topThreshold, 0);
+	auto stratusTop = VerticalHeight(wantedParamList, stLimit, layer, topThreshold, 0);
 
 	ret->Param(topParam);
 	ret->Data()->Set(stratusTop);
@@ -870,7 +862,7 @@ shared_ptr<info> hitool::Stratus()
 
 	assert(constData1.size() == constData2.size() && constData1.size() == stratusTop.size());
 	
-	for (size_t i = 0; 	i < constData1.size(); i++)
+	for (size_t i = 0; i < constData1.size(); i++)
 	{
 		if (stratusTop[i] == kFloatMissing)
 		{
@@ -906,10 +898,7 @@ shared_ptr<info> hitool::Stratus()
 
 	itsLogger->Info("Searching for stratus mean cloudiness");
 
-	//wantedParamList = {param("N-0TO1"), param("N-PRCNT")};
-
 	auto stratusMeanN = VerticalAverage(wantedParamList, stratusBase, stratusTop);
-	//auto stratusMeanN = VerticalExtremeValue(opts);
 
 	missing = 0;
 
@@ -957,15 +946,23 @@ shared_ptr<info> hitool::Stratus()
 
 	for (size_t i = 0; i < constData1.size(); i++)
 	{
-		if (stratusBase[i] == kFloatMissing)
+		double lower = stratusBase[i];
+		double upper = stratusTop[i];
+
+		if (lower == kFloatMissing || upper == kFloatMissing)
 		{
 			constData1[i] = kFloatMissing;
 			constData2[i] = kFloatMissing;
 		}
+		else if (fabs(lower-upper) < 100)
+		{
+			constData1[i] = lower;
+			constData2[i] = upper;
+		}
 		else
 		{
-			constData1[i] = stratusBase[i] + 50;
-			constData2[i] = stratusTop[i] - 50;
+			constData1[i] = lower + 50;
+			constData2[i] = upper - 50;
 		}
 	}
 
@@ -1252,4 +1249,6 @@ shared_ptr<info> hitool::FreezingArea()
 void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 {
 	itsConfiguration = conf;
+	itsConfiguration->Info()->First();
 }
+
