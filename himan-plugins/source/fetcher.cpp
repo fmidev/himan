@@ -259,6 +259,13 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		itsLogger->Trace("Grids are natively equal");
 	}
 
+	// Insert interpolated data to cache
+
+	if (!theInfos.empty() && config->UseCache())
+	{
+		itsCache->Insert(theInfos);
+	}
+
 	assert(*baseInfo->Grid() == *theInfos[0]->Grid());
 
 	baseInfo.reset();
@@ -314,16 +321,6 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
 		}
 
 		allInfos.insert(allInfos.end(), curInfos.begin(), curInfos.end());
-
-		if (curInfos.size())
-		{
-			if (options.configuration->UseCache())
-			{
-				itsCache->Insert(allInfos);
-			}
-
-			break; // We found what we were looking for
-		}
 
 	}
 
