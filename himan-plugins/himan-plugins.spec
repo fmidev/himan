@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.9.23
+Version: 14.9.24
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -86,6 +86,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Sep 24 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.24-1.fmi
+- EC support for weather_code_1
+- Fixes in hitool::Stratus()
 * Tue Sep 23 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.23-1.fmi
 - Adding wind bulk shear to stability
 - New SSICING-N parameter for seaicing
