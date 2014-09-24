@@ -51,6 +51,8 @@ configuration::configuration(const configuration& other)
 	itsSourceProducerIterator = std::unique_ptr<producer_iter> (new producer_iter(*other.itsSourceProducerIterator));
 	itsSourceProducerIterator->Set(other.itsSourceProducerIterator->Index());
 
+	itsForecastStep = other.itsForecastStep;
+	
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
 }
 
@@ -85,6 +87,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsUseCudaForPacking__ " << itsUseCudaForPacking << std::endl;
 
 	file << "__itsUseCache__ " << itsUseCache << std::endl;
+	file << "__itsForecastStep__ " << itsForecastStep << std::endl;
 	
 	for (size_t i = 0; i < itsAuxiliaryFiles.size(); i++)
 	{
@@ -118,6 +121,7 @@ void configuration::Init()
 	itsUseCache = true;
 	itsCudaDeviceId = 0;
 	itsStatisticsLabel = "";
+	itsForecastStep = kHPMissingInt;
 }
 
 HPFileType configuration::OutputFileType() const
@@ -301,4 +305,9 @@ short configuration::CudaDeviceId() const
 void configuration::CudaDeviceId(short theCudaDeviceId) 
 {
 	itsCudaDeviceId = theCudaDeviceId;
+}
+
+int configuration::ForecastStep() const
+{
+	return itsForecastStep;
 }

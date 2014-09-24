@@ -193,8 +193,8 @@ public:
 
 	/**
 	 * @brief Top level function for CUDA grib packing and unpacking.
-     * @return True if CUDA can be used (does not tell IF it's used)
-     */
+	 * @return True if CUDA can be used (does not tell IF it's used)
+	 */
 	
 	bool UseCudaForPacking() const;
 	void UseCudaForPacking(bool theUseCudaForPacking);
@@ -206,14 +206,14 @@ public:
 
 	/**
 	 * @brief Store number of CUDA devices found
-     */
+	 */
 
 	void CudaDeviceCount(short theCudaDeviceCount);
 
 	/**
 	 * @brief Check if we have any CUDA-enabled devices available
-     * @return True if there is at least one CUDA enable device present
-     */
+	 * @return True if there is at least one CUDA enable device present
+	 */
 
 	bool HaveCuda() const;
 
@@ -229,6 +229,14 @@ public:
 
 	short CudaDeviceId() const;
 	void CudaDeviceId(short theCudaDeviceId);
+
+	/**
+	 * @brief Return the value if key 'step'.
+	 * 
+	 * @return Value of 'step' if present
+	 */
+	
+	int ForecastStep() const;
 
 protected:
 	
@@ -267,6 +275,8 @@ protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
 	short itsCudaDeviceId;
+
+	int itsForecastStep;
 };
 
 

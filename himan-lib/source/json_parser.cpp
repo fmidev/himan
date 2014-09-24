@@ -111,7 +111,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	/* Check time definitions */
 
 	conf->FirstSourceProducer();
-	ParseTime(conf->SourceProducer(), baseInfo, pt);
+	ParseTime(conf, baseInfo, pt);
 
 	/* Check levels */
 
@@ -424,7 +424,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 }
 
-void json_parser::ParseTime(const producer& sourceProducer,
+void json_parser::ParseTime(shared_ptr<configuration> conf,
 								std::shared_ptr<info> anInfo,
 								const boost::property_tree::ptree& pt)
 {
@@ -433,6 +433,8 @@ void json_parser::ParseTime(const producer& sourceProducer,
 	string originDateTime;
 	string mask;
 
+	const producer sourceProducer = conf->SourceProducer();
+	
 	try
 	{
 		originDateTime = pt.get<string>("origintime");
@@ -551,6 +553,8 @@ void json_parser::ParseTime(const producer& sourceProducer,
 		int stop = pt.get<int>("stop_hour");
 		int step = pt.get<int>("step");
 
+		conf->itsForecastStep = step;
+		
 		HPTimeResolution stepResolution = kHourResolution;
 
 		if (stop > 1<<8)
