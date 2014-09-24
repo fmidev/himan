@@ -24,9 +24,8 @@ const himan::param ZParam("Z-M2S2");
 const himan::params NParams({himan::param("N-0TO1"), himan::param("N-PRCNT")});
 const himan::param TParam("T-K");
 const himan::param CloudParam("CLDSYM-N");
-const himan::params PrecParams({himan::param("RR-1-MM"), himan::param("RRR-KGM2")});
+const himan::params RRParam({himan::param("RR-1-MM"), himan::param("RR-3-MM"), himan::param("RR-6-MM")});
 const himan::param KindexParam("KINDEX-N");
-const himan::param RRParam("RR-1-MM");
 
 // ..and their levels
 himan::level Z1000Level(himan::kPressure, 1000, "PRESSURE");
@@ -66,7 +65,42 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	int paramStep = 1;
+	/*
+	 * In order to know which source precipitation parameter should be used we need
+	 * to know the forecast step. This of course applies only to those forecasts that
+	 * have a varying time step.
+	 *
+	 * First try to get step from configuration file key 'step'. If that is not available,
+	 * try to determine the step by comparing earlier or later times with the curren time.
+	 * If this doesn't work then default to one hour time step.
+	 */
+	
+	int paramStep = itsConfiguration->ForecastStep();
+
+	if (paramStep == kHPMissingInt)
+	{
+		// shit
+
+		if (myTargetInfo->SizeTimes() == 1)
+		{
+			paramStep = 1;
+			itsLogger->Warning("Unable to determine step from current configuration, assuming one hour");
+		}
+		else
+		{
+
+			if (myTargetInfo->TimeIndex() == 0)
+			{
+				forecast_time otherTime = myTargetInfo->PeekTime(myTargetInfo->TimeIndex()+1);
+				paramStep = otherTime.Step() - myTargetInfo->Time().Step();
+			}
+			else
+			{
+				forecast_time otherTime = myTargetInfo->PeekTime(myTargetInfo->TimeIndex()-1);
+				paramStep = myTargetInfo->Time().Step() - otherTime.Step();
+			}
+		}
+	}
 
 	info_t Z1000Info = Fetch(forecastTime, Z1000Level, ZParam, false);
 	info_t Z850Info = Fetch(forecastTime, Z850Level, ZParam, false);
@@ -90,6 +124,32 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	string deviceType = "CPU";
 
+	// Precipitation limits copied from TEE_Hsade.F
+	
+	double RRLimit1 = 0.01;
+	double RRLimit2 = 0.1;
+	double RRLimit3 = 1.;
+	double RRLimit4 = 3.;
+
+	if (paramStep == 3)
+	{
+		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
+
+		RRLimit1 = 0.1;
+		RRLimit2 = 5.;
+		RRLimit3 = 2.;
+		RRLimit4 = 4.;
+	}
+	else if (paramStep == 6)
+	{
+		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
+
+		RRLimit1 = 0.2;
+		RRLimit2 = 1.;
+		RRLimit3 = 4.;
+		RRLimit4 = 8.;
+	}
+	
 	LOCKSTEP(myTargetInfo,Z1000Info,Z850Info,T850Info,NInfo,TInfo,CloudInfo,KindexInfo,RRInfo,NextRRInfo)
 	{
 
@@ -115,22 +175,25 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		// from rain intensity determine WaWa-code
 
-		if (nextRR > 0.01 && RR > 0.01 )
-		{
-			rain = 60;
-		}
-		if (nextRR > 0.1 && RR > 0.1 )
-		{
-			rain = 61;
-		}
-		if (nextRR > 1 && RR > 1 )
-		{
-			rain = 63;
-		}
-		if (nextRR > 3 && RR > 3)
+		if (nextRR > RRLimit4 && RR > RRLimit4)
 		{
 			rain = 65;
 		}
+		else if (nextRR > RRLimit3 && RR > RRLimit3)
+		{
+			rain = 63;
+		}
+		else if (nextRR > RRLimit2 && RR > RRLimit2)
+		{
+			rain = 61;
+		}
+		else if (nextRR > RRLimit1 && RR > RRLimit1)
+		{
+			rain = 60;
+		}
+		
+		
+
 
 		// cloud code determines cloud type
 
