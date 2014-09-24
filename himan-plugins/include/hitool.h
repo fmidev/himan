@@ -78,7 +78,7 @@ public:
 	 * @return Maximum value for each point
 	 */
 
-	std::vector<double> VerticalMaximum(const param& wantedParam, const double& lowerHeight, const double& upperHeight) const;
+	std::vector<double> VerticalMaximum(const param& wantedParam, double lowerHeight, double upperHeight) const;
 
 	/**
 	 * @brief Find maximum value of a given parameter in a given height range
@@ -122,7 +122,7 @@ public:
 	 * @return Minimum value for each point
 	 */
 
-	std::vector<double> VerticalMinimum(const param& wantedParam, const double& lowerHeight, const double& upperHeight) const;
+	std::vector<double> VerticalMinimum(const param& wantedParam, double lowerHeight, double upperHeight) const;
 
 	/**
 	 * @brief Find minimum value of a given parameter in a given height range
@@ -185,7 +185,7 @@ public:
 	 * @return Mean for each point
 	 */
 
-	std::vector<double> VerticalAverage(const param& wantedParam, const double& lowerHeight, const double& upperHeight) const;
+	std::vector<double> VerticalAverage(const param& wantedParam, double lowerHeight, double upperHeight) const;
 
 	/**
 	 * @brief Calculate average of values for each point in a given height range
@@ -277,7 +277,7 @@ public:
 	 * @return Values for given height for each point
 	 */
 
-	std::vector<double> VerticalValue(const param& wantedParam, const double& height) const;
+	std::vector<double> VerticalValue(const param& wantedParam, double findValue) const;
 
 	/**
 	 * @brief Find value of parameter from given height

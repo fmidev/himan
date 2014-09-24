@@ -391,8 +391,8 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList,
 }
 
 vector<double> hitool::VerticalMinimum(const param& wantedParam,
-						const double& lowerHeight,
-						const double& upperHeight) const
+						double lowerHeight,
+						double upperHeight) const
 {
 	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
 	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
@@ -460,8 +460,8 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList,
 }
 
 vector<double> hitool::VerticalMaximum(const param& wantedParam,
-						const double& lowerHeight,
-						const double& upperHeight) const
+						double lowerHeight,
+						double upperHeight) const
 {
 	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
 	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
@@ -527,8 +527,8 @@ vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList,
 }
 
 vector<double> hitool::VerticalAverage(const param& wantedParam,
-						const double& lowerHeight,
-						const double& upperHeight) const
+						double lowerHeight,
+						double upperHeight) const
 {
 	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
 	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
@@ -689,7 +689,7 @@ vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const
 	throw runtime_error("Data not found");
 }
 
-vector<double> hitool::VerticalValue(const param& wantedParam, const double& height) const
+vector<double> hitool::VerticalValue(const param& wantedParam, double height) const
 {
 	vector<double> heightInfo(itsConfiguration->Info()->Grid()->Size(), height);
 
