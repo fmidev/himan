@@ -198,7 +198,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		// If this function is called from multi-param Fetch(), do not print
 		// any messages yet since we might have another source param coming
 
-		if (controlWaitTime)
+		if (!controlWaitTime)
 		{
 			string optsStr = "producer(s): ";
 
