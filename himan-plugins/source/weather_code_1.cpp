@@ -136,7 +136,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
 
 		RRLimit1 = 0.1;
-		RRLimit2 = 5.;
+		RRLimit2 = 0.5.;
 		RRLimit3 = 2.;
 		RRLimit4 = 4.;
 	}
