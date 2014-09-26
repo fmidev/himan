@@ -139,8 +139,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	//bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
-	bool useCudaInThisThread = false;
+	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
 	
 	info_t T850Info, T700Info, T500Info, TD850Info, TD700Info;
 		
