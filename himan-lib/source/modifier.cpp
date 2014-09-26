@@ -179,7 +179,10 @@ bool modifier::Evaluate(double theValue, double theHeight)
 
 	assert(itsIndex < itsOutOfBoundHeights.size());
 
-	assert(theHeight != kFloatMissing);
+	if (IsMissingValue(theHeight))
+	{
+		return false;
+	}
 
 	/*
 	 * "upper" value relates to it being higher in the atmosphere
@@ -372,7 +375,10 @@ bool modifier_mean::Evaluate(double theValue, double theHeight)
 
 	assert(itsIndex < itsOutOfBoundHeights.size());
 
-	assert(theHeight != kFloatMissing);
+	if (IsMissingValue(theHeight))
+	{
+		return false;
+	}
 
 	/*
 	 * "upper" value relates to it being higher in the atmosphere
@@ -554,7 +560,7 @@ void modifier_count::Init(const std::vector<double>& theData, const std::vector<
 void modifier_count::Calculate(double theValue, double theHeight)
 {
 	assert(itsFindValue.size());
-	
+
 	double findValue = itsFindValue[itsIndex];
 
 	if (IsMissingValue(findValue))
@@ -597,7 +603,7 @@ void modifier_count::Calculate(double theValue, double theHeight)
 	 *
 	 * The answer is: two times (as far as we know).
 	 */
-	
+
 	if ((previousValue <= findValue && theValue >= findValue) // updward trend
 			||
 		(previousValue >= findValue && theValue <= findValue)) // downward trend
@@ -615,6 +621,8 @@ void modifier_findheight::Clear(double fillValue)
 	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), fillValue);
 	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), fillValue);
 	std::fill(itsFoundNValues.begin(), itsFoundNValues.end(), 0);
+	std::fill(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), false);
+	itsValuesFound = 0;
 }
 
 bool modifier_findheight::CalculationFinished() const
@@ -634,7 +642,7 @@ void modifier_findheight::Init(const std::vector<double>& theData, const std::ve
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 		itsFoundNValues.resize(itsResult.size(), 0);
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
-
+		
 		itsValuesFound = 0;
 	}
 }
@@ -693,7 +701,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 	 * 
 	 */
 
-	if ((previousValue <= findValue && theValue >= findValue) || (previousValue >= findValue && theValue <= findValue))
+	if ((previousValue <= findValue && theValue >= findValue) || (previousValue > findValue && theValue <= findValue))
 	{
 		double actualHeight = NFmiInterpolation::Linear(findValue, previousValue, theValue, previousHeight, theHeight);
 
@@ -701,12 +709,14 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 		{
 			if (itsFindNthValue != 0)
 			{
+
 				itsFoundNValues[itsIndex] += 1;
 
 				if (itsFindNthValue == itsFoundNValues[itsIndex])
 				{
 					Value(actualHeight);
 					itsValuesFound++;
+					itsOutOfBoundHeights[itsIndex] = true;
 				}
 			}
 			else
@@ -726,6 +736,7 @@ void modifier_findvalue::Clear(double fillValue)
 	std::fill(itsResult.begin(), itsResult.end(), fillValue);
 	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), fillValue);
 	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), fillValue);
+	std::fill(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), false);
 }
 
 void modifier_findvalue::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
@@ -898,7 +909,10 @@ bool modifier_integral::Evaluate(double theValue, double theHeight)
 
 	assert(itsIndex < itsOutOfBoundHeights.size());
 
-	assert(theHeight != kFloatMissing);
+	if (IsMissingValue(theHeight))
+	{
+		return false;
+	}
 
 	/*
 	 * "upper" value relates to it being higher in the atmosphere
