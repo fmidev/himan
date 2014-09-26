@@ -79,12 +79,16 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param GustParam("FFG-MS");
 	const param TParam("T-K");
 	const param TGParam("TG-K");
-	const param TopoParam("-M");
+	const param TopoParam("Z-M2S2");
 
 	shared_ptr<plugin::fetcher> f = dynamic_pointer_cast <plugin::fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 	auto puuskaInfo = f->Fetch(itsConfiguration,myTargetInfo->Time(),myTargetInfo->Level(),GustParam);
-	auto TGInfo = f->Fetch(itsConfiguration,myTargetInfo->Time(),myTargetInfo->Level(),TGParam);
-	auto TopoInfo = f->Fetch(itsConfiguration,myTargetInfo->Time(),myTargetInfo->Level(),GustParam);
+
+        level H2 = level(himan::kHeight, 2, "HEIGHT");
+        level H0 = level(himan::kHeight, 0, "HEIGHT");
+
+	auto TGInfo = f->Fetch(itsConfiguration,myTargetInfo->Time(),H2,TGParam);
+	auto TopoInfo = f->Fetch(itsConfiguration,myTargetInfo->Time(),H0,TopoParam);
 	// maybe need adjusting
         auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
@@ -368,9 +372,8 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		double par467 = puuskaInfo->Value();
 		double t_ground = TGInfo->Value();
-		double topo = TopoInfo->Value();
+		double topo = TopoInfo->Value()*himan::constants::kIg;
 		double puuska = pohja[i];
-		double ws;
 
 		if (par467 == kFloatMissing)
 		{
@@ -393,19 +396,16 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			puuska = pohja_0_60[i];
 			par466[i] = ws_10[i];
-			ws = ws_10[i] * 0.7;
 			
 			if (maxt[i] - t_ground > 2)
 			{
 				puuska = ws_10[i];
 				par466[i] = ws_10[i] * 0.7;
-				ws = ws_10[i] * 0.4;
 				
 				if (maxt[i] - t_ground > 4)
 				{
 					puuska = ws_10[i] * 0.7;
 					par466[i] = ws_10[i] * 0.4;
-					ws = 0;
 				}
 			}
 		}
@@ -420,6 +420,15 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	auto puuska_filtered_ptr = make_shared<himan::matrix<double>> (puuska_filtered);
 	myTargetInfo->Grid()->Data(puuska_filtered_ptr);
+
+        LOCKSTEP(myTargetInfo)
+        {
+		size_t i = myTargetInfo->ParamIndex();
+		if( par466[i]*1.12 > myTargetInfo->Value())
+		{
+			myTargetInfo->Value(par466[i]*1.15);
+		}
+	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 
