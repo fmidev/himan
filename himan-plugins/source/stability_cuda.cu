@@ -39,11 +39,11 @@ __global__ void himan::plugin::stability_cuda::Calculate(
 			d_cti[idx] = himan::metutil::CTI_(TD850, T500);
 			d_vti[idx] = himan::metutil::VTI_(T850, T500);
 			d_tti[idx] = himan::metutil::TTI_(T850, T500, TD850); // CTI + VTI
-			d_si[idx] = himan::metutil::SI_(T850, T500, TD850);
 
 			if (opts.li)
 			{
 				d_li[idx] = himan::metutil::LI_(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx]);
+				d_si[idx] = himan::metutil::SI_(T850, T500, TD850);
 			}
 
 			if (opts.bs01)

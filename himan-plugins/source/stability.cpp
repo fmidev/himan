@@ -286,10 +286,6 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			myTargetInfo->Param(TTIParam);
 			myTargetInfo->Value(value);
 
-			value = metutil::SI_(T850, T500, TD850);
-			myTargetInfo->Param(SIParam);
-			myTargetInfo->Value(value);
-
 			if (LICalculation)
 			{
 				size_t locationIndex = myTargetInfo->LocationIndex();
@@ -309,6 +305,11 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 					myTargetInfo->Param(LIParam);
 					myTargetInfo->Value(value);
 				}
+
+				value = metutil::SI_(T850, T500, TD850);
+				myTargetInfo->Param(SIParam);
+				myTargetInfo->Value(value);
+
 			}
 
 			if (BSCalculation)
