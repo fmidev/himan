@@ -182,6 +182,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	t.join();
 
+	if (!stratus || !freezingArea)
+	{
+		myThreadedLogger->Error("hitool calculation failed, unable to prcoeed");
+		return;
+	}
+
 	freezingArea->First();
 	stratus->First();
 
@@ -389,7 +395,17 @@ void FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_ti
 	h->Configuration(conf);
 	h->Time(ftime);
 
-	result = h->FreezingArea();
+	try
+	{
+		result = h->FreezingArea();
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error("FreezingArea() caught exception " + boost::lexical_cast<string> (e));
+		}
+	}
 
 }
 
@@ -400,6 +416,16 @@ void Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& f
 	h->Configuration(conf);
 	h->Time(ftime);
 
-	result = h->Stratus();
+	try
+	{
+		result = h->Stratus();
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error("FreezingArea() caught exception " + boost::lexical_cast<string> (e));
+		}
+	}
 
 }
