@@ -193,7 +193,7 @@ void himan::plugin::stability_cuda::Prepare(info_simple* source, double* devptr,
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
 		source->packed_values->Unpack(devptr, source->size_x * source->size_y, &stream);
-		CUDA_CHECK(cudaMemcpyAsync(source->values, &devptr, memsize, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(source->values, devptr, memsize, cudaMemcpyDeviceToHost, stream));
 	}
 	else
 	{	

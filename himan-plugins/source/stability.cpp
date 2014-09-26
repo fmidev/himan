@@ -84,8 +84,6 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Total Totals index
 	theParams.push_back(TTIParam);
 
-	// Showalter Index
-	theParams.push_back(SIParam);
 
 	if (itsConfiguration->Exists("li") && itsConfiguration->GetValue("li") == "true")
 	{
@@ -93,6 +91,9 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		itsLICalculation = true;
 		theParams.push_back(LIParam);
+		
+		// Showalter Index
+		theParams.push_back(SIParam);
 	}
 
 	if (itsConfiguration->Exists("bs") && itsConfiguration->GetValue("bs") == "true")
