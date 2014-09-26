@@ -552,15 +552,19 @@ bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
 
 info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const params& theParams, bool fetchPacked) const
 {
-	info_t ret;
-	
-	for (size_t i = 0; i < theParams.size(); i++)
-	{
-		ret = Fetch(theTime, theLevel, theParams[i], fetchPacked);
+	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-		if (ret)
+	info_t ret;
+
+	try
+	{
+		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, itsConfiguration->UseCudaForPacking() && fetchPacked);
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
 		{
-			return ret;
+			throw runtime_error(ClassName() + ": Unable to proceed");
 		}
 	}
 
