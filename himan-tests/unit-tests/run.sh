@@ -1,8 +1,16 @@
 set -x
 
-export LD_LIBRARY_PATH=$HOME/workspace/himan-plugins/build/debug:$LD_LIBRARY_PATH
+if [ -z "$HIMAN_LIBRARY_PATH" ]; then
+	export LD_LIBRARY_PATH=/usr/lib64/himan-plugins:$LD_LIBRARY_PATH
+else
+	export LD_LIBRARY_PATH=$HIMAN_LIBRARY_PATH:$LD_LIBRARY_PATH
+fi
 
-path=$1
+if [ -z "$1" ]; then
+	path="build/debug"
+else
+	path=$1
+fi
 
 if [ $? -eq 0 ]; then
 	for i in $(find $path -maxdepth 1 -type f -executable); do 
