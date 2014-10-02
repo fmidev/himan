@@ -102,6 +102,27 @@ int main(int argc, char** argv)
 	
 	banner();
 
+#ifdef HAVE_CUDA
+	// Cuda library has a bug with regards to context initilization (HIMAN-57)
+	// This is a workaround: Do a dummy cuda library call in single-threaded execution 
+	// path so the cuda-context is built before entering multi-threaded execution.
+	if (conf->UseCuda())
+	{
+		double* d = 0;
+
+		if (cudaMallocHost(reinterpret_cast<void**> (&d), 1) != cudaSuccess)
+		{
+			aLogger->Warning("cudaMallocHost test failed");
+		}
+
+		if (cudaFreeHost(d) != cudaSuccess)
+		{
+			aLogger->Warning("cudaFreeHost test failed");
+		}
+		
+	}
+#endif
+	
 	vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
 	aLogger->Info("Found " + boost::lexical_cast<string> (thePlugins.size()) + " plugins");
