@@ -307,7 +307,7 @@ long param::GribTableVersion() const
 	return itsGribTableVersion;
 }
 
-aggregation& param::Aggregation()
+const aggregation& param::Aggregation() const
 {
 	return itsAggregation;
 }

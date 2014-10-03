@@ -110,7 +110,7 @@ public:
 	HPParameterUnit Unit() const;
 	void Unit(HPParameterUnit theUnit);
 
-	aggregation& Aggregation();
+	const aggregation& Aggregation() const;
 
 	double Base() const;
 	void Base(double theBase);
