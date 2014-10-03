@@ -117,7 +117,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	//ParseLevels(baseInfo, pt);
 
-	/* Check whole_file_write */
+	/* Check file_write */
 
 	try
 	{
@@ -363,6 +363,42 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			throw runtime_error(string("Error parsing meta information: ") + e.what());
 		}
 
+		// Check local file_write option
+
+		HPFileWriteOption delayedFileWrite = conf->FileWriteOption();
+
+		try
+		{
+
+			string theFileWriteOption = element.second.get<string>("file_write");
+
+			if (theFileWriteOption == "neons")
+			{
+				delayedFileWrite = kNeons;
+			}
+			else if (theFileWriteOption == "single")
+			{
+				delayedFileWrite = kSingleFile;
+			}
+			else if (theFileWriteOption == "multiple")
+			{
+				delayedFileWrite = kMultipleFiles;
+			}
+			else
+			{
+				throw runtime_error("Invalid value for file_write: " + theFileWriteOption);
+			}
+
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing meta information: ") + e.what());
+		}
+
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
 
 		if (plugins.empty())
@@ -376,6 +412,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 			pc->UseCache(delayedUseCache);
 			pc->itsOutputFileType = delayedFileType;
+			pc->FileWriteOption(delayedFileWrite);
 			
 			if (plugin.second.empty())
 			{
