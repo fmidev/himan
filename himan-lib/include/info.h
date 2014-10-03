@@ -45,6 +45,18 @@ public:
 		Reset();
 	}
 
+	iterator<T>(const iterator<T>& other)
+		: itsElements(other.itsElements)
+		, itsIndex(other.itsIndex)
+	{}
+	
+	iterator<T>& operator=(const iterator<T>& other)
+	{
+		itsElements = other.itsElements;
+		itsIndex = other.itsIndex;
+		return *this;
+	}
+
 	std::string ClassName() const
 	{
 		return "himan::iterator";
@@ -162,7 +174,7 @@ public:
 	 * @return Reference to current value or throw exception
 	 */
 
-	T& At()
+	const T& At() const
 	{
 		if (itsIndex != kIteratorResetValue && itsIndex < itsElements.size())
 		{
@@ -177,7 +189,7 @@ public:
 	 * @return Reference to value requested or throw exception
 	 */
 
-	T& At(size_t theIndex)
+	const T& At(size_t theIndex) const
 	{
 		if (theIndex < itsElements.size())
 		{
@@ -224,6 +236,16 @@ public:
 	}
 
 	/**
+	 * @brief Replace the value at current iterator position with a new value
+	 *
+	 */
+	
+	void Replace(const T& theNewValue)
+	{
+		itsElements[itsIndex] = theNewValue;
+	}
+	
+	/**
 	 * @return Current index value
 	 */
 
@@ -241,7 +263,7 @@ public:
 		return itsElements.size();
 	}
 
-	friend std::ostream& operator<<(std::ostream& file, iterator<T> & ob)
+	friend std::ostream& operator<<(std::ostream& file, const iterator<T> & ob)
 	{
 		return ob.Write(file);
 	}
@@ -507,9 +529,9 @@ public:
 	bool Param(const param& theRequiredParam);
 	void ParamIndex(size_t theParamIndex);
 	size_t ParamIndex() const;
-	param& Param() const;
-	param& PeekParam(size_t theIndex) const;
-	void ReplaceParam(const param& theParam);
+	const param& Param() const;
+	const param& PeekParam(size_t theIndex) const;
+	void SetParam(const param& theParam);
 	
 	size_t SizeParams() const;
 
@@ -550,8 +572,9 @@ public:
 	bool Level(const level& theLevel);
 	void LevelIndex(size_t theLevelIndex);
 	size_t LevelIndex() const;
-	level& Level() const;
-	level& PeekLevel(size_t theIndex) const;
+	const level& Level() const;
+	const level& PeekLevel(size_t theIndex) const;
+	void SetLevel(const level& theLevel);
 
 	HPLevelOrder LevelOrder() const;
 	void LevelOrder(HPLevelOrder levelOrder);
@@ -596,8 +619,9 @@ public:
 	bool Time(const forecast_time& theTime);
 	void TimeIndex(size_t theTimeIndex);
 	size_t TimeIndex() const;
-	forecast_time& Time() const;
-	forecast_time& PeekTime(size_t theIndex) const;
+	const forecast_time& Time() const;
+	const forecast_time& PeekTime(size_t theIndex) const;
+	void SetTime(const forecast_time& theTime);
 
 	size_t SizeTimes() const;
 
@@ -724,6 +748,7 @@ private:
 	
 	void ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize);
 
+
 	/*
 	 * START GLOBAL CONFIGURATION FILE PARAMETERS
 	 *
@@ -754,9 +779,9 @@ private:
 
 	/* END GLOBAL CONFIGURATION PARAMETERS */
 
-	std::shared_ptr<level_iter> itsLevelIterator;
-	std::shared_ptr<time_iter> itsTimeIterator;
-	std::shared_ptr<param_iter> itsParamIterator;
+	level_iter itsLevelIterator;
+	time_iter itsTimeIterator;
+	param_iter itsParamIterator;
 
 	std::shared_ptr<matrix_t> itsDimensionMatrix;
 

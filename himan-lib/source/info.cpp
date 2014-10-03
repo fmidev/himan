@@ -21,9 +21,9 @@ using namespace std;
 using namespace himan;
 
 info::info()
-	: itsLevelIterator(new level_iter())
-	, itsTimeIterator(new time_iter())
-	, itsParamIterator(new param_iter())
+	: itsLevelIterator()
+	, itsTimeIterator()
+	, itsParamIterator()
 	, itsDimensionMatrix(new matrix_t())
 {
     Init();
@@ -35,9 +35,9 @@ info::~info() {}
 
 info::info(const info& other)
 	// Iterators are COPIED
-	: itsLevelIterator(new level_iter(*other.itsLevelIterator))
-	, itsTimeIterator(new time_iter(*other.itsTimeIterator))
-	, itsParamIterator(new param_iter(*other.itsParamIterator))
+	: itsLevelIterator(other.itsLevelIterator)
+	, itsTimeIterator(other.itsTimeIterator)
+	, itsParamIterator(other.itsParamIterator)
 {
 	/* START GLOBAL CONFIGURATION OPTIONS */
 
@@ -104,20 +104,9 @@ std::ostream& info::Write(std::ostream& file) const
 
     file << itsProducer;
 
-    if (itsParamIterator)
-    {
-    	file << *itsParamIterator;
-    }
-
-    if (itsLevelIterator)
-    {
-    	file << *itsLevelIterator;
-    }
-
-    if (itsTimeIterator)
-    {
-    	file << *itsTimeIterator;
-    }
+   	file << itsParamIterator;
+   	file << itsLevelIterator;
+   	file << itsTimeIterator;
 
 	for (size_t i = 0; i < itsDimensionMatrix->Size(); i++)
 	{
@@ -130,7 +119,7 @@ std::ostream& info::Write(std::ostream& file) const
 
 void info::Create()
 {
-    itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
+    itsDimensionMatrix = make_shared<matrix_t> (itsTimeIterator.Size(), itsLevelIterator.Size(), itsParamIterator.Size());
 
     Reset();
 
@@ -171,7 +160,7 @@ void info::Create()
 
 void info::ReGrid()
 {
-	auto newDimensionMatrix = make_shared<matrix_t> (itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size());
+	auto newDimensionMatrix = make_shared<matrix_t> (itsTimeIterator.Size(), itsLevelIterator.Size(), itsParamIterator.Size());
 
     Reset();
 
@@ -208,7 +197,7 @@ void info::ReGrid()
 void info::Create(shared_ptr<grid> baseGrid)
 {
 
-    itsDimensionMatrix = shared_ptr<matrix_t> (new matrix_t(itsTimeIterator->Size(), itsLevelIterator->Size(), itsParamIterator->Size()));
+    itsDimensionMatrix = make_shared<matrix_t> (itsTimeIterator.Size(), itsLevelIterator.Size(), itsParamIterator.Size());
 
     Reset();
 
@@ -244,7 +233,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 	while (otherInfo->NextTime())
 	{
-		if (itsTimeIterator->Add(otherInfo->Time())) // no duplicates
+		if (itsTimeIterator.Add(otherInfo->Time())) // no duplicates
 		{
 			ReIndex(SizeTimes()-1,SizeLevels(),SizeParams());
 		}
@@ -261,7 +250,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 		while (otherInfo->NextLevel())
 		{
-			if (itsLevelIterator->Add(otherInfo->Level())) // no duplicates
+			if (itsLevelIterator.Add(otherInfo->Level())) // no duplicates
 			{
 				ReIndex(SizeTimes(),SizeLevels()-1,SizeParams());
 			}
@@ -278,7 +267,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 			while (otherInfo->NextParam())
 			{
-				if (itsParamIterator->Add(otherInfo->Param())) // no duplicates
+				if (itsParamIterator.Add(otherInfo->Param())) // no duplicates
 				{
 					ReIndex(SizeTimes(),SizeLevels(),SizeParams()-1);
 				}
@@ -324,32 +313,32 @@ void info::Producer(const producer& theProducer)
 
 void info::ParamIterator(const param_iter& theParamIterator)
 {
-    itsParamIterator = shared_ptr<param_iter> (new param_iter(theParamIterator));
+    itsParamIterator = theParamIterator;
 }
 
 void info::Params(const vector<param>& theParams)
 {
-    itsParamIterator = shared_ptr<param_iter> (new param_iter(theParams));
+    itsParamIterator = param_iter(theParams);
 }
 
 void info::LevelIterator(const level_iter& theLevelIterator)
 {
-    itsLevelIterator = shared_ptr<level_iter> (new level_iter(theLevelIterator));
+    itsLevelIterator = theLevelIterator;
 }
 
 void info::Levels(const vector<level>& theLevels)
 {
-    itsLevelIterator = shared_ptr<level_iter> (new level_iter(theLevels));
+    itsLevelIterator = level_iter(theLevels);
 }
 
 void info::TimeIterator(const time_iter& theTimeIterator)
 {
-    itsTimeIterator = shared_ptr<time_iter> (new time_iter(theTimeIterator));
+    itsTimeIterator = theTimeIterator;
 }
 
 void info::Times(const vector<forecast_time>& theTimes)
 {
-    itsTimeIterator = shared_ptr<time_iter> (new time_iter(theTimes));
+    itsTimeIterator = time_iter(theTimes);
 }
 
 raw_time info::OriginDateTime() const
@@ -364,47 +353,52 @@ void info::OriginDateTime(const string& theOriginDateTime, const string& theTime
 
 bool info::Param(const param& theRequestedParam)
 {
-    return itsParamIterator->Set(theRequestedParam);
+    return itsParamIterator.Set(theRequestedParam);
 }
 
 bool info::NextParam()
 {
-    return itsParamIterator->Next();
+    return itsParamIterator.Next();
 }
 
 void info::ResetParam()
 {
-    itsParamIterator->Reset();
+    itsParamIterator.Reset();
 }
 
 bool info::FirstParam()
 {
-    return itsParamIterator->First();
+    return itsParamIterator.First();
 }
 
 size_t info::ParamIndex() const
 {
-    return itsParamIterator->Index();
+    return itsParamIterator.Index();
 }
 
 void info::ParamIndex(size_t theParamIndex)
 {
-    itsParamIterator->Set(theParamIndex);
+    itsParamIterator.Set(theParamIndex);
 }
 
-param& info::Param() const
+const param& info::Param() const
 {
-    return itsParamIterator->At();
+    return itsParamIterator.At();
 }
 
 size_t info::SizeParams() const
 {
-	return itsParamIterator->Size();
+	return itsParamIterator.Size();
 }
 
-param& info::PeekParam(size_t theIndex) const
+const param& info::PeekParam(size_t theIndex) const
 {
-	return itsParamIterator->At(theIndex);
+	return itsParamIterator.At(theIndex);
+}
+
+void info::SetParam(const param& theParam)
+{
+	itsParamIterator.Replace(theParam);
 }
 
 HPLevelOrder info::LevelOrder() const
@@ -419,25 +413,37 @@ void info::LevelOrder(HPLevelOrder levelOrder)
 bool info::NextLevel()
 {
     if (itsLevelOrder == kBottomToTop)
-        return itsLevelIterator->Previous();
+	{
+		return itsLevelIterator.Previous();
+	}
     else
-        return itsLevelIterator->Next();
+	{
+		return itsLevelIterator.Next();
+	}
 }
 
 bool info::PreviousLevel()
 {
     if (itsLevelOrder == kBottomToTop)
-        return itsLevelIterator->Next();
+	{
+		return itsLevelIterator.Next();
+	}
     else
-        return itsLevelIterator->Previous();
+	{
+		return itsLevelIterator.Previous();
+	}
 }
 
 bool info::LastLevel()
 {
     if (itsLevelOrder == kBottomToTop)
-        return itsLevelIterator->First();
+	{
+		return itsLevelIterator.First();
+	}
     else
-        return itsLevelIterator->Last();
+	{
+		return itsLevelIterator.Last();
+	}
 }
 
 void info::First()
@@ -458,100 +464,114 @@ void info::Reset()
 
 void info::ResetLevel()
 {
-    itsLevelIterator->Reset();
+    itsLevelIterator.Reset();
 }
 
 bool info::FirstLevel()
 {
     if (itsLevelOrder == kBottomToTop)
-        return itsLevelIterator->Last();
+	{
+		return itsLevelIterator.Last();
+	}
     else
-        return itsLevelIterator->First();
+	{
+		return itsLevelIterator.First();
+	}
 }
 
 size_t info::LevelIndex() const
 {
-    return itsLevelIterator->Index();
+    return itsLevelIterator.Index();
 }
 
 void info::LevelIndex(size_t theLevelIndex)
 {
-    itsLevelIterator->Set(theLevelIndex);
+    itsLevelIterator.Set(theLevelIndex);
 }
 
 bool info::Level(const level& theLevel)
 {
-    return itsLevelIterator->Set(theLevel);
+    return itsLevelIterator.Set(theLevel);
 }
 
-level& info::Level() const
+const level& info::Level() const
 {
-    return itsLevelIterator->At();
+    return itsLevelIterator.At();
 }
 
 size_t info::SizeLevels() const
 {
-	return itsLevelIterator->Size();
+	return itsLevelIterator.Size();
 }
 
-level& info::PeekLevel(size_t theIndex) const
+const level& info::PeekLevel(size_t theIndex) const
 {
-	return itsLevelIterator->At(theIndex);
+	return itsLevelIterator.At(theIndex);
+}
+
+void info::SetLevel(const level& theLevel)
+{
+	itsLevelIterator.Replace(theLevel);
 }
 
 bool info::NextTime()
 {
-    return itsTimeIterator->Next();
+    return itsTimeIterator.Next();
 }
 
 bool info::PreviousTime()
 {
-    return itsTimeIterator->Previous();
+    return itsTimeIterator.Previous();
 }
 
 bool info::LastTime()
 {
-    return itsTimeIterator->Last();
+    return itsTimeIterator.Last();
 }
 
 void info::ResetTime()
 {
-    itsTimeIterator->Reset();
+    itsTimeIterator.Reset();
 }
 
 bool info::FirstTime()
 {
-    return itsTimeIterator->First();
+    return itsTimeIterator.First();
 }
 
 size_t info::TimeIndex() const
 {
-    return itsTimeIterator->Index();
+    return itsTimeIterator.Index();
 }
 
 void info::TimeIndex(size_t theTimeIndex)
 {
-    itsTimeIterator->Set(theTimeIndex);
+    itsTimeIterator.Set(theTimeIndex);
 }
 
 bool info::Time(const forecast_time& theTime)
 {
-    return itsTimeIterator->Set(theTime);
+    return itsTimeIterator.Set(theTime);
 }
 
-forecast_time& info::Time() const
+const forecast_time& info::Time() const
 {
-    return itsTimeIterator->At();
+    return itsTimeIterator.At();
 }
 
 size_t info::SizeTimes() const
 {
-	return itsTimeIterator->Size();
+	return itsTimeIterator.Size();
 }
 
-forecast_time& info::PeekTime(size_t theIndex) const
+const forecast_time& info::PeekTime(size_t theIndex) const
 {
-	return itsTimeIterator->At(theIndex);
+	return itsTimeIterator.At(theIndex);
+}
+
+void info::SetTime(const forecast_time& theTime)
+{
+	itsTimeIterator.Replace(theTime);
 }
 
 bool info::NextLocation()
@@ -657,11 +677,11 @@ shared_ptr<d_matrix_t> info::Data() const
 	assert(Grid()->Data());
 	return Grid()->Data();
 }
-
+/*
 void info::Data(shared_ptr<matrix_t> m)
 {
     itsDimensionMatrix = m;
-}
+}*/
 
 void info::Grid(shared_ptr<grid> d)
 {
@@ -717,13 +737,6 @@ HPProjectionType info::Projection() const
 size_t info::DimensionSize() const
 {
 	return itsDimensionMatrix->Size();
-}
-
-void info::ReplaceParam(const param& theParam)
-{
-	param& p = itsParamIterator->At();
-
-	p = theParam;
 }
 
 #ifdef HAVE_CUDA
@@ -789,7 +802,7 @@ const shared_ptr<const matrix_t> info::Dimensions() const
 
 void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
 {
-	auto d = shared_ptr<matrix_t> (new matrix_t(SizeTimes(), SizeLevels(), SizeParams()));
+	auto d = make_shared<matrix_t> (SizeTimes(), SizeLevels(), SizeParams());
 
 	for (size_t x = 0; x < oldXSize; x++)
 	{
