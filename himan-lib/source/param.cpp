@@ -158,7 +158,7 @@ param& param::operator=(const param& other)
 	return *this;
 }
 
-bool param::operator==(const param& other)
+bool param::operator==(const param& other) const
 {
 	if (this == &other)
 	{
@@ -222,7 +222,7 @@ bool param::operator==(const param& other)
 	return true;
 }
 
-bool param::operator!=(const param& other)
+bool param::operator!=(const param& other) const
 {
 	return !(*this == other);
 }

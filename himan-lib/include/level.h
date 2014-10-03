@@ -38,8 +38,8 @@ public:
         return "himan::level";
     }
 
-    bool operator==(const level& other);
-    bool operator!=(const level& other);
+    bool operator==(const level& other) const;
+    bool operator!=(const level& other) const;
 
     /**
      * @brief Set level values (for pressure levels)

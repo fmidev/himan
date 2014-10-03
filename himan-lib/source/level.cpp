@@ -65,7 +65,7 @@ level& level::operator=(const level& other)
 }
 
 
-bool level::operator==(const level& other)
+bool level::operator==(const level& other) const
 {
     if (this == &other)
     {
@@ -75,7 +75,7 @@ bool level::operator==(const level& other)
     return (itsType == other.itsType && itsValue == other.itsValue);
 }
 
-bool level::operator!=(const level& other)
+bool level::operator!=(const level& other) const
 {
     return !(*this == other);
 }

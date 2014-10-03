@@ -50,8 +50,8 @@ public:
 		return "himan::param";
 	}
 
-	bool operator==(const param& other);
-	bool operator!=(const param& other);
+	bool operator==(const param& other) const;
+	bool operator!=(const param& other) const;
 
 	/**
 	 * @brief Set grib parameter number (grib2)

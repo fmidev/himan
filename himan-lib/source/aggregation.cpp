@@ -36,7 +36,7 @@ aggregation& aggregation::operator=(const aggregation& other)
 	return *this;
 }
 
-bool aggregation::operator==(const aggregation& other)
+bool aggregation::operator==(const aggregation& other) const
 {
 	if (this == &other)
 	{
@@ -61,7 +61,7 @@ bool aggregation::operator==(const aggregation& other)
 	return true;
 }
 
-bool aggregation::operator!=(const aggregation& other)
+bool aggregation::operator!=(const aggregation& other) const
 {
 	return !(*this == other);
 }

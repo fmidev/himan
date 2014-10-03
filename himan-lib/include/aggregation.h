@@ -25,8 +25,8 @@ public:
 	aggregation(const aggregation& other);
 	aggregation& operator=(const aggregation& other);
 
-	bool operator==(const aggregation& other);
-	bool operator!=(const aggregation& other);
+	bool operator==(const aggregation& other) const;
+	bool operator!=(const aggregation& other) const;
 
 	std::string ClassName() const
     {

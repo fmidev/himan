@@ -68,7 +68,7 @@ std::ostream& forecast_time::Write(std::ostream& file) const
 	return file;
 }
 
-bool forecast_time::operator==(const forecast_time& other)
+bool forecast_time::operator==(const forecast_time& other) const
 {
 	if (this == &other)
 	{
@@ -80,7 +80,7 @@ bool forecast_time::operator==(const forecast_time& other)
 				&& itsStepResolution == other.itsStepResolution);
 }
 
-bool forecast_time::operator!=(const forecast_time& other)
+bool forecast_time::operator!=(const forecast_time& other) const
 {
 	return !(*this == other);
 }

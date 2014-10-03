@@ -44,8 +44,8 @@ public:
 
     std::ostream& Write(std::ostream& file) const;
 
-    bool operator==(const forecast_time& other);
-    bool operator!=(const forecast_time& other);
+    bool operator==(const forecast_time& other) const;
+    bool operator!=(const forecast_time& other) const;
 
     int Step() const;
 
