@@ -312,6 +312,11 @@ const aggregation& param::Aggregation() const
 	return itsAggregation;
 }
 
+void param::Aggregation(const aggregation& theAggregation)
+{
+	itsAggregation = theAggregation;
+}
+
 double param::Base() const
 {
 	return itsBase;
