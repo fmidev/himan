@@ -9,7 +9,7 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "util.h"
+#include "metutil.h"
 #include "NFmiGrid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
@@ -17,6 +17,7 @@
 #include "neons.h"
 #include "fetcher.h"
 #include "querydata.h"
+#include "hitool.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -144,7 +145,9 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				// grib-plugin does not set universal id number since it does
 				// not know anything about it, but we need it in smarttools-library
 
-				tempInfo->Param().UnivId(4);
+				param p(tempInfo->Param());
+				p.UnivId(4);
+				tempInfo->SetParam(p);
 
 				ScaleBase(tempInfo, 1, -constants::kKelvin);
 
@@ -166,7 +169,9 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 									 curLevel,
 									 RHParam);
 
-				tempInfo->Param().UnivId(13);
+				p = param(tempInfo->Param());
+				p.UnivId(13);
+				tempInfo->SetParam(p);
 
 				sourceInfo->Merge(tempInfo);
 
@@ -179,8 +184,10 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 									 curLevel,
 									 PParam);
 
-				tempInfo->Param().UnivId(1);
-
+				p = param(tempInfo->Param());
+				p.UnivId(1);
+				tempInfo->SetParam(p);
+				
 				if (tempInfo->Param().Name() == "P-PA")
 				{
 					ScaleBase(tempInfo, 0.01, 0);
@@ -197,8 +204,10 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 									 curLevel,
 									 HParam);
 
-				tempInfo->Param().UnivId(3);
-				
+				p = param(tempInfo->Param());
+				p.UnivId(3);
+				tempInfo->SetParam(p);
+
 				sourceInfo->Merge(tempInfo);
 
 				tempInfo.reset();
@@ -210,7 +219,9 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 									 curLevel,
 									 FFParam);
 
-				tempInfo->Param().UnivId(21);
+				p = param(tempInfo->Param());
+				p.UnivId(21);
+				tempInfo->SetParam(p);
 
 				sourceInfo->Merge(tempInfo);
 
@@ -287,7 +298,10 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		// Set correct target level to output data
 		
 		myTargetInfo->FirstLevel();
-		myTargetInfo->Level().Type(kHeight);
+		level l(myTargetInfo->Level());
+		l.Type(kHeight);
+
+		myTargetInfo->SetLevel(l);
 
 		string deviceType = "CPU";
 
@@ -300,7 +314,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			SwapTo(myTargetInfo, kBottomLeft);
 
-			param& p = myTargetInfo->Param();
+			param p(myTargetInfo->Param());
 			
 			switch (p.UnivId())
 			{
@@ -423,7 +437,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				case 4749:
 					p.Name("CAPE1040-MU");
 					break;
-					
+/*
 				case 4750:
 					p.Name("SI-N");
 					break;
@@ -455,7 +469,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				case 4771:
 					p.Name("WSH-1-KT");
 					break;
-
+*/
 				case 4772:
 					p.Name("HLCY-M2S2");
 					break;
@@ -473,10 +487,12 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 					break;
 					
 				default:
-					throw runtime_error("Unkown sounding parameter calculated: " + myTargetInfo->Param().Name());
+					throw runtime_error("Unkown sounding parameter calculated: " + p.Name());
 					break;
 			}
 
+			myTargetInfo->SetParam(p);
+			
 			for (myTargetInfo->ResetLocation(); myTargetInfo->NextLocation();)
 			{
 				count++;
@@ -523,3 +539,104 @@ void si::ScaleBase(shared_ptr<info> anInfo, double scale, double base)
 		anInfo->Value(v * scale + base);
 	}
 }
+#if 0
+void si::LCL()
+{
+	// Case 1: Surface T, TD, P
+
+	// Case 2,3,4: Average over wanted layer
+}
+
+void si::LCLAverage(shared_ptr<info> myTargetInfo, double fromZ, double toZ)
+{
+
+	// Fetch Z uncompressed since it is not transferred to cuda
+
+	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+
+	auto HInfo = f->Fetch(itsConfiguration,
+			myTargetInfo->Time(),
+			level(kHeight, 0),
+			param("Z-M2S2"),
+			false);
+
+	/*
+	 * Find out the pressure of 0 meter height and 500 meter height. Note that
+	 * the heights are adjusted with topography.
+	 * 
+	 * Limit search range to 0 .. 700 meters
+	 */
+
+	vector<double> lowerHeight(HInfo->SizeLocations(), 0);
+	vector<double> upperHeight(HInfo->SizeLocations(), 700);
+
+	vector<double> H0mVector = HInfo->Grid()->Data()->Values();
+	vector<double> H500mVector(HInfo->SizeLocations());
+
+	for (size_t i = 0; i < H500mVector.size(); i++)
+	{
+		// H0mVector contains the height of ground (compared to MSL). Height can be negative
+		// (maybe even in real life (Netherlands?)), but in our case we use 0 as smallest height.
+		// TODO: check how it is in smarttools
+
+		H0mVector[i] *= constants::kIg;
+
+		if (H0mVector[i] < 0)
+		{
+			H0mVector[i] = 0;
+		}
+
+		H500mVector[i] = H0mVector[i] + 500.;
+	}
+
+	// 1. Get pressure values corresponding to fromZ and toZ
+
+	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+
+	params PParam = { param("P-PA"), param("P-HPA") };
+	
+	vector<double> fromP = h->VerticalHeight(PParam, lowerHeight, upperHeight, H0mVector);
+	vector<double> toP = h->VerticalHeight(PParam, lowerHeight, upperHeight, H500mVector);
+
+	// Integrate from 'fromP' to 'toP' using 100 Pa intervals
+
+	vector<size_t> counts(fromP.size(), 0);
+	vector<double> T_avg(fromP.size(), 0);
+
+	do
+	{
+		auto T = h->VerticalValue(param("T-K"), fromP);
+
+		assert(T.size() == T_avg.size());
+
+		for (size_t i = 0; i < T.size(); i++)
+		{
+			if (T[i] != kFloatMissing)
+			{
+				T_avg[i] += T[i];
+				counts[i] += 1;
+			}
+
+			if (fromP[i] == kFloatMissing)
+			{
+				continue;
+			}
+			
+			fromP[i] -= 100;
+
+			if (fromP[i] < toP[i])
+			{
+				fromP[i] = kFloatMissing;
+			}
+		}
+
+		// for_each(fromP.begin(), fromP.end(), [](double& d) { d -= 100;});
+		
+	} while (true); //(!Finished(fromP));
+
+
+}
+#endif

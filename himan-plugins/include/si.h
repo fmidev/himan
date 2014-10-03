@@ -46,6 +46,7 @@ public:
 private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	void ScaleBase(std::shared_ptr<info> anInfo, double scale, double base);
+	void LCLAverage(std::shared_ptr<info> myTargetInfo, double fromZ, double toZ);
 
 	int itsBottomLevel;
 	int itsTopLevel;

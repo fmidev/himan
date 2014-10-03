@@ -103,10 +103,8 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rr1h") && itsConfiguration->GetValue("rr1h") == "true")
 	{
 		param parm("RR-1-MM", 353, 0, 1, 8);
-		parm.Aggregation().TimeResolutionValue(1);
 
-		parm.Aggregation().Type(kAccumulation);
-		parm.Aggregation().TimeResolution(kHourResolution);
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1));
 
 		params.push_back(parm);
 
@@ -115,21 +113,16 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rr3h") && itsConfiguration->GetValue("rr3h") == "true")
 	{
 		param parm("RR-3-MM", 354, 0, 1, 8);
-		parm.Aggregation().TimeResolutionValue(3);
 
-		parm.Aggregation().Type(kAccumulation);
-		parm.Aggregation().TimeResolution(kHourResolution);
-
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3));
 		params.push_back(parm);
 	}
 
 	if (itsConfiguration->Exists("rr6h") && itsConfiguration->GetValue("rr6h") == "true")
 	{
 		param parm("RR-6-MM", 355, 0, 1, 8);
-		parm.Aggregation().TimeResolutionValue(6);
 
-		parm.Aggregation().Type(kAccumulation);
-		parm.Aggregation().TimeResolution(kHourResolution);
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
 
 		params.push_back(parm);
 	}
@@ -137,10 +130,8 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rr12h") && itsConfiguration->GetValue("rr12h") == "true")
 	{
 		param parm("RR-12-MM", 356, 0, 1, 8);
-		parm.Aggregation().TimeResolutionValue(12);
 
-		parm.Aggregation().Type(kAccumulation);
-		parm.Aggregation().TimeResolution(kHourResolution);
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 12));
 
 		params.push_back(parm);
 	}
@@ -241,10 +232,8 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		
 		param parm("RR-6-MM", 355, 0, 1, 8);
 
-		parm.Aggregation().Type(kAccumulation);
-		parm.Aggregation().TimeResolution(kHourResolution);
-		parm.Aggregation().TimeResolutionValue(6);
-
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
+		
 		params.push_back(parm);
 	}
 
