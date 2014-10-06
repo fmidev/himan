@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.9.24
+Version: 14.10.6
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -60,6 +60,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libfetcher.so
 %{_libdir}/himan-plugins/libfog.so
 %{_libdir}/himan-plugins/libgrib.so
+%{_libdir}/himan-plugins/libgust.so
 %{_libdir}/himan-plugins/libhitool.so
 %{_libdir}/himan-plugins/libhybrid_height.so
 %{_libdir}/himan-plugins/libhybrid_pressure.so
@@ -86,6 +87,19 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.6-1.fmi
+- Changes in himan-lib
+* Tue Sep 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.30-1.fmi
+- Linking with newer grib_api that possibly fixes HIMAN-58
+- Newer version of fmigrib that possibly fixes another grib_api related bug (RPINTAII-39)
+* Fri Sep 26 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.26-1.fmi
+- Stability cuda version done
+- Stability-si calculation disabled by default
+- New plugin gust (initial version)
+- preform_hybrid does not throw runtime_error if hitool fails
+* Thu Sep 25 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.25-1.fmi
+- Limiting EC highest hybrid lever number to 24
+- Fix in weather_code_1 / 3h step
 * Wed Sep 24 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.24-1.fmi
 - EC support for weather_code_1
 - Fixes in hitool::Stratus()
@@ -96,7 +110,7 @@ rm -rf $RPM_BUILD_ROOT
 - Pre-allocate memory for simple_packed::Unpack()
 - New interpolation method (NFmiQueryInfo::InterpolatedValue())
 - Improvements in querydata plugins
-- Improvoments in hitool (additional overloads)
+- Improvements in hitool (additional overloads)
 - Using HPStringToLevelType at transformer
 * Thu Aug 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.28-1.fmi
 - Fix for HIMAN-62
