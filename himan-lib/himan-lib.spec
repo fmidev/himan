@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 14.9.24
+Version: 14.10.6
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -51,6 +51,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Oct  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.6-1.fmi
+- HIMAN-69
+* Tue Sep 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.30-1.fmi
+- Linking with newer grib_api that possibly fixes HIMAN-58
 * Wed Sep 24 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.24-1.fmi
 - Add ForecastStep() to class configuration
 * Tue Sep 23 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.23-2.fmi
