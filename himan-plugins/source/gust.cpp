@@ -82,13 +82,18 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param TopoParam("Z-M2S2");
 
 	shared_ptr<plugin::fetcher> f = dynamic_pointer_cast <plugin::fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-	auto puuskaInfo = f->Fetch(itsConfiguration,myTargetInfo->Time(),myTargetInfo->Level(),GustParam);
 
-        level H2 = level(himan::kHeight, 2, "HEIGHT");
-        level H0 = level(himan::kHeight, 0, "HEIGHT");
+	level H2;
+	level H0;
 
-	auto TGInfo = f->Fetch(itsConfiguration,myTargetInfo->Time(),H2,TGParam);
-	auto TopoInfo = f->Fetch(itsConfiguration,myTargetInfo->Time(),H0,TopoParam);
+       	H0 = level(himan::kGround, 0, "GROUND");
+
+	info_t puuskaInfo, TGInfo, TopoInfo;
+
+	puuskaInfo = Fetch(myTargetInfo->Time(),H0,GustParam,false);
+	TGInfo = Fetch(myTargetInfo->Time(),H0,TGParam,false);
+	TopoInfo = Fetch(myTargetInfo->Time(),H0,TopoParam,false);
+
 	// maybe need adjusting
         auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
