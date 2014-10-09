@@ -420,12 +420,16 @@ bool modifier_mean::Evaluate(double theValue, double theHeight)
 		itsOutOfBoundHeights[itsIndex] = true;
 		return false;
 	}
+	else if (itsOutOfBoundHeights[itsIndex])
+	{
+		return false;
+	}
 	else if (IsMissingValue(theValue))
 	{
 		return false;
 	}
 
-	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
+//	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
 
 	return true;
 }
@@ -482,8 +486,11 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 	itsPreviousValue[itsIndex] = theValue;
 	itsPreviousHeight[itsIndex] = theHeight;
 
-
-	if (previousHeight < lowerHeight && theHeight > lowerHeight)
+	if (lowerHeight == upperHeight)
+	{
+		itsOutOfBoundHeights[itsIndex] = true;
+	}
+	else if (previousHeight < lowerHeight && theHeight > lowerHeight)
 	{
 		double val = Value();
 		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
@@ -496,6 +503,8 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
                 itsRange[itsIndex] += upperHeight - previousHeight;
+		itsOutOfBoundHeights[itsIndex] = true;
+
 	}
 	else if (!(previousHeight == kFloatMissing) && previousHeight >= lowerHeight && theHeight <= upperHeight)
 	{
