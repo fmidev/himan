@@ -422,6 +422,7 @@ bool modifier_mean::Evaluate(double theValue, double theHeight)
 	}
 	else if (itsOutOfBoundHeights[itsIndex])
 	{
+		// check if upper height for that grid point has been passed in the previous iteration
 		return false;
 	}
 	else if (IsMissingValue(theValue))
@@ -485,7 +486,8 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 
 	itsPreviousValue[itsIndex] = theValue;
 	itsPreviousHeight[itsIndex] = theHeight;
-
+	
+	// check if averaging interval is larger then 0. Otherwise skip this gridpoint and return average value of 0.
 	if (lowerHeight == upperHeight)
 	{
 		itsOutOfBoundHeights[itsIndex] = true;
@@ -503,6 +505,7 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
                 itsRange[itsIndex] += upperHeight - previousHeight;
+		// if upper height is passed for this grid point set OutOfBoundHeight = "true" to skip calculation of the integral in following iterations
 		itsOutOfBoundHeights[itsIndex] = true;
 
 	}
