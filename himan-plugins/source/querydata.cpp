@@ -39,7 +39,7 @@ querydata::querydata()
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("querydata"));
 }
 
-bool querydata::ToFile(shared_ptr<info> theInfo, const string& theOutputFile, HPFileWriteOption fileWriteOption)
+bool querydata::ToFile(shared_ptr<info> theInfo, string& theOutputFile, HPFileWriteOption fileWriteOption)
 {
 	ofstream out(theOutputFile.c_str());
 

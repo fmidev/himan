@@ -37,7 +37,7 @@ shared_ptr<NFmiGrib> grib::Reader()
 	return itsGrib;
 }
 
-bool grib::ToFile(shared_ptr<info> anInfo, const string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption)
+bool grib::ToFile(shared_ptr<info> anInfo, string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption)
 {
 
 	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
@@ -74,11 +74,9 @@ bool grib::ToFile(shared_ptr<info> anInfo, const string& outputFile, HPFileType 
 
 }
 
-bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HPFileType fileType, bool appendToFile)
+bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileType fileType, bool appendToFile)
 {
 	long edition = static_cast<long> (fileType);
-
-	string outFile = outputFile;
 
 	// Check levelvalue since that might force us to change file type!
 	
@@ -89,7 +87,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
 		edition = 2;
 	
-		outFile = outFile + "2";
+		outputFile += "2";
 	}
 
 	itsGrib->Message().Edition(edition);
@@ -229,10 +227,10 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, const string& outputFile, HP
 		itsGrib->Message().PV(AB, AB.size());
 	}
 
-	itsGrib->Message().Write(outFile, appendToFile);
+	itsGrib->Message().Write(outputFile, appendToFile);
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
-	itsLogger->Info(verb + "file '" + outFile + "'");
+	itsLogger->Info(verb + "file '" + outputFile + "'");
 
 	return true;
 }
@@ -621,7 +619,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			X0 -= 360;
 		}
-		
+
+		/*
+		if (centre == 86 && itsGrib->Message()->Edition() == 2)
+		{
+			X0 -= 360;
+		}
+		*/
+
 		if (newGrid->Projection() == kStereographicProjection)
 		{
 			/*

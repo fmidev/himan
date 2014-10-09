@@ -85,7 +85,7 @@ public:
 	 * @return True if writing succeeds
 	 */
 
-	bool ToFile(std::shared_ptr<info> theInfo, const std::string& outputFile, HPFileWriteOption fileWriteOption);
+	bool ToFile(std::shared_ptr<info> theInfo, std::string& outputFile, HPFileWriteOption fileWriteOption);
 
 	/**
 	 * @brief Create in-memory querydata from given info-instance
