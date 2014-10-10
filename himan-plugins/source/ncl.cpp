@@ -1,8 +1,6 @@
 /**
  * @file ncl.cpp
  *
- * Template for future plugins.
- *
  * @date Apr 10, 2013
  * @author peramaki
  */
@@ -38,7 +36,8 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
 
-	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(230, "last hybrid level number"));
+//	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(230, "last hybrid level number"));
+	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
 
 	param theRequestedParam;
 
