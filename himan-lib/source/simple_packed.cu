@@ -15,7 +15,7 @@
 using namespace himan;
 
 __host__
-void simple_packed::Unpack(double* d_arr, size_t N, cudaStream_t* stream)
+void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 {
 	if (!packedLength)
 	{
@@ -27,7 +27,7 @@ void simple_packed::Unpack(double* d_arr, size_t N, cudaStream_t* stream)
 		std::cerr << "Error::" << ClassName() << " Allocated memory size is different from data: " << N << " vs " << unpackedLength << std::endl;
 		return;
 	}
-	
+
 	// We need to create a stream if no stream is specified since dereferencing
 	// a null pointer is, well, not a good thing.
 
@@ -40,14 +40,22 @@ void simple_packed::Unpack(double* d_arr, size_t N, cudaStream_t* stream)
 		destroyStream = true;
 	}
 
-	int blockSize = 512;
-	int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
+	// Allocate memory on device for packed data and transfer data to device
 
-	unsigned char*	d_p = 0; // device-packed data
-	int*			d_b = 0; // device-bitmap
+	unsigned char* d_p = 0; // device-packed data
 
 	CUDA_CHECK(cudaMalloc((void**) (&d_p), packedLength * sizeof(unsigned char)));
 	CUDA_CHECK(cudaMemcpyAsync(d_p, data, packedLength * sizeof(unsigned char), cudaMemcpyHostToDevice, *stream));
+
+	// Allocate memory on device for unpacked data
+
+	double* d_arr = 0;
+	CUDA_CHECK(cudaMalloc(reinterpret_cast<void **> (&d_arr), sizeof(double) * N));
+
+	int blockSize = 512;
+	int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
+
+	int* d_b = 0; // device-bitmap
 
 	if (HasBitmap())
 	{
@@ -58,6 +66,10 @@ void simple_packed::Unpack(double* d_arr, size_t N, cudaStream_t* stream)
 
 	simple_packed_util::Unpack <<< gridSize, blockSize, 0, *stream >>> (d_p, d_arr, d_b, coefficients, HasBitmap(), unpackedLength);
 
+	CUDA_CHECK(cudaMemcpyAsync(arr, d_arr, sizeof(double) * N, cudaMemcpyDeviceToHost, *stream));
+	CUDA_CHECK(cudaStreamSynchronize(*stream));
+
+	CUDA_CHECK(cudaFree(d_arr));
 	CUDA_CHECK(cudaFree(d_p));
 
 	if (HasBitmap())

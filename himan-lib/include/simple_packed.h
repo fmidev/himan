@@ -52,24 +52,6 @@ struct simple_packed : packed_data
 
 	virtual std::string ClassName() const { return "simple_packed"; }
 
-#ifndef __CUDACC__
-	/**
-	 * @brief Unpack binary array (unsigned char) to double array.
-	 *
-	 * This function is visible to host side compiler (ie. gcc).
-	 *
-	 * This function calls Unpack(double*, size_t, cudaStream_t*) to do the actual heavy lifting.
-	 *
-	 * Note! Argument arr should point to HOST MEMORY.
-	 *
-	 * @param arr Pointer to pre-allocated host memory
-	 * @param N Length of the data (not size)
-	 */
-
-	void Unpack(double* arr, size_t N);
-
-#endif
-	
 	/**
 	 * @brief Function will unpack binary array (unsigned char) to double array.
 	 *
