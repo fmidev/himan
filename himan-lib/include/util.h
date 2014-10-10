@@ -180,32 +180,6 @@ void Unpack(std::initializer_list<std::shared_ptr<grid>> grids);
 
 himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& B);
 
-#ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
-
-/**
- * @brief Determine precipitation form from water probability
- *
- * Water probability is determined with "Koistinen formula."
- * 
- * @param T Surface temperature in C
- * @param RH Surface relative humidity in %
- * @return Precipitation form: rain, snow or sleet
- */
-
-HPPrecipitationForm PrecipitationForm(double T, double RH);
-
-
-/**
- * @brief Calculate saturation vapour pressure (Pa) over water
- *
- * @param T Temperature in Kelvin
- * @return Pressure in Pa
- */
-
-//double SaturationWaterVapourPressure(double T);
-//double WaterVapurPressure(double T, double TW, double P, bool aspirated = false);
-#endif
-
 } // namespace util
 } // namespace himan
 

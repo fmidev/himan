@@ -609,71 +609,16 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 	return ret;
 }
 	
-#ifdef ENABLE_OBSOLETED_UTIL_FUNCTIONS
-HPPrecipitationForm util::PrecipitationForm(double T, double RH)
-{
-	const double probWater = WaterProbability(T, RH);
-
-	HPPrecipitationForm ret = kUnknownPrecipitationForm;
-
-	if (probWater > 0.8)
-	{
-		ret = kRain;
-	}
-	else if (probWater >= 0.2 && probWater <= 0.8)
-	{
-		ret = kSleet;
-	}
-	else if (probWater < 0.2)
-	{
-		ret = kSnow;
-	}
-
-	return ret;
-}
-
-double util::SaturationWaterVapourPressure(double T)
-{
-	T -= constants::kKelvin;
-	
-	return 100 * exp(1.809851 + 17.27 * T / (T + 237.3));
-}
-
-double util::WaterVapourPressure(double T, double TW, double P, bool aspirated)
-{
-	T -= constants::kKelvin;
-	TW -= constants::kKelvin;
-	P *= 0.01:
-				
-	double vpwtr = kFloatMissing;
-
-	double factor = 7.99e-4;
-
-	if (aspirated)
-	{
-		factor = 6.66e-4;
-	}
-
-	vpwtr = SaturationWaterVapourPressure(TW) - factor * P * (T - TW);
-
-	if (vpwtr < 0)
-	{
-		vpwtr = 1e-35;
-	}
-	
-	return vpwtr;
-}
-
-#endif
-
 #ifdef HAVE_CUDA
 void util::Unpack(initializer_list<shared_ptr<grid>> grids)
 {
+	vector<cudaStream_t*> streams;
+
 	for (auto it = grids.begin(); it != grids.end(); ++it)
 	{
 		shared_ptr<grid> tempGrid = *it;
 
-		if (!tempGrid->PackedData())
+		if (!tempGrid->IsPackedData())
 		{
 			// Safeguard: This particular info does not have packed data
 			continue;
@@ -681,20 +626,32 @@ void util::Unpack(initializer_list<shared_ptr<grid>> grids)
 
 		assert(tempGrid->PackedData()->ClassName() == "simple_packed");
 
-		double* arr;
+		double* arr = 0;
 		size_t N = tempGrid->PackedData()->unpackedLength;
 
-		assert(N);
+		assert(N > 0);
+
+		cudaStream_t* stream = new cudaStream_t;
+		CUDA_CHECK(cudaStreamCreate(stream));
+		streams.push_back(stream);
 
 		CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&arr), sizeof(double) * N));
 
-		dynamic_pointer_cast<simple_packed> (tempGrid->PackedData())->Unpack(arr, N);
+		assert(arr);
+
+		dynamic_pointer_cast<simple_packed> (tempGrid->PackedData())->Unpack(arr, N, stream);
 
 		tempGrid->Data()->Set(arr, N);
 
 		CUDA_CHECK(cudaFreeHost(arr));
 
 		tempGrid->PackedData()->Clear();
+	}
+
+	for (size_t i = 0; i < streams.size(); i++)
+	{
+		CUDA_CHECK(cudaStreamDestroy(*streams[i]));
+
 	}
 }
 #endif
