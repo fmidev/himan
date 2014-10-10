@@ -328,23 +328,53 @@ protected:
 	 * @param theTime Wanted forecast time
 	 * @param theLevel Wanted level
 	 * @param theParams List of parameters (in a vector)
-	 * @param fetchPacked Flag for fetching data either packed or unpacked
+	 * @param returnPacked Flag for returning data either packed or unpacked
 	 * @return shared_ptr<info> on success, null-pointer if data not found
 	 */
 
-	info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams, bool fetchPacked) const;
+	info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams, bool returnPacked = false) const;
 
 	/**
 	 * @brief Fetch source data with given requirements
 	 *
+	 * Will throw if an error occurs in data retrieval (file not found does not count as an
+	 * error in this case).
+	 *
+	 * Data can be fetched and returned in four different ways
+	 * 
+	 *                        FETCH
+	 *                    packed unpacked
+	 * RETURN   packed       1      X
+	 * RETURN unpacked       2      3
+	 *
+	 * Case 1) 
+	 * Data is fetched packed, and is returned packed. This is most useful for cuda-plugins which unpack the data in their cuda kernel.
+	 * 
+	 * Command line option --no-cuda-packing is NOT set, and flag returnPacked = true
+	 *
+	 * Case 2) 
+	 * Data is fetched packed but it is unpacked by himan in cuda before returning. This is most useful for regular plugins which need the
+	 * data unpacked. Unpacking is done in cuda since it is faster that CPU -based unpacking.
+	 *
+	 * Command line option --no-cuda-packing is NOT set, and flag returnPacked = false
+	 * 
+	 * Case 3)
+	 * Data is fetched unpacked and returned unpacked. This is how himan used to function with CPU-plugins. This mode has been superseded
+	 * by Case 2)
+	 *
+	 * Command line option --no-cuda-packing is set, flag returnPacked is ignored
+	 *
+	 * Case X)
+	 * This case is actually impossible and not realistic so it is not implemented, and Fetch() will fallback to case 1)
+	 *
 	 * @param theTime Wanted forecast time
 	 * @param theLevel Wanted level
 	 * @param theParams List of parameters (in a vector)
-	 * @param fetchPacked Flag for fetching data either packed or unpacked
-	 * @return shared_ptr<info> on success, null-pointer if data not found
+	 * @param returnPacked Flag for returning data either packed or unpacked
+	 * @return shared_ptr<info> on success, un-initialized shared_ptr if data not found
 	 */
 
-	info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool fetchPacked) const;
+	info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked = false) const;
 
 	info_t itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;

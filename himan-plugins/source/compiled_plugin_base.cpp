@@ -482,7 +482,7 @@ bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
 	return false;
 }
 
-info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const params& theParams, bool fetchPacked) const
+info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const params& theParams, bool returnPacked) const
 {
 	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
@@ -490,7 +490,14 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 	try
 	{
-		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, itsConfiguration->UseCudaForPacking() && fetchPacked);
+		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, itsConfiguration->UseCudaForPacking());
+
+		if (!returnPacked && ret->Grid()->IsPackedData())
+		{
+			assert(ret->Grid()->PackedData()->ClassName() == "simple_packed");
+
+			util::Unpack({ret->Grid()});
+		}
 	}
 	catch (HPExceptionType& e)
 	{
@@ -503,7 +510,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	return ret;
 }
 
-info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool fetchPacked) const
+info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked) const
 {
 	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
@@ -511,7 +518,15 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 	try
 	{
-		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, itsConfiguration->UseCudaForPacking() && fetchPacked);
+		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, itsConfiguration->UseCudaForPacking());
+
+		if (!returnPacked && ret->Grid()->IsPackedData())
+		{
+			assert(ret->Grid()->PackedData()->ClassName() == "simple_packed");
+
+			util::Unpack({ret->Grid()});
+		}
+
 	}
 	catch (HPExceptionType& e)
 	{
