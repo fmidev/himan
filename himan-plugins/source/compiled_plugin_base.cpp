@@ -10,7 +10,7 @@
 #include <boost/thread.hpp>
 #include "plugin_factory.h"
 #include "logger_factory.h"
-#include "NFmiGrid.h"
+#include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -31,61 +31,6 @@ mutex itsAdjustDimensionMutex;
 compiled_plugin_base::compiled_plugin_base() : itsPluginIsInitialized(false)
 {
 	itsBaseLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("compiled_plugin_base"));
-}
-
-bool compiled_plugin_base::InterpolateToPoint(const shared_ptr<const NFmiGrid>& targetGrid, const shared_ptr<NFmiGrid>& sourceGrid, bool gridsAreEqual, double& value)
-{
-
-	/*
-	 * Logic of interpolating values:
-	 *
-	 * 1) If source and target grids are equal, meaning that the grid AND the area
-	 *	properties are effectively the same, do not interpolate. Instead return
-	 *	the value of the source grid point that matches the ordering number of the
-	 *	target grid point (ie. target grid point #1 --> source grid point #1 etc).
-	 *
-	 * 2) If actual interpolation is needed, first get the *grid* coordinates of the
-	 *	latlon target point in the *source* grid. Then check if those grid coordinates
-	 *  are very close to an actual grid point -- if so, return the value of the grid
-	 *  point. This serves two purposes:
-	 *	- We don't need to interpolate if the distance between requested grid point
-	 *	  and actual grid point is small enough, saving some CPU cycles
-	 *	- Sometimes when the requested grid point is close to grid edge, floating
-	 *	  point inaccuracies might move it outside the grid. If this happens, the
-	 *	  interpolation fails even though the grid point is valid.
-	 *
-	 * 3) If requested source grid point is not near an actual grid point, interpolate
-	 *	the value of the point.
-	 */
-
-	// Step 1)
-
-	if (gridsAreEqual)
-	{
-		value = sourceGrid->FloatValue(targetGrid->GridPoint());
-		return true;
-	}
-
-	// Step 2)
-
-	const NFmiPoint targetLatLonPoint = targetGrid->LatLon();
-	const NFmiPoint sourceGridPoint = sourceGrid->LatLonToGrid(targetLatLonPoint);
-
-	bool noInterpolation = (
-						fabs(sourceGridPoint.X() - round(sourceGridPoint.X())) < kInterpolatedValueEpsilon &&
-						fabs(sourceGridPoint.Y() - round(sourceGridPoint.Y())) < kInterpolatedValueEpsilon
-	);
-
-	if (noInterpolation)
-	{
-		value = sourceGrid->FloatValue(sourceGridPoint);
-		return true;
-	}
-
-	// Step 3)
-
-	return sourceGrid->InterpolateToGridPoint(sourceGridPoint, value);
-
 }
 
 bool compiled_plugin_base::AdjustLeadingDimension(const info_t& myTargetInfo)
@@ -468,20 +413,7 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 
 		assert(tempInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
-		double* arr;
-		size_t N = tempInfo->Grid()->PackedData()->unpackedLength;
-
-		assert(N);
-
-		CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&arr), sizeof(double) * N));
-
-		dynamic_pointer_cast<simple_packed> (tempInfo->Grid()->PackedData())->Unpack(arr, N);
-
-		tempInfo->Data()->Set(arr, N);
-
-		CUDA_CHECK(cudaFreeHost(arr));
-
-		tempInfo->Grid()->PackedData()->Clear();
+		util::Unpack({ tempInfo->Grid() });
 
 		if (itsConfiguration->UseCache())
 		{
