@@ -492,12 +492,14 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	{
 		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, itsConfiguration->UseCudaForPacking());
 
+#ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
 			assert(ret->Grid()->PackedData()->ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 		}
+#endif
 	}
 	catch (HPExceptionType& e)
 	{
@@ -520,13 +522,14 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	{
 		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, itsConfiguration->UseCudaForPacking());
 
+#ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
 			assert(ret->Grid()->PackedData()->ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 		}
-
+#endif
 	}
 	catch (HPExceptionType& e)
 	{
