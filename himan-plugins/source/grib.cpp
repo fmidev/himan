@@ -343,7 +343,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			p.Unit(kMs);
 		}
-		else if (unit == "m")
+		else if (unit == "m" || unit == "m of water equivalent")
 		{
 			p.Unit(kM);
 		}
