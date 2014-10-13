@@ -635,29 +635,21 @@ void util::Unpack(initializer_list<shared_ptr<grid>> grids)
 		CUDA_CHECK(cudaStreamCreate(stream));
 		streams.push_back(stream);
 
-#ifdef MALLOC_SIMPLE
 		assert(tempGrid->Data()->Size() == N);
 		arr = const_cast<double*> (tempGrid->Data()->ValuesAsPOD());
-#ifdef MALLOC_REGISTER
-		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*> (arr), sizeof(double) * N, 0));
-#endif
 
-#else
-		CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&arr), sizeof(double) * N));
-#endif
+		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*> (arr), sizeof(double) * N, 0));
+
+		// CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&arr), sizeof(double) * N));
+
 		assert(arr);
 
 		dynamic_pointer_cast<simple_packed> (tempGrid->PackedData())->Unpack(arr, N, stream);
 
-#if not defined MALLOC_SIMPLE
-		tempGrid->Data()->Set(arr, N);
+		// tempGrid->Data()->Set(arr, N);
+		// CUDA_CHECK(cudaFreeHost(arr));
 
-		CUDA_CHECK(cudaFreeHost(arr));
-#endif
-
-#if defined MALLOC_REGISTER
 		CUDA_CHECK(cudaHostUnregister(arr));
-#endif
 
 		tempGrid->PackedData()->Clear();
 	}
@@ -665,7 +657,6 @@ void util::Unpack(initializer_list<shared_ptr<grid>> grids)
 	for (size_t i = 0; i < streams.size(); i++)
 	{
 		CUDA_CHECK(cudaStreamDestroy(*streams[i]));
-
 	}
 }
 #endif
