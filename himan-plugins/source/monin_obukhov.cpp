@@ -131,7 +131,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		{
 			mol = -constants::kG * constants::kK * Q / (U_S * U_S * U_S * T);
 		}
-		myTargetInfo->Value(1/mol);
+		myTargetInfo->Value(mol);
 
 	}
 
