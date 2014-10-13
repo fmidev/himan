@@ -42,9 +42,18 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 
-	const params PParam{ param("P-PA"), param("P-HPA")};
+	params PParam{ param("P-PA"), param("P-HPA")};
 	const param QParam("Q-KGKG");
-	const level PLevel(himan::kHeight, 0, "HEIGHT");
+	level PLevel(himan::kHeight, 0, "HEIGHT");
+
+	bool isECMWF = (itsConfiguration->SourceProducer().Id() == 131); // Note! This only checks the *current* source producer
+
+	if (isECMWF)
+	{
+		// For EC we calculate surface pressure from LNSP parameter
+		PParam = { param("LNSP-N") };
+		PLevel = level(himan::kHybrid, 1);
+	}
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("hybrid_pressureThread #" + boost::lexical_cast<string> (theThreadIndex));
 
@@ -84,11 +93,15 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 			continue;
 		}
 
+		if (isECMWF)
+		{
+			P = exp (P);
+		}
+		
 		double hybrid_pressure = 0.01 * (A + P * B);
 
 		myTargetInfo->Value(hybrid_pressure);
 	}
-
 
 	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
 
