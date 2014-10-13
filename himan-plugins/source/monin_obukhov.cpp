@@ -82,7 +82,17 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, false);
 	info_t U_SInfo = Fetch(forecastTime, forecastLevel, U_SParam, false);
 
-	double ForecastStepSize = 3600; //step size in seconds
+	// determine length of forecast step to calculate surface heat flux in W/m2
+	double forecastStepSize;
+
+	if ( itsConfiguration->SourceProducer().Id() != 199)
+	{
+		forecastStepSize = itsConfiguration->ForecastStep()*3600; //step size in seconds
+	}
+	else
+	{
+		forecastStepSize = itsConfiguration->ForecastStep()*60; //step size in seconds
+	}
 
 	if (!TInfo || !QInfo || !U_SInfo)
 	{
@@ -105,7 +115,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	{
 
 		double T = TInfo->Value();
-		double Q = QInfo->Value()/ForecastStepSize; // divide by time step to obtain Watts
+		double Q = QInfo->Value()/forecastStepSize; // divide by time step to obtain Watts
 		double U_S = U_SInfo->Value();
 		
 		double mol(kFloatMissing);
@@ -121,7 +131,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		{
 			mol = -constants::kG * constants::kK * Q / (U_S * U_S * U_S * T);
 		}
-		myTargetInfo->Value(mol);
+		myTargetInfo->Value(1/mol);
 
 	}
 
