@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.10.6
+Version: 14.10.14
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -65,6 +65,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libhybrid_height.so
 %{_libdir}/himan-plugins/libhybrid_pressure.so
 %{_libdir}/himan-plugins/libicing.so
+%{_libdir}/himan-plugins/libmonin_obukhov.so
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libprecipitation_rate.so
@@ -87,6 +88,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Oct 14 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.14-1.fmi
+- New plugin monin obukhov length
+- Fix EC hybrid pressure
+* Mon Oct 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.13-1.fmi
+- Fix EC snow accumulation unit recognition
+- Always use cuda grib unpacking if cuda device is present
+* Thu Oct  9 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.9-1.fmi
+- Fix in writer and grib-plugins when writing hybrid levels with level value > 127
 * Mon Oct  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.6-1.fmi
 - Changes in himan-lib
 * Tue Sep 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.30-1.fmi
