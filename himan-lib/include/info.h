@@ -655,7 +655,7 @@ public:
 	 * @return Current data matrix
 	 */
 
-	std::shared_ptr<grid> Grid() const;
+	const grid* Grid() const;
 
 	/**
 	 * @brief Return data matrix from the given time/level/param indexes
@@ -665,7 +665,7 @@ public:
 	 * @return Data matrix pointed by the given function arguments.
 	 */
 
-	std::shared_ptr<grid> Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
+	const grid* Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
 
 	/**
 	 * @brief Replace current grid with the function argument
@@ -679,7 +679,7 @@ public:
 	 * @return Current data matrix
 	 */
 
-	std::shared_ptr<unpacked> Data() const;
+	const unpacked* Data() const;
 
 	/**
 	 * @brief Replace whole meta matrix with a new one

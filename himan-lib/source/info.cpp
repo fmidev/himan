@@ -141,16 +141,16 @@ void info::Create()
                 // Create empty placeholders
             {
             	Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
-            	Grid()->Data()->Resize(itsNi,itsNj);
+            	itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Data()->Resize(itsNi,itsNj);
 
             	if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
             	{
-            		Grid()->Di(itsDi);
-            		Grid()->Dj(itsDj);
+            		itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Di(itsDi);
+            		itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Dj(itsDj);
             	}
 
-				Data()->MissingValue(kFloatMissing);
-				Data()->Fill(kFloatMissing);
+				itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Data()->MissingValue(kFloatMissing);
+				itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Data()->Fill(kFloatMissing);
             }
         }
     }
@@ -586,7 +586,7 @@ bool info::NextLocation()
         itsLocationIndex++;
     }
 
-    size_t locationSize = Grid()->Data()->Size();
+    size_t locationSize = Data()->Size();
 
     if (itsLocationIndex >= locationSize)
     {
@@ -602,7 +602,7 @@ bool info::NextLocation()
 bool info::PreviousLocation()
 {
     
-    size_t locationSize = Grid()->Data()->Size();
+    size_t locationSize = Data()->Size();
 
     if (itsLocationIndex == kIteratorResetValue)
     {
@@ -625,7 +625,7 @@ bool info::PreviousLocation()
 
 bool info::LastLocation()
 {
-    itsLocationIndex = Grid()->Data()->Size() - 1;
+    itsLocationIndex = Data()->Size() - 1;
 
     return true;
 }
@@ -662,26 +662,23 @@ size_t info::SizeLocations() const
 	return Data()->Size();
 }
 
-shared_ptr<grid> info::Grid() const
+const grid* info::Grid() const
 {
-    return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex());
+	assert(itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()));
+    return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get();
 }
 
-shared_ptr<grid> info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+const grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
-    return itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex);
+	assert(itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex));
+    return itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex).get();
 }
 
-shared_ptr<d_matrix_t> info::Data() const
+const unpacked* info::Data() const
 {
-	assert(Grid()->Data());
-	return Grid()->Data();
+	assert(Grid());
+	return (Grid()->Data()).get();
 }
-/*
-void info::Data(shared_ptr<matrix_t> m)
-{
-    itsDimensionMatrix = m;
-}*/
 
 void info::Grid(shared_ptr<grid> d)
 {
@@ -690,22 +687,22 @@ void info::Grid(shared_ptr<grid> d)
 
 bool info::Value(double theValue)
 {
-    return Grid()->Data()->Set(itsLocationIndex, theValue) ;
+    return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get()->Data().get()->Set(itsLocationIndex, theValue);
 }
 
 double info::Value() const
 {
-    return Grid()->Data()->At(itsLocationIndex);
+    return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get()->Data().get()->At(itsLocationIndex);
 }
 
 size_t info::Ni() const
 {
-    return Grid()->Data()->SizeX();
+    return Data()->SizeX();
 }
 
 size_t info::Nj() const
 {
-    return Grid()->Data()->SizeY();
+    return Data()->SizeY();
 }
 
 double info::Di() const
@@ -730,7 +727,6 @@ void info::StepSizeOverOneByte(bool theStepSizeOverOneByte)
 
 HPProjectionType info::Projection() const
 {
-	// unsafe: will crash if grid is not set?
 	return Grid()->Projection();
 }
 
@@ -811,7 +807,7 @@ void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
 			for (size_t z = 0; z < oldZSize; z++)
 			{
 				size_t newIndex = z * SizeTimes() * SizeLevels() + y * SizeTimes() + x ;// Index(x,y,z,xSize, ySize);
-				d->Set(newIndex, Grid(x,y,z));
+				d->Set(newIndex, itsDimensionMatrix->At(x,y,z));
 			}
 		}
 	}
