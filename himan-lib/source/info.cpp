@@ -194,7 +194,7 @@ void info::ReGrid()
 	First(); // "Factory setting"
 }
 
-void info::Create(shared_ptr<grid> baseGrid)
+void info::Create(const grid* baseGrid)
 {
 
     itsDimensionMatrix = make_shared<matrix_t> (itsTimeIterator.Size(), itsLevelIterator.Size(), itsParamIterator.Size());
@@ -212,7 +212,7 @@ void info::Create(shared_ptr<grid> baseGrid)
             while (NextParam())
                 // Create empty placeholders
             {
-            	Grid(shared_ptr<grid> (new grid(*baseGrid)));
+            	Grid(make_shared<grid> (*baseGrid));
             }
         }
     }
@@ -662,19 +662,19 @@ size_t info::SizeLocations() const
 	return Data()->Size();
 }
 
-const grid* info::Grid() const
+grid* info::Grid() const
 {
 	assert(itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()));
     return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get();
 }
 
-const grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
 	assert(itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex));
     return itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex).get();
 }
 
-const unpacked* info::Data() const
+unpacked* info::Data() const
 {
 	assert(Grid());
 	return (Grid()->Data()).get();

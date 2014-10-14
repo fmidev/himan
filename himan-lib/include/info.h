@@ -471,7 +471,7 @@ public:
  	 * Will *not* preserve iterator positions.
 	 */
 
-	void Create(std::shared_ptr<grid> baseGrid);
+	void Create(const grid* baseGrid);
 
 	/**
 	 * @brief Will reset data backend, ie. create new data that is not attached
@@ -655,7 +655,7 @@ public:
 	 * @return Current data matrix
 	 */
 
-	const grid* Grid() const;
+	grid* Grid() const;
 
 	/**
 	 * @brief Return data matrix from the given time/level/param indexes
@@ -665,7 +665,7 @@ public:
 	 * @return Data matrix pointed by the given function arguments.
 	 */
 
-	const grid* Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
+	grid* Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
 
 	/**
 	 * @brief Replace current grid with the function argument
@@ -679,7 +679,7 @@ public:
 	 * @return Current data matrix
 	 */
 
-	const unpacked* Data() const;
+	unpacked* Data() const;
 
 	/**
 	 * @brief Replace whole meta matrix with a new one
