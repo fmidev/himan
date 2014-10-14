@@ -304,7 +304,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 	if (!activeOnly && info->SizeTimes() * info->SizeParams() * info->SizeLevels() > 1)
 	{
 		info->ResetTime();
-		shared_ptr<grid> firstGrid;
+		const grid* firstGrid = 0;
 
 		while (info->NextTime())
 		{
@@ -423,7 +423,7 @@ shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const searc
 shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
 {
 	auto newInfo = make_shared<info> ();
-	auto newGrid = make_shared<grid> ();
+	grid* newGrid = new grid();
 
 	NFmiQueryInfo qinfo = theData.get();
 

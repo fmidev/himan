@@ -514,7 +514,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		// END VALIDATION OF SEARCH PARAMETERS
 
 		shared_ptr<info> newInfo (new info());
-		shared_ptr<grid> newGrid (new grid());
+		grid* newGrid = new grid();
 
 		producer prod(itsGrib->Message().Centre(), process);
 
