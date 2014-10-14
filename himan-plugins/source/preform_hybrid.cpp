@@ -184,7 +184,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	if (!stratus || !freezingArea)
 	{
-		myThreadedLogger->Error("hitool calculation failed, unable to prcoeed");
+		myThreadedLogger->Error("hitool calculation failed, unable to proceed");
 		return;
 	}
 
