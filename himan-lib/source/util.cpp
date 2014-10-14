@@ -610,13 +610,13 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 }
 	
 #ifdef HAVE_CUDA
-void util::Unpack(initializer_list<shared_ptr<grid>> grids)
+void util::Unpack(initializer_list<grid*> grids)
 {
 	vector<cudaStream_t*> streams;
 
 	for (auto it = grids.begin(); it != grids.end(); ++it)
 	{
-		shared_ptr<grid> tempGrid = *it;
+		grid* tempGrid = *it;
 
 		if (!tempGrid->IsPackedData())
 		{

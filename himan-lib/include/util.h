@@ -169,7 +169,7 @@ double ToPower(double value, double power);
  * @param grids List of grids that are unpacked.
  */
 
-void Unpack(std::initializer_list<std::shared_ptr<grid>> grids);
+void Unpack(std::initializer_list<grid*> grids);
 
 /**
  * @brief Compute convolution of matrix A by matrix B
