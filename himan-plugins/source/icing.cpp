@@ -18,8 +18,8 @@ const double kValueEpsilon = 0.00001;
 
 icing::icing()
 {
-	itsClearTextFormula = "Icing = round(log(500 * CW * 1000)) + VVcor + Tcor";
-
+	itsClearTextFormula = "Icing = round(log(CW) +6) + VVcor + Tcor";
+	
 	itsLogger = logger_factory::Instance()->GetLog("icing");
 
 }
@@ -66,6 +66,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	}
 
 	double VvScale = 1; // Assume we'll have VV-MMS
+	double ClScale = 1000;
 		
 	if (VvInfo->Param().Name() == "VV-MS")
 	{
@@ -97,6 +98,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 		T = T - TBase;
 		Vv *= VvScale;
+ 		Cl *= ClScale;
 
 		// Vertical velocity correction factor
 
@@ -169,7 +171,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 			Icing = 0;
 		}
 		else {
-			Icing = round(log(500 * Cl * 1000)) + vCor + tCor;
+			Icing = round(log(Cl) + 6) + vCor + tCor;
 		}
 
 		// Maximum and minimum values for index
