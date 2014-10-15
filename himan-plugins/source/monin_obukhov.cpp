@@ -115,7 +115,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	{
 
 		double T = TInfo->Value();
-		double Q = QInfo->Value()/forecastStepSize; // divide by time step to obtain Watts
+		double Q = QInfo->Value();
 		double U_S = U_SInfo->Value();
 		
 		double mol(kFloatMissing);
@@ -124,6 +124,8 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		{
 			continue;
 		}
+		
+		Q /= forecastStepSize; // divide by time step to obtain Watts
 
 		/* Calculation of the inverse of Monin-Obukhov length to avoid division by 0 */
 		
