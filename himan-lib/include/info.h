@@ -686,7 +686,7 @@ public:
 	 * @param m shared pointer to n meta matrix
 	 */
 	
-	void Data(std::shared_ptr<matrix_t> m);
+//	void Data(std::shared_ptr<matrix_t> m);
 
 	/**
 	 * @brief Return size of meta matrix. Is the same as times*params*levels.

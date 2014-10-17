@@ -665,19 +665,19 @@ size_t info::SizeLocations() const
 grid* info::Grid() const
 {
 	assert(itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()));
-    return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get();
+	return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get();
 }
 
 grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
 	assert(itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex));
-    return itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex).get();
+	return itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex).get();
 }
 
 unpacked* info::Data() const
 {
 	assert(Grid());
-	return (Grid()->Data()).get();
+	return Grid()->Data();
 }
 
 void info::Grid(shared_ptr<grid> d)
@@ -687,22 +687,22 @@ void info::Grid(shared_ptr<grid> d)
 
 bool info::Value(double theValue)
 {
-    return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get()->Data().get()->Set(itsLocationIndex, theValue);
+	return Grid()->Data()->Set(itsLocationIndex, theValue);
 }
 
 double info::Value() const
 {
-    return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get()->Data().get()->At(itsLocationIndex);
+	return Grid()->Data()->At(itsLocationIndex);
 }
 
 size_t info::Ni() const
 {
-    return Data()->SizeX();
+	return Data()->SizeX();
 }
 
 size_t info::Nj() const
 {
-    return Data()->SizeY();
+	return Data()->SizeY();
 }
 
 double info::Di() const
@@ -772,9 +772,7 @@ info_simple* info::ToSimple() const
 
 		assert(Grid()->PackedData()->ClassName() == "simple_packed");
 		
-		shared_ptr<simple_packed> v = dynamic_pointer_cast<simple_packed> (Grid()->PackedData());
-
-		ret->packed_values = v.get();
+		ret->packed_values = reinterpret_cast<simple_packed*> (Grid()->PackedData());
 		ret->create();
 
 	}

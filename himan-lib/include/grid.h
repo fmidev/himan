@@ -106,14 +106,13 @@ class grid
 		 * @return Data matrix
 		 */
 
-		std::shared_ptr<unpacked> Data() const;
+		unpacked* Data() const;
 
 		/**
 		 * @brief Replace current data matrix with the function argument
 		 * @param d shared pointer to a data matrix
 		 */
 
-		//void Data(std::shared_ptr<unpacked> d);
 		void Data(std::shared_ptr<unpacked> d);
 
 		HPScanningMode ScanningMode() const;
@@ -234,7 +233,7 @@ class grid
 		bool Stagger(double xStaggerFactor, double yStaggerFactor);
 
 		void PackedData(std::shared_ptr<packed_data> thePackedData);
-		std::shared_ptr<packed_data> PackedData() const;
+		packed_data* PackedData() const;
 		
 		bool IsPackedData() const;
 

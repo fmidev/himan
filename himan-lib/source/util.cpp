@@ -644,7 +644,7 @@ void util::Unpack(initializer_list<grid*> grids)
 
 		assert(arr);
 
-		dynamic_pointer_cast<simple_packed> (tempGrid->PackedData())->Unpack(arr, N, stream);
+		reinterpret_cast<simple_packed*> (tempGrid->PackedData())->Unpack(arr, N, stream);
 
 		// tempGrid->Data()->Set(arr, N);
 		// CUDA_CHECK(cudaFreeHost(arr));

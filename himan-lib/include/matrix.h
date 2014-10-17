@@ -301,7 +301,7 @@ public:
 	 * @brief Set value of a matrix element
 	 *
 	 * Function will set matrix value in a serialized way -- this
-	 * function is thread-safe. No bounds-checking is made for the
+	 * function is thread-safe. Bounds-checking is made for the
 	 * index.
 	 *
 	 * @param x X index
@@ -317,14 +317,15 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
 
-		assert(Index(x,y,z) < itsData.size());
+		size_t index = Index(x,y,z);
+		assert(index < itsData.size());
 
-		if (Index(x,y,z) >= itsData.size())
+		if (index >= itsData.size())
 		{
 			return false;
 		}
 		
-		itsData[Index(x,y,z)] = theValue;
+		itsData[index] = theValue;
 
 		return true;
 	}
@@ -349,11 +350,6 @@ public:
 
 		assert(theIndex < itsData.size());
 
-		if (theIndex >= itsData.size())
-		{
-			return false;
-		}
-		
 		itsData[theIndex] = theValue;
 
 		return true;
@@ -449,9 +445,7 @@ private:
 	std::mutex itsValueMutex;
 };
 
-
 typedef matrix <double> d_matrix_t;
-typedef matrix <unsigned char> uc_matrix_t;
 
 } // namespace himan
 

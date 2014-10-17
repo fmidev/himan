@@ -140,9 +140,9 @@ double grid::Dj() const
 	return itsDj;
 }
 
-shared_ptr<unpacked> grid::Data() const
+unpacked* grid::Data() const
 {
-	return itsData;
+	return itsData.get();
 }
 
 size_t grid::Size() const
@@ -765,9 +765,9 @@ bool grid::Swap(HPScanningMode newScanningMode)
 
 }
 
-shared_ptr<packed_data> grid::PackedData() const
+packed_data* grid::PackedData() const
 {
-	return itsPackedData;
+	return itsPackedData.get();
 }
 
 void grid::PackedData(shared_ptr<packed_data> thePackedData)
