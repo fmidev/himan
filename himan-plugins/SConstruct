@@ -19,11 +19,11 @@ RELEASE = (not DEBUG)
 
 # Workspace
 
-workspace = os.environ['HOME'] + "/workspace"
+workspace = os.environ['HOME'] + "/workspace/himan"
 
 # jenkins
-if os.environ['HOME'] == "/home/dev/weto":
-	workspace = os.environ['HOME'] + "/workspace/himan"
+#if os.environ['HOME'] == "/home/dev/weto":
+#workspace = os.environ['HOME'] + "/workspace/himan"
 
 # cuda toolkit path
 
