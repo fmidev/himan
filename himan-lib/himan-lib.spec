@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 14.10.6
+Version: 14.10.20
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -23,7 +23,7 @@ BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
 %endif
 
-BuildRequires: libsmartmet-newbase >= 14.4.10
+BuildRequires: libsmartmet-newbase >= 14.8.6
 BuildRequires: scons
 BuildRequires: boost-devel >= 1.54
 Provides: libhiman.so
@@ -51,6 +51,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Oct 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.20-1.fmi
+- Simplifying info-class more (HIMAN-69)
+* Thu Oct 16 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.16-1.fmi
+- Simplifying info-class (HIMAN-69)
+* Mon Oct 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.13-1.fmi
+- Changes in modifier_integral
+- Changes in unpacking grib
 * Mon Oct  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.6-1.fmi
 - HIMAN-69
 * Tue Sep 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.30-1.fmi
