@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.10.14
+Version: 14.10.20
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -80,6 +80,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libstability.so
 %{_libdir}/himan-plugins/libtpot.so
 %{_libdir}/himan-plugins/libtransformer.so
+%{_libdir}/himan-plugins/libunstagger.so
 %{_libdir}/himan-plugins/libvvms.so
 %{_libdir}/himan-plugins/libweather_symbol.so
 %{_libdir}/himan-plugins/libweather_code_1.so
@@ -88,6 +89,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.20-1.fmi
+- New plugin unstagger
+- Changes in fetcher related above
+* Thu Oct 16 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.16-1.fmi
+- Icing formula modified (HIMAN-77)
 * Tue Oct 14 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.14-1.fmi
 - New plugin monin obukhov length
 - Fix EC hybrid pressure
