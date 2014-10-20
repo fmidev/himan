@@ -100,6 +100,8 @@ public:
 
 	void DoLevelTransform(bool theDoLevelTransform);
 	bool DoLevelTransform() const;
+	void DoInterpolation(bool theDoInterpolation);
+	bool DoInterpolation() const;
 	
 private:
 
@@ -212,7 +214,7 @@ private:
 
     HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform; //<! Default true
-
+	bool itsDoInterpolation; //<! Default true
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

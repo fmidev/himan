@@ -15,7 +15,13 @@
 #include "logger_factory.h"
 #include "level.h"
 #include "forecast_time.h"
-#include "logger_factory.h"
+#include "plugin_factory.h"
+
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "fetcher.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;
@@ -79,26 +85,37 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("de_stagger Thread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("unstagger Thread #" + boost::lexical_cast<string> (threadIndex));
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, false);
-	info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, false);
+    auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-	if (!UInfo || !VInfo)
-	{
+    info_t UInfo, VInfo;
+
+    try
+    {
+		f->DoInterpolation(false);
+        UInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, UParam, itsConfiguration->UseCudaForPacking());
+		VInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, VParam, itsConfiguration->UseCudaForPacking());
+
+#ifdef HAVE_CUDA
+        if (UInfo->Grid()->IsPackedData())
+        {
+            assert(UInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+
+            util::Unpack({UInfo->Grid(), VInfo->Grid()});
+        }
+#endif
+    }
+    catch (HPExceptionType& e)
+    {
+        if (e != kFileDataNotFound)
+        {
+            throw runtime_error(ClassName() + ": Unable to proceed");
+        }
 		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			// When time or level is skipped, all values are missing
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data()->Size());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data()->Size());
-		}
-
-		return;
-
+    	return;
 	}
 
 	// If calculating for hybrid levels, A/B vertical coordinates must be set

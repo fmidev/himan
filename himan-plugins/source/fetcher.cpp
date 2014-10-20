@@ -33,7 +33,7 @@ const unsigned int SLEEPSECONDS = 10;
 shared_ptr<cache> itsCache;
 
 fetcher::fetcher()
-	: itsDoLevelTransform(true)
+	: itsDoLevelTransform(true), itsDoInterpolation(true)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
@@ -230,43 +230,48 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	auto baseInfo = make_shared<info> (*config->Info());
 	baseInfo->First();
 
-	if (*theInfos[0]->Grid() != *baseInfo->Grid())
+	if (itsDoInterpolation)
 	{
-		itsLogger->Trace("Interpolating area");
-		InterpolateArea(baseInfo, {theInfos[0]});
-	}
-	else if (theInfos[0]->Grid()->ScanningMode() != baseInfo->Grid()->ScanningMode())
-	{
-		// == operator does not test scanning mode !
-		itsLogger->Trace("Swapping area");
-#ifdef HAVE_CUDA
-		if (theInfos[0]->Grid()->IsPackedData())
+		if (*theInfos[0]->Grid() != *baseInfo->Grid())
 		{
-			// must unpack before swapping
+			itsLogger->Trace("Interpolating area");
+			InterpolateArea(baseInfo, {theInfos[0]});
+		}
+		else if (theInfos[0]->Grid()->ScanningMode() != baseInfo->Grid()->ScanningMode())
+		{
+			// == operator does not test scanning mode !
+			itsLogger->Trace("Swapping area");
+#ifdef HAVE_CUDA
+			if (theInfos[0]->Grid()->IsPackedData())
+			{
+				// must unpack before swapping
 
-			util::Unpack({theInfos[0]->Grid()});
+				util::Unpack({theInfos[0]->Grid()});
 
-			// Only unpacked and interpolated data is stored to cache
-			theInfos[0]->Grid()->PackedData()->Clear();
+				// Only unpacked and interpolated data is stored to cache
+				theInfos[0]->Grid()->PackedData()->Clear();
+
+			}
+#endif
+			theInfos[0]->Grid()->Swap(baseInfo->Grid()->ScanningMode());
 
 		}
-#endif
-		theInfos[0]->Grid()->Swap(baseInfo->Grid()->ScanningMode());
-
+		else
+		{
+			itsLogger->Trace("Grids are natively equal");
+		}
+		assert(*baseInfo->Grid() == *theInfos[0]->Grid());
 	}
 	else
 	{
-		itsLogger->Trace("Grids are natively equal");
+		itsLogger->Trace("Interpolation disabled");
 	}
-
 	// Insert interpolated data to cache
 
 	if (!theInfos.empty() && config->UseCache())
 	{
 		itsCache->Insert(theInfos);
 	}
-
-	assert(*baseInfo->Grid() == *theInfos[0]->Grid());
 
 	baseInfo.reset();
 
@@ -404,6 +409,16 @@ void fetcher::DoLevelTransform(bool theDoLevelTransform)
 bool fetcher::DoLevelTransform() const
 {
 	return itsDoLevelTransform;
+}
+
+void fetcher::DoInterpolation(bool theDoInterpolation)
+{
+	itsDoInterpolation = theDoInterpolation;
+}
+
+bool fetcher::DoInterpolation() const
+{
+	return itsDoInterpolation;
 }
 
 vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(const search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles)
