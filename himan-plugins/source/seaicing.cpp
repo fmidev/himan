@@ -129,7 +129,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 		// Change values to index
 		// Index by Antonios Niros: Vessel icing forecast and services: further development and perspectives.
-
+/*
 		if (seaIcing <= 0)
 		{ // No icing
 			seaIcing = 1;
@@ -150,7 +150,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
                 { // Extreme icing ja icing rate >4cm/h
                         seaIcing = 5;
                 }
-
+*/
 		myTargetInfo->Value(seaIcing);
 	}
 
