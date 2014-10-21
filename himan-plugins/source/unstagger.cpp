@@ -19,6 +19,7 @@
 
 #define HIMAN_AUXILIARY_INCLUDE
 
+#include "cache.h"
 #include "fetcher.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
@@ -89,33 +90,35 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-    auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
-    info_t UInfo, VInfo;
+	info_t UInfo, VInfo;
 
-    try
-    {
+	try
+	{
 		f->DoInterpolation(false);
-        UInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, UParam, itsConfiguration->UseCudaForPacking());
+		f->UseCache(false);
+
+		UInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, UParam, itsConfiguration->UseCudaForPacking());
 		VInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, VParam, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
-        if (UInfo->Grid()->IsPackedData())
-        {
-            assert(UInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+		if (UInfo->Grid()->IsPackedData())
+		{
+			assert(UInfo->Grid()->PackedData()->ClassName() == "simple_packed");
 
-            util::Unpack({UInfo->Grid(), VInfo->Grid()});
-        }
+			util::Unpack({UInfo->Grid(), VInfo->Grid()});
+		}
 #endif
-    }
-    catch (HPExceptionType& e)
-    {
-        if (e != kFileDataNotFound)
-        {
-            throw runtime_error(ClassName() + ": Unable to proceed");
-        }
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error(ClassName() + ": Unable to proceed");
+		}
 		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
-    	return;
+		return;
 	}
 
 	// If calculating for hybrid levels, A/B vertical coordinates must be set
@@ -125,27 +128,44 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	string deviceType = "CPU";
 	// calculate for U
-    himan::matrix<double> filter_kernel_U(2,1,1);
-    filter_kernel_U.Fill(0.5);
+	himan::matrix<double> filter_kernel_U(2,1,1);
+	filter_kernel_U.Fill(0.5);
 
 	himan::matrix<double> unstaggered_U = util::Filter2D(*UInfo->Data(), filter_kernel_U);	
 
-    auto unstaggered_U_ptr = make_shared<himan::matrix<double>> (unstaggered_U);
+	auto unstaggered_U_ptr = make_shared<himan::matrix<double>> (unstaggered_U);
 	myTargetInfo->ParamIndex(0);
 	myTargetInfo->Grid()->Data(unstaggered_U_ptr);
 
 	// calculate for V
-    himan::matrix<double> filter_kernel_V(1,2,1);
-    filter_kernel_V.Fill(0.5);
+	himan::matrix<double> filter_kernel_V(1,2,1);
+	filter_kernel_V.Fill(0.5);
 
 	himan::matrix<double> unstaggered_V = util::Filter2D(*VInfo->Data(), filter_kernel_V);	
 
-    auto unstaggered_V_ptr = make_shared<himan::matrix<double>> (unstaggered_V);
+	auto unstaggered_V_ptr = make_shared<himan::matrix<double>> (unstaggered_V);
 	myTargetInfo->ParamIndex(1);
 	myTargetInfo->Grid()->Data(unstaggered_V_ptr);
 
+	// Re-calculate grid coordinates
 
+	point bl = UInfo->Grid()->BottomLeft(), tr = UInfo->Grid()->TopRight();
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	UInfo->Grid()->BottomLeft(point(bl.X() - (UInfo->Grid()->Di() * 0.5), bl.Y()));
+	UInfo->Grid()->TopRight(point(tr.X() - (UInfo->Grid()->Di() * 0.5), tr.Y()));
+
+	bl = VInfo->Grid()->BottomLeft(), tr = VInfo->Grid()->TopRight();
+	VInfo->Grid()->BottomLeft(point(bl.X(), bl.Y() - (VInfo->Grid()->Dj() * 0.5)));
+	VInfo->Grid()->TopRight(point(tr.X(), tr.Y() - (VInfo->Grid()->Dj() * 0.5)));
+
+	auto c = dynamic_pointer_cast <cache> (plugin_factory::Instance()->Plugin("cache"));
+
+	c->Insert(UInfo);
+	c->Insert(VInfo);
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + 
+		boost::lexical_cast<string> (UInfo->Data()->MissingCount() + VInfo->Data()->MissingCount()) +
+		"/" + boost::lexical_cast<string> (UInfo->Data()->Size() + VInfo->Data()->Size()));
+
 
 }
