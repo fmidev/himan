@@ -37,7 +37,7 @@ public:
 
     virtual std::string ClassName() const
     {
-        return "himan::plugin::de_stagger";
+        return "himan::plugin::unstagger";
     }
 
     virtual HPPluginClass PluginClass() const
