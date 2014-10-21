@@ -33,7 +33,9 @@ const unsigned int SLEEPSECONDS = 10;
 shared_ptr<cache> itsCache;
 
 fetcher::fetcher()
-	: itsDoLevelTransform(true), itsDoInterpolation(true)
+	: itsDoLevelTransform(true)
+	, itsDoInterpolation(true)
+	, itsUseCache(true)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
@@ -268,7 +270,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	}
 	// Insert interpolated data to cache
 
-	if (!theInfos.empty() && config->UseCache())
+	if (!theInfos.empty() && itsUseCache && config->UseCache())
 	{
 		itsCache->Insert(theInfos);
 	}
@@ -421,6 +423,17 @@ bool fetcher::DoInterpolation() const
 	return itsDoInterpolation;
 }
 
+void fetcher::UseCache(bool theUseCache)
+{
+	itsUseCache = theUseCache;
+}
+
+bool fetcher::UseCache() const
+{
+	return itsUseCache;
+}
+
+
 vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(const search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles)
 {
 
@@ -430,7 +443,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(const search_options&
 
 	// itsLogger->Trace("Current producer: " + sourceProd.Name());
 
-	if (opts.configuration->UseCache())
+	if (itsUseCache && opts.configuration->UseCache())
 	{
 
 		// 1. Fetch data from cache

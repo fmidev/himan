@@ -102,7 +102,10 @@ public:
 	bool DoLevelTransform() const;
 	void DoInterpolation(bool theDoInterpolation);
 	bool DoInterpolation() const;
-	
+
+	void UseCache(bool theUseCache);
+	bool UseCache() const;
+
 private:
 
     std::vector<std::shared_ptr<info>> FromCache(const search_options& options);
@@ -215,6 +218,7 @@ private:
     HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform; //<! Default true
 	bool itsDoInterpolation; //<! Default true
+	bool itsUseCache;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
