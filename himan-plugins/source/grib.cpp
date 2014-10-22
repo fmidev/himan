@@ -8,9 +8,11 @@
 #include "grib.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
+#include "timer_factory.h"
 #include "producer.h"
 #include "util.h"
 #include "grid.h"
+#include <boost/filesystem.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -76,6 +78,9 @@ bool grib::ToFile(shared_ptr<info> anInfo, string& outputFile, HPFileType fileTy
 
 bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileType fileType, bool appendToFile)
 {
+	auto aTimer = timer_factory::Instance()->GetTimer();
+	aTimer->Start();
+	
 	long edition = static_cast<long> (fileType);
 
 	// Check levelvalue since that might force us to change file type!
@@ -229,8 +234,15 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 
 	itsGrib->Message().Write(outputFile, appendToFile);
 
+	aTimer->Stop();
+	long duration = aTimer->GetTime();
+
+	long bytes = boost::filesystem::file_size(outputFile);
+
+	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
+	
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
-	itsLogger->Info(verb + "file '" + outputFile + "'");
+	itsLogger->Info(verb + "file '" + outputFile + "' (" + boost::lexical_cast<string> (speed) + " MB/s)");
 
 	return true;
 }
@@ -238,7 +250,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool readContents, bool readPackedData)
 {
 
-	shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+	auto n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
 	vector<shared_ptr<himan::info>> infos;
 
@@ -248,8 +260,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		return infos;
 	}
 
-	itsLogger->Debug("Reading file '" + theInputFile + "'");
-
 	int foundMessageNo = 0;
 
 	if (options.prod.Centre() == kHPMissingInt)
@@ -258,9 +268,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		return infos;
 	}
 
+	auto aTimer = timer_factory::Instance()->GetTimer();
+	
 	while (itsGrib->NextMessage())
 	{
-
+	
 		foundMessageNo++;
 
 		/*
@@ -324,6 +336,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				p.Name("T-K");
 			}
 		}
+		
+		// Start timing after the last neons call so we get at least a 
+		// somewhat accurate timing result.
+		
+		aTimer->Start();
 
 		string unit = itsGrib->Message().ParameterUnit();
 		
@@ -620,13 +637,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			X0 -= 360;
 		}
 
-		/*
-		if (centre == 86 && itsGrib->Message()->Edition() == 2)
-		{
-			X0 -= 360;
-		}
-		*/
-
 		if (newGrid->Projection() == kStereographicProjection)
 		{
 			/*
@@ -765,15 +775,18 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		infos.push_back(newInfo);
 
+		aTimer->Stop();
+		
 		break ; // We found what we were looking for
 	}
 
-	if (infos.size())
-	{
-		// This will be broken when/if we return multiple infos from this function
-		itsLogger->Trace("Data found from message " + boost::lexical_cast<string> (foundMessageNo));
-	}
+	long duration = aTimer->GetTime();
+	long bytes = boost::filesystem::file_size(theInputFile);
 
+	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
+
+	itsLogger->Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string> (speed) + " MB/s)");
+	
 	return infos;
 }
 
