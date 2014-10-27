@@ -156,7 +156,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 	
 	// Level
 
-	itsGrib->Message().LevelValue(levelValue);
+	itsGrib->Message().LevelValue(static_cast<long> (levelValue));
 
 	// Himan levels equal to grib 1
 
