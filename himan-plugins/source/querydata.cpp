@@ -152,7 +152,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 				while (theInfo->NextParam() && qinfo.NextParam())
 				{
 					
-					if (theInfo->Dimensions()->IsMissing(theInfo->TimeIndex(), theInfo->LevelIndex(), theInfo->ParamIndex()))
+					if (!theInfo->Grid())
 					{
 						// No data in info (sparse info class)
 						
@@ -325,7 +325,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 						continue;
 					}
 
-					if (info->Dimensions()->IsMissing(info->TimeIndex(), info->LevelIndex(), info->ParamIndex()))
+					if (!info->Grid())
 					{
 						continue;
 					}
