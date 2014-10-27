@@ -211,27 +211,6 @@ class grid
 		bool operator==(const grid& other) const;
 		bool operator!=(const grid& other) const;
 
-
-		/**
-		 * @brief Stagger a grid
-		 *
-		 * Staggering is done to x- or y-direction or both, possible values are -0.5, 0 and 0.5 (lengths between grid points).
-		 * When a grid is staggered its area is changed accordingly and all values are linearly interpolated. In other words
-		 * this is just re-gridding but since the interpolation is simple it is efficient to do it this way.
-		 *
-		 * Function is copied from hil_pp to where it's copied from hirlam.
-		 *
-		 * This version of function has not been throughly tested; there might be some problems. Especially the handling of
-		 * outliers can cause problems, they are not extrapolated but copied as-is?
-		 * 
-		 * Note: works only for latlon grids.
-		 *
-		 * @param xStaggerFactor Stagger factor in x direction
-		 * @param yStaggerFactor Stagger factor in y direction
-		 */
-
-		bool Stagger(double xStaggerFactor, double yStaggerFactor);
-
 		void PackedData(std::shared_ptr<packed_data> thePackedData);
 		packed_data* PackedData() const;
 		

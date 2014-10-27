@@ -22,11 +22,14 @@ public:
     static plugin_factory* Instance();
 
     std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins(HPPluginClass = kUnknownPlugin); // Kinda ugly
-    std::vector<std::shared_ptr<plugin::himan_plugin>> CompiledPlugins();
-    std::vector<std::shared_ptr<plugin::himan_plugin>> AuxiliaryPlugins();
-    std::vector<std::shared_ptr<plugin::himan_plugin>> InterpretedPlugins();
 
-    std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName, bool theNewInstance = true);
+	
+	/**
+	 * @brief Return instance of the requested plugin if found. Caller must cast
+	 * the plugin to the derived class. 
+	 */
+	
+    std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName);
 
     ~plugin_factory() = default;
 

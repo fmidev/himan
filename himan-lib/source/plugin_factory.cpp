@@ -59,48 +59,17 @@ plugin_factory::plugin_factory() : itsPluginSearchPath()
 std::vector<std::shared_ptr<himan_plugin> > plugin_factory::Plugins(HPPluginClass pluginClass)
 {
 
-    std::vector<std::shared_ptr<himan_plugin>> thePlugins;
+    std::vector<std::shared_ptr<himan_plugin>> thePlugins(itsPluginFactory.size());
 
     for (size_t i = 0; i < itsPluginFactory.size(); i++)
     {
-        if (pluginClass == itsPluginFactory[i]->Plugin()->PluginClass())
-        {
-            thePlugins.push_back(itsPluginFactory[i]->Plugin());
-        }
-
-        else if (pluginClass == kUnknownPlugin)
-        {
-            thePlugins.push_back(itsPluginFactory[i]->Plugin());
-        }
+		thePlugins[i] = itsPluginFactory[i]->Plugin();
     }
 
     return thePlugins;
 }
 
-std::vector<std::shared_ptr<himan_plugin> > plugin_factory::CompiledPlugins()
-{
-    return Plugins(kCompiled);
-}
-std::vector<std::shared_ptr<himan_plugin> > plugin_factory::AuxiliaryPlugins()
-{
-    return Plugins(kAuxiliary);
-}
-std::vector<std::shared_ptr<himan_plugin> > plugin_factory::InterpretedPlugins()
-{
-    return Plugins(kInterpreted);
-}
-
-/*
- * Plugin()
- *
- * Return instance of the requested plugin if found. Caller must cast
- * the plugin to the derived class. If second argument is true, a new
- * instance is created and returned. Otherwise function behaves like
- * a regular factory pattern and return one known instance to each
- * caller (this is suitable only in non-threaded functions).
- */
-
-std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClassName, bool theNewInstance)
+std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClassName)
 {
     std::lock_guard<std::mutex> lock(itsPluginMutex);
 
@@ -110,14 +79,7 @@ std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClass
         if ((itsPluginFactory[i]->Plugin()->ClassName() == theClassName) ||
                 (itsPluginFactory[i]->Plugin()->ClassName() == "himan::plugin::" + theClassName))
         {
-            if (theNewInstance)
-            {
-                return itsPluginFactory[i]->Clone();
-            }
-            else
-            {
-                return itsPluginFactory[i]->Plugin();
-            }
+            return itsPluginFactory[i]->Clone();
         }
     }
 
