@@ -24,10 +24,10 @@ info::info()
 	: itsLevelIterator()
 	, itsTimeIterator()
 	, itsParamIterator()
-	, itsDimensionMatrix(new matrix_t())
+	, itsDimensions(new dim_t())
 {
-    Init();
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
+	Init();
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
 
 }
 
@@ -44,7 +44,7 @@ info::info(const info& other)
 	itsProjection = other.itsProjection;
 	itsOrientation = other.itsOrientation;
 	itsScanningMode = other.itsScanningMode;
-    itsLevelOrder = other.itsLevelOrder;
+	itsLevelOrder = other.itsLevelOrder;
 
 	itsBottomLeft = other.itsBottomLeft;
 	itsTopRight = other.itsTopRight;
@@ -59,8 +59,9 @@ info::info(const info& other)
 
 	/* END GLOBAL CONFIGURATION OPTIONS */
 
-	// Data backend is SHARED
-	itsDimensionMatrix = other.itsDimensionMatrix;
+	// All the grid-instances area shared
+	
+	itsDimensions = unique_ptr<dim_t> (new dim_t(*other.itsDimensions));
 
 	itsLocationIndex = other.itsLocationIndex;
 
@@ -76,146 +77,147 @@ info::info(const info& other)
 void info::Init()
 {
 
-    itsProjection = kUnknownProjection;
-    itsScanningMode = kUnknownScanningMode;
-    itsLevelOrder = kTopToBottom;
+	itsProjection = kUnknownProjection;
+	itsScanningMode = kUnknownScanningMode;
+	itsLevelOrder = kTopToBottom;
 
-    itsBottomLeft = point(kHPMissingValue, kHPMissingValue);
-    itsTopRight = point(kHPMissingValue, kHPMissingValue);
-    itsSouthPole = point(kHPMissingValue, kHPMissingValue);
+	itsBottomLeft = point(kHPMissingValue, kHPMissingValue);
+	itsTopRight = point(kHPMissingValue, kHPMissingValue);
+	itsSouthPole = point(kHPMissingValue, kHPMissingValue);
 
-    itsOrientation = kHPMissingValue;
-    itsStepSizeOverOneByte = false;
-    itsUVRelativeToGrid = false;
+	itsOrientation = kHPMissingValue;
+	itsStepSizeOverOneByte = false;
+	itsUVRelativeToGrid = false;
 
-    itsNi = 0;
-    itsNj = 0;
+	itsNi = 0;
+	itsNj = 0;
 
-    itsDi = kHPMissingValue;
-    itsDj = kHPMissingValue;
+	itsDi = kHPMissingValue;
+	itsDj = kHPMissingValue;
 }
 
 std::ostream& info::Write(std::ostream& file) const
 {
 
-    file << "<" << ClassName() << ">" << endl;
+	file << "<" << ClassName() << ">" << endl;
 
 	file << "__itsLevelOrder__ " << HPLevelOrderToString.at(itsLevelOrder) << endl;
 
-    file << itsProducer;
+	file << itsProducer;
 
    	file << itsParamIterator;
    	file << itsLevelIterator;
    	file << itsTimeIterator;
 
-	for (size_t i = 0; i < itsDimensionMatrix->Size(); i++)
+	for (size_t i = 0; i < itsDimensions->size(); i++)
 	{
-		file << *itsDimensionMatrix->At(i);
+		file << *(*itsDimensions)[i];
 	}
 	
-    return file;
+	return file;
 }
 
 
 void info::Create()
 {
-    itsDimensionMatrix = make_shared<matrix_t> (itsTimeIterator.Size(), itsLevelIterator.Size(), itsParamIterator.Size());
+	itsDimensions = unique_ptr<dim_t> (new dim_t(itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size()));
 
-    Reset();
+	Reset();
 
 	// Disallow Create() to be called if info is not originated from a configuration file
 
 	assert(itsScanningMode != kUnknownScanningMode);
 	assert(itsProjection != kUnknownProjection);
-    assert(itsLevelOrder != kUnknownLevelOrder);
+	assert(itsLevelOrder != kUnknownLevelOrder);
 
-    while (NextTime())
-    {
-        ResetLevel();
+	while (NextTime())
+	{
+		ResetLevel();
 
-        while (NextLevel())
-        {
-            ResetParam();
+		while (NextLevel())
+		{
+			ResetParam();
 
-            while (NextParam())
-                // Create empty placeholders
-            {
-            	Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
-            	itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Data()->Resize(itsNi,itsNj);
+			while (NextParam())
+				// Create empty placeholders
+			{
+				Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
+				
+				Data()->Resize(itsNi,itsNj);
 
-            	if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
-            	{
-            		itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Di(itsDi);
-            		itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Dj(itsDj);
-            	}
+				if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
+				{
+					Grid()->Di(itsDi);
+					Grid()->Dj(itsDj);
+				}
 
-				itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Data()->MissingValue(kFloatMissing);
-				itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex())->Data()->Fill(kFloatMissing);
-            }
-        }
-    }
+				Data()->MissingValue(kFloatMissing);
+				Data()->Fill(kFloatMissing);
+			}
+		}
+	}
 
 	First();
 }
 
 void info::ReGrid()
 {
-	auto newDimensionMatrix = make_shared<matrix_t> (itsTimeIterator.Size(), itsLevelIterator.Size(), itsParamIterator.Size());
+	auto newDimensions = unique_ptr<dim_t> (new dim_t(itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size()));
 
-    Reset();
+	Reset();
 
-    while (NextTime())
-    {
-        ResetLevel();
+	while (NextTime())
+	{
+		ResetLevel();
 
-        while (NextLevel())
-        {
-            ResetParam();
+		while (NextLevel())
+		{
+			ResetParam();
 
-            while (NextParam())
-                // Create empty placeholders
-            {
+			while (NextParam())
+				// Create empty placeholders
+			{
 				assert(Grid());
 
-            	auto newGrid = make_shared<grid> (*Grid());
-            	if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
-            	{
-            		newGrid->Di(itsDi);
-            		newGrid->Dj(itsDj);
-            	}
+				auto newGrid = make_shared<grid> (*Grid());
+				if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
+				{
+					newGrid->Di(itsDi);
+					newGrid->Dj(itsDj);
+				}
 
-				newDimensionMatrix->Set(TimeIndex(), LevelIndex(), ParamIndex(), newGrid);
+				(*newDimensions)[Index()] = newGrid;
 
-            }
-        }
-    }
+			}
+		}
+	}
 
-	itsDimensionMatrix = newDimensionMatrix;
+	itsDimensions = move(newDimensions);
 	First(); // "Factory setting"
 }
 
 void info::Create(const grid* baseGrid)
 {
 
-    itsDimensionMatrix = make_shared<matrix_t> (itsTimeIterator.Size(), itsLevelIterator.Size(), itsParamIterator.Size());
+	itsDimensions = unique_ptr<dim_t> (new dim_t(itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size()));
 
-    Reset();
+	Reset();
 
-    while (NextTime())
-    {
-        ResetLevel();
+	while (NextTime())
+	{
+		ResetLevel();
 
-        while (NextLevel())
-        {
-            ResetParam();
+		while (NextLevel())
+		{
+			ResetParam();
 
-            while (NextParam())
-                // Create empty placeholders
-            {
-            	Grid(make_shared<grid> (*baseGrid));
-            }
-        }
-    }
+			while (NextParam())
+				// Create empty placeholders
+			{
+				Grid(make_shared<grid> (*baseGrid));
+			}
+		}
+	}
 
 	First();
 }
@@ -223,7 +225,7 @@ void info::Create(const grid* baseGrid)
 void info::Merge(shared_ptr<info> otherInfo)
 {
 
-    Reset();
+	Reset();
 
 	otherInfo->ResetTime();
 
@@ -297,93 +299,93 @@ void info::Merge(vector<shared_ptr<info>>& otherInfos)
 
 const producer& info::Producer() const
 {
-    return itsProducer;
+	return itsProducer;
 }
 
 void info::Producer(long theFmiProducerId)
 {
-    itsProducer = producer(theFmiProducerId);
+	itsProducer = producer(theFmiProducerId);
 }
 
 
 void info::Producer(const producer& theProducer)
 {
-    itsProducer = theProducer;
+	itsProducer = theProducer;
 }
 
 void info::ParamIterator(const param_iter& theParamIterator)
 {
-    itsParamIterator = theParamIterator;
+	itsParamIterator = theParamIterator;
 }
 
 void info::Params(const vector<param>& theParams)
 {
-    itsParamIterator = param_iter(theParams);
+	itsParamIterator = param_iter(theParams);
 }
 
 void info::LevelIterator(const level_iter& theLevelIterator)
 {
-    itsLevelIterator = theLevelIterator;
+	itsLevelIterator = theLevelIterator;
 }
 
 void info::Levels(const vector<level>& theLevels)
 {
-    itsLevelIterator = level_iter(theLevels);
+	itsLevelIterator = level_iter(theLevels);
 }
 
 void info::TimeIterator(const time_iter& theTimeIterator)
 {
-    itsTimeIterator = theTimeIterator;
+	itsTimeIterator = theTimeIterator;
 }
 
 void info::Times(const vector<forecast_time>& theTimes)
 {
-    itsTimeIterator = time_iter(theTimes);
+	itsTimeIterator = time_iter(theTimes);
 }
 
 raw_time info::OriginDateTime() const
 {
-    return itsOriginDateTime;
+	return itsOriginDateTime;
 }
 
 void info::OriginDateTime(const string& theOriginDateTime, const string& theTimeMask)
 {
-    itsOriginDateTime = raw_time(theOriginDateTime, theTimeMask);
+	itsOriginDateTime = raw_time(theOriginDateTime, theTimeMask);
 }
 
 bool info::Param(const param& theRequestedParam)
 {
-    return itsParamIterator.Set(theRequestedParam);
+	return itsParamIterator.Set(theRequestedParam);
 }
 
 bool info::NextParam()
 {
-    return itsParamIterator.Next();
+	return itsParamIterator.Next();
 }
 
 void info::ResetParam()
 {
-    itsParamIterator.Reset();
+	itsParamIterator.Reset();
 }
 
 bool info::FirstParam()
 {
-    return itsParamIterator.First();
+	return itsParamIterator.First();
 }
 
 size_t info::ParamIndex() const
 {
-    return itsParamIterator.Index();
+	return itsParamIterator.Index();
 }
 
 void info::ParamIndex(size_t theParamIndex)
 {
-    itsParamIterator.Set(theParamIndex);
+	itsParamIterator.Set(theParamIndex);
 }
 
 const param& info::Param() const
 {
-    return itsParamIterator.At();
+	return itsParamIterator.At();
 }
 
 size_t info::SizeParams() const
@@ -407,16 +409,16 @@ HPLevelOrder info::LevelOrder() const
 }
 void info::LevelOrder(HPLevelOrder levelOrder)
 {
-    itsLevelOrder = levelOrder;
+	itsLevelOrder = levelOrder;
 }
 
 bool info::NextLevel()
 {
-    if (itsLevelOrder == kBottomToTop)
+	if (itsLevelOrder == kBottomToTop)
 	{
 		return itsLevelIterator.Previous();
 	}
-    else
+	else
 	{
 		return itsLevelIterator.Next();
 	}
@@ -424,11 +426,11 @@ bool info::NextLevel()
 
 bool info::PreviousLevel()
 {
-    if (itsLevelOrder == kBottomToTop)
+	if (itsLevelOrder == kBottomToTop)
 	{
 		return itsLevelIterator.Next();
 	}
-    else
+	else
 	{
 		return itsLevelIterator.Previous();
 	}
@@ -436,11 +438,11 @@ bool info::PreviousLevel()
 
 bool info::LastLevel()
 {
-    if (itsLevelOrder == kBottomToTop)
+	if (itsLevelOrder == kBottomToTop)
 	{
 		return itsLevelIterator.First();
 	}
-    else
+	else
 	{
 		return itsLevelIterator.Last();
 	}
@@ -448,32 +450,32 @@ bool info::LastLevel()
 
 void info::First()
 {
-    FirstLevel();
-    FirstParam();
-    FirstTime();
-    FirstLocation();
+	FirstLevel();
+	FirstParam();
+	FirstTime();
+	FirstLocation();
 }
 
 void info::Reset()
 {
-    ResetLevel();
-    ResetParam();
-    ResetTime();
-    ResetLocation();
+	ResetLevel();
+	ResetParam();
+	ResetTime();
+	ResetLocation();
 }
 
 void info::ResetLevel()
 {
-    itsLevelIterator.Reset();
+	itsLevelIterator.Reset();
 }
 
 bool info::FirstLevel()
 {
-    if (itsLevelOrder == kBottomToTop)
+	if (itsLevelOrder == kBottomToTop)
 	{
 		return itsLevelIterator.Last();
 	}
-    else
+	else
 	{
 		return itsLevelIterator.First();
 	}
@@ -481,22 +483,22 @@ bool info::FirstLevel()
 
 size_t info::LevelIndex() const
 {
-    return itsLevelIterator.Index();
+	return itsLevelIterator.Index();
 }
 
 void info::LevelIndex(size_t theLevelIndex)
 {
-    itsLevelIterator.Set(theLevelIndex);
+	itsLevelIterator.Set(theLevelIndex);
 }
 
 bool info::Level(const level& theLevel)
 {
-    return itsLevelIterator.Set(theLevel);
+	return itsLevelIterator.Set(theLevel);
 }
 
 const level& info::Level() const
 {
-    return itsLevelIterator.At();
+	return itsLevelIterator.At();
 }
 
 size_t info::SizeLevels() const
@@ -516,47 +518,47 @@ void info::SetLevel(const level& theLevel)
 
 bool info::NextTime()
 {
-    return itsTimeIterator.Next();
+	return itsTimeIterator.Next();
 }
 
 bool info::PreviousTime()
 {
-    return itsTimeIterator.Previous();
+	return itsTimeIterator.Previous();
 }
 
 bool info::LastTime()
 {
-    return itsTimeIterator.Last();
+	return itsTimeIterator.Last();
 }
 
 void info::ResetTime()
 {
-    itsTimeIterator.Reset();
+	itsTimeIterator.Reset();
 }
 
 bool info::FirstTime()
 {
-    return itsTimeIterator.First();
+	return itsTimeIterator.First();
 }
 
 size_t info::TimeIndex() const
 {
-    return itsTimeIterator.Index();
+	return itsTimeIterator.Index();
 }
 
 void info::TimeIndex(size_t theTimeIndex)
 {
-    itsTimeIterator.Set(theTimeIndex);
+	itsTimeIterator.Set(theTimeIndex);
 }
 
 bool info::Time(const forecast_time& theTime)
 {
-    return itsTimeIterator.Set(theTime);
+	return itsTimeIterator.Set(theTime);
 }
 
 const forecast_time& info::Time() const
 {
-    return itsTimeIterator.At();
+	return itsTimeIterator.At();
 }
 
 size_t info::SizeTimes() const
@@ -576,85 +578,85 @@ void info::SetTime(const forecast_time& theTime)
 
 bool info::NextLocation()
 {
-    if (itsLocationIndex == kIteratorResetValue)
-    {
-        itsLocationIndex = 0;    // ResetLocation() has been called before this function
-    }
+	if (itsLocationIndex == kIteratorResetValue)
+	{
+		itsLocationIndex = 0;	// ResetLocation() has been called before this function
+	}
 
-    else
-    {
-        itsLocationIndex++;
-    }
+	else
+	{
+		itsLocationIndex++;
+	}
 
-    size_t locationSize = Data()->Size();
+	size_t locationSize = Data()->Size();
 
-    if (itsLocationIndex >= locationSize)
-    {
-        itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;
+	if (itsLocationIndex >= locationSize)
+	{
+		itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;
 
-        return false;
-    }
+		return false;
+	}
 
-    return true;
+	return true;
 
 }
 
 bool info::PreviousLocation()
 {
-    
-    size_t locationSize = Data()->Size();
+	
+	size_t locationSize = Data()->Size();
 
-    if (itsLocationIndex == kIteratorResetValue)
-    {
-        itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;   // ResetLocation() has been called before this function
-    }
+	if (itsLocationIndex == kIteratorResetValue)
+	{
+		itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;   // ResetLocation() has been called before this function
+	}
 
-    else
-    {
-        if (itsLocationIndex == 0)
-        {
-            itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;
-            return false;
-        }
-        itsLocationIndex--;
-    }
+	else
+	{
+		if (itsLocationIndex == 0)
+		{
+			itsLocationIndex = (locationSize == 0) ? 0 : locationSize - 1;
+			return false;
+		}
+		itsLocationIndex--;
+	}
 
-    return true;
+	return true;
 
 }
 
 bool info::LastLocation()
 {
-    itsLocationIndex = Data()->Size() - 1;
+	itsLocationIndex = Data()->Size() - 1;
 
-    return true;
+	return true;
 }
 
 void info::ResetLocation()
 {
-    itsLocationIndex = kIteratorResetValue;
+	itsLocationIndex = kIteratorResetValue;
 }
 
 bool info::FirstLocation()
 {
-    ResetLocation();
+	ResetLocation();
 
-    return NextLocation();
+	return NextLocation();
 }
 
 size_t info::LocationIndex() const
 {
-    return itsLocationIndex;
+	return itsLocationIndex;
 }
 
 void info::LocationIndex(size_t theLocationIndex)
 {
-    itsLocationIndex = theLocationIndex;
+	itsLocationIndex = theLocationIndex;
 }
 
 size_t info::LocationIndex()
 {
-    return itsLocationIndex;
+	return itsLocationIndex;
 }
 
 size_t info::SizeLocations() const
@@ -664,14 +666,14 @@ size_t info::SizeLocations() const
 
 grid* info::Grid() const
 {
-	assert(itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()));
-	return itsDimensionMatrix->At(TimeIndex(), LevelIndex(), ParamIndex()).get();
+	//assert(itsDimensions->At(TimeIndex(), LevelIndex(), ParamIndex()));
+	return (*itsDimensions)[Index()].get();
 }
 
 grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
-	assert(itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex));
-	return itsDimensionMatrix->At(timeIndex, levelIndex, paramIndex).get();
+	//assert(itsDimensions->At(timeIndex, levelIndex, paramIndex));
+	return (*itsDimensions)[Index(timeIndex, levelIndex, paramIndex)].get();
 }
 
 unpacked* info::Data() const
@@ -682,7 +684,7 @@ unpacked* info::Data() const
 
 void info::Grid(shared_ptr<grid> d)
 {
-	itsDimensionMatrix->Set(TimeIndex(), LevelIndex(), ParamIndex(), d);
+	(*itsDimensions)[Index()] = d;
 }
 
 bool info::Value(double theValue)
@@ -732,7 +734,7 @@ HPProjectionType info::Projection() const
 
 size_t info::DimensionSize() const
 {
-	return itsDimensionMatrix->Size();
+	return itsDimensions->size();
 }
 
 #ifdef HAVE_CUDA
@@ -789,14 +791,14 @@ info_simple* info::ToSimple() const
 
 #endif
 
-const shared_ptr<const matrix_t> info::Dimensions() const
+const dim_t& info::Dimensions() const
 {
-	return itsDimensionMatrix;
+	return *itsDimensions;
 }
 
 void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
 {
-	auto d = make_shared<matrix_t> (SizeTimes(), SizeLevels(), SizeParams());
+	auto d = unique_ptr<dim_t> (new dim_t(SizeTimes() * SizeLevels() * SizeParams()));
 
 	for (size_t x = 0; x < oldXSize; x++)
 	{
@@ -804,13 +806,13 @@ void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
 		{
 			for (size_t z = 0; z < oldZSize; z++)
 			{
-				size_t newIndex = z * SizeTimes() * SizeLevels() + y * SizeTimes() + x ;// Index(x,y,z,xSize, ySize);
-				d->Set(newIndex, itsDimensionMatrix->At(x,y,z));
+				(*d)[Index(x, y, z)] = (*itsDimensions)[z * oldXSize * oldYSize + y * oldXSize + x];
+				
 			}
 		}
 	}
 
-	itsDimensionMatrix = d;
+	itsDimensions = move(d);
 }
 
 point info::LatLon() const

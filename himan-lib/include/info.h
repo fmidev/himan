@@ -20,6 +20,8 @@
 #include "info_simple.h"
 #include <boost/lexical_cast.hpp>
 #include "param.h"
+#include "level.h"
+#include "forecast_time.h"
 
 namespace himan
 {
@@ -271,7 +273,7 @@ public:
 	/**
 	 * @brief Add element to iterator
 	 *
-	 * NOTE: This function DOES NOT change the size of itsDimensionMatrix! That
+	 * NOTE: This function DOES NOT change the size of itsDimensions! That
 	 * needs to be done separately!
 	 *
 	 * @param newElement Element to be added
@@ -333,7 +335,7 @@ typedef iterator<level> level_iter;
 typedef iterator<param> param_iter;
 typedef iterator<forecast_time> time_iter;
 typedef iterator<producer> producer_iter;
-typedef matrix <std::shared_ptr<grid> > matrix_t;
+typedef std::vector<std::shared_ptr<grid>> dim_t;
 
 class info
 {
@@ -682,13 +684,6 @@ public:
 	unpacked* Data() const;
 
 	/**
-	 * @brief Replace whole meta matrix with a new one
-	 * @param m shared pointer to n meta matrix
-	 */
-	
-//	void Data(std::shared_ptr<matrix_t> m);
-
-	/**
 	 * @brief Return size of meta matrix. Is the same as times*params*levels.
 	 *
 	 */
@@ -725,7 +720,7 @@ public:
 
 #endif
 
-	const std::shared_ptr<const matrix_t> Dimensions() const;
+	const dim_t& Dimensions() const;
 	
 private:
 
@@ -748,7 +743,20 @@ private:
 	
 	void ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize);
 
-
+	/**
+	 * @brief Return running index nuimber when given relative index for each
+	 * three dimension
+	 * 
+     * @param timeIndex x-dimension index
+     * @param levelIndex y-dimension index
+     * @param paramIndex z-dimension index
+     * @return 
+     */
+	
+	size_t Index(size_t timeIndex, size_t levelIndex, size_t paramIndex) const;
+	size_t Index() const;
+	
+	
 	/*
 	 * START GLOBAL CONFIGURATION FILE PARAMETERS
 	 *
@@ -783,7 +791,7 @@ private:
 	time_iter itsTimeIterator;
 	param_iter itsParamIterator;
 
-	std::shared_ptr<matrix_t> itsDimensionMatrix;
+	std::unique_ptr<dim_t> itsDimensions;
 
 	std::unique_ptr<logger> itsLogger;
 
@@ -803,9 +811,20 @@ std::ostream& operator<<(std::ostream& file, const info& ob)
 	return ob.Write(file);
 }
 
+inline
+size_t himan::info::Index(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+{
+	return (paramIndex * itsTimeIterator.Size() * itsLevelIterator.Size() + levelIndex * itsTimeIterator.Size() + timeIndex);
+}
+
+inline
+size_t himan::info::Index() const
+{
+	return Index(TimeIndex(), LevelIndex(), ParamIndex());
+}
+
 typedef std::shared_ptr<info> info_t;
 
 } // namespace himan
 
 #endif /* INFO_H */
-
