@@ -335,7 +335,6 @@ typedef iterator<level> level_iter;
 typedef iterator<param> param_iter;
 typedef iterator<forecast_time> time_iter;
 typedef iterator<producer> producer_iter;
-typedef std::vector<std::shared_ptr<grid>> dim_t;
 
 class info
 {
@@ -720,7 +719,7 @@ public:
 
 #endif
 
-	const dim_t& Dimensions() const;
+	const std::vector<std::shared_ptr<grid>>& Dimensions() const;
 	
 private:
 
@@ -791,7 +790,7 @@ private:
 	time_iter itsTimeIterator;
 	param_iter itsParamIterator;
 
-	std::unique_ptr<dim_t> itsDimensions;
+	std::vector<std::shared_ptr<grid>> itsDimensions;
 
 	std::unique_ptr<logger> itsLogger;
 

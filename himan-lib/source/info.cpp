@@ -24,7 +24,7 @@ info::info()
 	: itsLevelIterator()
 	, itsTimeIterator()
 	, itsParamIterator()
-	, itsDimensions(new dim_t())
+	, itsDimensions()
 {
 	Init();
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
@@ -61,7 +61,7 @@ info::info(const info& other)
 
 	// All the grid-instances area shared
 	
-	itsDimensions = unique_ptr<dim_t> (new dim_t(*other.itsDimensions));
+	itsDimensions = other.itsDimensions;
 
 	itsLocationIndex = other.itsLocationIndex;
 
@@ -109,9 +109,9 @@ std::ostream& info::Write(std::ostream& file) const
    	file << itsLevelIterator;
    	file << itsTimeIterator;
 
-	for (size_t i = 0; i < itsDimensions->size(); i++)
+	for (size_t i = 0; i < itsDimensions.size(); i++)
 	{
-		file << *(*itsDimensions)[i];
+		file << *itsDimensions[i];
 	}
 	
 	return file;
@@ -120,7 +120,7 @@ std::ostream& info::Write(std::ostream& file) const
 
 void info::Create()
 {
-	itsDimensions = unique_ptr<dim_t> (new dim_t(itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size()));
+	itsDimensions = vector<shared_ptr<grid>> (itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
 	Reset();
 
@@ -162,7 +162,7 @@ void info::Create()
 
 void info::ReGrid()
 {
-	auto newDimensions = unique_ptr<dim_t> (new dim_t(itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size()));
+	auto newDimensions = vector<shared_ptr<grid>> (itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
 	Reset();
 
@@ -186,7 +186,7 @@ void info::ReGrid()
 					newGrid->Dj(itsDj);
 				}
 
-				(*newDimensions)[Index()] = newGrid;
+				newDimensions[Index()] = newGrid;
 
 			}
 		}
@@ -199,7 +199,7 @@ void info::ReGrid()
 void info::Create(const grid* baseGrid)
 {
 
-	itsDimensions = unique_ptr<dim_t> (new dim_t(itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size()));
+	itsDimensions = vector<shared_ptr<grid>> (itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
 	Reset();
 
@@ -667,13 +667,13 @@ size_t info::SizeLocations() const
 grid* info::Grid() const
 {
 	//assert(itsDimensions->At(TimeIndex(), LevelIndex(), ParamIndex()));
-	return (*itsDimensions)[Index()].get();
+	return itsDimensions[Index()].get();
 }
 
 grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
 	//assert(itsDimensions->At(timeIndex, levelIndex, paramIndex));
-	return (*itsDimensions)[Index(timeIndex, levelIndex, paramIndex)].get();
+	return itsDimensions[Index(timeIndex, levelIndex, paramIndex)].get();
 }
 
 unpacked* info::Data() const
@@ -684,7 +684,7 @@ unpacked* info::Data() const
 
 void info::Grid(shared_ptr<grid> d)
 {
-	(*itsDimensions)[Index()] = d;
+	itsDimensions[Index()] = d;
 }
 
 bool info::Value(double theValue)
@@ -734,7 +734,7 @@ HPProjectionType info::Projection() const
 
 size_t info::DimensionSize() const
 {
-	return itsDimensions->size();
+	return itsDimensions.size();
 }
 
 #ifdef HAVE_CUDA
@@ -791,14 +791,14 @@ info_simple* info::ToSimple() const
 
 #endif
 
-const dim_t& info::Dimensions() const
+const vector<shared_ptr<grid>>& info::Dimensions() const
 {
-	return *itsDimensions;
+	return itsDimensions;
 }
 
 void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
 {
-	auto d = unique_ptr<dim_t> (new dim_t(SizeTimes() * SizeLevels() * SizeParams()));
+	vector<shared_ptr<grid>> d (SizeTimes() * SizeLevels() * SizeParams());
 
 	for (size_t x = 0; x < oldXSize; x++)
 	{
@@ -806,13 +806,13 @@ void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
 		{
 			for (size_t z = 0; z < oldZSize; z++)
 			{
-				(*d)[Index(x, y, z)] = (*itsDimensions)[z * oldXSize * oldYSize + y * oldXSize + x];
+				d[Index(x, y, z)] = itsDimensions[z * oldXSize * oldYSize + y * oldXSize + x];
 				
 			}
 		}
 	}
 
-	itsDimensions = move(d);
+	itsDimensions = d;
 }
 
 point info::LatLon() const
