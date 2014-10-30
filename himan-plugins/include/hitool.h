@@ -375,7 +375,7 @@ private:
 	 *
 	 */
 
-	level LevelForHeight(const producer& prod, double height) const;
+	std::pair<level,level> LevelForHeight(const producer& prod, double height) const;
 
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	forecast_time itsTime;

@@ -84,18 +84,62 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 	return mod;
 }
 
-level hitool::LevelForHeight(const producer& prod, double height) const
+pair<level,level> hitool::LevelForHeight(const producer& prod, double height) const
 {
 
+	auto n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+	
+	long producerId = 0;
+	
+	// Hybrid level heights are calculated by himan, so coalesce the related 
+	// forecast producer id with the himan producer id.
+	
 	switch (prod.Id())
 	{
 		case 1:
 		case 230:
-
+			producerId = 230;
+			break;
+		
+		case 130:
+		case 240:
+			producerId = 240;
+			break;
+			
+		case 199:
+		case 210:
+			producerId = 210;
+			break;
+			
+		default:
+			itsLogger->Warning("Unsupported producer for hitool::LevelForHeight(): " + boost::lexical_cast<string> (prod.Id()));
 			break;
 	}
 	
-	return level();
+	stringstream query;
+	
+	query << "WITH list AS (SELECT "
+			<< "level_value "
+			<< "FROM "
+			<< "hybrid_level_height "
+			<< "WHERE "
+			<< "producer_id = " << producerId << " AND "
+			<< height << " BETWEEN minimum_value AND maximum_value) "
+			<< "SELECT min(level_value), max(level_value) FROM list";
+	
+	n->NeonsDB().Query(query.str());
+	
+	auto row = n->NeonsDB().FetchRow();
+	
+	long lowest = -1, highest = -1;
+	
+	if (row.empty())
+	{
+		lowest = boost::lexical_cast<long> (row[0]);
+		highest = boost::lexical_cast<long> (row[1]);
+	}
+	
+	return make_pair<level, level> (level(kHybrid, lowest), level(kHybrid, highest));
 }
 
 vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
@@ -131,31 +175,49 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	// first means first in sorted order, ie smallest number ie the highest level
 
 	long firstHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-	long lastHybridLevel = -1;
+	long lastHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
 
 	// Karkeaa haarukointia
 
 	switch (mod->Type())
 	{
 #if 0
-	case kFindValueModifier:
+		case kFindValueModifier:
 		{
+			/*
+			 * -- FIRST HYBRID LEVEL --
+			 * 
+			 * -- pick highest max above MAX HEIGHT --
+			 * 
+			 * -- MAX HEIGHT in data--
+			 *
+			 *  
+			 * -- MIN HEIGHT in data --
+			 * 
+			 * -- pick lowest min below MIN HEIGHT --
+			 * 
+			 * -- LAST HYBRID LEVEL --
+			 */
+			
+			double max_value = *max_element(findValue.begin(), findValue.end());
 			double min_value = *min_element(findValue.begin(), findValue.end());
-			// double max_value = *max_element(findValue.begin(), findValue.end());
-
-			if (min_value >= 6000.)
-			{
-				lastHybridLevel = 35;
-			}
-			else if (min_value >= 1000.)
-			{
-				lastHybridLevel = 55;
-			}
+			
+			// first --> lowest level that has this height
+			// second --> highest level that has this height
+			
+			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
+			auto levelsForMinHeight = LevelForHeight(prod, min_value);
+			
+			// For first hybrid level (the highest ie max), get one level above the max level if possible
+			// For last hybrid level (the lowest ie min), get one level below the min level if possible
+			
+			firstHybridLevel = (levelsForMaxHeight.second.Value() == firstHybridLevel ? firstHybridLevel : lastHybridLevel - 1);
+			lastHybridLevel = (levelsForMinHeight.first.Value() == lastHybridLevel ? lastHybridLevel : lastHybridLevel + 1);
+					
 		}
 			break;
 #endif
-		default:
-			lastHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		default:			
 			break;
 	}
 
