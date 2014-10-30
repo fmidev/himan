@@ -518,7 +518,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 			double sum = currentSum - previousSum;
 
-			if (sum > 0 && isRateCalculation && step != 1)
+			if (isRateCalculation && step != 1)
 			{
 				sum /= step;
 			}
