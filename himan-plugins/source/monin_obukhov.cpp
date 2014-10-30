@@ -20,7 +20,7 @@ using namespace himan::plugin;
 
 monin_obukhov::monin_obukhov()
 {
-	itsClearTextFormula = "1/L = -(k*g*Q)/(u*^3*T)";
+	itsClearTextFormula = "1/L = -(k*g*Q)/(rho*cp*u*^3*T)";
 
 	itsLogger = logger_factory::Instance()->GetLog("monin_obukhov");
 }
@@ -66,7 +66,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	const param TParam("T-K"); // ground Temperature
 	const param QParam("FLSEN-JM2"); // surface heat flux
 	const param U_SParam("FRVEL-MS"); // friction velocity
-
+	const param PParam("P-PA");	
 	// ----	
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("monin_obukhov Thread #" + boost::lexical_cast<string> (threadIndex));
@@ -81,7 +81,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
 	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, false);
 	info_t U_SInfo = Fetch(forecastTime, forecastLevel, U_SParam, false);
-
+	info_t PInfo = Fetch(forecastTime, forecastLevel, PParam, false);
 	// determine length of forecast step to calculate surface heat flux in W/m2
 	double forecastStepSize;
 
@@ -94,7 +94,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		forecastStepSize = itsConfiguration->ForecastStep()*60; //step size in seconds
 	}
 
-	if (!TInfo || !QInfo || !U_SInfo)
+	if (!TInfo || !QInfo || !U_SInfo || !PInfo)
 	{
 		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 
@@ -111,27 +111,30 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	string deviceType = "CPU";
 
-	LOCKSTEP(myTargetInfo, TInfo, QInfo, U_SInfo)
+	LOCKSTEP(myTargetInfo, TInfo, QInfo, U_SInfo, PInfo)
 	{
 
 		double T = TInfo->Value();
 		double Q = QInfo->Value();
 		double U_S = U_SInfo->Value();
-		
+		double P = PInfo->Value();
+
 		double mol(kFloatMissing);
 
-		if (T == kFloatMissing || Q == kFloatMissing || U_S == kFloatMissing)
+		if (T == kFloatMissing || Q == kFloatMissing || U_S == kFloatMissing || P == kFloatMissing)
 		{
 			continue;
 		}
 		
-		Q /= forecastStepSize; // divide by time step to obtain Watts
+		Q /= forecastStepSize; // divide by time step to obtain Watts/m2
 
 		/* Calculation of the inverse of Monin-Obukhov length to avoid division by 0 */
 		
 		if (U_S != 0.0)
 		{
-			mol = -constants::kG * constants::kK * Q / (U_S * U_S * U_S * T);
+			double rho = P / (constants::kRd * T); // Calculate density
+			double cp = 1.0056e-3 + 0.017766 * T + 4.0501e-4 * pow(T,2) - 1.017e-6 * pow(T,3) + 1.4715e-8 * pow(T,4) -7.4022e-11 * pow(T,5) + 1.2521e-13 * pow(T,6); // Calculate specific heat capacity
+			mol = -constants::kG * constants::kK * Q / (rho * cp * U_S * U_S * U_S * T);
 		}
 		myTargetInfo->Value(mol);
 
