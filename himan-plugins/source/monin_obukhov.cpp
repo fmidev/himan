@@ -119,6 +119,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		double U_S = U_SInfo->Value();
 		double P = PInfo->Value();
 
+		double T_C = T + constants::kKelvin; // Convert Temperature to Celvins
 		double mol(kFloatMissing);
 
 		if (T == kFloatMissing || Q == kFloatMissing || U_S == kFloatMissing || P == kFloatMissing)
@@ -133,7 +134,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		if (U_S != 0.0)
 		{
 			double rho = P / (constants::kRd * T); // Calculate density
-			double cp = 1.0056e-3 + 0.017766 * T + 4.0501e-4 * pow(T,2) - 1.017e-6 * pow(T,3) + 1.4715e-8 * pow(T,4) -7.4022e-11 * pow(T,5) + 1.2521e-13 * pow(T,6); // Calculate specific heat capacity
+			double cp = 1.0056e-3 + 0.017766 * T_C + 4.0501e-4 * pow(T_C,2) - 1.017e-6 * pow(T_C,3) + 1.4715e-8 * pow(T_C,4) -7.4022e-11 * pow(T_C,5) + 1.2521e-13 * pow(T_C,6); // Calculate specific heat capacity
 			mol = -constants::kG * constants::kK * Q / (rho * cp * U_S * U_S * U_S * T);
 		}
 		myTargetInfo->Value(mol);
