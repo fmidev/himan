@@ -345,6 +345,22 @@ enum HPModifierType
 	kIntegralModifier
 };
 
+#ifndef __CUDACC__
+const boost::unordered_map<HPModifierType,const char*> HPModifierTypeToString = ba::map_list_of
+		(kUnknownModifierType, "unknown modifier")
+		(kAverageModifier, "average modifier")
+		(kAccumulationModifier, "accumulation modifier")
+		(kMaximumModifier, "maximum modifier")
+		(kMinimumModifier, "minimum modifier")
+		(kDifferenceModifier, "difference modifier")
+		(kMaximumMinimumModifier, "maximum minimum modifier")
+		(kCountModifier, "count modifier")
+		(kFindHeightModifier, "find height modifier")
+		(kFindValueModifier, "find value modifier")
+		(kIntegralModifier, "integral modifier")
+;
+#endif
+
 /// Precipitation forms as agreed by FMI
 
 enum HPPrecipitationForm
