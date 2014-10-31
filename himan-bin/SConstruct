@@ -26,7 +26,7 @@ workspace = os.environ['HOME'] + "/workspace/himan"
 	
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-6.0'
+cuda_toolkit_path = '/usr/local/cuda-6.5'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
 	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
