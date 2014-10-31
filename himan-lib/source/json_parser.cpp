@@ -640,6 +640,8 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 		int stop = pt.get<int>("stop_minute");
 		int step = pt.get<int>("step");
 
+		conf->itsForecastStep = step;
+
 		HPTimeResolution stepResolution = kMinuteResolution;
 
 		if (stop > 1<<8)
