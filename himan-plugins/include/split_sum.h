@@ -60,14 +60,12 @@ private:
 	 * With rate we don't necessary know what are the closest time steps wrt to our
 	 * own time step
 	 *
-	 * @param conf himan configuration
 	 * @param myTargetInfo Result info of calculation (will not be modified in this function)
-	 * @param forward Whether to search forward in time for next data
-	 * @param targetStep The step of the target info; source data step must equal or large than this 
-	 * @return Requested data
+	 * @param targetStep Step length between current and previous timestep
+	 * @return Requested data, previous and current
 	 */
 
-	std::shared_ptr<himan::info> GetSourceDataForRate(std::shared_ptr<const info> myTargetInfo, bool forward, int targetStep);
+	std::pair<std::shared_ptr<himan::info>,std::shared_ptr<himan::info>> GetSourceDataForRate(std::shared_ptr<const info> myTargetInfo, int step);
 
 	/**
 	 * @brief Fetching source data from cumulative parameter

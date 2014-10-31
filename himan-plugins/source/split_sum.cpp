@@ -14,12 +14,6 @@
 #include "level.h"
 #include "forecast_time.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
-
 using namespace std;
 using namespace himan::plugin;
 
@@ -284,7 +278,15 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		info_t curSumInfo;
 		info_t prevSumInfo;
-			
+		
+		if (myTargetInfo->Time().Step() == 0)
+		{
+			// This is the first time step, calculation can not be done
+
+			 myThreadedLogger->Info("This is the first time step -- not calculating " + myTargetInfo->Param().Name() + " for step " + boost::lexical_cast<string> (forecastTime.Step()));
+			 continue;
+		}
+
 		/*
 		 * Two modes of operation:
 		 *
@@ -298,82 +300,19 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		 * based on those values.
 		 */
 
+
+		int step = itsConfiguration->ForecastStep();
+
 		if (isRateCalculation)
 		{
 
-			// Length of time step determined at configuration file
-
-			if (myTargetInfo->Time().Step() == 0)
-			{
-				// This is the first time step, calculation can not be done
-
-				 myThreadedLogger->Info("This is the first time step -- not calculating " + myTargetInfo->Param().Name() + " for step " + boost::lexical_cast<string> (forecastTime.Step()));
-
-				 continue;
-			 }
-
-			size_t timeIndex = myTargetInfo->TimeIndex();
-
-			forecast_time previousTime;
-				
-			if (timeIndex == 0)
-			{
-				/*
-				 * This is first time requested, but maybe not first time in the
-				 * source data. We have to extrapolate the step to previous data
-				 * from the step to next data.
-				 *
-				 * Of course we need to *have* next time step in order to do this.
-				 * In order to work around the problem, we guess that we could
-				 * have data in some time step and let the Fetch() function
-				 * deal with it.
-				 */
-
-				previousTime = myTargetInfo->Time();
-
-				if (myTargetInfo->SizeTimes() == 1)
-				{
-					if (previousTime.StepResolution() == kHourResolution)
-					{
-						previousTime.ValidDateTime()->Adjust(kHourResolution, -1);
-					}
-					else
-					{
-						previousTime.ValidDateTime()->Adjust(kMinuteResolution, -15);
-					}
-				}
-				else
-				{
-
-
-					forecast_time nextTime = myTargetInfo->PeekTime(timeIndex+1);
-
-					int diff = nextTime.Step() - myTargetInfo->Time().Step();
-
-					previousTime.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), -diff);
-				}
-			}
-			else
-			{
-				previousTime = myTargetInfo->PeekTime(timeIndex-1);
-			}
-				
-			assert(myTargetInfo->Time().StepResolution() == previousTime.StepResolution());
-
-			int targetStep = myTargetInfo->Time().Step() - previousTime.Step();
-
 			// Calculating RATE
 
-			// Previous VALID data
-			myThreadedLogger->Debug("Searching for previous time step data");
-			prevSumInfo = GetSourceDataForRate(myTargetInfo, false, targetStep);
-	
-			// Next VALID data
-			if (prevSumInfo)
-			{
-				myThreadedLogger->Debug("Searching for next time step data");
-				curSumInfo = GetSourceDataForRate(myTargetInfo, true, targetStep);
-			}
+
+			auto infos = GetSourceDataForRate(myTargetInfo, step);
+			
+			prevSumInfo = infos.first;
+			curSumInfo = infos.second;
 
 		}
 		else
@@ -436,22 +375,16 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		string deviceType = "CPU";
 
-		double step = static_cast<double> (curSumInfo->Time().Step() - prevSumInfo->Time().Step());
-
+		step = static_cast<int> (curSumInfo->Time().Step() - prevSumInfo->Time().Step());
+		
 		if (isRadiationCalculation)
 		{
 
 			/*
-			 * Radiation unit is W/m^2 which is J/s/m^2, so we need to convert
+			 * Radiation unit is W/m^2 which is J/m^2/s, so we need to convert
 			 * time to seconds.
 			 *
-			 * Here we do the same minute <--> hour switch than we do with
-			 * precipitation rates: because smartmet views harmonie data
-			 * only at one hour steps, we cannot calculate the radiation power
-			 * every 15 minutes. We have to calculate the value from the past
-			 * hour, not past 15 minutes. So in the case of Harmonie we
-			 * divide the cumulative value with 60*60 seconds instead of
-			 * 15*60 seconds.
+			 * Step is always one hour or more, even in the case of Harmonie.
 			 */
 
 			if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
@@ -476,34 +409,14 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 			 * For precipitation:
 			 *
 			 * If calculating for Harmonie, use hour as base time unit!
-			 * This has been agreed with AK.
+			 * This has been agreed with AKS.
 			 *
-			 * This is how its *should* be done, but it's not:
-			 *
-			 * --- THIS IS HOW IT SHOULD BE DONE BUT ITS NOT ---
-			 *
-			 * If target time resolution is hour, the basic time unit
-			 * is one hour.
-			 * If target time resolution is minute, the basic time unit
-			 * is 15 minutes.
-			 *
-			 * For example, ECMWF:
-			 *
-			 * (DATA_STEP_240 - DATA_STEP_234) / (BASIC_TIME_UNIT * STEP)
-			 *
-			 * --> (DATA_STEP_240 - DATA_STEP_234) / (6 * 1 hour)
-			 *
-			 * For example, Harmonie:
-			 *
-			 * (DATA_STEP_120 - DATA_STEP_105) / (STEP / BASIC_TIME_UNIT * STEP)
-			 *
-			 * --> (DATA_STEP_120 - DATA_STEP_105) / 1
-			 *
-			 * --- THIS IS HOW IT SHOULD BE DONE BUT ITS NOT ---
 			 */
 
 			step = 1;
 		}
+
+		double invstep = 1./step;
 
 		LOCKSTEP(myTargetInfo, curSumInfo, prevSumInfo)
 		{
@@ -520,7 +433,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 			if (isRateCalculation && step != 1)
 			{
-				sum /= step;
+				sum *= invstep;
 			}
 
 			if (sum < 0 && parmName != "RTOPLW-WM2")
@@ -538,118 +451,120 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	}
 }
 
-shared_ptr<himan::info> split_sum::GetSourceDataForRate(shared_ptr<const info> myTargetInfo, bool forward, int targetStep)
+pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataForRate(shared_ptr<const info> myTargetInfo, int step)
 {
-	shared_ptr<info> SumInfo;
-
-	/*
-	 * When calculating rate there are three different kinds if situations with
-	 * regards to time:
-	 *
-	 * 1) The target step is smaller than data step.
-	 *
-	 * This is for example when calculating hourly rate for ECMWF data where the data
-	 * step is 3 or 6 hours. So we have
-	 *
-	 * DATA_STEP  TARGET_STEP
-	 * 0          0
-	 *            1
-	 *            2
-	 * 3          3
-	 *            4
-	 *            5
-	 * 6          6
-	 *
-	 * So for target steps 1-3, we calculate (data_step 3 - data_step 0) / 3
-	 *
-	 * 2) The target step is the same as data step.
-	 *
-	 * This is for example when calculating hourly rate for Hirlam. This is the
-	 * most simple case.
-	 *
-	 * DATA_STEP  TARGET_STEP
-	 * 0          0
-	 * 1          1
-	 * 2          2
-	 * 3          3
-	 *
-	 * So for target step 1 we calculate (data_step 1 - data_step 0) / 1
-	 *
-	 * 3) The target step is larger than the data step.
-	 * 
-	 * This is for example when calculating hourly rate for Harmonie.
-	 *
-	 * DATA_STEP  TARGET_STEP
-	 * 0          0
-	 * 15
-	 * 30
-	 * 45
-	 * 60         60
-	 *
-	 * So for target step 60 we calculate (data_step 60 - data_step 0) / 1
-	 *
-	 * This differs from point 2) since we cannot simply take the first time step
-	 * that precedes step 60; we have to rollback all the way to step 0 and also
-	 * be sure to use 1 as divisor, not 4 or 60.
-	 */
+	shared_ptr<info> prevInfo;
+	shared_ptr<info> curInfo;
 
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
-	int steps = 6; // by default look for 6 timesteps forward or backward
-	int step = 1; // by default the difference between time steps is one (ie. one hour))
+	// 1. Assuming we *know* what the step is, fetch previous and current
+	// based on that step.
 
-	if (timeResolution == kMinuteResolution)
+	if (step != kHPMissingInt)
 	{
-		step = 60;	// Forecast step is 15 (ie Harmonie), but it has been agreed
-					// with AKS that we'll use one hour since editor displays
-					// only hourly data.
+		if (myTargetInfo->Producer().Id() == 210)
+		{
+			step = 60;	// Forecast step is 15 (Harmonie), but it has been agreed
+						// with AKS that we'll use one hour since editor displays
+						// only hourly data.
+		}
+		
+		forecast_time wantedTimeStep = myTargetInfo->Time();
+		wantedTimeStep.ValidDateTime()->Adjust(timeResolution, -step);
+		
+		prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
+	}
+	else
+	{
+		itsLogger->Debug("Configuration file does not have key 'step': trying to guess correct step");
+	}
+
+	curInfo = FetchSourceData(myTargetInfo,myTargetInfo->Time());
+
+	if (curInfo && prevInfo)
+	{
+		return make_pair(prevInfo,curInfo);
+	}
+
+	// 2. Data was not found on the requested steps. Now we have to scan the database
+	// for data which is slow.
+	
+	itsLogger->Debug("Scanning database for source data");
+	
+	int maxSteps = 6; // by default look for 6 hours forward or backward
+	step = 1; // by default the difference between time steps is one (ie. one hour))
+
+	if (myTargetInfo->Producer().Id() == 210)
+	{
+		step = 60;	// see comment on line 512
 	}
 	else if (timeResolution != kHourResolution)
 	{
 		throw runtime_error(ClassName() + ": Invalid time resolution value: " + HPTimeResolutionToString.at(timeResolution));
 	}
 
-	int i = 0;
+	int i = step;
 
-	/*
-	 * Parameter RRR-KGM2 is always calculated with 'normal' mode (no averaging).
-	 */
-	
-	if (!forward || (CALCULATE_AVERAGE_RATE && myTargetInfo->Param().Name() != "RRR-KGM2"))
-	{ 
-		//i = targetStep;
-		i = step;
-	}
+	itsLogger->Trace("Target time is " + static_cast<string> (*myTargetInfo->Time().ValidDateTime()));
 
-	for (; !SumInfo && i <= steps*step; i += step)
+	if (!prevInfo)
 	{
-		int curstep = i;
+		itsLogger->Trace("Searching for previous data");
 
-		forecast_time wantedTimeStep = myTargetInfo->Time();
+		// start going backwards in time and search for the
+		// first data that exists
 
-		if (!forward)
+		while (!prevInfo && i <= maxSteps*step)
 		{
-			curstep *= -1;
+			int curstep = i * -1;
+
+			forecast_time wantedTimeStep = myTargetInfo->Time();
+
+			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, curstep);
+
+			if (wantedTimeStep.Step() < 0)
+			{
+				continue;
+			}
+
+			itsLogger->Trace("Trying time " + static_cast<string> (*wantedTimeStep.ValidDateTime()));
+			prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
+
+			i += step;
 		}
-
-		wantedTimeStep.ValidDateTime()->Adjust(timeResolution, curstep);
-
-		if (wantedTimeStep.Step() < 0)
-		{
-			continue;
-		}
-
-		SumInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
-
 	}
 
-	return SumInfo;
+	if (!curInfo)
+	{
+		itsLogger->Trace("Searching for next data");
+
+		// start going forwards in time and search for the
+		// first data that exists
+
+		i = 0;
+
+		while (!curInfo && i <= maxSteps*step)
+		{
+			int curstep = i;
+
+			forecast_time wantedTimeStep = myTargetInfo->Time();
+
+			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, curstep);
+
+			itsLogger->Trace("Trying time " + static_cast<string> (*wantedTimeStep.ValidDateTime()));
+			curInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
+
+			i += step;
+
+		}
+	}
+	
+	return make_pair(prevInfo,curInfo);
 }
 
 shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime)
 {
-	shared_ptr<fetcher> f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-
 	level wantedLevel(kHeight, 0 ,"HEIGHT");
 
 	// Transform ground level based on only the first source parameter
@@ -665,22 +580,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 		wantedLevel = level(kTopOfAtmosphere, 0, "TOP");
 	}
 
-	shared_ptr<info> SumInfo;
-	
-	try
-	{
-		SumInfo = f->Fetch(itsConfiguration,
-						wantedTime,
-						wantedLevel,
-						params);
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw;
-		}
-	}
+	shared_ptr<info> SumInfo = Fetch(wantedTime, wantedLevel, params);
 
 	// If model does not provide data for timestep 0, emulate it
 	// by providing a zero-grid
@@ -697,9 +597,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 		SumInfo->Times(times);
 
 		SumInfo->Create(myTargetInfo->Grid());
-		SumInfo->First();
-		SumInfo->Grid()->Data()->Fill(0);
-
+		SumInfo->Data()->Fill(0);
 
 	}
 	
