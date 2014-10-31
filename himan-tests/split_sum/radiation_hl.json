@@ -7,7 +7,7 @@
 	"step" : "1",
 	"file_write" : "multiple",
 	"origintime" : "2014-10-29 18:00:00",
-	"read_data_from_database" : true,
+	"read_data_from_database" : false,
 	"processqueue" : [
 	{
 		"leveltype" : "height",

@@ -6,7 +6,7 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan-bin/himan"
 fi
 
-rm -f RR*grib
+rm -f RTOP*grib
 
 $HIMAN -d 5 -f radiation_ec.json -t grib ec_radiation_source.grib --no-cuda -s ec_nocuda
 
