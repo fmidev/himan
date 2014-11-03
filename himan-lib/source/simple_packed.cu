@@ -236,21 +236,24 @@ void simple_packed_util::PackUnevenBytes(unsigned char* __restrict__ d_p, const 
 	double divisor = GetGribPower(-coeff.binaryScaleFactor, 2);
 
 	double x=(((d_u[idx]*decimal)-coeff.referenceValue)*divisor)+0.5;
+	unsigned long unsigned_val = static_cast<unsigned long> (x);
+	
+	long bitp = coeff.bitsPerValue * idx;
 
-	// long bitp = coeff.bitsPerValue * idx;
-
-	long  i = 0;
+	long i = 0;
 
 	for (i=coeff.bitsPerValue-1; i >= 0; i--)
 	{
-		if(BitTest(static_cast<unsigned long> (x),i))
+		if(BitTest(unsigned_val,i))
 		{
-			SetBitOn(d_p, i);
+			SetBitOn(d_p, bitp);
 		}
 		else
 		{
-			SetBitOff(d_p, i);
+			SetBitOff(d_p, bitp);
 		}
+
+		bitp++;
 	}
 }
 
@@ -265,9 +268,9 @@ void simple_packed_util::PackFullBytes(unsigned char* __restrict__ d_p, const do
 	// unsigned char* encoded = d_p + idx * static_cast<int> (coefficients.bpv/8);
 
 	double x = ((((d_u[idx]*decimal)-coeff.referenceValue)*divisor)+0.5);
-	unsigned long unsigned_val = (unsigned long)x;
+	unsigned long unsigned_val = static_cast<unsigned long> (x);
 
-	unsigned char* encoded = &d_p[idx];
+	unsigned char* encoded = &d_p[idx * static_cast<int> (coeff.bitsPerValue/8)];
 
 	while(coeff.bitsPerValue >= 8)
 	{
