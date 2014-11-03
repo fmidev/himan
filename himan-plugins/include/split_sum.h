@@ -48,8 +48,22 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(1, 1);
+		return HPVersionNumber(1, 2);
 	}
+
+protected:
+	/**
+	 * @brief Write calculated data to file
+	 *
+	 * Function is exactly same as its parent version in compiled_plugin_base
+	 * except that it first checks if info has data. If all data is missing and
+	 * file write target is neons, no file will be written.
+	 *
+	 * For debugging purposes an empty file is written if file write target is
+	 * single or multiple files.
+	 */
+	
+	virtual void WriteToFile(const std::shared_ptr<const info>& targetInfo) const;
 
 private:
 	void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
