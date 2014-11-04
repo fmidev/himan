@@ -7,8 +7,8 @@
 	"stop_hour" : "4",
 	"step" : "1",
 	"file_write" : "multiple",
-	"origintime" : "2014-05-18 18:00:00",
-	"read_data_from_database" : "false",
+	"origintime" : "2014-11-04 00:00:00",
+	"read_data_from_database" : false,
 
 	"processqueue" : [
 	{
