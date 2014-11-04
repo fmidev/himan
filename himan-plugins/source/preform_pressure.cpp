@@ -114,7 +114,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	
 	params RRParams({param("RRR-KGM2"), param("RR-1-MM")});
 	
-	const params PParams({param("P-PA"), param("PGR-PA")});
+	const params PParams({param("PGR-PA"), param("P-PA")});
 	const params WParams({param ("VV-MMS"), param("VV-MS")});
 	
 	level groundLevel(kHeight, 2);
