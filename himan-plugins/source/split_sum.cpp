@@ -314,12 +314,10 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 			// Calculating RATE
 
-
 			auto infos = GetSourceDataForRate(myTargetInfo, step);
 			
 			prevSumInfo = infos.first;
 			curSumInfo = infos.second;
-
 		}
 		else
 		{
@@ -478,8 +476,11 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 		
 		forecast_time wantedTimeStep = myTargetInfo->Time();
 		wantedTimeStep.ValidDateTime()->Adjust(timeResolution, -step);
-		
-		prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
+	
+		if (wantedTimeStep.Step() >= 0)
+		{
+			prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
+		}
 	}
 	else
 	{
@@ -521,16 +522,17 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 		// start going backwards in time and search for the
 		// first data that exists
 
+		forecast_time wantedTimeStep = forecast_time(myTargetInfo->Time());
+	
 		while (!prevInfo && i <= maxSteps*step)
 		{
 			int curstep = i * -1;
 
-			forecast_time wantedTimeStep = myTargetInfo->Time();
-
 			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, curstep);
-
+		
 			if (wantedTimeStep.Step() < 0)
 			{
+				i += step;
 				continue;
 			}
 
