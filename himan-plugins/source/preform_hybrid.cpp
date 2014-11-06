@@ -360,6 +360,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				{
 					PreForm = kRain;
 				}
+				
+				// Lisäys, jolla korjataan vesi/tihku lumeksi, jos pintakerros pakkasella (mutta jäätävän sateen/tihkun kriteerit eivät toteudu, 
+				// esim. paksu plussakerros pakkas-st/sc:n yllä)
+				if (minusArea != MISS OR plusArea < snowArea)
+				{
+					PreForm = kSnow;
+				}
 			}
 
 			// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
@@ -367,6 +374,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			if (plusArea != MISS && plusArea >= snowArea AND plusArea <= waterArea)
 			{
 				PreForm = kSleet;
+				
+				// lisäys, jolla korjataan räntä lumeksi, kun pintakerros pakkasella tai vain ohuelti plussalla
+				
+				if (minusArea != MISS OR plusArea < snowArea)
+				{
+					PreForm = kSnow;
+				}
 			}
 
 			// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
