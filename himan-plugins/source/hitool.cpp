@@ -143,8 +143,8 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 		// If requested height is below lowest level (f.ex. 0 meters) or above highest (f.ex. 80km)
 		// database query will return null
 
-		double newlowest = (row[0] == "") ? lowest : lexical_cast<long> (row[0]);
-		double newhighest = (row[1] == "") ? highest : lexical_cast<long> (row[1]);
+		long newlowest = (row[0] == "") ? lowest : lexical_cast<long> (row[0]);
+		long newhighest = (row[1] == "") ? highest : lexical_cast<long> (row[1]);
 
 		// SQL query returns the level value that precedes the requested value.
 		// For first hybrid level (the highest ie max), get one level above the max level if possible
@@ -1327,8 +1327,6 @@ shared_ptr<info> hitool::FreezingArea()
 				{
 					paloft = (zl3 - zl2) * (ta2 - constants::kKelvin);
 					pa = pasfc + paloft;
-
-					ma = (zl2 - zl1) * (ta3 - constants::kKelvin);
 				}
 			}
 		}
