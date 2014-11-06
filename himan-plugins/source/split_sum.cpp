@@ -473,10 +473,10 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 						// with AKS that we'll use one hour since editor displays
 						// only hourly data.
 		}
-		
-		forecast_time wantedTimeStep = myTargetInfo->Time();
+
+		forecast_time wantedTimeStep(myTargetInfo->Time());
 		wantedTimeStep.ValidDateTime()->Adjust(timeResolution, -step);
-	
+
 		if (wantedTimeStep.Step() >= 0)
 		{
 			prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
@@ -491,6 +491,7 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 
 	if (curInfo && prevInfo)
 	{
+		itsLogger->Debug("Found previous and current data");
 		return make_pair(prevInfo,curInfo);
 	}
 
@@ -511,60 +512,56 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 		throw runtime_error(ClassName() + ": Invalid time resolution value: " + HPTimeResolutionToString.at(timeResolution));
 	}
 
-	int i = step;
-
 	itsLogger->Trace("Target time is " + static_cast<string> (*myTargetInfo->Time().ValidDateTime()));
 
 	if (!prevInfo)
 	{
-		itsLogger->Trace("Searching for previous data");
+		itsLogger->Debug("Searching for previous data");
 
 		// start going backwards in time and search for the
 		// first data that exists
 
-		forecast_time wantedTimeStep = forecast_time(myTargetInfo->Time());
-	
-		while (!prevInfo && i <= maxSteps*step)
-		{
-			int curstep = i * -1;
+		forecast_time wantedTimeStep(myTargetInfo->Time());
 
-			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, curstep);
-		
+		for (int i = 0; !prevInfo && i <= maxSteps*step; i++)
+		{
+			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, -step);
+
 			if (wantedTimeStep.Step() < 0)
 			{
-				i += step;
 				continue;
 			}
 
-			itsLogger->Trace("Trying time " + static_cast<string> (*wantedTimeStep.ValidDateTime()));
+			itsLogger->Debug("Trying time " + static_cast<string> (*wantedTimeStep.ValidDateTime()));
 			prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
 
-			i += step;
+			if (prevInfo)
+			{
+				itsLogger->Trace("Found previous data");
+			}
 		}
 	}
 
 	if (!curInfo)
 	{
-		itsLogger->Trace("Searching for next data");
+		itsLogger->Debug("Searching for next data");
 
 		// start going forwards in time and search for the
 		// first data that exists
 
-		i = 0;
+		forecast_time wantedTimeStep(myTargetInfo->Time());
 
-		while (!curInfo && i <= maxSteps*step)
+		for (int i = 0; !curInfo && i <= maxSteps*step; i++)
 		{
-			int curstep = i;
+			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, step);
 
-			forecast_time wantedTimeStep = myTargetInfo->Time();
-
-			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, curstep);
-
-			itsLogger->Trace("Trying time " + static_cast<string> (*wantedTimeStep.ValidDateTime()));
+			itsLogger->Debug("Trying time " + static_cast<string> (*wantedTimeStep.ValidDateTime()));
 			curInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
 
-			i += step;
-
+			if (curInfo)
+			{
+				itsLogger->Trace("Found current data");
+			}
 		}
 	}
 	
