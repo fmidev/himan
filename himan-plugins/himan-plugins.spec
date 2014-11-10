@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.10.30
+Version: 14.11.10
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -89,6 +89,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Nov 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.11.10-1.fmi
+- Fixes in split_sum, preform_pressure and preform_hybrid
+* Tue Nov 04 2014 Andreas Tack <andreas.tack@fmi.fi> - 14.11.4-1.fmi
+- Fixes in split_sum and monin_obukhov
 * Tue Oct 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.30-1.fmi
 - Fixes in split_sum and monin_obukhov
 * Tue Oct 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.28-1.fmi
