@@ -119,8 +119,8 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 	
 	stringstream query;
 	
-	query << "SELECT min(CASE WHEN maximum <= " << height << " THEN level_value ELSE NULL END) AS lowest_level, "
-			<< "max(CASE WHEN minimum >= " << height << " THEN level_Value ELSE NULL END) AS highest_level "
+	query << "SELECT min(CASE WHEN maximum_height <= " << height << " THEN level_value ELSE NULL END) AS lowest_level, "
+			<< "max(CASE WHEN minimum_height >= " << height << " THEN level_value ELSE NULL END) AS highest_level "
 			<< "FROM "
 			<< "hybrid_level_height "
 			<< "WHERE "
