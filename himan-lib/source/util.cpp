@@ -15,6 +15,7 @@
 #include "level.h"
 #include "param.h"
 #include "forecast_time.h"
+#include "cuda_helper.h"
 
 using namespace himan;
 using namespace std;

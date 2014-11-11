@@ -775,17 +775,12 @@ info_simple* info::ToSimple() const
 		assert(Grid()->PackedData()->ClassName() == "simple_packed");
 		
 		ret->packed_values = reinterpret_cast<simple_packed*> (Grid()->PackedData());
-		ret->create();
 
 	}
-	else
-	{
-		// Shallow-copy pointer to unpacked data. Note: this is not page-locked.
 
-		ret->values = const_cast<double*> (Data()->ValuesAsPOD());
-		ret->is_page_locked = false;
-	}
-
+	// Reserve a place for the unpacked data
+	ret->values = const_cast<double*> (Data()->ValuesAsPOD());
+	
 	return ret;
 }
 
