@@ -11,6 +11,7 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include "util.h"
+#include "cuda_helper.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -421,7 +422,7 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 		}
 	}
 }
-
+#if 0
 void compiled_plugin_base::CopyDataFromSimpleInfo(const info_t& anInfo, info_simple* aSimpleInfo, bool writeToCache)
 {
 	assert(aSimpleInfo);
@@ -441,6 +442,7 @@ void compiled_plugin_base::CopyDataFromSimpleInfo(const info_t& anInfo, info_sim
 		c->Insert(anInfo);
 	}
 }
+#endif
 #endif
 
 bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids) const

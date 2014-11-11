@@ -127,9 +127,6 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		auto opts = CudaPrepare(myTargetInfo, TInfo, VVInfo, PInfo);
 
 		vvms_cuda::Process(*opts);
-
-		CudaFinish(move(opts), myTargetInfo, TInfo, VVInfo, PInfo);
-
 	}
 	else
 #endif
@@ -209,33 +206,4 @@ unique_ptr<vvms_cuda::options> vvms::CudaPrepare(shared_ptr<info> myTargetInfo, 
 
 	return opts;
 }
-
-void vvms::CudaFinish(unique_ptr<vvms_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> VVInfo, shared_ptr<info> PInfo)
-{
-	// Copy data back to infos
-
-	CopyDataFromSimpleInfo(myTargetInfo, opts->vv_ms, false);
-	
-	// Copy unpacked data to source info in case
-	// some other thread/plugin calls for this same data.
-	// Clear packed data now that it's been unpacked
-
-	if (TInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(TInfo, opts->t, true);
-	}
-
-	if (VVInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(VVInfo, opts->vv, true);
-	}
-
-	if (PInfo && PInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(PInfo, opts->p, true);
-	}
-
-	// opts is destroyed after leaving this function
-}
-
 #endif

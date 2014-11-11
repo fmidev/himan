@@ -36,16 +36,28 @@ struct options
 	double PScale;
 	double P_level;
 
-
 	options() : select_case(1), N(0), missing(0), kEp(0), TDBase(0), TBase(0), PScale(1), P_level(0) {}
+
+#ifdef __NVCC__
+	~options()
+	{
+		if (T) delete T;
+		if (TD) delete TD;
+		if (Q) delete Q;
+		if (P) delete P;
+		if (RH) delete RH;
+	}
+
+#endif
+
 };
 
 void Process(options& opts);
 
 #ifdef __CUDACC__
-__global__ void CalculateTTD(double* __restrict__ d_T, double* __restrict__ d_TD, double* __restrict__ d_RH, options opts, int* d_missing);
-__global__ void CalculateTQP(const double* __restrict__ d_T, const double* __restrict__ d_Q, double* __restrict__ d_P, double* __restrict__ d_RH, options opts, int* d_missing);
-__global__ void CalculateTQ(const double* __restrict__ d_T, const double* __restrict__ d_Q, double* __restrict__ d_RH, options opts, int* d_missing);
+__global__ void CalculateTTD(cdarr_t d_T, cdarr_t d_TD, darr_t d_RH, options opts);
+__global__ void CalculateTQP(cdarr_t d_T, cdarr_t d_Q, cdarr_t d_P, darr_t d_RH, options opts);
+__global__ void CalculateTQ(cdarr_t d_T, cdarr_t d_Q, darr_t d_RH, options opts);
 
 #endif
 

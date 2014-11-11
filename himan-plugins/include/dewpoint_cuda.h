@@ -11,6 +11,7 @@
 #ifdef HAVE_CUDA
 
 #include "info_simple.h"
+#include "cuda_helper.h"
 
 namespace himan
 {
@@ -31,12 +32,13 @@ struct options
 	double rh_scale;
 
 	options() : N(0), missing(0), t_base(0), rh_scale(1) {}
+
 };
 
 void Process(options& opts);
 
 #ifdef __CUDACC__
-__global__ void Calculate(const double* __restrict__ d_t, const double* __restrict__ d_rh, double* __restrict__ d_td, options opts, int* d_missing);
+__global__ void Calculate(cdarr_t d_t, cdarr_t d_rh, darr_t d_td, options opts);
 #endif
 
 } // namespace dewpoint_cuda

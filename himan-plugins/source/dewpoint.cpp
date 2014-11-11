@@ -110,8 +110,6 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 		dewpoint_cuda::Process(*opts);
 
-		CudaFinish(move(opts), myTargetInfo, TInfo, RHInfo);
-
 	}
 	else
 #endif
@@ -177,28 +175,6 @@ unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTarg
 	}
 
 	return opts;
-}
-
-void dewpoint::CudaFinish(unique_ptr<dewpoint_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> RHInfo)
-{
-	// Copy data back to infos
-
-	CopyDataFromSimpleInfo(myTargetInfo, opts->td, false);
-
-	assert(TInfo->Grid()->ScanningMode() == RHInfo->Grid()->ScanningMode());
-
-	if (TInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(TInfo, opts->t, true);
-	}
-
-	if (RHInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(RHInfo, opts->rh, false);
-	}
-
-	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
-
 }
 
 #endif

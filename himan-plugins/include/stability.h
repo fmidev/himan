@@ -54,9 +54,6 @@ public:
 private:
 	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
-#ifdef HAVE_CUDA
-	void CudaFinish(std::unique_ptr<stability_cuda::options> opts, std::shared_ptr<info>& myTargetInfo,	std::shared_ptr<info>& T500Info, std::shared_ptr<info>& T700Info, std::shared_ptr<info>& T850Info, std::shared_ptr<info>& TD700Info, std::shared_ptr<info>& TD850Info);
-#endif
 	bool GetSourceData(std::shared_ptr<info>& T850Info, std::shared_ptr<info>& T700Info, std::shared_ptr<info>& T500Info, std::shared_ptr<info>& TD850Info, std::shared_ptr<info>& TD700Info, const std::shared_ptr<info>& myTargetInfo, bool useCudaInThisThread);
 	bool GetLISourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& T500mVector, std::vector<double>& TD500mVector, std::vector<double>& P500mVector);
 	bool GetWindShearSourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& U01Vector, std::vector<double>& V01Vector, std::vector<double>& U06Vector, std::vector<double>& V06Vector);

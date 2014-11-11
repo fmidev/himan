@@ -13,6 +13,7 @@
 #ifdef HAVE_CUDA
 
 #include "info_simple.h"
+#include "cuda_helper.h"
 
 namespace himan
 {
@@ -42,6 +43,7 @@ struct options
 	bool thetae;
 
 	options() : N(0), missing(0), t_base(0), td_base(0), p_scale(1), is_constant_pressure(false), theta(false), thetaw(false), thetae(false) {}
+
 };
 
 void Process(options& options);

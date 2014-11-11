@@ -13,6 +13,7 @@
 #ifdef HAVE_CUDA
 
 #include "info_simple.h"
+//#include "cuda_helper.h"
 
 namespace himan
 {
@@ -32,11 +33,12 @@ struct options
 	info_simple* dest;
 
 	options() : N(0), missing(0), scale(1), base(0), source(0), dest(0) {}
+
 };
 
 void Process(options& opts);
 
-__global__ void Calculate(const double* __restrict__ d_source, double* __restrict__ d_dest, options opts, int* d_missing);
+__global__ void Calculate(const double* __restrict__ d_source, double* __restrict__ d_dest, options opts);
 
 
 } // namespace transformer_cuda

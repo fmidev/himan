@@ -230,8 +230,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		windvector_cuda::Process(*opts);
 
-		CudaFinish(move(opts), myTargetInfo, UInfo, VInfo);
-
 	}
 	else
 #endif
@@ -482,42 +480,6 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 	opts->N = opts->speed->size_x*opts->speed->size_y;
 
 	return opts;
-}
-
-void windvector::CudaFinish(unique_ptr<windvector_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> UInfo, shared_ptr<info> VInfo)
-{
-	// Copy data back to infos
-
-	myTargetInfo->ParamIndex(0);
-	CopyDataFromSimpleInfo(myTargetInfo, opts->speed, false);
-	
-	if (itsCalculationTarget != kGust)
-	{
-		myTargetInfo->ParamIndex(1);
-		CopyDataFromSimpleInfo(myTargetInfo, opts->dir, false);
-	}
-
-	if (itsVectorCalculation)
-	{
-		myTargetInfo->ParamIndex(2);
-		CopyDataFromSimpleInfo(myTargetInfo, opts->vector, false);
-	}
-
-	// Copy unpacked data to source info in case
-	// some other thread/plugin calls for this same data.
-	// Clear packed data now that it's been unpacked
-
-	if (UInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(UInfo, opts->u, true);
-	}
-
-	if (VInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(VInfo, opts->v, true);
-	}
-
-	// opts is destroyed after leaving this function
 }
 
 #endif

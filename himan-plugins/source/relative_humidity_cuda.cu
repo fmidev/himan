@@ -11,11 +11,7 @@
 #include "metutil.h"
 
 // CUDA-kernel that computes RH from T and TD
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(double* __restrict__ d_T,
-														double* __restrict__ d_TD,
-														double* __restrict__ d_RH,
-														options opts,
-														int* d_missing)
+__global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(cdarr_t d_T, cdarr_t d_TD, darr_t d_RH, options opts)
 {
 	const double b = 17.27;
 	const double c = 237.3;
@@ -25,69 +21,46 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(double* __re
 
 	if (idx < opts.N)
 	{
-		if (d_T[idx] == kFloatMissing || d_TD[idx] == kFloatMissing)
+		if (d_T[idx] != kFloatMissing && d_TD[idx] != kFloatMissing)
 		{
-			atomicAdd(d_missing, 1);
-			d_RH[idx] = kFloatMissing;
-		}
-		else
-		{
-			d_TD[idx] += opts.TDBase;
-			d_T[idx] += opts.TBase;
-			d_RH[idx] = exp(d + b * (d_TD[idx] / (d_TD[idx] + c))) / exp(d + b * (d_T[idx] / (d_T[idx] + c)));
+			double td = d_TD[idx] + opts.TDBase;
+			double t = d_T[idx] + opts.TBase;
+
+			d_RH[idx] = exp(d + b * (td / (td + c))) / exp(d + b * (t / (t + c)));
 			d_RH[idx] = fmax(fmin(1.0,d_RH[idx]),0.0)*100.0;
 		}
 	}
 }
 
 // CUDA-kernel that computes RH from T, Q and P
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(const double* __restrict__ d_T,
-														const double* __restrict__ d_Q,
-														double* __restrict__ d_P,
-														double* __restrict__ d_RH,
-														options opts,
-														int* d_missing)
+__global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(cdarr_t d_T, cdarr_t d_Q, cdarr_t d_P, darr_t d_RH, options opts)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
 	{
-		if (d_T[idx] == kFloatMissing || d_Q[idx] == kFloatMissing || d_P[idx] == kFloatMissing)
+		if (d_T[idx] != kFloatMissing && d_Q[idx] != kFloatMissing && d_P[idx] == kFloatMissing)
 		{
-			atomicAdd(d_missing, 1);
-			d_RH[idx] = kFloatMissing;
-		}
-		else
-		{
-			d_P[idx] *= opts.PScale;
+			double p = d_P[idx] * opts.PScale;
 
 			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
 
-			d_RH[idx] = (d_P[idx] * d_Q[idx] / opts.kEp / ES) * (d_P[idx] - ES) / (d_P[idx] - d_Q[idx] * d_P[idx] / opts.kEp);
+			d_RH[idx] = (p * d_Q[idx] / opts.kEp / ES) * (p - ES) / (p - d_Q[idx] * p / opts.kEp);
 			d_RH[idx] = fmax(fmin(1.0,d_RH[idx]),0.0)*100.0;
 		}
 	}
 }
 
 // CUDA-kernel that computes RH on pressure-level from T and Q
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(const double* __restrict__ d_T,
-														const double* __restrict__ d_Q,
-														double* __restrict__ d_RH,
-														options opts,
-														int* d_missing)
+__global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(cdarr_t d_T, cdarr_t d_Q, darr_t d_RH, options opts)
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
 	{
-		if (d_T[idx] == kFloatMissing || d_Q[idx] == kFloatMissing)
-		{
-			atomicAdd(d_missing, 1);
-			d_RH[idx] = kFloatMissing;
-		}
-		else
+		if (d_T[idx] != kFloatMissing && d_Q[idx] != kFloatMissing)
 		{
 			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
 
@@ -106,6 +79,26 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 
 	size_t memsize = opts.N * sizeof(double);
 
+	// Define device arrays
+
+	double* d_RH = 0;
+	double* d_T = 0;
+
+	// Allocate memory on device
+
+	CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
+	CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
+
+	// Copy data to device
+
+	PrepareInfo(opts.T, d_T, stream);
+	PrepareInfo(opts.RH);
+
+	// dims
+
+	const int blockSize = 512;
+	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
+
 	// Select mode in which RH is calculated (with T-TD, T-Q-P or T-Q)
 	switch (opts.select_case)
 	{
@@ -113,55 +106,17 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 	case 0:	
 	{
 		// Define device arrays
-
-		double* d_T = 0;
 		double* d_TD = 0;
-		double* d_RH = 0;
-		int* d_missing = 0;
-
+	
 		// Allocate memory on device
-		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
-
-		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
+		
 		CUDA_CHECK(cudaMalloc((void **) &d_TD, memsize));
 
 		// Copy data to device
 
-		if (opts.T->packed_values)
-		{
-			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.T->packed_values->Unpack(d_T, opts.N, &stream);
-			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
-		}
-		else
-		{
-			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
-		}
-	
-		if (opts.TD->packed_values)
-		{
-			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.TD->packed_values->Unpack(d_TD, opts.N, &stream);
-			CUDA_CHECK(cudaMemcpyAsync(opts.TD->values, d_TD, memsize, cudaMemcpyDeviceToHost, stream));
-		}
-		else
-		{
-			CUDA_CHECK(cudaMemcpyAsync(d_TD, opts.TD->values, memsize, cudaMemcpyHostToDevice, stream));
-		}
-		
-		int src = 0;
-	
-		CUDA_CHECK(cudaMemcpyAsync(d_missing, &src, sizeof(int), cudaMemcpyHostToDevice, stream));
-
-		// dims
-
-		const int blockSize = 512;
-		const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
-	
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-	
-		CalculateTTD <<< gridSize, blockSize, 0, stream >>> (d_T, d_TD, d_RH, opts, d_missing);
+		PrepareInfo(opts.TD, d_TD, stream);
+			
+		CalculateTTD <<< gridSize, blockSize, 0, stream >>> (d_T, d_TD, d_RH, opts);
 	
 		// block until the stream has completed
 		CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -169,18 +124,11 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		// check if kernel execution generated an error
 		CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
-		// Retrieve result from device
-		CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
-		CUDA_CHECK(cudaMemcpyAsync(opts.RH->values, d_RH, memsize, cudaMemcpyDeviceToHost, stream));
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
+		ReleaseInfo(opts.TD);
+		
 		// Free device memory
 
-		CUDA_CHECK(cudaFree(d_T));
 		CUDA_CHECK(cudaFree(d_TD));
-		CUDA_CHECK(cudaFree(d_RH));
-		CUDA_CHECK(cudaFree(d_missing));
 
 		break;
 	}
@@ -189,67 +137,18 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 	{
 		// Define device arrays
 
-		double* d_T = 0;
 		double* d_Q = 0;
 		double* d_P = 0;
-		double* d_RH = 0;
-		int* d_missing = 0;
-
+		
 		// Allocate memory on device
-		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
-
-		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_P, memsize));
 		
 		// Copy data to device
-
-		if (opts.T->packed_values)
-		{
-			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.T->packed_values->Unpack(d_T, opts.N, &stream);
-			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
-		}
-		else
-		{
-			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
-		}
-
-		if (opts.Q->packed_values)
-		{
-			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.Q->packed_values->Unpack(d_Q, opts.N, &stream);
-			CUDA_CHECK(cudaMemcpyAsync(opts.Q->values, d_Q, memsize, cudaMemcpyDeviceToHost, stream));
-		}
-		else
-		{
-			CUDA_CHECK(cudaMemcpyAsync(d_Q, opts.Q->values, memsize, cudaMemcpyHostToDevice, stream));
-		}
-
-		if (opts.P->packed_values)
-		{
-			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.P->packed_values->Unpack(d_P, opts.N, &stream);
-			CUDA_CHECK(cudaMemcpyAsync(opts.P->values, d_P, memsize, cudaMemcpyDeviceToHost, stream));
-		}
-		else
-		{
-			CUDA_CHECK(cudaMemcpyAsync(d_P, opts.P->values, memsize, cudaMemcpyHostToDevice, stream));
-		}
-
-		int src = 0;
+		PrepareInfo(opts.Q, d_Q, stream);
+		PrepareInfo(opts.P, d_P, stream);
 	
-		CUDA_CHECK(cudaMemcpyAsync(d_missing, &src, sizeof(int), cudaMemcpyHostToDevice, stream));
-
-		// dims
-
-		const int blockSize = 512;
-		const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
-	
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		CalculateTQP <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_P, d_RH, opts, d_missing);
+		CalculateTQP <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_P, d_RH, opts);
 
 		// block until the stream has completed
 		CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -258,18 +157,13 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 		// Retrieve result from device
-		CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
-		CUDA_CHECK(cudaMemcpyAsync(opts.RH->values, d_RH, memsize, cudaMemcpyDeviceToHost, stream));
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+		ReleaseInfo(opts.Q);
+		ReleaseInfo(opts.P);
 
 		// Free device memory
 
-		CUDA_CHECK(cudaFree(d_T));
 		CUDA_CHECK(cudaFree(d_Q));
 		CUDA_CHECK(cudaFree(d_P));
-		CUDA_CHECK(cudaFree(d_RH));
-		CUDA_CHECK(cudaFree(d_missing));
 
 		break;
 	}
@@ -277,54 +171,15 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 	case 2:
 	{
 		// Define device arrays
-
-		double* d_T = 0;
 		double* d_Q = 0;
-		double* d_RH = 0;
-		int* d_missing = 0;
 
 		// Allocate memory on device
-		CUDA_CHECK(cudaMalloc((void **) &d_RH, memsize));
-		CUDA_CHECK(cudaMalloc((void **) &d_missing, sizeof(int)));
-
-		CUDA_CHECK(cudaMalloc((void **) &d_T, memsize));
 		CUDA_CHECK(cudaMalloc((void **) &d_Q, memsize));
 
 		// Copy data to device
+		PrepareInfo(opts.Q, d_Q, stream);
 
-		if (opts.T->packed_values)
-		{
-			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.T->packed_values->Unpack(d_T, opts.N, &stream);
-			CUDA_CHECK(cudaMemcpyAsync(opts.T->values, d_T, memsize, cudaMemcpyDeviceToHost, stream));
-		}
-		else
-		{
-			CUDA_CHECK(cudaMemcpyAsync(d_T, opts.T->values, memsize, cudaMemcpyHostToDevice, stream));
-		}
-
-		if (opts.Q->packed_values)
-		{
-			// Unpack data and copy it back to host, we need it because its put back to cache
-			opts.Q->packed_values->Unpack(d_Q, opts.N, &stream);
-			CUDA_CHECK(cudaMemcpyAsync(opts.Q->values, d_Q, memsize, cudaMemcpyDeviceToHost, stream));
-		}
-		else
-		{
-			CUDA_CHECK(cudaMemcpyAsync(d_Q, opts.Q->values, memsize, cudaMemcpyHostToDevice, stream));
-		}
-		int src = 0;
-	
-		CUDA_CHECK(cudaMemcpyAsync(d_missing, &src, sizeof(int), cudaMemcpyHostToDevice, stream));
-
-		// dims
-
-		const int blockSize = 512;
-		const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		CalculateTQ <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_RH, opts, d_missing);
+		CalculateTQ <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_RH, opts);
 
 		// block until the stream has completed
 		CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -333,21 +188,22 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
 		// Retrieve result from device
-		CUDA_CHECK(cudaMemcpyAsync(&opts.missing, d_missing, sizeof(int), cudaMemcpyDeviceToHost, stream));
-		CUDA_CHECK(cudaMemcpyAsync(opts.RH->values, d_RH, memsize, cudaMemcpyDeviceToHost, stream));
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+		ReleaseInfo(opts.Q);
 
 		// Free device memory
 	
-		CUDA_CHECK(cudaFree(d_T));
 		CUDA_CHECK(cudaFree(d_Q));
-		CUDA_CHECK(cudaFree(d_RH));
-		CUDA_CHECK(cudaFree(d_missing));
 
 		break;
 		}
 	}
+
+	ReleaseInfo(opts.T);
+	ReleaseInfo(opts.RH, d_RH, stream);
+
+	CUDA_CHECK(cudaFree(d_T));
+	CUDA_CHECK(cudaFree(d_RH));
+
     cudaStreamDestroy(stream);
 
 }

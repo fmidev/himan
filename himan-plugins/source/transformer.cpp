@@ -213,8 +213,6 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 		transformer_cuda::Process(*opts);
 
-		CudaFinish(move(opts), myTargetInfo, sourceInfo);
-
 	}
 	else
 #endif
@@ -265,19 +263,5 @@ unique_ptr<transformer_cuda::options> transformer::CudaPrepare( shared_ptr<info>
 
 	return opts;
 }
-
-void transformer::CudaFinish(unique_ptr<transformer_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> sourceInfo)
-{
-	// Copy data back to infos
-
-	CopyDataFromSimpleInfo(myTargetInfo, opts->dest, false);
-
-	if (sourceInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(sourceInfo, opts->source, true);
-	}
-
-}
-
 #endif
 

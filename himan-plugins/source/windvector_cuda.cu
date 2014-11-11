@@ -272,7 +272,7 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 
 	// dims
 
-	const int blockSize = 128;
+	const int blockSize = 256;
 	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
 	if (opts.u->south_pole_lat > 0)
@@ -287,12 +287,12 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	*/
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-	
+
 	if (opts.target_type != kGust && opts.need_grid_rotation)
 	{
 		Rotate <<< gridSize, blockSize, 0, stream >>> (d_u, d_v, *opts.u);
 	}
-	
+
 	Calculate <<< gridSize, blockSize, 0, stream >>> (d_u, d_v, d_speed, d_dir, d_vector, opts, d_missing);
 
 	// block until the stream has completed

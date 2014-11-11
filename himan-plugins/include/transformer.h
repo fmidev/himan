@@ -58,7 +58,6 @@ private:
 
 #ifdef HAVE_CUDA
 	std::unique_ptr<transformer_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
-	void CudaFinish(std::unique_ptr<transformer_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> sourceInfo);
 #endif
 
 

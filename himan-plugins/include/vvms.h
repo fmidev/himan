@@ -48,13 +48,12 @@ public:
 
     virtual HPVersionNumber Version() const
     {
-        return HPVersionNumber(1, 0);
+        return HPVersionNumber(1, 1);
     }
 
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 #ifdef HAVE_CUDA
-	void CudaFinish(std::unique_ptr<vvms_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> VVInfo, std::shared_ptr<info> PInfo);
 	std::unique_ptr<vvms_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> VVInfo, std::shared_ptr<info> PInfo);
 #endif
 	double itsScale;

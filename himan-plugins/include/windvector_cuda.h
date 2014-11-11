@@ -10,6 +10,7 @@
 
 #ifdef HAVE_CUDA
 #include "info_simple.h"
+#include "cuda_helper.h"
 #endif
 
 namespace himan
@@ -46,14 +47,18 @@ struct options
 	size_t N;
 
 	options() 
-		: target_type(kUnknownElement)
+		: u(0)
+		, v(0)
+		, speed(0)
+		, dir(0)
+		, vector(0)
+		, target_type(kUnknownElement)
 		, vector_calculation(false)
 		, need_grid_rotation(false)
 		, missing(0)
 		, N(0)
 	{}
 
-	
 };
 
 

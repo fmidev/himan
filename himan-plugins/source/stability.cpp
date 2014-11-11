@@ -210,9 +210,6 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		myTargetInfo->Param(param("TTI-N"));
 		opts->tti = myTargetInfo->ToSimple();
 
-		myTargetInfo->Param(param("SI-N"));
-		opts->si = myTargetInfo->ToSimple();
-
 		if (LICalculation)
 		{
 			opts->t500m = &T500mVector[0];
@@ -221,6 +218,9 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 			myTargetInfo->Param(param("LI-N"));
 			opts->li = myTargetInfo->ToSimple();
+
+			myTargetInfo->Param(param("SI-N"));
+			opts->si = myTargetInfo->ToSimple();
 		}
 
 		if (BSCalculation)
@@ -240,8 +240,6 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		opts->N = opts->t500->size_x * opts->t500->size_y;
 
 		stability_cuda::Process(*opts);
-
-		CudaFinish(move(opts), myTargetInfo, T500Info, T700Info, T850Info, TD700Info, TD850Info);
 
 	}
 	else
@@ -399,85 +397,6 @@ double stability::StormRelativeHelicity(double UID, double VID, double U_lower, 
 {
 	return ((UID - U_lower) * (V_lower - V_higher)) - ((VID - V_lower) * (U_lower - U_higher));
 }
-#endif
-
-#ifdef HAVE_CUDA
-
-void stability::CudaFinish(unique_ptr<stability_cuda::options> opts, shared_ptr<info>& myTargetInfo,
-	shared_ptr<info>& T500Info, shared_ptr<info>& T700Info, shared_ptr<info>& T850Info, shared_ptr<info>& TD700Info, shared_ptr<info>& TD850Info)
-{
-	// Copy data back to infos
-
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
-	{
-		string parmName = myTargetInfo->Param().Name();
-
-		if (parmName == "KINDEX-N")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->ki, false);
-		}
-		else if (parmName == "SI-N")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->si, false);
-		}
-		else if (parmName == "LI-N")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->li, false);
-		}
-		else if (parmName == "CTI-N")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->cti, false);
-		}
-		else if (parmName == "VTI-N")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->vti, false);
-		}
-		else if (parmName == "TTI-N")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->tti, false);
-		}
-		else if (parmName == "TTI-N")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->tti, false);
-		}
-		else if (parmName == "WSH-KT")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->bs06, false);
-		}
-		else if (parmName == "WSH-1-KT")
-		{
-			CopyDataFromSimpleInfo(myTargetInfo, opts->bs01, false);
-		}
-	}
-
-	if (T500Info->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(T500Info, opts->t500, true);
-	}
-
-	if (T700Info->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(T700Info, opts->t700, true);
-	}
-
-	if (T850Info->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(T850Info, opts->t850, true);
-	}
-
-	if (TD700Info->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(TD700Info, opts->td700, true);
-	}
-
-	if (TD850Info->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(TD850Info, opts->td850, true);
-	}
-
-	// opts is destroyed after leaving this function
-}
-
 #endif
 
 bool stability::GetSourceData(shared_ptr<info>& T850Info, shared_ptr<info>& T700Info, shared_ptr<info>& T500Info, shared_ptr<info>& TD850Info, shared_ptr<info>& TD700Info, const shared_ptr<info>& myTargetInfo, bool useCudaInThisThread)

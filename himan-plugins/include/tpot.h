@@ -41,7 +41,7 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 0);
 	}
 
 private:
@@ -99,7 +99,6 @@ private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short theThreadIndex);
 #ifdef HAVE_CUDA
 	std::unique_ptr<tpot_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> PInfo, std::shared_ptr<info> TDInfo);
-	void CudaFinish(std::unique_ptr<tpot_cuda::options> opts, std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> PInfo, std::shared_ptr<info> TDInfo);
 #endif
 	
 	bool itsThetaCalculation;

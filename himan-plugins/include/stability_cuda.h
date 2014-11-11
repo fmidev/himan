@@ -10,6 +10,7 @@
 
 #ifdef HAVE_CUDA
 #include "info_simple.h"
+#include "cuda_helper.h"
 
 namespace himan
 {
@@ -79,13 +80,12 @@ struct options
 void Process(options& opts);
 
 #ifdef __CUDACC__
-void Prepare(info_simple* source, double** devptr, size_t memsize, cudaStream_t& stream);
 void Prepare(const double* source, double** devptr, size_t memsize, cudaStream_t& stream);
 
 __global__ void Calculate(cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700, cdarr_t d_t500m, cdarr_t d_td500m, cdarr_t d_p500m,
 				cdarr_t d_u01, cdarr_t d_v01, cdarr_t d_u06, cdarr_t d_v06,
 				darr_t d_ki, darr_t d_vti, darr_t d_cti, darr_t d_tti, darr_t d_si, darr_t d_li,
-				darr_t d_bs01, darr_t d_bs06, options opts, int* d_missing);
+				darr_t d_bs01, darr_t d_bs06, options opts);
 #endif
 
 } // namespace stability_cuda

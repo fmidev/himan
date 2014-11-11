@@ -32,16 +32,16 @@ struct options
 	double t_base;
 	double p_scale;
 	bool is_constant_pressure;
-	size_t missing;
 	double vv_ms_scale;
 	
-	options() : N(0), p_const(0), t_base(0), p_scale(1), is_constant_pressure(false), missing(0), vv_ms_scale(1) {}
+	options() : N(0), p_const(0), t_base(0), p_scale(1), is_constant_pressure(false), vv_ms_scale(1) {}
+
 };
 
 void Process(options& opts);
 
 #ifdef __CUDACC__
-__global__ void Calculate(const double* __restrict__ d_t, const double* __restrict__ d_vv, const double* __restrict__ d_p, double* __restrict__ d_vv_ms, options opts);
+__global__ void Calculate(cdarr_t d_t, cdarr_t d_vv, cdarr_t d_p, darr_t d_vv_ms, options opts);
 #endif
 
 } // namespace vvms_cuda

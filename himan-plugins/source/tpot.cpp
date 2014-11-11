@@ -176,8 +176,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		tpot_cuda::Process(*opts);
 
-		CudaFinish(move(opts), myTargetInfo, TInfo, PInfo, TDInfo);
-
 	}
 	else
 #endif
@@ -425,47 +423,6 @@ unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, 
 	}
 
 	return opts;
-}
-
-void tpot::CudaFinish(unique_ptr<tpot_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> PInfo, shared_ptr<info> TDInfo)
-{
-	// Copy data back to infos
-	
-	if (opts->theta)
-	{
-		myTargetInfo->Param(param("TP-K"));
-		CopyDataFromSimpleInfo(myTargetInfo, opts->tp, false);
-	}
-	
-	if (opts->thetaw)
-	{
-		myTargetInfo->Param(param("TPW-K"));
-		CopyDataFromSimpleInfo(myTargetInfo, opts->tpw, false);
-	}
-
-	if (opts->thetae)
-	{
-		myTargetInfo->Param(param("TPE-K"));
-		CopyDataFromSimpleInfo(myTargetInfo, opts->tpe, false);
-	}
-
-	if (TInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(TInfo, opts->t, true);
-	}
-
-	if (PInfo && PInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(PInfo, opts->p, true);
-	}
-
-	if (TDInfo && TDInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(TDInfo, opts->td, true);
-	}
-	
-	// opts is destroyed after leaving this function
-
 }
 
 #endif

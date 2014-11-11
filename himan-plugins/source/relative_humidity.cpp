@@ -141,24 +141,18 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 			auto opts = CudaPrepareTTD(myTargetInfo, TInfo, TDInfo, TDBase, TBase);
 
 			relative_humidity_cuda::Process(*opts);
-
-			CudaFinish(move(opts), myTargetInfo, TInfo, TDInfo);
 		}
 		else if (isPressureLevel)
 		{
 			auto opts = CudaPrepareTQ(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(), TBase);
 
 			relative_humidity_cuda::Process(*opts);
-
-			CudaFinish(move(opts), myTargetInfo, TInfo, QInfo);
 		}
 		else
 		{
 			auto opts = CudaPrepareTQP(myTargetInfo, TInfo, QInfo, PInfo, PScale, TBase);
 
 			relative_humidity_cuda::Process(*opts);
-
-			CudaFinish(move(opts), myTargetInfo, TInfo, QInfo, PInfo);
 		}
 	}
 	else
@@ -329,58 +323,5 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQ( sh
 
 	return opts;
 }
-// Copy data back to infos
-// Case where RH is calculated from (T and TD) or from (T and Q)
-void relative_humidity::CudaFinish(unique_ptr<relative_humidity_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TD_Q_Info)
-{
-	CopyDataFromSimpleInfo(myTargetInfo, opts->RH, false);
 
-	if (TInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(TInfo, opts->T, true);
-	}
-
-	switch(opts->select_case)
-	{
-	case(0):
-	{
-		if (TD_Q_Info->Grid()->IsPackedData())
-		{
-			CopyDataFromSimpleInfo(TD_Q_Info, opts->TD, true);
-		}
-		break;
-	}
-	case(2):
-	{
-		if (TD_Q_Info->Grid()->IsPackedData())
-		{
-			CopyDataFromSimpleInfo(TD_Q_Info, opts->Q, true);
-		}
-		break;
-	}
-	}	
-	SwapTo(myTargetInfo, TInfo->Grid()->ScanningMode());
-
-}
-// Case where RH is calculated from T, Q and P
-void relative_humidity::CudaFinish(unique_ptr<relative_humidity_cuda::options> opts, shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, shared_ptr<info> PInfo)
-{
-	CopyDataFromSimpleInfo(myTargetInfo, opts->RH, false);
-
-	if (TInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(TInfo, opts->T, true);
-	}
-
-	if (QInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(QInfo, opts->Q, true);
-	}
-
-	if (PInfo->Grid()->IsPackedData())
-	{
-		CopyDataFromSimpleInfo(PInfo, opts->P, true);
-	}
-
-}
 #endif
