@@ -18,6 +18,7 @@
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
+#include "cuda_helper.h"
 
 using namespace himan;
 using namespace std;
