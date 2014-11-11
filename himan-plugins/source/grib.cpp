@@ -175,8 +175,11 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 	{
 		itsGrib->Message().TypeOfGeneratingProcess(2); // Forecast
 	}
-	
-	itsGrib->Message().Bitmap(true);
+
+	if (anInfo->Data()->MissingCount() > 0)
+	{
+		itsGrib->Message().Bitmap(true);
+	}
 
 	//itsGrib->Message().BitsPerValue(16);
 
