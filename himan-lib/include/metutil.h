@@ -17,8 +17,6 @@
 #include "himan_common.h"
 //#include "cuda_helper.h"
 
-#define kFloatMissing 32700.f
-
 #ifdef __CUDACC__
 #define CUDA_DEVICE __device__
 #define CUDA_KERNEL __global__
@@ -36,9 +34,9 @@ struct lcl_t
 
 	CUDA_DEVICE
 	lcl_t()
-	: T(kFloatMissing)
-	, P(kFloatMissing)
-	, Q(kFloatMissing)
+	: T(himan::kFloatMissing)
+	, P(himan::kFloatMissing)
+	, Q(himan::kFloatMissing)
 	{}
 };
 

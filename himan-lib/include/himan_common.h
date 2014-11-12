@@ -39,7 +39,7 @@ namespace himan
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = -999.;
-const float kFloatMissing = 32700.f; // From newbase
+const double kFloatMissing = 32700.; // From newbase
 
 // Define different plugin types
 
