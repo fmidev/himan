@@ -10,7 +10,6 @@
 
 #ifdef HAVE_CUDA
 #include "info_simple.h"
-#include "cuda_helper.h"
 #endif
 
 namespace himan
@@ -67,7 +66,7 @@ void Process(options& opts);
 
 #ifdef __CUDACC__
 __global__ void Calculate(const double* __restrict__ d_u, const double* __restrict__ d_v, double* __restrict__ d_speed, double* __restrict__ d_dir, double* __restrict__ d_vector,
-							options opts, int* d_missing);
+							options opts);
 __global__ void Rotate(double* __restrict__ dU, double* __restrict__ dV, info_simple opts);
 
 #endif

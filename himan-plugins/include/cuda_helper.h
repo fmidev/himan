@@ -59,6 +59,8 @@ inline void CheckCudaErrorString(const char* errstr, const char* file,	const int
 	}
 }
 
+#ifdef __NVCC__
+
 inline
 void PrepareInfo(info_simple* source)
 {
@@ -104,6 +106,21 @@ void ReleaseInfo(info_simple* source, double *devptr, cudaStream_t& stream)
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 	ReleaseInfo(source);
 }
+
+
+template<typename T>
+__global__
+void Fill(T* devptr, size_t N, T fillValue)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		devptr[idx] = fillValue;
+	}
+}
+
+#endif
 
 } // namespace himan
 #if 0
