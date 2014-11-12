@@ -280,7 +280,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				// We use UGrid area to do to the rotation even though UGrid area might be
 				// different from VGrid area (ie. Hirlam), but that does not matter
 
-				const point regPoint(reinterpret_cast<NFmiRotatedLatLonArea*> ((sourceArea.get()))->ToRegLatLon(static_cast<NFmiPoint> (rotPoint)));
+				NFmiPoint rp = reinterpret_cast<NFmiRotatedLatLonArea*> ((sourceArea.get()))->ToRegLatLon(NFmiPoint(rotPoint.X(), rotPoint.Y()));
+				const point regPoint(rp.X(), rp.Y());
 
 				double newU = kFloatMissing, newV = kFloatMissing;
 
@@ -382,8 +383,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 				i /= static_cast<double> (myTargetInfo->Data()->SizeX());
 				j /= static_cast<double> (myTargetInfo->Data()->SizeY());
+
+				NFmiPoint ll = reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->ToLatLon(NFmiPoint(i,j));
+				point regPoint(ll.X(), ll.Y());
 				
-				point regPoint(reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->ToLatLon(static_cast<NFmiPoint> (point(i,j))));
 				double angle = 180. + reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->CentralLongitude();
 				double lon = regPoint.X();
 
