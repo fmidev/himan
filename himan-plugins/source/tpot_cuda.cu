@@ -173,7 +173,7 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 		
 	// Allocate memory on device
 
-	if (opts.theta || opts.thetae)
+	if (opts.theta)
 	{
 		CUDA_CHECK(cudaMalloc((void **) &d_tp, memsize));
 		PrepareInfo(opts.tp);
@@ -189,7 +189,6 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 	{
 		CUDA_CHECK(cudaMalloc((void **) &d_tpe, memsize));
 		PrepareInfo(opts.tpe);
-
 	}
 
 	CUDA_CHECK(cudaMalloc((void **) &d_t, memsize));
