@@ -248,7 +248,7 @@ pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, d
 	double xWidthInMeters = (static_cast<double> (ni)-1.) * xSizeInMeters;
 	double yWidthInMeters = (static_cast<double> (nj)-1.) * ySizeInMeters;
 
-	NFmiStereographicArea a(static_cast<NFmiPoint> (firstPoint),
+	NFmiStereographicArea a(NFmiPoint(firstPoint.X(), firstPoint.Y()),
 								xWidthInMeters,
 								yWidthInMeters,
 								orientation,
@@ -256,8 +256,8 @@ pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, d
 								NFmiPoint(1,1),
 								90.);
 
-	point bottomLeft(a.BottomLeftLatLon());
-	point topRight(a.TopRightLatLon());
+	point bottomLeft(a.BottomLeftLatLon().X(), a.BottomLeftLatLon().Y());
+	point topRight(a.TopRightLatLon().X(), a.TopRightLatLon().Y());
 
 	return pair<point,point> (bottomLeft, topRight);
 

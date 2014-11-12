@@ -9,7 +9,6 @@
 #define POINT_H
 
 #include <ostream>
-#include <NFmiPoint.h>
 
 namespace himan
 {
@@ -26,13 +25,6 @@ class point
 public:
 	point();
 	point(double itsX, double itsY);
-
-	/**
-	 * @brief Constructor to integrate himan::point to newbase. If/when we don't use newbase
-	 * for interpolation, this can be removed.
-	 */
-
-	point(const NFmiPoint& thePoint);
 	~point() {}
 
 	point(const point& other);
@@ -70,13 +62,6 @@ public:
 		return file;
 	}
 
-	/**
-	 * @brief Create NFmiPoint from himan::point. If/when we don't use newbase
-	 * for interpolation, this can be removed.
-	 */
-
-	operator NFmiPoint () const;
-
 private:
 	double itsX;
 	double itsY;
@@ -91,10 +76,6 @@ inline point::point(double theX, double theY) : itsX(theX), itsY(theY)
 }
 
 inline point::point(const point& other) : itsX(other.X()), itsY(other.Y())
-{
-}
-
-inline point::point(const NFmiPoint& other) : itsX(other.X()), itsY(other.Y())
 {
 }
 
@@ -144,11 +125,6 @@ inline void point::Y(double theY)
 inline std::ostream& operator<<(std::ostream& file, const point& ob)
 {
 	return ob.Write(file);
-}
-
-inline point::operator NFmiPoint () const
-{
-	return NFmiPoint(itsX, itsY);
 }
 
 } // namespace himan
