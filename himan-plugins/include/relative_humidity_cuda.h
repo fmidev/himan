@@ -38,18 +38,6 @@ struct options
 
 	options() : select_case(1), N(0), missing(0), kEp(0), TDBase(0), TBase(0), PScale(1), P_level(0) {}
 
-#ifdef __NVCC__
-	~options()
-	{
-		if (T) delete T;
-		if (TD) delete TD;
-		if (Q) delete Q;
-		if (P) delete P;
-		if (RH) delete RH;
-	}
-
-#endif
-
 };
 
 void Process(options& opts);
