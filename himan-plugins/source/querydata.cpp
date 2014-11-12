@@ -510,8 +510,11 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			break;
 
 		case kNFmiRotatedLatLonArea:
+		{
 			newGrid->Projection(kRotatedLatLonProjection);
-			newGrid->SouthPole(reinterpret_cast<const NFmiRotatedLatLonArea*> (qinfo.Area())->SouthernPole());
+			NFmiPoint southPole = reinterpret_cast<const NFmiRotatedLatLonArea*> (qinfo.Area())->SouthernPole();
+			newGrid->SouthPole(point(southPole.X(), southPole.Y()));
+		}
 			break;
 
 		case kNFmiStereographicArea:
@@ -526,8 +529,8 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	size_t ni = qinfo.Grid()->XNumber();
 	size_t nj = qinfo.Grid()->YNumber();
 	
-	newGrid->BottomLeft(qinfo.Area()->BottomLeftLatLon());
-	newGrid->TopRight(qinfo.Area()->TopRightLatLon());
+	newGrid->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
+	newGrid->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
 
 	newInfo->Create(newGrid);
 
