@@ -7,7 +7,6 @@
 
 #include "cuda_helper.h"
 #include "relative_humidity_cuda.h"
-#include "himan_common.h"
 #include "metutil.h"
 
 // CUDA-kernel that computes RH from T and TD
@@ -21,6 +20,8 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(cdarr_t d_T,
 
 	if (idx < opts.N)
 	{
+		d_RH[idx] = kFloatMissing;
+		
 		if (d_T[idx] != kFloatMissing && d_TD[idx] != kFloatMissing)
 		{
 			double td = d_TD[idx] + opts.TDBase;
@@ -37,13 +38,14 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(cdarr_t d_T,
 {
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
+	
 	if (idx < opts.N)
 	{
-		if (d_T[idx] != kFloatMissing && d_Q[idx] != kFloatMissing && d_P[idx] == kFloatMissing)
+		d_RH[idx] = kFloatMissing;
+
+		if (d_T[idx] != kFloatMissing && d_Q[idx] != kFloatMissing && d_P[idx] != kFloatMissing)
 		{
 			double p = d_P[idx] * opts.PScale;
-
 			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
 
 			d_RH[idx] = (p * d_Q[idx] / opts.kEp / ES) * (p - ES) / (p - d_Q[idx] * p / opts.kEp);
@@ -60,6 +62,8 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(cdarr_t d_T, 
 
 	if (idx < opts.N)
 	{
+		d_RH[idx] = kFloatMissing;
+		
 		if (d_T[idx] != kFloatMissing && d_Q[idx] != kFloatMissing)
 		{
 			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
@@ -147,7 +151,7 @@ void himan::plugin::relative_humidity_cuda::Process(options& opts)
 		// Copy data to device
 		PrepareInfo(opts.Q, d_Q, stream);
 		PrepareInfo(opts.P, d_P, stream);
-	
+
 		CalculateTQP <<< gridSize, blockSize, 0, stream >>> (d_T, d_Q, d_P, d_RH, opts);
 
 		// block until the stream has completed

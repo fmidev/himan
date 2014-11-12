@@ -16,6 +16,8 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_r
 
 	if (idx < opts.N)
 	{
+		d_td[idx] = kFloatMissing;
+		
 		if (d_t[idx] != kFloatMissing && d_rh[idx] != kFloatMissing)
 		{
 			// Branching, but first branch is so much simpler in terms of calculation complexity

@@ -14,6 +14,7 @@ __global__ void himan::plugin::vvms_cuda::Calculate(cdarr_t d_t, cdarr_t d_vv, c
 
 	if (idx < opts.N)
 	{
+		d_vv_ms[idx] = kFloatMissing;
 		double P = (opts.is_constant_pressure) ? opts.p_const : d_p[idx];
 
 		if (d_t[idx] != kFloatMissing && d_vv[idx] != kFloatMissing && P != kFloatMissing)
@@ -52,7 +53,6 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 		CUDA_CHECK(cudaMalloc((void **) &d_p, memsize));
 
 		PrepareInfo(opts.p, d_p, stream);
-
 	}
 
 	// dims

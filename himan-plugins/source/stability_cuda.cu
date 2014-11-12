@@ -27,6 +27,23 @@ __global__ void himan::plugin::stability_cuda::Calculate(
 		double T500 = d_t500[idx];
 		double TD850 = d_td850[idx];
 		double TD700 = d_td700[idx];
+
+		d_ki[idx] = kFloatMissing;
+		d_cti[idx] = kFloatMissing;
+		d_vti[idx] = kFloatMissing;
+		d_tti[idx] = kFloatMissing;
+
+		if (opts.li)
+		{
+			d_li[idx] = kFloatMissing;
+			d_si[idx] = kFloatMissing;
+		}
+
+		if (opts.bs01)
+		{
+			d_bs01[idx] = kFloatMissing;
+			d_bs06[idx] = kFloatMissing;
+		}
 		
 		if (T850 != kFloatMissing && T700 != kFloatMissing && T500 != kFloatMissing && TD850 != kFloatMissing && TD700 != kFloatMissing)
 		{
@@ -110,6 +127,11 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	PrepareInfo(opts.cti);
 	PrepareInfo(opts.vti);
 
+	// dims
+
+	const int blockSize = 512;
+	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
+
 	assert(d_t500);
 	assert(d_t700);
 	assert(d_t850);
@@ -147,11 +169,6 @@ void himan::plugin::stability_cuda::Process(options& opts)
 		Prepare(opts.v06, &d_v06, memsize, stream);
 
 	}
-
-	// dims
-
-	const int blockSize = 512;
-	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
