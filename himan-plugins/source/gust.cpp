@@ -56,7 +56,7 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	param theRequestedParam("FFG-MS", 417, 0, 2, 22);
+	param theRequestedParam("FFG2-MS", 417, 0, 2, 22);
 
 	theRequestedParam.Unit(kMs);
 	
