@@ -203,7 +203,6 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 	switch (mod->Type())
 	{
-#if 0
 
 		/*
 		 * -- FIRST HYBRID LEVEL --
@@ -255,7 +254,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 					
 		}
 			break;
-#endif
+
 		default:			
 			break;
 	}
