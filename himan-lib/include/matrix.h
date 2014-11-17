@@ -151,26 +151,6 @@ public:
 		file << "__missing__ " << missing << std::endl;
 	}
 
-	/**
-	 * @brief Print information on contents if T == grid
-	 *
-	 */
-/*
-	void PrintData(std::ostream& file, std::vector<std::shared_ptr<grid>> theValues) const
-	{
-
-		if (!itsData.size())
-		{
-			file << "__no-data__" << std::endl;
-			return;
-		}
-
-		for (size_t i = 0; i < theValues.size(); i++)
-		{
-			file << *theValues[i];
-		}
-	}
-*/
 	size_t Size() const
 	{
 		return itsData.size();
