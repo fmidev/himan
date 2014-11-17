@@ -87,19 +87,36 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param TGParam("TG-K");
 	const param TopoParam("Z-M2S2");
 
-	level H0(himan::kGround, 0, "GROUND");
+	level H0, H10;
 
+	if (myTargetInfo->Producer().Id() == 240)
+	{
+		H0 = level(kGround, 0);
+		H10 = H0;
+	}
+	else
+	{
+		H0 = level(kHeight, 0);
+		H10 = level(kHeight, 10);
+	}
+	
 	info_t puuskaInfo, TGInfo, TopoInfo;
 
 	// Current time and level
-	
+
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	puuskaInfo = Fetch(forecastTime,H0,GustParam,false);
+	puuskaInfo = Fetch(forecastTime,H10,GustParam,false);
 	TGInfo = Fetch(forecastTime,H0,TGParam,false);
 	TopoInfo = Fetch(forecastTime,H0,TopoParam,false);
 
+	if (!puuskaInfo || !TGInfo || !TopoInfo)
+	{
+		itsLogger->Error("Unable to find all source data");
+		return;
+	}
+	
 	// maybe need adjusting
 	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
@@ -171,19 +188,26 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
 	{
-		if (myrsky[i] >= 20)
+		double val = myrsky[i];
+		
+		if (val == kFloatMissing)
+		{
+			continue;
+		}
+
+		if (val >= 20)
 		{
 			x[i] = -0.20;
 		}
 		else continue;
 
-		if (myrsky[i] >= 25)
+		if (val >= 25)
 		{
 			x[i] = -0.25;
 		}
 		else continue;
 
-		if (myrsky[i] >= 30)
+		if (val >= 30)
 		{
 			x[i] = -0.30;
 		}
@@ -194,6 +218,16 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
 	{
+		if (x[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
+		if (poterot.potero1[i] == kFloatMissing || poterot.potero2[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_200[i] == kFloatMissing)
+		{
+			continue;
+		}
+					
 		if (poterot.potero1[i] - poterot.potero2[i] > x[i] && ws_200[i] > ws_100[i])
 		{
 			lowerHeight[i] = 50;
@@ -201,6 +235,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero2[i] == kFloatMissing || poterot.potero3[i] == kFloatMissing || ws_200[i] == kFloatMissing || ws_300[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero2[i] - poterot.potero3[i] > x[i] && ws_300[i] > ws_200[i])
 		{
 			lowerHeight[i] = 100;
@@ -208,6 +247,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero3[i] == kFloatMissing || poterot.potero4[i] == kFloatMissing || ws_300[i] == kFloatMissing || ws_400[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero3[i] - poterot.potero4[i] > x[i] && ws_400[i] > ws_300[i])
 		{
 			lowerHeight[i] = 150;
@@ -215,6 +259,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero4[i] == kFloatMissing || poterot.potero5[i] == kFloatMissing || ws_400[i] == kFloatMissing || ws_500[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero4[i] - poterot.potero5[i] > x[i] && ws_500[i] > ws_400[i])
 		{
 			lowerHeight[i] = 200;
@@ -222,12 +271,22 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 	
+		if (poterot.potero5[i] == kFloatMissing || poterot.potero6[i] == kFloatMissing || ws_500[i] == kFloatMissing || ws_600[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero5[i] - poterot.potero6[i] > x[i] && ws_600[i] > ws_500[i])
 		{
 			lowerHeight[i] = 200;
 			upperHeight[i] = 600;
 		}
 		else continue;
+		
+		if (poterot.potero6[i] == kFloatMissing || poterot.potero7[i] == kFloatMissing || ws_600[i] == kFloatMissing || ws_700[i] == kFloatMissing)
+		{
+			continue;
+		}
 		
 		if (poterot.potero6[i] - poterot.potero7[i] > x[i] && ws_700[i] > ws_600[i])
 		{
@@ -236,6 +295,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero7[i] == kFloatMissing || poterot.potero8[i] == kFloatMissing || ws_700[i] == kFloatMissing || ws_800[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero7[i] - poterot.potero8[i] > x[i] && ws_800[i] > ws_700[i])
 		{
 			lowerHeight[i] = 200;
@@ -243,6 +307,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero8[i] == kFloatMissing || poterot.potero9[i] == kFloatMissing || ws_800[i] == kFloatMissing || ws_900[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero8[i] - poterot.potero9[i] > x[i] && ws_900[i] > ws_800[i])
 		{
 			lowerHeight[i] = 200;
@@ -250,6 +319,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero9[i] == kFloatMissing || poterot.potero10[i] == kFloatMissing || ws_900[i] == kFloatMissing || ws_1000[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero9[i] - poterot.potero10[i] > x[i] && ws_1000[i] > ws_900[i])
 		{
 			lowerHeight[i] = 200;
@@ -257,6 +331,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero10[i] == kFloatMissing || poterot.potero11[i] == kFloatMissing || ws_1000[i] == kFloatMissing || ws_1100[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero10[i] - poterot.potero11[i] > x[i] && ws_1100[i] > ws_1000[i])
 		{
 			lowerHeight[i] = 200;
@@ -268,16 +347,26 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
 	{
+		if (poterot.potero0[i] == kFloatMissing || poterot.potero1[i] == kFloatMissing || x[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_10[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero0[i] - poterot.potero1[i] <= x[i] && ws_100[i] <= ws_10[i])
 		{
 			 gust[i] = 0;
 		}
 	}
 
-	double a = 0.5;
+	const double a = 0.5;
 
 	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
 	{
+		if (poterot.potero1[i] == kFloatMissing || poterot.potero2[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_200[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero1[i] - poterot.potero2[i] > a && ws_200[i] > ws_100[i])
 		{
 			lowerHeight[i] = 50;
@@ -285,6 +374,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero2[i] == kFloatMissing || poterot.potero3[i] == kFloatMissing || ws_200[i] == kFloatMissing || ws_300[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero2[i] - poterot.potero3[i] > a && ws_300[i] > ws_200[i])
 		{
 			lowerHeight[i] = 100;
@@ -292,6 +386,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero3[i] == kFloatMissing || poterot.potero4[i] == kFloatMissing || ws_300[i] == kFloatMissing || ws_400[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero3[i] - poterot.potero4[i] > a && ws_400[i] > ws_300[i])
 		{
 			lowerHeight[i] = 150;
@@ -299,6 +398,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero4[i] == kFloatMissing || poterot.potero5[i] == kFloatMissing || ws_400[i] == kFloatMissing || ws_500[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero4[i] - poterot.potero5[i] > a && ws_500[i] > ws_400[i])
 		{
 			lowerHeight[i] = 200;
@@ -306,12 +410,22 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 	
+		if (poterot.potero5[i] == kFloatMissing || poterot.potero6[i] == kFloatMissing || ws_500[i] == kFloatMissing || ws_600[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero5[i] - poterot.potero6[i] > a && ws_600[i] > ws_500[i])
 		{
 			lowerHeight[i] = 200;
 			upperHeight[i] = 600;
 		}
 		else continue;
+		
+		if (poterot.potero6[i] == kFloatMissing || poterot.potero7[i] == kFloatMissing || ws_600[i] == kFloatMissing || ws_700[i] == kFloatMissing)
+		{
+			continue;
+		}
 		
 		if (poterot.potero6[i] - poterot.potero7[i] > a && ws_700[i] > ws_600[i])
 		{
@@ -320,6 +434,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero7[i] == kFloatMissing || poterot.potero8[i] == kFloatMissing || ws_700[i] == kFloatMissing || ws_800[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero7[i] - poterot.potero8[i] > a && ws_800[i] > ws_700[i])
 		{
 			lowerHeight[i] = 200;
@@ -327,6 +446,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero8[i] == kFloatMissing || poterot.potero9[i] == kFloatMissing || ws_800[i] == kFloatMissing || ws_900[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero8[i] - poterot.potero9[i] > a && ws_900[i] > ws_800[i])
 		{
 			lowerHeight[i] = 200;
@@ -334,6 +458,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero9[i] == kFloatMissing || poterot.potero10[i] == kFloatMissing || ws_900[i] == kFloatMissing || ws_1000[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero9[i] - poterot.potero10[i] > a && ws_1000[i] > ws_900[i])
 		{
 			lowerHeight[i] = 200;
@@ -341,6 +470,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else continue;
 
+		if (poterot.potero10[i] == kFloatMissing || poterot.potero11[i] == kFloatMissing || ws_1000[i] == kFloatMissing || ws_1100[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero10[i] - poterot.potero11[i] > a && ws_1100[i] > ws_1000[i])
 		{
 			lowerHeight[i] = 200;
@@ -353,6 +487,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
 	{
+		if (poterot.potero0[i] == kFloatMissing || poterot.potero1[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_10[i] == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if (poterot.potero0[i] - poterot.potero1[i] <= a && ws_100[i] <= ws_10[i])
 		{
 			 maxgust[i] = 0;
@@ -365,44 +504,53 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	LOCKSTEP(myTargetInfo, puuskaInfo, TGInfo, TopoInfo)
 	{
-		size_t i = myTargetInfo->ParamIndex();
+		size_t i = myTargetInfo->LocationIndex();
 
 		double par467 = puuskaInfo->Value();
 		double t_ground = TGInfo->Value();
-		double topo = TopoInfo->Value()*himan::constants::kIg;
+		double topo = TopoInfo->Value();
 		double puuska = pohja[i];
+		double gustval = gust[i];
+		double maxgustval = maxgust[i];
+		double ws10 = ws_10[i];
 
-		if (par467 == kFloatMissing)
+		if (par467 == kFloatMissing 
+			|| t_ground == kFloatMissing 
+			|| topo == kFloatMissing 
+			|| puuska == kFloatMissing 
+			|| gustval == kFloatMissing 
+			|| maxgustval == kFloatMissing
+			|| ws10 == kFloatMissing 
+			|| pohja_0_60[i] == kFloatMissing)
 		{
 			continue;
 		}
 
+		topo *= himan::constants::kIg;
+		
 		/* Calculations go here */
 
-		if (gust[i] > pohja[i])
+		puuska = fmax(gustval, puuska);
+		
+		if ((maxgustval - gustval) > 8)
 		{
-			puuska = gust[i];
-		}
-
-		if ((maxgust[i] - gust[i]) > 8)
-		{
-			puuska = (maxgust[i] + pohja[i])/2;
+			puuska = (maxgustval + pohja[i])/2;
 		}
 
 		if ((maxt[i] - t_ground) > 1 && topo > 15)
 		{
 			puuska = pohja_0_60[i];
-			par466[i] = ws_10[i];
+			par466[i] = ws10;
 			
 			if (maxt[i] - t_ground > 2)
 			{
-				puuska = ws_10[i];
-				par466[i] = ws_10[i] * 0.7;
+				puuska = ws10;
+				par466[i] = ws10 * 0.7;
 				
 				if (maxt[i] - t_ground > 4)
 				{
-					puuska = ws_10[i] * 0.7;
-					par466[i] = ws_10[i] * 0.4;
+					puuska = ws10 * 0.7;
+					par466[i] = ws10 * 0.4;
 				}
 			}
 		}
@@ -415,12 +563,21 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	filter_kernel.Fill(1.0/9.0);
 	himan::matrix<double> puuska_filtered = util::Filter2D(*myTargetInfo->Data(), filter_kernel);
 
+	
 	auto puuska_filtered_ptr = make_shared<himan::matrix<double>> (puuska_filtered);
+	puuska_filtered_ptr->MissingValue(kFloatMissing);
+	
 	myTargetInfo->Grid()->Data(puuska_filtered_ptr);
-
+	
         LOCKSTEP(myTargetInfo)
         {
-		size_t i = myTargetInfo->ParamIndex();
+		size_t i = myTargetInfo->LocationIndex();
+		
+		if (par466[i] == kFloatMissing || myTargetInfo->Value() == kFloatMissing)
+		{
+			continue;
+		}
+		
 		if( par466[i]*1.12 > myTargetInfo->Value())
 		{
 			myTargetInfo->Value(par466[i]*1.15);
