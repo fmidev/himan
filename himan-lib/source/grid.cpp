@@ -76,7 +76,16 @@ grid::grid(const grid& other)
 
 	if (other.itsPackedData)
 	{
-		itsPackedData = make_shared<packed_data> (*other.itsPackedData);
+		switch (other.itsPackedData->packingType)
+		{
+			// avoid slicing problem
+			case kSimplePacking:
+				itsPackedData = make_shared<simple_packed> (*(dynamic_pointer_cast<const simple_packed> (other.itsPackedData)));
+				break;
+			default:
+				throw runtime_error("Unsupported packing type: " + other.itsPackedData->ClassName());
+				break;
+		}
 	}
 
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
