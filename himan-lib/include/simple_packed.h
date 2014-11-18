@@ -55,8 +55,6 @@ struct simple_packed : packed_data
 	/**
 	 * @brief Function will unpack binary array (unsigned char) to double array.
 	 *
-	 * Function is synchronous due to implicit synchronization caused by cudaFree().
-	 *
 	 * Note! Argument d_arr should point to DEVICE MEMORY.
 	 *
 	 * @param d_arr Pointer to pre-allocated device memory
@@ -67,6 +65,9 @@ struct simple_packed : packed_data
 	CUDA_HOST
 	virtual void Unpack(double* d_arr, size_t N, cudaStream_t* stream);
 
+	CUDA_HOST
+	virtual void Pack(double* d_arr, size_t N, cudaStream_t* stream);
+
 #ifdef __CUDACC__
 	// Functions that are only visible for nvcc compiler
 
@@ -76,6 +77,11 @@ struct simple_packed : packed_data
 	CUDA_DEVICE
 	void UnpackFullBytes(double* __restrict__ d_u, int idx);
 
+	template<typename T>
+	CUDA_HOST T Min(T* d_arr, size_t N, cudaStream_t& stream);
+
+	template<typename T>
+	CUDA_HOST T Max(T* d_arr, size_t N, cudaStream_t& stream);
 #endif
 	
 	simple_packed_coefficients coefficients;
@@ -110,6 +116,9 @@ void SetBitOn(unsigned char* p, long bitp);
 
 __device__
 void SetBitOff(unsigned char* p, long bitp);
+
+__host__ __device__
+double GetGribPower(long s, long n);
 
 };
 
