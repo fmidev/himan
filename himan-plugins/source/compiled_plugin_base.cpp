@@ -422,27 +422,6 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 		}
 	}
 }
-#if 0
-void compiled_plugin_base::CopyDataFromSimpleInfo(const info_t& anInfo, info_simple* aSimpleInfo, bool writeToCache)
-{
-	assert(aSimpleInfo);
-	
-	anInfo->Data()->Set(aSimpleInfo->values, aSimpleInfo->size_x * aSimpleInfo->size_y);
-
-	if (anInfo->Grid()->IsPackedData())
-	{
-		anInfo->Grid()->PackedData()->Clear();
-	}
-	
-	aSimpleInfo->free_values();
-
-	if (writeToCache && itsConfiguration->UseCache())
-	{
-		auto c = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
-		c->Insert(anInfo);
-	}
-}
-#endif
 #endif
 
 bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids) const
