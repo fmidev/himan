@@ -70,9 +70,12 @@ void cache::SplitToPool(const shared_ptr<info> anInfo)
 
 	if (anInfo->Grid()->IsPackedData())
 	{
-		itsLogger->Trace("Ignoring cache push for packed data");
-		return;
+		itsLogger->Trace("Removing packed data from cached info");
+		anInfo->Grid()->PackedData()->Clear();
 	}
+
+	assert(!anInfo->Grid()->IsPackedData());
+	
 	vector<param> params;
 	vector<level> levels;
 	vector<forecast_time> times;

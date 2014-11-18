@@ -122,36 +122,6 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
 	bool activeOnly = (conf->FileWriteOption() == kSingleFile) ? false : true;
 
-#ifdef HAVE_CUDA
-
-	// Data has been written, if grid contains packed data clear it now before we
-	// write the info to cache
-
-	if (activeOnly)
-	{
-		if (theInfo->Grid()->IsPackedData())
-		{
-			theInfo->Grid()->PackedData()->Clear();
-		}
-	}
-	else
-	{
-		for (theInfo->ResetTime(); theInfo->NextTime();)
-		{
-			for (theInfo->ResetLevel(); theInfo->NextLevel();)
-			{
-				for (theInfo->ResetParam(); theInfo->NextParam();)
-				{
-					if (theInfo->Grid()->IsPackedData())
-					{
-						theInfo->Grid()->PackedData()->Clear();
-					}
-				}
-			}
-		}
-	}
-#endif
-	
 	if (conf->UseCache())
 	{
 		std::shared_ptr<cache> c = std::dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));

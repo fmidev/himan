@@ -249,10 +249,6 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 				// must unpack before swapping
 
 				util::Unpack({theInfos[0]->Grid()});
-
-				// Only unpacked and interpolated data is stored to cache
-				theInfos[0]->Grid()->PackedData()->Clear();
-
 			}
 #endif
 			theInfos[0]->Grid()->Swap(baseInfo->Grid()->ScanningMode());
@@ -270,7 +266,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	}
 	// Insert interpolated data to cache
 
-	if (!theInfos.empty() && itsUseCache && config->UseCache())
+	if (!theInfos.empty() && itsUseCache && config->UseCache() && !readPackedData)
 	{
 		itsCache->Insert(theInfos);
 	}
@@ -561,9 +557,6 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 		{
 			// We need to unpack
 			util::Unpack({(*it)->Grid()});
-
-			// Only unpacked and interpolated data is stored to cache
-			(*it)->Grid()->PackedData()->Clear();
 		}
 #endif
 		// interpInfo does the actual interpolation, results are stored to targetData
