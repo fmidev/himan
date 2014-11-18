@@ -103,6 +103,29 @@ inline
 void ReleaseInfo(info_simple* source, double *devptr, cudaStream_t& stream)
 {
 	CUDA_CHECK(cudaMemcpyAsync(source->values, devptr, source->size_x * source->size_y * sizeof(double), cudaMemcpyDeviceToHost, stream));
+
+	if (0)
+	{
+		// no bitmap support for now
+		bool pack = true;
+		for (size_t i = 0; i < source->size_x * source->size_y; i++)
+		{
+			if (source->values[0] == kFloatMissing)
+			{
+				pack = false;
+				break;
+			}
+		}
+		
+		if (pack)
+		{
+			assert(source->packed_values);
+			source->packed_values->coefficients.bitsPerValue = 24;
+
+			source->packed_values->Pack(devptr, source->size_x * source->size_y, &stream);
+		}
+	}
+
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 	ReleaseInfo(source);
 }
