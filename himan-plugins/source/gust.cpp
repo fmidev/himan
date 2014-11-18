@@ -87,15 +87,17 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param TGParam("TG-K");
 	const param TopoParam("Z-M2S2");
 
-	level H0, H10;
+	level H0, H10, Ground;
 
 	if (myTargetInfo->Producer().Id() == 240)
 	{
 		H0 = level(kGround, 0);
 		H10 = H0;
+		Ground = H0;
 	}
 	else
 	{
+		Ground = level(kGround, 0);
 		H0 = level(kHeight, 0);
 		H10 = level(kHeight, 10);
 	}
@@ -108,7 +110,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	level forecastLevel = myTargetInfo->Level();
 
 	puuskaInfo = Fetch(forecastTime,H10,GustParam,false);
-	TGInfo = Fetch(forecastTime,H0,TGParam,false);
+	TGInfo = Fetch(forecastTime,Ground,TGParam,false);
 	TopoInfo = Fetch(forecastTime,H0,TopoParam,false);
 
 	if (!puuskaInfo || !TGInfo || !TopoInfo)
