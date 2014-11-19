@@ -68,12 +68,14 @@ void cache::Insert(shared_ptr<himan::info> anInfo, bool activeOnly)
 void cache::SplitToPool(const shared_ptr<info> anInfo)
 {
 
+#ifdef HAVE_CUDA
 	if (anInfo->Grid()->IsPackedData())
 	{
 		itsLogger->Trace("Removing packed data from cached info");
 		anInfo->Grid()->PackedData()->Clear();
 	}
-
+#endif
+	
 	assert(!anInfo->Grid()->IsPackedData());
 	
 	vector<param> params;
