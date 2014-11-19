@@ -74,6 +74,7 @@ grid::grid(const grid& other)
 		itsData = make_shared<unpacked> (*other.itsData);
 	}
 
+#ifdef HAVE_CUDA
 	if (other.itsPackedData)
 	{
 		switch (other.itsPackedData->packingType)
@@ -87,7 +88,8 @@ grid::grid(const grid& other)
 				break;
 		}
 	}
-
+#endif
+	
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
 }
 
