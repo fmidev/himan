@@ -171,18 +171,33 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		return;
 	}
 
-	// maximum windspeed 0-1200m
-	vector<double> myrsky = h->VerticalMaximum(WSParam,0,1200);
+	vector<double> myrsky, maxt, pohja, pohja_0_60;
+	try
+	{
+		// maximum windspeed 0-1200m
+		myrsky = h->VerticalMaximum(WSParam,0,1200);
 
-	// maximum temperature 0-200m
-	vector<double> maxt = h->VerticalMaximum(TParam,0,200);
+		// maximum temperature 0-200m
+		maxt = h->VerticalMaximum(TParam,0,200);
 
-	// base wind speed
-	vector<double> pohja = h->VerticalAverage(WSParam,10,200);
+		// base wind speed
+		pohja = h->VerticalAverage(WSParam,10,200);
 
-	// average wind speed 0-60m
-	vector<double> pohja_0_60 = h->VerticalAverage(WSParam,0,60);	
-
+		// average wind speed 0-60m
+		pohja_0_60 = h->VerticalAverage(WSParam,0,60);	
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+		}
+		else
+		{
+			myThreadedLogger->Error("hitool was unable to find data");
+			return;
+		}
+	}
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
@@ -345,8 +360,25 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	vector<double> gust = h->VerticalAverage(WSParam,lowerHeight,upperHeight);	
-
+	vector<double> gust;
+	
+	try
+	{
+		gust = h->VerticalAverage(WSParam,lowerHeight,upperHeight);	
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+		}
+		else
+		{
+			myThreadedLogger->Error("hitool was unable to find data");
+			return;
+		}
+	}
+	
 	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
 	{
 		if (poterot.potero0[i] == kFloatMissing || poterot.potero1[i] == kFloatMissing || x[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_10[i] == kFloatMissing)
@@ -484,9 +516,25 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-
-	vector<double> maxgust = h->VerticalAverage(WSParam,lowerHeight,upperHeight);	
-
+	vector<double> maxgust;
+	
+	try
+	{
+		maxgust = h->VerticalAverage(WSParam,lowerHeight,upperHeight);	
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+		}
+		else
+		{
+			myThreadedLogger->Error("hitool was unable to find data");
+			return;
+		}
+	}
+	
 	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
 	{
 		if (poterot.potero0[i] == kFloatMissing || poterot.potero1[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_10[i] == kFloatMissing)
