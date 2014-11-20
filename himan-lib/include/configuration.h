@@ -248,8 +248,6 @@ protected:
 
 	std::string itsOriginTime;
 
-	std::shared_ptr<logger> itsLogger;
-
 	HPFileWriteOption itsFileWriteOption;
 	bool itsReadDataFromDatabase;
 

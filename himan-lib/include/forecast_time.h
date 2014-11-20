@@ -66,8 +66,6 @@ public:
     void StepResolution(HPTimeResolution theStepResolution);
 
 private:
-    std::unique_ptr<logger> itsLogger;
-
     std::shared_ptr<raw_time> itsOriginDateTime;
     std::shared_ptr<raw_time> itsValidDateTime;
 

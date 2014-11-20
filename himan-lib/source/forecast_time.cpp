@@ -6,13 +6,11 @@
  */
 
 #include "forecast_time.h"
-#include "logger_factory.h"
 
 using namespace himan;
 
 forecast_time::forecast_time()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime)
@@ -20,7 +18,6 @@ forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& 
 	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime)))
 	, itsStepResolution(kHourResolution)
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::shared_ptr<raw_time> theValidDateTime)
@@ -28,7 +25,6 @@ forecast_time::forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::s
 	, itsValidDateTime(theValidDateTime)
 	, itsStepResolution(kHourResolution)
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const std::string& theOriginDateTime,
@@ -38,7 +34,6 @@ forecast_time::forecast_time(const std::string& theOriginDateTime,
 	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(theValidDateTime, theDateMask)))
 	, itsStepResolution(kHourResolution)
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time::forecast_time(const forecast_time& other)
@@ -46,7 +41,6 @@ forecast_time::forecast_time(const forecast_time& other)
 	, itsValidDateTime(std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime)))
 	, itsStepResolution(other.itsStepResolution)
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("forecast_time"));
 }
 
 forecast_time& forecast_time::operator=(const forecast_time& other)
@@ -54,6 +48,7 @@ forecast_time& forecast_time::operator=(const forecast_time& other)
 	itsOriginDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsOriginDateTime));
 	itsValidDateTime = std::shared_ptr<raw_time> (new raw_time(*other.itsValidDateTime));
 	itsStepResolution = other.itsStepResolution;
+
 	return *this;
 }
 

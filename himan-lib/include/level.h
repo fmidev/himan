@@ -93,8 +93,6 @@ public:
     std::ostream& Write(std::ostream& file) const;
 
 private:
-	std::unique_ptr<logger> itsLogger;
-
     HPLevelType itsType;
 	double itsValue;
     int itsIndex;

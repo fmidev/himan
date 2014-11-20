@@ -148,8 +148,6 @@ private:
 	double itsMissingValue; //!< Missing value
 
 	aggregation itsAggregation;
-	
-	std::unique_ptr<logger> itsLogger;
 
 };
 

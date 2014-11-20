@@ -6,7 +6,6 @@
  */
 
 #include "configuration.h"
-#include "logger_factory.h"
 #include "plugin_factory.h"
 
 using namespace himan;
@@ -15,7 +14,6 @@ configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 {
 
 	Init();
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
 
 }
 
@@ -53,7 +51,6 @@ configuration::configuration(const configuration& other)
 
 	itsForecastStep = other.itsForecastStep;
 	
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("configuration"));
 }
 
 std::ostream& configuration::Write(std::ostream& file) const

@@ -30,7 +30,6 @@ param::param()
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const string& theName, unsigned long theUnivId)
@@ -50,7 +49,6 @@ param::param(const string& theName, unsigned long theUnivId)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const string& theName)
@@ -70,7 +68,6 @@ param::param(const string& theName)
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const string& theName,
@@ -94,7 +91,6 @@ param::param(const string& theName,
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const string& theName, unsigned long theUnivId, long theGribDiscipline, long theGribCategory, long theGribParameter)
@@ -114,7 +110,6 @@ param::param(const string& theName, unsigned long theUnivId, long theGribDiscipl
 	, itsMissingValue(kHPMissingValue)
 	, itsAggregation()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param::param(const param& other)
@@ -134,7 +129,6 @@ param::param(const param& other)
 	, itsMissingValue(other.itsMissingValue)
 	, itsAggregation(other.itsAggregation)
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("param"));
 }
 
 param& param::operator=(const param& other)

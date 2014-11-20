@@ -6,7 +6,6 @@
  */
 
 #include "level.h"
-#include "logger_factory.h"
 #include <ostream>
 #include "NFmiLevel.h"
 #include <boost/lexical_cast.hpp>
@@ -16,7 +15,6 @@ using namespace himan;
 level::level()
     : itsType(kUnknownLevel), itsValue(kHPMissingValue), itsIndex(kHPMissingInt), itsName("")
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level::level(HPLevelType theType, double theValue, const std::string& theName)
@@ -25,7 +23,6 @@ level::level(HPLevelType theType, double theValue, const std::string& theName)
     , itsIndex(kHPMissingInt)
 	, itsName(theName)
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level::level(HPLevelType theType, double theValue, int theIndex, const std::string& theName)
@@ -34,7 +31,6 @@ level::level(HPLevelType theType, double theValue, int theIndex, const std::stri
     , itsIndex(theIndex)
 	, itsName(theName)
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level::level(const NFmiLevel& theLevel)
@@ -42,7 +38,6 @@ level::level(const NFmiLevel& theLevel)
 	, itsValue(static_cast<double> (theLevel.LevelValue()))
     , itsIndex(kHPMissingInt)
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level::level(const level& other)
@@ -51,7 +46,6 @@ level::level(const level& other)
     , itsIndex(other.itsIndex)
 	, itsName(other.itsName)
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("level"));
 }
 
 level& level::operator=(const level& other)
@@ -60,7 +54,7 @@ level& level::operator=(const level& other)
 	itsValue = other.itsValue;
 	itsIndex = other.itsIndex;
 	itsName = other.itsName;
-
+	
     return *this;
 }
 
