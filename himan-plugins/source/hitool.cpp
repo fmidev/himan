@@ -22,6 +22,11 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
+bool cmp(double i, double j)
+{ 
+	return (j != kFloatMissing && i < j);
+}
+
 hitool::hitool()
 	: itsTime()
 {
@@ -223,14 +228,14 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		case kMinimumModifier:
 		case kMaximumModifier:
 		{
-			double max_value = *max_element(upperHeight.begin(), upperHeight.end());
-            double min_value = *min_element(lowerHeight.begin(), lowerHeight.end());
+			double max_value = *max_element(upperHeight.begin(), upperHeight.end(), cmp);
+			double min_value = *min_element(lowerHeight.begin(), lowerHeight.end(), cmp);
 
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
 			auto levelsForMinHeight = LevelForHeight(prod, min_value);
 		
-			firstHybridLevel = levelsForMaxHeight.second.Value();
-			lastHybridLevel = levelsForMinHeight.first.Value();
+			firstHybridLevel = static_cast<long> (levelsForMaxHeight.second.Value());
+			lastHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
 
 			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lastHybridLevel) + " .. " + boost::lexical_cast<string> (firstHybridLevel) + " for height range " 
 				+ boost::lexical_cast<string> (min_value) + " .. " + boost::lexical_cast<string> (max_value) + " meters");
@@ -239,14 +244,15 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		case kFindValueModifier:
 		{
-			double max_value = *max_element(findValue.begin(), findValue.end());
-			double min_value = *min_element(findValue.begin(), findValue.end());
+			auto p = minmax_element(lowerHeight.begin(), lowerHeight.end(), cmp);
+			double max_value = *p.second;
+			double min_value = *p.first;
 		
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
 			auto levelsForMinHeight = LevelForHeight(prod, min_value);
 		
-			firstHybridLevel = levelsForMaxHeight.second.Value();
-			lastHybridLevel = levelsForMinHeight.first.Value();
+			firstHybridLevel = static_cast<long> (levelsForMaxHeight.second.Value());
+			lastHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
 
 			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lastHybridLevel) + " .. " + boost::lexical_cast<string> (firstHybridLevel) + " for height range " 
 				+ boost::lexical_cast<string> (min_value) + " .. " + boost::lexical_cast<string> (max_value) + " meters");
