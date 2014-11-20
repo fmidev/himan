@@ -611,7 +611,7 @@ ostream& grid::Write(std::ostream& file) const
 
 	for (size_t i = 0; i < itsAB.size(); i++)
 	{
-		cout << "__itsAB__" << itsAB[i] << endl;
+		file << "__itsAB__" << itsAB[i] << endl;
 	}
 
 	file << itsBottomLeft;
