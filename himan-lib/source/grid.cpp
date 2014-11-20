@@ -30,7 +30,7 @@ grid::grid()
 	, itsDi(kHPMissingValue)
 	, itsDj(kHPMissingValue)
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
+	itsLogger = logger_factory::Instance()->GetLog("grid");
 }
 
 grid::grid(HPScanningMode theScanningMode,

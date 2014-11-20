@@ -27,7 +27,7 @@ info::info()
 	, itsDimensions()
 {
 	Init();
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("info"));
+	itsLogger = logger_factory::Instance()->GetLog("info");
 
 }
 

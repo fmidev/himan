@@ -57,7 +57,7 @@ json_parser* json_parser::Instance()
 
 json_parser::json_parser()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("json_parser"));
+	itsLogger = logger_factory::Instance()->GetLog("json_parser");
 }
 
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
