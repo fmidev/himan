@@ -187,7 +187,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 
 	if (anInfo->Grid()->IsPackedData() && anInfo->Grid()->PackedData()->ClassName() == "simple_packed")
 	{
-		itsLogger->Info("Writing packed data");
+		itsLogger->Trace("Writing packed data");
 		simple_packed* s = reinterpret_cast<simple_packed*> (anInfo->Grid()->PackedData());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
@@ -195,17 +195,17 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 		itsGrib->Message().DecimalScaleFactor(s->coefficients.decimalScaleFactor);
 		itsGrib->Message().BitsPerValue(s->coefficients.bitsPerValue);
 
-		itsLogger->Info("bits per value: " + boost::lexical_cast<string> (itsGrib->Message().BitsPerValue()));
-		itsLogger->Info("decimal scale factor: " + boost::lexical_cast<string> (itsGrib->Message().DecimalScaleFactor()));
-		itsLogger->Info("binary scale factor: " + boost::lexical_cast<string> (itsGrib->Message().BinaryScaleFactor()));
-		itsLogger->Info("reference value: " + boost::lexical_cast<string> (itsGrib->Message().ReferenceValue()));
+		itsLogger->Trace("bits per value: " + boost::lexical_cast<string> (itsGrib->Message().BitsPerValue()));
+		itsLogger->Trace("decimal scale factor: " + boost::lexical_cast<string> (itsGrib->Message().DecimalScaleFactor()));
+		itsLogger->Trace("binary scale factor: " + boost::lexical_cast<string> (itsGrib->Message().BinaryScaleFactor()));
+		itsLogger->Trace("reference value: " + boost::lexical_cast<string> (itsGrib->Message().ReferenceValue()));
 
 		itsGrib->Message().PackedValues(s->data, anInfo->Data()->Size(), 0, 0);
 	}
 	else
 #endif
 	{
-		itsLogger->Info("Writing unpacked data");
+		itsLogger->Trace("Writing unpacked data");
 		itsGrib->Message().Values(anInfo->Data()->ValuesAsPOD(), static_cast<long> (anInfo->Ni() * anInfo->Nj()));
 	}
 
