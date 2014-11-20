@@ -72,7 +72,7 @@ private:
 	std::atomic<size_t> itsCacheMissCount;
 	std::atomic<size_t> itsCacheHitCount;
 
-	std::shared_ptr<timer> itsTimer;
+	std::unique_ptr<timer> itsTimer;
 	short itsUsedThreadCount;
 	short itsUsedGPUCount;
 	

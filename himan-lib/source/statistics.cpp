@@ -10,7 +10,7 @@ using namespace himan;
 
 statistics::statistics()
 {
-	itsTimer = shared_ptr<timer> (timer_factory::Instance()->GetTimer());
+	itsTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 	Init();
 }
 
@@ -27,7 +27,7 @@ statistics::statistics(const statistics& other)
 	itsCacheMissCount.store(other.itsCacheMissCount, std::memory_order_relaxed);
 	itsCacheHitCount.store(other.itsCacheHitCount, std::memory_order_relaxed);
 
-	itsTimer = shared_ptr<timer> (timer_factory::Instance()->GetTimer());
+	itsTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 }
 
 bool statistics::Start()
