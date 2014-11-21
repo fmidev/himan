@@ -177,7 +177,7 @@ class modifier_integral : public modifier
 		
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
 
-		virtual bool CalculationFinished();
+		virtual bool CalculationFinished() const;
 
 	protected:
 		modifier_integral(HPModifierType theModifierType) : modifier(theModifierType) {}
@@ -205,7 +205,7 @@ class modifier_mean : public modifier_integral
 
 		virtual const std::vector<double>& Result() const;
 		
-		virtual bool CalculationFinished();
+		virtual bool CalculationFinished() const;
 
 	protected:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);

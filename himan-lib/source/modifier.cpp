@@ -534,7 +534,7 @@ const std::vector<double>& modifier_mean::Result() const
 	return itsResult;
 }
 
-bool modifier_mean::CalculationFinished()
+bool modifier_mean::CalculationFinished() const
 {
 	if (itsResult.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size())
 	{
@@ -1023,7 +1023,7 @@ void modifier_integral::Calculate(double theValue, double theHeight)
 	}
 }
 
-bool modifier_integral::CalculationFinished()
+bool modifier_integral::CalculationFinished() const
 {
 	if (itsResult.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size())
 	{
