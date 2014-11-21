@@ -165,10 +165,20 @@ vector<string> util::Split(const string& s, const std::string& delims, bool fill
 		{
 			it = orig_elems.erase(it);
 
-			for (int i = boost::lexical_cast<int> (splitted_elems[0]); i <= boost::lexical_cast<int> (splitted_elems[1]); i++)
+			int first = boost::lexical_cast<int> (splitted_elems[0]);
+			int last = boost::lexical_cast<int> (splitted_elems.back());
+
+			if (first <= last)
 			{
-				filled_elems.push_back(boost::lexical_cast<string> (i));
+				// levels are 1-65
+				for (int i = first; i <= last; ++i) filled_elems.push_back(boost::lexical_cast<string> (i));
 			}
+			else
+			{
+				// levels are 65-1
+				for (int i = first; i >= last; --i) filled_elems.push_back(boost::lexical_cast<string> (i));
+			}
+
 		}
 		else
 		{
