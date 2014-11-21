@@ -363,7 +363,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
 	("statistics,s", po::value(&statisticsLabel), "record statistics information")
 	("no-cuda", "disable all cuda extensions")
-	("no-cuda-packing", "disable cuda packing and unpacking of grib data")
+	("no-cuda-packing", "disable cuda packing of grib data")
+	("no-cuda-unpacking", "disable cuda unpacking of grib data")
 	("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
 	("cuda-properties", "print cuda device properties of platform (if any)")
 	;
@@ -433,6 +434,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	conf->UseCuda(false);
 	conf->UseCudaForPacking(false);
+	conf->UseCudaForUnpacking(false);
 	conf->CudaDeviceCount(0);
 
 	if (opt.count("cuda-device-id"))
@@ -453,10 +455,16 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCudaForPacking(false);
 	}
 
+	if (opt.count("no-cuda-unpacking"))
+	{
+		conf->UseCudaForUnpacking(false);
+	}
+
 	if (opt.count("no-cuda"))
 	{
 		conf->UseCuda(false);
 		conf->UseCudaForPacking(false);
+		conf->UseCudaForUnpacking(false);
 	}
 
 	// get cuda device count for this server
