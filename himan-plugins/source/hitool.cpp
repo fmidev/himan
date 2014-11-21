@@ -10,6 +10,8 @@
 #include "hitool.h"
 #include <NFmiInterpolation.h>
 #include <algorithm>
+#include <boost/foreach.hpp>
+#include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -22,9 +24,57 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-bool cmp(double i, double j)
+// I tried to use std::min_element and friends but it was just
+// too hard when we have to support missing values
+
+double min(const vector<double>& vec)
 { 
-	return (j != kFloatMissing && i < j);
+	double ret = 1e38;
+
+	BOOST_FOREACH(double val, vec)
+	{
+		if (val != kFloatMissing && val < ret) ret = val;
+	}
+
+	if (ret == 1e38) ret = kFloatMissing;
+
+	return ret;
+}
+
+double max(const vector<double>& vec)
+{ 
+	double ret = -1e38;
+
+	BOOST_FOREACH(double val, vec)
+	{
+		if (val != kFloatMissing && val > ret) ret = val;
+	}
+
+	if (ret == -1e38) ret = kFloatMissing;
+
+	return ret;
+}
+
+pair<double,double> minmax(const vector<double>& vec)
+{ 
+	double min = 1e38, max = -1e38;
+
+	BOOST_FOREACH(double val, vec)
+	{
+		if (val != kFloatMissing)
+		{
+			if (val < min) min = val;
+			if (val > max) max = val;
+		}
+	}
+
+	if (min == 1e38)
+	{
+		min = kFloatMissing;
+		max = kFloatMissing;
+	}
+
+	return make_pair(min,max);
 }
 
 hitool::hitool()
@@ -224,8 +274,14 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		case kMinimumModifier:
 		case kMaximumModifier:
 		{
-			double max_value = *max_element(upperHeight.begin(), upperHeight.end(), cmp);
-			double min_value = *min_element(lowerHeight.begin(), lowerHeight.end(), cmp);
+			double max_value = ::max(upperHeight);
+			double min_value = ::min(lowerHeight);
+
+			if (max_value == kFloatMissing || min_value == kFloatMissing)
+			{
+				itsLogger->Error("Min or max values of given heights are missing");
+				throw kFileDataNotFound;
+			}
 
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
 			auto levelsForMinHeight = LevelForHeight(prod, min_value);
@@ -234,15 +290,15 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			lastHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
 
 			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lastHybridLevel) + " .. " + boost::lexical_cast<string> (firstHybridLevel) + " for height range " 
-				+ boost::lexical_cast<string> (min_value) + " .. " + boost::lexical_cast<string> (max_value) + " meters");
+				+ boost::lexical_cast<string> (util::round(min_value, 1)) + " .. " + boost::lexical_cast<string> (util::round(max_value, 1)) + " meters");
 		}
 			break;
 
 		case kFindValueModifier:
 		{
-			auto p = minmax_element(findValue.begin(), findValue.end(), cmp);
-			double max_value = *p.second;
-			double min_value = *p.first;
+			auto p = ::minmax(findValue);
+			double max_value = p.second;
+			double min_value = p.first;
 		
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
 			auto levelsForMinHeight = LevelForHeight(prod, min_value);
@@ -251,7 +307,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			lastHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
 
 			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lastHybridLevel) + " .. " + boost::lexical_cast<string> (firstHybridLevel) + " for height range " 
-				+ boost::lexical_cast<string> (min_value) + " .. " + boost::lexical_cast<string> (max_value) + " meters");
+				+ boost::lexical_cast<string> (util::round(min_value, 1)) + " .. " + boost::lexical_cast<string> (util::round(max_value, 1)) + " meters");
 
 					
 		}
