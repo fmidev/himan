@@ -199,6 +199,9 @@ public:
 	bool UseCudaForPacking() const;
 	void UseCudaForPacking(bool theUseCudaForPacking);
 
+	bool UseCudaForUnpacking() const;
+	void UseCudaForUnpacking(bool theUseCudaForUnpacking);
+
 	bool UseCache() const;
 	void UseCache(bool theUseCache);
 
@@ -266,6 +269,7 @@ protected:
 	std::string itsStatisticsLabel;
 
 	bool itsUseCudaForPacking;
+	bool itsUseCudaForUnpacking;
 	bool itsUseCache;
 
 	short itsCudaDeviceCount;

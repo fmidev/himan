@@ -31,6 +31,7 @@ configuration::configuration(const configuration& other)
 	itsFileWaitTimeout = other.itsFileWaitTimeout;
 	itsUseCuda = other.itsUseCuda;
 	itsUseCudaForPacking = other.itsUseCudaForPacking;
+	itsUseCudaForUnpacking = other.itsUseCudaForUnpacking;
 	itsCudaDeviceCount = other.itsCudaDeviceCount;
 	itsCudaDeviceId = other.itsCudaDeviceId;
 	
@@ -82,6 +83,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << "__itsCudaDeviceId__ " << itsCudaDeviceId << std::endl;
 	file << "__itsUseCudaForPacking__ " << itsUseCudaForPacking << std::endl;
+	file << "__itsUseCudaForUnpacking__ " << itsUseCudaForUnpacking << std::endl;
 
 	file << "__itsUseCache__ " << itsUseCache << std::endl;
 	file << "__itsForecastStep__ " << itsForecastStep << std::endl;
@@ -115,6 +117,7 @@ void configuration::Init()
 	itsTargetGeomName = "";
 	itsConfigurationFile = "";
 	itsUseCudaForPacking = true;
+	itsUseCudaForUnpacking = true;
 	itsUseCache = true;
 	itsCudaDeviceId = 0;
 	itsStatisticsLabel = "";
@@ -251,6 +254,16 @@ void configuration::StatisticsLabel(const std::string& theStatisticsLabel)
 std::string configuration::StatisticsLabel() const
 {
 	return itsStatisticsLabel;
+}
+
+bool configuration::UseCudaForUnpacking() const
+{
+	return itsUseCudaForUnpacking;
+}
+
+void configuration::UseCudaForUnpacking(bool theUseCudaForUnpacking)
+{
+	itsUseCudaForUnpacking = theUseCudaForUnpacking;
 }
 
 bool configuration::UseCudaForPacking() const
