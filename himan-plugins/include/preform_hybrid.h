@@ -55,11 +55,25 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
 protected:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	
+private:
+	/**
+	 * @brief Calculate properties of a stratus cloud
+	 * @return info containing multiple parameters describing stratus
+	 */
+
+	void Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, std::shared_ptr<info>& result);
+
+	/**
+	 * @brief Calculate freezing area information (number of zero level etc)
+	 */
+
+	void FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, std::shared_ptr<info>& result);
 
 };
 

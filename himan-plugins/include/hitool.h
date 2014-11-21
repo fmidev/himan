@@ -316,19 +316,6 @@ public:
 	std::vector<double> VerticalCount(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue) const;
 
 	/**
-	 * @brief Calculate properties of a stratus cloud
-	 * @return info containing multiple parameters describing stratus
-	 */
-
-	std::shared_ptr<info> Stratus();
-
-	/**
-	 * @brief Calculate freezing area information (number of zero level etc)
-	 */
-	
-	std::shared_ptr<info> FreezingArea();
-
-	/**
 	 * @brief Set current forecast time
 	 * @param theTime Wanted time
 	 */
