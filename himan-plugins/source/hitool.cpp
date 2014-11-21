@@ -131,10 +131,6 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 			<< "WHERE "
 			<< "producer_id = " << producerId;
 
-#ifdef DEBUG
-	cout << query.str() << endl;
-#endif
-
 	n->NeonsDB().Query(query.str());
 	
 	auto row = n->NeonsDB().FetchRow();
@@ -244,7 +240,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		case kFindValueModifier:
 		{
-			auto p = minmax_element(lowerHeight.begin(), lowerHeight.end(), cmp);
+			auto p = minmax_element(findValue.begin(), findValue.end(), cmp);
 			double max_value = *p.second;
 			double min_value = *p.first;
 		
@@ -281,8 +277,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			switch (e)
 			{
 				case kFileDataNotFound:
+					itsLogger->Error("data not found for param " + wantedParam.Name() + " level " + static_cast<string> (currentLevel));
 					throw;
-					//itsLogger->Warning("Parameter of height data not found for level " + boost::lexical_cast<string> (currentLevel.Value()));
 					//continue;
 					break;
 				default:
