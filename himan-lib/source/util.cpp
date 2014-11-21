@@ -619,7 +619,13 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 	}
 	return ret;
 }
-	
+
+double util::round(double val, unsigned short numdigits)
+{
+	int div = static_cast<int> (pow(10, static_cast<double> (numdigits)));
+	return std::round(val * div) / div;
+}
+
 #ifdef HAVE_CUDA
 void util::Unpack(initializer_list<grid*> grids)
 {

@@ -180,6 +180,15 @@ void Unpack(std::initializer_list<grid*> grids);
 
 himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& B);
 
+/**
+ * @brief Round a double to requested precision
+ * @param val Value that is going to be rounded
+ * @param numdigits How many digits to preserve
+ * @return Rounded value
+ */
+
+double round(double val,unsigned short numdigits);
+
 } // namespace util
 } // namespace himan
 
