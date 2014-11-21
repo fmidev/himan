@@ -120,6 +120,10 @@ std::ostream& info::Write(std::ostream& file) const
 
 void info::Create()
 {
+	assert(itsTimeIterator.Size());
+	assert(itsParamIterator.Size());
+	assert(itsLevelIterator.Size());
+
 	itsDimensions = vector<shared_ptr<grid>> (itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
 	Reset();
@@ -666,13 +670,13 @@ size_t info::SizeLocations() const
 
 grid* info::Grid() const
 {
-	//assert(itsDimensions->At(TimeIndex(), LevelIndex(), ParamIndex()));
+	assert(itsDimensions.size());
 	return itsDimensions[Index()].get();
 }
 
 grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
-	//assert(itsDimensions->At(timeIndex, levelIndex, paramIndex));
+	assert(itsDimensions.size());
 	return itsDimensions[Index(timeIndex, levelIndex, paramIndex)].get();
 }
 

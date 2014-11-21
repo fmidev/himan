@@ -1072,6 +1072,8 @@ vector<level> json_parser::LevelsFromString(const string& levelType, const strin
 	{
 		levels.push_back(level(theLevelType, boost::lexical_cast<float> (levelsStr[i]), levelType));
 	}
+	
+	assert(!levels.empty());
 
 	return levels;
 }
