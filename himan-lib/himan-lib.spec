@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 14.11.4
+Version: 14.11.25
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -14,6 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 BuildRequires: redhat-rpm-config
+BuildRequires: cub
 
 %if %{distnum} == 5
 BuildRequires: gcc44-c++ >= 4.4.6
@@ -51,6 +52,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Nov 25 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.11.25-1.fmi
+- Removed logger from classes that don't need it
+- Add initial cuda grib packing support (not enabled yet)
 * Thu Nov 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.11.13-1.fmi
 - Removed support for NFmiPoint
 - No more double memory allocation for cuda plugins
