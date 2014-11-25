@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.11.13
-Release: 1.fmi
+Version: 14.11.25
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -16,6 +16,8 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.12.1
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
+Requires: himan-lib >= 14.11.25
+Requires: himan-bin >= 14.11.25
 BuildRequires: boost-devel >= 1.54
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 14.4.10
@@ -89,7 +91,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Thu Nov 13 2014  Mikko Partio <mikko.partio@fmi.fi> - 14.11.13-1.fmi
+* Tue Nov 25 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.11.25-1.fmi
+- Initial support for cuda grib packing (disabled for now)
+- Fixes in hitool
+* Tue Nov 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.11.18-1.fmi
+- Fixes in gust
+* Thu Nov 13 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.11.13-1.fmi
 - Enable hybrid level height check in hitool
 - Replace double allocation of memory in cuda plugins with memory registration
 * Tue Nov 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.11.10-1.fmi
