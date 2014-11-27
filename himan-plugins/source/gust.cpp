@@ -20,6 +20,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "hitool.h"
+#include "neons.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -84,10 +85,16 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param WSParam("FF-MS");
 	const param GustParam("FFG-MS");
 	const param TParam("T-K");
-	const param TGParam("TG-K");
+	const param T_LowestLevelParam("T-K");
 	const param TopoParam("Z-M2S2");
 
 	level H0, H10, Ground;
+
+	producer prod = itsConfiguration->SourceProducer(0);
+
+	auto n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+	long lowestHybridLevelNumber = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	level lowestHybridLevel(kHybrid,lowestHybridLevelNumber);
 
 	if (myTargetInfo->Producer().Id() == 240)
 	{
@@ -102,7 +109,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		H10 = level(kHeight, 10);
 	}
 	
-	info_t puuskaInfo, TGInfo, TopoInfo;
+	info_t puuskaInfo, T_LowestLevelInfo, TopoInfo;
 
 	// Current time and level
 
@@ -110,10 +117,10 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	level forecastLevel = myTargetInfo->Level();
 
 	puuskaInfo = Fetch(forecastTime,H10,GustParam,false);
-	TGInfo = Fetch(forecastTime,Ground,TGParam,false);
+	T_LowestLevelInfo = Fetch(forecastTime,lowestHybridLevel,T_LowestLevelParam,false);
 	TopoInfo = Fetch(forecastTime,H0,TopoParam,false);
 
-	if (!puuskaInfo || !TGInfo || !TopoInfo)
+	if (!puuskaInfo || !T_LowestLevelInfo || !TopoInfo)
 	{
 		itsLogger->Error("Unable to find all source data");
 		return;
@@ -136,7 +143,6 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	try
 	{
 		// Wind speeds
-
 		ws_10   = h->VerticalValue(WSParam,  10);
 		ws_100  = h->VerticalValue(WSParam, 100);
 		ws_200  = h->VerticalValue(WSParam, 200);
@@ -552,12 +558,12 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	string deviceType = "CPU";
 
-	LOCKSTEP(myTargetInfo, puuskaInfo, TGInfo, TopoInfo)
+	LOCKSTEP(myTargetInfo, puuskaInfo, T_LowestLevelInfo, TopoInfo)
 	{
 		size_t i = myTargetInfo->LocationIndex();
 
 		double par467 = puuskaInfo->Value();
-		double t_ground = TGInfo->Value();
+		double t_LowestLevel = T_LowestLevelInfo->Value();
 		double topo = TopoInfo->Value();
 		double puuska = pohja[i];
 		double gustval = gust[i];
@@ -565,7 +571,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		double ws10 = ws_10[i];
 
 		if (par467 == kFloatMissing 
-			|| t_ground == kFloatMissing 
+			|| t_LowestLevel == kFloatMissing 
 			|| topo == kFloatMissing 
 			|| puuska == kFloatMissing 
 			|| gustval == kFloatMissing 
@@ -587,17 +593,17 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			puuska = (maxgustval + pohja[i])/2;
 		}
 
-		if ((maxt[i] - t_ground) > 1 && topo > 15)
+		if ((maxt[i] - t_LowestLevel) > 1 && topo > 15)
 		{
 			puuska = pohja_0_60[i];
 			par466[i] = ws10;
 			
-			if (maxt[i] - t_ground > 2)
+			if (maxt[i] - t_LowestLevel > 2)
 			{
 				puuska = ws10;
 				par466[i] = ws10 * 0.7;
 				
-				if (maxt[i] - t_ground > 4)
+				if (maxt[i] - t_LowestLevel > 4)
 				{
 					puuska = ws10 * 0.7;
 					par466[i] = ws10 * 0.4;
