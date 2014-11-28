@@ -342,7 +342,8 @@ enum HPModifierType
 	kCountModifier,
 	kFindHeightModifier,
 	kFindValueModifier,
-	kIntegralModifier
+	kIntegralModifier,
+	kPlusMinusAreaModifier
 };
 
 #ifndef __CUDACC__
@@ -358,6 +359,7 @@ const boost::unordered_map<HPModifierType,const char*> HPModifierTypeToString = 
 		(kFindHeightModifier, "find height modifier")
 		(kFindValueModifier, "find value modifier")
 		(kIntegralModifier, "integral modifier")
+		(kPlusMinusAreaModifier, "plus minus area modifier")
 ;
 #endif
 
