@@ -318,8 +318,6 @@ class modifier_plusminusarea : public modifier
 
 		virtual bool CalculationFinished() const;
 
-		virtual void Clear(double fillValue = kFloatMissing);
-
 	private:
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 		virtual bool Evaluate(double theValue, double theHeight);
