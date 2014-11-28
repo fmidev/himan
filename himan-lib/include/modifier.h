@@ -300,6 +300,38 @@ class modifier_findvalue : public modifier
 		size_t itsValuesFound;
 };
 
+/**
+ * @class Find positive and negative area under a function
+ */
+
+class modifier_plusminusarea : public modifier
+{
+	public:
+		modifier_plusminusarea() : modifier(kPlusMinusAreaModifier), itsValuesFound(0) {}
+		virtual ~modifier_plusminusarea() {}
+
+		virtual std::string ClassName() const { return "himan::modifier_plusminusarea";}
+
+		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+ 
+		virtual const std::vector<double>& Result() const;
+
+		virtual bool CalculationFinished() const;
+
+		virtual void Clear(double fillValue = kFloatMissing);
+
+	private:
+		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
+		virtual bool Evaluate(double theValue, double theHeight);
+
+		std::vector<double> itsPreviousValue;
+		std::vector<double> itsPreviousHeight;
+		mutable std::vector<double> itsPlusArea;
+		std::vector<double> itsMinusArea;
+
+		size_t itsValuesFound;
+};
+
 } // namespace himan
 
 #endif	/* MODIFIER_H */

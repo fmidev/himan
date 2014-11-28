@@ -451,15 +451,6 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 	}
 }
 
-/*
- *  The method used here to calculate the vertical average is limited to calculate average values for grids with constant vertical grid spacing only.
- *  Hybrid grids become denser close to the surface. This requires a more general method of calculation, i.e. the mean of a function (http://en.wikipedia.org/wiki/Mean_of_a_function).
- *  In this function that would mean in the most simple case to replace: 
- *  Value(val + theValue) -> Value(val + theValue*layer_depth)
- *  itsResult[i] = val / static_cast<double> (count) -> itsResult[i] = val / (itsUpperHeight - itsLowerHeight)
- *  But probably it's better to create a seperate modifier_integral class and let the average function call it and devide the result by (itsUpperHeight - itsLowerHeight).
- */
-
 void modifier_mean::Calculate(double theValue, double theHeight)
 {
 	if (IsMissingValue(Value())) // First value
@@ -1037,4 +1028,235 @@ bool modifier_integral::CalculationFinished() const
 
 	return false;
 
+}
+
+/* ----------------- */
+
+bool modifier_plusminusarea::Evaluate(double theValue, double theHeight)
+{
+
+	assert(itsIndex < itsOutOfBoundHeights.size());
+
+	if (IsMissingValue(theHeight))
+	{
+		return false;
+	}
+
+	/*
+	 * "upper" value relates to it being higher in the atmosphere
+	 * meaning its value is higher.
+	 *
+	 * ie. lower limit 10, upper limit 100
+	 *
+	 * From this it follows that valid height is lower than upper limit and
+	 * higher than lower limit
+	 *
+	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
+	 * need to be changed.
+	 */
+
+	/*
+ 	 * upper/lower limit check moved from evaluate function to calculate for the averaging case
+	 */
+
+	double upperLimit = 1e38;
+	double lowerLimit = -1e38;
+
+	if (!itsUpperHeight.empty())
+	{
+		upperLimit = itsUpperHeight[itsIndex];
+	}
+
+	if (!itsLowerHeight.empty())
+	{
+		lowerLimit = itsLowerHeight[itsIndex];
+	}
+
+	if (itsOutOfBoundHeights[itsIndex] == true)
+	{
+		return false;
+	}
+	else if (IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+	{
+		// height is above given height range OR either level value is missing: stop processing of this grid point
+		itsOutOfBoundHeights[itsIndex] = true;
+		return false;
+	}
+	else if (itsOutOfBoundHeights[itsIndex])
+	{
+		// check if upper height for that grid point has been passed in the previous iteration
+		return false;
+	}
+	else if (IsMissingValue(theValue))
+	{
+		return false;
+	}
+
+//	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
+
+	return true;
+}
+
+void modifier_plusminusarea::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
+{
+
+	if (itsResult.size() == 0)
+	{
+		assert(theData.size() == theHeights.size());
+
+		itsPlusArea.resize(theData.size(), 0);
+		itsMinusArea.resize(theData.size(), 0);
+		itsPreviousValue.resize(theData.size(), kFloatMissing);
+		itsPreviousHeight.resize(theData.size(), kFloatMissing);
+	
+		itsOutOfBoundHeights.resize(itsResult.size(), false);
+	}
+}
+
+void modifier_plusminusarea::Calculate(double theValue, double theHeight)
+{
+	
+	double lowerHeight = -1e38;
+
+	if (!itsLowerHeight.empty())
+	{
+		lowerHeight=itsLowerHeight[itsIndex];
+	}
+
+	double upperHeight = 1e38;
+
+	if (!itsUpperHeight.empty())
+	{
+		upperHeight=itsUpperHeight[itsIndex];
+	}
+
+	double previousValue = itsPreviousValue[itsIndex];
+	double previousHeight = itsPreviousHeight[itsIndex];
+
+	itsPreviousValue[itsIndex] = theValue;
+	itsPreviousHeight[itsIndex] = theHeight;
+	
+	// check if interval is larger then 0. Otherwise skip this gridpoint and return value of 0.
+	if (lowerHeight == upperHeight)
+	{
+		itsOutOfBoundHeights[itsIndex] = true;
+	}
+	// integrate numerically with separating positive from negative area under the curve.
+	// find lower bound
+	else if (previousHeight < lowerHeight && theHeight > lowerHeight)
+	{
+		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
+		// zero is crossed from negative to positive: Interpolate height where zero is crossed and integrate positive and negative area separately
+		if (lowerValue < 0 && theValue > 0)
+		{
+			double zeroHeight = NFmiInterpolation::Linear(0.0, lowerValue, theValue, lowerHeight, theHeight);
+			itsMinusArea[itsIndex] += lowerValue / 2 * (zeroHeight - lowerHeight);
+			itsPlusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
+		}
+		// zero is crossed from positive to negative
+		else if (lowerValue > 0 && theValue < 0)
+		{
+			double zeroHeight = NFmiInterpolation::Linear(0.0, lowerValue, theValue, lowerHeight, theHeight);
+			itsPlusArea[itsIndex] += lowerValue / 2 * (zeroHeight - lowerHeight);
+			itsMinusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
+		}
+		// whole interval is in the negative area
+		else if (lowerValue <= 0 && theValue <= 0)
+		{
+			itsMinusArea[itsIndex] += (lowerValue + theValue) / 2 * (theHeight - lowerHeight);
+		}
+		// whole interval is in the positive area
+		else
+		{
+			itsPlusArea[itsIndex] += (lowerValue + theValue) / 2 * (theHeight - lowerHeight);
+		}
+	}
+	// find upper bound
+	else if (previousHeight < upperHeight && theHeight > upperHeight)
+	{
+		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
+		// zero is crossed from negative to positive
+		if (previousValue < 0 && upperValue > 0)
+		{
+			double zeroHeight = NFmiInterpolation::Linear(0.0, previousValue, upperValue, previousHeight, upperHeight);
+			itsMinusArea[itsIndex] += previousValue / 2 * (zeroHeight - previousHeight);
+			itsPlusArea[itsIndex] += upperValue / 2 * (upperHeight - zeroHeight);
+		}
+		// zero is crossed from positive to negative
+        else if (previousValue > 0 && upperValue < 0)
+		{
+			double zeroHeight = NFmiInterpolation::Linear(0.0, previousValue, upperValue, previousHeight, upperHeight);
+			itsPlusArea[itsIndex] += previousValue / 2 * (zeroHeight - previousHeight);
+			itsMinusArea[itsIndex] += upperValue / 2 * (upperHeight - zeroHeight);
+		}
+		// whole interval is in the negative area
+		else if (previousValue <= 0 && upperValue <= 0)
+		{
+			itsMinusArea[itsIndex] += (previousValue + upperValue) / 2 * (upperHeight - previousHeight);
+		}
+		// whole interval is in the positive area
+		else
+		{
+			itsPlusArea[itsIndex] += (previousValue + upperValue) / 2 * (upperHeight - previousHeight);
+		}
+		// if upper height is passed for this grid point set OutOfBoundHeight = "true" to skip calculation of the integral in following iterations
+		itsOutOfBoundHeights[itsIndex] = true;
+	}
+	else if (!(previousHeight == kFloatMissing) && previousHeight >= lowerHeight && theHeight <= upperHeight)
+	{
+		// zero is crossed from negative to positive
+		if (previousValue < 0 && theValue > 0)
+		{
+			double zeroHeight = NFmiInterpolation::Linear(0.0, previousValue, theValue, previousHeight, theHeight);
+			itsMinusArea[itsIndex] += previousValue / 2 * (zeroHeight - previousHeight);
+			itsPlusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
+		}
+		// zero is crossed from positive to negative
+		else if (previousValue > 0 && theValue < 0)
+		{
+			double zeroHeight = NFmiInterpolation::Linear(0.0, previousValue, theValue, previousHeight, theHeight);
+			itsPlusArea[itsIndex] += previousValue / 2 * (zeroHeight - previousHeight);
+			itsMinusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
+		}
+		// whole interval is in the negative area
+		else if (previousValue <= 0 && theValue <= 0)
+		{
+			itsMinusArea[itsIndex] += (previousValue + theValue) / 2 * (theHeight - previousHeight);
+		}
+		// whole interval is in the positive area
+		else
+		{
+			itsPlusArea[itsIndex] += (previousValue + theValue) / 2 * (theHeight - previousHeight);
+		}
+	}
+	else
+	{
+	// computation not possible -> set PlusMinusArea to kFloatMissing and stop calculation for this grid point
+	itsOutOfBoundHeights[itsIndex] = true;
+	itsMinusArea[itsIndex] = kFloatMissing;
+	itsPlusArea[itsIndex] = kFloatMissing;
+
+	}
+
+}
+
+bool modifier_plusminusarea::CalculationFinished() const
+{
+	if (itsMinusArea.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsMinusArea.size())
+	{
+		return true;
+	}
+	
+	if (itsPreviousHeight > itsUpperHeight)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+const std::vector<double>& modifier_plusminusarea::Result() const
+{
+	itsPlusArea.insert(itsPlusArea.end(), itsMinusArea.begin(), itsMinusArea.end()); //append MinusArea at the end of PlusArea 
+	return itsPlusArea; // return PlusMinusArea
 }
