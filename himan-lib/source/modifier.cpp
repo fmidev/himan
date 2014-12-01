@@ -242,7 +242,7 @@ void modifier::Process(const std::vector<double>& theData, const std::vector<dou
 
 	Init(theData, theHeights);
 	
-	assert(itsResult.size() == theData.size() && itsResult.size() == theHeights.size());
+	//assert(itsResult.size() == theData.size() && itsResult.size() == theHeights.size());
 
 	for (itsIndex = 0; itsIndex < itsResult.size(); itsIndex++)
 	{
@@ -1034,10 +1034,8 @@ bool modifier_integral::CalculationFinished() const
 
 bool modifier_plusminusarea::Evaluate(double theValue, double theHeight)
 {
-
 	assert(itsIndex < itsOutOfBoundHeights.size());
-
-	if (IsMissingValue(theHeight))
+    if (IsMissingValue(theHeight) || IsMissingValue(theValue))
 	{
 		return false;
 	}
@@ -1087,10 +1085,6 @@ bool modifier_plusminusarea::Evaluate(double theValue, double theHeight)
 		// check if upper height for that grid point has been passed in the previous iteration
 		return false;
 	}
-	else if (IsMissingValue(theValue))
-	{
-		return false;
-	}
 
 //	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
 
@@ -1109,13 +1103,31 @@ void modifier_plusminusarea::Init(const std::vector<double>& theData, const std:
 		itsPreviousValue.resize(theData.size(), kFloatMissing);
 		itsPreviousHeight.resize(theData.size(), kFloatMissing);
 	
-		itsOutOfBoundHeights.resize(itsResult.size(), false);
+		itsOutOfBoundHeights.resize(theData.size(), false);
+	}
+}
+
+void modifier_plusminusarea::Process(const std::vector<double>& theData, const std::vector<double>& theHeights)
+{
+
+    Init(theData, theHeights);
+
+	assert(itsPlusArea.size() == theData.size() && itsPlusArea.size() == theHeights.size());
+	
+	for (itsIndex = 0; itsIndex < itsPlusArea.size(); itsIndex++)
+	{
+		double theValue = theData[itsIndex], theHeight = theHeights[itsIndex];
+		if (!Evaluate(theValue, theHeight))
+		{
+			continue;
+		}
+		
+	    Calculate(theValue, theHeight);
 	}
 }
 
 void modifier_plusminusarea::Calculate(double theValue, double theHeight)
 {
-	
 	double lowerHeight = -1e38;
 
 	if (!itsLowerHeight.empty())
@@ -1135,7 +1147,7 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight)
 
 	itsPreviousValue[itsIndex] = theValue;
 	itsPreviousHeight[itsIndex] = theHeight;
-	
+
 	// check if interval is larger then 0. Otherwise skip this gridpoint and return value of 0.
 	if (lowerHeight == upperHeight)
 	{
@@ -1229,15 +1241,6 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight)
 			itsPlusArea[itsIndex] += (previousValue + theValue) / 2 * (theHeight - previousHeight);
 		}
 	}
-	else
-	{
-	// computation not possible -> set PlusMinusArea to kFloatMissing and stop calculation for this grid point
-	itsOutOfBoundHeights[itsIndex] = true;
-	itsMinusArea[itsIndex] = kFloatMissing;
-	itsPlusArea[itsIndex] = kFloatMissing;
-
-	}
-
 }
 
 bool modifier_plusminusarea::CalculationFinished() const
