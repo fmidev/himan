@@ -312,6 +312,8 @@ class modifier_plusminusarea : public modifier
 
 		virtual std::string ClassName() const { return "himan::modifier_plusminusarea";}
 
+		virtual void Process(const std::vector<double>& theData, const std::vector<double>& theHeights);
+		
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing);
  
 		virtual const std::vector<double>& Result() const;
