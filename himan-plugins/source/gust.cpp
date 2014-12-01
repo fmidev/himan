@@ -102,6 +102,12 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		H10 = H0;
 		Ground = H0;
 	}
+	else if (myTargetInfo->Producer().Id() == 210)
+	{
+		H0 = level(kHeight, 0);
+		H10 = level(kHeight, 10);
+		Ground = H0;
+	}
 	else
 	{
 		Ground = level(kGround, 0);
