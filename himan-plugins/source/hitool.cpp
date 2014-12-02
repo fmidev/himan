@@ -129,6 +129,10 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 			mod = make_shared<modifier_sum> ();
 			break;
 
+		case kPlusMinusAreaModifier:
+			mod = make_shared<modifier_plusminusarea> ();
+			break;
+
 		default:
 			itsLogger->Fatal("Unknown modifier type: " + boost::lexical_cast<string> (modifierType));
 			exit(1);
@@ -858,6 +862,73 @@ vector<double> hitool::VerticalValue(const param& wantedParam, double height) co
 vector<double> hitool::VerticalValue(const param& wantedParam, const vector<double>& heightInfo) const
 {
 	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, wantedParam, vector<double> (), vector<double> (), heightInfo);
+}
+
+vector<double> hitool::PlusMinusArea(const params& wantedParamList, double lowerHeight, double upperHeight) const
+{
+    vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+    vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+    return PlusMinusArea(wantedParamList, firstLevelValue, lastLevelValue);
+}
+
+vector<double> hitool::PlusMinusArea(const vector<param>& wantedParamList,
+                        const vector<double>& firstLevelValue,
+                        const vector<double>& lastLevelValue) const
+{
+    assert(!wantedParamList.empty());
+
+    size_t p_i = 0;
+
+    param foundParam = wantedParamList[p_i];
+
+    for (size_t i = 0; i < wantedParamList.size(); i++)
+    {
+        try
+        {
+            return PlusMinusArea(foundParam, firstLevelValue, lastLevelValue);
+        }
+        catch (const HPExceptionType& e)
+        {
+            if (e == kFileDataNotFound)
+            {
+                if (++p_i < wantedParamList.size())
+                {
+                    itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " + wantedParamList[p_i].Name());
+                    foundParam = wantedParamList[p_i];
+                }
+                else
+                {
+                    itsLogger->Warning("No more valid parameters left");
+                    throw;
+                }
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+    }
+
+    throw runtime_error("Data not found");
+}
+
+vector<double> hitool::PlusMinusArea(const param& wantedParam,
+                        double lowerHeight,
+                        double upperHeight) const
+{
+    vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+    vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+    return VerticalExtremeValue(CreateModifier(kPlusMinusAreaModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
+}
+
+vector<double> hitool::PlusMinusArea(const param& wantedParam,
+                        const vector<double>& firstLevelValue,
+                        const vector<double>& lastLevelValue) const
+{
+    return VerticalExtremeValue(CreateModifier(kPlusMinusAreaModifier), kHybrid, wantedParam, firstLevelValue, lastLevelValue);
 }
 
 void hitool::Time(const forecast_time& theTime)

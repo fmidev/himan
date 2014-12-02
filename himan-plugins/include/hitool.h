@@ -315,6 +315,49 @@ public:
 
 	std::vector<double> VerticalCount(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue) const;
 
+    /**
+     * @brief Return average of values in a given height range for the first parameter found.
+     *
+     * Overcoat for VerticalAverage(params, double, double)
+     *
+     * @param wantedParamList List (vector) of wanted parameters
+    */
+
+    std::vector<double> PlusMinusArea(const std::vector<param>& wantedParamList, double lowerHeight, double upperHeight) const;
+
+    /**
+     * @brief Return average of values in a given height range for the first parameter found.
+     *
+     * Overcoat for VerticalAverage(param, vector<double>, vector<double>)
+     *
+     * @param wantedParamList List (vector) of wanted parameters
+    */
+
+    std::vector<double> PlusMinusArea(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+    /**
+     * @brief Calculate average of values for each point in a given height range
+     *
+     * @param wantedParam Wanted parameter
+     * @param lowerHeight Lowest height value for all points, search will start here
+     * @param upperHeight Highest height value for all points, search will stop here
+     * @return Mean for each point
+     */
+
+    std::vector<double> PlusMinusArea(const param& wantedParam, double lowerHeight, double upperHeight) const;
+
+    /**
+     * @brief Calculate average of values for each point in a given height range
+     *
+     * @param wantedParam Wanted parameter
+     * @param firstLevelValue Lowest level value for each point, search will start here
+     * @param lastLevelValue Highest level value for each point, search will stop here
+     * @return Mean for each point
+     */
+
+    std::vector<double> PlusMinusArea(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+
 	/**
 	 * @brief Set current forecast time
 	 * @param theTime Wanted time
