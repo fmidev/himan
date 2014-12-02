@@ -316,9 +316,9 @@ public:
 	std::vector<double> VerticalCount(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue) const;
 
     /**
-     * @brief Return average of values in a given height range for the first parameter found.
+     * @brief Return the negative and positive area under a curve/vertical profile. First half of return vector contains positive area, second half negative area.
      *
-     * Overcoat for VerticalAverage(params, double, double)
+     * Overcoat for PlusMinusArea(params, double, double)
      *
      * @param wantedParamList List (vector) of wanted parameters
     */
@@ -326,9 +326,9 @@ public:
     std::vector<double> PlusMinusArea(const std::vector<param>& wantedParamList, double lowerHeight, double upperHeight) const;
 
     /**
-     * @brief Return average of values in a given height range for the first parameter found.
+     * @brief Return the negative and positive area under a curve/vertical profile. First half of return vector contains positive area, second half negative area.
      *
-     * Overcoat for VerticalAverage(param, vector<double>, vector<double>)
+     * Overcoat for PlusMinusArea(param, vector<double>, vector<double>)
      *
      * @param wantedParamList List (vector) of wanted parameters
     */
@@ -336,23 +336,23 @@ public:
     std::vector<double> PlusMinusArea(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
 
     /**
-     * @brief Calculate average of values for each point in a given height range
+     * @brief Return the negative and positive area under a curve/vertical profile. First half of return vector contains positive area, second half negative area.
      *
      * @param wantedParam Wanted parameter
      * @param lowerHeight Lowest height value for all points, search will start here
      * @param upperHeight Highest height value for all points, search will stop here
-     * @return Mean for each point
+     * @return vector that contains positive area, second half negative area
      */
 
     std::vector<double> PlusMinusArea(const param& wantedParam, double lowerHeight, double upperHeight) const;
 
     /**
-     * @brief Calculate average of values for each point in a given height range
+     * @brief Calculate negative and positive area under a curve/vertical profile.
      *
      * @param wantedParam Wanted parameter
      * @param firstLevelValue Lowest level value for each point, search will start here
      * @param lastLevelValue Highest level value for each point, search will stop here
-     * @return Mean for each point
+     * @return vector that contains positive area, second half negative area
      */
 
     std::vector<double> PlusMinusArea(const param& wantedParam, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
