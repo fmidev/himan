@@ -273,6 +273,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		case kAverageModifier:
 		case kMinimumModifier:
 		case kMaximumModifier:
+		case kCountModifier:
 		{
 			double max_value = ::max(upperHeight);
 			double min_value = ::min(lowerHeight);
