@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(QUERYDATA)
 	}
 
 	newGrid->Data(data);
-	newInfo->Create(newGrid);
+	newInfo->Create(newGrid.get());
 
 	// Convert info to querydata
 
