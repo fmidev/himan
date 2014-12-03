@@ -181,7 +181,7 @@ protected:
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	virtual void WriteToFile(const std::shared_ptr<const info>& targetInfo) const;
+	virtual void WriteToFile(const info& targetInfo) const;
 
 	/**
 	 * @brief Determine if cuda can be used in this thread, and if so
