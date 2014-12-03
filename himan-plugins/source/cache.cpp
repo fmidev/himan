@@ -19,16 +19,16 @@ typedef lock_guard<mutex> Lock;
 
 cache::cache()
 {
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("cache"));
+    itsLogger = logger_factory::Instance()->GetLog("cache");
 }
 
-string cache::UniqueName(const shared_ptr<const himan::info> info)
+string cache::UniqueName(const info& info)
 {
-	string forecast_time = info->Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S");
-	string valid_time = info->Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S");
-	string param = info->Param().Name();
-	string level_value = boost::lexical_cast<string>(info->Level().Value());
-	string level = HPLevelTypeToString.at(info->Level().Type());
+	string forecast_time = info.Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S");
+	string valid_time = info.Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S");
+	string param = info.Param().Name();
+	string level_value = boost::lexical_cast<string>(info.Level().Value());
+	string level = HPLevelTypeToString.at(info.Level().Type());
 	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
 
 }
@@ -43,7 +43,7 @@ string cache::UniqueNameFromOptions(const search_options& options)
 	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
 }
 
-void cache::Insert(shared_ptr<himan::info> anInfo, bool activeOnly)
+void cache::Insert(info& anInfo, bool activeOnly)
 {
 
 	if (activeOnly)
@@ -52,11 +52,11 @@ void cache::Insert(shared_ptr<himan::info> anInfo, bool activeOnly)
 	}
 	else
 	{
-		for (anInfo->ResetTime(); anInfo->NextTime(); )
+		for (anInfo.ResetTime(); anInfo.NextTime(); )
 		{
-			for (anInfo->ResetLevel(); anInfo->NextLevel(); )
+			for (anInfo.ResetLevel(); anInfo.NextLevel(); )
 			{
-				for (anInfo->ResetParam(); anInfo->NextParam(); )
+				for (anInfo.ResetParam(); anInfo.NextParam(); )
 				{
 					SplitToPool(anInfo);
 				}
@@ -65,50 +65,41 @@ void cache::Insert(shared_ptr<himan::info> anInfo, bool activeOnly)
 	}
 }
 
-void cache::SplitToPool(const shared_ptr<info> anInfo)
+void cache::SplitToPool(info& anInfo)
 {
 
 #ifdef HAVE_CUDA
-	if (anInfo->Grid()->IsPackedData())
+	if (anInfo.Grid()->IsPackedData())
 	{
 		itsLogger->Trace("Removing packed data from cached info");
-		anInfo->Grid()->PackedData().Clear();
+		anInfo.Grid()->PackedData().Clear();
 	}
 #endif
 	
-	assert(!anInfo->Grid()->IsPackedData());
+	assert(!anInfo.Grid()->IsPackedData());
 	
 	vector<param> params;
 	vector<level> levels;
 	vector<forecast_time> times;
 
-	params.push_back(anInfo->Param());
-	levels.push_back(anInfo->Level());
-	times.push_back(anInfo->Time());
+	params.push_back(anInfo.Param());
+	levels.push_back(anInfo.Level());
+	times.push_back(anInfo.Time());
 
-	auto newInfo = make_shared<info> (*anInfo);
+	auto newInfo = make_shared<info> (anInfo);
 
 	newInfo->Params(params);
 	newInfo->Levels(levels);
 	newInfo->Times(times);
-	newInfo->Create(anInfo->Grid());
+	newInfo->Create(anInfo.Grid());
 	newInfo->First();
 
-	string uniqueName = UniqueName(newInfo);
+	string uniqueName = UniqueName(*newInfo);
 
 	if (!(cache_pool::Instance()->Find(uniqueName)))
 	{
 		cache_pool::Instance()->Insert(uniqueName, newInfo);
 	}
-}
-
-void cache::Insert(const vector<shared_ptr<himan::info>>& infos, bool activeOnly)
-{		
-	for (size_t i = 0; i < infos.size(); i++)
-	{
-		Insert(infos[i], activeOnly);
-		//Clean();
-	}	
 }
 
 vector<shared_ptr<himan::info>> cache::GetInfo(const search_options& options) 

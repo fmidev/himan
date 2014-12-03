@@ -158,8 +158,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	auto c = dynamic_pointer_cast <cache> (plugin_factory::Instance()->Plugin("cache"));
 
-	c->Insert(UInfo);
-	c->Insert(VInfo);
+	c->Insert(*UInfo);
+	c->Insert(*VInfo);
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + 
 		boost::lexical_cast<string> (UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) +

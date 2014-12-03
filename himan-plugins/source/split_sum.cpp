@@ -610,34 +610,34 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 }
 
-void split_sum::WriteToFile(const shared_ptr<const info>& targetInfo) const
+void split_sum::WriteToFile(const info& targetInfo) const
 {
 	auto aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
 	// writing might modify iterator positions --> create a copy
 
-	auto tempInfo = make_shared<info> (*targetInfo);
+	auto tempInfo = targetInfo;
 
 	if (itsConfiguration->FileWriteOption() == kNeons || itsConfiguration->FileWriteOption() == kMultipleFiles)
 	{
 		// If info holds multiple parameters, we must loop over them all
 		// Note! We only loop over the parameters, not over the times or levels!
 
-		tempInfo->ResetParam();
+		tempInfo.ResetParam();
 
-		while (tempInfo->NextParam())
+		while (tempInfo.NextParam())
 		{
-			if (itsConfiguration->FileWriteOption() == kNeons && tempInfo->Data().Size() == tempInfo->Data().MissingCount())
+			if (itsConfiguration->FileWriteOption() == kNeons && tempInfo.Data().Size() == tempInfo.Data().MissingCount())
 			{
-				itsLogger->Info("All data missing for " + tempInfo->Param().Name() + " step " + boost::lexical_cast<string> (tempInfo->Time().Step()) + ", not writing to disk");
+				itsLogger->Info("All data missing for " + tempInfo.Param().Name() + " step " + boost::lexical_cast<string> (tempInfo.Time().Step()) + ", not writing to disk");
 				continue;
 			}
 
-			aWriter->ToFile(tempInfo, itsConfiguration);
+			aWriter->ToFile(tempInfo, *itsConfiguration);
 		}
 	}
 	else if (itsConfiguration->FileWriteOption() == kSingleFile)
 	{
-		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+		aWriter->ToFile(tempInfo, *itsConfiguration, itsConfiguration->ConfigurationFile());
 	}
 }

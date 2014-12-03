@@ -40,12 +40,10 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
-	bool ToFile(std::shared_ptr<info> theInfo,
-				std::shared_ptr<const plugin_configuration> conf,
-				const std::string& theFileName = "");
+	bool ToFile(info& theInfo, const plugin_configuration& conf, const std::string& theFileName = "");
 
 private:
 

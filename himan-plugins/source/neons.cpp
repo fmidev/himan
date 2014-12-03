@@ -136,7 +136,7 @@ vector<string> neons::Files(const search_options& options)
 
 }
 
-bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
+bool neons::Save(const info& resultInfo, const string& theFileName)
 {
 	Init();
 
@@ -149,7 +149,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	 * 4. Insert or update
 	 */
 
-	himan::point firstGridPoint = resultInfo->Grid()->FirstGridPoint();
+	himan::point firstGridPoint = resultInfo.Grid()->FirstGridPoint();
 
 	/*
 	 * pas_latitude and pas_longitude cannot be checked programmatically
@@ -161,12 +161,12 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 
 	query 	<< "SELECT geom_name "
 			<< "FROM grid_reg_geom "
-			<< "WHERE row_cnt = " << resultInfo->Nj()
-			<< " AND col_cnt = " << resultInfo->Ni()
+			<< "WHERE row_cnt = " << resultInfo.Nj()
+			<< " AND col_cnt = " << resultInfo.Ni()
 			<< " AND lat_orig = " << (firstGridPoint.Y() * 1e3)
 			<< " AND long_orig = " << (firstGridPoint.X() * 1e3);
-//			<< " AND pas_latitude = " << static_cast<long> (resultInfo->Dj() * 1e3)
-//			<< " AND pas_longitude = " << static_cast<long> (resultInfo->Di() * 1e3);
+//			<< " AND pas_latitude = " << static_cast<long> (resultInfo.Dj() * 1e3)
+//			<< " AND pas_longitude = " << static_cast<long> (resultInfo.Di() * 1e3);
 
 	itsNeonsDB->Query(query.str());
 
@@ -195,7 +195,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 			<< "grid_model m, "
 			<< "grid_model_name na, "
 			<< "fmi_producers f "
-			<< "WHERE f.producer_id = " << resultInfo->Producer().Id()
+			<< "WHERE f.producer_id = " << resultInfo.Producer().Id()
 			<< " AND m.model_type = f.ref_prod "
 			<< " AND nu.model_name = m.model_name "
 			<< " AND m.flag_mod = 0 "
@@ -208,7 +208,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 
 	if (row.empty())
 	{
-		itsLogger->Warning("Producer definition not found from neons (id: " + boost::lexical_cast<string> (resultInfo->Producer().Id()) + ")");
+		itsLogger->Warning("Producer definition not found from neons (id: " + boost::lexical_cast<string> (resultInfo.Producer().Id()) + ")");
 		return false;
 	}
 
@@ -245,7 +245,7 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 			<< "model_type = '" << model_type << "'"
 			<< " AND geom_name = '" << geom_name << "'"
 			<< " AND dset_name = 'AF'"
-			<< " AND base_date = '" << resultInfo->OriginDateTime().String("%Y%m%d%H%M") << "'";
+			<< " AND base_date = '" << resultInfo.OriginDateTime().String("%Y%m%d%H%M") << "'";
 
 	itsNeonsDB->Query(query.str());
 
@@ -303,10 +303,10 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		   << " (dset_id, parm_name, lvl_type, lvl1_lvl2, fcst_per, eps_specifier, file_location, file_server) "
 		   << "VALUES ("
 		   << dset_id << ", "
-		   << "'" << resultInfo->Param().Name() << "', "
-		   << "upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "'), "
-		   << resultInfo->Level().Value() << ", "
-		   << resultInfo->Time().Step() << ", "
+		   << "'" << resultInfo.Param().Name() << "', "
+		   << "upper('" << HPLevelTypeToString.at(resultInfo.Level().Type()) << "'), "
+		   << resultInfo.Level().Value() << ", "
+		   << resultInfo.Time().Step() << ", "
 		   << "'" << eps_specifier << "', "
 		   << "'" << theFileName << "', "
 		   << "'" << host << "')";
@@ -339,10 +339,10 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 
 				query	<< "DELETE FROM " << table_name << " WHERE "
 						<< "dset_id = " << dset_id
-						<< " AND parm_name = '" << resultInfo->Param().Name() << "'"
-						<< " AND lvl_type = upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "')"
-						<< " AND lvl1_lvl2 = " << resultInfo->Level().Value()
-						<< " AND fcst_per = " << resultInfo->Time().Step();
+						<< " AND parm_name = '" << resultInfo.Param().Name() << "'"
+						<< " AND lvl_type = upper('" << HPLevelTypeToString.at(resultInfo.Level().Type()) << "')"
+						<< " AND lvl1_lvl2 = " << resultInfo.Level().Value()
+						<< " AND fcst_per = " << resultInfo.Time().Step();
 
 				itsNeonsDB->Execute(query.str());
 				
@@ -352,10 +352,10 @@ bool neons::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 						<< " (dset_id, parm_name, lvl_type, lvl1_lvl2, fcst_per, eps_specifier, file_location, file_server) "
 						<< "VALUES ("
 						<< dset_id << ", "
-						<< "'" << resultInfo->Param().Name() << "', "
-						<< "upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "'), "
-						<< resultInfo->Level().Value() << ", "
-						<< resultInfo->Time().Step() << ", "
+						<< "'" << resultInfo.Param().Name() << "', "
+						<< "upper('" << HPLevelTypeToString.at(resultInfo.Level().Type()) << "'), "
+						<< resultInfo.Level().Value() << ", "
+						<< resultInfo.Time().Step() << ", "
 						<< "'" << eps_specifier << "', "
 						<< "'" << theFileName << "', "
 						<< "'" << host << "')";

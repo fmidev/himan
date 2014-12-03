@@ -68,7 +68,7 @@ public:
 	}
 
 	std::vector<std::string> Files(const search_options& options);
-	bool Save(std::shared_ptr<const info> resultInfo, const std::string& theFileName);
+	bool Save(const info& resultInfo, const std::string& theFileName);
 
 	/// Gets grib parameter name based on number and code table
 	/**

@@ -28,8 +28,6 @@ public:
 	cache(const cache& other) = delete;
 	cache& operator=(const cache& other) = delete;
 
-	void Insert(const std::vector<std::shared_ptr<himan::info>>& infos, bool activeOnly = true);
-
 	/**
 	 * @brief Insert data to cache
 	 *
@@ -38,7 +36,7 @@ public:
 	 * to cache
 	 */
 
-	void Insert(std::shared_ptr<himan::info> anInfo, bool activeOnly = true);
+	void Insert(info& anInfo, bool activeOnly = true);
 	std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);	
 	void Clean();
 
@@ -54,13 +52,13 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
 
 private:
-	void SplitToPool(const std::shared_ptr<info> anInfo);
-	std::string UniqueName(const std::shared_ptr<const himan::info> anInfo);
+	void SplitToPool(info& anInfo);
+	std::string UniqueName(const info& anInfo);
 	std::string UniqueNameFromOptions(const search_options& options);
 
 };

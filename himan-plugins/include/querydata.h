@@ -85,7 +85,7 @@ public:
 	 * @return True if writing succeeds
 	 */
 
-	bool ToFile(std::shared_ptr<info> theInfo, std::string& outputFile, HPFileWriteOption fileWriteOption);
+	bool ToFile(info& theInfo, std::string& outputFile, HPFileWriteOption fileWriteOption);
 
 	/**
 	 * @brief Create in-memory querydata from given info-instance
@@ -100,7 +100,7 @@ public:
 	 * @return shared pointer to querydata instance
 	 */
 	
-	std::shared_ptr<NFmiQueryData> CreateQueryData(std::shared_ptr<info> theInfo, bool activeOnly);
+	std::shared_ptr<NFmiQueryData> CreateQueryData(info& theInfo, bool activeOnly);
 
 	/**
 	 * @brief Create info from a given querydata
@@ -118,12 +118,12 @@ private:
      * @param theQueryData
      * @return 
      */
-	bool CopyData(const std::shared_ptr<info>& theInfo, NFmiFastQueryInfo& qinfo) const;
+	bool CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const;
 
-	NFmiTimeDescriptor CreateTimeDescriptor(std::shared_ptr<info> info, bool activeOnly);
-	NFmiParamDescriptor CreateParamDescriptor(std::shared_ptr<info> info, bool activeOnly);
-	NFmiHPlaceDescriptor CreateHPlaceDescriptor(std::shared_ptr<info> info, bool activeOnly);
-	NFmiVPlaceDescriptor CreateVPlaceDescriptor(std::shared_ptr<info> info, bool activeOnly);
+	NFmiTimeDescriptor CreateTimeDescriptor(info& info, bool activeOnly);
+	NFmiParamDescriptor CreateParamDescriptor(info& info, bool activeOnly);
+	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
+	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
    
 
 };
@@ -134,7 +134,7 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<querydata> (new querydata());
+	return std::make_shared<querydata> ();
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */

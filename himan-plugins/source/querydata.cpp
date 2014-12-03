@@ -39,7 +39,7 @@ querydata::querydata()
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("querydata"));
 }
 
-bool querydata::ToFile(shared_ptr<info> theInfo, string& theOutputFile, HPFileWriteOption fileWriteOption)
+bool querydata::ToFile(info& theInfo, string& theOutputFile, HPFileWriteOption fileWriteOption)
 {
 	ofstream out(theOutputFile.c_str());
 
@@ -65,7 +65,7 @@ bool querydata::ToFile(shared_ptr<info> theInfo, string& theOutputFile, HPFileWr
 	
 }
 
-shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, bool activeOnly)
+shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeOnly)
 {
 
 	/*
@@ -109,7 +109,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 
 	qdata = make_shared<NFmiQueryData> (new NFmiQueryData(qi));
     qdata->Init();
-	qdata->Info()->SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo->Producer().Id()), theInfo->Producer().Name()));
+	qdata->Info()->SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo.Producer().Id()), theInfo.Producer().Name()));
 
 	NFmiFastQueryInfo qinfo = qdata.get();
 
@@ -135,24 +135,24 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 		 * before writing querydata.
 		 */
 
-		theInfo->ResetTime();
+		theInfo.ResetTime();
 		qinfo.ResetTime();
 
-		while (theInfo->NextTime() && qinfo.NextTime())
+		while (theInfo.NextTime() && qinfo.NextTime())
 		{
 
-			theInfo->ResetLevel();
+			theInfo.ResetLevel();
 			qinfo.ResetLevel();
 
-			while (theInfo->NextLevel() && qinfo.NextLevel())
+			while (theInfo.NextLevel() && qinfo.NextLevel())
 			{
-				theInfo->ResetParam();
+				theInfo.ResetParam();
 				qinfo.ResetParam();
 
-				while (theInfo->NextParam() && qinfo.NextParam())
+				while (theInfo.NextParam() && qinfo.NextParam())
 				{
 					
-					if (!theInfo->Grid())
+					if (!theInfo.Grid())
 					{
 						// No data in info (sparse info class)
 						
@@ -171,10 +171,10 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(shared_ptr<info> theInfo, b
 
 }
 
-bool querydata::CopyData(const shared_ptr<info>& theInfo, NFmiFastQueryInfo& qinfo) const
+bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 {
 	bool swapped = false;
-	HPScanningMode originalMode = theInfo->Grid()->ScanningMode();
+	HPScanningMode originalMode = theInfo.Grid()->ScanningMode();
 
 	if (originalMode == kTopLeft)
 	{
@@ -184,7 +184,7 @@ bool querydata::CopyData(const shared_ptr<info>& theInfo, NFmiFastQueryInfo& qin
 
 		swapped = true;
 
-		theInfo->Grid()->Swap(kBottomLeft);
+		theInfo.Grid()->Swap(kBottomLeft);
 
 	}
 	else if (originalMode != kBottomLeft)
@@ -193,25 +193,25 @@ bool querydata::CopyData(const shared_ptr<info>& theInfo, NFmiFastQueryInfo& qin
 		exit(1);
 	}
 
-	assert(theInfo->Data().Size() == qinfo.Size());
+	assert(theInfo.Data().Size() == qinfo.Size());
 
-	theInfo->ResetLocation();
+	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
-	while (theInfo->NextLocation() && qinfo.NextLocation())
+	while (theInfo.NextLocation() && qinfo.NextLocation())
 	{
-		qinfo.FloatValue(static_cast<float> (theInfo->Value()));
+		qinfo.FloatValue(static_cast<float> (theInfo.Value()));
 	}
 
 	if (swapped)
 	{
-		theInfo->Grid()->Swap(originalMode);
+		theInfo.Grid()->Swap(originalMode);
 	}
 
 	return true;
 }
 
-NFmiTimeDescriptor querydata::CreateTimeDescriptor(shared_ptr<info> info, bool theActiveOnly)
+NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnly)
 {
 
 	/*
@@ -222,32 +222,32 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(shared_ptr<info> info, bool t
 
 	if (theActiveOnly)
 	{
-		tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%Y%m%d")),
-								  boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%H%M"))));
+		tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info.Time().ValidDateTime()->String("%Y%m%d")),
+								  boost::lexical_cast<long> (info.Time().ValidDateTime()->String("%H%M"))));
 	}
 	else
 	{
-		info->ResetTime();
+		info.ResetTime();
 
 		shared_ptr<raw_time> firstOriginTime;
 		
-		while (info->NextTime())
+		while (info.NextTime())
 		{
 			if (!firstOriginTime)
 			{
-				firstOriginTime = info->Time().OriginDateTime();
+				firstOriginTime = info.Time().OriginDateTime();
 			}
 			else
 			{
-				if (*firstOriginTime != *info->Time().OriginDateTime())
+				if (*firstOriginTime != *info.Time().OriginDateTime())
 				{
 					itsLogger->Error("Origintime is not the same for all grids in info");
 					return NFmiTimeDescriptor();
 				}
 			}
 			
-			tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%Y%m%d")),
-									  boost::lexical_cast<long> (info->Time().ValidDateTime()->String("%H%M"))));
+			tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info.Time().ValidDateTime()->String("%Y%m%d")),
+									  boost::lexical_cast<long> (info.Time().ValidDateTime()->String("%H%M"))));
 		}
 
 	}
@@ -257,7 +257,7 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(shared_ptr<info> info, bool t
 }
 
 
-NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool theActiveOnly)
+NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveOnly)
 {
 
 	/*
@@ -268,21 +268,21 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool
 
 	if (theActiveOnly)
 	{
-		assert(info->Param().UnivId());
+		assert(info.Param().UnivId());
 
-		pbag.Add(NFmiDataIdent(NFmiParam(info->Param().UnivId(), info->Param().Name())));
+		pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
 
 	}
 	else
 	{
-		info->ResetParam();
+		info.ResetParam();
 
-		while (info->NextParam())
+		while (info.NextParam())
 		{
 
-			assert(info->Param().UnivId());
+			assert(info.Param().UnivId());
 
-			pbag.Add(NFmiDataIdent(NFmiParam(info->Param().UnivId(), info->Param().Name())));
+			pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
 
 		}
 	}
@@ -291,7 +291,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(shared_ptr<info> info, bool
 
 }
 
-NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bool activeOnly)
+NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOnly)
 {
 
 	/*
@@ -301,42 +301,42 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 	 * TODO: interpolate to same grid if they are different ???
 	 */
 	
-	if (!activeOnly && info->SizeTimes() * info->SizeParams() * info->SizeLevels() > 1)
+	if (!activeOnly && info.SizeTimes() * info.SizeParams() * info.SizeLevels() > 1)
 	{
-		info->ResetTime();
+		info.ResetTime();
 		const grid* firstGrid = 0;
 
-		while (info->NextTime())
+		while (info.NextTime())
 		{
 
-			info->ResetLevel();
+			info.ResetLevel();
 
-			while (info->NextLevel())
+			while (info.NextLevel())
 			{
 
-				info->ResetParam();
+				info.ResetParam();
 
-				while (info->NextParam())
+				while (info.NextParam())
 				{
 
 					if (!firstGrid)
 					{
-						firstGrid = info->Grid();
+						firstGrid = info.Grid();
 						continue;
 					}
 
-					if (!info->Grid())
+					if (!info.Grid())
 					{
 						continue;
 					}
 
-					if (*firstGrid != *info->Grid())
+					if (*firstGrid != *info.Grid())
 					{
 						itsLogger->Error("All grids in info are not equal, unable to write querydata");
 						return NFmiHPlaceDescriptor();
 					}
 
-					assert(info->Grid()->ScanningMode() == kBottomLeft);
+					assert(info.Grid()->ScanningMode() == kBottomLeft);
 				}
 			}
 		}
@@ -344,21 +344,21 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 
 	NFmiArea* theArea = 0;
 
-	switch (info->Grid()->Projection())
+	switch (info.Grid()->Projection())
 	{
 		case kLatLonProjection:
 		{
-			theArea = new NFmiLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-										 NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()));
+			theArea = new NFmiLatLonArea(NFmiPoint(info.Grid()->BottomLeft().X(), info.Grid()->BottomLeft().Y()),
+										 NFmiPoint(info.Grid()->TopRight().X(), info.Grid()->TopRight().Y()));
 
 			break;
 		}
 
 		case kRotatedLatLonProjection:
 		{
-			theArea = new NFmiRotatedLatLonArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-												NFmiPoint(info->Grid()->TopRight().X(), info->Grid()->TopRight().Y()),
-												NFmiPoint(info->Grid()->SouthPole().X(), info->Grid()->SouthPole().Y()),
+			theArea = new NFmiRotatedLatLonArea(NFmiPoint(info.Grid()->BottomLeft().X(), info.Grid()->BottomLeft().Y()),
+												NFmiPoint(info.Grid()->TopRight().X(), info.Grid()->TopRight().Y()),
+												NFmiPoint(info.Grid()->SouthPole().X(), info.Grid()->SouthPole().Y()),
 												NFmiPoint(0.,0.), // default values
 												NFmiPoint(1.,1.), // default values
 												true);
@@ -368,10 +368,10 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 
 		case kStereographicProjection:
 		{
-			theArea = new NFmiStereographicArea(NFmiPoint(info->Grid()->BottomLeft().X(), info->Grid()->BottomLeft().Y()),
-												info->Grid()->Di() * static_cast<double> ((info->Grid()->Ni()-1)),
-												info->Grid()->Dj() * static_cast<double> ((info->Grid()->Nj()-1)),
-												info->Grid()->Orientation());
+			theArea = new NFmiStereographicArea(NFmiPoint(info.Grid()->BottomLeft().X(), info.Grid()->BottomLeft().Y()),
+												info.Grid()->Di() * static_cast<double> ((info.Grid()->Ni()-1)),
+												info.Grid()->Dj() * static_cast<double> ((info.Grid()->Nj()-1)),
+												info.Grid()->Orientation());
 
 			break;
 
@@ -383,7 +383,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 			break;
 	}
 
-	NFmiGrid theGrid (theArea, info->Grid()->Ni(), info->Grid()->Nj());
+	NFmiGrid theGrid (theArea, info.Grid()->Ni(), info.Grid()->Nj());
 
 	delete theArea;
 
@@ -391,23 +391,23 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(shared_ptr<info> info, bo
 
 }
 
-NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(shared_ptr<info> info, bool theActiveOnly)
+NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(info& info, bool theActiveOnly)
 {
 
 	NFmiLevelBag lbag;
 
 	if (theActiveOnly)
 	{
-		lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", static_cast<float> (info->Level().Value())));
+		lbag.AddLevel(NFmiLevel(info.Level().Type(), "Hipihipi", static_cast<float> (info.Level().Value())));
 	}
 	else
 	{
 
-		info->ResetLevel();
+		info.ResetLevel();
 
-		while (info->NextLevel())
+		while (info.NextLevel())
 		{
-			lbag.AddLevel(NFmiLevel(info->Level().Type(), "Hipihipi", static_cast<float> (info->Level().Value())));
+			lbag.AddLevel(NFmiLevel(info.Level().Type(), "Hipihipi", static_cast<float> (info.Level().Value())));
 		}
 	}
 

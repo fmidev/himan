@@ -39,7 +39,7 @@ shared_ptr<NFmiGrib> grib::Reader()
 	return itsGrib;
 }
 
-bool grib::ToFile(shared_ptr<info> anInfo, string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption)
+bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption)
 {
 
 	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
@@ -51,17 +51,17 @@ bool grib::ToFile(shared_ptr<info> anInfo, string& outputFile, HPFileType fileTy
 
 	else
 	{
-		anInfo->ResetTime();
+		anInfo.ResetTime();
 
-		while (anInfo->NextTime())
+		while (anInfo.NextTime())
 		{
-			anInfo->ResetLevel();
+			anInfo.ResetLevel();
 
-			while (anInfo->NextLevel())
+			while (anInfo.NextLevel())
 			{
-				anInfo->ResetParam();
+				anInfo.ResetParam();
 
-				while (anInfo->NextParam())
+				while (anInfo.NextParam())
 				{
 					if (!WriteGrib(anInfo, outputFile, fileType, true))
 					{
@@ -76,7 +76,7 @@ bool grib::ToFile(shared_ptr<info> anInfo, string& outputFile, HPFileType fileTy
 
 }
 
-bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fileType, bool appendToFile)
+bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool appendToFile)
 {
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
@@ -85,9 +85,9 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 
 	// Check levelvalue since that might force us to change file type!
 	
-	double levelValue = anInfo->Level().Value();
+	double levelValue = anInfo.Level().Value();
 
-	if (edition == 1 && anInfo->Level().Type() == kHybrid && levelValue > 127)
+	if (edition == 1 && anInfo.Level().Type() == kHybrid && levelValue > 127)
 	{
 		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
 		edition = 2;
@@ -99,11 +99,11 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 
 	shared_ptr<neons> n;
 
-	if (anInfo->Producer().Centre() == kHPMissingInt)
+	if (anInfo.Producer().Centre() == kHPMissingInt)
 	{
 		n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo->Producer().Id()));
+		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo.Producer().Id()));
 
 		if (!producermap["ident_id"].empty() && !producermap["model_id"].empty())
 		{
@@ -117,11 +117,11 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 		}
 		else
 		{
-			string producerId = boost::lexical_cast<string> (anInfo->Producer().Id());
+			string producerId = boost::lexical_cast<string> (anInfo.Producer().Id());
 			itsLogger->Warning("Unable to get process and centre information from Neons for producer " + producerId);
 			itsLogger->Warning("Setting process to " + producerId + " and centre to 86");
 			itsGrib->Message().Centre(86);
-			itsGrib->Message().Process(anInfo->Producer().Id());
+			itsGrib->Message().Process(anInfo.Producer().Id());
 
 			if (edition == 1)
 			{
@@ -133,12 +133,12 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 	}
 	else
 	{
-		itsGrib->Message().Centre(anInfo->Producer().Centre());
-		itsGrib->Message().Process(anInfo->Producer().Process());
+		itsGrib->Message().Centre(anInfo.Producer().Centre());
+		itsGrib->Message().Process(anInfo.Producer().Process());
 
 		if (edition == 1)
 		{
-			itsGrib->Message().Table2Version(anInfo->Producer().TableVersion());
+			itsGrib->Message().Table2Version(anInfo.Producer().TableVersion());
 		}
 	}
 
@@ -162,11 +162,11 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 
 	if (edition == 1)
 	{
-		itsGrib->Message().LevelType(anInfo->Level().Type());
+		itsGrib->Message().LevelType(anInfo.Level().Type());
 	}
 	else if (edition == 2)
 	{
-		itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(anInfo->Level().Type(),2));
+		itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(anInfo.Level().Type(),2));
 	}
 
 	// Misc
@@ -176,7 +176,7 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 		itsGrib->Message().TypeOfGeneratingProcess(2); // Forecast
 	}
 
-	if (anInfo->Data().MissingCount() > 0)
+	if (anInfo.Data().MissingCount() > 0)
 	{
 		itsGrib->Message().Bitmap(true);
 	}
@@ -185,10 +185,10 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 
 #ifdef GRIB_WRITE_PACKED_DATA
 
-	if (anInfo->Grid()->IsPackedData() && anInfo->Grid()->PackedData().ClassName() == "simple_packed")
+	if (anInfo.Grid()->IsPackedData() && anInfo.Grid()->PackedData().ClassName() == "simple_packed")
 	{
 		itsLogger->Trace("Writing packed data");
-		simple_packed* s = reinterpret_cast<simple_packed*> (&anInfo->Grid()->PackedData());
+		simple_packed* s = reinterpret_cast<simple_packed*> (&anInfo.Grid()->PackedData());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
 		itsGrib->Message().BinaryScaleFactor(s->coefficients.binaryScaleFactor);
@@ -200,13 +200,13 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 		itsLogger->Trace("binary scale factor: " + boost::lexical_cast<string> (itsGrib->Message().BinaryScaleFactor()));
 		itsLogger->Trace("reference value: " + boost::lexical_cast<string> (itsGrib->Message().ReferenceValue()));
 
-		itsGrib->Message().PackedValues(s->data, anInfo->Data().Size(), 0, 0);
+		itsGrib->Message().PackedValues(s->data, anInfo.Data().Size(), 0, 0);
 	}
 	else
 #endif
 	{
 		itsLogger->Trace("Writing unpacked data");
-		itsGrib->Message().Values(anInfo->Data().ValuesAsPOD(), static_cast<long> (anInfo->Ni() * anInfo->Nj()));
+		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long> (anInfo.Ni() * anInfo.Nj()));
 	}
 
 	if (edition == 2)
@@ -251,7 +251,7 @@ bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fil
 		itsGrib->Message().ResolutionAndComponentFlags(48); // 00110000
 	}
 
-	vector<double> AB = anInfo->Grid()->AB();
+	vector<double> AB = anInfo.Grid()->AB();
 
 	if (!AB.empty())
 	{
@@ -850,14 +850,14 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 	}
 }
 
-void grib::WriteAreaAndGrid(std::shared_ptr<info> anInfo)
+void grib::WriteAreaAndGrid(info& anInfo)
 {
-	himan::point firstGridPoint = anInfo->Grid()->FirstGridPoint();
-	himan::point lastGridPoint = anInfo->Grid()->LastGridPoint();
+	himan::point firstGridPoint = anInfo.Grid()->FirstGridPoint();
+	himan::point lastGridPoint = anInfo.Grid()->LastGridPoint();
 
 	long edition = itsGrib->Message().Edition();
 	
-	switch (anInfo->Grid()->Projection())
+	switch (anInfo.Grid()->Projection())
 	{
 		case kLatLonProjection:
 		{
@@ -875,8 +875,8 @@ void grib::WriteAreaAndGrid(std::shared_ptr<info> anInfo)
 			itsGrib->Message().Y0(firstGridPoint.Y());
 			itsGrib->Message().Y1(lastGridPoint.Y());
 
-			itsGrib->Message().iDirectionIncrement(anInfo->Di());
-			itsGrib->Message().jDirectionIncrement(anInfo->Dj());
+			itsGrib->Message().iDirectionIncrement(anInfo.Di());
+			itsGrib->Message().jDirectionIncrement(anInfo.Dj());
 
 			break;
 		}
@@ -898,15 +898,15 @@ void grib::WriteAreaAndGrid(std::shared_ptr<info> anInfo)
 			itsGrib->Message().X1(lastGridPoint.X());
 			itsGrib->Message().Y1(lastGridPoint.Y());
 
-			itsGrib->Message().SouthPoleX(anInfo->Grid()->SouthPole().X());
-			itsGrib->Message().SouthPoleY(anInfo->Grid()->SouthPole().Y());
+			itsGrib->Message().SouthPoleX(anInfo.Grid()->SouthPole().X());
+			itsGrib->Message().SouthPoleY(anInfo.Grid()->SouthPole().Y());
 
-			itsGrib->Message().iDirectionIncrement(anInfo->Grid()->Di());
-			itsGrib->Message().jDirectionIncrement(anInfo->Grid()->Dj());
+			itsGrib->Message().iDirectionIncrement(anInfo.Grid()->Di());
+			itsGrib->Message().jDirectionIncrement(anInfo.Grid()->Dj());
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().UVRelativeToGrid(anInfo->Grid()->UVRelativeToGrid());
+			itsGrib->Message().UVRelativeToGrid(anInfo.Grid()->UVRelativeToGrid());
 
 			break;
 		}
@@ -922,28 +922,28 @@ void grib::WriteAreaAndGrid(std::shared_ptr<info> anInfo)
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().X0(anInfo->Grid()->BottomLeft().X());
-			itsGrib->Message().Y0(anInfo->Grid()->BottomLeft().Y());
+			itsGrib->Message().X0(anInfo.Grid()->BottomLeft().X());
+			itsGrib->Message().Y0(anInfo.Grid()->BottomLeft().Y());
 
-			itsGrib->Message().GridOrientation(anInfo->Grid()->Orientation());
+			itsGrib->Message().GridOrientation(anInfo.Grid()->Orientation());
 
-			itsGrib->Message().XLengthInMeters(anInfo->Grid()->Di());
-			itsGrib->Message().YLengthInMeters(anInfo->Grid()->Dj());
+			itsGrib->Message().XLengthInMeters(anInfo.Grid()->Di());
+			itsGrib->Message().YLengthInMeters(anInfo.Grid()->Dj());
 			break;
 		}
 
 		default:
-			throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (anInfo->Grid()->Projection()));
+			throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (anInfo.Grid()->Projection()));
 			break;
 	}
 
-	itsGrib->Message().SizeX(static_cast<long> (anInfo->Ni()));
-	itsGrib->Message().SizeY(static_cast<long> (anInfo->Nj()));
+	itsGrib->Message().SizeX(static_cast<long> (anInfo.Ni()));
+	itsGrib->Message().SizeY(static_cast<long> (anInfo.Nj()));
 
 	bool iNegative = itsGrib->Message().IScansNegatively();
 	bool jPositive = itsGrib->Message().JScansPositively();
 
-	switch (anInfo->Grid()->ScanningMode())
+	switch (anInfo.Grid()->ScanningMode())
 	{
 		case kTopLeft:
 			iNegative = false;
@@ -974,19 +974,19 @@ void grib::WriteAreaAndGrid(std::shared_ptr<info> anInfo)
 	itsGrib->Message().JScansPositively(jPositive);
 }
 
-void grib::WriteTime(std::shared_ptr<info> anInfo)
+void grib::WriteTime(info& anInfo)
 {
-	itsGrib->Message().DataDate(boost::lexical_cast<long> (anInfo->Time().OriginDateTime()->String("%Y%m%d")));
-	itsGrib->Message().DataTime(boost::lexical_cast<long> (anInfo->Time().OriginDateTime()->String("%H%M")));
+	itsGrib->Message().DataDate(boost::lexical_cast<long> (anInfo.Time().OriginDateTime()->String("%Y%m%d")));
+	itsGrib->Message().DataTime(boost::lexical_cast<long> (anInfo.Time().OriginDateTime()->String("%H%M")));
 
 	if (itsGrib->Message().Edition() == 1)
 	{
-		itsGrib->Message().StartStep(anInfo->Time().Step());
-		itsGrib->Message().EndStep(anInfo->Time().Step());
+		itsGrib->Message().StartStep(anInfo.Time().Step());
+		itsGrib->Message().EndStep(anInfo.Time().Step());
 	}
 	else
 	{
-		itsGrib->Message().ForecastTime(anInfo->Time().Step());
+		itsGrib->Message().ForecastTime(anInfo.Time().Step());
 	}
 
 	/*
@@ -1002,17 +1002,17 @@ void grib::WriteTime(std::shared_ptr<info> anInfo)
 
 	long unitOfTimeRange = 1; // hour
 	
-	if (anInfo->Param().Aggregation().Type() != kUnknownAggregationType)
+	if (anInfo.Param().Aggregation().Type() != kUnknownAggregationType)
 	{
 		long timeRangeValue = 1;
 
-		if (anInfo->Param().Aggregation().TimeResolution() == kHourResolution)
+		if (anInfo.Param().Aggregation().TimeResolution() == kHourResolution)
 		{
 			timeRangeValue = 1;
 
-			int timeResolutionValue = anInfo->Param().Aggregation().TimeResolutionValue();
+			int timeResolutionValue = anInfo.Param().Aggregation().TimeResolutionValue();
 
-			if (anInfo->Time().StepResolution() == kHourResolution)
+			if (anInfo.Time().StepResolution() == kHourResolution)
 			{
 				// GRIB1 values !
 				// http://www.nco.ncep.noaa.gov/pmb/docs/on388/table4.html
@@ -1047,12 +1047,12 @@ void grib::WriteTime(std::shared_ptr<info> anInfo)
 				
 			}			
 		}
-		else if (anInfo->Param().Aggregation().TimeResolution() == kMinuteResolution)
+		else if (anInfo.Param().Aggregation().TimeResolution() == kMinuteResolution)
 		{
 			itsLogger->Warning(ClassName() + ": minute resolution for aggregated data, seems fishy");
 			
 			unitOfTimeRange = 0; // minute
-			timeRangeValue = anInfo->Param().Aggregation().TimeResolutionValue();
+			timeRangeValue = anInfo.Param().Aggregation().TimeResolutionValue();
 		}
 
 		itsGrib->Message().LengthOfTimeRange(timeRangeValue);
@@ -1060,7 +1060,7 @@ void grib::WriteTime(std::shared_ptr<info> anInfo)
 	}
 	else
 	{
-		if (anInfo->Time().StepResolution() == kMinuteResolution)
+		if (anInfo.Time().StepResolution() == kMinuteResolution)
 		{
 			unitOfTimeRange = 0;
 		}		
@@ -1068,11 +1068,11 @@ void grib::WriteTime(std::shared_ptr<info> anInfo)
 	
 	itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
 	
-	if (anInfo->StepSizeOverOneByte()) // Forecast with stepvalues that don't fit in one byte
+	if (anInfo.StepSizeOverOneByte()) // Forecast with stepvalues that don't fit in one byte
 	{
 		itsGrib->Message().TimeRangeIndicator(10);
 
-		long step = anInfo->Time().Step();
+		long step = anInfo.Time().Step();
 		long p1 = (step & 0xFF00) >> 8;
 		long p2 = step & 0x00FF;
 
@@ -1086,7 +1086,7 @@ void grib::WriteTime(std::shared_ptr<info> anInfo)
 	}
 }
 
-void grib::WriteParameter(std::shared_ptr<info> anInfo)
+void grib::WriteParameter(info& anInfo)
 {
 	/*
 	 * For grib1, get param_id from neons since its dependant on the table2version
@@ -1098,7 +1098,7 @@ void grib::WriteParameter(std::shared_ptr<info> anInfo)
 	{
 		shared_ptr<neons> n;
 		
-		long parm_id = anInfo->Param().GribIndicatorOfParameter();
+		long parm_id = anInfo.Param().GribIndicatorOfParameter();
 
 		if (parm_id == kHPMissingInt)
 		{
@@ -1107,11 +1107,11 @@ void grib::WriteParameter(std::shared_ptr<info> anInfo)
 				n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 			}
 
-			parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo->Param().Name());
+			parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo.Param().Name());
 
 			if (parm_id == -1)
 			{
-				itsLogger->Warning("Parameter " + anInfo->Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo->Producer().TableVersion()) + " in neons");
+				itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo.Producer().TableVersion()) + " in neons");
 			}
 		}
 
@@ -1119,17 +1119,17 @@ void grib::WriteParameter(std::shared_ptr<info> anInfo)
 	}
 	else
 	{
-		itsGrib->Message().ParameterNumber(anInfo->Param().GribParameter());
-		itsGrib->Message().ParameterCategory(anInfo->Param().GribCategory());
-		itsGrib->Message().ParameterDiscipline(anInfo->Param().GribDiscipline()) ;
+		itsGrib->Message().ParameterNumber(anInfo.Param().GribParameter());
+		itsGrib->Message().ParameterCategory(anInfo.Param().GribCategory());
+		itsGrib->Message().ParameterDiscipline(anInfo.Param().GribDiscipline()) ;
 
-		if (anInfo->Param().Aggregation().Type() != kUnknownAggregationType)
+		if (anInfo.Param().Aggregation().Type() != kUnknownAggregationType)
 		{
 			itsGrib->Message().ProductDefinitionTemplateNumber(8);
 
 			long type;
 
-			switch (anInfo->Param().Aggregation().Type())
+			switch (anInfo.Param().Aggregation().Type())
 			{
 				default:
 				case kAverage:

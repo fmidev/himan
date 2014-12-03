@@ -267,7 +267,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		// info: convert to querydata
 
-		shared_ptr<NFmiQueryData> qdata = q->CreateQueryData(sourceInfo, false);
+		shared_ptr<NFmiQueryData> qdata = q->CreateQueryData(*sourceInfo, false);
 
 #ifdef DEBUG
 		ofstream in("indata.fqd");
@@ -520,7 +520,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			WriteToFile(myTargetInfo);
+			WriteToFile(*myTargetInfo);
 		}
 
 	}

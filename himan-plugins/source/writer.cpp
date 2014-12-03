@@ -30,14 +30,14 @@ writer::writer()
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("writer"));
 }
 
-bool writer::ToFile(std::shared_ptr<info> theInfo,
-					std::shared_ptr<const plugin_configuration> conf,
+bool writer::ToFile(info& theInfo,
+					const plugin_configuration& conf,
 					const std::string& theOutputFile)
 {
 
 	std::unique_ptr<himan::timer> t = std::unique_ptr<himan::timer> (timer_factory::Instance()->GetTimer());
 
-	if (conf->StatisticsEnabled())
+	if (conf.StatisticsEnabled())
 	{
 		t->Start();
 	}
@@ -48,8 +48,8 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
 	std::string correctFileName = theOutputFile;
 	
-	HPFileWriteOption fileWriteOption = conf->FileWriteOption();
-	HPFileType fileType = conf->OutputFileType();
+	HPFileWriteOption fileWriteOption = conf.FileWriteOption();
+	HPFileType fileType = conf.OutputFileType();
 
 	if ((fileWriteOption == kNeons || fileWriteOption == kMultipleFiles) || correctFileName.empty())
 	{
@@ -71,7 +71,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 		case kGRIB2:
 		{
 
-			std::shared_ptr<grib> theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
+			auto theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
 
 			correctFileName += ".grib";
 
@@ -86,7 +86,7 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 		}
 		case kQueryData:
 		{
-			std::shared_ptr<querydata> theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+			auto theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
 
 			correctFileName += ".fqd";
 
@@ -120,20 +120,20 @@ bool writer::ToFile(std::shared_ptr<info> theInfo,
 
 	}
 
-	bool activeOnly = (conf->FileWriteOption() == kSingleFile) ? false : true;
+	bool activeOnly = (conf.FileWriteOption() == kSingleFile) ? false : true;
 
-	if (conf->UseCache())
+	if (conf.UseCache())
 	{
 		std::shared_ptr<cache> c = std::dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
 
 		c->Insert(theInfo, activeOnly);
 	}
 
-	if (conf->StatisticsEnabled())
+	if (conf.StatisticsEnabled())
 	{
 		t->Stop();
 
-		conf->Statistics()->AddToWritingTime(t->GetTime());
+		conf.Statistics()->AddToWritingTime(t->GetTime());
 	}
 
 	return ret;

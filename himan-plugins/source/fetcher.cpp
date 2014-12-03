@@ -270,7 +270,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (!theInfos.empty() && itsUseCache && config->UseCache() && !readPackedData)
 	{
-		itsCache->Insert(theInfos);
+		itsCache->Insert(*theInfos[0]);
 	}
 
 	baseInfo.reset();
@@ -549,7 +549,7 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 
 		if (!baseData)
 		{
-			baseData = q->CreateQueryData(base, true);
+			baseData = q->CreateQueryData(*base, true);
 			baseInfo = NFmiFastQueryInfo(baseData.get());
 		}
 
@@ -563,7 +563,7 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 #endif
 		// interpInfo does the actual interpolation, results are stored to targetData
 
-		auto interpData = q->CreateQueryData(*it, true);
+		auto interpData = q->CreateQueryData(**it, true);
 		NFmiFastQueryInfo interpInfo (interpData.get());
 
 		size_t i;
