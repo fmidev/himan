@@ -20,7 +20,7 @@
 using namespace himan;
 using namespace std;
 
-string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const info> info)
+string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 {
 
 	ostringstream fileName;
@@ -47,13 +47,13 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 		}
 
 		base <<	"/"
-			 << info->Producer().Centre()
+			 << info.Producer().Centre()
 			 << "_"
-			 << info->Producer().Process()
+			 << info.Producer().Process()
 			 << "/"
-			 << info->Time().OriginDateTime()->String("%Y%m%d%H%M")
+			 << info.Time().OriginDateTime()->String("%Y%m%d%H%M")
 			 << "/"
-			 << info->Time().Step();
+			 << info.Time().Step();
 	}
 
 	// Create a unique file name when creating multiple files from one info
@@ -62,21 +62,21 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, shared_ptr<const in
 	{
 		fileName	<< base.str()
 					<< "/"
-					<< info->Param().Name()
+					<< info.Param().Name()
 					<< "_"
-					<< HPLevelTypeToString.at(info->Level().Type())
+					<< HPLevelTypeToString.at(info.Level().Type())
 					<< "_"
-					<< info->Level().Value()
+					<< info.Level().Value()
 					<< "_"
-					<< HPProjectionTypeToString.at(info->Grid()->Projection())
+					<< HPProjectionTypeToString.at(info.Grid()->Projection())
 					<< "_"
-					<< info->Ni()
+					<< info.Ni()
 					<< "_"
-					<< info->Nj()
+					<< info.Nj()
 					<< "_0_"
 					<< setw(3)
 					<< setfill('0')
-					<< info->Time().Step()
+					<< info.Time().Step()
 					;
 
 	}

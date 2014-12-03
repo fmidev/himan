@@ -36,7 +36,7 @@ HPFileType FileType(const std::string& theFile);
  * @brief Creates a neons-style filename with path, but without file extension
  */
 
-std::string MakeFileName(HPFileWriteOption fileWriteOption, std::shared_ptr <const info> info);
+std::string MakeFileName(HPFileWriteOption fileWriteOption, const info& info);
 
 /**
  * @brief Splits a string and fills the gaps if requested
