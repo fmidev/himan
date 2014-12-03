@@ -86,13 +86,13 @@ public:
 		return "himan::matrix";
 	}
 
-	T& At(size_t combinedIndex)
+	T At(size_t combinedIndex) const
 	{
 		assert(itsData.size() > combinedIndex);
 		return itsData[combinedIndex];
 	}
 
-	T& At(size_t x, size_t y, size_t z = 0)
+	T At(size_t x, size_t y, size_t z = 0) const
 	{
 		return itsData[Index(x, y, z)];
 	}
@@ -395,7 +395,7 @@ public:
      * @return Number of missing values in data.
      */
 
-	size_t MissingCount() const
+	size_t MissingCount()
 	{
 		size_t missing = 0;
 

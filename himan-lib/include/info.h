@@ -680,7 +680,7 @@ public:
 	 * @return Current data matrix
 	 */
 
-	unpacked* Data() const;
+	unpacked& Data();
 
 	/**
 	 * @brief Return size of meta matrix. Is the same as times*params*levels.

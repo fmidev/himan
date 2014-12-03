@@ -17,7 +17,7 @@ using namespace himan;
 using namespace std;
 
 grid::grid() 
-	: itsData(new unpacked())
+	: itsData()
 	, itsPackedData()
 	, itsScanningMode(kUnknownScanningMode)
 	, itsUVRelativeToGrid(false)
@@ -40,7 +40,7 @@ grid::grid(HPScanningMode theScanningMode,
 			point theTopRight,
 			point theSouthPole,
 			double theOrientation)
-	: itsData(new unpacked())
+	: itsData()
 	, itsPackedData()
 	, itsScanningMode(theScanningMode)
 	, itsUVRelativeToGrid(theUVRelativeToGrid)
@@ -68,26 +68,26 @@ grid::grid(const grid& other)
 	itsOrientation = other.itsOrientation;
 	itsDi = other.itsDi;
 	itsDj = other.itsDj;
-
-	if (other.itsData)
-	{
-		itsData = make_shared<unpacked> (*other.itsData);
-	}
-
+	itsData = other.itsData;
+	
 #ifdef HAVE_CUDA
+
 	if (other.itsPackedData)
 	{
 		switch (other.itsPackedData->packingType)
 		{
-			// avoid slicing problem
-			case kSimplePacking:
-				itsPackedData = make_shared<simple_packed> (*(dynamic_pointer_cast<const simple_packed> (other.itsPackedData)));
-				break;
-			default:
-				throw runtime_error("Unsupported packing type: " + other.itsPackedData->ClassName());
-				break;
+		case kSimplePacking:
+			itsPackedData = unique_ptr<simple_packed> (dynamic_cast<simple_packed*> (other.itsPackedData.get()));
+			break;
+
+		default:
+			itsPackedData = unique_ptr<packed_data> (other.itsPackedData.get());
+			break;
 		}
+		
 	}
+
+
 #endif
 	
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("grid"));
@@ -95,22 +95,22 @@ grid::grid(const grid& other)
 
 size_t grid::Ni() const
 {
-	return itsData->SizeX();
+	return itsData.SizeX();
 }
 
 size_t grid::Nj() const
 {
-	return itsData->SizeY();
+	return itsData.SizeY();
 }
 
 void grid::Ni(size_t theNi)
 {
-	itsData->SizeX(theNi);
+	itsData.SizeX(theNi);
 }
 
 void grid::Nj(size_t theNj)
 {
-	itsData->SizeY(theNj);
+	itsData.SizeY(theNj);
 }
 
 void grid::Di(double theDi)
@@ -151,14 +151,14 @@ double grid::Dj() const
 	return itsDj;
 }
 
-unpacked* grid::Data() const
+unpacked& grid::Data() 
 {
-	return itsData.get();
+	return itsData;
 }
 
 size_t grid::Size() const
 {
-	return itsData->Size();
+	return itsData.Size();
 }
 
 HPScanningMode grid::ScanningMode() const
@@ -183,12 +183,12 @@ void grid::UVRelativeToGrid(bool theUVRelativeToGrid)
 
 bool grid::Value(size_t locationIndex, double theValue)
 {
-	return itsData->Set(locationIndex, theValue) ;
+	return itsData.Set(locationIndex, theValue) ;
 }
 
 double grid::Value(size_t locationIndex) const
 {
-	return itsData->At(locationIndex);
+	return double(itsData.At(locationIndex));
 }
 
 HPProjectionType grid::Projection() const
@@ -433,7 +433,7 @@ NFmiGrid* grid::ToNewbaseGrid() const
 	
 	NFmiGrid* theGrid (new NFmiGrid(theArea, Ni(), Nj(), dir, interp));
 
-	size_t dataSize = itsData->Size();
+	size_t dataSize = itsData.Size();
 
 	if (dataSize)   // Do we have data
 	{
@@ -444,7 +444,7 @@ NFmiGrid* grid::ToNewbaseGrid() const
 
 		// convert double array to float
 
-		const double* src = itsData->ValuesAsPOD();
+		const double* src = itsData.ValuesAsPOD();
 
 		copy(src, src + dataSize, arr);
 
@@ -530,7 +530,7 @@ bool grid::operator!=(const grid& other) const
 	return !(*this == other);
 }
 
-void grid::Data(shared_ptr<unpacked> d)
+void grid::Data(const unpacked& d)
 {
 	itsData = d;
 }
@@ -543,7 +543,7 @@ bool grid::Swap(HPScanningMode newScanningMode)
 		return true;
 	}
 
-	assert(itsData);
+	assert(itsData.Size());
 
 	// Flip with regards to x axis
 
@@ -555,11 +555,11 @@ bool grid::Swap(HPScanningMode newScanningMode)
 		{
 			for (size_t x = 0; x < Ni(); x++)
 			{
-				double upper = itsData->At(x,y);
-				double lower = itsData->At(x, Nj()-1-y);
+				double upper = itsData.At(x,y);
+				double lower = itsData.At(x, Nj()-1-y);
 
-				itsData->Set(x,y,0,lower);
-				itsData->Set(x,Nj()-1-y,0,upper);
+				itsData.Set(x,y,0,lower);
+				itsData.Set(x,Nj()-1-y,0,upper);
 			}
 		}
 	}
@@ -575,14 +575,14 @@ bool grid::Swap(HPScanningMode newScanningMode)
 
 }
 
-packed_data* grid::PackedData() const
+packed_data& grid::PackedData()
 {
-	return itsPackedData.get();
+	return *itsPackedData;
 }
 
-void grid::PackedData(shared_ptr<packed_data> thePackedData)
+void grid::PackedData(unique_ptr<packed_data> thePackedData)
 {
-	itsPackedData = thePackedData;
+	itsPackedData = move(thePackedData);
 }
 
 bool grid::IsPackedData() const
@@ -599,10 +599,7 @@ ostream& grid::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
-	if (itsData)
-	{
-		file << *itsData;
-	}
+	file << itsData;
 	
 	file << "__dataIsPacked__ " << IsPackedData() << endl;
 	file << "__itsScanningMode__ " << HPScanningModeToString.at(itsScanningMode) << endl;

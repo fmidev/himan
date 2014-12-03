@@ -8,14 +8,7 @@
 #include "info.h"
 #include <limits> // for std::numeric_limits<size_t>::max();
 #include <boost/lexical_cast.hpp>
-#include "plugin_factory.h"
 #include "logger_factory.h"
-
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "neons.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan;
@@ -147,7 +140,7 @@ void info::Create()
 			{
 				Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
 				
-				Data()->Resize(itsNi,itsNj);
+				Data().Resize(itsNi,itsNj);
 
 				if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
 				{
@@ -155,8 +148,8 @@ void info::Create()
 					Grid()->Dj(itsDj);
 				}
 
-				Data()->MissingValue(kFloatMissing);
-				Data()->Fill(kFloatMissing);
+				Data().MissingValue(kFloatMissing);
+				Data().Fill(kFloatMissing);
 			}
 		}
 	}
@@ -592,7 +585,7 @@ bool info::NextLocation()
 		itsLocationIndex++;
 	}
 
-	size_t locationSize = Data()->Size();
+	size_t locationSize = Data().Size();
 
 	if (itsLocationIndex >= locationSize)
 	{
@@ -608,7 +601,7 @@ bool info::NextLocation()
 bool info::PreviousLocation()
 {
 	
-	size_t locationSize = Data()->Size();
+	size_t locationSize = Data().Size();
 
 	if (itsLocationIndex == kIteratorResetValue)
 	{
@@ -631,7 +624,7 @@ bool info::PreviousLocation()
 
 bool info::LastLocation()
 {
-	itsLocationIndex = Data()->Size() - 1;
+	itsLocationIndex = Data().Size() - 1;
 
 	return true;
 }
@@ -665,7 +658,7 @@ size_t info::LocationIndex()
 
 size_t info::SizeLocations() const
 {
-	return Data()->Size();
+	return Grid()->Data().Size();
 }
 
 grid* info::Grid() const
@@ -680,7 +673,7 @@ grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 	return itsDimensions[Index(timeIndex, levelIndex, paramIndex)].get();
 }
 
-unpacked* info::Data() const
+unpacked& info::Data()
 {
 	assert(Grid());
 	return Grid()->Data();
@@ -693,22 +686,22 @@ void info::Grid(shared_ptr<grid> d)
 
 bool info::Value(double theValue)
 {
-	return Grid()->Data()->Set(itsLocationIndex, theValue);
+	return Grid()->Data().Set(itsLocationIndex, theValue);
 }
 
 double info::Value() const
 {
-	return Grid()->Data()->At(itsLocationIndex);
+	return Grid()->Data().At(itsLocationIndex);
 }
 
 size_t info::Ni() const
 {
-	return Data()->SizeX();
+	return Grid()->Data().SizeX();
 }
 
 size_t info::Nj() const
 {
-	return Data()->SizeY();
+	return Grid()->Data().SizeY();
 }
 
 double info::Di() const
@@ -747,8 +740,8 @@ info_simple* info::ToSimple() const
 {
 	info_simple* ret = new info_simple();
 
-	ret->size_x = Data()->SizeX();
-	ret->size_y = Data()->SizeY();
+	ret->size_x = Grid()->Data().SizeX();
+	ret->size_y = Grid()->Data().SizeY();
 
 	ret->di = Grid()->Di();
 	ret->dj = Grid()->Dj();
@@ -776,14 +769,14 @@ info_simple* info::ToSimple() const
 		 * Also allocate page-locked memory for the unpacked data.
 		 */
 
-		assert(Grid()->PackedData()->ClassName() == "simple_packed");
+		assert(Grid()->PackedData().ClassName() == "simple_packed");
 		
-		ret->packed_values = reinterpret_cast<simple_packed*> (Grid()->PackedData());
+		ret->packed_values = reinterpret_cast<simple_packed*> (&Grid()->PackedData());
 
 	}
 
 	// Reserve a place for the unpacked data
-	ret->values = const_cast<double*> (Data()->ValuesAsPOD());
+	ret->values = const_cast<double*> (Grid()->Data().ValuesAsPOD());
 	
 	return ret;
 }
@@ -829,18 +822,18 @@ point info::LatLon() const
 
 	if (Grid()->ScanningMode() == kBottomLeft) //opts.j_scans_positive)
 	{
-		j = floor(static_cast<double> (itsLocationIndex / Data()->SizeX()));
+		j = floor(static_cast<double> (itsLocationIndex / Grid()->Data().SizeX()));
 	}
 	else if (Grid()->ScanningMode() == kTopLeft)
 	{
-		j = Grid()->Nj() - floor(static_cast<double> (itsLocationIndex / Data()->SizeX()));
+		j = static_cast<double> (Grid()->Nj()) - floor(static_cast<double> (itsLocationIndex / Grid()->Data().SizeX()));
 	}
 	else
 	{
 		throw runtime_error("Unsupported projection: " + string(HPScanningModeToString.at(Grid()->ScanningMode())));
 	}
 
-	double i = itsLocationIndex - j * Grid()->Ni();
+	double i = static_cast<double> (itsLocationIndex) - j * static_cast<double> (Grid()->Ni());
 
 	return point(firstPoint.X() + i * Grid()->Di(), firstPoint.Y() + j * Grid()->Dj());
 }

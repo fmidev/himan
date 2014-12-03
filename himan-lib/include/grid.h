@@ -106,14 +106,14 @@ class grid
 		 * @return Data matrix
 		 */
 
-		unpacked* Data() const;
+		unpacked& Data();
 
 		/**
 		 * @brief Replace current data matrix with the function argument
 		 * @param d shared pointer to a data matrix
 		 */
 
-		void Data(std::shared_ptr<unpacked> d);
+		void Data(const unpacked& d);
 
 		HPScanningMode ScanningMode() const;
 		void ScanningMode(HPScanningMode theScanningMode);
@@ -211,8 +211,8 @@ class grid
 		bool operator==(const grid& other) const;
 		bool operator!=(const grid& other) const;
 
-		void PackedData(std::shared_ptr<packed_data> thePackedData);
-		packed_data* PackedData() const;
+		void PackedData(std::unique_ptr<packed_data> thePackedData);
+		packed_data& PackedData();
 		
 		bool IsPackedData() const;
 
@@ -227,8 +227,8 @@ class grid
 
 	private:
 
-		std::shared_ptr<unpacked> itsData; //<! Variable to hold unpacked data
-		std::shared_ptr<packed_data> itsPackedData; //<! Variable to hold packed data
+		unpacked itsData; //<! Variable to hold unpacked data
+		std::unique_ptr<packed_data> itsPackedData; //<! Variable to hold packed data
 
 		HPScanningMode itsScanningMode; //<! When data is read from files, we need to know what is the scanning mode
 

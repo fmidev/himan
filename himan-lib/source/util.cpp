@@ -641,10 +641,10 @@ void util::Unpack(initializer_list<grid*> grids)
 			continue;
 		}
 
-		assert(tempGrid->PackedData()->ClassName() == "simple_packed");
+		assert(tempGrid->PackedData().ClassName() == "simple_packed");
 
 		double* arr = 0;
-		size_t N = tempGrid->PackedData()->unpackedLength;
+		size_t N = tempGrid->PackedData().unpackedLength;
 
 		assert(N > 0);
 
@@ -652,8 +652,8 @@ void util::Unpack(initializer_list<grid*> grids)
 		CUDA_CHECK(cudaStreamCreate(stream));
 		streams.push_back(stream);
 
-		assert(tempGrid->Data()->Size() == N);
-		arr = const_cast<double*> (tempGrid->Data()->ValuesAsPOD());
+		assert(tempGrid->Data().Size() == N);
+		arr = const_cast<double*> (tempGrid->Data().ValuesAsPOD());
 
 		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*> (arr), sizeof(double) * N, 0));
 
@@ -661,14 +661,14 @@ void util::Unpack(initializer_list<grid*> grids)
 
 		assert(arr);
 
-		reinterpret_cast<simple_packed*> (tempGrid->PackedData())->Unpack(arr, N, stream);
+		dynamic_cast<simple_packed*> (&tempGrid->PackedData())->Unpack(arr, N, stream);
 
 		// tempGrid->Data()->Set(arr, N);
 		// CUDA_CHECK(cudaFreeHost(arr));
 
 		CUDA_CHECK(cudaHostUnregister(arr));
 
-		tempGrid->PackedData()->Clear();
+		tempGrid->PackedData().Clear();
 	}
 
 	for (size_t i = 0; i < streams.size(); i++)
