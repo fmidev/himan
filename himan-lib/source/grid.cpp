@@ -77,11 +77,11 @@ grid::grid(const grid& other)
 		switch (other.itsPackedData->packingType)
 		{
 		case kSimplePacking:
-			itsPackedData = unique_ptr<simple_packed> (dynamic_cast<simple_packed*> (other.itsPackedData.get()));
+			itsPackedData = unique_ptr<simple_packed> (new simple_packed(*dynamic_cast<simple_packed*> (other.itsPackedData.get())));
 			break;
 
 		default:
-			itsPackedData = unique_ptr<packed_data> (other.itsPackedData.get());
+			itsPackedData = unique_ptr<packed_data> (new packed_data(*itsPackedData));
 			break;
 		}
 		
@@ -577,6 +577,7 @@ bool grid::Swap(HPScanningMode newScanningMode)
 
 packed_data& grid::PackedData()
 {
+	assert(itsPackedData);
 	return *itsPackedData;
 }
 
