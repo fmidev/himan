@@ -128,29 +128,29 @@ bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode tar
 	return true;
 }
 
-void compiled_plugin_base::WriteToFile(const shared_ptr<const info>& targetInfo) const
+void compiled_plugin_base::WriteToFile(const info& targetInfo) const
 {
 	auto aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
 
 	// writing might modify iterator positions --> create a copy
 
-	auto tempInfo = make_shared<info> (*targetInfo);
+	auto tempInfo = targetInfo;
 
 	if (itsConfiguration->FileWriteOption() == kNeons || itsConfiguration->FileWriteOption() == kMultipleFiles)
 	{
 		// If info holds multiple parameters, we must loop over them all
 		// Note! We only loop over the parameters, not over the times or levels!
 
-		tempInfo->ResetParam();
+		tempInfo.ResetParam();
 
-		while (tempInfo->NextParam())
+		while (tempInfo.NextParam())
 		{
-			aWriter->ToFile(tempInfo, itsConfiguration);
+			aWriter->ToFile(tempInfo, *itsConfiguration);
 		}
 	}
 	else if (itsConfiguration->FileWriteOption() == kSingleFile)
 	{
-		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+		aWriter->ToFile(tempInfo, *itsConfiguration, itsConfiguration->ConfigurationFile());
 	}
 }
 
@@ -270,7 +270,7 @@ void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 
 			if (itsConfiguration->FileWriteOption() != kSingleFile)
 			{
-				WriteToFile(myTargetInfo);
+				WriteToFile(*myTargetInfo);
 			}
 
 			if (itsConfiguration->StatisticsEnabled())
@@ -293,7 +293,7 @@ void compiled_plugin_base::Finish() const
 
 	if (itsConfiguration->FileWriteOption() == kSingleFile)
 	{
-		WriteToFile(itsInfo);
+		WriteToFile(*itsInfo);
 	}
 }
 
@@ -418,7 +418,7 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 
 		if (itsConfiguration->UseCache())
 		{
-			c->Insert(tempInfo);
+			c->Insert(*tempInfo);
 		}
 	}
 }
@@ -526,6 +526,6 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 info* compiled_plugin_base::FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked) const
 {
 	auto r = Fetch(theTime,theLevel,theParam,false);
-	cout << *r.get();
+	assert(r);
 	return r.get();
 }
