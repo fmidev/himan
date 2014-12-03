@@ -88,6 +88,7 @@ public:
 
 	T& At(size_t combinedIndex)
 	{
+		assert(itsData.size() > combinedIndex);
 		return itsData[combinedIndex];
 	}
 
@@ -208,6 +209,7 @@ public:
      */
 	const T* ValuesAsPOD() const
 	{
+		assert(itsData.size());
 		return &itsData[0];
 	}
 
@@ -370,8 +372,7 @@ public:
 
 	bool IsMissing(size_t theIndex) const
 	{
-		// No checking of limits
-
+		assert(itsData.size() > theIndex);
 		return (itsData[theIndex] == itsMissingValue);
 	}
 
