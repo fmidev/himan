@@ -367,6 +367,6 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		myTargetInfo->Value(rain);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }

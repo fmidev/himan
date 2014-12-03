@@ -395,7 +395,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }
 
@@ -419,7 +419,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	ret->Times(times);
 	ret->Create();
 
-	vector<double> constData1(ret->Data()->Size(), 0);
+	vector<double> constData1(ret->Data().Size(), 0);
 
 	auto constData2 = constData1;
 	fill(constData2.begin(), constData2.end(), 5000);
@@ -643,10 +643,10 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	}
 
 	ret->Param(minusAreaParam);
-	ret->Data()->Set(minusArea);
+	ret->Data().Set(minusArea);
 
 	ret->Param(plusAreaParam);
-	ret->Data()->Set(plusArea);
+	ret->Data().Set(plusArea);
 
 	result = ret;
 
@@ -702,7 +702,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	ret->Times(times);
 	ret->Create();
 
-	vector<double> constData1(ret->Data()->Size(), 0);
+	vector<double> constData1(ret->Data().Size(), 0);
 
 	auto constData2 = constData1;
 	auto logger = logger_factory::Instance()->GetLog("preform_hybrid-stratus");
@@ -732,7 +732,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		}
 
 		ret->Param(baseParam);
-		ret->Data()->Set(baseThreshold);
+		ret->Data().Set(baseThreshold);
 
 		/**
 		 * Etsitään parametrin N minimiarvo korkeusvälillä stLimit (=500) .. layer (=2000)
@@ -771,7 +771,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			throw runtime_error("Impossible error");
 		}
 
-		ret->Data()->Set(stratusBase);
+		ret->Data().Set(stratusBase);
 
 		size_t missing = 0;
 
@@ -793,7 +793,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		auto stratusTop = h->VerticalHeight(wantedParamList, stLimit, layer, topThreshold, 0);
 
 		ret->Param(topParam);
-		ret->Data()->Set(stratusTop);
+		ret->Data().Set(stratusTop);
 
 #ifdef DEBUG
 
@@ -836,7 +836,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		auto upperLayerRH = h->VerticalAverage(wantedParam, constData1, constData2);
 
 		ret->Param(upperLayerRHParam);
-		ret->Data()->Set(upperLayerRH);
+		ret->Data().Set(upperLayerRH);
 
 #ifdef DEBUG
 		missing = 0;
@@ -872,7 +872,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 #endif
 
 		ret->Param(meanCloudinessParam);
-		ret->Data()->Set(stratusMeanN);
+		ret->Data().Set(stratusMeanN);
 
 		logger->Info("Searching for stratus top temperature");
 
@@ -896,7 +896,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		logger->Debug("Stratus top temperature number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusTopTemp.size()));
 #endif
 		ret->Param(topTempParam);
-		ret->Data()->Set(stratusTopTemp);
+		ret->Data().Set(stratusTopTemp);
 
 		logger->Info("Searching for stratus mean temperature");
 
@@ -940,7 +940,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		logger->Debug("Stratus mean temperature number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusMeanTemp.size()));
 #endif
 		ret->Param(meanTempParam);
-		ret->Data()->Set(stratusMeanTemp);
+		ret->Data().Set(stratusMeanTemp);
 
 		// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
 		//VAR wAvg = VERTZ_AVG(W_EC,Base,Top)
@@ -966,7 +966,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 #endif
 
 		ret->Param(verticalVelocityParam);
-		ret->Data()->Set(stratusVerticalVelocity);
+		ret->Data().Set(stratusVerticalVelocity);
 		
 	}
 	catch (const HPExceptionType& e)

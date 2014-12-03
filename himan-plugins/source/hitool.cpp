@@ -356,12 +356,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		values->First();
 		heights->First();
 
-		mod->Process(values->Grid()->Data()->Values(), heights->Grid()->Data()->Values());
+		mod->Process(values->Grid()->Data().Values(), heights->Grid()->Data().Values());
 
 		size_t heightsCrossed = mod->HeightsCrossed();
 
 		string msg = "Level " + boost::lexical_cast<string> (currentLevel.Value()) + ": height range crossed for " + boost::lexical_cast<string> (heightsCrossed) +
-			"/" + boost::lexical_cast<string> (values->Data()->Size()) + " grid points";
+			"/" + boost::lexical_cast<string> (values->Data().Size()) + " grid points";
 
 		itsLogger->Debug(msg);
 

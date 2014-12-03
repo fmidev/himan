@@ -210,14 +210,6 @@ protected:
 	virtual void Run(info_t myTargetInfo, unsigned short threadIndex);
 
 	/**
-	 * @brief Initialize compiled_plugin_base and set internal state.
-	 *
-	 * @param conf
-	 */
-
-	virtual void Init(const std::shared_ptr<const plugin_configuration>& conf);
-
-	/**
 	 * @brief Set target params
 	 *
 	 * Function will fetch grib1 definitions from neons if necessary, and will
@@ -373,9 +365,19 @@ protected:
 	 * @param returnPacked Flag for returning data either packed or unpacked
 	 * @return shared_ptr<info> on success, un-initialized shared_ptr if data not found
 	 */
-
+public:
 	info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked = false) const;
+	info* FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked = false) const;
 
+	/**
+	 * @brief Initialize compiled_plugin_base and set internal state.
+	 *
+	 * @param conf
+	 */
+
+	virtual void Init(const std::shared_ptr<const plugin_configuration> conf);
+
+protected:
 	info_t itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	short itsThreadCount;

@@ -368,11 +368,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 				if (myTargetInfo->Grid()->ScanningMode() == kBottomLeft) //opts.j_scans_positive)
 				{
-					j = floor(static_cast<double> (myTargetInfo->LocationIndex() / myTargetInfo->Data()->SizeX()));
+					j = floor(static_cast<double> (myTargetInfo->LocationIndex() / myTargetInfo->Data().SizeX()));
 				}
 				else if (myTargetInfo->Grid()->ScanningMode() == kTopLeft)
 				{
-					j = static_cast<double> (myTargetInfo->Grid()->Nj()) - floor(static_cast<double> (myTargetInfo->LocationIndex()) / static_cast<double> (myTargetInfo->Data()->SizeX()));
+					j = static_cast<double> (myTargetInfo->Grid()->Nj()) - floor(static_cast<double> (myTargetInfo->LocationIndex()) / static_cast<double> (myTargetInfo->Data().SizeX()));
 				}
 				else
 				{
@@ -381,8 +381,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 				double i = static_cast<double> (myTargetInfo->LocationIndex()) - j * static_cast<double> (myTargetInfo->Grid()->Ni());
 
-				i /= static_cast<double> (myTargetInfo->Data()->SizeX());
-				j /= static_cast<double> (myTargetInfo->Data()->SizeY());
+				i /= static_cast<double> (myTargetInfo->Data().SizeX());
+				j /= static_cast<double> (myTargetInfo->Data().SizeY());
 
 				NFmiPoint ll = reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->ToLatLon(NFmiPoint(i,j));
 				point regPoint(ll.X(), ll.Y());
@@ -444,8 +444,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
 	{
-		missing += myTargetInfo->Data()->MissingCount();
-		total += myTargetInfo->Data()->Size();
+		missing += myTargetInfo->Data().MissingCount();
+		total += myTargetInfo->Data().Size();
 	}
 	
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (total));

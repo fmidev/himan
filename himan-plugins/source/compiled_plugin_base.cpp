@@ -220,7 +220,7 @@ void compiled_plugin_base::Start()
 	Finish();
 }
 
-void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration>& conf)
+void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> conf)
 {
 
 	const short MAX_THREADS = 12; //<! Max number of threads we allow
@@ -275,8 +275,8 @@ void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 
 			if (itsConfiguration->StatisticsEnabled())
 			{
-				itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data()->MissingCount());
-				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data()->Size());
+				itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
+				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 			}
 		}
 	}
@@ -406,13 +406,13 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 	{
 		info_t tempInfo = *it;
 
-		if (!tempInfo->Grid()->PackedData() || tempInfo->Grid()->PackedData()->packedLength == 0)
+		if (tempInfo->Grid()->PackedData().packedLength == 0)
 		{
 			// Safeguard: This particular info does not have packed data
 			continue;
 		}
 
-		assert(tempInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+		assert(tempInfo->Grid()->PackedData().ClassName() == "simple_packed");
 
 		util::Unpack({ tempInfo->Grid() });
 
@@ -476,7 +476,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(ret->Grid()->PackedData()->ClassName() == "simple_packed");
+			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 		}
@@ -506,7 +506,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(ret->Grid()->PackedData()->ClassName() == "simple_packed");
+			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 		}
@@ -521,4 +521,11 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	}
 
 	return ret;
+}
+
+info* compiled_plugin_base::FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked) const
+{
+	auto r = Fetch(theTime,theLevel,theParam,false);
+	cout << *r.get();
+	return r.get();
 }

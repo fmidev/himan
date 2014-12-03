@@ -105,7 +105,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 #ifdef HAVE_CUDA
 		if (UInfo->Grid()->IsPackedData())
 		{
-			assert(UInfo->Grid()->PackedData()->ClassName() == "simple_packed");
+			assert(UInfo->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({UInfo->Grid(), VInfo->Grid()});
 		}
@@ -131,21 +131,19 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	himan::matrix<double> filter_kernel_U(2,1,1);
 	filter_kernel_U.Fill(0.5);
 
-	himan::matrix<double> unstaggered_U = util::Filter2D(*UInfo->Data(), filter_kernel_U);	
+	himan::matrix<double> unstaggered_U = util::Filter2D(UInfo->Data(), filter_kernel_U);	
 
-	auto unstaggered_U_ptr = make_shared<himan::matrix<double>> (unstaggered_U);
 	myTargetInfo->ParamIndex(0);
-	myTargetInfo->Grid()->Data(unstaggered_U_ptr);
+	myTargetInfo->Grid()->Data(unstaggered_U);
 
 	// calculate for V
 	himan::matrix<double> filter_kernel_V(1,2,1);
 	filter_kernel_V.Fill(0.5);
 
-	himan::matrix<double> unstaggered_V = util::Filter2D(*VInfo->Data(), filter_kernel_V);	
+	himan::matrix<double> unstaggered_V = util::Filter2D(VInfo->Data(), filter_kernel_V);	
 
-	auto unstaggered_V_ptr = make_shared<himan::matrix<double>> (unstaggered_V);
 	myTargetInfo->ParamIndex(1);
-	myTargetInfo->Grid()->Data(unstaggered_V_ptr);
+	myTargetInfo->Grid()->Data(unstaggered_V);
 
 	// Re-calculate grid coordinates
 
@@ -164,8 +162,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	c->Insert(VInfo);
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + 
-		boost::lexical_cast<string> (UInfo->Data()->MissingCount() + VInfo->Data()->MissingCount()) +
-		"/" + boost::lexical_cast<string> (UInfo->Data()->Size() + VInfo->Data()->Size()));
+		boost::lexical_cast<string> (UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) +
+		"/" + boost::lexical_cast<string> (UInfo->Data().Size() + VInfo->Data().Size()));
 
 
 }

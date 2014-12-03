@@ -230,6 +230,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	assert((theInfos[0]->Param()) == requestedParam);
 
 	auto baseInfo = make_shared<info> (*config->Info());
+	assert(baseInfo->Dimensions().size());
+	
 	baseInfo->First();
 
 	if (itsDoInterpolation)
@@ -543,7 +545,7 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 
 		// new data backend
 
-		auto targetData = make_shared<d_matrix_t> (base->Data()->SizeX(), base->Data()->SizeY());
+		unpacked targetData(base->Data().SizeX(), base->Data().SizeY());
 
 		if (!baseData)
 		{
@@ -572,7 +574,7 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 		{
 			double value = interpInfo.InterpolatedValue(baseInfo.LatLon());
 			
-			targetData->Set(i, value);
+			targetData.Set(i, value);
 		}
 
 		(*it)->Grid()->Data(targetData);

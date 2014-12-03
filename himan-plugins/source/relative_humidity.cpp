@@ -244,7 +244,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }
 
@@ -273,7 +273,7 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTTD( s
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
-	opts->N = TInfo->Data()->Size();
+	opts->N = TInfo->Data().Size();
 	opts->select_case = 0;
 
 	opts->TDBase = TDBase;
@@ -290,7 +290,7 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQP( s
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
-	opts->N = TInfo->Data()->Size();
+	opts->N = TInfo->Data().Size();
 
 	opts->select_case = 1;
 
@@ -310,7 +310,7 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQ( sh
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
-	opts->N = TInfo->Data()->Size();
+	opts->N = TInfo->Data().Size();
 
 	opts->select_case = 2;
 

@@ -72,7 +72,7 @@ void cache::SplitToPool(const shared_ptr<info> anInfo)
 	if (anInfo->Grid()->IsPackedData())
 	{
 		itsLogger->Trace("Removing packed data from cached info");
-		anInfo->Grid()->PackedData()->Clear();
+		anInfo->Grid()->PackedData().Clear();
 	}
 #endif
 	

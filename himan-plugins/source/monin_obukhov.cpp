@@ -105,14 +105,6 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	if (!TInfo || !QInfo || !U_SInfo || !PInfo || !PrevQInfo)
 	{
 		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			// When time or level is skipped, all values are missing
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data()->Size());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data()->Size());
-		}
-
 		return;
 
 	}
@@ -150,6 +142,6 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }

@@ -361,7 +361,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		}
 	}
 	
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 }
 
 void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, vector<double>& result)
@@ -454,7 +454,7 @@ bool stability::GetLISourceData(const shared_ptr<info>& myTargetInfo, vector<dou
 	}
 
 
-	vector<double> H0mVector = HInfo->Grid()->Data()->Values();
+	vector<double> H0mVector = HInfo->Grid()->Data().Values();
 	vector<double> H500mVector(HInfo->SizeLocations());
 
 	for (size_t i = 0; i < H500mVector.size(); i++)
@@ -536,8 +536,8 @@ vector<double> Shear(shared_ptr<const plugin_configuration> conf, const forecast
 	h->Configuration(conf);
 	h->Time(ftime);
 
-	vector<double> lowerHeights (height->Data()->Size(), lowerHeight);
-	vector<double> upperHeights (height->Data()->Size(), upperHeight);
+	vector<double> lowerHeights (height->Data().Size(), lowerHeight);
+	vector<double> upperHeights (height->Data().Size(), upperHeight);
 
 	size_t i;
 

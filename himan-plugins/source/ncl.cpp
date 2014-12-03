@@ -95,7 +95,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	bool firstLevel = true;
 
-	myTargetInfo->Data()->Fill(-1);		
+	myTargetInfo->Data().Fill(-1);
 		
 	HInfo->ResetLocation();
 	TInfo->ResetLocation();
@@ -250,16 +250,16 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }
 
 bool ncl::CountValues(const shared_ptr<himan::info> values)
 {
-	size_t s = values->Data()->Size();
+	size_t s = values->Data().Size();
 	for (size_t j = 0; j < s; j++)
 	{
-		if (values->Data()->At(j) == -1)
+		if (values->Data().At(j) == -1)
 			return false;
 	}
 	return true;

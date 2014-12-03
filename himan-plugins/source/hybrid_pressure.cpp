@@ -103,6 +103,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		myTargetInfo->Value(hybrid_pressure);
 	}
 
-	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }

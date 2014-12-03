@@ -117,5 +117,5 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 		}
 	}
 
-	myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 }

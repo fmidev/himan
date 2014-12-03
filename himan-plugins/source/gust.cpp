@@ -623,16 +623,16 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	himan::matrix<double> filter_kernel(3,3,1);
 	filter_kernel.Fill(1.0/9.0);
-	himan::matrix<double> puuska_filtered = util::Filter2D(*myTargetInfo->Data(), filter_kernel);
+	himan::matrix<double> puuska_filtered = util::Filter2D(myTargetInfo->Data(), filter_kernel);
 
 	
-	auto puuska_filtered_ptr = make_shared<himan::matrix<double>> (puuska_filtered);
-	puuska_filtered_ptr->MissingValue(kFloatMissing);
+	//auto puuska_filtered_ptr = make_shared<himan::matrix<double>> (puuska_filtered);
+	puuska_filtered.MissingValue(kFloatMissing);
 	
-	myTargetInfo->Grid()->Data(puuska_filtered_ptr);
+	myTargetInfo->Grid()->Data(puuska_filtered);
 	
-        LOCKSTEP(myTargetInfo)
-        {
+	LOCKSTEP(myTargetInfo)
+	{
 		size_t i = myTargetInfo->LocationIndex();
 		
 		if (par466[i] == kFloatMissing || myTargetInfo->Value() == kFloatMissing)
@@ -646,7 +646,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }
 

@@ -193,7 +193,7 @@ bool querydata::CopyData(const shared_ptr<info>& theInfo, NFmiFastQueryInfo& qin
 		exit(1);
 	}
 
-	assert(theInfo->Data()->Size() == qinfo.Size());
+	assert(theInfo->Data().Size() == qinfo.Size());
 
 	theInfo->ResetLocation();
 	qinfo.ResetLocation();
@@ -548,13 +548,13 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			{
 				assert(newInfo->ParamIndex() == qinfo.ParamIndex());
 
-				auto dm = make_shared<unpacked> (ni, nj);
+				unpacked dm(ni, nj);
 
 				size_t i;
 				
 				for (qinfo.ResetLocation(), i = 0; qinfo.NextLocation() && i < ni*nj; i++)
 				{
-					dm->Set(i, static_cast<double> (qinfo.FloatValue()));
+					dm.Set(i, static_cast<double> (qinfo.FloatValue()));
 				}
 
 				newInfo->Grid()->Data(dm);

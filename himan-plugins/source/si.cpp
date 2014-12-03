@@ -234,7 +234,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				{
 					case kFileDataNotFound:
 						itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
-						myTargetInfo->Data()->Fill(kFloatMissing);
+						myTargetInfo->Data().Fill(kFloatMissing);
 
 						if (itsConfiguration->StatisticsEnabled())
 						{
@@ -570,7 +570,7 @@ void si::LCLAverage(shared_ptr<info> myTargetInfo, double fromZ, double toZ)
 	vector<double> lowerHeight(HInfo->SizeLocations(), 0);
 	vector<double> upperHeight(HInfo->SizeLocations(), 700);
 
-	vector<double> H0mVector = HInfo->Grid()->Data()->Values();
+	vector<double> H0mVector = HInfo->Grid()->Data().Values();
 	vector<double> H500mVector(HInfo->SizeLocations());
 
 	for (size_t i = 0; i < H500mVector.size(); i++)

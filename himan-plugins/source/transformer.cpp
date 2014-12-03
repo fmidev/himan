@@ -243,7 +243,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 }
 
 
@@ -253,7 +253,7 @@ unique_ptr<transformer_cuda::options> transformer::CudaPrepare( shared_ptr<info>
 {
 	unique_ptr<transformer_cuda::options> opts(new transformer_cuda::options);
 
-	opts->N = sourceInfo->Data()->Size();
+	opts->N = sourceInfo->Data().Size();
 
 	opts->base = itsBase;
 	opts->scale = itsScale;

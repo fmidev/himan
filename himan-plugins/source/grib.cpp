@@ -76,7 +76,7 @@ bool grib::ToFile(shared_ptr<info> anInfo, string& outputFile, HPFileType fileTy
 
 }
 
-bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileType fileType, bool appendToFile)
+bool grib::WriteGrib(shared_ptr<info> anInfo, string& outputFile, HPFileType fileType, bool appendToFile)
 {
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
@@ -176,7 +176,7 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 		itsGrib->Message().TypeOfGeneratingProcess(2); // Forecast
 	}
 
-	if (anInfo->Data()->MissingCount() > 0)
+	if (anInfo->Data().MissingCount() > 0)
 	{
 		itsGrib->Message().Bitmap(true);
 	}
@@ -185,10 +185,10 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 
 #ifdef GRIB_WRITE_PACKED_DATA
 
-	if (anInfo->Grid()->IsPackedData() && anInfo->Grid()->PackedData()->ClassName() == "simple_packed")
+	if (anInfo->Grid()->IsPackedData() && anInfo->Grid()->PackedData().ClassName() == "simple_packed")
 	{
 		itsLogger->Trace("Writing packed data");
-		simple_packed* s = reinterpret_cast<simple_packed*> (anInfo->Grid()->PackedData());
+		simple_packed* s = reinterpret_cast<simple_packed*> (&anInfo->Grid()->PackedData());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
 		itsGrib->Message().BinaryScaleFactor(s->coefficients.binaryScaleFactor);
@@ -200,13 +200,13 @@ bool grib::WriteGrib(shared_ptr<const info> anInfo, string& outputFile, HPFileTy
 		itsLogger->Trace("binary scale factor: " + boost::lexical_cast<string> (itsGrib->Message().BinaryScaleFactor()));
 		itsLogger->Trace("reference value: " + boost::lexical_cast<string> (itsGrib->Message().ReferenceValue()));
 
-		itsGrib->Message().PackedValues(s->data, anInfo->Data()->Size(), 0, 0);
+		itsGrib->Message().PackedValues(s->data, anInfo->Data().Size(), 0, 0);
 	}
 	else
 #endif
 	{
 		itsLogger->Trace("Writing unpacked data");
-		itsGrib->Message().Values(anInfo->Data()->ValuesAsPOD(), static_cast<long> (anInfo->Ni() * anInfo->Nj()));
+		itsGrib->Message().Values(anInfo->Data().ValuesAsPOD(), static_cast<long> (anInfo->Ni() * anInfo->Nj()));
 	}
 
 	if (edition == 2)
@@ -728,7 +728,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		newInfo->Time(t);
 		newInfo->Level(l);
 
-		shared_ptr<unpacked> dm = shared_ptr<unpacked> (new unpacked(ni, nj));
+		unpacked dm(ni, nj);
 
 		/*
 		 * Read data from grib *
@@ -756,7 +756,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			double rv = itsGrib->Message().ReferenceValue();
 			long bpv = itsGrib->Message().BitsPerValue();
 
-			auto packed = std::make_shared<simple_packed> (bpv, util::ToPower(bsf,2), util::ToPower(-dsf, 10), rv);
+			auto packed = unique_ptr<simple_packed> (new simple_packed(bpv, util::ToPower(bsf,2), util::ToPower(-dsf, 10), rv));
 
 			packed->Set(data, len, static_cast<size_t> (itsGrib->Message().SizeX() * itsGrib->Message().SizeY()));
 
@@ -779,8 +779,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 				delete [] bitmap;
 			}
+			newInfo->Grid()->PackedData(move(packed));
 
-			newInfo->Grid()->PackedData(packed);
 		}
 		else
 #endif
@@ -790,7 +790,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			double* d = itsGrib->Message().Values();
 
-			dm->Set(d, len);
+			dm.Set(d, len);
 
 			free(d);
 
@@ -850,7 +850,7 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 	}
 }
 
-void grib::WriteAreaAndGrid(std::shared_ptr<const info> anInfo)
+void grib::WriteAreaAndGrid(std::shared_ptr<info> anInfo)
 {
 	himan::point firstGridPoint = anInfo->Grid()->FirstGridPoint();
 	himan::point lastGridPoint = anInfo->Grid()->LastGridPoint();
@@ -974,7 +974,7 @@ void grib::WriteAreaAndGrid(std::shared_ptr<const info> anInfo)
 	itsGrib->Message().JScansPositively(jPositive);
 }
 
-void grib::WriteTime(std::shared_ptr<const info> anInfo)
+void grib::WriteTime(std::shared_ptr<info> anInfo)
 {
 	itsGrib->Message().DataDate(boost::lexical_cast<long> (anInfo->Time().OriginDateTime()->String("%Y%m%d")));
 	itsGrib->Message().DataTime(boost::lexical_cast<long> (anInfo->Time().OriginDateTime()->String("%H%M")));
@@ -1086,7 +1086,7 @@ void grib::WriteTime(std::shared_ptr<const info> anInfo)
 	}
 }
 
-void grib::WriteParameter(std::shared_ptr<const info> anInfo)
+void grib::WriteParameter(std::shared_ptr<info> anInfo)
 {
 	/*
 	 * For grib1, get param_id from neons since its dependant on the table2version

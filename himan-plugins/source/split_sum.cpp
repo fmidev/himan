@@ -451,7 +451,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		}
 
-		myThreadedLogger->Info("[" + deviceType + "] Parameter " + parmName + " missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
+		myThreadedLogger->Info("[" + deviceType + "] Parameter " + parmName + " missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 	}
 }
 
@@ -602,7 +602,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 		SumInfo->Times(times);
 
 		SumInfo->Create(myTargetInfo->Grid());
-		SumInfo->Data()->Fill(0);
+		SumInfo->Data().Fill(0);
 
 	}
 	
@@ -627,7 +627,7 @@ void split_sum::WriteToFile(const shared_ptr<const info>& targetInfo) const
 
 		while (tempInfo->NextParam())
 		{
-			if (itsConfiguration->FileWriteOption() == kNeons && tempInfo->Data()->Size() == tempInfo->Data()->MissingCount())
+			if (itsConfiguration->FileWriteOption() == kNeons && tempInfo->Data().Size() == tempInfo->Data().MissingCount())
 			{
 				itsLogger->Info("All data missing for " + tempInfo->Param().Name() + " step " + boost::lexical_cast<string> (tempInfo->Time().Step()) + ", not writing to disk");
 				continue;
