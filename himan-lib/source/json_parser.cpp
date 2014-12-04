@@ -546,10 +546,9 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 
 			// Create forecast_time with both times origintime, then adjust the validtime
 
-			forecast_time theTime (shared_ptr<raw_time> (new raw_time(originDateTime, mask)),
-								   shared_ptr<raw_time> (new raw_time(originDateTime, mask)));
-
-			theTime.ValidDateTime()->Adjust(kHourResolution, times[i]);
+			forecast_time theTime (originDateTime, originDateTime, mask);
+			
+			theTime.ValidDateTime().Adjust(kHourResolution, times[i]);
 
 			theTimes.push_back(theTime);
 		}
@@ -606,10 +605,9 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 		do
 		{
 
-			forecast_time theTime (shared_ptr<raw_time> (new raw_time(originDateTime, mask)),
-								   shared_ptr<raw_time> (new raw_time(originDateTime, mask)));
+			forecast_time theTime (originDateTime, originDateTime, mask);
 
-			theTime.ValidDateTime()->Adjust(stepResolution, curtime);
+			theTime.ValidDateTime().Adjust(stepResolution, curtime);
 
 			theTime.StepResolution(stepResolution);
 
@@ -656,10 +654,9 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 		do
 		{
 
-			forecast_time theTime (shared_ptr<raw_time> (new raw_time(originDateTime, mask)),
-								   shared_ptr<raw_time> (new raw_time(originDateTime, mask)));
+			forecast_time theTime (originDateTime, originDateTime, mask);
 
-			theTime.ValidDateTime()->Adjust(stepResolution, curtime);
+			theTime.ValidDateTime().Adjust(stepResolution, curtime);
 
 			theTime.StepResolution(stepResolution);
 

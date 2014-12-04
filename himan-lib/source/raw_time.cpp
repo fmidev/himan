@@ -38,7 +38,7 @@ raw_time& raw_time::operator=(const raw_time& other)
 }
 
 
-bool raw_time::operator==(const raw_time&  other)
+bool raw_time::operator==(const raw_time& other) const
 {
     if (this == &other)
     {
@@ -48,7 +48,7 @@ bool raw_time::operator==(const raw_time&  other)
     return (itsDateTime == other.itsDateTime);
 }
 
-bool raw_time::operator!=(const raw_time&  other)
+bool raw_time::operator!=(const raw_time& other) const
 {
     return !(*this == other);
 }

@@ -530,7 +530,7 @@ public:
 	bool Param(const param& theRequiredParam);
 	void ParamIndex(size_t theParamIndex);
 	size_t ParamIndex() const;
-	const param& Param() const;
+	param Param() const;
 	const param& PeekParam(size_t theIndex) const;
 	void SetParam(const param& theParam);
 	
@@ -573,7 +573,7 @@ public:
 	bool Level(const level& theLevel);
 	void LevelIndex(size_t theLevelIndex);
 	size_t LevelIndex() const;
-	const level& Level() const;
+	level Level() const;
 	const level& PeekLevel(size_t theIndex) const;
 	void SetLevel(const level& theLevel);
 
@@ -620,7 +620,7 @@ public:
 	bool Time(const forecast_time& theTime);
 	void TimeIndex(size_t theTimeIndex);
 	size_t TimeIndex() const;
-	const forecast_time& Time() const;
+	forecast_time Time() const;
 	const forecast_time& PeekTime(size_t theIndex) const;
 	void SetTime(const forecast_time& theTime);
 

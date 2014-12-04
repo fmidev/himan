@@ -380,7 +380,7 @@ void info::ParamIndex(size_t theParamIndex)
 	itsParamIterator.Set(theParamIndex);
 }
 
-const param& info::Param() const
+param info::Param() const
 {
 	return itsParamIterator.At();
 }
@@ -493,7 +493,7 @@ bool info::Level(const level& theLevel)
 	return itsLevelIterator.Set(theLevel);
 }
 
-const level& info::Level() const
+level info::Level() const
 {
 	return itsLevelIterator.At();
 }
@@ -553,7 +553,7 @@ bool info::Time(const forecast_time& theTime)
 	return itsTimeIterator.Set(theTime);
 }
 
-const forecast_time& info::Time() const
+forecast_time info::Time() const
 {
 	return itsTimeIterator.At();
 }

@@ -51,7 +51,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 			 << "_"
 			 << info.Producer().Process()
 			 << "/"
-			 << info.Time().OriginDateTime()->String("%Y%m%d%H%M")
+			 << info.Time().OriginDateTime().String("%Y%m%d%H%M")
 			 << "/"
 			 << info.Time().Step();
 	}

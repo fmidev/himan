@@ -10,7 +10,6 @@
 #define FORECAST_TIME_H
 
 #include "raw_time.h"
-#include <stdexcept>
 
 namespace himan
 {
@@ -28,7 +27,6 @@ class forecast_time
 public:
     forecast_time();
     forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime);
-    forecast_time(std::shared_ptr<raw_time> theOriginDateTime, std::shared_ptr<raw_time> theValidDateTime);
     forecast_time(const std::string& theOriginDateTime,
                   const std::string& theValidDateTime,
                   const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
@@ -49,13 +47,13 @@ public:
 
     int Step() const;
 
-    std::shared_ptr<raw_time> OriginDateTime() const;
-    void OriginDateTime(std::shared_ptr<raw_time> theOriginDateTime);
-    void OriginDateTime(std::string& theOriginDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
+    raw_time& OriginDateTime();
+    void OriginDateTime(const raw_time& theOriginDateTime);
+    void OriginDateTime(const std::string& theOriginDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
-    std::shared_ptr<raw_time> ValidDateTime() const;
-    void ValidDateTime(std::shared_ptr<raw_time> theValidDateTime);
-    void ValidDateTime(std::string& theValidDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
+    raw_time& ValidDateTime();
+    void ValidDateTime(const raw_time& theValidDateTime);
+    void ValidDateTime(const std::string& theValidDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
     /**
 	 *
@@ -66,8 +64,8 @@ public:
     void StepResolution(HPTimeResolution theStepResolution);
 
 private:
-    std::shared_ptr<raw_time> itsOriginDateTime;
-    std::shared_ptr<raw_time> itsValidDateTime;
+    raw_time itsOriginDateTime;
+    raw_time itsValidDateTime;
 
     HPTimeResolution itsStepResolution;
 };

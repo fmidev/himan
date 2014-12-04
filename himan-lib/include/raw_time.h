@@ -13,7 +13,6 @@
 
 #include "himan_common.h"
 #include <boost/date_time.hpp>
-#include <stdexcept>
 
 namespace himan
 {
@@ -23,7 +22,8 @@ class raw_time
 {
 
 public:
-
+	friend class forecast_time;
+	
     raw_time() : itsDateTime(boost::posix_time::not_a_date_time) {}
     raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 
@@ -41,15 +41,10 @@ public:
         return "himan::raw_time";
     }
 
-    bool operator==(const raw_time& other);
-    bool operator!=(const raw_time& other);
+    bool operator==(const raw_time& other) const;
+    bool operator!=(const raw_time& other) const;
 
     bool Adjust(HPTimeResolution timeResolution, int theValue);
-
-    boost::posix_time::ptime RawTime() const
-    {
-        return itsDateTime;
-    }
 
     bool Empty() const;
 
