@@ -143,7 +143,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	
 	info_t T850Info, T700Info, T500Info, TD850Info, TD700Info;
 		
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	bool LICalculation = itsLICalculation;
 	bool BSCalculation = itsBSCalculation;

@@ -24,8 +24,8 @@ cache::cache()
 
 string cache::UniqueName(const info& info)
 {
-	string forecast_time = info.Time().OriginDateTime()->String("%Y-%m-%d_%H:%M:%S");
-	string valid_time = info.Time().ValidDateTime()->String("%Y-%m-%d_%H:%M:%S");
+	string forecast_time = info.Time().OriginDateTime().String("%Y-%m-%d_%H:%M:%S");
+	string valid_time = info.Time().ValidDateTime().String("%Y-%m-%d_%H:%M:%S");
 	string param = info.Param().Name();
 	string level_value = boost::lexical_cast<string>(info.Level().Value());
 	string level = HPLevelTypeToString.at(info.Level().Type());
@@ -33,11 +33,11 @@ string cache::UniqueName(const info& info)
 
 }
 
-string cache::UniqueNameFromOptions(const search_options& options)
+string cache::UniqueNameFromOptions(search_options& options)
 {
-	string forecast_time = (options.time.OriginDateTime())->String("%Y-%m-%d_%H:%M:%S");
-	string valid_time = (options.time.ValidDateTime())->String("%Y-%m-%d_%H:%M:%S");
-	string param = (options.param).Name();
+	string forecast_time = options.time.OriginDateTime().String("%Y-%m-%d_%H:%M:%S");
+	string valid_time = options.time.ValidDateTime().String("%Y-%m-%d_%H:%M:%S");
+	string param = options.param.Name();
 	string level_value = boost::lexical_cast<string>((options.level).Value());
 	string level = HPLevelTypeToString.at(options.level.Type());
 	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
@@ -102,7 +102,7 @@ void cache::SplitToPool(info& anInfo)
 	}
 }
 
-vector<shared_ptr<himan::info>> cache::GetInfo(const search_options& options) 
+vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options) 
 {
 	string uniqueName = UniqueNameFromOptions(options);
 

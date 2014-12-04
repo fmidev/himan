@@ -222,32 +222,32 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 
 	if (theActiveOnly)
 	{
-		tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info.Time().ValidDateTime()->String("%Y%m%d")),
-								  boost::lexical_cast<long> (info.Time().ValidDateTime()->String("%H%M"))));
+		tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info.Time().ValidDateTime().String("%Y%m%d")),
+								  boost::lexical_cast<long> (info.Time().ValidDateTime().String("%H%M"))));
 	}
 	else
 	{
 		info.ResetTime();
 
-		shared_ptr<raw_time> firstOriginTime;
+		raw_time firstOriginTime;
 		
 		while (info.NextTime())
 		{
-			if (!firstOriginTime)
+			if (firstOriginTime.Empty())
 			{
 				firstOriginTime = info.Time().OriginDateTime();
 			}
 			else
 			{
-				if (*firstOriginTime != *info.Time().OriginDateTime())
+				if (firstOriginTime != info.Time().OriginDateTime())
 				{
 					itsLogger->Error("Origintime is not the same for all grids in info");
 					return NFmiTimeDescriptor();
 				}
 			}
 			
-			tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info.Time().ValidDateTime()->String("%Y%m%d")),
-									  boost::lexical_cast<long> (info.Time().ValidDateTime()->String("%H%M"))));
+			tlist.Add(new NFmiMetTime(boost::lexical_cast<long> (info.Time().ValidDateTime().String("%Y%m%d")),
+									  boost::lexical_cast<long> (info.Time().ValidDateTime().String("%H%M"))));
 		}
 
 	}

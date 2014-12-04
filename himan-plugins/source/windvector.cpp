@@ -185,7 +185,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) +
+	myThreadedLogger->Info("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) +
 								" level " + static_cast<string> (forecastLevel));
 
 	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, useCudaInThisThread);

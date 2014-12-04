@@ -37,7 +37,7 @@ public:
 	 */
 
 	void Insert(info& anInfo, bool activeOnly = true);
-	std::vector<std::shared_ptr<himan::info>> GetInfo(const search_options& options);	
+	std::vector<std::shared_ptr<himan::info>> GetInfo(search_options& options);	
 	void Clean();
 
 	virtual std::string ClassName() const
@@ -59,7 +59,7 @@ public:
 private:
 	void SplitToPool(info& anInfo);
 	std::string UniqueName(const info& anInfo);
-	std::string UniqueNameFromOptions(const search_options& options);
+	std::string UniqueNameFromOptions(search_options& options);
 
 };
 

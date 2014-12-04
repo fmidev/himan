@@ -70,7 +70,7 @@ public:
      * @return Data for first param found.
      */
 
-    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const params& requestedParams, bool readPackedData = false);
+    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime, level requestedLevel, const params& requestedParams, bool readPackedData = false);
 
 	/**
 	 * @brief Fetch data based on given arguments.
@@ -90,7 +90,7 @@ public:
      * @return shared_ptr to info-instance
      */
 
-    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& requestedValidTime, const level& requestedLevel, const param& requestedParam, bool readPackedData = false, bool controlWaitTime = true);
+    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime, level requestedLevel, param requestedParam, bool readPackedData = false, bool controlWaitTime = true);
 
 	/**
 	 * @brief Set flag for level transform
@@ -108,7 +108,7 @@ public:
 
 private:
 
-    std::vector<std::shared_ptr<info>> FromCache(const search_options& options);
+    std::vector<std::shared_ptr<info>> FromCache(search_options& options);
 
 	/**
 	 * @brief Get data and metadata from a file.
@@ -128,7 +128,7 @@ private:
 	 */
 
     std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files,
-												const search_options& options,
+												search_options& options,
 												bool readContents = true,
 												bool readPackedData = false);
 
@@ -144,7 +144,7 @@ private:
      * @return A vector of shared_ptr'd infos.
      */
 
-    std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, const search_options& options, bool readContents = true, bool readPackedData = false);
+    std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false);
 	
     /**
      * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
@@ -157,7 +157,7 @@ private:
      * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
      */
 
-    std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, const search_options& options, bool readContents = true);
+    std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, search_options& options, bool readContents = true);
 
 	/**
 	 * @brief Map level definitions between models and code tables
@@ -180,7 +180,7 @@ private:
      * @param fetchFromAuxiliaryFiles Determine whether to read data from aux files
      * @return Vector of infos, zero sized if none found
      */
-	std::vector<std::shared_ptr<info>> FetchFromProducer(const search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles);
+	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles);
 
 	/**
 	 * @brief Function to perform area interpolation

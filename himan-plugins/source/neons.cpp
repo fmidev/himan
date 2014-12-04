@@ -52,14 +52,14 @@ void neons::InitPool()
 	}
 }
 
-vector<string> neons::Files(const search_options& options)
+vector<string> neons::Files(search_options& options)
 {
 
 	Init();
 
 	vector<string> files;
 
-	string analtime = options.time.OriginDateTime()->String("%Y%m%d%H%M%S");
+	string analtime = options.time.OriginDateTime().String("%Y%m%d%H%M%S");
 	string levelvalue = boost::lexical_cast<string> (options.level.Value());
 
 	string ref_prod = options.prod.Name();

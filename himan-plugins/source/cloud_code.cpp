@@ -62,7 +62,7 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, false);
 	info_t NInfo = Fetch(forecastTime, NKLevel, NParams, false);

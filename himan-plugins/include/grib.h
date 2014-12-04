@@ -67,7 +67,7 @@ public:
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options, bool readContents = true, bool readPackedData = false);
+	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false);
 
 	bool ToFile(info& anInfo, std::string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption);
 

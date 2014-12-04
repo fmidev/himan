@@ -79,10 +79,10 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	forecast_time forecastTimePrev = myTargetInfo->Time();
-	forecastTimePrev.ValidDateTime()->Adjust(timeResolution, -paramStep);
+	forecastTimePrev.ValidDateTime().Adjust(timeResolution, -paramStep);
 
 	level forecastLevel = level(himan::kHeight, 0, "Height"); 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
 	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, false);

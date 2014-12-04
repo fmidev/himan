@@ -184,7 +184,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 

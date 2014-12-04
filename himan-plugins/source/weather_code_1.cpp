@@ -63,7 +63,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	/*
 	 * In order to know which source precipitation parameter should be used we need
@@ -112,7 +112,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	info_t RRInfo = Fetch(forecastTime, forecastLevel, RRParam, false);
 
 	forecast_time nextTimeStep = forecastTime;
-	nextTimeStep.ValidDateTime()->Adjust(myTargetInfo->Time().StepResolution(), paramStep);
+	nextTimeStep.ValidDateTime().Adjust(myTargetInfo->Time().StepResolution(), paramStep);
 
 	info_t NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, false);
 

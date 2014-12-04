@@ -41,8 +41,8 @@ fetcher::fetcher()
 }
 
 shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config,
-										const forecast_time& requestedTime,
-										const level& requestedLevel,
+										forecast_time requestedTime,
+										level requestedLevel,
 										const params& requestedParams,
 										bool readPackedData)
 {
@@ -98,7 +98,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	optsStr = optsStr.substr(0, optsStr.size()-1);
 
-	optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
+	optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
 
 	optsStr += " param(s): ";
 	
@@ -119,9 +119,9 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 
 shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config,
-										const forecast_time& requestedTime,
-										const level& requestedLevel,
-										const param& requestedParam,
+										forecast_time requestedTime,
+										level requestedLevel,
+										param requestedParam,
 										bool readPackedData,
 										bool controlWaitTime)
 {
@@ -162,7 +162,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 				}
 			}			
 			
-			const search_options opts (requestedTime, requestedParam, newLevel, sourceProd, config);
+			search_options opts (requestedTime, requestedParam, newLevel, sourceProd, config);
 
 			theInfos = FetchFromProducer(opts, readPackedData, (waitedSeconds == 0));
 		}
@@ -211,7 +211,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 			optsStr = optsStr.substr(0, optsStr.size()-1);
 
-			optsStr += " origintime: " + requestedTime.OriginDateTime()->String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
+			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
 			optsStr += " param: " + requestedParam.Name();
 			optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
 
@@ -279,7 +279,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, const search_options& options, bool readContents, bool readPackedData)
+vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, search_options& options, bool readContents, bool readPackedData)
 {
 
 	vector<shared_ptr<himan::info>> allInfos ;
@@ -332,14 +332,14 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, c
 	return allInfos;
 }
 
-vector<shared_ptr<himan::info> > fetcher::FromCache(const search_options& options)
+vector<shared_ptr<himan::info> > fetcher::FromCache(search_options& options)
 {
 	vector<shared_ptr<himan::info>> infos = itsCache->GetInfo(options);
 
 	return infos;
 }
 
-vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, const search_options& options, bool readContents, bool readPackedData)
+vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, search_options& options, bool readContents, bool readPackedData)
 {
 
 	shared_ptr<grib> g = dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
@@ -349,7 +349,7 @@ vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, cons
 	return infos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, const search_options& options, bool readContents)
+vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, search_options& options, bool readContents)
 {
 
 	shared_ptr<querydata> q = dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
@@ -432,7 +432,7 @@ bool fetcher::UseCache() const
 }
 
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(const search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles)
+vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles)
 {
 
 	vector<shared_ptr<info>> ret;

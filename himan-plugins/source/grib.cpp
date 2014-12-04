@@ -274,7 +274,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 	return true;
 }
 
-vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool readContents, bool readPackedData)
+vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, search_options& options, bool readContents, bool readPackedData)
 {
 
 	auto n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
@@ -478,13 +478,13 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		t.StepResolution(timeResolution);
 
-		t.ValidDateTime()->Adjust(timeResolution, static_cast<int> (step));
+		t.ValidDateTime().Adjust(timeResolution, static_cast<int> (step));
 
 		if (t != options.time)
 		{
 			itsLogger->Trace("Times do not match");
-			itsLogger->Trace("OriginDateTime: " + options.time.OriginDateTime()->String() + " (requested) vs " + t.OriginDateTime()->String() + " (found)");
-			itsLogger->Trace("ValidDateTime: " + options.time.ValidDateTime()->String() + " (requested) vs " + t.ValidDateTime()->String() + " (found)");
+			itsLogger->Trace("OriginDateTime: " + options.time.OriginDateTime().String() + " (requested) vs " + t.OriginDateTime().String() + " (found)");
+			itsLogger->Trace("ValidDateTime: " + options.time.ValidDateTime().String() + " (requested) vs " + t.ValidDateTime().String() + " (found)");
 			itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(options.time.StepResolution())) + " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) + " (found)");
 
 			continue;
@@ -976,8 +976,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 void grib::WriteTime(info& anInfo)
 {
-	itsGrib->Message().DataDate(boost::lexical_cast<long> (anInfo.Time().OriginDateTime()->String("%Y%m%d")));
-	itsGrib->Message().DataTime(boost::lexical_cast<long> (anInfo.Time().OriginDateTime()->String("%H%M")));
+	itsGrib->Message().DataDate(boost::lexical_cast<long> (anInfo.Time().OriginDateTime().String("%Y%m%d")));
+	itsGrib->Message().DataTime(boost::lexical_cast<long> (anInfo.Time().OriginDateTime().String("%H%M")));
 
 	if (itsGrib->Message().Edition() == 1)
 	{

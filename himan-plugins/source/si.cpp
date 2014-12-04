@@ -115,8 +115,8 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	while (AdjustNonLeadingDimension(myTargetInfo))
 	{
 
-		myThreadedLogger->Debug("Calculating time " + myTargetInfo->Time().ValidDateTime()->String("%Y%m%d%H%M") +
-								" level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		myThreadedLogger->Debug("Calculating time " + static_cast<string> (myTargetInfo->Time().ValidDateTime()) +
+								" level " + static_cast<string> (myTargetInfo->Level()));
 
 		// Source infos
 

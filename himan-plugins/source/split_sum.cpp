@@ -260,7 +260,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
 	{
 
-		myThreadedLogger->Info("Calculating parameter " + myTargetInfo->Param().Name() + " time " + static_cast<string>(*forecastTime.ValidDateTime()) +
+		myThreadedLogger->Info("Calculating parameter " + myTargetInfo->Param().Name() + " time " + static_cast<string>(forecastTime.ValidDateTime()) +
 												  " level " + static_cast<string> (forecastLevel));
 
 		string parmName = myTargetInfo->Param().Name();
@@ -341,7 +341,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 				// Data from previous time step
 				forecast_time prevTimeStep = myTargetInfo->Time();
 
-				prevTimeStep.ValidDateTime()->Adjust(prevTimeStep.StepResolution(), -paramStep);
+				prevTimeStep.ValidDateTime().Adjust(prevTimeStep.StepResolution(), -paramStep);
 
 				prevSumInfo = FetchSourceData(myTargetInfo, prevTimeStep);
 
@@ -475,7 +475,7 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 		}
 
 		forecast_time wantedTimeStep(myTargetInfo->Time());
-		wantedTimeStep.ValidDateTime()->Adjust(timeResolution, -step);
+		wantedTimeStep.ValidDateTime().Adjust(timeResolution, -step);
 
 		if (wantedTimeStep.Step() >= 0)
 		{
@@ -512,7 +512,7 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 		throw runtime_error(ClassName() + ": Invalid time resolution value: " + HPTimeResolutionToString.at(timeResolution));
 	}
 
-	itsLogger->Trace("Target time is " + static_cast<string> (*myTargetInfo->Time().ValidDateTime()));
+	itsLogger->Trace("Target time is " + static_cast<string> (myTargetInfo->Time().ValidDateTime()));
 
 	if (!prevInfo)
 	{
@@ -525,14 +525,14 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 
 		for (int i = 0; !prevInfo && i <= maxSteps*step; i++)
 		{
-			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, -step);
+			wantedTimeStep.ValidDateTime().Adjust(timeResolution, -step);
 
 			if (wantedTimeStep.Step() < 0)
 			{
 				continue;
 			}
 
-			itsLogger->Debug("Trying time " + static_cast<string> (*wantedTimeStep.ValidDateTime()));
+			itsLogger->Debug("Trying time " + static_cast<string> (wantedTimeStep.ValidDateTime()));
 			prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
 
 			if (prevInfo)
@@ -553,9 +553,9 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 
 		for (int i = 0; !curInfo && i <= maxSteps*step; i++)
 		{
-			wantedTimeStep.ValidDateTime()->Adjust(timeResolution, step);
+			wantedTimeStep.ValidDateTime().Adjust(timeResolution, step);
 
-			itsLogger->Debug("Trying time " + static_cast<string> (*wantedTimeStep.ValidDateTime()));
+			itsLogger->Debug("Trying time " + static_cast<string> (wantedTimeStep.ValidDateTime()));
 			curInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
 
 			if (curInfo)
