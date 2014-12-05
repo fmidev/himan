@@ -72,6 +72,14 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 	 * Create required descriptors
 	 */
 
+	shared_ptr<NFmiQueryData> qdata;
+
+	if (theInfo.Grid()->Type() != kRegularGrid)
+	{
+		itsLogger->Error("Currently unable to write point data");
+		return qdata;
+	}
+	
 	NFmiParamDescriptor pdesc = CreateParamDescriptor(theInfo, activeOnly);
 	NFmiTimeDescriptor tdesc = CreateTimeDescriptor(theInfo, activeOnly);
 	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(theInfo, activeOnly);
@@ -82,8 +90,6 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 	assert(hdesc.Size());
 	assert(vdesc.Size());
 
-	shared_ptr<NFmiQueryData> qdata;
-	
 	if (pdesc.Size() == 0)
 	{
 		itsLogger->Error("No valid parameters found");
@@ -174,7 +180,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 {
 	bool swapped = false;
-	HPScanningMode originalMode = theInfo.Grid()->ScanningMode();
+	HPScanningMode originalMode = dynamic_cast<regular_grid*> (theInfo.Grid())->ScanningMode();
 
 	if (originalMode == kTopLeft)
 	{
@@ -184,7 +190,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 
 		swapped = true;
 
-		theInfo.Grid()->Swap(kBottomLeft);
+		dynamic_cast<regular_grid*> (theInfo.Grid())->Swap(kBottomLeft);
 
 	}
 	else if (originalMode != kBottomLeft)
@@ -205,7 +211,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 
 	if (swapped)
 	{
-		theInfo.Grid()->Swap(originalMode);
+		dynamic_cast<regular_grid*> (theInfo.Grid())->Swap(originalMode);
 	}
 
 	return true;
@@ -300,11 +306,11 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 	 *
 	 * TODO: interpolate to same grid if they are different ???
 	 */
-	
+
 	if (!activeOnly && info.SizeTimes() * info.SizeParams() * info.SizeLevels() > 1)
 	{
 		info.ResetTime();
-		const grid* firstGrid = 0;
+		const regular_grid* firstGrid = 0;
 
 		while (info.NextTime())
 		{
@@ -318,25 +324,26 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 
 				while (info.NextParam())
 				{
+					regular_grid* g = dynamic_cast<regular_grid*> (info.Grid());
+
+					if (!g)
+					{
+						continue;
+					}
 
 					if (!firstGrid)
 					{
-						firstGrid = info.Grid();
+						firstGrid = g;
 						continue;
 					}
 
-					if (!info.Grid())
-					{
-						continue;
-					}
-
-					if (*firstGrid != *info.Grid())
+					if (*firstGrid != *g)
 					{
 						itsLogger->Error("All grids in info are not equal, unable to write querydata");
 						return NFmiHPlaceDescriptor();
 					}
 
-					assert(info.Grid()->ScanningMode() == kBottomLeft);
+					assert(g->ScanningMode() == kBottomLeft);
 				}
 			}
 		}
@@ -344,21 +351,23 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 
 	NFmiArea* theArea = 0;
 
-	switch (info.Grid()->Projection())
+	regular_grid* g = dynamic_cast<regular_grid*> (info.Grid());
+	
+	switch (g->Projection())
 	{
 		case kLatLonProjection:
 		{
-			theArea = new NFmiLatLonArea(NFmiPoint(info.Grid()->BottomLeft().X(), info.Grid()->BottomLeft().Y()),
-										 NFmiPoint(info.Grid()->TopRight().X(), info.Grid()->TopRight().Y()));
+			theArea = new NFmiLatLonArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
+										 NFmiPoint(g->TopRight().X(), g->TopRight().Y()));
 
 			break;
 		}
 
 		case kRotatedLatLonProjection:
 		{
-			theArea = new NFmiRotatedLatLonArea(NFmiPoint(info.Grid()->BottomLeft().X(), info.Grid()->BottomLeft().Y()),
-												NFmiPoint(info.Grid()->TopRight().X(), info.Grid()->TopRight().Y()),
-												NFmiPoint(info.Grid()->SouthPole().X(), info.Grid()->SouthPole().Y()),
+			theArea = new NFmiRotatedLatLonArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
+												NFmiPoint(g->TopRight().X(), g->TopRight().Y()),
+												NFmiPoint(g->SouthPole().X(), g->SouthPole().Y()),
 												NFmiPoint(0.,0.), // default values
 												NFmiPoint(1.,1.), // default values
 												true);
@@ -368,10 +377,10 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 
 		case kStereographicProjection:
 		{
-			theArea = new NFmiStereographicArea(NFmiPoint(info.Grid()->BottomLeft().X(), info.Grid()->BottomLeft().Y()),
-												info.Grid()->Di() * static_cast<double> ((info.Grid()->Ni()-1)),
-												info.Grid()->Dj() * static_cast<double> ((info.Grid()->Nj()-1)),
-												info.Grid()->Orientation());
+			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
+												g->Di() * static_cast<double> ((g->Ni()-1)),
+												g->Dj() * static_cast<double> ((g->Nj()-1)),
+												g->Orientation());
 
 			break;
 
@@ -383,7 +392,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 			break;
 	}
 
-	NFmiGrid theGrid (theArea, info.Grid()->Ni(), info.Grid()->Nj());
+	NFmiGrid theGrid (theArea, g->Ni(), g->Nj());
 
 	delete theArea;
 
@@ -423,7 +432,7 @@ shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const searc
 shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
 {
 	auto newInfo = make_shared<info> ();
-	grid* newGrid = new grid();
+	regular_grid newGrid;
 
 	NFmiQueryInfo qinfo = theData.get();
 
@@ -500,28 +509,28 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	// Grid
 
-	newGrid->ScanningMode(kBottomLeft);
-	newGrid->UVRelativeToGrid(false);
+	newGrid.ScanningMode(kBottomLeft);
+	newGrid.UVRelativeToGrid(false);
 
 	switch (qinfo.Area()->ClassId())
 	{
 		case kNFmiLatLonArea:
-			newGrid->Projection(kLatLonProjection);
+			newGrid.Projection(kLatLonProjection);
 			break;
 
 		case kNFmiRotatedLatLonArea:
 		{
-			newGrid->Projection(kRotatedLatLonProjection);
+			newGrid.Projection(kRotatedLatLonProjection);
 			NFmiPoint southPole = reinterpret_cast<const NFmiRotatedLatLonArea*> (qinfo.Area())->SouthernPole();
-			newGrid->SouthPole(point(southPole.X(), southPole.Y()));
+			newGrid.SouthPole(point(southPole.X(), southPole.Y()));
 		}
 			break;
 
 		case kNFmiStereographicArea:
-			newGrid->Projection(kStereographicProjection);
-			newGrid->Orientation(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->Orientation());
-			//newGrid->Di(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->);
-			//newGrid->Dj(itsGrib->Message()->YLengthInMeters());
+			newGrid.Projection(kStereographicProjection);
+			newGrid.Orientation(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->Orientation());
+			//newGrid.Di(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->);
+			//newGrid.Dj(itsGrib->Message()->YLengthInMeters());
 
 			break;
 	}
@@ -529,10 +538,10 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	size_t ni = qinfo.Grid()->XNumber();
 	size_t nj = qinfo.Grid()->YNumber();
 	
-	newGrid->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
-	newGrid->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
+	newGrid.BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
+	newGrid.TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
 
-	newInfo->Create(newGrid);
+	newInfo->Create(&newGrid);
 
 	// Copy data
 

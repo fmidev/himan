@@ -142,6 +142,14 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 	stringstream query;
 
+	if (resultInfo.Grid()->Type() != kRegularGrid)
+	{
+		itsLogger->Error("Only grid data can be stored to neons for now");
+		return false;
+	}
+
+	const regular_grid* g = dynamic_cast<regular_grid*> (resultInfo.Grid());
+
 	/*
 	 * 1. Get grid information
 	 * 2. Get model information
@@ -149,7 +157,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 	 * 4. Insert or update
 	 */
 
-	himan::point firstGridPoint = resultInfo.Grid()->FirstGridPoint();
+	himan::point firstGridPoint = g->FirstGridPoint();
 
 	/*
 	 * pas_latitude and pas_longitude cannot be checked programmatically
@@ -161,8 +169,8 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 	query 	<< "SELECT geom_name "
 			<< "FROM grid_reg_geom "
-			<< "WHERE row_cnt = " << resultInfo.Nj()
-			<< " AND col_cnt = " << resultInfo.Ni()
+			<< "WHERE row_cnt = " << g->Nj()
+			<< " AND col_cnt = " << g->Ni()
 			<< " AND lat_orig = " << (firstGridPoint.Y() * 1e3)
 			<< " AND long_orig = " << (firstGridPoint.X() * 1e3);
 //			<< " AND pas_latitude = " << static_cast<long> (resultInfo.Dj() * 1e3)

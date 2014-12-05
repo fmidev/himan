@@ -11,7 +11,7 @@
 #include "timer_factory.h"
 #include "producer.h"
 #include "util.h"
-#include "grid.h"
+#include "regular_grid.h"
 #include <boost/filesystem.hpp>
 
 using namespace std;
@@ -185,10 +185,10 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 
 #ifdef GRIB_WRITE_PACKED_DATA
 
-	if (anInfo.Grid()->IsPackedData() && anInfo.Grid()->PackedData().ClassName() == "simple_packed")
+	if (anInfo.Grid()->IsPackedData() && dynamic_cast<regular_grid*> (anInfo.Grid())->PackedData().ClassName() == "simple_packed")
 	{
 		itsLogger->Trace("Writing packed data");
-		simple_packed* s = reinterpret_cast<simple_packed*> (&anInfo.Grid()->PackedData());
+		simple_packed* s = reinterpret_cast<simple_packed*> (&dynamic_cast<regular_grid*> (anInfo.Grid())->PackedData());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
 		itsGrib->Message().BinaryScaleFactor(s->coefficients.binaryScaleFactor);
@@ -206,7 +206,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 #endif
 	{
 		itsLogger->Trace("Writing unpacked data");
-		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long> (anInfo.Ni() * anInfo.Nj()));
+		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long> (anInfo.Grid()->Size()));
 	}
 
 	if (edition == 2)
@@ -558,11 +558,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 		// END VALIDATION OF SEARCH PARAMETERS
 
 		shared_ptr<info> newInfo (new info());
-		grid* newGrid = new grid();
+		regular_grid newGrid;
 
 		producer prod(itsGrib->Message().Centre(), process);
 
-		newGrid->AB(ab);
+		newGrid.AB(ab);
 
 		newInfo->Producer(prod);
 
@@ -594,20 +594,20 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 		switch (itsGrib->Message().NormalizedGridType())
 		{
 		case 0:
-			newGrid->Projection(kLatLonProjection);
+			newGrid.Projection(kLatLonProjection);
 			break;
 
 		case 5:
-			newGrid->Projection(kStereographicProjection);
+			newGrid.Projection(kStereographicProjection);
 
-			newGrid->Orientation(itsGrib->Message().GridOrientation());
-			newGrid->Di(itsGrib->Message().XLengthInMeters());
-			newGrid->Dj(itsGrib->Message().YLengthInMeters());
+			newGrid.Orientation(itsGrib->Message().GridOrientation());
+			newGrid.Di(itsGrib->Message().XLengthInMeters());
+			newGrid.Dj(itsGrib->Message().YLengthInMeters());
 			break;
 
 		case 10:
-			newGrid->Projection(kRotatedLatLonProjection);
-			newGrid->SouthPole(himan::point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY()));
+			newGrid.Projection(kRotatedLatLonProjection);
+			newGrid.SouthPole(himan::point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY()));
 			break;
 
 		default:
@@ -642,11 +642,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			throw runtime_error("WHAT?");
 		}
 
-		newGrid->ScanningMode(m);
+		newGrid.ScanningMode(m);
 
-		if (newGrid->Projection() == kRotatedLatLonProjection)
+		if (newGrid.Projection() == kRotatedLatLonProjection)
 		{
-			newGrid->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
+			newGrid.UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
 		}
 
 		double X0 = itsGrib->Message().X0();
@@ -664,7 +664,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			X0 -= 360;
 		}
 
-		if (newGrid->Projection() == kStereographicProjection)
+		if (newGrid.Projection() == kStereographicProjection)
 		{
 			/*
 			 * Do not support stereographic projections but in bottom left scanning mode.
@@ -673,7 +673,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			 * but lets not do that unless it's absolutely necessary.
 			 */
 			
-			if (newGrid->ScanningMode() != kBottomLeft)
+			if (newGrid.ScanningMode() != kBottomLeft)
 			{
 				itsLogger->Error(ClassName() + ": stereographic projection only supported when scanning mode is bottom left");
 				continue;
@@ -681,13 +681,13 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 
 			const point first(X0, Y0);
 
-			newGrid->BottomLeft(first);
+			newGrid.BottomLeft(first);
 
-			assert(newGrid->ScanningMode() == kBottomLeft);
+			assert(newGrid.ScanningMode() == kBottomLeft);
 			
-			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(first, newGrid->Orientation(), ni, nj, newGrid->Di(), newGrid->Dj());
+			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(first, newGrid.Orientation(), ni, nj, newGrid.Di(), newGrid.Dj());
 
-			newGrid->TopRight(coordinates.second);
+			newGrid.TopRight(coordinates.second);
 		
 		}
 		else
@@ -716,11 +716,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 
 			pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),itsGrib->Message().jDirectionIncrement(), m);
 
-			newGrid->BottomLeft(coordinates.first);
-			newGrid->TopRight(coordinates.second);
+			newGrid.BottomLeft(coordinates.first);
+			newGrid.TopRight(coordinates.second);
 		}
 
-		newInfo->Create(newGrid);
+		newInfo->Create(&newGrid);
 
 		// Set descriptors
 
@@ -779,7 +779,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 
 				delete [] bitmap;
 			}
-			newInfo->Grid()->PackedData(move(packed));
+			dynamic_cast<regular_grid*> (newInfo->Grid())->PackedData(move(packed));
 
 		}
 		else
@@ -852,8 +852,10 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 
 void grib::WriteAreaAndGrid(info& anInfo)
 {
-	himan::point firstGridPoint = anInfo.Grid()->FirstGridPoint();
-	himan::point lastGridPoint = anInfo.Grid()->LastGridPoint();
+	regular_grid* g = dynamic_cast<regular_grid*> (anInfo.Grid());
+
+	himan::point firstGridPoint = g->FirstGridPoint();
+	himan::point lastGridPoint = g->LastGridPoint();
 
 	long edition = itsGrib->Message().Edition();
 	
@@ -875,8 +877,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			itsGrib->Message().Y0(firstGridPoint.Y());
 			itsGrib->Message().Y1(lastGridPoint.Y());
 
-			itsGrib->Message().iDirectionIncrement(anInfo.Di());
-			itsGrib->Message().jDirectionIncrement(anInfo.Dj());
+			itsGrib->Message().iDirectionIncrement(g->Di());
+			itsGrib->Message().jDirectionIncrement(g->Dj());
 
 			break;
 		}
@@ -898,15 +900,15 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			itsGrib->Message().X1(lastGridPoint.X());
 			itsGrib->Message().Y1(lastGridPoint.Y());
 
-			itsGrib->Message().SouthPoleX(anInfo.Grid()->SouthPole().X());
-			itsGrib->Message().SouthPoleY(anInfo.Grid()->SouthPole().Y());
+			itsGrib->Message().SouthPoleX(g->SouthPole().X());
+			itsGrib->Message().SouthPoleY(g->SouthPole().Y());
 
-			itsGrib->Message().iDirectionIncrement(anInfo.Grid()->Di());
-			itsGrib->Message().jDirectionIncrement(anInfo.Grid()->Dj());
+			itsGrib->Message().iDirectionIncrement(g->Di());
+			itsGrib->Message().jDirectionIncrement(g->Dj());
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().UVRelativeToGrid(anInfo.Grid()->UVRelativeToGrid());
+			itsGrib->Message().UVRelativeToGrid(g->UVRelativeToGrid());
 
 			break;
 		}
@@ -922,28 +924,28 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().X0(anInfo.Grid()->BottomLeft().X());
-			itsGrib->Message().Y0(anInfo.Grid()->BottomLeft().Y());
+			itsGrib->Message().X0(g->BottomLeft().X());
+			itsGrib->Message().Y0(g->BottomLeft().Y());
 
-			itsGrib->Message().GridOrientation(anInfo.Grid()->Orientation());
+			itsGrib->Message().GridOrientation(g->Orientation());
 
-			itsGrib->Message().XLengthInMeters(anInfo.Grid()->Di());
-			itsGrib->Message().YLengthInMeters(anInfo.Grid()->Dj());
+			itsGrib->Message().XLengthInMeters(g->Di());
+			itsGrib->Message().YLengthInMeters(g->Dj());
 			break;
 		}
 
 		default:
-			throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (anInfo.Grid()->Projection()));
+			throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (g->Projection()));
 			break;
 	}
 
-	itsGrib->Message().SizeX(static_cast<long> (anInfo.Ni()));
-	itsGrib->Message().SizeY(static_cast<long> (anInfo.Nj()));
+	itsGrib->Message().SizeX(static_cast<long> (g->Ni()));
+	itsGrib->Message().SizeY(static_cast<long> (g->Nj()));
 
 	bool iNegative = itsGrib->Message().IScansNegatively();
 	bool jPositive = itsGrib->Message().JScansPositively();
 
-	switch (anInfo.Grid()->ScanningMode())
+	switch (g->ScanningMode())
 	{
 		case kTopLeft:
 			iNegative = false;

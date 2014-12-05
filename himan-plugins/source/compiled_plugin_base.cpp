@@ -115,17 +115,24 @@ bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourc
 
 bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode targetScanningMode)
 {
+	bool ret = false;
 
-	if (myTargetInfo->Grid()->ScanningMode() != targetScanningMode)
+	if (myTargetInfo->Grid()->Type() == kRegularGrid)
 	{
-		HPScanningMode originalMode = myTargetInfo->Grid()->ScanningMode();
+		regular_grid* g = dynamic_cast<regular_grid*> (myTargetInfo->Grid());
+		if (g->ScanningMode() != targetScanningMode)
+		{
+			HPScanningMode originalMode = g->ScanningMode();
 
-		myTargetInfo->Grid()->ScanningMode(targetScanningMode);
+			g->ScanningMode(targetScanningMode);
 
-		myTargetInfo->Grid()->Swap(originalMode);
+			g->Swap(originalMode);
+		}
+
+		return true;
 	}
 
-	return true;
+	return ret;
 }
 
 void compiled_plugin_base::WriteToFile(const info& targetInfo) const
@@ -405,14 +412,15 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{
 		info_t tempInfo = *it;
+		regular_grid* g = dynamic_cast<regular_grid*> (tempInfo->Grid());
 
-		if (tempInfo->Grid()->PackedData().packedLength == 0)
+		if (g->PackedData().packedLength == 0)
 		{
 			// Safeguard: This particular info does not have packed data
 			continue;
 		}
 
-		assert(tempInfo->Grid()->PackedData().ClassName() == "simple_packed");
+		assert(g->PackedData().ClassName() == "simple_packed");
 
 		util::Unpack({ tempInfo->Grid() });
 
@@ -424,6 +432,7 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 }
 #endif
 
+/*
 bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids) const
 {
 	if (grids.size() <= 1)
@@ -448,7 +457,7 @@ bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids
 	}
 
 	return true;
-}
+}*/
 
 bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
 {
@@ -476,7 +485,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
+			assert(dynamic_cast<regular_grid*> (ret->Grid())->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 		}
@@ -506,7 +515,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
+			assert(dynamic_cast<regular_grid*> (ret->Grid())->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 		}
@@ -521,11 +530,4 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	}
 
 	return ret;
-}
-
-info* compiled_plugin_base::FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked) const
-{
-	auto r = Fetch(theTime,theLevel,theParam,false);
-	assert(r);
-	return r.get();
 }

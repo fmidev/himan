@@ -72,7 +72,7 @@ void cache::SplitToPool(info& anInfo)
 	if (anInfo.Grid()->IsPackedData())
 	{
 		itsLogger->Trace("Removing packed data from cached info");
-		anInfo.Grid()->PackedData().Clear();
+		dynamic_cast<regular_grid*> (anInfo.Grid())->PackedData().Clear();
 	}
 #endif
 	

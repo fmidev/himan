@@ -236,31 +236,42 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (itsDoInterpolation)
 	{
-		if (*theInfos[0]->Grid() != *baseInfo->Grid())
+		if (baseInfo->Grid()->Type() == kRegularGrid)
 		{
-			itsLogger->Trace("Interpolating area");
-			InterpolateArea(baseInfo, {theInfos[0]});
-		}
-		else if (theInfos[0]->Grid()->ScanningMode() != baseInfo->Grid()->ScanningMode())
-		{
-			// == operator does not test scanning mode !
-			itsLogger->Trace("Swapping area");
-#ifdef HAVE_CUDA
-			if (theInfos[0]->Grid()->IsPackedData())
+			const regular_grid* bg = dynamic_cast<regular_grid*> (baseInfo->Grid());
+			regular_grid* g = dynamic_cast<regular_grid*> (theInfos[0]->Grid());
+
+			if (*g != *bg)
 			{
-				// must unpack before swapping
-
-				util::Unpack({theInfos[0]->Grid()});
+				itsLogger->Trace("Interpolating area");
+				InterpolateArea(baseInfo, {theInfos[0]});
 			}
-#endif
-			theInfos[0]->Grid()->Swap(baseInfo->Grid()->ScanningMode());
+			else if (g->ScanningMode() != bg->ScanningMode())
+			{
+				// == operator does not test scanning mode !
+				itsLogger->Trace("Swapping area");
+	#ifdef HAVE_CUDA
+				if (theInfos[0]->Grid()->IsPackedData())
+				{
+					// must unpack before swapping
 
+					util::Unpack({theInfos[0]->Grid()});
+				}
+	#endif
+				g->Swap(bg->ScanningMode());
+
+			}
+			else
+			{
+				itsLogger->Trace("Grids are natively equal");
+			}
+			assert(*bg == *g);
 		}
 		else
 		{
-			itsLogger->Trace("Grids are natively equal");
+			itsLogger->Fatal("Unable to interpolate to irregular grids yet");
+			exit(1);
 		}
-		assert(*baseInfo->Grid() == *theInfos[0]->Grid());
 	}
 	else
 	{
@@ -538,11 +549,21 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 
 	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{
-		if (!(*it) || *(base->Grid()) == *((*it)->Grid()))
+		if (!(*it))
 		{
 			continue;
 		}
 
+		assert(base->Grid()->Type() == kRegularGrid);
+
+		regular_grid* g = dynamic_cast<regular_grid*> ((*it)->Grid());
+		const regular_grid* bg = dynamic_cast<regular_grid*> (base->Grid());
+
+		if (*g == *bg)
+		{
+			continue;
+		}
+		
 		// new data backend
 
 		unpacked targetData(base->Data().SizeX(), base->Data().SizeY());
@@ -577,29 +598,29 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 			targetData.Set(i, value);
 		}
 
-		(*it)->Grid()->Data(targetData);
-		(*it)->Grid()->BottomLeft(base->Grid()->BottomLeft());
-		(*it)->Grid()->TopRight(base->Grid()->TopRight());
-		(*it)->Grid()->Projection(base->Grid()->Projection());
-		(*it)->Grid()->SouthPole(base->Grid()->SouthPole());
-		(*it)->Grid()->Orientation(base->Grid()->Orientation());
-		(*it)->Grid()->ScanningMode(base->Grid()->ScanningMode());
+		g->Data(targetData);
+		g->BottomLeft(bg->BottomLeft());
+		g->TopRight(bg->TopRight());
+		g->Projection(bg->Projection());
+		g->SouthPole(bg->SouthPole());
+		g->Orientation(bg->Orientation());
+		g->ScanningMode(bg->ScanningMode());
 
 		// Newbase always normalizes data to +x+y
 		// So if source scanning mode is eg. +x-y, we have to swap the interpolated
 		// data to back to original scanningmode
 
-		if (base->Grid()->ScanningMode() != kBottomLeft)
+		if (g->ScanningMode() != kBottomLeft)
 		{
-			HPScanningMode targetMode = base->Grid()->ScanningMode();
+			HPScanningMode targetMode = bg->ScanningMode();
 
 			// this is what newbase did to the data
-			(*it)->Grid()->ScanningMode(kBottomLeft);
+			g->ScanningMode(kBottomLeft);
 
 			// let's swap it back
-			(*it)->Grid()->Swap(targetMode);
+			g->Swap(targetMode);
 
-			assert(targetMode == (*it)->Grid()->ScanningMode());
+			assert(targetMode == g->ScanningMode());
 
 		}
 	}

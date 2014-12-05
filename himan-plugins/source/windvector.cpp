@@ -364,6 +364,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			{
 				//const point regPoint = myTargetInfo->LatLon();
 				throw runtime_error("Rotation of stereographic UV coordinates not confirmed yet");
+#if 0
 				double j;
 
 				if (myTargetInfo->Grid()->ScanningMode() == kBottomLeft) //opts.j_scans_positive)
@@ -400,6 +401,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 					
 				U = regUV.X();
 				V = regUV.Y();
+#endif
 			}
 
 			double dir = 0;

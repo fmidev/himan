@@ -36,6 +36,12 @@ unstagger::unstagger()
 
 void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 {
+	if (conf->Info()->Grid()->Type() != kRegularGrid)
+	{
+		itsLogger->Error("Unable to stagger irregular grids");
+		return;
+	}
+	
 	Init(conf);
 
 	/*
@@ -81,8 +87,6 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	const param UParam("U-MS");
 	const param VParam("V-MS");
 
-	// ----	
-	
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	
@@ -105,7 +109,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 #ifdef HAVE_CUDA
 		if (UInfo->Grid()->IsPackedData())
 		{
-			assert(UInfo->Grid()->PackedData().ClassName() == "simple_packed");
+			assert(dynamic_cast<regular_grid*> (UInfo->Grid())->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({UInfo->Grid(), VInfo->Grid()});
 		}
@@ -149,12 +153,15 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	point bl = UInfo->Grid()->BottomLeft(), tr = UInfo->Grid()->TopRight();
 
-	UInfo->Grid()->BottomLeft(point(bl.X() - (UInfo->Grid()->Di() * 0.5), bl.Y()));
-	UInfo->Grid()->TopRight(point(tr.X() - (UInfo->Grid()->Di() * 0.5), tr.Y()));
+	double u_di = dynamic_cast<regular_grid*> (UInfo->Grid())->Di();
+	double v_dj = dynamic_cast<regular_grid*> (VInfo->Grid())->Dj();
+	
+	UInfo->Grid()->BottomLeft(point(bl.X() - (u_di * 0.5), bl.Y()));
+	UInfo->Grid()->TopRight(point(tr.X() - (u_di * 0.5), tr.Y()));
 
 	bl = VInfo->Grid()->BottomLeft(), tr = VInfo->Grid()->TopRight();
-	VInfo->Grid()->BottomLeft(point(bl.X(), bl.Y() - (VInfo->Grid()->Dj() * 0.5)));
-	VInfo->Grid()->TopRight(point(tr.X(), tr.Y() - (VInfo->Grid()->Dj() * 0.5)));
+	VInfo->Grid()->BottomLeft(point(bl.X(), bl.Y() - (v_dj * 0.5)));
+	VInfo->Grid()->TopRight(point(tr.X(), tr.Y() - (v_dj * 0.5)));
 
 	auto c = dynamic_pointer_cast <cache> (plugin_factory::Instance()->Plugin("cache"));
 

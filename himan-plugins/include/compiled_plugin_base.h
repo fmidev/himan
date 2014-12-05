@@ -180,9 +180,9 @@ protected:
 	 *
 	 * @param targetInfo info-class instance holding the data
 	 */
-
+public:
 	virtual void WriteToFile(const info& targetInfo) const;
-
+protected:
 	/**
 	 * @brief Determine if cuda can be used in this thread, and if so
 	 * set the environment.
@@ -365,9 +365,8 @@ protected:
 	 * @param returnPacked Flag for returning data either packed or unpacked
 	 * @return shared_ptr<info> on success, un-initialized shared_ptr if data not found
 	 */
-public:
+
 	info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked = false) const;
-	info* FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked = false) const;
 
 	/**
 	 * @brief Initialize compiled_plugin_base and set internal state.
@@ -380,10 +379,10 @@ public:
 protected:
 	info_t itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
+	std::unique_ptr<timer> itsTimer;
 	short itsThreadCount;
 
 private:
-	std::unique_ptr<timer> itsTimer;
 	std::unique_ptr<logger> itsBaseLogger;
 	bool itsPluginIsInitialized;
 	HPDimensionType itsLeadingDimension;
