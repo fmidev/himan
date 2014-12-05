@@ -36,12 +36,7 @@ unstagger::unstagger()
 
 void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-	if (conf->Info()->Grid()->Type() != kRegularGrid)
-	{
-		itsLogger->Error("Unable to stagger irregular grids");
-		return;
-	}
-	
+
 	Init(conf);
 
 	/*
@@ -77,20 +72,19 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	/*
-	 * Required source parameters
-	 *
-	 * eg. param PParam("P-Pa"); for pressure in pascals
-	 *
-	 */
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("unstagger Thread #" + boost::lexical_cast<string> (threadIndex));
+
+	if (myTargetInfo->Grid()->Type() != kRegularGrid)
+	{
+		itsLogger->Error("Unable to stagger irregular grids");
+		return;
+	}
 
 	const param UParam("U-MS");
 	const param VParam("V-MS");
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
-	
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("unstagger Thread #" + boost::lexical_cast<string> (threadIndex));
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
