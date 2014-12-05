@@ -46,7 +46,6 @@ const double kFloatMissing = 32700.; // From newbase
 enum HPPluginClass
 {
 	kUnknownPlugin = 0,
-	kInterpreted,
 	kCompiled,
 	kAuxiliary
 };
@@ -389,6 +388,21 @@ const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormT
 		(kGraupel, "graupel")
 		(kHail, "hail")
 		(kUnknownPrecipitationForm, "unknown");
+#endif
+
+enum HPGridType
+{
+	kUnknownGridType = 0,
+	kRegularGrid,
+	kIrregularGrid
+};
+
+
+#ifndef __CUDACC__
+const boost::unordered_map<HPGridType,const char*> HPGridTypeToString = ba::map_list_of
+		(kUnknownGridType, "unknown")
+		(kRegularGrid, "regular")
+		(kIrregularGrid, "irregular");
 #endif
 
 /**

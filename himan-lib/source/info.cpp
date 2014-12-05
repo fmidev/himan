@@ -138,16 +138,17 @@ void info::Create()
 			while (NextParam())
 				// Create empty placeholders
 			{
-				Grid(shared_ptr<grid> (new grid(itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation)));
-				
-				Data().Resize(itsNi,itsNj);
+				auto g = make_shared<regular_grid> (itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation);
 
 				if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
 				{
-					Grid()->Di(itsDi);
-					Grid()->Dj(itsDj);
+					g->Di(itsDi);
+					g->Dj(itsDj);
 				}
 
+				Grid(g);
+
+				Data().Resize(itsNi,itsNj);
 				Data().MissingValue(kFloatMissing);
 				Data().Fill(kFloatMissing);
 			}
@@ -176,7 +177,7 @@ void info::ReGrid()
 			{
 				assert(Grid());
 
-				auto newGrid = make_shared<grid> (*Grid());
+				auto newGrid = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (Grid()));
 				if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
 				{
 					newGrid->Di(itsDi);
@@ -211,7 +212,7 @@ void info::Create(const grid* baseGrid)
 			while (NextParam())
 				// Create empty placeholders
 			{
-				Grid(make_shared<grid> (*baseGrid));
+				Grid(make_shared<regular_grid> (*dynamic_cast<const regular_grid*> (baseGrid)));
 			}
 		}
 	}
@@ -279,7 +280,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 					exit(1);
 				}
 
-				Grid(make_shared<grid> (*otherInfo->Grid()));
+				Grid(make_shared<regular_grid> (*dynamic_cast<regular_grid*> (otherInfo->Grid())));
 			}
 		}
 	}
@@ -694,26 +695,6 @@ double info::Value() const
 	return Grid()->Data().At(itsLocationIndex);
 }
 
-size_t info::Ni() const
-{
-	return Grid()->Data().SizeX();
-}
-
-size_t info::Nj() const
-{
-	return Grid()->Data().SizeY();
-}
-
-double info::Di() const
-{
-	return Grid()->Di();
-}
-
-double info::Dj() const
-{
-	return Grid()->Dj();
-}
-
 bool info::StepSizeOverOneByte() const
 {
 	return itsStepSizeOverOneByte;
@@ -740,28 +721,30 @@ info_simple* info::ToSimple() const
 {
 	info_simple* ret = new info_simple();
 
-	ret->size_x = Grid()->Data().SizeX();
-	ret->size_y = Grid()->Data().SizeY();
+	regular_grid* g = dynamic_cast<regular_grid*> (Grid());
 
-	ret->di = Grid()->Di();
-	ret->dj = Grid()->Dj();
+	ret->size_x = g->Data().SizeX();
+	ret->size_y = g->Data().SizeY();
 
-	ret->first_lat = Grid()->FirstGridPoint().Y();
-	ret->first_lon = Grid()->FirstGridPoint().X();
+	ret->di = g->Di();
+	ret->dj = g->Dj();
 
-	ret->south_pole_lat = Grid()->SouthPole().Y();
-	ret->south_pole_lon = Grid()->SouthPole().X();
+	ret->first_lat = g->FirstGridPoint().Y();
+	ret->first_lon = g->FirstGridPoint().X();
 
-	if (Grid()->ScanningMode() == kTopLeft)
+	ret->south_pole_lat = g->SouthPole().Y();
+	ret->south_pole_lon = g->SouthPole().X();
+
+	if (g->ScanningMode() == kTopLeft)
 	{
 		ret->j_scans_positive = false;
 	}
-	else if (Grid()->ScanningMode() != kBottomLeft)
+	else if (g->ScanningMode() != kBottomLeft)
 	{
-		throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " + string(HPScanningModeToString.at(Grid()->ScanningMode())));
+		throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " + string(HPScanningModeToString.at(g->ScanningMode())));
 	}
 
-	if (Grid()->IsPackedData())
+	if (g->IsPackedData())
 	{
 
 		/*
@@ -769,14 +752,14 @@ info_simple* info::ToSimple() const
 		 * Also allocate page-locked memory for the unpacked data.
 		 */
 
-		assert(Grid()->PackedData().ClassName() == "simple_packed");
+		assert(g->PackedData().ClassName() == "simple_packed");
 		
-		ret->packed_values = reinterpret_cast<simple_packed*> (&Grid()->PackedData());
+		ret->packed_values = reinterpret_cast<simple_packed*> (&g->PackedData());
 
 	}
 
 	// Reserve a place for the unpacked data
-	ret->values = const_cast<double*> (Grid()->Data().ValuesAsPOD());
+	ret->values = const_cast<double*> (g->Data().ValuesAsPOD());
 	
 	return ret;
 }
@@ -809,31 +792,11 @@ void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
 
 point info::LatLon() const
 {
-	assert(Grid()->Projection() == kLatLonProjection || Grid()->Projection() == kRotatedLatLonProjection);
-
 	if (itsLocationIndex == kIteratorResetValue)
 	{
 		itsLogger->Error("Location iterator position is not set");
 		return point();
 	}
 
-	double j;
-	point firstPoint = Grid()->FirstGridPoint();
-
-	if (Grid()->ScanningMode() == kBottomLeft) //opts.j_scans_positive)
-	{
-		j = floor(static_cast<double> (itsLocationIndex / Grid()->Data().SizeX()));
-	}
-	else if (Grid()->ScanningMode() == kTopLeft)
-	{
-		j = static_cast<double> (Grid()->Nj()) - floor(static_cast<double> (itsLocationIndex / Grid()->Data().SizeX()));
-	}
-	else
-	{
-		throw runtime_error("Unsupported projection: " + string(HPScanningModeToString.at(Grid()->ScanningMode())));
-	}
-
-	double i = static_cast<double> (itsLocationIndex) - j * static_cast<double> (Grid()->Ni());
-
-	return point(firstPoint.X() + i * Grid()->Di(), firstPoint.Y() + j * Grid()->Dj());
+	return Grid()->LatLon(itsLocationIndex);
 }

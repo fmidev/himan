@@ -23,6 +23,11 @@ using namespace std;
 string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 {
 
+	if (info.Grid()->Type() != kRegularGrid)
+	{
+		throw runtime_error("Only regular grids are stored as files");
+	}
+
 	ostringstream fileName;
 	ostringstream base;
 
@@ -70,9 +75,9 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 					<< "_"
 					<< HPProjectionTypeToString.at(info.Grid()->Projection())
 					<< "_"
-					<< info.Ni()
+					<< dynamic_cast<regular_grid*> (info.Grid())->Ni()
 					<< "_"
-					<< info.Nj()
+					<< dynamic_cast<regular_grid*> (info.Grid())->Nj()
 					<< "_0_"
 					<< setw(3)
 					<< setfill('0')
@@ -633,7 +638,7 @@ void util::Unpack(initializer_list<grid*> grids)
 
 	for (auto it = grids.begin(); it != grids.end(); ++it)
 	{
-		grid* tempGrid = *it;
+		regular_grid* tempGrid = dynamic_cast<regular_grid*> (*it);
 
 		if (!tempGrid->IsPackedData())
 		{

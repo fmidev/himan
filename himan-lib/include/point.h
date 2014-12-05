@@ -9,6 +9,7 @@
 #define POINT_H
 
 #include <ostream>
+#include "himan_common.h"
 
 namespace himan
 {

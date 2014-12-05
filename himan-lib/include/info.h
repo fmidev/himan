@@ -15,7 +15,7 @@
 #include "raw_time.h"
 #include "himan_common.h"
 #include "producer.h"
-#include "grid.h"
+#include "regular_grid.h"
 #include <vector>
 #include "info_simple.h"
 #include <boost/lexical_cast.hpp>
@@ -379,30 +379,6 @@ public:
 	 */
 
 	void Merge(std::vector<std::shared_ptr<info>>& otherInfos);
-
-	/**
-	 * @return Number of point along X axis
-	 */
-
-	size_t Ni() const;
-
-	/**
-	 * @return Number of point along Y axis
-	 */
-
-	size_t Nj() const;
-
-	/**
-	 * @return Distance between two points in X axis in degrees
-	 */
-
-	double Di() const;
-
-	/**
-	 * @return Distance between two points in Y axis in degrees
-	 */
-
-	double Dj() const;
 
 	/**
 	 * @brief Initialize parameter iterator with new parameters
