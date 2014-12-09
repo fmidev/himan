@@ -26,7 +26,7 @@ public:
 	plugin_configuration& operator=(const plugin_configuration& other) = delete;
 
 	plugin_configuration(const configuration& theConfiguration);
-	plugin_configuration(const std::string& theName, const std::map<std::string,std::string>& theOptions);
+	plugin_configuration(const std::string& theName, const std::map<std::string, std::vector<std::string>>& theOptions);
 
 	~plugin_configuration() = default;
 
@@ -55,18 +55,6 @@ public:
 	std::string Name() const;
 
 	/**
-	 * @brief Return a map of options defined for a plugin.
-	 *
-	 * Options are extra specifiers, for example with windvector one can specify
-	 * 'for_ice' = true, these options are stored here.
-	 *
-	 * @return const reference to options map
-	 */
-
-    const std::map<std::string,std::string>& Options() const;
-    void Options(const std::map<std::string,std::string>& theOptions);
-
-	/**
 	 * @brief Add new element to options map
      * @param key Key name
      * @param value Value
@@ -83,11 +71,12 @@ public:
 	/**
 	 * @brief Get value for a given key
      * @param key Key name
-     * @return Value as string
+     * @return Value as string, empty string if key doesn't exist
      */
 
 	std::string GetValue(const std::string & key) const;
-    
+    const std::vector<std::string>& GetValueList(const std::string& key) const;
+
 	void Info(std::shared_ptr<info> theInfo);
 	std::shared_ptr<info> Info() const;
 
@@ -100,7 +89,7 @@ public:
 private:
 
 	std::string itsName;
-	std::map<std::string,std::string> itsOptions;
+	std::map<std::string,std::vector<std::string>> itsOptions;
 	std::shared_ptr<info> itsInfo;
 	std::shared_ptr<statistics> itsStatistics;
 };

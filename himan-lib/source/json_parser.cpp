@@ -287,6 +287,11 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	boost::property_tree::ptree& pq = pt.get_child("processqueue");
 
+	if (pq.empty())
+	{
+		throw runtime_error(ClassName() + ": processqueue missing");
+	}
+	
 	BOOST_FOREACH(boost::property_tree::ptree::value_type &element, pq)
 	{
 		std::shared_ptr<info> anInfo (new info(*baseInfo));
@@ -406,6 +411,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			throw runtime_error(ClassName() + ": plugin definitions not found");
 		}
 
+
 		BOOST_FOREACH(boost::property_tree::ptree::value_type &plugin, plugins)
 		{
 			shared_ptr<plugin_configuration> pc = make_shared<plugin_configuration> (*conf);
@@ -439,14 +445,25 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				}
 				else
 				{
-					pc->AddOption(key, value);
-				}
+					if (value.empty())
+					{
+						BOOST_FOREACH(boost::property_tree::ptree::value_type& listval, kv.second)
+						{
 
-				if (pc->Name().empty())
-				{
-					throw runtime_error(ClassName() + ": plugin name not found from configuration");
+							//pc->AddOption(key, value);
+							pc->AddOption(key, listval.second.get<string> (""));
+						}
+					}
+					else
+					{
+						pc->AddOption(key, value);
+					}
 				}
+			}
 
+			if (pc->Name().empty())
+			{
+				throw runtime_error(ClassName() + ": plugin name not found from configuration");
 			}
 
 			pc->Info(make_shared<info> (*anInfo));	// We have to have a copy for all configs.

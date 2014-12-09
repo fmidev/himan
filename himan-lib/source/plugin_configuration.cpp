@@ -36,7 +36,7 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
 	itsStatistics = make_shared<statistics> (*other.itsStatistics);
 }
 
-plugin_configuration::plugin_configuration(const string& theName, const map<string,string>& theOptions)
+plugin_configuration::plugin_configuration(const string& theName, const map<string,vector<string>>& theOptions)
 	: itsName(theName)
 	, itsOptions(theOptions)
 	, itsStatistics(new statistics)
@@ -45,17 +45,7 @@ plugin_configuration::plugin_configuration(const string& theName, const map<stri
 
 void plugin_configuration::AddOption(const string& key, const string& value)
 {
-	itsOptions[key] = value;
-}
-
-void plugin_configuration::Options(const map<string,string>& theOptions)
-{
-	itsOptions = theOptions;
-}
-
-const map<string,string>& plugin_configuration::Options() const
-{
-	return itsOptions;
+	itsOptions[key].push_back(value);
 }
 
 void plugin_configuration::Name(const string& theName)
@@ -76,14 +66,25 @@ bool plugin_configuration::Exists(const string & key) const
 string plugin_configuration::GetValue(const string & key) const
 {
 
-	map<string,string>::const_iterator iter = itsOptions.find(key);
+	map<string,vector<string>>::const_iterator iter = itsOptions.find(key);
 
 	if (iter == itsOptions.end())
 	{
 		return "";
 	}
 
-	return iter->second;
+	if (iter->second.size() > 1)
+	{
+		throw runtime_error("Key '" + key + "' is a multi-value key");
+	}
+
+	assert(iter->second.size() == 1);
+	return iter->second[0];
+}
+
+const vector<string>& plugin_configuration::GetValueList(const string& key) const
+{
+	return itsOptions.at(key);
 }
 
 shared_ptr<info> plugin_configuration::Info() const
@@ -202,9 +203,20 @@ ostream& plugin_configuration::Write(ostream& file) const
 	file << "<" << ClassName() << ">" << endl;
 	file << "__itsName__ " << itsName << endl;
 
-	for(map<string, string>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)
+	for(map<string, vector<string>>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)
 	{
-		file << "__" << iter->first << "__ " << iter->second << endl;
+		file << "__" << iter->first << "__ ";
+		
+		for (size_t i = 0; i < iter->second.size(); i++)
+		{
+			if (i > 1)
+			{
+				file << ",";
+			}
+			
+			file << iter->second[i] << endl;
+
+		}
 	}
 
 	configuration::Write(file);
