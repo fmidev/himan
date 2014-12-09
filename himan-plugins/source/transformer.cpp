@@ -50,7 +50,7 @@ void transformer::SetAdditionalParameters()
 	std::string itsSourceLevelType;
 	std::string SourceLevels;
 
-	if(itsConfiguration->Options().count("base"))
+	if(!itsConfiguration->GetValue("base").empty())
 	{
 		itsBase = boost::lexical_cast<double>(itsConfiguration->GetValue("base"));
 	}
@@ -59,7 +59,7 @@ void transformer::SetAdditionalParameters()
 		itsLogger->Warning("Base not specified, using default value 0.0");
 	}
 	
-	if(itsConfiguration->Options().count("scale"))
+	if(!itsConfiguration->GetValue("scale").empty())
 	{
 		itsScale = boost::lexical_cast<double>(itsConfiguration->GetValue("scale"));
 	}
@@ -68,7 +68,7 @@ void transformer::SetAdditionalParameters()
 		itsLogger->Warning("Scale not specified, using default value 1.0");
 	}
 
-	if(itsConfiguration->Options().count("target_univ_ID"))
+	if(!itsConfiguration->GetValue("target_univ_ID").empty())
 	{
 		itsTargetUnivID = boost::lexical_cast<int>(itsConfiguration->GetValue("target_univ_id"));
 	}
@@ -77,7 +77,7 @@ void transformer::SetAdditionalParameters()
 		itsLogger->Warning("Target_univ_ID not specified, using default value 9999");
 	}
 	
-	if(itsConfiguration->Options().count("target_param"))
+	if(!itsConfiguration->GetValue("target_param").empty())
 	{
 		itsTargetParam = itsConfiguration->GetValue("target_param");
 	}
@@ -87,7 +87,7 @@ void transformer::SetAdditionalParameters()
 		exit(1);
 	}
 
-	if(itsConfiguration->Options().count("source_param"))
+	if(!itsConfiguration->GetValue("source_param").empty())
 	{
 		itsSourceParam = itsConfiguration->GetValue("source_param");
 	}
@@ -97,7 +97,7 @@ void transformer::SetAdditionalParameters()
 		itsLogger->Warning("Source_param not specified, source_param set to target_param");
 	}
 
-	if(itsConfiguration->Options().count("source_level_type"))
+	if(!itsConfiguration->GetValue("source_level_type").empty())
 	{
 		itsSourceLevelType = itsConfiguration->GetValue("source_level_type");
 	}
@@ -107,7 +107,7 @@ void transformer::SetAdditionalParameters()
 		exit(1);
 	}
 	
-	if(itsConfiguration->Options().count("source_levels"))
+	if(!itsConfiguration->GetValue("source_levels").empty())
 	{
 		SourceLevels = itsConfiguration->GetValue("source_levels");
 	}
@@ -142,9 +142,9 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	param requestedParam(itsTargetParam, itsTargetUnivID);
 
 	// GRIB 2
-        if (itsConfiguration->OutputFileType() == kGRIB2)
+	if (itsConfiguration->OutputFileType() == kGRIB2)
 	{
-		if (itsConfiguration->Options().count("grib_discipline") && itsConfiguration->Options().count("grib_category") && itsConfiguration->Options().count("grib_parameter"))
+		if (!itsConfiguration->GetValue("grib_discipline").empty() && !itsConfiguration->GetValue("grib_category").empty() && !itsConfiguration->GetValue("grib_parameter").empty())
 		{
 			requestedParam.GribDiscipline(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_discipline")));
 			requestedParam.GribCategory(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_category")));
