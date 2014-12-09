@@ -13,7 +13,6 @@
 #include "logger_factory.h"
 #include "level.h"
 #include "forecast_time.h"
-#include "logger_factory.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -57,7 +56,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
 
 	/*
@@ -71,27 +70,20 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	// ----	
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("example_pluginThread #" + boost::lexical_cast<string> (threadIndex)));
+	// Current time and level as given to this thread
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string> (*forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
-
-	// Current time and level
-	
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
-	
+
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("example_pluginThread #" + boost::lexical_cast<string> (threadIndex)));
+
+	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+
 	info_t exampleInfo = Fetch(forecastTime, forecastLevel, exampleParam);
 
 	if (!exampleInfo)
 	{
 		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			// When time or level is skipped, all values are missing
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data()->Size());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data()->Size());
-		}
 
 		return;
 
@@ -112,7 +104,7 @@ void example_plugin::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		double x = exampleInfo->Value();
 
-		if (IsMissing({example}))
+		if (x == kFloatMissing)
 		{
 			continue;
 		}

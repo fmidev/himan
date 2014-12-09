@@ -1,8 +1,8 @@
-/*
- * example_plugin.h
+/**
+ * @file example_plugin.h
  *
- *  Created on: Apr 10, 2012
- *      Author: partio, perämäki
+ * @date Apr 10, 2012
+ * @author perämäki
  */
 
 #ifndef EXAMPLE_PLUGIN_H
@@ -59,7 +59,7 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<example_plugin> (new example_plugin());
+    return std::make_shared<example_plugin> ();
 }
 
 } // namespace plugin
