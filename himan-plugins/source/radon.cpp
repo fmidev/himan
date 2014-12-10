@@ -41,9 +41,9 @@ void radon::InitPool()
 
 		if (string(base) == "/masala")
 		{
-			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
-			NFmiNeonsDBPool::Instance()->Username("wetodb");
-			NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
+			NFmiRadonDBPool::Instance()->ReadWriteTransaction(true);
+			NFmiRadonDBPool::Instance()->Username("wetodb");
+			NFmiRadonDBPool::Instance()->Password("3loHRgdio");
 		}
 		else
 		{
@@ -63,7 +63,7 @@ vector<string> radon::Files(const search_options& options)
 	string levelvalue = boost::lexical_cast<string> (options.level.Value());
 
 	string ref_prod = options.prod.Name();
-	long no_vers = options.prod.TableVersion();
+	// long no_vers = options.prod.TableVersion();
 
 	string level_name = HPLevelTypeToString.at(options.level.Type());
 
@@ -210,7 +210,7 @@ bool radon::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	 * We have our own error loggings for unique key violations
 	 */
 	
-	itsRadonDB->Verbose(false);
+	// itsRadonDB->Verbose(false);
 	
 	query  << "INSERT INTO " << table_name
 		   << " (param_id, level_id, level_value, forecast_period, file_location, file_server) "
@@ -233,7 +233,7 @@ bool radon::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 		itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
 		itsLogger->Error("Query: " + query.str());
 
-		itsNeonsDB->Rollback();
+		itsRadonDB->Rollback();
 
 		return false;
 	}
@@ -243,21 +243,20 @@ bool radon::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	return true;
 }
 
-string radon::GribParameterName(long fmiParameterId, long codeTableVersion, long timeRangeIndicator)
+map<string,string> radon::Grib1ParameterName(long producer, long fmiParameterId, long codeTableVersion, long timeRangeIndicator, long levelId, double level_value)
 {	
 	Init();
 	
-	string paramName = itsRadonDB->GetGridParameterName(fmiParameterId, codeTableVersion, codeTableVersion, timeRangeIndicator);
+	map<string,string> paramName = itsRadonDB->ParameterFromGrib1(producer, codeTableVersion, fmiParameterId, timeRangeIndicator, levelId, level_value);
 	return paramName; 
-	
 }
 
-string radon::GribParameterName(long fmiParameterId, long category, long discipline, long producer)
+map<string,string> radon::Grib2ParameterName(long fmiParameterId, long category, long discipline, long producer, long levelId, double level_value)
 {
 	Init();
 	
-	string paramName = itsRadonDB->GetGridParameterNameForGrib2(fmiParameterId, category, discipline, producer);
-	return paramName;   
+	map<string,string> paramName = itsRadonDB->ParameterFromGrib2(producer, discipline, category, fmiParameterId, levelId, level_value);
+	return paramName;
 }
 
 string radon::ProducerMetaData(long producerId, const string& attribute) const
