@@ -353,7 +353,7 @@ public:
 		itsMissingValue = theMissingValue;
 	}
 
-	T MissingValue()
+	T MissingValue() const
 	{
 		return itsMissingValue;
 	}
