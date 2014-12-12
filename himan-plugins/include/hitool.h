@@ -138,12 +138,31 @@ public:
 	/**
 	 * @brief Return sum in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalSum(param, vector<double>, vector<double>, vector<double>)
+	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
+	 *
+	 * @param wantedParamList List (vector) of wanted parameters
+	*/
+
+	std::vector<double> VerticalSum(const std::vector<param>& wantedParamList, double firstLevelValue, double lastLevelValue) const;
+
+	/**
+	 * @brief Return sum in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	*/
 
 	std::vector<double> VerticalSum(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue) const;
+
+	/**
+	 * @brief Return sum in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
+	 *
+	*/
+
+	std::vector<double> VerticalSum(const param& wantedParam, double firstLevelValue, double lastLevelValue) const;
 
 	/**
 	 * @brief Calculate sum of values for each point in a given height range
@@ -217,6 +236,28 @@ public:
 	*/
 
 	std::vector<double> VerticalHeight(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue , size_t findNth = 1) const;
+
+	/**
+	 * @brief Return height of a given parameter value.
+	 *
+	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
+	 *
+	 * @param wantedParamList List (vector) of wanted parameters
+	 * @return Heights for given values for each point
+	 */
+
+	std::vector<double> VerticalHeight(const params& wantedParam, double firstLevelValue, double lastLevelValue, double findValue, size_t findNth = 1) const;
+
+	/**
+	 * @brief Return height of a given parameter value.
+	 *
+	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
+	 *
+	 * @param wantedParamList List (vector) of wanted parameters
+	 * @return Heights for given values for each point
+	 */
+
+	std::vector<double> VerticalHeight(const param& wantedParam, double firstLevelValue, double lastLevelValue, double findValue, size_t findNth = 1) const;
 
 	/**
 	 * @brief Return height of a given parameter value.
@@ -299,7 +340,27 @@ public:
 	 * @return Values for given heights
 	 */
 
+	std::vector<double> VerticalCount(const std::vector<param>& wantedParamList, double firstLevelValue, double lastLevelValue, double findValue) const;
+
+	/**
+	 * @brief Find the number of occurrences of a given parameter value in a given height range for the first parameter found.
+	 *
+	 * Overcoat for VerticalCount(param, vector<double>, vector<double>, vector<double>)
+	 *
+	 * @return Values for given heights
+	 */
+
 	std::vector<double> VerticalCount(const std::vector<param>& wantedParamList, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue) const;
+
+	/**
+	 * @brief Find the number of occurrences of a given parameter value in a given height range.
+	 *
+	 * Overcoat for VerticalCount(param, vector<double>, vector<double>, vector<double>)
+	 *
+	 * @return Values for given heights
+	 */
+
+	std::vector<double> VerticalCount(const param& wantedParam, double firstLevelValue, double lastLevelValue, double findValue) const;
 
 	/**
 	 * @brief Find the number of occurrences of a given parameter value in a given height range
