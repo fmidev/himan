@@ -16,7 +16,7 @@
 
 extern "C"
 {
-#include <lua5.2/lualib.h>
+#include <lualib.h>
 }
 
 namespace luabind

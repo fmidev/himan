@@ -60,7 +60,6 @@ includes.append('/usr/include/smartmet/newbase')
 includes.append('/usr/include/smartmet/smarttools')
 includes.append(workspace + '/fmidb/include')
 includes.append(workspace + '/fmigrib/include')
-includes.append('/usr/lib/grib_api/include')
 
 if os.environ.get('ORACLE_HOME') is None:
 	includes.append('/usr/include/oracle')
@@ -102,6 +101,8 @@ libraries.append('fmigrib')
 libraries.append('fmidb')
 libraries.append('jasper')
 libraries.append('clntsh')
+libraries.append('lua')
+libraries.append('luabind')
 
 env.Append(LIBS = libraries)
 

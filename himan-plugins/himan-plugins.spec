@@ -18,6 +18,9 @@ Requires: grib_api >= 1.12.1
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
 Requires: himan-lib >= 14.11.25
 Requires: himan-bin >= 14.11.25
+Requires: lua >= 5.1.4
+BuildRequires: libluabind
+BuildRequires: lua-devel >= 5.1.4
 BuildRequires: boost-devel >= 1.54
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 14.4.10
