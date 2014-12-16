@@ -130,8 +130,9 @@ vector<string> radon::Files(const search_options& options)
 
 bool radon::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 {
+	
 	Init();
-
+	
 	stringstream query;
 
 	/*
@@ -151,12 +152,12 @@ bool radon::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	 * (since pas_latitude and pas_longitude are derived from these anyway)
 	 */
 
-	query 	<< "SELECT id "
-			<< "FROM geom "
-			<< "WHERE row_cnt = " << resultInfo->Nj()
-			<< " AND col_cnt = " << resultInfo->Ni()
-			<< " AND lat_orig = " << (firstGridPoint.Y() * 1e3)
-			<< " AND long_orig = " << (firstGridPoint.X() * 1e3);
+	query 	<< "SELECT geom_id "
+			<< "FROM geom_v "
+			<< "WHERE nj = " << resultInfo->Nj()
+			<< " AND ni = " << resultInfo->Ni()
+			<< " AND first_lat = " << (firstGridPoint.Y() * 1e-2)
+			<< " AND first_lon = " << (firstGridPoint.X() * 1e-2);
 
 	itsRadonDB->Query(query.str());
 
@@ -175,10 +176,10 @@ bool radon::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	query.str("");
 
 	query	<< "SELECT "
-			<< "id, table_name"
+			<< "id, table_name "
 			<< "FROM as_grid "
 			<< "WHERE geometry_id = '" << geom_id << "'"
-			<< " AND analysis_time = '" << resultInfo->OriginDateTime().String("%Y%m%d%H%M") << "'";
+			<< " AND analysis_time = '" << resultInfo->OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "'";
 
 	itsRadonDB->Query(query.str());
 
@@ -211,18 +212,21 @@ bool radon::Save(shared_ptr<const info> resultInfo, const string& theFileName)
 	 */
 	
 	// itsRadonDB->Verbose(false);
-	
-	query  << "INSERT INTO " << table_name
-		   << " (param_id, level_id, level_value, forecast_period, file_location, file_server) "
-		   << "SELECT param.id, level.id, "
+	query  << "INSERT INTO data." << table_name
+		   << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, forecast_period, forecast_type_id, file_location, file_server) "
+		   << "SELECT " << resultInfo->Producer().Id() << ", "
+		   << "'" << resultInfo->OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "', "
+		   << "'" << geom_id << "', "
+		   << "param.id, level.id, "
 		   << resultInfo->Level().Value() << ", "
-		   << resultInfo->Time().Step() << ", "
+		   << "'" << boost::lexical_cast<string>(resultInfo->Time().Step()) << " hour', "
+		   << "1, "
 		   << "'" << theFileName << "', "
-		   << "'" << host << "'"
+		   << "'" << host << "' "
 		   << "FROM param, level "
-		   << "WHERE param.name = '" << resultInfo->Param().Name() << "', "
-		   << "AND level,name = upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "')";
-		  
+		   << "WHERE param.name = '" << resultInfo->Param().Name() << "' "
+		   << "AND level.name = upper('" << HPLevelTypeToString.at(resultInfo->Level().Type()) << "')";
+	
 	try
 	{
 		itsRadonDB->Execute(query.str());
