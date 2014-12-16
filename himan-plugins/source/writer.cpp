@@ -19,6 +19,7 @@
 #include "grib.h"
 #include "querydata.h"
 #include "neons.h"
+#include "radon.h"
 #include "cache.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
@@ -81,7 +82,7 @@ bool writer::ToFile(info& theInfo,
 			}
 
 			ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileWriteOption);
-
+			ret = true;
 			break;
 		}
 		case kQueryData:
@@ -107,9 +108,19 @@ bool writer::ToFile(info& theInfo,
 	if (ret && fileWriteOption == kNeons)
 	{
 		std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+		std::shared_ptr<radon> r = std::dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
 
-		// Save file information to neons
-
+		// Try to save file information to radon
+		try
+		{
+			ret = r->Save(theInfo, correctFileName);
+		}
+		catch(...)
+		{
+			itsLogger->Error("Writing to radon failed"); 
+		}
+		
+		// save file information to neons
 		ret = n->Save(theInfo, correctFileName);
 
 		if (!ret)
