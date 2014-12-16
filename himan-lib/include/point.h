@@ -128,6 +128,57 @@ inline std::ostream& operator<<(std::ostream& file, const point& ob)
 	return ob.Write(file);
 }
 
+class station : public point
+{
+public:
+	station();
+	station(int theId, const std::string& theName, double lon, double lat);
+	~station();	
+
+	int Id() const;
+	void Id(int theId);
+	
+	std::string Name() const;
+	void Name(const std::string& theName);
+	
+private:
+	int itsId; // FMISID
+	std::string itsName;
+};
+
+inline station::station()
+	: point()
+	, itsId(kHPMissingInt)
+	, itsName("Himan default station")
+{}
+
+inline station::station(int theId, const std::string& theName, double lon, double lat)
+	: point(lon,lat)
+	, itsId(theId)
+	, itsName(theName)
+{}
+
+inline int station::Id() const
+{
+	return itsId;
+}
+
+inline void station::Id(int theId)
+{
+	itsId = theId;
+}
+
+inline std::string station::Name() const
+{
+	return itsName;
+}
+
+inline void station::Name(const std::string& theName)
+{
+	itsName = theName;
+}
+
+
 } // namespace himan
 
 #endif /* POINT_H */
