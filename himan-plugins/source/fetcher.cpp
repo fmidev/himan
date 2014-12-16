@@ -19,6 +19,7 @@
 
 #include "grib.h"
 #include "neons.h"
+#include "radon.h"
 #include "param.h"
 #include "cache.h"
 #include "querydata.h"
@@ -505,12 +506,13 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		}
 	}
 
-	// 3. Fetch data from Neons
+	// 3. Fetch data from Neons or Radon
 
 	vector<string> files;
 
 	if (opts.configuration->ReadDataFromDatabase())
 	{
+		// try neons first
 		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
 		files = n->Files(opts);
@@ -526,6 +528,22 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 			return ret;
 		}
+		// try radon next
+        shared_ptr<radon> r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+
+        files = r->Files(opts);
+
+        if (!files.empty())
+        {
+            ret = FromFile(files, opts, true, readPackedData);
+
+            if (dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->StatisticsEnabled())
+            {
+                dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->Statistics()->AddToCacheMissCount(1);
+            }
+
+            return ret;
+        }
 	}
 
 	return ret;
