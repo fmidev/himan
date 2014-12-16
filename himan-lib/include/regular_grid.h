@@ -191,21 +191,8 @@ class regular_grid : public grid
 
 		bool SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj);
 
-
-		/**
-		 * @brief Create a newbase regular_grid (NFmiGrid) from current data
-		 * @return Raw pointer to NFmiGrid
-		 */
-
-		NFmiGrid* ToNewbaseGrid() const;
-
-
-		/**
-		 * @brief Check if regular_grid and area are equal
-		 */
-
-		bool operator==(const regular_grid& other) const;
-		bool operator!=(const regular_grid& other) const;
+		bool operator==(const grid& other) const;
+		bool operator!=(const grid& other) const;
 
 		void PackedData(std::unique_ptr<packed_data> thePackedData);
 		packed_data& PackedData();
@@ -222,8 +209,9 @@ class regular_grid : public grid
 		bool Swap(HPScanningMode newScanningMode);
 
 		point LatLon(size_t locationIndex) const;
-
+		
 	private:
+		bool EqualsTo(const regular_grid& other) const;
 
 		unpacked itsData; //<! Variable to hold unpacked data
 		std::unique_ptr<packed_data> itsPackedData; //<! Variable to hold packed data

@@ -136,22 +136,16 @@ class grid
 		virtual bool IsPackedData() const = 0;
 
 		virtual point LatLon(size_t locationIndex) const = 0;
-
+		virtual bool operator==(const grid& other) const = 0;
+		virtual bool operator!=(const grid& other) const = 0;
+		
 	protected:
-		/**
-		 * @brief Equality operators are hidden to prevent anybody from comparing
-		 * base classes to each other.
-		 */
-
-		bool operator==(const grid& other) const { return false; }
-		bool operator!=(const grid& other) const { return false; }
-
+	
+		virtual bool EqualsTo(const grid& other) const;
 
 		HPGridType itsGridType;
 		//std::unique_ptr<logger> itsLogger;
 
-private:
-	bool EqualsTo();
 };
 
 inline

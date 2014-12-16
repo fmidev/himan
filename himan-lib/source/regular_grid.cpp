@@ -11,7 +11,6 @@
 #include <NFmiStereographicArea.h>
 #include <NFmiLatLonArea.h>
 #include "logger_factory.h"
-#include <NFmiGrid.h>
 
 using namespace himan;
 using namespace std;
@@ -377,161 +376,6 @@ void regular_grid::Orientation(double theOrientation)
 	itsOrientation = theOrientation;
 }
 
-NFmiGrid* regular_grid::ToNewbaseGrid() const
-{
-
-	FmiInterpolationMethod interp = kLinearly;
-	FmiDirection dir = static_cast<FmiDirection> (itsScanningMode);
-
-	NFmiArea* theArea = 0;
-
-	// Newbase does not understand grib2 longitude coordinates
-
-	double bottomLeftLongitude = itsBottomLeft.X();
-	double topRightLongitude = itsTopRight.X();
-
-	if (bottomLeftLongitude > 180 || topRightLongitude > 180)
-	{
-		bottomLeftLongitude -= 180;
-		topRightLongitude -= 180;
-	}
-
-	switch (itsProjection)
-	{
-	case kLatLonProjection:
-	{
-		theArea = new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
-									 NFmiPoint(topRightLongitude, itsTopRight.Y()));
-
-		break;
-	}
-
-	case kRotatedLatLonProjection:
-	{
-		theArea = new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
-											NFmiPoint(topRightLongitude, itsTopRight.Y()),
-											NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()),
-											NFmiPoint(0.,0.), // default values
-											NFmiPoint(1.,1.), // default values
-											true);
-		break;
-	}
-
-	case kStereographicProjection:
-	{
-		theArea = new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, itsBottomLeft.Y()),
-											NFmiPoint(topRightLongitude, itsTopRight.Y()),
-											itsOrientation);
-		break;
-
-	}
-
-	default:
-		throw runtime_error(ClassName() + ": No supported projection found");
-		break;
-	}
-
-	assert(theArea);
-	
-	NFmiGrid* theGrid (new NFmiGrid(theArea, Ni(), Nj(), dir, interp));
-
-	size_t dataSize = itsData.Size();
-
-	if (dataSize)   // Do we have data
-	{
-
-		NFmiDataPool thePool;
-
-		float* arr = new float[dataSize];
-
-		// convert double array to float
-
-		const double* src = itsData.ValuesAsPOD();
-
-		copy(src, src + dataSize, arr);
-
-		if (!thePool.Init(dataSize, arr))
-		{
-			throw runtime_error("NFmiDataPool init failed");
-		}
-
-		if (!theGrid->Init(&thePool))
-		{
-			throw runtime_error("NFmiGrid init failed");
-		}
-
-		delete [] arr;
-	}
-
-	delete theArea;
-
-	return theGrid;
-
-}
-
-bool regular_grid::operator==(const regular_grid& other) const
-{
-
-	if (itsProjection != other.itsProjection)
-	{
-		itsLogger->Trace("Projections do not match: " + string(HPProjectionTypeToString.at(itsProjection)) + " vs " + string(HPProjectionTypeToString.at(other.itsProjection)));
-		return false;
-	}
-
-	if (itsBottomLeft != other.BottomLeft())
-	{
-		itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<string> (other.BottomLeft().X()));
-		itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<string> (other.BottomLeft().Y()));
-		return false;
-	}
-
-   	if (itsTopRight != other.TopRight())
-	{
-		itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<string> (itsTopRight.X()) + " vs " + boost::lexical_cast<string> (other.TopRight().X()));
-		itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<string> (other.TopRight().Y()));
-		return false;
-	}
-
-	if (itsProjection == kRotatedLatLonProjection)
-	{
-		if (itsSouthPole != other.SouthPole())
-		{
-			itsLogger->Trace("SouthPole does not match: X " + boost::lexical_cast<string> (itsSouthPole.X()) + " vs " + boost::lexical_cast<string> (other.SouthPole().X()));
-			itsLogger->Trace("SouthPole does not match: Y " + boost::lexical_cast<string> (itsSouthPole.Y()) + " vs " + boost::lexical_cast<string> (other.SouthPole().Y()));
-			return false;
-		}
-	}
-
-	if (itsProjection == kStereographicProjection)
-	{
-		if (itsOrientation != other.Orientation())
-		{
-			itsLogger->Trace("Orientations don't match: " + boost::lexical_cast<string> (itsOrientation) + " vs " + boost::lexical_cast<string> (other.Orientation()));
-			return false;
-		}
-	}
-
-	if (Ni() != other.Ni())
-	{
-		itsLogger->Trace("Grid X-counts don't match: " + boost::lexical_cast<string> (Ni()) + " vs " + boost::lexical_cast<string> (other.Ni()));
-		return false;
-	}
-
-	if (Nj() != other.Nj())
-	{
-		itsLogger->Trace("Grid Y-counts don't match: " + boost::lexical_cast<string> (Nj()) + " vs " + boost::lexical_cast<string> (other.Nj()));
-		return false;
-	}
-
-	return true;
-
-}
-
-bool regular_grid::operator!=(const regular_grid& other) const
-{
-	return !(*this == other);
-}
-
 void regular_grid::Data(const unpacked& d)
 {
 	itsData = d;
@@ -648,4 +492,82 @@ point regular_grid::LatLon(size_t locationIndex) const
 	double i = static_cast<double> (locationIndex) - j * static_cast<double> (Ni());
 
 	return point(firstPoint.X() + i * Di(), firstPoint.Y() + j * Dj());
+}
+
+
+bool regular_grid::operator!=(const grid& other) const
+{
+	return !(other == *this);
+}
+
+bool regular_grid::operator==(const grid& other) const
+{
+	const regular_grid* g = dynamic_cast<const regular_grid*> (&other);
+	
+	if (g)
+	{
+		return EqualsTo(*g);
+	}
+	
+	return false;
+}
+
+bool regular_grid::EqualsTo(const regular_grid& other) const
+{
+	if (grid::EqualsTo(other))
+	{
+		if (itsProjection != other.itsProjection)
+		{
+			itsLogger->Trace("Projections do not match: " + string(HPProjectionTypeToString.at(itsProjection)) + " vs " + string(HPProjectionTypeToString.at(other.itsProjection)));
+			return false;
+		}
+
+		if (itsBottomLeft != other.BottomLeft())
+		{
+			itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<string> (other.BottomLeft().X()));
+			itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<string> (other.BottomLeft().Y()));
+			return false;
+		}
+
+		if (itsTopRight != other.TopRight())
+		{
+			itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<string> (itsTopRight.X()) + " vs " + boost::lexical_cast<string> (other.TopRight().X()));
+			itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<string> (other.TopRight().Y()));
+			return false;
+		}
+
+		if (itsProjection == kRotatedLatLonProjection)
+		{
+			if (itsSouthPole != other.SouthPole())
+			{
+				itsLogger->Trace("SouthPole does not match: X " + boost::lexical_cast<string> (itsSouthPole.X()) + " vs " + boost::lexical_cast<string> (other.SouthPole().X()));
+				itsLogger->Trace("SouthPole does not match: Y " + boost::lexical_cast<string> (itsSouthPole.Y()) + " vs " + boost::lexical_cast<string> (other.SouthPole().Y()));
+				return false;
+			}
+		}
+
+		if (itsProjection == kStereographicProjection)
+		{
+			if (itsOrientation != other.Orientation())
+			{
+				itsLogger->Trace("Orientations don't match: " + boost::lexical_cast<string> (itsOrientation) + " vs " + boost::lexical_cast<string> (other.Orientation()));
+				return false;
+			}
+		}
+
+		if (Ni() != other.Ni())
+		{
+			itsLogger->Trace("Grid X-counts don't match: " + boost::lexical_cast<string> (Ni()) + " vs " + boost::lexical_cast<string> (other.Ni()));
+			return false;
+		}
+
+		if (Nj() != other.Nj())
+		{
+			itsLogger->Trace("Grid Y-counts don't match: " + boost::lexical_cast<string> (Nj()) + " vs " + boost::lexical_cast<string> (other.Nj()));
+			return false;
+		}
+
+	}
+	
+	return true;	
 }

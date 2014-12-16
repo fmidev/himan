@@ -16,17 +16,13 @@
 #include "param.h"
 #include "forecast_time.h"
 #include "cuda_helper.h"
+#include "regular_grid.h"
 
 using namespace himan;
 using namespace std;
 
 string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 {
-
-	if (info.Grid()->Type() != kRegularGrid)
-	{
-		throw runtime_error("Only regular grids are stored as files");
-	}
 
 	ostringstream fileName;
 	ostringstream base;
@@ -73,12 +69,17 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 					<< "_"
 					<< info.Level().Value()
 					<< "_"
-					<< HPProjectionTypeToString.at(info.Grid()->Projection())
-					<< "_"
-					<< dynamic_cast<regular_grid*> (info.Grid())->Ni()
-					<< "_"
-					<< dynamic_cast<regular_grid*> (info.Grid())->Nj()
-					<< "_0_"
+					<< HPProjectionTypeToString.at(info.Grid()->Projection());
+
+		if (info.Grid()->Type() == kRegularGrid)
+		{
+			fileName	<< "_"
+						<< dynamic_cast<regular_grid*> (info.Grid())->Ni()
+						<< "_"
+						<< dynamic_cast<regular_grid*> (info.Grid())->Nj();
+		}
+		
+		fileName	<< "_0_"
 					<< setw(3)
 					<< setfill('0')
 					<< info.Time().Step()

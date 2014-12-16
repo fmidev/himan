@@ -14,3 +14,13 @@ using namespace std;
 grid::grid() : itsGridType(kUnknownGridType) {}
 
 grid::~grid() {}
+
+bool grid::EqualsTo(const grid& other) const
+{
+	if (other.Type() == itsGridType)
+	{
+		return true;
+	}
+	
+	return false;
+}
