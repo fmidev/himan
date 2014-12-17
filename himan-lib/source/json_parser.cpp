@@ -13,6 +13,9 @@
 #include "logger_factory.h"
 #include "util.h"
 #include <map>
+#include "point.h"
+#include "regular_grid.h"
+#include "irregular_grid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -98,7 +101,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	vector<shared_ptr<plugin_configuration>> pluginContainer;
 	/* Create our base info */
 
-	shared_ptr<info> baseInfo(new info());
+	auto baseInfo = make_shared<info> ();
 
 	/* Check producers */
 
@@ -106,8 +109,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	/* Check area definitions */
 
-	ParseAreaAndGrid(conf, baseInfo, pt);
+	auto g = ParseAreaAndGrid(conf, pt);
 
+	baseInfo->itsBaseGrid = move(g);
+	
 	/* Check time definitions */
 
 	conf->FirstSourceProducer();
@@ -298,7 +303,9 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			ParseAreaAndGrid(conf, anInfo, element.second);
+			auto g = ParseAreaAndGrid(conf, element.second);
+			
+			anInfo->itsBaseGrid = move(g);
 		}
 		catch (...)
 		{
@@ -692,9 +699,11 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 
 }
 
-void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
 
+	unique_ptr<grid> g;
+	
 	/* First check for neons style geom name */
 
 	bool haveArea = false;
@@ -705,12 +714,16 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 		conf->itsTargetGeomName = geom;
 
-		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+		auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
 		map<string, string> geominfo = n->NeonsDB().GetGeometryDefinition(geom);
 
 		if (!geominfo.empty())
 		{
+			
+			g = unique_ptr<regular_grid> (new regular_grid());
+			regular_grid* _g = dynamic_cast<regular_grid*> (g.get()); // shortcut to avoid a million dynamic casts
+
 			/*
 			 *  In Neons we don't have rotlatlon projection used separately, instead we have
 			 *  to check if geom_parm_1 and geom_parm_2 specify the regular rotated location
@@ -722,39 +735,39 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 			if (geominfo["prjn_name"] == "latlon" && (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0"))
 			{
-				anInfo->itsProjection = kRotatedLatLonProjection;
-				anInfo->itsSouthPole = point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
+				g->Projection(kRotatedLatLonProjection);
+				g->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3));
 				di /= 1e3;
 				dj /= 1e3;
 			}
 			else if (geominfo["prjn_name"] == "latlon")
 			{
-				anInfo->itsProjection = kLatLonProjection;
+				g->Projection(kLatLonProjection);
 				di /= 1e3;
 				dj /= 1e3;
 			}
 			else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo")
 			{
-				anInfo->itsProjection = kStereographicProjection;
-				anInfo->itsOrientation = boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3;
-				anInfo->itsDi = di;
-				anInfo->itsDj = dj;
+				g->Projection(kStereographicProjection);
+				g->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
+				_g->Di(di);
+				_g->Dj(dj);
 			}
 			else
 			{
 				throw runtime_error(ClassName() + ": Unknown projection: " + geominfo["prjn_name"]);
 			}
 
-			anInfo->itsNi = boost::lexical_cast<size_t> (geominfo["col_cnt"]);
-			anInfo->itsNj = boost::lexical_cast<size_t> (geominfo["row_cnt"]);
+			_g->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
+			_g->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
 
 			if (geominfo["stor_desc"] == "+x-y")
 			{
-				anInfo->itsScanningMode = kTopLeft;
+				_g->ScanningMode(kTopLeft);
 			}
 			else if (geominfo["stor_desc"] == "+x+y")
 			{
-				anInfo->itsScanningMode = kBottomLeft;
+				_g->ScanningMode(kBottomLeft);
 			}
 			else
 			{
@@ -766,18 +779,18 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 			std::pair<point, point> coordinates;
 
-			if (anInfo->itsProjection == kStereographicProjection)
+			if (g->Projection() == kStereographicProjection)
 			{
-				assert(anInfo->itsScanningMode == kBottomLeft);
-				coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), anInfo->itsOrientation, anInfo->itsNi, anInfo->itsNj, di, dj);
+				assert(_g->ScanningMode() == kBottomLeft);
+				coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), g->Orientation(), _g->Ni(), _g->Nj(), di, dj);
 			}
 			else
 			{
-				coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), anInfo->itsNi, anInfo->itsNj, di, dj, anInfo->itsScanningMode);
+				coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), _g->Ni(), _g->Nj(), di, dj, _g->ScanningMode());
 			}
 
-			anInfo->itsBottomLeft = coordinates.first;
-			anInfo->itsTopRight = coordinates.second;
+			g->BottomLeft(coordinates.first);
+			g->TopRight(coordinates.second);
 
 		}
 		else
@@ -814,21 +827,68 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 	if (haveArea)
 	{
 		// using neons style geom_name we get all information, even grid size
-		return;
+		return g;
 	}
 
+		// Check for points
+	
+	try
+	{
+		g = unique_ptr<irregular_grid> (new irregular_grid());
+
+		vector<string> stations = util::Split(pt.get<string>("points"), ";", false);
+
+		// hard coded projection to latlon
+		
+		g->Projection(kLatLonProjection);
+
+		vector<station> theStations;
+		
+		BOOST_FOREACH(const string& line, stations)
+		{
+			vector<string> stat = util::Split(line, ",", false);
+			
+			if (stat.size() != 4)
+			{
+				itsLogger->Error("Line " + line + " is invalid");
+				continue;
+			}
+			
+			theStations.push_back(
+				station(boost::lexical_cast<int> (stat[0]), stat[1], boost::lexical_cast<long>(stat[2]), boost::lexical_cast<long>(stat[3]))
+			);
+		}
+		
+		dynamic_cast<irregular_grid*> (g.get())->Stations(theStations);
+
+		return g;
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing bbox: ") + e.what());
+	}
+	
 	// Target geometry is still not set, check for bbox
+
+	// From this point forward we only support regular grids
+	
+	g = unique_ptr<regular_grid> (new regular_grid());
 
 	try
 	{
+
 		vector<string> coordinates = util::Split(pt.get<string>("bbox"), ",", false);
 
 		// hard coded projection to latlon
 		
-		anInfo->itsProjection = kLatLonProjection;
+		g->Projection(kLatLonProjection);
 
-		anInfo->itsBottomLeft = point(boost::lexical_cast<double>(coordinates[0]), boost::lexical_cast<double>(coordinates[1]));
-		anInfo->itsTopRight = point(boost::lexical_cast<double>(coordinates[2]), boost::lexical_cast<double>(coordinates[3]));
+		g->BottomLeft(point(boost::lexical_cast<double>(coordinates[0]), boost::lexical_cast<double>(coordinates[1])));
+		g->TopRight(point(boost::lexical_cast<double>(coordinates[2]), boost::lexical_cast<double>(coordinates[3])));
 
 		haveArea = true;
 	}
@@ -852,15 +912,15 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 			if (projection == "latlon")
 			{
-				anInfo->itsProjection = kLatLonProjection;
+				g->Projection(kLatLonProjection);
 			}
 			else if (projection == "rotated_latlon")
 			{
-				anInfo->itsProjection = kRotatedLatLonProjection;
+				g->Projection(kRotatedLatLonProjection);
 			}
 			else if (projection == "stereographic")
 			{
-				anInfo->itsProjection = kStereographicProjection;
+				g->Projection(kStereographicProjection);
 			}
 			else
 			{
@@ -879,8 +939,8 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 		try
 		{
-			anInfo->itsBottomLeft = point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude"));
-			anInfo->itsTopRight = point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude"));
+			g->BottomLeft(point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
+			g->TopRight(point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
 		}
 		catch (boost::property_tree::ptree_bad_path& e)
 		{
@@ -895,11 +955,11 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 		try
 		{
-			anInfo->itsOrientation = pt.get<double>("orientation");
+			g->Orientation(pt.get<double>("orientation"));
 		}
 		catch (boost::property_tree::ptree_bad_path& e)
 		{
-			if (anInfo->itsProjection == kStereographicProjection)
+			if (g->Projection() == kStereographicProjection)
 			{
 				throw runtime_error(string("Orientation not found for stereographic projection: ") + e.what());
 			}
@@ -913,11 +973,11 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 		try
 		{
-			anInfo->itsSouthPole = point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude"));
+			g->SouthPole(point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude")));
 		}
 		catch (boost::property_tree::ptree_bad_path& e)
 		{
-			if (anInfo->itsProjection == kRotatedLatLonProjection)
+			if (g->Projection() == kRotatedLatLonProjection)
 			{
 				throw runtime_error(string("South pole coordinates not found for rotated latlon projection: ") + e.what());
 			}
@@ -930,10 +990,12 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 	/* Finally check grid definitions */
 
+	regular_grid* _g = dynamic_cast<regular_grid*> (g.get()); // shortcut to avoid a million dynamic casts
+
 	try
 	{
-		anInfo->itsNi = pt.get<size_t>("ni");
-		anInfo->itsNj = pt.get<size_t>("nj");
+		_g->Ni(pt.get<size_t>("ni"));
+		_g->Nj(pt.get<size_t>("nj"));
 
 		
 	}
@@ -949,7 +1011,7 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 	// Default scanningmode to +x+y
 	
-	anInfo->itsScanningMode = kBottomLeft;
+	_g->ScanningMode(kBottomLeft);
 	
 	try
 	{
@@ -957,11 +1019,11 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 
 		if (mode == "+x-y")
 		{
-			anInfo->itsScanningMode = kTopLeft;
+			_g->ScanningMode(kTopLeft);
 		}
 		else if (mode == "+x+y")
 		{
-			anInfo->itsScanningMode = kBottomLeft;
+			_g->ScanningMode(kBottomLeft);
 		}
 		else
 		{
@@ -976,6 +1038,8 @@ void json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, std::shared_p
 	{
 		throw runtime_error(string("Error parsing scanning mode: ") + e.what());
 	}
+	
+	return g;
 
 }
 

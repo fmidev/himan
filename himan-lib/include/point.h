@@ -133,7 +133,6 @@ class station : public point
 public:
 	station();
 	station(int theId, const std::string& theName, double lon, double lat);
-	~station();	
 
 	int Id() const;
 	void Id(int theId);

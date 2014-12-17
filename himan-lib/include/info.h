@@ -15,13 +15,13 @@
 #include "raw_time.h"
 #include "himan_common.h"
 #include "producer.h"
-#include "regular_grid.h"
 #include <vector>
 #include "info_simple.h"
 #include <boost/lexical_cast.hpp>
 #include "param.h"
 #include "level.h"
 #include "forecast_time.h"
+#include "grid.h"
 
 namespace himan
 {
@@ -731,36 +731,7 @@ private:
 	size_t Index(size_t timeIndex, size_t levelIndex, size_t paramIndex) const;
 	size_t Index() const;
 	
-	
-	/*
-	 * START GLOBAL CONFIGURATION FILE PARAMETERS
-	 *
-	 * These variables are needed when parsing configuration file.
-	 * Later on they are used to create the correct data structure.
-	 * They should *not* be referred to when calculating or reading/
-	 * writing data (that's why they are private).
-	 */
-
-	HPProjectionType itsProjection;
-
-	point itsBottomLeft;
-	point itsTopRight;
-	point itsSouthPole;
-
-	double itsOrientation;
-
-	HPScanningMode itsScanningMode;
 	HPLevelOrder itsLevelOrder;
-
-	size_t itsNi;
-	size_t itsNj;
-
-	double itsDi;
-	double itsDj;
-
-	bool itsUVRelativeToGrid;
-
-	/* END GLOBAL CONFIGURATION PARAMETERS */
 
 	level_iter itsLevelIterator;
 	time_iter itsTimeIterator;
@@ -777,7 +748,8 @@ private:
 	size_t itsLocationIndex;
 
 	bool itsStepSizeOverOneByte; //!< TODO: Remove and implement in fmigrib
-	
+
+	std::unique_ptr<grid> itsBaseGrid; //!< grid information from json. used as a template, never to store data
 };
 
 inline

@@ -9,6 +9,8 @@
 #include <limits> // for std::numeric_limits<size_t>::max();
 #include <boost/lexical_cast.hpp>
 #include "logger_factory.h"
+#include "regular_grid.h"
+#include "irregular_grid.h"
 
 using namespace std;
 using namespace himan;
@@ -18,6 +20,7 @@ info::info()
 	, itsTimeIterator()
 	, itsParamIterator()
 	, itsDimensions()
+	, itsBaseGrid()
 {
 	Init();
 	itsLogger = logger_factory::Instance()->GetLog("info");
@@ -32,28 +35,8 @@ info::info(const info& other)
 	, itsTimeIterator(other.itsTimeIterator)
 	, itsParamIterator(other.itsParamIterator)
 {
-	/* START GLOBAL CONFIGURATION OPTIONS */
-
-	itsProjection = other.itsProjection;
-	itsOrientation = other.itsOrientation;
-	itsScanningMode = other.itsScanningMode;
 	itsLevelOrder = other.itsLevelOrder;
 
-	itsBottomLeft = other.itsBottomLeft;
-	itsTopRight = other.itsTopRight;
-	itsSouthPole = other.itsSouthPole;
-
-	itsUVRelativeToGrid = other.itsUVRelativeToGrid;
-	itsNi = other.itsNi;
-	itsNj = other.itsNj;
-
-	itsDi = other.itsDi;
-	itsDj = other.itsDj;
-
-	/* END GLOBAL CONFIGURATION OPTIONS */
-
-	// All the grid-instances area shared
-	
 	itsDimensions = other.itsDimensions;
 
 	itsLocationIndex = other.itsLocationIndex;
@@ -63,30 +46,34 @@ info::info(const info& other)
 	itsOriginDateTime = other.itsOriginDateTime;
 
 	itsStepSizeOverOneByte = other.itsStepSizeOverOneByte;
+
+	if (other.itsBaseGrid)
+	{
+		if (other.itsBaseGrid->Type() == kRegularGrid)
+		{
+			itsBaseGrid = unique_ptr<regular_grid> (new regular_grid(*dynamic_cast<regular_grid*> (other.itsBaseGrid.get())));
+		}
+		else if (other.itsBaseGrid->Type() == kIrregularGrid)
+		{
+			itsBaseGrid = unique_ptr<irregular_grid> (new irregular_grid(*dynamic_cast<irregular_grid*> (other.itsBaseGrid.get())));
+		}
+		else
+		{
+			itsLogger->Fatal("Invalid grid type for base grid");
+			exit(1);
+		}
+
+		assert(itsBaseGrid);
+		assert(itsBaseGrid->Data().Values().size() == 0);
+	}
 	
 	itsLogger = logger_factory::Instance()->GetLog("info");
 }
 
 void info::Init()
 {
-
-	itsProjection = kUnknownProjection;
-	itsScanningMode = kUnknownScanningMode;
 	itsLevelOrder = kTopToBottom;
-
-	itsBottomLeft = point(kHPMissingValue, kHPMissingValue);
-	itsTopRight = point(kHPMissingValue, kHPMissingValue);
-	itsSouthPole = point(kHPMissingValue, kHPMissingValue);
-
-	itsOrientation = kHPMissingValue;
 	itsStepSizeOverOneByte = false;
-	itsUVRelativeToGrid = false;
-
-	itsNi = 0;
-	itsNj = 0;
-
-	itsDi = kHPMissingValue;
-	itsDj = kHPMissingValue;
 }
 
 std::ostream& info::Write(std::ostream& file) const
@@ -110,7 +97,6 @@ std::ostream& info::Write(std::ostream& file) const
 	return file;
 }
 
-
 void info::Create()
 {
 	assert(itsTimeIterator.Size());
@@ -121,10 +107,6 @@ void info::Create()
 
 	Reset();
 
-	// Disallow Create() to be called if info is not originated from a configuration file
-
-	assert(itsScanningMode != kUnknownScanningMode);
-	assert(itsProjection != kUnknownProjection);
 	assert(itsLevelOrder != kUnknownLevelOrder);
 
 	while (NextTime())
@@ -138,17 +120,28 @@ void info::Create()
 			while (NextParam())
 				// Create empty placeholders
 			{
-				auto g = make_shared<regular_grid> (itsScanningMode, itsUVRelativeToGrid, itsProjection, itsBottomLeft, itsTopRight, itsSouthPole, itsOrientation);
-
-				if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
+				assert(itsBaseGrid);
+				
+				shared_ptr<grid> g;
+				
+				if (itsBaseGrid->Type() == kRegularGrid)
 				{
-					g->Di(itsDi);
-					g->Dj(itsDj);
+					g = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (itsBaseGrid.get()));
+					g->Data().Resize(dynamic_cast<regular_grid*> (itsBaseGrid.get())->Ni(), dynamic_cast<regular_grid*> (itsBaseGrid.get())->Nj());
 				}
-
+				else if (itsBaseGrid->Type() == kIrregularGrid)
+				{
+					g = make_shared<irregular_grid> (*dynamic_cast<irregular_grid*> (itsBaseGrid.get()));
+					g->Data().Resize(dynamic_cast<irregular_grid*> (itsBaseGrid.get())->Stations().size(), 1, 1);
+				}
+				else
+				{
+					itsLogger->Fatal("Unknown grid type");
+					exit(1);
+				}
+				
 				Grid(g);
 
-				Data().Resize(itsNi,itsNj);
 				Data().MissingValue(kFloatMissing);
 				Data().Fill(kFloatMissing);
 			}
@@ -178,11 +171,6 @@ void info::ReGrid()
 				assert(Grid());
 
 				auto newGrid = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (Grid()));
-				if (itsDi != kHPMissingValue && itsDj != kHPMissingValue)
-				{
-					newGrid->Di(itsDi);
-					newGrid->Dj(itsDj);
-				}
 
 				newDimensions[Index()] = newGrid;
 
@@ -212,7 +200,18 @@ void info::Create(const grid* baseGrid)
 			while (NextParam())
 				// Create empty placeholders
 			{
-				Grid(make_shared<regular_grid> (*dynamic_cast<const regular_grid*> (baseGrid)));
+				if (baseGrid->Type() == kRegularGrid)
+				{
+					Grid(make_shared<regular_grid> (*dynamic_cast<const regular_grid*> (baseGrid)));
+				}
+				else if (baseGrid->Type() == kIrregularGrid)
+				{
+					Grid(make_shared<irregular_grid> (*dynamic_cast<const irregular_grid*> (baseGrid)));
+				}
+				else
+				{
+					throw runtime_error(ClassName() + ": Invalid grid type");
+				}
 			}
 		}
 	}
