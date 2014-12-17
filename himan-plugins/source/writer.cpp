@@ -82,7 +82,7 @@ bool writer::ToFile(info& theInfo,
 			}
 
 			ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileWriteOption);
-			ret = true;
+
 			break;
 		}
 		case kQueryData:
