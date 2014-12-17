@@ -18,7 +18,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-// Simo Neiglickin tekstiä alkuperäiseen editorimakroon: 
+// Simo Neiglick's text to the original SmartMet macro: 
 // Local air pressure reduced to mean sea level according to ICAO standard atmosphere
 // = QNH. Note: Model pressure reduced to sea level (=QFF) is done using constant
 // (current station) temperature, which can differ from QNH by several hPa (when the
@@ -94,15 +94,16 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const double T0=288.15;
 	const double inv_T0=1./288.15;
 	const double R=8.31447;
-	const double inv_R=1./8.31447;
 	const double M=0.0289644;
-	const double inv_M=1./0.0289644;
 	const double L=0.0065;
 	const double inv_L=1./0.0065;
-	
+	const double qnh_exponent = himan::constants::kG*M/R/L;
+	const double alt_exponent = R*L/himan::constants::kG/M;
+		
+		
 	
 	const param topoParam("Z-M2S2");
-	const param pressureParam("P-PA");
+	const params PParams({param("PGR-PA"), param("P-PA")});   // ground level pressure for EC is PGR-PA, for Hirlam P-PA
 	
 	level groundLevel(kHeight,0);
 	
@@ -117,15 +118,15 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("qnhThread #" + boost::lexical_cast<string> (threadIndex));
 
-	forecast_time forecastTime = myTargetInfo->Time();  // tiedot annetaan .json-ajotiedostossa
-	level forecastLevel = myTargetInfo->Level();  // tiedot annetaan .json-ajotiedostossa
+	forecast_time forecastTime = myTargetInfo->Time();
+	level forecastLevel = myTargetInfo->Level();
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	// Current time and level
 	
-	info_t topoInfo = Fetch(forecastTime, groundLevel, topoParam);  // haetaan tietokannasta pinnan korkeus
-	info_t pressureInfo = Fetch(forecastTime, groundLevel, pressureParam);  //haetaan tietokannasta paine maanpinnalla (= 0 m)
+	info_t topoInfo = Fetch(forecastTime, groundLevel, topoParam);  // surface elevation (as geopotential [m2/s2]) from database
+	info_t pressureInfo = Fetch(forecastTime, groundLevel, PParams);  // ground level (= 0 m) pressure [Pa] from database
 
 	if (!topoInfo||!pressureInfo)
 	{
@@ -154,7 +155,7 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			continue;
 		}
 
-		topo = topo*himan::constants::kIg;
+		topo = topo*himan::constants::kIg;   // [m2/s2] -> [m]
 			if (topo<0)
 			{
 				topo=0;
@@ -164,24 +165,15 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		/* Calculations go here */
 
-		//double alt_exponent = R*L/himan::constants::kG/M;
-		//double altitude = (T0-T0*(pow(pressure/p0,alt_exponent))) / L;
-		double alt_exponent = R*L*himan::constants::kIg*inv_M;
 		double altitude = (T0-T0*(pow(pressure*inv_p0,alt_exponent))) * inv_L;
 		
 		double msl = altitude - topo;
 
-		//double qnh_exponent = himan::constants::kG*M/R/L;
-		//double qnh = p0*pow(1-L*msl/T0,qnh_exponent);
-		double qnh_exponent = himan::constants::kG*M*inv_R*inv_L;
 		double qnh = p0*pow(1-L*msl*inv_T0,qnh_exponent);
 
 		myTargetInfo->Value(qnh);
 		
-		//cout << qnh_exponent << " qnh_exponent " << alt_exponent << " alt_exponent " << endl;
-		//cout << topo << " " << pressure << " " << qnh << endl;
-		//exit(1);
-
+	
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
