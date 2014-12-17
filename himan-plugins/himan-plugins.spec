@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.12.8
+Version: 14.12.17
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -71,12 +71,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libhybrid_pressure.so
 %{_libdir}/himan-plugins/libicing.so
 %{_libdir}/himan-plugins/libmonin_obukhov.so
+%{_libdir}/himan-plugins/libluatool.so
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libprecipitation_rate.so
 %{_libdir}/himan-plugins/libpreform_hybrid.so
 %{_libdir}/himan-plugins/libpreform_pressure.so
+%{_libdir}/himan-plugins/libqnh.so
 %{_libdir}/himan-plugins/libquerydata.so
+%{_libdir}/himan-plugins/libradon.so
 %{_libdir}/himan-plugins/librelative_humidity.so
 %{_libdir}/himan-plugins/libroughness.so
 %{_libdir}/himan-plugins/libseaicing.so
@@ -94,6 +97,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Dec 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.17-1.fmi
+- New plugin: qnh
+- New plugin: radon
+- New plugin: luatool
 * Mon Dec  8 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.8-1.fmi
 - Large internal changes in himan-lib
 * Mon Dec  1 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.1-1.fmi
