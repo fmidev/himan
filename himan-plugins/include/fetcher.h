@@ -195,7 +195,8 @@ private:
 	 * @return True if interpolation succeeds for all infos
 	 */
 
-	bool InterpolateArea(const std::shared_ptr<info>& targetInfo, std::initializer_list<std::shared_ptr<info>> infos) const;
+	bool InterpolateArea(info& targetInfo, std::initializer_list<info_t> infos) const;
+	bool Interpolate(info& baseInfo, std::vector<info_t>& infos) const;
 
 	/**
 	 * @brief Swap scanning mode if needed

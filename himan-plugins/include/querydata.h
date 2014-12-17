@@ -125,6 +125,9 @@ private:
 	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
 	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
    
+	NFmiHPlaceDescriptor CreateGrid(info& info) const;
+	NFmiHPlaceDescriptor CreatePoint(info& info) const;
+
 
 };
 

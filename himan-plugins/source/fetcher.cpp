@@ -14,6 +14,8 @@
 #include "timer_factory.h"
 #include "util.h"
 #include <NFmiQueryData.h>
+#include "regular_grid.h"
+#include "irregular_grid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -237,42 +239,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (itsDoInterpolation)
 	{
-		if (baseInfo->Grid()->Type() == kRegularGrid)
-		{
-			const regular_grid* bg = dynamic_cast<regular_grid*> (baseInfo->Grid());
-			regular_grid* g = dynamic_cast<regular_grid*> (theInfos[0]->Grid());
-
-			if (*g != *bg)
-			{
-				itsLogger->Trace("Interpolating area");
-				InterpolateArea(baseInfo, {theInfos[0]});
-			}
-			else if (g->ScanningMode() != bg->ScanningMode())
-			{
-				// == operator does not test scanning mode !
-				itsLogger->Trace("Swapping area");
-	#ifdef HAVE_CUDA
-				if (theInfos[0]->Grid()->IsPackedData())
-				{
-					// must unpack before swapping
-
-					util::Unpack({theInfos[0]->Grid()});
-				}
-	#endif
-				g->Swap(bg->ScanningMode());
-
-			}
-			else
-			{
-				itsLogger->Trace("Grids are natively equal");
-			}
-			assert(*bg == *g);
-		}
-		else
-		{
-			itsLogger->Fatal("Unable to interpolate to irregular grids yet");
-			exit(1);
-		}
+		Interpolate(*baseInfo, theInfos);
 	}
 	else
 	{
@@ -552,7 +519,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 }
 
-bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<shared_ptr<info>> infos) const
+bool fetcher::InterpolateArea(info& base, initializer_list<shared_ptr<info>> infos) const
 {
 	if (infos.size() == 0)
 	{
@@ -573,24 +540,33 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 		{
 			continue;
 		}
-
-		assert(base->Grid()->Type() == kRegularGrid);
-
-		regular_grid* g = dynamic_cast<regular_grid*> ((*it)->Grid());
-		const regular_grid* bg = dynamic_cast<regular_grid*> (base->Grid());
-
-		if (*g == *bg)
+		
+		//assert(base.Grid()->Type() == kRegularGrid);
+		
+		if (base.Grid()->Type() == kRegularGrid && (*it)->Grid()->Type() == kIrregularGrid)
 		{
+			itsLogger->Error("Unable to intepolate from irregular to regular grid");
 			continue;
 		}
+			
+		shared_ptr<grid> interpGrid;
 		
+		if (base.Grid()->Type() == kRegularGrid)
+		{
+			interpGrid = make_shared<regular_grid> ();
+		}
+		else
+		{
+			interpGrid = make_shared<irregular_grid> ();
+		}
+
 		// new data backend
 
-		unpacked targetData(base->Data().SizeX(), base->Data().SizeY());
+		unpacked targetData(base.Data().SizeX(), base.Data().SizeY());
 
 		if (!baseData)
 		{
-			baseData = q->CreateQueryData(*base, true);
+			baseData = q->CreateQueryData(base, true);
 			baseInfo = NFmiFastQueryInfo(baseData.get());
 		}
 
@@ -618,33 +594,92 @@ bool fetcher::InterpolateArea(const shared_ptr<info>& base, initializer_list<sha
 			targetData.Set(i, value);
 		}
 
-		g->Data(targetData);
-		g->BottomLeft(bg->BottomLeft());
-		g->TopRight(bg->TopRight());
-		g->Projection(bg->Projection());
-		g->SouthPole(bg->SouthPole());
-		g->Orientation(bg->Orientation());
-		g->ScanningMode(bg->ScanningMode());
+		interpGrid->Data(targetData);
+		interpGrid->Projection(base.Grid()->Projection());
+		interpGrid->SouthPole(base.Grid()->SouthPole());
+		interpGrid->Orientation(base.Grid()->Orientation());
 
-		// Newbase always normalizes data to +x+y
-		// So if source scanning mode is eg. +x-y, we have to swap the interpolated
-		// data to back to original scanningmode
-
-		if (g->ScanningMode() != kBottomLeft)
+		if (interpGrid->Type() == kRegularGrid)
 		{
-			HPScanningMode targetMode = bg->ScanningMode();
+			regular_grid* _g = dynamic_cast<regular_grid*> (interpGrid.get());
+			const regular_grid* _bg = dynamic_cast<const regular_grid*> (base.Grid());
+			
+			assert(_g && _bg);
+			
+			_g->ScanningMode(_bg->ScanningMode());
+			_g->BottomLeft(_bg->BottomLeft());
+			_g->TopRight(_bg->TopRight());
+		
+			// Newbase always normalizes data to +x+y
+			// So if source scanning mode is eg. +x-y, we have to swap the interpolated
+			// data to back to original scanningmode
 
-			// this is what newbase did to the data
-			g->ScanningMode(kBottomLeft);
+			if (_g->ScanningMode() != kBottomLeft)
+			{
+				HPScanningMode targetMode = _bg->ScanningMode();
 
-			// let's swap it back
-			g->Swap(targetMode);
+				// this is what newbase did to the data
+				_g->ScanningMode(kBottomLeft);
 
-			assert(targetMode == g->ScanningMode());
+				// let's swap it back
+				_g->Swap(targetMode);
 
+				assert(targetMode == _g->ScanningMode());
+			}
 		}
+		else
+		{
+			dynamic_cast<irregular_grid*> (interpGrid.get())->Stations(dynamic_cast<irregular_grid*> (base.Grid())->Stations());
+		}
+
+		(*it)->Grid(interpGrid);
 	}
 
 	return true;
 
+}
+
+bool fetcher::Interpolate(info& baseInfo, vector<info_t>& theInfos) const
+{
+	bool needInterpolation = false;
+
+	if (baseInfo.Grid()->Type() != theInfos[0]->Grid()->Type())
+	{
+		needInterpolation = true;
+	}			
+	else
+	{
+
+		if (*baseInfo.Grid() != *theInfos[0]->Grid())
+		{
+			needInterpolation = true;
+		}		
+		else if (baseInfo.Grid()->Type() == kRegularGrid && dynamic_cast<regular_grid*>(baseInfo.Grid())->ScanningMode() != dynamic_cast<regular_grid*>(theInfos[0]->Grid())->ScanningMode())
+		{
+			// == operator does not test scanning mode !
+			itsLogger->Trace("Swapping area");
+#ifdef HAVE_CUDA
+			if (theInfos[0]->Grid()->IsPackedData())
+			{
+				// must unpack before swapping
+
+				util::Unpack({theInfos[0]->Grid()});
+			}
+#endif
+			dynamic_cast<regular_grid*>(theInfos[0]->Grid())->Swap(dynamic_cast<regular_grid*>(baseInfo.Grid())->ScanningMode());
+
+		}
+	}
+	
+	if (needInterpolation)
+	{
+		itsLogger->Trace("Interpolating area");
+		InterpolateArea(baseInfo, {theInfos[0]});
+	}
+	else
+	{
+		itsLogger->Trace("Grids are natively equal");
+	}
+	
+	return true;
 }

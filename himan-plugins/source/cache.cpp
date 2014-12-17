@@ -92,7 +92,6 @@ void cache::SplitToPool(info& anInfo)
 	newInfo->Levels(levels);
 	newInfo->Times(times);
 	newInfo->Create(anInfo.Grid());
-	newInfo->First();
 
 	string uniqueName = UniqueName(*newInfo);
 

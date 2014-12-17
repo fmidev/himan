@@ -12,6 +12,7 @@
 #include <sstream>
 #include "util.h"
 #include "unistd.h" // getuid())
+#include "regular_grid.h"
 
 using namespace std;
 using namespace himan::plugin;

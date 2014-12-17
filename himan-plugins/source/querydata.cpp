@@ -9,6 +9,9 @@
 #include "querydata.h"
 #include "logger_factory.h"
 #include <fstream>
+#include "regular_grid.h"
+#include "irregular_grid.h"
+#include <boost/foreach.hpp>
 
 #ifdef __clang__
 
@@ -73,12 +76,6 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 	 */
 
 	shared_ptr<NFmiQueryData> qdata;
-
-	if (theInfo.Grid()->Type() != kRegularGrid)
-	{
-		itsLogger->Error("Currently unable to write point data");
-		return qdata;
-	}
 	
 	NFmiParamDescriptor pdesc = CreateParamDescriptor(theInfo, activeOnly);
 	NFmiTimeDescriptor tdesc = CreateTimeDescriptor(theInfo, activeOnly);
@@ -177,28 +174,33 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 
 }
 
+
 bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 {
 	bool swapped = false;
-	HPScanningMode originalMode = dynamic_cast<regular_grid*> (theInfo.Grid())->ScanningMode();
-
-	if (originalMode == kTopLeft)
+	
+	HPScanningMode originalMode = kUnknownScanningMode;
+	
+	if (theInfo.Grid()->Type() == kRegularGrid)
 	{
-		// For newbase we have swap data to kBottomLeft. We will
-		// have to create a copy of theInfo since we don't want to change
-		// that data.
+		originalMode = dynamic_cast<regular_grid*> (theInfo.Grid())->ScanningMode();
 
-		swapped = true;
+		if (originalMode == kTopLeft)
+		{
+			// For newbase we have swap data to kBottomLeft.
 
-		dynamic_cast<regular_grid*> (theInfo.Grid())->Swap(kBottomLeft);
+			swapped = true;
 
+			dynamic_cast<regular_grid*> (theInfo.Grid())->Swap(kBottomLeft);
+
+		}
+		else if (originalMode != kBottomLeft)
+		{
+			itsLogger->Fatal("Invalid scannignmode: " + string(HPScanningModeToString.at(originalMode)));
+			exit(1);
+		}
 	}
-	else if (originalMode != kBottomLeft)
-	{
-		itsLogger->Fatal("Invalid scannignmode: " + string(HPScanningModeToString.at(originalMode)));
-		exit(1);
-	}
-
+	
 	assert(theInfo.Data().Size() == qinfo.Size());
 
 	theInfo.ResetLocation();
@@ -297,9 +299,23 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 }
 
-NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOnly)
-{
 
+NFmiHPlaceDescriptor querydata::CreatePoint(info& info) const
+{
+	const irregular_grid* g = dynamic_cast<irregular_grid*> (info.Grid());
+	NFmiLocationBag bag;
+	
+	BOOST_FOREACH(const station& s, g->Stations())
+	{
+		NFmiStation stat(s.Id(), s.Name(), s.X(), s.Y());
+		bag.AddLocation(stat);
+	}
+	
+	return NFmiHPlaceDescriptor(bag);
+}
+
+NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
+{
 	/*
 	 * If whole info is converted to querydata, we need to check that if info contains
 	 * more than one element, the grids of each element must be equal!
@@ -307,51 +323,10 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 	 * TODO: interpolate to same grid if they are different ???
 	 */
 
-	if (!activeOnly && info.SizeTimes() * info.SizeParams() * info.SizeLevels() > 1)
-	{
-		info.ResetTime();
-		const regular_grid* firstGrid = 0;
-
-		while (info.NextTime())
-		{
-
-			info.ResetLevel();
-
-			while (info.NextLevel())
-			{
-
-				info.ResetParam();
-
-				while (info.NextParam())
-				{
-					regular_grid* g = dynamic_cast<regular_grid*> (info.Grid());
-
-					if (!g)
-					{
-						continue;
-					}
-
-					if (!firstGrid)
-					{
-						firstGrid = g;
-						continue;
-					}
-
-					if (*firstGrid != *g)
-					{
-						itsLogger->Error("All grids in info are not equal, unable to write querydata");
-						return NFmiHPlaceDescriptor();
-					}
-
-					assert(g->ScanningMode() == kBottomLeft);
-				}
-			}
-		}
-	}
 
 	NFmiArea* theArea = 0;
 
-	regular_grid* g = dynamic_cast<regular_grid*> (info.Grid());
+	const regular_grid* g = dynamic_cast<const regular_grid*> (info.Grid());
 	
 	switch (g->Projection())
 	{
@@ -397,6 +372,89 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 	delete theArea;
 
 	return NFmiHPlaceDescriptor(theGrid);
+	
+}
+
+NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOnly)
+{
+	if (!activeOnly && info.SizeTimes() * info.SizeParams() * info.SizeLevels() > 1)
+	{
+		info.ResetTime();
+		const grid* firstGrid = 0;
+
+		while (info.NextTime())
+		{
+			info.ResetLevel();
+
+			while (info.NextLevel())
+			{
+				info.ResetParam();
+
+				while (info.NextParam())
+				{
+					grid* g = info.Grid();
+
+					if (!g)
+					{
+						continue;
+					}
+
+					if (!firstGrid)
+					{
+						if (firstGrid->Type() == kRegularGrid)
+						{
+							firstGrid = dynamic_cast<regular_grid*> (g);
+						}
+						else
+						{
+							firstGrid = dynamic_cast<irregular_grid*> (g);	
+						}
+						
+						continue;
+					}
+
+					if (firstGrid->Type() != g->Type())
+					{
+						itsLogger->Error("All grids in info are not equal, unable to write querydata");
+						return NFmiHPlaceDescriptor();
+					}
+					
+					if (firstGrid->Type() == kRegularGrid)
+					{
+						const regular_grid* fg_ = dynamic_cast<const regular_grid*> (firstGrid);
+						regular_grid* g_ = dynamic_cast<regular_grid*> (info.Grid());
+					
+						if (*fg_ != *g_)
+						{
+							itsLogger->Error("All grids in info are not equal, unable to write querydata");
+							return NFmiHPlaceDescriptor();
+						}
+					}
+					else
+					{
+						const irregular_grid* fg_ = dynamic_cast<const irregular_grid*> (firstGrid);
+						irregular_grid* g_ = dynamic_cast<irregular_grid*> (info.Grid());
+					
+						if (*fg_ != *g_)
+						{
+							itsLogger->Error("All grids in info are not equal, unable to write querydata");
+							return NFmiHPlaceDescriptor();
+						}
+					}
+				}
+			}
+		}
+	}
+
+
+	if (info.Grid()->Type() == kRegularGrid)
+	{
+		return CreateGrid(info);
+	}
+	else
+	{
+		return CreatePoint(info);
+	}			
 
 }
 

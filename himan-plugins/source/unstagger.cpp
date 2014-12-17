@@ -16,6 +16,7 @@
 #include "level.h"
 #include "forecast_time.h"
 #include "plugin_factory.h"
+#include "regular_grid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 

@@ -12,6 +12,7 @@
 #include "logger_factory.h"
 #include "util.h"
 #include "cuda_helper.h"
+#include "regular_grid.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 

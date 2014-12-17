@@ -80,6 +80,12 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 {
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
+
+	if (anInfo.Grid()->Type() == kIrregularGrid)
+	{
+		itsLogger->Error("Unable to write irregular grid to grib");
+		return false;
+	}
 	
 	long edition = static_cast<long> (fileType);
 
