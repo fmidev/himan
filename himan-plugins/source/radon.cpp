@@ -188,7 +188,8 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 			<< "id, table_name "
 			<< "FROM as_grid "
 			<< "WHERE geometry_id = '" << geom_id << "'"
-			<< " AND analysis_time = '" << resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "'";
+			<< " AND analysis_time = '" << resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "'"
+			<< " AND producer_id = " << resultInfo.Producer().Id();
 
 	itsRadonDB->Query(query.str());
 
