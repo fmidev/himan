@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.12.17
+Version: 14.12.18
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -19,6 +19,7 @@ Requires: oracle-instantclient-basic >= 11.2.0.3.0
 Requires: himan-lib >= 14.11.25
 Requires: himan-bin >= 14.11.25
 Requires: lua >= 5.1.4
+Requires: unixODBC
 BuildRequires: libluabind
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: boost-devel >= 1.54
@@ -97,6 +98,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Dec 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.18-1.fmi
+- Fixes in qnh
+- Irregular grid in himan-lib
+* Wed Dec 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.17-2.fmi
+- Missed linking with odbc-library
 * Wed Dec 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.17-1.fmi
 - New plugin: qnh
 - New plugin: radon
