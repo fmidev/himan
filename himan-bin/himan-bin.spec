@@ -9,7 +9,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 14.12.8
+Version: 14.12.17
 Release: 1.fmi
 License: FMI
 Group: Development/Tools
@@ -33,7 +33,7 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: scons
 BuildRequires: boost-devel >= 1.54
 BuildRequires: libsmartmet-newbase >= 14.4.10
-BuildRequires: cuda-6-0 
+BuildRequires: cuda-6-5 
 Provides: himan
 
 %description
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Wed Dec 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.17-1.fmi
+- Changes in himan-lib headers
 * Mon Dec  8 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.8-1.fmi
 - Large internal changes in himan-lib
 * Mon Dec  1 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.1-1.fmi
