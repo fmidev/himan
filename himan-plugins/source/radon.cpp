@@ -42,7 +42,6 @@ void radon::InitPool()
 
 		if (string(base) == "/masala")
 		{
-			NFmiRadonDBPool::Instance()->ReadWriteTransaction(true);
 			NFmiRadonDBPool::Instance()->Username("wetodb");
 			NFmiRadonDBPool::Instance()->Password("3loHRgdio");
 		}
