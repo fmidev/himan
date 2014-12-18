@@ -11,6 +11,7 @@
 #include <time.h>
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
+#include "regular_grid.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -72,7 +73,7 @@ void cache::SplitToPool(info& anInfo)
 	if (anInfo.Grid()->IsPackedData())
 	{
 		itsLogger->Trace("Removing packed data from cached info");
-		dynamic_cast<regular_grid*> (anInfo.Grid())->PackedData().Clear();
+		dynamic_cast<himan::regular_grid*> (anInfo.Grid())->PackedData().Clear();
 	}
 #endif
 	
