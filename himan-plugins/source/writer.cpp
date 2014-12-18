@@ -108,7 +108,7 @@ bool writer::ToFile(info& theInfo,
 	if (ret && fileWriteOption == kNeons)
 	{
 		std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-		std::shared_ptr<radon> r = std::dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+		/*std::shared_ptr<radon> r = std::dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
 
 		// Try to save file information to radon
 		try
@@ -119,7 +119,7 @@ bool writer::ToFile(info& theInfo,
 		{
 			itsLogger->Error("Writing to radon failed"); 
 		}
-		
+		*/
 		// save file information to neons
 		ret = n->Save(theInfo, correctFileName);
 
