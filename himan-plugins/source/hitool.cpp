@@ -79,12 +79,14 @@ pair<double,double> minmax(const vector<double>& vec)
 
 hitool::hitool()
 	: itsTime()
+	, itsHeightUnit(kM)
 {
     itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("hitool"));
 }
 
 hitool::hitool(shared_ptr<plugin_configuration> conf)
 	: itsTime()
+	, itsHeightUnit(kM)
 {
     itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("hitool"));
 	itsConfiguration = conf;
@@ -178,12 +180,24 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 	
 	stringstream query;
 	
-	query << "SELECT min(CASE WHEN maximum_height <= " << height << " THEN level_value ELSE NULL END) AS lowest_level, "
+	if (itsHeightUnit == kM)
+	{
+		query << "SELECT min(CASE WHEN maximum_height <= " << height << " THEN level_value ELSE NULL END) AS lowest_level, "
 			<< "max(CASE WHEN minimum_height >= " << height << " THEN level_value ELSE NULL END) AS highest_level "
 			<< "FROM "
 			<< "hybrid_level_height "
 			<< "WHERE "
 			<< "producer_id = " << producerId;
+	}
+	else if (itsHeightUnit == kHPa)
+	{
+		query << "SELECT max(CASE WHEN minimum_pressure <= " << height << " THEN level_value ELSE NULL END) AS lowest_level, "
+			<< "min(CASE WHEN maximum_pressure >= " << height << " THEN level_value ELSE NULL END) AS highest_level "
+			<< "FROM "
+			<< "hybrid_level_height "
+			<< "WHERE "
+			<< "producer_id = " << producerId;
+	}
 
 	n->NeonsDB().Query(query.str());
 	
@@ -251,10 +265,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	
 	// first means first in sorted order, ie smallest number ie the highest level
 
-	long firstHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-	long lastHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	long highestHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
+	long lowestHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
 
 	// Karkeaa haarukointia
+
+	string heightUnit = (itsHeightUnit == kM) ? "meters" : "hectopascal";
 
 	switch (mod->Type())
 	{
@@ -291,11 +307,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
 			auto levelsForMinHeight = LevelForHeight(prod, min_value);
 		
-			firstHybridLevel = static_cast<long> (levelsForMaxHeight.second.Value());
-			lastHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
-
-			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lastHybridLevel) + " .. " + boost::lexical_cast<string> (firstHybridLevel) + " for height range " 
-				+ boost::lexical_cast<string> (util::round(min_value, 1)) + " .. " + boost::lexical_cast<string> (util::round(max_value, 1)) + " meters");
+			highestHybridLevel = static_cast<long> (levelsForMaxHeight.second.Value());
+			lowestHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
+		
+			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lowestHybridLevel) + " .. " + boost::lexical_cast<string> (highestHybridLevel) 
+				+ " for height range " + boost::lexical_cast<string> (util::round(min_value, 1)) 
+				+ " .. " + boost::lexical_cast<string> (util::round(max_value, 1)) + " " + heightUnit);
 		}
 			break;
 
@@ -308,11 +325,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
 			auto levelsForMinHeight = LevelForHeight(prod, min_value);
 		
-			firstHybridLevel = static_cast<long> (levelsForMaxHeight.second.Value());
-			lastHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
+			highestHybridLevel = static_cast<long> (levelsForMaxHeight.second.Value());
+			lowestHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
 
-			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lastHybridLevel) + " .. " + boost::lexical_cast<string> (firstHybridLevel) + " for height range " 
-				+ boost::lexical_cast<string> (util::round(min_value, 1)) + " .. " + boost::lexical_cast<string> (util::round(max_value, 1)) + " meters");
+			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lowestHybridLevel) + " .. " + boost::lexical_cast<string> (highestHybridLevel) 
+				+ " for height range " + boost::lexical_cast<string> (util::round(min_value, 1)) 
+				+ " .. " + boost::lexical_cast<string> (util::round(max_value, 1)) + " " + heightUnit);
 
 					
 		}
@@ -322,7 +340,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			break;
 	}
 
-	for (long levelValue = lastHybridLevel; levelValue >= firstHybridLevel && !mod->CalculationFinished(); levelValue--)
+	for (long levelValue = lowestHybridLevel; levelValue >= highestHybridLevel && !mod->CalculationFinished(); levelValue--)
 	{
 
 		level currentLevel(kHybrid, levelValue, "HYBRID");
@@ -376,6 +394,21 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 	shared_ptr<info> values, heights;
 	shared_ptr<plugin::fetcher> f = dynamic_pointer_cast <plugin::fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 
+	param heightParam;
+	
+	if (itsHeightUnit == kM)
+	{
+		heightParam = param("HL-M");
+	}
+	else if (itsHeightUnit == kHPa)
+	{
+		heightParam = param("P-HPA");
+	}
+	else
+	{
+		itsLogger->Fatal("Invalid height unit: " + boost::lexical_cast<string> (itsHeightUnit));
+	}
+	
 	try
 	{
 		if (!values)
@@ -391,7 +424,7 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 			heights = f->Fetch(itsConfiguration,
 								wantedTime,
 								wantedLevel,
-								param("HL-M"));
+								heightParam);
 		}
 	}
 	catch (HPExceptionType e)
@@ -1002,3 +1035,18 @@ void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 	itsConfiguration->Info()->First();
 }
 
+HPParameterUnit hitool::HeightUnit() const
+{
+	return itsHeightUnit;
+}
+
+void hitool::HeightUnit(HPParameterUnit theHeightUnit)
+{
+	if (theHeightUnit != kM && theHeightUnit != kHPa)
+	{
+		itsLogger->Error("Invalid height unit: " + boost::lexical_cast<string> (theHeightUnit));
+		return;
+	}
+	
+	itsHeightUnit = theHeightUnit;
+}

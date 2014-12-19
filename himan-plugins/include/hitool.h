@@ -430,8 +430,12 @@ public:
 	 * @brief Set configuration
 	 * @param conf
 	 */
+	
 	void Configuration(const std::shared_ptr<const plugin_configuration> conf);
 
+	void HeightUnit(HPParameterUnit theHeightUnit);
+	HPParameterUnit HeightUnit() const;
+	
 private:
 	std::shared_ptr<modifier> CreateModifier(HPModifierType modifierType) const;
 
@@ -470,7 +474,12 @@ private:
 
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	forecast_time itsTime;
-	
+
+	/**
+	 * @brief Height from ground can be either meters (HPParameterUnit::kM) or hectopascals (kHPa)
+	 */
+
+	HPParameterUnit itsHeightUnit;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
@@ -479,7 +488,7 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<hitool> (new hitool());
+	return std::make_shared<hitool> ();
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
