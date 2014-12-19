@@ -12,6 +12,7 @@ modifier::modifier()
 	: itsMissingValuesAllowed(false)
 	, itsFindNthValue(1) // first
 	, itsModifierType(kUnknownModifierType)
+	, itsLowerIsSmaller(true)
 {
 }
 
@@ -19,6 +20,7 @@ modifier::modifier(HPModifierType theModifierType)
 	: itsMissingValuesAllowed(false)
 	, itsFindNthValue(1) // first
 	, itsModifierType(theModifierType)
+	, itsLowerIsSmaller(true)
 {
 }
 
@@ -216,17 +218,34 @@ bool modifier::Evaluate(double theValue, double theHeight)
 	{
 		return false;
 	}
-	else if (theHeight > upperLimit  || IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+	else if (itsLowerIsSmaller)
 	{
-		// height is above given height range OR either level value is missing: stop processing of this grid point
-		itsOutOfBoundHeights[itsIndex] = true;
-		return false;
+		if (theHeight > upperLimit  || IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+		{
+			// height is above given height range OR either level value is missing: stop processing of this grid point
+			itsOutOfBoundHeights[itsIndex] = true;
+			return false;
+		}
+		else if (theHeight < lowerLimit)
+		{
+			// height is below given height range, do not cancel calculation yet
+			return false;
+		}
 	}
-	else if (theHeight < lowerLimit)
+	else if (!itsLowerIsSmaller)
 	{
-		// height is below given height range, do not cancel calculation yet
-		return false;
-	}
+		if (theHeight < upperLimit  || IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+		{
+			// height is above given height range OR either level value is missing: stop processing of this grid point
+			itsOutOfBoundHeights[itsIndex] = true;
+			return false;
+		}
+		else if (theHeight > lowerLimit)
+		{
+			// height is below given height range, do not cancel calculation yet
+			return false;
+		}
+	}	
 	else if (IsMissingValue(theValue))
 	{
 		return false;
@@ -800,7 +819,6 @@ bool modifier_findvalue::CalculationFinished() const
 
 void modifier_findvalue::Calculate(double theValue, double theHeight)
 {
-
 	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
 	
 	double findHeight = itsFindValue[itsIndex];

@@ -82,6 +82,14 @@ class modifier
 
 		HPModifierType itsModifierType;
 		
+		/**
+		 * @brief Define if height values get smaller or bigger as we move up in the atmosphere.
+		 *
+		 * Default unit for height is meters, which means that lower is smaller.
+		 * The other option is to use pascals which means that lowers is bigger.
+		 */
+
+		bool itsLowerIsSmaller;
 };
 
 inline
