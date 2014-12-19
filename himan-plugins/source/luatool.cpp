@@ -135,6 +135,7 @@ void luatool::InitLua(std::shared_ptr<info> myTargetInfo)
 	// Define a nice iterator for multiple infos
 
 	const char* nextvalue = R"(
+_gridsize = -1
 function nextvalue(...)
 	local arg = {...}
 	local tmp = {...}
@@ -146,13 +147,11 @@ function nextvalue(...)
 	local function _nextvalue(arg, i)
 		i = i+1
 
-		local gridsize = arg[1]:GetGrid():Size()
-
+		if _gridsize == -1 then _gridsize = arg[1]:GetGrid():Size() end
 		if i > gridsize then return nil end
 
 		for j=1,#arg do
-			local f = arg[j]
-			local val = f:GetIndexValue(i)
+			local val = arg[j]:GetIndexValue(i)
 			if val == nil then return val end
 
 			tmp[j] = val
@@ -307,6 +306,12 @@ void BindEnum(lua_State* L)
 			value("kUnknownGridType", kUnknownGridType),
 			value("kRegularGrid", kRegularGrid),
 			value("kIrregularGrid", kIrregularGrid)
+		],
+		class_<HPParameterUnit>("HPParameterUnit")
+			.enum_("constants")
+		[
+			value("kM", kM),
+			value("kHPa", kHPa)
 		]
 	];
 }
@@ -508,6 +513,17 @@ void Time(std::shared_ptr<hitool> h, const forecast_time& theTime)
 {
 	h->Time(theTime);
 }
+
+void SetHeightUnit(std::shared_ptr<hitool> h, HPParameterUnit theHeightUnit)
+{
+	h->HeightUnit(theHeightUnit);
+}
+
+HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h)
+{
+	return h->HeightUnit();
+}
+
 } // namespace hitool_wrapper
 
 void BindLib(lua_State* L)
@@ -787,6 +803,8 @@ void BindPlugins(lua_State* L)
 			.def("VerticalPlusMinusAreaMultiParam", &hitool_wrapper::VerticalPlusMinusAreaMultiParam)
 			.def("VerticalPlusMinusAreaGrid", &hitool_wrapper::VerticalPlusMinusAreaGrid)
 			.def("VerticalPlusMinusArea", &hitool_wrapper::VerticalPlusMinusArea)
+			.def("SetHeightUnit", &hitool_wrapper::SetHeightUnit)
+			.def("GetHeightUnit", &hitool_wrapper::GetHeightUnit)
 	];
 }
 
