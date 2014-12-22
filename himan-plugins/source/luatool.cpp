@@ -150,9 +150,9 @@ void luatool::InitLua(info_t myTargetInfo)
 _gridsize = -1
 function nextvalue(...)
 	local arg = {...}
-	local tmp = {...}
+	local tmp = {}
 
-	if #tmp == 0 then
+	if #arg == 0 then
 		return function() end, nil, nil
 	end
 
@@ -160,6 +160,7 @@ function nextvalue(...)
 		i = i+1
 
 		if _gridsize == -1 then _gridsize = arg[1]:GetGrid():Size() end
+
 		if i > gridsize then return nil end
 
 		for j=1,#arg do
