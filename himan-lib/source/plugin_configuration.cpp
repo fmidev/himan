@@ -34,6 +34,7 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
 	, itsOptions(other.itsOptions)
 {
 	itsStatistics = make_shared<statistics> (*other.itsStatistics);
+	itsInfo = make_shared<info> (*other.itsInfo);
 }
 
 plugin_configuration::plugin_configuration(const string& theName, const map<string,vector<string>>& theOptions)
