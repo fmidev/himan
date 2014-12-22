@@ -56,16 +56,16 @@ protected:
 	 * lua scripts!
 	 */
 
-	virtual void Finish() const;
-	virtual void Run(info_t myTargetInfo, unsigned short threadIndex);
+	void Finish() const;
+	void Run(info_t myTargetInfo, unsigned short threadIndex);
 
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
-	void InitLua(std::shared_ptr<info> myTargetInfo);
+	void InitLua(info_t myTargetInfo);
 	bool ReadFile(const std::string& luaFile);
 
-	lua_State* L;	
+	boost::thread_specific_ptr <lua_State> myL;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

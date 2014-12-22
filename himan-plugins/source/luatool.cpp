@@ -52,7 +52,7 @@ void BindPlugins(lua_State* L);
 void BindEnum(lua_State* L);
 int BindErrorHandler(lua_State* L);
 
-luatool::luatool() : L(0)
+luatool::luatool() : myL(0)
 {
 	itsClearTextFormula = "<interpreted>";
 	itsLogger = logger_factory::Instance()->GetLog("luatool");
@@ -60,10 +60,6 @@ luatool::luatool() : L(0)
 
 luatool::~luatool()
 {
-	if (L)
-	{
-		lua_close(L);
-	}
 }
 
 void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -79,12 +75,13 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("luatoolThread #" + boost::lexical_cast<std::string> (threadIndex));
 
 	InitLua(myTargetInfo);
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("luatoolThread #" + boost::lexical_cast<std::string> (threadIndex));
+	myThreadedLogger->Info("Calculating time " + static_cast<std::string> (myTargetInfo->Time().ValidDateTime()) + " level " + static_cast<std::string> (myTargetInfo->Level()));
 
-	globals(L)["logger"] = myThreadedLogger.get();
+	globals(myL.get())["logger"] = myThreadedLogger.get();
 
 	BOOST_FOREACH(const std::string& luaFile, itsConfiguration->GetValueList("luafile"))
 	{
@@ -93,16 +90,30 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 			continue;
 		}
 
-		itsLogger->Info("Starting script " + luaFile);
+		myThreadedLogger->Info("Starting script " + luaFile);
 
 		ReadFile(luaFile);
 	}
+
+	lua_close(myL.get());
+	myL.reset();
+
 }
 
-void luatool::InitLua(std::shared_ptr<info> myTargetInfo)
+void luatool::InitLua(info_t myTargetInfo)
 {
+	/*
+	 * An ideal solution would be to initialize the basic stuff once in a single threaded environment,
+	 * and then just set the thread-specific stuff in the thread-specific section of code.
+	 *
+	 * Unfortunately lua does not support copying of the global lua_State* variable so this is not possible.
+	 * So now we have to re-bind all functions for every thread execution :-(
+	 */
+
+	lua_State* L = luaL_newstate();
 
 	L = luaL_newstate();
+
 	luaL_openlibs(L);
 
 	assert(L);
@@ -115,22 +126,23 @@ void luatool::InitLua(std::shared_ptr<info> myTargetInfo)
     BindLib(L);
     BindPlugins(L);
 
-	itsLogger->Trace("luabind finished");
-
-	// Set some variable that are needed in luatool calculations
-	// but are too hard or complicated to create in the lua side
-
 	globals(L)["luatool"] = boost::ref(this);
 	globals(L)["result"] = myTargetInfo;
-	globals(L)["current_time"] = myTargetInfo->Time();
-	globals(L)["current_level"] = myTargetInfo->Level();
+
+	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
+	globals(L)["current_level"] = level(myTargetInfo->Level());
 
 	auto h = std::dynamic_pointer_cast<hitool> (plugin_factory::Instance()->Plugin("hitool"));
 
 	h->Configuration(itsConfiguration);
-	h->Time(myTargetInfo->Time());
+	h->Time(forecast_time(myTargetInfo->Time()));
 
 	globals(L)["hitool"] = h;
+
+	itsLogger->Trace("luabind finished");
+
+	// Set some variable that are needed in luatool calculations
+	// but are too hard or complicated to create in the lua side
 
 	// Define a nice iterator for multiple infos
 
@@ -165,6 +177,9 @@ end
 )";
 
 	luaL_dostring(L, nextvalue);
+
+	myL.reset(L);
+
 }
 
 bool luatool::ReadFile(const std::string& luaFile)
@@ -174,12 +189,13 @@ bool luatool::ReadFile(const std::string& luaFile)
 		std::cerr << "Error: script " << luaFile << " does not exist\n";
 		return false;
 	}
-	
+
 	try
 	{
-		if (luaL_dofile(L, luaFile.c_str()))
+		assert(myL.get());
+		if (luaL_dofile(myL.get(), luaFile.c_str()))
 		{
-			itsLogger->Error(lua_tostring(L, -1));
+			itsLogger->Error(lua_tostring(myL.get(), -1));
 			return false;
 		}
 	}
@@ -340,6 +356,46 @@ bool SetData(std::shared_ptr<info> anInfo, const std::vector<double>& values)
 	return anInfo->Grid()->Data().Set(values);
 }
 
+size_t GetLocationIndex(std::shared_ptr<info> anInfo)
+{
+	return anInfo->LocationIndex()+1;
+}
+
+size_t GetTimeIndex(std::shared_ptr<info> anInfo)
+{
+	return anInfo->TimeIndex()+1;
+}
+
+size_t GetParamIndex(std::shared_ptr<info> anInfo)
+{
+	return anInfo->ParamIndex()+1;
+}
+
+size_t GetLevelIndex(std::shared_ptr<info> anInfo)
+{
+	return anInfo->LevelIndex()+1;
+}
+
+void SetLocationIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+{
+	anInfo->LocationIndex(--theIndex);
+}
+
+void SetTimeIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+{
+	anInfo->TimeIndex(--theIndex);
+}
+
+void SetParamIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+{
+	anInfo->ParamIndex(--theIndex);
+}
+
+void SetLevelIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+{
+	anInfo->LevelIndex(--theIndex);
+}
+
 } // namespace info_wrapper
 
 namespace hitool_wrapper
@@ -349,6 +405,7 @@ namespace hitool_wrapper
 // because that leads to undefined symbols in plugins and that
 // forces us to link luatool with hitool which is not nice!
 
+/*
 std::vector<double> VerticalMaximumMultiParamGrid(std::shared_ptr<hitool> h, const params& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
 	return h->VerticalMaximum(theParams, firstLevelValue, lastLevelValue);
@@ -358,17 +415,47 @@ std::vector<double> VerticalMaximumMultiParam(std::shared_ptr<hitool> h, const p
 {
 	return h->VerticalMaximum(theParams, firstLevelValue, lastLevelValue);
 }
+*/
 
 std::vector<double> VerticalMaximumGrid(std::shared_ptr<hitool> h, const param& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
-	return h->VerticalMaximum(theParams, firstLevelValue, lastLevelValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalMaximum(theParams, firstLevelValue, lastLevelValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+	
+	return ret;
 }
 
 std::vector<double> VerticalMaximum(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue)
 {
-	return h->VerticalMaximum(theParams, firstLevelValue, lastLevelValue);
+	std::vector<double> ret;
+
+	try
+	{
+		h->VerticalMaximum(theParams, firstLevelValue, lastLevelValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
+/*
 std::vector<double> VerticalMinimumMultiParamGrid(std::shared_ptr<hitool> h, const params& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
 	return h->VerticalMinimum(theParams, firstLevelValue, lastLevelValue);
@@ -378,17 +465,47 @@ std::vector<double> VerticalMinimumMultiParam(std::shared_ptr<hitool> h, const p
 {
 	return h->VerticalMinimum(theParams, firstLevelValue, lastLevelValue);
 }
+*/
 
 std::vector<double> VerticalMinimumGrid(std::shared_ptr<hitool> h, const param& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
-	return h->VerticalMinimum(theParams, firstLevelValue, lastLevelValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalMinimum(theParams, firstLevelValue, lastLevelValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
 std::vector<double> VerticalMinimum(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue)
 {
-	return h->VerticalMinimum(theParams, firstLevelValue, lastLevelValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalMinimum(theParams, firstLevelValue, lastLevelValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
+/*
 std::vector<double> VerticalSumMultiParamGrid(std::shared_ptr<hitool> h, const params& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
 	return h->VerticalSum(theParams, firstLevelValue, lastLevelValue);
@@ -398,17 +515,47 @@ std::vector<double> VerticalSumMultiParam(std::shared_ptr<hitool> h, const param
 {
 	return h->VerticalSum(theParams, firstLevelValue, lastLevelValue);
 }
+*/
 
 std::vector<double> VerticalSumGrid(std::shared_ptr<hitool> h, const param& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
-	return h->VerticalSum(theParams, firstLevelValue, lastLevelValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalSum(theParams, firstLevelValue, lastLevelValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
 std::vector<double> VerticalSum(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue)
 {
-	return h->VerticalSum(theParams, firstLevelValue, lastLevelValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalSum(theParams, firstLevelValue, lastLevelValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
+/*
 std::vector<double> VerticalAverageMultiParamGrid(std::shared_ptr<hitool> h, const params& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
 	return h->VerticalAverage(theParams, firstLevelValue, lastLevelValue);
@@ -418,17 +565,47 @@ std::vector<double> VerticalAverageMultiParam(std::shared_ptr<hitool> h, const p
 {
 	return h->VerticalAverage(theParams, firstLevelValue, lastLevelValue);
 }
+*/
 
 std::vector<double> VerticalAverageGrid(std::shared_ptr<hitool> h, const param& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
-	return h->VerticalAverage(theParams, firstLevelValue, lastLevelValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalAverage(theParams, firstLevelValue, lastLevelValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
 std::vector<double> VerticalAverage(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue)
 {
-	return h->VerticalAverage(theParams, firstLevelValue, lastLevelValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalAverage(theParams, firstLevelValue, lastLevelValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
+/*
 std::vector<double> VerticalCountMultiParamGrid(std::shared_ptr<hitool> h, const params& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue)
 {
 	return h->VerticalCount(theParams, firstLevelValue, lastLevelValue, findValue);
@@ -438,17 +615,47 @@ std::vector<double> VerticalCountMultiParam(std::shared_ptr<hitool> h, const par
 {
 	return h->VerticalCount(theParams, firstLevelValue, lastLevelValue, findValue);
 }
+*/
 
 std::vector<double> VerticalCountGrid(std::shared_ptr<hitool> h, const param& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue)
 {
-	return h->VerticalCount(theParams, firstLevelValue, lastLevelValue, findValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalCount(theParams, firstLevelValue, lastLevelValue, findValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
 std::vector<double> VerticalCount(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue, double findValue)
 {
-	return h->VerticalCount(theParams, firstLevelValue, lastLevelValue, findValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalCount(theParams, firstLevelValue, lastLevelValue, findValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
+/*
 std::vector<double> VerticalHeightMultiParamGrid(std::shared_ptr<hitool> h, const params& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue, size_t findNth)
 {
 	return h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth);
@@ -458,17 +665,47 @@ std::vector<double> VerticalHeightMultiParam(std::shared_ptr<hitool> h, const pa
 {
 	return h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth);
 }
+*/
 
 std::vector<double> VerticalHeightGrid(std::shared_ptr<hitool> h, const param& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue, const std::vector<double>& findValue, size_t findNth)
 {
-	return h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
 std::vector<double> VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue, double findValue, size_t findNth)
 {
-	return h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;	
 }
 
+/*
 std::vector<double> VerticalValueMultiParamGrid(std::shared_ptr<hitool> h, const params& theParams, const std::vector<double>& findValue)
 {
 	return h->VerticalValue(theParams, findValue);
@@ -478,17 +715,47 @@ std::vector<double> VerticalValueMultiParam(std::shared_ptr<hitool> h, const par
 {
 	return h->VerticalValue(theParams, findValue);
 }
+*/
 
 std::vector<double> VerticalValueGrid(std::shared_ptr<hitool> h, const param& theParams, const std::vector<double>& findValue)
 {
-	return h->VerticalValue(theParams, findValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalValue(theParams, findValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
 std::vector<double> VerticalValue(std::shared_ptr<hitool> h, const param& theParams, double findValue)
 {
-	return h->VerticalValue(theParams, findValue);
+	std::vector<double> ret;
+
+	try
+	{
+		ret = h->VerticalValue(theParams, findValue);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw e;
+		}
+	}
+
+	return ret;
 }
 
+/*
 std::vector<double> VerticalPlusMinusAreaMultiParamGrid(std::shared_ptr<hitool> h, const params& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
 	return h->PlusMinusArea(theParams, firstLevelValue, lastLevelValue);
@@ -498,6 +765,7 @@ std::vector<double> VerticalPlusMinusAreaMultiParam(std::shared_ptr<hitool> h, c
 {
 	return h->PlusMinusArea(theParams, firstLevelValue, lastLevelValue);
 }
+*/
 
 std::vector<double> VerticalPlusMinusAreaGrid(std::shared_ptr<hitool> h, const param& theParams, const std::vector<double>& firstLevelValue, const std::vector<double>& lastLevelValue)
 {
@@ -526,6 +794,22 @@ HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h)
 
 } // namespace hitool_wrapper
 
+namespace std_wrapper
+{
+
+double vector_at(std::vector<double>& vec, size_t theIndex)
+{
+	return vec[--theIndex];
+}
+
+void vector_set(std::vector<double>& vec, size_t theIndex, double value)
+{
+	vec[--theIndex] = value;
+}
+
+} // namespace std_wrapper
+
+
 void BindLib(lua_State* L)
 {
 	module(L)
@@ -552,10 +836,6 @@ void BindLib(lua_State* L)
 			.def("SizeTimes", LUA_CMEMFN(size_t, info, SizeTimes, void))
 			.def("SizeParams", LUA_CMEMFN(size_t, info, SizeParams, void))
 			.def("SizeLevels", LUA_CMEMFN(size_t, info, SizeLevels, void))
-			.def("LocationIndex", LUA_CMEMFN(size_t, info, LocationIndex, void))
-			.def("GetTimeIndex", LUA_CMEMFN(size_t, info, TimeIndex, void))
-			.def("GetParamIndex", LUA_CMEMFN(size_t, info, ParamIndex, void))
-			.def("GetLevelIndex", LUA_CMEMFN(size_t, info, LevelIndex, void))
 			.def("GetLevel", LUA_CMEMFN(level, info, Level, void))
 			.def("GetTime", LUA_CMEMFN(forecast_time, info, Time, void))
 			.def("GetGrid", LUA_CMEMFN(grid*, info, Grid, void))
@@ -568,6 +848,14 @@ void BindLib(lua_State* L)
 			.def("SetIndexValue", &info_wrapper::SetValue)
 			.def("GetIndexValue", &info_wrapper::GetValue)
 			.def("SetData", &info_wrapper::SetData)
+			.def("GetLocationIndex", &info_wrapper::GetLocationIndex)
+			.def("GetTimeIndex", &info_wrapper::GetTimeIndex)
+			.def("GetParamIndex", &info_wrapper::GetParamIndex)
+			.def("GetLevelIndex", &info_wrapper::GetLevelIndex)
+			.def("SetLocationIndex", &info_wrapper::SetLocationIndex)
+			.def("SetTimeIndex", &info_wrapper::SetTimeIndex)
+			.def("SetParamIndex", &info_wrapper::SetParamIndex)
+			.def("SetLevelIndex", &info_wrapper::SetLevelIndex)
 		,
 		class_<grid, std::shared_ptr<grid>>("grid")
 		,
@@ -751,6 +1039,10 @@ void BindLib(lua_State* L)
 		class_<std::vector<double>>("vector")
 			.def(constructor<>())
 			.def("size", &std::vector<double>::size)
+			.def("empty", &std::vector<double>::empty)
+			.def("get_value", &std_wrapper::vector_at)
+			.def("set_value", &std_wrapper::vector_set)
+			.def("clear", &std::vector<double>::clear)
 	];
 
 }
@@ -771,36 +1063,36 @@ void BindPlugins(lua_State* L)
 			.def(constructor<>())
 			.def("ClassName", &hitool::ClassName)
 			// Local functions to luatool
-			.def("VerticalMaximumMultiParamGrid", &hitool_wrapper::VerticalMaximumMultiParamGrid)
-			.def("VerticalMaximumMultiParam", &hitool_wrapper::VerticalMaximumMultiParam)
+//			.def("VerticalMaximumMultiParamGrid", &hitool_wrapper::VerticalMaximumMultiParamGrid)
+//			.def("VerticalMaximumMultiParam", &hitool_wrapper::VerticalMaximumMultiParam)
 			.def("VerticalMaximumGrid", &hitool_wrapper::VerticalMaximumGrid)
 			.def("VerticalMaximum", &hitool_wrapper::VerticalMaximum)
-			.def("VerticalMinimumMultiParamGrid", &hitool_wrapper::VerticalMinimumMultiParamGrid)
-			.def("VerticalMinimumMultiParam", &hitool_wrapper::VerticalMinimumMultiParam)
+//			.def("VerticalMinimumMultiParamGrid", &hitool_wrapper::VerticalMinimumMultiParamGrid)
+//			.def("VerticalMinimumMultiParam", &hitool_wrapper::VerticalMinimumMultiParam)
 			.def("VerticalMinimumGrid", &hitool_wrapper::VerticalMinimumGrid)
 			.def("VerticalMinimum", &hitool_wrapper::VerticalMinimum)
-			.def("VerticalSumMultiParamGrid", &hitool_wrapper::VerticalSumMultiParamGrid)
-			.def("VerticalSumMultiParam", &hitool_wrapper::VerticalSumMultiParam)
+//			.def("VerticalSumMultiParamGrid", &hitool_wrapper::VerticalSumMultiParamGrid)
+//			.def("VerticalSumMultiParam", &hitool_wrapper::VerticalSumMultiParam)
 			.def("VerticalSumGrid", &hitool_wrapper::VerticalSumGrid)
 			.def("VerticalSum", &hitool_wrapper::VerticalSum)
-			.def("VerticalAverageMultiParamGrid", &hitool_wrapper::VerticalAverageMultiParamGrid)
-			.def("VerticalAverageMultiParam", &hitool_wrapper::VerticalAverageMultiParam)
+//			.def("VerticalAverageMultiParamGrid", &hitool_wrapper::VerticalAverageMultiParamGrid)
+//			.def("VerticalAverageMultiParam", &hitool_wrapper::VerticalAverageMultiParam)
 			.def("VerticalAverageGrid", &hitool_wrapper::VerticalAverageGrid)
 			.def("VerticalAverage", &hitool_wrapper::VerticalAverage)
-			.def("VerticalCountMultiParamGrid", &hitool_wrapper::VerticalCountMultiParamGrid)
-			.def("VerticalCountMultiParam", &hitool_wrapper::VerticalCountMultiParam)
+//			.def("VerticalCountMultiParamGrid", &hitool_wrapper::VerticalCountMultiParamGrid)
+//			.def("VerticalCountMultiParam", &hitool_wrapper::VerticalCountMultiParam)
 			.def("VerticalCountGrid", &hitool_wrapper::VerticalCountGrid)
 			.def("VerticalCount", &hitool_wrapper::VerticalCount)
-			.def("VerticalHeightMultiParamGrid", &hitool_wrapper::VerticalHeightMultiParamGrid)
-			.def("VerticalHeightMultiParam", &hitool_wrapper::VerticalHeightMultiParam)
+//			.def("VerticalHeightMultiParamGrid", &hitool_wrapper::VerticalHeightMultiParamGrid)
+//			.def("VerticalHeightMultiParam", &hitool_wrapper::VerticalHeightMultiParam)
 			.def("VerticalHeightGrid", &hitool_wrapper::VerticalHeightGrid)
 			.def("VerticalHeight", &hitool_wrapper::VerticalHeight)
-			.def("VerticalValueMultiParamGrid", &hitool_wrapper::VerticalValueMultiParamGrid)
-			.def("VerticalValueMultiParam", &hitool_wrapper::VerticalValueMultiParam)
+//			.def("VerticalValueMultiParamGrid", &hitool_wrapper::VerticalValueMultiParamGrid)
+//			.def("VerticalValueMultiParam", &hitool_wrapper::VerticalValueMultiParam)
 			.def("VerticalValueGrid", &hitool_wrapper::VerticalValueGrid)
 			.def("VerticalValue", &hitool_wrapper::VerticalValue)
-			.def("VerticalPlusMinusAreaMultiParamGrid", &hitool_wrapper::VerticalPlusMinusAreaMultiParamGrid)
-			.def("VerticalPlusMinusAreaMultiParam", &hitool_wrapper::VerticalPlusMinusAreaMultiParam)
+//			.def("VerticalPlusMinusAreaMultiParamGrid", &hitool_wrapper::VerticalPlusMinusAreaMultiParamGrid)
+//			.def("VerticalPlusMinusAreaMultiParam", &hitool_wrapper::VerticalPlusMinusAreaMultiParam)
 			.def("VerticalPlusMinusAreaGrid", &hitool_wrapper::VerticalPlusMinusAreaGrid)
 			.def("VerticalPlusMinusArea", &hitool_wrapper::VerticalPlusMinusArea)
 			.def("SetHeightUnit", &hitool_wrapper::SetHeightUnit)
