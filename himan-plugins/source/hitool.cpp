@@ -1031,7 +1031,7 @@ void hitool::Time(const forecast_time& theTime)
 
 void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 {
-	itsConfiguration = conf;
+	itsConfiguration = make_shared<plugin_configuration> (*conf); // not an ideal solution but the next line changes iterator positions so we need a local copy
 	itsConfiguration->Info()->First();
 }
 
