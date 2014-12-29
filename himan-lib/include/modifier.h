@@ -58,6 +58,9 @@ class modifier
 		size_t HeightsCrossed() const;
 		HPModifierType Type() const;
 		
+		bool HeightInMeters() const;
+		void HeightInMeters(bool theHeightInMeters);
+
 	protected:
 		modifier(HPModifierType theModifierType);
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
@@ -89,7 +92,7 @@ class modifier
 		 * The other option is to use pascals which means that lowers is bigger.
 		 */
 
-		bool itsLowerIsSmaller;
+		bool itsHeightInMeters;
 };
 
 inline

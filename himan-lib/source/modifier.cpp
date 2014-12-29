@@ -12,7 +12,7 @@ modifier::modifier()
 	: itsMissingValuesAllowed(false)
 	, itsFindNthValue(1) // first
 	, itsModifierType(kUnknownModifierType)
-	, itsLowerIsSmaller(true)
+	, itsHeightInMeters(true)
 {
 }
 
@@ -20,7 +20,7 @@ modifier::modifier(HPModifierType theModifierType)
 	: itsMissingValuesAllowed(false)
 	, itsFindNthValue(1) // first
 	, itsModifierType(theModifierType)
-	, itsLowerIsSmaller(true)
+	, itsHeightInMeters(true)
 {
 }
 
@@ -218,7 +218,7 @@ bool modifier::Evaluate(double theValue, double theHeight)
 	{
 		return false;
 	}
-	else if (itsLowerIsSmaller)
+	else if (itsHeightInMeters)
 	{
 		if (theHeight > upperLimit  || IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
 		{
@@ -232,11 +232,10 @@ bool modifier::Evaluate(double theValue, double theHeight)
 			return false;
 		}
 	}
-	else if (!itsLowerIsSmaller)
+	else if (!itsHeightInMeters)
 	{
 		if (theHeight < upperLimit  || IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
 		{
-			// height is above given height range OR either level value is missing: stop processing of this grid point
 			itsOutOfBoundHeights[itsIndex] = true;
 			return false;
 		}
@@ -251,7 +250,7 @@ bool modifier::Evaluate(double theValue, double theHeight)
 		return false;
 	}
 
-	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
+	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || ((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit)));
 
 	return true;
 }
@@ -291,6 +290,15 @@ HPModifierType modifier::Type() const
 	return itsModifierType;
 }
 
+bool modifier::HeightInMeters() const
+{
+	return itsHeightInMeters;
+}
+
+void modifier::HeightInMeters(bool theHeightInMeters)
+{
+	itsHeightInMeters = theHeightInMeters;
+}
 
 std::ostream& modifier::Write(std::ostream& file) const
 {
@@ -801,13 +809,21 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 			}
 		}
 
-		// Give some threshold to lowest and highest heights: 500 meters to both
+		// Give some threshold to lowest and highest heights
 		
-		lowestHeight = fmax(0, lowestHeight-500);
-
-		itsLowerHeight.resize(itsResult.size(), lowestHeight);
-		itsUpperHeight.resize(itsResult.size(), highestHeight+500);
-
+		if (itsHeightInMeters)
+		{
+			lowestHeight = fmax(0, lowestHeight-500); // meters
+			itsLowerHeight.resize(itsResult.size(), lowestHeight);
+			itsUpperHeight.resize(itsResult.size(), highestHeight+500);
+		}
+		else
+		{
+			lowestHeight = lowestHeight+200; // hectopascals
+			itsLowerHeight.resize(itsResult.size(), lowestHeight);
+			itsUpperHeight.resize(itsResult.size(), highestHeight-200);
+			
+		}
 		itsValuesFound = 0;
 	} 
 }
@@ -840,7 +856,7 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 		// that we cannot interpolate the value. In this case clamp the value to the lowest
 		// hybrid level.
 		
-		// Clamp threshold is set to 30 meters: if the difference between requrested height
+		// Clamp threshold is set to 30 meters: if the difference between requested height
 		// and lowest hybrid level is larger that this then clamping is not done and
 		// kFloatMissing is the result
 
