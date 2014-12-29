@@ -1,0 +1,18 @@
+{
+	"source_geom_name" : "ECGLO0125",
+	"target_geom_name" : "ECGLO0125",
+	"source_producer" : "131",
+	"target_producer" : "240",
+	"hours" : "13",
+	"file_write" : "multiple",
+	"origintime" : "2014-12-29 06:00:00",
+	"read_data_from_database" : "false",
+
+	"processqueue" : [
+	{
+		"leveltype" : "height",
+		"levels" : "0",
+		"plugins" : [ { "name" : "qnh" } ]
+	}
+	]
+}
