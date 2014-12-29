@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 14.12.18
-Release: 1%{dist}.fmi
+Version: 14.12.29
+Release: 2%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -98,6 +98,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Dec 29 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.29-2.fmi
+- Updated fmidb
+* Mon Dec 29 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.29-1.fmi
+- Changes in luatool, hitool
 * Thu Dec 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.18-1.fmi
 - Fixes in qnh
 - Irregular grid in himan-lib
