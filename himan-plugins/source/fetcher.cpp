@@ -483,7 +483,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
 		files = n->Files(opts);
-
+		
 		if (!files.empty())
 		{
 			ret = FromFile(files, opts, true, readPackedData);
@@ -496,7 +496,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 			return ret;
 		}
 		// try radon next
-		/* Needs some debugging
+		
         shared_ptr<radon> r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
 
         files = r->Files(opts);
@@ -512,7 +512,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
             return ret;
         }
-		*/
+
 	}
 
 	return ret;
