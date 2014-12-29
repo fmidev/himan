@@ -18,6 +18,20 @@ extern "C"
 #include <lua.h>
 }
 
+namespace luabind
+{
+namespace detail
+{
+namespace has_get_pointer_
+{
+	template<class T>
+	T * get_pointer(std::shared_ptr<T> const& p) { return p.get(); }
+}
+}
+}
+
+#include <luabind/object.hpp>
+
 namespace himan
 {
 namespace plugin
@@ -45,8 +59,8 @@ public:
 	}
 
 	void Process(std::shared_ptr<const plugin_configuration> configuration);
-
-	std::shared_ptr<info> Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
+	std::shared_ptr<info> FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
+	luabind::object Fetch(const std::string& theGlobalLuaName, const forecast_time& theTime, const level& theLevel, const param& theParam) const;
 	
 protected:
 	/* These functions exists because we need to stop himan
@@ -58,14 +72,12 @@ protected:
 
 	void Finish() const;
 	void Run(info_t myTargetInfo, unsigned short threadIndex);
-
+	
 private:
-    virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-
-	void InitLua(info_t myTargetInfo);
+    void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void InitLua(info_t myTargetInfo);	
 	bool ReadFile(const std::string& luaFile);
-
-	boost::thread_specific_ptr <lua_State> myL;
+	
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
