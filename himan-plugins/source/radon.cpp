@@ -59,7 +59,7 @@ vector<string> radon::Files(search_options& options)
 
 	vector<string> files;
 
-	string analtime = options.time.OriginDateTime().String("%Y%m%d%H%M%S");
+	string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 	string levelvalue = boost::lexical_cast<string> (options.level.Value());
 
 	string ref_prod = options.prod.Name();
