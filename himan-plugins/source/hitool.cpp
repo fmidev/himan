@@ -259,6 +259,11 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 		mod->UpperHeight(upperHeight);
 	}
 
+	if (itsHeightUnit == kHPa)
+	{
+		mod->HeightInMeters(false);
+	}
+	
 	// Should we loop over all producers ?
 
 	producer prod = itsConfiguration->SourceProducer(0);

@@ -598,6 +598,7 @@ bool fetcher::InterpolateArea(info& base, initializer_list<shared_ptr<info>> inf
 		interpGrid->Projection(base.Grid()->Projection());
 		interpGrid->SouthPole(base.Grid()->SouthPole());
 		interpGrid->Orientation(base.Grid()->Orientation());
+		interpGrid->AB((*it)->Grid()->AB());
 
 		if (interpGrid->Type() == kRegularGrid)
 		{

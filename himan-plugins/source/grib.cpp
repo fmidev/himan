@@ -807,7 +807,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 		newInfo->Grid()->Data(dm);
 
 		infos.push_back(newInfo);
-
+		newInfo->First();
+		
 		aTimer->Stop();
 		
 		break ; // We found what we were looking for
