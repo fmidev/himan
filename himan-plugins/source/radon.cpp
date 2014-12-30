@@ -104,7 +104,7 @@ vector<string> radon::Files(search_options& options)
 				   "AND param_name = '"+parm_name+"' "
 				   "AND level_name = '"+level_name+"' "
 				   "AND level_value = "+levelvalue+" "
-				   "AND forecast_period = '"+boost::lexical_cast<string> (options.time.Step())+"' "
+				   "AND forecast_period = '"+boost::lexical_cast<string> (options.time.Step())+" hour' "
 				   "ORDER BY forecast_period, level_id, level_value";
 
 		itsRadonDB->Query(query);
