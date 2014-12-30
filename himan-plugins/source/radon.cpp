@@ -100,11 +100,11 @@ vector<string> radon::Files(search_options& options)
 
 		string query = "SELECT param_id, level_id, level_value, forecast_period, file_location, file_server "
 				   "FROM "+tablename+"_v "
-				   "WHERE analysis_time = "+analtime+" "
-				   "AND param_name = "+parm_name+" "
-				   "AND level_name = "+level_name+" "
-				   "AND level_value = " +levelvalue+" "
-				   "AND forecast_period = "+boost::lexical_cast<string> (options.time.Step())+" "
+				   "WHERE analysis_time = '"+analtime+"' "
+				   "AND param_name = '"+parm_name+"' "
+				   "AND level_name = '"+level_name+"' "
+				   "AND level_value = "+levelvalue+" "
+				   "AND forecast_period = '"+boost::lexical_cast<string> (options.time.Step())+"' "
 				   "ORDER BY forecast_period, level_id, level_value";
 
 		itsRadonDB->Query(query);
@@ -137,7 +137,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
     if (resultInfo.Grid()->Type() != kRegularGrid)
     {
-        itsLogger->Error("Only grid data can be stored to neons for now");
+        itsLogger->Error("Only grid data can be stored to radon for now");
         return false;
     }
 
