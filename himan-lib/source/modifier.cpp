@@ -13,6 +13,7 @@ modifier::modifier()
 	, itsFindNthValue(1) // first
 	, itsModifierType(kUnknownModifierType)
 	, itsHeightInMeters(true)
+	, itsGridsProcessed(0)
 {
 }
 
@@ -21,6 +22,7 @@ modifier::modifier(HPModifierType theModifierType)
 	, itsFindNthValue(1) // first
 	, itsModifierType(theModifierType)
 	, itsHeightInMeters(true)
+	, itsGridsProcessed(0)
 {
 }
 
@@ -204,6 +206,12 @@ bool modifier::Evaluate(double theValue, double theHeight)
 	double upperLimit = 1e38;
 	double lowerLimit = -1e38;
 
+	if (!itsHeightInMeters)
+	{
+		lowerLimit = 1e38;
+		upperLimit = -1e38;
+	}
+	
 	if (!itsUpperHeight.empty())
 	{
 		upperLimit = itsUpperHeight[itsIndex];
@@ -278,6 +286,8 @@ void modifier::Process(const std::vector<double>& theData, const std::vector<dou
 
 		Calculate(theValue, theHeight);
 	}
+
+	itsGridsProcessed++;
 }
 
 size_t modifier::HeightsCrossed() const
@@ -504,14 +514,20 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		Value(0);
 	}
 
+
 	double lowerHeight = -1e38;
+	double upperHeight = 1e38;
+
+	if (!itsHeightInMeters)
+	{
+		lowerHeight = 1e38;
+		upperHeight = -1e38;
+	}
 
 	if (!itsLowerHeight.empty())
 	{
 		lowerHeight=itsLowerHeight[itsIndex];
 	}
-
-	double upperHeight = 1e38;
 
 	if (!itsUpperHeight.empty())
 	{
@@ -528,31 +544,40 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 	if (lowerHeight == upperHeight)
 	{
 		itsOutOfBoundHeights[itsIndex] = true;
+		return;
 	}
-	else if (previousHeight < lowerHeight && theHeight > lowerHeight)
+
+	double val = Value();	
+
+	// value is below the lowest limit
+	if ((itsHeightInMeters && previousHeight < lowerHeight && theHeight > lowerHeight)
+		||
+		(!itsHeightInMeters && previousHeight > lowerHeight && theHeight < lowerHeight))
 	{
-		double val = Value();
 		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
 		itsRange[itsIndex] += theHeight - lowerHeight;
 	}
-	else if (previousHeight < upperHeight && theHeight > upperHeight)
+	// value is above the highest limit
+	else if ((itsHeightInMeters && previousHeight < upperHeight && theHeight > upperHeight)
+		||
+		(!itsHeightInMeters && previousHeight > upperHeight && theHeight < upperHeight))
 	{
-		double val = Value();
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
-                itsRange[itsIndex] += upperHeight - previousHeight;
+		itsRange[itsIndex] += upperHeight - previousHeight;
 		// if upper height is passed for this grid point set OutOfBoundHeight = "true" to skip calculation of the integral in following iterations
 		itsOutOfBoundHeights[itsIndex] = true;
 
 	}
-	else if (!(previousHeight == kFloatMissing) && previousHeight >= lowerHeight && theHeight <= upperHeight)
+	else if (previousHeight != kFloatMissing &&
+		((itsHeightInMeters && previousHeight >= lowerHeight && theHeight <= upperHeight)
+		||
+		(!itsHeightInMeters && previousHeight <= lowerHeight && theHeight >= upperHeight)))
 	{
-		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
-                itsRange[itsIndex] += theHeight - previousHeight;
+			itsRange[itsIndex] += theHeight - previousHeight;
 	}
-
 }
 
 const std::vector<double>& modifier_mean::Result() const
@@ -810,7 +835,7 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 		// Fake lower && upper heights
 
 		double lowestHeight = 1e38;
-		double highestHeight = -1;
+		double highestHeight = -1e38;
 
 		assert(itsFindValue.size());
 		
@@ -833,6 +858,12 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 			}
 		}
 
+		if (!itsHeightInMeters)
+		{
+			double tmp = lowestHeight;
+			lowestHeight = highestHeight;
+			highestHeight = tmp;
+		}
 		// Give some threshold to lowest and highest heights
 		
 		if (itsHeightInMeters)
@@ -879,20 +910,20 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 	itsPreviousValue[itsIndex] = theValue;
 	itsPreviousHeight[itsIndex] = theHeight;
 
-	if (IsMissingValue(previousValue))
+	if (IsMissingValue(previousValue) && itsGridsProcessed == 0)
 	{
 		// It's possible that the height requested is below the lowest hybrid level, meaning
 		// that we cannot interpolate the value. In this case clamp the value to the lowest
 		// hybrid level.
 		
-		// Clamp threshold is set to 30 meters: if the difference between requested height
+		// Clamp threshold is set to 20 meters: if the difference between requested height
 		// and lowest hybrid level is larger that this then clamping is not done and
 		// kFloatMissing is the result
 
 		double diff = fabs(theHeight - findHeight);
 		if (findHeight < theHeight)
 		{
-			if (diff < 30)
+			if (diff < 20)
 			{
 				Value(theValue);
 				itsValuesFound++;
@@ -1187,6 +1218,8 @@ void modifier_plusminusarea::Process(const std::vector<double>& theData, const s
 		
 	    Calculate(theValue, theHeight);
 	}
+
+	itsGridsProcessed++;
 }
 
 void modifier_plusminusarea::Calculate(double theValue, double theHeight)

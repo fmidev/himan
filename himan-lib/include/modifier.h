@@ -93,6 +93,8 @@ class modifier
 		 */
 
 		bool itsHeightInMeters;
+
+		size_t itsGridsProcessed;
 };
 
 inline
