@@ -213,9 +213,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	vector<double> x(itsConfiguration->Info()->Grid()->Size(),-0.15);
+	const size_t gridSize = myTargetInfo->Grid()->Size();
 
-	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
+	vector<double> x(gridSize,-0.15);
+
+	for (size_t i = 0; i < gridSize; ++i)
 	{
 		double val = myrsky[i];
 		
@@ -242,10 +244,10 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 	
-	vector<double> lowerHeight(itsConfiguration->Info()->Grid()->Size(),0);
-	vector<double> upperHeight(itsConfiguration->Info()->Grid()->Size(),0);
+	vector<double> lowerHeight(gridSize,0);
+	vector<double> upperHeight(gridSize,0);
 
-	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
+	for (size_t i = 0; i < gridSize; ++i)
 	{
 		if (x[i] == kFloatMissing)
 		{
@@ -391,7 +393,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 	
-	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
+	for (size_t i = 0; i < gridSize; ++i)
 	{
 		if (poterot.potero0[i] == kFloatMissing || poterot.potero1[i] == kFloatMissing || x[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_10[i] == kFloatMissing)
 		{
@@ -406,7 +408,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	const double a = 0.5;
 
-	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
+	for (size_t i = 0; i < gridSize; ++i)
 	{
 		if (poterot.potero1[i] == kFloatMissing || poterot.potero2[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_200[i] == kFloatMissing)
 		{
@@ -547,7 +549,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 	
-	for (size_t i = 0; i < itsConfiguration->Info()->Grid()->Size(); ++i)
+	for (size_t i = 0; i < gridSize; ++i)
 	{
 		if (poterot.potero0[i] == kFloatMissing || poterot.potero1[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_10[i] == kFloatMissing)
 		{
@@ -560,7 +562,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	vector<double> par466(itsConfiguration->Info()->Grid()->Size(),0);
+	vector<double> par466(gridSize,0);
 
 	string deviceType = "CPU";
 
