@@ -587,7 +587,7 @@ const std::vector<double>& modifier_mean::Result() const
 	
 	double val = itsResult[i];
 
-		if (!IsMissingValue(val))
+		if (!IsMissingValue(val) && itsRange[i] > 0.0)
 		{
 			itsResult[i] = val / itsRange[i]; 
 		}
@@ -598,17 +598,27 @@ const std::vector<double>& modifier_mean::Result() const
 
 bool modifier_mean::CalculationFinished() const
 {
+
+	if (itsResult.size() == 0) 
+	{
+		return false;
+	}
+
 	if (itsResult.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size())
 	{
 		return true;
 	}
-	
-	if (itsPreviousHeight > itsUpperHeight)
+
+
+	for (size_t i=0; i<itsResult.size(); ++i)
 	{
-		return true;
+		if (itsUpperHeight[i] > itsPreviousHeight[i])
+		{
+			return false;
+		}
 	}
 
-	return false;
+	return true;
 
 }
 
@@ -1224,6 +1234,7 @@ void modifier_plusminusarea::Process(const std::vector<double>& theData, const s
 
 void modifier_plusminusarea::Calculate(double theValue, double theHeight)
 {
+	theValue-=273.15;
 	double lowerHeight = -1e38;
 
 	if (!itsLowerHeight.empty())
@@ -1341,17 +1352,26 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight)
 
 bool modifier_plusminusarea::CalculationFinished() const
 {
+
+    if (itsResult.size() == 0)
+	{
+		return false;
+	}
+
 	if (itsMinusArea.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsMinusArea.size())
 	{
 		return true;
 	}
-	
-	if (itsPreviousHeight > itsUpperHeight)
-	{
-		return true;
-	}
 
-	return false;
+    for (size_t i=0; i<itsResult.size(); ++i)
+    {
+        if (itsUpperHeight[i] > itsPreviousHeight[i])
+        {
+            return false;
+        }
+    }
+
+    return true;	
 }
 
 const std::vector<double>& modifier_plusminusarea::Result() const
