@@ -128,7 +128,8 @@ public:
 		double max = -1e38;
 		double sum = 0;
 		size_t count = 0;
-		long missing = 0;
+		size_t missing = 0;
+		size_t nan = 0;
 
 		for (size_t i = 0; i < theValues.size(); i++)
 		{
@@ -137,6 +138,11 @@ public:
 			if (d == kFloatMissing)
 			{
 				missing++;
+				continue;
+			}
+			else if (d != d)
+			{
+				nan++;
 				continue;
 			}
 
@@ -150,6 +156,7 @@ public:
 		file << "__max__ " << (max == -1e38 ? std::numeric_limits<double>::quiet_NaN() : max) << std::endl;
 		file << "__avg__ " << (count == 0 ? std::numeric_limits<double>::quiet_NaN() : sum / static_cast<double> (count)) << std::endl;
 		file << "__missing__ " << missing << std::endl;
+		file << "__nan__ " << nan << std::endl;
 	}
 
 	size_t Size() const
