@@ -92,6 +92,13 @@ vector<string> radon::Files(search_options& options)
 		return files;
 	}
 
+	string stepUnit = "hours";
+
+	if (options.prod.Id() == 199)
+	{
+		stepUnit = "minutes";
+	}
+	
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
 		string tablename = gridgeoms[i][1];
@@ -104,7 +111,7 @@ vector<string> radon::Files(search_options& options)
 				   "AND param_name = '"+parm_name+"' "
 				   "AND level_name = '"+level_name+"' "
 				   "AND level_value = "+levelvalue+" "
-				   "AND forecast_period = '"+boost::lexical_cast<string> (options.time.Step())+" hour' "
+				   "AND forecast_period = '"+boost::lexical_cast<string> (options.time.Step())+" " + stepUnit + "' "
 				   "ORDER BY forecast_period, level_id, level_value";
 
 		itsRadonDB->Query(query);
@@ -260,7 +267,7 @@ map<string,string> radon::Grib1ParameterName(long producer, long fmiParameterId,
 {	
 	Init();
 	
-	map<string,string> paramName = itsRadonDB->ParameterFromGrib1(producer, codeTableVersion, fmiParameterId, timeRangeIndicator, levelId, level_value);
+	map<string,string> paramName = itsRadonDB->GetParameterFromGrib1(producer, codeTableVersion, fmiParameterId, timeRangeIndicator, levelId, level_value);
 	return paramName; 
 }
 
@@ -268,7 +275,7 @@ map<string,string> radon::Grib2ParameterName(long fmiParameterId, long category,
 {
 	Init();
 	
-	map<string,string> paramName = itsRadonDB->ParameterFromGrib2(producer, discipline, category, fmiParameterId, levelId, level_value);
+	map<string,string> paramName = itsRadonDB->GetParameterFromGrib2(producer, discipline, category, fmiParameterId, levelId, level_value);
 	return paramName;
 }
 
