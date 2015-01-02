@@ -405,6 +405,27 @@ BOOST_AUTO_TEST_CASE(MODIFIER_MEAN)
 
 }
 
+BOOST_AUTO_TEST_CASE(MODIFIER_MEAN_USING_CALCULATION_FINISHED)
+{
+
+	init();
+
+	modifier_mean mod;
+
+	for (size_t i = 0; i < level_count && !mod.CalculationFinished(); i++)
+	{
+		mod.Process(values_all[i], heights_all_meters[i]);
+	}
+
+	auto result = mod.Result();
+
+	//vdump(result);
+	BOOST_CHECK_CLOSE(result[0], -22.9134, kEpsilon);
+	BOOST_REQUIRE(result[2] == 7);
+	BOOST_CHECK_CLOSE(result[8], -1.38372, kEpsilon);
+
+}
+
 BOOST_AUTO_TEST_CASE(MODIFIER_MEAN_PA)
 {
 
