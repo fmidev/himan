@@ -598,7 +598,7 @@ const std::vector<double>& modifier_mean::Result() const
 
 bool modifier_mean::CalculationFinished() const
 {
-
+	
 	if (itsResult.size() == 0) 
 	{
 		return false;
@@ -609,6 +609,10 @@ bool modifier_mean::CalculationFinished() const
 		return true;
 	}
 
+	if (itsUpperHeight.empty())
+	{
+		return false;
+	}
 
 	for (size_t i=0; i<itsPreviousHeight.size(); ++i)
 	{
@@ -1361,6 +1365,11 @@ bool modifier_plusminusarea::CalculationFinished() const
 	if (itsMinusArea.size() > 0 && static_cast<size_t> (count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsMinusArea.size())
 	{
 		return true;
+	}
+
+	if (itsUpperHeight.empty())
+	{
+		return false;
 	}
 
     for (size_t i=0; i<itsPreviousHeight.size(); ++i)
