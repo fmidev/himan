@@ -24,7 +24,6 @@ const himan::param ZParam("Z-M2S2");
 const himan::params NParams({himan::param("N-0TO1"), himan::param("N-PRCNT")});
 const himan::param TParam("T-K");
 const himan::param CloudParam("CLDSYM-N");
-const himan::params RRParam({himan::param("RR-1-MM"), himan::param("RR-3-MM"), himan::param("RR-6-MM")});
 const himan::param KindexParam("KINDEX-N");
 
 // ..and their levels
@@ -71,7 +70,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	 * have a varying time step.
 	 *
 	 * First try to get step from configuration file key 'step'. If that is not available,
-	 * try to determine the step by comparing earlier or later times with the curren time.
+	 * try to determine the step by comparing earlier or later times with the current time.
 	 * If this doesn't work then default to one hour time step.
 	 */
 	
@@ -101,7 +100,23 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			}
 		}
 	}
+	
+	param RRParam("RR-1-MM"); // Default
 
+	if (paramStep == 3)
+	{
+		RRParam = param("RR-3-MM");
+	}
+	else if (paramStep == 6)
+	{
+		RRParam = param("RR-6-MM");
+	}
+	else if (paramStep != 1)
+	{
+		myThreadedLogger->Error("Unsupported step: " + boost::lexical_cast<string> (paramStep));
+		return;
+	}
+	
 	info_t Z1000Info = Fetch(forecastTime, Z1000Level, ZParam, false);
 	info_t Z850Info = Fetch(forecastTime, Z850Level, ZParam, false);
 	info_t T850Info = Fetch(forecastTime, Z850Level, TParam, false);
@@ -116,6 +131,43 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	info_t NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, false);
 
+	/* 
+	 * Sometimes we cannot find data for either time with the current forecast step.
+	 * 
+	 * This happens for example with EC when the forecast step changes at forecast hour 90.
+	 * At that hour the forecast step is 1, so current RR is fetched from hour 90 as parameter
+	 * RR-1-MM. Hour 91 does not exist so that data is unavailable. In the database we have data
+	 * for hour 93, but that is parameter RR-3-MM. As both precipitation parameters have to be
+	 * of the same aggregation period, we have re-fetch both.
+	 * 
+	 * This same thing happens at forecast hour 144 when step changes from 3h --> 6h.
+	 */
+	
+	if (!RRInfo || !NextRRInfo)
+	{
+		if (paramStep == 1)
+		{
+			paramStep = 3;
+			RRParam = param("RR-3-MM");
+		}
+		else if (paramStep == 3)
+		{
+			paramStep = 6;
+			RRParam = param("RR-6-MM");
+		}
+		else
+		{
+			myThreadedLogger->Error("Precipitation data not found");
+			return;
+		}
+		
+		RRInfo = Fetch(forecastTime, forecastLevel, RRParam, false);
+		nextTimeStep = forecastTime;
+		nextTimeStep.ValidDateTime().Adjust(myTargetInfo->Time().StepResolution(), paramStep);
+
+		NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, false);
+	}
+	
 	if (!Z1000Info || !Z850Info || !T850Info || !NInfo || !TInfo || !CloudInfo || !KindexInfo || !RRInfo || !NextRRInfo)
 	{
 		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
