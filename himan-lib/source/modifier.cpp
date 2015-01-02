@@ -610,7 +610,7 @@ bool modifier_mean::CalculationFinished() const
 	}
 
 
-	for (size_t i=0; i<itsResult.size(); ++i)
+	for (size_t i=0; i<itsPreviousHeight.size(); ++i)
 	{
 		if (itsUpperHeight[i] > itsPreviousHeight[i])
 		{
@@ -1363,7 +1363,7 @@ bool modifier_plusminusarea::CalculationFinished() const
 		return true;
 	}
 
-    for (size_t i=0; i<itsResult.size(); ++i)
+    for (size_t i=0; i<itsPreviousHeight.size(); ++i)
     {
         if (itsUpperHeight[i] > itsPreviousHeight[i])
         {
