@@ -321,6 +321,11 @@ std::ostream& modifier::Write(std::ostream& file) const
 
 void modifier_max::Calculate(double theValue, double theHeight)
 {
+	if (IsMissingValue(theValue))
+	{
+		return;
+	}
+
 	if (IsMissingValue(Value()) || theValue > Value())
 	{
 		Value(theValue);
@@ -331,6 +336,11 @@ void modifier_max::Calculate(double theValue, double theHeight)
 
 void modifier_min::Calculate(double theValue, double theHeight)
 {
+	if (IsMissingValue(theValue))
+	{
+		return;
+	}
+
 	if (IsMissingValue(Value()) || theValue < Value())
 	{
 		Value(theValue);
@@ -359,10 +369,14 @@ const std::vector<double>& modifier_maxmin::Result() const
 
 void modifier_maxmin::Calculate(double theValue, double theHeight)
 {
-	// Set min == max
+	if (IsMissingValue(theValue))
+	{
+		return;
+	}
 
 	if (IsMissingValue(Value()))
 	{
+		// Set min == max
 		itsResult[itsIndex] = theValue;
 		itsMaximumResult[itsIndex] = theValue;
 	}
@@ -384,6 +398,11 @@ void modifier_maxmin::Calculate(double theValue, double theHeight)
 
 void modifier_sum::Calculate(double theValue, double theHeight)
 {
+	if (IsMissingValue(theValue))
+	{
+		return;
+	}
+	
 	if (IsMissingValue(Value())) // First value
 	{
 		Value(theValue);
@@ -682,6 +701,11 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 
 	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
 
+	if (IsMissingValue(theHeight) || IsMissingValue(theValue))
+	{
+		return;
+	}
+	
 	double findValue = itsFindValue[itsIndex];
 	
 	if (IsMissingValue(findValue) || (itsFindNthValue > 0 && !IsMissingValue(Value())))
@@ -836,6 +860,11 @@ bool modifier_findvalue::CalculationFinished() const
 void modifier_findvalue::Calculate(double theValue, double theHeight)
 {
 	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+
+	if (IsMissingValue(theHeight) || IsMissingValue(theValue))
+	{
+		return;
+	}
 	
 	double findHeight = itsFindValue[itsIndex];
 
@@ -996,7 +1025,7 @@ bool modifier_integral::Evaluate(double theValue, double theHeight)
 		return false;
 	}
 
-	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
+	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || ((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit)));
 
 	return true;
 }
