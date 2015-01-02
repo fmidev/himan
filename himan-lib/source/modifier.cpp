@@ -587,9 +587,9 @@ const std::vector<double>& modifier_mean::Result() const
 	
 	double val = itsResult[i];
 
-		if (!IsMissingValue(val) && itsRange[i] > 0.0)
+		if (!IsMissingValue(val) && fabs(itsRange[i]) > 0.0)
 		{
-			itsResult[i] = val / itsRange[i]; 
+			itsResult[i] = val / itsRange[i];
 		}
 	}
 
