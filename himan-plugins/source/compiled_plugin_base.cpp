@@ -20,6 +20,7 @@
 #include "neons.h"
 #include "writer.h"
 #include "cache.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -140,7 +141,7 @@ void compiled_plugin_base::WriteToFile(const info& targetInfo) const
 
 	auto tempInfo = targetInfo;
 
-	if (itsConfiguration->FileWriteOption() == kNeons || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 	{
 		// If info holds multiple parameters, we must loop over them all
 		// Note! We only loop over the parameters, not over the times or levels!
@@ -332,21 +333,60 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 	if (itsConfiguration->OutputFileType() == kGRIB1)
 	{
-		auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		for (unsigned int i = 0; i < params.size(); i++)
+		HPDatabaseType dbtype = itsConfiguration->DatabaseType();
+		
+		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			long table2Version = itsInfo->Producer().TableVersion();
-			long parm_id = n->NeonsDB().GetGridParameterId(table2Version, params[i].Name());
+			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-			if (parm_id == -1)
+			for (unsigned int i = 0; i < params.size(); i++)
 			{
-				itsBaseLogger->Warning("Grib1 parameter definitions not found from Neons");
-				itsBaseLogger->Warning("table2Version is " + boost::lexical_cast<string> (table2Version) + ", parm_name is " + params[i].Name());
-			}
+				long table2Version = itsInfo->Producer().TableVersion();
+				
+				if (table2Version == kHPMissingInt)
+				{
+					auto prodinfo = n->NeonsDB().GetProducerDefinition(itsInfo->Producer().Id());
+					
+					table2Version = boost::lexical_cast<long> (prodinfo["no_vers"]);
+				}
+				
+				long parm_id = n->NeonsDB().GetGridParameterId(table2Version, params[i].Name());
 
-			params[i].GribIndicatorOfParameter(parm_id);
-			params[i].GribTableVersion(table2Version);
+				if (parm_id == -1)
+				{
+					itsBaseLogger->Warning("Grib1 parameter definitions not found from Neons");
+					itsBaseLogger->Warning("table2Version is " + boost::lexical_cast<string> (table2Version) + ", parm_name is " + params[i].Name());
+					continue;
+				}
+				
+				params[i].GribIndicatorOfParameter(parm_id);
+				params[i].GribTableVersion(table2Version);
+			}
+		}
+		
+		if (dbtype == kRadon || dbtype == kNeonsAndRadon)
+		{
+			auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+
+			for (unsigned int i = 0; i < params.size(); i++)
+			{
+				if (params[i].GribIndicatorOfParameter() != kHPMissingInt && params[i].GribTableVersion() != kHPMissingInt)
+				{
+					continue;
+				}
+				
+				map<string,string> paraminfo = r->RadonDB().GetParameterFromDatabaseName(itsInfo->Producer().Id(), params[i].Name());
+
+				if (paraminfo.empty() || paraminfo["grib1_number"].empty() || paraminfo["grib1_table_version"].empty())
+				{
+					itsBaseLogger->Warning("Grib1 parameter definition not found from Radon");
+					itsBaseLogger->Warning("Producer id is " + boost::lexical_cast<string> (itsInfo->Producer().Id()) + ", parm_name is " + params[i].Name());
+					continue;
+				}
+				
+				params[i].GribIndicatorOfParameter(boost::lexical_cast<int> (paraminfo["grib1_number"]));
+				params[i].GribTableVersion(boost::lexical_cast<int> (paraminfo["grib1_table_version"]));
+			}
 		}
 	}
 

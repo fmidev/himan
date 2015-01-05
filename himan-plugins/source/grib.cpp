@@ -42,7 +42,7 @@ shared_ptr<NFmiGrib> grib::Reader()
 bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption)
 {
 
-	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
+	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
 	{
 		// Write only that data which is currently set at descriptors
 
@@ -103,11 +103,9 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 
 	itsGrib->Message().Edition(edition);
 
-	shared_ptr<neons> n;
-
 	if (anInfo.Producer().Centre() == kHPMissingInt)
 	{
-		n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+		auto n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
 		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo.Producer().Id()));
 
@@ -115,11 +113,6 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 		{
 			itsGrib->Message().Centre(boost::lexical_cast<long> (producermap["ident_id"]));
 			itsGrib->Message().Process(boost::lexical_cast<long> (producermap["model_id"]));
-
-			if (edition == 1)
-			{
-				itsGrib->Message().Table2Version(boost::lexical_cast<long> (producermap["no_vers"]));
-			}
 		}
 		else
 		{
@@ -128,12 +121,6 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 			itsLogger->Warning("Setting process to " + producerId + " and centre to 86");
 			itsGrib->Message().Centre(86);
 			itsGrib->Message().Process(anInfo.Producer().Id());
-
-			if (edition == 1)
-			{
-				itsLogger->Warning("Setting table2version to 203");
-				itsGrib->Message().Table2Version(203);
-			}
 		}
 		
 	}
@@ -141,11 +128,6 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 	{
 		itsGrib->Message().Centre(anInfo.Producer().Centre());
 		itsGrib->Message().Process(anInfo.Producer().Process());
-
-		if (edition == 1)
-		{
-			itsGrib->Message().Table2Version(anInfo.Producer().TableVersion());
-		}
 	}
 
 	// Parameter
@@ -1097,36 +1079,48 @@ void grib::WriteTime(info& anInfo)
 
 void grib::WriteParameter(info& anInfo)
 {
-	/*
-	 * For grib1, get param_id from neons since its dependant on the table2version
-	 *
-	 * For grib2, assume the plugin has set the correct numbers since they are "static".
-	 */
 
 	if (itsGrib->Message().Edition() == 1)
 	{
-		shared_ptr<neons> n;
-		
-		long parm_id = anInfo.Param().GribIndicatorOfParameter();
-
-		if (parm_id == kHPMissingInt)
+		if (anInfo.Param().GribTableVersion() != kHPMissingInt)
 		{
-			if (!n)
-			{
-				n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-			}
-
-			parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo.Param().Name());
-
-			if (parm_id == -1)
-			{
-				itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo.Producer().TableVersion()) + " in neons");
-			}
+			// In radon table version is a parameter property, not a 
+			// producer property
+		
+			itsGrib->Message().Table2Version(anInfo.Param().GribTableVersion());
+			itsGrib->Message().ParameterNumber(anInfo.Param().GribIndicatorOfParameter());
 		}
+		else
+		{
+			// In neons table version is a producer property
+		
+			long parm_id = anInfo.Param().GribIndicatorOfParameter();
+			long tableVersion = anInfo.Producer().TableVersion();
+			
+			if (parm_id == kHPMissingInt || tableVersion == kHPMissingInt)
+			{
+				auto n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+				
+				parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo.Param().Name());
+				map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo.Producer().Id()));
+				tableVersion = boost::lexical_cast<long> (producermap["no_vers"]);
 
-		itsGrib->Message().ParameterNumber(parm_id);
+				if (parm_id == -1 || tableVersion == -1)
+				{
+					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo.Producer().TableVersion()) + " in neons");
+					itsLogger->Warning("Setting table2version to 203");
+					itsGrib->Message().Table2Version(203);
+					
+				}
+				else
+				{
+					itsGrib->Message().ParameterNumber(parm_id);
+					itsGrib->Message().Table2Version(tableVersion);
+				}
+			}
+		}		
 	}
-	else
+	else if (itsGrib->Message().Edition() == 2)
 	{
 		itsGrib->Message().ParameterNumber(anInfo.Param().GribParameter());
 		itsGrib->Message().ParameterCategory(anInfo.Param().GribCategory());

@@ -17,6 +17,7 @@
 
 #include "fetcher.h"
 #include "neons.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -149,8 +150,6 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 {
 	using boost::lexical_cast;
 
-	auto n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-	
 	long producerId = 0;
 	
 	// Hybrid level heights are calculated by himan, so coalesce the related 
@@ -174,7 +173,7 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 			break;
 			
 		default:
-			itsLogger->Warning("Unsupported producer for hitool::LevelForHeight(): " + lexical_cast<string> (prod.Id()));
+			itsLogger->Error("Unsupported producer for hitool::LevelForHeight(): " + lexical_cast<string> (prod.Id()));
 			break;
 	}
 	
@@ -199,13 +198,34 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 			<< "producer_id = " << producerId;
 	}
 
-	n->NeonsDB().Query(query.str());
+	HPDatabaseType dbtype = itsConfiguration->DatabaseType();
 	
-	auto row = n->NeonsDB().FetchRow();
+	vector<string> row;
 	
-	long lowest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-	long highest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
+	long lowest = kHPMissingInt, highest = kHPMissingInt;
 	
+	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+	{
+		auto n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+		n->NeonsDB().Query(query.str());
+	
+		row = n->NeonsDB().FetchRow();
+		
+		lowest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		highest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
+	}
+	
+	if (row.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	{
+		auto r = dynamic_pointer_cast <plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+		r->RadonDB().Query(query.str());
+	
+		row = r->RadonDB().FetchRow();
+		
+		lowest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		highest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
+	}
+		
 	if (!row.empty())
 	{
 
@@ -240,8 +260,6 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 							const vector<double>& upperHeight,
 							const vector<double>& findValue) const
 {
-	shared_ptr<plugin::neons> n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
 	assert(wantedLevelType == kHybrid);
 
 	if (findValue.size())
@@ -270,9 +288,26 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	
 	// first means first in sorted order, ie smallest number ie the highest level
 
-	long highestHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-	long lowestHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	HPDatabaseType dbtype = itsConfiguration->DatabaseType();
+	
+	long highestHybridLevel = kHPMissingInt, lowestHybridLevel = kHPMissingInt;
+	
+	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+	{
+		auto n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
+		highestHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
+		lowestHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	}
+	
+	if (highestHybridLevel == kHPMissingInt && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	{
+		auto r = dynamic_pointer_cast <plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+
+		highestHybridLevel = boost::lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
+		lowestHybridLevel = boost::lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	}
+	
 	// Karkeaa haarukointia
 
 	string heightUnit = (itsHeightUnit == kM) ? "meters" : "hectopascal";

@@ -479,47 +479,60 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 	if (opts.configuration->ReadDataFromDatabase())
 	{
-		// try neons first
-		shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+		HPDatabaseType dbtype = opts.configuration->DatabaseType();
 
-		files = n->Files(opts);
-		
-		if (!files.empty())
+		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			ret = FromFile(files, opts, true, readPackedData);
+			// try neons first
+			shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 
-			if (dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->StatisticsEnabled())
-			{
-				dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->Statistics()->AddToCacheMissCount(1);
-			}
-
-			return ret;
-		}
-		// try radon next
+			itsLogger->Trace("Accessing Neons database");
+			
+			files = n->Files(opts);
 		
-        shared_ptr<radon> r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+			if (!files.empty())
+			{
+				ret = FromFile(files, opts, true, readPackedData);
+
+				if (dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->StatisticsEnabled())
+				{
+					dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->Statistics()->AddToCacheMissCount(1);
+				}
+
+				return ret;
+			}
+		}
+		
+		if (dbtype == kRadon || dbtype == kNeonsAndRadon)
+		{
+			// try radon next
+		
+			shared_ptr<radon> r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
 /*
-        files = r->Files(opts);
+			itsLogger->Trace("Accessing Radon database");
+			
+			files = r->Files(opts);
 
-        if (!files.empty())
-        {
-            ret = FromFile(files, opts, true, readPackedData);
+			if (!files.empty())
+			{
+				ret = FromFile(files, opts, true, readPackedData);
 
-            if (dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->StatisticsEnabled())
-            {
-                dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->Statistics()->AddToCacheMissCount(1);
-            }
+				if (dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->StatisticsEnabled())
+				{
+					dynamic_pointer_cast<const plugin_configuration> (opts.configuration)->Statistics()->AddToCacheMissCount(1);
+				}
 
-            return ret;
-        }
+				return ret;
+ 			}
 */
+		}
 	}
 
 	return ret;
 
 }
 
-bool fetcher::InterpolateArea(info& base, initializer_list<shared_ptr<info>> infos) const
+bool fetcher::InterpolateArea(info& base, vector<info_t> infos) const
 {
 	if (infos.size() == 0)
 	{
@@ -640,7 +653,7 @@ bool fetcher::InterpolateArea(info& base, initializer_list<shared_ptr<info>> inf
 
 }
 
-bool fetcher::Interpolate(info& baseInfo, vector<info_t>& theInfos) const
+bool fetcher::Interpolate(himan::info& baseInfo, vector<info_t>& theInfos) const
 {
 	bool needInterpolation = false;
 
@@ -675,7 +688,7 @@ bool fetcher::Interpolate(info& baseInfo, vector<info_t>& theInfos) const
 	if (needInterpolation)
 	{
 		itsLogger->Trace("Interpolating area");
-		InterpolateArea(baseInfo, {theInfos[0]});
+		InterpolateArea(baseInfo, theInfos);
 	}
 	else
 	{

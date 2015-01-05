@@ -52,7 +52,7 @@ bool writer::ToFile(info& theInfo,
 	HPFileWriteOption fileWriteOption = conf.FileWriteOption();
 	HPFileType fileType = conf.OutputFileType();
 
-	if ((fileWriteOption == kNeons || fileWriteOption == kMultipleFiles) || correctFileName.empty())
+	if ((fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles) || correctFileName.empty())
 	{
 		correctFileName = util::MakeFileName(fileWriteOption, theInfo);
 	}
@@ -105,30 +105,36 @@ bool writer::ToFile(info& theInfo,
 
 	}
 
-	if (ret && fileWriteOption == kNeons)
+	if (ret && fileWriteOption == kDatabase)
 	{
-		std::shared_ptr<neons> n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
-		/*std::shared_ptr<radon> r = std::dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
-
-		// Try to save file information to radon
-		try
+		HPDatabaseType dbtype = conf.DatabaseType();
+		
+		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			ret = r->Save(theInfo, correctFileName);
-		}
-		catch(...)
-		{
-			itsLogger->Error("Writing to radon failed"); 
-		}
-		*/
-		// save file information to neons
-		ret = n->Save(theInfo, correctFileName);
+			auto n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+			
+			ret = n->Save(theInfo, correctFileName);
 
-		if (!ret)
-		{
-			itsLogger->Warning("Saving file information to neons failed");
-		   // unlink(correctFileName.c_str());
+			if (!ret)
+			{
+				itsLogger->Warning("Saving file information to neons failed");
+			}
 		}
+		
+		if (dbtype == kRadon || dbtype == kNeonsAndRadon)
+		{
+			auto r = std::dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
 
+			// Try to save file information to radon
+			try
+			{
+				ret = r->Save(theInfo, correctFileName);
+			}
+			catch(...)
+			{
+				itsLogger->Error("Writing to radon failed"); 
+			}
+		}
 	}
 
 	bool activeOnly = (conf.FileWriteOption() == kSingleFile) ? false : true;

@@ -618,7 +618,7 @@ void split_sum::WriteToFile(const info& targetInfo) const
 
 	auto tempInfo = targetInfo;
 
-	if (itsConfiguration->FileWriteOption() == kNeons || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 	{
 		// If info holds multiple parameters, we must loop over them all
 		// Note! We only loop over the parameters, not over the times or levels!
@@ -627,7 +627,7 @@ void split_sum::WriteToFile(const info& targetInfo) const
 
 		while (tempInfo.NextParam())
 		{
-			if (itsConfiguration->FileWriteOption() == kNeons && tempInfo.Data().Size() == tempInfo.Data().MissingCount())
+			if (itsConfiguration->FileWriteOption() == kDatabase && tempInfo.Data().Size() == tempInfo.Data().MissingCount())
 			{
 				itsLogger->Info("All data missing for " + tempInfo.Param().Name() + " step " + boost::lexical_cast<string> (tempInfo.Time().Step()) + ", not writing to disk");
 				continue;
