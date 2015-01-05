@@ -66,7 +66,6 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-
 	unique_ptr<logger> aLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("himan"));
 	unique_ptr<timer> aTimer;
 
@@ -85,8 +84,16 @@ int main(int argc, char** argv)
 	 *
 	 * Note that we don't actually do anything with the plugin here.
 	 */
-
-	shared_ptr<plugin::auxiliary_plugin> n = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
+/*
+	if (conf->DatabaseType() == kNeonsDB || conf->DatabaseType() == kNeonsDBAndRadonDB)
+	{
+		auto n = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
+	}
+	if (conf->DatabaseType() == kRadonDB || conf->DatabaseType() == kNeonsDBAndRadonDB)
+	{
+		auto r = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("radon"));
+	}*/
+	
 	shared_ptr<plugin::auxiliary_plugin> c = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("cache"));
 
 	std::vector<shared_ptr<plugin_configuration>> plugins;
@@ -252,7 +259,7 @@ void banner()
 			  << "************************************************" << endl << endl;
 
 }
-
+#ifdef HAVE_CUDA
 void CudaCapabilities()
 {
 	int devCount;
@@ -329,7 +336,7 @@ void CudaCapabilities()
 	std::cout << "#----------------------------------------------#" << std::endl;
 
 }
-
+#endif
 shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 {
 
@@ -365,6 +372,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	("no-cuda", "disable all cuda extensions")
 	("no-cuda-packing", "disable cuda packing of grib data")
 	("no-cuda-unpacking", "disable cuda unpacking of grib data")
+	("radon,R", "use only radon database")
+	("neons,N", "use only neons database")
 	("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
 	("cuda-properties", "print cuda device properties of platform (if any)")
 	;
@@ -564,6 +573,19 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		exit(1);
 	}
 
+	if (opt.count("radon"))
+	{
+		conf->DatabaseType(kRadonDB);
+	}
+	else if (opt.count("neons"))
+	{
+		conf->DatabaseType(kNeonsDB);
+	}
+	else if (opt.count("neons") && opt.count("radon"))
+	{
+		cerr << "Both radon and neons options cannot be selected" << endl;
+		exit(1);
+	}
 	if (!confFile.empty())
 	{
 		conf->ConfigurationFile(confFile);
