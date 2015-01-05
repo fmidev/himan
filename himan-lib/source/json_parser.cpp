@@ -937,6 +937,7 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 		BOOST_FOREACH(const string& str, stations)
 		{		
 			throw runtime_error("Not ready yet");
+			cout << str << endl;
 			/*unsigned long fmisid;
 			
 			try
