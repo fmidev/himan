@@ -194,6 +194,27 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 #endif
 	{
 		itsLogger->Trace("Writing unpacked data");
+#ifdef DEBUG
+		// Check that data is not NaN, otherwise grib_api will go to 
+		// an eternal loop
+
+		auto data = anInfo.Data().Values();
+		bool foundNanValue = false;
+
+		for (size_t i = 0; i < data.size(); i++)
+		{
+			double d = data[i];
+
+			if (d != d)
+			{
+				foundNanValue = true;
+				break;
+			}
+		}
+
+		assert(!foundNanValue);
+#endif
+
 		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long> (anInfo.Grid()->Size()));
 	}
 
@@ -1101,7 +1122,11 @@ void grib::WriteParameter(info& anInfo)
 			{
 				auto n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
 				
-				parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo.Param().Name());
+				if (parm_id == kHPMissingInt)
+				{
+					parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo.Param().Name());
+				}
+
 				map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo.Producer().Id()));
 				tableVersion = boost::lexical_cast<long> (producermap["no_vers"]);
 
