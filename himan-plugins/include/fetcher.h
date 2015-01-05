@@ -195,7 +195,7 @@ private:
 	 * @return True if interpolation succeeds for all infos
 	 */
 
-	bool InterpolateArea(info& targetInfo, std::initializer_list<info_t> infos) const;
+	bool InterpolateArea(info& targetInfo, std::vector<info_t> infos) const;
 	bool Interpolate(info& baseInfo, std::vector<info_t>& infos) const;
 
 	/**
