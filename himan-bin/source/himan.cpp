@@ -575,11 +575,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (opt.count("radon"))
 	{
-		conf->DatabaseType(kRadonDB);
+		conf->DatabaseType(kRadon);
 	}
 	else if (opt.count("neons"))
 	{
-		conf->DatabaseType(kNeonsDB);
+		conf->DatabaseType(kNeons);
 	}
 	else if (opt.count("neons") && opt.count("radon"))
 	{
