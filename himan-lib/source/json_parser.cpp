@@ -571,6 +571,10 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 				throw runtime_error("Latest time not found from Neons for producer '" + prod["ref_prod"] + "'");
 			}
 		}
+		else
+		{
+			anInfo->OriginDateTime(originDateTime, mask);
+		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
