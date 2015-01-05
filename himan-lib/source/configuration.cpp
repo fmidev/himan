@@ -12,9 +12,23 @@ using namespace himan;
 
 configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 {
-
-	Init();
-
+	itsOutputFileType = kGRIB1;
+	itsFileWriteOption = kSingleFile;
+	itsReadDataFromDatabase = true;
+	itsUseCuda = true;
+	itsFileWaitTimeout = 0;
+	itsLeadingDimension = kTimeDimension;
+	itsThreadCount = -1;
+	itsTargetGeomName = "";
+	itsConfigurationFile = "";
+	itsUseCudaForPacking = true;
+	itsUseCudaForUnpacking = true;
+	itsUseCache = true;
+	itsCudaDeviceId = 0;
+	itsStatisticsLabel = "";
+	itsForecastStep = kHPMissingInt;
+	itsDatabaseType = kNeonsAndRadon;
+	
 }
 
 configuration::configuration(const configuration& other)
@@ -52,6 +66,7 @@ configuration::configuration(const configuration& other)
 
 	itsForecastStep = other.itsForecastStep;
 	
+	itsDatabaseType = other.itsDatabaseType;
 }
 
 std::ostream& configuration::Write(std::ostream& file) const
@@ -103,25 +118,6 @@ std::vector<std::string> configuration::AuxiliaryFiles() const
 void configuration::AuxiliaryFiles(const std::vector<std::string>& theAuxiliaryFiles)
 {
 	itsAuxiliaryFiles = theAuxiliaryFiles;
-}
-
-void configuration::Init()
-{
-	itsOutputFileType = kGRIB1;
-	itsFileWriteOption = kSingleFile;
-	itsReadDataFromDatabase = true;
-	itsUseCuda = true;
-	itsFileWaitTimeout = 0;
-	itsLeadingDimension = kTimeDimension;
-	itsThreadCount = -1;
-	itsTargetGeomName = "";
-	itsConfigurationFile = "";
-	itsUseCudaForPacking = true;
-	itsUseCudaForUnpacking = true;
-	itsUseCache = true;
-	itsCudaDeviceId = 0;
-	itsStatisticsLabel = "";
-	itsForecastStep = kHPMissingInt;
 }
 
 HPFileType configuration::OutputFileType() const
@@ -320,4 +316,24 @@ void configuration::CudaDeviceId(short theCudaDeviceId)
 int configuration::ForecastStep() const
 {
 	return itsForecastStep;
+}
+
+HPDatabaseType configuration::DatabaseType() const
+{
+	return itsDatabaseType;
+}
+
+void configuration::DatabaseType(HPDatabaseType theDatabaseType)
+{
+	itsDatabaseType = theDatabaseType;
+}
+
+std::string configuration::TargetGeomName() const
+{
+	return itsTargetGeomName;
+}
+
+void configuration::TargetGeomName(const std::string& theTargetGeomName)
+{
+	itsTargetGeomName = theTargetGeomName;
 }

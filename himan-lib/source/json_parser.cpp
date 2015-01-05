@@ -20,11 +20,16 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
 using namespace std;
+//using namespace boost::property_tree;
+
+unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
+unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
 
 /*
  * Parse()
@@ -131,7 +136,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		if (theFileWriteOption == "neons")
 		{
-			conf->FileWriteOption(kNeons);
+			itsLogger->Warning("file_write_option value 'neons' has been deprecated, use 'database' instead");
+			conf->FileWriteOption(kDatabase);
+		}
+		else if (theFileWriteOption == "database")
+		{
+			conf->FileWriteOption(kDatabase);
 		}
 		else if (theFileWriteOption == "single")
 		{
@@ -386,7 +396,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 			if (theFileWriteOption == "neons")
 			{
-				delayedFileWrite = kNeons;
+				itsLogger->Warning("file_write_option value 'neons' has been deprecated, use 'database' instead");
+				delayedFileWrite = kDatabase;
+			}
+			else if (theFileWriteOption == "database")
+			{
+				delayedFileWrite = kDatabase;
 			}
 			else if (theFileWriteOption == "single")
 			{
@@ -505,27 +520,57 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 
 		if (originDateTime == "latest")
 		{
-			shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+			HPDatabaseType dbtype = conf->DatabaseType();
+			
+			map<string,string> prod;
+			
+			if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+			{
+				auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-			map<string,string> prod = n->NeonsDB().GetProducerDefinition(static_cast<unsigned long> (sourceProducer.Id()));
+				prod = n->NeonsDB().GetProducerDefinition(static_cast<unsigned long> (sourceProducer.Id()));
 
+				if (!prod.empty())
+				{
+					originDateTime = n->NeonsDB().GetLatestTime(prod["ref_prod"]);
+					
+					if (!originDateTime.empty())
+					{
+						mask = "%Y%m%d%H%M";
+						anInfo->OriginDateTime(originDateTime, mask);
+					}
+				}
+					
+			}
+			
+			if (prod.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+			{
+				auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+
+				prod = r->RadonDB().GetProducerDefinition(static_cast<unsigned long> (sourceProducer.Id()));
+
+				if (!prod.empty())
+				{
+					originDateTime = r->RadonDB().GetLatestTime(prod["ref_prod"]);
+					
+					if (!originDateTime.empty())
+					{
+						mask = "%Y-%m-%d %H:%M:00";
+						anInfo->OriginDateTime(originDateTime, mask);
+					}
+				}
+				
+			}
+			
 			if (prod.empty())
 			{
 				throw runtime_error("Producer definition not found for procucer id " + boost::lexical_cast<string> (sourceProducer.Id()));
 			}
-
-			originDateTime = n->NeonsDB().GetLatestTime(prod["ref_prod"]);
-
-			if (originDateTime.size() == 0)
+			else if (originDateTime.size() == 0)
 			{
 				throw runtime_error("Latest time not found from Neons for producer '" + prod["ref_prod"] + "'");
 			}
-
-			mask = "%Y%m%d%H%M";
 		}
-
-		anInfo->OriginDateTime(originDateTime, mask);
-
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -699,106 +744,114 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 
 }
 
-unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
+unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
 {
-
-	unique_ptr<grid> g;
-	
-	/* First check for neons style geom name */
-
-	bool haveArea = false;
-	
+	unique_ptr<regular_grid> g;
+		
 	try
 	{
 		string geom = pt.get<string>("target_geom_name");
 
-		conf->itsTargetGeomName = geom;
+		g = unique_ptr<regular_grid> (new regular_grid);
+		
+		conf.TargetGeomName(geom);
 
-		auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		map<string, string> geominfo = n->NeonsDB().GetGeometryDefinition(geom);
-
-		if (!geominfo.empty())
+		HPDatabaseType dbtype = conf.DatabaseType();
+		
+		map<string, string> geominfo;
+		
+		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
+			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+
+			geominfo = n->NeonsDB().GetGeometryDefinition(geom);
+		}
+		
+		if (geominfo.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+		{
+			auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+
+			geominfo = r->RadonDB().GetGeometryDefinition(geom);
+		}
+
+		if (geominfo.empty())
+		{
+			throw runtime_error("Fatal::json_parser Unknown geometry '" + geom + "' found");	
+		}
 			
-			g = unique_ptr<regular_grid> (new regular_grid());
-			regular_grid* _g = dynamic_cast<regular_grid*> (g.get()); // shortcut to avoid a million dynamic casts
+		//regular_grid* _g = dynamic_cast<regular_grid*> (g.get()); // shortcut to avoid a million dynamic casts
 
-			/*
-			 *  In Neons we don't have rotlatlon projection used separately, instead we have
-			 *  to check if geom_parm_1 and geom_parm_2 specify the regular rotated location
-			 *  if south pole (0,30).
-			 */
+		/*
+		 *  In Neons we don't have rotlatlon projection used separately, instead we have
+		 *  to check if geom_parm_1 and geom_parm_2 specify the regular rotated location
+		 *  if south pole (0,30).
+		 */
 
-			double di = boost::lexical_cast<double>(geominfo["pas_longitude"]);
-			double dj = boost::lexical_cast<double>(geominfo["pas_latitude"]);
+		double di = boost::lexical_cast<double>(geominfo["pas_longitude"]);
+		double dj = boost::lexical_cast<double>(geominfo["pas_latitude"]);
 
-			if (geominfo["prjn_name"] == "latlon" && (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0"))
-			{
-				g->Projection(kRotatedLatLonProjection);
-				g->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3));
-				di /= 1e3;
-				dj /= 1e3;
-			}
-			else if (geominfo["prjn_name"] == "latlon")
-			{
-				g->Projection(kLatLonProjection);
-				di /= 1e3;
-				dj /= 1e3;
-			}
-			else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo")
-			{
-				g->Projection(kStereographicProjection);
-				g->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
-				_g->Di(di);
-				_g->Dj(dj);
-			}
-			else
-			{
-				throw runtime_error(ClassName() + ": Unknown projection: " + geominfo["prjn_name"]);
-			}
-
-			_g->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
-			_g->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
-
-			if (geominfo["stor_desc"] == "+x-y")
-			{
-				_g->ScanningMode(kTopLeft);
-			}
-			else if (geominfo["stor_desc"] == "+x+y")
-			{
-				_g->ScanningMode(kBottomLeft);
-			}
-			else
-			{
-				throw runtime_error(ClassName() + ": scanning mode " + geominfo["stor_desc"] + " not supported yet");
-			}
-
-			double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) / 1e3;
-			double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) / 1e3;
-
-			std::pair<point, point> coordinates;
-
-			if (g->Projection() == kStereographicProjection)
-			{
-				assert(_g->ScanningMode() == kBottomLeft);
-				coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), g->Orientation(), _g->Ni(), _g->Nj(), di, dj);
-			}
-			else
-			{
-				coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), _g->Ni(), _g->Nj(), di, dj, _g->ScanningMode());
-			}
-
-			g->BottomLeft(coordinates.first);
-			g->TopRight(coordinates.second);
-
+		if (
+				(geominfo["prjn_name"] == "latlon" && (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0")) // neons
+				||
+				(geominfo["prjn_id"] == "4")) // radon
+		{
+			g->Projection(kRotatedLatLonProjection);
+			g->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3));
+			di /= 1e3;
+			dj /= 1e3;
+		}
+		else if (geominfo["prjn_name"] == "latlon" || geominfo["prjn_id"] == "1")
+		{
+			g->Projection(kLatLonProjection);
+			di /= 1e3;
+			dj /= 1e3;
+		}
+		else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo" || geominfo["prjn_id"] == "2")
+		{
+			g->Projection(kStereographicProjection);
+			g->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
+			g->Di(di);
+			g->Dj(dj);
 		}
 		else
 		{
-			throw runtime_error(ClassName() + ": Unknown geometry '" + geom + "' found");
+			throw runtime_error("Fatal::json_parser Unknown projection: " + geominfo["prjn_name"]);
 		}
 
-		haveArea = true;
+		g->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
+		g->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
+
+		if (geominfo["stor_desc"] == "+x-y")
+		{
+			g->ScanningMode(kTopLeft);
+		}
+		else if (geominfo["stor_desc"] == "+x+y")
+		{
+			g->ScanningMode(kBottomLeft);
+		}
+		else
+		{
+			throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
+		}
+
+		double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) / 1e3;
+		double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) / 1e3;
+
+		std::pair<point, point> coordinates;
+
+		if (g->Projection() == kStereographicProjection)
+		{
+			assert(g->ScanningMode() == kBottomLeft);
+			coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), g->Orientation(), g->Ni(), g->Nj(), di, dj);
+		}
+		else
+		{
+			coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), g->Ni(), g->Nj(), di, dj, g->ScanningMode());
+		}
+
+		g->BottomLeft(coordinates.first);
+		g->TopRight(coordinates.second);
+
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -806,10 +859,159 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing area information: ") + e.what());
+		throw runtime_error(string("Fatal::json_parser Error parsing area information: ") + e.what());
 	}
+	
+	return g;
+}
 
-	// Check for source geom name
+unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt)
+{
+	unique_ptr<irregular_grid> g;
+	
+	// check points
+	
+	try
+	{
+		vector<string> stations = util::Split(pt.get<string>("points"), ",", false);
+
+		g = unique_ptr<irregular_grid> (new irregular_grid());
+	
+		// hard coded projection to latlon
+		
+		g->Projection(kLatLonProjection);
+
+		vector<station> theStations;
+		
+		int i = 1;
+		
+		BOOST_FOREACH(const string& line, stations)
+		{
+			vector<string> point = util::Split(line, "/", false);
+			
+			if (point.size() != 2)
+			{
+				cout << "Error::json_parser Line " + line + " is invalid" << endl;
+				continue;
+			}
+			
+			theStations.push_back(
+				station(i, 
+					"point_" + boost::lexical_cast<string> (i), 
+					boost::lexical_cast<double>(point[0]), 
+					boost::lexical_cast<double>(point[1]))
+			);
+			
+			i++;
+		}
+		
+		g->Stations(theStations);
+
+		return g;
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (const exception& e)
+	{
+		throw runtime_error(string("Fatal::json_parser Error parsing points: ") + e.what());
+	}
+	
+	// Check stations
+
+	try
+	{
+		vector<string> stations = util::Split(pt.get<string>("stations"), ";", false);
+
+		g = unique_ptr<irregular_grid> (new irregular_grid());
+	
+		// hard coded projection to latlon
+		
+		g->Projection(kLatLonProjection);
+
+		vector<station> theStations;
+		
+		auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+		
+		BOOST_FOREACH(const string& str, stations)
+		{		
+			unsigned long fmisid;
+			
+			try
+			{
+				fmisid = boost::lexical_cast<unsigned long> (str);
+			}
+			catch (boost::bad_lexical_cast& e)
+			{
+				cout << "Error::json_parser Invalid fmisid: " << str << endl;
+				continue;
+			}
+		
+			auto stationinfo = r->RadonDB().GetStationInfoFromFmiSID(fmisid);
+			
+			if (stationinfo.empty())
+			{
+				cout << "Error::json_parser Station " << str << " not found from database" << endl;
+				continue;
+			}
+			theStations.push_back(
+				station(fmisid,
+					stationinfo["station_name"],
+					boost::lexical_cast<double>(stationinfo["longitude"]),
+					boost::lexical_cast<double>(stationinfo["latitude"])
+				)
+			);
+		}
+		
+		g->Stations(theStations);
+
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (const exception& e)
+	{
+		throw runtime_error(string("Fatal::json_parser Error parsing stations: ") + e.what());
+	}
+	
+	if (g->Stations().empty())
+	{
+		throw runtime_error("Fatal::json_parser No valid points or stations found");
+	}
+	
+	return g;
+}
+
+unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
+{
+
+	unique_ptr<grid> g;
+	
+	/* 
+	 * Parse area and grid from different possible options.
+	 * Order or parsing:
+	 * 
+	 * 1. 'source_geom_name': this is used in fetching data, it's not used to create an area instance
+	 * 2. neons style geom name: 'target_geom_name' 
+	 * 3. irregular grid: 'points' and 'stations'
+	 * 4. bounding box: 'bbox'
+	 * 5. manual definition: 
+	 * -> 'projection', 
+	 * -> 'bottom_left_longitude', 'bottom_left_latitude', 
+	 * -> 'top_right_longitude', 'top_right_latitude'
+	 * -> 'orientation'
+	 * -> 'south_pole_longitude', 'south_pole_latitude'
+	 * -> 'ni', 'nj'
+	 * -> 'scanning_mode'
+	 * 
+	 
+	 */
+
+	bool haveArea = false;
+	
+	// 1. Check for source geom name
 
 	try
 	{
@@ -824,55 +1026,25 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		throw runtime_error(string("Error parsing area information: ") + e.what());
 	}
 
-	if (haveArea)
+	// 2. neons-style geom_name
+	
+	g = ParseAreaAndGridFromDatabase(*conf, pt);
+	
+	if (g)
 	{
-		// using neons style geom_name we get all information, even grid size
 		return g;
 	}
 
-		// Check for points
+	// 3. Points
 	
-	try
+	g = ParseAreaAndGridFromPoints(*conf, pt);
+	
+	if (g)
 	{
-		g = unique_ptr<irregular_grid> (new irregular_grid());
-
-		vector<string> stations = util::Split(pt.get<string>("points"), ";", false);
-
-		// hard coded projection to latlon
-		
-		g->Projection(kLatLonProjection);
-
-		vector<station> theStations;
-		
-		BOOST_FOREACH(const string& line, stations)
-		{
-			vector<string> stat = util::Split(line, ",", false);
-			
-			if (stat.size() != 4)
-			{
-				itsLogger->Error("Line " + line + " is invalid");
-				continue;
-			}
-			
-			theStations.push_back(
-				station(boost::lexical_cast<int> (stat[0]), stat[1], boost::lexical_cast<long>(stat[2]), boost::lexical_cast<long>(stat[3]))
-			);
-		}
-		
-		dynamic_cast<irregular_grid*> (g.get())->Stations(theStations);
-
 		return g;
 	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing bbox: ") + e.what());
-	}
 	
-	// Target geometry is still not set, check for bbox
+	// 4. Target geometry is still not set, check for bbox
 
 	// From this point forward we only support regular grids
 	
@@ -1051,31 +1223,69 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		std::vector<producer> sourceProducers;
 		vector<string> sourceProducersStr = util::Split(pt.get<string>("source_producer"), ",", false);
 
-		shared_ptr<plugin::neons> n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-
-		for (size_t i = 0; i < sourceProducersStr.size(); i++)
+		HPDatabaseType dbtype = conf->DatabaseType();
+		
+		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			long pid = boost::lexical_cast<long> (sourceProducersStr[i]);
+			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
-			producer prod(pid);
-
-			map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (pid));
-
-			if (!prodInfo.empty())
+			for (size_t i = 0; i < sourceProducersStr.size(); i++)
 			{
-				prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
-				prod.Name(prodInfo["ref_prod"]);
-				prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
-				prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
-			}
-			else
-			{
-				itsLogger->Warning("Unknown source producer: " + sourceProducersStr[i]);
-			}
+				long pid = boost::lexical_cast<long> (sourceProducersStr[i]);
 
-			sourceProducers.push_back(prod);
+				producer prod(pid);
+
+				map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (pid));
+
+				if (!prodInfo.empty())
+				{
+					prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
+					prod.Name(prodInfo["ref_prod"]);
+					prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
+					prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
+				}
+				else
+				{
+					itsLogger->Warning("Unknown source producer: " + sourceProducersStr[i]);
+				}
+
+				sourceProducers.push_back(prod);
+			}
 		}
+		
+		if (sourceProducers.size() == 0 && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+		{
+			auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
 
+			for (size_t i = 0; i < sourceProducersStr.size(); i++)
+			{
+				long pid = boost::lexical_cast<long> (sourceProducersStr[i]);
+
+				producer prod(pid);
+
+				map<string,string> prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long> (pid));
+
+				if (!prodInfo.empty())
+				{
+					prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
+					prod.Name(prodInfo["ref_prod"]);
+					prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
+				}
+				else
+				{
+					itsLogger->Warning("Unknown source producer: " + sourceProducersStr[i]);
+				}
+
+				sourceProducers.push_back(prod);
+			}
+		}
+		
+		
+		if (sourceProducers.size() == 0)
+		{
+			throw runtime_error(ClassName() + ": Source producer information was not found from database");
+		}
+		
 		conf->SourceProducers(sourceProducers);
 
 		/*
@@ -1084,16 +1294,27 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		 */
 
 		long pid = boost::lexical_cast<long> (pt.get<string>("target_producer"));
-
-		map<string,string> prodInfo = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (pid));
-
 		producer prod (pid);
-
+		
+		map<string,string> prodInfo;
+		
+		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+		{
+			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+			prodInfo = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (pid));
+		}
+		
+		if (prodInfo.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+		{
+			auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+			prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long> (pid));
+		}
+		
 		if (!prodInfo.empty())
 		{
 			prod.Centre(boost::lexical_cast<long> (prodInfo["ident_id"]));
 			prod.Name(prodInfo["ref_prod"]);
-			prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
+			//prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
 			prod.Process(boost::lexical_cast<long> (prodInfo["model_id"]));
 		}
 		else

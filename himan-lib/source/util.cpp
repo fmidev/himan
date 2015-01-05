@@ -31,7 +31,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 
 	// For neons get base directory
 
-	if (fileWriteOption == kNeons)
+	if (fileWriteOption == kDatabase)
 	{
 		char* path;
 
@@ -59,7 +59,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 
 	// Create a unique file name when creating multiple files from one info
 
-	if (fileWriteOption == kNeons || fileWriteOption == kMultipleFiles)
+	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
 	{
 		fileName	<< base.str()
 					<< "/"

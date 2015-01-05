@@ -241,10 +241,13 @@ public:
 	
 	int ForecastStep() const;
 
-protected:
+	HPDatabaseType DatabaseType() const;
+	void DatabaseType(HPDatabaseType theDatabaseType);
 	
-	void Init();
-
+	std::string TargetGeomName() const;
+	void TargetGeomName(const std::string& theTargetGeomName);
+	
+protected:
 	HPFileType itsOutputFileType;
 	std::string itsConfigurationFile;
 	std::vector<std::string> itsAuxiliaryFiles;
@@ -279,6 +282,8 @@ protected:
 	short itsCudaDeviceId;
 
 	int itsForecastStep;
+	
+	HPDatabaseType itsDatabaseType;
 };
 
 

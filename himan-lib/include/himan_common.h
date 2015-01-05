@@ -142,6 +142,7 @@ enum HPLevelType
 	kUnknownLevel = 0,
 	kGround = 1,
 	kTopOfAtmosphere = 8,
+	kLake = 21,
 	kPressure = 100,
 	kMeanSea = 102,
 	kAltitude = 103,
@@ -167,6 +168,7 @@ const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = ba::ma
 		(kTopOfAtmosphere, "top")
 		(kEntireAtmosphere, "entatm")
 		(kEntireOcean, "entocean")
+		(kLake, "lake")
 		;
 
 const boost::unordered_map<std::string,HPLevelType> HPStringToLevelType = ba::map_list_of
@@ -182,6 +184,7 @@ const boost::unordered_map<std::string,HPLevelType> HPStringToLevelType = ba::ma
 		("top",kTopOfAtmosphere)
 		("entatm", kEntireAtmosphere)
 		("entocean", kEntireOcean)
+		("lake", kLake)
 		;
 #endif
 
@@ -190,7 +193,7 @@ enum HPFileWriteOption
 	kUnknownFileWriteOption = 0,
 	kSingleFile,
 	kMultipleFiles,
-	kNeons
+	kDatabase
 };
 
 #ifndef __CUDACC__
@@ -198,7 +201,7 @@ const boost::unordered_map<HPFileWriteOption,const char*> HPFileWriteOptionToStr
 		(kUnknownFileWriteOption, "unknown")
 		(kSingleFile, "single file only")
 		(kMultipleFiles, "multiple files")
-		(kNeons, "write to neons")
+		(kDatabase, "write to database")
 		;
 #endif
 
@@ -397,6 +400,13 @@ enum HPGridType
 	kIrregularGrid
 };
 
+enum HPDatabaseType
+{
+	kUnknownDatabaseType = 0,
+	kNeons,
+	kRadon,
+	kNeonsAndRadon
+};
 
 #ifndef __CUDACC__
 const boost::unordered_map<HPGridType,const char*> HPGridTypeToString = ba::map_list_of
