@@ -17,7 +17,9 @@ logger:Info("Calculating dewpoint deficit")
 local par1 = param("T-K")
 local par2 = param("TD-C") -- name is 'C', but data is 'K'
 local par3 = param("DPDEF-C") -- dewpoint deficit
- 
+
+par3:SetGrib1Parameter(123) -- Fake a number
+
 -- "current_time" is a global variable and is set by himan.
 -- It is the time this current thread should calculate
 -- The value is set in the configuration file.
@@ -70,7 +72,7 @@ result:SetValues(res)
 -- is written. Notice that setting the parameter does not affect the data in any way.
  
 result:SetParam(par3)
- 
+
 logger:Info("Writing results")
  
 -- WriteToFile() function will write data to disk. The file type and name etc is determined
