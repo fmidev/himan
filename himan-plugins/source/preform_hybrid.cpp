@@ -16,6 +16,7 @@
 #include <boost/lexical_cast.hpp>
 #include "level.h"
 #include "forecast_time.h"
+#include <boost/foreach.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -949,7 +950,27 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		wantedParam = param("VV-MMS");
 
-		auto stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
+		vector<double> stratusVerticalVelocity;
+
+		try
+		{
+			stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				logger->Debug("Trying for param VV-MS");
+				wantedParam = param("VV-MS");
+
+				stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
+
+				BOOST_FOREACH(double& d, stratusVerticalVelocity)
+				{
+					d *= 1000;
+				}
+			}
+		}
 
 #ifdef DEBUG
 		missing = 0;
