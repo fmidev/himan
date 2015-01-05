@@ -166,6 +166,21 @@ bool irregular_grid::EqualsTo(const irregular_grid& other) const
 				return false;
 			}
 		}
+		
+		if (itsStations.size() != other.itsStations.size())
+		{
+			itsLogger->Trace("Station counts do not match: " + boost::lexical_cast<string> (itsStations.size()) + " vs " + boost::lexical_cast<string> (other.itsStations.size()));
+			return false;
+		}
+		
+		for (size_t i = 0; i < itsStations.size(); i++)
+		{
+			if (itsStations[i] != other.itsStations[i])
+			{
+				itsLogger->Trace("Station " + boost::lexical_cast<string> (i) + " does not match");
+				return false;
+			}
+		}
 	}
 	
 	return true;	
