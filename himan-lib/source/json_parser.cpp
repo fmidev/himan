@@ -978,7 +978,7 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 		throw runtime_error(string("Fatal::json_parser Error parsing stations: ") + e.what());
 	}
 	
-	if (g->Stations().empty())
+	if (g && g->Stations().empty())
 	{
 		throw runtime_error("Fatal::json_parser No valid points or stations found");
 	}
