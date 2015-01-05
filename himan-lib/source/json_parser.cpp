@@ -940,9 +940,7 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 		
 		BOOST_FOREACH(const string& str, stations)
 		{		
-			throw runtime_error("Not ready yet");
-			cout << str << endl;
-			/*unsigned long fmisid;
+			unsigned long fmisid;
 			
 			try
 			{
@@ -954,20 +952,21 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 				continue;
 			}
 			
-			auto stationinfo = r->RadonDB().GetStationInfoFromFmiSID(fmisid);
+			auto stationinfo = r->RadonDB().GetStationDefinition(kFmiSIDNetwork, fmisid);
 			
 			if (stationinfo.empty())
 			{
 				cout << "Error::json_parser Station " << str << " not found from database" << endl;
 				continue;
 			}
+			
 			theStations.push_back(
 				station(fmisid,
 					stationinfo["station_name"],
 					boost::lexical_cast<double>(stationinfo["longitude"]),
 					boost::lexical_cast<double>(stationinfo["latitude"])
 				)
-			);*/
+			);
 		}
 		
 		g->Stations(theStations);
