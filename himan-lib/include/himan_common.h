@@ -540,6 +540,12 @@ namespace constants {
 	
 	const double kRw_div_L = himan::constants::kRw / himan::constants::kL;
 
+	/**
+	 * @brief Mean radius of the earth in meters
+	 */
+
+	const double kR = 6371009;
+
 } // namespace constants
 
 } // namespace himan

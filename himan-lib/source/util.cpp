@@ -9,6 +9,7 @@
 
 #include "util.h"
 #include <boost/algorithm/string.hpp>
+#include <boost/math/constants/constants.hpp>
 #include <sstream>
 #include <iomanip>
 #include <NFmiStereographicArea.h>
@@ -624,6 +625,12 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 	  	}
 	}
 	return ret;
+}
+
+double util::LatitudeLength(double phi)
+{
+	double sin_phi= sin(phi * constants::kDeg);
+	return 2 * boost::math::constants::pi<double>() * sqrt(constants::kR * constants::kR * (1 - 2 * sin_phi + sin_phi * sin_phi));
 }
 
 double util::round(double val, unsigned short numdigits)

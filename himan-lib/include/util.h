@@ -189,6 +189,14 @@ himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& 
 
 double round(double val,unsigned short numdigits);
 
+/**
+ * @brief Calculate the length of a latitude on a sphere with mean radius of the earth
+ * @param phi Latitude that is going to be calculated
+ * @return Length of Latitude
+ */
+
+double LatitudeLength(double phi);
+
 } // namespace util
 } // namespace himan
 
