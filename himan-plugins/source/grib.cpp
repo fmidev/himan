@@ -376,8 +376,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 							boost::lexical_cast<string> (number) + ", timeRangeIndicator: " +
 							boost::lexical_cast<string> (timeRangeIndicator));
 			}
-
-			p.Name(parmName);
+			else
+			{
+				p.Name(parmName);
+			}
 			
 			p.GribParameter(number);
 			p.GribTableVersion(no_vers);
@@ -388,8 +390,46 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			long category = itsGrib->Message().ParameterCategory();
 			long discipline = itsGrib->Message().ParameterDiscipline();
 			long process = options.prod.Process();
-		
-			p.Name(n->GribParameterName(number, category, discipline, process));
+	
+			string parmName = "";
+
+			if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+			{
+				if (!n)
+				{
+					n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+				}
+
+				parmName = n->GribParameterName(number, category, discipline, process);
+			}
+
+			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon))
+			{
+				if (!r)
+				{
+					r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+				}
+
+				auto parminfo = r->RadonDB().GetParameterFromGrib2(options.prod.Id(), discipline, category, number,
+				itsGrib->Message().NormalizedLevelType(), itsGrib->Message().LevelValue());
+
+				if (parminfo.size())
+				{
+					parmName = parminfo["name"];
+				}
+			}
+
+			if (parmName.empty())
+			{
+				itsLogger->Warning("Parameter name not found from Neons for discipline: " +
+							boost::lexical_cast<string> (discipline) + ", category: " +
+							boost::lexical_cast<string> (category) + ", number: " +
+							boost::lexical_cast<string> (number));
+			}
+			else
+			{
+				p.Name(parmName);
+			}
 
 			p.GribParameter(number);
 			p.GribDiscipline(discipline);
@@ -884,7 +924,7 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 				// need to break from loop after final element has been processed
 				break;
 			}
-	    }
+		}
 	}
 }
 
