@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.1.2
-Release: 2%{dist}.fmi
+Version: 15.1.7
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -98,6 +98,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Jan  7 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.7-1.fmi
+- Changes to accomodate radon
 * Fri Jan  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.2-2.fmi
 - Changes in modifier
 * Fri Jan  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.2-1.fmi
