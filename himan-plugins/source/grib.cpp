@@ -20,6 +20,7 @@ using namespace himan::plugin;
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -286,7 +287,8 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, search_options& options, bool readContents, bool readPackedData)
 {
 
-	auto n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+	shared_ptr<neons> n;
+	shared_ptr<radon> r;
 
 	vector<shared_ptr<himan::info>> infos;
 
@@ -339,7 +341,33 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 
 			long timeRangeIndicator = itsGrib->Message().TimeRangeIndicator();
 
-			string parmName = n->GribParameterName(number, no_vers, timeRangeIndicator);
+			string parmName = "";
+
+			if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+			{
+				if (!n)
+				{
+					n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+				}
+
+				parmName = n->GribParameterName(number, no_vers, timeRangeIndicator);
+			}
+
+			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon))
+			{
+				if (!r)
+				{
+					r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+				}
+
+				auto parminfo = r->RadonDB().GetParameterFromGrib1(options.prod.Id(), no_vers, number, timeRangeIndicator,
+				itsGrib->Message().NormalizedLevelType(), itsGrib->Message().LevelValue());
+
+				if (parminfo.size())
+				{
+					parmName = parminfo["name"];
+				}
+			}
 
 			if (parmName.empty())
 			{
