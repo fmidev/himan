@@ -1,16 +1,10 @@
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
-%define dist el5
-
-%if %{distnum} == 6
-%define dist el6
-%endif
-
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 14.12.17
-Release: 1.fmi
+Version: 15.1.7
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -59,6 +53,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Wed Jan  7 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.7-1.fmi
+- New options -N and -R
 * Wed Dec 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.17-1.fmi
 - Changes in himan-lib headers
 * Mon Dec  8 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.12.8-1.fmi
