@@ -578,7 +578,7 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 	}
 	else	// data contains missing values
 	{
-		std::cout << "Data contains missing values -> Choosing slow algorithm." << std::endl;
+		std::cout << "util::Filter2D: Data contains missing values -> Choosing slow algorithm." << std::endl;
 		double kernel_missing_count;
 		for(int i=0; i < ASizeX; ++i)              // rows
 	  	{
@@ -624,6 +624,75 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 	    		}
 	  	}
 	}
+	return ret;
+}
+
+pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, vector<double>& dx, vector<double>& dy)
+{
+    matrix<double> dA_dx(A.SizeX(),A.SizeY(),1);
+    matrix<double> dA_dy(A.SizeX(),A.SizeY(),1);
+
+	int ASizeX = int(A.SizeX());
+	int ASizeY = int(A.SizeY());
+
+	assert(dy.size() == A.SizeX() && dx.size() == A.SizeY());
+
+	// check if data contains missing values
+	if (A.MissingCount()==0) // if no missing values in the data we can use a faster algorithm
+	{
+		// calculate for inner field
+		for(int i=1; i < ASizeX-1; ++i)	// rows
+		{
+			for(int j=1; j < ASizeY-1; ++j)	// columns
+			{
+				dA_dx.Set(i,j,0,(A.At(i-1,j,0) - 2 * A.At(i,j,0) + A.At(i+1,j,0)) / (2 * dx[j])); // central difference in x-direction
+				dA_dy.Set(i,j,0,(A.At(i,j-1,0) - 2 * A.At(i,j,0) + A.At(i,j+1,0)) / (2 * dy[i])); // central difference in y-direction
+			}
+		}
+	
+		// treat boundaries separately
+		for(int i=1; i < ASizeX-1; ++i)              // rows
+	  	{
+ 			// calculate for upper boundary
+	   		dA_dx.Set(i,0,0,(A.At(i-1,0,0) - 2 * A.At(i,0,0) + A.At(i+1,0,0)) / (2 * dx[0])); 	// central difference in x-direction
+			dA_dy.Set(i,0,0,(A.At(i,1,0) - A.At(i,0,0)) / dy[i]); 								// foreward difference in y-direction
+	  	
+			// calculate for lower boundary
+			dA_dx.Set(i,ASizeY,0,(A.At(i-1,ASizeY,0) - 2 * A.At(i,ASizeY,0) + A.At(i+1,ASizeY,0)) / (2 * dx[ASizeY]));	// central difference in x-direction
+			dA_dy.Set(i,ASizeY,0,(A.At(i,ASizeY,0) - A.At(i,ASizeY-1,0)) / dy[i]);                          		   	// backward difference in y-direction
+	  	}
+
+	   	for(int j=1; j < ASizeY-1; ++j)          // columns
+	   	{
+			// calculate for left boundary
+			dA_dx.Set(0,j,0,(A.At(1,j,0) - A.At(0,j,0)) / dx[j]);                                // foreward difference in x-direction
+            dA_dy.Set(0,j,0,(A.At(0,j-1,0) - 2 * A.At(0,j,0) + A.At(0,j+1,0)) / (2 * dy[0]));    // central difference in y-direction
+
+			// calculate for right boundary
+            dA_dx.Set(ASizeX,j,0,(A.At(ASizeX,j,0) - A.At(ASizeX-1,j,0)) / dx[j]);                             			// backward difference in x-direction
+			dA_dy.Set(ASizeX,j,0,(A.At(ASizeX,j-1,0) - 2 * A.At(ASizeX,j,0) + A.At(ASizeX,j+1,0)) / (2 * dy[ASizeX]));  // central difference in y-direction
+	  	}
+
+		// corner values last
+		// top left
+        dA_dx.Set(0,0,0,(A.At(1,0,0) - A.At(0,0,0)) / dx[0]);                               // foreward difference in x-direction
+		dA_dy.Set(0,0,0,(A.At(0,1,0) - A.At(0,0,0)) / dy[0]);                               // foreward difference in y-direction
+
+		// top right
+        dA_dx.Set(ASizeX,0,0,(A.At(ASizeX,0,0) - A.At(ASizeX-1,0,0)) / dx[0]);				// foreward difference in x-direction
+		dA_dy.Set(ASizeX,0,0,(A.At(ASizeX,1,0) - A.At(ASizeX,0,0)) / dy[ASizeX]);			// backward difference in y-direction
+
+		// bottom left
+        dA_dx.Set(0,ASizeY,0,(A.At(1,ASizeY,0) - A.At(0,ASizeY,0)) / dx[ASizeY]);           // foreward difference in x-direction
+		dA_dy.Set(0,ASizeY,0,(A.At(0,ASizeY,0) - A.At(0,ASizeY-1,0)) / dy[0]);           	// backward difference in y-direction
+
+
+		// bottom right
+        dA_dx.Set(ASizeX,ASizeY,0,(A.At(ASizeX,ASizeY,0) - A.At(ASizeX-1,ASizeY,0)) / dx[ASizeY]);            // backward difference in x-direction
+		dA_dy.Set(ASizeX,ASizeY,0,(A.At(ASizeX,ASizeY,0) - A.At(ASizeX,ASizeY-1,0)) / dy[ASizeX]);            // backward difference in y-direction
+	}
+
+	pair<matrix<double>,matrix<double>> ret(dA_dx,dA_dy);
 	return ret;
 }
 

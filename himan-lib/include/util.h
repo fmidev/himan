@@ -181,6 +181,16 @@ void Unpack(std::initializer_list<grid*> grids);
 himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& B);
 
 /**
+ * @brief Compute the x/y-derivative of input A
+ * @param A Data field of input values
+ * @param dx vector of x-spacing as function of y
+ * @param dy vector of y-spacing as function of x
+ * @return pair of dA/dx,dA/Dy
+ */
+
+std::pair<himan::matrix<double>,himan::matrix<double>> CentralDifference(himan::matrix<double>& A, std::vector<double>& dx, std::vector<double>& dy);
+
+/**
  * @brief Round a double to requested precision
  * @param val Value that is going to be rounded
  * @param numdigits How many digits to preserve
