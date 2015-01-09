@@ -410,6 +410,8 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 {
 	// find center position of kernel (half of kernel size)
 	matrix<double> ret(A.SizeX(),A.SizeY(),1);
+	ret.MissingValue(A.MissingValue());
+
 	double convolution_value; // accumulated value of the convolution at a given grid point in A
 	double kernel_weight_sum; // accumulated value of the kernel weights in B that are used to compute the convolution at given point A
 
@@ -631,6 +633,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 {
     matrix<double> dA_dx(A.SizeX(),A.SizeY(),1);
     matrix<double> dA_dy(A.SizeX(),A.SizeY(),1);
+	dA_dx.MissingValue(A.MissingValue());
+	dA_dy.MissingValue(A.MissingValue());
 
 	int ASizeX = int(A.SizeX());
 	int ASizeY = int(A.SizeY());
@@ -638,8 +642,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 	assert(dy.size() == A.SizeX() && dx.size() == A.SizeY());
 
 	// check if data contains missing values
-	if (A.MissingCount()==0) // if no missing values in the data we can use a faster algorithm
-	{
+	//if (A.MissingCount()==0) // if no missing values in the data we can use a faster algorithm
+	//{
 		// calculate for inner field
 		for(int i=1; i < ASizeX-1; ++i)	// rows
 		{
@@ -690,7 +694,7 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 		// bottom right
         dA_dx.Set(ASizeX-1,ASizeY-1,0,(A.At(ASizeX-1,ASizeY-1,0) - A.At(ASizeX-2,ASizeY-1,0)) / dx[ASizeY-1]);            // backward difference in x-direction
 		dA_dy.Set(ASizeX-1,ASizeY-1,0,(A.At(ASizeX-1,ASizeY-1,0) - A.At(ASizeX-1,ASizeY-2,0)) / dy[ASizeX-1]);            // backward difference in y-direction
-	}
+	//}
 
 	pair<matrix<double>,matrix<double>> ret(dA_dx,dA_dy);
 	return ret;
