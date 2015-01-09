@@ -91,13 +91,6 @@ vector<string> radon::Files(search_options& options)
 		
 		return files;
 	}
-
-	string stepUnit = "hours";
-
-	if (options.prod.Id() == 199)
-	{
-		stepUnit = "minutes";
-	}
 	
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
@@ -111,7 +104,7 @@ vector<string> radon::Files(search_options& options)
 				   "AND param_name = '"+parm_name+"' "
 				   "AND level_name = '"+level_name+"' "
 				   "AND level_value = "+levelvalue+" "
-				   "AND forecast_period = '"+boost::lexical_cast<string> (options.time.Step())+" " + stepUnit + "' "
+				   "AND forecast_period = '"+util::MakeSQLInterval(options.time)+"' "
 				   "ORDER BY forecast_period, level_id, level_value";
 
 		itsRadonDB->Query(query);
@@ -235,7 +228,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 		   << "'" << geom_id << "', "
 		   << "param.id, level.id, "
 		   << resultInfo.Level().Value() << ", "
-		   << "'" << boost::lexical_cast<string>(resultInfo.Time().Step()) << " hour', "
+		   << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 		   << "1, "
 		   << "'" << theFileName << "', "
 		   << "'" << host << "' "
@@ -341,3 +334,4 @@ string radon::ProducerMetaData(long producerId, const string& attribute) const
 	
 	//string query = "SELECT value FROM producers_eav WHERE producer_id = " + boost::lexical_cast<string> (producerId) + " AND attribute = '" + attribute + "'";
 }
+
