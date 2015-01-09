@@ -106,3 +106,45 @@ BOOST_AUTO_TEST_CASE(FILTER2D)
   	}
 
 }
+BOOST_AUTO_TEST_CASE(CENTRAL_DIFFERENCE)
+{
+    // Filter a plane with given filter kernel
+    // Declare matrices
+    himan::matrix<double> A(5,5,1);
+    himan::matrix<double> B;
+	himan::matrix<double> C;
+
+	// Matrices containing the correct solution
+	himan::matrix<double> D(5,5,1);
+	himan::matrix<double> E(5,5,1);
+
+    // Fill matrix A and solution matrices D and E
+    for(size_t i=0; i < A.Size(); ++i)
+    {
+        A.Set(i, double(i));
+		D.Set(i,1.0/double(1+i/5));
+		E.Set(i,5.0);
+    }
+
+	std::pair<himan::matrix<double>,himan::matrix<double>> grad_A;
+
+	// Declare vectors for grid spacing
+	std::vector<double> dx {1.0,2.0,3.0,4.0,5.0};
+	std::vector<double> dy(5,1.0);
+
+	grad_A = himan::util::CentralDifference(A,dx,dy);
+	B = std::get<0>(grad_A);
+	C = std::get<1>(grad_A);
+	
+	std::cout << B.MissingCount() << ", " << D.MissingCount() << std::endl;
+	std::cout << B.Size() << ", " << D.Size() << std::endl;
+	std::cout << B.SizeX() << ", " << D.SizeX() << std::endl;
+	std::cout << B.SizeY() << ", " << D.SizeY() << std::endl;
+	std::cout << B.SizeZ() << ", " << D.SizeZ() << std::endl;
+	for (size_t i=0; i<B.Size(); ++i) 
+	{
+		std::cout << B.At(i) << ", " << D.At(i) << std::endl;
+	}
+	assert(B==D);
+	
+} 
