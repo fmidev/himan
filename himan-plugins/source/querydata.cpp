@@ -615,7 +615,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			{
 				assert(newInfo->ParamIndex() == qinfo.ParamIndex());
 
-				unpacked dm(ni, nj);
+				unpacked dm(ni, nj, 1, kFloatMissing);
 
 				size_t i;
 				

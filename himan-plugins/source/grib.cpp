@@ -805,7 +805,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 		newInfo->Time(t);
 		newInfo->Level(l);
 
-		unpacked dm(ni, nj);
+		unpacked dm(ni, nj, 1, kFloatMissing);
 
 		/*
 		 * Read data from grib *

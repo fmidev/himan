@@ -575,7 +575,7 @@ bool fetcher::InterpolateArea(info& base, vector<info_t> infos) const
 
 		// new data backend
 
-		unpacked targetData(base.Data().SizeX(), base.Data().SizeY());
+		unpacked targetData(base.Data().SizeX(), base.Data().SizeY(), base.Data().SizeZ(), base.Data().MissingValue());
 
 		if (!baseData)
 		{

@@ -726,7 +726,7 @@ void BindLib(lua_State* L)
 			.def("GetLastGridPoint", LUA_CMEMFN(point, regular_grid, LastGridPoint, void))
 		,
 		class_<matrix<double>>("matrix")
-			.def(constructor<size_t,size_t,size_t>())
+			.def(constructor<size_t,size_t,size_t,double>())
 			/*.def("Size", &matrix<double>::Size)
 			.def("ClassName", &matrix<double>::ClassName)
 			.def("Resize", LUA_MEMFN(void, matrix<double>, Resize, size_t, size_t, size_t))
