@@ -207,6 +207,19 @@ double round(double val,unsigned short numdigits);
 
 double LatitudeLength(double phi);
 
+/**
+ * @brief Make SQL style interval value from forecast time
+ *
+ * SQL interval is like: 01:00:00, as in 1 hour 0 minutes 0 seconds
+ *
+ * This function will not handle seconds.
+ * 
+ * @param theTime The forecast time
+ * @return Interval string
+ */
+
+std::string MakeSQLInterval(const himan::forecast_time& theTime);
+
 } // namespace util
 } // namespace himan
 

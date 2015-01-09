@@ -708,6 +708,34 @@ double util::round(double val, unsigned short numdigits)
 	return std::round(val * div) / div;
 }
 
+string util::MakeSQLInterval(const himan::forecast_time& theTime)
+{
+	int step = theTime.Step();
+	string ret;
+
+	char i[11];
+
+	if (theTime.StepResolution() == himan::kHourResolution)
+	{
+		snprintf(i, 11, "%02d:00:00", step);
+
+		ret = i;
+	}
+	else
+	{
+		int hours, minutes;
+
+		hours = static_cast<int> (floor(static_cast<double> (step)/60));
+		minutes = step - hours*60;
+
+		snprintf(i, 11, "%02d:%02d:00", hours, minutes);
+
+		ret = i;
+	}
+
+	return ret;
+}
+
 #ifdef HAVE_CUDA
 void util::Unpack(initializer_list<grid*> grids)
 {
