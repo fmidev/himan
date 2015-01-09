@@ -148,3 +148,35 @@ BOOST_AUTO_TEST_CASE(CENTRAL_DIFFERENCE)
 	assert(B==D);
 	
 } 
+
+BOOST_AUTO_TEST_CASE(MAKESQLINTERVAL)
+{
+
+	forecast_time f1("2015-01-09 00:00:00", "2015-01-09 12:00:00");
+
+	BOOST_REQUIRE(util::MakeSQLInterval(f1) == "12:00:00");
+
+	f1.StepResolution(kMinuteResolution);
+
+	BOOST_REQUIRE(util::MakeSQLInterval(f1) == "12:00:00");
+
+	forecast_time f2("2015-01-09 00:00:00", "2015-01-09 00:15:00");
+
+	BOOST_REQUIRE(util::MakeSQLInterval(f2) == "00:00:00");
+
+	f2.StepResolution(kMinuteResolution);	
+
+	BOOST_REQUIRE(util::MakeSQLInterval(f2) == "00:15:00");
+
+	forecast_time f3("2015-01-09 00:00:00", "2015-01-19 00:16:00");
+
+	BOOST_REQUIRE(util::MakeSQLInterval(f3) == "240:00:00");
+
+	forecast_time f4("2015-01-09 00:00:00", "2015-10-19 00:00:00");
+
+	BOOST_REQUIRE(util::MakeSQLInterval(f4) == "6792:00:00");
+
+	forecast_time f5("2015-01-09 00:00:00", "2015-01-09 00:00:00");
+
+	BOOST_REQUIRE(util::MakeSQLInterval(f5) == "00:00:00");
+}
