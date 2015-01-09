@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(QUERYDATA)
 
 	size_t nx = 10, ny = 20;
 
-	auto data = matrix<double>(nx, ny);
+	auto data = matrix<double>(nx, ny, 1, kFloatMissing);
 
 	for (size_t i = 0; i < nx*ny; i++)
 	{

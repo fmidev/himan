@@ -188,16 +188,17 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		// maximum windspeed 0-1200m
 		myrsky = h->VerticalMaximum(WSParam,0,1200);
-
+	
 		// maximum temperature 0-200m
 		maxt = h->VerticalMaximum(TParam,0,200);
-
+		
 		// base wind speed
 		pohja = h->VerticalAverage(WSParam,10,200);
 
 		// average wind speed 0-60m
 		pohja_0_60 = h->VerticalAverage(WSParam,0,60);	
 	}
+
 	catch (const HPExceptionType& e)
 	{
 		if (e != kFileDataNotFound)
@@ -209,6 +210,12 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			myThreadedLogger->Error("hitool was unable to find data");
 			return;
 		}
+	}
+
+	std::cout << pohja_0_60.size() << std::endl;
+	for (size_t i = 0; i < pohja_0_60.size(); ++i)
+	{
+		std::cout << pohja_0_60[i] << std::endl;
 	}
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
@@ -623,13 +630,12 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	}
 
-	himan::matrix<double> filter_kernel(3,3,1);
+	himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
 	filter_kernel.Fill(1.0/9.0);
 	himan::matrix<double> puuska_filtered = util::Filter2D(myTargetInfo->Data(), filter_kernel);
 
 	
 	//auto puuska_filtered_ptr = make_shared<himan::matrix<double>> (puuska_filtered);
-	puuska_filtered.MissingValue(kFloatMissing);
 	
 	myTargetInfo->Grid()->Data(puuska_filtered);
 	

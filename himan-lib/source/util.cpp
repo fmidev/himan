@@ -409,8 +409,7 @@ double util::ToPower(double value, double power)
 matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 {
 	// find center position of kernel (half of kernel size)
-	matrix<double> ret(A.SizeX(),A.SizeY(),1);
-	ret.MissingValue(A.MissingValue());
+	matrix<double> ret(A.SizeX(),A.SizeY(),1,A.MissingValue());
 
 	double convolution_value; // accumulated value of the convolution at a given grid point in A
 	double kernel_weight_sum; // accumulated value of the kernel weights in B that are used to compute the convolution at given point A
@@ -623,7 +622,7 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 				{
 		  			ret.Set(i,j,0,himan::kFloatMissing); // if three or more values are missing in kernel put kFloatMissing
 				}
-	    		}
+	    	}
 	  	}
 	}
 	return ret;
@@ -631,10 +630,8 @@ matrix<double> util::Filter2D(matrix<double>& A, matrix<double>& B)
 
 pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, vector<double>& dx, vector<double>& dy)
 {
-    matrix<double> dA_dx(A.SizeX(),A.SizeY(),1);
-    matrix<double> dA_dy(A.SizeX(),A.SizeY(),1);
-	dA_dx.MissingValue(A.MissingValue());
-	dA_dy.MissingValue(A.MissingValue());
+    matrix<double> dA_dx(A.SizeX(),A.SizeY(),1,A.MissingValue());
+    matrix<double> dA_dy(A.SizeX(),A.SizeY(),1,A.MissingValue());
 
 	int ASizeX = int(A.SizeX());
 	int ASizeY = int(A.SizeY());

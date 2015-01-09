@@ -35,10 +35,10 @@ BOOST_AUTO_TEST_CASE(FILTER2D)
 {
 	// Filter a plane with given filter kernel
 	// Declare matrices
-	himan::matrix<double> A(11,8,1);
-	himan::matrix<double> B(3,3,1);
+	himan::matrix<double> A(11,8,1,kFloatMissing);
+	himan::matrix<double> B(3,3,1,kFloatMissing);
 	himan::matrix<double> C;
-	himan::matrix<double> D(11,8,1);
+	himan::matrix<double> D(11,8,1,kFloatMissing);
 
 	// Fill matrix A that will be smoothend with checker-board pattern
 	for(size_t i=0; i < A.Size(); ++i)
@@ -110,13 +110,13 @@ BOOST_AUTO_TEST_CASE(CENTRAL_DIFFERENCE)
 {
     // Filter a plane with given filter kernel
     // Declare matrices
-    himan::matrix<double> A(5,5,1);
+    himan::matrix<double> A(5,5,1,kFloatMissing);
     himan::matrix<double> B;
 	himan::matrix<double> C;
 
 	// Matrices containing the correct solution
-	himan::matrix<double> D(5,5,1);
-	himan::matrix<double> E(5,5,1);
+	himan::matrix<double> D(5,5,1,kFloatMissing);
+	himan::matrix<double> E(5,5,1,kFloatMissing);
 
     // Fill matrix A and solution matrices D and E
     for(size_t i=0; i < A.Size(); ++i)
@@ -135,17 +135,8 @@ BOOST_AUTO_TEST_CASE(CENTRAL_DIFFERENCE)
 	grad_A = himan::util::CentralDifference(A,dx,dy);
 	B = std::get<0>(grad_A);
 	C = std::get<1>(grad_A);
-	
-	std::cout << B.MissingCount() << ", " << D.MissingCount() << std::endl;
-	std::cout << B.Size() << ", " << D.Size() << std::endl;
-	std::cout << B.SizeX() << ", " << D.SizeX() << std::endl;
-	std::cout << B.SizeY() << ", " << D.SizeY() << std::endl;
-	std::cout << B.SizeZ() << ", " << D.SizeZ() << std::endl;
-	for (size_t i=0; i<B.Size(); ++i) 
-	{
-		std::cout << B.At(i) << ", " << D.At(i) << std::endl;
-	}
-	assert(B==D);
+
+	assert(B==D && C==E);
 	
 } 
 

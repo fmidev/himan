@@ -24,11 +24,12 @@ class matrix
 public:
 	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0) {}
 
-	matrix(size_t theWidth, size_t theHeight, size_t theDepth = 1)
+	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue )
 		: itsData(theWidth* theHeight* theDepth)
 		, itsWidth(theWidth)
 		, itsHeight(theHeight)
 		, itsDepth(theDepth)
+		, itsMissingValue(theMissingValue)
 	{
 	}
 
