@@ -137,13 +137,13 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	
 	stringstream query;
 
-    if (resultInfo.Grid()->Type() != kRegularGrid)
-    {
-        itsLogger->Error("Only grid data can be stored to radon for now");
-        return false;
-    }
+	if (resultInfo.Grid()->Type() != kRegularGrid)
+	{
+		itsLogger->Error("Only grid data can be stored to radon for now");
+		return false;
+	}
 
-    const regular_grid* g = dynamic_cast<regular_grid*> (resultInfo.Grid());
+	const regular_grid* g = dynamic_cast<regular_grid*> (resultInfo.Grid());
 
 	/*
 	 * 1. Get grid information
@@ -152,7 +152,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	 * 4. Insert or update
 	 */
 
-    himan::point firstGridPoint = g->FirstGridPoint();
+	himan::point firstGridPoint = g->FirstGridPoint();
 
 	/*
 	 * pas_latitude and pas_longitude cannot be checked programmatically
@@ -162,12 +162,12 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	 * (since pas_latitude and pas_longitude are derived from these anyway)
 	 */
 
-	query 	<< "SELECT geom_id "
+	query 	<< "SELECT geometry_id "
 			<< "FROM geom_v "
 			<< "WHERE nj = " << g->Nj()
 			<< " AND ni = " << g->Ni()
-			<< " AND first_lat = " << (firstGridPoint.Y() * 1e-2)
-			<< " AND first_lon = " << (firstGridPoint.X() * 1e-2);
+			<< " AND first_lat = " << firstGridPoint.Y()
+			<< " AND first_lon = " << firstGridPoint.X();
 
 	itsRadonDB->Query(query.str());
 
