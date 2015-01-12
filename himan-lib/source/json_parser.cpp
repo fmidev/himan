@@ -763,12 +763,15 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 		HPDatabaseType dbtype = conf.DatabaseType();
 		
 		map<string, string> geominfo;
-		
+	
+		double scale = 1;
+
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
 			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
 
 			geominfo = n->NeonsDB().GetGeometryDefinition(geom);
+			scale = 0.001;
 		}
 		
 		if (geominfo.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
@@ -782,7 +785,7 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 		{
 			throw runtime_error("Fatal::json_parser Unknown geometry '" + geom + "' found");	
 		}
-			
+
 		//regular_grid* _g = dynamic_cast<regular_grid*> (g.get()); // shortcut to avoid a million dynamic casts
 
 		/*
@@ -800,20 +803,24 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 				(geominfo["prjn_id"] == "4")) // radon
 		{
 			g->Projection(kRotatedLatLonProjection);
-			g->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) / 1e3, boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3));
-			di /= 1e3;
-			dj /= 1e3;
+			g->SouthPole(point(
+							boost::lexical_cast<double>(geominfo["geom_parm_2"]) * scale, 
+							boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale)
+			);
+		
+			di *= scale;
+			dj *= scale;
 		}
 		else if (geominfo["prjn_name"] == "latlon" || geominfo["prjn_id"] == "1")
 		{
 			g->Projection(kLatLonProjection);
-			di /= 1e3;
-			dj /= 1e3;
+			di *= scale;
+			dj *= scale;
 		}
 		else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo" || geominfo["prjn_id"] == "2")
 		{
 			g->Projection(kStereographicProjection);
-			g->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) / 1e3);
+			g->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale);
 			g->Di(di);
 			g->Dj(dj);
 		}
@@ -838,8 +845,8 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 			throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
 		}
 
-		double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) / 1e3;
-		double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) / 1e3;
+		double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
+		double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
 
 		std::pair<point, point> coordinates;
 
