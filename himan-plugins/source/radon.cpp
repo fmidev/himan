@@ -95,6 +95,7 @@ vector<string> radon::Files(search_options& options)
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
 		string tablename = gridgeoms[i][1];
+		string geomid = gridgeoms[i][0];
 
 		string parm_name = options.param.Name();
 
@@ -102,9 +103,10 @@ vector<string> radon::Files(search_options& options)
 				   "FROM "+tablename+"_v "
 				   "WHERE analysis_time = '"+analtime+"' "
 				   "AND param_name = '"+parm_name+"' "
-				   "AND level_name = '"+level_name+"' "
+				   "AND level_name = upper('"+level_name+"') "
 				   "AND level_value = "+levelvalue+" "
 				   "AND forecast_period = '"+util::MakeSQLInterval(options.time)+"' "
+				   "AND geometry_id = "+geomid+" "
 				   "ORDER BY forecast_period, level_id, level_value";
 
 		itsRadonDB->Query(query);
@@ -116,7 +118,7 @@ vector<string> radon::Files(search_options& options)
 			continue;
 		}
 
-		itsLogger->Trace("Found data for parameter " + parm_name + " from radon geometry " + gridgeoms[i][0]);
+		itsLogger->Trace("Found data for parameter " + parm_name + " from radon geometry " + gridgeoms[i][3]);
 		
 		files.push_back(values[4]);
 
