@@ -1,6 +1,8 @@
 #ifndef IO_CSV_H
 #define IO_CSV_H
 
+#define CSV_IO_NO_THREAD
+
 #include <vector>
 #include <string>
 #include <cstring>
@@ -13,6 +15,10 @@
 #endif
 #include <cassert>
 #include <cerrno>
+
+#if __GNUC__ >= 4 && __GNUC__MINOR__ < 6
+#define nullptr 0
+#endif
 
 namespace io{
 	////////////////////////////////////////////////////////////////////////////
@@ -224,7 +230,7 @@ namespace io{
 					#ifndef CSV_IO_NO_THREAD
 					data_end += bytes_read.get();
 					#else
-					data_end += std::fread(buffer + 2*block_len, 1, block_len, file);
+					data_end += static_cast<int> (std::fread(buffer + 2*block_len, 1, block_len, file));
 					#endif
 					std::memcpy(buffer+block_len, buffer+2*block_len, block_len);
 
@@ -464,12 +470,18 @@ namespace io{
 	template<char ... trim_char_list>
 	struct trim_chars{
 	private:
-		constexpr static bool is_trim_char(char c){
+#if __GNUC__ >= 4 && __GNUC__MINOR__ >= 6
+		constexpr
+#endif	
+		static bool is_trim_char(char c){
 			return false;
 		}
 
 		template<class ...OtherTrimChars>
-		constexpr static bool is_trim_char(char c, char trim_char, OtherTrimChars...other_trim_chars){
+#if __GNUC__ >= 4 && __GNUC__MINOR__ >= 6
+		constexpr 
+#endif
+		static bool is_trim_char(char c, char trim_char, OtherTrimChars...other_trim_chars){
 			return c == trim_char || is_trim_char(c, other_trim_chars...);
 		}
 
@@ -493,12 +505,18 @@ namespace io{
 	template<char ... comment_start_char_list>
 	struct single_line_comment{
 	private:
-		constexpr static bool is_comment_start_char(char c){
+#if __GNUC__ >= 4 && __GNUC__MINOR__ >= 6
+		constexpr 
+#endif
+		static bool is_comment_start_char(char c){
 			return false;
 		}
 
 		template<class ...OtherCommentStartChars>
-		constexpr static bool is_comment_start_char(char c, char comment_start_char, OtherCommentStartChars...other_comment_start_chars){
+#if __GNUC__ >= 4 && __GNUC__MINOR__ >= 6
+		constexpr 
+#endif		
+		static bool is_comment_start_char(char c, char comment_start_char, OtherCommentStartChars...other_comment_start_chars){
 			return c == comment_start_char || is_comment_start_char(c, other_comment_start_chars...);
 		}
 
@@ -886,12 +904,17 @@ namespace io{
 
 		template<class ...Args>
 		explicit CSVReader(Args...args):in(std::forward<Args>(args)...){
+#if __GNUC__ >= 4 && __GNUC__MINOR__ >= 6
 			std::fill(row, row+column_count, nullptr);
+#else
+			char* nullchar = '\0';
+			std::fill(row, row+column_count, nullchar);
+#endif
 			col_order.resize(column_count);
 			for(unsigned i=0; i<column_count; ++i)
 				col_order[i] = i;
 			for(unsigned i=1; i<=column_count; ++i)
-				column_names[i-1] = "col"+std::to_string(i);
+				column_names[i-1] = "col"+std::to_string(static_cast<long long>(i));
 		}
 
 		template<class ...ColNames>
@@ -931,10 +954,19 @@ namespace io{
 		}
 
 		bool has_column(const std::string&name) const {
+#if __GNUC__ >= 4 && __GNUC__MINOR__ >= 6
 			return col_order.end() != std::find(
 				col_order.begin(), col_order.end(),
 					std::find(std::begin(column_names), std::end(column_names), name)
 				- std::begin(column_names));
+#else
+			for (size_t i = 0; i< column_count; i++)
+			{
+				if (name == column_names[i]) return true;
+			}
+
+			return false;
+#endif
 		}
 
 		void set_file_name(const std::string&file_name){
