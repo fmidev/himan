@@ -8,6 +8,7 @@
 #include "json_parser.h"
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <stdexcept>
 #include "plugin_factory.h"
 #include "logger_factory.h"
@@ -898,27 +899,35 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 		
 		BOOST_FOREACH(const string& line, stations)
 		{
-			vector<string> point = util::Split(line, "/", false);
+			vector<string> point = util::Split(line, " ", false);
 			
 			if (point.size() != 2)
 			{
 				cout << "Error::json_parser Line " + line + " is invalid" << endl;
 				continue;
 			}
-			
+
+			string lon = point[0];
+			string lat = point[1];
+
+			boost::algorithm::trim(lon);
+			boost::trim(lat);
+
 			theStations.push_back(
 				station(i, 
 					"point_" + boost::lexical_cast<string> (i), 
-					boost::lexical_cast<double>(point[0]), 
-					boost::lexical_cast<double>(point[1]))
+					boost::lexical_cast<double>(lon),
+					boost::lexical_cast<double>(lat))
 			);
 			
 			i++;
 		}
-		
-		g->Stations(theStations);
 
-		return g;
+		if (theStations.size())
+		{
+			g->Stations(theStations);
+			return g;
+		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -933,7 +942,7 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 
 	try
 	{
-		vector<string> stations = util::Split(pt.get<string>("stations"), ";", false);
+		vector<string> stations = util::Split(pt.get<string>("stations"), ",", false);
 
 		g = unique_ptr<irregular_grid> (new irregular_grid());
 	
