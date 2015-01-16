@@ -209,6 +209,7 @@ private:
 
 	bool InterpolateArea(info& targetInfo, std::vector<info_t> infos) const;
 	bool Interpolate(info& baseInfo, std::vector<info_t>& infos) const;
+	bool ReorderPoints(info& base, std::vector<info_t> infos) const;
 
 	/**
 	 * @brief Swap scanning mode if needed

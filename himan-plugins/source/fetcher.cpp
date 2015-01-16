@@ -240,7 +240,11 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (itsDoInterpolation)
 	{
-		Interpolate(*baseInfo, theInfos);
+		if (!Interpolate(*baseInfo, theInfos))
+		{
+			// interpolation failed
+			throw kFileDataNotFound;
+		}
 	}
 	else
 	{
@@ -673,17 +677,91 @@ bool fetcher::InterpolateArea(info& base, vector<info_t> infos) const
 
 }
 
+bool fetcher::ReorderPoints(info& base, vector<info_t> infos) const
+{
+	if (infos.size() == 0)
+	{
+		return false;
+	}
+
+	for (auto it = infos.begin(); it != infos.end(); ++it)
+	{
+		if (!(*it))
+		{
+			continue;
+		}
+
+		// Worst case: cartesian product ie O(mn) ~ O(n^2)
+
+		auto targetStations = dynamic_cast<irregular_grid*> (base.Grid())->Stations();
+		auto sourceStations = dynamic_cast<irregular_grid*> ((*it)->Grid())->Stations();
+		auto sourceData = (*it)->Grid()->Data();
+		auto newData = matrix<double> (targetStations.size(), 1, 1, kFloatMissing);
+
+		if (targetStations.size() == 0 || sourceStations.size() == 0) return false;
+
+		vector<station> newStations;
+
+		for (size_t i = 0; i < targetStations.size(); i++)
+		{
+			station s1 = targetStations[i];
+			
+			bool found = false;
+		
+			for (size_t j = 0; j < sourceStations.size() && !found; j++)
+			{
+				station s2 = sourceStations[j];
+				
+				if (s1 == s2)
+				{
+					newStations.push_back(s1);
+					newData.Set(i, sourceData.At(j));
+					
+					found = true;
+				}
+			}
+
+			if (!found)
+			{
+				itsLogger->Trace("Failed, source data does not contain all the same points as target");
+				return false;
+			}
+		}
+
+		dynamic_cast<irregular_grid*> ((*it)->Grid())->Stations(newStations);
+		(*it)->Grid()->Data(newData);
+		
+	}
+
+	itsLogger->Trace("Success");
+	
+	return true;
+}
+
 bool fetcher::Interpolate(himan::info& baseInfo, vector<info_t>& theInfos) const
 {
 	bool needInterpolation = false;
+	bool needPointReordering = false;
+
+	/*
+	 * Possible scenarios:
+	 * 1. from regular to regular (basic area interpolation)
+	 * 2. from regular to irregular (area to point)
+	 * 3. from irregular to irregular (limited functionality, basically just point reordering)
+	 * 4. from irregular to regular, not supported
+	 */
+
+	
 
 	if (baseInfo.Grid()->Type() != theInfos[0]->Grid()->Type())
 	{
 		needInterpolation = true;
-	}			
-	else
-	{
+	}
 
+	// 1.
+
+	if (baseInfo.Grid()->Type() == kRegularGrid && theInfos[0]->Grid()->Type() == kRegularGrid)
+	{
 		if (*baseInfo.Grid() != *theInfos[0]->Grid())
 		{
 			needInterpolation = true;
@@ -704,11 +782,40 @@ bool fetcher::Interpolate(himan::info& baseInfo, vector<info_t>& theInfos) const
 
 		}
 	}
-	
+
+	// 2.
+
+	else if (baseInfo.Grid()->Type() == kIrregularGrid && theInfos[0]->Grid()->Type() == kRegularGrid)
+	{
+		needInterpolation = true;
+	}
+
+	// 3.
+
+	else if (baseInfo.Grid()->Type() == kIrregularGrid && theInfos[0]->Grid()->Type() == kIrregularGrid)
+	{
+		if (*baseInfo.Grid() != *theInfos[0]->Grid())
+		{
+			needPointReordering = true;
+		}
+	}
+
+	// 4.
+
+	else if (baseInfo.Grid()->Type() == kRegularGrid && theInfos[0]->Grid()->Type() == kIrregularGrid)
+	{
+		throw runtime_error("Unable to extrapolate from points to grid");
+	}
+
 	if (needInterpolation)
 	{
 		itsLogger->Trace("Interpolating area");
-		InterpolateArea(baseInfo, theInfos);
+		return InterpolateArea(baseInfo, theInfos);
+	}
+	else if (needPointReordering)
+	{
+		itsLogger->Trace("Reordering points to match");
+		return ReorderPoints(baseInfo, theInfos);
 	}
 	else
 	{

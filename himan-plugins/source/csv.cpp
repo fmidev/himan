@@ -209,6 +209,8 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 	csv_reader in2(inputFile);
 	in2.read_header(io::ignore_no_column, "station_id", "station_name","longitude","latitude","origintime","forecasttime","level_name","level_value","parameter_name","value");
 
+	int counter = 0;
+
 	while (GetLine(in2, line))
 	{
 		forecast_time f(get<4>(line), get<5>(line));
@@ -221,32 +223,21 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 		
 		station s (get<0>(line), get<1>(line), get<2>(line), get<3>(line));
 
-		ret->Param(p);
-		ret->Time(f);
-		ret->Level(l);
+		if (!ret->Param(p)) continue;
+		if (!ret->Time(f)) continue;
+		if (!ret->Level(l)) continue;
 
-		if (!ret->Grid())
-		{
-			throw runtime_error("ASDASD");
-			auto g = make_shared<irregular_grid> ();
-			vector<station> stations;
-			stations.push_back(s);
+		// Add new station
+		auto stats = dynamic_cast<irregular_grid*> (ret->Grid())->Stations();
+		stats.push_back(s);
+		dynamic_cast<irregular_grid*> (ret->Grid())->Stations(stats);
 
-			g->Stations(stations);
-			ret->Grid(g);
-		}
-		else
-		{
-			// Add new station
-			auto stats = dynamic_cast<irregular_grid*> (ret->Grid())->Stations();
-			stats.push_back(s);
-			dynamic_cast<irregular_grid*> (ret->Grid())->Stations(stats);
-
-			// Add the data point
-			ret->Grid()->Value(stats.size()-1, get<9> (line));
-		}	
+		// Add the data point
+		ret->Grid()->Value(stats.size()-1, get<9> (line));
+		counter++;
 	}
 
+	itsLogger->Debug("Read " + boost::lexical_cast<string> (counter) + " lines of data");
 	return ret;
 	
 }
