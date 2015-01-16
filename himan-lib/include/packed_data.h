@@ -40,9 +40,24 @@ struct packed_data
 #include <cuda_runtime_api.h>
 #include "himan_common.h"
 #include <string>
+#include <stdexcept>
 
 namespace himan
 {
+
+struct packing_coefficients
+{
+	int bitsPerValue;
+	double binaryScaleFactor;
+	double decimalScaleFactor;
+	double referenceValue;
+
+	CUDA_HOST
+	packing_coefficients()
+		: bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0)
+	{}
+
+};
 
 struct packed_data
 {
@@ -77,6 +92,8 @@ struct packed_data
 	CUDA_HOST CUDA_DEVICE
 	bool HasBitmap() const;
 
+	virtual void Unpack(double* d_arr, size_t N, cudaStream_t* stream) { throw std::runtime_error("top level Unpack called"); }
+
 	unsigned char* data;
 	size_t packedLength;
 	size_t unpackedLength;
@@ -85,7 +102,35 @@ struct packed_data
 
 	HPPackingType packingType;
 
+	packing_coefficients coefficients;
+
 };
+
+namespace packed_data_util
+{
+CUDA_HOST CUDA_DEVICE
+double GetGribPower(long s, long n);
+}
+
+inline
+CUDA_HOST CUDA_DEVICE
+double himan::packed_data_util::GetGribPower(long s, long n)
+{
+	double divisor = 1.0;
+	double dn = static_cast<double> (n);
+
+	while(s < 0)
+	{
+		divisor /= dn;
+		s++;
+	}
+	while(s > 0)
+	{
+		divisor *= dn;
+		s--;
+	}
+	return divisor;
+}
 
 inline
 CUDA_HOST CUDA_DEVICE

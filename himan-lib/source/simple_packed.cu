@@ -24,7 +24,7 @@ long get_binary_scale_fact(double max, double min, long bpval)
   long          scale  = 0;
   const long last = 127; /* Depends on edition, should be parameter */
 
-  unsigned long maxint = simple_packed_util::GetGribPower(bpval,2) - 1;
+  unsigned long maxint = packed_data_util::GetGribPower(bpval,2) - 1;
   double dmaxint=(double)maxint;
 
   assert (bpval >= 1);
@@ -78,9 +78,9 @@ long get_decimal_scale_fact(double max, double min, long bpval,long binary_scale
   double    unscaled_min=min;
   double  unscaled_max=max;
 
-      f= simple_packed_util::GetGribPower(bits_per_value,2)-1;
-      minrange=simple_packed_util::GetGribPower(-last,2)*f;
-      maxrange=simple_packed_util::GetGribPower(last,2)*f;
+      f= packed_data_util::GetGribPower(bits_per_value,2)-1;
+      minrange=packed_data_util::GetGribPower(-last,2)*f;
+      maxrange=packed_data_util::GetGribPower(last,2)*f;
 
       while (range<minrange) {
         decimal_scale_factor+=1;
@@ -348,7 +348,7 @@ void simple_packed_util::Unpack(unsigned char* d_p, double* d_u, int* d_b, simpl
 		}
 	}
 }
-
+/*
 __host__ __device__
 double simple_packed_util::GetGribPower(long s,long n)
 {
@@ -365,7 +365,7 @@ double simple_packed_util::GetGribPower(long s,long n)
 	}
 	return divisor;
 }
-
+*/
 __device__
 void simple_packed_util::GetBitValue(unsigned char* p, long bitp, int *val)
 {
@@ -479,8 +479,8 @@ void simple_packed_util::PackUnevenBytes(unsigned char* __restrict__ d_p, const 
 									size_t values_len, simple_packed_coefficients coeff, int idx)
 {
 
-	double decimal = GetGribPower(-coeff.decimalScaleFactor, 10);
-	double divisor = GetGribPower(-coeff.binaryScaleFactor, 2);
+	double decimal = packed_data_util::GetGribPower(-coeff.decimalScaleFactor, 10);
+	double divisor = packed_data_util::GetGribPower(-coeff.binaryScaleFactor, 2);
 
 	double x=(((d_u[idx]*decimal)-coeff.referenceValue)*divisor)+0.5;
 	unsigned long unsigned_val = static_cast<unsigned long> (x);
@@ -509,8 +509,8 @@ void simple_packed_util::PackFullBytes(unsigned char* __restrict__ d_p, const do
 									size_t values_len, simple_packed_coefficients coeff, int idx)
 {
 
-	double decimal = GetGribPower(-coeff.decimalScaleFactor, 10);
-	double divisor = GetGribPower(-coeff.binaryScaleFactor, 2);
+	double decimal = packed_data_util::GetGribPower(-coeff.decimalScaleFactor, 10);
+	double divisor = packed_data_util::GetGribPower(-coeff.binaryScaleFactor, 2);
 	
 	// unsigned char* encoded = d_p + idx * static_cast<int> (coefficients.bpv/8);
 

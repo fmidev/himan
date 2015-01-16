@@ -19,19 +19,7 @@
 namespace himan
 {
 
-struct simple_packed_coefficients
-{
-	int bitsPerValue;
-	double binaryScaleFactor;
-	double decimalScaleFactor;
-	double referenceValue;
-
-	CUDA_HOST
-	simple_packed_coefficients()
-		: bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0)
-	{}
-
-};
+typedef packing_coefficients simple_packed_coefficients;
 
 struct simple_packed : packed_data
 {
@@ -62,11 +50,10 @@ struct simple_packed : packed_data
 	 * @param stream Cuda stream for execution. If 0 is given, function will create a temporary stream.
 	 */
 
-	CUDA_HOST
 	virtual void Unpack(double* d_arr, size_t N, cudaStream_t* stream);
 
 	CUDA_HOST
-	virtual void Pack(double* d_arr, size_t N, cudaStream_t* stream);
+	void Pack(double* d_arr, size_t N, cudaStream_t* stream);
 
 #ifdef __CUDACC__
 	// Functions that are only visible for nvcc compiler
@@ -83,8 +70,6 @@ struct simple_packed : packed_data
 	template<typename T>
 	CUDA_HOST T Max(T* d_arr, size_t N, cudaStream_t& stream);
 #endif
-	
-	simple_packed_coefficients coefficients;
 
 };
 
@@ -116,9 +101,6 @@ void SetBitOn(unsigned char* p, long bitp);
 
 __device__
 void SetBitOff(unsigned char* p, long bitp);
-
-__host__ __device__
-double GetGribPower(long s, long n);
 
 };
 
