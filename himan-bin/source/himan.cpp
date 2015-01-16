@@ -523,6 +523,10 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		{
 			conf->OutputFileType(kQueryData);
 		}
+		else if (outfileType == "csv")
+		{
+			conf->OutputFileType(kCSV);
+		}
 		else
 		{
 			cerr << "Invalid file type: " << outfileType << endl;
