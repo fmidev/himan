@@ -21,6 +21,7 @@
 #include "neons.h"
 #include "radon.h"
 #include "cache.h"
+#include "csv.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -98,6 +99,15 @@ bool writer::ToFile(info& theInfo,
 		case kNetCDF:
 			break;
 
+		case kCSV:
+		{
+			auto theWriter = std::dynamic_pointer_cast<csv> (plugin_factory::Instance()->Plugin("csv"));
+
+			correctFileName += ".csv";
+
+			ret = theWriter->ToFile(theInfo, correctFileName, fileWriteOption);
+			break;
+		}
 			// Must have this or compiler complains
 		default:
 			throw std::runtime_error(ClassName() + ": Invalid file type: " + HPFileTypeToString.at(fileType));

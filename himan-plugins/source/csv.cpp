@@ -13,6 +13,7 @@
 #include "irregular_grid.h"
 #include <boost/foreach.hpp>
 #include "csv_v3.h"
+#include <boost/filesystem.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -67,7 +68,62 @@ csv::csv()
 
 bool csv::ToFile(info& theInfo, string& theOutputFile, HPFileWriteOption fileWriteOption)
 {
-	throw runtime_error("Not implemented yet");
+	if (theInfo.Grid()->Type() != kIrregularGrid)
+	{
+		itsLogger->Error("Only irregular grids can be written to CSV");
+		return false;
+	}
+
+	auto aTimer = timer_factory::Instance()->GetTimer();
+	aTimer->Start();
+
+	ofstream out(theOutputFile);
+
+	assert(out.is_open());
+
+	out << "station_id,station_name,longitude,latitude,origintime,forecasttime,level_name,level_value,parameter_name,value" << endl;
+	
+	for (theInfo.ResetTime(); theInfo.NextTime();)
+	{
+		forecast_time time = theInfo.Time();
+		
+		for (theInfo.ResetLevel(); theInfo.NextLevel();)
+		{
+			level lev = theInfo.Level();
+			
+			for (theInfo.ResetParam(); theInfo.NextParam();)
+			{
+				param par = theInfo.Param();
+
+				for (theInfo.ResetLocation(); theInfo.NextLocation();)
+				{
+					station s = theInfo.Station();
+					out << s.Id() << ","
+						<< s.Name() << ","
+						<< s.X() << ","
+						<< s.Y() << ","
+						<< time.OriginDateTime().String() << ","
+						<< time.ValidDateTime().String() << ","
+						<< HPLevelTypeToString.at(lev.Type()) << ","
+						<< lev.Value() << ","
+						<< par.Name() << ","
+						<< theInfo.Value()
+						<< endl;
+				}
+
+				out.flush();
+			}
+		}
+	}
+
+	aTimer->Stop();
+
+	double duration = static_cast<double> (aTimer->GetTime());
+	double bytes = static_cast<double> (boost::filesystem::file_size(theOutputFile));
+
+	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
+	itsLogger->Info("Wrote file '" + theOutputFile + "' (" + boost::lexical_cast<string> (speed) + " MB/s)");
+
 	return true;
 	
 }
