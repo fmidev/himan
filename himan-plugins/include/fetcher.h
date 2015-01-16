@@ -160,6 +160,18 @@ private:
     std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, search_options& options, bool readContents = true);
 
 	/**
+     * @brief Return all data from a CSV file, overcoat for himan::plugin::csv::FromFile().
+     * @see himan::plugin::csv::FromFile()
+     *
+     * @param inputFile Input file name
+     * @param options Search options (param, level, time, prod, config)
+     *
+     * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
+     */
+
+    std::vector<std::shared_ptr<info>> FromCSV(const std::string& inputFile, search_options& options);
+
+	/**
 	 * @brief Map level definitions between models and code tables
 	 *
 	 * Ie. Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.

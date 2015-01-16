@@ -25,6 +25,7 @@
 #include "param.h"
 #include "cache.h"
 #include "querydata.h"
+#include "csv.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -298,9 +299,15 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 			itsLogger->Error("File is NetCDF");
 			break;
 
+		case kCSV:
+		{
+			curInfos = FromCSV(inputFile, options);
+			break;
+		}
+
 		default:
 			// Unknown file type, cannot proceed
-			throw runtime_error("Input file is neither GRIB, NetCDF nor QueryData");
+			throw runtime_error("Input file is neither GRIB, NetCDF, QueryData nor CSV");
 			break;
 		}
 
@@ -340,6 +347,19 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 	theInfos.push_back(i);
 
 	return theInfos;
+}
+
+vector<shared_ptr<himan::info> > fetcher::FromCSV(const string& inputFile, search_options& options)
+{
+
+	auto c = dynamic_pointer_cast<csv> (plugin_factory::Instance()->Plugin("csv"));
+
+	auto info = c->FromFile(inputFile, options);
+
+	vector<info_t> infos;
+	infos.push_back(info);
+
+	return infos;
 }
 
 himan::level fetcher::LevelTransform(const producer& sourceProducer, const param& targetParam,	const level& targetLevel) const
