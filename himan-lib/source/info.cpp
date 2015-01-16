@@ -64,7 +64,6 @@ info::info(const info& other)
 		}
 
 		assert(itsBaseGrid);
-		assert(itsBaseGrid->Data().Values().size() == 0);
 	}
 	
 	itsLogger = logger_factory::Instance()->GetLog("info");

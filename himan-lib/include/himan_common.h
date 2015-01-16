@@ -98,6 +98,7 @@ enum HPProjectionType
 
 #ifndef __CUDACC__
 const boost::unordered_map<HPProjectionType,const char*> HPProjectionTypeToString = ba::map_list_of
+		(kUnknownProjection, "unknown projection")
 		(kLatLonProjection, "ll")
 		(kRotatedLatLonProjection, "rll")
 		(kStereographicProjection, "polster");

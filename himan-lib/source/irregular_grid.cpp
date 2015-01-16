@@ -242,6 +242,7 @@ const vector<station>& irregular_grid::Stations() const
 void irregular_grid::Stations(const vector<station>& theStations)
 {
 	itsStations = theStations;
+	itsData.Resize(theStations.size(), 1, 1);
 }
 
 bool irregular_grid::operator!=(const grid& other) const
