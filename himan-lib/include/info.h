@@ -629,6 +629,15 @@ public:
 	point LatLon() const;
 	
 	/**
+	 * @brief Return station information corresponding to current location. Only valid
+	 * for irregular grids.
+	 * 
+     * @return station information
+     */
+
+	station Station() const;
+
+	/**
 	 * @return Current data matrix
 	 */
 
