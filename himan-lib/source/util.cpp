@@ -13,6 +13,7 @@
 #include <sstream>
 #include <iomanip>
 #include <NFmiStereographicArea.h>
+#include <boost/filesystem/path.hpp>
 #include "level.h"
 #include "param.h"
 #include "forecast_time.h"
@@ -105,6 +106,35 @@ himan::HPFileType util::FileType(const string& theFile)
 
 	using namespace std;
 
+	// First check by extension since its cheap
+
+	boost::filesystem::path p (theFile);
+
+	const string ext = p.extension().string();
+
+	if (ext == ".csv")
+	{
+		return kCSV;
+	}
+	else if (ext == ".fqd" || ext == ".sqd")
+	{
+		return kQueryData;
+	}
+	else if (ext == ".grib")
+	{
+		return kGRIB;
+	}
+	else if (ext == ".grib2")
+	{
+		return kGRIB2;
+	}
+	else if (ext == ".nc")
+	{
+		return kNetCDF;
+	}
+
+	// Try the check the file header; CSV is not possible anymore
+	
 	ifstream f(theFile.c_str(), ios::in | ios::binary);
 
 	long keywordLength = 4;
@@ -752,7 +782,7 @@ void util::Unpack(initializer_list<grid*> grids)
 			continue;
 		}
 
-		assert(tempGrid->PackedData().ClassName() == "simple_packed");
+		assert(tempGrid->PackedData().ClassName() == "simple_packed" || tempGrid->PackedData().ClassName() == "jpeg_packed");
 
 		double* arr = 0;
 		size_t N = tempGrid->PackedData().unpackedLength;
@@ -768,14 +798,9 @@ void util::Unpack(initializer_list<grid*> grids)
 
 		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*> (arr), sizeof(double) * N, 0));
 
-		// CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&arr), sizeof(double) * N));
-
 		assert(arr);
 
-		dynamic_cast<simple_packed*> (&tempGrid->PackedData())->Unpack(arr, N, stream);
-
-		// tempGrid->Data()->Set(arr, N);
-		// CUDA_CHECK(cudaFreeHost(arr));
+		tempGrid->PackedData().Unpack(arr, N, stream);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
 

@@ -71,7 +71,8 @@ enum HPFileType
 	kGRIB2,
 	kGRIB, // when we don't know if its 1 or 2
 	kQueryData,
-	kNetCDF
+	kNetCDF,
+	kCSV
 };
 
 #ifndef __CUDACC__
@@ -297,7 +298,8 @@ enum HPPackingType
 {
 	kUnknownPackingType = 0,
 	kUnpacked,
-	kSimplePacking
+	kSimplePacking,
+	kJpegPacking
 };
 
 enum HPAggregationType
