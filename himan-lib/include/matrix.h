@@ -205,7 +205,7 @@ public:
 
 	void Resize(size_t theWidth, size_t theHeight, size_t theDepth = 1)
 	{
-		itsData.resize(theWidth * theHeight * theDepth, 0);
+		itsData.resize(theWidth * theHeight * theDepth, itsMissingValue);
 		itsWidth = theWidth;
 		itsHeight = theHeight;
 		itsDepth = theDepth;

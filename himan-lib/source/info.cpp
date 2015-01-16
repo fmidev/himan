@@ -798,3 +798,19 @@ point info::LatLon() const
 
 	return Grid()->LatLon(itsLocationIndex);
 }
+
+station info::Station() const
+{
+	if (itsLocationIndex == kIteratorResetValue)
+	{
+		itsLogger->Error("Location iterator position is not set");
+		return station();
+	}
+	else if (Grid()->Type() != kIrregularGrid)
+	{
+		itsLogger->Error("regular_grid does not hold station information");
+		return station();
+	}
+
+	return dynamic_cast<irregular_grid*> (Grid())->Station(itsLocationIndex);
+}

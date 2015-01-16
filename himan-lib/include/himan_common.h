@@ -82,7 +82,8 @@ const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = ba::map_
 		(kGRIB2, "grib edition 2")
 		(kGRIB, "grib edition 1 or 2")
 		(kQueryData, "QueryData")
-		(kNetCDF, "NetCDF");
+		(kNetCDF, "NetCDF")
+		(kCSV, "CSV");
 #endif
 
 // Define supported projections
