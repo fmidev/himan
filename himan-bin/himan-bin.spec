@@ -13,21 +13,23 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 14.6.18
+Requires: himan-lib >= 15.1.7
 BuildRequires: redhat-rpm-config
 
-%if %{distnum} == 5
-BuildRequires: gcc44-c++ >= 4.4.6
-BuildRequires: gcc44-c++ < 4.7
-%else
+%if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
+BuildRequires: cuda-6-5 
+BuildRequires: boost-devel >= 1.54
+%else
+BuildRequires: gcc-c++ >= 4.8.2
+BuildRequires: cuda-7-0
+Requires: boost-program-options
+Requires: boost-system
 %endif
 
 BuildRequires: scons
-BuildRequires: boost-devel >= 1.54
 BuildRequires: libsmartmet-newbase >= 14.4.10
-BuildRequires: cuda-6-5 
 Provides: himan
 
 %description
