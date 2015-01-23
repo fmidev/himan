@@ -40,7 +40,7 @@ void neons::InitPool()
 	{
 		char* base = getenv("MASALA_BASE");
 
-		if (string(base) == "/masala")
+		if (base && string(base) == "/masala")
 		{
 			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
 			NFmiNeonsDBPool::Instance()->Username("wetodb");
