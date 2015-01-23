@@ -4,7 +4,7 @@
 Summary: himan core library
 Name: %{LIBNAME}
 Version: 15.1.7
-Release: 1.fmi
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,20 +13,31 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
+
+%if %distnum == 7
+Requires: libluabind
+Requires: boost-system
+Requires: boost-filesystem
+Requires: boost-program-options
+Requires: boost-thread
+Requires: boost-iostreams
+Requires: boost-regex
+%else
+BuildRequires: boost-devel >= 1.54
+%endif
+
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
 
-%if %{distnum} == 5
-BuildRequires: gcc44-c++ >= 4.4.6
-BuildRequires: gcc44-c++ < 4.7
-%else
+%if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
+%else
+BuildRequires: gcc-c++ >= 4.8.2
 %endif
 
 BuildRequires: libsmartmet-newbase >= 14.8.6
 BuildRequires: scons
-BuildRequires: boost-devel >= 1.54
 Provides: libhiman.so
 
 %description
