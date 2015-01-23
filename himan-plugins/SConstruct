@@ -2,6 +2,15 @@
 # SConscript for himan-bin
 
 import os
+import platform
+
+OS_NAME = platform.linux_distribution()[0]
+OS_VERSION = float(platform.linux_distribution()[1])
+
+IS_RHEL = False
+
+if OS_NAME == "Red Hat Enterprise Linux Server" or OS_NAME == "CentOS":
+	IS_RHEL=True
 
 AddOption(
     '--debug-build',
@@ -19,11 +28,7 @@ RELEASE = (not DEBUG)
 
 # Workspace
 
-workspace = os.environ['HOME'] + "/workspace/himan"
-
-# jenkins
-#if os.environ['HOME'] == "/home/dev/weto":
-#workspace = os.environ['HOME'] + "/workspace/himan"
+workspace = os.getcwd() + "/../"
 
 # cuda toolkit path
 
@@ -104,12 +109,9 @@ libraries.append('clntsh')
 libraries.append('lua')
 libraries.append('luabind')
 libraries.append('odbc')
+libraries.append('grib_api')
 
 env.Append(LIBS = libraries)
-
-libgrib_api = env.File('/usr/lib64/libgrib_api.a')
-
-env.Append(LIBS=libgrib_api)
 
 if have_cuda:
 	env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
@@ -154,7 +156,11 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 
 cflags = []
 cflags.append('-fPIC')
-cflags.append('-std=c++0x')
+
+if not IS_RHEL or (IS_RHEL and OS_VERSION >= 7.0):
+	cflags.append('-std=c++11')
+else:
+	cflags.append('-std=c++0x')
 
 env.Append(CCFLAGS = cflags)
 env.Append(CCFLAGS = cflags_normal)
@@ -177,6 +183,9 @@ env.Append(NVCCFLAGS = ['-m64'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
 env.Append(NVCCFLAGS = ['-arch=compute_35','-code=sm_35'])
+
+if not IS_RHEL or (IS_RHEL and OS_VERSION >= 7.0):
+	env.Append(NVCCFLAGS = ['-std=c++11'])
 
 env.Append(NVCCPATH = ['./include'])
 env.Append(NVCCPATH = [workspace + '/himan-lib/include']) # timer

@@ -20,9 +20,21 @@ Requires: himan-lib >= 14.11.25
 Requires: himan-bin >= 14.11.25
 Requires: lua >= 5.1.4
 Requires: unixODBC
+
+%if %distnum == 7
+Requires: libluabind
+Requires: boost-system
+Requires: boost-filesystem
+Requires: boost-program-options
+Requires: boost-thread
+Requires: boost-iostreams
+Requires: boost-regex
+%else
+BuildRequires: boost-devel >= 1.54
+%endif
+
 BuildRequires: libluabind
 BuildRequires: lua-devel >= 5.1.4
-BuildRequires: boost-devel >= 1.54
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 14.4.10
 BuildRequires: libsmartmet-smarttools >= 14.4.7
@@ -30,12 +42,11 @@ BuildRequires: grib_api-devel >= 1.12.1
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
-%if %{distnum} == 5
-BuildRequires: gcc44-c++ >= 4.4.6
-BuildRequires: gcc44-c++ < 4.7
-%else
+%if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
+%else
+BuildRequires: gcc-c++ >= 4.8.2
 %endif
 
 %description
