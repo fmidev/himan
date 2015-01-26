@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.1.7
-Release: 1%{dist}.fmi
+Version: 15.1.26
+Release: 2%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -72,6 +72,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libabsolute_humidity.so
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libcloud_code.so
+%{_libdir}/himan-plugins/libcsv.so
 %{_libdir}/himan-plugins/libdensity.so
 %{_libdir}/himan-plugins/libdewpoint.so
 %{_libdir}/himan-plugins/libfetcher.so
@@ -109,6 +110,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.26-1.fmi
+- CSV plugin
+- RHEL7 compatibility
+- Other minor fixes
+* Wed Jan  7 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.7-2.fmi
+- Changes to accomodate radon
 * Wed Jan  7 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.7-1.fmi
 - Changes to accomodate radon
 * Fri Jan  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.2-2.fmi
