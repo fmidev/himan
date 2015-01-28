@@ -853,8 +853,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 
 double util::LatitudeLength(double phi)
 {
-	double sin_phi= sin(phi * constants::kDeg);
-	return 2 * boost::math::constants::pi<double>() * sqrt(constants::kR * constants::kR * (1 - 2 * sin_phi + sin_phi * sin_phi));
+	double cos_phi= cos(phi * constants::kDeg);
+	return 2 * boost::math::constants::pi<double>() * constants::kR * abs(cos_phi);
 }
 
 double util::round(double val, unsigned short numdigits)
