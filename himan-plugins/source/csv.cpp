@@ -147,6 +147,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 	vector<forecast_time> times;
 	vector<param> params;
 	vector<level> levels;
+	vector<station> stats;
 
 	// First create descriptors
 	while (GetLine(in, line))
@@ -184,7 +185,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 		
 		if (p != options.param)
 		{
-			itsLogger->Debug("PAram does not match");
+			itsLogger->Debug("Param does not match");
 			itsLogger->Debug(options.param.Name() + " vs " + p.Name());
 
 			continue;
@@ -230,7 +231,23 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 		}
 
 		if (!found) params.push_back(p);
-				
+
+		// Add location information
+
+		station s (get<0>(line), get<1>(line), get<2>(line), get<3>(line));
+
+		found = false;
+
+		BOOST_FOREACH(const station& stat, stats)
+		{
+			if (stat == s)
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) stats.push_back(s);
 	}
 
 	if (times.size() == 0 || params.size() == 0 || levels.size() == 0)
@@ -251,6 +268,8 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 	base->Projection(kLatLonProjection);
 	
 	ret->Create(base.get());
+
+	dynamic_cast<irregular_grid*> (ret->Grid())->Stations(stats);
 
 	itsLogger->Debug("Read " + boost::lexical_cast<string> (times.size()) 
 			+ " times, " + boost::lexical_cast<string> (levels.size())
@@ -283,14 +302,16 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 		if (!ret->Time(f)) continue;
 		if (!ret->Level(l)) continue;
 
-		// Add new station
-		auto stats = dynamic_cast<irregular_grid*> (ret->Grid())->Stations();
-		stats.push_back(s);
-		dynamic_cast<irregular_grid*> (ret->Grid())->Stations(stats);
+		for (size_t i = 0; i < stats.size(); i++)
+		{
+			if (s == stats[i])
+			{
+				// Add the data point
+				ret->Grid()->Value(i, get<9> (line));
+				counter++;
+			}
+		}
 
-		// Add the data point
-		ret->Grid()->Value(stats.size()-1, get<9> (line));
-		counter++;
 	}
 
 	itsLogger->Debug("Read " + boost::lexical_cast<string> (counter) + " lines of data");
