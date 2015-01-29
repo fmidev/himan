@@ -1,0 +1,25 @@
+{
+	"points" : "25 60,27 61",
+	"source_producer" : "1",
+	"target_producer" : "230",
+	"hours" : "1",
+	"file_write" : "multiple",
+	"origintime" : "2015-01-29 00:00:00",
+	"read_data_from_database" : false,
+
+	"processqueue" : [
+	{
+		"leveltype" : "pressure",
+		"levels" : "850",
+		"plugins" : [ { "name" : "transformer",
+				"base" : "273.15",
+				"scale" : "1.0",
+				"source_param" : "T-C",
+                                "target_param" : "T-K",
+				"target_univ_id" : "4",
+                                "source_level_type" : "pressure",
+                                "source_levels" : "850" } ]
+	} 
+
+	]
+}
