@@ -37,9 +37,9 @@ void turbulence::Process(std::shared_ptr<const plugin_configuration> conf)
 
     itsInfo->LevelOrder(kTopToBottom);
 
-    shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+    //shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
 
-    itsTopLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
+    //itsTopLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
 
     if (Dimension() != kTimeDimension)
     {
@@ -104,7 +104,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-    bool firstLevel = false;
+    /*bool firstLevel = false;
 
     if (myTargetInfo->Level().Value() == itsTopLevel)
     {
@@ -115,7 +115,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", first hybrid level " + static_cast<string> (forecastLevel));
 		return;
-    }
+    }*/
 
     info_t UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo;
 
@@ -127,7 +127,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     UInfo = Fetch(forecastTime, forecastLevel, UParam, false);
     VInfo = Fetch(forecastTime, forecastLevel, VParam, false);
 
-	if (!(prevHInfo && prevUInfo && prevVInfo && HInfo && UInfo && VInfo))
+	if (!prevHInfo || !prevUInfo || !prevVInfo || !HInfo || !UInfo || !VInfo)
 	{
         myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
         return;
@@ -152,12 +152,12 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	for (size_t i=0; i < Ni; ++i)
 	{
-		dy[i] = util::LatitudeLength(0) * Dj / 360;	
+		dy[i] = util::LatitudeLength(0) * Dj / 360;
 	}
 
 	for (size_t j=0; j < Nj; ++j)
 	{
-		dx[j] = util::LatitudeLength(firstPoint.Y() + j * Dj) * Di / 360;
+		dx[j] = util::LatitudeLength(firstPoint.Y() + double(j) * Dj) * Di / 360;
 	}
 
 	pair<matrix<double>,matrix<double>> gradU = util::CentralDifference(UInfo->Data(),dx,dy);
