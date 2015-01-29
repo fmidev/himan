@@ -57,12 +57,12 @@ private:
 
 // the class factory
 
-/*
+
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<turbulence> (new turbulence());
+    return std::make_shared<turbulence> ();
 }
-*/
+
 
 } // namespace plugin
 } // namespace himan

@@ -12,9 +12,14 @@
 #include "logger_factory.h"
 #include "level.h"
 #include "forecast_time.h"
-#include "neons.h"
 #include "regular_grid.h"
 #include "util.h"
+
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "neons.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;
