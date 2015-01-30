@@ -123,6 +123,7 @@ enum HPParameterUnit
 	kKgkg, // kg/kg
 	kJm2, // J per square meter
 	kKgm2 // kg/m^2
+	kS2 // 1/s^2
 };
 
 enum HPInterpolationMethod
