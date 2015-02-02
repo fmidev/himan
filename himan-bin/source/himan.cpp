@@ -487,8 +487,12 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		// No device or no driver present
 
 		devCount = 0;
+
+		conf->UseCuda(false);
+		conf->UseCudaForPacking(false);
+		conf->UseCudaForUnpacking(false);
 	}
-	
+
 	conf->CudaDeviceCount(static_cast<short> (devCount));
 
 	if (opt.count("cuda-device-id"))
