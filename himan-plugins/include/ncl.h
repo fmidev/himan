@@ -54,6 +54,7 @@ private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
     bool CountValues(const std::shared_ptr<himan::info> values);
     int itsBottomLevel;
+    int itsTopLevel;
     int itsTargetTemperature;
 };
 
