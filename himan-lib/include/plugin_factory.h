@@ -13,6 +13,8 @@
 #include <mutex>
 #include <memory>
 
+#define GET_PLUGIN(P) std::dynamic_pointer_cast<himan::plugin::P> (plugin_factory::Instance()->Plugin("P"))
+
 namespace himan
 {
 
