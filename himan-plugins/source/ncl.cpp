@@ -34,10 +34,10 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+	auto theNeons = GET_PLUGIN(neons);
 
-//	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(230, "last hybrid level number"));
 	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+	itsTopLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
 
 	param theRequestedParam;
 
@@ -107,9 +107,10 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	info_t prevHInfo, prevTInfo;
 
-	while (--levelNumber > 0)
+	while (--levelNumber >= itsTopLevel)
 	{
-
+		myThreadedLogger->Trace("Level: " + boost::lexical_cast<string> (levelNumber));
+		
 		if (prevHInfo)
 		{
 			prevHInfo->ResetLocation();
@@ -119,6 +120,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			prevTInfo->ResetLocation();
 		}
+		
+		assert(HInfo && TInfo);
 
 		LOCKSTEP(myTargetInfo, TInfo, HInfo)
 		{
