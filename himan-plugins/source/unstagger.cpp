@@ -123,7 +123,11 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	// If calculating for hybrid levels, A/B vertical coordinates must be set
 	// (copied from source)
 	
+	myTargetInfo->ParamIndex(0);
 	SetAB(myTargetInfo, UInfo);
+
+	myTargetInfo->ParamIndex(1);
+	SetAB(myTargetInfo, VInfo);
 
 	string deviceType = "CPU";
 	// calculate for U
