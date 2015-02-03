@@ -171,3 +171,23 @@ BOOST_AUTO_TEST_CASE(MAKESQLINTERVAL)
 
 	BOOST_REQUIRE(util::MakeSQLInterval(f5) == "00:00:00");
 }
+
+BOOST_AUTO_TEST_CASE(EXPAND)
+{
+	setenv("BOOST_TEST", "xyz", 1);
+
+	string test = "$BOOST_TEST/asdf";
+
+	string expanded = util::Expand(test);
+
+	BOOST_REQUIRE(expanded == "xyz/asdf");
+
+	setenv("BOOST_TEST_2", "123", 1);
+
+	test = "$BOOST_TEST/asdf/$BOOST_TEST_2";
+
+	expanded = util::Expand(test);
+
+	BOOST_REQUIRE(expanded == "xyz/asdf/123");
+
+}
