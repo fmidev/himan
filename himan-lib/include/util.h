@@ -220,6 +220,17 @@ double LatitudeLength(double phi);
 
 std::string MakeSQLInterval(const himan::forecast_time& theTime);
 
+/**
+ * @brief Expand possible environmental variables from a string.
+ * 
+ * For example $HOME --> /home/weto 
+ * 
+ * @param in string where there might be env variables
+ * @return string that contains the variables expanded
+ */
+
+std::string Expand(const std::string& in);
+
 } // namespace util
 } // namespace himan
 

@@ -19,6 +19,7 @@
 #include "forecast_time.h"
 #include "cuda_helper.h"
 #include "regular_grid.h"
+#include <wordexp.h>
 
 using namespace himan;
 using namespace std;
@@ -255,6 +256,8 @@ pair<point,point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, s
 	double dnj = static_cast<double> (nj) - 1;
 
 	point bottomLeft, topRight, topLeft, bottomRight;
+
+	// longitude is normalized to -180 .. 180
 
 	switch (scanningMode)
 	{
@@ -888,6 +891,20 @@ string util::MakeSQLInterval(const himan::forecast_time& theTime)
 		ret = i;
 	}
 
+	return ret;
+}
+
+string util::Expand(const string& in)
+{
+	wordexp_t p;
+	
+	wordexp(in.c_str(), &p, 0);
+	char ** out = p.we_wordv;
+	
+	string ret(out[0]);
+	
+	wordfree(&p);
+	
 	return ret;
 }
 
