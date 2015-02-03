@@ -57,14 +57,15 @@ void turbulence::Process(std::shared_ptr<const plugin_configuration> conf)
 	 */
 
 	// param theRequestedParam(PARM_NAME, UNIV_ID, GRIB2DISCIPLINE, GRIB2CATEGORY, GRIB2NUMBER);
-	param TI("CAT-PRCN", 999, 0, 19, 22);
-	param TI2("CTP-PRCN", 999, 0, 19, 21);
+	param TI("TI-S2", 1208);
+	param TI2("TI2-S2", 1209);
 	// If this param is also used as a source param for other calculations
 	// (like for example dewpoint, relative humidity), unit should also be
 	// specified
 
-	//theRequestedParam.Unit(kSOME_UNIT);
-	
+	TI.Unit(kS2);
+	TI2.Unit(kS2);
+
 	SetParams({TI,TI2});
 
 	Start();
@@ -127,7 +128,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     UInfo = Fetch(forecastTime, forecastLevel, UParam, false);
     VInfo = Fetch(forecastTime, forecastLevel, VParam, false);
 
-	if (!prevHInfo || !prevUInfo || !prevVInfo || !HInfo || !UInfo || !VInfo)
+	if (!(prevHInfo && prevUInfo && prevVInfo && HInfo && UInfo && VInfo))
 	{
         myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
         return;
@@ -135,8 +136,11 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// If calculating for hybrid levels, A/B vertical coordinates must be set
 	// (copied from source)
-	
+    myTargetInfo->ParamIndex(0);	
 	SetAB(myTargetInfo, HInfo);
+
+	myTargetInfo->ParamIndex(1);
+    SetAB(myTargetInfo, HInfo);
 
 	string deviceType = "CPU";
 
