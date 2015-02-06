@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.1.26
+Version: 15.2.03
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 15.1.7
+Requires: himan-lib >= 15.2.03
 BuildRequires: redhat-rpm-config
 
 %if %{distnum} == 6
@@ -55,6 +55,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Tue Feb  3 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.03-1.fmi
+- Bugfix in unstagger
+- Changes in querydata
+- Changes in CSV
+- Changes in NCL
 * Mon Jan 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.26-1.fmi
 - CSV plugin
 - RHEL7 compatibility
