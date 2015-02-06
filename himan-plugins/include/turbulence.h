@@ -52,7 +52,7 @@ public:
 
 private:
     virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-	int itsTopLevel;
+    int itsTopLevel;
 };
 
 // the class factory
