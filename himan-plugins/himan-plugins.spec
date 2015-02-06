@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.1.26
+Version: 15.2.4
 Release: 2%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -101,6 +101,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libstability.so
 %{_libdir}/himan-plugins/libtpot.so
 %{_libdir}/himan-plugins/libtransformer.so
+%{_libdir}/himan-plugins/libturbulence.so
 %{_libdir}/himan-plugins/libunstagger.so
 %{_libdir}/himan-plugins/libvvms.so
 %{_libdir}/himan-plugins/libweather_symbol.so
@@ -110,6 +111,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Feb  4 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.4-1.fmi
+- Add turbulence
+* Tue Feb  3 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.03-1.fmi
+- Turbulence plugin
+- Bugfix in unstagger
+- Changes in NCL
+- Changes in CSV
+- Changes in querydata
 * Mon Jan 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.26-1.fmi
 - CSV plugin
 - RHEL7 compatibility
