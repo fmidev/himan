@@ -9,6 +9,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/regex.hpp>
 #include <stdexcept>
 #include "plugin_factory.h"
 #include "logger_factory.h"
@@ -27,10 +28,16 @@
 
 using namespace himan;
 using namespace std;
-//using namespace boost::property_tree;
 
 unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
 unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
+void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
+void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
+
+bool ParseBoolean(string booleanValue);
+vector<level> LevelsFromString(const string& levelType, const string& levelValues);
+
+std::unique_ptr<logger> itsLogger;
 
 /*
  * Parse()
@@ -331,7 +338,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			throw runtime_error(string("Error parsing level information: ") + e.what());
 		}
-
+		
 		// Check local use_cache option
 
 		bool delayedUseCache = conf->UseCache();
@@ -474,12 +481,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 						{
 
 							//pc->AddOption(key, value);
-							pc->AddOption(key, listval.second.get<string> (""));
+							pc->AddOption(key, util::Expand(listval.second.get<string> ("")));
 						}
 					}
 					else
 					{
-						pc->AddOption(key, value);
+						pc->AddOption(key, util::Expand(value));
 					}
 				}
 			}
@@ -519,21 +526,31 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 
 		boost::algorithm::to_lower(originDateTime);
 
-		if (originDateTime == "latest")
+		if (boost::regex_search(originDateTime, boost::regex("latest")))
 		{
+			auto strlist = util::Split(originDateTime, "-", false);
+			
+			int offset = 0;
+			
+			if (strlist.size() == 2)
+			{
+				// will throw if origintime is not in the form "latest-X", where X : integer >= 0
+				offset = boost::lexical_cast<unsigned int> (strlist[1]);
+			}
+			
 			HPDatabaseType dbtype = conf->DatabaseType();
 			
 			map<string,string> prod;
 			
 			if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 			{
-				auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+				auto n = GET_PLUGIN(neons);
 
 				prod = n->NeonsDB().GetProducerDefinition(static_cast<unsigned long> (sourceProducer.Id()));
 
 				if (!prod.empty())
 				{
-					originDateTime = n->NeonsDB().GetLatestTime(prod["ref_prod"]);
+					originDateTime = n->NeonsDB().GetLatestTime(prod["ref_prod"], "", offset);
 					
 					if (!originDateTime.empty())
 					{
@@ -546,13 +563,13 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 			
 			if (prod.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 			{
-				auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+				auto r = GET_PLUGIN(radon);
 
 				prod = r->RadonDB().GetProducerDefinition(static_cast<unsigned long> (sourceProducer.Id()));
 
 				if (!prod.empty())
 				{
-					originDateTime = r->RadonDB().GetLatestTime(prod["ref_prod"]);
+					originDateTime = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
 					
 					if (!originDateTime.empty())
 					{
@@ -769,7 +786,7 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+			auto n = GET_PLUGIN(neons);
 
 			geominfo = n->NeonsDB().GetGeometryDefinition(geom);
 			scale = 0.001;
@@ -777,7 +794,7 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 		
 		if (geominfo.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 		{
-			auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+			auto r = GET_PLUGIN(radon);
 
 			geominfo = r->RadonDB().GetGeometryDefinition(geom);
 		}
@@ -786,8 +803,6 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 		{
 			throw runtime_error("Fatal::json_parser Unknown geometry '" + geom + "' found");	
 		}
-
-		//regular_grid* _g = dynamic_cast<regular_grid*> (g.get()); // shortcut to avoid a million dynamic casts
 
 		/*
 		 *  In Neons we don't have rotlatlon projection used separately, instead we have
@@ -952,7 +967,7 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 
 		vector<station> theStations;
 		
-		auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+		auto r = GET_PLUGIN(radon);
 		
 		BOOST_FOREACH(const string& str, stations)
 		{		
@@ -1236,7 +1251,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 }
 
-void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
 {
 	try
 	{
@@ -1248,7 +1263,7 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+			auto n = GET_PLUGIN(neons);
 
 			for (size_t i = 0; i < sourceProducersStr.size(); i++)
 			{
@@ -1276,7 +1291,7 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		
 		if (sourceProducers.size() == 0 && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 		{
-			auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+			auto r = GET_PLUGIN(radon);
 
 			for (size_t i = 0; i < sourceProducersStr.size(); i++)
 			{
@@ -1304,7 +1319,8 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		
 		if (sourceProducers.size() == 0)
 		{
-			throw runtime_error(ClassName() + ": Source producer information was not found from database");
+			itsLogger->Fatal("Source producer information was not found from database");
+			exit(1);
 		}
 		
 		conf->SourceProducers(sourceProducers);
@@ -1321,13 +1337,13 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 		
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+			auto n = GET_PLUGIN(neons);
 			prodInfo = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (pid));
 		}
 		
 		if (prodInfo.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 		{
-			auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+			auto r = GET_PLUGIN(radon);
 			prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long> (pid));
 		}
 		
@@ -1343,24 +1359,25 @@ void json_parser::ParseProducers(shared_ptr<configuration> conf, shared_ptr<info
 			itsLogger->Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 		}
 
-		anInfo->itsProducer = prod;
+		anInfo->Producer(prod);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		throw runtime_error(ClassName() + string(": Producer definitions not found: ") + e.what());
+		itsLogger->Fatal("Producer definitions not found: " + string(e.what()));
+		exit(1);
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing producer information: ") + e.what());
+		itsLogger->Fatal("Error parsing producer information: " + string(e.what()));
+		exit(1);
 	}
 
 }
 
-void json_parser::ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
 {
 	try
 	{
-
 		string levelTypeStr = pt.get<string>("leveltype");
 		string levelValuesStr = pt.get<string>("levels");
 
@@ -1380,7 +1397,7 @@ void json_parser::ParseLevels(shared_ptr<info> anInfo, const boost::property_tre
 	}
 }
 
-vector<level> json_parser::LevelsFromString(const string& levelType, const string& levelValues) const
+vector<level> LevelsFromString(const string& levelType, const string& levelValues)
 {
 	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
 
@@ -1405,7 +1422,7 @@ vector<level> json_parser::LevelsFromString(const string& levelType, const strin
  * Note: will change argument to lower case.
  */
 
-bool json_parser::ParseBoolean(string& booleanValue)
+bool ParseBoolean(string booleanValue)
 {
 	bool ret;
 
@@ -1423,7 +1440,8 @@ bool json_parser::ParseBoolean(string& booleanValue)
 
 	else
 	{
-		throw runtime_error(ClassName() + ": Invalid boolean value: " + booleanValue);
+		itsLogger->Fatal("Invalid boolean value: " + booleanValue);
+		exit(1);
 	}
 
 	return ret;
