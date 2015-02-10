@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.2.03
+Version: 15.2.10
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -28,6 +28,7 @@ BuildRequires: boost-devel >= 1.54
 
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
+BuildRequires: libfmidb >= 15.2.6
 
 %if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
@@ -63,8 +64,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
-
-* Mon Feb 03 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.03-1.fmi
+* Tue Feb 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.10-1.fmi
+- Changes in json_parser
+* Tue Feb 03 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.03-1.fmi
 - Changes in util 
 * Mon Jan 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.1.26-1.fmi
 - RHEL7 adjustment
