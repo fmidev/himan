@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.2.03
+Version: 15.2.10
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -55,6 +55,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Tue Feb 10 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.10-1.fmi
+- Changes in himan-lib headers
 * Tue Feb  3 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.03-1.fmi
 - Bugfix in unstagger
 - Changes in querydata
