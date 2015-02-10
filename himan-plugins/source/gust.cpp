@@ -231,12 +231,6 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	std::cout << pohja_0_60.size() << std::endl;
-	for (size_t i = 0; i < pohja_0_60.size(); ++i)
-	{
-		std::cout << pohja_0_60[i] << std::endl;
-	}
-
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	const size_t gridSize = myTargetInfo->Grid()->Size();
