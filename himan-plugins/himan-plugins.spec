@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.2.4
-Release: 2%{dist}.fmi
+Version: 15.2.10
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -33,6 +33,8 @@ Requires: boost-regex
 BuildRequires: boost-devel >= 1.54
 %endif
 
+BuildRequires: libfmidb >= 15.2.6
+BuildRequires: libfmigrib
 BuildRequires: libluabind
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
@@ -111,9 +113,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Wed Feb  4 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.4-1.fmi
+* Tue Feb 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.4-1.fmi
+- Cosmetic changes
+* Wed Feb  4 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.4-2.fmi
 - Add turbulence
-* Tue Feb  3 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.03-1.fmi
+* Tue Feb  3 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.03-2.fmi
 - Turbulence plugin
 - Bugfix in unstagger
 - Changes in NCL
