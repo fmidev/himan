@@ -14,6 +14,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -41,10 +42,22 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	itsInfo->LevelOrder(kBottomToTop);
 
-	shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+	HPDatabaseType dbtype = conf->DatabaseType();
+		
+	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+	{
+		auto n = GET_PLUGIN(neons);
 
-	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		itsBottomLevel = boost::lexical_cast<int> (n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+	}
 
+	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && itsBottomLevel == kHPMissingInt)
+	{
+		auto r = GET_PLUGIN(radon);
+
+		itsBottomLevel = boost::lexical_cast<int> (r->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+	}
+	
 	itsUseGeopotential = (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199);
 
 	if (!itsConfiguration->Exists("fast_mode") && itsConfiguration->GetValue("fast_mode") == "true")

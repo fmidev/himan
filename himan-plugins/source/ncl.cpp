@@ -15,6 +15,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "neons.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -23,7 +24,7 @@ using namespace himan::plugin;
 
 const string itsName("ncl");
 
-ncl::ncl()
+ncl::ncl() : itsBottomLevel(kHPMissingInt), itsTopLevel(kHPMissingInt)
 {
 	itsClearTextFormula = "???";
 	itsLogger = logger_factory::Instance()->GetLog(itsName);
@@ -34,10 +35,23 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	auto theNeons = GET_PLUGIN(neons);
+	HPDatabaseType dbtype = conf->DatabaseType();
+		
+	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+	{
+		auto n = GET_PLUGIN(neons);
 
-	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
-	itsTopLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
+		itsBottomLevel = boost::lexical_cast<int> (n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		itsTopLevel = boost::lexical_cast<int> (n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
+	}
+
+	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && (itsBottomLevel == kHPMissingInt || itsTopLevel == kHPMissingInt))
+	{
+		auto r = GET_PLUGIN(radon);
+
+		itsBottomLevel = boost::lexical_cast<int> (r->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		itsTopLevel = boost::lexical_cast<int> (r->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));	
+	}
 
 	param theRequestedParam;
 

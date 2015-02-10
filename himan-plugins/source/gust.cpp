@@ -21,6 +21,7 @@
 
 #include "hitool.h"
 #include "neons.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -92,8 +93,26 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	producer prod = itsConfiguration->SourceProducer(0);
 
-	auto n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
-	long lowestHybridLevelNumber = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	HPDatabaseType dbtype = itsConfiguration->DatabaseType();
+		
+	long lowestHybridLevelNumber = kHPMissingInt;
+	
+	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+	{
+		auto n = GET_PLUGIN(neons);
+
+		lowestHybridLevelNumber = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	}
+
+	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && lowestHybridLevelNumber == kHPMissingInt)
+	{
+		auto r = GET_PLUGIN(radon);
+
+		lowestHybridLevelNumber = boost::lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
+	}
+
+	assert(lowestHybridLevelNumber != kHPMissingInt);
+	
 	level lowestHybridLevel(kHybrid,lowestHybridLevelNumber);
 
 	if (myTargetInfo->Producer().Id() == 240)
@@ -133,7 +152,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	}
 	
 	// maybe need adjusting
-	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(itsConfiguration);
 	h->Time(forecastTime);
@@ -660,7 +679,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 void Potero(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, potero& poterot, bool& succeeded)
 {
-	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+	auto h = GET_PLUGIN(hitool);
 	
 	h->Configuration(conf);
 	h->Time(ftime);
