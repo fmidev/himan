@@ -206,7 +206,7 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 	
 	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 	{
-		auto n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+		auto n = GET_PLUGIN(neons);
 		n->NeonsDB().Query(query.str());
 	
 		row = n->NeonsDB().FetchRow();
@@ -217,7 +217,7 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 	
 	if (row.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 	{
-		auto r = dynamic_pointer_cast <plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+		auto r = GET_PLUGIN(radon);
 		r->RadonDB().Query(query.str());
 	
 		row = r->RadonDB().FetchRow();
@@ -294,7 +294,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	
 	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 	{
-		auto n = dynamic_pointer_cast <plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+		auto n = GET_PLUGIN(neons);
 
 		highestHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
 		lowestHybridLevel = boost::lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
@@ -302,7 +302,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	
 	if (highestHybridLevel == kHPMissingInt && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 	{
-		auto r = dynamic_pointer_cast <plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+		auto r = GET_PLUGIN(radon);
 
 		highestHybridLevel = boost::lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
 		lowestHybridLevel = boost::lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
@@ -432,7 +432,7 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 {
 
 	shared_ptr<info> values, heights;
-	shared_ptr<plugin::fetcher> f = dynamic_pointer_cast <plugin::fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto f = GET_PLUGIN(fetcher);
 
 	param heightParam;
 	

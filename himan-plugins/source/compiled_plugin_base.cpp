@@ -135,7 +135,7 @@ bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode tar
 
 void compiled_plugin_base::WriteToFile(const info& targetInfo) const
 {
-	auto aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+	auto aWriter = GET_PLUGIN(writer);
 
 	// writing might modify iterator positions --> create a copy
 
@@ -337,7 +337,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			auto n = dynamic_pointer_cast<plugin::neons> (plugin_factory::Instance()->Plugin("neons"));
+			auto n = GET_PLUGIN(neons);
 
 			for (unsigned int i = 0; i < params.size(); i++)
 			{
@@ -366,7 +366,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		
 		if (dbtype == kRadon || dbtype == kNeonsAndRadon)
 		{
-			auto r = dynamic_pointer_cast<plugin::radon> (plugin_factory::Instance()->Plugin("radon"));
+			auto r = GET_PLUGIN(radon);
 
 			for (unsigned int i = 0; i < params.size(); i++)
 			{
@@ -444,7 +444,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 #ifdef HAVE_CUDA
 void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 {
-	auto c = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+	auto c = GET_PLUGIN(cache);
 
 	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{
@@ -511,7 +511,7 @@ bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
 
 info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const params& theParams, bool returnPacked) const
 {
-	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto f = GET_PLUGIN(fetcher);
 
 	info_t ret;
 
@@ -541,7 +541,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked) const
 {
-	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto f = GET_PLUGIN(fetcher);
 
 	info_t ret;
 

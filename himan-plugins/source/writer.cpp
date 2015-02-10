@@ -73,7 +73,7 @@ bool writer::ToFile(info& theInfo,
 		case kGRIB2:
 		{
 
-			auto theGribWriter = std::dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
+			auto theGribWriter = GET_PLUGIN(grib);
 
 			correctFileName += ".grib";
 
@@ -88,7 +88,7 @@ bool writer::ToFile(info& theInfo,
 		}
 		case kQueryData:
 		{
-			auto theWriter = std::dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+			auto theWriter = GET_PLUGIN(querydata);
 
 			correctFileName += ".fqd";
 
@@ -101,7 +101,7 @@ bool writer::ToFile(info& theInfo,
 
 		case kCSV:
 		{
-			auto theWriter = std::dynamic_pointer_cast<csv> (plugin_factory::Instance()->Plugin("csv"));
+			auto theWriter = GET_PLUGIN(csv);
 
 			correctFileName += ".csv";
 
@@ -121,7 +121,7 @@ bool writer::ToFile(info& theInfo,
 		
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
-			auto n = std::dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+			auto n = GET_PLUGIN(neons);
 			
 			ret = n->Save(theInfo, correctFileName);
 
@@ -133,7 +133,7 @@ bool writer::ToFile(info& theInfo,
 		
 		if (dbtype == kRadon || dbtype == kNeonsAndRadon)
 		{
-			auto r = std::dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+			auto r = GET_PLUGIN(radon);
 
 			// Try to save file information to radon
 			try
@@ -151,7 +151,7 @@ bool writer::ToFile(info& theInfo,
 
 	if (conf.UseCache())
 	{
-		std::shared_ptr<cache> c = std::dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+		std::shared_ptr<cache> c = GET_PLUGIN(cache);
 
 		c->Insert(theInfo, activeOnly);
 	}

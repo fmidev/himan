@@ -332,7 +332,7 @@ vector<shared_ptr<himan::info> > fetcher::FromCache(search_options& options)
 vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, search_options& options, bool readContents, bool readPackedData)
 {
 
-	shared_ptr<grib> g = dynamic_pointer_cast<grib> (plugin_factory::Instance()->Plugin("grib"));
+	auto g = GET_PLUGIN(grib);
 
 	vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents, readPackedData);
 
@@ -342,7 +342,7 @@ vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, sear
 vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, search_options& options, bool readContents)
 {
 
-	shared_ptr<querydata> q = dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+	auto q = GET_PLUGIN(querydata);
 
 	shared_ptr<info> i = q->FromFile(inputFile, options, readContents);
 
@@ -356,7 +356,7 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 vector<shared_ptr<himan::info> > fetcher::FromCSV(const string& inputFile, search_options& options)
 {
 
-	auto c = dynamic_pointer_cast<csv> (plugin_factory::Instance()->Plugin("csv"));
+	auto c = GET_PLUGIN(csv);
 
 	auto info = c->FromFile(inputFile, options);
 
@@ -373,7 +373,7 @@ himan::level fetcher::LevelTransform(const producer& sourceProducer, const param
 
 	if (sourceProducer.TableVersion() != kHPMissingInt)
 	{
-		shared_ptr<neons> n = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+		auto n = GET_PLUGIN(neons);
 
 		string lvlName = n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
 
@@ -451,7 +451,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 		if (!itsCache)
 		{
-			itsCache = dynamic_pointer_cast<plugin::cache> (plugin_factory::Instance()->Plugin("cache"));
+			itsCache = GET_PLUGIN(cache);
 		}
 
 		ret = FromCache(opts);
@@ -508,7 +508,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
 			// try neons first
-			shared_ptr<neons> n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+			auto n = GET_PLUGIN(neons);
 
 			itsLogger->Trace("Accessing Neons database");
 			
@@ -531,7 +531,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		{
 			// try radon next
 		
-			shared_ptr<radon> r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+			auto r = GET_PLUGIN(radon);
 /*
 			itsLogger->Trace("Accessing Radon database");
 			
@@ -569,7 +569,7 @@ bool fetcher::InterpolateArea(info& base, vector<info_t> infos) const
 	shared_ptr<NFmiQueryData> baseData;
 	NFmiFastQueryInfo baseInfo;
 
-	auto q = dynamic_pointer_cast<querydata> (plugin_factory::Instance()->Plugin("querydata"));
+	auto q = GET_PLUGIN(querydata);
 
 	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{

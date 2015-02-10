@@ -124,7 +124,7 @@ void luatool::InitLua(info_t myTargetInfo)
 	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
 	globals(L)["current_level"] = level(myTargetInfo->Level());
 
-	auto h = std::dynamic_pointer_cast<hitool> (plugin_factory::Instance()->Plugin("hitool"));
+	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(itsConfiguration);
 	h->Time(forecast_time(myTargetInfo->Time()));

@@ -89,7 +89,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto f = GET_PLUGIN(fetcher);
 
 	info_t UInfo, VInfo;
 
@@ -162,7 +162,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	VInfo->Grid()->BottomLeft(point(bl.X(), bl.Y() - (v_dj * 0.5)));
 	VInfo->Grid()->TopRight(point(tr.X(), tr.Y() - (v_dj * 0.5)));
 
-	auto c = dynamic_pointer_cast <cache> (plugin_factory::Instance()->Plugin("cache"));
+	auto c = GET_PLUGIN(cache);
 
 	c->Insert(*UInfo);
 	c->Insert(*VInfo);

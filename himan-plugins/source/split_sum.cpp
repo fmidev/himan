@@ -612,7 +612,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 void split_sum::WriteToFile(const info& targetInfo) const
 {
-	auto aWriter = dynamic_pointer_cast <writer> (plugin_factory::Instance()->Plugin("writer"));
+	auto aWriter = GET_PLUGIN(writer);
 
 	// writing might modify iterator positions --> create a copy
 

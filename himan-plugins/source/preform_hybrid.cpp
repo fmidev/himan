@@ -140,7 +140,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	const param minusAreaParam("MINUS-AREA-MC");
 	const param plusAreaParam("PLUS-AREA-MC");
 
-	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(itsConfiguration);
 
@@ -402,8 +402,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result)
 {
-	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
-
+	auto h = GET_PLUGIN(hitool);
+	
 	h->Configuration(conf);
 	h->Time(ftime);
 
@@ -655,7 +655,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result)
 {
-	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
 	h->Time(ftime);

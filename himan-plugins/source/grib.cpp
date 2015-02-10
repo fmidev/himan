@@ -106,7 +106,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 
 	if (anInfo.Producer().Centre() == kHPMissingInt)
 	{
-		auto n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+		auto n = GET_PLUGIN(neons);
 
 		map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo.Producer().Id()));
 
@@ -347,7 +347,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			{
 				if (!n)
 				{
-					n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+					n = GET_PLUGIN(neons);
 				}
 
 				parmName = n->GribParameterName(number, no_vers, timeRangeIndicator);
@@ -357,7 +357,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			{
 				if (!r)
 				{
-					r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+					r = GET_PLUGIN(radon);
 				}
 
 				auto parminfo = r->RadonDB().GetParameterFromGrib1(options.prod.Id(), no_vers, number, timeRangeIndicator,
@@ -397,7 +397,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			{
 				if (!n)
 				{
-					n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+					n = GET_PLUGIN(neons);
 				}
 
 				parmName = n->GribParameterName(number, category, discipline, process);
@@ -407,7 +407,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			{
 				if (!r)
 				{
-					r = dynamic_pointer_cast<radon> (plugin_factory::Instance()->Plugin("radon"));
+					r = GET_PLUGIN(radon);
 				}
 
 				auto parminfo = r->RadonDB().GetParameterFromGrib2(options.prod.Id(), discipline, category, number,
@@ -1188,7 +1188,7 @@ void grib::WriteParameter(info& anInfo)
 			
 			if (parm_id == kHPMissingInt || tableVersion == kHPMissingInt)
 			{
-				auto n = dynamic_pointer_cast<neons> (plugin_factory::Instance()->Plugin("neons"));
+				auto n = GET_PLUGIN(neons);
 				
 				if (parm_id == kHPMissingInt)
 				{

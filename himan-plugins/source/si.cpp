@@ -78,7 +78,7 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams(theParams);
 
-	shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
+	auto theNeons = GET_PLUGIN(neons);
 
 	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
 	itsTopLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
@@ -95,8 +95,8 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
-	auto q = dynamic_pointer_cast <querydata> (plugin_factory::Instance()->Plugin("querydata"));
+	auto f = GET_PLUGIN(fetcher);
+	auto q = GET_PLUGIN(querydata);
 
 	// Required source parameters
 
@@ -552,7 +552,7 @@ void si::LCLAverage(shared_ptr<info> myTargetInfo, double fromZ, double toZ)
 
 	// Fetch Z uncompressed since it is not transferred to cuda
 
-	auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
+	auto f = GET_PLUGIN(fetcher);
 
 	auto HInfo = f->Fetch(itsConfiguration,
 			myTargetInfo->Time(),
@@ -591,7 +591,7 @@ void si::LCLAverage(shared_ptr<info> myTargetInfo, double fromZ, double toZ)
 
 	// 1. Get pressure values corresponding to fromZ and toZ
 
-	auto h = dynamic_pointer_cast <hitool> (plugin_factory::Instance()->Plugin("hitool"));
+	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
