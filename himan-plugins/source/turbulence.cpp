@@ -15,12 +15,6 @@
 #include "regular_grid.h"
 #include "util.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
-#include "neons.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
-
 using namespace std;
 using namespace himan::plugin;
 
@@ -34,18 +28,6 @@ turbulence::turbulence()
 void turbulence::Process(std::shared_ptr<const plugin_configuration> conf)
 {
     Init(conf);
-
-    itsInfo->LevelOrder(kTopToBottom);
-
-    //shared_ptr<neons> theNeons = dynamic_pointer_cast <neons> (plugin_factory::Instance()->Plugin("neons"));
-
-    //itsTopLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
-
-    if (Dimension() != kTimeDimension)
-    {
-        itsLogger->Info("Changing leading_dimension to time");
-        Dimension(kTimeDimension);
-    }
 
     /*
      * Set target parameter properties
