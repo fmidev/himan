@@ -944,7 +944,7 @@ std::shared_ptr<info> luatool::FetchRaw(const forecast_time& theTime, const leve
 	return compiled_plugin_base::Fetch(theTime,theLevel,theParam,false);
 }
 
-luabind::object luatool::Fetch(const std::string& theGlobalLuaName, const forecast_time& theTime, const level& theLevel, const param& theParam) const
+luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const
 {
 	auto x = compiled_plugin_base::Fetch(theTime,theLevel,theParam,false);
 	return VectorToTable(x->Data().Values());
