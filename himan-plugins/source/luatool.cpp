@@ -130,6 +130,7 @@ void luatool::InitLua(info_t myTargetInfo)
 	h->Time(forecast_time(myTargetInfo->Time()));
 
 	globals(L)["hitool"] = h;
+	globals(L)["kFloatMissing"] = kFloatMissing;
 
 	itsLogger->Trace("luabind finished");
 
