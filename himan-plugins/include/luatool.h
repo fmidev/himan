@@ -60,7 +60,7 @@ public:
 
 	void Process(std::shared_ptr<const plugin_configuration> configuration);
 	std::shared_ptr<info> FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
-	luabind::object Fetch(const std::string& theGlobalLuaName, const forecast_time& theTime, const level& theLevel, const param& theParam) const;
+	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
 	
 protected:
 	/* These functions exists because we need to stop himan
