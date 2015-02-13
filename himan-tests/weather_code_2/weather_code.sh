@@ -13,9 +13,9 @@ $HIMAN -d 4 -f weather_symbol_hir1h.json -t grib hir1h_source/11_100_850_0_10_10
 grib_compare hir1h_result.grib weather_symbol_hir1h.json.grib
 
 if [ $? -eq 0 ];then
-  echo weather_symbol/hirlam success!
+  echo weather_code_2/hirlam success!
 else
-  echo weather_symbol/hirlam failed
+  echo weather_code_2/hirlam failed
   exit 1
 fi
 
@@ -24,8 +24,8 @@ $HIMAN -d 4 -f weather_symbol_ecmwf.json -t grib ECMWF_source/19_105_0_0_10_161_
 grib_compare ecmwf_result.grib weather_symbol_ecmwf.json.grib
 
 if [ $? -eq 0 ];then
-  echo weather_symbol/ecmwf success!
+  echo weather_code_2/ecmwf success!
 else
-  echo weather_symbol/ecmwf failed
+  echo weather_code_2/ecmwf failed
   exit 1
 fi
