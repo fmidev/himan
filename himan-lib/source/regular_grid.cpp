@@ -489,9 +489,9 @@ point regular_grid::LatLon(size_t locationIndex) const
 		throw runtime_error("Unsupported scanning mode: " + string(HPScanningModeToString.at(ScanningMode())));
 	}
 
-	double i = static_cast<double> (locationIndex) - j * static_cast<double> (Ni());
+	double i = fmod(static_cast<double> (locationIndex), Ni());
 
-	return point(firstPoint.X() + i * Di(), firstPoint.Y() + j * Dj());
+	return point(itsBottomLeft.X() + i * Di(), itsBottomLeft.Y() + j * Dj());
 }
 
 
