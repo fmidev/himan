@@ -17,15 +17,13 @@
 #include <string>
 #include "point.h"
 #include "grid.h"
+#include "logger.h"
 
 #include "packed_data.h"
-
-class NFmiGrid;
 
 namespace himan
 {
 
-class logger;
 class regular_grid : public grid
 {
 	public:
