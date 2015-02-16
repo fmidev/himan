@@ -110,21 +110,22 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u,
 
 		if (U != himan::kFloatMissing && V != himan::kFloatMissing)
 		{
-			int j;
-			
+
+			int i = fmod(static_cast<double> (idx), static_cast<double> (opts.size_x)); //idx - j * opts.size_x;
+			int j = floor(static_cast<double> (idx / opts.size_x));
+
+			double lon = opts.first_lon + i * opts.di;
+
+			double lat = kFloatMissing;
+
 			if (opts.j_scans_positive)
 			{
-				j = floor(static_cast<double> (idx/opts.size_x));
+				lat = opts.first_lat + j * opts.dj;
 			}
 			else
 			{
-				j = opts.size_y - floor(static_cast<double> (idx/opts.size_x));
+				lat = opts.first_lat - j * opts.dj;
 			}
-
-			int i = idx - j * opts.size_x;
-
-			double lon = opts.first_lon + i * opts.di;
-			double lat = opts.first_lat + j * opts.dj;
 
 			double SinYPole = sin((opts.south_pole_lat + 90.) * himan::constants::kDeg);
 			double CosYPole = cos((opts.south_pole_lat + 90.) * himan::constants::kDeg);
