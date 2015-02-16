@@ -38,7 +38,7 @@ class regular_grid : public grid
 				point theSouthPole = point(),
 				double theOrientation = kHPMissingValue);
 
-		~regular_grid() = default;
+		~regular_grid() {}
 
 		/**
 		 * @brief Copy constructor for regular_grid
@@ -149,6 +149,8 @@ class regular_grid : public grid
 
 		point BottomLeft() const;
 		point TopRight() const;
+		point BottomRight() const;
+		point TopLeft() const;
 
 		void BottomLeft(const point& theBottomLeft);
 		void TopRight(const point& theTopRight);
@@ -175,22 +177,6 @@ class regular_grid : public grid
 
 		point LastGridPoint() const;
 
-		/**
-		 * @brief Calculate area coordinates from first regular_gridpoint, scanning mode, regular_grid size and distance between two regular_gridpoints.
-		 *
-		 * This function is the opposite of FirstGridPoint(). NOTE: scanning mode must already be set when calling this function!
-		 *
-		 * @param firstPoint Latitude and longitude of first regular_gridpoint
-		 * @param ni Grid size in X direction
-		 * @param ny Grid size in Y direction
-		 * @param di Distance between two points in X direction
-		 * @param dj Distance between two points in Y direction
-		 *
-		 * @return True if calculation is successful
-		 */
-
-		bool SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj);
-
 		bool operator==(const grid& other) const;
 		bool operator!=(const grid& other) const;
 
@@ -211,6 +197,21 @@ class regular_grid : public grid
 		point LatLon(size_t locationIndex) const;
 		
 	private:
+
+		/**
+		 * @brief Calculate area coordinates from first gridpoint, scanning mode, grid size and distance between two gridpoints.
+		 *
+		 * @param firstPoint Latitude and longitude of first regular_gridpoint
+		 * @param ni Grid size in X direction
+		 * @param ny Grid size in Y direction
+		 * @param di Distance between two points in X direction
+		 * @param dj Distance between two points in Y direction
+		 *
+		 * @return True if calculation is successful
+		 */
+
+		bool SetCoordinates();
+
 		bool EqualsTo(const regular_grid& other) const;
 
 		unpacked itsData; //<! Variable to hold unpacked data
@@ -225,6 +226,8 @@ class regular_grid : public grid
 
 		point itsBottomLeft;
 		point itsTopRight;
+		point itsBottomRight;
+		point itsTopLeft;
 		point itsSouthPole;
 
 		double itsOrientation;

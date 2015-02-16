@@ -16,7 +16,7 @@ using namespace himan;
 using namespace std;
 
 regular_grid::regular_grid()
-	: itsData()
+	: itsData(0, 0, 1, kFloatMissing)
 	, itsPackedData()
 	, itsScanningMode(kUnknownScanningMode)
 	, itsUVRelativeToGrid(false)
@@ -24,6 +24,8 @@ regular_grid::regular_grid()
 	, itsAB()
 	, itsBottomLeft()
 	, itsTopRight()
+	, itsBottomRight()
+	, itsTopLeft()
 	, itsSouthPole()
 	, itsOrientation(kHPMissingValue)
 	, itsDi(kHPMissingValue)
@@ -40,7 +42,7 @@ regular_grid::regular_grid(HPScanningMode theScanningMode,
 			point theTopRight,
 			point theSouthPole,
 			double theOrientation)
-	: itsData()
+	: itsData(0, 0, 1, kFloatMissing)
 	, itsPackedData()
 	, itsScanningMode(theScanningMode)
 	, itsUVRelativeToGrid(theUVRelativeToGrid)
@@ -55,6 +57,7 @@ regular_grid::regular_grid(HPScanningMode theScanningMode,
 {
 	itsGridType = kRegularGrid;
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("regular_grid"));
+	SetCoordinates();
 }
 
 regular_grid::regular_grid(const regular_grid& other)
@@ -65,6 +68,8 @@ regular_grid::regular_grid(const regular_grid& other)
 	itsAB = other.itsAB;
 	itsBottomLeft = other.itsBottomLeft;
 	itsTopRight = other.itsTopRight;
+	itsBottomRight = other.itsBottomRight;
+	itsTopLeft = other.itsTopLeft;
 	itsSouthPole = other.itsSouthPole;
 	itsOrientation = other.itsOrientation;
 	itsDi = other.itsDi;
@@ -222,14 +227,26 @@ point regular_grid::TopRight() const
 	return itsTopRight;
 }
 
+point regular_grid::BottomRight() const
+{
+	return itsBottomRight;
+}
+
+point regular_grid::TopLeft() const
+{
+	return itsTopLeft;
+}
+
 void regular_grid::BottomLeft(const point& theBottomLeft)
 {
 	itsBottomLeft = theBottomLeft;
+	SetCoordinates();
 }
 
 void regular_grid::TopRight(const point& theTopRight)
 {
 	itsTopRight = theTopRight;
+	SetCoordinates();
 }
 
 void regular_grid::SouthPole(const point& theSouthPole)
@@ -244,13 +261,15 @@ point regular_grid::SouthPole() const
 
 point regular_grid::FirstGridPoint() const
 {
-	double x = kHPMissingValue;
-	double y = kHPMissingValue;
-
 	if (itsProjection == kStereographicProjection)
 	{
 		// Currently support no other scanning mode than bottom left for stereographic projections
-		assert(itsScanningMode == kBottomLeft);
+		if (itsScanningMode != kBottomLeft)
+		{
+			itsLogger->Fatal("Only bottom left is supported for stereographic projection");
+			exit(1);
+		}
+
 		return itsBottomLeft;
 	}
 
@@ -261,34 +280,33 @@ point regular_grid::FirstGridPoint() const
 	assert(Ni() > 0);
 	assert(Nj() > 0);
 
+	point ret;
+
 	switch (itsScanningMode)
 	{
 	case kBottomLeft:
-		x = itsBottomLeft.X();
-		y = itsBottomLeft.Y();
+		ret = itsBottomLeft;
 		break;
 
 	case kTopLeft:
-		x = itsTopRight.X() - (static_cast<double> (Ni())-1)*Di();
-		y = itsBottomLeft.Y() + (static_cast<double> (Nj())-1)*Dj();
+		ret = itsTopLeft;
 		break;
 
 	case kTopRight:
-		x = itsTopRight.X();
-		y = itsTopRight.Y();
+		ret = itsTopRight;
 		break;
 
 	case kBottomRight:
-		x = itsBottomLeft.X() + (static_cast<double> (Ni())-1)*Di();
-		y = itsTopRight.Y() - (static_cast<double> (Nj())-1)*Dj();
+		ret = itsBottomRight;
 		break;
 
 	default:
-		itsLogger->Warning("Calculating first regular_grid point when scanning mode is unknown");
+		itsLogger->Fatal("Invalid scanning mode: " + string(HPScanningModeToString.at(itsScanningMode)));
+		exit(1);
 		break;
 	}
 
-	return point(x,y);
+	return ret;
 }
 
 point regular_grid::LastGridPoint() const
@@ -300,67 +318,44 @@ point regular_grid::LastGridPoint() const
 		return itsTopRight;
 	}
 
-	point firstGridPoint = FirstGridPoint();
 	point lastGridPoint;
 
 	switch (itsScanningMode)
 	{
 		case kBottomLeft:
-			lastGridPoint.X(firstGridPoint.X() + (static_cast<double> (Ni())-1)*Di());
-			lastGridPoint.Y(firstGridPoint.Y() + (static_cast<double> (Nj())-1)*Dj());
+			lastGridPoint = itsTopRight;
 			break;
 
 		case kTopLeft:
-			lastGridPoint.X(firstGridPoint.X() + (static_cast<double> (Ni())-1)*Di());
-			lastGridPoint.Y(firstGridPoint.Y() - (static_cast<double> (Nj())-1)*Dj());
+			lastGridPoint = itsBottomRight;
+			break;
+
+		case kBottomRight:
+			lastGridPoint = itsTopLeft;
+			break;
+
+		case kTopRight:
+			lastGridPoint = itsBottomLeft;
 			break;
 
 		default:
-			throw runtime_error(ClassName() + ": Invalid scanning mode in LastGridPoint()");
+			itsLogger->Fatal("Invalid scanning mode: " + string(HPScanningModeToString.at(itsScanningMode)));
+			exit(1);
 			break;
 	}
 	
 	return lastGridPoint;
 }
 
-bool regular_grid::SetCoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj)
+bool regular_grid::SetCoordinates()
 {
-	assert(itsScanningMode != kUnknownScanningMode);
-
-	double dni = static_cast<double> (ni) - 1;
-	double dnj = static_cast<double> (nj) - 1;
-
-	point topLeft, bottomRight;
-
-	switch (itsScanningMode)
+	if (itsBottomLeft == point() || itsTopRight == point())
 	{
-	case kBottomLeft:
-		itsBottomLeft = firstPoint;
-		itsTopRight = point(itsBottomLeft.X() + dni*di, itsBottomLeft.Y() + dnj*dj);
-		break;
-
-	case kTopLeft: // +x-y
-		bottomRight = point(firstPoint.X() + dni*di, firstPoint.Y() - dnj*dj);
-		itsBottomLeft = point(bottomRight.X() - dni*di, firstPoint.Y() - dnj*dj);
-		itsTopRight = point(itsBottomLeft.X() + dni*di, itsBottomLeft.Y() + dnj*dj);
-		break;
-
-	case kTopRight: // -x-y
-		itsTopRight = firstPoint;
-		itsBottomLeft = point(itsTopRight.X() - dni*di, itsTopRight.Y() - dnj*dj);
-		break;
-
-	case kBottomRight: // -x+y
-		topLeft = point(firstPoint.X() - dni*di, firstPoint.Y() + dnj*dj);
-		itsBottomLeft = point(firstPoint.X() - dni*di, topLeft.Y() - dnj*dj);
-		itsTopRight = point(itsBottomLeft.X() + dni*di, itsBottomLeft.Y() + dnj*dj);
-		break;
-
-	default:
-		itsLogger->Warning("Calculating first regular_grid point when scanning mode is unknown");
-		break;
-
+		return false;
 	}
+
+	itsBottomRight = point(itsTopRight.X(), itsBottomLeft.Y());
+	itsTopLeft = point(itsBottomLeft.X(), itsTopRight.Y());
 
 	return true;
 }
@@ -460,6 +455,8 @@ ostream& regular_grid::Write(std::ostream& file) const
 
 	file << itsBottomLeft;
 	file << itsTopRight;
+	file << itsBottomRight;
+	file << itsTopLeft;
 	file << itsSouthPole;
 	file << "__itsOrientation__ " << itsOrientation << endl;
 	file << "__itsDi__ " << itsDi << endl;
@@ -471,27 +468,36 @@ ostream& regular_grid::Write(std::ostream& file) const
 
 point regular_grid::LatLon(size_t locationIndex) const
 {
-	assert(Projection() == kLatLonProjection || Projection() == kRotatedLatLonProjection);
+	if (Projection() != kLatLonProjection && Projection() != kRotatedLatLonProjection)
+	{
+		itsLogger->Fatal("Unsupported projection: " + string(HPProjectionTypeToString.at(Projection())));
+		exit(1);
+	}
+	else if (ScanningMode() != kBottomLeft && ScanningMode() != kTopLeft)
+	{
+		itsLogger->Fatal("Unsupported scanning mode: " + string(HPScanningModeToString.at(ScanningMode())));
+		exit(1);
+	}
 
-	double j;
+	assert(locationIndex < Ni() * Nj());
+
 	point firstPoint = FirstGridPoint();
 
-	if (ScanningMode() == kBottomLeft) //opts.j_scans_positive)
+	double j = floor(static_cast<double> (locationIndex / itsData.SizeX()));//fmod(static_cast<double> (locationIndex), Nj()); 
+	double i = fmod(static_cast<double> (locationIndex), Ni());
+
+	point ret(firstPoint.X() + i * Di(), kHPMissingInt);
+
+	if (ScanningMode() == kBottomLeft)
 	{
-		j = floor(static_cast<double> (locationIndex / itsData.SizeX()));
+		ret.Y(firstPoint.Y() + j * Dj());
 	}
 	else if (ScanningMode() == kTopLeft)
 	{
-		j = static_cast<double> (Nj()) - floor(static_cast<double> (locationIndex / itsData.SizeX()));
-	}
-	else
-	{
-		throw runtime_error("Unsupported scanning mode: " + string(HPScanningModeToString.at(ScanningMode())));
+		ret.Y(firstPoint.Y() - j * Dj());
 	}
 
-	double i = fmod(static_cast<double> (locationIndex), Ni());
-
-	return point(itsBottomLeft.X() + i * Di(), itsBottomLeft.Y() + j * Dj());
+	return ret;
 }
 
 
