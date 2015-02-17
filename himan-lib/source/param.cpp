@@ -363,6 +363,7 @@ ostream& param::Write(ostream& file) const
 	file << "__itsGribParameter__ " << itsGribParameter << endl;
 	file << "__itsGribCategory__ " << itsGribCategory << endl;
 	file << "__itsGribDiscipline__ " << itsGribDiscipline << endl;
+	file << "__itsGribTableVersion__ " << itsGribTableVersion << endl;
 	file << "__itsUnit__ " << itsUnit << endl;
 	file << "__itsVersion__ " << itsVersion << endl;
 	file << "__itsInterpolationMethod__ " << HPInterpolationMethodToString.at(itsInterpolationMethod) << endl;
