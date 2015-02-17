@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.2.16
+Version: 15.2.17
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: jasper-libs
-Requires: grib_api >= 1.12.1
+Requires: grib_api >= 1.13.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
 Requires: himan-lib >= 14.11.25
 Requires: himan-bin >= 14.11.25
@@ -49,7 +49,7 @@ BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase >= 14.4.10
 BuildRequires: libsmartmet-smarttools >= 14.4.7
-BuildRequires: grib_api-devel >= 1.12.1
+BuildRequires: grib_api-devel >= 1.13.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
@@ -115,6 +115,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Feb 17 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.17-1.fmi
+- Sall fix in luatool
+- Link with grib_api 1.13.0
+* Mon Feb 16 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.16-2.fmi
+- Fix in windvector_cuda grid point coordinate handling
 * Mon Feb 16 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.16-1.fmi
 - Small changes in luatool
 * Tue Feb 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.10-1.fmi
