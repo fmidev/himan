@@ -28,6 +28,40 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
+#ifdef DEBUG
+void DumpVector(const vector<double>& vec)
+{
+	double min = 1e38, max = -1e38, sum = 0;
+	size_t count = 0, missing = 0;
+
+	BOOST_FOREACH(double val, vec)
+	{
+		if (val == kFloatMissing)
+		{
+			missing++;
+			continue;
+		}
+
+		min = (val < min) ? val : min;
+		max = (val > max) ? val : max;
+		count++;
+		sum += val;
+	}
+
+	double mean = numeric_limits<double>::quiet_NaN();
+
+	if (count > 0)
+	{
+		mean = sum / static_cast<double> (count);
+	}
+
+	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
+
+}
+#endif
+
+
+
 // Korkein sallittu pilven alarajan korkeus, jotta kysessä stratus [m]
 const double baseLimit = 300.;
 
@@ -180,9 +214,15 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	t.join();
 
-	if (!stratus || !freezingArea)
+	if (!stratus)
 	{
-		myThreadedLogger->Error("hitool calculation failed, unable to proceed");
+		myThreadedLogger->Error("stratus calculation failed, unable to proceed");
+		return;
+	}
+
+	if (!freezingArea)
+	{
+		myThreadedLogger->Error("freezingArea calculation failed, unable to proceed");
 		return;
 	}
 
@@ -449,6 +489,9 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		{
 			assert(numZeroLevels[i] != kFloatMissing);
 		}
+
+		DumpVector(numZeroLevels);
+
 #endif
 
 		/* Check which values we have. Will slow down processing a bit but
@@ -508,9 +551,17 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			zeroLevel1 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 1);
 
+#ifdef DEBUG
+			DumpVector(zeroLevel1);
+#endif
+
 			logger->Info("Searching for average temperature between ground level and first zero level");
 
 			Tavg1 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
+
+#ifdef DEBUG
+			DumpVector(Tavg1);
+#endif
 
 		}
 
@@ -522,9 +573,18 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			zeroLevel2 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
 
+#ifdef DEBUG
+			DumpVector(zeroLevel2);
+#endif
+
 			logger->Info("Searching for average temperature between first and second zero level");
 
 			Tavg2_two = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
+
+#ifdef DEBUG
+			DumpVector(Tavg2_two);
+#endif
+
 		}
 
 		if (haveThree)
@@ -535,13 +595,26 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			zeroLevel3 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
 
+#ifdef DEBUG
+			DumpVector(zeroLevel3);
+#endif
+
 			logger->Info("Searching for average temperature between second and third zero level");
 
 			Tavg2_three = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
 
+#ifdef DEBUG
+			DumpVector(Tavg2_three);
+#endif
+
 			logger->Info("Searching for average temperature between first and third zero level");
 
 			Tavg3 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
+
+#ifdef DEBUG
+			DumpVector(Tavg3);
+#endif
+		
 		}
 
 		if (haveFour)
@@ -550,9 +623,17 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
 
+#ifdef DEBUG
+			DumpVector(zeroLevel4);
+#endif
+
 			logger->Info("Searching for average temperature between third and fourth zero level");
 
 			Tavg2_four = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
+
+#ifdef DEBUG
+			DumpVector(Tavg2_four);
+#endif
 
 		}
 	}
@@ -732,6 +813,10 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			}
 		}
 
+#ifdef DEBUG
+		DumpVector(baseThreshold);
+#endif
+
 		ret->Param(baseParam);
 		ret->Data().Set(baseThreshold);
 
@@ -751,6 +836,10 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 				topThreshold[i] = stCover;
 			}
 		}
+
+#ifdef DEBUG
+		DumpVector(topThreshold);
+#endif
 
 		// Stratus Base/top [m]
 		// _findh: 0 = viimeinen löytyvä arvo pinnasta ylöspäin, 1 = ensimmäinen löytyvä arvo
@@ -774,17 +863,9 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		ret->Data().Set(stratusBase);
 
-		size_t missing = 0;
-
-		for (size_t i = 0; i < stratusBase.size(); i++)
-		{
-			if (stratusBase[i] == kFloatMissing)
-			{
-				missing++;
-			}
-		}
-
-		logger->Debug("Stratus base number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusBase.size()));
+#ifdef DEBUG
+		DumpVector(stratusBase);
+#endif
 
 		/**
 		 * Etsitään parametrin N viimeisen topThreshold-arvon korkeus väliltä 0 .. layer (=2000)
@@ -797,20 +878,9 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Data().Set(stratusTop);
 
 #ifdef DEBUG
-
-		missing = 0;
-
-		for (size_t i = 0; i < stratusTop.size(); i++)
-		{
-			if (stratusTop[i] == kFloatMissing)
-			{
-				missing++;
-			}
-		}
-
-		logger->Debug("Stratus top number of missing values: " + boost::lexical_cast<string> (missing)+ "/" + boost::lexical_cast<string> (stratusTop.size()));
-
+		DumpVector(stratusTop);
 #endif
+
 		// Keskimääräinen RH stratuksen yläpuolisessa kerroksessa (jäätävä tihku)
 
 		logger->Info("Searching for humidity in layers above stratus top");
@@ -840,36 +910,18 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Data().Set(upperLayerRH);
 
 #ifdef DEBUG
-		missing = 0;
-
-		for (size_t i = 0; i < upperLayerRH.size(); i++)
-		{
-			if (upperLayerRH[i] == kFloatMissing)
-			{
-				missing++;
-			}
-		}
-
-		logger->Debug("Upper layer RH number of missing values: " + boost::lexical_cast<string> (missing)+ "/" + boost::lexical_cast<string> (upperLayerRH.size()));
+		DumpVector(upperLayerRH);
 #endif
+
 		//VERTZ_AVG(N_EC,Base,Top)
 
 		logger->Info("Searching for stratus mean cloudiness");
 
 		auto stratusMeanN = h->VerticalAverage(wantedParamList, stratusBase, stratusTop);
 
+
 #ifdef DEBUG
-		missing = 0;
-
-		for (size_t i = 0; i < stratusMeanN.size(); i++)
-		{
-			if (stratusMeanN[i] == kFloatMissing)
-			{
-				missing++;
-			}
-		}
-
-		logger->Debug("Stratus mean cloudiness number of missing values: " + boost::lexical_cast<string> (missing)+ "/" + boost::lexical_cast<string> (stratusMeanN.size()));
+		DumpVector(stratusMeanN);
 #endif
 
 		ret->Param(meanCloudinessParam);
@@ -883,19 +935,11 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		wantedParam = { param("T-K") };
 
 		auto stratusTopTemp = h->VerticalValue(wantedParam, stratusTop);
+
 #ifdef DEBUG
-		missing = 0;
-
-		for (size_t i = 0; i < stratusTopTemp.size(); i++)
-		{
-			if (stratusTopTemp[i] == kFloatMissing)
-			{
-				missing++;
-			}
-		}
-
-		logger->Debug("Stratus top temperature number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusTopTemp.size()));
+		DumpVector(stratusTopTemp);
 #endif
+
 		ret->Param(topTempParam);
 		ret->Data().Set(stratusTopTemp);
 
@@ -927,19 +971,11 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		}
 
 		auto stratusMeanTemp = h->VerticalAverage(wantedParam, constData1, constData2);
+
 #ifdef DEBUG
-		missing = 0;
-
-		for (size_t i = 0; i < stratusMeanTemp.size(); i++)
-		{
-			if (stratusMeanTemp[i] == kFloatMissing)
-			{
-				missing++;
-			}
-		}
-
-		logger->Debug("Stratus mean temperature number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusMeanTemp.size()));
+		DumpVector(stratusMeanTemp);
 #endif
+
 		ret->Param(meanTempParam);
 		ret->Data().Set(stratusMeanTemp);
 
@@ -973,22 +1009,12 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		}
 
 #ifdef DEBUG
-		missing = 0;
-
-		for (size_t i = 0; i < stratusVerticalVelocity.size(); i++)
-		{
-			if (stratusVerticalVelocity[i] == kFloatMissing)
-			{
-				missing++;
-			}
-		}
-
-		logger->Debug("Stratus vertical velocity number of missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (stratusVerticalVelocity.size()));
+		DumpVector(stratusVerticalVelocity);
 #endif
 
 		ret->Param(verticalVelocityParam);
 		ret->Data().Set(stratusVerticalVelocity);
-		
+
 	}
 	catch (const HPExceptionType& e)
 	{
