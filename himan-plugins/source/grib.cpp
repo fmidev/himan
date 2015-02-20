@@ -560,9 +560,21 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 		if (t != options.time)
 		{
 			itsLogger->Trace("Times do not match");
-			itsLogger->Trace("OriginDateTime: " + options.time.OriginDateTime().String() + " (requested) vs " + t.OriginDateTime().String() + " (found)");
-			itsLogger->Trace("ValidDateTime: " + options.time.ValidDateTime().String() + " (requested) vs " + t.ValidDateTime().String() + " (found)");
-			itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(options.time.StepResolution())) + " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) + " (found)");
+
+			if (options.time.OriginDateTime() != t.OriginDateTime())
+			{
+				itsLogger->Trace("OriginDateTime: " + options.time.OriginDateTime().String() + " (requested) vs " + t.OriginDateTime().String() + " (found)");
+			}
+
+			if (options.time.ValidDateTime() != t.ValidDateTime())
+			{
+				itsLogger->Trace("ValidDateTime: " + options.time.ValidDateTime().String() + " (requested) vs " + t.ValidDateTime().String() + " (found)");
+			}
+
+			if (options.time.StepResolution() != t.StepResolution())
+			{
+				itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(options.time.StepResolution())) + " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) + " (found)");
+			}
 
 			continue;
 		}
@@ -612,14 +624,17 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 
 		if (l != options.level)
 		{
-			itsLogger->Trace("Level does not match: " + 
-				string(HPLevelTypeToString.at(options.level.Type())) +
-				" " +
-				string(boost::lexical_cast<string> (options.level.Value())) +
-				" vs " +
-				string(HPLevelTypeToString.at(l.Type())) +
-				" " +
-				string(boost::lexical_cast<string> (l.Value())));
+			itsLogger->Trace("Level does not match");
+			
+			if (options.level.Type() != l.Type())
+			{
+				itsLogger->Trace("Type: " + string(HPLevelTypeToString.at(options.level.Type())) + " (requested) vs " + string(HPLevelTypeToString.at(l.Type())) + " (found)");
+			}
+			
+			if (options.level.Value() != l.Value())
+			{
+				itsLogger->Trace("Value: " + string(boost::lexical_cast<string> (options.level.Value())) + " (requested) vs " + string(boost::lexical_cast<string> (l.Value())) + " (found)");
+			}
 			continue;
 		}
 
