@@ -172,7 +172,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 
 	//itsGrib->Message().BitsPerValue(16);
 
-#ifdef GRIB_WRITE_PACKED_DATA
+#if defined GRIB_WRITE_PACKED_DATA and defined HAVE_CUDA
 
 	if (anInfo.Grid()->IsPackedData() && dynamic_cast<regular_grid*> (anInfo.Grid())->PackedData().ClassName() == "simple_packed")
 	{
