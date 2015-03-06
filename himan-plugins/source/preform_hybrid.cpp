@@ -61,6 +61,45 @@ void DumpVector(const vector<double>& vec)
 #endif
 
 
+// 0. Mallissa sadetta (RR>0; RR = rainfall + snowfall, [RR]=mm/h)
+//
+// 1. Jäätävää tihkua, jos
+//     RR <= 0.2
+//     -10 < T2m < 0
+//     sade ei konvektiivista (ConvPre mm/h = 0)
+//     stratus (base<300m ja määrä vähintään 5/8)
+//     stratuksessa (heikkoa) nousuliikettä (0<wAvg<50mm/s)
+//     stratus riittävän paksu (dz>800m)
+//     stratus Ttop > -12C
+//     stratus avgT > -12C
+//     -10C < T2m < 0C
+//     kuiva kerros (paksuus>1.5km, jossa RH<70%) stratuksen yläpuolella
+//
+// 2. Jäätävää vesisadetta, jos
+//     RR > 0.1
+//     T2m < 0
+//     riittävän paksu/lämmin (pinta-ala>100mC) sulamiskerros pinnan yläpuolella
+//     riittävän paksu/kylmä (pinta-ala<-100mC) pakkaskerros pinnassa sulamiskerroksen alapuolella
+//     jos on stratus, sulamiskerros sen yllä ei saa olla kuiva
+//
+// 3. Tihkua tai vettä, jos
+//     riittävän paksu ja lämmin plussakerros pinnan yläpuolella
+//
+//   3.1 Tihkua, jos
+//        RR <= 0.3
+//        stratus (base<300m ja määrä vähintään 5/8)
+//        stratus riittävän paksu (dz>500m)
+//        kuiva kerros (dz>1.5km, jossa RH<70%) stratuksen yläpuolella
+//
+//   3.3 Jos pinnan plussakerroksessa on kuivaa (rhAvg<rhMelt), muutetaan olomuoto vedestä rännäksi
+//
+// 4. Räntää, jos
+//     ei liian paksu/lämmin plussakerros pinnan yläpuolella
+//
+//   4.1 Jos pinnan plussakerroksessa on kuivaa (rhAvg<rhMelt), muutetaan olomuoto rännästä lumeksi
+//
+// 5. Muuten lunta
+//     korkeintaan ohut plussakerros pinnan yläpuolella
 
 // Korkein sallittu pilven alarajan korkeus, jotta kysessä stratus [m]
 const double baseLimit = 300.;
@@ -368,12 +407,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		// 2. jäätävää vesisadetta? (tai jääjyväsiä (ice pellets), jos pakkaskerros hyvin paksu, ja/tai sulamiskerros ohut)
 		// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros?
-		// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
 
 		if (PreForm == MISS AND
 			plusArea != MISS AND
 			minusArea != MISS AND
-			RR > 0.1 AND
 			plusArea > fzraPA AND
 			minusArea < fzraMA AND
 			T <= 0 AND

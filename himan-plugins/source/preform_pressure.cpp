@@ -23,7 +23,7 @@ using namespace himan::plugin;
 //
 // 0. Mallissa sadetta (RR>0; RR = rainfall + snowfall)
 // 1. Jäätävää tihkua, jos -10<T2m<=0C, pakkasstratus (~-10...-0) jossa nousuliikettä, sade heikkoa, ei satavaa keskipilveä
-// 2. Jäätävää vesisadetta, jos T2m<=0C ja pinnan yläpuolella on T>0C kerros, ja RR>0.1
+// 2. Jäätävää vesisadetta, jos T2m<=0C ja pinnan yläpuolella on T>0C kerros
 // 3. Lunta, jos snowfall/RR>0.8, tai T<=0C
 // 4. Räntää, jos 0.15<snowfall/RR<0.8
 // 5. Vettä tai tihkua, jos snowfall/RR<0.15
@@ -284,9 +284,8 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		}
 
 		// jäätävää vesisadetta: "pinnassa pakkasta ja sulamiskerros pinnan lähellä"
-		// (Heikoimmat intensiteetit pois, RR>0.1 tms?)
 
-		if ((PreForm == MISS) AND (RR > 0.1) AND (T <= 0) AND ((T925 > 0) OR (T850 > 0) OR (T700 > 0)))
+		if ((PreForm == MISS) AND (T <= 0) AND ((T925 > 0) OR (T850 > 0) OR (T700 > 0)))
 		{
 
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925)
