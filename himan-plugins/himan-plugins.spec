@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.2.17
+Version: 15.3.9
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -115,8 +115,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Mon Feb 17 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.17-1.fmi
-- Sall fix in luatool
+* Mon Mar  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.3.9-1.fmi
+- Minor changes in preform_pressure and preform_hybrid
+* Tue Feb 17 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.17-1.fmi
+- Small fix in luatool
 - Link with grib_api 1.13.0
 * Mon Feb 16 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.16-2.fmi
 - Fix in windvector_cuda grid point coordinate handling
