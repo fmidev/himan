@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.3.9
+Version: 15.3.11
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Mar 11 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.3.11-1.fmi
+- Changing cache-plugin to check for existing cache item before inserting
 * Mon Mar  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.3.9-1.fmi
 - Minor changes in preform_pressure and preform_hybrid
 * Tue Feb 17 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.17-1.fmi
