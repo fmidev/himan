@@ -69,6 +69,16 @@ void cache::Insert(info& anInfo, bool activeOnly)
 void cache::SplitToPool(info& anInfo)
 {
 
+	// Cached data is never replaced by another data that has
+	// the same uniqueName
+
+	string uniqueName = UniqueName(anInfo);
+
+	if (cache_pool::Instance()->Find(uniqueName))
+	{
+		return;
+	}
+
 #ifdef HAVE_CUDA
 	if (anInfo.Grid()->IsPackedData())
 	{
@@ -94,12 +104,11 @@ void cache::SplitToPool(info& anInfo)
 	newInfo->Times(times);
 	newInfo->Create(anInfo.Grid());
 
-	string uniqueName = UniqueName(*newInfo);
+	assert(uniqueName == UniqueName(*newInfo));
 
-	if (!(cache_pool::Instance()->Find(uniqueName)))
-	{
-		cache_pool::Instance()->Insert(uniqueName, newInfo);
-	}
+	// Race condition?
+	cache_pool::Instance()->Insert(uniqueName, newInfo);
+
 }
 
 vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options) 
