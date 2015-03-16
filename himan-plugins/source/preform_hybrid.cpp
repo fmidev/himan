@@ -175,7 +175,7 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Uusi neons-rakenne ehka sallii meidan tallentaa eri laskentatavoilla tuotetut
 	// parametrit samalle numerolle
 
-	SetParams({param("PRECFORM2-N", 10059)});
+	SetParams({param("PRECFORM2-N", 1206)});
 
 	Start();
 	
@@ -278,6 +278,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	assert(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
 	assert(myTargetInfo->SizeLocations() == RHInfo->SizeLocations());
 
+	double RHScale = 100;
+
+	if (RHInfo->Param().Unit() == kPrcnt)
+	{
+		RHScale = 1;
+	}
+
 	LOCKSTEP (myTargetInfo, stratus, freezingArea, TInfo, RRInfo, RHInfo)
 	{
 
@@ -323,7 +330,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		// Unit conversions
 
 		T -= himan::constants::kKelvin; // K --> C
-		RH *= 100; // 0..1 --> %
+		RH *= RHScale;
 
 		if (Ttop != kFloatMissing)
 		{
@@ -339,6 +346,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		{
 			Navg *= 100; // --> %
 		}
+
+		assert(RH >= 0 && RH < 102);
+		assert(T >= -80 && T < 80);
+		assert(RR > 0);
+		assert(Navg == kFloatMissing || (Navg >= 0 && Navg <= 100));
+
 /*
 		cout	<< "base\t\t" << base << endl
 				<< "top\t\t" << top << endl
@@ -348,7 +361,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				<< "stTavg\t\t" << stTavg << endl
 				<< "T\t\t" << T << endl
 				<< "RH\t\t" << RH << endl
-				<< "plusArea1\t" << plusArea1 << endl
 				<< "minusArea\t" << minusArea << endl
 				<< "wAvg\t\t" << wAvg << endl
 				<< "baseLimit\t" << baseLimit << endl
