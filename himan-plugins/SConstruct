@@ -82,12 +82,13 @@ library_paths = []
 
 if RELEASE:
 	library_paths.append(workspace + '/himan-lib/build/release')
+	library_paths.append(workspace + '/fmigrib/build/release')
 
 elif DEBUG:
 	library_paths.append(workspace + '/himan-lib/build/debug')
+	library_paths.append(workspace + '/fmigrib/build/debug')
 
 library_paths.append(workspace + '/fmidb/lib')
-library_paths.append(workspace + '/fmigrib/lib')
 library_paths.append('/usr/lib64')
 
 if os.environ.get('ORACLE_HOME') is None:
