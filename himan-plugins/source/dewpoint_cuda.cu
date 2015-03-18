@@ -20,19 +20,9 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_r
 		
 		if (d_t[idx] != kFloatMissing && d_rh[idx] != kFloatMissing)
 		{
-			// Branching, but first branch is so much simpler in terms of calculation complexity
-			// so it's probably worth it
-
 			double RH = d_rh[idx] * opts.rh_scale;
 			
-			if (RH > 50)
-			{
-				d_td[idx] = metutil::DewPointFromHighRH_(d_t[idx]+opts.t_base, RH);
-			}
-			else
-			{
-				d_td[idx] = metutil::DewPointFromLowRH_(d_t[idx]+opts.t_base, RH);
-			}
+			d_td[idx] = metutil::DewPointFromRH_(d_t[idx]+opts.t_base, RH);
 		}
 	}
 }

@@ -133,14 +133,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 			double TD = kFloatMissing;
 
-			if (RH > 50)
-			{
-				TD = metutil::DewPointFromHighRH_(T, RH);
-			}
-			else
-			{
-				TD = metutil::DewPointFromLowRH_(T, RH);
-			}
+			TD = metutil::DewPointFromRH_(T, RH);
 
 			myTargetInfo->Value(TD);
 
