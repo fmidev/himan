@@ -87,7 +87,7 @@ const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = ba::map_
 		(kNetCDF, "NetCDF")
 		(kCSV, "CSV")
 		(kGZIP, "gzip compressed grib")
-		(kBZIP2, "bzip2 compressed grib")
+		(kBZIP2, "bzip2 compressed grib");
 #endif
 
 // Define supported projections
