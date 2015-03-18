@@ -72,7 +72,9 @@ enum HPFileType
 	kGRIB, // when we don't know if its 1 or 2
 	kQueryData,
 	kNetCDF,
-	kCSV
+	kCSV,
+	kGZIP, // for compressed grib-files
+	kBZIP2 // for compressed grib-files
 };
 
 #ifndef __CUDACC__
@@ -83,7 +85,9 @@ const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = ba::map_
 		(kGRIB, "grib edition 1 or 2")
 		(kQueryData, "QueryData")
 		(kNetCDF, "NetCDF")
-		(kCSV, "CSV");
+		(kCSV, "CSV")
+		(kGZIP, "gzip compressed grib")
+		(kBZIP2, "bzip2 compressed grib")
 #endif
 
 // Define supported projections
