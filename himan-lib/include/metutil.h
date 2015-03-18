@@ -202,7 +202,7 @@ double DryLift_(double P, double T, double targetP);
  * @brief Calculate dew point temperature from air temperature and relative humidity.
  *
  * The formula used is simple and efficient and gives a close-enough result when humidity
- * is high enough. As a rule of thumb this function should be used if RH > 50%.
+ * is high enough (> 50%).
  *
  * Source: http://journals.ametsoc.org/doi/pdf/10.1175/BAMS-86-2-225
  *
@@ -212,13 +212,13 @@ double DryLift_(double P, double T, double targetP);
  */
 
 CUDA_DEVICE
-double DewPointFromHighRH_(double T, double RH);
+double DewPointFromRHSimple_(double T, double RH);
 
 /**
  * @brief Calculate dew point temperature from air temperature and relative humidity.
  *
- * The formula used is a more complex one than in DewPointSimple, but gives more accurate
- * results when humidity is low. As a rule of thumb this formula should be used if RH < 50%.
+ * The formula used is a more complex one than in DewPointSimple_, but gives more accurate
+ * results when humidity is low.
  *
  * Source: http://journals.ametsoc.org/doi/pdf/10.1175/BAMS-86-2-225
  *
@@ -228,7 +228,7 @@ double DewPointFromHighRH_(double T, double RH);
  */
 
 CUDA_DEVICE
-double DewPointFromLowRH_(double T, double RH);
+double DewPointFromRH_(double T, double RH);
 
 
 /**
@@ -414,13 +414,13 @@ __global__ void LCL(cdarr_t d_p, cdarr_t d_t, cdarr_t d_td, darr_t d_t_result, d
 } // namespace himan
 
 CUDA_DEVICE
-inline double himan::metutil::DewPointFromHighRH_(double T, double RH)
+inline double himan::metutil::DewPointFromRHSimple_(double T, double RH)
 {
 	return (T - ((100 - RH) * 0.2));
 }
 
 CUDA_DEVICE
-inline double himan::metutil::DewPointFromLowRH_(double T, double RH)
+inline double himan::metutil::DewPointFromRH_(double T, double RH)
 {
 	return (T / (1 - (T * log(RH * 0.01) * constants::kRw_div_L)));
 }
