@@ -76,12 +76,15 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     forecast_time forecastTime = myTargetInfo->Time();
     level forecastLevel = myTargetInfo->Level();
 
-    level prevLevel;
+    level prevLevel, nextLevel;
 
     prevLevel = level(myTargetInfo->Level());
     prevLevel.Value(myTargetInfo->Level().Value() - 1);
     prevLevel.Index(prevLevel.Index() - 1);
 
+    nextLevel = level(myTargetInfo->Level());
+	nextLevel.Value(myTargetInfo->Level().Value() + 1);
+	nextLevel.Index(nextLevel.Index() + 1);
 
     auto myThreadedLogger = logger_factory::Instance()->GetLog("turbulence_pluginThread #" + boost::lexical_cast<string> (threadIndex));
 
@@ -100,17 +103,21 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     	return;
     }*/
 
-    info_t UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo;
+    info_t UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo;
 
     prevHInfo = Fetch(forecastTime, prevLevel, HParam, false);
     prevUInfo = Fetch(forecastTime, prevLevel, UParam, false);
     prevVInfo = Fetch(forecastTime, prevLevel, VParam, false);
 
+	nextHInfo = Fetch(forecastTime, nextLevel, HParam, false);
+	nextUInfo = Fetch(forecastTime, nextLevel, UParam, false);
+	nextVInfo = Fetch(forecastTime, nextLevel, VParam, false);
+
     HInfo = Fetch(forecastTime, forecastLevel, HParam, false);
     UInfo = Fetch(forecastTime, forecastLevel, UParam, false);
     VInfo = Fetch(forecastTime, forecastLevel, VParam, false);
 
-    if (!(prevHInfo && prevUInfo && prevVInfo && HInfo && UInfo && VInfo))
+    if (!(prevHInfo && prevUInfo && prevVInfo && nextHInfo && nextUInfo && nextVInfo && HInfo && UInfo && VInfo))
     {
         myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
         return;
@@ -149,7 +156,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     pair<matrix<double>,matrix<double>> gradU = util::CentralDifference(UInfo->Data(),dx,dy);
     pair<matrix<double>,matrix<double>> gradV = util::CentralDifference(VInfo->Data(),dx,dy);
 
-    LOCKSTEP(myTargetInfo, UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo)
+    LOCKSTEP(myTargetInfo, UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo)
     {
         size_t index = myTargetInfo->LocationIndex();
         double U = UInfo->Value();
@@ -158,14 +165,17 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         double prevU = prevUInfo->Value();
         double prevV = prevVInfo->Value();
         double prevH = prevHInfo->Value();
+        double nextU = nextUInfo->Value();
+		double nextV = nextVInfo->Value();
+		double nextH = nextHInfo->Value();
 
-        if (U == kFloatMissing || V == kFloatMissing || H == kFloatMissing || prevU == kFloatMissing || prevV == kFloatMissing || prevH == kFloatMissing)
+        if (U == kFloatMissing || V == kFloatMissing || H == kFloatMissing || prevU == kFloatMissing || prevV == kFloatMissing || prevH == kFloatMissing || nextU == kFloatMissing || nextV == kFloatMissing || nextH == kFloatMissing)
         {
             continue;
         }
 
         //Precalculation of wind shear, deformation and convergence
-        double VWS = sqrt(pow((prevU-U)/(prevH-H),2) + pow((prevV-V)/(prevH-H),2));
+        double VWS = sqrt(pow((nextU-prevU)/(nextH-prevH),2) + pow((nextV-prevV)/(nextH-prevH),2));
         double DEF = sqrt(pow(get<0>(gradU).At(index)-get<1>(gradV).At(index),2) + pow(get<0>(gradV).At(index) + get<1>(gradU).At(index),2));
         double CVG = -get<0>(gradU).At(index)-get<1>(gradV).At(index);
 
