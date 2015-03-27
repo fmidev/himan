@@ -39,8 +39,8 @@ void turbulence::Process(std::shared_ptr<const plugin_configuration> conf)
      */
 
     // param theRequestedParam(PARM_NAME, UNIV_ID, GRIB2DISCIPLINE, GRIB2CATEGORY, GRIB2NUMBER);
-    param TI("TI-S2", 1164);
-    param TI2("TI2-S2", 1209);
+    param TI("TI-S2", 1164, 0, 19, 22);
+    param TI2("TI2-S2", 1209, 0, 19, 22);
     // If this param is also used as a source param for other calculations
     // (like for example dewpoint, relative humidity), unit should also be
     // specified
