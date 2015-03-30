@@ -23,7 +23,7 @@ using namespace himan::plugin;
 //
 // 0. Mallissa sadetta (RR>0; RR = rainfall + snowfall)
 // 1. Jäätävää tihkua, jos -10<T2m<=0C, pakkasstratus (~-10...-0) jossa nousuliikettä, sade heikkoa, ei satavaa keskipilveä
-// 2. Jäätävää vesisadetta, jos T2m<=0C ja pinnan yläpuolella on T>0C kerros
+// 2. Jäätävää vesisadetta, jos T2m<=0C ja pinnan yläpuolella on T>0C kerros, jossa kosteaa (pilveä)
 // 3. Lunta, jos snowfall/RR>0.8, tai T<=0C
 // 4. Räntää, jos 0.15<snowfall/RR<0.8
 // 5. Vettä tai tihkua, jos snowfall/RR<0.15
@@ -35,11 +35,11 @@ const double waterLim = 0.15;
 const double snowLim = 0.8;
 
 // Vaadittu 2m lämpötilaväli (oltava näiden välissä) [C] jäätävässä tihkussa
-const double sfcMax = 0;
-const double sfcMin = -10;
+const double sfcMax = 0.;
+const double sfcMin = -10.;
 
 // Kylmin sallittu stratuksen topin T ja kylmin sallittu st:n keskim. T [C] jäätävässä tihkussa
-const double stTlimit = -12;
+const double stTlimit = -12.;
 
 // Raja-arvot tihkun ja jäätävän tihkun max intensiteetille [mm/h]
 // (pienemmällä jäätävän tihkun raja-arvolla voi hieman rajoittaa sen esiintymistä)
@@ -47,13 +47,16 @@ const double dzLim = 0.3;
 const double fzdzLim = 0.2;
 
  // Max sallittu nousuliike stratuksessa [mm/s] jäätävässä tihkussa (vähentää fzdz esiintymistä)
-const double wMax = 50;
+const double wMax = 50.;
 
 // 925 tai 850hPa:n stratuksen ~vähimmäispaksuus [hPa] jäätävässä tihkussa, ja
 // sulamiskerroksen (tai sen alapuolisen pakkaskerroksen) vähimmäispaksuus [hPa] jäätävässä sateessa
 // (olettaen, että stratuksen/sulamis-/pakkaskerroksen top on 925/850hPa:ssa)
-const double stH = 15;
+const double stH = 15.;
 
+// Suht. kosteuden raja-arvo alapilvelle (925/850/700hPa) [%]
+const double rhLim = 90.;
+		
 preform_pressure::preform_pressure()
 {
 	itsClearTextFormula = "<algorithm>";
@@ -266,10 +269,9 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		if ((T <= sfcMax) AND (T > sfcMin) AND (RH700 < 80) AND (RH > 90) AND (RR <= fzdzLim))
 		{
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925),
-			// tai kun Psfc ei (enää) löydy (eli ei mp-dataa, 6-10vrk)?
-			// (riittävän paksu/jäätävä) stratus 925hPa:ssa, jossa nousuliikettä?
+			// tai kun Psfc ei löydy (riittävän paksu/jäätävä) stratus 925hPa:ssa, jossa nousuliikettä?
 
-			if (P > (925 + stH) AND RH925 > 90 AND T925 < 0 AND T925 > stTlimit AND W925 > 0 AND W925 < wMax)
+			if (P > (925 + stH) AND RH925 > rhLim AND T925 < 0 AND T925 > stTlimit AND W925 > 0 AND W925 < wMax)
 			{
 				PreForm = kFreezingDrizzle;
 			}
@@ -277,7 +279,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
 			// (riittävän paksu/jäätävä) stratus 850hPa:ssa, jossa nousuliikettä?
 
-			else if ((P <= 925+stH) AND (P > 850+stH) AND (RH850 > 90) AND (T850 < 0) AND (T850 > stTlimit) AND (W850 > 0) AND (W850 < wMax))
+			if ((P <= 925+stH) AND (P > 850+stH) AND (RH850 > rhLim) AND (T850 < 0) AND (T850 > stTlimit) AND (W850 > 0) AND (W850 < wMax))
 			{
 				PreForm = kFreezingDrizzle;
 			}
@@ -288,11 +290,10 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		if ((PreForm == MISS) AND (T <= 0) AND ((T925 > 0) OR (T850 > 0) OR (T700 > 0)))
 		{
 
-			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925)
-			// tai kun Psfc ei (enää) löydy (eli ei mp-dataa, 6-10vrk)?
-			// (riittävän paksu) sulamiskerros 925hPa:ssa (tai pakkaskerros sen alla)?
-
-			if ((P > (925+stH)) AND ((T925 > 0) OR (T850 > 0)))
+			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925), tai kun Psfc ei löydy?
+			// (riittävän paksu) sulamiskerros ja pilveä 925/850hPa:ssa?
+			
+			if (P > (925+stH) AND (T925 > 0 AND RH925 >= rhLim OR (T850 > 0 AND RH850 >= rhLim)))
 			{
 				PreForm = kFreezingRain;
 			}
@@ -300,15 +301,15 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
 			// (riittävän paksu) sulamiskerros 850hPa:ssa (tai pakkaskerros sen alla)?
 
-			else if ((P <= (925+stH)) AND (P > (850+stH)) AND (T850 > 0))
+			if (P <= (925+stH) AND P > (850+stH) AND T850 > 0 AND RH850 >= rhLim)
 			{
-				PreForm = kFreezingRain ;
+				PreForm = kFreezingRain;
 			}
 
 			// ollaanko ~1500-3000m merenpinnasta (850<pintapaine<700)?
-			// (riittävän paksu) sulamiskerros 700hPa:ssa (tai pakkaskerros sen alla)?
+			// (riittävän paksu) sulamiskerros 700hPa:ssa ja pilveä 700hPa:ssa
 
-			if ((P <= 850+stH) AND (P > 700+stH) AND (T700 > 0))
+			if (P <= 850+stH AND P > 700+stH AND T700 > 0 AND RH700 >= rhLim)
 			{
 				PreForm = kFreezingRain;
 			}
@@ -345,7 +346,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 				// tai kun Psfc ei (enää) löydy (eli ei mp-dataa, 6-10vrk)?
 				// stratus 925hPa:ssa?
 
-				if ((P > 925) AND (RH925 > 90))
+				if ((P > 925) AND (RH925 > rhLim))
 				{
 					PreForm = kDrizzle;
 				}
@@ -353,7 +354,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 				// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
 				// stratus 850hPa:ssa?
 
-				else if ((P <= 925) AND (P > 850) AND (RH850 > 90))
+				if ((P <= 925) AND (P > 850) AND (RH850 > rhLim))
 				{
 					PreForm = kDrizzle;
 				}
