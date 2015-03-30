@@ -293,7 +293,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925), tai kun Psfc ei löydy?
 			// (riittävän paksu) sulamiskerros ja pilveä 925/850hPa:ssa?
 			
-			if (P > (925+stH) AND (T925 > 0 AND RH925 >= rhLim OR (T850 > 0 AND RH850 >= rhLim)))
+			if (P > (925+stH) AND ((T925 > 0 AND RH925 >= rhLim) OR (T850 > 0 AND RH850 >= rhLim)))
 			{
 				PreForm = kFreezingRain;
 			}
