@@ -978,6 +978,12 @@ std::shared_ptr<info> luatool::FetchRaw(const forecast_time& theTime, const leve
 luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const
 {
 	auto x = compiled_plugin_base::Fetch(theTime,theLevel,theParam,false);
+
+	if (!x)
+	{
+		return newtable(myL.get());
+	}
+
 	return VectorToTable(x->Data().Values());
 }
 
