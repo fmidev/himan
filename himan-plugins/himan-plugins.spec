@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.3.30
+Version: 15.4.2
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -115,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Apr  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.2-1.fmi
+- Bugix to luatool
+- preform_pressure algorithm update 
 * Mon Mar 30 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.3.30-1.fmi
 - Bugfix to turbulence
 * Mon Mar 16 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.3.16-1.fmi
