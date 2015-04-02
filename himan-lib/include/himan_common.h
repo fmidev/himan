@@ -78,7 +78,7 @@ enum HPFileType
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPFileType,const char*> HPFileTypeToString = ba::map_list_of
+const boost::unordered_map<HPFileType,std::string> HPFileTypeToString = ba::map_list_of
 		(kUnknownFile, "unknown")
 		(kGRIB1, "grib edition 1")
 		(kGRIB2, "grib edition 2")
@@ -102,7 +102,7 @@ enum HPProjectionType
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPProjectionType,const char*> HPProjectionTypeToString = ba::map_list_of
+const boost::unordered_map<HPProjectionType,std::string> HPProjectionTypeToString = ba::map_list_of
 		(kUnknownProjection, "unknown projection")
 		(kLatLonProjection, "ll")
 		(kRotatedLatLonProjection, "rll")
@@ -138,7 +138,7 @@ enum HPInterpolationMethod
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPInterpolationMethod,const char*> HPInterpolationMethodToString = ba::map_list_of
+const boost::unordered_map<HPInterpolationMethod,std::string> HPInterpolationMethodToString = ba::map_list_of
 		(kUnknownInterpolationMethod, "unknown")
 		(kBiLinear, "bi-linear")
 		(kNearestPoint, "nearest point")
@@ -163,7 +163,7 @@ enum HPLevelType
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPLevelType,const char*> HPLevelTypeToString = ba::map_list_of
+const boost::unordered_map<HPLevelType,std::string> HPLevelTypeToString = ba::map_list_of
 		(kUnknownLevel, "unknown")
 		(kGround, "ground")
 		(kPressure, "pressure")
@@ -205,7 +205,7 @@ enum HPFileWriteOption
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPFileWriteOption,const char*> HPFileWriteOptionToString = ba::map_list_of
+const boost::unordered_map<HPFileWriteOption,std::string> HPFileWriteOptionToString = ba::map_list_of
 		(kUnknownFileWriteOption, "unknown")
 		(kSingleFile, "single file only")
 		(kMultipleFiles, "multiple files")
@@ -232,7 +232,7 @@ enum HPScanningMode
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPScanningMode,const char*> HPScanningModeToString = ba::map_list_of
+const boost::unordered_map<HPScanningMode,std::string> HPScanningModeToString = ba::map_list_of
 		(kUnknownScanningMode, "unknown")
 		(kTopLeft, "+x-y")
 		(kTopRight, "+x+y")
@@ -248,7 +248,7 @@ enum HPLevelOrder
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPLevelOrder,const char*> HPLevelOrderToString = ba::map_list_of
+const boost::unordered_map<HPLevelOrder,std::string> HPLevelOrderToString = ba::map_list_of
 	(kUnknownLevelOrder, "unknown")
 	(kTopToBottom, "top to bottom")
 	(kBottomToTop, "bottom to top");
@@ -275,16 +275,28 @@ enum HPDimensionType
 	kTimeDimension,
 	kLevelDimension,
 	kParamDimension,
-	kLocationDimension
+	kLocationDimension,
+	kForecastTypeDimension
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPDimensionType,const char*> HPDimensionTypeToString = ba::map_list_of
+const boost::unordered_map<HPDimensionType,std::string> HPDimensionTypeToString = ba::map_list_of
 		(kUnknownDimension, "unknown")
 		(kTimeDimension, "time dimension")
 		(kLevelDimension, "level dimension")
 		(kParamDimension, "param dimension")
-		(kLocationDimension, "location dimension");
+		(kLocationDimension, "location dimension")
+		(kForecastTypeDimension, "forecast type dimension")
+		;
+
+const boost::unordered_map<std::string,HPDimensionType> HPStringToDimensionType = ba::map_list_of
+		("unknown",kUnknownDimension)
+		("time",kTimeDimension)
+		("level",kLevelDimension)
+		("param",kParamDimension)
+		("location",kLocationDimension)
+		("forecast_type",kForecastTypeDimension)
+		;
 #endif
 
 enum HPTimeResolution
@@ -295,7 +307,7 @@ enum HPTimeResolution
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPTimeResolution,const char*> HPTimeResolutionToString = ba::map_list_of
+const boost::unordered_map<HPTimeResolution,std::string> HPTimeResolutionToString = ba::map_list_of
 		(kUnknownTimeResolution, "unknown")
 		(kHourResolution, "hour")
 		(kMinuteResolution, "minute");
@@ -316,29 +328,18 @@ enum HPAggregationType
 	kAccumulation,
 	kMaximum,
 	kMinimum,
-	kDifference,
-
-	/*
-	 * Parameters refer to another parameter minimum and maximum value, used in modifier.
-	 * Not a perfect way to describe the relationship between two separate parameters
-	 * but as we don't have combined parameters this is maybe the nicest way to do it.
-	*/
-
-	kExternalMinimum,
-	kExternalMaximum
-
+	kDifference
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPAggregationType,const char*> HPAggregationTypeToString = ba::map_list_of
+const boost::unordered_map<HPAggregationType,std::string> HPAggregationTypeToString = ba::map_list_of
 		(kUnknownAggregationType, "unknown")
 		(kAverage, "average")
 		(kAccumulation, "accumulation")
 		(kMaximum, "maximum")
 		(kMinimum, "minimum")
 		(kDifference, "difference")
-		(kExternalMinimum, "external minimum")
-		(kExternalMaximum, "external maximum");
+;
 #endif
 
 enum HPModifierType
@@ -358,7 +359,7 @@ enum HPModifierType
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPModifierType,const char*> HPModifierTypeToString = ba::map_list_of
+const boost::unordered_map<HPModifierType,std::string> HPModifierTypeToString = ba::map_list_of
 		(kUnknownModifierType, "unknown modifier")
 		(kAverageModifier, "average modifier")
 		(kAccumulationModifier, "accumulation modifier")
@@ -409,6 +410,13 @@ enum HPGridType
 	kIrregularGrid
 };
 
+#ifndef __CUDACC__
+const boost::unordered_map<HPGridType,std::string> HPGridTypeToString = ba::map_list_of
+		(kUnknownGridType, "unknown")
+		(kRegularGrid, "regular")
+		(kIrregularGrid, "irregular");
+#endif
+
 enum HPDatabaseType
 {
 	kUnknownDatabaseType = 0,
@@ -418,10 +426,38 @@ enum HPDatabaseType
 };
 
 #ifndef __CUDACC__
-const boost::unordered_map<HPGridType,const char*> HPGridTypeToString = ba::map_list_of
-		(kUnknownGridType, "unknown")
-		(kRegularGrid, "regular")
-		(kIrregularGrid, "irregular");
+const boost::unordered_map<HPDatabaseType,std::string> HPDatabaseTypeToString = ba::map_list_of
+		(kUnknownDatabaseType, "unknown")
+		(kNeons, "neons")
+		(kRadon, "radon")
+		(kNeonsAndRadon, "neons and radon");
+#endif
+
+enum HPForecastType
+{
+	kUnknownType = 0,
+	kDeterministic,
+	kAnalysis,
+	kEpsControl,
+	kEpsPerturbation
+};
+
+#ifndef __CUDACC__
+const boost::unordered_map<HPForecastType,std::string> HPForecastTypeToString = ba::map_list_of
+		(kUnknownType, "unknown")
+		(kDeterministic, "deterministic")
+		(kAnalysis, "analysis")
+		(kEpsControl, "eps control")
+		(kEpsPerturbation, "eps perturbation")
+		;
+
+const boost::unordered_map<std::string,HPForecastType> HPStringToForecastType = ba::map_list_of
+		("unknown",kUnknownType)
+		("deterministic",kDeterministic)
+		("analysis", kAnalysis)
+		("eps control",kEpsControl)
+		("eps perturbation",kEpsPerturbation)
+		;
 #endif
 
 /**
