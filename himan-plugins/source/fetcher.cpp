@@ -40,6 +40,7 @@ fetcher::fetcher()
 	: itsDoLevelTransform(true)
 	, itsDoInterpolation(true)
 	, itsUseCache(true)
+	, itsApplyLandSeaMask(false)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
@@ -250,6 +251,22 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		itsLogger->Trace("Interpolation disabled");
 	}
+	
+	if (itsApplyLandSeaMask)
+	{
+		itsLogger->Trace("Applying land-sea mask");
+
+		itsApplyLandSeaMask = false;
+	
+		if (!ApplyLandSeaMask(config, *theInfos[0], requestedTime))
+		{
+			itsLogger->Warning("Land sea mask apply failed");
+		}
+		
+		itsApplyLandSeaMask = true;
+
+	}
+
 	// Insert interpolated data to cache
 
 	if (!theInfos.empty() && itsUseCache && config->UseCache() && !readPackedData)
@@ -823,4 +840,57 @@ bool fetcher::Interpolate(himan::info& baseInfo, vector<info_t>& theInfos) const
 	}
 	
 	return true;
+}
+
+bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime)
+{
+	raw_time originTime = requestedTime.OriginDateTime();
+	forecast_time firstTime(originTime, originTime); 
+	
+	try
+	{
+		auto lsmInfo = Fetch(config, firstTime, level(kGround, 0), param("LC-0TO1"), false, false);
+
+		lsmInfo->First();
+			
+		assert(*lsmInfo->Grid() == *theInfo.Grid());
+			
+		double threshold = 0.5;
+		
+		assert(threshold >= -1 && threshold <= 1);
+		assert(threshold != 0);
+		
+		double multiplier = (threshold > 0) ? 1. : -1.;
+
+		for (lsmInfo->ResetLocation(), theInfo.ResetLocation(); lsmInfo->NextLocation() && theInfo.NextLocation();)
+		{
+			double lsm = lsmInfo->Value();
+				
+			if (theInfo.Value() == kFloatMissing || lsm == kFloatMissing)
+			{
+				continue;
+			}
+				
+			if (multiplier * lsm <= 0.5)
+			{
+				theInfo.Value(kFloatMissing);
+			}				
+		}
+	}
+	catch (HPExceptionType& e)
+	{
+		return false;
+	}
+	
+	return true;
+}
+
+bool fetcher::ApplyLandSeaMask() const
+{
+	return itsApplyLandSeaMask;
+}
+
+void fetcher::ApplyLandSeaMask(bool theApplyLandSeaMask)
+{
+	itsApplyLandSeaMask = theApplyLandSeaMask;
 }

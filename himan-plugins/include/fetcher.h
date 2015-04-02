@@ -106,7 +106,24 @@ public:
 	void UseCache(bool theUseCache);
 	bool UseCache() const;
 
+	void ApplyLandSeaMask(bool theApplyLandSeaMask);
+	bool ApplyLandSeaMask() const;
+	
 private:
+
+	/**
+	 * @brief Apply land-sea mask to requested data.
+	 * 
+	 * Threshold value can range from -1 to 1.
+	 * If threshold < 0, masking will be done so that land is masked missing
+	 * If threshold > 0, masking will be done so that sea is masked missing
+	 * 
+     * @param theInfo Info that's masked
+     * @param requestedTime 
+     * @return True if masking is successful
+     */
+	
+	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime);
 
     std::vector<std::shared_ptr<info>> FromCache(search_options& options);
 
@@ -233,6 +250,7 @@ private:
 	bool itsDoLevelTransform; //<! Default true
 	bool itsDoInterpolation; //<! Default true
 	bool itsUseCache;
+	bool itsApplyLandSeaMask;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
