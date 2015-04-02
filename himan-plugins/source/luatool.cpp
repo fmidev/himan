@@ -981,7 +981,7 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 
 	if (!x)
 	{
-		return newtable(myL.get());
+		return object();
 	}
 
 	return VectorToTable(x->Data().Values());
