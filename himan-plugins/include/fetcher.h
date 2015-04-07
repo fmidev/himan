@@ -35,42 +35,42 @@ namespace plugin
 class fetcher : public auxiliary_plugin
 {
 public:
-    fetcher();
+	fetcher();
 
-    virtual ~fetcher() {}
+	virtual ~fetcher() {}
 
-    fetcher(const fetcher& other) = delete;
-    fetcher& operator=(const fetcher& other) = delete;
+	fetcher(const fetcher& other) = delete;
+	fetcher& operator=(const fetcher& other) = delete;
 
-    virtual std::string ClassName() const
-    {
-        return "himan::plugin::fetcher";
-    }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::fetcher";
+	}
 
-    virtual HPPluginClass PluginClass() const
-    {
-        return kAuxiliary;
-    }
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	}
 
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(1, 1);
-    }
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
 
 	/**
 	 * @brief Multi-param overcoat for the other Fetch() function
 	 *
 	 * Will return the first param found.
 	 *
-     * @param config Plugin configuration
-     * @param requestedValidTime
-     * @param requestedLevel
-     * @param requestedParams List of wanted params
-     * @param readPackedData
-     * @return Data for first param found.
-     */
+	 * @param config Plugin configuration
+	 * @param requestedValidTime
+	 * @param requestedLevel
+	 * @param requestedParams List of wanted params
+	 * @param readPackedData
+	 * @return Data for first param found.
+	 */
 
-    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime, level requestedLevel, const params& requestedParams, bool readPackedData = false);
+	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime, level requestedLevel, const params& requestedParams, bool readPackedData = false);
 
 	/**
 	 * @brief Fetch data based on given arguments.
@@ -80,23 +80,23 @@ public:
 	 *
 	 * Will throw kFileDataNotFound if data is not found.
 	 *
-     * @param config Plugin configuration
-     * @param requestedValidTime
-     * @param requestedLevel
-     * @param requestedParam
+	 * @param config Plugin configuration
+	 * @param requestedValidTime
+	 * @param requestedLevel
+	 * @param requestedParam
 	 * @param readPackedData Whether to read unpacked data (from grib only!). Caller must do unpacking.
-     * @param controlWaitTime Whether this function should control wait times if they are specified.
+	 * @param controlWaitTime Whether this function should control wait times if they are specified.
 	 * Default is true, will be set to false if this function is called from multi-param Fetch()
-     * @return shared_ptr to info-instance
-     */
+	 * @return shared_ptr to info-instance
+	 */
 
-    std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime, level requestedLevel, param requestedParam, bool readPackedData = false, bool controlWaitTime = true);
+	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime, level requestedLevel, param requestedParam, bool readPackedData = false, bool controlWaitTime = true);
 
 	/**
 	 * @brief Set flag for level transform
 	 *
-     * @param theDoLevelTransform If false, level transform is not made
-     */
+	 * @param theDoLevelTransform If false, level transform is not made
+	 */
 
 	void DoLevelTransform(bool theDoLevelTransform);
 	bool DoLevelTransform() const;
@@ -108,6 +108,9 @@ public:
 
 	void ApplyLandSeaMask(bool theApplyLandSeaMask);
 	bool ApplyLandSeaMask() const;
+
+	void LandSeaMaskThreshold(double theLandSeaMaskThreshold);
+	double LandSeaMaskThreshold() const;
 	
 private:
 
@@ -118,14 +121,14 @@ private:
 	 * If threshold < 0, masking will be done so that land is masked missing
 	 * If threshold > 0, masking will be done so that sea is masked missing
 	 * 
-     * @param theInfo Info that's masked
-     * @param requestedTime 
-     * @return True if masking is successful
-     */
+	 * @param theInfo Info that's masked
+	 * @param requestedTime 
+	 * @return True if masking is successful
+	 */
 	
 	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime);
 
-    std::vector<std::shared_ptr<info>> FromCache(search_options& options);
+	std::vector<std::shared_ptr<info>> FromCache(search_options& options);
 
 	/**
 	 * @brief Get data and metadata from a file.
@@ -141,74 +144,75 @@ private:
 	 * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
 	 *
-     * @return A vector of shared_ptr'd infos.
+	 * @return A vector of shared_ptr'd infos.
 	 */
 
-    std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files,
+	std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files,
 												search_options& options,
 												bool readContents = true,
 												bool readPackedData = false);
 
-    /**
-     * @brief Return all data from a grib file, overcoat for himan::plugin::grib::FromFile().
-     * @see himan::plugin::grib::FromFile()
-     *
-     * @param inputFile Input file name
-     * @param options Search options (param, level, time, prod, config)
-     * @param readContents Specify if data should also be read (and not only metadata)
+	/**
+	 * @brief Return all data from a grib file, overcoat for himan::plugin::grib::FromFile().
+	 * @see himan::plugin::grib::FromFile()
+	 *
+	 * @param inputFile Input file name
+	 * @param options Search options (param, level, time, prod, config)
+	 * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
-     *
-     * @return A vector of shared_ptr'd infos.
-     */
+	 *
+	 * @return A vector of shared_ptr'd infos.
+	 */
 
-    std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false);
+	std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false);
 	
-    /**
-     * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
-     * @see himan::plugin::querydata::FromFile()
-     *
-     * @param inputFile Input file name
-     * @param options Search options (param, level, time, prod, config)
-     * @param readContents Specify if data should also be read (and not only metadata)
-     *
-     * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
-     */
+	/**
+	 * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
+	 * @see himan::plugin::querydata::FromFile()
+	 *
+	 * @param inputFile Input file name
+	 * @param options Search options (param, level, time, prod, config)
+	 * @param readContents Specify if data should also be read (and not only metadata)
+	 *
+	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
+	 */
 
-    std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, search_options& options, bool readContents = true);
+	std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, search_options& options, bool readContents = true);
 
 	/**
-     * @brief Return all data from a CSV file, overcoat for himan::plugin::csv::FromFile().
-     * @see himan::plugin::csv::FromFile()
-     *
-     * @param inputFile Input file name
-     * @param options Search options (param, level, time, prod, config)
-     *
-     * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
-     */
+	 * @brief Return all data from a CSV file, overcoat for himan::plugin::csv::FromFile().
+	 * @see himan::plugin::csv::FromFile()
+	 *
+	 * @param inputFile Input file name
+	 * @param options Search options (param, level, time, prod, config)
+	 *
+	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
+	 */
 
-    std::vector<std::shared_ptr<info>> FromCSV(const std::string& inputFile, search_options& options);
+	std::vector<std::shared_ptr<info>> FromCSV(const std::string& inputFile, search_options& options);
 
 	/**
 	 * @brief Map level definitions between models and code tables
 	 *
 	 * Ie. Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.
 	 * 
-     * @param sourceProducer Id of source producer
-     * @param targetParam
-     * @param targetLevel
-     * @return New level. If mapping is not found, new level == targetLevel.
-     */
+	 * @param sourceProducer Id of source producer
+	 * @param targetParam
+	 * @param targetLevel
+	 * @return New level. If mapping is not found, new level == targetLevel.
+	 */
 	
 	level LevelTransform(const producer& sourceProducer, const param& targetParam, const level& targetLevel) const;
 
 	/**
 	 * @brief Try to fetch data from a single producer
 	 *
-     * @param opts Search options
-     * @param readPackedData Determine whether to read packed data from grib
-     * @param fetchFromAuxiliaryFiles Determine whether to read data from aux files
-     * @return Vector of infos, zero sized if none found
-     */
+	 * @param opts Search options
+	 * @param readPackedData Determine whether to read packed data from grib
+	 * @param fetchFromAuxiliaryFiles Determine whether to read data from aux files
+	 * @return Vector of infos, zero sized if none found
+	 */
+
 	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles);
 
 	/**
@@ -246,11 +250,12 @@ private:
 
 	bool SwapTo(const std::shared_ptr<grid>& targetGrid, HPScanningMode targetScanningMode);
 
-    HPFileType FileType(const std::string& theInputFile);
+	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform; //<! Default true
 	bool itsDoInterpolation; //<! Default true
 	bool itsUseCache;
 	bool itsApplyLandSeaMask;
+	double itsLandSeaMaskThreshold;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
@@ -259,10 +264,10 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-    return std::shared_ptr<fetcher> (new fetcher());
+	return std::make_shared<fetcher> ();
 }
 
-typedef std::shared_ptr<fetcher> fetcher_t;
+//typedef std::shared_ptr<fetcher> fetcher_t;
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

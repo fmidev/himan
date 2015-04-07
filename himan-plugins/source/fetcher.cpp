@@ -41,6 +41,7 @@ fetcher::fetcher()
 	, itsDoInterpolation(true)
 	, itsUseCache(true)
 	, itsApplyLandSeaMask(false)
+	, itsLandSeaMaskThreshold(0.5)
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("fetcher"));
 }
@@ -254,7 +255,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	
 	if (itsApplyLandSeaMask)
 	{
-		itsLogger->Trace("Applying land-sea mask");
+		itsLogger->Trace("Applying land-sea mask with threshold " + boost::lexical_cast<string> (itsLandSeaMaskThreshold));
 
 		itsApplyLandSeaMask = false;
 	
@@ -849,18 +850,26 @@ bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, in
 	
 	try
 	{
-		auto lsmInfo = Fetch(config, firstTime, level(kGround, 0), param("LC-0TO1"), false, false);
+		auto lsmInfo = Fetch(config, firstTime, level(kHeight, 0), param("LC-0TO1"), false, false);
 
 		lsmInfo->First();
 			
 		assert(*lsmInfo->Grid() == *theInfo.Grid());
-			
-		double threshold = 0.5;
+					
+		assert(itsLandSeaMaskThreshold >= -1 && itsLandSeaMaskThreshold <= 1);
+		assert(itsLandSeaMaskThreshold != 0);
 		
-		assert(threshold >= -1 && threshold <= 1);
-		assert(threshold != 0);
+#ifdef HAVE_CUDA
+		if (theInfo.Grid()->IsPackedData())
+		{
+			// We need to unpack
+			util::Unpack({theInfo.Grid()});
+		}
+#endif
 		
-		double multiplier = (threshold > 0) ? 1. : -1.;
+		assert(!theInfo.Grid()->IsPackedData());
+		
+		double multiplier = (itsLandSeaMaskThreshold > 0) ? 1. : -1.;
 
 		for (lsmInfo->ResetLocation(), theInfo.ResetLocation(); lsmInfo->NextLocation() && theInfo.NextLocation();)
 		{
@@ -871,7 +880,7 @@ bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, in
 				continue;
 			}
 				
-			if (multiplier * lsm <= 0.5)
+			if (multiplier * lsm <= itsLandSeaMaskThreshold)
 			{
 				theInfo.Value(kFloatMissing);
 			}				
@@ -893,4 +902,20 @@ bool fetcher::ApplyLandSeaMask() const
 void fetcher::ApplyLandSeaMask(bool theApplyLandSeaMask)
 {
 	itsApplyLandSeaMask = theApplyLandSeaMask;
+}
+
+double fetcher::LandSeaMaskThreshold() const
+{
+	return itsLandSeaMaskThreshold;
+}
+
+void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
+{
+	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
+	{
+		itsLogger->Fatal("Invalid value for land sea mask threshold: " + boost::lexical_cast<string> (theLandSeaMaskThreshold));
+		exit(1);
+	}
+	
+	itsLandSeaMaskThreshold = theLandSeaMaskThreshold;
 }
