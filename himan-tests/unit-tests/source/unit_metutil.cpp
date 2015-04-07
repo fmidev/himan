@@ -82,31 +82,31 @@ BOOST_AUTO_TEST_CASE(ES)
 
 }
 
-BOOST_AUTO_TEST_CASE(DEWPOINT_HIGH_RH)
+BOOST_AUTO_TEST_CASE(DEWPOINT_SIMPLE)
 {
 
-	double TD = metutil::DewPointFromHighRH_(292.5, 92.1);
+	double TD = metutil::DewPointFromRHSimple_(292.5, 92.1);
 
 	BOOST_CHECK_CLOSE(TD, 290.9200, kEpsilon);
 
 	// negative temperatures
 
-	TD = metutil::DewPointFromHighRH_(264, 57.44);
+	TD = metutil::DewPointFromRHSimple_(264, 57.44);
 
 	BOOST_CHECK_CLOSE(TD, 255.488, kEpsilon);
 
 }
 
-BOOST_AUTO_TEST_CASE(DEWPOINT_LOW_RH)
+BOOST_AUTO_TEST_CASE(DEWPOINT)
 {
 
-	double TD = metutil::DewPointFromLowRH_(292.5, 22);
+	double TD = metutil::DewPointFromRH_(292.5, 22);
 
 	BOOST_CHECK_CLOSE(TD, 270.3936, kEpsilon);
 
 	// negative temperatures
 
-	TD = metutil::DewPointFromLowRH_(264, 42.0);
+	TD = metutil::DewPointFromRH_(264, 42.0);
 
 	BOOST_CHECK_CLOSE(TD, 253.2915, kEpsilon);
 
