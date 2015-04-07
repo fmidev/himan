@@ -13,24 +13,24 @@ $HIMAN -d 5 -f gfs.json -t grib -s vvms_gfs gfs_source.grib --no-cuda
 grib_compare vvms_gfs_result.grib VV-MS_pressure_925_ll_720_361_0_192.grib
 
 if [ $? -eq 0 ];then
-  echo vvms/hl success!
+  echo vvms/gfs success!
 else
-  echo vvms/hl failed
+  echo vvms/gfs failed
   exit 1
 fi
 
 if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
-  mv vvms_hl.json.grib vvms_hl.json-CPU.grib
+  mv vvms_gfs.json.grib vvms_gfs.json-CPU.grib
 
   $HIMAN -d 5 -f gfs.json -s vvms_gfs gfs_source.grib
 
   grib_compare -b referenceValue -A 0.0001 vvms_gfs_result.grib VV-MS_pressure_925_ll_720_361_0_192.grib
 
   if [ $? -eq 0 ];then
-    echo vvms/hl success GPU
+    echo vvms/gfs success GPU
   else
-    echo vvms/hl failed on GPU
+    echo vvms/gfs failed on GPU
     exit 1
   fi
 
