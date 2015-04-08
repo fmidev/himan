@@ -28,42 +28,61 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-recursive_mutex dimensionMutex;
+mutex dimensionMutex;
 
 compiled_plugin_base::compiled_plugin_base() : itsDimensionsRemaining(true), itsPluginIsInitialized(false)
 {
 	itsBaseLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("compiled_plugin_base"));
 }
 
-bool compiled_plugin_base::Next(const info_t& myTargetInfo)
+bool compiled_plugin_base::Next(info& myTargetInfo)
 {
-	lock_guard<recursive_mutex> lock(dimensionMutex);
-	
+	lock_guard<mutex> lock(dimensionMutex);
+
 	if (!itsDimensionsRemaining)
 	{
 		return false;
 	}
-	
-	while (itsInfo->NextLevel())
+
+	if (itsInfo->NextLevel())
 	{
-		return myTargetInfo->Level(itsInfo->Level());
+		bool ret = myTargetInfo.Level(itsInfo->Level());
+		assert(ret);
+		ret = myTargetInfo.Time(itsInfo->Time());
+		assert(ret);
+
+		return ret;
 	}
+
+	// No more levels at this forecast type/time combination; rewind level iterator
 	
-	itsInfo->ResetLevel();
-	
-	while (itsInfo->NextTime())
+	itsInfo->FirstLevel();
+
+	if (itsInfo->NextTime())
 	{
-		myTargetInfo->Time(itsInfo->Time());
-		return Next(myTargetInfo);
+		bool ret = myTargetInfo.Time(itsInfo->Time());
+		assert(ret);
+
+		ret = myTargetInfo.Level(itsInfo->Level());
+		assert(ret);
+
+		return ret;
 	}
+
+	// No more times at this forecast type; rewind time iterator, level iterator is
+	// already at first place
 	
 	itsInfo->FirstTime();
-	myTargetInfo->Time(itsInfo->Time());
-	
-	while (itsInfo->NextForecastType())
+
+	if (itsInfo->NextForecastType())
 	{
-		myTargetInfo->ForecastType(itsInfo->ForecastType());
-		return Next(myTargetInfo);
+		myTargetInfo.Time(itsInfo->Time());
+		myTargetInfo.Level(itsInfo->Level());
+	
+		bool ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		assert(ret);
+
+		return ret;
 	}
 	
 	// future threads calling for new dimensions aren't getting any
@@ -236,7 +255,7 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 
 void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 {
-	while (Next(myTargetInfo))
+	while (Next(*myTargetInfo))
 	{
 		Calculate(myTargetInfo, threadIndex);
 

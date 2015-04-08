@@ -961,7 +961,7 @@ void BindPlugins(lua_State* L)
 
 void luatool::Run(info_t myTargetInfo, unsigned short threadIndex)
 {
-	while (Next(myTargetInfo))
+	while (Next(*myTargetInfo))
 	{
 		Calculate(myTargetInfo, threadIndex);
 

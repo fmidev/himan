@@ -182,7 +182,7 @@ protected:
 
 	bool SwapTo(const info_t& myTargetInfo, HPScanningMode targetScanningMode);
 
-	bool Next(const info_t& myTargetInfo);
+	bool Next(info& myTargetInfo);
 
 	/**
 	 * @brief Write plugin contents to file.
