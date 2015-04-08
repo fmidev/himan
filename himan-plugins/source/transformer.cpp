@@ -232,7 +232,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 #ifdef HAVE_CUDA
 
-	if (useCudaInThisThread && !levelOnly)
+	if (itsConfiguration->UseCuda() && !levelOnly)
 	{
 
 		deviceType = "GPU";

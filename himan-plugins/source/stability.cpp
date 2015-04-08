@@ -184,7 +184,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 #ifdef HAVE_CUDA
 
-	if (useCudaInThisThread)
+	if (itsConfiguration->UseCuda())
 	{
 		deviceType = "GPU";
 

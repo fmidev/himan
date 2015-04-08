@@ -130,7 +130,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 #ifdef HAVE_CUDA
 
-	if (useCudaInThisThread)
+	if (itsConfiguration->UseCuda())
 	{
 
 		deviceType = "GPU";

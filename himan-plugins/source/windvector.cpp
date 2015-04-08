@@ -219,7 +219,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 #ifdef HAVE_CUDA
 	bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
 
-	if (useCudaInThisThread && !needStereographicGridRotation)
+	if (itsConfiguration->UseCuda() && !needStereographicGridRotation)
 	{
 		deviceType = "GPU";
 

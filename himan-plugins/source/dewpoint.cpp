@@ -101,7 +101,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 #ifdef HAVE_CUDA
 
-	if (useCudaInThisThread)
+	if (itsConfiguration->UseCuda())
 	{
 
 		deviceType = "GPU";

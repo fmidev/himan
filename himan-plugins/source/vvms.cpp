@@ -118,7 +118,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 #ifdef HAVE_CUDA
 
-	if (useCudaInThisThread)
+	if (itsConfiguration->UseCuda())
 	{
 		deviceType = "GPU";
 
