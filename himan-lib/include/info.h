@@ -22,6 +22,7 @@
 #include "level.h"
 #include "forecast_time.h"
 #include "grid.h"
+#include "forecast_type.h"
 
 namespace himan
 {
@@ -330,11 +331,13 @@ class forecast_time;
 class param;
 class level;
 class logger;
+class forecast_type;
 
 typedef iterator<level> level_iter;
 typedef iterator<param> param_iter;
 typedef iterator<forecast_time> time_iter;
 typedef iterator<producer> producer_iter;
+typedef iterator<forecast_type> forecast_type_iter;
 
 class info
 {
@@ -422,6 +425,9 @@ public:
 
 	void TimeIterator(const time_iter& theTimeIterator);
 
+	void ForecastTypes(const std::vector<forecast_type>& theTypes);
+	void ForecastTypeIterator(const forecast_type_iter& theForecastTypeIterator);
+	
 	/**
 	 * @brief Initialize data backend with correct number of matrices
 	 *
@@ -617,6 +623,14 @@ public:
 
 	size_t SizeLocations() const;
 
+	bool NextForecastType();
+	void ResetForecastType();
+	bool FirstForecastType();
+	size_t ForecastTypeIndex() const;
+	size_t SizeForecastTypes() const;
+	bool ForecastType(const forecast_type& theType);
+	forecast_type ForecastType() const;
+	
 	/**
 	 * @brief Return current latlon coordinates
 	 *
@@ -720,12 +734,9 @@ private:
 	 *
 	 * ReIndex() moves data around but does not copy (ie allocate new memory).
 	 *
-	 * @param xSize Old size of time iterator
-	 * @param ySize Old size of level iterator
-	 * @param zSize Old size of parameter iterator
 	*/
 	
-	void ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize);
+	void ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize);
 
 	/**
 	 * @brief Return running index nuimber when given relative index for each
@@ -737,7 +748,7 @@ private:
      * @return 
      */
 	
-	size_t Index(size_t timeIndex, size_t levelIndex, size_t paramIndex) const;
+	size_t Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const;
 	size_t Index() const;
 	
 	HPLevelOrder itsLevelOrder;
@@ -745,6 +756,7 @@ private:
 	level_iter itsLevelIterator;
 	time_iter itsTimeIterator;
 	param_iter itsParamIterator;
+	forecast_type_iter itsForecastTypeIterator;
 
 	std::vector<std::shared_ptr<grid>> itsDimensions;
 
@@ -768,15 +780,25 @@ std::ostream& operator<<(std::ostream& file, const info& ob)
 }
 
 inline
-size_t himan::info::Index(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
-	return (paramIndex * itsTimeIterator.Size() * itsLevelIterator.Size() + levelIndex * itsTimeIterator.Size() + timeIndex);
+	assert(forecastTypeIndex != kIteratorResetValue);
+	assert(timeIndex != kIteratorResetValue);
+	assert(levelIndex != kIteratorResetValue);
+	assert(paramIndex != kIteratorResetValue);
+	
+	return (
+			paramIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() + 
+			levelIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() + 
+			timeIndex * itsForecastTypeIterator.Size() +
+			forecastTypeIndex
+			);
 }
 
 inline
 size_t himan::info::Index() const
 {
-	return Index(TimeIndex(), LevelIndex(), ParamIndex());
+	return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex());
 }
 
 typedef std::shared_ptr<info> info_t;

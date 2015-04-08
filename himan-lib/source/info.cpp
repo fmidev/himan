@@ -16,37 +16,34 @@ using namespace std;
 using namespace himan;
 
 info::info()
-	: itsLevelIterator()
+	: itsLevelOrder(kTopToBottom)
+	, itsLevelIterator()
 	, itsTimeIterator()
 	, itsParamIterator()
+	, itsForecastTypeIterator()
 	, itsDimensions()
+	, itsStepSizeOverOneByte(false)
 	, itsBaseGrid()
 {
-	Init();
 	itsLogger = logger_factory::Instance()->GetLog("info");
-
 }
 
 info::~info() {}
 
 info::info(const info& other)
 	// Iterators are COPIED
-	: itsLevelIterator(other.itsLevelIterator)
+	: itsLevelOrder(other.itsLevelOrder)
+	, itsLevelIterator(other.itsLevelIterator)
 	, itsTimeIterator(other.itsTimeIterator)
 	, itsParamIterator(other.itsParamIterator)
+	, itsForecastTypeIterator(other.itsForecastTypeIterator)
+	, itsDimensions(other.itsDimensions)
+	, itsProducer(other.itsProducer)
+	, itsOriginDateTime(other.itsOriginDateTime)
+	, itsLocationIndex(other.itsLocationIndex)
+	, itsStepSizeOverOneByte(other.itsStepSizeOverOneByte)
 {
-	itsLevelOrder = other.itsLevelOrder;
-
-	itsDimensions = other.itsDimensions;
-
-	itsLocationIndex = other.itsLocationIndex;
-
-	itsProducer = other.itsProducer;
-
-	itsOriginDateTime = other.itsOriginDateTime;
-
-	itsStepSizeOverOneByte = other.itsStepSizeOverOneByte;
-
+	
 	if (other.itsBaseGrid)
 	{
 		if (other.itsBaseGrid->Type() == kRegularGrid)
@@ -69,12 +66,6 @@ info::info(const info& other)
 	itsLogger = logger_factory::Instance()->GetLog("info");
 }
 
-void info::Init()
-{
-	itsLevelOrder = kTopToBottom;
-	itsStepSizeOverOneByte = false;
-}
-
 std::ostream& info::Write(std::ostream& file) const
 {
 
@@ -87,10 +78,11 @@ std::ostream& info::Write(std::ostream& file) const
    	file << itsParamIterator;
    	file << itsLevelIterator;
    	file << itsTimeIterator;
+	file << itsForecastTypeIterator;
 
 	for (size_t i = 0; i < itsDimensions.size(); i++)
 	{
-		file << *itsDimensions[i];
+		if (itsDimensions[i]) file << *itsDimensions[i];
 	}
 	
 	return file;
@@ -101,52 +93,56 @@ void info::Create()
 	assert(itsTimeIterator.Size());
 	assert(itsParamIterator.Size());
 	assert(itsLevelIterator.Size());
+	assert(itsForecastTypeIterator.Size());
 
-	itsDimensions = vector<shared_ptr<grid>> (itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
+	itsDimensions = vector<shared_ptr<grid>> (itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
 	Reset();
 
 	assert(itsLevelOrder != kUnknownLevelOrder);
 
-	while (NextTime())
+	while (NextForecastType())
 	{
-		ResetLevel();
-
-		while (NextLevel())
+		while (NextTime())
 		{
-			ResetParam();
+			ResetLevel();
 
-			while (NextParam())
-				// Create empty placeholders
+			while (NextLevel())
 			{
-				assert(itsBaseGrid);
-				
-				shared_ptr<grid> g;
-				
-				if (itsBaseGrid->Type() == kRegularGrid)
-				{
-					g = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (itsBaseGrid.get()));
-					g->Data().Resize(dynamic_cast<regular_grid*> (itsBaseGrid.get())->Ni(), dynamic_cast<regular_grid*> (itsBaseGrid.get())->Nj());
-				}
-				else if (itsBaseGrid->Type() == kIrregularGrid)
-				{
-					g = make_shared<irregular_grid> (*dynamic_cast<irregular_grid*> (itsBaseGrid.get()));
-					g->Data().Resize(dynamic_cast<irregular_grid*> (itsBaseGrid.get())->Stations().size(), 1, 1);
-				}
-				else
-				{
-					itsLogger->Fatal("Unknown grid type");
-					exit(1);
-				}
-				
-				Grid(g);
+				ResetParam();
 
-				Data().MissingValue(kFloatMissing);
-				Data().Fill(kFloatMissing);
+				while (NextParam())
+					// Create empty placeholders
+				{
+					assert(itsBaseGrid);
+
+					shared_ptr<grid> g;
+
+					if (itsBaseGrid->Type() == kRegularGrid)
+					{
+						g = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (itsBaseGrid.get()));
+						g->Data().Resize(dynamic_cast<regular_grid*> (itsBaseGrid.get())->Ni(), dynamic_cast<regular_grid*> (itsBaseGrid.get())->Nj());
+					}
+					else if (itsBaseGrid->Type() == kIrregularGrid)
+					{
+						g = make_shared<irregular_grid> (*dynamic_cast<irregular_grid*> (itsBaseGrid.get()));
+						g->Data().Resize(dynamic_cast<irregular_grid*> (itsBaseGrid.get())->Stations().size(), 1, 1);
+					}
+					else
+					{
+						itsLogger->Fatal("Unknown grid type");
+						exit(1);
+					}
+
+					Grid(g);
+
+					Data().MissingValue(kFloatMissing);
+					Data().Fill(kFloatMissing);
+				}
 			}
 		}
 	}
-
+	
 	First();
 }
 
@@ -156,27 +152,30 @@ void info::ReGrid()
 
 	Reset();
 
-	while (NextTime())
+	while (NextForecastType())
 	{
-		ResetLevel();
-
-		while (NextLevel())
+		while (NextTime())
 		{
-			ResetParam();
+			ResetLevel();
 
-			while (NextParam())
-				// Create empty placeholders
+			while (NextLevel())
 			{
-				assert(Grid());
+				ResetParam();
 
-				auto newGrid = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (Grid()));
+				while (NextParam())
+					// Create empty placeholders
+				{
+					assert(Grid());
 
-				newDimensions[Index()] = newGrid;
+					auto newGrid = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (Grid()));
 
+					newDimensions[Index()] = newGrid;
+
+				}
 			}
 		}
 	}
-
+	
 	itsDimensions = move(newDimensions);
 	First(); // "Factory setting"
 }
@@ -184,37 +183,40 @@ void info::ReGrid()
 void info::Create(const grid* baseGrid)
 {
 
-	itsDimensions = vector<shared_ptr<grid>> (itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
+	itsDimensions = vector<shared_ptr<grid>> (itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
 	Reset();
 
-	while (NextTime())
+	while (NextForecastType())
 	{
-		ResetLevel();
-
-		while (NextLevel())
+		while (NextTime())
 		{
-			ResetParam();
+			ResetLevel();
 
-			while (NextParam())
-				// Create empty placeholders
+			while (NextLevel())
 			{
-				if (baseGrid->Type() == kRegularGrid)
+				ResetParam();
+
+				while (NextParam())
+					// Create empty placeholders
 				{
-					Grid(make_shared<regular_grid> (*dynamic_cast<const regular_grid*> (baseGrid)));
-				}
-				else if (baseGrid->Type() == kIrregularGrid)
-				{
-					Grid(make_shared<irregular_grid> (*dynamic_cast<const irregular_grid*> (baseGrid)));
-				}
-				else
-				{
-					throw runtime_error(ClassName() + ": Invalid grid type");
+					if (baseGrid->Type() == kRegularGrid)
+					{
+						Grid(make_shared<regular_grid> (*dynamic_cast<const regular_grid*> (baseGrid)));
+					}
+					else if (baseGrid->Type() == kIrregularGrid)
+					{
+						Grid(make_shared<irregular_grid> (*dynamic_cast<const irregular_grid*> (baseGrid)));
+					}
+					else
+					{
+						throw runtime_error(ClassName() + ": Invalid grid type");
+					}
 				}
 			}
 		}
 	}
-
+	
 	First();
 }
 
@@ -223,62 +225,74 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 	Reset();
 
-	otherInfo->ResetTime();
+	otherInfo->ResetForecastType();
+	
+	// X = forecast type
+	// Y = time
+	// Z = level
+	// Å = param
 
-	// X = time
-	// Y = level
-	// Z = param
-
-	while (otherInfo->NextTime())
+	while (otherInfo->NextForecastType())
 	{
-		if (itsTimeIterator.Add(otherInfo->Time())) // no duplicates
+
+		if (itsForecastTypeIterator.Add(otherInfo->ForecastType())) // no duplicates
 		{
-			ReIndex(SizeTimes()-1,SizeLevels(),SizeParams());
+			ReIndex(SizeForecastTypes()-1,SizeTimes(),SizeLevels(),SizeParams());
 		}
 
-		bool ret = Time(otherInfo->Time());
-
-		if (!ret)
+		if (!ForecastType(otherInfo->ForecastType()))
 		{
-			itsLogger->Fatal("Unable to set time, merge failed");
+			itsLogger->Fatal("Unable to set forecast type, merge failed");
 			exit(1);
 		}
 
-		otherInfo->ResetLevel();
-
-		while (otherInfo->NextLevel())
+		otherInfo->ResetTime();
+				
+		while (otherInfo->NextTime())
 		{
-			if (itsLevelIterator.Add(otherInfo->Level())) // no duplicates
+			if (itsTimeIterator.Add(otherInfo->Time())) // no duplicates
 			{
-				ReIndex(SizeTimes(),SizeLevels()-1,SizeParams());
+				ReIndex(SizeForecastTypes(),SizeTimes()-1,SizeLevels(),SizeParams());
 			}
 
-			ret = Level(otherInfo->Level());
-
-			if (!ret)
+			if (!Time(otherInfo->Time()))
 			{
-				itsLogger->Fatal("Unable to set level, merge failed");
+				itsLogger->Fatal("Unable to set time, merge failed");
 				exit(1);
 			}
 
-			otherInfo->ResetParam();
+			otherInfo->ResetLevel();
 
-			while (otherInfo->NextParam())
+			while (otherInfo->NextLevel())
 			{
-				if (itsParamIterator.Add(otherInfo->Param())) // no duplicates
+				if (itsLevelIterator.Add(otherInfo->Level())) // no duplicates
 				{
-					ReIndex(SizeTimes(),SizeLevels(),SizeParams()-1);
+					ReIndex(SizeForecastTypes(),SizeTimes(),SizeLevels()-1,SizeParams());
 				}
 
-				ret = Param(otherInfo->Param());
-
-				if (!ret)
+				if (!Level(otherInfo->Level()))
 				{
-					itsLogger->Fatal("Unable to set param, merge failed");
+					itsLogger->Fatal("Unable to set level, merge failed");
 					exit(1);
 				}
 
-				Grid(make_shared<regular_grid> (*dynamic_cast<regular_grid*> (otherInfo->Grid())));
+				otherInfo->ResetParam();
+
+				while (otherInfo->NextParam())
+				{
+					if (itsParamIterator.Add(otherInfo->Param())) // no duplicates
+					{
+						ReIndex(SizeForecastTypes(),SizeTimes(),SizeLevels(),SizeParams()-1);
+					}
+
+					if (!Param(otherInfo->Param()))
+					{
+						itsLogger->Fatal("Unable to set param, merge failed");
+						exit(1);
+					}
+
+					Grid(make_shared<regular_grid> (*dynamic_cast<regular_grid*> (otherInfo->Grid())));
+				}
 			}
 		}
 	}
@@ -302,7 +316,6 @@ void info::Producer(long theFmiProducerId)
 {
 	itsProducer = producer(theFmiProducerId);
 }
-
 
 void info::Producer(const producer& theProducer)
 {
@@ -449,6 +462,7 @@ void info::First()
 	FirstLevel();
 	FirstParam();
 	FirstTime();
+	FirstForecastType();
 	FirstLocation();
 }
 
@@ -458,6 +472,7 @@ void info::Reset()
 	ResetParam();
 	ResetTime();
 	ResetLocation();
+	ResetForecastType();
 }
 
 void info::ResetLevel()
@@ -572,6 +587,26 @@ void info::SetTime(const forecast_time& theTime)
 	itsTimeIterator.Replace(theTime);
 }
 
+bool info::NextForecastType()
+{
+	return itsForecastTypeIterator.Next();
+}
+
+size_t info::SizeForecastTypes() const
+{
+	return itsForecastTypeIterator.Size();
+}
+
+void info::ResetForecastType()
+{
+	itsForecastTypeIterator.Reset();
+}
+
+size_t info::ForecastTypeIndex() const
+{
+	return itsForecastTypeIterator.Index();
+}
+
 bool info::NextLocation()
 {
 	if (itsLocationIndex == kIteratorResetValue)
@@ -669,7 +704,7 @@ grid* info::Grid() const
 grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
 	assert(itsDimensions.size());
-	return itsDimensions[Index(timeIndex, levelIndex, paramIndex)].get();
+	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
 }
 
 unpacked& info::Data()
@@ -680,6 +715,7 @@ unpacked& info::Data()
 
 void info::Grid(shared_ptr<grid> d)
 {
+	assert(itsDimensions.size() > Index());
 	itsDimensions[Index()] = d;
 }
 
@@ -769,23 +805,32 @@ const vector<shared_ptr<grid>>& info::Dimensions() const
 	return itsDimensions;
 }
 
-void info::ReIndex(size_t oldXSize, size_t oldYSize, size_t oldZSize)
+void info::ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize)
 {
-	vector<shared_ptr<grid>> d (SizeTimes() * SizeLevels() * SizeParams());
+	vector<shared_ptr<grid>> theDimensions(SizeForecastTypes() * SizeTimes() * SizeLevels() * SizeParams());
 
-	for (size_t x = 0; x < oldXSize; x++)
+	for (size_t a = 0; a < oldForecastTypeSize; a++)
 	{
-		for (size_t y = 0; y < oldYSize; y++)
+		for (size_t b = 0; b < oldTimeSize; b++)
 		{
-			for (size_t z = 0; z < oldZSize; z++)
+			for (size_t c = 0; c < oldLevelSize; c++)
 			{
-				d[Index(x, y, z)] = itsDimensions[z * oldXSize * oldYSize + y * oldXSize + x];
-				
+				for (size_t d = 0; d < oldParamSize; d++)
+				{
+					size_t index =	d * oldForecastTypeSize * oldTimeSize * oldLevelSize +
+									c * oldForecastTypeSize * oldTimeSize +
+									b * oldForecastTypeSize +
+									a;
+					
+					size_t newIndex = Index(a,b,c,d);
+					theDimensions[newIndex] = itsDimensions[index];
+					
+				}
 			}
 		}
 	}
-
-	itsDimensions = d;
+	
+	itsDimensions = theDimensions;
 }
 
 point info::LatLon() const
@@ -813,4 +858,30 @@ station info::Station() const
 	}
 
 	return dynamic_cast<irregular_grid*> (Grid())->Station(itsLocationIndex);
+}
+
+void info::ForecastTypes(const std::vector<forecast_type>& theTypes)
+{
+	itsForecastTypeIterator = forecast_type_iter(theTypes);
+}
+
+void info::ForecastTypeIterator(const forecast_type_iter& theForecastTypeIterator)
+{
+	itsForecastTypeIterator = theForecastTypeIterator;
+}
+
+forecast_type info::ForecastType() const
+{
+	return itsForecastTypeIterator.At();
+}
+
+bool info::ForecastType(const forecast_type& theRequestedType)
+{
+	return itsForecastTypeIterator.Set(theRequestedType);
+}
+
+bool info::FirstForecastType()
+{
+	ResetForecastType();
+	return NextForecastType();
 }

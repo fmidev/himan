@@ -180,8 +180,6 @@ public:
 	bool UseCuda() const;
 	void UseCuda(bool theUseCuda);
 
-	HPDimensionType LeadingDimension() const;
-
 	void ThreadCount(short theThreadCount);
 	short ThreadCount() const;
 
@@ -259,8 +257,6 @@ protected:
 
 	unsigned short itsFileWaitTimeout; //<! Minutes
 	bool itsUseCuda;
-
-	HPDimensionType itsLeadingDimension;
 
 	short itsThreadCount;
 

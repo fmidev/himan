@@ -172,7 +172,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
+		throw runtime_error(string("Error parsing key file_write: ") + e.what());
 	}
 
 	/* Check read_data_from_database */
@@ -193,7 +193,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
+		throw runtime_error(string("Error parsing key read_data_from_database: ") + e.what());
 	}
 
 	/* Check file_wait_timeout */
@@ -211,40 +211,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
-	}
-
-	/* Check leading_dimension */
-
-	try
-	{
-		string theLeadingDimensionStr = pt.get<string>("leading_dimension");
-
-		HPDimensionType theLeadingDimension = kUnknownDimension;
-
-		if (theLeadingDimensionStr == "time")
-		{
-			theLeadingDimension = kTimeDimension;
-		}
-		else if (theLeadingDimensionStr == "level")
-		{
-			theLeadingDimension = kLevelDimension;
-		}
-		else
-		{
-			throw runtime_error(ClassName() + ": unsupported leading dimension: " + theLeadingDimensionStr);
-		}
-
-		conf->itsLeadingDimension = theLeadingDimension;
-
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
+		throw runtime_error(string("Error parsing key file_wait_timeout: ") + e.what());
 	}
 
 	// Check global use_cache option
@@ -265,7 +232,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
+		throw runtime_error(string("Error parsing key use_cache: ") + e.what());
 	}
 
 	// Check global file_type option
@@ -297,10 +264,70 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
+		throw runtime_error(string("Error parsing key file_type: ") + e.what());
 	}
 
+	// Check global forecast_type option
 
+	vector<forecast_type> theForecastTypes;
+	try
+	{
+		
+		vector<string> types = util::Split(pt.get<string>("forecast_type"), ",", false);
+		
+		BOOST_FOREACH(string& type, types)
+		{
+			boost::algorithm::to_lower(type);
+			
+			HPForecastType forecastType;
+			
+			if (boost::regex_search(type, boost::regex("pf")))
+			{
+				forecastType = kEpsPerturbation;
+				string list = "";
+				for (size_t i = 2; i < type.size(); i++) list += type[i];
+				
+				vector<string> members = util::Split(list, "-", true);
+				
+				BOOST_FOREACH(const string& member, members)
+				{
+					theForecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double> (member)));
+				}
+			}
+			else
+			{
+				if (type == "cf")
+				{
+					theForecastTypes.push_back(forecast_type(kEpsControl));
+				}
+				else if (type == "deterministic")
+				{
+					theForecastTypes.push_back(forecast_type(kDeterministic));
+				}
+				else
+				{
+					throw runtime_error("Invalid forecast_type: " + type);
+				}
+			}
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Default to deterministic
+		theForecastTypes.push_back(forecast_type(kDeterministic));
+	}
+	catch (const boost::exception& e)
+	{
+		// int errno = boost::get_error_info<boost::errinfo_errno> (&e);
+		throw runtime_error(string("Invalid forecast_type value"));
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing key forecast_type: ") + e.what());
+	}
+
+	baseInfo->ForecastTypes(theForecastTypes);
+	
 	/* 
 	 * Check processqueue.
 	 *
@@ -449,7 +476,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pc->UseCache(delayedUseCache);
 			pc->itsOutputFileType = delayedFileType;
 			pc->FileWriteOption(delayedFileWrite);
-			
+
 			if (plugin.second.empty())
 			{
 				throw runtime_error(ClassName() + ": plugin definition is empty");

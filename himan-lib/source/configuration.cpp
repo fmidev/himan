@@ -17,7 +17,6 @@ configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 	itsReadDataFromDatabase = true;
 	itsUseCuda = true;
 	itsFileWaitTimeout = 0;
-	itsLeadingDimension = kTimeDimension;
 	itsThreadCount = -1;
 	itsTargetGeomName = "";
 	itsConfigurationFile = "";
@@ -50,8 +49,7 @@ configuration::configuration(const configuration& other)
 	itsCudaDeviceId = other.itsCudaDeviceId;
 	
 	itsUseCache = other.itsUseCache;
-
-	itsLeadingDimension = other.itsLeadingDimension;
+	
 	itsThreadCount = other.itsThreadCount;
 
 	itsTargetGeomName = other.itsTargetGeomName;
@@ -81,7 +79,6 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsUseCuda__ " << itsUseCuda << std::endl;
 	file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
 	file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
-	file << "__itsLeadingDimension__ " << HPDimensionTypeToString.at(itsLeadingDimension) << std::endl;
 
 	file << "__itsThreadCount__ " << itsThreadCount << std::endl;
 
@@ -168,11 +165,6 @@ bool configuration::UseCuda() const
 void configuration::UseCuda(bool theUseCuda)
 {
 	itsUseCuda = theUseCuda;
-}
-
-HPDimensionType configuration::LeadingDimension() const
-{
-	return itsLeadingDimension;
 }
 
 short configuration::ThreadCount() const

@@ -147,7 +147,6 @@ void plugin_configuration::WriteStatistics()
 	cout << "Outfile type:\t\t" << HPFileTypeToString.at(itsOutputFileType) << endl;
 	cout << "File write:\t\t" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl;
 	cout << "Read from database:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
-	cout << "Leading dimension:\t" << HPDimensionTypeToString.at(itsLeadingDimension) << endl;
 
 	cout << "Source producer:\t" << SourceProducer().Id() << endl;
 	cout << "Target producer:\t" << itsInfo->Producer().Id() << endl;
