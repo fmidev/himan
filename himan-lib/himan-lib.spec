@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.3.30
+Version: 15.4.8
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -38,7 +38,7 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: gcc-c++ >= 4.8.2
 %endif
 
-BuildRequires: libsmartmet-newbase >= 14.8.6
+BuildRequires: libsmartmet-newbase >= 15.2.17
 BuildRequires: scons
 Provides: libhiman.so
 
@@ -65,6 +65,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-1.fmi
+- Major update to add forecast type based calculations
 * Mon Mar 30 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.3.30-1.fmi
 - New release
 * Wed Feb 18 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.2.18-1.fmi
