@@ -109,52 +109,62 @@ protected:
 	virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
 
 	/**
-	 * @brief Set leading dimension
+	 * @brief Set primary dimension
 	 *
-	 * Functionality of this function could be replaced just by exposing the variable
-	 * itsLeadingDimension to all child classes but as all other access to this
+	 * Functionality of this function could be replaced just by exposing the 
+	 * variables to all child classes but as all other access to this
 	 * variable is through functions (ie adjusting the dimensions), it is
 	 * better not to allow direct access to have some consistency.
 	 */
 
-	void Dimension(HPDimensionType theLeadingDimension)
-	{
-		itsLeadingDimension = theLeadingDimension;
-	}
+/*	void PrimaryDimension(HPDimensionType thePrimaryDimension);
+	HPDimensionType PrimaryDimension() const;
 
-	HPDimensionType Dimension() const
-	{
-		return itsLeadingDimension;
-	}
-
+	void SecondaryDimension(HPDimensionType theSecondaryDimension);
+	HPDimensionType SecondaryDimension() const;
+	
+	void TertiaryDimension(HPDimensionType theTertiaryDimension);
+	HPDimensionType TertiaryDimension() const;*/
+	
 	/**
-	 * @brief Advance leading dimension (time or level) by one, called by threads
+	 * @brief Advance primary dimension by one, called by threads.
 	 *
 	 * This function is protected with a mutex as it is responsible for distributing
-	 * time steps or levels for processing to all calling threads.
+	 * forecast types, time steps or levels for processing to all calling threads.
 	 *
 	 * @param myTargetInfo Threads own copy of target info
 	 * @return True if thread has more items to process
 	 */
 
-	bool AdjustLeadingDimension(const info_t& myTargetInfo);
+	//bool AdjustPrimaryDimension(const info_t& myTargetInfo);
 
 	/**
-	 * @brief Adjust non-leading dimension (time of level) by one, called by threads
+	 * @brief Advance secondary dimension by one, called by threads.
+	 *
+	 * This function is protected with a mutex as it is responsible for distributing
+	 * forecast types, time steps or levels for processing to all calling threads.
+	 *
+	 * @param myTargetInfo Threads own copy of target info
+	 * @return True if thread has more items to process
+	 */
+
+	//bool AdjustSecondaryDimension(const info_t& myTargetInfo);
+
+	/**
+	 * @brief Adjust secondary dimension by one, called by threads
 	 *
 	 * This function is not protected with a mutex since all threads have exclusive
-	 * access to their own info class instances' non-leading dimension. It is
+	 * access to their own info class instances' tertiary dimension. It is
 	 * implemented in base class however because the information what is the
-	 * leading dimension is located here.
+	 * primary and secondary dimension is located here.
 	 *
 	 * @param myTargetInfo Threads own copy of target info
 	 * @return
 	 */
-
-	bool AdjustNonLeadingDimension(const info_t& myTargetInfo);
-
 	
-	void ResetNonLeadingDimension(const info_t& myTargetInfo);
+	//bool AdjustTertiaryDimension(const info_t& myTargetInfo);
+	
+	//void ResetTertiaryDimension(const info_t& myTargetInfo);
  
 	/**
 	 * @brief Copy AB values from source to dest info
@@ -172,6 +182,8 @@ protected:
 
 	bool SwapTo(const info_t& myTargetInfo, HPScanningMode targetScanningMode);
 
+	bool Next(const info_t& myTargetInfo);
+
 	/**
 	 * @brief Write plugin contents to file.
 	 *
@@ -180,6 +192,7 @@ protected:
 	 *
 	 * @param targetInfo info-class instance holding the data
 	 */
+
 public:
 	virtual void WriteToFile(const info& targetInfo) const;
 protected:
@@ -321,10 +334,11 @@ protected:
 	 * @param theLevel Wanted level
 	 * @param theParams List of parameters (in a vector)
 	 * @param returnPacked Flag for returning data either packed or unpacked
+	 * @param theType
 	 * @return shared_ptr<info> on success, null-pointer if data not found
 	 */
 
-	info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams, bool returnPacked = false) const;
+	info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams, const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
 
 	/**
 	 * @brief Fetch source data with given requirements
@@ -363,10 +377,11 @@ protected:
 	 * @param theLevel Wanted level
 	 * @param theParams List of parameters (in a vector)
 	 * @param returnPacked Flag for returning data either packed or unpacked
+	 * @param theType
 	 * @return shared_ptr<info> on success, un-initialized shared_ptr if data not found
 	 */
 
-	info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked = false) const;
+	info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
 
 	/**
 	 * @brief Initialize compiled_plugin_base and set internal state.
@@ -381,11 +396,14 @@ protected:
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	std::unique_ptr<timer> itsTimer;
 	short itsThreadCount;
+	bool itsDimensionsRemaining;
 
 private:
 	std::unique_ptr<logger> itsBaseLogger;
 	bool itsPluginIsInitialized;
-	HPDimensionType itsLeadingDimension;
+	//HPDimensionType itsPrimaryDimension;
+	//HPDimensionType itsSecondaryDimension;
+	//HPDimensionType itsTertiaryDimension;
 
 };
 

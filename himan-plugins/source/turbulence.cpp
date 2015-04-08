@@ -75,6 +75,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
     forecast_time forecastTime = myTargetInfo->Time();
     level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
     level prevLevel, nextLevel;
 
@@ -105,17 +106,17 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
     info_t UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo;
 
-    prevHInfo = Fetch(forecastTime, prevLevel, HParam, false);
-    prevUInfo = Fetch(forecastTime, prevLevel, UParam, false);
-    prevVInfo = Fetch(forecastTime, prevLevel, VParam, false);
+    prevHInfo = Fetch(forecastTime, prevLevel, HParam, forecastType, false);
+    prevUInfo = Fetch(forecastTime, prevLevel, UParam, forecastType, false);
+    prevVInfo = Fetch(forecastTime, prevLevel, VParam, forecastType, false);
 
-	nextHInfo = Fetch(forecastTime, nextLevel, HParam, false);
-	nextUInfo = Fetch(forecastTime, nextLevel, UParam, false);
-	nextVInfo = Fetch(forecastTime, nextLevel, VParam, false);
+	nextHInfo = Fetch(forecastTime, nextLevel, HParam, forecastType, false);
+	nextUInfo = Fetch(forecastTime, nextLevel, UParam, forecastType, false);
+	nextVInfo = Fetch(forecastTime, nextLevel, VParam, forecastType, false);
 
-    HInfo = Fetch(forecastTime, forecastLevel, HParam, false);
-    UInfo = Fetch(forecastTime, forecastLevel, UParam, false);
-    VInfo = Fetch(forecastTime, forecastLevel, VParam, false);
+    HInfo = Fetch(forecastTime, forecastLevel, HParam, forecastType, false);
+    UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, false);
+    VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, false);
 
     if (!(prevHInfo && prevUInfo && prevVInfo && nextHInfo && nextUInfo && nextVInfo && HInfo && UInfo && VInfo))
     {

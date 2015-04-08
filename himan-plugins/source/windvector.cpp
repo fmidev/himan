@@ -180,16 +180,15 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string> (threadIndex));
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
-
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) +
 								" level " + static_cast<string> (forecastLevel));
 
-	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, useCudaInThisThread);
-	info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, useCudaInThisThread);
+	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
+	info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 	if (!UInfo || !VInfo)
 	{

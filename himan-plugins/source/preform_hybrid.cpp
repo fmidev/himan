@@ -219,6 +219,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
@@ -226,9 +227,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	// Source infos
 
-	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, false);
-	info_t TInfo = Fetch(forecastTime, surface0mLevel, TParam, false);
-	info_t RHInfo = Fetch(forecastTime, surface2mLevel, RHParam, false);
+	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, forecastType, false);
+	info_t TInfo = Fetch(forecastTime, surface0mLevel, TParam, forecastType, false);
+	info_t RHInfo = Fetch(forecastTime, surface2mLevel, RHParam, forecastType, false);
 
 	if (!RRInfo || !TInfo || !RHInfo)
 	{

@@ -86,6 +86,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
@@ -98,8 +99,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		f->DoInterpolation(false);
 		f->UseCache(false);
 
-		UInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, UParam, itsConfiguration->UseCudaForPacking());
-		VInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, VParam, itsConfiguration->UseCudaForPacking());
+		UInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
+		VInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
 		if (UInfo->Grid()->IsPackedData())

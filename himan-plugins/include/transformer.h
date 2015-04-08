@@ -46,7 +46,7 @@ public:
 
     virtual HPVersionNumber Version() const
     {
-        return HPVersionNumber(1, 0);
+        return HPVersionNumber(1, 1);
     }
 
 private:
@@ -67,6 +67,8 @@ private:
 	std::string itsTargetParam;
 	int itsTargetUnivID;
 	std::vector<level> itsSourceLevels;
+	bool itsApplyLandSeaMask;
+	double itsLandSeaMaskThreshold;
 
 };
 

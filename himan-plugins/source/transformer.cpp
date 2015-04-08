@@ -14,12 +14,18 @@
 #include "level.h"
 #include "forecast_time.h"
 
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "fetcher.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
+
 using namespace std;
 using namespace himan::plugin;
 
 #include "cuda_helper.h"
 
-transformer::transformer() : itsBase(0.0), itsScale(1.0), itsTargetUnivID(9999)
+transformer::transformer() : itsBase(0.0), itsScale(1.0), itsTargetUnivID(9999), itsApplyLandSeaMask(false), itsLandSeaMaskThreshold(0.5)
 {
 	itsClearTextFormula = "target_param = source_param * itsScale + itsBase";
 	itsCudaEnabledCalculation = true;
@@ -30,8 +36,6 @@ transformer::transformer() : itsBase(0.0), itsScale(1.0), itsTargetUnivID(9999)
 vector<himan::level> transformer::LevelsFromString(const string& levelType, const string& levelValues) const
 {
 	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
-
-	// can cause exception, what will happen then ?
 
 	vector<string> levelsStr = util::Split(levelValues, ",", true);
 
@@ -117,6 +121,19 @@ void transformer::SetAdditionalParameters()
 		exit(1);
 	}
 	
+	// Check apply land sea mask parameter
+	
+	if (itsConfiguration->Exists("apply_landsea_mask") && itsConfiguration->GetValue("apply_landsea_mask") == "true")
+	{
+		itsApplyLandSeaMask = true;
+		
+		// Check for optional threshold parameter
+		if (itsConfiguration->Exists("landsea_mask_threshold"))
+		{
+			itsLandSeaMaskThreshold = boost::lexical_cast<double> (itsConfiguration->GetValue("landsea_mask_threshold"));
+		}
+	}
+	
 	// looks useful to use this function to create source_levels
 	itsSourceLevels = LevelsFromString(itsSourceLevelType, SourceLevels);
 }
@@ -183,14 +200,25 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
-
-	info_t sourceInfo = Fetch(forecastTime, itsSourceLevels[myTargetInfo->LevelIndex()], InputParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-
-	if (!sourceInfo)
+	auto f = GET_PLUGIN(fetcher);
+	
+	if (itsApplyLandSeaMask)
+	{
+		f->ApplyLandSeaMask(true);
+		f->LandSeaMaskThreshold(itsLandSeaMaskThreshold);
+	}
+	
+	info_t sourceInfo;
+	
+	try
+	{
+		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->LevelIndex()], InputParam, forecastType, itsConfiguration->UseCudaForPacking());
+	}
+	catch (HPExceptionType& e)
 	{
 		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;

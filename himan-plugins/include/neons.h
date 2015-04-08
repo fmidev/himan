@@ -64,7 +64,7 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
 	std::vector<std::string> Files(search_options& options);
@@ -99,15 +99,6 @@ public:
 	std::string ProducerMetaData(long producerId, const std::string& attribute) const;
 
 private:
-
-	/**
-	 * @brief Initialize connection pool
-	 *
-	 * This function will be called just once even in a threaded environment
-	 * and it will set the maximum size of the connection pool.
-	 */
-
-	void InitPool();
 
 	/**
 	 * @brief Connect to database

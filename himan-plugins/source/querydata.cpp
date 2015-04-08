@@ -565,6 +565,11 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	newInfo->Params(theParams);
 
+	vector<forecast_type> ftypes;
+	ftypes.push_back(forecast_type(kDeterministic));
+	
+	newInfo->ForecastTypes(ftypes);
+	
 	// Grid
 
 	newGrid.ScanningMode(kBottomLeft);
@@ -603,6 +608,8 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	// Copy data
 
+	newInfo->FirstForecastType();
+	
 	for (newInfo->ResetTime(), qinfo.ResetTime(); newInfo->NextTime() && qinfo.NextTime();)
 	{
 		assert(newInfo->TimeIndex() == qinfo.TimeIndex());

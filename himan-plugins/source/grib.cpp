@@ -52,21 +52,26 @@ bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileW
 
 	else
 	{
-		anInfo.ResetTime();
-
-		while (anInfo.NextTime())
+		anInfo.ResetForecastType();
+		
+		while(anInfo.NextForecastType())
 		{
-			anInfo.ResetLevel();
+			anInfo.ResetTime();
 
-			while (anInfo.NextLevel())
+			while (anInfo.NextTime())
 			{
-				anInfo.ResetParam();
+				anInfo.ResetLevel();
 
-				while (anInfo.NextParam())
+				while (anInfo.NextLevel())
 				{
-					if (!WriteGrib(anInfo, outputFile, fileType, true))
+					anInfo.ResetParam();
+
+					while (anInfo.NextParam())
 					{
-						itsLogger->Error("Error writing grib to file");
+						if (!WriteGrib(anInfo, outputFile, fileType, true))
+						{
+							itsLogger->Error("Error writing grib to file");
+						}
 					}
 				}
 			}
@@ -307,7 +312,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 	}
 
 	auto aTimer = timer_factory::Instance()->GetTimer();
-	
+	aTimer->Start();
+
 	while (itsGrib->NextMessage())
 	{
 	
@@ -441,11 +447,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			}
 		}
 		
-		// Start timing after the last neons call so we get at least a 
-		// somewhat accurate timing result.
-		
-		aTimer->Start();
-
 		string unit = itsGrib->Message().ParameterUnit();
 		
 		if (unit == "K")
@@ -647,6 +648,25 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			ab = itsGrib->Message().PV(static_cast<size_t> (nv), static_cast<size_t> (lev));
 		}
 
+		forecast_type ty(static_cast<HPForecastType> (itsGrib->Message().ForecastType()), itsGrib->Message().ForecastTypeValue());
+		
+		if (options.ftype.Type() != ty.Type() || options.ftype.Value() != ty.Value())
+		{
+			itsLogger->Trace("Forecast type does not match");
+			
+			if (options.ftype.Type() != ty.Type())
+			{
+				itsLogger->Trace("Type: " + string(HPForecastTypeToString.at(options.ftype.Type())) + " (requested) vs " + string(HPForecastTypeToString.at(ty.Type())) + " (found)");
+			}
+			
+			if (options.ftype.Value() != ty.Value())
+			{
+				itsLogger->Trace("Value: " + string(boost::lexical_cast<string> (options.ftype.Value())) + " (requested) vs " + string(boost::lexical_cast<string> (ty.Value())) + " (found)");
+			}
+			
+			continue;
+		}
+		
 		// END VALIDATION OF SEARCH PARAMETERS
 
 		shared_ptr<info> newInfo (new info());
@@ -676,6 +696,12 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 
 		newInfo->Levels(theLevels);
 
+		vector<forecast_type> theForecastTypes;
+		
+		theForecastTypes.push_back(ty);
+				
+		newInfo->ForecastTypes(theForecastTypes);
+		
 		/*
 		 * Get area information from grib.
 		 */
@@ -819,6 +845,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 		newInfo->Param(p);
 		newInfo->Time(t);
 		newInfo->Level(l);
+		newInfo->ForecastType(ty);
 
 		unpacked dm(ni, nj, 1, kFloatMissing);
 

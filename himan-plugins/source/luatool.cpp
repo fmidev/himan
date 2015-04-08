@@ -119,11 +119,12 @@ void luatool::InitLua(info_t myTargetInfo)
 	// Set some variable that are needed in luatool calculations
 	// but are too hard or complicated to create in the lua side
 
-	globals(L)["luatool"] = boost::ref(this);
+	globals(L)["luatool"] = boost::ref(*this);
 	globals(L)["result"] = myTargetInfo;
 
 	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
 	globals(L)["current_level"] = level(myTargetInfo->Level());
+	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
 
 	auto h = GET_PLUGIN(hitool);
 
@@ -285,6 +286,15 @@ void BindEnum(lua_State* L)
 		[
 			value("kM", kM),
 			value("kHPa", kHPa)
+		],
+		class_<HPForecastType>("HPForecastType")
+			.enum_("constants")
+		[
+			value("kUnknownType", kUnknownType),
+			value("kDeterministic", kDeterministic),
+			value("kAnalysis", kAnalysis),
+			value("kEpsControl", kEpsControl),
+			value("kEpsPerturbation", kEpsPerturbation)
 		]
 	];
 }
@@ -819,6 +829,14 @@ void BindLib(lua_State* L)
 			.def("GetStepResolution", LUA_CMEMFN(HPTimeResolution, forecast_time, StepResolution, void))
 			.def("SetStepResolution", LUA_MEMFN(void, forecast_time, StepResolution, HPTimeResolution))
 		,
+		class_<forecast_type>("forecast_type")
+			.def(constructor<HPForecastType, double>())
+			.def("ClassName", &forecast_type::ClassName)
+			.def("GetType", LUA_CMEMFN(HPForecastType, forecast_type, Type, void))
+			.def("SetType", LUA_MEMFN(void, forecast_type, Type, HPForecastType))
+			.def("GetValue", LUA_CMEMFN(double, forecast_type, Value, void))
+			.def("SetValue", LUA_MEMFN(void, forecast_type, Value, double))
+		,
 		class_<point>("point")
 			.def(constructor<double, double>())
 			.def("ClassName", &point::ClassName)
@@ -913,8 +931,8 @@ void BindPlugins(lua_State* L)
 		class_<luatool, compiled_plugin_base>("luatool")
 			.def(constructor<>())
 			.def("ClassName", &luatool::ClassName)
-			.def("FetchRaw", &luatool::FetchRaw)
-			.def("Fetch", &luatool::Fetch)
+			// .def("FetchRaw", &luatool::FetchRaw)
+			.def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&))
 		,
 		class_<hitool, std::shared_ptr<hitool>>("hitool")
 			.def(constructor<>())
@@ -943,21 +961,16 @@ void BindPlugins(lua_State* L)
 
 void luatool::Run(info_t myTargetInfo, unsigned short threadIndex)
 {
-	while (AdjustLeadingDimension(myTargetInfo))
+	while (Next(myTargetInfo))
 	{
-		ResetNonLeadingDimension(myTargetInfo);
+		Calculate(myTargetInfo, threadIndex);
 
-		while (AdjustNonLeadingDimension(myTargetInfo))
+		if (itsConfiguration->StatisticsEnabled())
 		{
-			Calculate(myTargetInfo, threadIndex);
-
-			if (itsConfiguration->StatisticsEnabled())
-			{
-				itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-			}
+			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
+			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 		}
-	}
+	}	
 }
 
 void luatool::Finish() const
@@ -970,14 +983,21 @@ void luatool::Finish() const
 	}
 }
 
+/*
 std::shared_ptr<info> luatool::FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam) const
 {
 	return compiled_plugin_base::Fetch(theTime,theLevel,theParam,false);
 }
+*/
 
 luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const
 {
-	auto x = compiled_plugin_base::Fetch(theTime,theLevel,theParam,false);
+	return luatool::Fetch(theTime, theLevel, theParam, forecast_type(kDeterministic));
+}
+
+luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, const forecast_type& theType) const
+{
+	auto x = compiled_plugin_base::Fetch(theTime,theLevel,theParam,theType,false);
 
 	if (!x)
 	{

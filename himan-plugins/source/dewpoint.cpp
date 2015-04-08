@@ -58,15 +58,15 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 	
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
 	
 	double TBase = 0;
 	double RHScale = 1;
 		
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-	info_t RHInfo = Fetch(forecastTime, forecastLevel, RHParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
+	info_t RHInfo = Fetch(forecastTime, forecastLevel, RHParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 	if (!TInfo || !RHInfo)
 	{

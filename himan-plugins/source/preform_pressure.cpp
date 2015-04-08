@@ -133,28 +133,29 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	// Source infos
 
-	info_t TInfo = Fetch(forecastTime, groundLevel, TParam, false);
-	info_t T700Info = Fetch(forecastTime, P700, TParam, false);
-	info_t T850Info = Fetch(forecastTime, P850, TParam, false);
-	info_t T925Info = Fetch(forecastTime, P925, TParam, false);
+	info_t TInfo = Fetch(forecastTime, groundLevel, TParam, forecastType, false);
+	info_t T700Info = Fetch(forecastTime, P700, TParam, forecastType, false);
+	info_t T850Info = Fetch(forecastTime, P850, TParam, forecastType, false);
+	info_t T925Info = Fetch(forecastTime, P925, TParam, forecastType, false);
 
-	info_t RHInfo = Fetch(forecastTime, surface2mLevel, RHParam, false);
-	info_t RH700Info = Fetch(forecastTime, P700, RHParam, false);
-	info_t RH850Info = Fetch(forecastTime, P850, RHParam, false);
-	info_t RH925Info = Fetch(forecastTime, P925, RHParam, false);
+	info_t RHInfo = Fetch(forecastTime, surface2mLevel, RHParam, forecastType, false);
+	info_t RH700Info = Fetch(forecastTime, P700, RHParam, forecastType, false);
+	info_t RH850Info = Fetch(forecastTime, P850, RHParam, forecastType, false);
+	info_t RH925Info = Fetch(forecastTime, P925, RHParam, forecastType, false);
 
-	info_t W925Info = Fetch(forecastTime, P925, WParams, false);
-	info_t W850Info = Fetch(forecastTime, P850, WParams, false);
+	info_t W925Info = Fetch(forecastTime, P925, WParams, forecastType, false);
+	info_t W850Info = Fetch(forecastTime, P850, WParams, forecastType, false);
 
-	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParams, false);
-	info_t PInfo = Fetch(forecastTime, surface0mLevel, PParams, false);
+	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParams, forecastType, false);
+	info_t PInfo = Fetch(forecastTime, surface0mLevel, PParams, forecastType, false);
 
-	info_t SNRInfo = Fetch(forecastTime, surface0mLevel, SNRParam, false);
+	info_t SNRInfo = Fetch(forecastTime, surface0mLevel, SNRParam, forecastType, false);
 
 	if (!TInfo || !T700Info || !T850Info || !T925Info || !RHInfo || !RH700Info || !RH850Info || !RH925Info || !W925Info || !W850Info || !RRInfo || !PInfo || !SNRInfo)
 	{

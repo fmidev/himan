@@ -140,10 +140,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	puuskaInfo = Fetch(forecastTime,H10,GustParam,false);
-	T_LowestLevelInfo = Fetch(forecastTime,lowestHybridLevel,T_LowestLevelParam,false);
-	TopoInfo = Fetch(forecastTime,H0,TopoParam,false);
+	puuskaInfo = Fetch(forecastTime,H10,GustParam,forecastType,false);
+	T_LowestLevelInfo = Fetch(forecastTime,lowestHybridLevel,T_LowestLevelParam,forecastType,false);
+	TopoInfo = Fetch(forecastTime,H0,TopoParam,forecastType,false);
 
 	if (!puuskaInfo || !T_LowestLevelInfo || !TopoInfo)
 	{

@@ -80,15 +80,16 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	forecast_time forecastTime = myTargetInfo->Time();
 	forecast_time forecastTimePrev = myTargetInfo->Time();
 	forecastTimePrev.ValidDateTime().Adjust(timeResolution, -paramStep);
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	level forecastLevel = level(himan::kHeight, 0, "Height"); 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
-	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, false);
-	info_t PrevQInfo = Fetch(forecastTimePrev, forecastLevel, PrevQParam, false);
-	info_t U_SInfo = Fetch(forecastTime, forecastLevel, U_SParam, false);
-	info_t PInfo = Fetch(forecastTime, forecastLevel, PParam, false);
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
+	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, forecastType, false);
+	info_t PrevQInfo = Fetch(forecastTimePrev, forecastLevel, PrevQParam, forecastType, false);
+	info_t U_SInfo = Fetch(forecastTime, forecastLevel, U_SParam, forecastType, false);
+	info_t PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
 
 	// determine length of forecast step to calculate surface heat flux in W/m2
 	double forecastStepSize;

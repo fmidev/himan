@@ -113,8 +113,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const params PParam = { param("P-PA"), param("P-HPA") };
 	const params TDParam = { param("TD-C"), param("TD-K") };
 	
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
-
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
@@ -124,14 +122,14 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	double TBase = 0;
 	double TDBase  = 0;
 		
-	info_t TInfo = Fetch(forecastTime, forecastLevel, param("T-K"), itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	info_t TInfo = Fetch(forecastTime, forecastLevel, param("T-K"), myTargetInfo->ForecastType(), itsConfiguration->UseCudaForPacking());
 	info_t TDInfo, PInfo;
 
 	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
 	if (!isPressureLevel)
 	{
-		PInfo = Fetch(forecastTime, forecastLevel, PParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+		PInfo = Fetch(forecastTime, forecastLevel, PParam, myTargetInfo->ForecastType(), itsConfiguration->UseCudaForPacking());
 
 		if (PInfo && (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA"))
 		{
@@ -141,7 +139,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (itsThetaWCalculation || itsThetaECalculation)
 	{
-		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, myTargetInfo->ForecastType(), itsConfiguration->UseCudaForPacking());
 	}
 
 	if (!TInfo || (!isPressureLevel && !PInfo) || ((itsThetaWCalculation || itsThetaECalculation) && !TDInfo))

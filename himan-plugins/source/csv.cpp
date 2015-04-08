@@ -263,6 +263,11 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 	ret->Times(times);
 	ret->Params(params);
 	ret->Levels(levels);
+	
+	vector<forecast_type> ftypes;
+	ftypes.push_back(forecast_type(kDeterministic));
+	
+	ret->ForecastTypes(ftypes);
 
 	auto base = unique_ptr<grid> (new irregular_grid()); // placeholder
 	base->Projection(kLatLonProjection);

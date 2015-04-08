@@ -52,19 +52,20 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	double PScale = 1;
 
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 
 	info_t PInfo;
 	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
 	if(!isPressureLevel)
 	{
-		PInfo = Fetch(forecastTime, forecastLevel, PParam, false);
+		PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
 	}
 
 	if (!TInfo || (!isPressureLevel && !PInfo))

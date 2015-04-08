@@ -61,6 +61,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
@@ -117,19 +118,19 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		return;
 	}
 	
-	info_t Z1000Info = Fetch(forecastTime, Z1000Level, ZParam, false);
-	info_t Z850Info = Fetch(forecastTime, Z850Level, ZParam, false);
-	info_t T850Info = Fetch(forecastTime, Z850Level, TParam, false);
-	info_t NInfo = Fetch(forecastTime, NLevel, NParams, false);
-	info_t TInfo = Fetch(forecastTime, T2Level, TParam, false);
-	info_t CloudInfo = Fetch(forecastTime, NLevel, CloudParam, false);
-	info_t KindexInfo = Fetch(forecastTime, NLevel, KindexParam, false);
-	info_t RRInfo = Fetch(forecastTime, forecastLevel, RRParam, false);
+	info_t Z1000Info = Fetch(forecastTime, Z1000Level, ZParam, forecastType, false);
+	info_t Z850Info = Fetch(forecastTime, Z850Level, ZParam, forecastType, false);
+	info_t T850Info = Fetch(forecastTime, Z850Level, TParam, forecastType, false);
+	info_t NInfo = Fetch(forecastTime, NLevel, NParams, forecastType, false);
+	info_t TInfo = Fetch(forecastTime, T2Level, TParam, forecastType, false);
+	info_t CloudInfo = Fetch(forecastTime, NLevel, CloudParam, forecastType, false);
+	info_t KindexInfo = Fetch(forecastTime, NLevel, KindexParam, forecastType, false);
+	info_t RRInfo = Fetch(forecastTime, forecastLevel, RRParam, forecastType, false);
 
 	forecast_time nextTimeStep = forecastTime;
 	nextTimeStep.ValidDateTime().Adjust(myTargetInfo->Time().StepResolution(), paramStep);
 
-	info_t NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, false);
+	info_t NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, forecastType, false);
 
 	/* 
 	 * Sometimes we cannot find data for either time with the current forecast step.
@@ -161,11 +162,11 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			return;
 		}
 		
-		RRInfo = Fetch(forecastTime, forecastLevel, RRParam, false);
+		RRInfo = Fetch(forecastTime, forecastLevel, RRParam, forecastType, false);
 		nextTimeStep = forecastTime;
 		nextTimeStep.ValidDateTime().Adjust(myTargetInfo->Time().StepResolution(), paramStep);
 
-		NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, false);
+		NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, forecastType, false);
 	}
 	
 	if (!Z1000Info || !Z850Info || !T850Info || !NInfo || !TInfo || !CloudInfo || !KindexInfo || !RRInfo || !NextRRInfo)

@@ -61,16 +61,17 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, false);
-	info_t NInfo = Fetch(forecastTime, NKLevel, NParams, false);
-	info_t KInfo = Fetch(forecastTime, NKLevel, KParam, false);
-	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, false);
-	info_t RH850Info = Fetch(forecastTime, RH850Level, RHParam, false);
-	info_t RH700Info = Fetch(forecastTime, RH700Level, RHParam, false);
-	info_t RH500Info = Fetch(forecastTime, RH500Level, RHParam, false);
+	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, forecastType, false);
+	info_t NInfo = Fetch(forecastTime, NKLevel, NParams, forecastType, false);
+	info_t KInfo = Fetch(forecastTime, NKLevel, KParam, forecastType, false);
+	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, forecastType, false);
+	info_t RH850Info = Fetch(forecastTime, RH850Level, RHParam, forecastType, false);
+	info_t RH700Info = Fetch(forecastTime, RH700Level, RHParam, forecastType, false);
+	info_t RH500Info = Fetch(forecastTime, RH500Level, RHParam, forecastType, false);
 
 	if (!T0mInfo || !NInfo || !KInfo || !T850Info || !RH850Info || !RH700Info || !RH500Info)
 	{

@@ -28,6 +28,7 @@ struct search_options
     himan::param param;
     himan::level level;
     himan::producer prod;
+	himan::forecast_type ftype;
     const std::shared_ptr<const himan::configuration> configuration;
 
 	search_options(const himan::forecast_time& theTime,
@@ -39,8 +40,25 @@ struct search_options
 	, param(theParam)
 	, level(theLevel)
 	, prod(theProducer)
+	, ftype(forecast_type(kDeterministic))
 	, configuration(theConf)
 	{}
+	
+	search_options(const himan::forecast_time& theTime,
+					const himan::param& theParam,
+					const himan::level& theLevel,
+					const himan::producer& theProducer,
+					const himan::forecast_type& theForecastType,
+					std::shared_ptr<const himan::configuration> theConf)
+	: time(theTime)
+	, param(theParam)
+	, level(theLevel)
+	, prod(theProducer)
+	, ftype(theForecastType)
+	, configuration(theConf)
+	{}
+	
+	
 };
 
 } // namespace plugins

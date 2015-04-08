@@ -64,20 +64,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		itsFastMode = true;
 	}
-	else if (!itsUseGeopotential)
-	{
-		// When doing exact calculation we must do them sequentially starting from
-		// surface closest to ground because every surface's value is depended
-		// on the surface below it. Therefore we cannot parallelize the calculation
-		// on level basis.
-		
-		if (Dimension() != kTimeDimension)
-		{
-			itsLogger->Info("Changing leading_dimension to time");
-			Dimension(kTimeDimension);
-		}
-	}
-
+	
 	Start();
 	
 }
@@ -115,6 +102,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
@@ -139,33 +127,33 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	if (itsUseGeopotential)
 	{
-		GPInfo = Fetch(forecastTime, forecastLevel, ZParam, false);
-		zeroGPInfo = Fetch(forecastTime, H0, ZParam, false);
+		GPInfo = Fetch(forecastTime, forecastLevel, ZParam, forecastType, false);
+		zeroGPInfo = Fetch(forecastTime, H0, ZParam, forecastType, false);
 	}
 	else
 	{
 		if (!firstLevel)
 		{
-			prevTInfo = Fetch(forecastTime, prevLevel, TParam, false);
-			prevPInfo = Fetch(forecastTime, prevLevel, PParam, false);
-			prevHInfo = Fetch(forecastTime, prevLevel, param("HL-M"), false);
+			prevTInfo = Fetch(forecastTime, prevLevel, TParam, forecastType, false);
+			prevPInfo = Fetch(forecastTime, prevLevel, PParam, forecastType, false);
+			prevHInfo = Fetch(forecastTime, prevLevel, param("HL-M"), forecastType, false);
 		}
 		else
 		{
 			if ( itsConfiguration->SourceProducer().Id() == 131 )
 			{
-				prevPInfo = Fetch(forecastTime, H0, GPParam, false);
-				prevTInfo = Fetch(forecastTime, H2, TParam, false);
+				prevPInfo = Fetch(forecastTime, H0, GPParam, forecastType, false);
+				prevTInfo = Fetch(forecastTime, H2, TParam, forecastType, false);
 			}
 			else
 			{
-				prevPInfo = Fetch(forecastTime, H0, GPParam, false);
-				prevTInfo = Fetch(forecastTime, H2, TGParam, false);
+				prevPInfo = Fetch(forecastTime, H0, GPParam, forecastType, false);
+				prevTInfo = Fetch(forecastTime, H2, TGParam, forecastType, false);
 			}
 		}
 
-		PInfo = Fetch(forecastTime, forecastLevel, PParam, false);
-		TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
+		PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
+		TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 
 	}
 

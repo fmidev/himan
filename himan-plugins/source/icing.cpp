@@ -51,13 +51,14 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, false);
-	info_t VvInfo = Fetch(forecastTime, forecastLevel, VvParam, false);
-	info_t ClInfo = Fetch(forecastTime, forecastLevel, ClParam, false);
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
+	info_t VvInfo = Fetch(forecastTime, forecastLevel, VvParam, forecastType, false);
+	info_t ClInfo = Fetch(forecastTime, forecastLevel, ClParam, forecastType, false);
 
 	if (!TInfo || !VvInfo || !ClInfo)
 	{

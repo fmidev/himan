@@ -585,7 +585,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 		wantedLevel = level(kTopOfAtmosphere, 0, "TOP");
 	}
 
-	shared_ptr<info> SumInfo = Fetch(wantedTime, wantedLevel, params);
+	shared_ptr<info> SumInfo = Fetch(wantedTime, wantedLevel, params, myTargetInfo->ForecastType());
 
 	// If model does not provide data for timestep 0, emulate it
 	// by providing a zero-grid

@@ -63,13 +63,11 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
-
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
@@ -86,13 +84,13 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-	info_t VVInfo = Fetch(forecastTime, forecastLevel, VVParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	info_t VVInfo = Fetch(forecastTime, forecastLevel, VVParam, forecastType, itsConfiguration->UseCudaForPacking());
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 	if (!isPressureLevel)
 	{
 		// Source info for P
-		PInfo = Fetch(forecastTime, forecastLevel, PParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+		PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, itsConfiguration->UseCudaForPacking());
 	}
 
 	if (!VVInfo || !TInfo || (!isPressureLevel && !PInfo))

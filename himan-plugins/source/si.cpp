@@ -108,11 +108,12 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	unique_ptr<logger> myThreadedLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("siThread #" + boost::lexical_cast<string> (threadIndex)));
 
-	ResetNonLeadingDimension(myTargetInfo);
+	//ResetTertiaryDimension(myTargetInfo);
 
 	myTargetInfo->FirstParam();
 
-	while (AdjustNonLeadingDimension(myTargetInfo))
+	while(false)
+	//while (AdjustTertiaryDimension(myTargetInfo))
 	{
 
 		myThreadedLogger->Debug("Calculating time " + static_cast<string> (myTargetInfo->Time().ValidDateTime()) +

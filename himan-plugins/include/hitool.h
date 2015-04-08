@@ -15,6 +15,7 @@
 #include "plugin_configuration.h"
 #include "modifier.h"
 #include "forecast_time.h"
+#include "forecast_type.h"
 
 namespace himan
 {
@@ -427,6 +428,13 @@ public:
 	void Time(const forecast_time& theTime);
 
 	/**
+	 * @brief Set current forecast type. Default is deterministic forecast
+     * @param theType
+     */
+	
+	void ForecastType(const forecast_type& theType);
+	
+	/**
 	 * @brief Set configuration
 	 * @param conf
 	 */
@@ -463,7 +471,7 @@ private:
 							const std::vector<double>& lastLevelValue = std::vector<double>(),
 							const std::vector<double>& findValue = std::vector<double>()) const;
 
-	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime) const;
+	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime, const forecast_type& theType) const;
 
 	/**
 	 * @brief Approximate heights (in meters) for each model level.
@@ -474,6 +482,7 @@ private:
 
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	forecast_time itsTime;
+	forecast_type itsForecastType;
 
 	/**
 	 * @brief Height from ground can be either meters (HPParameterUnit::kM) or hectopascals (kHPa)

@@ -71,12 +71,13 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	info_t groundInfo = Fetch(forecastTime, ground, groundParam, false);
-	info_t dewInfo = Fetch(forecastTime, h2m, dewParam, false);
-	info_t windInfo = Fetch(forecastTime, h10m, windParam, false);
+	info_t groundInfo = Fetch(forecastTime, ground, groundParam, forecastType, false);
+	info_t dewInfo = Fetch(forecastTime, h2m, dewParam, forecastType, false);
+	info_t windInfo = Fetch(forecastTime, h10m, windParam, forecastType, false);
 
 	if (!groundInfo || !dewInfo || !windInfo)
 	{

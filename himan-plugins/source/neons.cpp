@@ -14,11 +14,13 @@
 #include "unistd.h" // getuid())
 #include "regular_grid.h"
 
+void InitPool();
+
 using namespace std;
 using namespace himan::plugin;
 
 const int MAX_WORKERS = 16;
-once_flag oflag;
+static std::once_flag oflag;
 
 neons::neons() : itsInit(false), itsNeonsDB()
 {
@@ -27,29 +29,20 @@ neons::neons() : itsInit(false), itsNeonsDB()
 	// no lambda functions for gcc 4.4 :(
 	// call_once(oflag, [](){ NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS); });
 
-	call_once(oflag, &himan::plugin::neons::InitPool, this);
+	std::call_once(oflag, &InitPool);
+
 }
 
-void neons::InitPool()
+void InitPool()
 {
 	NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
-
 	uid_t uid = getuid();
 	
 	if (uid == 1459) // weto
 	{
-		char* base = getenv("MASALA_BASE");
-
-		if (base && string(base) == "/masala")
-		{
-			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
-			NFmiNeonsDBPool::Instance()->Username("wetodb");
-			NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
-		}
-		else
-		{
-			itsLogger->Warning("Program executed as uid 1459 ('weto') but MASALA_BASE not set");
-		}
+		NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+		NFmiNeonsDBPool::Instance()->Username("wetodb");
+		NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
 	}
 }
 
@@ -93,6 +86,23 @@ vector<string> neons::Files(search_options& options)
 		return files;
 	}
 
+	string neonsForecastType = "";
+
+	switch (options.ftype.Type())
+	{
+		default:
+		case kDeterministic:
+		case kAnalysis:
+			neonsForecastType = "0";
+			break;
+		case kEpsControl:
+			neonsForecastType = "3";
+			break;
+		case kEpsPerturbation:
+			neonsForecastType = "4_" + boost::lexical_cast<string> (options.ftype.Value());
+			break;
+	}
+	
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
 		string tablename = gridgeoms[i][1];
@@ -114,6 +124,8 @@ vector<string> neons::Files(search_options& options)
 				   "AND lvl_type = upper('"+level_name+"') "
 				   "AND lvl1_lvl2 = " +levelvalue+" "
 				   "AND fcst_per = "+boost::lexical_cast<string> (options.time.Step())+" "
+// eps-specifier commented out until all data is loaded with grid_to_neons
+//				   "AND eps_specifier = '"+neonsForecastType+"' "
 				   "ORDER BY dset_id, fcst_per, lvl_type, lvl1_lvl2";
 
 		itsNeonsDB->Query(query);

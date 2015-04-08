@@ -49,11 +49,12 @@ void roughness::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	info_t RoughTInfo = Fetch(forecastTime, forecastLevel, RoughTParam, false);
-	info_t RoughVInfo = Fetch(forecastTime, forecastLevel, RoughVParam, false);
+	info_t RoughTInfo = Fetch(forecastTime, forecastLevel, RoughTParam, forecastType, false);
+	info_t RoughVInfo = Fetch(forecastTime, forecastLevel, RoughVParam, forecastType, false);
 
 	if (!RoughTInfo || !RoughVInfo)
 	{

@@ -53,10 +53,9 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("relative_humidityThread #" + boost::lexical_cast<string> (threadIndex));
 	
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(threadIndex);
-
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
@@ -67,7 +66,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	// Temperature is always needed
 
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 	if (!TInfo)
 	{
@@ -79,12 +78,12 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	bool calculateWithTD = false;
 
-	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, forecastType, itsConfiguration->UseCudaForPacking());
 	info_t PInfo;
 	
 	if (!isPressureLevel)
 	{
-		PInfo = Fetch(forecastTime, forecastLevel, PParams, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+		PInfo = Fetch(forecastTime, forecastLevel, PParams, forecastType, itsConfiguration->UseCudaForPacking());
 	}
 
 	if (!QInfo || (!isPressureLevel && !PInfo))
@@ -97,7 +96,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	
 	if (calculateWithTD)
 	{
-		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, itsConfiguration->UseCudaForPacking() && useCudaInThisThread);
+		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, forecastType, itsConfiguration->UseCudaForPacking());
 		
 		if (!TDInfo)
 		{

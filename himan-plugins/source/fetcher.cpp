@@ -50,6 +50,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 										forecast_time requestedTime,
 										level requestedLevel,
 										const params& requestedParams,
+										forecast_type requestedType,
 										bool readPackedData)
 {
 	unsigned int waitedSeconds = 0;
@@ -62,7 +63,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		{
 			try
 			{
-				ret = Fetch(config, requestedTime, requestedLevel, requestedParams[i], readPackedData, false);
+				ret = Fetch(config, requestedTime, requestedLevel, requestedParams[i], requestedType, readPackedData, false);
 				
 				return ret;
 			}
@@ -128,6 +129,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 										forecast_time requestedTime,
 										level requestedLevel,
 										param requestedParam,
+										forecast_type requestedType,
 										bool readPackedData,
 										bool controlWaitTime)
 {
@@ -168,7 +170,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 				}
 			}			
 			
-			search_options opts (requestedTime, requestedParam, newLevel, sourceProd, config);
+			search_options opts (requestedTime, requestedParam, newLevel, sourceProd, requestedType, config);
 
 			theInfos = FetchFromProducer(opts, readPackedData, (waitedSeconds == 0));
 		}
@@ -259,7 +261,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		itsApplyLandSeaMask = false;
 	
-		if (!ApplyLandSeaMask(config, *theInfos[0], requestedTime))
+		if (!ApplyLandSeaMask(config, *theInfos[0], requestedTime, requestedType))
 		{
 			itsLogger->Warning("Land sea mask apply failed");
 		}
@@ -843,15 +845,19 @@ bool fetcher::Interpolate(himan::info& baseInfo, vector<info_t>& theInfos) const
 	return true;
 }
 
-bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime)
+bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime, forecast_type& requestedType)
 {
 	raw_time originTime = requestedTime.OriginDateTime();
 	forecast_time firstTime(originTime, originTime); 
 	
 	try
 	{
-		auto lsmInfo = Fetch(config, firstTime, level(kHeight, 0), param("LC-0TO1"), false, false);
-
+		itsApplyLandSeaMask = false;
+		
+		auto lsmInfo = Fetch(config, firstTime, level(kHeight, 0), param("LC-0TO1"), requestedType, false, false);
+		
+		itsApplyLandSeaMask = true;
+		
 		lsmInfo->First();
 			
 		assert(*lsmInfo->Grid() == *theInfo.Grid());
@@ -888,6 +894,7 @@ bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, in
 	}
 	catch (HPExceptionType& e)
 	{
+		itsApplyLandSeaMask = true;
 		return false;
 	}
 	

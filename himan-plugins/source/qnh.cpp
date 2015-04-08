@@ -120,13 +120,14 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	// Current time and level
 	
-	info_t topoInfo = Fetch(forecastTime, groundLevel, topoParam);  // surface elevation (as geopotential [m2/s2]) from database
-	info_t pressureInfo = Fetch(forecastTime, groundLevel, PParams);  // ground level (= 0 m) pressure [Pa] from database
+	info_t topoInfo = Fetch(forecastTime, groundLevel, topoParam, forecastType);  // surface elevation (as geopotential [m2/s2]) from database
+	info_t pressureInfo = Fetch(forecastTime, groundLevel, PParams, forecastType);  // ground level (= 0 m) pressure [Pa] from database
 
 	if (!topoInfo||!pressureInfo)
 	{

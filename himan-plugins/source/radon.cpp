@@ -92,6 +92,8 @@ vector<string> radon::Files(search_options& options)
 		return files;
 	}
 	
+	string forecastTypeValue = (options.ftype.Type() == kEpsPerturbation) ? boost::lexical_cast<string> (options.ftype.Value()) : "-1";
+			
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
 		string tablename = gridgeoms[i][1];
@@ -107,6 +109,8 @@ vector<string> radon::Files(search_options& options)
 				   "AND level_value = "+levelvalue+" "
 				   "AND forecast_period = '"+util::MakeSQLInterval(options.time)+"' "
 				   "AND geometry_id = "+geomid+" "
+				   "AND forecast_type_id = "+boost::lexical_cast<string> (options.ftype.Type())+" "
+				   "AND forecast_type_value = "+forecastTypeValue+" "
 				   "ORDER BY forecast_period, level_id, level_value";
 
 		itsRadonDB->Query(query);
@@ -154,14 +158,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	himan::point firstGridPoint = g->FirstGridPoint();
 
-	/*
-	 * pas_latitude and pas_longitude cannot be checked programmatically
-	 * since f.ex. in the case for GFS in radon we have value 500 and
-	 * by calculating we have value 498. But not check these columns should
-	 * not matter as long as row_cnt, col_cnt, lat_orig and lon_orig match
-	 * (since pas_latitude and pas_longitude are derived from these anyway)
-	 */
-
 	query 	<< "SELECT geometry_id "
 			<< "FROM geom_v "
 			<< "WHERE nj = " << g->Nj()
@@ -205,8 +201,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	string table_name = row[1];
 	string dset_id = row[0];
 
-	string eps_specifier = "0";
-
 	query.str("");
 
 	string host = "undetermined host";
@@ -219,19 +213,23 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	}
 
 	/*
-	 * We have our own error loggings for unique key violations
+	 * We have our own error logging for unique key violations
 	 */
 	
 	// itsRadonDB->Verbose(false);
+	
+	double forecastTypeValue = (resultInfo.ForecastType().Type() == kEpsPerturbation) ? resultInfo.ForecastType().Value() : -1.;
+	
 	query  << "INSERT INTO data." << table_name
-		   << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, forecast_period, forecast_type_id, file_location, file_server) "
+		   << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, forecast_period, forecast_type_id, forecast_type_value, file_location, file_server) "
 		   << "SELECT " << resultInfo.Producer().Id() << ", "
 		   << "'" << resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "', "
 		   << "'" << geom_id << "', "
 		   << "param.id, level.id, "
 		   << resultInfo.Level().Value() << ", "
 		   << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
-		   << "1, "
+		   << HPForecastTypeToString.at(resultInfo.ForecastType().Type()) << ", "
+		   << forecastTypeValue << ","
 		   << "'" << theFileName << "', "
 		   << "'" << host << "' "
 		   << "FROM param, level "

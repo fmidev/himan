@@ -95,11 +95,12 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 	
-	info_t HInfo = Fetch(forecastTime, HLevel, HParam, false);
-	info_t TInfo = Fetch(forecastTime, HLevel, TParam, false);
+	info_t HInfo = Fetch(forecastTime, HLevel, HParam, forecastType, false);
+	info_t TInfo = Fetch(forecastTime, HLevel, TParam, forecastType, false);
 
 	if (!HInfo || !TInfo)
 	{
@@ -238,11 +239,11 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		prevLevel = curLevel;
 		curLevel = level(himan::kHybrid, static_cast<float> (levelNumber), "HYBRID");
 			
-		HInfo = Fetch(forecastTime, curLevel, HParam, false);
-		TInfo = Fetch(forecastTime, curLevel, TParam, false);
+		HInfo = Fetch(forecastTime, curLevel, HParam, forecastType, false);
+		TInfo = Fetch(forecastTime, curLevel, TParam, forecastType, false);
 			
-		prevHInfo = Fetch(forecastTime, prevLevel, HParam, false);
-		prevTInfo = Fetch(forecastTime, prevLevel, TParam, false);
+		prevHInfo = Fetch(forecastTime, prevLevel, HParam, forecastType, false);
+		prevTInfo = Fetch(forecastTime, prevLevel, TParam, forecastType, false);
 
 
 		firstLevel = false;

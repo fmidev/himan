@@ -80,6 +80,7 @@ pair<double,double> minmax(const vector<double>& vec)
 
 hitool::hitool()
 	: itsTime()
+	, itsForecastType(kDeterministic)
 	, itsHeightUnit(kM)
 {
     itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("hitool"));
@@ -87,6 +88,7 @@ hitool::hitool()
 
 hitool::hitool(shared_ptr<plugin_configuration> conf)
 	: itsTime()
+	, itsForecastType(kDeterministic)
 	, itsHeightUnit(kM)
 {
     itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("hitool"));
@@ -389,7 +391,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		try
 		{
-			data = GetData(currentLevel, wantedParam, itsTime);
+			data = GetData(currentLevel, wantedParam, itsTime, itsForecastType);
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -428,7 +430,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	return mod->Result();
 }
 
-valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	const forecast_time& wantedTime) const
+valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	const forecast_time& wantedTime, const forecast_type& wantedType) const
 {
 
 	shared_ptr<info> values, heights;
@@ -456,7 +458,8 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 			values = f->Fetch(itsConfiguration,
 								wantedTime,
 								wantedLevel,
-								wantedParam);
+								wantedParam,
+								wantedType);
 		}
 
 		if (!heights)
@@ -464,7 +467,8 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 			heights = f->Fetch(itsConfiguration,
 								wantedTime,
 								wantedLevel,
-								heightParam);
+								heightParam,
+								wantedType);
 		}
 	}
 	catch (HPExceptionType e)
@@ -1067,6 +1071,11 @@ vector<double> hitool::PlusMinusArea(const param& wantedParam,
 void hitool::Time(const forecast_time& theTime)
 {
 	itsTime = theTime;
+}
+
+void hitool::ForecastType(const forecast_type& theForecastType)
+{
+	itsForecastType = theForecastType;
 }
 
 void hitool::Configuration(shared_ptr<const plugin_configuration> conf)

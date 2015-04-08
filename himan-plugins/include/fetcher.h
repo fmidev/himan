@@ -70,7 +70,12 @@ public:
 	 * @return Data for first param found.
 	 */
 
-	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime, level requestedLevel, const params& requestedParams, bool readPackedData = false);
+	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, 
+		forecast_time requestedValidTime, 
+		level requestedLevel, 
+		const params& requestedParams, 
+		forecast_type requestedType = forecast_type(kDeterministic),
+		bool readPackedData = false);
 
 	/**
 	 * @brief Fetch data based on given arguments.
@@ -90,7 +95,13 @@ public:
 	 * @return shared_ptr to info-instance
 	 */
 
-	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime, level requestedLevel, param requestedParam, bool readPackedData = false, bool controlWaitTime = true);
+	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, 
+		forecast_time requestedValidTime, 
+		level requestedLevel, 
+		param requestedParam, 
+		forecast_type requestedType = forecast_type(kDeterministic),
+		bool readPackedData = false, 
+		bool controlWaitTime = true);
 
 	/**
 	 * @brief Set flag for level transform
@@ -126,7 +137,7 @@ private:
 	 * @return True if masking is successful
 	 */
 	
-	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime);
+	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime, forecast_type& requestedType);
 
 	std::vector<std::shared_ptr<info>> FromCache(search_options& options);
 

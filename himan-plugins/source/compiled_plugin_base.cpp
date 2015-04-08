@@ -28,77 +28,50 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-const double kInterpolatedValueEpsilon = 0.00001; //<! Max difference between two grid points (if smaller, points are considered the same)
-mutex itsAdjustDimensionMutex;
+recursive_mutex dimensionMutex;
 
-compiled_plugin_base::compiled_plugin_base() : itsPluginIsInitialized(false)
+compiled_plugin_base::compiled_plugin_base() : itsDimensionsRemaining(true), itsPluginIsInitialized(false)
 {
 	itsBaseLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("compiled_plugin_base"));
 }
 
-bool compiled_plugin_base::AdjustLeadingDimension(const info_t& myTargetInfo)
+bool compiled_plugin_base::Next(const info_t& myTargetInfo)
 {
-
-	lock_guard<mutex> lock(itsAdjustDimensionMutex);
-
-	// Leading dimension can be: time or level
-
-	if (itsLeadingDimension == kTimeDimension)
+	lock_guard<recursive_mutex> lock(dimensionMutex);
+	
+	if (!itsDimensionsRemaining)
 	{
-		if (!itsInfo->NextTime())
-		{
-			return false;
-		}
-
+		return false;
+	}
+	
+	while (itsInfo->NextLevel())
+	{
+		return myTargetInfo->Level(itsInfo->Level());
+	}
+	
+	itsInfo->ResetLevel();
+	
+	while (itsInfo->NextTime())
+	{
 		myTargetInfo->Time(itsInfo->Time());
+		return Next(myTargetInfo);
 	}
-	else if (itsLeadingDimension == kLevelDimension)
+	
+	itsInfo->FirstTime();
+	myTargetInfo->Time(itsInfo->Time());
+	
+	while (itsInfo->NextForecastType())
 	{
-		if (!itsInfo->NextLevel())
-		{
-			return false;
-		}
+		myTargetInfo->ForecastType(itsInfo->ForecastType());
+		return Next(myTargetInfo);
+	}
+	
+	// future threads calling for new dimensions aren't getting any
 
-		myTargetInfo->Level(itsInfo->Level());
-	}
-	else
-	{
-		throw runtime_error(ClassName() + ": Invalid dimension type: " + boost::lexical_cast<string> (itsLeadingDimension));
-	}
-
-	return true;
-}
-
-bool compiled_plugin_base::AdjustNonLeadingDimension(const info_t& myTargetInfo)
-{
-	if (itsLeadingDimension == kTimeDimension)
-	{
-		return myTargetInfo->NextLevel();
-	}
-	else if (itsLeadingDimension == kLevelDimension)
-	{
-		return myTargetInfo->NextTime();
-	}
-	else
-	{
-		throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
-	}
-}
-
-void compiled_plugin_base::ResetNonLeadingDimension(const info_t& myTargetInfo)
-{
-	if (itsLeadingDimension == kTimeDimension)
-	{
-		myTargetInfo->ResetLevel();
-	}
-	else if (itsLeadingDimension == kLevelDimension)
-	{
-		myTargetInfo->ResetTime();
-	}
-	else
-	{
-		throw runtime_error(ClassName() + ": unsupported leading dimension: " + boost::lexical_cast<string> (itsLeadingDimension));
-	}
+	itsDimensionsRemaining = false;
+	
+	return false;
+	
 }
 
 bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourceInfo)
@@ -257,32 +230,25 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 	}
 
 	itsInfo = itsConfiguration->Info();
-
-	itsLeadingDimension = itsConfiguration->LeadingDimension();
 	
 	itsPluginIsInitialized = true;
 }
 
 void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 {
-	while (AdjustLeadingDimension(myTargetInfo))
+	while (Next(myTargetInfo))
 	{
-		ResetNonLeadingDimension(myTargetInfo);
+		Calculate(myTargetInfo, threadIndex);
 
-		while (AdjustNonLeadingDimension(myTargetInfo))
+		if (itsConfiguration->FileWriteOption() != kSingleFile)
 		{
-			Calculate(myTargetInfo, threadIndex);
+			WriteToFile(*myTargetInfo);
+		}
 
-			if (itsConfiguration->FileWriteOption() != kSingleFile)
-			{
-				WriteToFile(*myTargetInfo);
-			}
-
-			if (itsConfiguration->StatisticsEnabled())
-			{
-				itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-			}
+		if (itsConfiguration->StatisticsEnabled())
+		{
+			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
+			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 		}
 	}
 }
@@ -398,29 +364,18 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 	itsInfo->Create();
 
-	/*
-	 * Iterators must be reseted since they are at first position after Create()
-	 */
-
-	itsInfo->Reset();
-
+	itsInfo->First();
+	itsInfo->ResetLevel();
+	
 	/*
 	 * Do not launch more threads than there are things to calculate.
 	 */
 
-	if (itsLeadingDimension == kTimeDimension)
+	size_t dims = itsInfo->SizeForecastTypes() * itsInfo->SizeTimes() * itsInfo->SizeLevels();
+
+	if (dims < static_cast<size_t> (itsThreadCount))
 	{
-		if (itsInfo->SizeTimes() < static_cast<size_t> (itsThreadCount))
-		{
-			itsThreadCount = static_cast<short> (itsInfo->SizeTimes());
-		}
-	}
-	else if (itsLeadingDimension == kLevelDimension)
-	{
-		if (itsInfo->SizeLevels() < static_cast<size_t> (itsThreadCount))
-		{
-			itsThreadCount = static_cast<short> (itsInfo->SizeLevels());
-		}
+		itsThreadCount = static_cast<short> (dims);
 	}
 	
 	/*
@@ -436,9 +391,6 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		// Start process timing
 		itsTimer->Start();
 	}
-
-	itsInfo->FirstParam();
-
 }
 
 #ifdef HAVE_CUDA
@@ -509,7 +461,7 @@ bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
 	return false;
 }
 
-info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const params& theParams, bool returnPacked) const
+info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const params& theParams, const forecast_type& theType, bool returnPacked) const
 {
 	auto f = GET_PLUGIN(fetcher);
 
@@ -517,7 +469,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 	try
 	{
-		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, itsConfiguration->UseCudaForPacking());
+		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
@@ -539,7 +491,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	return ret;
 }
 
-info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, bool returnPacked) const
+info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, const forecast_type& theType, bool returnPacked) const
 {
 	auto f = GET_PLUGIN(fetcher);
 
@@ -547,7 +499,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 	try
 	{
-		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, itsConfiguration->UseCudaForPacking());
+		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())

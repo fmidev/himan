@@ -139,8 +139,6 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	bool useCudaInThisThread = compiled_plugin_base::GetAndSetCuda(theThreadIndex);
-	
 	info_t T850Info, T700Info, T500Info, TD850Info, TD700Info;
 		
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
@@ -149,7 +147,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	bool BSCalculation = itsBSCalculation;
 	bool SRHCalculation = itsSRHCalculation;
 
-	if (!GetSourceData(T850Info, T700Info, T500Info, TD850Info, TD700Info, myTargetInfo, useCudaInThisThread))
+	if (!GetSourceData(T850Info, T700Info, T500Info, TD850Info, TD700Info, myTargetInfo, itsConfiguration->UseCudaForPacking()))
 	{
 		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
@@ -405,27 +403,27 @@ bool stability::GetSourceData(shared_ptr<info>& T850Info, shared_ptr<info>& T700
 
 	if (!T850Info)
 	{
-		T850Info = Fetch(myTargetInfo->Time(), P850Level, TParam, useCudaInThisThread);
+		T850Info = Fetch(myTargetInfo->Time(), P850Level, TParam, myTargetInfo->ForecastType(), useCudaInThisThread);
 	}
 
 	if (!T700Info)
 	{
-		T700Info = Fetch(myTargetInfo->Time(), P700Level, TParam, useCudaInThisThread);
+		T700Info = Fetch(myTargetInfo->Time(), P700Level, TParam, myTargetInfo->ForecastType(), useCudaInThisThread);
 	}
 
 	if (!T500Info)
 	{
-		T500Info = Fetch(myTargetInfo->Time(), P500Level, TParam, useCudaInThisThread);
+		T500Info = Fetch(myTargetInfo->Time(), P500Level, TParam, myTargetInfo->ForecastType(), useCudaInThisThread);
 	}
 
 	if (!TD850Info)
 	{
-		TD850Info = Fetch(myTargetInfo->Time(), P850Level, TDParam, useCudaInThisThread);
+		TD850Info = Fetch(myTargetInfo->Time(), P850Level, TDParam, myTargetInfo->ForecastType(), useCudaInThisThread);
 	}
 
 	if (!TD700Info)
 	{
-		TD700Info = Fetch(myTargetInfo->Time(),	P700Level, TDParam, useCudaInThisThread);
+		TD700Info = Fetch(myTargetInfo->Time(),	P700Level, TDParam, myTargetInfo->ForecastType(), useCudaInThisThread);
 	}
 
 	if (!T850Info || !T700Info || !T500Info || !TD850Info || !TD700Info)

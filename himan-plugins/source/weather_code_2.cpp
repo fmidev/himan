@@ -64,20 +64,21 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
+	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	info_t CloudInfo = Fetch(forecastTime, HLevel, CloudParam, false);
-	info_t PrecformInfo = Fetch(forecastTime, HLevel, PrecformParam, false);
-	info_t TotalPrecInfo = Fetch(forecastTime, HLevel, TotalPrecParam, false);
-	info_t TotalCloudCoverInfo = Fetch(forecastTime, HLevel, TotalCloudCoverParam, false);
-	info_t LowCloudCoverInfo = Fetch(forecastTime, HLevel, LowCloudCoverParam, false);
-	info_t MedCloudCoverInfo = Fetch(forecastTime, HLevel, MedCloudCoverParam, false);
-	info_t HighCloudCoverInfo = Fetch(forecastTime, HLevel, HighCloudCoverParam, false);
-	info_t FogInfo = Fetch(forecastTime, HLevel, FogParam, false);
-	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, false);
-	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, false);
-	info_t KInfo = Fetch(forecastTime, HLevel, KParam, false);
+	info_t CloudInfo = Fetch(forecastTime, HLevel, CloudParam, forecastType, false);
+	info_t PrecformInfo = Fetch(forecastTime, HLevel, PrecformParam, forecastType, false);
+	info_t TotalPrecInfo = Fetch(forecastTime, HLevel, TotalPrecParam, forecastType, false);
+	info_t TotalCloudCoverInfo = Fetch(forecastTime, HLevel, TotalCloudCoverParam, forecastType, false);
+	info_t LowCloudCoverInfo = Fetch(forecastTime, HLevel, LowCloudCoverParam, forecastType, false);
+	info_t MedCloudCoverInfo = Fetch(forecastTime, HLevel, MedCloudCoverParam, forecastType, false);
+	info_t HighCloudCoverInfo = Fetch(forecastTime, HLevel, HighCloudCoverParam, forecastType, false);
+	info_t FogInfo = Fetch(forecastTime, HLevel, FogParam, forecastType, false);
+	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, forecastType, false);
+	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, forecastType, false);
+	info_t KInfo = Fetch(forecastTime, HLevel, KParam, forecastType, false);
 
 	if (!CloudInfo || !PrecformInfo || !TotalPrecInfo || !TotalCloudCoverInfo || !LowCloudCoverInfo || !MedCloudCoverInfo || !HighCloudCoverInfo || !FogInfo || !T0mInfo || !T850Info || !KInfo)
 	{
