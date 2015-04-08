@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 15.4.8
-Release: 1%{dist}.fmi
+Release: 3%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -20,6 +20,7 @@ Requires: himan-lib >= 14.11.25
 Requires: himan-bin >= 14.11.25
 Requires: lua >= 5.1.4
 Requires: unixODBC
+#Requires: libsmartmet_newbase >= 15.3.30
 
 %if %distnum == 7
 Requires: boost-system
@@ -47,7 +48,8 @@ BuildRequires: libfmigrib >= 15.4.8
 BuildRequires: libluabind
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase >= 15.2.17
+#BuildRequires: libsmartmet-newbase-devel >= 15.3.30
+BuildRequires: libsmartmet-newbase >= 15.3.16
 BuildRequires: libsmartmet-smarttools >= 14.8.1
 BuildRequires: grib_api-devel >= 1.13.0
 BuildRequires: redhat-rpm-config
@@ -115,6 +117,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-3.fmi
+- Bugfix in job distribution
+* Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-2.fmi
+- Bugfix for radon insert sql
 * Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-1.fmi
 - Major update to add forecast type based calculations
 - Land-sea mask for fetcher&transformer
