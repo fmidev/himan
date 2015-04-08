@@ -103,6 +103,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rr1h") && itsConfiguration->GetValue("rr1h") == "true")
 	{
 		param parm("RR-1-MM", 353, 0, 1, 8);
+		parm.Unit(kMm);
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1));
 
@@ -113,6 +114,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rr3h") && itsConfiguration->GetValue("rr3h") == "true")
 	{
 		param parm("RR-3-MM", 354, 0, 1, 8);
+		parm.Unit(kMm);
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3));
 		params.push_back(parm);
@@ -121,6 +123,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rr6h") && itsConfiguration->GetValue("rr6h") == "true")
 	{
 		param parm("RR-6-MM", 355, 0, 1, 8);
+		parm.Unit(kMm);
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
 
@@ -130,6 +133,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rr12h") && itsConfiguration->GetValue("rr12h") == "true")
 	{
 		param parm("RR-12-MM", 356, 0, 1, 8);
+		parm.Unit(kMm);
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 12));
 
@@ -139,13 +143,15 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rrr") && itsConfiguration->GetValue("rrr") == "true")
 	{
 		param parm("RRR-KGM2", 49, 0, 1, 52);
-		
+		parm.Unit(kKgm2);
+
 		params.push_back(parm);
 	}
 
 	if (itsConfiguration->Exists("rrrc") && itsConfiguration->GetValue("rrrc") == "true")
 	{
 		param parm("RRRC-KGM2", 201, 0, 1, 196);
+		parm.Unit(kKgm2);
 
 		params.push_back(parm);
 	}
@@ -153,7 +159,8 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rrrl") && itsConfiguration->GetValue("rrrl") == "true")
 	{
 		param parm("RRRL-KGM2", 200, 0, 1, 54);
-		
+		parm.Unit(kKgm2);
+	
 		params.push_back(parm);
 	}
 
@@ -162,6 +169,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("grr") && itsConfiguration->GetValue("grr") == "true")
 	{
 		param parm("GRR-MMH", 1168);
+		parm.Unit(kKgm2);
 
 		params.push_back(parm);
 	}
@@ -171,6 +179,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("rrrs") && itsConfiguration->GetValue("rrrs") == "true")
 	{
 		param parm("RRRS-KGM2", 1170);
+		parm.Unit(kKgm2);
 
 		params.push_back(parm);
 	}
@@ -180,6 +189,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("snr") && itsConfiguration->GetValue("snr") == "true")
 	{
 		param parm("SNR-KGM2", 264, 0, 1, 53);
+		parm.Unit(kKgm2);
 
 		params.push_back(parm);
 	}
@@ -187,13 +197,15 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("snrc") && itsConfiguration->GetValue("snrc") == "true")
 	{
 		param parm("SNRC-KGM2", 269, 0, 1, 55);
-		
+		parm.Unit(kKgm2);
+
 		params.push_back(parm);
 	}
 
 	if (itsConfiguration->Exists("snrl") && itsConfiguration->GetValue("snrl") == "true")
 	{
 		param parm("SNRL-KGM2", 268, 0, 1, 56);
+		parm.Unit(kKgm2);
 	
 		params.push_back(parm);
 	}
@@ -372,7 +384,8 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		// EC gives precipitation in meters, we are calculating millimeters
 
-		if (curSumInfo->Param().Unit() == kM)
+		if (curSumInfo->Param().Unit() == kM
+			 || myTargetInfo->Producer().Id() == 240) // HIMAN-98
 		{
 			scaleFactor = 1000.;
 		}
