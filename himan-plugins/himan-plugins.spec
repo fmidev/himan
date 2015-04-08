@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.4.2
+Version: 15.4.8
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -43,12 +43,12 @@ BuildRequires: boost-devel >= 1.54
 %endif
 
 BuildRequires: libfmidb >= 15.2.6
-BuildRequires: libfmigrib
+BuildRequires: libfmigrib >= 15.4.8
 BuildRequires: libluabind
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase >= 14.4.10
-BuildRequires: libsmartmet-smarttools >= 14.4.7
+BuildRequires: libsmartmet-newbase >= 15.2.17
+BuildRequires: libsmartmet-smarttools >= 14.8.1
 BuildRequires: grib_api-devel >= 1.13.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
@@ -115,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-1.fmi
+- Major update to add forecast type based calculations
+- Land-sea mask for fetcher&transformer
 * Thu Apr  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.2-1.fmi
 - Bugix to luatool
 - preform_pressure algorithm update 
