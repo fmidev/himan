@@ -385,7 +385,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		// EC gives precipitation in meters, we are calculating millimeters
 
 		if (curSumInfo->Param().Unit() == kM
-			 || myTargetInfo->Producer().Id() == 240) // HIMAN-98
+			 || (myTargetInfo->Producer().Id() == 240 && !isRadiationCalculation)) // HIMAN-98
 		{
 			scaleFactor = 1000.;
 		}
