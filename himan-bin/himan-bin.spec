@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.3.30
+Version: 15.4.8
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 15.2.03
+Requires: himan-lib >= 15.4.8
 BuildRequires: redhat-rpm-config
 
 %if %{distnum} == 6
@@ -29,7 +29,7 @@ Requires: boost-system
 %endif
 
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase >= 14.4.10
+BuildRequires: libsmartmet-newbase >= 15.2.17
 Provides: himan
 
 %description
@@ -55,8 +55,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Wed Apr  8 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.4.8-1.fmi
+- New release
 * Mon Mar 30 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.3.30-1.fmi
-- new release
+- New release
 * Tue Feb 10 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.10-1.fmi
 - Changes in himan-lib headers
 * Tue Feb  3 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.2.03-1.fmi
