@@ -18,7 +18,7 @@ using namespace std;
 using namespace himan::plugin;
 
 const int MAX_WORKERS = 16;
-once_flag oflag;
+static once_flag oflag;
 
 radon::radon() : itsInit(false), itsRadonDB()
 {
@@ -228,7 +228,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 		   << "param.id, level.id, "
 		   << resultInfo.Level().Value() << ", "
 		   << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
-		   << HPForecastTypeToString.at(resultInfo.ForecastType().Type()) << ", "
+		   << resultInfo.ForecastType().Type() << ", "
 		   << forecastTypeValue << ","
 		   << "'" << theFileName << "', "
 		   << "'" << host << "' "
