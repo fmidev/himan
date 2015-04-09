@@ -69,20 +69,9 @@ bool compiled_plugin_base::AdjustDimension(info& myTargetInfo, HPDimensionType d
 		
 		return myTargetInfo.Level(itsInfo->Level());
 	}
-
-	if (itsInfo->NextTime())
-	{
-		bool ret = myTargetInfo.Time(itsInfo->Time());
-		assert(ret);
-
-		ret = myTargetInfo.Level(itsInfo->Level());
-		assert(ret);
-
-		return ret;
-	}
 	else
 	{
-		itsBaseLogger->Fatal("Invalid primary dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
+		itsBaseLogger->Fatal("Invalid dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
 		exit(1);
 	}
 	
