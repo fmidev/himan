@@ -34,8 +34,6 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	SetParams({param("HL-M", 3, 0, 3, 6)});
-
 	/*
 	 * For hybrid height we must go through the levels backwards.
 	 */
@@ -64,7 +62,13 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		itsFastMode = true;
 	}
-	
+	else
+	{
+		PrimaryDimension(kTimeDimension);
+	}
+
+	SetParams({param("HL-M", 3, 0, 3, 6)});
+
 	Start();
 	
 }

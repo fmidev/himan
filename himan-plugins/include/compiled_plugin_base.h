@@ -104,6 +104,17 @@ public:
 	compiled_plugin_base(const compiled_plugin_base& other) = delete;
 	compiled_plugin_base& operator=(const compiled_plugin_base& other) = delete;
 
+	/**
+	 * @brief Write plugin contents to file.
+	 *
+	 * Function will determine whether it needs to write whole info or just active
+	 * parts of it. Function will preserve iterator positions.
+	 *
+	 * @param targetInfo info-class instance holding the data
+	 */
+
+	virtual void WriteToFile(const info& targetInfo) const;
+
 protected:
 
 	virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
@@ -117,54 +128,8 @@ protected:
 	 * better not to allow direct access to have some consistency.
 	 */
 
-/*	void PrimaryDimension(HPDimensionType thePrimaryDimension);
+	void PrimaryDimension(HPDimensionType thePrimaryDimension);
 	HPDimensionType PrimaryDimension() const;
-
-	void SecondaryDimension(HPDimensionType theSecondaryDimension);
-	HPDimensionType SecondaryDimension() const;
-	
-	void TertiaryDimension(HPDimensionType theTertiaryDimension);
-	HPDimensionType TertiaryDimension() const;*/
-	
-	/**
-	 * @brief Advance primary dimension by one, called by threads.
-	 *
-	 * This function is protected with a mutex as it is responsible for distributing
-	 * forecast types, time steps or levels for processing to all calling threads.
-	 *
-	 * @param myTargetInfo Threads own copy of target info
-	 * @return True if thread has more items to process
-	 */
-
-	//bool AdjustPrimaryDimension(const info_t& myTargetInfo);
-
-	/**
-	 * @brief Advance secondary dimension by one, called by threads.
-	 *
-	 * This function is protected with a mutex as it is responsible for distributing
-	 * forecast types, time steps or levels for processing to all calling threads.
-	 *
-	 * @param myTargetInfo Threads own copy of target info
-	 * @return True if thread has more items to process
-	 */
-
-	//bool AdjustSecondaryDimension(const info_t& myTargetInfo);
-
-	/**
-	 * @brief Adjust secondary dimension by one, called by threads
-	 *
-	 * This function is not protected with a mutex since all threads have exclusive
-	 * access to their own info class instances' tertiary dimension. It is
-	 * implemented in base class however because the information what is the
-	 * primary and secondary dimension is located here.
-	 *
-	 * @param myTargetInfo Threads own copy of target info
-	 * @return
-	 */
-	
-	//bool AdjustTertiaryDimension(const info_t& myTargetInfo);
-	
-	//void ResetTertiaryDimension(const info_t& myTargetInfo);
  
 	/**
 	 * @brief Copy AB values from source to dest info
@@ -182,34 +147,13 @@ protected:
 
 	bool SwapTo(const info_t& myTargetInfo, HPScanningMode targetScanningMode);
 
-	bool Next(info& myTargetInfo);
-
 	/**
-	 * @brief Write plugin contents to file.
-	 *
-	 * Function will determine whether it needs to write whole info or just active
-	 * parts of it. Function will preserve iterator positions.
-	 *
-	 * @param targetInfo info-class instance holding the data
-	 */
-
-public:
-	virtual void WriteToFile(const info& targetInfo) const;
-protected:
-	/**
-	 * @brief Determine if cuda can be used in this thread, and if so
-	 * set the environment.
-	 *
-	 * @param threadIndex Thread index number, starting from 1
+	 * @brief Distribute work equally to all threads
+	 * @param myTargetInfo
+	 * @return 
 	 */
 	
-	bool GetAndSetCuda(int threadIndex);
-
-	/**
-	 * @brief Reset GPU card state
-	 */
-	
-	void ResetCuda() const;
+	virtual bool Next(info& myTargetInfo);
 
 	/**
 	 * @brief Entry point for threads.
@@ -391,6 +335,27 @@ protected:
 
 	virtual void Init(const std::shared_ptr<const plugin_configuration> conf);
 
+	/**
+ 	 * @brief Run threads through all dimensions in the most effective way.
+ 	 */ 
+
+	void RunAll(info_t myTargetInfo, unsigned short threadIndex);
+
+	/**
+	 * @brief Run threads so that each thread will get one time step.
+	 *
+	 * This limits the number of threads to the number of time steps, but it is 
+	 * the preferred way when f.ex. levels need to be accessed sequentially (hybrid_height). 
+	 */ 
+
+	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex);
+
+	/**
+	 * @brief Thread-safe way to distribute work for a given thread.
+	 */
+ 
+	bool AdjustDimension(info& myTargetInfo, HPDimensionType dim);
+
 protected:
 	info_t itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
@@ -401,10 +366,8 @@ protected:
 private:
 	std::unique_ptr<logger> itsBaseLogger;
 	bool itsPluginIsInitialized;
-	//HPDimensionType itsPrimaryDimension;
-	//HPDimensionType itsSecondaryDimension;
-	//HPDimensionType itsTertiaryDimension;
-
+	HPDimensionType itsPrimaryDimension;
+	
 };
 
 } // namespace plugin

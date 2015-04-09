@@ -30,9 +30,63 @@ using namespace himan::plugin;
 
 mutex dimensionMutex;
 
-compiled_plugin_base::compiled_plugin_base() : itsDimensionsRemaining(true), itsPluginIsInitialized(false)
+compiled_plugin_base::compiled_plugin_base() 
+	: itsDimensionsRemaining(true)
+	, itsPluginIsInitialized(false)
+	, itsPrimaryDimension(kUnknownDimension)
 {
 	itsBaseLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("compiled_plugin_base"));
+}
+
+bool compiled_plugin_base::AdjustDimension(info& myTargetInfo, HPDimensionType dim)
+{
+	lock_guard<mutex> lock(dimensionMutex);
+	
+	if (dim == kForecastTypeDimension)
+	{
+		if (!itsInfo->NextForecastType())
+		{
+			return false;
+		}
+		
+		return myTargetInfo.ForecastType(itsInfo->ForecastType());
+	}
+	else if (dim == kTimeDimension)
+	{
+		if (!itsInfo->NextTime())
+		{
+			return false;
+		}
+		
+		return myTargetInfo.Time(itsInfo->Time());
+	}
+	else if (dim == kLevelDimension)
+	{
+		if (!itsInfo->NextLevel())
+		{
+			return false;
+		}
+		
+		return myTargetInfo.Level(itsInfo->Level());
+	}
+
+	if (itsInfo->NextTime())
+	{
+		bool ret = myTargetInfo.Time(itsInfo->Time());
+		assert(ret);
+
+		ret = myTargetInfo.Level(itsInfo->Level());
+		assert(ret);
+
+		return ret;
+	}
+	else
+	{
+		itsBaseLogger->Fatal("Invalid primary dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
+		exit(1);
+	}
+	
+	return false;
 }
 
 bool compiled_plugin_base::Next(info& myTargetInfo)
@@ -43,12 +97,14 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 	{
 		return false;
 	}
-
+	
 	if (itsInfo->NextLevel())
 	{
 		bool ret = myTargetInfo.Level(itsInfo->Level());
 		assert(ret);
 		ret = myTargetInfo.Time(itsInfo->Time());
+		assert(ret);
+		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
 		assert(ret);
 
 		return ret;
@@ -62,8 +118,9 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 	{
 		bool ret = myTargetInfo.Time(itsInfo->Time());
 		assert(ret);
-
 		ret = myTargetInfo.Level(itsInfo->Level());
+		assert(ret);
+		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
 		assert(ret);
 
 		return ret;
@@ -151,39 +208,6 @@ void compiled_plugin_base::WriteToFile(const info& targetInfo) const
 	}
 }
 
-bool compiled_plugin_base::GetAndSetCuda(int threadIndex)
-{
-	// This function used to have more logic with regards to thread index, but all that
-	// has been removed.
-	
-#ifdef HAVE_CUDA
-	bool ret = itsConfiguration->UseCuda() && itsConfiguration->CudaDeviceId() < itsConfiguration->CudaDeviceCount();
-
-	if (ret)
-	{
-		cudaError_t err;
-
-		if ((err = cudaSetDevice(itsConfiguration->CudaDeviceId())) != cudaSuccess)
-		{
-			cerr << ClassName() << "::Warning Failed to select device #" << itsConfiguration->CudaDeviceId() << ", error: " << cudaGetErrorString(err) << endl;
-			cerr << ClassName() << "::Warning Has another CUDA process reserved the card?\n";
-			ret = false;
-		}
-	}
-#else
-	bool ret = false;
-#endif
-	
-	return ret;
-}
-
-void compiled_plugin_base::ResetCuda() const
-{
-#ifdef HAVE_CUDA
-	CUDA_CHECK(cudaDeviceReset());
-#endif
-}
-
 void compiled_plugin_base::Start()
 {
 	if (!itsPluginIsInitialized)
@@ -253,7 +277,7 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 	itsPluginIsInitialized = true;
 }
 
-void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
+void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadIndex)
 {
 	while (Next(*myTargetInfo))
 	{
@@ -270,6 +294,58 @@ void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 		}
 	}
+}
+
+void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
+{
+	while (AdjustDimension(*myTargetInfo, kTimeDimension))
+	{
+		for (myTargetInfo->ResetForecastType(); myTargetInfo->NextForecastType();)
+		{
+			for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+			{
+				Calculate(myTargetInfo, threadIndex);
+
+				if (itsConfiguration->FileWriteOption() != kSingleFile)
+				{
+					WriteToFile(*myTargetInfo);
+				}
+
+				if (itsConfiguration->StatisticsEnabled())
+				{
+					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
+					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
+				}
+			}
+		}
+	}	
+}
+
+void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
+{
+	if (itsPrimaryDimension == kUnknownDimension)
+	{
+		// The general case: all elements are distributed to all threads in an
+		// equal fashion with no dependencies.
+		// This method is faster than any of the dimension variations or Run().)
+		
+		RunAll(myTargetInfo, threadIndex);
+		
+	}
+	else if (itsPrimaryDimension == kTimeDimension)
+	{
+		// Each thread will get one time and process that.
+		// This is used when f.ex. levels need to be processed
+		// in sequential order.
+		
+		RunTimeDimension(myTargetInfo, threadIndex);
+	}
+	else
+	{
+		itsBaseLogger->Fatal("Invalid primary dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
+		exit(1);
+	}
+	
 }
 
 void compiled_plugin_base::Finish() const
@@ -383,15 +459,27 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 	itsInfo->Create();
 
-	itsInfo->First();
-	itsInfo->ResetLevel();
+	itsInfo->Reset();
+	itsInfo->FirstParam();
 	
+	if (itsPrimaryDimension == kUnknownDimension)
+	{
+		itsInfo->FirstTime();
+		itsInfo->FirstForecastType();
+		itsInfo->ResetLevel();
+	}
+
 	/*
 	 * Do not launch more threads than there are things to calculate.
 	 */
 
 	size_t dims = itsInfo->SizeForecastTypes() * itsInfo->SizeTimes() * itsInfo->SizeLevels();
 
+	if (itsPrimaryDimension == kTimeDimension)
+	{
+		dims = itsInfo->SizeTimes();
+	}
+	
 	if (dims < static_cast<size_t> (itsThreadCount))
 	{
 		itsThreadCount = static_cast<short> (dims);
@@ -538,4 +626,20 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	}
 
 	return ret;
+}
+
+HPDimensionType compiled_plugin_base::PrimaryDimension() const
+{
+	return itsPrimaryDimension;
+}
+
+void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
+{
+	if (itsInfo->SizeParams() > 0)
+	{
+		itsBaseLogger->Fatal("PrimaryDimension() must be called before plugin initialization is finished");
+		exit(1);
+	}
+	
+	itsPrimaryDimension = thePrimaryDimension;
 }
