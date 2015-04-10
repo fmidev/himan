@@ -98,6 +98,7 @@ libraries.append('jasper')
 libraries.append('grib_api')
 libraries.append('odbc')
 libraries.append('boost_program_options')
+libraries.append('boost_system')
 
 env.Append(LIBS = libraries)
 
