@@ -162,7 +162,7 @@ const double fzraMA = -100.;
 const double fzraPA = 100.;
 
 // Pinnan yläpuolisen plussakerroksen pinta-alan raja-arvot [mC, "metriastetta"]:
-const double waterArea = 300.;  // alkup. PK:n arvo oli 300
+const double waterArea = 200.;  // alkup. PK:n arvo oli 300
 const double snowArea = 50.;	// alkup. PK:n arvo oli 50
 
 // Max sallittu nousuliike st:ssa [mm/s]
