@@ -29,6 +29,8 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.getcwd() + "/../"
+# rpm builds:
+#workspace = "/home/dev/weto/workspace/himan"
 
 # cuda toolkit path
 
@@ -96,30 +98,12 @@ libraries.append('clntsh')
 libraries.append('fmidb')
 libraries.append('z')
 libraries.append('bz2')
-
-if not IS_RHEL or (IS_RHEL and OS_VERSION >= 7.0):
-	libraries.append('boost_program_options')
-	libraries.append('boost_filesystem')
-	libraries.append('boost_system')
-	libraries.append('boost_regex')
-	libraries.append('boost_iostreams')
-	libraries.append('boost_thread')
+libraries.append('boost_iostreams')
 
 env.Append(LIBS = libraries)
 
 if have_cuda:
         env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
-
-if IS_RHEL and OS_VERSION < 7.0:
-	boost_libraries = [ 'boost_program_options', 'boost_filesystem', 'boost_system', 'boost_regex', 'boost_iostreams', 'boost_thread' ]
-
-	for lib in boost_libraries:
-		libfile = '/usr/lib64/lib' + lib + '.a'
-
-		if not os.path.isfile(libfile):
-			libfile = '/usr/lib64/lib' + lib + '-mt.a'
-
-		env.Append(LIBS=env.File(libfile))
 
 # CFLAGS
 

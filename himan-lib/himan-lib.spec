@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.4.8
+Version: 15.4.10
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,20 +13,9 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: grib_api >= 1.13.0
-
-%if %distnum == 7
-Requires: libluabind
-Requires: boost-system
-Requires: boost-filesystem
-Requires: boost-program-options
-Requires: boost-thread
-Requires: boost-iostreams
-Requires: boost-regex
-%else
-BuildRequires: boost-devel >= 1.54
-%endif
-
+BuildRequires: zlib-devel
+BuildRequires: bzip2-devel
+BuildRequires: boost-devel >= 1.57
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
 BuildRequires: libfmidb >= 15.2.6
@@ -38,7 +27,7 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: gcc-c++ >= 4.8.2
 %endif
 
-BuildRequires: libsmartmet-newbase >= 15.2.17
+BuildRequires: libsmartmet-newbase-devel >= 15.4.9
 BuildRequires: scons
 Provides: libhiman.so
 
@@ -65,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
+- Link with boost 1.57 and dynamic version of newbase
 * Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-1.fmi
 - Major update to add forecast type based calculations
 * Mon Mar 30 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.3.30-1.fmi
