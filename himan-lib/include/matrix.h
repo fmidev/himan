@@ -158,6 +158,47 @@ public:
 		file << "__avg__ " << (count == 0 ? std::numeric_limits<double>::quiet_NaN() : sum / static_cast<double> (count)) << std::endl;
 		file << "__missing__ " << missing << std::endl;
 		file << "__nan__ " << nan << std::endl;
+
+		if (max == -1e38 || min == 1e38)
+		{
+			return;
+		}
+		
+		int binn = 10;
+		double binw = (max-min)/10;
+
+		double binmin = min;
+		double binmax = binmin + binw;
+		
+		file << "distribution:" << std::endl;
+
+		for (int i = 1; i <= binn; i++)
+		{
+			if (i == binn) binmax += 0.001;
+
+			size_t count = 0;
+
+			for (size_t j = 0; j < theValues.size(); j++)
+			{
+				double val = theValues[j];
+				
+				if (val == itsMissingValue) continue;
+				
+				if (val >= binmin && val < binmax)
+				{
+					count++;
+				}
+			}
+
+			if (i == binn) binmax -= 0.001;
+
+			file << binmin << ":" << binmax << " " << count << std::endl;
+
+			binmin += binw;
+			binmax += binw;
+
+		}
+
 	}
 
 	size_t Size() const
@@ -213,8 +254,8 @@ public:
 
 	/**
 	 * @brief Return const pointer to data as POD
-     * @return const pointer to data
-     */
+	 * @return const pointer to data
+	 */
 	const T* ValuesAsPOD() const
 	{
 		assert(itsData.size());
@@ -223,8 +264,8 @@ public:
 
 	/**
 	 * @brief Return reference to data (in c++ style)
-     * @return const reference to data
-     */
+	 * @return const reference to data
+	 */
 	
 	const std::vector<T>& Values() const
 	{
@@ -271,9 +312,9 @@ public:
 	 * 
 	 * The size of the new data must be equal to size of old data
 	 * 
-     * @param theData
-     * @return 
-     */
+	 * @param theData
+	 * @return 
+	 */
 	bool Set(const std::vector<T>& theData)
 	{
 		assert(itsData.size() == theData.size());
@@ -368,7 +409,7 @@ public:
 
 	/**
 	 * @brief Clear contents of matrix (set size = 0)
-     */
+	 */
 
 	void Clear()
 	{
@@ -400,8 +441,8 @@ public:
 	 * The proportion of missing values in the data does not make any difference
 	 * in performance.
 	 * 
-     * @return Number of missing values in data.
-     */
+	 * @return Number of missing values in data.
+	 */
 
 	size_t MissingCount()
 	{
