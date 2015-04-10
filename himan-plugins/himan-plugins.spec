@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.4.8
-Release: 3%{dist}.fmi
+Version: 15.4.10
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -16,41 +16,26 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.13.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 14.11.25
-Requires: himan-bin >= 14.11.25
+Requires: himan-lib >= 15.4.10
+Requires: himan-bin >= 15.4.10
 Requires: lua >= 5.1.4
 Requires: unixODBC
-#Requires: libsmartmet_newbase >= 15.3.30
+BuildRequires: boost-devel >= 1.57
 
 %if %distnum == 7
-Requires: boost-system
-Requires: boost-filesystem
-Requires: boost-program-options
-Requires: boost-thread
-Requires: boost-iostreams
-Requires: boost-regex
-Requires: boost-system
-Requires: boost-filesystem
-Requires: boost-program-options
-Requires: boost-thread
-Requires: boost-iostreams
-Requires: boost-regex
-BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 %else
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
-BuildRequires: boost-devel >= 1.54
 %endif
 
 BuildRequires: libfmidb >= 15.2.6
 BuildRequires: libfmigrib >= 15.4.8
-BuildRequires: libluabind
+BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-#BuildRequires: libsmartmet-newbase-devel >= 15.3.30
-BuildRequires: libsmartmet-newbase >= 15.3.16
-BuildRequires: libsmartmet-smarttools >= 14.8.1
+BuildRequires: libsmartmet-newbase-devel >= 15.4.9
+BuildRequires: libsmartmet-smarttools >= 15.3.16
 BuildRequires: grib_api-devel >= 1.13.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
@@ -117,6 +102,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
+- Link with boost 1.57 and dynamic version of newbase
+* Wed Apr  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.9-1.fmi
+- Bugfix in sequential job distribution (hybrid_height)
 * Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-3.fmi
 - Bugfix in job distribution
 * Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-2.fmi

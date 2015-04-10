@@ -29,6 +29,8 @@ RELEASE = (not DEBUG)
 # Workspace
 
 workspace = os.getcwd() + "/../"
+# rpm builds:
+#workspace = "/home/dev/weto/workspace/himan"
 
 # cuda toolkit path
 
@@ -63,8 +65,6 @@ includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append('/usr/include/smartmet/smarttools')
-includes.append(workspace + '/fmidb/include')
-includes.append(workspace + '/fmigrib/include')
 
 if os.environ.get('ORACLE_HOME') is None:
 	includes.append('/usr/include/oracle')
@@ -103,6 +103,10 @@ env.Append(LIBPATH = library_paths)
 libraries = []
 
 # libraries.append('smartmet_newbase')
+
+if have_cuda:
+	env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
+
 libraries.append('fmigrib')
 libraries.append('fmidb')
 libraries.append('jasper')
@@ -113,9 +117,6 @@ libraries.append('odbc')
 libraries.append('grib_api')
 
 env.Append(LIBS = libraries)
-
-if have_cuda:
-	env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
 
 # CFLAGS
 
