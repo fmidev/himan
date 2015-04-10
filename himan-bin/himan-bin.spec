@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.4.8
+Version: 15.4.10
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,23 +13,33 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 15.4.8
+Requires: himan-lib >= 15.4.10
+Requires: boost-program-options
+Requires: boost-system
+Requires: boost-regex
+Requires: boost-iostreams
+Requires: boost-thread
+Requires: libsmartmet-newbase >= 15.4.9
+Requires: jasper
+Requires: grib_api >= 1.13.0
+Requires: oracle-instantclient-basic
+Requires: gdal >= 1.11.1
+Requires: bzip2-libs
+Requires: zlib
+
 BuildRequires: redhat-rpm-config
+BuildRequires: boost-devel >= 1.57
 
 %if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
 BuildRequires: cuda-6-5 
-BuildRequires: boost-devel >= 1.54
 %else
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-0
-Requires: boost-program-options
-Requires: boost-system
 %endif
 
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase >= 15.2.17
 Provides: himan
 
 %description
@@ -55,7 +65,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
-* Wed Apr  8 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.4.8-1.fmi
+* Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
+- Link with boost 1.57 and dynamic version of newbase
+* Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-1.fmi
 - New release
 * Mon Mar 30 2015 Andreas Tack <andreas.tack@fmi.fi> - 15.3.30-1.fmi
 - New release
