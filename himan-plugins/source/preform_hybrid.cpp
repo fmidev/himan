@@ -57,6 +57,31 @@ void DumpVector(const vector<double>& vec)
 
 	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
 
+	int binn = 10;
+	double binw = (max-min)/10;
+
+	double binmin = min;
+	double binmax = binmin + binw;
+
+	for (int i = 1; i <= binn; i++)
+	{
+		if (i == binn) binmax += 0.001;
+
+		size_t count = 0;
+		BOOST_FOREACH(double val, vec)
+        	{
+			if (val >= binmin && val < binmax) count++;
+		}
+
+		if (i == binn) binmax -= 0.001;
+
+		cout << binmin << ":" << binmax << " " << count << endl;
+
+		binmin += binw;
+		binmax += binw;
+
+	}
+
 }
 #endif
 
@@ -159,9 +184,9 @@ const param plusAreaParam("PLUS-AREA-MC"); // metriastetta, mC
 const param plusAreaSfcParam("PLUS-AREA-SFC-MC"); // metriastetta, mC
 const param numZeroLevelsParam("NUMZEROLEVELS-N"); // nollakohtien lkm
 const param rhAvgParam("RHAVG-PRCNT");
-const param rhAvgUpperParam("RHAVG-PRCNT");
-const param rhMeltParam("RHAVG-PRCNT");
-const param rhMeltUpperParam("RHAVG-PRCNT");
+const param rhAvgUpperParam("RHAVG-UPPER-PRCNT");
+const param rhMeltParam("RHMELT-PRCNT");
+const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
 preform_hybrid::preform_hybrid()
 {
@@ -385,7 +410,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		assert(T >= -80 && T < 80);
 		assert(RR > 0);
 		assert(Navg == MISS || (Navg >= 0 && Navg <= 100));
-
 /*
 		cout	<< "base\t\t" << base << endl
 				<< "top\t\t" << top << endl
@@ -407,18 +431,18 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				<< "baseLimit\t" << baseLimit << endl
 				<< "topLimit\t" << stLimit << endl
 				<< "Nlimit\t\t" << Nlimit << endl
-				<< "dryNlim\t" << dryNlim << endl
+				<< "dryNlim\t\t" << dryNlim << endl
 				<< "waterArea\t" << waterArea << endl
 				<< "snowArea\t" << snowArea << endl
 				<< "wMax\t\t" << wMax << endl
 				<< "sfcMin\t\t" << sfcMin << endl
 				<< "sfcMax\t\t" << sfcMax << endl
-				<< "fzdzLim\t" << fzdzLim << endl
+				<< "fzdzLim\t\t" << fzdzLim << endl
 				<< "fzStLimit\t" << fzStLimit << endl
 				<< "fzraPA\t\t" << fzraPA << endl
 				<< "fzraMA\t\t" << fzraMA << endl;
 */
-		
+
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
@@ -553,7 +577,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	h->Configuration(conf);
 	h->Time(ftime);
 
-	vector<param> params = { minusAreaParam, plusAreaParam, plusAreaSfcParam, numZeroLevelsParam };
+	vector<param> params = { minusAreaParam, plusAreaParam, plusAreaSfcParam, numZeroLevelsParam, rhAvgParam, rhAvgUpperParam, rhMeltParam, rhMeltUpperParam };
 	vector<forecast_time> times = { ftime };
 	vector<level> levels = { level(kHeight, 0, "HEIGHT") };
 
@@ -675,19 +699,26 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 #endif
 
 		wantedParam = param("RH-PRCNT");
-		
+
+		logger->Info("Searching for average humidity between ground and first zero level");
 		// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa
 		rhAvg01 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
 		
 #ifdef DEBUG
 		DumpVector(rhAvg01);
 #endif
+
+		logger->Info("Searching for average humidity between first and second zero level");
+
 		// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
 		rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 		
 #ifdef DEBUG
 		DumpVector(rhAvgUpper12);
 #endif
+
+ 		logger->Info("Searching for average humidity between second and third zero level");
+
 		// Keskimääräinen RH ylemmässä plussakerroksessa
 		rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
 		
@@ -768,7 +799,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		else if (numZeroLevel%2 == 1)
 		{
 			double zl1 = zeroLevel1[i], ta1 = Tavg01[i];
-			double pasfc = MISS, paloft = MISS;
+			double paloft = MISS;
 
 			if (zl1 != MISS && ta1 != MISS)
 			{
@@ -816,7 +847,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 						pa = pasfc + paloft;
 					}
 				}
-				
 			}
 		}
 
@@ -824,6 +854,16 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		plusAreaSfc[i] = pasfc;
 		minusArea[i] = ma;
 	}
+
+#ifdef DEBUG
+	DumpVector(minusArea);
+	DumpVector(plusArea);
+	DumpVector(plusAreaSfc);
+	DumpVector(rhAvg);
+	DumpVector(rhAvgUpper);
+	DumpVector(rhMelt);
+	DumpVector(rhMeltUpper);
+#endif
 
 	ret->Param(minusAreaParam);
 	ret->Data().Set(minusArea);
