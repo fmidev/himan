@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.4.10
+Version: 15.4.13
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -102,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 13 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.13-1.fmi
+- Minor fix to preform_hybrid
 * Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
 - Link with boost 1.57 and dynamic version of newbase
 * Wed Apr  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.9-1.fmi
