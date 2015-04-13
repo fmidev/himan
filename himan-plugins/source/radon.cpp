@@ -38,17 +38,8 @@ void radon::InitPool()
 	
 	if (uid == 1459) // weto
 	{
-		char* base = getenv("MASALA_BASE");
-
-		if (string(base) == "/masala")
-		{
-			NFmiRadonDBPool::Instance()->Username("wetodb");
-			NFmiRadonDBPool::Instance()->Password("3loHRgdio");
-		}
-		else
-		{
-			itsLogger->Warning("Program executed as uid 1459 ('weto') but MASALA_BASE not set");
-		}
+		NFmiRadonDBPool::Instance()->Username("wetodb");
+		NFmiRadonDBPool::Instance()->Password("3loHRgdio");
 	}
 }
 
@@ -203,14 +194,11 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	query.str("");
 
-	string host = "undetermined host";
-
-	char* hostname = getenv("HOSTNAME");
-
-	if (hostname != NULL)
-	{
-		host = string(hostname);
-	}
+	char host[255];
+	gethostname(host, 255);
+	
+	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name());
+	auto levelinfo = itsRadonDB->GetLevelFromGrib(resultInfo.Producer().Id(), resultInfo.Level().Type(), 1);
 
 	/*
 	 * We have our own error logging for unique key violations
@@ -220,33 +208,64 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	
 	double forecastTypeValue = (resultInfo.ForecastType().Type() == kEpsPerturbation) ? resultInfo.ForecastType().Value() : -1.;
 	
+	string analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
+			
 	query  << "INSERT INTO data." << table_name
-		   << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, forecast_period, forecast_type_id, forecast_type_value, file_location, file_server) "
-		   << "SELECT " << resultInfo.Producer().Id() << ", "
-		   << "'" << resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "', "
-		   << "'" << geom_id << "', "
-		   << "param.id, level.id, "
+		   << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, forecast_period, forecast_type_id, forecast_type_value, file_location, file_server) VALUES ("
+		   << resultInfo.Producer().Id() << ", "
+		   << "'" << analysisTime << "', "
+		   << geom_id << ", "
+		   << paraminfo["id"] << ", "
+		   << levelinfo["id"] << ", "
 		   << resultInfo.Level().Value() << ", "
 		   << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 		   << resultInfo.ForecastType().Type() << ", "
 		   << forecastTypeValue << ","
 		   << "'" << theFileName << "', "
-		   << "'" << host << "' "
-		   << "FROM param, level "
-		   << "WHERE param.name = '" << resultInfo.Param().Name() << "' "
-		   << "AND level.name = upper('" << HPLevelTypeToString.at(resultInfo.Level().Type()) << "')";
+		   << "'" << host << "')"
+		   ;
 	
 	try
 	{
+		itsRadonDB->Execute(query.str());
+		
+		query.str("");
+		
+		query << "UPDATE as_grid SET record_count = record_count+1 WHERE producer_id = " << resultInfo.Producer().Id()
+				<< " AND geometry_id = " << geom_id
+				<< " AND analysis_time = '" << analysisTime << "'";
+
 		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
 	}
 	catch (int e)
 	{
-		itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
-		itsLogger->Error("Query: " + query.str());
-
 		itsRadonDB->Rollback();
+		
+		if (e == 7)
+		{
+			query.str("");
+			query << "UPDATE data." << table_name << " SET "
+					<< "file_location = '" << theFileName << "', "
+					<< "file_server = '" << host << "' WHERE "
+					<< "producer_id = " << resultInfo.Producer().Id() << " AND "
+					<< "analysis_time = '" << analysisTime << "' AND "
+					<< "geometry_id = " << geom_id << " AND "
+					<< "param_id = " << paraminfo["id"] << " AND "
+					<< "level_id = " << levelinfo["id"] << " AND "
+					<< "level_value = " << resultInfo.Level().Value() << " AND "
+					<< "forecast_period = " << "'" << util::MakeSQLInterval(resultInfo.Time()) << "' AND "
+					<< "forecast_type_id = " << resultInfo.ForecastType().Type() << " AND "
+					<< "forecast_type_value = " << forecastTypeValue;
+					
+			itsRadonDB->Execute(query.str());
+			itsRadonDB->Commit();
+		}
+		else
+		{
+			itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
+			itsLogger->Error("Query: " + query.str());
+		}
 
 		return false;
 	}
