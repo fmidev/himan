@@ -753,6 +753,11 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		double pa = MISS, ma = MISS, pasfc = MISS;
 		
+		// Kommentteja Simolta nollakohtien lukumäärään:
+		// * Nollakohtien löytymättömyys ei ole ongelma, sillä tällöin olomuoto on aina lumi tai jäätävä tihku
+		// * Parittomilla nollakohdilla ei voi tulla koskaan jäätävää sadetta koska pintakerros on plussalla
+		//   (jolloin ainakin yleensä pätee oletus ettei jäätävää sadetta voi esiintyä)
+
 		// nollarajoja parillinen määrä (pintakerros pakkasella)
 
 		if (numZeroLevel%2 == 0)
