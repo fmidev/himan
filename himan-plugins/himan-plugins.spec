@@ -20,7 +20,7 @@ Requires: himan-lib >= 15.4.10
 Requires: himan-bin >= 15.4.10
 Requires: lua >= 5.1.4
 Requires: unixODBC
-BuildRequires: boost-devel >= 1.57
+BuildRequires: boost-devel >= 1.55
 
 %if %distnum == 7
 BuildRequires: gcc-c++ >= 4.8.2
@@ -35,7 +35,7 @@ BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase-devel >= 15.4.9
-BuildRequires: libsmartmet-smarttools >= 15.3.16
+BuildRequires: libsmartmet-smarttools-devel >= 15.3.16
 BuildRequires: grib_api-devel >= 1.13.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
@@ -106,7 +106,7 @@ rm -rf $RPM_BUILD_ROOT
 - Minor fix to preform_hybrid
 * Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
 - Link with boost 1.57 and dynamic version of newbase
-* Wed Apr  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.9-1.fmi
+* Thu Apr  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.9-1.fmi
 - Bugfix in sequential job distribution (hybrid_height)
 * Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-3.fmi
 - Bugfix in job distribution
@@ -188,7 +188,7 @@ rm -rf $RPM_BUILD_ROOT
 - Fixes in split_sum, preform_pressure and preform_hybrid
 * Tue Nov 04 2014 Andreas Tack <andreas.tack@fmi.fi> - 14.11.4-1.fmi
 - Fixes in split_sum and monin_obukhov
-* Tue Oct 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.30-1.fmi
+* Thu Oct 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.30-1.fmi
 - Fixes in split_sum and monin_obukhov
 * Tue Oct 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.28-1.fmi
 - HIMAN-69
@@ -291,7 +291,7 @@ rm -rf $RPM_BUILD_ROOT
 - Vertical coordinate fix for density and precipitation_rate
 * Thu Mar 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.20-1.fmi
 - New plugin: precipitation_rate
-* Mon Mar 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.18-1.fmi
+* Tue Mar 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.18-1.fmi
 - Minor fixes
 * Mon Mar 17 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.3.17-1.fmi
 - Bugfix in compiled_plugin_base::Unpack() (VALVONTA-112)
