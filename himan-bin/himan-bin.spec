@@ -19,7 +19,7 @@ Requires: boost-system
 Requires: boost-regex
 Requires: boost-iostreams
 Requires: boost-thread
-Requires: libsmartmet-newbase >= 15.4.9
+Requires: libsmartmet-newbase >= 15.4.22
 Requires: jasper
 Requires: grib_api >= 1.13.0
 Requires: oracle-instantclient-basic
