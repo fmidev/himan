@@ -198,7 +198,20 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	gethostname(host, 255);
 	
 	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name());
+
+	if (paraminfo.empty())
+	{
+		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name());
+		return false;
+	}
+
 	auto levelinfo = itsRadonDB->GetLevelFromGrib(resultInfo.Producer().Id(), resultInfo.Level().Type(), 1);
+
+	if (levelinfo.empty())
+	{
+		itsLogger->Error("Level information not found from radon for level " + resultInfo.Level().Name());
+		return false;
+	}
 
 	/*
 	 * We have our own error logging for unique key violations

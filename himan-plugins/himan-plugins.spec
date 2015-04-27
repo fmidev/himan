@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.4.13
+Version: 15.4.27
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -29,12 +29,12 @@ BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
 %endif
 
-BuildRequires: libfmidb >= 15.2.6
-BuildRequires: libfmigrib >= 15.4.8
+BuildRequires: libfmidb >= 15.4.16
+BuildRequires: libfmigrib >= 15.4.16
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase-devel >= 15.4.9
+BuildRequires: libsmartmet-newbase-devel >= 15.4.22
 BuildRequires: libsmartmet-smarttools-devel >= 15.3.16
 BuildRequires: grib_api-devel >= 1.13.0
 BuildRequires: redhat-rpm-config
@@ -102,6 +102,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 27 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.27-1.fmi
+- sql fix for radon 
+* Fri Apr 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.24-1.fmi
+- Linking with newer fmigrib and fmidb
 * Mon Apr 13 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.13-1.fmi
 - Minor fix to preform_hybrid
 * Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
