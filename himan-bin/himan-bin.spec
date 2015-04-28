@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.4.10
+Version: 15.4.28
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -33,12 +33,11 @@ BuildRequires: boost-devel >= 1.57
 %if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
-BuildRequires: cuda-6-5 
 %else
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-7-0
 %endif
 
+BuildRequires: cuda-7-0
 BuildRequires: scons
 Provides: himan
 
@@ -65,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Tue Apr 28 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.28-1.fmi
+- Linking with Cuda 7 (HIMAN-96)
 * Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
 - Link with boost 1.57 and dynamic version of newbase
 * Wed Apr  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.8-1.fmi
