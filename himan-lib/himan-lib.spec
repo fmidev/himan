@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.4.13
+Version: 15.4.28
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -27,7 +27,8 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: gcc-c++ >= 4.8.2
 %endif
 
-BuildRequires: libsmartmet-newbase-devel >= 15.4.9
+BuildRequires: cuda-7-0
+BuildRequires: libsmartmet-newbase-devel >= 15.4.22
 BuildRequires: scons
 Provides: libhiman.so
 
@@ -54,6 +55,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Apr 28 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.28-1.fmi
+- Linking with Cuda 7 (HIMAN-96)
+* Fri Apr 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.24-1.fmi
+- Linking with newer fmidb
 * Mon Apr 13 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.13-1.fmi
 - Better debug output to matrix
 * Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
