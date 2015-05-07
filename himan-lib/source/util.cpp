@@ -117,8 +117,6 @@ himan::HPFileType util::FileType(const string& theFile)
 		ext.insert(0,p.extension().string());
 	}
 
-	std::cout << ext << std::endl;
-
 	if (ext == ".csv")
 	{
 		return kCSV;
