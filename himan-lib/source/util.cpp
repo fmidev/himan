@@ -111,7 +111,13 @@ himan::HPFileType util::FileType(const string& theFile)
 
 	boost::filesystem::path p (theFile);
 
-	const string ext = p.extension().string();
+	string ext; // = p.extension().string();
+	for (;!p.extension().empty();p=p.stem())
+	{
+		ext.insert(0,p.extension().string());
+	}
+
+	std::cout << ext << std::endl;
 
 	if (ext == ".csv")
 	{
@@ -128,6 +134,22 @@ himan::HPFileType util::FileType(const string& theFile)
 	else if (ext == ".grib2")
 	{
 		return kGRIB2;
+	}
+	else if (ext == ".grib.gz")
+	{
+		return kGRIB1GZ;
+	}
+	else if (ext == ".grib2.gz")
+	{
+		return kGRIB2GZ;
+	}
+	else if (ext == ".grib.bz2")
+	{
+		return kGRIB1BZ2;
+	}
+	else if (ext == ".grib2.bz2")
+	{
+		return kGRIB2BZ2;
 	}
 	else if (ext == ".nc")
 	{
