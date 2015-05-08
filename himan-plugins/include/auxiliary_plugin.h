@@ -23,7 +23,6 @@
 #define AUXILIARY_PLUGIN_H
 
 #include "himan_plugin.h"
-#include "info.h"
 
 namespace himan
 {

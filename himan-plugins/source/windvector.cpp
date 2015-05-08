@@ -16,6 +16,7 @@
 #include "NFmiArea.h"
 #include "NFmiRotatedLatLonArea.h"
 #include "NFmiStereographicArea.h"
+#include <boost/thread.hpp>
 
 using namespace std;
 using namespace himan::plugin;

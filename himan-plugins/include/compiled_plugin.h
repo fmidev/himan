@@ -13,8 +13,6 @@
 #include "configuration.h"
 #include "plugin_configuration.h"
 
-#include <boost/thread.hpp>
-
 namespace himan
 {
 namespace plugin

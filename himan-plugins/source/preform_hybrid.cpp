@@ -17,6 +17,7 @@
 #include "level.h"
 #include "forecast_time.h"
 #include <boost/foreach.hpp>
+#include <boost/thread.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 

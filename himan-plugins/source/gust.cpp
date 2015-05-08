@@ -16,6 +16,7 @@
 #include "level.h"
 #include "forecast_time.h"
 #include "logger_factory.h"
+#include <boost/thread.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 

@@ -15,6 +15,7 @@
 #include <functional> // for std::plus
 #include "level.h"
 #include "forecast_time.h"
+#include <boost/thread.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 

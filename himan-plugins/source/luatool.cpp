@@ -7,6 +7,7 @@
 #include "regular_grid.h"
 #include "plugin_factory.h"
 #include <boost/foreach.hpp>
+#include <boost/thread.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
