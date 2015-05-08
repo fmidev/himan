@@ -8,9 +8,9 @@
  */
 
 #ifndef AGGREGATION_H
-#define	AGGREGATION_H
+#define AGGREGATION_H
 
-#include "raw_time.h"
+#include "himan_common.h"
 
 namespace himan
 {
@@ -29,9 +29,9 @@ public:
 	bool operator!=(const aggregation& other) const;
 
 	std::string ClassName() const
-    {
-        return "himan::aggregation";
-    }
+	{
+		return "himan::aggregation";
+	}
 
 	HPAggregationType Type() const;
 	void Type(HPAggregationType theType);
