@@ -47,7 +47,7 @@ __device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options op
 	
 	if (T != kFloatMissing && P != kFloatMissing)
 	{
-		theta = T * pow((1000 / (0.01 * P)), 0.28586);
+		theta = metutil::Theta_(T, P);
 	}
 
 	return theta;

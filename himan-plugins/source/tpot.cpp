@@ -222,7 +222,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			if (itsThetaCalculation)
 			{
-				theta = Theta(P, T);
+				theta = metutil::Theta_(T, P);
 
 				myTargetInfo->Param(param("TP-K"));
 
@@ -251,13 +251,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
-}
-
-double tpot::Theta(double P, double T)
-{
-	double value = T * pow((1000 / (P*0.01)), 0.28586);
-
-	return value;
 }
 
 double tpot::ThetaW(double P, double T, double TD)
@@ -337,7 +330,7 @@ double tpot::ThetaE(double P, double T, double TD, double theta)
 	{
 		// theta was not calculated in this plugin session :(
 
-		theta = Theta(P, T);
+		theta = metutil::Theta_(T, P);
 
 		if (theta == kFloatMissing)
 		{

@@ -47,20 +47,6 @@ public:
 private:
 
 	/**
-	 * @brief Calculate "dry" potential temperature with poissons equation.
-	 * 
-	 * Note that input is in Celsius, but the output is in Kelvins!
-	 *
-	 * http://san.hufs.ac.kr/~gwlee/session3/potential.html
-	 *
-	 * @param P Pressure in hPa
-	 * @param T Temperature in C
-	 * @return Potential temperature in K
-	 */
-
-	double Theta(double P, double T);
-
-	/**
 	 * @brief Calculating pseudo-adiabatic theta (ie thetaw).
 	 *
 	 * Method: numerical integration from LCL to 1000mb level along wet adiabatic line.
