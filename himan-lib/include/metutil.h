@@ -429,6 +429,7 @@ double TW(double T, double P);
  * @return Potential temperature in K
  */
 
+CUDA_DEVICE
 double Theta_(double T, double P);
 
 #ifdef __CUDACC__
