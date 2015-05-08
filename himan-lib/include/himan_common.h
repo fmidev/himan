@@ -594,6 +594,22 @@ namespace constants {
 	 */
 
 	const double kR = 6371009;
+	
+	/**
+	 * @brief Molar mass of water in g/mol
+	 * 
+	 * See also kEp = kMW / kMA
+	 */
+	
+	const double kMW = 18.01528;
+
+	/**
+	 * @brief Molar mass of dry air in g/mol
+	 * 
+	 * See also kEp = kMW / kMA
+	 */
+
+	const double kMA = 28.9644;
 
 } // namespace constants
 
