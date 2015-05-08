@@ -65,10 +65,11 @@ namespace himan
 
 namespace metutil
 {
-
 /**
  * @brief Calculate water vapor saturated pressure in Pa
  *
+ * Equation inherited from hilake.
+ * 
  * Equation found in f.ex. Smithsonian meteorological tables or
  * http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
  *
@@ -83,6 +84,49 @@ namespace metutil
 
 CUDA_DEVICE
 double Es_(double T);
+
+/**
+ * @brief Calculate water vapor saturated pressure in Pa
+ * 
+ * Equation is used in smarttools-library (NFmiSoundingFunctions::ESAT(double))
+ * 
+ * Original version of the formula is found here:
+ * 
+ * http://www.iac.ethz.ch/staff/dominik/idltools/atmos_phys/esat.pro
+ * 
+ * The following notes are copied from file above:
+ * 
+ * ------------------------------------------------------------------------
+ * PURPOSE:
+ *  compute saturation vapor pressure given temperature in K or C
+ *
+ * EXAMPLE:
+ *  print,esat(15)
+ *   prints    17.0523
+ * 
+ * Formula with T = temperature in K
+ * esat = exp( -6763.6/(T+T0) - 4.9283*alog((T+T0)) + 54.2190 )
+ *
+ * Formula close to that of Magnus, 1844 with temperature TC in Celsius
+ *    ESAT = 6.1078 * EXP( 17.2693882 * TC / (TC + 237.3) ) ; TC in Celsius
+ *
+ * or Emanuel's formula (also approximation in form of Magnus' formula,
+ * 1844), which was taken from Bolton, Mon. Wea. Rev. 108, 1046-1053, 1980.
+ * This formula is very close to Goff and Gratch with differences of
+ * less than 0.25% between -50 and 0 deg C (and only 0.4% at -60degC)    
+ *    esat=6.112*EXP(17.67*TC/(243.5+TC))
+ *
+ * WMO reference formula is that of Goff and Gratch (1946), slightly
+ * modified by Goff in 1965:
+ *
+ * ------------------------------------------------------------------------
+ *  
+ * @param T Temperature in K
+ * @return Pressure in Pa
+ */
+
+CUDA_DEVICE
+double Es2_(double T);
 
 /**
  * @brief Calculates pseudo-adiabatic lapse rate
@@ -358,6 +402,35 @@ double KI_(double T500, double T700, double T850, double TD700, double TD850);
 CUDA_DEVICE
 double BulkShear_(double U, double V);
 
+/**
+ * @brief Calculate adiabatic saturation temperature [thermodynamic wet-bulb temperature] at 1000hPa. 
+ * 
+ * Definition: http://en.wikipedia.org/wiki/Wet-bulb_temperature#Thermodynamic_wet-bulb_temperature_.28adiabatic_saturation_temperature.29
+ * 
+ * Source: http://www.iac.ethz.ch/staff/dominik/idltools/atmos_phys/skewt.pro
+ * 
+ * This function is also used in smarttools-library.
+ * 
+ * @param T Temperature in K
+ * @param P Pressure in Pa
+ * @return 
+ */
+
+CUDA_DEVICE
+double TW(double T, double P);
+
+/**
+ * @brief Calculate "dry" potential temperature with poissons equation.
+ * 
+ * http://san.hufs.ac.kr/~gwlee/session3/potential.html
+ *
+ * @param T Temperature in K
+ * @param P Pressure in Pa
+ * @return Potential temperature in K
+ */
+
+double Theta_(double T, double P);
+
 #ifdef __CUDACC__
 
 // We have to declare cuda functions in the header or be ready to face the
@@ -432,9 +505,7 @@ inline double himan::metutil::MixingRatio_(double T, double P)
 	assert(P > 1000);
 	assert(T > 0 && T < 500);
 
-	double E = Es_(T) * 0.01; // hPa
-
-	P *= 0.01;
+	double E = Es_(T); // Pa
 
 	return 621.97 * E / (P - E);
 }
@@ -641,6 +712,28 @@ double himan::metutil::Es_(double T)
 
 }
 
+
+CUDA_DEVICE
+inline 
+double himan::metutil::Es2_(double T)
+{
+	assert(T > 0);
+	
+	const double e1 = 1013.250;
+	const double T0 = 0.;
+	
+	// Horrible, just horrible!
+	
+    double Es = e1 * 
+		::pow(10., (10.79586 * (1 - constants::kKelvin / (T+T0)) - 5.02808 * ::log10((T + T0) / constants::kKelvin) +
+		1.50474 * 1e-4 * (1- ::pow(10.,(-8.29692 * ((T + T0) / constants::kKelvin - 1)))) +
+		0.42873 * 1e-3 * (::pow(10., (4.76955 * (1 - constants::kKelvin / (T + T0)))) - 1) - 2.2195983)
+	);
+	
+	return 100 * Es; // Pa
+	
+}
+
 CUDA_DEVICE
 inline
 double himan::metutil::Gammas_(double P, double T)
@@ -810,6 +903,29 @@ inline
 double himan::metutil::BulkShear_(double U, double V)
 {
 	return sqrt(U*U + V*V) * 1.943844492; // converting to knots
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::Theta_(double T, double P)
+{
+	assert(T > 0);
+	assert(P > 1000);
+	
+	return T * pow((1000. / (P*0.01)), 0.28586);
+
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::TW(double T, double P)
+{
+	assert(T > 0);
+	assert(P > 1000);
+	
+	P *= 0.01; // hPa
+	
+	return Theta_(T, P) / (exp(-2.6518986 * MixingRatio_(T, P)/T));
 }
 
 #endif /* METUTIL_H_ */
