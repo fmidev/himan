@@ -38,7 +38,7 @@ class modifier
 		virtual void Calculate(double theValue, double theHeight = kFloatMissing) = 0;
 		virtual void Clear(double fillValue = kFloatMissing);
 
-		virtual bool IsMissingValue(double theValue) const;
+		virtual bool IsMissingValue(double theValue) const __attribute__((always_inline));
 
 		void FindValue(const std::vector<double>& theFindValue);
 		void LowerHeight(const std::vector<double>& theLowerHeight);
@@ -101,6 +101,17 @@ inline
 std::ostream& operator<<(std::ostream& file, const modifier& ob)
 {
 	return ob.Write(file);
+}
+
+inline
+bool modifier::IsMissingValue(double theValue) const
+{
+	if (theValue == kFloatMissing)
+	{
+		return true;
+	}
+
+	return false;
 }
 
 /**

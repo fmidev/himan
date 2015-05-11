@@ -48,16 +48,6 @@ void modifier::Clear(double fillValue)
 	std::fill(itsResult.begin(), itsResult.end(), fillValue);
 }
 
-bool modifier::IsMissingValue(double theValue) const
-{
-	if (theValue == kFloatMissing)
-	{
-		return true;
-	}
-
-	return false;
-}
-
 void modifier::FindValue(const std::vector<double>& theFindValue)
 {
 	itsFindValue = theFindValue;
@@ -66,6 +56,15 @@ void modifier::FindValue(const std::vector<double>& theFindValue)
 void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
 {
 	itsLowerHeight = theLowerHeight;
+	
+	// If height limits have missing values we can't process those grid points
+	for (size_t i = 0; i < itsLowerHeight.size(); i++)
+	{
+		if (itsLowerHeight[i] == kFloatMissing)
+		{
+			itsOutOfBoundHeights[i] = true;
+		}
+	}
 #ifdef DEBUG
 	double min = 1e38, max = -1e38, mean = 0;
 	size_t count = 0;
@@ -106,6 +105,15 @@ void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
 void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 {
 	itsUpperHeight = theUpperHeight;
+	
+	// If height limits have missing values we can't process those grid points
+	for (size_t i = 0; i < itsUpperHeight.size(); i++)
+	{
+		if (itsUpperHeight[i] == kFloatMissing)
+		{
+			itsOutOfBoundHeights[i] = true;
+		}
+	}
 #ifdef DEBUG
 	double min = 1e38, max = -1e38, mean = 0;
 	size_t count = 0;
@@ -175,6 +183,19 @@ void modifier::Init(const std::vector<double>& theData, const std::vector<double
 
 		itsResult.resize(theData.size(), kFloatMissing);
 		itsOutOfBoundHeights.resize(theData.size(), false);
+
+		// Absurd default limits if user has not specified any limits
+		
+		if (itsHeightInMeters)
+		{	
+			itsLowerHeight.resize(theData.size(), 1e38);
+			itsUpperHeight.resize(theData.size(), -1e38);
+		}
+		else
+		{
+			itsLowerHeight.resize(theData.size(), -1e38);
+			itsUpperHeight.resize(theData.size(), 1e38);
+		}
 	}
 }
 
@@ -183,80 +204,41 @@ bool modifier::Evaluate(double theValue, double theHeight)
 
 	assert(itsIndex < itsOutOfBoundHeights.size());
 
-	if (IsMissingValue(theHeight))
+	if (kFloatMissing == theHeight || kFloatMissing == theValue || itsOutOfBoundHeights[itsIndex] == true)
 	{
 		return false;
-	}
-
-	/*
-	 * "upper" value relates to it being higher in the atmosphere
-	 * meaning its value is higher.
-	 *
-	 * ie. lower limit 10, upper limit 100
-	 *
-	 * From this it follows that valid height is lower than upper limit and
-	 * higher than lower limit
-	 *
-	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
-	 * need to be changed.
-	*/
-
-	// Absurd default limits if user has not specified any limits
-
-	double upperLimit = 1e38;
-	double lowerLimit = -1e38;
-
-	if (!itsHeightInMeters)
-	{
-		lowerLimit = 1e38;
-		upperLimit = -1e38;
 	}
 	
-	if (!itsUpperHeight.empty())
-	{
-		upperLimit = itsUpperHeight[itsIndex];
-	}
+	double lowerLimit = itsLowerHeight[itsIndex];
+	double upperLimit = itsUpperHeight[itsIndex];
 
-	if (!itsLowerHeight.empty())
+	if (itsHeightInMeters)
 	{
-		lowerLimit = itsLowerHeight[itsIndex];
-	}
-
-	if (itsOutOfBoundHeights[itsIndex] == true)
-	{
-		return false;
-	}
-	else if (itsHeightInMeters)
-	{
-		if (theHeight > upperLimit  || IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+		if (theHeight >= upperLimit) //  || kFloatMissing == upperLimit || kFloatMissing == lowerLimit)
 		{
 			// height is above given height range OR either level value is missing: stop processing of this grid point
 			itsOutOfBoundHeights[itsIndex] = true;
 			return false;
 		}
-		else if (theHeight < lowerLimit)
+		else if (theHeight <= lowerLimit)
 		{
 			// height is below given height range, do not cancel calculation yet
 			return false;
 		}
 	}
-	else if (!itsHeightInMeters)
+	else
 	{
-		if (theHeight < upperLimit  || IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
+		if (theHeight <= upperLimit) //  || kFloatMissing == upperLimit || kFloatMissing == lowerLimit)
 		{
 			itsOutOfBoundHeights[itsIndex] = true;
 			return false;
 		}
-		else if (theHeight > lowerLimit)
+		else if (theHeight >= lowerLimit)
 		{
 			// height is below given height range, do not cancel calculation yet
 			return false;
 		}
 	}	
-	else if (IsMissingValue(theValue))
-	{
-		return false;
-	}
 
 	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || ((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit)));
 
@@ -331,12 +313,7 @@ std::ostream& modifier::Write(std::ostream& file) const
 
 void modifier_max::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-
-	if (IsMissingValue(Value()) || theValue > Value())
+	if (kFloatMissing == Value() || theValue > Value())
 	{
 		Value(theValue);
 	}
@@ -346,12 +323,7 @@ void modifier_max::Calculate(double theValue, double theHeight)
 
 void modifier_min::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-
-	if (IsMissingValue(Value()) || theValue < Value())
+	if (kFloatMissing == Value() || theValue < Value())
 	{
 		Value(theValue);
 	}
@@ -379,12 +351,7 @@ const std::vector<double>& modifier_maxmin::Result() const
 
 void modifier_maxmin::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-
-	if (IsMissingValue(Value()))
+	if (kFloatMissing == Value())
 	{
 		// Set min == max
 		itsResult[itsIndex] = theValue;
@@ -408,12 +375,8 @@ void modifier_maxmin::Calculate(double theValue, double theHeight)
 
 void modifier_sum::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(theValue))
-	{
-		return;
-	}
-	
-	if (IsMissingValue(Value())) // First value
+
+	if (kFloatMissing == Value()) // First value
 	{
 		Value(theValue);
 	}
@@ -431,62 +394,10 @@ bool modifier_mean::Evaluate(double theValue, double theHeight)
 
 	assert(itsIndex < itsOutOfBoundHeights.size());
 
-	if (IsMissingValue(theHeight))
+	if (kFloatMissing == theHeight || kFloatMissing == theValue || itsOutOfBoundHeights[itsIndex])
 	{
 		return false;
 	}
-
-	/*
-	 * "upper" value relates to it being higher in the atmosphere
-	 * meaning its value is higher.
-	 *
-	 * ie. lower limit 10, upper limit 100
-	 *
-	 * From this it follows that valid height is lower than upper limit and
-	 * higher than lower limit
-	 *
-	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
-	 * need to be changed.
-	 */
-
-	/*
- 	 * upper/lower limit check moved from evaluate function to calculate for the averaging case
-	 */
-
-	double upperLimit = 1e38;
-	double lowerLimit = -1e38;
-
-	if (!itsUpperHeight.empty())
-	{
-		upperLimit = itsUpperHeight[itsIndex];
-	}
-
-	if (!itsLowerHeight.empty())
-	{
-		lowerLimit = itsLowerHeight[itsIndex];
-	}
-
-	if (itsOutOfBoundHeights[itsIndex] == true)
-	{
-		return false;
-	}
-	else if (IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
-	{
-		// height is above given height range OR either level value is missing: stop processing of this grid point
-		itsOutOfBoundHeights[itsIndex] = true;
-		return false;
-	}
-	else if (itsOutOfBoundHeights[itsIndex])
-	{
-		// check if upper height for that grid point has been passed in the previous iteration
-		return false;
-	}
-	else if (IsMissingValue(theValue))
-	{
-		return false;
-	}
-
-//	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
 
 	return true;
 }
@@ -504,36 +415,32 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 	
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
+		
+		// Absurd default limits if user has not specified any limits
+		
+		if (itsHeightInMeters)
+		{	
+			itsLowerHeight.resize(theData.size(), 1e38);
+			itsUpperHeight.resize(theData.size(), -1e38);
+		}
+		else
+		{
+			itsLowerHeight.resize(theData.size(), -1e38);
+			itsUpperHeight.resize(theData.size(), 1e38);
+		}
 	}
 }
 
 void modifier_mean::Calculate(double theValue, double theHeight)
 {
-	if (IsMissingValue(Value())) // First value
+	if (kFloatMissing == Value()) // First value
 	{		
 		Value(0);
 	}
 
-
-	double lowerHeight = -1e38;
-	double upperHeight = 1e38;
-
-	if (!itsHeightInMeters)
-	{
-		lowerHeight = 1e38;
-		upperHeight = -1e38;
-	}
-
-	if (!itsLowerHeight.empty())
-	{
-		lowerHeight=itsLowerHeight[itsIndex];
-	}
-
-	if (!itsUpperHeight.empty())
-	{
-		upperHeight=itsUpperHeight[itsIndex];
-	}
-
+	double lowerHeight=itsLowerHeight[itsIndex];
+	double upperHeight=itsUpperHeight[itsIndex];
+	
 	double previousValue = itsPreviousValue[itsIndex];
 	double previousHeight = itsPreviousHeight[itsIndex];
 
@@ -585,7 +492,7 @@ const std::vector<double>& modifier_mean::Result() const
 	for (size_t i = 0; i < itsResult.size(); i++)
 	{
 	
-	double val = itsResult[i];
+		double val = itsResult[i];
 
 		if (!IsMissingValue(val) && fabs(itsRange[i]) > 0.0)
 		{
@@ -651,8 +558,9 @@ void modifier_count::Calculate(double theValue, double theHeight)
 
 	double findValue = itsFindValue[itsIndex];
 
-	if (IsMissingValue(findValue))
+	if (kFloatMissing == findValue)
 	{
+		itsOutOfBoundHeights[itsIndex] = true;
 		return;
 	}
 
@@ -740,11 +648,6 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 
 	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
 
-	if (IsMissingValue(theHeight) || IsMissingValue(theValue))
-	{
-		return;
-	}
-	
 	double findValue = itsFindValue[itsIndex];
 	
 	if (IsMissingValue(findValue) || (itsFindNthValue > 0 && !IsMissingValue(Value())))
@@ -888,10 +791,9 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 		}
 		else
 		{
-			lowestHeight = lowestHeight+200; // hectopascals
+			lowestHeight = lowestHeight+50; // hectopascals
 			itsLowerHeight.resize(itsResult.size(), lowestHeight);
-			itsUpperHeight.resize(itsResult.size(), highestHeight-200);
-			
+			itsUpperHeight.resize(itsResult.size(), highestHeight-50);	
 		}
 		itsValuesFound = 0;
 	} 
@@ -906,17 +808,7 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 {
 	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
 
-	if (IsMissingValue(theHeight) || IsMissingValue(theValue))
-	{
-		return;
-	}
-	
 	double findHeight = itsFindValue[itsIndex];
-
-	if (!IsMissingValue(Value()) || IsMissingValue(findHeight))
-	{
-		return;
-	}
 
 	double previousValue = itsPreviousValue[itsIndex];
 	double previousHeight = itsPreviousHeight[itsIndex];
@@ -1020,55 +912,14 @@ bool modifier_integral::Evaluate(double theValue, double theHeight)
 
 	assert(itsIndex < itsOutOfBoundHeights.size());
 
-	if (IsMissingValue(theHeight))
+	if (theHeight == kFloatMissing || theValue == kFloatMissing || itsOutOfBoundHeights[itsIndex])
 	{
 		return false;
 	}
-
-	/*
-	 * "upper" value relates to it being higher in the atmosphere
-	 * meaning its value is higher.
-	 *
-	 * ie. lower limit 10, upper limit 100
-	 *
-	 * From this it follows that valid height is lower than upper limit and
-	 * higher than lower limit
-	 *
-	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
-	 * need to be changed.
-	 */
 
 	/*
  	 * upper/lower limit check moved from evaluate function to calculate for the integration case
 	 */
-
-	double upperLimit = 1e38;
-	double lowerLimit = -1e38;
-
-	if (!itsUpperHeight.empty())
-	{
-		upperLimit = itsUpperHeight[itsIndex];
-	}
-
-	if (!itsLowerHeight.empty())
-	{
-		lowerLimit = itsLowerHeight[itsIndex];
-	}
-
-	if (itsOutOfBoundHeights[itsIndex] == true)
-	{
-		return false;
-	}
-	else if (IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
-	{
-		// height is above given height range OR either level value is missing: stop processing of this grid point
-		itsOutOfBoundHeights[itsIndex] = true;
-		return false;
-	}
-	else if (IsMissingValue(theValue))
-	{
-		return false;
-	}
 
 	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || ((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit)));
 
@@ -1082,19 +933,8 @@ void modifier_integral::Calculate(double theValue, double theHeight)
 		Value(0);
 	}
 
-	double lowerHeight = -1e38;
-
-	if (!itsLowerHeight.empty())
-	{
-		lowerHeight=itsLowerHeight[itsIndex];
-	}
-
-	double upperHeight = 1e38;
-
-	if (!itsUpperHeight.empty())
-	{
-		upperHeight=itsUpperHeight[itsIndex];
-	}
+	double lowerHeight=itsLowerHeight[itsIndex];
+	double upperHeight=itsUpperHeight[itsIndex];
 
 	double previousValue = itsPreviousValue[itsIndex];
 	double previousHeight = itsPreviousHeight[itsIndex];
@@ -1143,58 +983,14 @@ bool modifier_integral::CalculationFinished() const
 bool modifier_plusminusarea::Evaluate(double theValue, double theHeight)
 {
 	assert(itsIndex < itsOutOfBoundHeights.size());
-    if (IsMissingValue(theHeight) || IsMissingValue(theValue))
+    if (theHeight == kFloatMissing || theValue == kFloatMissing || itsOutOfBoundHeights[itsIndex] == true)
 	{
 		return false;
 	}
-
-	/*
-	 * "upper" value relates to it being higher in the atmosphere
-	 * meaning its value is higher.
-	 *
-	 * ie. lower limit 10, upper limit 100
-	 *
-	 * From this it follows that valid height is lower than upper limit and
-	 * higher than lower limit
-	 *
-	 * TODO: If we'll ever be using pressure levels and Pa as unit this will
-	 * need to be changed.
-	 */
 
 	/*
  	 * upper/lower limit check moved from evaluate function to calculate for the averaging case
 	 */
-
-	double upperLimit = 1e38;
-	double lowerLimit = -1e38;
-
-	if (!itsUpperHeight.empty())
-	{
-		upperLimit = itsUpperHeight[itsIndex];
-	}
-
-	if (!itsLowerHeight.empty())
-	{
-		lowerLimit = itsLowerHeight[itsIndex];
-	}
-
-	if (itsOutOfBoundHeights[itsIndex] == true)
-	{
-		return false;
-	}
-	else if (IsMissingValue(upperLimit) || IsMissingValue(lowerLimit))
-	{
-		// height is above given height range OR either level value is missing: stop processing of this grid point
-		itsOutOfBoundHeights[itsIndex] = true;
-		return false;
-	}
-	else if (itsOutOfBoundHeights[itsIndex])
-	{
-		// check if upper height for that grid point has been passed in the previous iteration
-		return false;
-	}
-
-//	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || (lowerLimit <= upperLimit));
 
 	return true;
 }
@@ -1239,19 +1035,9 @@ void modifier_plusminusarea::Process(const std::vector<double>& theData, const s
 void modifier_plusminusarea::Calculate(double theValue, double theHeight)
 {
 	theValue-=273.15;
-	double lowerHeight = -1e38;
 
-	if (!itsLowerHeight.empty())
-	{
-		lowerHeight=itsLowerHeight[itsIndex];
-	}
-
-	double upperHeight = 1e38;
-
-	if (!itsUpperHeight.empty())
-	{
-		upperHeight=itsUpperHeight[itsIndex];
-	}
+	double lowerHeight=itsLowerHeight[itsIndex];
+	double upperHeight=itsUpperHeight[itsIndex];
 
 	double previousValue = itsPreviousValue[itsIndex];
 	double previousHeight = itsPreviousHeight[itsIndex];
