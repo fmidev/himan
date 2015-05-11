@@ -12,6 +12,14 @@
 using namespace himan;
 using namespace std;
 
+void metutil::Gammaw(cdarr_t P, cdarr_t T, darr_t result, size_t N)
+{
+	for (size_t i = 0; i < N; i++)
+	{
+		result[i] = Gammaw_(P[i], T[i]);
+	}
+}
+
 void metutil::MixingRatio(cdarr_t T, cdarr_t P, darr_t result, size_t N)
 {
 	for (size_t i = 0; i < N; i++)

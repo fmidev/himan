@@ -38,6 +38,11 @@ struct lcl_t
 	, P(himan::kFloatMissing)
 	, Q(himan::kFloatMissing)
 	{}
+
+	CUDA_DEVICE
+	lcl_t(double T, double P, double Q)
+	: T(T), P(P), Q(Q)
+	{}
 };
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -155,6 +160,9 @@ double Gammas_(double P, double T);
 
 CUDA_DEVICE
 double Gammaw_(double P, double T);
+
+CUDA_KERNEL
+void Gammaw(cdarr_t P, cdarr_t T, darr_t result, size_t N);
 
 /**
  * @brief Calculates the temperature, pressure and specific humidity (Q) of
@@ -763,7 +771,7 @@ double himan::metutil::Gammaw_(double P, double T)
 {
 	// Sanity checks
 
-	assert(P > 10000);
+	assert(P > 1000);
 	assert(T > 0 && T < 500);
 
 	/*
