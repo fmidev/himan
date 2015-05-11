@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.4.28
+Version: 15.5.11
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -23,7 +23,7 @@ Requires: libsmartmet-newbase >= 15.4.22
 Requires: jasper
 Requires: grib_api >= 1.13.0
 Requires: oracle-instantclient-basic
-Requires: gdal >= 1.11.1
+Requires: gdal >= 1.11.0
 Requires: bzip2-libs
 Requires: zlib
 
@@ -37,7 +37,7 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: gcc-c++ >= 4.8.2
 %endif
 
-BuildRequires: cuda-7-0
+BuildRequires: cuda-6-5
 BuildRequires: scons
 Provides: himan
 
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon May 11 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.5.11-1.fmi
+- Link with cuda 6.5 due to performance issues (HIMAN-96)
 * Tue Apr 28 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.28-1.fmi
 - Linking with Cuda 7 (HIMAN-96)
 * Fri Apr 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.10-1.fmi
