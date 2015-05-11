@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.4.29
+Version: 15.5.11
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -29,7 +29,7 @@ BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
 %endif
 
-BuildRequires: cuda-7-0
+BuildRequires: cuda-6-5
 BuildRequires: libfmidb >= 15.4.16
 BuildRequires: libfmigrib >= 15.4.16
 BuildRequires: libluabind >= 0.9.3-3
@@ -103,6 +103,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon May 11 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.5.11-1.fmi
+- Link with cuda 6.5 due to performance issues (HIMAN-96)
 * Tue Apr 28 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.28-1.fmi
 - Linking with Cuda 7 (HIMAN-96)
 * Mon Apr 27 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.27-1.fmi
