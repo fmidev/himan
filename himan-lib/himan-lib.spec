@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.4.28
+Version: 15.5.11
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -27,7 +27,7 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: gcc-c++ >= 4.8.2
 %endif
 
-BuildRequires: cuda-7-0
+BuildRequires: cuda-6-5
 BuildRequires: libsmartmet-newbase-devel >= 15.4.22
 BuildRequires: scons
 Provides: libhiman.so
@@ -55,6 +55,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon May 11 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.5.11-1.fmi
+- gzip and bzip2 support for grib (STU-2152)
+- Link with cuda 6.5 due to performance issues (HIMAN-96)
 * Tue Apr 28 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.28-1.fmi
 - Linking with Cuda 7 (HIMAN-96)
 * Fri Apr 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.24-1.fmi
