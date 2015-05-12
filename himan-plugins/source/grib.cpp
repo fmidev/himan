@@ -40,14 +40,14 @@ shared_ptr<NFmiGrib> grib::Reader()
 	return itsGrib;
 }
 
-bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileWriteOption fileWriteOption)
+bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileCompression fileCompression, HPFileWriteOption fileWriteOption)
 {
 
-	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
+	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles || fileCompression != kNONE)
 	{
 		// Write only that data which is currently set at descriptors
 
-		WriteGrib(anInfo, outputFile, fileType);
+		WriteGrib(anInfo, outputFile, fileType, fileCompression);
 	}
 
 	else
@@ -68,7 +68,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileW
 
 					while (anInfo.NextParam())
 					{
-						if (!WriteGrib(anInfo, outputFile, fileType, true))
+						if (!WriteGrib(anInfo, outputFile, fileType, fileCompression, true))
 						{
 							itsLogger->Error("Error writing grib to file");
 						}
@@ -82,7 +82,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileW
 
 }
 
-bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool appendToFile)
+bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFileCompression fileCompression, bool appendToFile)
 {
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
@@ -103,9 +103,24 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 	{
 		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
 		edition = 2;
-	
-		outputFile += "2";
-	}
+		if (fileCompression == kNONE)
+		{	
+			outputFile += "2";
+		}
+		else if (fileCompression == kGZIP)
+		{
+                	outputFile.insert(outputFile.end()-3, '2');
+		}
+		else if (fileCompression == kBZIP2)
+		{
+			outputFile.insert(outputFile.end()-4, '2');
+		}
+		else
+		{
+			itsLogger->Error("Unable to write to compressed grib. Unknown file compression.");
+        	        return false;
+		}
+        }
 
 	itsGrib->Message().Edition(edition);
 
@@ -274,7 +289,14 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, bool
 		itsGrib->Message().PV(AB, AB.size());
 	}
 
-	itsGrib->Message().Write(outputFile, appendToFile);
+	if (fileCompression == kNONE)
+	{
+		itsGrib->Message().Write(outputFile, appendToFile);
+	}
+	else
+	{
+	        itsGrib->WriteMessage(outputFile);
+	}
 
 	aTimer->Stop();
 	long duration = aTimer->GetTime();

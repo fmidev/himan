@@ -52,6 +52,7 @@ bool writer::ToFile(info& theInfo,
 	
 	HPFileWriteOption fileWriteOption = conf.FileWriteOption();
 	HPFileType fileType = conf.OutputFileType();
+	HPFileCompression fileCompression = conf.FileCompression();
 
 	if ((fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles) || correctFileName.empty())
 	{
@@ -71,32 +72,27 @@ bool writer::ToFile(info& theInfo,
 		case kGRIB:
 		case kGRIB1:
 		case kGRIB2:
-		case kGRIB1GZ:
-		case kGRIB2GZ:
-		case kGRIB1BZ2:
-		case kGRIB2BZ2:
 		{
 
 			auto theGribWriter = GET_PLUGIN(grib);
 
 			correctFileName += ".grib";
 
-			if (fileType == kGRIB2 || fileType == kGRIB2GZ || fileType == kGRIB2BZ2)
+			if (fileType == kGRIB2)
 			{
 				correctFileName += "2";
 			}
 
-			if (fileType == kGRIB1GZ || fileType == kGRIB2GZ)
+			if (fileCompression == kGZIP)
 			{
 				correctFileName += ".gz";
 			}
-
-			if (fileType == kGRIB1BZ2 || fileType == kGRIB2BZ2)
+			else if (fileCompression == kBZIP2)
 			{
 				correctFileName += ".bz2";
 			}
 
-			ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileWriteOption);
+			ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileCompression, fileWriteOption);
 
 			break;
 		}
