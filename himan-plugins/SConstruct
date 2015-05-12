@@ -61,8 +61,6 @@ includes = []
 
 includes.append('./include')
 
-includes.append('/home/weto/tack/fmigrib/include')
-
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
@@ -109,7 +107,7 @@ libraries = []
 if have_cuda:
 	env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
 
-#libraries.append('fmigrib')
+libraries.append('fmigrib')
 libraries.append('fmidb')
 libraries.append('jasper')
 libraries.append('clntsh')
@@ -119,7 +117,6 @@ libraries.append('odbc')
 libraries.append('grib_api')
 
 env.Append(LIBS = libraries)
-env.Append(LIBS = env.File('/home/weto/tack/fmigrib/build/debug/libfmigrib.a'))
 
 # CFLAGS
 
