@@ -156,6 +156,15 @@ public:
 	void FileWriteOption(HPFileWriteOption theFileWriteOption);
 	HPFileWriteOption FileWriteOption() const;
 
+        /**
+         * @brief Enable or disable output file compression
+         *
+         * @param theFileCompression set output file compression to gzip, bzip2 or none
+         */
+
+	void FileCompression(HPFileCompression theFileCompression);
+	HPFileCompression FileCompression() const;
+
 	/**
 	 * @brief Enable or disable reading of source data from Neons
 	 * @param theReadDataFromDatabase true = read data from neons, false = use only data specified in command
@@ -166,7 +175,7 @@ public:
 	bool ReadDataFromDatabase() const;
 
 	/**
-	 * @brief Enable or disable waiting for files
+	 * @brief Eiable or disable waiting for files
 	 * @param theFileWaitTimeout Value in minutes
 	 */
 
@@ -253,6 +262,7 @@ protected:
 	std::string itsOriginTime;
 
 	HPFileWriteOption itsFileWriteOption;
+	HPFileCompression itsFileCompression;
 	bool itsReadDataFromDatabase;
 
 	unsigned short itsFileWaitTimeout; //<! Minutes

@@ -175,6 +175,34 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing key file_write: ") + e.what());
 	}
 
+	/* Check file_compression */
+
+	try
+	{
+		string theFileCompression = pt.get<string>("file_compression");
+
+		if (theFileCompression == "gzip")
+		{
+			conf->FileCompression(kGZIP);
+		}
+		else if (theFileCompression == "bzip2")
+		{
+			conf->FileCompression(kBZIP2);
+		}
+		else
+		{
+			conf->FileCompression(kNONE);
+		}
+	}
+        catch (boost::property_tree::ptree_bad_path& e)
+        {
+                // Something was not found; do nothing
+        }
+        catch (exception& e)
+        {
+                throw runtime_error(string("Error parsing key file_write: ") + e.what());
+        }
+
 	/* Check read_data_from_database */
 
 	try
@@ -249,6 +277,23 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			conf->itsOutputFileType = kGRIB2;
 		}
+		else if (theFileType == "GRIB1GZ")
+		{
+			conf->itsOutputFileType = kGRIB1GZ;
+		}
+                else if (theFileType == "GRIB2GZ")
+                {
+                        conf->itsOutputFileType = kGRIB2GZ;
+                }
+                else if (theFileType == "GRIB1BZ2")
+                {
+                        conf->itsOutputFileType = kGRIB1BZ2;
+                }
+                else if (theFileType == "GRIB2BZ2")
+                {
+                        conf->itsOutputFileType = kGRIB2BZ2;
+                }
+
 		else if (theFileType == "FQD" || theFileType == "QUERYDATA")
 		{
 			conf->itsOutputFileType = kQueryData;

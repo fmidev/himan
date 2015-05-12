@@ -125,29 +125,13 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		return kQueryData;
 	}
-	else if (ext == ".grib")
+	else if (ext == ".grib" || ext == ".grib.gz" || ext == ".grib.bz2")
 	{
 		return kGRIB;
 	}
-	else if (ext == ".grib2")
+	else if (ext == ".grib2" || ext == ".grib2.gz" || ext == ".grib2.bz2")
 	{
 		return kGRIB2;
-	}
-	else if (ext == ".grib.gz")
-	{
-		return kGRIB1GZ;
-	}
-	else if (ext == ".grib2.gz")
-	{
-		return kGRIB2GZ;
-	}
-	else if (ext == ".grib.bz2")
-	{
-		return kGRIB1BZ2;
-	}
-	else if (ext == ".grib2.bz2")
-	{
-		return kGRIB2BZ2;
 	}
 	else if (ext == ".nc")
 	{

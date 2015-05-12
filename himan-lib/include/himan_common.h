@@ -94,6 +94,23 @@ const boost::unordered_map<HPFileType,std::string> HPFileTypeToString = ba::map_
 		(kGRIB2BZ2, "bzip2 compressed grib2");
 #endif
 
+// Defined external compression types
+
+enum HPFileCompression
+{
+	kNONE = 0,
+	kGZIP,
+	kBZIP2
+};
+
+#ifndef __CUDACC__
+const boost::unordered_map<HPFileCompression,std::string> HPFileCompressionToString = ba::map_list_of
+                (kNONE, "uncompressed")
+                (kGZIP, "gzip compressed")
+                (kBZIP2, "bzip2 compressed");
+#endif
+
+
 // Define supported projections
 // Values equal to those in newbase
 

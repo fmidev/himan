@@ -14,6 +14,7 @@ configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 {
 	itsOutputFileType = kGRIB1;
 	itsFileWriteOption = kSingleFile;
+	itsFileCompression = kNONE;
 	itsReadDataFromDatabase = true;
 	itsUseCuda = true;
 	itsFileWaitTimeout = 0;
@@ -39,6 +40,7 @@ configuration::configuration(const configuration& other)
 	itsOriginTime = other.itsOriginTime;
 
 	itsFileWriteOption = other.itsFileWriteOption;
+	itsFileCompression = other.itsFileCompression;
 	itsReadDataFromDatabase = other.itsReadDataFromDatabase;
 
 	itsFileWaitTimeout = other.itsFileWaitTimeout;
@@ -76,6 +78,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << "__itsOutputFileType__ " << HPFileTypeToString.at(itsOutputFileType) << std::endl;
 	file << "__itsFileWriteOption__ " << HPFileWriteOptionToString.at(itsFileWriteOption) << std::endl;
+        file << "__itsFileCompression__ " << HPFileCompressionToString.at(itsFileCompression) << std::endl;
 	file << "__itsUseCuda__ " << itsUseCuda << std::endl;
 	file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
 	file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
@@ -136,6 +139,17 @@ void configuration::FileWriteOption(HPFileWriteOption theFileWriteOption)
 {
 	itsFileWriteOption = theFileWriteOption;
 }
+
+HPFileCompression configuration::FileCompression() const
+{
+        return itsFileCompression;
+}
+
+void configuration::FileCompression(HPFileCompression theFileCompression)
+{
+        itsFileCompression = theFileCompression;
+}
+
 
 bool configuration::ReadDataFromDatabase() const
 {
