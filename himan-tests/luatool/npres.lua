@@ -22,7 +22,6 @@ if not data then
 end
 
 if scale then
-	logger:Info("Scaling data")
 	for i = 1, #data do
 		local val = data[i]
 		if value then
@@ -31,7 +30,6 @@ if scale then
 	end
 end
 
-print("data size: " .. #data)
 result:SetParam(nparam)
 result:SetValues(data)
 

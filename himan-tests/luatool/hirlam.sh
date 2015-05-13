@@ -8,7 +8,7 @@ fi
 
 rm -f N*grib
 
-$HIMAN -d 5 -f hirlam.json hirlam_npres_source.grib -s stat --no-cuda
+$HIMAN -d 4 -f hirlam.json hirlam_npres_source.grib -s stat --no-cuda
 
 grib_compare hirlam_npres_result.grib ./N-0TO1_pressure_600_rll_1030_816_0_041.grib
 
