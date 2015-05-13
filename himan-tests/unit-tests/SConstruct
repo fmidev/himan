@@ -26,7 +26,7 @@ if os.environ['HOME'] == "/home/weto":
 	
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-5.5'
+cuda_toolkit_path = '/usr/local/cuda-7.0'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
 	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -110,16 +110,7 @@ libraries.append('smartmet_smarttools')
 
 env.Append(LIBS = libraries)
 
-boost_libraries = [ 'boost_filesystem', 'boost_system', 'boost_regex', 'boost_iostreams', 'boost_thread', 'boost_unit_test_framework' ]
-
-for lib in boost_libraries:
-	libfile = '/usr/lib64/lib' + lib + '.a'
-
-	if not os.path.isfile(libfile):
-		libfile = '/usr/lib64/lib' + lib + '-mt.a'
-
-	env.Append(LIBS=env.File(libfile))
-
+env.Append(LIBS = [ 'boost_filesystem', 'boost_system', 'boost_regex', 'boost_iostreams', 'boost_thread', 'boost_unit_test_framework' ])
 env.Append(LIBS = [ 'z', 'bz2', 'rt' ])
 
 # CFLAGS

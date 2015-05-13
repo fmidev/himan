@@ -27,14 +27,17 @@ BOOST_AUTO_TEST_CASE(QUERYDATA)
 	vector<forecast_time> times;
 	vector<level> levels;
 	vector<param> params;
+	vector<forecast_type> types;
 
 	times.push_back(forecast_time("2014-04-04 00:00:00", "2014-04-04 01:00:00"));
 	levels.push_back(level(kHeight, 2, "Height"));
 	params.push_back(param("TestParam", 12));
+	types.push_back(forecast_type(kDeterministic));
 
 	newInfo->Times(times);
 	newInfo->Levels(levels);
 	newInfo->Params(params);
+	newInfo->ForecastTypes(types);
 
 	newGrid->ScanningMode(himan::kBottomLeft);
 	newGrid->UVRelativeToGrid(false);
@@ -45,7 +48,7 @@ BOOST_AUTO_TEST_CASE(QUERYDATA)
 
 	size_t nx = 10, ny = 20;
 
-	auto data = matrix<double>(nx, ny, 1, kFloatMissing);
+	auto data = matrix<double>(nx, ny, 1, himan::kFloatMissing);
 
 	for (size_t i = 0; i < nx*ny; i++)
 	{
