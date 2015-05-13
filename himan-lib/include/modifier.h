@@ -72,6 +72,13 @@ class modifier
 		virtual bool Evaluate(double theValue, double theHeight);
 		virtual double Value() const;
 		virtual void Value(double theValue);
+		
+		/**
+		 * @brief Initialize lower and upper heights to some default values
+	         */
+		
+		virtual void InitializeHeights();
+		
 		bool itsMissingValuesAllowed;
 
 		std::vector<double> itsLowerHeight;

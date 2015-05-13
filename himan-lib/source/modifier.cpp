@@ -170,27 +170,23 @@ void modifier::Init(const std::vector<double>& theData, const std::vector<double
 		itsResult.resize(theData.size(), kFloatMissing);
 		itsOutOfBoundHeights.resize(theData.size(), false);
 
-		// Absurd default limits if user has not specified any limits
+		InitializeHeights();
 		
-		if (itsHeightInMeters)
-		{	
-			itsLowerHeight.resize(theData.size(), 1e38);
-			itsUpperHeight.resize(theData.size(), -1e38);
-		}
-		else
-		{
-			itsLowerHeight.resize(theData.size(), -1e38);
-			itsUpperHeight.resize(theData.size(), 1e38);
-		}
+#ifdef DEBUG
+		DumpVector(itsOutOfBoundHeights);
+		DumpVector(itsLowerHeight);
+		DumpVector(itsUpperHeight);
+#endif
 	}
 }
 
 bool modifier::Evaluate(double theValue, double theHeight)
 {
-
 	assert(itsIndex < itsOutOfBoundHeights.size());
+	assert(itsIndex < itsLowerHeight.size());
+	assert(itsIndex < itsUpperHeight.size());
 
-	if (kFloatMissing == theHeight || kFloatMissing == theValue || itsOutOfBoundHeights[itsIndex] == true)
+	if (kFloatMissing == theHeight || kFloatMissing == theValue || itsOutOfBoundHeights[itsIndex])
 	{
 		return false;
 	}
@@ -278,6 +274,24 @@ void modifier::HeightInMeters(bool theHeightInMeters)
 	itsHeightInMeters = theHeightInMeters;
 }
 
+void modifier::InitializeHeights()
+{
+	// Absurd default limits if user has not specified any limits
+
+	assert(itsResult.size());
+
+	if (itsHeightInMeters)
+	{	
+		itsLowerHeight.resize(itsResult.size(), -1e38);
+		itsUpperHeight.resize(itsResult.size(), 1e38);
+	}
+	else
+	{
+		itsLowerHeight.resize(itsResult.size(), 1e38);
+		itsUpperHeight.resize(itsResult.size(), -1e38);
+	}
+}
+
 std::ostream& modifier::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
@@ -326,6 +340,8 @@ void modifier_maxmin::Init(const std::vector<double>& theData, const std::vector
 		itsResult.resize(theData.size(), kFloatMissing);
 		itsMaximumResult.resize(theData.size(), kFloatMissing);
 		itsOutOfBoundHeights.resize(theData.size(), false);
+		
+		InitializeHeights();
 	}
 }
 
@@ -402,18 +418,7 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 	
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
 		
-		// Absurd default limits if user has not specified any limits
-		
-		if (itsHeightInMeters)
-		{	
-			itsLowerHeight.resize(theData.size(), 1e38);
-			itsUpperHeight.resize(theData.size(), -1e38);
-		}
-		else
-		{
-			itsLowerHeight.resize(theData.size(), -1e38);
-			itsUpperHeight.resize(theData.size(), 1e38);
-		}
+		InitializeHeights();
 	}
 }
 
@@ -534,6 +539,7 @@ void modifier_count::Init(const std::vector<double>& theData, const std::vector<
 
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
 
+		InitializeHeights();
 	}
 }
 
@@ -624,6 +630,10 @@ void modifier_findheight::Init(const std::vector<double>& theData, const std::ve
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 		itsFoundNValues.resize(itsResult.size(), 0);
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
+		
+		// Absurd default limits if user has not specified any limits
+		
+		InitializeHeights();
 		
 		itsValuesFound = 0;
 	}
@@ -897,6 +907,8 @@ void modifier_integral::Init(const std::vector<double>& theData, const std::vect
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 	
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
+		
+		InitializeHeights();
 
 	}
 }
@@ -999,6 +1011,8 @@ void modifier_plusminusarea::Init(const std::vector<double>& theData, const std:
 		itsPreviousHeight.resize(theData.size(), kFloatMissing);
 	
 		itsOutOfBoundHeights.resize(theData.size(), false);
+		
+		InitializeHeights();
 	}
 }
 
