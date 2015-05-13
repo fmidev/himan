@@ -99,6 +99,22 @@ void modifier::Clear(double fillValue)
 void modifier::FindValue(const std::vector<double>& theFindValue)
 {
 	itsFindValue = theFindValue;
+
+	// If Find values have missing values we can't process those grid points
+	
+	itsOutOfBoundHeights.resize(itsFindValue.size(), false);
+	
+	for (size_t i = 0; i < itsFindValue.size(); i++)
+	{
+		if (itsFindValue[i] == kFloatMissing)
+		{
+			itsOutOfBoundHeights[i] = true;
+		}
+	}
+#ifdef DEBUG
+	DumpVector(itsFindValue);
+	DumpVector(itsOutOfBoundHeights);
+#endif	
 }
 
 void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
@@ -106,6 +122,9 @@ void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
 	itsLowerHeight = theLowerHeight;
 	
 	// If height limits have missing values we can't process those grid points
+	
+	itsOutOfBoundHeights.resize(itsLowerHeight.size(), false);
+
 	for (size_t i = 0; i < itsLowerHeight.size(); i++)
 	{
 		if (itsLowerHeight[i] == kFloatMissing)
@@ -124,6 +143,9 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 	itsUpperHeight = theUpperHeight;
 	
 	// If height limits have missing values we can't process those grid points
+	
+	itsOutOfBoundHeights.resize(itsUpperHeight.size(), false);
+	
 	for (size_t i = 0; i < itsUpperHeight.size(); i++)
 	{
 		if (itsUpperHeight[i] == kFloatMissing)
@@ -196,7 +218,7 @@ bool modifier::Evaluate(double theValue, double theHeight)
 
 	if (itsHeightInMeters)
 	{
-		if (theHeight >= upperLimit) //  || kFloatMissing == upperLimit || kFloatMissing == lowerLimit)
+		if (theHeight >= upperLimit)
 		{
 			// height is above given height range OR either level value is missing: stop processing of this grid point
 			itsOutOfBoundHeights[itsIndex] = true;
@@ -210,7 +232,7 @@ bool modifier::Evaluate(double theValue, double theHeight)
 	}
 	else
 	{
-		if (theHeight <= upperLimit) //  || kFloatMissing == upperLimit || kFloatMissing == lowerLimit)
+		if (theHeight <= upperLimit)
 		{
 			itsOutOfBoundHeights[itsIndex] = true;
 			return false;
@@ -635,6 +657,16 @@ void modifier_findheight::Init(const std::vector<double>& theData, const std::ve
 		
 		InitializeHeights();
 		
+		// If Find values have missing values we can't process those grid points
+	
+		for (size_t i = 0; i < itsFindValue.size(); i++)
+		{
+			if (itsFindValue[i] == kFloatMissing)
+			{
+				itsOutOfBoundHeights[i] = true;
+			}
+		}
+		
 		itsValuesFound = 0;
 	}
 }
@@ -793,6 +825,20 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 			itsUpperHeight.resize(itsResult.size(), highestHeight-150);
 		}
 		
+		// If Find values have missing values we can't process those grid points
+	
+		for (size_t i = 0; i < itsFindValue.size(); i++)
+		{
+			if (itsFindValue[i] == kFloatMissing)
+			{
+				itsOutOfBoundHeights[i] = true;
+			}
+		}
+
+#ifdef DEBUG
+		DumpVector(itsFindValue);
+		DumpVector(itsOutOfBoundHeights);
+#endif	
 		itsValuesFound = 0;
 		
 #ifdef DEBUG
@@ -820,26 +866,25 @@ void modifier_findvalue::Calculate(double theValue, double theHeight)
 	itsPreviousValue[itsIndex] = theValue;
 	itsPreviousHeight[itsIndex] = theHeight;
 
-	if (IsMissingValue(previousValue) && itsGridsProcessed == 0)
+	if (itsGridsProcessed == 0 && ((itsHeightInMeters && findHeight < theHeight) || (!itsHeightInMeters && findHeight > theHeight)))
 	{
 		// It's possible that the height requested is below the lowest hybrid level, meaning
 		// that we cannot interpolate the value. In this case clamp the value to the lowest
 		// hybrid level.
 		
-		// Clamp threshold is set to 20 meters: if the difference between requested height
+		// Clamp threshold is set to 20 meters or hPa: if the difference between requested height
 		// and lowest hybrid level is larger that this then clamping is not done and
 		// kFloatMissing is the result
 
 		double diff = fabs(theHeight - findHeight);
-		if (findHeight < theHeight)
+
+		if (diff < 20)
 		{
-			if (diff < 20)
-			{
-				Value(theValue);
-				itsValuesFound++;
-				itsOutOfBoundHeights[itsIndex] = true;
-			}
+			Value(theValue);
+			itsValuesFound++;
 		}
+		
+		itsOutOfBoundHeights[itsIndex] = true;
 
 		// previous was missing but the level we want is above current height
 		return;
