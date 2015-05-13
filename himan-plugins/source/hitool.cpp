@@ -11,6 +11,7 @@
 #include <NFmiInterpolation.h>
 #include <algorithm>
 #include <boost/foreach.hpp>
+#include <boost/format.hpp>
 #include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
@@ -192,19 +193,22 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 	}
 	else if (itsHeightUnit == kHPa)
 	{
-		query << "SELECT max(CASE WHEN minimum_pressure <= " << height << " THEN level_value ELSE NULL END) AS lowest_level, "
-			<< "min(CASE WHEN maximum_pressure >= " << height << " THEN level_value ELSE NULL END) AS highest_level "
+		// Add/subtract 1 already in the query, since due to the composition of the query it will return
+		// the first level that is higher than lower height and vice versa
+		
+		query << "SELECT max(CASE WHEN minimum_pressure <= " << height << " THEN level_value+1 ELSE NULL END) AS lowest_level, "
+			<< "min(CASE WHEN maximum_pressure >= " << height << " THEN level_value-1 ELSE NULL END) AS highest_level "
 			<< "FROM "
 			<< "hybrid_level_height "
 			<< "WHERE "
-			<< "producer_id = " << producerId;
+			<< "producer_id = " << producerId;;
 	}
 
 	HPDatabaseType dbtype = itsConfiguration->DatabaseType();
 	
 	vector<string> row;
 	
-	long lowest = kHPMissingInt, highest = kHPMissingInt;
+	long absolutelowest = kHPMissingInt, absolutehighest = kHPMissingInt;
 	
 	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 	{
@@ -213,8 +217,8 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 	
 		row = n->NeonsDB().FetchRow();
 		
-		lowest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-		highest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
+		absolutelowest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		absolutehighest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
 	}
 	
 	if (row.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
@@ -224,35 +228,55 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 	
 		row = r->RadonDB().FetchRow();
 		
-		lowest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
-		highest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
+		absolutelowest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		absolutehighest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
 	}
-		
+
+	long newlowest = absolutelowest, newhighest = absolutehighest;
+
 	if (!row.empty())
 	{
 
 		// If requested height is below lowest level (f.ex. 0 meters) or above highest (f.ex. 80km)
 		// database query will return null
 
-		long newlowest = (row[0] == "") ? lowest : lexical_cast<long> (row[0]);
-		long newhighest = (row[1] == "") ? highest : lexical_cast<long> (row[1]);
-
-		// SQL query returns the level value that precedes the requested value.
-		// For first hybrid level (the highest ie max), get one level above the max level if possible
-		// For last hybrid level (the lowest ie min), get one level below the min level if possible
-		// This means that we have a buffer of two levels for both directions!
-
-		lowest = (newlowest == lowest) ? lowest : newlowest + 1;
-		
-		highest = (newhighest == highest) ? highest : newhighest - 1;
-
-		if (highest > lowest)
+		if (row[0] != "")
 		{
-			highest = lowest;
-		}
-	}
+
+			// SQL query returns the level value that precedes the requested value.
+			// For first hybrid level (the highest ie max), get one level above the max level if possible
+			// For last hybrid level (the lowest ie min), get one level below the min level if possible
+			// This means that we have a buffer of three levels for both directions!
 			
-	return make_pair<level, level> (level(kHybrid, lowest), level(kHybrid, highest));
+			newlowest = lexical_cast<long> (row[0]) + 1;
+			
+			if (newlowest > absolutelowest)
+			{
+				newlowest = absolutelowest;
+			}
+
+		}
+		
+		if (row[1] != "")
+		{
+			newhighest = lexical_cast<long> (row[1]) - 1;
+		
+			if (newhighest < absolutehighest)
+			{
+				newhighest = absolutehighest;
+			}
+		}
+		
+		if (newhighest > newlowest)
+		{
+			newhighest = newlowest;
+		}
+		
+	}
+
+	assert(newlowest >= newhighest);
+
+	return make_pair<level, level> (level(kHybrid, newlowest), level(kHybrid, newhighest));
 }
 
 vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
@@ -352,27 +376,44 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 			highestHybridLevel = static_cast<long> (levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
 		
+			assert(lowestHybridLevel >= highestHybridLevel);
+
 			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lowestHybridLevel) + " .. " + boost::lexical_cast<string> (highestHybridLevel) 
-				+ " for height range " + boost::lexical_cast<string> (util::round(min_value, 1)) 
-				+ " .. " + boost::lexical_cast<string> (util::round(max_value, 1)) + " " + heightUnit);
+				+ " for height range " + boost::str(boost::format("%.2f") % min_value) 
+				+ " .. " + boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
 		}
 			break;
 
 		case kFindValueModifier:
 		{
 			auto p = ::minmax(findValue);
-			double max_value = p.second;
-			double min_value = p.first;
-		
+			
+			double max_value = p.second; // highest
+			double min_value = p.first; // lowest
+
+			if (itsHeightUnit == kHPa)
+			{
+				// larger value is closer to ground
+			
+				double temp=max_value;
+				max_value = min_value;
+				min_value = temp;
+
+				assert(min_value >= 10);
+				assert(max_value < 1200);				
+			}
+
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
 			auto levelsForMinHeight = LevelForHeight(prod, min_value);
-		
+
 			highestHybridLevel = static_cast<long> (levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long> (levelsForMinHeight.first.Value());
+			
+			assert(lowestHybridLevel >= highestHybridLevel);
 
 			itsLogger->Debug("Adjusting level range to " + boost::lexical_cast<string> (lowestHybridLevel) + " .. " + boost::lexical_cast<string> (highestHybridLevel) 
-				+ " for height range " + boost::lexical_cast<string> (util::round(min_value, 1)) 
-				+ " .. " + boost::lexical_cast<string> (util::round(max_value, 1)) + " " + heightUnit);
+				+ " for height range " + boost::str(boost::format("%.2f") % min_value) 
+				+ " .. " + boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
 
 					
 		}
@@ -418,15 +459,17 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 
 		mod->Process(values->Grid()->Data().Values(), heights->Grid()->Data().Values());
 
+#ifdef DEBUG
 		size_t heightsCrossed = mod->HeightsCrossed();
 
 		string msg = "Level " + boost::lexical_cast<string> (currentLevel.Value()) + ": height range crossed for " + boost::lexical_cast<string> (heightsCrossed) +
 			"/" + boost::lexical_cast<string> (values->Data().Size()) + " grid points";
 
 		itsLogger->Debug(msg);
-
+#endif
 	}
 
+	assert(mod->HeightsCrossed() == mod->Result().size());
 	return mod->Result();
 }
 

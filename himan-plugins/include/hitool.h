@@ -443,6 +443,16 @@ public:
 
 	void HeightUnit(HPParameterUnit theHeightUnit);
 	HPParameterUnit HeightUnit() const;
+
+	/**
+	 * @brief Determine minimum and maximum hybrid levels that can contain data for a specific height
+	 *
+	 * @param prod Producer from where data is fetched, function will try to determine correct producer even if raw producer is defined
+	 * @param height The height in question, meters or hPa
+	 * @return Two level definitions, minimum level that contains this height and maximum level
+	 */
+
+	std::pair<level,level> LevelForHeight(const producer& prod, double height) const;
 	
 private:
 	std::shared_ptr<modifier> CreateModifier(HPModifierType modifierType) const;
@@ -472,13 +482,6 @@ private:
 							const std::vector<double>& findValue = std::vector<double>()) const;
 
 	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime, const forecast_type& theType) const;
-
-	/**
-	 * @brief Approximate heights (in meters) for each model level.
-	 *
-	 */
-
-	std::pair<level,level> LevelForHeight(const producer& prod, double height) const;
 
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	forecast_time itsTime;
