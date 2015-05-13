@@ -8,6 +8,54 @@
 
 using namespace himan;
 
+#ifdef DEBUG
+#include <boost/foreach.hpp>
+
+void DumpVector(const std::vector<double>& vec)
+{
+
+	double min = 1e38, max = -1e38, sum = 0;
+	size_t count = 0, missing = 0;
+
+	BOOST_FOREACH(double val, vec)
+	{
+		if (val == kFloatMissing)
+		{
+			missing++;
+			continue;
+		}
+
+		min = (val < min) ? val : min;
+		max = (val > max) ? val : max;
+		count++;
+		sum += val;
+	}
+
+	double mean = std::numeric_limits<double>::quiet_NaN();
+
+	if (count > 0)
+	{
+		mean = sum / static_cast<double> (count);
+	}
+
+	std::cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << std::endl;
+
+}
+void DumpVector(const std::vector<bool>& vec)
+{
+	size_t count = 0, trueval = 0;
+	BOOST_FOREACH(bool val, vec)
+	{
+		count++;
+		
+		if (val) trueval++;
+	}
+	
+	std::cout << "true values: " << trueval << " false values: " << (count-trueval) << " total: " << count << std::endl;
+
+}
+#endif
+
 modifier::modifier()
 	: itsMissingValuesAllowed(false)
 	, itsFindNthValue(1) // first
@@ -66,39 +114,8 @@ void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
 		}
 	}
 #ifdef DEBUG
-	double min = 1e38, max = -1e38, mean = 0;
-	size_t count = 0;
-	
-	for (size_t i = 0; i < itsLowerHeight.size(); i++)
-	{
-		double val = itsLowerHeight[i];
-
-		if (IsMissingValue(val))
-		{
-			continue;
-		}
-
-		count++;
-		mean += val;
-
-		if (val > max)
-		{
-			max = val;
-		}
-		else if (val < min)
-		{
-			min = val;
-		}
-	}
-
-	if (count == 0)
-	{
-		std::cout << "itsUpperHeight all values are missing" << std::endl;
-	}
-	else
-	{
-		std::cout << "itsLowerHeight min: " << min << " max: " << max << " mean: " << mean/static_cast<double> (count) << std::endl;
-	}
+	DumpVector(itsLowerHeight);
+	DumpVector(itsOutOfBoundHeights);
 #endif
 }
 
@@ -115,39 +132,8 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 		}
 	}
 #ifdef DEBUG
-	double min = 1e38, max = -1e38, mean = 0;
-	size_t count = 0;
-
-	for (size_t i = 0; i < itsUpperHeight.size(); i++)
-	{
-		double val = itsUpperHeight[i];
-
-		if (IsMissingValue(val))
-		{
-			continue;
-		}
-		
-		count++;
-		mean += val;
-		
-		if (val > max)
-		{
-			max = val;
-		}
-		else if (val < min)
-		{
-			min = val;
-		}
-	}
-
-	if (count == 0)
-	{
-		std::cout << "itsUpperHeight all values are missing" << std::endl;
-	}
-	else
-	{
-		std::cout << "itsUpperHeight min: " << min << " max: " << max << " mean: " << mean/static_cast<double> (count) << std::endl;
-	}
+	DumpVector(itsLowerHeight);
+	DumpVector(itsOutOfBoundHeights);
 #endif
 }
 
@@ -762,6 +748,7 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 
 			if (h == kFloatMissing)
 			{
+				itsOutOfBoundHeights[i] = true;
 				continue;
 			}
 
@@ -791,11 +778,18 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 		}
 		else
 		{
-			lowestHeight = lowestHeight+50; // hectopascals
+			lowestHeight = lowestHeight+150; // hectopascals
 			itsLowerHeight.resize(itsResult.size(), lowestHeight);
-			itsUpperHeight.resize(itsResult.size(), highestHeight-50);	
+			itsUpperHeight.resize(itsResult.size(), highestHeight-150);
 		}
+		
 		itsValuesFound = 0;
+		
+#ifdef DEBUG
+		DumpVector(itsLowerHeight);
+		DumpVector(itsUpperHeight);
+		DumpVector(itsOutOfBoundHeights);
+#endif
 	} 
 }
 
@@ -921,8 +915,6 @@ bool modifier_integral::Evaluate(double theValue, double theHeight)
  	 * upper/lower limit check moved from evaluate function to calculate for the integration case
 	 */
 
-	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || ((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit)));
-
 	return true;
 }
 
@@ -941,7 +933,6 @@ void modifier_integral::Calculate(double theValue, double theHeight)
 
 	itsPreviousValue[itsIndex] = theValue;
 	itsPreviousHeight[itsIndex] = theHeight;
-
 
 	if (previousHeight < lowerHeight && theHeight > lowerHeight)
 	{
