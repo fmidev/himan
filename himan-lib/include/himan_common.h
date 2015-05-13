@@ -72,11 +72,7 @@ enum HPFileType
 	kGRIB, // when we don't know if its 1 or 2
 	kQueryData,
 	kNetCDF,
-	kCSV,
-	kGRIB1GZ, // for compressed grib-files
-	kGRIB1BZ2, // for compressed grib-files
-	kGRIB2GZ, // for compressed grib-files
-	kGRIB2BZ2 // for compressed grib-files
+	kCSV
 };
 
 #ifndef __CUDACC__
@@ -88,24 +84,23 @@ const boost::unordered_map<HPFileType,std::string> HPFileTypeToString = ba::map_
 		(kQueryData, "QueryData")
 		(kNetCDF, "NetCDF")
 		(kCSV, "CSV")
-		(kGRIB1GZ, "gzip compressed grib1")
-		(kGRIB1BZ2, "bzip2 compressed grib1")
-		(kGRIB2GZ, "gzip compressed grib2")
-		(kGRIB2BZ2, "bzip2 compressed grib2");
+		;
 #endif
 
 // Defined external compression types
 
 enum HPFileCompression
 {
-	kNONE = 0,
+	kUnknownCompression = 0,
+	kNoCompression,
 	kGZIP,
 	kBZIP2
 };
 
 #ifndef __CUDACC__
 const boost::unordered_map<HPFileCompression,std::string> HPFileCompressionToString = ba::map_list_of
-                (kNONE, "uncompressed")
+				(kUnknownCompression, "unknown compression")
+                (kNoCompression, "no compression")
                 (kGZIP, "gzip compressed")
                 (kBZIP2, "bzip2 compressed");
 #endif

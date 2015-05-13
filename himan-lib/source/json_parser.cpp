@@ -191,7 +191,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		}
 		else
 		{
-			conf->FileCompression(kNONE);
+			conf->FileCompression(kNoCompression);
 		}
 	}
         catch (boost::property_tree::ptree_bad_path& e)
@@ -277,23 +277,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			conf->itsOutputFileType = kGRIB2;
 		}
-		else if (theFileType == "GRIB1GZ")
-		{
-			conf->itsOutputFileType = kGRIB1GZ;
-		}
-                else if (theFileType == "GRIB2GZ")
-                {
-                        conf->itsOutputFileType = kGRIB2GZ;
-                }
-                else if (theFileType == "GRIB1BZ2")
-                {
-                        conf->itsOutputFileType = kGRIB1BZ2;
-                }
-                else if (theFileType == "GRIB2BZ2")
-                {
-                        conf->itsOutputFileType = kGRIB2BZ2;
-                }
-
 		else if (theFileType == "FQD" || theFileType == "QUERYDATA")
 		{
 			conf->itsOutputFileType = kQueryData;
