@@ -193,6 +193,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			conf->FileCompression(kNoCompression);
 		}
+
+		if (conf->FileCompression() != kNoCompression && conf->FileWriteOption() == kSingleFile)
+		{
+			itsLogger->Warning("file_write_option value 'single' conflicts with file_compression, using 'multiple' instead");
+			conf->FileWriteOption(kMultipleFiles);
+		}
 	}
         catch (boost::property_tree::ptree_bad_path& e)
         {
