@@ -43,7 +43,7 @@ shared_ptr<NFmiGrib> grib::Reader()
 bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileCompression fileCompression, HPFileWriteOption fileWriteOption)
 {
 
-	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles || fileCompression != kNONE)
+	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
 	{
 		// Write only that data which is currently set at descriptors
 
@@ -103,7 +103,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 	{
 		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
 		edition = 2;
-		if (fileCompression == kNONE)
+		if (fileCompression == kNoCompression)
 		{	
 			outputFile += "2";
 		}
@@ -117,10 +117,10 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 		}
 		else
 		{
-			itsLogger->Error("Unable to write to compressed grib. Unknown file compression.");
-        	        return false;
+			itsLogger->Error("Unable to write to compressed grib. Unknown file compression: " + HPFileCompressionToString.at(fileCompression));
+			return false;
 		}
-        }
+	}
 
 	itsGrib->Message().Edition(edition);
 
@@ -289,15 +289,14 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 		itsGrib->Message().PV(AB, AB.size());
 	}
 
-	if (fileCompression == kNONE)
+	if ((fileCompression == kGZIP || fileCompression == kBZIP2) && appendToFile)
 	{
-		itsGrib->Message().Write(outputFile, appendToFile);
+		itsLogger->Warning("Unable to append to a compressed file");
+		appendToFile = false;
 	}
-	else
-	{
-	        itsGrib->WriteMessage(outputFile);
-	}
-
+	
+	itsGrib->Message().Write(outputFile, appendToFile);
+	
 	aTimer->Stop();
 	long duration = aTimer->GetTime();
 

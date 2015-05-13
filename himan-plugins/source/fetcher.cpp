@@ -306,10 +306,6 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 		case kGRIB:
 		case kGRIB1:
 		case kGRIB2:
-		case kGRIB1GZ:
-		case kGRIB2GZ:
-		case kGRIB1BZ2:
-		case kGRIB2BZ2:
 		{
 			curInfos = FromGrib(inputFile, options, readContents, readPackedData);
 			break;
