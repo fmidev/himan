@@ -469,8 +469,10 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 #endif
 	}
 
-	assert(mod->HeightsCrossed() == mod->Result().size());
-	return mod->Result();
+	auto ret = mod->Result();
+	
+	assert(mod->HeightsCrossed() == ret.size());
+	return ret;
 }
 
 valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	const forecast_time& wantedTime, const forecast_type& wantedType) const
