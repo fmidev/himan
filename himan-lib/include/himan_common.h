@@ -563,17 +563,16 @@ namespace constants {
 	const double kEp = 0.622;
 
 	/**
-	 * @brief Specific gas constant of dry air (J / K kg)
+	 * @brief Specific gas constant of dry air (J / K / kg)
 	 */
 
 	const double kRd = 287;
 
 	/**
-	 * @brief Specific heat of dry air at constant pressure (J / K kg)
+	 * @brief Specific heat of dry air at constant pressure (J / K / kg)
 	 */
 
 	const double kCp = 1003.5;
-
 
 	/**
 	 * @brief Gravity constant approximation (m/s^2)
@@ -587,7 +586,11 @@ namespace constants {
 
 	const double kIg = 0.10197;
 
-	const double kRCp = 0.286;
+	/**
+	 * @brief R / Cp, where R = Rd. Unitless quantity.
+	 */
+
+	const double kRd_div_Cp = kRd / kCp;
 
 	/**
  	 * @brief von Karman constant

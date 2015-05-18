@@ -616,8 +616,6 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 	double Tstep = 0.05;
 
-	const double kRCp = 0.286;
-
 	P *= 0.01; // HPa
 
 	// saturated vapor pressure
@@ -625,7 +623,7 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	double E0 = himan::metutil::Es_(TD) * 0.01; // HPa
 
 	double Q = constants::kEp * E0 / P;
-	double C = T / pow(E0, kRCp);
+	double C = T / pow(E0, constants::kRd_div_Cp);
 
 	double TLCL = kFloatMissing;
 	double PLCL = kFloatMissing;
@@ -639,12 +637,12 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	
 	while (++nq < 100)
 	{
-		double TEs = C * pow(himan::metutil::Es_(T)*0.01, kRCp);
+		double TEs = C * pow(himan::metutil::Es_(T)*0.01, constants::kRd_div_Cp);
 
 		if (fabs(TEs - T) < 0.05)
 		{
 			TLCL = T;
-			PLCL = pow((TLCL/Torig), (1/kRCp)) * P;
+			PLCL = pow((TLCL/Torig), (1/constants::kRd_div_Cp)) * P;
 
 			ret.P = PLCL * 100; // Pa
 			ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // K
@@ -669,14 +667,14 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 		while (++nq <= 500)
 		{
-			if ((C * pow(himan::metutil::Es_(T)*0.01, kRCp)-T) > 0)
+			if ((C * pow(himan::metutil::Es_(T)*0.01, constants::kRd_div_Cp)-T) > 0)
 			{
 				T -= Tstep;
 			}
 			else
 			{
 				TLCL = T;
-				PLCL = pow(TLCL / Torig, (1/kRCp)) * Porig;
+				PLCL = pow(TLCL / Torig, (1/constants::kRd_div_Cp)) * Porig;
 
 				ret.P = PLCL * 100; // Pa
 				ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // K
