@@ -561,31 +561,15 @@ inline double himan::metutil::MoistLift_(double P, double T, double TD, double t
 
 		double T0 = Tint;
 
-		//double Z = kFloatMissing;
-
 		int i = 0;
 		const double Pstep = 100; // Pa
 
 		while (++i < 500) // usually we don't reach this value
 		{
-			double TA = Tint;
-/*
-			if (i <= 2)
-			{
-				Z = i * Pstep/2;
-			}
-			else
-			{
-				Z = 2 * Pstep;
-			}
-*/
 			// Gammaw() takes Pa
 			Tint = T0 - metutil::Gammaw_(Pint, Tint) * Pstep;
 
-			if (i > 2)
-			{
-				T0 = TA;
-			}
+			T0=Tint;
 
 			Pint -= Pstep;
 
@@ -747,6 +731,11 @@ double himan::metutil::Gammas_(double P, double T)
 {
 	// Sanity checks
 
+	if (P == kFloatMissing || T == kFloatMissing)
+	{
+		return kFloatMissing;
+	}
+
 	assert(P > 10000);
 	assert(T > 0 && T < 500);
 
@@ -769,26 +758,20 @@ double himan::metutil::Gammaw_(double P, double T)
 {
 	// Sanity checks
 
+	if (P == kFloatMissing || T == kFloatMissing)
+	{
+		return kFloatMissing;
+	}
+
 	assert(P > 1000);
 	assert(T > 0 && T < 500);
-
-	/*
-	 * Constants:
-	 * - g = 9.81
-	 * - Cp = 1003.5
-	 * - L = 2.5e6
-	 *
-	 * Variables:
-	 * - dWs = saturation mixing ratio = util::MixingRatio()
-	 */
 
 	namespace hc = himan::constants;
 
 	double r = himan::metutil::MixingRatio_(T, P);
-	const double kL = 2.256e6; // Another kL !!!
 
-	double numerator = hc::kG * (1 + (kL * r) / (hc::kRd * T));
-	double denominator = hc::kCp + ((kL*kL * r * hc::kEp) / (hc::kRd * T * T));
+	double numerator = hc::kG * (1 + (hc::kL * r) / (hc::kRd * T));
+	double denominator = hc::kCp + ((hc::kL*hc::kL * r * hc::kEp) / (hc::kRd * T * T));
 
 	return numerator / denominator;
 }
