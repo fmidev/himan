@@ -155,7 +155,7 @@ double Gammas_(double P, double T);
  *
  * @param P Pressure in Pa
  * @param T Temperature in K
- * @return Lapse rate in K/km
+ * @return Lapse rate in K/Pa
  */
 
 CUDA_DEVICE
@@ -439,6 +439,24 @@ double TW(double T, double P);
 
 CUDA_DEVICE
 double Theta_(double T, double P);
+
+/**
+ * @brief Calculate equivalent potential temperature.
+ * 
+ * Formula used is (43) from 
+ * 
+ * Bolton: The Computation of Equivalent Potential Temperature (1980)
+ * 
+ * Note! Input temperature and pressure are assumed to be from a saturated
+ * air parcel (ie. LCL temperature and pressure).
+ * 
+ * @param T The temperature of a saturated air parcel (Kelvin)
+ * @param P The initial pressure of the parcel (Pa)
+ * @return Equivalent potential temperature ThetaE in Kelvins
+ */
+
+CUDA_DEVICE
+double ThetaE_(double T, double P);
 
 #ifdef __CUDACC__
 
@@ -902,8 +920,27 @@ double himan::metutil::Theta_(double T, double P)
 	assert(T > 0);
 	assert(P > 1000);
 	
-	return T * pow((1000. / (P*0.01)), 0.28586);
+	return T * pow((100000. / P), 0.28586);
 
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::ThetaE_(double T, double P)
+{
+	assert(T > 0);
+	assert(P > 1000);
+	
+	double r = himan::metutil::MixingRatio_(T, P);
+	
+	// Assuming fully saturated air parcel, ie. T = T_lcl
+	
+	// 100000 = reference pressure 1000hPa
+	double A = T * pow(100000./P, 0.2854 * (1 - 0.00028 * r));
+	double B = 3.376 / T - 0.00254;
+	double C = r * (1 + 0.00081 * r);
+	
+	return A * exp(B * C);
 }
 
 CUDA_DEVICE
