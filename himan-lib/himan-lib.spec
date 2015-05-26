@@ -15,7 +15,7 @@ Requires: libgcc
 Requires: libstdc++
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
-BuildRequires: boost-devel >= 1.57
+BuildRequires: boost-devel >= 1.55
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
 BuildRequires: libfmidb >= 15.2.6
@@ -23,11 +23,12 @@ BuildRequires: libfmidb >= 15.2.6
 %if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
+BuildRequires: cuda-6-5
 %else
 BuildRequires: gcc-c++ >= 4.8.2
+BuildRequires: cuda-7-0
 %endif
 
-BuildRequires: cuda-6-5
 BuildRequires: libsmartmet-newbase-devel >= 15.4.22
 BuildRequires: scons
 Provides: libhiman.so
@@ -135,7 +136,7 @@ rm -rf $RPM_BUILD_ROOT
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-1.fmi
 - Timer time resolution change from microseconds to milliseconds
 - modifier_integral class added 
-* Thu Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
+* Wed Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
 - Initial build with Cuda6 (HIMAN-57)
 * Thu Jun  5 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.5-1.fmi
 - Minor changes
