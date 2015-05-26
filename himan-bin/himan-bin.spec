@@ -20,6 +20,7 @@ Requires: boost-regex
 Requires: boost-iostreams
 Requires: boost-thread
 Requires: libsmartmet-newbase >= 15.4.22
+Requires: libsmartmet-smarttools >= 15.4.9
 Requires: jasper
 Requires: grib_api >= 1.13.0
 Requires: oracle-instantclient-basic
@@ -28,16 +29,17 @@ Requires: bzip2-libs
 Requires: zlib
 
 BuildRequires: redhat-rpm-config
-BuildRequires: boost-devel >= 1.57
+BuildRequires: boost-devel >= 1.55
 
 %if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
+BuildRequires: cuda-6-5
 %else
 BuildRequires: gcc-c++ >= 4.8.2
+BuildRequires: cuda-7-0
 %endif
 
-BuildRequires: cuda-6-5
 BuildRequires: scons
 Provides: himan
 
@@ -98,28 +100,28 @@ rm -rf $RPM_BUILD_ROOT
 - Changes in himan-lib headers
 * Tue Nov 04 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.11.4-1.fmi
 - Changes in himan-lib headers
-* Mon Oct 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.30-1.fmi
+* Thu Oct 30 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.30-1.fmi
 - Changes in himan-lib headers
-* Mon Oct 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.28-1.fmi
+* Tue Oct 28 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.28-1.fmi
 - Changes in himan-lib headers
 * Mon Oct 20 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.20-1.fmi
 - Changes in himan-lib headers
 * Mon Oct  6 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.10.6-1.fmi
 - Changes in himan-lib headers
-* Tue Sep 24 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.24-1.fmi
+* Wed Sep 24 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.24-1.fmi
 - Changes in himan-lib headers
 * Tue Sep 23 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.23-1.fmi
 - Changes in himan-lib headers
 * Mon Sep  8 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.8-1.fmi
 - Compling and linkin with -pie (HIMAN-51)
-* Mon Aug 12 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.12-1.fmi
+* Tue Aug 12 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.12-1.fmi
 - Backwards compatibility for renamed plugins
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-2.fmi
 - Fix bug that forced himan to an eternal loop
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-1.fmi
 - Add overall timings on himan execution
 - Add cuda functionality since plugin pcuda is removed
-* Thu Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
+* Fri Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
 - Initial build with Cuda6 (HIMAN-57)
 * Thu Jun  5 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.5-1.fmi
 - Changes in himan-lib
