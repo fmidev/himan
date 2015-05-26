@@ -82,6 +82,24 @@ BOOST_AUTO_TEST_CASE(ES)
 
 }
 
+BOOST_AUTO_TEST_CASE(ES2)
+{
+	// water vapour pressure, another formula
+
+	double E = metutil::Es2_(285);
+
+	BOOST_CHECK_CLOSE(E, 1388.65877, kEpsilon);
+
+	// negative temperatures
+
+	E = metutil::Es2_(266);
+
+	BOOST_CHECK_CLOSE(E, 357.80213, kEpsilon);
+
+
+
+}
+
 BOOST_AUTO_TEST_CASE(DEWPOINT_SIMPLE)
 {
 
@@ -112,3 +130,89 @@ BOOST_AUTO_TEST_CASE(DEWPOINT)
 
 }
 
+BOOST_AUTO_TEST_CASE(THETA)
+{
+	double tpot = metutil::Theta_(19+273.15, 94000);
+
+	BOOST_CHECK_CLOSE(tpot, 297.36600, kEpsilon);
+
+	tpot = metutil::Theta_(-20+273.15, 83400);
+
+	BOOST_CHECK_CLOSE(tpot, 266.63269, kEpsilon);
+
+}
+
+BOOST_AUTO_TEST_CASE(THETAE)
+{
+	// These test values are taken from Boltons paper
+
+	// The somewhat large differences 0.1 ... 0.5 to reference values
+	// are most likely caused by mixing ratio formula which is not the
+	// same one Bolton is using.
+
+	double T = 273.15 + 30;
+	double P = 100 * 1000;
+
+	double thetae = metutil::ThetaE_(T,P);
+
+	BOOST_CHECK_CLOSE(thetae, 386.28, 0.1);
+
+	T -= 10;
+
+	thetae = metutil::ThetaE_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 335.61, 0.1);
+
+	T -= 20;
+
+	thetae = metutil::ThetaE_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 283.60, 0.1);
+
+	T -= 30;
+
+	thetae = metutil::ThetaE_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 244.01, 0.1);
+
+	T = 273.15 + 20;
+	P = 100 * 700;
+
+	thetae = metutil::ThetaE_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 394.71, 0.1);
+
+	T -= 20;
+
+	thetae = metutil::ThetaE_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 319.13, 0.1);	
+
+	T -= 30;
+
+	thetae = metutil::ThetaE_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 270.57, 0.2);
+
+	T = 273.15 - 30;
+	P = 100 * 200;
+
+	thetae = metutil::ThetaE_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 391.82, 0.5);	
+
+	T -= 20;
+
+	thetae = metutil::ThetaE_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 354.11, 0.1);	
+
+}
+
+/*BOOST_AUTO_TEST_CASE(GAMMAW)
+{
+	double LR = metutil::Gammaw_(100000, -40 + constants::kKelvin);
+
+	BOOST_CHECK_CLOSE(LR, 0.00211237, kEpsilon);
+}
+*/
