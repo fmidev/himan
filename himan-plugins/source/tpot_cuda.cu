@@ -128,23 +128,11 @@ __device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD
 	{
 		// Search LCL level
 
-		const double kEp = 0.622;
-		const double kL = 2.5e6;
-		const double kCp = 1003.5;
-
 		lcl_t LCL = himan::metutil::LCL_(P, T, TD);
 
 		if (LCL.T != kFloatMissing)
 		{
-			double theta = Theta(T, P, opts) - himan::constants::kKelvin; // C
-
-			// No need to check theta for kFloatMissing since Theta() always returns
-			// value if T and P are != kFloatMissing
-		
-			double ZEs = himan::metutil::Es_(LCL.T) * 0.01;
-			double ZQs = kEp * (ZEs / (P*0.01 - ZEs));
-
-			value = 273.15 + theta * exp(kL * ZQs / kCp / (LCL.T));
+			value = metutil::ThetaE_(LCL.T, LCL.P);
 		}
 	}
 

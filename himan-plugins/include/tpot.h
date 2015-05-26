@@ -41,7 +41,7 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(1, 0);
+		return HPVersionNumber(1, 1);
 	}
 
 private:
@@ -66,21 +66,13 @@ private:
 	/**
 	  * @brief Calculate equivalent potential temperature
 	  *
-	  * Method:
-	  *
-	  * The approximation given by Holton: Introduction to Dyn. Met.
-	  * page 331 is used. If the air is not saturated, it is
-	  * taken adiabatically to LCL.
-	  *
-	  * Original author K Eerola.
-	  * @param P Pressure in hPa
-	  * @param T Temperature in C
+	  * @param P Pressure in Pa
+	  * @param T Temperature in K
 	  * @param TD Dew point temperature in C
-	  * @param theta Dry potential temperature in C (if calculated)
-	  * @return Equivalent potential temperature in C
+	  * @return Equivalent potential temperature in K
 	  */
 	
-	double ThetaE(double P, double T, double TD, double theta);
+	double ThetaE(double P, double T, double TD);
 
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short theThreadIndex);
 #ifdef HAVE_CUDA

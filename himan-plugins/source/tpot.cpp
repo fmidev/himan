@@ -240,7 +240,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			if (itsThetaECalculation)
 			{
-				double value = ThetaE(P, T, TD, theta);
+				double value = ThetaE(P, T, TD);
 
 				myTargetInfo->Param(param("TPE-K"));
 
@@ -318,7 +318,7 @@ double tpot::ThetaW(double P, double T, double TD)
 	return value;
 }
 
-double tpot::ThetaE(double P, double T, double TD, double theta)
+double tpot::ThetaE(double P, double T, double TD)
 {
 	lcl_t LCL = metutil::LCL_(P, T, TD);
 
@@ -326,26 +326,8 @@ double tpot::ThetaE(double P, double T, double TD, double theta)
 	{
 		return kFloatMissing;
 	}
-	else if (theta == kFloatMissing)
-	{
-		// theta was not calculated in this plugin session :(
 
-		theta = metutil::Theta_(T, P);
-
-		if (theta == kFloatMissing)
-		{
-			return theta;
-		}
-	}
-
-	theta -= constants::kKelvin;
-	
-	double Es = metutil::Es_(LCL.T) * 0.01;
-	double ZQs = himan::constants::kEp * (Es / (P*0.01 - Es));
-
-	double value = theta * exp(himan::constants::kL * ZQs / himan::constants::kCp / (LCL.T));
-
-	return value + constants::kKelvin;
+	return metutil::ThetaE_(LCL.T, LCL.P);
 
 }
 
