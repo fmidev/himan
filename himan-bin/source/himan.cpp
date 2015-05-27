@@ -349,6 +349,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	// Can't use required() since it doesn't allow us to use --list-plugins
 
 	string outfileType = "";
+	string outfileCompression = "";
 	string confFile = "";
 	string statisticsLabel = "";
 	vector<string> auxFiles;
@@ -362,6 +363,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	desc.add_options()
 	("help,h", "print out help message")
 	("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
+	("compression,c", po::value(&outfileCompression), "output file compression, one of: gz, bzip2")
 	("version,v", "display version number")
 	("configuration-file,f", po::value(&confFile), "configuration file")
 	("auxiliary-files,a", po::value<vector<string> > (&auxFiles), "auxiliary (helper) file(s)")
@@ -535,6 +537,22 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		{
 			cerr << "Invalid file type: " << outfileType << endl;
 			exit(1);
+		}
+	}
+
+	if (!outfileCompression.empty())
+	{
+		if (outfileCompression == "gz")
+		{
+			conf->FileCompression(kGZIP);
+		}
+		else if (outfileCompression == "bzip2")
+		{
+			conf->FileCompression(kBZIP2);
+		}
+		else
+		{
+			cerr << "Invalid file compression type: " << outfileCompression << endl;
 		}
 	}
 
