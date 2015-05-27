@@ -425,7 +425,7 @@ double BulkShear_(double U, double V);
  */
 
 CUDA_DEVICE
-double TW(double T, double P);
+double TW_(double T, double P);
 
 /**
  * @brief Calculate "dry" potential temperature with poissons equation.
@@ -457,6 +457,22 @@ double Theta_(double T, double P);
 
 CUDA_DEVICE
 double ThetaE_(double T, double P);
+
+/**
+ * @brief Calculate wet-bulb potential temperature
+ * 
+ * Formula used is (3.8) from
+ * 
+ * Davies-Jones: An Efficient and Accurate Method for Computing the Wet-Bulb Temperature
+ * along Pseudoadiabats (2007)
+ *
+ * @param thetaE Equivalent potential temperature, Kelvin
+ * @param P target pressure, Pa
+ * @return Wet-bulb potential temperature ThetaW in Kelvins
+ */
+
+CUDA_DEVICE
+double ThetaW_(double thetaE, double P);
 
 #ifdef __CUDACC__
 
@@ -945,7 +961,7 @@ double himan::metutil::ThetaE_(double T, double P)
 
 CUDA_DEVICE
 inline
-double himan::metutil::TW(double T, double P)
+double himan::metutil::TW_(double T, double P)
 {
 	assert(T > 0);
 	assert(P > 1000);
@@ -953,6 +969,37 @@ double himan::metutil::TW(double T, double P)
 	P *= 0.01; // hPa
 	
 	return Theta_(T, P) / (exp(-2.6518986 * MixingRatio_(T, P)/T));
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::ThetaW_(double thetaE, double P)
+{
+	assert(P > 1000);
+	
+	double thetaW = thetaE;
+	
+	if (thetaE >= 173.15)
+	{
+		const double X = thetaE / constants::kKelvin;
+
+		const double a0 = 7.101574;
+		const double a1 = -20.68208;
+		const double a2 = 16.11182;
+		const double a3 = 2.574631;
+		const double a4 = -5.205688;
+		const double b1 = -3.552497;
+		const double b2 = 3.781782;
+		const double b3 = -0.6899655;
+		const double b4 = -0.5929340;
+
+		double A = a0 + a1 * X + a2 * X * X + a3 * pow(X, 3) + a4 * pow(X, 4);
+		double B = 1 + b1 * X + b2 * X * X + b3 * pow(X, 3) + b4 * pow(X,4);
+		
+		thetaW = thetaW - exp(A/B);
+	}
+
+	return thetaW;
 }
 
 #endif /* METUTIL_H_ */
