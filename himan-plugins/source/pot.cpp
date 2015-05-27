@@ -41,12 +41,12 @@ void pot::Process(std::shared_ptr<const plugin_configuration> conf)
      */
 
     // param theRequestedParam(PARM_NAME, UNIV_ID, GRIB2DISCIPLINE, GRIB2CATEGORY, GRIB2NUMBER);
-    param POT("POT-N", 9999, 0, 192, 15);
+    param POT("POT-PRCNT", 9999, 0, 19, 2);
     // If this param is also used as a source param for other calculations
     // (like for example dewpoint, relative humidity), unit should also be
     // specified
 
-    POT.Unit(kUnknownUnit);
+    POT.Unit(kPrcnt);
 
     SetParams({POT});
 
@@ -98,7 +98,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	double POT;
         double CAPE = CAPEInfo->Value();
         double RR = RRInfo->Value();
-        double LAT = myTargetInfo->LatLon().X();
+        double LAT = myTargetInfo->LatLon().Y();
 
 	double PoLift = 0;
 	double PoThermoDyn = 0;
@@ -136,8 +136,6 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	// Laukaisevan tekijän (Lift) todennäköisyys
-
-	//sade = MAX(rr_ec -1 -1 1 1)   //käytetään sadeparametrina mallin sateesta kurkkausmenetelmällä lähi-hilapisteistä poimittuja maksimiarvoja
 
 	if (RR >= 0.05 && RR <= 5)           
    	{
