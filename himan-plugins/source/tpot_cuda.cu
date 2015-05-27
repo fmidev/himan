@@ -57,66 +57,15 @@ __device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options op
 __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD, options opts)
 {
 
-	double value = kFloatMissing;
+	double thetaE = ThetaE(T, P, TD, opts);
 
-	if (T != kFloatMissing && P != kFloatMissing && TD != kFloatMissing)
+	if (thetaE == kFloatMissing)
 	{
-
-		const double Pstep = 500; // Pa
-
-		// Search LCL level
-
-		lcl_t LCL = himan::metutil::LCL_(P, T, TD);
-
-		double Tint = LCL.T;
-		double Pint = LCL.P;
-
-		int i = 0;
-
-		if (Tint != kFloatMissing && Pint != kFloatMissing)
-		{
-
-			/*
-			* Units: Temperature in Kelvins, Pressure in Pascals
-			*/
-
-			double T0 = Tint;
-
-			double Z = kFloatMissing;
-
-			while (++i < 500) // usually we don't reach this value
-			{
-				double TA = Tint;
-
-				if (i <= 2)
-				{
-					Z = i * Pstep/2;
-				}
-				else
-				{
-					Z = 2 * Pstep;
-				}
-
-				// Gammas() takes hPa
-				Tint = T0 + himan::metutil::Gammas_(Pint, Tint) * Z;
-
-				if (i > 2)
-				{
-					T0 = TA;
-				}
-
-				Pint += Pstep;
-
-				if (Pint >= 1e5)
-				{
-					value = Tint;
-					break;
-				}
-			}
-		}
+		return kFloatMissing;
 	}
 
-	return value;
+	return metutil::ThetaW_(thetaE, P);
+
 }
 
 __device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD, options opts)

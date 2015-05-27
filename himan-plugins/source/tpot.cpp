@@ -256,66 +256,14 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 double tpot::ThetaW(double P, double T, double TD)
 {
 	
-	double value = kFloatMissing;
+	double thetae = ThetaE(P, T, TD);
 
-	// Search LCL level
-	lcl_t LCL = metutil::LCL_(P, T, TD);
-
-	double Pint = LCL.P; // Pa
-	double Tint = LCL.T; // K
-
-	if (Tint == kFloatMissing || Pint == kFloatMissing)
+	if (thetae == kFloatMissing)
 	{
 		return kFloatMissing;
 	}
-	else
-	{
 
-		const double Pstep = 500; // Pa
-		int i = 0;
-		
-		/*
-		 * Units: Temperature in Kelvins, Pressure in Pascals
-		 */
-
-		double T0 = Tint;
-
-		double Z = kFloatMissing;
-
-		while (++i < 500) // usually we don't reach this value
-		{
-			double TA = Tint;
-
-			if (i <= 2)
-			{
-				Z = i * Pstep/2;
-			}
-			else
-			{
-				Z = 2 * Pstep;
-			}
-
-			// Gammas() takes Pa
-			Tint = T0 + metutil::Gammas_(Pint, Tint) * Z;
-
-			if (i > 2)
-			{
-				T0 = TA;
-			}
-
-			Pint += Pstep;
-
-			if (Pint >= 1e5)
-			{
-				value = Tint;
-				break;
-			}
-		}
-	}
-
-	assert(value == value); // check NaN
-
-	return value;
+	return metutil::ThetaW_(thetae, P);
 }
 
 double tpot::ThetaE(double P, double T, double TD)
