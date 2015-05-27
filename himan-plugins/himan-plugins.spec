@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.5.11
+Version: 15.5.27
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -79,6 +79,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libluatool.so
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
+%{_libdir}/himan-plugins/libpot.so
 %{_libdir}/himan-plugins/libprecipitation_rate.so
 %{_libdir}/himan-plugins/libpreform_hybrid.so
 %{_libdir}/himan-plugins/libpreform_pressure.so
@@ -103,6 +104,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed May 27 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.5.27-1.fmi
+- New plugin: pot (HIMAN-100)
+- Change tpot to use new formula for theta e
 * Mon May 11 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.5.11-1.fmi
 - Link with cuda 6.5 due to performance issues (HIMAN-96)
 * Tue Apr 28 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.4.28-1.fmi
