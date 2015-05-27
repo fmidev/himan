@@ -993,8 +993,8 @@ double himan::metutil::ThetaW_(double thetaE, double P)
 		const double b3 = -0.6899655;
 		const double b4 = -0.5929340;
 
-		double A = a0 + a1 * X + a2 * X * X + a3 * pow(X, 3) + a4 * pow(X, 4);
-		double B = 1 + b1 * X + b2 * X * X + b3 * pow(X, 3) + b4 * pow(X,4);
+		double A = a0 + a1 * X + a2 * X * X + a3 * ::pow(X, 3.) + a4 * pow(X, 4.);
+		double B = 1 + b1 * X + b2 * X * X + b3 * pow(X, 3.) + b4 * pow(X,4.);
 		
 		thetaW = thetaW - exp(A/B);
 	}
