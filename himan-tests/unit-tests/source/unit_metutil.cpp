@@ -209,6 +209,60 @@ BOOST_AUTO_TEST_CASE(THETAE)
 
 }
 
+BOOST_AUTO_TEST_CASE(THETAW)
+{
+
+	// Reference data from smithsonian tables (319)
+
+	double T = 12 + 273.15;
+	double P = 36960;
+
+	double thetaE = metutil::ThetaE_(T,P);
+	double thetaW = metutil::ThetaW_(thetaE, P);
+
+	BOOST_CHECK_CLOSE(thetaW - 273.15, 39.9, 0.1);
+
+	T = -32 + 273.15;
+	P = 18820;
+
+	thetaE = metutil::ThetaE_(T,P);
+	thetaW = metutil::ThetaW_(thetaE, P);
+
+	BOOST_CHECK_CLOSE(thetaW - 273.15, 30.97, 0.1);
+
+	T = 38 + 273.15;
+	P = 106980;
+
+	thetaE = metutil::ThetaE_(T,P);
+	thetaW = metutil::ThetaW_(thetaE, P);
+
+	BOOST_CHECK_CLOSE(thetaW - 273.15, 36.05, 0.1);
+
+	T = 10 + 273.15;
+	P = 90800;
+
+	thetaE = metutil::ThetaE_(T,P);
+	thetaW = metutil::ThetaW_(thetaE, P);
+
+	BOOST_CHECK_CLOSE(thetaW - 273.15, 14.02, 0.1);
+
+	T = -14 + 273.15;
+	P = 64800;
+
+	thetaE = metutil::ThetaE_(T,P);
+	thetaW = metutil::ThetaW_(thetaE, P);
+
+	BOOST_CHECK_CLOSE(thetaW - 273.15, 7.54, 0.1);
+
+	T = -50 + 273.15;
+	P = 30170;
+
+	thetaE = metutil::ThetaE_(T,P);
+	thetaW = metutil::ThetaW_(thetaE, P);
+
+	BOOST_CHECK_CLOSE(thetaW - 273.15, 13.68, 0.1);
+}
+
 /*BOOST_AUTO_TEST_CASE(GAMMAW)
 {
 	double LR = metutil::Gammaw_(100000, -40 + constants::kKelvin);
