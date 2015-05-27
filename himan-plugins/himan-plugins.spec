@@ -20,6 +20,8 @@ Requires: himan-lib >= 15.4.10
 Requires: himan-bin >= 15.4.10
 Requires: lua >= 5.1.4
 Requires: unixODBC
+Requires: libfmigrib >= 15.5.18
+
 BuildRequires: boost-devel >= 1.55
 
 %if %distnum == 7
@@ -31,7 +33,7 @@ BuildRequires: gcc-c++ < 4.7
 
 BuildRequires: cuda-6-5
 BuildRequires: libfmidb >= 15.4.16
-BuildRequires: libfmigrib >= 15.4.16
+BuildRequires: libfmigrib-devel >= 15.5.18
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
