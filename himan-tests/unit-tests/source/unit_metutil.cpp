@@ -263,6 +263,28 @@ BOOST_AUTO_TEST_CASE(THETAW)
 	BOOST_CHECK_CLOSE(thetaW - 273.15, 13.68, 0.1);
 }
 
+BOOST_AUTO_TEST_CASE(TW)
+{
+	double TLCL = 273.15;
+	double PLCL = 100000;
+
+	double thetaE = metutil::ThetaE_(TLCL,PLCL);
+
+	double Tw = metutil::Tw_(thetaE, 85000);
+
+	BOOST_REQUIRE_CLOSE(Tw, 264.93, 0.01);
+
+	TLCL = 250;
+	PLCL = 50000;
+
+	thetaE = metutil::ThetaE_(TLCL,PLCL);
+
+ 	Tw = metutil::Tw_(thetaE, 20000);
+
+	BOOST_REQUIRE_CLOSE(Tw, 194.26, 0.01);
+
+}
+
 /*BOOST_AUTO_TEST_CASE(GAMMAW)
 {
 	double LR = metutil::Gammaw_(100000, -40 + constants::kKelvin);
