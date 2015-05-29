@@ -411,21 +411,28 @@ CUDA_DEVICE
 double BulkShear_(double U, double V);
 
 /**
- * @brief Calculate adiabatic saturation temperature [thermodynamic wet-bulb temperature] at 1000hPa. 
+ * @brief Calculate adiabatic saturation temperature at given pressure. 
  * 
- * Definition: http://en.wikipedia.org/wiki/Wet-bulb_temperature#Thermodynamic_wet-bulb_temperature_.28adiabatic_saturation_temperature.29
+ * Function approximates the temperature at given pressure when equivalent
+ * potential temperature is given. ThetaE should be evaluated at saturation (LCL)
+ * level.
  * 
- * Source: http://www.iac.ethz.ch/staff/dominik/idltools/atmos_phys/skewt.pro
+ * Maximum relative error in the initial guess compared to integrated value is 
+ * 1.8K; the value is further corrected with Newton-Raphson so that the error 
+ * reduces to 0.34K.
  * 
- * This function is also used in smarttools-library.
+ * Formula derived by Davies-Jones in:
  * 
- * @param T Temperature in K
- * @param P Pressure in Pa
- * @return 
+ * An Efficient and Accurate Method for Computing the Wet-Bulb Temperature
+ * along Pseudoadiabat (2007)
+ * 
+ * @param thetaE Equivalent potential temperature in K
+ * @param P Target pressure in Pa
+ * @return Temperature along a saturated adiabat at wanted height in Kelvins
  */
 
 CUDA_DEVICE
-double TW_(double T, double P);
+double Tw_(double thetaE, double P);
 
 /**
  * @brief Calculate "dry" potential temperature with poissons equation.
@@ -961,14 +968,92 @@ double himan::metutil::ThetaE_(double T, double P)
 
 CUDA_DEVICE
 inline
-double himan::metutil::TW_(double T, double P)
+double himan::metutil::Tw_(double thetaE, double P)
 {
-	assert(T > 0);
+	assert(thetaE > 0);
 	assert(P > 1000);
 	
-	P *= 0.01; // hPa
+	using namespace himan::constants;
 	
-	return Theta_(T, P) / (exp(-2.6518986 * MixingRatio_(T, P)/T));
+	const double P0 = 100000;
+	const double lambda = 1/kRd_div_Cp;
+	const double a = 17.67;
+	const double b = 243.5; // K
+	const double C = kKelvin;
+	const double pi = pow(P / P0, kRd_div_Cp); // Nondimensional pressure, exner function
+	const double Te = thetaE * pi; // Equivalent temperature
+	const double ratio = pow((C / Te), lambda);
+
+	// Quadratic regression curves for thetaW
+	
+	const double k1 = -38.5*pi*pi + 137.81 * pi - 53.737;
+	const double k2 = -4.392 * pi * pi + 56.831 * pi - 0.384;
+	
+	// Regression line for transition points of different Tw formulas
+	
+	const double dpi = 1 / (0.1859 * (P / P0) + 0.6512);
+
+	const double p0 = P0 * 0.01;
+	const double p = P * 0.01;
+	
+	double Tw = kFloatMissing;
+	
+	if (ratio > dpi)
+	{
+		const double r = MixingRatio_(Te, P) * 0.001;
+
+		const double A = 2675; // K
+		
+		Tw = Te - C - (A * r) / (1 + A * r * (a * b / pow((Te - C + b), 2)));
+	}
+	else
+	{
+		const double hot = (thetaE > 355.15) ? 1 : 0;
+		const double cold = (ratio >= 1 && ratio <= dpi) ? 0 : 1;
+
+		Tw = k1 - 1.21 * cold - 1.45 * hot - (k2 - 1.21 * cold) * ratio + (0.58 / ratio) * hot;
+ 	}
+	
+	Tw += C;
+	
+	// Improve accuracy with Newton-Raphson
+	// Current Tw is used as initial guess
+	
+	for (int i = 0; i < 1; i++)
+	{
+		const double newRatio = pow((C / Tw), lambda);
+		const double r = MixingRatio_(Tw, P) * 0.001;
+		const double e = Es_(Tw) * 0.01;
+		
+		// e & r as Davies-Jones implemented them
+		//const double e = 6.112 * exp((a * (Tw - C)) / (Tw - C + b));
+		//const double r = (kEp * e) / (p0 * pow(pi, lambda) - e);
+		
+		// Evaluate f(x)
+
+		const double A = newRatio * (1 - e / (p0 * pow(pi, lambda)));
+		const double B = (3036 / Tw - 1.78) * (r + 0.448 * r * r);
+
+		const double TwNew = A * exp(-lambda * B);
+		
+		// Partial derivative des/dTw
+		const double desTw = e * (a * b) / pow((Tw - C + b), 2);
+		
+		// Partial derivative drs/dTw
+		const double drsTw = desTw * (kEp * p) / pow((p - e), 2);
+
+		// Evaluate f'(x)
+		
+		const double A_ = (1 / Tw) + (kRd_div_Cp / (p - e)) * desTw;
+		const double B_ = -3036 * (r + 0.448 * r * r) / (Tw * Tw);
+		const double C_ = (3036 / Tw - 1.78) * (1 + 2 * (0.448 * r)) * drsTw;
+		
+		const double dTw = -lambda * (A_ + B_ * C_);
+
+		Tw = Tw - (TwNew - ratio) / dTw;
+	}
+	
+	return Tw;
 }
 
 CUDA_DEVICE
