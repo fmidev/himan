@@ -26,7 +26,6 @@ extern "C"
 #include <luabind/adopt_policy.hpp>
 #include <luabind/iterator_policy.hpp>
 #include <luabind/operator.hpp>
-//#include <boost/get_pointer.hpp>
 
 using namespace himan;
 using namespace himan::plugin;
@@ -122,6 +121,7 @@ void luatool::InitLua(info_t myTargetInfo)
 
 	globals(L)["luatool"] = boost::ref(*this);
 	globals(L)["result"] = myTargetInfo;
+	globals(L)["configuration"] = itsConfiguration;
 
 	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
 	globals(L)["current_level"] = level(myTargetInfo->Level());
@@ -892,7 +892,7 @@ void BindLib(lua_State* L)
 			.def(constructor<>())
 			.def("ClassName", &plugin_configuration::ClassName)
 			.def("GetValue", &plugin_configuration::GetValue)
-			.def("GetValue", &plugin_configuration::GetValueList)
+			.def("GetValueList", &plugin_configuration::GetValueList)
 			.def("Exists", &plugin_configuration::Exists)
 		,
 		class_<lcl_t>("lcl_t")
