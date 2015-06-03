@@ -1,0 +1,27 @@
+{
+	"source_geom_name" : "ECGLO0125",
+	"target_geom_name" : "ECGLO0125",
+	"source_producer" : "131,240",
+	"target_producer" : "240",
+	"start_hour" : "1",
+	"stop_hour" : "1",
+	"step" : "1",
+	"file_write" : "multiple",
+	"origintime" : "2015-06-03 00:00:00",
+	"read_data_from_database":false,
+	"processqueue" : [
+        {
+                "leveltype" : "ground",
+                "levels" : "0",
+                "plugins" : [ { "name" : "density" } ]
+        },
+	{
+        "leveltype" : "ground",
+        "levels" : "0",
+        "plugins" : [ {
+            "name" : "luatool",
+            "luafile" : [ "friction_velocity.lua" ]
+        } ]
+	} 
+	]
+}
