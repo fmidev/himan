@@ -45,7 +45,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 
 	// Required source parameters
 
-	const params PParam = { param("P-PA"), param("P-HPA") };
+	const params PParam = { param("P-PA"), param("P-HPA"), param("PGR-PA") };
 	const param TParam("T-K");
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
