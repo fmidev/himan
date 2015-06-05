@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(CENTRAL_DIFFERENCE)
 	B = std::get<0>(grad_A);
 	C = std::get<1>(grad_A);
 
-	assert(B==D && C==E);
+	BOOST_CHECK(B==D && C==E);
 	
 } 
 
