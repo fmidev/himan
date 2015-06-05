@@ -166,18 +166,36 @@ void Gammaw(cdarr_t P, cdarr_t T, darr_t result, size_t N);
 
 /**
  * @brief Calculates the temperature, pressure and specific humidity (Q) of
- * a parcel of air in LCL
+ * a parcel of air in LCL by vertically iterating from starting height
  *
  * Original author AK Sarkanen/Kalle Eerola
  *
  * @param P Pressure in Pa
  * @param T Temperature in K
  * @param TD Dew point temperature in K
- * @return Pressure (Pa), temperature (K) and specific humidity (g/kg) for LCL (in this order).
+ * @return Pressure (Pa), temperature (K) and specific humidity (g/kg) for LCL .
  */
 
 CUDA_DEVICE
 lcl_t LCL_(double P, double T, double TD);
+
+/**
+ * @brief LCL level temperature and pressure approximation.
+ * 
+ * For temperature, the used formula is (15) of
+ * 
+ * Bolton: The Computation of Equivalent Potential Temperature (1980)
+ * 
+ * LCL pressure is calculated using starting T and P and T_LCL with
+ * Poissons formula assuming dry-adiabatic conditions.
+ * 
+ * @param P Ground pressure in Pa
+ * @param T Ground temperature in Kelvin
+ * @param TD Ground dewpoint temperature in TD
+ * @param Pressure (Pa) and temperature (K) for LCL.
+ */
+CUDA_DEVICE
+lcl_t LCLA_(double P, double T, double TD);
 
 /**
  * @brief Calculate water probability based on T and RH
@@ -711,6 +729,31 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	}
 	
 	return ret;
+}
+
+CUDA_DEVICE
+inline
+lcl_t himan::metutil::LCLA_(double P, double T, double TD)
+{
+	// Sanity checks
+
+	assert(P > 10000);
+	assert(T > 0);
+	assert(T < 500);
+	assert(TD > 0);
+	assert(TD < 500);
+
+	lcl_t ret;
+	
+	double A = 1 / (TD - 56);
+	double B = log(T/TD) / 800;
+	
+	ret.T = 1 / (A + B) + 56;
+	ret.P = P * pow((ret.T / T), 3.5011);
+	ret.Q = kFloatMissing;
+
+	return ret;
+	
 }
 
 CUDA_DEVICE
