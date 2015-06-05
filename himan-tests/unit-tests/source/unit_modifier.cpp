@@ -688,7 +688,7 @@ BOOST_AUTO_TEST_CASE(MODIFIER_FINDVALUE_PA)
 		690, 899, 975, 
 	};
 
-//	vdump(findh);
+	//vdump(findh);
 
 	mod.FindValue(findh);
 
@@ -701,7 +701,7 @@ BOOST_AUTO_TEST_CASE(MODIFIER_FINDVALUE_PA)
 
 	//vdump(values);
 	BOOST_REQUIRE(values[0] == -5);
-	BOOST_REQUIRE(values[1] == kFloatMissing); 
+	BOOST_REQUIRE(values[1] == 15); // clamp 
 	BOOST_CHECK_CLOSE(values[3], -20.0952, kEpsilon);
 	BOOST_REQUIRE(values[8] == 0);
 
