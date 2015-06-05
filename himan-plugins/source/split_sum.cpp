@@ -83,6 +83,7 @@ split_sum::split_sum()
 	sourceParameters["RADGLO-WM2"] = { param("RADGLOA-JM2"), param("RADGLO-WM2") };
 	sourceParameters["RADLW-WM2"] = { param("RADLWA-JM2"), param("RADLW-WM2") };
 	sourceParameters["RTOPLW-WM2"] = { param("RTOPLWA-JM2"), param("RTOPLW-WM2") };
+	sourceParameters["RNETLW-WM2"] = { param("RNETLWA-JM2"), param("RNETLW-WM2") };
 
 }
 
@@ -222,7 +223,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->Exists("lw") && itsConfiguration->GetValue("lw") == "true")
 	{
-		param parm("RADLW-WM2", 315, 0, 4, 5);
+		param parm("RADLW-WM2", 315, 0, 5, 192);
 
 		params.push_back(parm);
 	}
@@ -232,7 +233,15 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		// Same grib2 parameter definition as with RADLW-WM2, this is just on
 		// another surface
 
-		param parm("RTOPLW-WM2", 314, 0, 4, 5);
+		param parm("RTOPLW-WM2", 314, 0, 5, 192);
+
+		params.push_back(parm);
+	}
+	
+	if (itsConfiguration->Exists("netlw") && itsConfiguration->GetValue("netlw") == "true")
+	{
+
+		param parm("RNETLW-WM2", 312, 0, 5, 5);
 
 		params.push_back(parm);
 	}
@@ -279,7 +288,9 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		bool isRadiationCalculation = (	parmName == "RADGLO-WM2" ||
 										parmName == "RADLW-WM2" ||
-										parmName == "RTOPLW-WM2");
+										parmName == "RTOPLW-WM2" ||
+										parmName == "RNETLW-WM2"
+		);
 			
 		bool isRateCalculation = (isRadiationCalculation || 
 									parmName == "RRR-KGM2" ||
