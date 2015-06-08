@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.5.27
+Version: 15.6.8
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -16,8 +16,8 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.13.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 15.4.10
-Requires: himan-bin >= 15.4.10
+Requires: himan-lib >= 15.5.27
+Requires: himan-bin >= 15.5.27
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 15.5.18
@@ -106,6 +106,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.8-1.fmi
+- RNETLW-WM2 to split_sum
+* Wed Jun  3 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.3-1.fmi
+- Change formula for tpot/thetaw
+- Other minor changes
 * Wed May 27 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.5.27-1.fmi
 - New plugin: pot (HIMAN-100)
 - Change tpot to use new formula for theta e
