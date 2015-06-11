@@ -1,0 +1,20 @@
+{
+	"source_geom_name" : "GEM0240",
+	"target_geom_name" : "GEM0240",
+	"source_producer" : "47",
+	"target_producer" : "47",
+	"start_hour" : "6",
+	"stop_hour" : "6",
+	"step" : "1",
+	"step_unit" : "hour",
+	"file_write" : "multiple",
+	"origintime" : "2015-06-11 00:00:00",
+	"read_data_from_database" : "false",
+	"processqueue" : [
+	{
+		"leveltype" : "pressure",
+		"levels" : "700",
+		"plugins" : [ { "name" : "relative_humidity" } ]
+	} 
+	]
+}
