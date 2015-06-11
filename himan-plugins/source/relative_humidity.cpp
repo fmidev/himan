@@ -49,7 +49,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	const param TParam("T-K");
 	const params PParams = { param("P-HPA"), param("P-PA") };
 	const param QParam("Q-KGKG");
-	const param TDParam("TD-C");
+	const params TDParams = {param("TD-C"), param("TD-K")};
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("relative_humidityThread #" + boost::lexical_cast<string> (threadIndex));
 	
@@ -96,7 +96,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	
 	if (calculateWithTD)
 	{
-		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, forecastType, itsConfiguration->UseCudaForPacking());
+		TDInfo = Fetch(forecastTime, forecastLevel, TDParams, forecastType, itsConfiguration->UseCudaForPacking());
 		
 		if (!TDInfo)
 		{
