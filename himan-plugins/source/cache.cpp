@@ -76,6 +76,7 @@ void cache::SplitToPool(info& anInfo)
 
 	if (cache_pool::Instance()->Find(uniqueName))
 	{
+		itsLogger->Trace("Data with key " + uniqueName + " already exists at cache");
 		return;
 	}
 

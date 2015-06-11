@@ -973,11 +973,21 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 
 		if (!dataIsValid && forceCaching)
 		{
-			auto c = GET_PLUGIN(cache);
-			if (options.configuration->UseCache())
+			// Put this data to cache now if the data has regular grid and the grid is equal
+			// to wanted grid. This is a requirement since can't interpolate area here.
+			
+			if (options.configuration->UseCache() && 
+					dynamic_pointer_cast<const plugin_configuration> (options.configuration)->Info()->Grid()->Type() == kRegularGrid &&
+					dynamic_pointer_cast<const plugin_configuration> (options.configuration)->Info()->Grid()->Type() == newInfo->Grid()->Type() &&
+					*dynamic_pointer_cast<const plugin_configuration> (options.configuration)->Info()->Grid() == *newInfo->Grid())
 			{
+				itsLogger->Trace("Force cache insert");
+
+				auto c = GET_PLUGIN(cache);
+
 				c->Insert(*newInfo);
 			}
+
 			continue;
 		}
 		

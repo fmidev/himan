@@ -497,7 +497,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 	if (!opts.configuration->AuxiliaryFiles().empty() && fetchFromAuxiliaryFiles)
 	{
-		ret = FromFile(opts.configuration->AuxiliaryFiles(), opts, true, readPackedData, true);
+		ret = FromFile(opts.configuration->AuxiliaryFiles(), opts, true, readPackedData, !itsApplyLandSeaMask && !readPackedData);
 
 		if (!ret.empty())
 		{

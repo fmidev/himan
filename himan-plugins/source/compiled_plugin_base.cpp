@@ -316,7 +316,8 @@ void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		// The general case: all elements are distributed to all threads in an
 		// equal fashion with no dependencies.
-		// This method is faster than any of the dimension variations or Run().)
+		
+		// This method is faster than any of the dimension variations or Run()
 		
 		RunAll(myTargetInfo, threadIndex);
 		
@@ -327,6 +328,10 @@ void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 		// This is used when f.ex. levels need to be processed
 		// in sequential order.
 		
+		// Assure other iterators are set since some plugins might access
+		// configuration class' info-instance
+		
+		itsInfo->First();itsInfo->ResetTime(); 
 		RunTimeDimension(myTargetInfo, threadIndex);
 	}
 	else
