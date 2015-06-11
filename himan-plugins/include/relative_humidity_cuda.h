@@ -30,13 +30,12 @@ struct options
 	int select_case;
 	size_t N;
 	size_t missing;
-	double kEp;
 	double TDBase;
 	double TBase;
 	double PScale;
 	double P_level;
 
-	options() : select_case(1), N(0), missing(0), kEp(0), TDBase(0), TBase(0), PScale(1), P_level(0) {}
+	options() : select_case(1), N(0), missing(0), TDBase(0), TBase(0), PScale(1), P_level(0) {}
 
 };
 

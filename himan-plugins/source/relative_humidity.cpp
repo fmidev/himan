@@ -253,7 +253,6 @@ double relative_humidity::WithQ(double T, double Q, double P)
 	// Pressure needs to be hPa and temperature C
 
 	double es = metutil::Es_(T + constants::kKelvin) * 0.01;
-	
 	return (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 }
 
@@ -293,7 +292,6 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQP( s
 
 	opts->select_case = 1;
 
-	opts->kEp = constants::kEp;
 	opts->PScale = PScale;
 	opts->TBase = TBase;
 
