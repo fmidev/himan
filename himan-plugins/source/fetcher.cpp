@@ -283,7 +283,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, search_options& options, bool readContents, bool readPackedData)
+vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, search_options& options, bool readContents, bool readPackedData, bool readIfNotMatching)
 {
 
 	vector<shared_ptr<himan::info>> allInfos ;
@@ -307,7 +307,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 		case kGRIB1:
 		case kGRIB2:
 		{
-			curInfos = FromGrib(inputFile, options, readContents, readPackedData);
+			curInfos = FromGrib(inputFile, options, readContents, readPackedData, readIfNotMatching);
 			break;
 
 		}
@@ -348,12 +348,12 @@ vector<shared_ptr<himan::info> > fetcher::FromCache(search_options& options)
 	return infos;
 }
 
-vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, search_options& options, bool readContents, bool readPackedData)
+vector<shared_ptr<himan::info> > fetcher::FromGrib(const string& inputFile, search_options& options, bool readContents, bool readPackedData, bool forceCaching)
 {
 
 	auto g = GET_PLUGIN(grib);
 
-	vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents, readPackedData);
+	vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents, readPackedData, forceCaching);
 
 	return infos;
 }
@@ -497,7 +497,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 	if (!opts.configuration->AuxiliaryFiles().empty() && fetchFromAuxiliaryFiles)
 	{
-		ret = FromFile(opts.configuration->AuxiliaryFiles(), opts, true, readPackedData);
+		ret = FromFile(opts.configuration->AuxiliaryFiles(), opts, true, readPackedData, true);
 
 		if (!ret.empty())
 		{

@@ -21,6 +21,7 @@ using namespace himan::plugin;
 
 #include "neons.h"
 #include "radon.h"
+#include "cache.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -310,7 +311,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 	return true;
 }
 
-vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, search_options& options, bool readContents, bool readPackedData)
+vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, search_options& options, bool readContents, bool readPackedData,	bool forceCaching)
 {
 
 	shared_ptr<neons> n;
@@ -339,6 +340,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 	{
 	
 		foundMessageNo++;
+		bool dataIsValid = true;
 
 		/*
 		 * One grib file may contain many grib messages. Loop though all messages
@@ -522,7 +524,15 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 		if (p != options.param)
 		{
 			itsLogger->Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() + " (found)");
-			continue;
+			
+			if (forceCaching)
+			{
+				dataIsValid = false;
+			}
+			else
+			{
+				continue;
+			}
 		}
 
 		string dataDate = boost::lexical_cast<string> (itsGrib->Message().DataDate());
@@ -598,7 +608,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 				itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(options.time.StepResolution())) + " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) + " (found)");
 			}
 
-			continue;
+			if (forceCaching)
+			{
+				dataIsValid = false;
+			}
+			else
+			{
+				continue;
+			}
 		}
 
 		long gribLevel = itsGrib->Message().NormalizedLevelType();
@@ -657,7 +674,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 			{
 				itsLogger->Trace("Value: " + string(boost::lexical_cast<string> (options.level.Value())) + " (requested) vs " + string(boost::lexical_cast<string> (l.Value())) + " (found)");
 			}
-			continue;
+			if (forceCaching)
+			{
+				dataIsValid = false;
+			}
+			else
+			{
+				continue;
+			}
 		}
 
 		std::vector<double> ab;
@@ -685,7 +709,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 				itsLogger->Trace("Value: " + string(boost::lexical_cast<string> (options.ftype.Value())) + " (requested) vs " + string(boost::lexical_cast<string> (ty.Value())) + " (found)");
 			}
 			
-			continue;
+			if (forceCaching)
+			{
+				dataIsValid = false;
+			}
+			else
+			{
+				continue;
+			}
 		}
 		
 		// END VALIDATION OF SEARCH PARAMETERS
@@ -940,6 +971,16 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 
 		newInfo->Grid()->Data(dm);
 
+		if (!dataIsValid && forceCaching)
+		{
+			auto c = GET_PLUGIN(cache);
+			if (options.configuration->UseCache())
+			{
+				c->Insert(*newInfo);
+			}
+			continue;
+		}
+		
 		infos.push_back(newInfo);
 		newInfo->First();
 		

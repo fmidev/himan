@@ -63,11 +63,12 @@ public:
 	 * @param options Search options (param, level, time)
 	 * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data (from grib). Caller must do unpacking.
+	 * @param forceCaching Force caching of data even if it does not match searched data
 	 *
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false);
+	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false, bool forceCaching = false);
 
 	bool ToFile(info& anInfo, std::string& outputFile, HPFileType fileType, HPFileCompression fileCompression, HPFileWriteOption fileWriteOption);
 

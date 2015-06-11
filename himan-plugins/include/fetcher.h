@@ -154,6 +154,7 @@ private:
 	 * @param options A struct holding the search criteria
 	 * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
+	 * @param forceCaching Force caching of data even if it does not match searched data
 	 *
 	 * @return A vector of shared_ptr'd infos.
 	 */
@@ -161,7 +162,8 @@ private:
 	std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files,
 												search_options& options,
 												bool readContents = true,
-												bool readPackedData = false);
+												bool readPackedData = false,
+												bool forceCaching = false);
 
 	/**
 	 * @brief Return all data from a grib file, overcoat for himan::plugin::grib::FromFile().
@@ -171,11 +173,12 @@ private:
 	 * @param options Search options (param, level, time, prod, config)
 	 * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
+	 * @param forceCaching Force caching of data even if it does not match searched data
 	 *
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false);
+	std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false, bool forceCaching = false);
 	
 	/**
 	 * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
