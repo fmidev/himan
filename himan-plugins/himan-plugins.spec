@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.6.8
+Version: 15.6.16
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -106,6 +106,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jun 16 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.16-1.fmi
+- Fix to relative_humidity
 * Mon Jun  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.8-1.fmi
 - RNETLW-WM2 to split_sum
 * Wed Jun  3 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.3-1.fmi
