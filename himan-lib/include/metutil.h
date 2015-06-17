@@ -452,6 +452,9 @@ double BulkShear_(double U, double V);
 CUDA_DEVICE
 double Tw_(double thetaE, double P);
 
+CUDA_KERNEL
+void Tw(cdarr_t thetaE, cdarr_t P, darr_t result, size_t N);
+
 /**
  * @brief Calculate "dry" potential temperature with poissons equation.
  * 
@@ -498,6 +501,19 @@ double ThetaE_(double T, double P);
 
 CUDA_DEVICE
 double ThetaW_(double thetaE, double P);
+
+/**
+ * @brief Calculate virtual temperature
+ * 
+ * Formula is: http://glossary.ametsoc.org/wiki/Virtual_temperature
+ * 
+ * @param T Temperature in K
+ * @param P Pressure in Pa
+ * @return Virtual temperature in K
+ */
+
+CUDA_DEVICE
+double VirtualTemperature_(double T, double P);
 
 #ifdef __CUDACC__
 
@@ -1130,4 +1146,15 @@ double himan::metutil::ThetaW_(double thetaE, double P)
 	return thetaW;
 }
 
+CUDA_DEVICE
+inline
+double himan::metutil::VirtualTemperature_(double T, double P)
+{
+	assert(T > 100);
+	assert(T < 400);
+	assert(P > 1000);
+
+	double r = MixingRatio_(T, P);
+	return T * (1 + r / constants::kEp) / (1 + r);
+}
 #endif /* METUTIL_H_ */

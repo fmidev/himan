@@ -44,6 +44,14 @@ void metutil::MoistLift(cdarr_t P, cdarr_t T, cdarr_t TD, darr_t result, double 
 	}
 }
 
+void metutil::Tw(cdarr_t thetaE, cdarr_t P, darr_t result, size_t N)
+{
+	for (size_t i = 0; i < N; i++)
+	{
+		result[i] = Tw_(thetaE[i], P[i]);
+	}
+}
+
 double metutil::WaterProbability_(double T, double RH)
 {
 	return 1 / (1 + exp(22 - 2.7 * (T-constants::kKelvin) - 0.2 * RH));
