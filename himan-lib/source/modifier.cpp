@@ -1084,8 +1084,6 @@ void modifier_plusminusarea::Process(const std::vector<double>& theData, const s
 
 void modifier_plusminusarea::Calculate(double theValue, double theHeight)
 {
-	theValue-=273.15;
-
 	double lowerHeight=itsLowerHeight[itsIndex];
 	double upperHeight=itsUpperHeight[itsIndex];
 
