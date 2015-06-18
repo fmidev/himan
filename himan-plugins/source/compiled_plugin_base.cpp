@@ -570,6 +570,17 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 	try
 	{
+		/*
+		 * Fetching of packed data is quite convoluted:
+		 * 
+		 * 1) Fetch packed data iff cuda unpacking is enabled (UseCudaForPacking() == true): it makes no sense to unpack the data in himan with CPU.
+		 *    If we allow fetcher to return packed data, it will implicitly disable cache integration of fetched data.
+		 * 
+		 * 2a) If caller does not want packed data (returnPacked == false), unpack it here and insert to cache.
+		 * 
+		 * 2b) If caller wants packed data, return data as-is and leave cache integration to caller.
+		 */
+		
 		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
@@ -578,6 +589,10 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 			assert(dynamic_cast<regular_grid*> (ret->Grid())->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
+			
+			auto c = GET_PLUGIN(cache);
+			
+			c->Insert(*ret);
 		}
 #endif
 	}
@@ -608,6 +623,10 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 			assert(dynamic_cast<regular_grid*> (ret->Grid())->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
+									
+			auto c = GET_PLUGIN(cache);
+			
+			c->Insert(*ret);
 		}
 #endif
 	}
