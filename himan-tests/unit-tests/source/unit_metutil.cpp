@@ -61,6 +61,12 @@ BOOST_AUTO_TEST_CASE(LCLA)
 
 	BOOST_CHECK_CLOSE(LCL.P, 100*647.3825, 0.1);
 
+	LCL = himan::metutil::LCLA_(100870, 273.15 + 16.5, 273.15 + 11.05);
+
+	BOOST_CHECK_CLOSE(LCL.P, 92960, 0.1);
+	BOOST_CHECK_CLOSE(LCL.T, 273.15 + 9.82, 0.1);
+
+
 }
 BOOST_AUTO_TEST_CASE(MIXING_RATIO)
 {
@@ -300,6 +306,24 @@ BOOST_AUTO_TEST_CASE(TW)
  	Tw = metutil::Tw_(thetaE, 20000);
 
 	BOOST_REQUIRE_CLOSE(Tw, 194.26, 0.01);
+
+	TLCL = 280.01;
+	PLCL = 84011;
+
+	Tw = metutil::Tw_(metutil::ThetaE_(TLCL, PLCL),  72570);
+
+	BOOST_REQUIRE_CLOSE(Tw, 273.52, 0.01);
+	
+}
+
+BOOST_AUTO_TEST_CASE(VIRTUAL_TEMPERATURE)
+{
+	double T = 273.15;
+	double P = 100000;
+
+	double Tv = metutil::VirtualTemperature_(T, P);
+
+	BOOST_REQUIRE_CLOSE(Tv, 273.79, 0.01);
 
 }
 
