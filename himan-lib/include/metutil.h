@@ -1034,6 +1034,8 @@ double himan::metutil::Tw_(double thetaE, double P)
 	assert(thetaE > 0);
 	assert(P > 1000);
 	
+	if (thetaE == kFloatMissing) return kFloatMissing;
+
 	using namespace himan::constants;
 	
 	const double P0 = 100000;
@@ -1123,6 +1125,8 @@ double himan::metutil::ThetaW_(double thetaE, double P)
 {
 	assert(P > 1000);
 	
+	if (thetaE == kFloatMissing) return kFloatMissing;
+
 	double thetaW = thetaE;
 	
 	if (thetaE >= 173.15)
