@@ -505,7 +505,9 @@ double ThetaW_(double thetaE, double P);
 /**
  * @brief Calculate virtual temperature
  * 
- * Formula is: http://glossary.ametsoc.org/wiki/Virtual_temperature
+ * Formula is 1.13 from
+ * 
+ * Stull: Meteorology for Scientists and Engineers, 2nd edition (2000)
  * 
  * @param T Temperature in K
  * @param P Pressure in Pa
@@ -1154,7 +1156,7 @@ double himan::metutil::VirtualTemperature_(double T, double P)
 	assert(T < 400);
 	assert(P > 1000);
 
-	double r = MixingRatio_(T, P);
-	return T * (1 + r / constants::kEp) / (1 + r);
+	double r = 0.001 * MixingRatio_(T, P); // kg/kg
+	return (1 + 0.61 * r) * T;
 }
 #endif /* METUTIL_H_ */
