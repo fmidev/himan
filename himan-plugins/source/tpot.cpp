@@ -268,7 +268,7 @@ double tpot::ThetaW(double P, double T, double TD)
 
 double tpot::ThetaE(double P, double T, double TD)
 {
-	lcl_t LCL = metutil::LCL_(P, T, TD);
+	lcl_t LCL = metutil::LCLA_(P, T, TD);
 
 	if (LCL.T == kFloatMissing)
 	{
