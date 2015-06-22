@@ -40,14 +40,15 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(1, 1);
+		return HPVersionNumber(1, 2);
 	}
 
 private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	bool WithIteration(info_t& myTargetInfo);
+	bool WithGeopotential(info_t& myTargetInfo);
 
 	int itsBottomLevel;
-	bool itsFastMode;
 	bool itsUseGeopotential;
 
 };
@@ -56,7 +57,7 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<hybrid_height> (new hybrid_height());
+	return std::make_shared<hybrid_height> ();
 }
 
 } // namespace plugin

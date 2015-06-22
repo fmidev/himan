@@ -23,7 +23,13 @@ using namespace himan::plugin;
 
 const string itsName("hybrid_height");
 
-hybrid_height::hybrid_height() : itsFastMode(false)
+const himan::param ZParam("Z-M2S2");
+const himan::params GPParam { himan::param("LNSP-N") , himan::param("P-PA") };
+const himan::param PParam("P-HPA");
+const himan::param TParam("T-K");
+const himan::param TGParam("TG-K");
+
+hybrid_height::hybrid_height()
 {
 	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
 	itsLogger = logger_factory::Instance()->GetLog(itsName);
@@ -58,14 +64,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	
 	itsUseGeopotential = (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199);
 
-	if (!itsConfiguration->Exists("fast_mode") && itsConfiguration->GetValue("fast_mode") == "true")
-	{
-		itsFastMode = true;
-	}
-	else
-	{
-		PrimaryDimension(kTimeDimension);
-	}
+	PrimaryDimension(kTimeDimension);
 
 	SetParams({param("HL-M", 3, 0, 3, 6)});
 
@@ -81,40 +80,94 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
+	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
 
-	const params GPParam { param("LNSP-N") , param("P-PA") };
-	const param PParam("P-HPA");
-	//const params TParam = { param("TG-K"), param("T-K") };
-	const param TParam("T-K");
-	const param TGParam("TG-K");
-	const param ZParam("Z-M2S2");
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " + static_cast<string> (myTargetInfo->Level()));
+
+	if (itsUseGeopotential)
+	{
+		bool ret = WithGeopotential(myTargetInfo);
+
+		if (!ret)
+		{
+			myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + static_cast<string> (myTargetInfo->Level()));
+			return;
+		}
+	}
+	else
+	{
+		bool ret = WithIteration(myTargetInfo);
+
+		if (!ret)
+		{
+			myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + static_cast<string> (myTargetInfo->Level()));
+			return;
+		}
+	}
 	
-	level H2;//(himan::kHeight, 2, "HEIGHT");
-	level H0;//(himan::kHeight, 0, "HEIGHT");
+	string deviceType = "CPU";
+
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
+
+}
+
+bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
+{
+	himan::level H0(himan::kHeight, 0);
+	
+	if ( itsConfiguration->SourceProducer().Id() == 131)
+	{
+		H0 = level(himan::kHybrid, 1, "LNSP");
+	}
+
+	auto GPInfo = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(), false);
+	auto zeroGPInfo = Fetch(myTargetInfo->Time(), H0, ZParam, myTargetInfo->ForecastType(), false);
+	
+	if (!GPInfo || !zeroGPInfo)
+	{
+		return false;
+	}
+	
+	SetAB(myTargetInfo, GPInfo);
+	
+	LOCKSTEP(myTargetInfo, GPInfo, zeroGPInfo)
+	{
+		double GP = GPInfo->Value();
+		double zeroGP = zeroGPInfo->Value();
+		
+		if (GP == kFloatMissing || zeroGP == kFloatMissing)
+		{
+			continue;
+		}
+
+		double height = (GP - zeroGP) * himan::constants::kIg;
+			
+		myTargetInfo->Value(height);
+	}
+	
+	return true;
+}
+
+bool hybrid_height::WithIteration(info_t& myTargetInfo)
+{
+
+	himan::level H0(himan::kHeight, 0);
+	himan::level H2(himan::kHeight, 2);
+	
 	if ( itsConfiguration->SourceProducer().Id() == 131)
 	{
 		H2 = level(himan::kHybrid, 137, "GROUND");
 		H0 = level(himan::kHybrid, 1, "LNSP");
 	}
-	else
-	{
-		H2 = level(himan::kHeight, 2, "HEIGHT");
-		H0 = level(himan::kHeight, 0, "HEIGHT");
-	}
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
-
-	forecast_time forecastTime = myTargetInfo->Time();
-	level forecastLevel = myTargetInfo->Level();
-	forecast_type forecastType = myTargetInfo->ForecastType();
-
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
-
+	const auto forecastTime = myTargetInfo->Time();
+	const auto forecastType = myTargetInfo->ForecastType();
+	
 	level prevLevel;
 
 	bool firstLevel = false;
 		
-	if (itsFastMode || myTargetInfo->Level().Value() == itsBottomLevel)
+	if (myTargetInfo->Level().Value() == itsBottomLevel)
 	{
 		firstLevel = true;
 	}
@@ -125,157 +178,88 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 		prevLevel.Index(prevLevel.Index() + 1);
 	}
-
-
-	info_t TInfo, PInfo, prevPInfo, prevTInfo, prevHInfo, GPInfo, zeroGPInfo;
-
-	if (itsUseGeopotential)
+	
+	info_t prevTInfo, prevPInfo, prevHInfo;
+	
+	if (!firstLevel)
 	{
-		GPInfo = Fetch(forecastTime, forecastLevel, ZParam, forecastType, false);
-		zeroGPInfo = Fetch(forecastTime, H0, ZParam, forecastType, false);
+		prevTInfo = Fetch(forecastTime, prevLevel, TParam, forecastType, false);
+		prevPInfo = Fetch(forecastTime, prevLevel, PParam, forecastType, false);
+		prevHInfo = Fetch(forecastTime, prevLevel, param("HL-M"), forecastType, false);
 	}
 	else
 	{
-		if (!firstLevel)
+		if ( itsConfiguration->SourceProducer().Id() == 131 )
 		{
-			prevTInfo = Fetch(forecastTime, prevLevel, TParam, forecastType, false);
-			prevPInfo = Fetch(forecastTime, prevLevel, PParam, forecastType, false);
-			prevHInfo = Fetch(forecastTime, prevLevel, param("HL-M"), forecastType, false);
+			prevPInfo = Fetch(forecastTime, H0, GPParam, forecastType, false);
+			prevTInfo = Fetch(forecastTime, H2, TParam, forecastType, false);
 		}
 		else
+		{
+			prevPInfo = Fetch(forecastTime, H0, GPParam, forecastType, false);
+			prevTInfo = Fetch(forecastTime, H2, TGParam, forecastType, false);
+		}
+	}
+
+	auto PInfo = Fetch(forecastTime, myTargetInfo->Level(), PParam, forecastType, false);
+	auto TInfo = Fetch(forecastTime, myTargetInfo->Level(), TParam, forecastType, false);	
+	
+	if (!prevTInfo || !prevPInfo || ( !prevHInfo && !firstLevel ) || !PInfo || !TInfo)
+	{
+		return false;
+	}
+	
+	SetAB(myTargetInfo, TInfo);
+
+	if (!firstLevel)
+	{
+		prevHInfo->ResetLocation();
+		assert(prevLevel.Value() > myTargetInfo->Level().Value());
+	}		
+
+	LOCKSTEP(myTargetInfo, PInfo, prevPInfo, TInfo, prevTInfo)
+	{
+		double T = TInfo->Value();
+		double P = PInfo->Value();
+		double prevT = prevTInfo->Value();
+		double prevP = prevPInfo->Value();
+
+		double prevH = kFloatMissing;
+
+		if (!firstLevel)
+		{
+			prevHInfo->NextLocation();
+			prevH = prevHInfo->Value();
+		}
+		else
+		{
+			prevH = 0;
+		}
+
+		if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing || prevH == kFloatMissing)
+		{
+			continue;
+		}
+
+		if (firstLevel)
 		{
 			if ( itsConfiguration->SourceProducer().Id() == 131 )
 			{
-				prevPInfo = Fetch(forecastTime, H0, GPParam, forecastType, false);
-				prevTInfo = Fetch(forecastTime, H2, TParam, forecastType, false);
+				// LNSP to regular pressure
+				prevP = exp (prevP) * 0.01f;
 			}
-			else
+			else 
 			{
-				prevPInfo = Fetch(forecastTime, H0, GPParam, forecastType, false);
-				prevTInfo = Fetch(forecastTime, H2, TGParam, forecastType, false);
+				prevP *= 0.01f;
 			}
 		}
 
-		PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
-		TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
-
-	}
-
-	if ((itsUseGeopotential && (!GPInfo || !zeroGPInfo)) || (!itsUseGeopotential && (!prevTInfo || !prevPInfo || ( !prevHInfo && !firstLevel ) || !PInfo || !TInfo)))
-	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
-		return;
+		double deltaZ = 14.628 * (prevT + T) * log(prevP/P);
+		double totalHeight = prevH + deltaZ;
+	
+		myTargetInfo->Value(totalHeight);
 	}
 	
-	string deviceType = "CPU";
-
-	if (itsUseGeopotential)
-	{
-		SetAB(myTargetInfo, GPInfo);
-		
-		GPInfo->ResetLocation();
-		zeroGPInfo->ResetLocation();
-	}
-	else
-	{
-		SetAB(myTargetInfo, TInfo);
-		
-		PInfo->ResetLocation();
-		TInfo->ResetLocation();
-		prevPInfo->ResetLocation();
-		prevTInfo->ResetLocation();
-
-		if (!firstLevel)
-		{
-			prevHInfo->ResetLocation();
-		}
-	}
-
-	LOCKSTEP(myTargetInfo)
-	{
-
-		if (itsUseGeopotential)
-		{
-			GPInfo->NextLocation();
-			double GP = GPInfo->Value();
-
-			zeroGPInfo->NextLocation();
-			double zeroGP = zeroGPInfo->Value();
-		
-			if (GP == kFloatMissing || zeroGP == kFloatMissing)
-			{
-				continue;
-			}
-
-			double height = (GP - zeroGP) * himan::constants::kIg;
-			
-			myTargetInfo->Value(height);
-		}
-		else
-		{
-			TInfo->NextLocation();
-			double T = TInfo->Value();
-
-			PInfo->NextLocation();
-			double P = PInfo->Value();
-
-			prevTInfo->NextLocation();
-			double prevT = prevTInfo->Value();
-
-			prevPInfo->NextLocation();
-			double prevP = prevPInfo->Value();
-
-			double prevH = kFloatMissing;
-			
-			if (!firstLevel)
-			{
-				prevHInfo->NextLocation();
-				prevH = prevHInfo->Value();
-
-				if (prevH == kFloatMissing )
-				{
-					continue; 
-				}
-			}
-
-			if ( prevT == kFloatMissing|| prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing )
-			{
-				continue;
-			}
-
-			if (firstLevel)
-			{
-				if ( itsConfiguration->SourceProducer().Id() == 131 )
-				{
-					prevP = exp (prevP) * 0.01f;
-				}
-				else 
-				{
-					prevP *= 0.01f;
-				}
-			}
-			
-			double deltaZ = 14.628 * (prevT + T) * (log(prevP/P));
-			double totalHeight(0);
-
-			if (firstLevel)
-			{
-				totalHeight = deltaZ;		
-			}
-			else
-			{	
-				totalHeight = prevH + deltaZ;
-			}
-
-			myTargetInfo->Value(totalHeight);
-		}
-	}
-
-	if (!itsFastMode)
-	{
-		firstLevel = false;
-	}
-
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	return true;
 }
+
