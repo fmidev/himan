@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 15.6.22
-Release: 1%{dist}.fmi
+Release: 2%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -26,12 +26,13 @@ BuildRequires: boost-devel >= 1.55
 
 %if %distnum == 7
 BuildRequires: gcc-c++ >= 4.8.2
+BuildRequires: cuda-7-0
 %else
 BuildRequires: gcc-c++ >= 4.4.6
 BuildRequires: gcc-c++ < 4.7
+BuildRequires: cuda-6-5
 %endif
 
-BuildRequires: cuda-6-5
 BuildRequires: libfmidb >= 15.4.16
 BuildRequires: libfmigrib-devel >= 15.5.18
 BuildRequires: libluabind >= 0.9.3-3
@@ -106,6 +107,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun 22 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.22-2.fmi
+- Performance improvements in hybrid_height and tpot
 * Mon Jun 22 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.22-1.fmi
 - Fix to cache
 * Tue Jun 16 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.16-1.fmi
