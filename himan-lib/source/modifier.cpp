@@ -1048,13 +1048,24 @@ bool modifier_plusminusarea::Evaluate(double theValue, double theHeight)
 {
 	assert(itsIndex < itsOutOfBoundHeights.size());
 
-    if (theHeight == kFloatMissing || theValue == kFloatMissing || itsOutOfBoundHeights[itsIndex] == true)
+	if (itsOutOfBoundHeights[itsIndex] == true)
 	{
+		return false;
+	}
+    else if (theHeight == kFloatMissing || theValue == kFloatMissing)
+	{
+		// If f.ex. theValue is constantly missing but height is is found, we have to give after 
+		// theHeight has passed upper height
+	
+		if (theHeight != kFloatMissing && theHeight > itsUpperHeight[itsIndex])
+		{
+			itsOutOfBoundHeights[itsIndex] = true;
+		}
 		return false;
 	}
 
 	/*
- 	 * upper/lower limit check moved from evaluate function to calculate for the averaging case
+	 * upper/lower limit check moved from evaluate function to calculate for the averaging case
 	 */
 
 	return true;
