@@ -13,12 +13,13 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
+Requires: libfmidb >= 15.6.24
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 BuildRequires: boost-devel >= 1.55
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
-BuildRequires: libfmidb >= 15.2.6
+BuildRequires: libfmidb-devel >= 15.6.24
 
 %if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
