@@ -97,6 +97,7 @@ libraries.append('nnz11')
 libraries.append('jasper')
 libraries.append('grib_api')
 libraries.append('odbc')
+libraries.append('pqxx')
 libraries.append('boost_program_options')
 libraries.append('boost_system')
 
