@@ -413,7 +413,7 @@ void simple_packed_util::UnpackFullBytes(unsigned char* __restrict__ d_p, double
 			lvalue |= d_p[o++] ;
 		}
 
-		d_u[idx] = ((lvalue * coeff.binaryScaleFactor) + coeff.referenceValue) * coeff.decimalScaleFactor;
+		d_u[idx] = fma(lvalue, coeff.binaryScaleFactor, coeff.referenceValue) * coeff.decimalScaleFactor;
 	}
 }
 
@@ -469,7 +469,7 @@ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict__ d_p, doub
 			bitp += 1;
 		}
 
-		d_u[idx] = ((lvalue * coeff.binaryScaleFactor) + coeff.referenceValue) * coeff.decimalScaleFactor;
+		d_u[idx] = fma(lvalue, coeff.binaryScaleFactor, coeff.referenceValue) * coeff.decimalScaleFactor;
 	}
 
 }
