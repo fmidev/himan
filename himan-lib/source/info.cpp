@@ -777,6 +777,8 @@ info_simple* info::ToSimple() const
 	{
 		throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " + string(HPScanningModeToString.at(g->ScanningMode())));
 	}
+	
+	ret->projection = g->Projection();
 
 	if (g->IsPackedData())
 	{

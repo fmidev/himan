@@ -72,6 +72,8 @@ struct info_simple
 
 	size_t missing;
 
+	HPProjectionType projection;
+	
 	info_simple()
 		: size_x(0)
 		, size_y(0)
@@ -80,6 +82,7 @@ struct info_simple
 		, values(0)
 		, packed_values(0)
 		, missing(0)
+		, projection(kUnknownProjection)
 	{}
 
 };
