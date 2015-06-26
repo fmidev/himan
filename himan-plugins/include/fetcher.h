@@ -242,9 +242,13 @@ private:
 	 * @return True if interpolation succeeds for all infos
 	 */
 
-	bool InterpolateArea(info& targetInfo, std::vector<info_t> infos) const;
-	bool Interpolate(info& baseInfo, std::vector<info_t>& infos) const;
+	bool InterpolateArea(const plugin_configuration& conf, info& targetInfo, std::vector<info_t> infos) const;
+	bool Interpolate(const plugin_configuration& conf, info& baseInfo, std::vector<info_t>& infos) const;
 	bool ReorderPoints(info& base, std::vector<info_t> infos) const;
+	bool InterpolateAreaCuda(info& base, info& target, unpacked& targetData) const;
+	bool InterpolateAreaNewbase(info& base, info& source, unpacked& targetData) const;
+
+
 
 	/**
 	 * @brief Swap scanning mode if needed

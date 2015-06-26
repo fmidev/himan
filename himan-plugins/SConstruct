@@ -191,6 +191,7 @@ if not IS_RHEL or (IS_RHEL and OS_VERSION >= 7.0):
 
 env.Append(NVCCPATH = ['./include'])
 env.Append(NVCCPATH = [workspace + '/himan-lib/include']) # timer
+env.Append(NVCCPATH = ['/usr/include/smartmet/newbase']) 
 
 build_dir = ""
 

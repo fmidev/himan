@@ -35,6 +35,7 @@ using namespace std;
 const unsigned int SLEEPSECONDS = 10;
 
 shared_ptr<cache> itsCache;
+extern bool InterpolateCuda(himan::info_simple* baseInfo, himan::info_simple* targetInfo);
 
 fetcher::fetcher()
 	: itsDoLevelTransform(true)
@@ -244,7 +245,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (itsDoInterpolation)
 	{
-		if (!Interpolate(*baseInfo, theInfos))
+		if (!Interpolate(*config, *baseInfo, theInfos))
 		{
 			// interpolation failed
 			throw kFileDataNotFound;
@@ -585,20 +586,79 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 }
 
-bool fetcher::InterpolateArea(info& base, vector<info_t> infos) const
+
+bool fetcher::InterpolateAreaCuda(info& base, info& source, unpacked& targetData) const
+{
+
+#ifdef HAVE_CUDA	
+	auto simple_base = base.ToSimple();
+	auto simple_source = source.ToSimple();
+	
+	info_simple simple_target(*simple_base);
+
+	simple_target.values = new double[simple_target.size_x * simple_target.size_y];
+#ifdef DEBUG
+	memset(simple_target.values, 0, simple_target.size_x * simple_target.size_y * sizeof(double));
+#endif
+	
+	if (!InterpolateCuda(simple_source, &simple_target))
+	{		
+		return false;
+	}
+
+	targetData.Set(simple_target.values, simple_target.size_x * simple_target.size_y);
+
+	delete [] (simple_target.values);
+
+	return true;
+	
+#else
+	return false;
+#endif
+
+}
+
+bool fetcher::InterpolateAreaNewbase(info& base, info& source, unpacked& targetData) const
+{
+#ifdef HAVE_CUDA
+
+	if (source.Grid()->IsPackedData())
+	{
+		// We need to unpack
+		util::Unpack({source.Grid()});
+	}
+#endif
+
+	auto q = GET_PLUGIN(querydata);
+	
+	shared_ptr<NFmiQueryData> baseData = q->CreateQueryData(base, true);
+	NFmiFastQueryInfo baseInfo = NFmiFastQueryInfo(baseData.get());
+
+	// interpInfo does the actual interpolation, results are stored to targetData
+
+	auto interpData = q->CreateQueryData(source, true);
+	NFmiFastQueryInfo interpInfo (interpData.get());
+
+	size_t i;
+
+	baseInfo.First();
+
+	for (baseInfo.ResetLocation(), i = 0; baseInfo.NextLocation(); i++)
+	{
+		double value = interpInfo.InterpolatedValue(baseInfo.LatLon());
+
+		targetData.Set(i, value);
+	}
+	
+	return true;
+
+}
+bool fetcher::InterpolateArea(const plugin_configuration& conf, info& base, vector<info_t> infos) const
 {
 	if (infos.size() == 0)
 	{
 		return false;
 	}
-
-	// baseInfo geometry is target_geom in json-file: it is the geometry that the user has
-	// requested
-
-	shared_ptr<NFmiQueryData> baseData;
-	NFmiFastQueryInfo baseInfo;
-
-	auto q = GET_PLUGIN(querydata);
 
 	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{
@@ -611,10 +671,32 @@ bool fetcher::InterpolateArea(info& base, vector<info_t> infos) const
 		
 		if (base.Grid()->Type() == kRegularGrid && (*it)->Grid()->Type() == kIrregularGrid)
 		{
-			itsLogger->Error("Unable to intepolate from irregular to regular grid");
+			itsLogger->Error("Unable to interpolate from irregular to regular grid");
 			continue;
 		}
-			
+
+		unpacked targetData(base.Data().SizeX(), base.Data().SizeY(), base.Data().SizeZ(), base.Data().MissingValue());
+
+		if (conf.UseCudaForInterpolation() &&
+				base.Grid()->Type() == kRegularGrid && 
+				(*it)->Grid()->Type() == kRegularGrid &&
+				(base.Grid()->Projection() == kLatLonProjection || base.Grid()->Projection() == kRotatedLatLonProjection) &&
+				((*it)->Grid()->Projection() == kLatLonProjection || (*it)->Grid()->Projection() == kRotatedLatLonProjection))
+		{
+			if (InterpolateAreaCuda(base, **it, targetData))
+			{
+				itsLogger->Trace("Interpolation with cuda succeeded");
+			}
+			else
+			{
+				InterpolateAreaNewbase(base, **it, targetData);
+			}
+		}
+		else
+		{
+			InterpolateAreaNewbase(base, **it, targetData);
+		}
+
 		shared_ptr<grid> interpGrid;
 		
 		if (base.Grid()->Type() == kRegularGrid)
@@ -627,38 +709,6 @@ bool fetcher::InterpolateArea(info& base, vector<info_t> infos) const
 		}
 
 		// new data backend
-
-		unpacked targetData(base.Data().SizeX(), base.Data().SizeY(), base.Data().SizeZ(), base.Data().MissingValue());
-
-		if (!baseData)
-		{
-			baseData = q->CreateQueryData(base, true);
-			baseInfo = NFmiFastQueryInfo(baseData.get());
-		}
-
-#ifdef HAVE_CUDA
-
-		if ((*it)->Grid()->IsPackedData())
-		{
-			// We need to unpack
-			util::Unpack({(*it)->Grid()});
-		}
-#endif
-		// interpInfo does the actual interpolation, results are stored to targetData
-
-		auto interpData = q->CreateQueryData(**it, true);
-		NFmiFastQueryInfo interpInfo (interpData.get());
-
-		size_t i;
-
-		baseInfo.First();
-		
-		for (baseInfo.ResetLocation(), i = 0; baseInfo.NextLocation(); i++)
-		{
-			double value = interpInfo.InterpolatedValue(baseInfo.LatLon());
-			
-			targetData.Set(i, value);
-		}
 
 		interpGrid->Data(targetData);
 		interpGrid->Projection(base.Grid()->Projection());
@@ -767,25 +817,18 @@ bool fetcher::ReorderPoints(info& base, vector<info_t> infos) const
 	return true;
 }
 
-bool fetcher::Interpolate(himan::info& baseInfo, vector<info_t>& theInfos) const
+bool fetcher::Interpolate(const plugin_configuration& conf, himan::info& baseInfo, vector<info_t>& theInfos) const
 {
 	bool needInterpolation = false;
 	bool needPointReordering = false;
 
 	/*
 	 * Possible scenarios:
-	 * 1. from regular to regular (basic area interpolation)
+	 * 1. from regular to regular (basic area&grid interpolation)
 	 * 2. from regular to irregular (area to point)
 	 * 3. from irregular to irregular (limited functionality, basically just point reordering)
 	 * 4. from irregular to regular, not supported
 	 */
-
-	
-
-	if (baseInfo.Grid()->Type() != theInfos[0]->Grid()->Type())
-	{
-		needInterpolation = true;
-	}
 
 	// 1.
 
@@ -795,7 +838,8 @@ bool fetcher::Interpolate(himan::info& baseInfo, vector<info_t>& theInfos) const
 		{
 			needInterpolation = true;
 		}		
-		else if (baseInfo.Grid()->Type() == kRegularGrid && dynamic_cast<regular_grid*>(baseInfo.Grid())->ScanningMode() != dynamic_cast<regular_grid*>(theInfos[0]->Grid())->ScanningMode())
+		else if (baseInfo.Grid()->Type() == kRegularGrid && 
+				dynamic_cast<regular_grid*>(baseInfo.Grid())->ScanningMode() != dynamic_cast<regular_grid*>(theInfos[0]->Grid())->ScanningMode())
 		{
 			// == operator does not test scanning mode !
 			itsLogger->Trace("Swapping area");
@@ -839,7 +883,7 @@ bool fetcher::Interpolate(himan::info& baseInfo, vector<info_t>& theInfos) const
 	if (needInterpolation)
 	{
 		itsLogger->Trace("Interpolating area");
-		return InterpolateArea(baseInfo, theInfos);
+		return InterpolateArea(conf, baseInfo, theInfos);
 	}
 	else if (needPointReordering)
 	{
