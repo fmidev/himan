@@ -327,6 +327,16 @@ BOOST_AUTO_TEST_CASE(VIRTUAL_TEMPERATURE)
 
 }
 
+BOOST_AUTO_TEST_CASE(E)
+{
+	double r = 5.04; // g/kg
+	double P = 100000.; // "sea level"
+
+	double e = metutil::E_(r, P);
+
+	BOOST_REQUIRE_CLOSE(e, 810.29, 0.01);
+}
+
 /*BOOST_AUTO_TEST_CASE(GAMMAW)
 {
 	double LR = metutil::Gammaw_(100000, -40 + constants::kKelvin);

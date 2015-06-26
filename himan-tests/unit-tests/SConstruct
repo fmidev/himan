@@ -94,8 +94,10 @@ libraries = []
 libraries.append('querydata')
 
 libraries.append('himan')
-libraries.append('smartmet_newbase')
+libraries.append('fmidb')
 libraries.append('clntsh')
+libraries.append('odbc')
+libraries.append('pqxx')
 libraries.append('nnz11')
 libraries.append('jasper')
 
@@ -107,6 +109,7 @@ libraries.append('hitool')
 libraries.append('fetcher')
 
 libraries.append('smartmet_smarttools')
+libraries.append('smartmet_newbase')
 
 env.Append(LIBS = libraries)
 
@@ -159,7 +162,7 @@ env.Append(CCFLAGS = cflags_normal)
 
 # Linker flags
 
-env.Append(LINKFLAGS = ['-rdynamic','-Wl,--warn-unresolved-symbols','-Wl,--as-needed' ,'-pthread'])
+env.Append(LINKFLAGS = ['-rdynamic','-Wl,--as-needed' ,'-pthread'])
 
 # '-Wl,-rpath,.'
 
