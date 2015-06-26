@@ -119,18 +119,18 @@ void plugin_configuration::WriteStatistics()
 	itsStatistics->itsTimer->Stop();
 
 	cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << endl;
-
+	
+	cout << "Plugin:\t\t\t" << itsName << endl;
 	cout << "Use cache:\t\t" << (itsUseCache ? "true" : "false") << endl;
 	cout << "Use cuda:\t\t" << (itsUseCuda ? "true" : "false") << endl;
 	cout << "Use cuda packing:\t" << (itsUseCudaForPacking ? "true" : "false") << endl;
+	cout << "Use cuda unpacking:\t" << (itsUseCudaForUnpacking ? "true" : "false") << endl;
+	cout << "Use cuda interpolation:\t" << (itsUseCudaForInterpolation ? "true" : "false") << endl;
 
 	cout << "Origin time:\t\t" << itsInfo->OriginDateTime().String() << endl;
 
 	cout << "Target geom_name:\t" << itsTargetGeomName << endl;
-	
 	cout << "Source geom_name:\t" << util::Join(itsSourceGeomNames, ",") << endl;
-	
-	// Hoping we have iterators set
 
 	itsInfo->First();
 
@@ -145,13 +145,12 @@ void plugin_configuration::WriteStatistics()
 	cout << "Time count:\t\t" << itsInfo->SizeTimes() << endl;
 
 	cout << "Outfile type:\t\t" << HPFileTypeToString.at(itsOutputFileType) << endl;
+	cout << "Compression type:\t" << HPFileCompressionToString.at(itsFileCompression) << endl;
 	cout << "File write:\t\t" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl;
 	cout << "Read from database:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
 
 	cout << "Source producer:\t" << SourceProducer().Id() << endl;
 	cout << "Target producer:\t" << itsInfo->Producer().Id() << endl;
-
-	cout << "Plugin:\t\t\t" << itsName << endl;
 
 	// Statistics from class statistics
 
@@ -191,7 +190,7 @@ void plugin_configuration::WriteStatistics()
 		<< "Writing time:\t\t" << itsStatistics->itsWritingTime/itsStatistics->itsUsedThreadCount << " milliseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
 		<< "Values:\t\t\t" << itsStatistics->itsValueCount << endl
 		<< "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
-		<< "PPS:\t\t\t" << 1000*1000*static_cast<double>(itsStatistics->itsValueCount)/static_cast<double>(elapsedTime) << endl;
+		<< "Million PPS:\t\t" << static_cast<double>(itsStatistics->itsValueCount)/(static_cast<double>(elapsedTime)*1e3) << endl; // million points per second
 
 }
 

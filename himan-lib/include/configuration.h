@@ -209,6 +209,9 @@ public:
 	bool UseCudaForUnpacking() const;
 	void UseCudaForUnpacking(bool theUseCudaForUnpacking);
 
+	bool UseCudaForInterpolation() const;
+	void UseCudaForInterpolation(bool theUseCudaForInterpolation);
+	
 	bool UseCache() const;
 	void UseCache(bool theUseCache);
 
@@ -279,6 +282,7 @@ protected:
 
 	bool itsUseCudaForPacking;
 	bool itsUseCudaForUnpacking;
+	bool itsUseCudaForInterpolation;
 	bool itsUseCache;
 
 	short itsCudaDeviceCount;

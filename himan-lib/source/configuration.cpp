@@ -23,6 +23,7 @@ configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 	itsConfigurationFile = "";
 	itsUseCudaForPacking = true;
 	itsUseCudaForUnpacking = true;
+	itsUseCudaForInterpolation = false;
 	itsUseCache = true;
 	itsCudaDeviceId = 0;
 	itsStatisticsLabel = "";
@@ -47,6 +48,7 @@ configuration::configuration(const configuration& other)
 	itsUseCuda = other.itsUseCuda;
 	itsUseCudaForPacking = other.itsUseCudaForPacking;
 	itsUseCudaForUnpacking = other.itsUseCudaForUnpacking;
+	itsUseCudaForInterpolation = other.itsUseCudaForInterpolation;
 	itsCudaDeviceCount = other.itsCudaDeviceCount;
 	itsCudaDeviceId = other.itsCudaDeviceId;
 	
@@ -99,6 +101,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsCudaDeviceId__ " << itsCudaDeviceId << std::endl;
 	file << "__itsUseCudaForPacking__ " << itsUseCudaForPacking << std::endl;
 	file << "__itsUseCudaForUnpacking__ " << itsUseCudaForUnpacking << std::endl;
+	file << "__itsUseCudaFoInterpolation__ " << itsUseCudaForInterpolation << std::endl;
 
 	file << "__itsUseCache__ " << itsUseCache << std::endl;
 	file << "__itsForecastStep__ " << itsForecastStep << std::endl;
@@ -276,6 +279,16 @@ bool configuration::UseCudaForPacking() const
 void configuration::UseCudaForPacking(bool theUseCudaForPacking)
 {
 	itsUseCudaForPacking = theUseCudaForPacking;
+}
+
+bool configuration::UseCudaForInterpolation() const
+{
+	return itsUseCudaForInterpolation;
+}
+
+void configuration::UseCudaForInterpolation(bool theUseCudaForInterpolation)
+{
+	itsUseCudaForInterpolation = theUseCudaForInterpolation;
 }
 
 bool configuration::UseCache() const
