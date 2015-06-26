@@ -371,13 +371,14 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	("list-plugins,l", "list all defined plugins")
 	("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
 	("statistics,s", po::value(&statisticsLabel), "record statistics information")
-	("no-cuda", "disable all cuda extensions")
-	("no-cuda-packing", "disable cuda packing of grib data")
-	("no-cuda-unpacking", "disable cuda unpacking of grib data")
 	("radon,R", "use only radon database")
 	("neons,N", "use only neons database")
 	("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
 	("cuda-properties", "print cuda device properties of platform (if any)")
+	("no-cuda", "disable all cuda extensions")
+	("no-cuda-packing", "disable cuda packing of grib data")
+	("no-cuda-unpacking", "disable cuda unpacking of grib data")
+	("no-cuda-interpolation", "disable cuda grid interpolation")
 	;
 
 	po::positional_options_description p;
@@ -446,6 +447,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	conf->UseCuda(false);
 	conf->UseCudaForPacking(false);
 	conf->UseCudaForUnpacking(false);
+	conf->UseCudaForInterpolation(false);
 	conf->CudaDeviceCount(0);
 
 	if (opt.count("cuda-device-id"))
@@ -471,11 +473,17 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCudaForUnpacking(false);
 	}
 
+	if (opt.count("no-cuda-interpolation"))
+	{
+		conf->UseCudaForInterpolation(false);
+	}
+	
 	if (opt.count("no-cuda"))
 	{
 		conf->UseCuda(false);
 		conf->UseCudaForPacking(false);
 		conf->UseCudaForUnpacking(false);
+		conf->UseCudaForInterpolation(false);
 	}
 
 	// get cuda device count for this server
