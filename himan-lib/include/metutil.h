@@ -70,6 +70,21 @@ namespace himan
 
 namespace metutil
 {
+
+/**
+ * @brief Calculate partial water vapor pressure from mixing ratio and pressure
+ * 
+ * Basically this is inverse of mixing ratio, formula used is (2.18)
+ * from Rogers & Yau: A Short Course in Cloud Physics (3rd edition).
+ * 
+ * @param R Mixing ration in g/kg
+ * @param P Pressure in Pa
+ * @return Water vapour pressure in Pa 
+ */
+
+CUDA_DEVICE
+double E_(double R, double P);
+
 /**
  * @brief Calculate water vapor saturated pressure in Pa
  *
@@ -594,6 +609,18 @@ inline double himan::metutil::MixingRatio_(double T, double P)
 	double E = Es_(T); // Pa
 
 	return 621.97 * E / (P - E);
+}
+
+CUDA_DEVICE
+inline double himan::metutil::E_(double R, double P)
+{
+	assert(P > 1000);
+	assert(R > 0.001);
+
+	
+	// R is g/kg, converting it to g/g gives multiplier 1000
+
+	return (R * P / (constants::kEp * 1000));
 }
 
 CUDA_DEVICE
