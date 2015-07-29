@@ -38,7 +38,7 @@ public:
 	param(const std::string& theName, unsigned long theUnivId,
 		  double theScale,
 		  double theBase,
-		  HPInterpolationMethod theInterpolationMethod = kNearestPoint);
+		  HPInterpolationMethod theInterpolationMethod = kBiLinear);
 
 	~param();
 
