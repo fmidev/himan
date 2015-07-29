@@ -679,9 +679,7 @@ bool fetcher::InterpolateArea(const plugin_configuration& conf, info& base, vect
 
 		if (conf.UseCudaForInterpolation() &&
 				base.Grid()->Type() == kRegularGrid && 
-				(*it)->Grid()->Type() == kRegularGrid &&
-				(base.Grid()->Projection() == kLatLonProjection || base.Grid()->Projection() == kRotatedLatLonProjection) &&
-				((*it)->Grid()->Projection() == kLatLonProjection || (*it)->Grid()->Projection() == kRotatedLatLonProjection))
+				(*it)->Grid()->Type() == kRegularGrid)
 		{
 			if (InterpolateAreaCuda(base, **it, targetData))
 			{
