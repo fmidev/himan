@@ -77,6 +77,7 @@ struct info_simple
 	size_t missing;
 
 	HPProjectionType projection;
+	HPInterpolationMethod interpolation;
 	
 	info_simple()
 		: size_x(0)
@@ -87,6 +88,7 @@ struct info_simple
 		, packed_values(0)
 		, missing(0)
 		, projection(kUnknownProjection)
+		, interpolation(kBiLinear)
 	{}
 
 };

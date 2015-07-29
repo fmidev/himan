@@ -770,6 +770,7 @@ info_simple* info::ToSimple() const
 	ret->south_pole_lon = g->SouthPole().X();
 
 	ret->orientation = g->Orientation();
+	ret->interpolation = Param().InterpolationMethod();
 
 	if (g->ScanningMode() == kTopLeft)
 	{
