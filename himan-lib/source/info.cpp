@@ -769,6 +769,8 @@ info_simple* info::ToSimple() const
 	ret->south_pole_lat = g->SouthPole().Y();
 	ret->south_pole_lon = g->SouthPole().X();
 
+	ret->orientation = g->Orientation();
+
 	if (g->ScanningMode() == kTopLeft)
 	{
 		ret->j_scans_positive = false;

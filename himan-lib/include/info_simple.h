@@ -56,9 +56,13 @@ struct info_simple
 	double first_lat;
 	double first_lon;
 
+	// rotated latlon
 	double south_pole_lat;
 	double south_pole_lon;
 
+	// stereographic projection
+	double orientation;
+	
 	double di;
 	double dj;
 
