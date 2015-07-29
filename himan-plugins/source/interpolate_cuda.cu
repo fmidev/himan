@@ -18,15 +18,15 @@ struct point
 };
 
 __host__ __device__ 
-int Index(int x, int y, int sx, float dir = 1)
+int Index(int x, int y, int sx)
 {
-	return y * sx + dir * x;
+	return y * sx + x;
 }
 
 __host__ __device__ 
-int Index(point p, int sx, float dir = 1)
+int Index(point p, int sx)
 {
-	return Index(static_cast<int> (p.x),static_cast<int> (p.y), sx, dir);
+	return Index(static_cast<int> (p.x),static_cast<int> (p.y), sx);
 }
 
 __global__
@@ -160,8 +160,8 @@ double BiLinear(double dx, double dy, double a, double b, double c, double d)
 }
 
 __global__ 
-void InterpolateCudaKernel(const double* __restrict__ source, 
-							double* __restrict__ target,
+void InterpolateCudaKernel(const double* __restrict__ d_source, 
+							double* __restrict__ d_target,
 							const point* __restrict__ d_grid,
 							himan::info_simple sourceInfo, 
 							himan::info_simple targetInfo)
@@ -207,53 +207,73 @@ void InterpolateCudaKernel(const double* __restrict__ source,
 			gp.x < (sourceInfo.size_x-1) && gp.y < (sourceInfo.size_y-1)
 		)
 		{
-			// Find all four neighboring points
-
-			point a(floor(gp.x), ceil(gp.y));
-			point b(ceil(gp.x), ceil(gp.y));
-			point c(floor(gp.x), floor(gp.y));
-			point d(ceil(gp.x), floor(gp.y));
-
-			// Neighbor values
-
-			double av = source[Index(a,sourceInfo.size_x)];
-			double bv = source[Index(b,sourceInfo.size_x)];
-			double cv = source[Index(c,sourceInfo.size_x)];
-			double dv = source[Index(d,sourceInfo.size_x)];
-			
-			// Distance of interpolated point to neighboring points
-
-			point dist(gp.x - c.x, gp.y - c.y);
-
-			if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
-			{
-				interp = BiLinear(dist.x, dist.y, av, bv, cv, dv);
-			}
 			
 			// TODO: Maybe add special cases if only one or two neighbors are missing?			
 
-#ifdef EXTRADEBUG
-			// Neighbor point indexes in linear format
-
-			int aidx = Index(a,sourceInfo.size_x);
-			int bidx = Index(b,sourceInfo.size_x);
-			int cidx = Index(c,sourceInfo.size_x);
-			int didx = Index(d,sourceInfo.size_x);
-			
-			if (i == 0 && j == 0)
+			switch (sourceInfo.interpolation)
 			{
-				printf("x:%d y:%d gpx:%f gpy:%f\n", i, j, gp.x, gp.y);
-				printf("a x:%d y:%d val:%f\n", int(a.x), int(a.y), av);
-				printf("b x:%d y:%d val:%f\n", int(b.x), int(b.y), bv);
-				printf("c x:%d y:%d val:%f\n", int(c.x), int(c.y), cv);
-				printf("d x:%d y:%d val:%f\n", int(d.x), int(d.y), dv);
-				printf("dist x:%f y:%f\n", dist.x, dist.y);
-				printf("interp:%f\n", interp);
-			}
+				case himan::kBiLinear:
+				{
+					// Find all four neighboring points
+
+					point a(floor(gp.x), ceil(gp.y));
+					point b(ceil(gp.x), ceil(gp.y));
+					point c(floor(gp.x), floor(gp.y));
+					point d(ceil(gp.x), floor(gp.y));
+
+					// Neighbor values
+
+					double av = d_source[Index(a,sourceInfo.size_x)];
+					double bv = d_source[Index(b,sourceInfo.size_x)];
+					double cv = d_source[Index(c,sourceInfo.size_x)];
+					double dv = d_source[Index(d,sourceInfo.size_x)];	
+
+					// Distance of interpolated point to neighboring points
+
+					point dist(gp.x - c.x, gp.y - c.y);
+
+					if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
+					{
+						interp = BiLinear(dist.x, dist.y, av, bv, cv, dv);
+					}
+
+#ifdef EXTRADEBUG
+					// Neighbor point indexes in linear format
+
+					int aidx = Index(a,sourceInfo.size_x);
+					int bidx = Index(b,sourceInfo.size_x);
+					int cidx = Index(c,sourceInfo.size_x);
+					int didx = Index(d,sourceInfo.size_x);
+
+					if (i == 0 && j == 0)
+					{
+						printf("x:%d y:%d gpx:%f gpy:%f\n", i, j, gp.x, gp.y);
+						printf("a x:%d y:%d val:%f\n", int(a.x), int(a.y), av);
+						printf("b x:%d y:%d val:%f\n", int(b.x), int(b.y), bv);
+						printf("c x:%d y:%d val:%f\n", int(c.x), int(c.y), cv);
+						printf("d x:%d y:%d val:%f\n", int(d.x), int(d.y), dv);
+						printf("dist x:%f y:%f\n", dist.x, dist.y);
+						printf("interp:%f\n", interp);
+					}
 #endif
+				}
+					break;
+					
+				case himan::kNearestPoint:
+					int rx = rint(gp.x);
+					int ry = rint(gp.y);
+					
+					assert(rx >= 0 && rx < sourceInfo.size_x);
+					assert(ry >= 0 && ry < sourceInfo.size_y);
+					
+					interp = d_source[Index(rx,ry,sourceInfo.size_x)];
+					
+					break;
+					
+			}
 		}
 
-		target[idx] = interp ;
+		d_target[idx] = interp ;
 
 	}
 }
@@ -263,6 +283,11 @@ bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetI
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
+
+	if (sourceInfo->interpolation != himan::kUnknownInterpolationMethod)
+	{
+		sourceInfo->interpolation = himan::kBiLinear;
+	}
 
 	/* Determine all grid point coordinates that need to be interpolated.
 	 * This is done with newbase by explicitly looping through the grid.
