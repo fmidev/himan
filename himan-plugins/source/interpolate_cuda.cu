@@ -1,6 +1,7 @@
 #include "info_simple.h"
-#include <NFmiRotatedLatLonArea.h>
 #include <NFmiLatLonArea.h>
+#include <NFmiRotatedLatLonArea.h>
+#include <NFmiStereographicArea.h>
 #include <NFmiGrid.h>
 #include "cuda_helper.h"
 
@@ -16,13 +17,63 @@ struct point
 
 };
 
+__host__ __device__ 
+int Index(int x, int y, int sx, float dir = 1)
+{
+	return y * sx + dir * x;
+}
+
+__host__ __device__ 
+int Index(point p, int sx, float dir = 1)
+{
+	return Index(static_cast<int> (p.x),static_cast<int> (p.y), sx, dir);
+}
+
+__global__
+void Flip(double* __restrict__ arr, size_t ni, size_t nj)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	// Flip with regards to x axis
+
+	if (idx < nj * ni * 0.5)
+	{
+		size_t half = static_cast<size_t> (floor(static_cast<double>(nj/2)));
+
+		const int i = fmod(static_cast<double> (idx), static_cast<double> (ni));
+		const int j = floor(static_cast<double> (idx / ni));
+
+		double upper = arr[idx];
+		double lower = arr[Index(i,nj-1-j,ni)];
+
+		arr[idx] = lower;
+		arr[Index(i,nj-1-j,ni)] = upper;
+		
+	}
+}
+
+__global__ void Print(double* __restrict__ arr, int i) { printf("%d %f\n", i, arr[i]); }
+
  NFmiArea* CreateArea(himan::info_simple* info)
 {
-	NFmiPoint bl(info->first_lon, info->first_lat);
-	NFmiPoint tr(bl.X() + (info->size_x - 1) * info->di, bl.Y() + (info->size_y - 1) * info->dj);
+	NFmiPoint bl, tr;
+	
+	bl.X(info->first_lon);
+	tr.X(bl.X() + (info->size_x - 1) * info->di);
+
+	if (info->j_scans_positive)
+	{	
+		bl.Y(info->first_lat);
+		tr.Y(bl.Y() + (info->size_y - 1) * info->dj);
+	}
+	else
+	{
+		tr.Y(info->first_lat);
+		bl.Y(tr.Y() - (info->size_y - 1) * info->dj);
+	}
 
 	NFmiArea* area = 0;
-	
+
 	if (info->projection == himan::kLatLonProjection)
 	{
 		area = new NFmiLatLonArea(bl, tr);
@@ -32,24 +83,60 @@ struct point
 		NFmiPoint sp(info->south_pole_lon, info->south_pole_lat);
 		area = new NFmiRotatedLatLonArea(bl, tr, sp, NFmiPoint(0,0), NFmiPoint(1,1), true);
 	}
+	else if (info->projection == himan::kStereographicProjection)
+	{
+		area = new NFmiStereographicArea(bl, (info->size_x - 1) * info->di, (info->size_y - 1) * info->dj, info->orientation);
+	}
 	else
 	{
 		throw std::runtime_error("Invalid projection for cuda interpolation");
 	}
-	
+
+	assert(area);
 	return area;
 }
 
-__host__ __device__ 
-int index(int x, int y, int sx)
+point* CreateGrid(himan::info_simple* sourceInfo, himan::info_simple* targetInfo)
 {
-	return y * sx + x;
-}
 
-__host__ __device__ 
-int index(point p, int sx)
-{
-	return index(static_cast<int> (p.x),static_cast<int> (p.y), sx);
+	NFmiArea* sourceArea = CreateArea(sourceInfo);
+	NFmiArea* targetArea = CreateArea(targetInfo);
+	
+	NFmiGrid sourceGrid(sourceArea, sourceInfo->size_x, sourceInfo->size_y, kBottomLeft);
+	NFmiGrid targetGrid(targetArea, targetInfo->size_x, targetInfo->size_y, kBottomLeft);
+/*
+	std::cout	<< "Source area BL: " << sourceArea->BottomLeftLatLon()
+				<< "Source area TR: " << sourceArea->TopRightLatLon()
+				<< "Source grid BL: " << sourceGrid.LatLonToGrid(sourceArea->BottomLeftLatLon())
+				<< "Source grid TR: " << sourceGrid.LatLonToGrid(sourceArea->TopRightLatLon())
+				<< "Source J scans positive: " << sourceInfo->j_scans_positive << std::endl
+				<< "Target area BL: " << targetArea->BottomLeftLatLon()
+				<< "Target area TR: " << targetArea->TopRightLatLon()
+				<< "Target grid BL (relative): " << sourceGrid.LatLonToGrid(targetArea->BottomLeftLatLon())
+				<< "Target grid TR (relative): " << sourceGrid.LatLonToGrid(targetArea->TopRightLatLon())
+				<< "Target J scans positive: " << targetInfo->j_scans_positive << std::endl
+				;
+*/	
+	delete (sourceArea);
+	delete (targetArea);
+	
+	point* ret = new point[targetGrid.XNumber() * targetGrid.YNumber()];
+	
+	targetGrid.Reset();
+	
+	int i = 0;
+	
+	while(targetGrid.Next())
+	{
+		NFmiPoint gp = sourceGrid.LatLonToGrid(targetGrid.LatLon());
+		
+		ret[i].x = gp.X();
+		ret[i].y = gp.Y();
+		
+		i++;
+	}
+
+	return ret;
 }
 
 __device__
@@ -62,27 +149,49 @@ double Linear(double dx, double left, double right)
 __device__ 
 double BiLinear(double dx, double dy, double a, double b, double c, double d)
 {
-	double ab = Linear(dx, a, b);
-	double cd = Linear(dx, c, d);
-	return Linear(dy, ab, cd);
+	// Method below is faster but gives visible interpolation artifacts
 
-	// return (1 - dx) * (1 - dy) * c + dx * (1 - dy) * d + (1 - dx) * dy * a + dx * dy * b;
+	//double ab = Linear(dx, a, b);
+	//double cd = Linear(dx, c, d);
+	//return Linear(dy, ab, cd);
+
+	// This one gives smooth interpolation surfaces
+	return (1 - dx) * (1 - dy) * c + dx * (1 - dy) * d + (1 - dx) * dy * a + dx * dy * b;
 }
 
 __global__ 
 void InterpolateCudaKernel(const double* __restrict__ source, 
-							double* __restrict__ target, 
+							double* __restrict__ target,
+							const point* __restrict__ d_grid,
 							himan::info_simple sourceInfo, 
-							himan::info_simple targetInfo,
-							point offset)
+							himan::info_simple targetInfo)
 {
 
-	int x = blockIdx.x * blockDim.x + threadIdx.x;
-	int y = blockIdx.y * blockDim.y + threadIdx.y;
-	
-	if (x < targetInfo.size_x && y < targetInfo.size_y)
+	// idx is our pointer to the TARGET data in linear format
+
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < targetInfo.size_x * targetInfo.size_y)
 	{
-		point gp(offset.x + x * targetInfo.di / sourceInfo.di, offset.y + y * targetInfo.dj / sourceInfo.dj);
+		// next we need to get x and y of the 'idx' in the source grid coordinates
+		// to do that we first determine the i and j of the target grid coordinates
+		
+		const int i = fmod(static_cast<double> (idx), static_cast<double> (targetInfo.size_x));
+		const int j = floor(static_cast<double> (idx / targetInfo.size_x));
+
+		// with i and j we can get the grid point coordinates in the source grid
+		
+		point gp = d_grid[Index(i,j,targetInfo.size_x)];
+		
+		if (gp.x < 0 || gp.x > sourceInfo.size_x - 1)
+		{
+			// wrap x if necessary
+			// this might happen f.ex. with EC where grid start at 0 meridian and 
+			// we interpolate from say -10 to 40 longitude
+
+			while (gp.x < 0) gp.x += sourceInfo.size_x;
+			while (gp.x > sourceInfo.size_x-1) gp.x -= sourceInfo.size_x-1;
+		}
 		
 		double interp = kFloatMissing;
 		
@@ -106,14 +215,14 @@ void InterpolateCudaKernel(const double* __restrict__ source,
 			point d(ceil(gp.x), floor(gp.y));
 
 			// Neighbor values
-			
-			double av = source[index(a,sourceInfo.size_x)];
-			double bv = source[index(b,sourceInfo.size_x)];
-			double cv = source[index(c,sourceInfo.size_x)];
-			double dv = source[index(d,sourceInfo.size_x)];
 
-			// Distance of interpolated point to neighboring points
+			double av = source[Index(a,sourceInfo.size_x)];
+			double bv = source[Index(b,sourceInfo.size_x)];
+			double cv = source[Index(c,sourceInfo.size_x)];
+			double dv = source[Index(d,sourceInfo.size_x)];
 			
+			// Distance of interpolated point to neighboring points
+
 			point dist(gp.x - c.x, gp.y - c.y);
 
 			if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
@@ -123,85 +232,59 @@ void InterpolateCudaKernel(const double* __restrict__ source,
 			
 			// TODO: Maybe add special cases if only one or two neighbors are missing?			
 
-#ifdef DEBUG
+#ifdef EXTRADEBUG
 			// Neighbor point indexes in linear format
 
-			int aidx = index(a,sourceInfo.size_x);
-			int bidx = index(b,sourceInfo.size_x);
-			int cidx = index(c,sourceInfo.size_x);
-			int didx = index(d,sourceInfo.size_x);
-
-			/*
-			if (interp < 100)
+			int aidx = Index(a,sourceInfo.size_x);
+			int bidx = Index(b,sourceInfo.size_x);
+			int cidx = Index(c,sourceInfo.size_x);
+			int didx = Index(d,sourceInfo.size_x);
+			
+			if (i == 0 && j == 0)
 			{
-				printf("x:%d y:%d gpx:%f gpy:%f\n", x, y, gp.x, gp.y);
+				printf("x:%d y:%d gpx:%f gpy:%f\n", i, j, gp.x, gp.y);
 				printf("a x:%d y:%d val:%f\n", int(a.x), int(a.y), av);
 				printf("b x:%d y:%d val:%f\n", int(b.x), int(b.y), bv);
 				printf("c x:%d y:%d val:%f\n", int(c.x), int(c.y), cv);
 				printf("d x:%d y:%d val:%f\n", int(d.x), int(d.y), dv);
 				printf("dist x:%f y:%f\n", dist.x, dist.y);
 				printf("interp:%f\n", interp);
-			} */
+			}
 #endif
 		}
 
-		target[index(x, y, targetInfo.size_x)] = interp ;
+		target[idx] = interp ;
 
 	}
 }
+
 
 bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetInfo)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
+
+	/* Determine all grid point coordinates that need to be interpolated.
+	 * This is done with newbase by explicitly looping through the grid.
+	 * Initially I tried to implement it with just starting point and offset
+	 * but the code was awkward and would not work with stereographic projections
+	 * anyway.
+	 */
+
+	point* grid = CreateGrid(sourceInfo, targetInfo);
 	
-	NFmiArea* sourceArea = CreateArea(sourceInfo);
-	NFmiArea* targetArea = CreateArea(targetInfo);
+	const size_t N = targetInfo->size_x * targetInfo->size_y;
 	
-	//NFmiPoint interpbl(targetInfo->first_lon, targetInfo->first_lat);
-	//NFmiPoint interptr(interpbl.X() + (targetInfo->size_x - 1) * targetInfo->di, interpbl.Y() + (targetInfo->size_y - 1) * targetInfo->dj);
-
-	NFmiPoint interpbl = targetArea->BottomLeftLatLon();
-	NFmiPoint interptr = targetArea->TopRightLatLon();
-		
-	NFmiGrid sourceGrid(sourceArea, sourceInfo->size_x, sourceInfo->size_y);
-
-	NFmiPoint gpbl = sourceGrid.LatLonToGrid(interpbl);
-
-#ifdef DEBUG
-	NFmiPoint gptr = sourceGrid.LatLonToGrid(interptr);
-#endif
-
-	if (targetInfo->projection == himan::kRotatedLatLonProjection)
-	{
-		interpbl = dynamic_cast<NFmiRotatedLatLonArea*> (targetArea)->ToRotLatLon(interpbl);
-		interptr = dynamic_cast<NFmiRotatedLatLonArea*> (targetArea)->ToRotLatLon(interptr);
-	}
-	
-	point offset(gpbl.X(), gpbl.Y());
-
-#ifdef DEBUG
-	std::cout	<< "Source area BL: " << sourceArea->BottomLeftLatLon()
-				<< "Source area TR: " << sourceArea->TopRightLatLon()
-				<< "Source grid BL: " << sourceGrid.LatLonToGrid(sourceArea->BottomLeftLatLon())
-				<< "Source grid TR: " << sourceGrid.LatLonToGrid(sourceArea->TopRightLatLon())
-				<< "Target area BL: " << interpbl
-				<< "Target area TR: " << interptr
-				<< "Target grid BL: " << gpbl
-				<< "Target grid TR: " << gptr
-				<< "Source grid dx/dy " << sourceInfo->di << "/" << sourceInfo->di << std::endl
-				<< "Target grid dx/dy " << targetInfo->di << "/" << targetInfo->dj << std::endl
-				<< "Offset x/y: " << offset.x << "/" << offset.y << std::endl
-				;
-#endif	
-	delete (sourceArea);
-	delete (targetArea);
+	point* d_grid = 0;
+	CUDA_CHECK(cudaMalloc((void**) &d_grid, sizeof(point) * N));
+	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid, sizeof(point) * N, cudaMemcpyHostToDevice, stream));
 
 	double* d_source = 0;
 	double* d_target = 0;
 
 	CUDA_CHECK(cudaMalloc((void **) &d_source, sourceInfo->size_x * sourceInfo->size_y * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((void **) &d_target, targetInfo->size_x * targetInfo->size_y * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((void **) &d_target, N * sizeof(double)));
+
 #ifdef DEBUG
 	CUDA_CHECK(cudaMemset(d_target, 0, targetInfo->size_x * targetInfo->size_y * 8));
 #endif
@@ -209,28 +292,35 @@ bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetI
 	PrepareInfo(sourceInfo, d_source, stream);
 	PrepareInfo(targetInfo);
 
-	const int blocksize = 16;
-	const dim3 blocks(blocksize,blocksize);
+	if (!sourceInfo->j_scans_positive)
+	{
+		// Force +x-y --> +x+y
+
+		size_t N = sourceInfo->size_x * sourceInfo->size_y * 0.5 ;
+
+		int bs = 256;
+		int gs = N/bs + (N % bs == 0?0:1);
+		Flip <<<gs,bs,0,stream>>>(d_source, sourceInfo->size_x, sourceInfo->size_y);
+
+		sourceInfo->j_scans_positive = true;
+	}
 	
-	dim3 grids;
-	
-	grids.x = ceil((targetInfo->size_x+blocks.x-1)/blocks.x);
-	grids.y = ceil((targetInfo->size_y+blocks.y-1)/blocks.y);
+	const int bs = 256;
+	const int gs = N/bs + (N % bs == 0?0:1);
 
 	// Do bilinear transform on CUDA device
-	InterpolateCudaKernel <<<grids,blocks,0,stream>>>(d_source, d_target, *sourceInfo, *targetInfo, offset);
+	InterpolateCudaKernel <<<gs,bs,0,stream>>>(d_source, d_target, d_grid, *sourceInfo, *targetInfo);
  
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-
+	
 	himan::ReleaseInfo(sourceInfo);
 	himan::ReleaseInfo(targetInfo, d_target, stream);
 	
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
 	CUDA_CHECK(cudaFree(d_source));
 	CUDA_CHECK(cudaFree(d_target));
-
+	CUDA_CHECK(cudaFree(d_grid));
+	
 	CUDA_CHECK(cudaStreamDestroy(stream));
-
+	
 	return true;
 }
