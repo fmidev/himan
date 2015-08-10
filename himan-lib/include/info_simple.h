@@ -50,45 +50,52 @@ namespace himan
 struct info_simple
 {
 
+	// grid size
 	size_t size_x;
 	size_t size_y;
 
+	// first point of grid
 	double first_lat;
 	double first_lon;
 
-	// rotated latlon
+	// only for rotated latlon
 	double south_pole_lat;
 	double south_pole_lon;
 
-	// stereographic projection
+	// only stereographic projection
 	double orientation;
 	
+	// distance between two grid points, degrees or meters (stereographic))
 	double di;
 	double dj;
 
 	bool j_scans_positive;
-	bool is_page_locked;
 
 	double *values;
 	simple_packed* packed_values;
 
-	std::string param;
-
-	size_t missing;
-
 	HPProjectionType projection;
 	HPInterpolationMethod interpolation;
+
+	// true if area extends over zero meridian (important information in interpolation)
+	bool wraps_globally;
 	
 	info_simple()
 		: size_x(0)
 		, size_y(0)
+		, first_lat(kFloatMissing)
+		, first_lon(kFloatMissing)
+		, south_pole_lat(kFloatMissing)
+		, south_pole_lon(kFloatMissing)
+		, orientation(kFloatMissing)
+		, di(kFloatMissing)
+		, dj(kFloatMissing)
 		, j_scans_positive(true)
-		, is_page_locked(false)
 		, values(0)
 		, packed_values(0)
-		, missing(0)
 		, projection(kUnknownProjection)
 		, interpolation(kBiLinear)
+		, wraps_globally(false)
 	{}
 
 };

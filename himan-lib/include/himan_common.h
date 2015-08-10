@@ -151,14 +151,24 @@ enum HPInterpolationMethod
 	kUnknownInterpolationMethod = 0,
 	kBiLinear = 1,
 	kNearestPoint = 2,
+	kNearestPointValue // http://arxiv.org/pdf/1211.1768.pdf
 };
 
 #ifndef __CUDACC__
 const boost::unordered_map<HPInterpolationMethod,std::string> HPInterpolationMethodToString = ba::map_list_of
 		(kUnknownInterpolationMethod, "unknown")
-		(kBiLinear, "bi-linear")
+		(kBiLinear, "bilinear")
 		(kNearestPoint, "nearest point")
+		(kNearestPointValue, "nearest point value")
 		;
+
+const boost::unordered_map<std::string,HPInterpolationMethod> HPStringToInterpolationMethod = ba::map_list_of
+		("unknown",kUnknownInterpolationMethod)
+		("bilinear",kBiLinear)
+		("nearest point",kNearestPoint)
+		("nearest point value",kNearestPointValue)
+		;
+
 #endif
 
 enum HPLevelType
