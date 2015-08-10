@@ -46,7 +46,7 @@ public:
 
     virtual HPVersionNumber Version() const
     {
-        return HPVersionNumber(1, 1);
+        return HPVersionNumber(1, 2);
     }
 
 private:
@@ -69,7 +69,7 @@ private:
 	std::vector<level> itsSourceLevels;
 	bool itsApplyLandSeaMask;
 	double itsLandSeaMaskThreshold;
-
+	HPInterpolationMethod itsInterpolationMethod;
 };
 
 // the class factory

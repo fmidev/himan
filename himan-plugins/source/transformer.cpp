@@ -25,7 +25,13 @@ using namespace himan::plugin;
 
 #include "cuda_helper.h"
 
-transformer::transformer() : itsBase(0.0), itsScale(1.0), itsTargetUnivID(9999), itsApplyLandSeaMask(false), itsLandSeaMaskThreshold(0.5)
+transformer::transformer() 
+	: itsBase(0.0)
+	, itsScale(1.0)
+	, itsTargetUnivID(9999)
+	, itsApplyLandSeaMask(false)
+	, itsLandSeaMaskThreshold(0.5)
+	, itsInterpolationMethod(kUnknownInterpolationMethod)
 {
 	itsClearTextFormula = "target_param = source_param * itsScale + itsBase";
 	itsCudaEnabledCalculation = true;
@@ -134,6 +140,11 @@ void transformer::SetAdditionalParameters()
 		}
 	}
 	
+	if (itsConfiguration->Exists("interpolation"))
+	{
+		itsInterpolationMethod = HPStringToInterpolationMethod.at(itsConfiguration->GetValue("interpolation"));
+	}
+
 	// looks useful to use this function to create source_levels
 	itsSourceLevels = LevelsFromString(itsSourceLevelType, SourceLevels);
 }
@@ -173,7 +184,10 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 		}
 	}	
 
-	// GRIB 1
+	if (itsInterpolationMethod != kUnknownInterpolationMethod)
+	{
+		requestedParam.InterpolationMethod(itsInterpolationMethod);
+	}
 
 	theParams.push_back(requestedParam);
 
