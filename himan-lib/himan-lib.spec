@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.6.22
+Version: 15.8.10
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,13 +13,13 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 15.6.24
+Requires: libfmidb >= 15.8.10
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 BuildRequires: boost-devel >= 1.55
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
-BuildRequires: libfmidb-devel >= 15.6.24
+BuildRequires: libfmidb-devel >= 15.8.10
 
 %if %{distnum} == 6
 BuildRequires: gcc-c++ >= 4.4.6
@@ -57,6 +57,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Aug 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.10-1.fmi
+- New interpolation method (not enabled)
+- New vertical integration namespace
 * Mon Jun 22 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.22-1.fmi
 - Changes in metutil and modifier
 * Wed May 27 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.5.27-1.fmi

@@ -49,8 +49,11 @@ bool integral::Evaluate()
 	{
 		itsLevel.Value(lvl);
 		//fetch parameter and create pointers to their data structures
-		for (param itsParam:itsParams)
+
+		//for (param itsParam:itsParams) <-- only for g++ 4.8
+		for (unsigned int i = 0; i < itsParams.size(); i++)
 		{
+			param itsParam = itsParams[i];
         		paramInfos.push_back(f->Fetch(itsConfiguration, itsTime, itsLevel, itsParam, itsType, itsConfiguration->UseCudaForPacking()));
 			paramPointers.push_back(&(paramInfos.back()->Data().Values()));
 			//allocate result container
