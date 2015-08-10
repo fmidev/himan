@@ -900,6 +900,8 @@ string util::MakeSQLInterval(const himan::forecast_time& theTime)
 
 string util::Expand(const string& in)
 {
+	if (in.find("$") == string::npos) return in;
+	
 	wordexp_t p;
 	
 	wordexp(in.c_str(), &p, 0);
