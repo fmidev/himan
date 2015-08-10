@@ -35,7 +35,10 @@ using namespace std;
 const unsigned int SLEEPSECONDS = 10;
 
 shared_ptr<cache> itsCache;
+
+#ifdef HAVE_CUDA
 extern bool InterpolateCuda(himan::info_simple* baseInfo, himan::info_simple* targetInfo);
+#endif
 
 fetcher::fetcher()
 	: itsDoLevelTransform(true)
