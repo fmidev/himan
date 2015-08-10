@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.6.22
-Release: 2%{dist}.fmi
+Version: 15.8.10
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.13.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 15.5.27
+Requires: himan-lib >= 15.8.10
 Requires: himan-bin >= 15.5.27
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -33,7 +33,7 @@ BuildRequires: gcc-c++ < 4.7
 BuildRequires: cuda-6-5
 %endif
 
-BuildRequires: libfmidb >= 15.4.16
+BuildRequires: libfmidb >= 15.8.10
 BuildRequires: libfmigrib-devel >= 15.5.18
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
@@ -107,6 +107,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Aug 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.10-1.fmi
+- Adding native interpolation methods
 * Mon Jun 22 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.22-2.fmi
 - Performance improvements in hybrid_height and tpot
 * Mon Jun 22 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.22-1.fmi
