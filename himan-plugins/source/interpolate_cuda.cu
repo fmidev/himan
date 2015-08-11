@@ -238,11 +238,25 @@ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_si
 
 	double ret = kFloatMissing;
 
-	// TODO: Maybe add special cases if only one or two neighbors are missing?			
-	
 	if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
 	{
 		ret = BiLinear(dist.x, dist.y, av, bv, cv, dv);
+	}
+	else if (av == kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
+	{
+		ret = BiLinear(dist.x, dist.y, bv, bv, cv, dv);
+	}
+	else if (av != kFloatMissing && bv == kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
+	{
+		ret = BiLinear(dist.x, dist.y, av, av, cv, dv);
+	}
+	else if (av != kFloatMissing && bv != kFloatMissing && cv == kFloatMissing && dv != kFloatMissing)
+	{
+		ret = BiLinear(dist.x, dist.y, av, bv, dv, dv);
+	}
+	else if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv == kFloatMissing)
+	{
+		ret = BiLinear(dist.x, dist.y, av, av, cv, cv);
 	}
 
 #ifdef EXTRADEBUG
