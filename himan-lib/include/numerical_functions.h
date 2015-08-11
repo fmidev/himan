@@ -10,7 +10,7 @@
 
 #include "himan_common.h"
 #include "plugin_configuration.h"
-
+#include <valarray>
 namespace himan
 {
 
@@ -37,7 +37,7 @@ class integral
 		void Params(params theParams);
 
 		//provide function of parameters that will be integrated over. TODO I'll document an example how that lambda function has to look like.
-		void Function(std::function<std::vector<double>(std::vector<const std::vector<double>*>, size_t)> theFunction);
+		void Function(std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> theFunction);
 
 		//set bounds
 		void LowerBound(const std::vector<double>& theLowerBound);
@@ -66,7 +66,7 @@ class integral
 		int itsHighestLevel;
 
 		params itsParams;
-                std::function<std::vector<double>(std::vector<const std::vector<double>*>, size_t)> itsFunction;
+                std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> itsFunction;
 
 		std::vector<double> itsLowerBound;
 		std::vector<double> itsUpperBound;

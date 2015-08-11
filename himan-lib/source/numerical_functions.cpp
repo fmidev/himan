@@ -21,7 +21,7 @@ void integral::Params(std::vector<param> theParams)
 	itsParams = theParams;
 }
 
-void integral::Function(std::function<std::vector<double>(std::vector<const std::vector<double>*>,size_t)> theFunction)
+void integral::Function(std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> theFunction)
 {
 	itsFunction = theFunction;
 }
@@ -38,12 +38,15 @@ bool integral::Evaluate()
 	auto f = GET_PLUGIN(fetcher);
 	
 	std::vector<info_t> paramInfos;
-	//Create a container that points to the data structures containing parameter data. This container passed as an argument to the function that is being integrated over.
-	std::vector<const std::vector<double>*> paramPointers;
-	std::vector<double> previousLevelValue;
-	std::vector<double> currentLevelValue;
-	std::vector<double> previousLevelHeight;
-	std::vector<double> currentLevelHeight;
+	//Create a container that contains the parameter data. This container passed as an argument to the function that is being integrated over.
+	std::vector<std::valarray<double>> paramsData;
+	std::valarray<double> previousLevelValue;
+	std::valarray<double> currentLevelValue;
+	std::valarray<double> previousLevelHeight;
+	std::valarray<double> currentLevelHeight;
+
+	//set manually for testing
+	itsLowestLevel = 50; itsHighestLevel = 55;
 
 	for (int lvl=itsLowestLevel; lvl<=itsHighestLevel; ++lvl)
 	{
@@ -55,7 +58,7 @@ bool integral::Evaluate()
 		{
 			param itsParam = itsParams[i];
         		paramInfos.push_back(f->Fetch(itsConfiguration, itsTime, itsLevel, itsParam, itsType, itsConfiguration->UseCudaForPacking()));
-			paramPointers.push_back(&(paramInfos.back()->Data().Values()));
+			paramsData.push_back(std::valarray<double> (paramInfos.back()->Data().Values().data(),paramInfos.back()->Data().Size()));
 			//allocate result container
 			if (!itsResult.size()) itsResult.resize(paramInfos.back()->Data().Size());
 		}
@@ -63,7 +66,7 @@ bool integral::Evaluate()
 		//evaluate integration function TODO if no function is given copy data from info class to currentLevelValue
 		if (itsFunction)
 		{
-			currentLevelValue = itsFunction(paramPointers,paramInfos.back()->Data().Size());
+			currentLevelValue = itsFunction(paramsData);
 		}
 		
 		//move data from current level to previous level
