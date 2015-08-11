@@ -589,6 +589,16 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 }
 
+int InterpolationMethod(const std::string& paramName, int interpolationMethod)
+{
+	if (interpolationMethod == 1 && 
+			(paramName == "U-MS" || paramName == "V-MS" || paramName == "DD-D" || paramName == "FF-MS"))
+	{
+		return 2; // nearest point in himan and newbase
+	}
+	
+	return interpolationMethod;
+}
 
 bool fetcher::InterpolateAreaCuda(info& base, info& source, unpacked& targetData) const
 {
@@ -596,10 +606,20 @@ bool fetcher::InterpolateAreaCuda(info& base, info& source, unpacked& targetData
 #ifdef HAVE_CUDA	
 	auto simple_base = base.ToSimple();
 	auto simple_source = source.ToSimple();
-	
+
 	info_simple simple_target(*simple_base);
 
 	simple_target.values = new double[simple_target.size_x * simple_target.size_y];
+	
+	int method = InterpolationMethod(source.Param().Name(), static_cast<int> (simple_target.interpolation));
+	
+	if (method != static_cast<int> (simple_target.interpolation))
+	{
+		itsLogger->Warning("Interpolation method forced to " + HPInterpolationMethodToString.at(static_cast<HPInterpolationMethod> (method)) + " for parameter " + source.Param().Name());
+	}
+	
+	simple_target.interpolation = static_cast<HPInterpolationMethod> (method);
+
 #ifdef DEBUG
 	memset(simple_target.values, 0, simple_target.size_x * simple_target.size_y * sizeof(double));
 #endif
@@ -641,6 +661,17 @@ bool fetcher::InterpolateAreaNewbase(info& base, info& source, unpacked& targetD
 
 	auto interpData = q->CreateQueryData(source, true);
 	NFmiFastQueryInfo interpInfo (interpData.get());
+
+	auto param = string(interpInfo.Param().GetParam()->GetName());
+		
+	int method = InterpolationMethod(param, static_cast<int> (base.Param().InterpolationMethod()));
+
+	if (method != base.Param().InterpolationMethod())
+	{
+		itsLogger->Warning("Interpolation method forced to " + HPInterpolationMethodToString.at(static_cast<HPInterpolationMethod> (method)) + " for parameter " + param);
+	}
+	
+	interpInfo.Param().GetParam()->InterpolationMethod(static_cast<FmiInterpolationMethod> (method));
 
 	size_t i;
 
@@ -690,6 +721,7 @@ bool fetcher::InterpolateArea(const plugin_configuration& conf, info& base, vect
 			}
 			else
 			{
+				itsLogger->Trace("Interpolation with cuda failed");
 				InterpolateAreaNewbase(base, **it, targetData);
 			}
 		}
@@ -883,7 +915,7 @@ bool fetcher::Interpolate(const plugin_configuration& conf, himan::info& baseInf
 
 	if (needInterpolation)
 	{
-		itsLogger->Trace("Interpolating area");
+		itsLogger->Trace("Interpolating area with method: " + HPInterpolationMethodToString.at(baseInfo.Param().InterpolationMethod()));
 		return InterpolateArea(conf, baseInfo, theInfos);
 	}
 	else if (needPointReordering)
