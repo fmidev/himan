@@ -242,21 +242,33 @@ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_si
 	{
 		ret = BiLinear(dist.x, dist.y, av, bv, cv, dv);
 	}
+
+	// These "triangulation" methods have been copied from NFmiInterpolation.cpp
+
 	else if (av == kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
 	{
-		ret = BiLinear(dist.x, dist.y, bv, bv, cv, dv);
+		double wsum = (dist.x * dist.y + (1 - dist.x) * (1 - dist.y) + dist.x * (1 - dist.y));
+
+		ret = ((1 - dist.x) * (1 - dist.y) * cv + dist.x * (1 - dist.y) * dv + dist.x * dist.y * bv) / wsum;
 	}
 	else if (av != kFloatMissing && bv == kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
 	{
-		ret = BiLinear(dist.x, dist.y, av, av, cv, dv);
+		double wsum = ((1 - dist.x) * dist.y + (1 - dist.x) * (1 - dist.y) + dist.x * (1 - dist.y));
+
+		ret = ((1 - dist.x) * (1 - dist.y) * cv + dist.x * (1 - dist.y) * dv + (1 - dist.x) * dist.y * av) / wsum;
 	}
 	else if (av != kFloatMissing && bv != kFloatMissing && cv == kFloatMissing && dv != kFloatMissing)
 	{
-		ret = BiLinear(dist.x, dist.y, av, bv, dv, dv);
+		double wsum = ((1 - dist.x) * dist.y + dist.x * dist.y + dist.x * (1 - dist.y));
+		
+		ret = (dist.x * (1 - dist.y) * dv + (1 - dist.x) * dist.y * av + dist.x * dist.y * bv) / wsum;
 	}
 	else if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv == kFloatMissing)
 	{
-		ret = BiLinear(dist.x, dist.y, av, av, cv, cv);
+		double wsum = ((1 - dist.x) * (1 - dist.y) + (1 - dist.x) * dist.y + dist.x * dist.y);
+		
+		ret = ((1 - dist.x) * (1 - dist.y) * cv + (1 - dist.x) * dist.y * av + dist.x * dist.y * bv) / wsum;
+
 	}
 
 #ifdef EXTRADEBUG
