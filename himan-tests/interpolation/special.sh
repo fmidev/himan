@@ -11,6 +11,23 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan"
 fi
 
+rm -f gfs*.grib
+
+$HIMAN -d 5 -f gfs.json --no-cuda -s stat source_gfs.grib
+mv gfs.json.grib newbase.grib
+
+$HIMAN -d 5 -f gfs.json -s stat source_gfs.grib
+mv gfs.json.grib cuda.grib
+
+grib_compare -b referenceValue -A 0.5 newbase.grib cuda.grib
+
+if [ $? -eq 0 ];then
+  echo interpolation/gfs success!
+else
+  echo interpolation/gfs failed
+  exit 1
+fi
+
 rm -f cross_meridian*.grib
 
 $HIMAN -d 5 -f cross_meridian.json --no-cuda -s stat source_latlon.grib
@@ -70,7 +87,7 @@ mv missing_bl.json.grib newbase.grib
 $HIMAN -d 5 -f missing_bl.json -s stat source_missing.grib
 mv missing_bl.json.grib cuda.grib
 
-grib_compare -A 1.5 newbase.grib cuda.grib
+grib_compare -A 0.5 newbase.grib cuda.grib
 
 if [ $? -eq 0 ];then
   echo interpolation/missing_bl success!
