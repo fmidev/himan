@@ -12,7 +12,7 @@ rm -f hybrid_height_ec.json.grib2
 
 $HIMAN -d 5 -f hybrid_height_ec.json -t grib source_ec.grib
 
-grib_compare result_ec.grib2 hybrid_height_ec.json.grib2
+grib_compare -b totalLength -A 0.1 result_ec.grib2 hybrid_height_ec.json.grib2
 
 if [ $? -eq 0 ];then
   echo hybrid_height/ec success!

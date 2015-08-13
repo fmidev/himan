@@ -19,7 +19,7 @@ fi
 
 temp=$(grep 25 T-C_pressure_850_ll_0_001.csv | cut -d "," -f 10)
 
-if [ "$temp" != "-5.34336" ]; then
+if [ "$temp" != "-5.40369" ]; then
   echo "csv failed"
   exit 1
 fi
@@ -37,7 +37,7 @@ fi
 
 temp=$(grep 25 T-K_pressure_850_ll_0_001.csv | cut -d "," -f 10)
 
-if [ "$temp" != "267.807" ]; then
+if [ "$temp" != "267.746" ]; then
   echo "csv failed"
   exit 1
 fi
