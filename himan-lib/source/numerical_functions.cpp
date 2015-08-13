@@ -33,7 +33,7 @@ const std::vector<double>& integral::Result() const
 	return itsResult;
 }
 
-bool integral::Evaluate()
+void integral::Evaluate()
 {
 	auto f = GET_PLUGIN(fetcher);
 	
@@ -44,14 +44,12 @@ bool integral::Evaluate()
 	std::valarray<double> currentLevelValue;
 	std::valarray<double> previousLevelHeight;
 	std::valarray<double> currentLevelHeight;
-
-	//set manually for testing
-	itsLowestLevel = 50; itsHighestLevel = 55;
+	std::valarray<bool> missingValueMask;
 
 	for (int lvl=itsLowestLevel; lvl<=itsHighestLevel; ++lvl)
 	{
 		itsLevel.Value(lvl);
-		//fetch parameter and create pointers to their data structures
+		//fetch parameters
 
 		//for (param itsParam:itsParams) <-- only for g++ 4.8
 		for (unsigned int i = 0; i < itsParams.size(); i++)
@@ -63,11 +61,32 @@ bool integral::Evaluate()
 			if (!itsResult.size()) itsResult.resize(paramInfos.back()->Data().Size());
 		}
 
-		//evaluate integration function TODO if no function is given copy data from info class to currentLevelValue
+		//fetch height TODO also implement pressure as hight coordinate
+                param heightParam = param("HL-M");
+                info_t heights = f->Fetch(itsConfiguration, itsTime, itsLevel, heightParam, itsType, itsConfiguration->UseCudaForPacking());
+                currentLevelHeight = std::valarray<double> (heights->Data().Values().data(),heights->Data().Size());
+
+		
+		//mask for missing values
+		missingValueMask = std::valarray<bool> (false,heights->Data().Size());
+		for (unsigned int i = 0; i < paramsData.size(); i++)
+		{
+			missingValueMask = (paramsData[i] == kFloatMissing || missingValueMask);
+		}
+
+		//evaluate integration function
 		if (itsFunction)
 		{
 			currentLevelValue = itsFunction(paramsData);
 		}
+		else
+		{
+			//use first param if no function is given
+			currentLevelValue = paramsData[0];
+		}
+		
+		//put missing values back in
+		currentLevelValue[missingValueMask] = kFloatMissing;
 		
 		//move data from current level to previous level
 		if (lvl == itsLowestLevel)
@@ -77,17 +96,36 @@ bool integral::Evaluate()
 			continue;
 		}
 
-		//perform trapezoideal integration step TODO Implement catching of upper/lower bound 
+		//perform trapezoideal integration TODO deal with missing values
 		for (size_t i=0; i<paramInfos.back()->Data().Size(); ++i)
 		{
-			itsResult[i] += (currentLevelValue[i] + previousLevelValue[i]) / 2 * (previousLevelHeight[i] - currentLevelHeight[i]);
+
+        		// value is below the lowest limit
+        		if (previousLevelHeight[i] > itsLowerBound[i] && currentLevelHeight[i] < itsLowerBound[i])
+        		{
+                		double lowerValue = previousLevelValue[i]+(currentLevelValue[i]-previousLevelValue[i])*(itsLowerBound[i]-previousLevelHeight[i])/(currentLevelHeight[i]-previousLevelHeight[i]);
+                		itsResult[i] += (lowerValue + previousLevelValue[i]) / 2 * (previousLevelHeight[i] - itsLowerBound[i]);
+			}
+        		// value is above the highest limit
+        		else if (previousLevelHeight[i] > itsUpperBound[i] && currentLevelHeight[i] < itsUpperBound[i])
+        		{
+                		double upperValue = previousLevelValue[i]+(currentLevelValue[i]-previousLevelValue[i])*(itsLowerBound[i]-previousLevelHeight[i])/(currentLevelHeight[i]-previousLevelHeight[i]);
+                		itsResult[i] += (upperValue + currentLevelValue[i]) / 2 * (itsUpperBound[i] - currentLevelHeight[i]);
+
+        		}
+        		else if (previousLevelHeight[i] <= itsUpperBound[i] && currentLevelHeight[i] >= itsLowerBound[i])        
+			{
+                		itsResult[i] += (previousLevelValue[i] + currentLevelValue[i]) / 2 * (previousLevelHeight[i] - currentLevelHeight[i]);
+        		}
+
 		}
 		
 		//move data from current level to previous level at the end of the integration step
                 previousLevelHeight = std::move(currentLevelHeight);
                 previousLevelValue = std::move(currentLevelValue);
+		paramInfos.clear();
+		paramsData.clear();
 	}
-	return true;
 }
 
 void integral::LowerBound(const std::vector<double>& theLowerBound)
@@ -122,4 +160,30 @@ void integral::UpperBound(const std::vector<double>& theUpperBound)
 			itsOutOfBound[i] = true;
 		}
 	}
+}
+
+void integral::LowerLevelLimit(int theLowestLevel)
+{
+	itsLowestLevel = theLowestLevel;
+}
+
+void integral::UpperLevelLimit(int theHighestLevel)
+{
+	itsHighestLevel = theHighestLevel;
+}
+
+void integral::ForecastType(forecast_type theType)
+{
+	itsType = theType;
+}
+
+void integral::ForecastTime(forecast_time theTime)
+{
+	itsTime = theTime;
+}
+
+// TODO add check that all information that is needed is given to the class object
+bool integral::Complete()
+{
+	return true;
 }

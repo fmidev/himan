@@ -42,20 +42,21 @@ class integral
 		//set bounds
 		void LowerBound(const std::vector<double>& theLowerBound);
 		void UpperBound(const std::vector<double>& theUpperBound);
+		void LowerLevelLimit(int theLowestLevel);
+		void UpperLevelLimit(int theHighestLevel);
+		void ForecastType(forecast_type theType);
+		void ForecastTime(forecast_time theTime);
 
 		//return result
 		const std::vector<double>& Result() const;
 
-		//pass configuration to interation object (needed for fetching values)
+		//pass configuration to integration object (needed for fetching values)
                 std::shared_ptr<const plugin_configuration> itsConfiguration;
 		
-		//parameters needed for fetching. This is a temporary test solution. TODO provide interface to set these values or determine from configuration
-	        forecast_time itsTime;
-        	level itsLevel;
-        	forecast_type itsType;
-
 		//evaluate the integral expression
-		bool Evaluate();
+		void Evaluate();
+		//check if all necessary parameters are given
+		bool Complete();
 
 	private:
 
@@ -64,6 +65,10 @@ class integral
 		//bool itsMissingValuesAllowed;
 		int itsLowestLevel;
 		int itsHighestLevel;
+
+                forecast_time itsTime;
+                forecast_type itsType;
+		level itsLevel;
 
 		params itsParams;
                 std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> itsFunction;
