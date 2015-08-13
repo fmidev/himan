@@ -6,7 +6,7 @@
 #include "cuda_helper.h"
 #include <thrust/sort.h>
 
-const double kEpsilon = 1e-5;
+const double kEpsilon = 1e-6;
 
 struct point
 {
@@ -137,7 +137,7 @@ point* CreateGrid(himan::info_simple* sourceInfo, himan::info_simple* targetInfo
 		
 		ret[i].x = gp.X();
 		ret[i].y = gp.Y();
-		
+
 		i++;
 	}
 
@@ -238,12 +238,36 @@ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_si
 
 	double ret = kFloatMissing;
 
+	// All values present, regular bilinear interpolation
+	
 	if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
 	{
 		ret = BiLinear(dist.x, dist.y, av, bv, cv, dv);
 	}
 
-	// These "triangulation" methods have been copied from NFmiInterpolation.cpp
+	// x or y is at grid edge
+	
+	else if (fabs(dist.y) < kEpsilon && cv != kFloatMissing && dv != kFloatMissing)
+	{
+		ret = Linear(dist.x, cv, dv);
+	}
+
+	else if (fabs(dist.y - 1) < kEpsilon && av != kFloatMissing && bv != kFloatMissing)
+	{
+		ret = Linear(dist.x, av, bv);
+	}
+	
+	else if (fabs(dist.x) < kEpsilon && cv != kFloatMissing && av != kFloatMissing)
+	{
+		ret = Linear(dist.y, cv, dv);
+	}
+
+	else if (fabs(dist.x - 1) < kEpsilon && av != kFloatMissing && bv != kFloatMissing)
+	{
+		ret = Linear(dist.y, dv, bv);
+	}
+		
+	// One point missing; these "triangulation" methods have been copied from NFmiInterpolation.cpp
 
 	else if (av == kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
 	{
@@ -268,10 +292,14 @@ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_si
 		double wsum = ((1 - dist.x) * (1 - dist.y) + (1 - dist.x) * dist.y + dist.x * dist.y);
 		
 		ret = ((1 - dist.x) * (1 - dist.y) * cv + (1 - dist.x) * dist.y * av + dist.x * dist.y * bv) / wsum;
-
 	}
 
 #ifdef EXTRADEBUG
+	else
+	{
+		printf("More than one point missing for gp x: %f y:%f --> a:%f b:%f c:%f d:%f | dx:%f dy:%f\n", gp.x, gp.y, av, bv, cv, dv, dist.x, dist.y);
+	}
+
 	// Neighbor point indexes in linear format
 
 	int aidx = Index(a,sourceInfo.size_x);
@@ -302,7 +330,7 @@ double NearestPointInterpolation(const double* __restrict__ d_source, himan::inf
 
 	assert(rx >= 0 && rx < sourceInfo.size_x);
 	assert(ry >= 0 && ry < sourceInfo.size_y);
-
+	if (d_source[Index(rx,ry,sourceInfo.size_x)] == kFloatMissing) printf("missing value returned\n");
 	return d_source[Index(rx,ry,sourceInfo.size_x)];
 
 }
@@ -386,7 +414,7 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 	{
 		// next we need to get x and y of the 'idx' in the source grid coordinates
 		// to do that we first determine the i and j of the target grid coordinates
-		
+
 		const int i = fmod(static_cast<double> (idx), static_cast<double> (targetInfo.size_x));
 		const int j = floor(static_cast<double> (idx / targetInfo.size_x));
 
@@ -410,12 +438,12 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 			// if interpolated grid points are negative, it means that we are outside
 			// of the source area
 				
-			gp.x >= 0 && gp.y >= 0 &&
+			gp.x >= (0 - kEpsilon) && gp.y >= (0 - kEpsilon) &&
 				
 			// if interpolated grid points are larger than source grid in x or y
 			// direction, it means again that we are outside of the area
 			
-			gp.x < (sourceInfo.size_x-1) && gp.y < (sourceInfo.size_y-1)
+			gp.x < (sourceInfo.size_x) && gp.y < (sourceInfo.size_y)
 		)
 		{
 			
@@ -436,6 +464,12 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 					break;
 			}
 		}
+#ifdef EXTRADEBUG
+		else
+		{
+			printf("grid point x:%f y:%f discarded [%ld,%ld]\n", gp.x, gp.y, sourceInfo.size_x-1, sourceInfo.size_y-1);
+		}
+#endif
 
 		d_target[idx] = interp ;
 
@@ -453,8 +487,6 @@ bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetI
 		targetInfo->interpolation = himan::kBiLinear;
 	}
 
-	// std::cout << "Interpolation method: " << targetInfo->interpolation << std::endl;
-	
 	/* Determine all grid point coordinates that need to be interpolated.
 	 * This is done with newbase by explicitly looping through the grid.
 	 * Initially I tried to implement it with just starting point and offset
