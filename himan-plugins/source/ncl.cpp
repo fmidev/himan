@@ -104,7 +104,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (!HInfo || !TInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Error("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
 	}
 
@@ -236,6 +236,11 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		}
 
+		if (CountValues(myTargetInfo))
+		{
+			break;
+		}
+
 		prevLevel = curLevel;
 		curLevel = level(himan::kHybrid, static_cast<float> (levelNumber), "HYBRID");
 			
@@ -244,14 +249,15 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			
 		prevHInfo = Fetch(forecastTime, prevLevel, HParam, forecastType, false);
 		prevTInfo = Fetch(forecastTime, prevLevel, TParam, forecastType, false);
-
+		
+		if (!HInfo || !TInfo || !prevHInfo || !prevTInfo)
+		{
+			myThreadedLogger->Error("Not enough data for step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+			break;
+		}
 
 		firstLevel = false;
 
-		if (CountValues(myTargetInfo))
-		{
-			break;
-		}
 	} 
 
 	/*
@@ -262,7 +268,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	
 	while(myTargetInfo->NextLocation())
 	{
-		if ( myTargetInfo->Value() == -1)
+		if ( myTargetInfo->Value() == -1.)
 		{
 			myTargetInfo->Value(kFloatMissing);
 		}
@@ -275,10 +281,28 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 bool ncl::CountValues(const shared_ptr<himan::info> values)
 {
 	size_t s = values->Data().Size();
+
+#ifdef DEBUG
+	size_t foundVals = s;
+#endif
+	
 	for (size_t j = 0; j < s; j++)
 	{
 		if (values->Data().At(j) == -1)
+		{
+#ifdef DEBUG
+			foundVals--;
+#else
 			return false;
+#endif
+		}
 	}
+	
+#ifdef DEBUG
+	itsLogger->Debug("Found value for " + boost::lexical_cast<string> (foundVals) + "/" + boost::lexical_cast<string> (s) + " gridpoints");
+	
+	if (foundVals != s) return false;
+#endif
+	
 	return true;
 }
