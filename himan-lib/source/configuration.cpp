@@ -23,7 +23,7 @@ configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 	itsConfigurationFile = "";
 	itsUseCudaForPacking = true;
 	itsUseCudaForUnpacking = true;
-	itsUseCudaForInterpolation = false;
+	itsUseCudaForInterpolation = true;
 	itsUseCache = true;
 	itsCudaDeviceId = 0;
 	itsStatisticsLabel = "";
