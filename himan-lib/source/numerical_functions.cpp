@@ -59,6 +59,8 @@ void integral::Evaluate()
 			paramsData.push_back(std::valarray<double> (paramInfos.back()->Data().Values().data(),paramInfos.back()->Data().Size()));
 			//allocate result container
 			if (!itsResult.size()) itsResult.resize(paramInfos.back()->Data().Size());
+			//initialize missingValueMask
+			if (!missingValueMask.size()) missingValueMask = std::valarray<bool> (false,paramInfos.back()->Data().Size());
 		}
 
 		//fetch height TODO also implement pressure as hight coordinate
@@ -71,7 +73,7 @@ void integral::Evaluate()
 		auto missingValueMaskFunction = std::valarray<bool> (false,heights->Data().Size());
 		for (unsigned int i = 0; i < paramsData.size(); i++)
 		{
-			missingValueMaskFunction = (paramsData[i] == kFloatMissing || missingValueMask);
+			missingValueMaskFunction = (paramsData[i] == kFloatMissing || missingValueMaskFunction);
 		}
 
 		//evaluate integration function
@@ -87,8 +89,11 @@ void integral::Evaluate()
 		
 		//put missing values back in
 		currentLevelValue[missingValueMaskFunction] = kFloatMissing;
-		
+
+		//update mask of missing values in the result of the integral
+		missingValueMask = (currentLevelHeight == kFloatMissing || currentLevelValue == kFloatMissing || missingValueMask);
 		//move data from current level to previous level
+
 		if (lvl == itsLowestLevel)
 		{
 			previousLevelHeight = std::move(currentLevelHeight);
@@ -99,13 +104,14 @@ void integral::Evaluate()
 		//perform trapezoideal integration TODO deal with missing values
 		//
 		//vectorized form of trapezoideal integration
-
-		std::valarray<bool> upperBoundMask (previousLevelHeight > itsLowerBound && currentLevelHeight < itsLowerBound);
-		std::valarray<bool> lowerBoundMask (previousLevelHeight > itsUpperBound && currentLevelHeight < itsUpperBound);
+		
+		std::valarray<bool> lowerBoundMask (previousLevelHeight > itsLowerBound && currentLevelHeight < itsLowerBound);
+		std::valarray<bool> upperBoundMask (previousLevelHeight > itsUpperBound && currentLevelHeight < itsUpperBound);
 		std::valarray<bool> insideBoundsMask (previousLevelHeight <= itsUpperBound && currentLevelHeight >= itsLowerBound);
+		
 		// TODO Perhaps it is better to cast valarrays from the mask_array before this step. According to Stroustrup all operators and mathematical function can be applied to mask_array as well. Unfortunately not the case.
-		itsResult[upperBoundMask] += (Interpolate(std::valarray<double> (currentLevelValue[upperBoundMask]),std::valarray<double> (previousLevelValue[upperBoundMask]), std::valarray<double> (currentLevelHeight[upperBoundMask]), std::valarray<double> (previousLevelHeight[upperBoundMask]), std::valarray<double> (itsLowerBound[upperBoundMask]))+ std::valarray<double>(previousLevelValue[upperBoundMask]))/ 2 * (std::valarray<double> (previousLevelHeight[upperBoundMask]) - std::valarray<double> (itsLowerBound[upperBoundMask]));
-                itsResult[lowerBoundMask] += (Interpolate(std::valarray<double> (currentLevelValue[lowerBoundMask]),std::valarray<double> (previousLevelValue[lowerBoundMask]),std::valarray<double> (currentLevelHeight[lowerBoundMask]),std::valarray<double> (previousLevelHeight[lowerBoundMask]),std::valarray<double> (itsUpperBound[lowerBoundMask]))+std::valarray<double> (previousLevelValue[lowerBoundMask]))/ 2 * (std::valarray<double> (itsUpperBound[lowerBoundMask]) - std::valarray<double> (currentLevelHeight[lowerBoundMask]));
+		itsResult[upperBoundMask] += (Interpolate(std::valarray<double> (currentLevelValue[upperBoundMask]),std::valarray<double> (previousLevelValue[upperBoundMask]), std::valarray<double> (currentLevelHeight[upperBoundMask]), std::valarray<double> (previousLevelHeight[upperBoundMask]), std::valarray<double> (itsUpperBound[upperBoundMask])) + std::valarray<double>(currentLevelValue[upperBoundMask])) / 2 * (std::valarray<double> (itsUpperBound[upperBoundMask]) - std::valarray<double> (currentLevelHeight[upperBoundMask]));
+                itsResult[lowerBoundMask] += (Interpolate(std::valarray<double> (currentLevelValue[lowerBoundMask]),std::valarray<double> (previousLevelValue[lowerBoundMask]),std::valarray<double> (currentLevelHeight[lowerBoundMask]),std::valarray<double> (previousLevelHeight[lowerBoundMask]),std::valarray<double> (itsLowerBound[lowerBoundMask])) + std::valarray<double> (previousLevelValue[lowerBoundMask])) / 2 * (std::valarray<double> (previousLevelHeight[lowerBoundMask]) - std::valarray<double> (itsLowerBound[lowerBoundMask]));
 		itsResult[insideBoundsMask] += (std::valarray<double> (previousLevelValue[insideBoundsMask]) + std::valarray<double> (currentLevelValue[insideBoundsMask])) / 2 * (std::valarray<double> (previousLevelHeight[insideBoundsMask]) - std::valarray<double> (currentLevelHeight[insideBoundsMask]));
 		
 		//serial version of trapezoideal integration
@@ -122,7 +128,7 @@ void integral::Evaluate()
         		// value is above the highest limit
         		else if (previousLevelHeight[i] > itsUpperBound[i] && currentLevelHeight[i] < itsUpperBound[i])
         		{
-                		double upperValue = previousLevelValue[i]+(currentLevelValue[i]-previousLevelValue[i])*(itsLowerBound[i]-previousLevelHeight[i])/(currentLevelHeight[i]-previousLevelHeight[i]);
+                		double upperValue = previousLevelValue[i]+(currentLevelValue[i]-previousLevelValue[i])*(itsUpperBound[i]-previousLevelHeight[i])/(currentLevelHeight[i]-previousLevelHeight[i]);
                 		itsResult[i] += (upperValue + currentLevelValue[i]) / 2 * (itsUpperBound[i] - currentLevelHeight[i]);
 
         		}
@@ -139,6 +145,8 @@ void integral::Evaluate()
 		paramInfos.clear();
 		paramsData.clear();
 	}
+	//Insert missing values into result
+	itsResult[missingValueMask] = kFloatMissing;
 }
 
 void integral::LowerBound(const std::valarray<double>& theLowerBound)
