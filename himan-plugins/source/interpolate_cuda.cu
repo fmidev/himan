@@ -438,12 +438,15 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 			// if interpolated grid points are negative, it means that we are outside
 			// of the source area
 				
+			// sometime first grid point is -0, so we substrace a small value from first
+			// grid point accept that value as well
+				
 			gp.x >= (0 - kEpsilon) && gp.y >= (0 - kEpsilon) &&
 				
 			// if interpolated grid points are larger than source grid in x or y
 			// direction, it means again that we are outside of the area
 			
-			gp.x < sourceInfo.size_x && gp.y < sourceInfo.size_y
+			__double2uint_ru(gp.x) <= sourceInfo.size_x && __double2uint_ru(gp.y) <= sourceInfo.size_y
 		)
 		{
 			
@@ -467,7 +470,7 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 #ifdef EXTRADEBUG
 		else
 		{
-			printf("grid point x:%f y:%f discarded [%ld,%ld]\n", gp.x, gp.y, sourceInfo.size_x-1, sourceInfo.size_y-1);
+			printf("grid point x:%f y:%f discarded [%ld,%ld]\n", gp.x, gp.y, sourceInfo.size_x, sourceInfo.size_y);
 		}
 #endif
 
