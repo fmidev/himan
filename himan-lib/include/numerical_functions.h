@@ -40,15 +40,15 @@ class integral
 		void Function(std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> theFunction);
 
 		//set bounds
-		void LowerBound(const std::vector<double>& theLowerBound);
-		void UpperBound(const std::vector<double>& theUpperBound);
+		void LowerBound(const std::valarray<double>& theLowerBound);
+		void UpperBound(const std::valarray<double>& theUpperBound);
 		void LowerLevelLimit(int theLowestLevel);
 		void UpperLevelLimit(int theHighestLevel);
 		void ForecastType(forecast_type theType);
 		void ForecastTime(forecast_time theTime);
 
 		//return result
-		const std::vector<double>& Result() const;
+		const std::valarray<double>& Result() const;
 
 		//pass configuration to integration object (needed for fetching values)
                 std::shared_ptr<const plugin_configuration> itsConfiguration;
@@ -57,6 +57,8 @@ class integral
 		void Evaluate();
 		//check if all necessary parameters are given
 		bool Complete();
+
+		std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>) const __attribute__((always_inline));
 
 	private:
 
@@ -73,15 +75,20 @@ class integral
 		params itsParams;
                 std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> itsFunction;
 
-		std::vector<double> itsLowerBound;
-		std::vector<double> itsUpperBound;
+		std::valarray<double> itsLowerBound;
+		std::valarray<double> itsUpperBound;
 		std::vector<bool> itsOutOfBound;
 
-		std::vector<double> itsResult; // variable is modified in some Result() const functions
+		std::valarray<double> itsResult; // variable is modified in some Result() const functions
 		size_t itsIndex;
 		
 };
 
+inline
+std::valarray<double> integral::Interpolate(std::valarray<double> currentLevelValue, std::valarray<double> previousLevelValue, std::valarray<double> currentLevelHeight, std::valarray<double> previousLevelHeight, std::valarray<double> itsBound) const
+{
+	return (previousLevelValue + (currentLevelValue - previousLevelValue) * (itsBound - previousLevelHeight) / (currentLevelHeight - previousLevelHeight));
+}
 /*
 inline
 bool integral::IsMissingValue(double theValue) const
