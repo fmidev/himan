@@ -600,8 +600,11 @@ int InterpolationMethod(const std::string& paramName, int interpolationMethod)
 			paramName == "RR-KGM2" || paramName == "SNR-KGM2" || paramName == "GRI-KGM2" || paramName == "RRR-KGM2" ||
 			paramName == "RRRC-KGM2" || paramName == "RRRL-KGM2" || paramName == "SNRC-KGM2" || paramName == "SNRL-KGM2" ||
 			paramName == "RRRS-KGM2" || paramName == "RR-1-MM" || paramName == "RR-3-MM" || paramName == "RR-6-MM" ||
-			paramName == "RRI-KGM2" || paramName == "SNRI-KGM2" || paramName == "SNACC-KGM2")
-	)
+			paramName == "RRI-KGM2" || paramName == "SNRI-KGM2" || paramName == "SNACC-KGM2" ||
+			// symbols
+			paramName == "CLDSYM-N" || paramName == "PRECFORM-N" || paramName == "PRECFORM2-N" || paramName == "FOGSYM-N" ||
+			paramName == "ICING-N"
+	))
 	{
 		return 2; // nearest point in himan and newbase
 	}

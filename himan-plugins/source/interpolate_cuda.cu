@@ -21,15 +21,15 @@ struct point
 };
 
 __host__ __device__ 
-int Index(int x, int y, int sx)
+unsigned int Index(unsigned int x, unsigned int y, unsigned int sx)
 {
 	return y * sx + x;
 }
 
 __host__ __device__ 
-int Index(point p, int sx)
+unsigned int Index(point p, unsigned int sx)
 {
-	return Index(static_cast<int> (p.x),static_cast<int> (p.y), sx);
+	return Index(static_cast<unsigned int> (p.x),static_cast<unsigned int> (p.y), sx);
 }
 
 __global__
@@ -328,9 +328,9 @@ double NearestPointInterpolation(const double* __restrict__ d_source, himan::inf
 	int rx = rint(gp.x);
 	int ry = rint(gp.y);
 
-	assert(rx >= 0 && rx < sourceInfo.size_x);
-	assert(ry >= 0 && ry < sourceInfo.size_y);
-	if (d_source[Index(rx,ry,sourceInfo.size_x)] == kFloatMissing) printf("missing value returned\n");
+	assert(rx >= 0 && rx <= sourceInfo.size_x);
+	assert(ry >= 0 && ry <= sourceInfo.size_y);
+
 	return d_source[Index(rx,ry,sourceInfo.size_x)];
 
 }
@@ -443,7 +443,7 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 			// if interpolated grid points are larger than source grid in x or y
 			// direction, it means again that we are outside of the area
 			
-			gp.x < (sourceInfo.size_x) && gp.y < (sourceInfo.size_y)
+			gp.x < sourceInfo.size_x && gp.y < sourceInfo.size_y
 		)
 		{
 			
@@ -472,6 +472,9 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 #endif
 
 		d_target[idx] = interp ;
+		
+		assert(interp == interp); // no NaN
+		assert(interp < 1e30); // No crazy values
 
 	}
 }
