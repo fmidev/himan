@@ -34,7 +34,7 @@ mv latlon_to_rotlatlon.json.grib newbase.grib
 $HIMAN -d 5 -f latlon_to_rotlatlon.json -t grib -s stat source_latlon.grib
 mv latlon_to_rotlatlon.json.grib cuda.grib
 
-grib_compare -A 0.5 newbase.grib cuda.grib
+grib_compare -A 3.5 newbase.grib cuda.grib
 
 if [ $? -eq 0 ];then
   echo interpolation/latlon_to_rotlatlon success!

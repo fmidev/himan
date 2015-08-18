@@ -34,7 +34,7 @@ mv polster_to_rotlatlon.json.grib newbase.grib
 $HIMAN -d 5 -f polster_to_rotlatlon.json -t grib -s stat source_polster.grib
 mv polster_to_rotlatlon.json.grib cuda.grib
 
-grib_compare -A 0.1 newbase.grib cuda.grib
+grib_compare -b totalLength -A 0.1 newbase.grib cuda.grib
 
 if [ $? -eq 0 ];then
   echo interpolation/polster_to_rotpolster success!

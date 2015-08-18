@@ -8,7 +8,7 @@ fi
 
 rm -f icing_ec.json.grib
 
-$HIMAN -d 5 -j 1 -f icing_ec.json -t grib t_ec.grib vvms_ec.grib cldwat_ec.grib
+$HIMAN -d 5 -j 1 -f icing_ec.json -t grib t_ec.grib vvms_ec.grib cldwat_ec.grib  --no-cuda
 
 grib_compare result_ec.grib icing_ec.json.grib
 
