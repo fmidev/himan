@@ -101,14 +101,25 @@ void integral::Evaluate()
 			continue;
 		}
 
-		//perform trapezoideal integration TODO deal with missing values
+		//perform trapezoideal integration
 		//
+		std::valarray<bool> lowerBoundMask;
+		std::valarray<bool> upperBoundMask;
+		std::valarray<bool> insideBoundsMask;
 		//vectorized form of trapezoideal integration
-		
-		std::valarray<bool> lowerBoundMask (previousLevelHeight > itsLowerBound && currentLevelHeight < itsLowerBound);
-		std::valarray<bool> upperBoundMask (previousLevelHeight > itsUpperBound && currentLevelHeight < itsUpperBound);
-		std::valarray<bool> insideBoundsMask (previousLevelHeight <= itsUpperBound && currentLevelHeight >= itsLowerBound);
-		
+		if (itsHeightInMeters)
+		{
+			lowerBoundMask = (previousLevelHeight > itsLowerBound && currentLevelHeight < itsLowerBound);
+			upperBoundMask = (previousLevelHeight > itsUpperBound && currentLevelHeight < itsUpperBound);
+			insideBoundsMask = (previousLevelHeight <= itsUpperBound && currentLevelHeight >= itsLowerBound);
+		}
+		else
+		//height in Pascal
+		{
+                        lowerBoundMask = (previousLevelHeight < itsLowerBound && currentLevelHeight > itsLowerBound);
+                        upperBoundMask = (previousLevelHeight < itsUpperBound && currentLevelHeight > itsUpperBound);
+                        insideBoundsMask = (previousLevelHeight >= itsUpperBound && currentLevelHeight <= itsLowerBound);
+		}
 		// TODO Perhaps it is better to cast valarrays from the mask_array before this step. According to Stroustrup all operators and mathematical function can be applied to mask_array as well. Unfortunately not the case.
 		itsResult[upperBoundMask] += (Interpolate(std::valarray<double> (currentLevelValue[upperBoundMask]),std::valarray<double> (previousLevelValue[upperBoundMask]), std::valarray<double> (currentLevelHeight[upperBoundMask]), std::valarray<double> (previousLevelHeight[upperBoundMask]), std::valarray<double> (itsUpperBound[upperBoundMask])) + std::valarray<double>(currentLevelValue[upperBoundMask])) / 2 * (std::valarray<double> (itsUpperBound[upperBoundMask]) - std::valarray<double> (currentLevelHeight[upperBoundMask]));
                 itsResult[lowerBoundMask] += (Interpolate(std::valarray<double> (currentLevelValue[lowerBoundMask]),std::valarray<double> (previousLevelValue[lowerBoundMask]),std::valarray<double> (currentLevelHeight[lowerBoundMask]),std::valarray<double> (previousLevelHeight[lowerBoundMask]),std::valarray<double> (itsLowerBound[lowerBoundMask])) + std::valarray<double> (previousLevelValue[lowerBoundMask])) / 2 * (std::valarray<double> (previousLevelHeight[lowerBoundMask]) - std::valarray<double> (itsLowerBound[lowerBoundMask]));
@@ -120,19 +131,19 @@ void integral::Evaluate()
 		{
 
         		// value is below the lowest limit
-        		if (previousLevelHeight[i] > itsLowerBound[i] && currentLevelHeight[i] < itsLowerBound[i])
+        		if (itsHeightInMeters && previousLevelHeight[i] > itsLowerBound[i] && currentLevelHeight[i] < itsLowerBound[i] || !itsHeightInMeters && previousLevelHeight[i] < itsLowerBound[i] && currentLevelHeight[i] > itsLowerBound[i])
         		{
                 		double lowerValue = previousLevelValue[i]+(currentLevelValue[i]-previousLevelValue[i])*(itsLowerBound[i]-previousLevelHeight[i])/(currentLevelHeight[i]-previousLevelHeight[i]);
                 		itsResult[i] += (lowerValue + previousLevelValue[i]) / 2 * (previousLevelHeight[i] - itsLowerBound[i]);
 			}
         		// value is above the highest limit
-        		else if (previousLevelHeight[i] > itsUpperBound[i] && currentLevelHeight[i] < itsUpperBound[i])
+        		else if (itsHeightInMeters && previousLevelHeight[i] > itsUpperBound[i] && currentLevelHeight[i] < itsUpperBound[i] || !itsHeightInMeters && previousLevelHeight[i] < itsUpperBound[i] && currentLevelHeight[i] > itsUpperBound[i])
         		{
                 		double upperValue = previousLevelValue[i]+(currentLevelValue[i]-previousLevelValue[i])*(itsUpperBound[i]-previousLevelHeight[i])/(currentLevelHeight[i]-previousLevelHeight[i]);
                 		itsResult[i] += (upperValue + currentLevelValue[i]) / 2 * (itsUpperBound[i] - currentLevelHeight[i]);
 
         		}
-        		else if (previousLevelHeight[i] <= itsUpperBound[i] && currentLevelHeight[i] >= itsLowerBound[i])        
+        		else if (itsHeightInMeters && previousLevelHeight[i] <= itsUpperBound[i] && currentLevelHeight[i] >= itsLowerBound[i] || !itsHeightInMeters && previousLevelHeight[i] >= itsUpperBound[i] && currentLevelHeight[i] <= itsLowerBound[i])        
 			{
                 		itsResult[i] += (previousLevelValue[i] + currentLevelValue[i]) / 2 * (previousLevelHeight[i] - currentLevelHeight[i]);
         		}
@@ -203,6 +214,15 @@ void integral::ForecastTime(forecast_time theTime)
 	itsTime = theTime;
 }
 
+void integral::LevelType(level theLevel)
+{
+	itsLevel = theLevel;
+}
+
+void integral::HeightInMeters(bool theHeightInMeters)
+{
+	itsHeightInMeters = theHeightInMeters;
+}
 // TODO add check that all information that is needed is given to the class object
 bool integral::Complete()
 {

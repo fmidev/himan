@@ -46,7 +46,8 @@ class integral
 		void UpperLevelLimit(int theHighestLevel);
 		void ForecastType(forecast_type theType);
 		void ForecastTime(forecast_time theTime);
-
+		void LevelType(level theLevel);
+		void HeightInMeters (bool theHeightInMeters);
 		//return result
 		const std::valarray<double>& Result() const;
 
@@ -55,16 +56,15 @@ class integral
 		
 		//evaluate the integral expression
 		void Evaluate();
-		//check if all necessary parameters are given
 		bool Complete();
 
 		std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>) const __attribute__((always_inline));
-
 	private:
 
 		//bool Evaluate();
 		
 		//bool itsMissingValuesAllowed;
+		bool itsHeightInMeters;
 		int itsLowestLevel;
 		int itsHighestLevel;
 
