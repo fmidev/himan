@@ -63,11 +63,19 @@ void integral::Evaluate()
 			if (!missingValueMask.size()) missingValueMask = std::valarray<bool> (false,paramInfos.back()->Data().Size());
 		}
 
-		//fetch height TODO also implement pressure as hight coordinate
-                param heightParam = param("HL-M");
+		//fetch height 
+		param heightParam;
+		if (itsHeightInMeters)
+		{
+                	param heightParam = param("HL-M");
+		}
+		else
+                {
+                        param heightParam = param("P-HPa");
+		}
+
                 info_t heights = f->Fetch(itsConfiguration, itsTime, itsLevel, heightParam, itsType, itsConfiguration->UseCudaForPacking());
                 currentLevelHeight = std::valarray<double> (heights->Data().Values().data(),heights->Data().Size());
-
 		
 		//mask for missing values
 		auto missingValueMaskFunction = std::valarray<bool> (false,heights->Data().Size());
