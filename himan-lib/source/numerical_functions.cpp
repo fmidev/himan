@@ -46,7 +46,7 @@ void integral::Evaluate()
 	std::valarray<double> currentLevelHeight;
 	std::valarray<bool> missingValueMask;
 
-	for (int lvl=itsLowestLevel; lvl<=itsHighestLevel; ++lvl)
+	for (int lvl=itsHighestLevel; lvl<=itsLowestLevel; ++lvl)
 	{
 		itsLevel.Value(lvl);
 		//fetch parameters
@@ -67,11 +67,11 @@ void integral::Evaluate()
 		param heightParam;
 		if (itsHeightInMeters)
 		{
-                	param heightParam = param("HL-M");
+                	heightParam = param("HL-M");
 		}
 		else
                 {
-                        param heightParam = param("P-HPa");
+                        heightParam = param("P-HPa");
 		}
 
                 info_t heights = f->Fetch(itsConfiguration, itsTime, itsLevel, heightParam, itsType, itsConfiguration->UseCudaForPacking());
@@ -171,35 +171,11 @@ void integral::Evaluate()
 void integral::LowerBound(const std::valarray<double>& theLowerBound)
 {
 	itsLowerBound = theLowerBound;
-	
-	// If height limits have missing values we can't process those grid points
-	
-	itsOutOfBound.resize(itsLowerBound.size(), false);
-
-	for (size_t i = 0; i < itsLowerBound.size(); i++)
-	{
-		if (itsLowerBound[i] == kFloatMissing)
-		{
-			itsOutOfBound[i] = true;
-		}
-	}
 }
 
 void integral::UpperBound(const std::valarray<double>& theUpperBound)
 {
 	itsUpperBound = theUpperBound;
-	
-	// If height limits have missing values we can't process those grid points
-	
-	itsOutOfBound.resize(itsUpperBound.size(), false);
-	
-	for (size_t i = 0; i < itsUpperBound.size(); i++)
-	{
-		if (itsUpperBound[i] == kFloatMissing)
-		{
-			itsOutOfBound[i] = true;
-		}
-	}
 }
 
 void integral::LowerLevelLimit(int theLowestLevel)

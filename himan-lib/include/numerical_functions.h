@@ -31,8 +31,6 @@ class integral
 
 		//virtual std::string ClassName() const { return "himan::numerical_functions::integral"; }
 
-		//bool IsMissingValue(double theValue) const __attribute__((always_inline));
-
 		//provide list of parameters that will be integrated over
 		void Params(params theParams);
 
@@ -58,12 +56,8 @@ class integral
 		void Evaluate();
 		bool Complete();
 
-		std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>) const __attribute__((always_inline));
 	private:
 
-		//bool Evaluate();
-		
-		//bool itsMissingValuesAllowed;
 		bool itsHeightInMeters;
 		int itsLowestLevel;
 		int itsHighestLevel;
@@ -77,11 +71,11 @@ class integral
 
 		std::valarray<double> itsLowerBound;
 		std::valarray<double> itsUpperBound;
-		std::vector<bool> itsOutOfBound;
 
 		std::valarray<double> itsResult; // variable is modified in some Result() const functions
 		size_t itsIndex;
-		
+
+                std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>) const __attribute__((always_inline));
 };
 
 inline
@@ -89,18 +83,6 @@ std::valarray<double> integral::Interpolate(std::valarray<double> currentLevelVa
 {
 	return (previousLevelValue + (currentLevelValue - previousLevelValue) * (itsBound - previousLevelHeight) / (currentLevelHeight - previousLevelHeight));
 }
-/*
-inline
-bool integral::IsMissingValue(double theValue) const
-{
-	if (theValue == kFloatMissing)
-	{
-		return true;
-	}
-
-	return false;
-}
-*/
 
 } // namespace numerical_functions
 
