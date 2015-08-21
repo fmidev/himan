@@ -121,10 +121,7 @@ point* CreateGrid(himan::info_simple* sourceInfo, himan::info_simple* targetInfo
 				<< "Target grid TR (relative): " << sourceGrid.LatLonToGrid(targetArea->TopRightLatLon())
 				<< "Target J scans positive: " << targetInfo->j_scans_positive << std::endl
 				;
-*/	
-	delete (sourceArea);
-	delete (targetArea);
-	
+	*/	
 	point* ret = new point[targetGrid.XNumber() * targetGrid.YNumber()];
 	
 	targetGrid.Reset();
@@ -133,13 +130,28 @@ point* CreateGrid(himan::info_simple* sourceInfo, himan::info_simple* targetInfo
 	
 	while(targetGrid.Next())
 	{
+		NFmiPoint latlon = targetGrid.LatLon();
 		NFmiPoint gp = sourceGrid.LatLonToGrid(targetGrid.LatLon());
+
+#ifdef EXTRADEBUG
+		if (!sourceArea->IsInside(latlon))
+		{
+			std::cout << "Latlon " << latlon << " is outside source area!" << std::endl;
+		}
+		if (!sourceGrid.IsInsideGrid(gp))
+		{
+			std::cout << "Gridpoint " << gp << " is outside source grid!" << std::endl;
+		}
 		
+#endif
 		ret[i].x = gp.X();
 		ret[i].y = gp.Y();
 
 		i++;
 	}
+
+	delete (sourceArea);
+	delete (targetArea);
 
 	return ret;
 }
@@ -216,37 +228,114 @@ double BiLinear(double dx, double dy, double a, double b, double c, double d)
 }
 
 __device__
+bool IsInsideGrid(point& gp, size_t size_x, size_t size_y)
+{
+	// if interpolated grid points are negative, it means that we are outside the grid
+	
+	// sometime first grid point is -0, so we subtract a small value from first
+	// grid point accept that value as well
+	
+	if (gp.x >= (0 - kEpsilon) && gp.y >= (0 - kEpsilon) &&
+				
+		// if interpolated grid points are larger than source grid in x or y
+		// direction, it means again that we are outside of the area
+			
+		((fabs(gp.x - (size_x - 1)) < kEpsilon || __double2uint_ru(gp.x) < size_x) && (fabs(gp.y - (size_y - 1)) < kEpsilon || __double2uint_ru(gp.y) < size_y)))
+	{
+		return true;
+	}
+
+#ifdef EXTRADEBUG
+	bool lc = gp.x >= (0 - kEpsilon) && gp.y >= (0 - kEpsilon);
+	bool uc = (fabs(gp.x - (size_x - 1)) < kEpsilon || __double2uint_ru(gp.x) < size_x) && (fabs(gp.y - (size_y - 1)) < kEpsilon || __double2uint_ru(gp.y) < size_y);
+	
+	printf("gp x:%f y:%f discarded [%ld,%ld]: lower cond --> x:%d y:%d upper cond x:%d y:%d\n", 
+		gp.x, gp.y, size_x, size_y, gp.x >= (0 - kEpsilon), gp.y >= (0 - kEpsilon), lc, uc);
+	
+#endif
+
+	return false;
+}
+
+__device__
+double NearestPointInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo, const point& gp)
+{
+	int rx = rint(gp.x);
+	int ry = rint(gp.y);
+
+	assert(rx >= 0 && rx <= sourceInfo.size_x);
+	assert(ry >= 0 && ry <= sourceInfo.size_y);
+
+	return d_source[Index(rx,ry,sourceInfo.size_x)];
+
+}
+
+__device__
 double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo, const point& gp)
 {
+	double ret = kFloatMissing;
+
 	// Find all four neighboring points
 
 	point a(floor(gp.x), ceil(gp.y));
 	point b(ceil(gp.x), ceil(gp.y));
 	point c(floor(gp.x), floor(gp.y));
 	point d(ceil(gp.x), floor(gp.y));
-
-	// Neighbor values
-
-	double av = d_source[Index(a,sourceInfo.size_x)];
-	double bv = d_source[Index(b,sourceInfo.size_x)];
-	double cv = d_source[Index(c,sourceInfo.size_x)];
-	double dv = d_source[Index(d,sourceInfo.size_x)];	
+	
+	// Assure neighboring points are inside grid and get values
+	
+	size_t size_x = sourceInfo.size_x;
+	size_t size_y = sourceInfo.size_y;
+	
+	double av = kFloatMissing, bv = kFloatMissing, cv = kFloatMissing, dv = kFloatMissing;
+	
+	if (IsInsideGrid(a, size_x, size_y))
+	{
+		av = d_source[Index(a,size_x)];
+	}
+	if (IsInsideGrid(b, size_x, size_y))
+	{
+		bv = d_source[Index(b,size_x)];
+	}
+	if (IsInsideGrid(c, size_x, size_y))
+	{
+		cv = d_source[Index(c,size_x)];
+	}
+	if (IsInsideGrid(d, size_x, size_y))
+	{
+		dv = d_source[Index(d,size_x)];
+	}
 
 	// Distance of interpolated point to neighboring points
 
 	point dist(gp.x - c.x, gp.y - c.y);
 
-	double ret = kFloatMissing;
-
+	assert(dist.x >= 0 && dist.x <= 1);
+	assert(dist.y >= 0 && dist.y <= 1);
+	
+	// If interpolated point is very close to source grid point, pick 
+	// the point value directly
+	
+	// This is preferred since nearest point is faster than bilinear, and
+	// if wanted grid point =~ source grid point, the bilinear interpolation
+	// value will be very close to nearest point value
+	
+	if ( 
+			(dist.x < kEpsilon || fabs(dist.x-1) < kEpsilon) && 
+			(dist.y < kEpsilon || fabs(dist.y-1) < kEpsilon) )
+	{
+		ret = NearestPointInterpolation(d_source, sourceInfo, gp);
+	}
+	
 	// All values present, regular bilinear interpolation
 	
-	if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
+	else if (av != kFloatMissing && bv != kFloatMissing && cv != kFloatMissing && dv != kFloatMissing)
 	{
 		ret = BiLinear(dist.x, dist.y, av, bv, cv, dv);
 	}
-
-	// x or y is at grid edge
 	
+	// x or y is at grid edge
+
 	else if (fabs(dist.y) < kEpsilon && cv != kFloatMissing && dv != kFloatMissing)
 	{
 		ret = Linear(dist.x, cv, dv);
@@ -256,10 +345,10 @@ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_si
 	{
 		ret = Linear(dist.x, av, bv);
 	}
-	
+
 	else if (fabs(dist.x) < kEpsilon && cv != kFloatMissing && av != kFloatMissing)
 	{
-		ret = Linear(dist.y, cv, dv);
+		ret = Linear(dist.y, cv, av);
 	}
 
 	else if (fabs(dist.x - 1) < kEpsilon && av != kFloatMissing && bv != kFloatMissing)
@@ -300,44 +389,25 @@ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_si
 		printf("More than one point missing for gp x: %f y:%f --> a:%f b:%f c:%f d:%f | dx:%f dy:%f\n", gp.x, gp.y, av, bv, cv, dv, dist.x, dist.y);
 	}
 
-	// Neighbor point indexes in linear format
-
-	int aidx = Index(a,sourceInfo.size_x);
-	int bidx = Index(b,sourceInfo.size_x);
-	int cidx = Index(c,sourceInfo.size_x);
-	int didx = Index(d,sourceInfo.size_x);
-
-	if (i == 0 && j == 0)
-	{
-		printf("x:%d y:%d gpx:%f gpy:%f\n", i, j, gp.x, gp.y);
-		printf("a x:%d y:%d val:%f\n", int(a.x), int(a.y), av);
-		printf("b x:%d y:%d val:%f\n", int(b.x), int(b.y), bv);
-		printf("c x:%d y:%d val:%f\n", int(c.x), int(c.y), cv);
-		printf("d x:%d y:%d val:%f\n", int(d.x), int(d.y), dv);
-		printf("dist x:%f y:%f\n", dist.x, dist.y);
-		printf("interp:%f\n", interp);
+	if (ret == kFloatMissing) { 
+	
+		printf("gpx:%f gpy:%f [%ld %ld] |  dist x:%f y:%f\n", gp.x, gp.y, size_x, size_y, dist.x, dist.y);
+		printf("av:%f bv:%f cv:%f dv:%f | interp:%f\n", av, bv, cv, dv, ret);
+		printf("ax:%f ay:%f bx:%f by:%f cx:%f cy:%f dx:%f dy:%f\n", a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
+		printf("is inside grid: a:%d b:%d c:%d d:%d\n", IsInsideGrid(a, size_x, size_y), IsInsideGrid(b, size_x, size_y), IsInsideGrid(c, size_x, size_y), IsInsideGrid(d, size_x, size_y));
+	
 	}
+	
 #endif
 
 	return ret;
 }
 
 __device__
-double NearestPointInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo, const point& gp)
-{
-	int rx = rint(gp.x);
-	int ry = rint(gp.y);
-
-	assert(rx >= 0 && rx <= sourceInfo.size_x);
-	assert(ry >= 0 && ry <= sourceInfo.size_y);
-
-	return d_source[Index(rx,ry,sourceInfo.size_x)];
-
-}
-
-__device__
 double NearestPointValueInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo, const point& gp)
 {
+	double ret = kFloatMissing;
+
 	// Find all four neighboring points
 
 	point a(floor(gp.x), ceil(gp.y));
@@ -345,12 +415,22 @@ double NearestPointValueInterpolation(const double* __restrict__ d_source, himan
 	point c(floor(gp.x), floor(gp.y));
 	point d(ceil(gp.x), floor(gp.y));
 
+	// Assure neighboring points are inside grid
+	
+	size_t size_x = sourceInfo.size_x;
+	size_t size_y = sourceInfo.size_y;
+	
+	if (!IsInsideGrid(a, size_x, size_y) || !IsInsideGrid(b, size_x, size_y) || !IsInsideGrid(c, size_x, size_y) || !IsInsideGrid(d, size_x, size_y))
+	{
+		return ret;
+	}
+	
 	// Neighbor values
 
-	double av = d_source[Index(a,sourceInfo.size_x)];
-	double bv = d_source[Index(b,sourceInfo.size_x)];
-	double cv = d_source[Index(c,sourceInfo.size_x)];
-	double dv = d_source[Index(d,sourceInfo.size_x)];	
+	double av = d_source[Index(a,size_x)];
+	double bv = d_source[Index(b,size_x)];
+	double cv = d_source[Index(c,size_x)];
+	double dv = d_source[Index(d,size_x)];	
 
 	// Find mode of neighboring points
 
@@ -370,8 +450,6 @@ double NearestPointValueInterpolation(const double* __restrict__ d_source, himan
 	arr[3] = fabs(dv - bilin);
 	
 	mode = Mode(arr);
-	
-	double ret = kFloatMissing;
 	
 	if (mode != kFloatMissing)
 	{
@@ -421,7 +499,7 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 		// with i and j we can get the grid point coordinates in the source grid
 		
 		point gp = d_grid[Index(i,j,targetInfo.size_x)];
-		
+
 		if (sourceInfo.wraps_globally && (gp.x < 0 || gp.x > sourceInfo.size_x - 1))
 		{
 			// wrap x if necessary
@@ -434,20 +512,7 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 		
 		double interp = kFloatMissing;
 		
-		if (
-			// if interpolated grid points are negative, it means that we are outside
-			// of the source area
-				
-			// sometime first grid point is -0, so we substrace a small value from first
-			// grid point accept that value as well
-				
-			gp.x >= (0 - kEpsilon) && gp.y >= (0 - kEpsilon) &&
-				
-			// if interpolated grid points are larger than source grid in x or y
-			// direction, it means again that we are outside of the area
-			
-			__double2uint_ru(gp.x) <= sourceInfo.size_x && __double2uint_ru(gp.y) <= sourceInfo.size_y
-		)
+		if (IsInsideGrid(gp, sourceInfo.size_x, sourceInfo.size_y))
 		{
 			
 			//targetInfo.interpolation = himan::kNearestPointValue;
@@ -473,9 +538,8 @@ void InterpolateCudaKernel(const double* __restrict__ d_source,
 			printf("grid point x:%f y:%f discarded [%ld,%ld]\n", gp.x, gp.y, sourceInfo.size_x, sourceInfo.size_y);
 		}
 #endif
-
 		d_target[idx] = interp ;
-		
+
 		assert(interp == interp); // no NaN
 		assert(interp < 1e30); // No crazy values
 
