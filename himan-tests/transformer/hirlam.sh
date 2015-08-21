@@ -54,7 +54,7 @@ if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
   $HIMAN -d 5 -f tk2tc_hl_pres.json -s tk2tc_hl_pres_cuda hl_source_pres.grib
 
-  grib_compare -A 0.1 hl_result_pres_gpu.grib ./T-C_pressure_850_rll_582_448_0_001.grib
+  grib_compare -A 0.1 hl_result_pres.grib ./T-C_pressure_850_rll_582_448_0_001.grib
 
   if [ $? -eq 0 ];then
     echo tk2tc_pres/hl success on GPU!
