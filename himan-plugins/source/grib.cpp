@@ -188,6 +188,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 
 	if (anInfo.Data().MissingCount() > 0)
 	{
+		itsGrib->Message().MissingValue(anInfo.Data().MissingValue());
 		itsGrib->Message().Bitmap(true);
 	}
 
