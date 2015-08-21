@@ -406,6 +406,15 @@ void SetParam(info_t& anInfo, const param& par)
 
 }
 
+double GetMissingValue(info_t& anInfo)
+{
+	return anInfo->Data().MissingValue();
+}
+
+void SetMissingValue(info_t& anInfo, double missingValue)
+{
+	anInfo->Data().MissingValue(missingValue);
+}
 
 } // namespace info_wrapper
 
@@ -745,6 +754,8 @@ void BindLib(lua_State* L)
 			.def("SetValues", &info_wrapper::SetValues)
 			.def("GetValues", &info_wrapper::GetValues, return_stl_iterator)
 			.def("GetLatLon", &info_wrapper::GetLatLon)
+			.def("GetMissingValue", &info_wrapper::GetMissingValue)
+			.def("SetMissingValue", &info_wrapper::SetMissingValue)
 		,
 		class_<grid, std::shared_ptr<grid>>("grid")
 		,
