@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.8.10
+Version: 15.8.24
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -20,7 +20,7 @@ Requires: himan-lib >= 15.8.10
 Requires: himan-bin >= 15.5.27
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 15.5.18
+Requires: libfmigrib >= 15.8.21
 
 BuildRequires: boost-devel >= 1.55
 
@@ -107,6 +107,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Aug 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.24-1.fmi
+- Augmenting interpolation methods
+- Add support for setting specific missing value to grib
 * Mon Aug 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.10-1.fmi
 - Adding native interpolation methods
 * Mon Jun 22 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.6.22-2.fmi
