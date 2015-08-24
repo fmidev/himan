@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.8.10
+Version: 15.8.24
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -57,6 +57,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Aug 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.24-1.fmi
+- Additions to numerical integration functions
 * Mon Aug 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.10-1.fmi
 - New interpolation method (not enabled)
 - New vertical integration namespace
