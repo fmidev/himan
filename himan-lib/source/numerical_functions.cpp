@@ -6,7 +6,14 @@
 #include "numerical_functions.h"
 #include "NFmiInterpolation.h"
 #include "plugin_factory.h"
+
+#define HIMAN_AUXILIARY_INCLUDE
+
 #include "fetcher.h"
+#include "neons.h"
+#include "radon.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
 
@@ -188,6 +195,28 @@ void integral::UpperLevelLimit(int theHighestLevel)
 	itsHighestLevel = theHighestLevel;
 }
 
+void integral::SetLevelLimits()
+{
+        producer prod = itsConfiguration->SourceProducer(0);
+
+        double max_value = itsHeightInMeters ? itsUpperBound.max() : itsUpperBound.min();
+        double min_value = itsHeightInMeters ? itsLowerBound.max() : itsLowerBound.max();
+
+        if (max_value == kFloatMissing || min_value == kFloatMissing)
+        {
+               //itsLogger->Error("Min or max values of given heights are missing");
+               throw kFileDataNotFound;
+        }
+
+        auto levelsForMaxHeight = LevelForHeight(prod, max_value);
+        auto levelsForMinHeight = LevelForHeight(prod, min_value);
+
+        itsHighestLevel = static_cast<int> (levelsForMaxHeight.second.Value());
+        itsLowestLevel = static_cast<int> (levelsForMinHeight.first.Value());
+
+        assert(itsLowestLevel >= itsHighestLevel);
+}
+
 void integral::ForecastType(forecast_type theType)
 {
 	itsType = theType;
@@ -212,3 +241,135 @@ bool integral::Complete()
 {
 	return true;
 }
+
+std::pair<level,level> integral::LevelForHeight(const producer& prod, double height) const
+{
+        using boost::lexical_cast;
+
+        long producerId = 0;
+
+        // Hybrid level heights are calculated by himan, so coalesce the related 
+        // forecast producer id with the himan producer id.
+
+        switch (prod.Id())
+        {
+                case 1:
+                case 230:
+                        producerId = 230;
+                        break;
+
+                case 131:
+                case 240:
+                        producerId = 240;
+                        break;
+
+                case 199:
+                case 210:
+                        producerId = 210;
+                        break;
+
+                default:
+                        //itsLogger->Error("Unsupported producer for hitool::LevelForHeight(): " + lexical_cast<std::string> (prod.Id()));
+                        break;
+        }
+
+        std::stringstream query;
+
+        if (itsHeightInMeters)
+        {
+                query << "SELECT min(CASE WHEN maximum_height <= " << height << " THEN level_value+1 ELSE NULL END) AS lowest_level, "
+                        << "max(CASE WHEN minimum_height >= " << height << " THEN level_value-1 ELSE NULL END) AS highest_level "
+                        << "FROM "
+                        << "hybrid_level_height "
+                        << "WHERE "
+                        << "producer_id = " << producerId;
+        }
+        else
+        {
+                // Add/subtract 1 already in the query, since due to the composition of the query it will return
+                // the first level that is higher than lower height and vice versa
+
+                query << "SELECT max(CASE WHEN minimum_pressure <= " << height << " THEN level_value+1 ELSE NULL END) AS lowest_level, "
+                        << "min(CASE WHEN maximum_pressure >= " << height << " THEN level_value-1 ELSE NULL END) AS highest_level "
+                        << "FROM "
+                        << "hybrid_level_height "
+                        << "WHERE "
+                        << "producer_id = " << producerId;;
+        }
+
+        HPDatabaseType dbtype = itsConfiguration->DatabaseType();
+
+        std::vector<std::string> row;
+
+        long absolutelowest = kHPMissingInt;
+	long absolutehighest = kHPMissingInt;
+
+        if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+        {
+                auto n = GET_PLUGIN(neons);
+                n->NeonsDB().Query(query.str());
+
+                row = n->NeonsDB().FetchRow();
+
+                absolutelowest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+                absolutehighest = lexical_cast<long> (n->ProducerMetaData(prod.Id(), "first hybrid level number"));
+        }
+
+        if (row.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+        {
+                auto r = GET_PLUGIN(radon);
+                r->RadonDB().Query(query.str());
+
+                row = r->RadonDB().FetchRow();
+
+                absolutelowest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
+                absolutehighest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
+        }
+
+        long newlowest = absolutelowest, newhighest = absolutehighest;
+
+        if (!row.empty())
+        {
+
+                // If requested height is below lowest level (f.ex. 0 meters) or above highest (f.ex. 80km)
+                // database query will return null
+
+                if (row[0] != "")
+                {
+
+                        // SQL query returns the level value that precedes the requested value.
+                        // For first hybrid level (the highest ie max), get one level above the max level if possible
+                        // For last hybrid level (the lowest ie min), get one level below the min level if possible
+                        // This means that we have a buffer of three levels for both directions!
+
+                        newlowest = lexical_cast<long> (row[0]) + 1;
+
+                        if (newlowest > absolutelowest)
+                        {
+                                newlowest = absolutelowest;
+                        }
+
+                }
+
+                if (row[1] != "")
+                {
+                        newhighest = lexical_cast<long> (row[1]) - 1;
+
+                        if (newhighest < absolutehighest)
+                        {
+                                newhighest = absolutehighest;
+                        }
+                }
+
+                if (newhighest > newlowest)
+                {
+                        newhighest = newlowest;
+                }
+
+        }
+
+        assert(newlowest >= newhighest);
+
+        return std::make_pair<level, level> (level(kHybrid, newlowest), level(kHybrid, newhighest));
+}
+

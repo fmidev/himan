@@ -42,6 +42,7 @@ class integral
 		void UpperBound(const std::valarray<double>& theUpperBound);
 		void LowerLevelLimit(int theLowestLevel);
 		void UpperLevelLimit(int theHighestLevel);
+		void SetLevelLimits();
 		void ForecastType(forecast_type theType);
 		void ForecastTime(forecast_time theTime);
 		void LevelType(level theLevel);
@@ -76,6 +77,7 @@ class integral
 		size_t itsIndex;
 
                 std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>) const __attribute__((always_inline));
+		std::pair<level,level> LevelForHeight(const producer&, double) const;
 };
 
 inline
