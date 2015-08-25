@@ -5,7 +5,9 @@
 logger:Info("Calculating Cloud ceiling in feet")
   
 local kFloatMissing = kFloatMissing
- 
+-- another value for missing data is needed for output because cloud ceiling in feet might get mixed up with kFloatMissing
+local Missing = -1 
+
 -- Max height to check for cloud base [m]
 local maxH = 14000
  
@@ -45,7 +47,7 @@ for i = 1, #lowNmax do
     local nh = Nheight[i]
     local nmax = lowNmax[i]
  
-    local ceil = kFloatMissing
+    local ceil = Missing
  
     if nh ~= kFloatMissing and nmax ~= kFloatMissing then
  
@@ -74,6 +76,7 @@ for i = 1, #lowNmax do
 end
  
 result:SetParam(param("CL-FT"))
+result:SetMissingValue(Missing)
 result:SetValues(ceiling)
  
 luatool:WriteToFile(result)
