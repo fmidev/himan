@@ -73,6 +73,8 @@ class integral
 		std::valarray<double> itsLowerBound;
 		std::valarray<double> itsUpperBound;
 
+		std::vector<bool> itsComplete;
+
 		std::valarray<double> itsResult; // variable is modified in some Result() const functions
 		size_t itsIndex;
 

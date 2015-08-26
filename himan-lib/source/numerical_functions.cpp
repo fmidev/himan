@@ -6,6 +6,7 @@
 #include "numerical_functions.h"
 #include "NFmiInterpolation.h"
 #include "plugin_factory.h"
+#include <algorithm>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -19,7 +20,7 @@ using namespace himan;
 
 using namespace numerical_functions;
 
-integral::integral()
+integral::integral() : itsComplete(8,true)
 {
 }
 
@@ -42,6 +43,8 @@ const std::valarray<double>& integral::Result() const
 
 void integral::Evaluate()
 {
+	assert (Complete());
+
 	auto f = GET_PLUGIN(fetcher);
 	
 	std::vector<info_t> paramInfos;
@@ -177,26 +180,32 @@ void integral::Evaluate()
 
 void integral::LowerBound(const std::valarray<double>& theLowerBound)
 {
+	itsComplete[0] = true;
 	itsLowerBound = theLowerBound;
 }
 
 void integral::UpperBound(const std::valarray<double>& theUpperBound)
 {
+	itsComplete[1] = true;
 	itsUpperBound = theUpperBound;
 }
 
 void integral::LowerLevelLimit(int theLowestLevel)
 {
+	itsComplete[2] = true;
 	itsLowestLevel = theLowestLevel;
 }
 
 void integral::UpperLevelLimit(int theHighestLevel)
 {
+	itsComplete[3] = true;
 	itsHighestLevel = theHighestLevel;
 }
 
 void integral::SetLevelLimits()
 {
+	assert(itsComplete[0] && itsComplete[1]);
+
         producer prod = itsConfiguration->SourceProducer(0);
 
         double max_value = itsHeightInMeters ? itsUpperBound.max() : itsUpperBound.min();
@@ -215,31 +224,37 @@ void integral::SetLevelLimits()
         itsLowestLevel = static_cast<int> (levelsForMinHeight.first.Value());
 
         assert(itsLowestLevel >= itsHighestLevel);
+	itsComplete[2] = true;
+	itsComplete[3] = true;
 }
 
 void integral::ForecastType(forecast_type theType)
 {
+	itsComplete[4] = true;
 	itsType = theType;
 }
 
 void integral::ForecastTime(forecast_time theTime)
 {
+	itsComplete[5] = true;
 	itsTime = theTime;
 }
 
 void integral::LevelType(level theLevel)
 {
+	itsComplete[6] = true;
 	itsLevel = theLevel;
 }
 
 void integral::HeightInMeters(bool theHeightInMeters)
 {
+	itsComplete[7] = true;
 	itsHeightInMeters = theHeightInMeters;
 }
 // TODO add check that all information that is needed is given to the class object
 bool integral::Complete()
 {
-	return true;
+	return std::all_of(itsComplete.begin(), itsComplete.end(), [](bool i){return i==true;});
 }
 
 std::pair<level,level> integral::LevelForHeight(const producer& prod, double height) const
@@ -277,8 +292,8 @@ std::pair<level,level> integral::LevelForHeight(const producer& prod, double hei
 
         if (itsHeightInMeters)
         {
-                query << "SELECT min(CASE WHEN maximum_height <= " << height << " THEN level_value+1 ELSE NULL END) AS lowest_level, "
-                        << "max(CASE WHEN minimum_height >= " << height << " THEN level_value-1 ELSE NULL END) AS highest_level "
+                query << "SELECT min(CASE WHEN maximum_height <= " << height << " THEN level_value ELSE NULL END) AS lowest_level, "
+                        << "max(CASE WHEN minimum_height >= " << height << " THEN level_value ELSE NULL END) AS highest_level "
                         << "FROM "
                         << "hybrid_level_height "
                         << "WHERE "
