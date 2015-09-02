@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.8.24
+Version: 15.9.2
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -14,33 +14,26 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: jasper-libs
-Requires: grib_api >= 1.13.0
+Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
 Requires: himan-lib >= 15.8.10
 Requires: himan-bin >= 15.5.27
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 15.8.21
+Requires: libsmartmet-newbase >= 15.4.29
 
 BuildRequires: boost-devel >= 1.55
-
-%if %distnum == 7
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-0
-%else
-BuildRequires: gcc-c++ >= 4.4.6
-BuildRequires: gcc-c++ < 4.7
-BuildRequires: cuda-6-5
-%endif
-
-BuildRequires: libfmidb >= 15.8.10
-BuildRequires: libfmigrib-devel >= 15.5.18
+BuildRequires: libfmidb >= 15.9.1
+BuildRequires: libfmigrib-devel >= 15.8.21
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase-devel >= 15.4.22
+BuildRequires: libsmartmet-newbase-devel >= 15.4.29
 BuildRequires: libsmartmet-smarttools-devel >= 15.3.16
-BuildRequires: grib_api-devel >= 1.13.0
+BuildRequires: grib_api-devel >= 1.14.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
@@ -107,6 +100,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Sep  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.2-1.fmi
+- fmidb api change
+- grib_api 1.14
 * Mon Aug 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.24-1.fmi
 - Augmenting interpolation methods
 - Add support for setting specific missing value to grib
