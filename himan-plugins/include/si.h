@@ -16,6 +16,22 @@ namespace himan
 namespace plugin
 {
 
+enum HPSoundingIndexSourceDataType
+{
+	kSurface = 0,			// Use surface data (from 2m)
+	k500mAvg,				// Average data of lowest 500m
+	k500mAvgMixingRatio,	// Average data of lowest 500m using mixing ratio
+	kMaxThetaE				// Find source data with max Theta E with upper limit 500hPa
+	
+};
+
+enum HPSoundingIndexCAPEVariation
+{
+	kCAPE = 0,	// regular CAPE from LFC to EL
+	kCAPE1040,	// vertical profile limited to areas where env temperature is between -40 .. -10
+	kCAPE3km	// vertical profile limited to lower 3000 meters
+};
+
 class si : public compiled_plugin, private compiled_plugin_base
 {
 public:
@@ -45,12 +61,25 @@ public:
 
 private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void CalculateVersion(std::shared_ptr<info> theTargetInfo, HPSoundingIndexSourceDataType sourceType);
 	void ScaleBase(std::shared_ptr<info> anInfo, double scale, double base);
-	void LCLAverage(std::shared_ptr<info> myTargetInfo, double fromZ, double toZ);
+	
+	std::pair<std::vector<double>,std::vector<double>> GetLCL(std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& TD);
+	std::pair<std::vector<double>,std::vector<double>> GetLFC(std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& P);
+	
+	// Functions to fetch different kinds of source data
+
+	std::pair<std::vector<double>,std::vector<double>> GetSurfaceTAndTD(std::shared_ptr<info> myTargetInfo);
+	std::pair<std::vector<double>,std::vector<double>> Get500mTAndTD(std::shared_ptr<info> myTargetInfo);
+	std::pair<std::vector<double>,std::vector<double>> Get500mMixingRatioTAndTD(std::shared_ptr<info> myTargetInfo);
+	std::pair<std::vector<double>,std::vector<double>> GetHighestThetaETAndTD(std::shared_ptr<info> myTargetInfo);
+
+
+	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> GetCAPE(std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P, HPSoundingIndexCAPEVariation CAPEVariation);
+	std::vector<double> GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL, const std::vector<double>& PLFC);
 
 	int itsBottomLevel;
 	int itsTopLevel;
-
 };
 
 // the class factory
