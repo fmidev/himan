@@ -44,7 +44,7 @@ std::vector<double> TableToVector(const object& table);
 
 boost::thread_specific_ptr <lua_State> myL;
 
-luatool::luatool()
+luatool::luatool() : itsWriteOptions()
 {
 	itsClearTextFormula = "<interpreted>";
 	itsLogger = logger_factory::Instance()->GetLog("luatool");
@@ -122,6 +122,7 @@ void luatool::InitLua(info_t myTargetInfo)
 	globals(L)["luatool"] = boost::ref(*this);
 	globals(L)["result"] = myTargetInfo;
 	globals(L)["configuration"] = itsConfiguration;
+	globals(L)["write_options"] = boost::ref(itsWriteOptions);
 
 	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
 	globals(L)["current_level"] = level(myTargetInfo->Level());
@@ -912,6 +913,10 @@ void BindLib(lua_State* L)
 			.def_readwrite("P", &lcl_t::P)
 			.def_readwrite("Q", &lcl_t::Q)
 		,
+		class_<write_options>("write_options")
+			.def(constructor<>())
+			.def_readwrite("use_bitmap", &write_options::use_bitmap)
+		,
 		// util namespace
 		def("Filter2D", &util::Filter2D)
 		,
@@ -938,7 +943,8 @@ void BindPlugins(lua_State* L)
 	module(L) [
 		class_<compiled_plugin_base>("compiled_plugin_base")
 			.def(constructor<>())
-			.def("WriteToFile", LUA_CMEMFN(void, compiled_plugin_base, WriteToFile, const info&))
+			.def("WriteToFile", LUA_CMEMFN(void, luatool, WriteToFile, const info_t& targetInfo))
+			//.def("WriteToFile", LUA_CMEMFN(void, compiled_plugin_base, WriteToFile, const info&))
 		,
 		class_<luatool, compiled_plugin_base>("luatool")
 			.def(constructor<>())
@@ -1066,4 +1072,9 @@ std::vector<double> TableToVector(const object& table)
 	}
 	
 	return ret;
+}
+
+void luatool::WriteToFile(const info_t& targetInfo) const
+{
+	compiled_plugin_base::WriteToFile(*targetInfo, itsWriteOptions);
 }

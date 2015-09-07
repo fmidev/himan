@@ -186,7 +186,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 		itsGrib->Message().TypeOfGeneratingProcess(2); // Forecast
 	}
 
-	if (anInfo.Data().MissingCount() > 0)
+	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
 	{
 		itsGrib->Message().MissingValue(anInfo.Data().MissingValue());
 		itsGrib->Message().Bitmap(true);
@@ -312,7 +312,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 	return true;
 }
 
-vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, search_options& options, bool readContents, bool readPackedData,	bool forceCaching)
+vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options, bool readContents, bool readPackedData, bool forceCaching) const
 {
 
 	shared_ptr<neons> n;
@@ -589,24 +589,26 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, searc
 		t.StepResolution(timeResolution);
 
 		t.ValidDateTime().Adjust(timeResolution, static_cast<int> (step));
-
+		
 		if (t != options.time)
 		{
+			forecast_time optsTime(options.time);
+
 			itsLogger->Trace("Times do not match");
 
-			if (options.time.OriginDateTime() != t.OriginDateTime())
+			if (optsTime.OriginDateTime() != t.OriginDateTime())
 			{
-				itsLogger->Trace("OriginDateTime: " + options.time.OriginDateTime().String() + " (requested) vs " + t.OriginDateTime().String() + " (found)");
+				itsLogger->Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " + t.OriginDateTime().String() + " (found)");
 			}
 
-			if (options.time.ValidDateTime() != t.ValidDateTime())
+			if (optsTime.ValidDateTime() != t.ValidDateTime())
 			{
-				itsLogger->Trace("ValidDateTime: " + options.time.ValidDateTime().String() + " (requested) vs " + t.ValidDateTime().String() + " (found)");
+				itsLogger->Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " + t.ValidDateTime().String() + " (found)");
 			}
 
-			if (options.time.StepResolution() != t.StepResolution())
+			if (optsTime.StepResolution() != t.StepResolution())
 			{
-				itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(options.time.StepResolution())) + " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) + " (found)");
+				itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) + " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) + " (found)");
 			}
 
 			if (forceCaching)

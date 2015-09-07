@@ -377,7 +377,7 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 
 	auto q = GET_PLUGIN(querydata);
 
-	shared_ptr<info> i = q->FromFile(inputFile, options, readContents);
+	shared_ptr<info> i = q->FromFile(inputFile, options);
 
 	vector<shared_ptr<info>> theInfos;
 

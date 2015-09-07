@@ -128,7 +128,7 @@ bool csv::ToFile(info& theInfo, string& theOutputFile, HPFileWriteOption fileWri
 	
 }
 
-shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& options)
+shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_options& options) const
 {
 	info_t ret = make_shared<info> ();
 	
@@ -149,6 +149,8 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 	vector<level> levels;
 	vector<station> stats;
 
+	forecast_time optsTime(options.time);
+	
 	// First create descriptors
 	while (GetLine(in, line))
 	{
@@ -159,8 +161,8 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, search_options& o
 		if (f != options.time)
 		{
 			itsLogger->Debug("Time does not match");
-			itsLogger->Debug("Origin time " + static_cast<string> (options.time.OriginDateTime()) + " vs " + static_cast<string> (f.OriginDateTime()));
-			itsLogger->Debug("Forecast time: " + static_cast<string> (options.time.ValidDateTime()) + " vs " + static_cast<string> (f.ValidDateTime()));
+			itsLogger->Debug("Origin time " + static_cast<string> (optsTime.OriginDateTime()) + " vs " + static_cast<string> (f.OriginDateTime()));
+			itsLogger->Debug("Forecast time: " + static_cast<string> (optsTime.ValidDateTime()) + " vs " + static_cast<string> (f.ValidDateTime()));
 
 			continue;
 		}

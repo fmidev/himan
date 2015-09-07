@@ -23,6 +23,8 @@
 #define AUXILIARY_PLUGIN_H
 
 #include "himan_plugin.h"
+#include "write_options.h"
+#include "search_options.h"
 
 namespace himan
 {
@@ -37,6 +39,27 @@ public:
 
     virtual ~auxiliary_plugin() {};
 
+};
+
+class io_plugin : public auxiliary_plugin
+{
+
+public:
+	io_plugin() {}
+	virtual ~io_plugin() {}
+	
+	virtual write_options WriteOptions() const
+	{
+		return itsWriteOptions;
+	}
+
+	virtual void WriteOptions(const write_options& theWriteOptions)
+	{
+		itsWriteOptions = theWriteOptions;
+	}
+	
+protected:
+	write_options itsWriteOptions;
 };
 
 } // namespace plugin

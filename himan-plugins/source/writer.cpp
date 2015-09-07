@@ -27,7 +27,7 @@
 
 using namespace himan::plugin;
 
-writer::writer()
+writer::writer() : itsWriteOptions()
 {
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("writer"));
 }
@@ -92,6 +92,7 @@ bool writer::ToFile(info& theInfo,
 				correctFileName += ".bz2";
 			}
 
+			theGribWriter->WriteOptions(itsWriteOptions);
 			ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileCompression, fileWriteOption);
 
 			break;
@@ -99,6 +100,7 @@ bool writer::ToFile(info& theInfo,
 		case kQueryData:
 		{
 			auto theWriter = GET_PLUGIN(querydata);
+			theWriter->WriteOptions(itsWriteOptions);
 
 			correctFileName += ".fqd";
 
@@ -112,6 +114,7 @@ bool writer::ToFile(info& theInfo,
 		case kCSV:
 		{
 			auto theWriter = GET_PLUGIN(csv);
+			theWriter->WriteOptions(itsWriteOptions);
 
 			correctFileName += ".csv";
 
@@ -174,4 +177,14 @@ bool writer::ToFile(info& theInfo,
 	}
 
 	return ret;
+}
+
+write_options writer::WriteOptions() const
+{
+	return itsWriteOptions;
+}
+
+void writer::WriteOptions(const write_options& theWriteOptions)
+{
+	itsWriteOptions = theWriteOptions;
 }

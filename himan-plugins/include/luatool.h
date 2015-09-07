@@ -55,13 +55,13 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
 	void Process(std::shared_ptr<const plugin_configuration> configuration);
-	//std::shared_ptr<info> FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, const forecast_type& theType = forecast_type(kDeterministic)) const;
+	void WriteToFile(const info_t& targetInfo) const;
 	
 protected:
 	/* These functions exists because we need to stop himan
@@ -79,6 +79,7 @@ private:
 	void InitLua(info_t myTargetInfo);	
 	bool ReadFile(const std::string& luaFile);
 	
+	write_options itsWriteOptions;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

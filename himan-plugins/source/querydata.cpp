@@ -487,7 +487,7 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(info& info, bool theActiv
 
 }
 
-shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const search_options& options, bool readContents)
+shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const search_options& options) const
 {
 	throw runtime_error(ClassName() + ": Function FromFile() not implemented yet");
 }

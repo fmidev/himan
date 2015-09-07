@@ -16,7 +16,7 @@ namespace himan
 namespace plugin
 {
 
-class csv : public auxiliary_plugin
+class csv : public io_plugin
 {
 public:
 	csv();
@@ -38,7 +38,7 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
 	/**
@@ -55,7 +55,7 @@ public:
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::shared_ptr<info> FromFile(const std::string& inputFile, search_options& options);
+	virtual std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options) const;
 
 	/**
 	 * @brief Write info contents to a csv file
@@ -67,7 +67,6 @@ public:
 	 */
 
 	bool ToFile(info& theInfo, std::string& outputFile, HPFileWriteOption fileWriteOption);
-	
 private:
 
 };

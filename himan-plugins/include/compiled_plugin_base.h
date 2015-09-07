@@ -11,6 +11,7 @@
 #include "compiled_plugin.h"
 #include "plugin_configuration.h"
 #include <mutex>
+#include <write_options.h>
 
 /*
  * Really nice pre-processor macros here
@@ -113,7 +114,7 @@ public:
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	virtual void WriteToFile(const info& targetInfo) const;
+	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) const;
 
 protected:
 

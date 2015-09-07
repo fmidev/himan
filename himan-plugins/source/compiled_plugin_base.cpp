@@ -171,9 +171,11 @@ bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode tar
 	return ret;
 }
 
-void compiled_plugin_base::WriteToFile(const info& targetInfo) const
+void compiled_plugin_base::WriteToFile(const info& targetInfo, const write_options& writeOptions) const
 {
 	auto aWriter = GET_PLUGIN(writer);
+	
+	aWriter->WriteOptions(writeOptions);
 
 	// writing might modify iterator positions --> create a copy
 

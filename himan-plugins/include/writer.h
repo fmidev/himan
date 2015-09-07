@@ -12,6 +12,7 @@
 
 #include "auxiliary_plugin.h"
 #include "plugin_configuration.h"
+#include "write_options.h"
 
 namespace himan
 {
@@ -40,12 +41,16 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(1, 1);
+		return HPVersionNumber(1, 2);
 	}
 
 	bool ToFile(info& theInfo, const plugin_configuration& conf, const std::string& theFileName = "");
+	
+	write_options WriteOptions() const;
+	void WriteOptions(const write_options& theWriteOptions);
 
 private:
+	write_options itsWriteOptions;
 
 };
 
@@ -55,7 +60,7 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<writer> (new writer());
+	return std::make_shared<writer> ();
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */

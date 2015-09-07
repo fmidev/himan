@@ -33,7 +33,7 @@ namespace himan
 namespace plugin
 {
 
-class querydata : public auxiliary_plugin
+class querydata : public io_plugin
 {
 public:
 	querydata();
@@ -55,7 +55,7 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
 	/**
@@ -69,12 +69,11 @@ public:
 	 *
 	 * @param file Input file name
 	 * @param options Search options (param, level, time)
-	 * @param readContents Specify if data should also be read (and not only metadata)
 	 *
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options, bool readContents);
+	std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options) const;
 
 	/**
 	 * @brief Write info contents to a querydata file

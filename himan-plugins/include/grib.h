@@ -12,14 +12,13 @@
 
 #include "auxiliary_plugin.h"
 #include "NFmiGrib.h"
-#include "search_options.h"
 
 namespace himan
 {
 namespace plugin
 {
 
-class grib : public auxiliary_plugin
+class grib : public io_plugin
 {
 
 public:
@@ -43,7 +42,7 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(1, 0);
+		return HPVersionNumber(1, 1);
 	}
 
 	std::shared_ptr<NFmiGrib> Reader();
@@ -68,7 +67,7 @@ public:
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false, bool forceCaching = false);
+	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options, bool readContents, bool readPackedData, bool forceCaching) const;
 
 	bool ToFile(info& anInfo, std::string& outputFile, HPFileType fileType, HPFileCompression fileCompression, HPFileWriteOption fileWriteOption);
 
@@ -106,7 +105,7 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<grib> (new grib());
+	return std::make_shared<grib> ();
 }
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
