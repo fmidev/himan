@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.8.24
+Version: 15.9.8
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,24 +13,16 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 15.8.10
+Requires: libfmidb >= 15.9.1
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 BuildRequires: boost-devel >= 1.55
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
-BuildRequires: libfmidb-devel >= 15.8.10
-
-%if %{distnum} == 6
-BuildRequires: gcc-c++ >= 4.4.6
-BuildRequires: gcc-c++ < 4.7
-BuildRequires: cuda-6-5
-%else
+BuildRequires: libfmidb-devel >= 15.9.1
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-0
-%endif
-
-BuildRequires: libsmartmet-newbase-devel >= 15.4.22
+BuildRequires: libsmartmet-newbase-devel >= 15.4.29
 BuildRequires: scons
 Provides: libhiman.so
 
@@ -57,6 +49,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Sep  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.8-1.fmi
+- plugin inheritance hierarchy modifications
+* Wed Sep  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.2-1.fmi
+- fmidb api change
 * Mon Aug 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.24-1.fmi
 - Additions to numerical integration functions
 * Mon Aug 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.10-1.fmi
