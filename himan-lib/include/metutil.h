@@ -596,6 +596,11 @@ inline double himan::metutil::DewPointFromRHSimple_(double T, double RH)
 CUDA_DEVICE
 inline double himan::metutil::DewPointFromRH_(double T, double RH)
 {
+	if (RH == 0.) RH = 0.01; // formula does not work if RH = 0; actually all small values give extreme Td values
+	assert(RH > 0.);
+	assert(RH < 101.);
+	assert(T > 0. && T < 500.);
+
 	return (T / (1 - (T * log(RH * 0.01) * constants::kRw_div_L)));
 }
 
