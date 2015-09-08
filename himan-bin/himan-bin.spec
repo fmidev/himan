@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.8.24
+Version: 15.9.8
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,35 +13,28 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 15.4.10
+Requires: himan-lib >= 15.9.2
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
 Requires: boost-iostreams
 Requires: boost-thread
-Requires: libsmartmet-newbase >= 15.4.22
+Requires: libsmartmet-newbase >= 15.4.29
 Requires: libsmartmet-smarttools >= 15.4.9
 Requires: jasper
-Requires: grib_api >= 1.13.0
+Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
 Requires: bzip2-libs
 Requires: zlib
-
 BuildRequires: redhat-rpm-config
 BuildRequires: boost-devel >= 1.55
-
-%if %{distnum} == 6
-BuildRequires: gcc-c++ >= 4.4.6
-BuildRequires: gcc-c++ < 4.7
-BuildRequires: cuda-6-5
-%else
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-0
-%endif
-
 BuildRequires: scons
 Provides: himan
+
+AutoReqProv:	no
 
 %description
 FMI himan -- hilojen manipulaatio -- executable
@@ -66,6 +59,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Tue Sep  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.8-1.fmi
+- plugin inheritance hierarchy modifications
+* Wed Sep  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.2-1.fmi
+- grib_api 1.14
 * Mon Aug 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.8.24-1.fmi
 - New command line option --no-cuda-interpolation
 * Wed May 27 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.5.27-1.fmi
