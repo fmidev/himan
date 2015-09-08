@@ -17,7 +17,6 @@ configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 	itsFileCompression = kNoCompression;
 	itsReadDataFromDatabase = true;
 	itsUseCuda = true;
-	itsFileWaitTimeout = 0;
 	itsThreadCount = -1;
 	itsTargetGeomName = "";
 	itsConfigurationFile = "";
@@ -44,7 +43,6 @@ configuration::configuration(const configuration& other)
 	itsFileCompression = other.itsFileCompression;
 	itsReadDataFromDatabase = other.itsReadDataFromDatabase;
 
-	itsFileWaitTimeout = other.itsFileWaitTimeout;
 	itsUseCuda = other.itsUseCuda;
 	itsUseCudaForPacking = other.itsUseCudaForPacking;
 	itsUseCudaForUnpacking = other.itsUseCudaForUnpacking;
@@ -82,7 +80,6 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsFileWriteOption__ " << HPFileWriteOptionToString.at(itsFileWriteOption) << std::endl;
 	file << "__itsFileCompression__ " << HPFileCompressionToString.at(itsFileCompression) << std::endl;
 	file << "__itsUseCuda__ " << itsUseCuda << std::endl;
-	file << "__itsFileWaitTimeout__ " << itsFileWaitTimeout << std::endl;
 	file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
 
 	file << "__itsThreadCount__ " << itsThreadCount << std::endl;
@@ -162,16 +159,6 @@ bool configuration::ReadDataFromDatabase() const
 void configuration::ReadDataFromDatabase(bool theReadDataFromDatabase)
 {
 	itsReadDataFromDatabase = theReadDataFromDatabase;
-}
-
-unsigned short configuration::FileWaitTimeout() const
-{
-	return itsFileWaitTimeout;
-}
-
-void configuration::FileWaitTimeout(unsigned short theFileWaitTimeout)
-{
-	itsFileWaitTimeout = theFileWaitTimeout;
 }
 
 bool configuration::UseCuda() const

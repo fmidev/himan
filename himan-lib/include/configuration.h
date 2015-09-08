@@ -175,14 +175,6 @@ public:
 	bool ReadDataFromDatabase() const;
 
 	/**
-	 * @brief Eiable or disable waiting for files
-	 * @param theFileWaitTimeout Value in minutes
-	 */
-
-	void FileWaitTimeout(unsigned short theFileWaitTimeout);
-	unsigned short FileWaitTimeout() const;
-
-	/**
 	 * @brief Top level function for CUDA calculation
 	 * @return True if CUDA can be used (does not tell IF it's used)
 	 */
@@ -268,7 +260,6 @@ protected:
 	HPFileCompression itsFileCompression;
 	bool itsReadDataFromDatabase;
 
-	unsigned short itsFileWaitTimeout; //<! Minutes
 	bool itsUseCuda;
 
 	short itsThreadCount;

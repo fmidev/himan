@@ -230,24 +230,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing key read_data_from_database: ") + e.what());
 	}
 
-	/* Check file_wait_timeout */
-
-	try
-	{
-		string theFileWaitTimeout = pt.get<string>("file_wait_timeout");
-
-		conf->itsFileWaitTimeout = boost::lexical_cast<unsigned short> (theFileWaitTimeout);
-
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key file_wait_timeout: ") + e.what());
-	}
-
 	// Check global use_cache option
 
 	try
