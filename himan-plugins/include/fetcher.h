@@ -90,8 +90,6 @@ public:
 	 * @param requestedLevel
 	 * @param requestedParam
 	 * @param readPackedData Whether to read unpacked data (from grib only!). Caller must do unpacking.
-	 * @param controlWaitTime Whether this function should control wait times if they are specified.
-	 * Default is true, will be set to false if this function is called from multi-param Fetch()
 	 * @return shared_ptr to info-instance
 	 */
 
@@ -100,8 +98,8 @@ public:
 		level requestedLevel, 
 		param requestedParam, 
 		forecast_type requestedType = forecast_type(kDeterministic),
-		bool readPackedData = false, 
-		bool controlWaitTime = true);
+		bool readPackedData = false,
+		bool suppressLogging = false);
 
 	/**
 	 * @brief Set flag for level transform
@@ -223,11 +221,10 @@ private:
 	 *
 	 * @param opts Search options
 	 * @param readPackedData Determine whether to read packed data from grib
-	 * @param fetchFromAuxiliaryFiles Determine whether to read data from aux files
 	 * @return Vector of infos, zero sized if none found
 	 */
 
-	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles);
+	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData);
 
 	/**
 	 * @brief Function to perform area interpolation

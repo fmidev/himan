@@ -32,8 +32,6 @@
 using namespace himan::plugin;
 using namespace std;
 
-const unsigned int SLEEPSECONDS = 10;
-
 shared_ptr<cache> itsCache;
 
 #ifdef HAVE_CUDA
@@ -57,48 +55,24 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 										forecast_type requestedType,
 										bool readPackedData)
 {
-	unsigned int waitedSeconds = 0;
-
 	shared_ptr<info> ret;
-	
-	do
+
+	for (size_t i = 0; i < requestedParams.size(); i++)
 	{
-		for (size_t i = 0; i < requestedParams.size(); i++)
+		try
 		{
-			try
-			{
-				ret = Fetch(config, requestedTime, requestedLevel, requestedParams[i], requestedType, readPackedData, false);
-				
-				return ret;
-			}
-			catch (const HPExceptionType& e)
-			{
-				if (e != kFileDataNotFound)
-				{
-					throw;
-				}
-			}
-			catch (const exception& e)
+			ret = Fetch(config, requestedTime, requestedLevel, requestedParams[i], requestedType, readPackedData, true);
+
+			return ret;
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
 			{
 				throw;
 			}
-
 		}
-		if (config->FileWaitTimeout() > 0)
-		{
-			itsLogger->Debug("Sleeping for " + boost::lexical_cast<string> (SLEEPSECONDS) + " seconds (cumulative: " + boost::lexical_cast<string> (waitedSeconds) + ")");
-
-			if (!config->ReadDataFromDatabase())
-			{
-				itsLogger->Warning("file_wait_timeout specified but file read from Neons is disabled");
-			}
-
-			sleep(SLEEPSECONDS);
-		}
-
-		waitedSeconds += SLEEPSECONDS;
 	}
-	while (waitedSeconds < config->FileWaitTimeout() * 60);
 
 	string optsStr = "producer(s): ";
 
@@ -135,7 +109,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 										param requestedParam,
 										forecast_type requestedType,
 										bool readPackedData,
-										bool controlWaitTime)
+										bool suppressLogging)
 {
 
 	unique_ptr<timer> t = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
@@ -146,54 +120,33 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	}
 	
 	vector<shared_ptr<info>> theInfos;
-	unsigned int waitedSeconds = 0;
 
 	level newLevel = requestedLevel;
 
-	do
+	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers() && theInfos.empty(); prodNum++)
 	{
-		// Loop over all source producers if more than one specified
 
-		for (size_t prodNum = 0; prodNum < config->SizeSourceProducers() && theInfos.empty(); prodNum++)
+		producer sourceProd(config->SourceProducer(prodNum));
+
+		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
 		{
+			newLevel = LevelTransform(sourceProd, requestedParam, requestedLevel);
 
-			producer sourceProd(config->SourceProducer(prodNum));
-			
-			if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
+			if (newLevel != requestedLevel)
 			{
-				newLevel = LevelTransform(sourceProd, requestedParam, requestedLevel);
-
-				if (newLevel != requestedLevel)
-				{
-					itsLogger->Trace("Transform level " + string(HPLevelTypeToString.at(requestedLevel.Type()))
-								+ "/" + boost::lexical_cast<string> (requestedLevel.Value())
-								+ " to " + HPLevelTypeToString.at(newLevel.Type())
-								+ "/" + boost::lexical_cast<string> (newLevel.Value())
-								+ " for producer " + boost::lexical_cast<string> (sourceProd.Id())
-								+ ", parameter " + requestedParam.Name());
-				}
-			}			
-			
-			search_options opts (requestedTime, requestedParam, newLevel, sourceProd, requestedType, config);
-
-			theInfos = FetchFromProducer(opts, readPackedData, (waitedSeconds == 0));
-		}
-
-		if (controlWaitTime && config->FileWaitTimeout() > 0)
-		{
-			itsLogger->Debug("Sleeping for " + boost::lexical_cast<string> (SLEEPSECONDS) + " seconds (cumulative: " + boost::lexical_cast<string> (waitedSeconds) + ")");
-
-			if (!config->ReadDataFromDatabase())
-			{
-				itsLogger->Warning("file_wait_timeout specified but file read from Neons is disabled");
+				itsLogger->Trace("Transform level " + string(HPLevelTypeToString.at(requestedLevel.Type()))
+							+ "/" + boost::lexical_cast<string> (requestedLevel.Value())
+							+ " to " + HPLevelTypeToString.at(newLevel.Type())
+							+ "/" + boost::lexical_cast<string> (newLevel.Value())
+							+ " for producer " + boost::lexical_cast<string> (sourceProd.Id())
+							+ ", parameter " + requestedParam.Name());
 			}
+		}			
 
-			sleep(SLEEPSECONDS);
-		}
+		search_options opts (requestedTime, requestedParam, newLevel, sourceProd, requestedType, config);
 
-		waitedSeconds += SLEEPSECONDS;
+		theInfos = FetchFromProducer(opts, readPackedData);
 	}
-	while (theInfos.empty() && controlWaitTime && waitedSeconds < config->FileWaitTimeout() * 60);
 
 	if (config->StatisticsEnabled())
 	{
@@ -209,10 +162,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (theInfos.size() == 0)
 	{
-		// If this function is called from multi-param Fetch(), do not print
-		// any messages yet since we might have another source param coming
-
-		if (controlWaitTime)
+		if (!suppressLogging)
 		{
 			string optsStr = "producer(s): ";
 
@@ -468,7 +418,7 @@ bool fetcher::UseCache() const
 }
 
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool fetchFromAuxiliaryFiles)
+vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData)
 {
 
 	vector<shared_ptr<info>> ret;
@@ -509,7 +459,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 	 *  only once.
 	 */
 
-	if (!opts.configuration->AuxiliaryFiles().empty() && fetchFromAuxiliaryFiles)
+	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
 		ret = FromFile(opts.configuration->AuxiliaryFiles(), opts, true, readPackedData, !itsApplyLandSeaMask && !readPackedData);
 
@@ -952,7 +902,7 @@ bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, in
 	{
 		itsApplyLandSeaMask = false;
 		
-		auto lsmInfo = Fetch(config, firstTime, level(kHeight, 0), param("LC-0TO1"), requestedType, false, false);
+		auto lsmInfo = Fetch(config, firstTime, level(kHeight, 0), param("LC-0TO1"), requestedType, false);
 		
 		itsApplyLandSeaMask = true;
 		
