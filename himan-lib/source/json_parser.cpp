@@ -1402,6 +1402,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 			itsLogger->Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 		}
 
+		conf->TargetProducer(prod);
 		anInfo->Producer(prod);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)

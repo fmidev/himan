@@ -238,6 +238,11 @@ const producer& configuration::TargetProducer() const
 	return itsTargetProducer;
 }
 
+void configuration::TargetProducer(const producer& theTargetProducer)
+{
+	itsTargetProducer = theTargetProducer;
+}
+
 void configuration::StatisticsLabel(const std::string& theStatisticsLabel)
 {
 	itsStatisticsLabel = theStatisticsLabel;
