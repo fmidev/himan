@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.9.8
+Version: 15.9.9
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -49,6 +49,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed Sep  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.9-1.fmi
+- Fix for dewpoint calculation when RH=0
+- Remove obsolete code from fetcher
 * Tue Sep  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.8-1.fmi
 - plugin inheritance hierarchy modifications
 * Wed Sep  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.2-1.fmi
