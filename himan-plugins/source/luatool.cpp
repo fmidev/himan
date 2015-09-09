@@ -13,6 +13,7 @@
 
 #include "hitool.h"
 #include "neons.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -124,20 +125,26 @@ void luatool::InitLua(info_t myTargetInfo)
 	globals(L)["configuration"] = itsConfiguration;
 	globals(L)["write_options"] = boost::ref(itsWriteOptions);
 
+	// Useful variables
 	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
 	globals(L)["current_level"] = level(myTargetInfo->Level());
 	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
-
+	globals(L)["kFloatMissing"] = kFloatMissing;
+	
 	auto h = GET_PLUGIN(hitool);
-
+	
 	h->Configuration(itsConfiguration);
 	h->Time(forecast_time(myTargetInfo->Time()));
 
+	auto n = GET_PLUGIN(neons);
+	auto r = GET_PLUGIN(radon);
+
+	// Useful plugins
 	globals(L)["hitool"] = h;
-	globals(L)["kFloatMissing"] = kFloatMissing;
+	globals(L)["neons"] = n;
+	globals(L)["radon"] = r;
 
 	itsLogger->Trace("luabind finished");
-
 	myL.reset(L);
 
 }
@@ -974,6 +981,15 @@ void BindPlugins(lua_State* L)
 			.def("VerticalPlusMinusArea", &hitool_wrapper::VerticalPlusMinusArea)
 			.def("SetHeightUnit", &hitool_wrapper::SetHeightUnit)
 			.def("GetHeightUnit", &hitool_wrapper::GetHeightUnit)
+		,
+		class_<neons, std::shared_ptr<neons>> ("neons")
+			.def(constructor<>())
+			.def("ClassName", &neons::ClassName)
+			.def("GetProducerMetaData", LUA_CMEMFN(std::string, neons, ProducerMetaData, long, const std::string&))
+		,
+		class_<radon, std::shared_ptr<radon>> ("radon")
+			.def(constructor<>())
+			.def("GetProducerMetaData", LUA_CMEMFN(std::string, radon, ProducerMetaData, long, const std::string&))
 	];
 }
 
