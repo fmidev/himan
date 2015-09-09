@@ -722,6 +722,22 @@ HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h)
 
 } // namespace hitool_wrapper
 
+namespace neons_wrapper
+{
+std::string GetProducerMetaData(std::shared_ptr<neons> n, const producer& prod, const std::string& attName)
+{
+	return n->ProducerMetaData(prod.Id(), attName);
+}
+} // namespace neons_wrapper
+
+namespace radon_wrapper
+{
+std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, const std::string& attName)
+{
+	return r->ProducerMetaData(prod.Id(), attName);
+}
+} // namespace radon_wrapper
+
 void BindLib(lua_State* L)
 {
 	module(L)
@@ -985,11 +1001,11 @@ void BindPlugins(lua_State* L)
 		class_<neons, std::shared_ptr<neons>> ("neons")
 			.def(constructor<>())
 			.def("ClassName", &neons::ClassName)
-			.def("GetProducerMetaData", LUA_CMEMFN(std::string, neons, ProducerMetaData, long, const std::string&))
+			.def("GetProducerMetaData", &neons_wrapper::GetProducerMetaData)
 		,
 		class_<radon, std::shared_ptr<radon>> ("radon")
 			.def(constructor<>())
-			.def("GetProducerMetaData", LUA_CMEMFN(std::string, radon, ProducerMetaData, long, const std::string&))
+			.def("GetProducerMetaData", &radon_wrapper::GetProducerMetaData)
 	];
 }
 
