@@ -10,6 +10,7 @@
 #include "cuda_helper.h"
 #include <cub/cub.cuh>
 #include <grib_api.h>
+#include <NFmiGribPacking.h>
 
 #define BitTest(n,i)	!!((n) & BitMask1(i))
 #define BitMask1(i)	(1u << i)
@@ -154,6 +155,9 @@ __host__ T simple_packed::Max(T* d_arr, size_t N, cudaStream_t& stream)
 __host__
 void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 {
+	assert(arr);
+	assert(N > 0);
+
 	if (!packedLength)
 	{
 		return;
@@ -165,6 +169,20 @@ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 		return;
 	}
 
+	// Special case for static grid
+	if (coefficients.bitsPerValue == 0)
+	{
+		if (NFmiGribPacking::IsHostPointer(arr))
+		{
+			std::fill(arr, N, coefficients.referenceValue);			
+		}
+		else
+		{
+			NFmiGribPacking::Fill(arr, N, coefficients.referenceValue);
+		}
+		return;
+	}
+	
 	// We need to create a stream if no stream is specified since dereferencing
 	// a null pointer is, well, not a good thing.
 
