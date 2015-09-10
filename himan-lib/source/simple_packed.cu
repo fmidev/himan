@@ -174,7 +174,7 @@ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 	{
 		if (NFmiGribPacking::IsHostPointer(arr))
 		{
-			std::fill(arr, N, coefficients.referenceValue);			
+			std::fill(arr, arr+N, coefficients.referenceValue);			
 		}
 		else
 		{
