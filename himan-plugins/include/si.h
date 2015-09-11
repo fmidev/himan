@@ -25,13 +25,6 @@ enum HPSoundingIndexSourceDataType
 	
 };
 
-enum HPSoundingIndexCAPEVariation
-{
-	kCAPE = 0,	// regular CAPE from LFC to EL
-	kCAPE1040,	// vertical profile limited to areas where env temperature is between -40 .. -10
-	kCAPE3km	// vertical profile limited to lower 3000 meters
-};
-
 class si : public compiled_plugin, private compiled_plugin_base
 {
 public:
@@ -75,7 +68,14 @@ private:
 	std::pair<std::vector<double>,std::vector<double>> GetHighestThetaETAndTD(std::shared_ptr<info> myTargetInfo);
 
 
-	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> GetCAPE(std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P, HPSoundingIndexCAPEVariation CAPEVariation);
+	/**
+	 * @brief Integrate CAPE values
+	 * 
+	 * CAPE			regular CAPE from LFC to EL
+	 * CAPE1040		vertical profile limited to areas where env temperature is between -40 .. -10
+	 * CAPE3km		vertical profile limited to lower 3000 meters
+	 */
+	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>, std::vector<double>, std::vector<double>> GetCAPE(std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P);
 	std::vector<double> GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL, const std::vector<double>& PLFC);
 
 	int itsBottomLevel;

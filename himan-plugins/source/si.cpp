@@ -24,6 +24,10 @@
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
+const unsigned char FCAPE		= (1 << 2);
+const unsigned char FCAPE1040	= (1 << 1);
+const unsigned char FCAPE3km	= (1 << 0);
+
 using namespace std;
 using namespace himan::plugin;
 
@@ -53,6 +57,14 @@ double max(const vector<double>& vec)
 	if (ret == -1e38) ret = kFloatMissing;
 
 	return ret;
+}
+
+void multiply_with(vector<double>& vec, double multiplier)
+{
+	BOOST_FOREACH(double& val, vec)
+	{
+		if (val != kFloatMissing) val *= multiplier;
+	}
 }
 
 const himan::param SBLCLT("LCL-K");
@@ -188,18 +200,18 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	
 	// Spinoff thread calculates surface data
 	
-	//boost::thread t1(&si::CalculateVersion, this, boost::ref(myTargetInfo), kSurface);
+	boost::thread t1(&si::CalculateVersion, this, boost::ref(myTargetInfo), kSurface);
 	
 	// Spinoff thread calculate 500m data
 	
-	boost::thread t2(&si::CalculateVersion, this, boost::ref(myTargetInfo), k500mAvgMixingRatio);
+	//boost::thread t2(&si::CalculateVersion, this, boost::ref(myTargetInfo), k500mAvgMixingRatio);
 	
 	// Spinoff thread calculates most unstable data
 	
 	//boost::thread t3(&si::CalculateVersion, this, boost::ref(myTargetInfo), kMaxThetaE);
 	
-	//t1.join(); 
-	t2.join(); 
+	t1.join(); 
+	//t2.join(); 
 	//t3.join();
 	
 }
@@ -333,29 +345,25 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 
  	cout << "\n--- CAPE --\n" << endl;
 	
-	auto CAPE = GetCAPE(myTargetInfo, LFC.first, LFC.second, kCAPE);
+	auto CAPE = GetCAPE(myTargetInfo, LFC.first, LFC.second);
 
-	myTargetInfo->Param(CAPEParam);
-	myTargetInfo->Data().Set(get<2> (CAPE));
-	
 	myTargetInfo->Param(ELTParam);
 	myTargetInfo->Data().Set(get<0> (CAPE));
 	
 	myTargetInfo->Param(ELPParam);
 	myTargetInfo->Data().Set(get<1> (CAPE));
 
-	CAPE = GetCAPE(myTargetInfo, LFC.first, LFC.second, kCAPE1040);
-
-	myTargetInfo->Param(CAPE1040Param);
+	myTargetInfo->Param(CAPEParam);
 	myTargetInfo->Data().Set(get<2> (CAPE));
-
-	CAPE = GetCAPE(myTargetInfo, LFC.first, LFC.second, kCAPE3km);
+	
+	myTargetInfo->Param(CAPE1040Param);
+	myTargetInfo->Data().Set(get<3> (CAPE));
 
 	myTargetInfo->Param(CAPE3kmParam);
-	myTargetInfo->Data().Set(get<2> (CAPE));
+	myTargetInfo->Data().Set(get<4> (CAPE));
 
 	// 5. 
-
+/*
 	cout << "\n--- CIN --\n" << endl;
 	
 	auto CIN = GetCIN(myTargetInfo, TandTD.first, LCL.first, LCL.second, LFC.second);
@@ -363,7 +371,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	DumpVector(CIN, "CIN");
 	myTargetInfo->Param(CINParam);
 	myTargetInfo->Data().Set(CIN);
-
+*/
 }
 
 vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC)
@@ -519,7 +527,7 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 	
 }
 
-tuple<vector<double>, vector<double>, vector<double>> si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, HPSoundingIndexCAPEVariation CAPEVariation)
+tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<double>> si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P)
 {
 	auto h = GET_PLUGIN(hitool);
 	
@@ -527,11 +535,14 @@ tuple<vector<double>, vector<double>, vector<double>> si::GetCAPE(shared_ptr<inf
 	h->Time(myTargetInfo->Time());
 	h->HeightUnit(kHPa);
 
-	vector<bool> found(T.size(), false);
+	vector<unsigned char> found(T.size(), 0);
 	vector<double> CAPE(T.size(), -1);
+	vector<double> CAPE1040(T.size(), -1);
+	vector<double> CAPE3km(T.size(), -1);
 	vector<double> ELT(T.size(), kFloatMissing);
 	vector<double> ELP(T.size(), kFloatMissing);
 
+#ifdef USE_TW
 	// Use Davies-Jones Tw formula 
 	
 	auto thetaE = P;
@@ -543,7 +554,7 @@ tuple<vector<double>, vector<double>, vector<double>> si::GetCAPE(shared_ptr<inf
 			thetaE[i] = metutil::ThetaE_(T[i], 100*P[i]);
 		}
 	}
-	
+#endif
 	// For each grid point find next hybrid level that's below the LFC
 		
 	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::max(P));
@@ -551,15 +562,29 @@ tuple<vector<double>, vector<double>, vector<double>> si::GetCAPE(shared_ptr<inf
 	level curLevel = levels.first;
 	curLevel.Value(curLevel.Value() - 1);
 	
-	size_t foundCount = count(found.begin(), found.end(), true);
-
-	info_t prevZInfo, prevTInfo, prevPInfo;
-	std::vector<double> prevTw;
-
-	while (curLevel.Value() > 45 && foundCount != found.size())
+	for (size_t i = 0; i < P.size(); i++)
 	{
-		
-		cout << "Current level: " << curLevel.Value() << "\n";
+		if (P[i] == kFloatMissing)
+		{
+			found[i] |= FCAPE;
+		}
+	}
+
+	size_t foundCount = 0;
+	
+	for (size_t i = 0; i < found.size(); i++)
+	{
+		if ((found[i] & FCAPE)) foundCount++;
+	}
+	
+	info_t prevZInfo, prevTInfo, prevPInfo;
+	std::vector<double> prevTparcelVec;
+
+	auto Piter = P, Titer = T;
+	multiply_with(Piter, 100);
+
+	while (curLevel.Value() > 50 && foundCount != found.size())
+	{
 	
 		if (!prevZInfo)
 		{
@@ -580,126 +605,200 @@ tuple<vector<double>, vector<double>, vector<double>> si::GetCAPE(shared_ptr<inf
 		
 		// Penv is hPa
 		
-		vector<double> Penv(P.size(), kFloatMissing);
+		auto PenvVec = PenvInfo->Data().Values();
+		multiply_with(PenvVec, 100);
 
-		for (size_t i = 0; i < P.size() && PenvInfo->NextLocation(); i++)
-		{
-			if (PenvInfo->Value() == kFloatMissing) continue;
-			
-			Penv[i] = PenvInfo->Value() * 100;
-		}
-		
-		vector<double> Tw(P.size(), kFloatMissing);
-		
-		metutil::Tw(&thetaE[0], &Penv[0], &Tw[0], thetaE.size());
-		
+		vector<double> TparcelVec(P.size(), kFloatMissing);
+#if USE_TW		
+		metutil::Tw(&thetaE[0], &PenvVec[0], &TparcelVec[0], thetaE.size());
+#else
+		//for (size_t i = 0; i < Piter.size(); i++) if (Piter[i] != kFloatMissing && Piter[i] < PenvVec[i]) std::cout << i << " target is lower than initial value: " << Piter[i] << " vs " << PenvVec[i] << std::endl;
+		//int i = 49287;
+
+		metutil::MoistLift(&Piter[0], &Titer[0], &TparcelVec[0], &PenvVec[0], TparcelVec.size());
+		//if ( i == 49287) std::cout << i << " Piter " << Piter[i] << " Titer " << Titer[i] << " Penv " << PenvVec[i] << " Tparcel " << TparcelVec[i] << std::endl;
+
+	//	DumpVector(Titer, "Titer");
+	//	DumpVector(TparcelVec, "TparcelVec");
+#endif
 		assert(T.size() == P.size());
 		
 		LOCKSTEP(PenvInfo, ZenvInfo, prevZInfo, prevTInfo, prevPInfo, TenvInfo)
 		{
 			size_t i = PenvInfo->LocationIndex();
 
-			if (found[i]) continue;
+			// CAPE is a superset of CAPE1040 and CAPE3km
+			if (found[i] & FCAPE) continue;
 
 			double Tenv = TenvInfo->Value();
-			double _Penv = Penv[i];
+			double Penv = PenvInfo->Value();
 			
 			double Zenv = ZenvInfo->Value();
 			double ZenvPrev = prevZInfo->Value();
-			double _Tw = Tw[i];
+			double Tparcel = TparcelVec[i];
 				
-			if (_Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || ZenvPrev == kFloatMissing || _Tw == kFloatMissing)
+			if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || ZenvPrev == kFloatMissing || Tparcel == kFloatMissing)
 			{
-				found[i] = true;
+				found[i] |= FCAPE;
+
 				continue;
 			}
+			//if ( i == 49287) std::cout << i << " Tenv " << Tenv << " Tparcel " << Tparcel << " Zenv " << Zenv << std::endl;
+			assert(P[i] > 50 && P[i] < 1200);
+			assert(Penv > 50 && Penv < 1200);
 			
-			if (_Penv > P[i]*100) 
+			if (Penv > P[i]) 
 			{
 				// Current grid point is below LFC
 				continue;
 			}
-
-			if (CAPEVariation == kCAPE3km && Zenv > 3000.)
-			{
-				// Interpolate the final piece of CAPE area just below 3000m
-				assert(prevTw.size());
-				_Tw = NFmiInterpolation::Linear(3000., ZenvPrev, Zenv, prevTw[i], _Tw);
-				Tenv = NFmiInterpolation::Linear(3000., ZenvPrev, Zenv, prevTInfo->Value(), Tenv);
-				_Penv = NFmiInterpolation::Linear(3000., ZenvPrev, Zenv, prevPInfo->Value(), _Penv);
-
-				Tenv = metutil::VirtualTemperature_(Tenv, _Penv);
-				_Tw = metutil::VirtualTemperature_(_Tw, _Penv);
-
-				if (CAPE[i] == -1) CAPE[i] = 0;
-
-				CAPE[i] += constants::kG * (3000. - ZenvPrev) * ((_Tw - Tenv) / Tenv);
-				
-				found[i] = true;
-				continue;
-			}
 			
-			if (CAPEVariation == kCAPE1040 && (Tenv < 233.15 || Tenv > 263.15))
+			if (Tenv < 200. && Penv < 600)
 			{
-				continue;
+				// If 
+				found[i] |= FCAPE1040;
 			}
 
-			if (_Tw >= Tenv)
+			if (Tparcel >= Tenv)
 			{
-				Tenv = metutil::VirtualTemperature_(Tenv, _Penv);
-				_Tw = metutil::VirtualTemperature_(_Tw, _Penv);
+				Tenv = metutil::VirtualTemperature_(Tenv, Penv*100);
+				Tparcel = metutil::VirtualTemperature_(Tparcel, Penv*100);
 
 				if (CAPE[i] == -1) CAPE[i] = 0;
 
-				CAPE[i] += constants::kG * (Zenv - ZenvPrev) * ((_Tw - Tenv) / Tenv);
-				assert(CAPE[i] < 8000);
+				double C = constants::kG * (Zenv - ZenvPrev) * ((Tparcel - Tenv) / Tenv);
+
+				CAPE[i] += C;
+				
+				assert(CAPE[i] < 10000);
+				
+				if  ((found[i] & FCAPE1040) == 0 && (Tenv >= 233.15 && Tenv <= 263.15))
+				{
+					if (CAPE1040[i] == -1) CAPE1040[i] = 0;
+					
+					CAPE1040[i] += C;
+					assert(CAPE1040[i] < 10000);		
+				}
+
+				if ((found[i] & FCAPE3km) == 0)
+				{
+					if (CAPE3km[i] == -1) CAPE3km[i] = 0;
+					
+					if (Zenv <= 3000.)
+					{
+						CAPE3km[i] += C;
+					}
+					else if (ZenvPrev <= 3000.)
+					{
+						// Interpolate the final piece of CAPE area just below 3000m
+						assert(prevTparcelVec.size());
+						// Interpolate without virtual temp
+						Tparcel = NFmiInterpolation::Linear(ZenvPrev, 3000., Zenv, prevTparcelVec[i], TparcelVec[i]);
+						Tenv = NFmiInterpolation::Linear(ZenvPrev, 3000., Zenv, prevTInfo->Value(), TenvInfo->Value());
+						Penv = NFmiInterpolation::Linear(ZenvPrev, 3000., Zenv, prevPInfo->Value(), Penv);
+
+						Tenv = metutil::VirtualTemperature_(TenvInfo->Value(), Penv*100);
+						Tparcel = metutil::VirtualTemperature_(TparcelVec[i], Penv*100);
+
+						//assert(ZenvPrev < 3000.);
+
+						CAPE3km[i] += constants::kG * (3000. - ZenvPrev) * ((Tparcel - Tenv) / Tenv);
+
+						found[i] |= FCAPE3km;
+					}
+				}
 			}
 			else 
 			{
-				// Do simple linear interpolation to get EL values
+				if (CAPE[i] != -1) found[i] |= FCAPE;
 
-				double _ELT = (Tenv + prevTInfo->Value()) / 2;
-				double _ELP = (prevPInfo->Value() + _Penv) / 2;
-				
-				if (CAPEVariation == kCAPE)
+#if 0 
+				if (!prevTparcel.empty())
 				{
-					ELP[i] = _ELP;
-					ELT[i] = _ELT;	
+
+					if (CAPE[i] != -1)
+					{
+						// Do simple linear interpolation to get EL values
+
+						double _ELT = (Tenv + prevTInfo->Value()) / 2;
+						double _ELP = (prevPInfo->Value() + _Penv) / 2;
+
+						ELP[i] = _ELP;
+						ELT[i] = _ELT;	
+
+						// Interpolate the final piece of CAPE area just below EL
+						_ELT = metutil::VirtualTemperature_(_ELT, _ELP);
+						_Tw = metutil::VirtualTemperature_((_Tw + prevTparcel[i])/2, _Penv);
+
+						CAPE[i] += constants::kG * 0.5 * (Zenv - ZenvPrev) * ((_Tw - _ELT) / _ELT);
+						assert(CAPE[i] < 8000);
+
+					}					
+					
+					if  (CAPE1040[i] != -1 && (found[i] & FCAPE1040) == 0 && (Tenv >= 233.15 && Tenv <= 263.15))
+					{
+						double _ELT = (Tenv + prevTInfo->Value()) / 2;
+						double _ELP = (prevPInfo->Value() + _Penv) / 2;
+						_ELT = metutil::VirtualTemperature_(_ELT, _ELP);
+						_Tw = metutil::VirtualTemperature_((_Tw + prevTparcel[i])/2, _Penv);
+
+						CAPE1040[i] += constants::kG * 0.5 * (Zenv - ZenvPrev) * ((_Tw - _ELT) / _ELT);
+						assert(CAPE1040[i] < 7000);		
+					}
+
+					if  (CAPE3km[i] != -1 && (found[i] & FCAPE3km) == 0)
+					{
+						double _ELT = (Tenv + prevTInfo->Value()) / 2;
+						double _ELP = (prevPInfo->Value() + _Penv) / 2;
+						_ELT = metutil::VirtualTemperature_(_ELT, _ELP);
+						_Tw = metutil::VirtualTemperature_((_Tw + prevTparcel[i])/2, _Penv);
+
+						CAPE3km[i] += constants::kG * 0.5 * (Zenv - ZenvPrev) * ((_Tw - _ELT) / _ELT);
+						assert(CAPE3km[i] < 7000);		
+					}
+
+					found[i] |= FCAPE;
 				}
-
-				// Interpolate the final piece of CAPE area just below EL
-				assert(prevTw.size());
-
-				_ELT = metutil::VirtualTemperature_(_ELT, _ELP);
-				_Tw = metutil::VirtualTemperature_((_Tw + prevTw[i])/2, _Penv);
-	
-				if (CAPE[i] == -1) CAPE[i] = 0;
-
-				CAPE[i] += constants::kG * 0.5 * (Zenv - ZenvPrev) * ((_Tw - _ELT) / _ELT);
-				assert(CAPE[i] < 8000);
-				
-				found[i] = true;
+#endif
 			}
 		}
 		//DumpVector(CAPE, "CAPE");
+		//DumpVector(CAPE1040, "CAPE1040");
+		//DumpVector(CAPE3km, "CAPE3km");
+
 		curLevel.Value(curLevel.Value() - 1);		
 		
-		foundCount = count(found.begin(), found.end(), true);
-		itsLogger->Debug("CAPE read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
+		foundCount = 0;
+		
+		for (size_t i = 0; i < found.size(); i++)
+		{
+			if ((found[i] & FCAPE)) foundCount++;
+		}
+		//itsLogger->Info("CAPE read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 		prevZInfo = ZenvInfo;
 		prevTInfo = TenvInfo;
 		prevPInfo = PenvInfo;
-		prevTw = Tw;
-	}/*
-	for (size_t i = 0;i< CAPE.size();i++){
-		if(CAPE[i] > 7000){
-			std::cout << "CAPE " << CAPE[i] << "@" << i << std::endl;exit(1);
+		prevTparcelVec = TparcelVec;
+
+		for (size_t i = 0; i < Titer.size(); i++)
+		{
+			// preserve starting position for those grid points that have value
+			if (TparcelVec[i] != kFloatMissing && PenvVec[i] != kFloatMissing)
+			{
+				Titer[i] = TparcelVec[i];
+				Piter[i] = PenvVec[i];
+			}
 		}
-	}*/
+	}
 
-	for (size_t i = 0;i< CAPE.size();i++) if (CAPE[i] == -1) CAPE[i] = kFloatMissing;
+	for (size_t i = 0;i< CAPE.size();i++)
+	{
+		if (CAPE[i] == -1) CAPE[i] = kFloatMissing;
+		if (CAPE3km[i] == -1) CAPE[i] = kFloatMissing;
+		if (CAPE1040[i] == -1) CAPE[i] = kFloatMissing;
+	}
 
-	return make_tuple (ELT, ELP, CAPE);
+	return make_tuple (ELT, ELP, CAPE, CAPE1040, CAPE3km);
 }
 
 pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P)
@@ -719,11 +818,16 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	
 	// Check LCL conditions, if LCL = LFC
 	
+	itsLogger->Info("Searching environment temperature for LCL");
+
 	auto TenvLCL = h->VerticalValue(param("T-K"), P);
 	
+	auto Piter = P, Titer = T;
+	multiply_with(Piter, 100);
+
 	for (size_t i = 0; i < TenvLCL.size(); i++)
 	{
-		if ((T[i] >= TenvLCL[i]) || (TenvLCL[i] - T[i]) < 0.01) // fuzzy factor
+		if (T[i] >= TenvLCL[i])
 		{
 			found[i] = true;
 			LFCT[i] = T[i];
@@ -733,15 +837,14 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 
 	itsLogger->Debug("Found " + boost::lexical_cast<string> (count(found.begin(), found.end(), true)) + " gridpoints that have LCL=LFC");
 
-	auto Pint = P;
-	
+#ifdef USE_TW
 	auto thetaE = P;
 
 	for (size_t i = 0; i < thetaE.size(); i++)
 	{
 		thetaE[i] = metutil::ThetaE_(T[i], 100*P[i]);
 	}
-		
+#endif
 	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::max(P));
 	
 	level curLevel = levels.first;
@@ -752,7 +855,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	auto prevPInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("P-PA"), myTargetInfo->ForecastType(), false);
 	auto prevTInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("T-K"), myTargetInfo->ForecastType(), false);
 		
-	while (curLevel.Value() > 55 && foundCount != found.size())
+	while (curLevel.Value() > 80 && foundCount != found.size())
 	{	
 	
 		// Get environment temperature values
@@ -760,22 +863,25 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 		auto TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 		auto PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
-		// Penv is hPa
+		//auto TenvVec = TenvInfo->Data().Values();
+		auto PenvVec = PenvInfo->Data().Values();
 		
-		vector<double> Penv(PenvInfo->Data().Size(), kFloatMissing);
-
-		PenvInfo->ResetLocation();
-		for (size_t i = 0; PenvInfo->NextLocation(); i++)
-		{
-			double v = PenvInfo->Value();
-			
-			if (v != kFloatMissing) Penv[i] = (v * 100);
-		}
+		// Penv is hPa, convert to Pa
+		multiply_with(PenvVec, 100);
 		
-		vector<double> Tw(P.size(), kFloatMissing);
+		vector<double> TparcelVec(P.size(), kFloatMissing);
 		
+#ifdef USE_TW			
 		metutil::Tw(&thetaE[0], &Penv[0], &Tw[0], thetaE.size());
-	
+#else
+		multiply_with(P, 100);
+//		auto t = std::unique_ptr<himan::timer> (timer_factory::Instance()->GetTimer());
+
+//		t->Start();
+		metutil::MoistLift(&Piter[0], &Titer[0], &TparcelVec[0], &PenvVec[0], TparcelVec.size());
+//		t->Stop();
+//		std::cout << "Lifting took " << t->GetTime() << "ms\n";
+#endif
 		TenvInfo->ResetLocation();
 		PenvInfo->ResetLocation();
 		
@@ -789,22 +895,21 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 
 			double Penv = PenvInfo->Value();
 			double Tenv = TenvInfo->Value();
+			double Tparcel = TparcelVec[i];
 
-//#define SMARTTOOL_COMPATIBILITY
+			if (Tparcel == kFloatMissing)
+			{
+				found[i] = true;
+				continue;
+			}
 
-#ifndef SMARTTOOL_COMPATIBILITY
-			// In smarttool:
-			// " jos löytyi LFC, mutta sen arvo on alempana kuin LCL, laitetaan  LFC:n arvoksi LCL"
-
-			if (Penv > P[i]) 
+			if (Penv*100 > P[i]) 
 			{
 				continue;
 			}
-#endif
 
-			if (Tw[i] > Tenv)
+			if (Tparcel >= Tenv)
 			{
-				
 				found[i] = true;
 				LFCT[i] = (Tenv + prevTInfo->Value()) / 2;
 				
@@ -815,33 +920,36 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 				if (prevP >= P[i]) prevP = P[i];
 				
 				LFCP[i] = (Penv + prevP) / 2;
-
 			}
 		}
 		
-		curLevel.Value(curLevel.Value() - 1);		
-		
+		curLevel.Value(curLevel.Value() - 1);	
+	
 		foundCount = count(found.begin(), found.end(), true);
+		itsLogger->Info("LFC processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
 
 		prevPInfo = PenvInfo;
 		prevTInfo = TenvInfo;
-	}
-	
-#ifdef SMARTTOOL_COMPATIBILITY
-	
-	for (size_t i = 0; i < T.size(); i++)
-	{
-		if (LFCP[i] != kFloatMissing && LFCP[i] > P[i])
+		for (size_t i = 0; i < Titer.size(); i++)
 		{
-			LFCP[i] = P[i];
-			LFCT[i] = T[i];
+			// preserve starting position for those grid points that have value
+			if (TparcelVec[i] != kFloatMissing && PenvVec[i] != kFloatMissing)
+			{
+				Titer[i] = TparcelVec[i];
+				Piter[i] = PenvVec[i];
+			}
+			if (found[i]) Titer[i] = kFloatMissing;
 		}
 	}
+
+#ifndef NDEBUG
+	for (size_t i = 0; i < LFCP.size(); i++) assert(LFCP[i] == kFloatMissing || LFCP[i]<P[i]);
 #endif
+
 	return make_pair(LFCT, LFCP);
 }
 
-#if 0
+#ifdef SMARTTOOL_COMPATIBILITY
 namespace smarttool {
 
 const double gTMR_alfa = 0.0498646455;
@@ -990,16 +1098,17 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 	for (size_t i = 0; i < T.size() && Psurf->NextLocation(); i++)
 	{
+	
+#ifdef SMARTTOOL_COMPATIBILITY		
+		auto lcl = smarttool::CalcLCLPressureFast(Tsurf[i], TDsurf[i], _Psurf);
+		P[i] = (lcl.P > _Psurf) ? 0.01 * _Psurf : 0.01 * lcl.P; // hPa
+		T[i] = himan::metutil::DryLift_(_Psurf, Tsurf[i], lcl.P);
+#else
 		double _Psurf = Psurf->Value();
 		auto lcl = metutil::LCLA_(_Psurf, Tsurf[i], TDsurf[i]);
 		T[i] = lcl.T;
 		P[i] = (lcl.P > _Psurf) ? 0.01 * _Psurf : 0.01 * lcl.P; // hPa
-
-/*		
-		auto lcl = smarttool::CalcLCLPressureFast(Tsurf[i], TDsurf[i], _Psurf);
-		P[i] = (lcl.P > _Psurf) ? 0.01 * _Psurf : 0.01 * lcl.P; // hPa
-		T[i] = himan::metutil::DryLift_(_Psurf, Tsurf[i], lcl.P);
-*/		
+#endif
 	}
 
 	return make_pair(T,P);
@@ -1042,7 +1151,68 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 {
 	
 	modifier_mean tp, mr;
-			
+	level curLevel(kHybrid, 137);
+
+#if 0
+	itsLogger->Info("Calculating T&Td in smarttool compatibility mode");
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+	h->HeightUnit(kHPa);
+
+	tp.HeightInMeters(false);
+	mr.HeightInMeters(false);
+	
+	auto PInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto P = PInfo->Data().Values();	
+
+	tp.LowerHeight(P);
+	mr.LowerHeight(P);
+
+	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
+
+	tp.UpperHeight(P500m);
+	mr.UpperHeight(P500m);
+	
+	vector<bool> found(myTargetInfo->Data().Size(), false);
+
+	while (true)
+	{
+		auto T = h->VerticalValue(param("T-K"), P);
+		
+		vector<double> Tpot(T.size(), kFloatMissing);
+		vector<double> MR(T.size(), kFloatMissing);
+
+		for (size_t i = 0; i < T.size(); i++)
+		{
+			if (found[i]) continue;
+
+			Tpot[i] = metutil::Theta_(T[i], 100*P[i]);
+			MR[i] = metutil::MixingRatio_(T[i], 100*P[i]);
+		}
+		DumpVector(MR, "mr");
+
+		tp.Process(Tpot, P);
+		mr.Process(MR, P);
+
+		auto Z = h->VerticalValue(param("HL-M"), P);
+		
+		for (size_t i = 0; i < Z.size(); i++)
+		{
+			if (found[i]) continue;
+			if (Z[i] > 500.) found[i] = true;
+		}
+		
+		auto foundCount = static_cast<size_t> (count(found.begin(), found.end(), true));
+		itsLogger->Debug("Data read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
+
+		if (foundCount == found.size()) break;
+
+		transform(P.begin(), P.end(), P.begin(), bind2nd(minus<double>(), 1.0));
+	}
+		
+#else
+	itsLogger->Info("Calculating T&Td himan style");
 	vector<double> zero(myTargetInfo->Data().Size(), 0);
 	vector<double> m500(zero.size(), 500.);
 
@@ -1051,8 +1221,6 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 
 	tp.UpperHeight(m500);
 	mr.UpperHeight(m500);
-
-	level curLevel(kHybrid, 137);
 
 	while (!tp.CalculationFinished() && !mr.CalculationFinished())
 	{
@@ -1079,7 +1247,8 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 
 		curLevel.Value(curLevel.Value()-1);
 	}
-
+#endif
+	
 	auto Tpot = tp.Result();
 	auto MR = mr.Result();
 
@@ -1108,7 +1277,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 		double E = metutil::E_(MR[i], P[i]);
 
 		double RH = E/Es * 100;
-
+		//std::cout << "RH " << RH <<"\n";
 		TD[i] = metutil::DewPointFromRH_(T[i], RH);
 	}
 
