@@ -28,19 +28,27 @@ void metutil::MixingRatio(cdarr_t T, cdarr_t P, darr_t result, size_t N)
 	}
 }
 
-void metutil::DryLift(cdarr_t P, cdarr_t T, darr_t result, double targetP, size_t N)
+void metutil::DryLift(cdarr_t P, cdarr_t T, cdarr_t targetP, darr_t result, size_t N)
 {
 	for (size_t i = 0; i < N; i++)
 	{
-		result[i] = DryLift_(P[i], T[i], targetP);
+		result[i] = DryLift_(P[i], T[i], targetP[i]);
 	}
 }
 
-void metutil::MoistLift(cdarr_t P, cdarr_t T, cdarr_t TD, darr_t result, double targetP, size_t N)
+void metutil::MoistLift(cdarr_t P, cdarr_t T, darr_t result, cdarr_t targetP, size_t N)
 {
 	for (size_t i = 0; i < N; i++)
 	{
-		result[i] = MoistLift_(P[i], T[i], TD[i], targetP);
+		result[i] = MoistLift_(P[i], T[i], targetP[i]);
+	}
+}
+
+void metutil::Lift(cdarr_t P, cdarr_t T, cdarr_t TD, darr_t result, cdarr_t targetP, size_t N)
+{
+	for (size_t i = 0; i < N; i++)
+	{
+		result[i] = Lift_(P[i], T[i], TD[i], targetP[i]);
 	}
 }
 

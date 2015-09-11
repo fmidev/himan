@@ -25,6 +25,8 @@
 #define CUDA_KERNEL
 #endif
 
+#include <NFmiInterpolation.h>
+
 // struct to store LCL level parameters
 struct lcl_t
 {
@@ -166,8 +168,13 @@ double Gammas_(double P, double T);
  * 
  * Also known as saturated adiabatic lapse rate (SALR)
  * 
- * http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate
+ * Formula used is (3.16) from 
+ * 
+ * Rogers&Yun: A short course in cloud physics 3rd edition
  *
+ * combined with gamma (g/Cp) and transformed from m to Pa
+ * with inverse of hydropstatic equation.
+ * 
  * @param P Pressure in Pa
  * @param T Temperature in K
  * @return Lapse rate in K/Pa
@@ -248,10 +255,9 @@ CUDA_DEVICE
 double MixingRatio_(double T, double P);
 
 /**
- * @brief Lift a parcel of air moist-adiabatically to wanted pressure
+ * @brief Lift a parcel of air to wanted pressure
  *
- * Function will calculate LCL from given arguments and starts
- * lifting from that pressure and temperature.
+ * Overcoat for DryLift/MoistLift
  *
  * @param P Initial pressure in Pascals
  * @param T Initial temperature in Kelvins
@@ -261,10 +267,28 @@ double MixingRatio_(double T, double P);
  */
 
 CUDA_KERNEL
-void MoistLift(cdarr_t P, cdarr_t T, cdarr_t TD, darr_t result, double targetP, size_t N);
+void Lift(cdarr_t P, cdarr_t T, cdarr_t TD, darr_t result, cdarr_t targetP, size_t N);
 
 CUDA_DEVICE
-double MoistLift_(double P, double T, double TD, double targetP);
+double Lift_(double P, double T, double TD, double targetP);
+
+/**
+ * @brief Lift a parcel of air moist-adiabatically to wanted pressure
+ *
+ * Function will calculate LCL from given arguments and starts
+ * lifting from that pressure and temperature.
+ *
+ * @param P Pressure of LCL in Pascals
+ * @param T Temperature of LCL in K
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+CUDA_KERNEL
+void MoistLift(cdarr_t P, cdarr_t T, darr_t result, cdarr_t targetP, size_t N);
+
+CUDA_DEVICE
+double MoistLift_(double P, double T, double targetP);
 
 /**
  * @brief Lift a parcel of air dry adiabatically to wanted pressure
@@ -278,7 +302,7 @@ double MoistLift_(double P, double T, double TD, double targetP);
  */
 
 CUDA_KERNEL
-void DryLift(cdarr_t P, cdarr_t T, darr_t result, double targetP, size_t N);
+void DryLift(cdarr_t P, cdarr_t T, cdarr_t targetP, darr_t result, size_t N);
 
 CUDA_DEVICE
 double DryLift_(double P, double T, double targetP);
@@ -537,23 +561,23 @@ double VirtualTemperature_(double T, double P);
 // We have to declare cuda functions in the header or be ready to face the
 // eternal horror of 'separate compilation.'
 
-__global__ void DryLift(cdarr_t d_p, cdarr_t d_t, darr_t d_result, double targetP, size_t N)
+__global__ void DryLift(cdarr_t d_p, cdarr_t d_t, cdarr_t d_targetP, darr_t d_result, size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		d_result[idx] = DryLift_(d_p[idx], d_t[idx], targetP);
+		d_result[idx] = DryLift_(d_p[idx], d_t[idx], d_targetP[idx]);
 	}
 }
 
-__global__ void MoistLift(cdarr_t d_p, cdarr_t d_t, cdarr_t d_td, darr_t d_result, double targetP, size_t N)
+__global__ void Lift(cdarr_t d_p, cdarr_t d_t, cdarr_t d_td, darr_t d_result, double targetP, size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		d_result[idx] = MoistLift_(d_p[idx], d_t[idx], d_td[idx], targetP);
+		d_result[idx] = Lift_(d_p[idx], d_t[idx], d_td[idx], targetP);
 	}
 }
 
@@ -598,7 +622,7 @@ inline double himan::metutil::DewPointFromRH_(double T, double RH)
 {
 	if (RH == 0.) RH = 0.01; // formula does not work if RH = 0; actually all small values give extreme Td values
 	assert(RH > 0.);
-	assert(RH < 101.);
+	//assert(RH < 101.);
 	assert(T > 0. && T < 500.);
 
 	return (T / (1 - (T * log(RH * 0.01) * constants::kRw_div_L)));
@@ -640,7 +664,7 @@ inline double himan::metutil::DryLift_(double P, double T, double targetP)
 }
 
 CUDA_DEVICE
-inline double himan::metutil::MoistLift_(double P, double T, double TD, double targetP)
+inline double himan::metutil::Lift_(double P, double T, double TD, double targetP)
 {
 	// Sanity checks
 	assert(P > 10000);
@@ -649,45 +673,66 @@ inline double himan::metutil::MoistLift_(double P, double T, double TD, double t
 	assert(targetP > 10000);
 
 	// Search LCL level
-	lcl_t LCL = metutil::LCL_(P, T, TD);
+	lcl_t LCL = metutil::LCLA_(P, T, TD);
 
-	double Pint = LCL.P; // Pa
-	double Tint = LCL.T; // K
+	if (LCL.P < targetP)
+	{
+		// LCL level is higher than requested pressure, only dry lift is needed
+		return DryLift_(P, T, targetP);
+	}
+	
+	return MoistLift_(P, T, targetP);
+}
 
-	// Start moist lifting from LCL height
+CUDA_DEVICE
+inline double himan::metutil::MoistLift_(double P, double T, double targetP)
+{
 
-	double value = kFloatMissing;
-
-	if (Tint == kFloatMissing || Pint == kFloatMissing)
+	if (T == kFloatMissing || P == kFloatMissing || targetP >= P)
 	{
 		return kFloatMissing;
 	}
-	else
+	// Sanity checks
+
+	assert(P > 1000);
+	assert(T > 0 && T < 500);
+	assert(targetP > 1000);
+	
+	double Pint = P; // Pa
+	double Tint = T; // K
+
+	/*
+	 * Units: Temperature in Kelvins, Pressure in Pascals
+	 */
+
+	double T0 = Tint;
+
+	int i = 0;
+	const double Pstep = 200; // Pa
+	const int maxIter = static_cast<int> (100000/Pstep+10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
+
+	double value = kFloatMissing;
+	
+	while (++i < maxIter)
 	{
-		/*
-		 * Units: Temperature in Kelvins, Pressure in Pascals
-		 */
+		Tint = T0 - metutil::Gammaw_(Pint, Tint) * Pstep;
+		
+		Pint -= Pstep;
 
-		double T0 = Tint;
-
-		int i = 0;
-		const double Pstep = 100; // Pa
-
-		while (++i < 500) // usually we don't reach this value
+		if (Pint <= targetP)
 		{
-			// Gammaw() takes Pa
-			Tint = T0 - metutil::Gammaw_(Pint, Tint) * Pstep;
-
-			T0=Tint;
-
-			Pint -= Pstep;
-
-			if (Pint <= targetP)
-			{
-				value = Tint;
-				break;
-			}
+#ifdef __CUDACC__
+			double dx = (targetP-Pint)/(Pint+Pstep-Pint);
+			value = fma(dx, Tint, fma(-dx, T0, T0));
+#else
+			value = NFmiInterpolation::Linear(targetP, Pint, Pint+Pstep, T0, Tint);
+#endif
+		//	value = Tint;
+			break;
 		}
+	
+		T0=Tint;
+
 	}
 
 	return value;
@@ -901,13 +946,24 @@ double himan::metutil::Gammaw_(double P, double T)
 	assert(T > 0 && T < 500);
 
 	namespace hc = himan::constants;
+	
+	double esat = Es_(T);
+	double wsat = hc::kEp * esat / (P - esat); // Rogers&Yun 2.18
+	double numerator = (2./7.) * T + (2./7. * hc::kL / hc::kRd) * wsat;
+	double denominator = P * (1 + (hc::kEp * hc::kL * hc::kL / (hc::kRd * hc::kCp)) * wsat / (T*T));
 
-	double r = himan::metutil::MixingRatio_(T, P);
+	assert(numerator != 0);
+	assert(denominator != 0);
+
+	return numerator / denominator; // Rogers&Yun 3.16
+	
+/*	double r = himan::metutil::MixingRatio_(T, P);
 
 	double numerator = hc::kG * (1 + (hc::kL * r) / (hc::kRd * T));
 	double denominator = hc::kCp + ((hc::kL*hc::kL * r * hc::kEp) / (hc::kRd * T * T));
 
 	return numerator / denominator;
+ * */
 }
 
 CUDA_DEVICE
@@ -969,7 +1025,7 @@ double himan::metutil::LI_(double T500, double T500m, double TD500m, double P500
 	{
 		// Grid point is inside or above cloud
 
-		double wetT = MoistLift_(P500m, T500m, TD500m, TARGET_PRESSURE);
+		double wetT = Lift_(P500m, T500m, TD500m, TARGET_PRESSURE);
 
 		if (wetT != kFloatMissing)
 		{
@@ -1011,7 +1067,7 @@ double himan::metutil::SI_(double T850, double T500, double TD850)
 	{
 		// Grid point is inside or above cloud
 		
-		double wetT = MoistLift_(85000, T850, TD850, TARGET_PRESSURE);
+		double wetT = Lift_(85000, T850, TD850, TARGET_PRESSURE);
 
 		if (wetT != kFloatMissing)
 		{
