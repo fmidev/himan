@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.9.9
+Version: 15.9.28
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -16,18 +16,18 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 15.8.10
+Requires: himan-lib >= 15.9.9
 Requires: himan-bin >= 15.5.27
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 15.8.21
+Requires: libfmigrib >= 15.9.14
 Requires: libsmartmet-newbase >= 15.4.29
 
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-0
 BuildRequires: libfmidb >= 15.9.1
-BuildRequires: libfmigrib-devel >= 15.8.21
+BuildRequires: libfmigrib-devel >= 15.9.14
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
@@ -88,6 +88,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libsi.so
 %{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libstability.so
+%{_libdir}/himan-plugins/libtke.so
 %{_libdir}/himan-plugins/libtpot.so
 %{_libdir}/himan-plugins/libtransformer.so
 %{_libdir}/himan-plugins/libturbulence.so
@@ -100,6 +101,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Sep 28 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.28-1.fmi
+- Initial version of tke plugin
 * Wed Sep  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.9-1.fmi
 - neons and radon to luatool
 * Tue Sep  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.8-1.fmi
