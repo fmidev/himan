@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.9.28
+Version: 15.9.30
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,15 +13,15 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 15.9.1
+Requires: libfmidb >= 15.9.29
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 BuildRequires: boost-devel >= 1.55
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
-BuildRequires: libfmidb-devel >= 15.9.1
+BuildRequires: libfmidb-devel >= 15.9.29
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-7-0
+BuildRequires: cuda-7-5
 BuildRequires: libsmartmet-newbase-devel >= 15.4.29
 BuildRequires: scons
 Provides: libhiman.so
