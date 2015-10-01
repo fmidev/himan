@@ -89,39 +89,27 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     level forecastLevel = myTargetInfo->Level();
     forecast_type forecastType = myTargetInfo->ForecastType();
 
-    level groundLevel;
-
-    // this will come back to us
-    if ( itsConfiguration->SourceProducer().Id() == 131)
-    {
-            groundLevel = level(himan::kGndLayer, 0, "GNDLAYER");
-    }
-    else
-    {
-            groundLevel = level(himan::kHeight, 0, "HEIGHT");
-    }
+    level groundLevel = level(himan::kHeight, 0, "HEIGHT");
 
     auto myThreadedLogger = logger_factory::Instance()->GetLog("tke_pluginThread #" + boost::lexical_cast<string> (threadIndex));
 
     myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-    info_t FrvelInfo, MoninObukhovInfo, MixHgtInfo, TGInfo, QInfo, QPrevInfo, ZInfo, PGInfo;
+    info_t FrvelInfo = Fetch(forecastTime, groundLevel, FrvelParam, forecastType, false);
+    info_t MoninObukhovInfo = Fetch(forecastTime, groundLevel, MoninObukhovParam, forecastType, false);
+    info_t MixHgtInfo = Fetch(forecastTime, groundLevel, MixHgtParam, forecastType, false);
+    info_t TGInfo = Fetch(forecastTime, level(himan::kGndLayer, 0), TGParam, forecastType, false);
+    info_t PGInfo = Fetch(forecastTime, groundLevel, PGParam, forecastType, false);
+    info_t QInfo = Fetch(forecastTime, groundLevel, QParam, forecastType, false);
+    info_t QPrevInfo  = Fetch(forecastTimePrev, groundLevel, QParam, forecastType, false);
+    info_t ZInfo = Fetch(forecastTime, forecastLevel, ZParam, forecastType, false);
 
-    FrvelInfo = Fetch(forecastTime, groundLevel, FrvelParam, forecastType, false);
-    MoninObukhovInfo = Fetch(forecastTime, groundLevel, MoninObukhovParam, forecastType, false);
-    MixHgtInfo = Fetch(forecastTime, groundLevel, MixHgtParam, forecastType, false);
-    TGInfo = Fetch(forecastTime, groundLevel, TGParam, forecastType, false);
-    PGInfo = Fetch(forecastTime, groundLevel, PGParam, forecastType, false);
-    QInfo = Fetch(forecastTime, groundLevel, QParam, forecastType, false);
-    QPrevInfo  = Fetch(forecastTimePrev, groundLevel, QParam, forecastType, false);
-    ZInfo = Fetch(forecastTime, forecastLevel, TGParam, forecastType, false);
-
-    /*if (!())
+    if (!(FrvelInfo && MoninObukhovInfo && MixHgtInfo && TGInfo && PGInfo && QInfo && QPrevInfo && ZInfo))
     {
         myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
         return;
     }
-    */
+ 
 
     // determine length of forecast step to calculate surface heat flux in W/m2
     double forecastStepSize;
@@ -135,12 +123,13 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
             forecastStepSize = itsConfiguration->ForecastStep()*60; //step size in seconds
     }
 
+    SetAB(myTargetInfo, ZInfo);
 
     string deviceType = "CPU";
 
-    LOCKSTEP(myTargetInfo)
+    LOCKSTEP(myTargetInfo, MoninObukhovInfo, MixHgtInfo, TGInfo, PGInfo, QInfo, QPrevInfo, ZInfo, FrvelInfo)
     {
-        double TKE;
+        double TKE = 0;
         double Frvel = FrvelInfo->Value();
         double MoninObukhov = MoninObukhovInfo->Value();
         double MixHgt = MixHgtInfo->Value();
@@ -154,7 +143,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         double cp = 1.0056e3 + 0.017766 * T_C; // Calculate specific heat capacity, linear approximation
         double rho =  PG / (constants::kRd * TG); // Calculate density
 
-        if (Z > MixHgt)
+        if (Z > MixHgt || Frvel == kFloatMissing || MoninObukhov == kFloatMissing || MixHgt == kFloatMissing || Q == kFloatMissing || Z == kFloatMissing || TG == kFloatMissing || PG == kFloatMissing)
         {
             TKE = kFloatMissing;
         }
@@ -169,7 +158,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
                 TKE = 6*Frvel*Frvel*pow(1-Z/MixHgt,1.75);
             }
         }
-        else
+        else   
         {
             if (abs(Z*MoninObukhov) > 0.5)
             {
