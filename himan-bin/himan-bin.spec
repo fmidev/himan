@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.9.8
+Version: 15.9.30
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 15.9.2
+Requires: himan-lib >= 15.9.30
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
@@ -30,7 +30,7 @@ Requires: zlib
 BuildRequires: redhat-rpm-config
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-7-0
+BuildRequires: cuda-7-5
 BuildRequires: scons
 Provides: himan
 
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Wed Sep 30 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.30-1.fmi
+- Cuda 7.5
 * Tue Sep  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.8-1.fmi
 - plugin inheritance hierarchy modifications
 * Wed Sep  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.2-1.fmi
