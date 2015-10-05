@@ -3,12 +3,12 @@
 	"target_geom_name" : "RCR068",
 	"source_producer" : "1,230",
 	"target_producer" : "230",
-	"start_hour" : "15",
-	"stop_hour" : "15",
+	"start_hour" : "12",
+	"stop_hour" : "12",
 	"step" : "1",
 	"step_unit" : "hour",
-	"file_write" : "multiple",
-	"origintime" : "2015-02-13 00:00:00",
+	"file_write" : "single",
+	"origintime" : "2015-10-05 00:00:00",
 	"read_data_from_database" : "false",
 	"processqueue" : [
 	{

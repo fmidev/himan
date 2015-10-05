@@ -6,11 +6,11 @@ if [ -z "$HIMAN" ]; then
 	export HIMAN="../../himan"
 fi
 
-rm -f MOL-M*.grib
+rm -f monin_obukhov_hirlam.json.grib
 
-$HIMAN -d 5 -j 1 -f monin_obukhov_hirlam.json -t grib --no-cuda FLSEN-JM2_source_1.grib FLSEN-JM2_source_2.grib FRVEL-MS_source.grib P-PA_source.grib T-K_source.grib
+$HIMAN -d 5 -j 1 -f monin_obukhov_hirlam.json --no-cuda 1_105_0_0_rll_1030_816_0_0_012.grib 121_105_0_0_rll_1030_816_4_0_011.grib 122_105_0_0_rll_1030_816_4_0_011.grib 227_105_0_0_rll_1030_816_0_0_012.grib 11_105_0_0_rll_1030_816_0_0_012.grib 121_105_0_0_rll_1030_816_4_0_012.grib 122_105_0_0_rll_1030_816_4_0_012.grib
 
-grib_compare MOL-M_height_0_rll_1030_816_0_015.grib result.grib 
+grib_compare monin_obukhov_hirlam.json.grib result.grib 
 
 if [ $? -eq 0 ];then
   echo monin-obukhov/hirlam success on CPU!
@@ -19,4 +19,4 @@ else
   exit 1
 fi
 
-rm -f MOL-M*.grib
+rm -f monin_obukhov_hirlam.json.grib
