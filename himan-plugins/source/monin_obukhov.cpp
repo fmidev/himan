@@ -64,10 +64,10 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	 */
 
 	const param TParam("T-K"); // ground Temperature
-	const param QParam("FLSEN-JM2"); // accumulated surface heat flux
-	const param PrevQParam("FLSEN-JM2"); // accumulated surface heat flux of previous step
+	const param SHFParam("FLSEN-JM2"); // accumulated surface sensible heat flux
+        const param LHFParam("FLLAT-JM2"); // accumulated surface latent heat flux
 	const param U_SParam("FRVEL-MS"); // friction velocity
-	const param PParam("P-PA");	
+	const param PParam("PGR-PA");	
 	// ----	
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("monin_obukhov Thread #" + boost::lexical_cast<string> (threadIndex));
@@ -86,8 +86,10 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
-	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, forecastType, false);
-	info_t PrevQInfo = Fetch(forecastTimePrev, forecastLevel, PrevQParam, forecastType, false);
+	info_t SHFInfo = Fetch(forecastTime, forecastLevel, SHFParam, forecastType, false);
+	info_t PrevSHFInfo = Fetch(forecastTimePrev, forecastLevel, SHFParam, forecastType, false);
+        info_t LHFInfo = Fetch(forecastTime, forecastLevel, LHFParam, forecastType, false);
+        info_t PrevLHFInfo = Fetch(forecastTimePrev, forecastLevel, LHFParam, forecastType, false);
 	info_t U_SInfo = Fetch(forecastTime, forecastLevel, U_SParam, forecastType, false);
 	info_t PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
 
@@ -103,8 +105,9 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		forecastStepSize = itsConfiguration->ForecastStep()*60; //step size in seconds
 	}
 
-	if (!TInfo || !QInfo || !U_SInfo || !PInfo || !PrevQInfo)
+	if (!TInfo || !SHFInfo || !U_SInfo || !PInfo || !PrevSHFInfo || !LHFInfo || !PrevLHFInfo)
 	{
+
 		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
 
@@ -112,23 +115,25 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	string deviceType = "CPU";
 	
-	LOCKSTEP(myTargetInfo, TInfo, QInfo, PrevQInfo, U_SInfo, PInfo)
+	LOCKSTEP(myTargetInfo, TInfo, SHFInfo, PrevSHFInfo, LHFInfo, PrevLHFInfo, U_SInfo, PInfo)
 	{
 
 		double T = TInfo->Value();
-		double Q = QInfo->Value() - PrevQInfo->Value();
+		double SHF = SHFInfo->Value() - PrevSHFInfo->Value();
+                double LHF = LHFInfo->Value() - PrevLHFInfo->Value();
 		double U_S = U_SInfo->Value();
 		double P = PInfo->Value();
 
 		double T_C = T - constants::kKelvin; // Convert Temperature to Celvins
 		double mol(kFloatMissing);
 
-		if (T == kFloatMissing || Q == kFloatMissing || U_S == kFloatMissing || P == kFloatMissing)
+		if (T == kFloatMissing || SHF == kFloatMissing || LHF == kFloatMissing || U_S == kFloatMissing || P == kFloatMissing)
 		{
 			continue;
 		}
 		
-		Q /= forecastStepSize; // divide by time step to obtain Watts/m2
+		SHF /= forecastStepSize; // divide by time step to obtain Watts/m2
+                LHF /= forecastStepSize; // divide by time step to obtain Watts/m2
 
 		/* Calculation of the inverse of Monin-Obukhov length to avoid division by 0 */
 
@@ -137,7 +142,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			double rho = P / (constants::kRd * T); // Calculate density
 
 			double cp = 1.0056e3 + 0.017766 * T_C + 4.0501e-4 * pow(T_C,2) - 1.017e-6 * pow(T_C,3) + 1.4715e-8 * pow(T_C,4) -7.4022e-11 * pow(T_C,5) + 1.2521e-13 * pow(T_C,6); // Calculate specific heat capacity
-			mol = -constants::kG * constants::kK * Q / (rho * cp * U_S * U_S * U_S * T);
+			mol = -constants::kG * constants::kK * (SHF + 0.07*LHF) / (rho * cp * U_S * U_S * U_S * T);
 		}
 		myTargetInfo->Value(mol);
 
