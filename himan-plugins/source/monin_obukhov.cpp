@@ -67,7 +67,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	const param SHFParam("FLSEN-JM2"); // accumulated surface sensible heat flux
         const param LHFParam("FLLAT-JM2"); // accumulated surface latent heat flux
 	const param U_SParam("FRVEL-MS"); // friction velocity
-	const param PParam("PGR-PA");	
+	const param PParam("P-PA");	
 	// ----	
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("monin_obukhov Thread #" + boost::lexical_cast<string> (threadIndex));
