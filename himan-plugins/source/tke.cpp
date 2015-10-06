@@ -71,9 +71,9 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     const param MoninObukhovParam("MOL-M");
     const param MixHgtParam("MIXHGT-M");
     const param TGParam("TG-K");
-    const param PGParam("PGR-PA");
-    const param QParam("FLSEN-JM2"); // accumulated surface heat flux
-    const param QPrevParam("FLSEN-JM2"); // accumulated surface heat flux
+    const param PGParam("P-PA");
+    const param SHFParam("FLSEN-JM2"); // accumulated surface sensible heat flux
+    const param LHFParam("FLLAT-JM2"); // accumulated surface latent heat flux
     const param ZParam("HL-M"); // model level height 
     // ----
 
@@ -100,11 +100,13 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     info_t MixHgtInfo = Fetch(forecastTime, groundLevel, MixHgtParam, forecastType, false);
     info_t TGInfo = Fetch(forecastTime, level(himan::kGndLayer, 0), TGParam, forecastType, false);
     info_t PGInfo = Fetch(forecastTime, groundLevel, PGParam, forecastType, false);
-    info_t QInfo = Fetch(forecastTime, groundLevel, QParam, forecastType, false);
-    info_t QPrevInfo  = Fetch(forecastTimePrev, groundLevel, QParam, forecastType, false);
+    info_t SHFInfo = Fetch(forecastTime, groundLevel, SHFParam, forecastType, false);
+    info_t SHFPrevInfo  = Fetch(forecastTimePrev, groundLevel, SHFParam, forecastType, false);
+    info_t LHFInfo = Fetch(forecastTime, groundLevel, LHFParam, forecastType, false);
+    info_t LHFPrevInfo  = Fetch(forecastTimePrev, groundLevel, LHFParam, forecastType, false);
     info_t ZInfo = Fetch(forecastTime, forecastLevel, ZParam, forecastType, false);
 
-    if (!(FrvelInfo && MoninObukhovInfo && MixHgtInfo && TGInfo && PGInfo && QInfo && QPrevInfo && ZInfo))
+    if (!(FrvelInfo && MoninObukhovInfo && MixHgtInfo && TGInfo && PGInfo && SHFInfo && SHFPrevInfo && LHFInfo && LHFPrevInfo && ZInfo))
     {
         myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
         return;
@@ -127,7 +129,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
     string deviceType = "CPU";
 
-    LOCKSTEP(myTargetInfo, MoninObukhovInfo, MixHgtInfo, TGInfo, PGInfo, QInfo, QPrevInfo, ZInfo, FrvelInfo)
+    LOCKSTEP(myTargetInfo, MoninObukhovInfo, MixHgtInfo, TGInfo, PGInfo, SHFInfo, SHFPrevInfo, LHFInfo, LHFPrevInfo, ZInfo, FrvelInfo)
     {
         double TKE = 0;
         double Frvel = FrvelInfo->Value();
@@ -135,15 +137,18 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         double MixHgt = MixHgtInfo->Value();
         double TG = TGInfo->Value();
         double PG = PGInfo->Value();
-        double Q = QPrevInfo->Value()-QInfo->Value();
+        double SHF = SHFInfo->Value()-SHFPrevInfo->Value();
+        double LHF = LHFInfo->Value()-LHFPrevInfo->Value();
         double Z = ZInfo->Value();
 
-        Q /= forecastStepSize; // divide by time step to obtain Watts/m2
+        SHF /= forecastStepSize; // divide by time step to obtain Watts/m2
+        LHF /= forecastStepSize; // divide by time step to obtain Watts/m2
+
         double T_C = TG - constants::kKelvin; // Convert Temperature to Celvins
         double cp = 1.0056e3 + 0.017766 * T_C; // Calculate specific heat capacity, linear approximation
         double rho =  PG / (constants::kRd * TG); // Calculate density
 
-        if (Z > MixHgt || Frvel == kFloatMissing || MoninObukhov == kFloatMissing || MixHgt == kFloatMissing || Q == kFloatMissing || Z == kFloatMissing || TG == kFloatMissing || PG == kFloatMissing)
+        if (Z > MixHgt || Frvel == kFloatMissing || MoninObukhov == kFloatMissing || MixHgt == kFloatMissing || SHF == kFloatMissing || LHF == kFloatMissing || Z == kFloatMissing || TG == kFloatMissing || PG == kFloatMissing)
         {
             TKE = kFloatMissing;
         }
@@ -164,16 +169,16 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
             {
                 if (Z <= 0.1*MixHgt)
                 {
-                    TKE = 0.36*pow(constants::kG/TG*Q/(rho*cp)*MixHgt,2/3)+0.85*Frvel*Frvel*pow(1-3*Z*MoninObukhov,2/3);
+                    TKE = 0.36*pow(constants::kG/TG*(SHF/(rho*cp) + 0.61*TG*LHF*MoninObukhov/cp)*MixHgt,2/3) + 0.85*Frvel*Frvel*pow(1-3*Z*MoninObukhov,2/3);
                 }
                 else
                 {
-                    TKE = 0.54*pow(constants::kG/TG*Q/(rho*cp)*MixHgt,2/3);
+                    TKE = 0.54*pow(constants::kG/TG*(SHF/(rho*cp) + 0.61*TG*LHF*MoninObukhov/cp)*MixHgt,2/3);
                 }
             }
             else if (0.02 < abs(Z*MoninObukhov) && abs(Z*MoninObukhov) <= 0.5)
             {
-                TKE = 0.54*pow(constants::kG/TG*Q/(rho*cp)*MixHgt,2/3);
+                TKE = 0.54*pow(constants::kG/TG*(SHF/(rho*cp) + 0.61*TG*LHF*MoninObukhov/cp)*MixHgt,2/3);
             }
             else
             {
