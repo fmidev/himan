@@ -16,6 +16,8 @@
 #include "forecast_time.h"
 #include "regular_grid.h"
 #include "util.h"
+#include "matrix.h"
+
 
 using namespace std;
 using namespace himan::plugin;
@@ -91,65 +93,68 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         return;
     }
 
+    // käytetään sadeparametrina mallin sateen alueellista keskiarvoa, jotta diskreettejä sadeolioita saadaan vähän levitettyä ympäristöön, tässä toimisi paremmin esim. 30 km säde.
+    // Filter RR
+    himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
+    filter_kernel_U.Fill(1/9);
+    himan::matrix<double> filtered_RR = util::Filter2D(RRInfo->Data(), filter_kernel_U);
+    RRInfo->Grid()->Data(filtered_RR);
+
     string deviceType = "CPU";
 
     LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo)
     {
 	double POT;
-        double CAPE = CAPEInfo->Value();
+        double CAPE_ec = CAPEInfo->Value();
         double RR = RRInfo->Value();
         double LAT = myTargetInfo->LatLon().Y();
 
-	double PoLift = 0;
-	double PoThermoDyn = 0;
+	double PoLift_ec = 0;
+	double PoThermoDyn_ec = 0;
 
+	// Määritetään salamointi vs. CAPE riippuvuutta varten tarvitaan CAPEn ala- ja ylärajoille yhtälöt. Ala- ja ylärajat muuttuvat leveyspiirin funktiona.
+	double lat_abs = abs(LAT);
+	double cape_low = -25*lat_abs + 1225;
+	double cape_high = -40*lat_abs + 2600;
 
-        if (CAPE == kFloatMissing || RR == kFloatMissing)
-        {
-            continue;
-        }
-
-	if (CAPE >= 100 && CAPE <= 1000)           
+	// Kiinnitetään cape_low ja high levespiirien 25...45  ulkopuolella vakioarvoihin.
+	if (lat_abs <25)
 	{
-		PoThermoDyn = 0.434294482 * log(CAPE) - 2;    //salamoinnin todennäköisyyden on oikeastikin havaittu kasvavan logaritmisesti CAPE-arvojen kasvaessa.
+		cape_low = 600;
+		cape_high = 1600;
 	}
 
-	if (CAPE > 1000)
+	if (lat_abs > 45)
 	{
-		PoThermoDyn = 1;
+		cape_low = 100;
+		cape_high = 800;
 	}
 
-	// Tropiikki käsitellään vähän eri tavalla, koska siellä CAPE <---> salamointi -relaatio on erilainen
+	// CAPE-arvot skaalataan arvoihin 1....10. Ala- ja ylärajat muuttuvat leveyspiirin funktiona.
+	double k =  9/(cape_high - cape_low);
+	double scaled_cape = k*CAPE_ec + (1- k*cape_low);
 
-	if (LAT <20 && LAT > -20)
-	{
- 
-		if (CAPE >= 500 && CAPE <= 2000)           
-		{
-			PoThermoDyn = 0.72134752 * log(CAPE) - 4.482892142;
-		}
+	// Leikataan skaalatun CAPEN arvot, jotka menevät yli 10
+	if (scaled_cape >10) scaled_cape = 10;
 
-		if (CAPE > 2000)
-		{
-			PoThermoDyn = 1;
-		}
-	}
+	//Ukkosta suosivan termodynamiikan todennäköisyys
+	PoThermoDyn_ec = 0.4343 * log(scaled_cape);      //salamoinnin todennäköisyys kasvaa logaritmisesti CAPE-arvojen kasvaessa.
 
-	// Laukaisevan tekijän (Lift) todennäköisyys
+	// Laukaisevan tekijän (Lift) todennäköisyys kasvaa ennustetun sateen intensiteetin funktiona.
+	// Perustelu: Konvektioparametrisointi (eli malli saa nollasta poikkeavaa sademäärää) malleissa käynnistyy useimmiten alueilla, missä mallissa on konvergenssia tai liftiä tarjolla
 
 	if (RR >= 0.05 && RR <= 5)           
-   	{
-		PoLift  = 0.217147241 * log(RR) + 0.650514998;	// Funktio kasvaa nopeasti logaritmisesti nollasta ykköseen, kun sateen intensiteetti saa arvoja 0.05 ---> 5 mm/h
+	{
+		PoLift_ec  = 0.217147241 * log(sade) + 0.650514998;  // Funktio kasvaa nopeasti logaritmisesti nollasta ykköseen
 	}
 
 	if (RR > 5)
-   	{
-		PoLift = 1;
+	{
+		PoLift_ec  = 1;
 	}
 
 	//POT on ainesosiensa todennäköisyyksien tulo
- 
-	POT = PoLift * PoThermoDyn * 100;
+	POT = PoLift_ec * PoThermoDyn_ec * 100;
 
         //return result
         myTargetInfo->Value(POT);
