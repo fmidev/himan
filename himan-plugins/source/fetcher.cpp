@@ -515,7 +515,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 			// try radon next
 		
 			auto r = GET_PLUGIN(radon);
-/*
+
 			itsLogger->Trace("Accessing Radon database");
 			
 			files = r->Files(opts);
@@ -531,7 +531,6 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 				return ret;
  			}
-*/
 		}
 	}
 
