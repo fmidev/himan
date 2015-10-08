@@ -97,7 +97,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     // Filter RR
     himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
     filter_kernel_U.Fill(1/9);
-    himan::matrix<double> filtered_RR = util::Filter2D(RRInfo->Data(), filter_kernel_U);
+    himan::matrix<double> filtered_RR = util::Filter2D(RRInfo->Data(), filter_kernel);
     RRInfo->Grid()->Data(filtered_RR);
 
     string deviceType = "CPU";
