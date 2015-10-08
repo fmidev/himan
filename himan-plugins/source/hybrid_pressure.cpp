@@ -43,7 +43,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 {
 
 	params PParam{ param("P-PA"), param("P-HPA")};
-	const param QParam("Q-KGKG");
+	const param TParam("T-K");
 	level PLevel(himan::kHeight, 0, "HEIGHT");
 
 	bool isECMWF = (itsConfiguration->SourceProducer().Id() == 131); // Note! This only checks the *current* source producer
@@ -64,15 +64,15 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
 	info_t PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
-	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, forecastType, false);
+	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 
-	if (!PInfo || !QInfo)
+	if (!PInfo || !TInfo)
 	{
 		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
 	}
 	
-	SetAB(myTargetInfo, QInfo);
+	SetAB(myTargetInfo, TInfo);
 
 	/* 
 	 * Vertical coordinates for full hybrid levels.
@@ -80,7 +80,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	 * For Harmonie and ECMWF interpolation is done, when reading data from the grib-file. (NFmiGribMessage::PV)
 	 */
 
-	std::vector<double> ab = QInfo->Grid()->AB();
+	std::vector<double> ab = TInfo->Grid()->AB();
 
    	double A = ab[0];
    	double B = ab[1];
