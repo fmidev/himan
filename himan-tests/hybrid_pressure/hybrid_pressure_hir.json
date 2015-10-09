@@ -4,7 +4,7 @@
 	"target_producer" : "230",
 	"hours" : "1",
 	"file_write" : "single",
-	"origintime" : "2013-04-10 06:00:00",
+	"origintime" : "2015-10-09 00:00:00",
 	"read_data_from_database" : "false",
 
 	"processqueue" : [
