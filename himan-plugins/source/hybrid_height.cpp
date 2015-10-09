@@ -29,7 +29,7 @@ const himan::param PParam("P-HPA");
 const himan::param TParam("T-K");
 const himan::param TGParam("TG-K");
 
-hybrid_height::hybrid_height()
+hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt)
 {
 	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
 	itsLogger = logger_factory::Instance()->GetLog(itsName);
