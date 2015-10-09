@@ -1298,35 +1298,58 @@ void grib::WriteParameter(info& anInfo)
 		}
 		else
 		{
-			// In neons table version is a producer property
-		
 			long parm_id = anInfo.Param().GribIndicatorOfParameter();
-			long tableVersion = anInfo.Producer().TableVersion();
-			
-			if (parm_id == kHPMissingInt || tableVersion == kHPMissingInt)
+
+			if (itsWriteOptions.configuration->DatabaseType() == kNeons || itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon)
 			{
+				// In neons table version is a producer property
 
-				auto n = GET_PLUGIN(neons);
-				
-				if (parm_id == kHPMissingInt)
+				long tableVersion = anInfo.Producer().TableVersion();
+
+				if (parm_id == kHPMissingInt || tableVersion == kHPMissingInt)
 				{
-					parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo.Param().Name());
+
+					auto n = GET_PLUGIN(neons);
+
+					if (parm_id == kHPMissingInt)
+					{
+						parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo.Param().Name());
+					}
+
+					map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo.Producer().Id()));
+					tableVersion = boost::lexical_cast<long> (producermap["no_vers"]);
+
+					if (parm_id == -1 || tableVersion == -1)
+					{
+						itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo.Producer().TableVersion()) + " in neons");
+						itsLogger->Warning("Setting table2version to 203");
+						itsGrib->Message().Table2Version(203);
+
+					}
+					else
+					{
+						itsGrib->Message().ParameterNumber(parm_id);
+						itsGrib->Message().Table2Version(tableVersion);
+					}
 				}
-
-				map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo.Producer().Id()));
-				tableVersion = boost::lexical_cast<long> (producermap["no_vers"]);
-
-				if (parm_id == -1 || tableVersion == -1)
+			}
+			
+			if (itsWriteOptions.configuration->DatabaseType() == kRadon || (itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon && parm_id == kHPMissingInt))
+			{
+				auto r = GET_PLUGIN(radon);
+				
+				auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name());
+				
+				if (paramInfo.empty())
 				{
-					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo.Producer().TableVersion()) + " in neons");
+					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " + boost::lexical_cast<string> (anInfo.Producer().Id()) + " in radon");
 					itsLogger->Warning("Setting table2version to 203");
 					itsGrib->Message().Table2Version(203);
-					
 				}
 				else
 				{
-					itsGrib->Message().ParameterNumber(parm_id);
-					itsGrib->Message().Table2Version(tableVersion);
+					itsGrib->Message().ParameterNumber(boost::lexical_cast<long> (paramInfo["grib1_number"]));
+					itsGrib->Message().Table2Version(boost::lexical_cast<long> (paramInfo["grib1_table_version"]));
 				}
 			}
 		}		
