@@ -149,26 +149,33 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	himan::point firstGridPoint = g->FirstGridPoint();
 
-	query 	<< "SELECT geometry_id "
-			<< "FROM geom_v "
-			<< "WHERE nj = " << g->Nj()
-			<< " AND ni = " << g->Ni()
-			<< " AND first_lat = " << firstGridPoint.Y()
-			<< " AND first_lon = " << firstGridPoint.X();
+	// get grib1 gridType
 
-	itsRadonDB->Query(query.str());
+	int gridType = -1;
 
-	vector<string> row;
+	switch (g->Projection()) {
+		case 10:
+			gridType = 0; // latlon
+			break;
+		case 11:
+			gridType = 10; // rot latlon
+			break;
+		case 13:
+			gridType = 5; // polster
+			break;
+		default:	
+			throw runtime_error("Unsupported projection: " + HPProjectionTypeToString.at(g->Projection()));
+	}
 
-	row = itsRadonDB->FetchRow();
+        auto geominfo = itsRadonDB->GetGeometryDefinition(g->Ni(), g->Nj(), firstGridPoint.Y(), firstGridPoint.X(), g->Di(), g->Dj(), 1, gridType);
 
-	if (row.empty())
+	if (geominfo.empty())
 	{
 		itsLogger->Warning("Grid geometry not found from radon");
 		return false;
 	}
 
-	string geom_id = row[0];
+	string geom_id = geominfo["id"];
 
 	query.str("");
 
@@ -181,7 +188,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	itsRadonDB->Query(query.str());
 
-	row = itsRadonDB->FetchRow();
+	auto row = itsRadonDB->FetchRow();
 
 	if (row.empty())
 	{
