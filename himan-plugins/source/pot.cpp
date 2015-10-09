@@ -134,6 +134,8 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	double k =  9/(cape_high - cape_low);
 	double scaled_cape = k*CAPE_ec + (1- k*cape_low);
 
+	assert( scaled_cape > 0);
+
 	// Leikataan skaalatun CAPEN arvot, jotka menevät yli 10
 	if (scaled_cape >10) scaled_cape = 10;
 
