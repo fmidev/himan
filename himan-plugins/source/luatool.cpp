@@ -386,34 +386,6 @@ point GetLatLon(info_t& anInfo, size_t theIndex)
 	return anInfo->Grid()->LatLon(--theIndex);
 }
 
-void SetParam(info_t& anInfo, const param& par)
-{
-
-	param p = par;
-
-	auto n = GET_PLUGIN(neons);
-
-	long tableVersion = anInfo->Producer().TableVersion();
-
-	if (tableVersion == kHPMissingInt)
-	{
-		auto prodinfo = n->NeonsDB().GetProducerDefinition(anInfo->Producer().Id());
-		tableVersion = boost::lexical_cast<long> (prodinfo["no_vers"]);
-	}
-
-	p.GribTableVersion(tableVersion);
-
-	long paramId = n->NeonsDB().GetGridParameterId(tableVersion, p.Name());
-
-	if (paramId != -1)
-	{
-		p.GribIndicatorOfParameter(paramId);
-	}
-
-	anInfo->SetParam(p);
-
-}
-
 double GetMissingValue(info_t& anInfo)
 {
 	return anInfo->Data().MissingValue();
@@ -765,8 +737,8 @@ void BindLib(lua_State* L)
 			.def("GetGrid", LUA_CMEMFN(grid*, info, Grid, void))
 			.def("SetTime", LUA_MEMFN(void, info, SetTime, const forecast_time&))
 			.def("SetLevel", LUA_MEMFN(void, info, SetLevel, const level&))
+			.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 			// These are local functions to luatool
-			.def("SetParam", &info_wrapper::SetParam)
 			.def("SetIndexValue", &info_wrapper::SetValue)
 			.def("GetIndexValue", &info_wrapper::GetValue)
 			.def("GetTimeIndex", &info_wrapper::GetTimeIndex)
