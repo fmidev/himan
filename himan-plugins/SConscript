@@ -45,7 +45,7 @@ for p in auxiliary_plugins:
 
 	file = 'source/' + p + '.cpp'
 
-	if p == "fetcher":
+	if p == "fetcher" and have_cuda:
 		interp = 'source/interpolate_cuda.cu'
 		file = [file, interp]
 
