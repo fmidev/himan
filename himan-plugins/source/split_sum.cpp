@@ -657,11 +657,11 @@ void split_sum::WriteToFile(const info& targetInfo) const
 				continue;
 			}
 
-			aWriter->ToFile(tempInfo, *itsConfiguration);
+			aWriter->ToFile(tempInfo, itsConfiguration);
 		}
 	}
 	else if (itsConfiguration->FileWriteOption() == kSingleFile)
 	{
-		aWriter->ToFile(tempInfo, *itsConfiguration, itsConfiguration->ConfigurationFile());
+		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
 	}
 }

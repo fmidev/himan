@@ -66,7 +66,7 @@ csv::csv()
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("csv"));
 }
 
-bool csv::ToFile(info& theInfo, string& theOutputFile, HPFileWriteOption fileWriteOption)
+bool csv::ToFile(info& theInfo, string& theOutputFile)
 {
 	if (theInfo.Grid()->Type() != kIrregularGrid)
 	{

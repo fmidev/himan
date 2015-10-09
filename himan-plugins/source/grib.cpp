@@ -41,14 +41,14 @@ shared_ptr<NFmiGrib> grib::Reader()
 	return itsGrib;
 }
 
-bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileCompression fileCompression, HPFileWriteOption fileWriteOption)
+bool grib::ToFile(info& anInfo, string& outputFile)
 {
 
-	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
+	if (itsWriteOptions.configuration->FileWriteOption() == kDatabase || itsWriteOptions.configuration->FileWriteOption() == kMultipleFiles)
 	{
 		// Write only that data which is currently set at descriptors
 
-		WriteGrib(anInfo, outputFile, fileType, fileCompression);
+		WriteGrib(anInfo, outputFile);
 	}
 
 	else
@@ -69,7 +69,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileC
 
 					while (anInfo.NextParam())
 					{
-						if (!WriteGrib(anInfo, outputFile, fileType, fileCompression, true))
+						if (!WriteGrib(anInfo, outputFile, true))
 						{
 							itsLogger->Error("Error writing grib to file");
 						}
@@ -83,7 +83,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, HPFileType fileType, HPFileC
 
 }
 
-bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFileCompression fileCompression, bool appendToFile)
+bool grib::WriteGrib(info& anInfo, string& outputFile, bool appendToFile)
 {
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
@@ -94,7 +94,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 		return false;
 	}
 	
-	long edition = static_cast<long> (fileType);
+	long edition = static_cast<long> (itsWriteOptions.configuration->OutputFileType());
 
 	// Check levelvalue since that might force us to change file type!
 	
@@ -104,21 +104,21 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 	{
 		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
 		edition = 2;
-		if (fileCompression == kNoCompression)
+		if (itsWriteOptions.configuration->FileCompression() == kNoCompression)
 		{	
 			outputFile += "2";
 		}
-		else if (fileCompression == kGZIP)
+		else if (itsWriteOptions.configuration->FileCompression() == kGZIP)
 		{
                 	outputFile.insert(outputFile.end()-3, '2');
 		}
-		else if (fileCompression == kBZIP2)
+		else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
 		{
 			outputFile.insert(outputFile.end()-4, '2');
 		}
 		else
 		{
-			itsLogger->Error("Unable to write to compressed grib. Unknown file compression: " + HPFileCompressionToString.at(fileCompression));
+			itsLogger->Error("Unable to write to compressed grib. Unknown file compression: " + HPFileCompressionToString.at(itsWriteOptions.configuration->FileCompression()));
 			return false;
 		}
 	}
@@ -291,7 +291,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, HPFileType fileType, HPFi
 		itsGrib->Message().PV(AB, AB.size());
 	}
 
-	if ((fileCompression == kGZIP || fileCompression == kBZIP2) && appendToFile)
+	if ((itsWriteOptions.configuration->FileCompression() == kGZIP || itsWriteOptions.configuration->FileCompression() == kBZIP2) && appendToFile)
 	{
 		itsLogger->Warning("Unable to append to a compressed file");
 		appendToFile = false;
@@ -1305,6 +1305,7 @@ void grib::WriteParameter(info& anInfo)
 			
 			if (parm_id == kHPMissingInt || tableVersion == kHPMissingInt)
 			{
+
 				auto n = GET_PLUGIN(neons);
 				
 				if (parm_id == kHPMissingInt)

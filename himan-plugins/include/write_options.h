@@ -8,10 +8,13 @@
 #ifndef WRITE_OPTIONS_H
 #define	WRITE_OPTIONS_H
 
+#include <plugin_configuration.h>
+
 namespace himan {
 namespace plugin {
 
 struct write_options {
+	std::shared_ptr<const plugin_configuration> configuration;
 	bool use_bitmap;
 	
 	write_options()

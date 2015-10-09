@@ -33,13 +33,13 @@ writer::writer() : itsWriteOptions()
 }
 
 bool writer::ToFile(info& theInfo,
-					const plugin_configuration& conf,
+					std::shared_ptr<const plugin_configuration> conf,
 					const std::string& theOutputFile)
 {
 
 	std::unique_ptr<himan::timer> t = std::unique_ptr<himan::timer> (timer_factory::Instance()->GetTimer());
 
-	if (conf.StatisticsEnabled())
+	if (conf->StatisticsEnabled())
 	{
 		t->Start();
 	}
@@ -50,13 +50,11 @@ bool writer::ToFile(info& theInfo,
 
 	std::string correctFileName = theOutputFile;
 	
-	HPFileWriteOption fileWriteOption = conf.FileWriteOption();
-	HPFileType fileType = conf.OutputFileType();
-	HPFileCompression fileCompression = conf.FileCompression();
+	itsWriteOptions.configuration = conf;
 
-	if ((fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles) || correctFileName.empty())
+	if ((itsWriteOptions.configuration->FileWriteOption() == kDatabase || itsWriteOptions.configuration->FileWriteOption() == kMultipleFiles) || correctFileName.empty())
 	{
-		correctFileName = util::MakeFileName(fileWriteOption, theInfo);
+		correctFileName = util::MakeFileName(itsWriteOptions.configuration->FileWriteOption(), theInfo);
 	}
 
 	fs::path pathname(correctFileName);
@@ -66,7 +64,7 @@ bool writer::ToFile(info& theInfo,
 		fs::create_directories(pathname.parent_path());
 	}
 
-	switch (fileType)
+	switch (itsWriteOptions.configuration->OutputFileType())
 	{
 
 		case kGRIB:
@@ -78,22 +76,22 @@ bool writer::ToFile(info& theInfo,
 
 			correctFileName += ".grib";
 
-			if (fileType == kGRIB2)
+			if (itsWriteOptions.configuration->OutputFileType() == kGRIB2)
 			{
 				correctFileName += "2";
 			}
 
-			if (fileCompression == kGZIP)
+			if (itsWriteOptions.configuration->FileCompression() == kGZIP)
 			{
 				correctFileName += ".gz";
 			}
-			else if (fileCompression == kBZIP2)
+			else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
 			{
 				correctFileName += ".bz2";
 			}
 
 			theGribWriter->WriteOptions(itsWriteOptions);
-			ret = theGribWriter->ToFile(theInfo, correctFileName, fileType, fileCompression, fileWriteOption);
+			ret = theGribWriter->ToFile(theInfo, correctFileName);
 
 			break;
 		}
@@ -104,7 +102,7 @@ bool writer::ToFile(info& theInfo,
 
 			correctFileName += ".fqd";
 
-			ret = theWriter->ToFile(theInfo, correctFileName, fileWriteOption);
+			ret = theWriter->ToFile(theInfo, correctFileName);
 
 			break;
 		}
@@ -118,19 +116,19 @@ bool writer::ToFile(info& theInfo,
 
 			correctFileName += ".csv";
 
-			ret = theWriter->ToFile(theInfo, correctFileName, fileWriteOption);
+			ret = theWriter->ToFile(theInfo, correctFileName);
 			break;
 		}
 			// Must have this or compiler complains
 		default:
-			throw std::runtime_error(ClassName() + ": Invalid file type: " + HPFileTypeToString.at(fileType));
+			throw std::runtime_error(ClassName() + ": Invalid file type: " + HPFileTypeToString.at(itsWriteOptions.configuration->OutputFileType()));
 			break;
 
 	}
 
-	if (ret && fileWriteOption == kDatabase)
+	if (ret && itsWriteOptions.configuration->FileWriteOption() == kDatabase)
 	{
-		HPDatabaseType dbtype = conf.DatabaseType();
+		HPDatabaseType dbtype = conf->DatabaseType();
 		
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
@@ -160,20 +158,20 @@ bool writer::ToFile(info& theInfo,
 		}
 	}
 
-	bool activeOnly = (conf.FileWriteOption() == kSingleFile) ? false : true;
+	bool activeOnly = (conf->FileWriteOption() == kSingleFile) ? false : true;
 
-	if (conf.UseCache())
+	if (conf->UseCache())
 	{
 		std::shared_ptr<cache> c = GET_PLUGIN(cache);
 
 		c->Insert(theInfo, activeOnly);
 	}
 
-	if (conf.StatisticsEnabled())
+	if (conf->StatisticsEnabled())
 	{
 		t->Stop();
 
-		conf.Statistics()->AddToWritingTime(t->GetTime());
+		conf->Statistics()->AddToWritingTime(t->GetTime());
 	}
 
 	return ret;

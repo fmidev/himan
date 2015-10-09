@@ -42,13 +42,13 @@ querydata::querydata()
 	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("querydata"));
 }
 
-bool querydata::ToFile(info& theInfo, string& theOutputFile, HPFileWriteOption fileWriteOption)
+bool querydata::ToFile(info& theInfo, string& theOutputFile)
 {
 	ofstream out(theOutputFile.c_str());
 
 	bool activeOnly = true;
 
-	if (fileWriteOption == kSingleFile)
+	if (itsWriteOptions.configuration->FileWriteOption() == kSingleFile)
 	{
 		activeOnly = false;
 	}

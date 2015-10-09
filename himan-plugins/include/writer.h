@@ -44,7 +44,7 @@ public:
 		return HPVersionNumber(1, 2);
 	}
 
-	bool ToFile(info& theInfo, const plugin_configuration& conf, const std::string& theFileName = "");
+	bool ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, const std::string& theFileName = "");
 	
 	write_options WriteOptions() const;
 	void WriteOptions(const write_options& theWriteOptions);

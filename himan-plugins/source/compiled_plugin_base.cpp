@@ -190,12 +190,12 @@ void compiled_plugin_base::WriteToFile(const info& targetInfo, const write_optio
 
 		while (tempInfo.NextParam())
 		{
-			aWriter->ToFile(tempInfo, *itsConfiguration);
+			aWriter->ToFile(tempInfo, itsConfiguration);
 		}
 	}
 	else if (itsConfiguration->FileWriteOption() == kSingleFile)
 	{
-		aWriter->ToFile(tempInfo, *itsConfiguration, itsConfiguration->ConfigurationFile());
+		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
 	}
 }
 

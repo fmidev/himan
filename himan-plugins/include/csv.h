@@ -66,7 +66,7 @@ public:
 	 * @return True if writing succeeds
 	 */
 
-	bool ToFile(info& theInfo, std::string& outputFile, HPFileWriteOption fileWriteOption);
+	bool ToFile(info& theInfo, std::string& outputFile);
 private:
 
 };
