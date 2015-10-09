@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.10.8
+Version: 15.10.9
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -101,6 +101,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Oct  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.9-1.fmi
+- Fix writing of grib in radon-only environment
+- Use radondb libary to fetch geom info
+- Fix grib plugin to use correct database for fetching data
+- Remove redundant luatool parameter number fetching function
 * Thu Oct  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.8-1.fmi
 - tke completed
 - hybrid_pressure changed to use T not Q
