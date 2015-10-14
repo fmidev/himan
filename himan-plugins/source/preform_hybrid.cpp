@@ -609,7 +609,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		param wantedParam ("T-K");
 
-		logger->Info("Counting number of zero levels");
+		logger->Trace("Counting number of zero levels");
 
 		numZeroLevels = h->VerticalCount(wantedParam, constData1, constData2, constData3);
 
@@ -643,56 +643,56 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		// Mahdollisen pinta- tai 1/2. nollarajojen välisen pakkaskerroksen koko [mC, "metriastetta"]
 		minusArea = zeroLevel1;
 
-		logger->Info("Searching for first zero level height");
+		logger->Trace("Searching for first zero level height");
 		zeroLevel1 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 1);
 
 #ifdef DEBUG
 		DumpVector(zeroLevel1);
 #endif
 
-		logger->Info("Searching for average temperature between ground level and first zero level");
+		logger->Trace("Searching for average temperature between ground level and first zero level");
 		Tavg01 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
 
 #ifdef DEBUG
 		DumpVector(Tavg01);
 #endif
 
-		logger->Info("Searching for second zero level height");
+		logger->Trace("Searching for second zero level height");
 		zeroLevel2 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
 
 #ifdef DEBUG
 		DumpVector(zeroLevel2);
 #endif
 
-		logger->Info("Searching for average temperature between first and second zero level");
+		logger->Trace("Searching for average temperature between first and second zero level");
 		Tavg12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 
 #ifdef DEBUG
 		DumpVector(Tavg12);
 #endif
 
-		logger->Info("Searching for third zero level height");
+		logger->Trace("Searching for third zero level height");
 		zeroLevel3 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
 
 #ifdef DEBUG
 		DumpVector(zeroLevel3);
 #endif
 
-		logger->Info("Searching for average temperature between second and third zero level");
+		logger->Trace("Searching for average temperature between second and third zero level");
 		Tavg23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
 
 #ifdef DEBUG
 		DumpVector(Tavg23);
 #endif
 
-		logger->Info("Searching for fourth zero level height");
+		logger->Trace("Searching for fourth zero level height");
 		zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
 
 #ifdef DEBUG
 		DumpVector(zeroLevel4);
 #endif
 
-		logger->Info("Searching for average temperature between third and fourth zero level");
+		logger->Trace("Searching for average temperature between third and fourth zero level");
 		Tavg34 = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
 
 #ifdef DEBUG
@@ -701,7 +701,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		wantedParam = param("RH-PRCNT");
 
-		logger->Info("Searching for average humidity between ground and first zero level");
+		logger->Trace("Searching for average humidity between ground and first zero level");
 		// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa
 		rhAvg01 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
 		
@@ -709,7 +709,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		DumpVector(rhAvg01);
 #endif
 
-		logger->Info("Searching for average humidity between first and second zero level");
+		logger->Trace("Searching for average humidity between first and second zero level");
 
 		// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
 		rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
@@ -718,7 +718,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		DumpVector(rhAvgUpper12);
 #endif
 
- 		logger->Info("Searching for average humidity between second and third zero level");
+ 		logger->Trace("Searching for average humidity between second and third zero level");
 
 		// Keskimääräinen RH ylemmässä plussakerroksessa
 		rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
@@ -790,7 +790,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				double zl3 = zeroLevel3[i], zl4 = zeroLevel4[i];
 				ta2 = Tavg34[i];
 
-				if (zl3 != MISS && zl4 != MISS && ta2 != MISS)
+				if (zl3 != MISS && zl4 != MISS && ta2 != MISS && paloft != MISS)
 				{
 					paloft = paloft + (zl4 - zl3) * (ta2 - constants::kKelvin);
 				}
@@ -848,7 +848,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 					// Keskimääräinen RH ylemmässä plussakerroksessa    
 					rhAvgUpper[i] = rhAvgUpper23[i];
 					
-					if (rhAvgUpper[i] != MISS AND rhMeltUpper[i] != MISS AND rhAvgUpper[i] > rhMeltUpper[i])
+					if (rhAvgUpper[i] != MISS AND rhMeltUpper[i] != MISS AND rhAvgUpper[i] > rhMeltUpper[i] && pasfc != MISS)
 					{
 						pa = pasfc + paloft;
 					}
