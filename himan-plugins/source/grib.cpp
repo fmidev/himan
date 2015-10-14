@@ -241,7 +241,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long> (anInfo.Grid()->Size()));
 	}
 
-	if (edition == 2)
+	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
 	{
 		itsGrib->Message().PackingType("grid_jpeg");
 	}
@@ -1306,31 +1306,31 @@ void grib::WriteParameter(info& anInfo)
 
 				long tableVersion = anInfo.Producer().TableVersion();
 
-				if (parm_id == kHPMissingInt || tableVersion == kHPMissingInt)
+				auto n = GET_PLUGIN(neons);
+				
+				if (tableVersion == kHPMissingInt)
 				{
+					auto prodinfo = n->NeonsDB().GetProducerDefinition(anInfo.Producer().Id());
+					tableVersion = boost::lexical_cast<long> (prodinfo["no_vers"]);
+				}
+				
+				assert(tableVersion != kHPMissingInt);
 
-					auto n = GET_PLUGIN(neons);
-
-					if (parm_id == kHPMissingInt)
-					{
-						parm_id = n->NeonsDB().GetGridParameterId(itsGrib->Message().Table2Version(), anInfo.Param().Name());
-					}
-
-					map<string, string> producermap = n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long> (anInfo.Producer().Id()));
-					tableVersion = boost::lexical_cast<long> (producermap["no_vers"]);
-
-					if (parm_id == -1 || tableVersion == -1)
-					{
-						itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo.Producer().TableVersion()) + " in neons");
-						itsLogger->Warning("Setting table2version to 203");
-						itsGrib->Message().Table2Version(203);
-
-					}
-					else
-					{
-						itsGrib->Message().ParameterNumber(parm_id);
-						itsGrib->Message().Table2Version(tableVersion);
-					}
+				if (parm_id == kHPMissingInt)
+				{
+					parm_id = n->NeonsDB().GetGridParameterId(tableVersion, anInfo.Param().Name());
+				}
+				
+				if (parm_id == -1 || tableVersion == -1)
+				{
+					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo.Producer().TableVersion()) + " in neons");
+					itsLogger->Warning("Setting table2version to 203");
+					itsGrib->Message().Table2Version(203);
+				}
+				else
+				{
+					itsGrib->Message().ParameterNumber(parm_id);
+					itsGrib->Message().Table2Version(tableVersion);
 				}
 			}
 			
