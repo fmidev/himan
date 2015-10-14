@@ -16,9 +16,11 @@ namespace plugin {
 struct write_options {
 	std::shared_ptr<const plugin_configuration> configuration;
 	bool use_bitmap;
+	HPPackingType packing_type; // for grib, ie simple_packing, jpeg_packing
 	
 	write_options()
 		: use_bitmap(true)
+		, packing_type(kSimplePacking)
 	{}
 };
 
