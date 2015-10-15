@@ -267,7 +267,7 @@ double MixingRatio_(double T, double P);
  */
 
 CUDA_KERNEL
-void Lift(cdarr_t P, cdarr_t T, cdarr_t TD, darr_t result, cdarr_t targetP, size_t N);
+void Lift(cdarr_t P, cdarr_t T, cdarr_t TD, cdarr_t targetP, darr_t result, size_t N);
 
 CUDA_DEVICE
 double Lift_(double P, double T, double TD, double targetP);
@@ -285,7 +285,7 @@ double Lift_(double P, double T, double TD, double targetP);
  */
 
 CUDA_KERNEL
-void MoistLift(cdarr_t P, cdarr_t T, darr_t result, cdarr_t targetP, size_t N);
+void MoistLift(cdarr_t P, cdarr_t T, cdarr_t targetP, darr_t result, size_t N);
 
 CUDA_DEVICE
 double MoistLift_(double P, double T, double targetP);
@@ -694,9 +694,9 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	}
 	// Sanity checks
 
-	assert(P > 1000);
-	assert(T > 0 && T < 500);
-	assert(targetP > 1000);
+	assert(P > 1200);
+	assert(T > 100 && T < 400);
+	assert(targetP > 1200);
 	
 	double Pint = P; // Pa
 	double Tint = T; // K
@@ -716,6 +716,8 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	while (++i < maxIter)
 	{
 		Tint = T0 - metutil::Gammaw_(Pint, Tint) * Pstep;
+		
+		assert(Tint != kFloatMissing);
 		
 		Pint -= Pstep;
 
