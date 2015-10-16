@@ -9,7 +9,6 @@
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 #include "metutil.h"
 #include <future>
 #include "NFmiInterpolation.h"
@@ -35,7 +34,7 @@ double min(const vector<double>& vec)
 { 
 	double ret = 1e38;
 
-	BOOST_FOREACH(const double& val, vec)
+	for (const double& val : vec)
 	{
 		if (val != himan::kFloatMissing && val < ret) ret = val;
 	}
@@ -49,7 +48,7 @@ double max(const vector<double>& vec)
 { 
 	double ret = -1e38;
 
-	BOOST_FOREACH(const double& val, vec)
+	for(const double& val : vec)
 	{
 		if (val != kFloatMissing && val > ret) ret = val;
 	}
@@ -61,7 +60,7 @@ double max(const vector<double>& vec)
 
 void multiply_with(vector<double>& vec, double multiplier)
 {
-	BOOST_FOREACH(double& val, vec)
+	for(double& val : vec)
 	{
 		if (val != kFloatMissing) val *= multiplier;
 	}
@@ -144,6 +143,8 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 	theParams.push_back(SB500ELT);
 	theParams.push_back(SB500ELP);
 	theParams.push_back(SB500CAPE);
+	theParams.push_back(SB500CAPE1040);
+	theParams.push_back(SB500CAPE3km);
 	theParams.push_back(SB500CIN);
 
 	theParams.push_back(MULCLT);
@@ -153,6 +154,8 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 	theParams.push_back(MUELT);
 	theParams.push_back(MUELP);
 	theParams.push_back(MUCAPE);
+	theParams.push_back(MUCAPE1040);
+	theParams.push_back(MUCAPE3km);
 	theParams.push_back(MUCIN);
 	
 	SetParams(theParams);
@@ -167,7 +170,7 @@ void DumpVector(const vector<double>& vec, const string& name)
 	double min = 1e38, max = -1e38, sum = 0;
 	size_t count = 0, missing = 0;
 
-	BOOST_FOREACH(double val, vec)
+	for(const double& val : vec)
 	{
 		if (val == kFloatMissing)
 		{
@@ -361,9 +364,9 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 
 	myTargetInfo->Param(CAPE3kmParam);
 	myTargetInfo->Data().Set(get<4> (CAPE));
-
-	// 5. 
 /*
+	// 5. 
+
 	cout << "\n--- CIN --\n" << endl;
 	
 	auto CIN = GetCIN(myTargetInfo, TandTD.first, LCL.first, LCL.second, LFC.second);
@@ -373,6 +376,8 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	myTargetInfo->Data().Set(CIN);
 */
 }
+
+#if 0
 
 vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC)
 {
@@ -526,9 +531,193 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 	return cinh;
 	
 }
+#endif
 
+double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv, double Zenv, double prevZenv)
+{
+	double C = 0;
+
+	if (Tparcel >= Tenv)
+	{
+		if (Tenv >= 233.15 && Tenv <= 263.15 && prevTenv > 263.15)
+		{
+			// Just entered cold CAPE zone, the direction is hard coded from warmer to colder
+
+			if (prevTparcel == kFloatMissing)
+			{
+				Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
+				Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+
+				return himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+			}
+
+			Zenv = NFmiInterpolation::Linear(263.15, Tenv, prevTenv, Zenv, prevZenv);
+			Penv = NFmiInterpolation::Linear(263.15, Tenv, prevTenv, Penv, prevPenv);
+			Tparcel = NFmiInterpolation::Linear(263.15, Tenv, prevTenv, Tparcel, prevTparcel);
+
+			Tenv = himan::metutil::VirtualTemperature_(263.15, Penv*100);
+			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+
+			// problem : 
+			// interpolating Tparcel to same level as env 263.15 makes Tparcel temperature
+			// lower than 263.15 --> not in CAPE zone
+
+			// This could be solved by integrating Tparcel to exactly level where Tenv is 263.15
+			// but that might be expensive
+
+			if (Tparcel >= Tenv)
+			{
+				Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
+				Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+
+				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+				assert(Zenv >= prevZenv);
+				assert(C >= 0.);
+			}
+		}
+		else if (prevTenv >= 233.15 && prevTenv <= 263.15 && Tenv < 233.15)
+		{
+			// Just exited cold CAPE zone to an even colder area
+
+			if (prevTparcel == kFloatMissing)
+			{
+				return 0;
+			}
+			
+			Zenv = NFmiInterpolation::Linear(233.15, prevTenv, Tenv, prevZenv, Zenv);
+			Penv = NFmiInterpolation::Linear(233.15, prevTenv, Tenv, prevPenv, Penv);
+			Tparcel = NFmiInterpolation::Linear(233.15, prevTenv, Tenv, prevTparcel, Tparcel);
+
+			Tenv = himan::metutil::VirtualTemperature_(233.15, Penv*100);
+
+
+		}
+		else if (Tenv >= 233.15 && Tenv <= 263.15)
+		{
+			// Firmly in the cold CAPE zone
+			C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+		}
+	}
+	else
+	{
+		// Out of general CAPE zone
+		// Calculate average between two levels to get an approximate height
+
+		Tenv = (Tenv + prevTenv) * 0.5;
+		Penv = (Penv + prevPenv) * 0.5;
+		Zenv = (Zenv + prevZenv) * 0.5;
+		
+		if (Tenv >= 233.15 && Tenv <= 263.15)
+		{
+			Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
+			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+
+			if (Tparcel >= Tenv)
+			{
+				// Approximation worked and particle is still warmer than environment in the 
+				// -10 .. -40 temperature zone
+				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+				assert(C >= 0);
+			}
+		}
+	}
+	
+	return C;
+}
+
+double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv, double Zenv, double prevZenv)
+{
+	double C= 0.;
+
+	if (Tparcel >= Tenv)
+	{
+		// In general CAPE zone
+
+		if (Zenv <= 3000.)
+		{
+			Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
+			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+
+			assert(Tparcel >= Tenv);
+			C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+			assert(C >= 0);
+		}
+		else if (prevZenv <= 3000.)
+		{
+			// Interpolate the final piece of CAPE area just below 3000m		
+			// Interpolate without virtual temp
+
+			if (prevTparcel == kFloatMissing)
+			{
+				// Unable to interpolate value since previous temperature is missing
+				return 0;
+			}
+			
+			Tparcel = NFmiInterpolation::Linear(3000., prevZenv, Zenv, prevTparcel, Tparcel);
+			Tenv = NFmiInterpolation::Linear(3000., prevZenv, Zenv, prevTenv, Tenv);
+			Penv = NFmiInterpolation::Linear(3000., prevZenv, Zenv, prevPenv, Penv);
+
+			Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
+			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+
+			if (Tparcel >= Tenv)
+			{
+				C = himan::constants::kG * (3000. - prevZenv) * ((Tparcel - Tenv) / Tenv);
+				assert(C >= 0);
+			}
+		}
+	}
+	else if (prevZenv < 3000.)
+	{
+		// Out of general CAPE zone
+		// Calculate average between two levels to get an approximate height
+
+		Tenv = (Tenv + prevTenv) * 0.5;
+		Penv = (Penv + prevPenv) * 0.5;
+		Zenv = (Zenv + prevZenv) * 0.5;
+
+		if (Zenv < 3000.)
+		{
+			// If average Zenv is higher than 3000m, we cannot calculate the missing
+			// part of CAPE zone since the location is only an approximation.
+
+			Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
+			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+		
+			if (Tparcel >= Tenv)
+			{
+				// Approximation worked and particle is still warmer than environment
+				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+				assert(C >= 0);
+			}
+		}		
+	}
+
+	return C;
+}
+
+
+double CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv, double Zenv, double prevZenv)
+{
+	double C= 0.;
+
+	if (Tparcel >= Tenv)
+	{
+		Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
+		Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+
+		assert(Tparcel >= Tenv);
+
+		C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+	}
+
+	return C;
+}
+			
 tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<double>> si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P)
 {
+	assert(T.size() == P.size());
+
 	auto h = GET_PLUGIN(hitool);
 	
 	h->Configuration(itsConfiguration);
@@ -536,32 +725,18 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 	h->HeightUnit(kHPa);
 
 	vector<unsigned char> found(T.size(), 0);
+	
+	// CAPE is initialized to -1: in the data we make a difference between
+	// zero CAPE and unknown CAPE (kFloatMissing)
+
 	vector<double> CAPE(T.size(), -1);
 	vector<double> CAPE1040(T.size(), -1);
 	vector<double> CAPE3km(T.size(), -1);
 	vector<double> ELT(T.size(), kFloatMissing);
 	vector<double> ELP(T.size(), kFloatMissing);
 
-#ifdef USE_TW
-	// Use Davies-Jones Tw formula 
-	
-	auto thetaE = P;
+	// Unlike LCL, LFC is *not* found for all grid points
 
-	for (size_t i = 0; i < thetaE.size(); i++)
-	{
-		if (T[i] != kFloatMissing && P[i] != kFloatMissing)
-		{
-			thetaE[i] = metutil::ThetaE_(T[i], 100*P[i]);
-		}
-	}
-#endif
-	// For each grid point find next hybrid level that's below the LFC
-		
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::max(P));
-	
-	level curLevel = levels.first;
-	curLevel.Value(curLevel.Value() - 1);
-	
 	for (size_t i = 0; i < P.size(); i++)
 	{
 		if (P[i] == kFloatMissing)
@@ -570,196 +745,165 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 		}
 	}
 
+	// Found count determines if we have calculated all three CAPE variation for a single grid point
+	
 	size_t foundCount = 0;
 	
-	for (size_t i = 0; i < found.size(); i++)
+	for (auto& val : found)
 	{
-		if ((found[i] & FCAPE)) foundCount++;
+		if (val & FCAPE) foundCount++;
 	}
 	
-	info_t prevZInfo, prevTInfo, prevPInfo;
-	std::vector<double> prevTparcelVec;
-
-	auto Piter = P, Titer = T;
+	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
+	// among all grid points
+		
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::max(P));
+	
+	level curLevel = levels.first;
+	
+	auto prevZInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
+	auto prevTenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+	auto prevPenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	
+	curLevel.Value(curLevel.Value() - 1);	
+	
+	auto Piter = P, Titer = T; // integration variables
+	auto prevTparcelVec = Titer;
+	
+	// Convert pressure to Pa since metutil-library expects that
 	multiply_with(Piter, 100);
 
 	while (curLevel.Value() > 50 && foundCount != found.size())
 	{
-	
-		if (!prevZInfo)
-		{
-			prevZInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
-			prevTInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
-			prevPInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
-			
-			curLevel.Value(curLevel.Value() - 1);		
-
-			continue;
-		}
-		
-		// Get environment temperature values
-
+		// Get environment temperature, pressure and height values for this level
 		auto PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 		auto TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 		auto ZenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
-		
-		// Penv is hPa
-		
+
+		// Convert pressure to Pa since metutil-library expects that
 		auto PenvVec = PenvInfo->Data().Values();
 		multiply_with(PenvVec, 100);
 
 		vector<double> TparcelVec(P.size(), kFloatMissing);
-#if USE_TW		
-		metutil::Tw(&thetaE[0], &PenvVec[0], &TparcelVec[0], thetaE.size());
-#else
-		//for (size_t i = 0; i < Piter.size(); i++) if (Piter[i] != kFloatMissing && Piter[i] < PenvVec[i]) std::cout << i << " target is lower than initial value: " << Piter[i] << " vs " << PenvVec[i] << std::endl;
-		//int i = 49287;
 
-		metutil::MoistLift(&Piter[0], &Titer[0], &TparcelVec[0], &PenvVec[0], TparcelVec.size());
-		//if ( i == 49287) std::cout << i << " Piter " << Piter[i] << " Titer " << Titer[i] << " Penv " << PenvVec[i] << " Tparcel " << TparcelVec[i] << std::endl;
-
-	//	DumpVector(Titer, "Titer");
-	//	DumpVector(TparcelVec, "TparcelVec");
-#endif
-		assert(T.size() == P.size());
-		
-		LOCKSTEP(PenvInfo, ZenvInfo, prevZInfo, prevTInfo, prevPInfo, TenvInfo)
+		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+	
+		LOCKSTEP(PenvInfo, ZenvInfo, prevZInfo, prevTenvInfo, prevPenvInfo, TenvInfo)
 		{
 			size_t i = PenvInfo->LocationIndex();
 
 			// CAPE is a superset of CAPE1040 and CAPE3km
 			if (found[i] & FCAPE) continue;
 
-			double Tenv = TenvInfo->Value();
-			double Penv = PenvInfo->Value();
+			double Tenv = TenvInfo->Value(); // K
+			assert(Tenv > 100.);
 			
-			double Zenv = ZenvInfo->Value();
-			double ZenvPrev = prevZInfo->Value();
-			double Tparcel = TparcelVec[i];
-				
-			if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || ZenvPrev == kFloatMissing || Tparcel == kFloatMissing)
+			double prevTenv = prevTenvInfo->Value(); // K
+			assert(prevTenv > 100.);
+			
+			double Penv = PenvInfo->Value(); // hPa
+			assert(Penv < 1200.);
+			
+			double prevPenv = prevPenvInfo->Value(); // hPa
+			assert(prevPenv < 1200.);
+			
+			double Zenv = ZenvInfo->Value(); // m
+			double prevZenv = prevZInfo->Value(); // m
+			
+			double Tparcel = TparcelVec[i]; // K
+			assert(Tparcel > 100. || Tparcel == kFloatMissing);
+			
+			double prevTparcel = prevTparcelVec[i]; // K
+			assert(prevTparcel > 100. || Tparcel == kFloatMissing);
+			
+			if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || prevZenv == kFloatMissing || Tparcel == kFloatMissing || Penv > P[i])
 			{
-				found[i] |= FCAPE;
+				// Missing data or current grid point is below LFC
+				continue;
+			}
 
-				continue;
-			}
-			//if ( i == 49287) std::cout << i << " Tenv " << Tenv << " Tparcel " << Tparcel << " Zenv " << Zenv << std::endl;
-			assert(P[i] > 50 && P[i] < 1200);
-			assert(Penv > 50 && Penv < 1200);
-			
-			if (Penv > P[i]) 
+			if (prevZenv >= 3000. && Zenv >= 3000.)
 			{
-				// Current grid point is below LFC
-				continue;
+				found[i] |= FCAPE3km;
 			}
 			
-			if (Tenv < 200. && Penv < 600)
+			if (prevTenv < 200. && Tenv < 200.)
 			{
-				// If 
 				found[i] |= FCAPE1040;
 			}
-
-			if (Tparcel >= Tenv)
+			
+			if ((found[i] & FCAPE3km) == 0)
 			{
-				Tenv = metutil::VirtualTemperature_(Tenv, Penv*100);
-				Tparcel = metutil::VirtualTemperature_(Tparcel, Penv*100);
+				double C = CalcCAPE3km(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 
-				if (CAPE[i] == -1) CAPE[i] = 0;
-
-				double C = constants::kG * (Zenv - ZenvPrev) * ((Tparcel - Tenv) / Tenv);
-
-				CAPE[i] += C;
+				CAPE3km[i] = max(CAPE3km[i], 0.);
+				CAPE3km[i] += C;
 				
-				assert(CAPE[i] < 10000);
-				
-				if  ((found[i] & FCAPE1040) == 0 && (Tenv >= 233.15 && Tenv <= 263.15))
-				{
-					if (CAPE1040[i] == -1) CAPE1040[i] = 0;
-					
-					CAPE1040[i] += C;
-					assert(CAPE1040[i] < 10000);		
-				}
-
-				if ((found[i] & FCAPE3km) == 0)
-				{
-					if (CAPE3km[i] == -1) CAPE3km[i] = 0;
-					
-					if (Zenv <= 3000.)
-					{
-						CAPE3km[i] += C;
-					}
-					else if (ZenvPrev <= 3000.)
-					{
-						// Interpolate the final piece of CAPE area just below 3000m
-						assert(prevTparcelVec.size());
-						// Interpolate without virtual temp
-						Tparcel = NFmiInterpolation::Linear(ZenvPrev, 3000., Zenv, prevTparcelVec[i], TparcelVec[i]);
-						Tenv = NFmiInterpolation::Linear(ZenvPrev, 3000., Zenv, prevTInfo->Value(), TenvInfo->Value());
-						Penv = NFmiInterpolation::Linear(ZenvPrev, 3000., Zenv, prevPInfo->Value(), Penv);
-
-						Tenv = metutil::VirtualTemperature_(TenvInfo->Value(), Penv*100);
-						Tparcel = metutil::VirtualTemperature_(TparcelVec[i], Penv*100);
-
-						//assert(ZenvPrev < 3000.);
-
-						CAPE3km[i] += constants::kG * (3000. - ZenvPrev) * ((Tparcel - Tenv) / Tenv);
-
-						found[i] |= FCAPE3km;
-					}
-				}
+				assert(CAPE3km[i] < 3000.);
+				assert(CAPE3km[i] >= -1.);
 			}
-			else 
+
+			if ((found[i] & FCAPE1040) == 0)
 			{
-				if (CAPE[i] != -1) found[i] |= FCAPE;
-
-#if 0 
-				if (!prevTparcel.empty())
-				{
-
-					if (CAPE[i] != -1)
-					{
-						// Do simple linear interpolation to get EL values
-
-						double _ELT = (Tenv + prevTInfo->Value()) / 2;
-						double _ELP = (prevPInfo->Value() + _Penv) / 2;
-
-						ELP[i] = _ELP;
-						ELT[i] = _ELT;	
-
-						// Interpolate the final piece of CAPE area just below EL
-						_ELT = metutil::VirtualTemperature_(_ELT, _ELP);
-						_Tw = metutil::VirtualTemperature_((_Tw + prevTparcel[i])/2, _Penv);
-
-						CAPE[i] += constants::kG * 0.5 * (Zenv - ZenvPrev) * ((_Tw - _ELT) / _ELT);
-						assert(CAPE[i] < 8000);
-
-					}					
+				double C = CalcCAPE1040(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 					
-					if  (CAPE1040[i] != -1 && (found[i] & FCAPE1040) == 0 && (Tenv >= 233.15 && Tenv <= 263.15))
-					{
-						double _ELT = (Tenv + prevTInfo->Value()) / 2;
-						double _ELP = (prevPInfo->Value() + _Penv) / 2;
-						_ELT = metutil::VirtualTemperature_(_ELT, _ELP);
-						_Tw = metutil::VirtualTemperature_((_Tw + prevTparcel[i])/2, _Penv);
+				CAPE1040[i] = max(CAPE1040[i], 0.);					
+				CAPE1040[i] += C;
 
-						CAPE1040[i] += constants::kG * 0.5 * (Zenv - ZenvPrev) * ((_Tw - _ELT) / _ELT);
-						assert(CAPE1040[i] < 7000);		
-					}
+				assert(CAPE1040[i] < 5000.);
+				assert(CAPE1040[i] >= -1.);
+			}
+			
+			double C = CalcCAPE(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
+			
+			if (C >= 0)
+			{
+				CAPE[i] = max(CAPE[i], 0.);					
+				CAPE[i] += C;
+			}
+			
+			assert(C >= 0.);				
+			assert(CAPE[i] < 8000);
+	
+			if (Tparcel <= Tenv && CAPE[i] != -1)
+			{
+				// We are exiting CAPE zone
 
-					if  (CAPE3km[i] != -1 && (found[i] & FCAPE3km) == 0)
-					{
-						double _ELT = (Tenv + prevTInfo->Value()) / 2;
-						double _ELP = (prevPInfo->Value() + _Penv) / 2;
-						_ELT = metutil::VirtualTemperature_(_ELT, _ELP);
-						_Tw = metutil::VirtualTemperature_((_Tw + prevTparcel[i])/2, _Penv);
+				found[i] |= FCAPE;
 
-						CAPE3km[i] += constants::kG * 0.5 * (Zenv - ZenvPrev) * ((_Tw - _ELT) / _ELT);
-						assert(CAPE3km[i] < 7000);		
-					}
-
-					found[i] |= FCAPE;
+				if (prevTparcel == kFloatMissing)
+				{
+					// Nothing to do here, we have never entered CAPE zone
+					continue;
 				}
-#endif
+
+				// Do simple linear interpolation to get EL values
+				// EL is the estimate of the exact value where CAPE zone ends
+
+				double _ELT = (Tenv + prevTenv) * 0.5;
+				double _ELP = (Penv + prevPenv) * 0.5;
+
+				ELP[i] = _ELP;
+				ELT[i] = _ELT;	
+
+				// Interpolate the final piece of CAPE area between previous level and EL
+				_ELT = metutil::VirtualTemperature_(_ELT, _ELP*100); // environment
+					
+				// Linear interpolation of parcel temperature
+				Tparcel = (Tparcel + prevTparcel) * 0.5;			
+				Tparcel = metutil::VirtualTemperature_(Tparcel, _ELP*100);
+
+				if(Tparcel >= _ELT)
+				{
+					// Linear interpolation of parcel height
+					Zenv = (Zenv + prevZenv) * 0.5;
+
+					double C = constants::kG * (Zenv - prevZenv) * ((Tparcel - _ELT) / _ELT);
+					CAPE[i] += C;
+				}
+				
+				assert(CAPE[i] < 8000);
+
 			}
 		}
 		//DumpVector(CAPE, "CAPE");
@@ -767,17 +911,17 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 		//DumpVector(CAPE3km, "CAPE3km");
 
 		curLevel.Value(curLevel.Value() - 1);		
-		
+		/*
 		foundCount = 0;
 		
-		for (size_t i = 0; i < found.size(); i++)
+		for (auto& val : found)
 		{
-			if ((found[i] & FCAPE)) foundCount++;
-		}
+			if (val & FCAPE) foundCount++;
+		}*/
 		//itsLogger->Info("CAPE read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 		prevZInfo = ZenvInfo;
-		prevTInfo = TenvInfo;
-		prevPInfo = PenvInfo;
+		prevTenvInfo = TenvInfo;
+		prevPenvInfo = PenvInfo;
 		prevTparcelVec = TparcelVec;
 
 		for (size_t i = 0; i < Titer.size(); i++)
@@ -788,14 +932,17 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 				Titer[i] = TparcelVec[i];
 				Piter[i] = PenvVec[i];
 			}
+			
+			if (found[i] & FCAPE) Titer[i] = kFloatMissing; // by setting this we prevent MoistLift to integrate particle
+
 		}
 	}
 
-	for (size_t i = 0;i< CAPE.size();i++)
+	for (size_t i = 0; i < CAPE.size();i++)
 	{
 		if (CAPE[i] == -1) CAPE[i] = kFloatMissing;
-		if (CAPE3km[i] == -1) CAPE[i] = kFloatMissing;
-		if (CAPE1040[i] == -1) CAPE[i] = kFloatMissing;
+		if (CAPE3km[i] == -1) CAPE3km[i] = kFloatMissing;
+		if (CAPE1040[i] == -1) CAPE1040[i] = kFloatMissing;
 	}
 
 	return make_tuple (ELT, ELP, CAPE, CAPE1040, CAPE3km);
@@ -804,26 +951,29 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P)
 {
 	auto h = GET_PLUGIN(hitool);
+
+	assert(T.size() == P.size());
 	
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
 	h->HeightUnit(kHPa);
+	
+	// The arguments given to this function are LCL temperature and pressure
+	// Often LFC height is the same as LCL height, check that now
+	
+	itsLogger->Info("Searching environment temperature for LCL");
+
+	auto TenvLCL = h->VerticalValue(param("T-K"), P);
+
+	auto Piter = P, Titer = T; // integration variables
+	
+	// Convert pressure to Pa since metutil-library expects that
+	multiply_with(Piter, 100);
 
 	vector<bool> found(T.size(), false);
 	
 	vector<double> LFCT(T.size(), kFloatMissing);
 	vector<double> LFCP(T.size(), kFloatMissing);
-	
-	auto f = GET_PLUGIN(fetcher);
-	
-	// Check LCL conditions, if LCL = LFC
-	
-	itsLogger->Info("Searching environment temperature for LCL");
-
-	auto TenvLCL = h->VerticalValue(param("T-K"), P);
-	
-	auto Piter = P, Titer = T;
-	multiply_with(Piter, 100);
 
 	for (size_t i = 0; i < TenvLCL.size(); i++)
 	{
@@ -835,101 +985,98 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 		}
 	}
 
-	itsLogger->Debug("Found " + boost::lexical_cast<string> (count(found.begin(), found.end(), true)) + " gridpoints that have LCL=LFC");
+	size_t foundCount = count(found.begin(), found.end(), true);
 
-#ifdef USE_TW
-	auto thetaE = P;
+	itsLogger->Debug("Found " + boost::lexical_cast<string> (foundCount) + " gridpoints that have LCL=LFC");
 
-	for (size_t i = 0; i < thetaE.size(); i++)
-	{
-		thetaE[i] = metutil::ThetaE_(T[i], 100*P[i]);
-	}
-#endif
+	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
+	// among all grid points; most commonly it's the lowest hybrid level
+
 	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::max(P));
 	
 	level curLevel = levels.first;
-	curLevel.Value(curLevel.Value());
-
-	size_t foundCount = count(found.begin(), found.end(), true);
-
-	auto prevPInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("P-PA"), myTargetInfo->ForecastType(), false);
-	auto prevTInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("T-K"), myTargetInfo->ForecastType(), false);
-		
-	while (curLevel.Value() > 80 && foundCount != found.size())
-	{	
 	
-		// Get environment temperature values
+	auto prevPenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto prevTenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+	
+	curLevel.Value(curLevel.Value()-1);
 
+	//auto prevPenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("P-PA"), myTargetInfo->ForecastType(), false);
+	//auto prevTenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("T-K"), myTargetInfo->ForecastType(), false);
+
+	while (curLevel.Value() > 70 && foundCount != found.size())
+	{	
+		// Get environment temperature and pressure values for this level
 		auto TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 		auto PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
-		//auto TenvVec = TenvInfo->Data().Values();
-		auto PenvVec = PenvInfo->Data().Values();
-		
-		// Penv is hPa, convert to Pa
+		// Convert pressure to Pa since metutil-library expects that
+		auto PenvVec = PenvInfo->Data().Values();		
 		multiply_with(PenvVec, 100);
 		
+		// Lift the particle from previous level to this level. In the first revolution
+		// of this loop the starting level is LCL. If target level level is below current level
+		// (ie. we would be lowering the particle) missing value is returned.
+
 		vector<double> TparcelVec(P.size(), kFloatMissing);
-		
-#ifdef USE_TW			
-		metutil::Tw(&thetaE[0], &Penv[0], &Tw[0], thetaE.size());
-#else
-		multiply_with(P, 100);
-//		auto t = std::unique_ptr<himan::timer> (timer_factory::Instance()->GetTimer());
+		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
-//		t->Start();
-		metutil::MoistLift(&Piter[0], &Titer[0], &TparcelVec[0], &PenvVec[0], TparcelVec.size());
-//		t->Stop();
-//		std::cout << "Lifting took " << t->GetTime() << "ms\n";
-#endif
-		TenvInfo->ResetLocation();
-		PenvInfo->ResetLocation();
-		
-		assert(T.size() == P.size());
-
-		LOCKSTEP(TenvInfo, PenvInfo, prevPInfo, prevTInfo)
+		LOCKSTEP(TenvInfo, PenvInfo, prevPenvInfo, prevTenvInfo)
 		{
 			size_t i = TenvInfo->LocationIndex();
 
 			if (found[i]) continue;
 
-			double Penv = PenvInfo->Value();
-			double Tenv = TenvInfo->Value();
-			double Tparcel = TparcelVec[i];
+			double Penv = PenvInfo->Value(); // hPa
+			assert(Penv < 1200.);
+			assert(P[i] < 1200.);
 
-			if (Tparcel == kFloatMissing)
-			{
-				found[i] = true;
-				continue;
-			}
+			double Tenv = TenvInfo->Value(); // K
+			assert(Tenv > 100.);
+			
+			double Tparcel = TparcelVec[i]; // K
+			assert(Tparcel > 100.);
 
-			if (Penv*100 > P[i]) 
+			if (Tparcel == kFloatMissing || Penv > P[i])
 			{
 				continue;
 			}
 
 			if (Tparcel >= Tenv)
 			{
+				// Parcel is now warmer than environment, we have found LFC and entering CAPE zone
+
 				found[i] = true;
-				LFCT[i] = (Tenv + prevTInfo->Value()) / 2;
+
+				// We have no specific information on the precise height where the temperature has crossed
+				// Or we could if we'd integrate it but it makes the calculation more complex. So maybe in the
+				// future. For now just take an average of upper and lower level values.
 				
-				// Never allow LFC pressure to be bigger than LCL pressure
+				double prevTenv = prevTenvInfo->Value(); // K
+				assert(prevTenv > 100.);
+
+				LFCT[i] = (Tenv + prevTenv) * 0.5;
+
+				double prevP = prevPenvInfo->Value();
+				if (prevPenvInfo->Param().Name() == "P-PA") prevP *= 0.01;
+
+				// Never allow LFC pressure to be bigger than LCL pressure; bound lower level (with larger pressure value)
+				// to LCL level if it below LCL
+
+				prevP = min(prevP, P[i]);
 				
-				double prevP = prevPInfo->Value();
-				if (prevPInfo->Param().Name() == "P-PA") prevP *= 0.01;
-				if (prevP >= P[i]) prevP = P[i];
-				
-				LFCP[i] = (Penv + prevP) / 2;
+				LFCP[i] = (Penv + prevP) * 0.5;
 			}
 		}
 		
 		curLevel.Value(curLevel.Value() - 1);	
 	
 		foundCount = count(found.begin(), found.end(), true);
-		itsLogger->Info("LFC processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
+		itsLogger->Trace("LFC processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
 
-		prevPInfo = PenvInfo;
-		prevTInfo = TenvInfo;
+		prevPenvInfo = PenvInfo;
+		prevTenvInfo = TenvInfo;
+
 		for (size_t i = 0; i < Titer.size(); i++)
 		{
 			// preserve starting position for those grid points that have value
@@ -938,12 +1085,12 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 				Titer[i] = TparcelVec[i];
 				Piter[i] = PenvVec[i];
 			}
-			if (found[i]) Titer[i] = kFloatMissing;
+			if (found[i]) Titer[i] = kFloatMissing; // by setting this we prevent MoistLift to integrate particle
 		}
 	}
 
 #ifndef NDEBUG
-	for (size_t i = 0; i < LFCP.size(); i++) assert(LFCP[i] == kFloatMissing || LFCP[i]<P[i]);
+	for (size_t i = 0; i < LFCP.size(); i++) assert(LFCP[i] == kFloatMissing || LFCP[i]<=P[i]);
 #endif
 
 	return make_pair(LFCT, LFCP);
@@ -1120,6 +1267,10 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 	auto TInfo = Fetch(myTargetInfo->Time(), level(himan::kHeight,2), param("T-K"), myTargetInfo->ForecastType(), false);
 	auto TDInfo = Fetch(myTargetInfo->Time(), level(himan::kHeight,2), param("TD-C"), myTargetInfo->ForecastType(), false);
 	
+	if (!TInfo || !TDInfo)
+	{
+		throw runtime_error("No data found");
+	}
 	auto T = TInfo->Data().Values();
 	auto TD = TDInfo->Data().Values();
 
@@ -1153,7 +1304,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	modifier_mean tp, mr;
 	level curLevel(kHybrid, 137);
 
-#if 0
+#if 1
 	itsLogger->Info("Calculating T&Td in smarttool compatibility mode");
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
@@ -1260,7 +1411,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
 	auto Psurf = Fetch(myTargetInfo->Time(), level(kHeight, 0), PParams, myTargetInfo->ForecastType(), false);
-	auto P = Psurf->Data().Values();
+	P = Psurf->Data().Values();
 
 	vector<double> T(Tpot.size(), kFloatMissing);			
 
