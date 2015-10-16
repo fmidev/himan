@@ -364,7 +364,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 
 	myTargetInfo->Param(CAPE3kmParam);
 	myTargetInfo->Data().Set(get<4> (CAPE));
-/*
+ 
 	// 5. 
 
 	cout << "\n--- CIN --\n" << endl;
@@ -374,16 +374,56 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	DumpVector(CIN, "CIN");
 	myTargetInfo->Param(CINParam);
 	myTargetInfo->Data().Set(CIN);
-*/
-}
 
-#if 0
+	if (sourceType == kMaxThetaE)
+	{
+		// If calculating most unstable CAPE, and the value of CAPE is zero, set it to missing
+		// with all its helper parameters
+		
+		myTargetInfo->Param(CAPEParam);
+		
+		for (myTargetInfo->ResetLocation(); myTargetInfo->NextLocation();)
+		{			
+			double CAPEval = myTargetInfo->Value();
+			
+			if (CAPEval <= 0.001)
+			{
+				myTargetInfo->Value(kFloatMissing);
+
+				myTargetInfo->Param(ELTParam);
+				myTargetInfo->Value(kFloatMissing);
+
+				myTargetInfo->Param(ELPParam);
+				myTargetInfo->Value(kFloatMissing);
+	
+				myTargetInfo->Param(CAPE1040Param);
+				myTargetInfo->Value(kFloatMissing);
+
+				myTargetInfo->Param(CAPE3kmParam);
+				myTargetInfo->Value(kFloatMissing);
+				
+				myTargetInfo->Param(LFCTParam);
+				myTargetInfo->Value(kFloatMissing);
+				
+				myTargetInfo->Param(LFCPParam);
+				myTargetInfo->Value(kFloatMissing);
+				
+				myTargetInfo->Param(LCLTParam);
+				myTargetInfo->Value(kFloatMissing);
+				
+				myTargetInfo->Param(LCLPParam);
+				myTargetInfo->Value(kFloatMissing);
+			}
+		}
+	}
+	
+}
 
 vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
 	
-	auto PsurfInfo = Fetch(myTargetInfo->Time(), level(kHeight, 0), PParams, myTargetInfo->ForecastType(), false);
+	//auto PsurfInfo = Fetch(myTargetInfo->Time(), level(kHeight, 0), PParams, myTargetInfo->ForecastType(), false);
 	
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
@@ -395,15 +435,16 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 	forecast_time ftime = myTargetInfo->Time();
 	forecast_type ftype = myTargetInfo->ForecastType();
 
-	modifier_plusminusarea m;
-
 	/*
 	 * Modus operandi:
 	 * 
 	 * 1. Integrate from ground to LCL dry adiabatically
+	 * 
+	 * This can be done always since LCL is known at all grid points.
+	 * 
 	 * 2. Integrate from LCL to LFC moist adiabatically
 	 * 
-	 * Use modifier_plusminusarea for integration.
+	 * This can be done to only those grid points that have LFC defined.
 	 */
 	
 	// Get LCL and LFC heights in meters
@@ -420,118 +461,136 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 	itsLogger->Debug("Fetching LFC metric height");
 	DumpVector(ZLFC, "ZLFC");
 
-	// If LFC is not defined for some points, do not calculate CIN for
-	// those either.
-	
-	for (size_t i = 0; i < PLFC.size(); i++)
-	{
-		if (ZLCL[i] == kFloatMissing || ZLFC[i] == kFloatMissing)
-		{
-			found[i] = true;
-			ZLCL[i] = kFloatMissing;
-			ZLFC[i] = kFloatMissing;
-		}
-	}
-	
-	vector<double> zero (PLCL.size(), 0);
-	m.LowerHeight(zero);
-	m.UpperHeight(ZLCL);
-	
 	level curLevel(kHybrid, 137);
 	
-	//while (!m.CalculationFinished())
+	auto basePenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
+	auto prevZenvInfo = Fetch(ftime, curLevel, param("HL-M"), ftype, false);
+	auto prevTenvInfo = Fetch(ftime, curLevel, param("T-K"), ftype, false);
+	auto prevPenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
 	
-	info_t prevZInfo;
 	std::vector<double> cinh(PLCL.size(), 0);
 	
-	for (size_t i=0; i<found.size();i++) if (found[i]) cinh[i] = kFloatMissing;
+	size_t foundCount = count(found.begin(), found.end(), true);
 	
-	// For moist lift we need thetaE
+	auto Piter = basePenvInfo->Data().Values();
+	multiply_with(Piter, 100);
 	
-	vector<double> thetaE(PLFC.size(), kFloatMissing);
+	auto PLCLPa = PLCL;
+	multiply_with(PLCLPa, 100);
 	
-	for (size_t i = 0; i < thetaE.size() && PsurfInfo->NextLocation(); i++)
-	{
-		if (TLCL[i] != kFloatMissing && PLCL[i] != kFloatMissing && PLFC[i] != kFloatMissing )
-		{
-			thetaE[i] = metutil::ThetaE_(TLCL[i], 100*PLCL[i]);
-		}
-	}
+	auto Titer = Tsurf;
+	auto prevTparcelVec = Tsurf;
 
-	while (true)
+	curLevel.Value(curLevel.Value()-1);
+	
+	while (curLevel.Value() > 70 && foundCount != found.size())
 	{
+
 		auto ZenvInfo = Fetch(ftime, curLevel, param("HL-M"), ftype, false);
-		
-		if (curLevel.Value() == 137)
-		{
-			prevZInfo = ZenvInfo;
-			curLevel.Value(curLevel.Value()-1);
-			continue;
-		}
-		
 		auto TenvInfo = Fetch(ftime, curLevel, param("T-K"), ftype, false);
 		auto PenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
 		
-		vector<double> Tdiff(PLCL.size(), kFloatMissing);
+//		vector<double> Tdiff(PLCL.size(), kFloatMissing);
+		vector<double> TparcelVec(Piter.size(), kFloatMissing);
+
+		// Convert pressure to Pa since metutil-library expects that
+		auto PenvVec = PenvInfo->Data().Values();
+		multiply_with(PenvVec, 100);
+
+		metutil::LiftLCL(&Piter[0], &Titer[0], &PLCLPa[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 		
-		LOCKSTEP(TenvInfo, PenvInfo, ZenvInfo, PsurfInfo, prevZInfo)
+		LOCKSTEP(TenvInfo, PenvInfo, ZenvInfo, prevZenvInfo, basePenvInfo)
 		{
 			size_t i = TenvInfo->LocationIndex();
 
 			if (found[i]) continue;
 
-			double Tenv = TenvInfo->Value();
-
+			double Tenv = TenvInfo->Value(); // K
+			assert(Tenv >= 100.);
+			
+			double Penv = PenvInfo->Value(); // hPa
+			assert(Penv < 1200.);
+			
+			double Pbase = basePenvInfo->Value(); // hPa
+			assert(Pbase < 1200.);
+			
+			assert(PLFC[i] < 1200. || PLFC[i] == kFloatMissing);
+			
+			double Zenv = ZenvInfo->Value(); // m
+			double prevZenv = prevZenvInfo->Value(); // m
+			
 			double Tparcel = kFloatMissing;
 			
-			if (PenvInfo->Value() <= PLFC[i])
+			if (Penv >= PLCL[i] && PLFC[i] == kFloatMissing)
 			{
-				// reached max height
 				found[i] = true;
 				continue;
 			}
-			else if (PenvInfo->Value() > PLCL[i])
+			
+			if (Penv <= PLFC[i])
 			{
-				Tparcel = metutil::DryLift_(PsurfInfo->Value(), Tsurf[i], PenvInfo->Value() * 100);
+				// reached max height
+				// TODO: final piece integration
+				found[i] = true;
+				continue;
+			}
+			else if (Penv > PLCL[i])
+			{
+				Tparcel = metutil::DryLift_(Pbase*100, Tsurf[i], Penv * 100);
 			}
 			else
 			{
-				Tparcel = metutil::Tw_(thetaE[i], PenvInfo->Value() * 100);
+				Tparcel = metutil::MoistLift_(Pbase*100, Tsurf[i], Penv * 100);
+				
 				if (Tparcel == kFloatMissing) continue;
 				
-				Tparcel = metutil::VirtualTemperature_(Tparcel, PenvInfo->Value() * 100);
-				Tenv = metutil::VirtualTemperature_(Tenv, PenvInfo->Value() * 100);
+				Tparcel = metutil::VirtualTemperature_(Tparcel, Penv * 100);
+				Tenv = metutil::VirtualTemperature_(Tenv, Penv * 100);
 			}
 
 			if (Tparcel <= Tenv)
 			{
-				cinh[i] += constants::kG * (ZenvInfo->Value() - prevZInfo->Value()) * ((Tparcel - Tenv) / Tenv);
+				cinh[i] += constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 				assert(cinh[i] <= 0);
 			}
 			else if (cinh[i] != 0)
 			{
 				// cape layer, no more CIN
+				// TODO: final piece integration
 				found[i] = true;
 			}
 		}
 
-		size_t numfound = static_cast<unsigned int> (count(found.begin(), found.end(), true));
+		foundCount = count(found.begin(), found.end(), true);
 		
-		std::cout << "cinh done for " << numfound << "/" << found.size() << " gridpoints level " << curLevel.Value() << "\n";
-		
-		if (numfound == found.size())
-		{
-			break;
-		}
+		//std::cout << "cinh done for " << foundCount << "/" << found.size() << " gridpoints level " << curLevel.Value() << "\n";
 
 		curLevel.Value(curLevel.Value()-1);
-		prevZInfo = ZenvInfo;
+		prevZenvInfo = ZenvInfo;
+		prevTparcelVec = TparcelVec;
+		
+		prevZenvInfo = ZenvInfo;
+		prevTenvInfo = TenvInfo;
+		prevPenvInfo = PenvInfo;
+		prevTparcelVec = TparcelVec;
+
+		for (size_t i = 0; i < Titer.size(); i++)
+		{
+			// preserve starting position for those grid points that have value
+			if (TparcelVec[i] != kFloatMissing && PenvVec[i] != kFloatMissing)
+			{
+				Titer[i] = TparcelVec[i];
+				Piter[i] = PenvVec[i];
+			}
+			
+			if (found[i] & FCAPE) Titer[i] = kFloatMissing; // by setting this we prevent MoistLift to integrate particle
+
+		}
 	} 
-	
+
 	return cinh;
 	
 }
-#endif
 
 double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv, double Zenv, double prevZenv)
 {
@@ -761,7 +820,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 	
 	level curLevel = levels.first;
 	
-	auto prevZInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
+	auto prevZenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
 	auto prevTenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 	auto prevPenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 	
@@ -788,7 +847,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 
 		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 	
-		LOCKSTEP(PenvInfo, ZenvInfo, prevZInfo, prevTenvInfo, prevPenvInfo, TenvInfo)
+		LOCKSTEP(PenvInfo, ZenvInfo, prevZenvInfo, prevTenvInfo, prevPenvInfo, TenvInfo)
 		{
 			size_t i = PenvInfo->LocationIndex();
 
@@ -808,7 +867,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 			assert(prevPenv < 1200.);
 			
 			double Zenv = ZenvInfo->Value(); // m
-			double prevZenv = prevZInfo->Value(); // m
+			double prevZenv = prevZenvInfo->Value(); // m
 			
 			double Tparcel = TparcelVec[i]; // K
 			assert(Tparcel > 100. || Tparcel == kFloatMissing);
@@ -919,7 +978,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 			if (val & FCAPE) foundCount++;
 		}*/
 		//itsLogger->Info("CAPE read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
-		prevZInfo = ZenvInfo;
+		prevZenvInfo = ZenvInfo;
 		prevTenvInfo = TenvInfo;
 		prevPenvInfo = PenvInfo;
 		prevTparcelVec = TparcelVec;
@@ -944,7 +1003,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 		if (CAPE3km[i] == -1) CAPE3km[i] = kFloatMissing;
 		if (CAPE1040[i] == -1) CAPE1040[i] = kFloatMissing;
 	}
-
+	
 	return make_tuple (ELT, ELP, CAPE, CAPE1040, CAPE3km);
 }
 
@@ -1460,8 +1519,9 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 			double RH = RHInfo->Value();
 			double P = PInfo->Value();
 			
-			if (P < 500.)
+			if (P < 600.)
 			{
+				// Cut search if reach level 600hPa
 				found[i] = true;
 				continue;
 			}
@@ -1474,7 +1534,6 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 				T[i] = T_;
 				if (RH == 0.) RH=0.1;
 				TD[i] = metutil::DewPointFromRH_(T_, RH);
-				if (TD[i] < 100) std::cout << T_ << " " << RH << std::endl;
 				assert(TD[i] > 100);
 			}
 		}
