@@ -273,6 +273,25 @@ CUDA_DEVICE
 double Lift_(double P, double T, double TD, double targetP);
 
 /**
+ * @brief Lift a parcel of air to wanted pressure
+ *
+ * Overcoat for DryLift/MoistLift, with user-given LCL level pressure
+ *
+ * @param P Initial pressure in Pascals
+ * @param T Initial temperature in Kelvins
+ * @param PLCL LCL level pressure in Pascals
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+CUDA_KERNEL
+void LiftLCL(cdarr_t P, cdarr_t T, cdarr_t LCP, cdarr_t targetP, darr_t result, size_t N);
+
+CUDA_DEVICE
+double LiftLCL_(double P, double T, double LCLP, double targetP);
+
+
+/**
  * @brief Lift a parcel of air moist-adiabatically to wanted pressure
  *
  * Function will calculate LCL from given arguments and starts
@@ -685,6 +704,24 @@ inline double himan::metutil::Lift_(double P, double T, double TD, double target
 }
 
 CUDA_DEVICE
+inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double targetP)
+{
+	// Sanity checks
+	assert(P > 10000);
+	assert(T > 0 && T < 500);
+	assert(targetP > 10000);
+	assert(LCLP > 10000);
+
+	if (LCLP < targetP)
+	{
+		// LCL level is higher than requested pressure, only dry lift is needed
+		return DryLift_(P, T, targetP);
+	}
+	
+	return MoistLift_(P, T, targetP);
+}
+
+CUDA_DEVICE
 inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 {
 
@@ -708,7 +745,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	double T0 = Tint;
 
 	int i = 0;
-	const double Pstep = 200; // Pa
+	const double Pstep = 100; // Pa
 	const int maxIter = static_cast<int> (100000/Pstep+10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
 	double value = kFloatMissing;

@@ -52,6 +52,15 @@ void metutil::Lift(cdarr_t P, cdarr_t T, cdarr_t TD, cdarr_t targetP, darr_t res
 	}
 }
 
+
+void metutil::LiftLCL(cdarr_t P, cdarr_t T, cdarr_t PLCL, cdarr_t targetP, darr_t result, size_t N)
+{
+	for (size_t i = 0; i < N; i++)
+	{
+		result[i] = LiftLCL_(P[i], T[i], PLCL[i], targetP[i]);
+	}
+}
+
 void metutil::Tw(cdarr_t thetaE, cdarr_t P, darr_t result, size_t N)
 {
 	for (size_t i = 0; i < N; i++)
