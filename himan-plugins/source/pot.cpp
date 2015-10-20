@@ -115,24 +115,25 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// Määritetään salamointi vs. CAPE riippuvuutta varten tarvitaan CAPEn ala- ja ylärajoille yhtälöt. Ala- ja ylärajat muuttuvat leveyspiirin funktiona.
 	double lat_abs = abs(LAT);
 	double cape_low = -25*lat_abs + 1225;
-	double cape_high = -40*lat_abs + 2600;
+	double cape_high = -40*lat_abs + 3250;
 
 	// Kiinnitetään cape_low ja high levespiirien 25...45  ulkopuolella vakioarvoihin.
 	if (lat_abs <25)
 	{
 		cape_low = 600;
-		cape_high = 1600;
+		cape_high = 2000;
 	}
 
 	if (lat_abs > 45)
 	{
 		cape_low = 100;
-		cape_high = 800;
+		cape_high = 1000;
 	}
 
 	// CAPE-arvot skaalataan arvoihin 1....10. Ala- ja ylärajat muuttuvat leveyspiirin funktiona.
 	double k =  9/(cape_high - cape_low);
-	double scaled_cape = k*CAPE_ec + (1- k*cape_low);
+	double scaled_cape = 1;
+        if (CAPE_ec >= cape_low) scaled_cape = k*CAPE_ec + (1- k*cape_low);
 
 	assert( scaled_cape > 0);
 
