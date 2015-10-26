@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.10.14
+Version: 15.10.26
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -101,6 +101,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.26-1.fmi
+- Fix POT
 * Wed Oct 14 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.14-1.fmi
 - Remove mandatory jpeg packing of grib2 files
 * Fri Oct  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.9-1.fmi
