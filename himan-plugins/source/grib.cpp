@@ -104,19 +104,20 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
 		edition = 2;
-		if (itsWriteOptions.configuration->FileCompression() == kNoCompression)
+		if (itsWriteOptions.configuration->FileCompression() == kNoCompression && itsWriteOptions.configuration->FileWriteOption() != kSingleFile)
 		{	
 			outputFile += "2";
 		}
-		else if (itsWriteOptions.configuration->FileCompression() == kGZIP)
+		
+		if (itsWriteOptions.configuration->FileCompression() == kGZIP)
 		{
-                	outputFile.insert(outputFile.end()-3, '2');
+			outputFile.insert(outputFile.end()-3, '2');
 		}
 		else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
 		{
 			outputFile.insert(outputFile.end()-4, '2');
 		}
-		else
+		else if (itsWriteOptions.configuration->FileCompression() != kNoCompression)
 		{
 			itsLogger->Error("Unable to write to compressed grib. Unknown file compression: " + HPFileCompressionToString.at(itsWriteOptions.configuration->FileCompression()));
 			return false;
