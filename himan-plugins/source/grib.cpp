@@ -1289,7 +1289,7 @@ void grib::WriteParameter(info& anInfo)
 
 	if (itsGrib->Message().Edition() == 1)
 	{
-		if (anInfo.Param().GribTableVersion() != kHPMissingInt)
+		if (anInfo.Param().GribTableVersion() != kHPMissingInt && anInfo.Param().GribIndicatorOfParameter() != kHPMissingInt)
 		{
 			// In radon table version is a parameter property, not a 
 			// producer property
