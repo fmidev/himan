@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.10.26
+Version: 15.10.29
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -26,7 +26,7 @@ Requires: libsmartmet-newbase >= 15.4.29
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libfmidb >= 15.9.29
+BuildRequires: libfmidb >= 15.10.9
 BuildRequires: libfmigrib-devel >= 15.9.14
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
@@ -101,6 +101,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.29-1.fmi
+- Bugfix for luatool (SOL-3219)
 * Mon Oct 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.26-1.fmi
 - Fix POT
 * Wed Oct 14 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.14-1.fmi
