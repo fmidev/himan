@@ -15,6 +15,8 @@
 using namespace himan;
 using namespace std;
 
+std::unique_ptr<NFmiRotatedLatLonArea> rotlatlonArea;
+
 regular_grid::regular_grid()
 	: itsData(0, 0, 1, kFloatMissing)
 	, itsPackedData()
@@ -499,16 +501,19 @@ point regular_grid::LatLon(size_t locationIndex) const
 
 	if (Projection() == kRotatedLatLonProjection)
 	{
-		// TODO: Optimize this so that area is not created at every function call!
-		auto area = NFmiRotatedLatLonArea(NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()),
-			NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
-			NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()),
-			NFmiPoint(0.,0.),
-			NFmiPoint(0.,0.),
-			true
-		);
+		if (!rotlatlonArea)
+		{
+			rotlatlonArea = unique_ptr<NFmiRotatedLatLonArea> (new NFmiRotatedLatLonArea(
+				NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()),
+				NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
+				NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()),
+				NFmiPoint(0.,0.),
+				NFmiPoint(0.,0.),
+				true)
+			);
+		}
 		
-		auto regpoint = area.ToRegLatLon(NFmiPoint(ret.X(), ret.Y()));
+		auto regpoint = rotlatlonArea->ToRegLatLon(NFmiPoint(ret.X(), ret.Y()));
 
 		ret.X(regpoint.X());
 		ret.Y(regpoint.Y());
