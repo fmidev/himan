@@ -10,6 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
+#include <boost/thread.hpp>
 
 namespace himan
 {
@@ -21,7 +22,7 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 public:
 	hybrid_height();
 
-	inline virtual ~hybrid_height() {}
+	virtual ~hybrid_height();
 
 	hybrid_height(const hybrid_height& other) = delete;
 	hybrid_height& operator=(const hybrid_height& other) = delete;
@@ -42,6 +43,8 @@ public:
 	{
 		return HPVersionNumber(1, 2);
 	}
+	
+	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) const;
 
 private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
@@ -50,6 +53,8 @@ private:
 
 	int itsBottomLevel;
 	bool itsUseGeopotential;
+	bool itsUseWriterThreads;
+	mutable boost::thread_group itsWriterGroup;
 
 };
 

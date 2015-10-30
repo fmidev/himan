@@ -15,6 +15,8 @@
 
 #include "neons.h"
 #include "radon.h"
+#include "writer.h"
+#include "cache.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -29,11 +31,21 @@ const himan::param PParam("P-HPA");
 const himan::param TParam("T-K");
 const himan::param TGParam("TG-K");
 
-hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt)
+void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, const himan::info& targetInfo);
+
+hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseWriterThreads(false)
 {
 	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
 	itsLogger = logger_factory::Instance()->GetLog(itsName);
 
+}
+
+hybrid_height::~hybrid_height()
+{
+	if (itsUseWriterThreads)
+	{
+		itsWriterGroup.join_all();
+	}
 }
 
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -63,7 +75,15 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 	
 	itsUseGeopotential = (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199);
-
+	
+	// Using separate writer threads is only efficient when we are calculating with iteration (ECMWF)
+	// and if we are using external packing like gzip. In those condition it should give according to inital
+	// tests a ~30% increase in calculation speed.
+	
+	itsUseWriterThreads = (itsConfiguration->FileCompression() != kNoCompression 
+			&& (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles) 
+			&& !itsUseGeopotential);
+	
 	PrimaryDimension(kTimeDimension);
 
 	SetParams({param("HL-M", 3, 0, 3, 6)});
@@ -166,7 +186,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	level prevLevel;
 
 	bool firstLevel = false;
-		
+
 	if (myTargetInfo->Level().Value() == itsBottomLevel)
 	{
 		firstLevel = true;
@@ -178,7 +198,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 		prevLevel.Index(prevLevel.Index() + 1);
 	}
-	
+
 	info_t prevTInfo, prevPInfo, prevHInfo;
 	
 	if (!firstLevel)
@@ -215,7 +235,26 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	{
 		prevHInfo->ResetLocation();
 		assert(prevLevel.Value() > myTargetInfo->Level().Value());
-	}		
+	}
+	
+	double scale = 1.;
+	
+	// First level for ECMWF is LNSP which needs to be converted
+	// to regular pressure
+
+	if (firstLevel)
+	{
+		if ( itsConfiguration->SourceProducer().Id() == 131 )
+		{
+			// LNSP to regular pressure
+			for (double& val : prevPInfo->Data().Values())
+			{
+				val = exp (val);
+			}
+		}
+		
+		scale = 0.01;
+	}
 
 	LOCKSTEP(myTargetInfo, PInfo, prevPInfo, TInfo, prevTInfo)
 	{
@@ -241,25 +280,59 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 			continue;
 		}
 
-		if (firstLevel)
-		{
-			if ( itsConfiguration->SourceProducer().Id() == 131 )
-			{
-				// LNSP to regular pressure
-				prevP = exp (prevP) * 0.01f;
-			}
-			else 
-			{
-				prevP *= 0.01f;
-			}
-		}
-
+		prevP *= scale;
+		
 		double deltaZ = 14.628 * (prevT + T) * log(prevP/P);
 		double totalHeight = prevH + deltaZ;
 	
 		myTargetInfo->Value(totalHeight);
 	}
+
+	// If we are writing to a single file, launch a separate writing thread and let the main
+	// thread proceed. This speeds up the processing in those machines where writing of files
+	// is particularly slow (for example when external packing is used)
 	
+	if (itsUseWriterThreads)
+	{
+		// First the data needs to be added to cache, otherwise this current calculating
+		// thread cannot find it in the next step
+
+		if (itsConfiguration->UseCache())
+		{
+			auto c = GET_PLUGIN(cache);
+
+			c->Insert(*myTargetInfo, true);
+		}
+
+		// Write to disk asynchronously
+		boost::thread* t = new boost::thread(Write, itsConfiguration, *myTargetInfo);
+		itsWriterGroup.add_thread(t);
+		itsLogger->Trace("Writer thread started");
+	}
+
 	return true;
 }
 
+void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, const himan::info& targetInfo)
+{
+	using namespace himan;
+	auto aWriter = GET_PLUGIN(writer);
+
+	assert(itsConfiguration->FileWriteOption() != kSingleFile);
+
+	auto tempInfo = targetInfo;
+	tempInfo.ResetParam();
+
+	while (tempInfo.NextParam())
+	{
+		aWriter->ToFile(tempInfo, itsConfiguration);
+	}
+}
+
+void hybrid_height::WriteToFile(const info& targetInfo, const write_options& writeOptions) const
+{
+	if (!itsUseWriterThreads)
+	{
+		compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
+	}
+}
