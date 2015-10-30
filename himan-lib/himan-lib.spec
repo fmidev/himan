@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.10.26
+Version: 15.10.30
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,13 +13,13 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 15.9.29
+Requires: libfmidb >= 15.10.9
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 BuildRequires: boost-devel >= 1.55
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
-BuildRequires: libfmidb-devel >= 15.9.29
+BuildRequires: libfmidb-devel >= 15.10.9
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
 BuildRequires: libsmartmet-newbase-devel >= 15.4.29
@@ -49,6 +49,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Oct 30 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.30-1.fmi
+- Changes in regular_grid and matrix
 * Mon Oct 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.26-1.fmi
 - Some changes to metutil
 * Mon Sep 30 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.30-1.fmi
