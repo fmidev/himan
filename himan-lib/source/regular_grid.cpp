@@ -497,6 +497,22 @@ point regular_grid::LatLon(size_t locationIndex) const
 		ret.Y(firstPoint.Y() - j * Dj());
 	}
 
+	if (Projection() == kRotatedLatLonProjection)
+	{
+		// TODO: Optimize this so that area is not created at every function call!
+		auto area = NFmiRotatedLatLonArea(NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()),
+			NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
+			NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()),
+			NFmiPoint(0.,0.),
+			NFmiPoint(0.,0.),
+			true
+		);
+		
+		auto regpoint = area.ToRegLatLon(NFmiPoint(ret.X(), ret.Y()));
+
+		ret.X(regpoint.X());
+		ret.Y(regpoint.Y());
+	}
 	return ret;
 }
 
