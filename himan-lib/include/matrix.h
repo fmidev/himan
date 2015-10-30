@@ -82,6 +82,11 @@ public:
 		return !(*this == other);
 	}
 	
+	T& operator[](size_t& i)
+	{
+		return itsData[i];
+	}
+	
 	std::string ClassName() const
 	{
 		return "himan::matrix";
@@ -115,7 +120,7 @@ public:
 	 * @brief Print information on contents if T == double
 	 *
 	 */
-
+#ifndef __NVCC__
 	void PrintData(std::ostream& file, const std::vector<double>& theValues) const
 	{
 
@@ -200,6 +205,7 @@ public:
 		}
 
 	}
+#endif
 
 	size_t Size() const
 	{
@@ -252,22 +258,13 @@ public:
 		itsDepth = theDepth;
 	}
 
-	/**
-	 * @brief Return const pointer to data as POD
-	 * @return const pointer to data
-	 */
-	const T* ValuesAsPOD() const
+	T* ValuesAsPOD()
 	{
 		assert(itsData.size());
 		return &itsData[0];
 	}
 
-	/**
-	 * @brief Return reference to data (in c++ style)
-	 * @return const reference to data
-	 */
-	
-	const std::vector<T>& Values() const
+	std::vector<T>& Values()
 	{
 		return itsData;
 	}
