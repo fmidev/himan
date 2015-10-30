@@ -275,13 +275,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 			if (UInfo->Grid()->Projection() == kRotatedLatLonProjection)
 			{
-				const point rotPoint = myTargetInfo->LatLon();
+				const point regPoint = myTargetInfo->LatLon();
+
+				const NFmiPoint rp = reinterpret_cast<NFmiRotatedLatLonArea*> ((sourceArea.get()))->ToRotLatLon(NFmiPoint(regPoint.X(), regPoint.Y()));
+				const point rotPoint(rp.X(), rp.Y());
 
 				// We use UGrid area to do to the rotation even though UGrid area might be
 				// different from VGrid area (ie. Hirlam), but that does not matter
-
-				NFmiPoint rp = reinterpret_cast<NFmiRotatedLatLonArea*> ((sourceArea.get()))->ToRegLatLon(NFmiPoint(rotPoint.X(), rotPoint.Y()));
-				const point regPoint(rp.X(), rp.Y());
 
 				double newU = kFloatMissing, newV = kFloatMissing;
 
