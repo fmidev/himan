@@ -354,7 +354,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 				// Wind speed should the same with both forms of U and V
 
-				assert(fabs(sqrt(U*U+V*V) - sqrt(newU*newU + newV * newV)) < 0.001);
+				assert(fabs(sqrt(U*U+V*V) - sqrt(newU*newU + newV * newV)) < 0.01);
 
 				U = newU;
 				V = newV;
