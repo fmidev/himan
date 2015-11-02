@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.10.29
+Version: 15.11.2
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -101,7 +101,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Mon Oct 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.29-1.fmi
+* Mon Nov  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.2-1.fmi
+- Fix to work distribution when primary dimension is time
+- Minor changes to hybrid_height
+* Fri Oct 30 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.30-1.fmi
+- Performance optimization for hybrid_height
+* Thu Oct 29 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.29-1.fmi
 - Bugfix for luatool (SOL-3219)
 * Mon Oct 26 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.26-1.fmi
 - Fix POT
