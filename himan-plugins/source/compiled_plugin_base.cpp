@@ -213,6 +213,17 @@ void compiled_plugin_base::Start()
 	 * Each thread will have a copy of the target info.
 	 */
 
+	if (itsPrimaryDimension == kTimeDimension)
+	{
+		// Assure other iterators are set since some plugins might access
+		// configuration class' info-instance. This is only necessary
+		// for time dimension (since it is the only 'special' dimension we use)
+		// and it needs to be done before threaded execution starts.
+		
+		itsInfo->First();
+		itsInfo->ResetTime(); 
+	}
+
 	for (short i = 0; i < itsThreadCount; i++)
 	{
 
@@ -330,10 +341,6 @@ void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
 		// This is used when f.ex. levels need to be processed
 		// in sequential order.
 		
-		// Assure other iterators are set since some plugins might access
-		// configuration class' info-instance
-		
-		itsInfo->First();itsInfo->ResetTime(); 
 		RunTimeDimension(myTargetInfo, threadIndex);
 	}
 	else
