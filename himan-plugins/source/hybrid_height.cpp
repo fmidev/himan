@@ -31,7 +31,7 @@ const himan::param PParam("P-HPA");
 const himan::param TParam("T-K");
 const himan::param TGParam("TG-K");
 
-void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, const himan::info& targetInfo);
+void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, himan::info targetInfo);
 
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseWriterThreads(false)
 {
