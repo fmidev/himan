@@ -40,13 +40,7 @@ hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseWriterThre
 
 }
 
-hybrid_height::~hybrid_height()
-{
-	if (itsUseWriterThreads)
-	{
-		itsWriterGroup.join_all();
-	}
-}
+hybrid_height::~hybrid_height() {}
 
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
@@ -90,6 +84,10 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	Start();
 	
+	if (itsUseWriterThreads)
+	{
+		itsWriterGroup.join_all();
+	}
 }
 
 /*
@@ -313,19 +311,19 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	return true;
 }
 
-void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, const himan::info& targetInfo)
+// This functions copies targetInfo intentionally!
+void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, himan::info targetInfo)
 {
 	using namespace himan;
 	auto aWriter = GET_PLUGIN(writer);
 
 	assert(itsConfiguration->FileWriteOption() != kSingleFile);
 
-	auto tempInfo = targetInfo;
-	tempInfo.ResetParam();
+	targetInfo.ResetParam();
 
-	while (tempInfo.NextParam())
+	while (targetInfo.NextParam())
 	{
-		aWriter->ToFile(tempInfo, itsConfiguration);
+		aWriter->ToFile(targetInfo, itsConfiguration);
 	}
 }
 
