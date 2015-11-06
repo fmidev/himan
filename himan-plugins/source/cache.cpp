@@ -77,6 +77,9 @@ void cache::SplitToPool(info& anInfo)
 	if (cache_pool::Instance()->Find(uniqueName))
 	{
 		itsLogger->Trace("Data with key " + uniqueName + " already exists at cache");
+		
+		// Update timestamp of this cache item
+		cache_pool::Instance()->UpdateTime(uniqueName);
 		return;
 	}
 
@@ -134,7 +137,7 @@ void cache::Clean()
 
 cache_pool* cache_pool::itsInstance = NULL;
 
-cache_pool::cache_pool()
+cache_pool::cache_pool() : itsCacheLimit(-1)
 {
     itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("cache_pool"));
 }
@@ -147,6 +150,11 @@ cache_pool* cache_pool::Instance()
 	}
 
 	return itsInstance;
+}
+
+void cache_pool::CacheLimit(int theCacheLimit)
+{
+	itsCacheLimit = theCacheLimit;
 }
 
 bool cache_pool::Find(const string& uniqueName) 
@@ -167,29 +175,50 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 	Lock lock(itsInsertMutex);
 
 	itsCache.insert(pair<string, shared_ptr<himan::info>>(uniqueName, anInfo));
-	time_t timer;
-	time(&timer);
-	itsCacheItems.insert(pair<string, time_t>(uniqueName, timer));
+	itsCacheTime.insert(pair<string, time_t>(uniqueName, time(nullptr)));
 	itsLogger->Trace("Data added to cache. UniqueName: " + uniqueName);
 	
+	if (itsCacheLimit > -1 && itsCache.size() > static_cast<size_t> (itsCacheLimit))
+	{
+		Clean();
+	}
+	
+}
+
+void cache_pool::UpdateTime(const std::string& uniqueName)
+{
+	itsCacheTime[uniqueName] = time(nullptr);
 }
 
 void cache_pool::Clean()
 {
 	Lock lock(itsDeleteMutex);
 
-	for (map<string, time_t>::iterator it = itsCacheItems.begin(); it != itsCacheItems.end(); ++it)
+	assert(itsCacheLimit > 0);
+	if (itsCache.size() <= static_cast<size_t> (itsCacheLimit))
 	{
-		time_t timer;
-		time(&timer);
-		if (timer - it->second > 10)
+		return;
+	}
+
+	string oldestName;
+	time_t oldestTime = INT_MAX;
+
+	for (const auto& kv : itsCacheTime)
+	{
+		if (kv.second < oldestTime)
 		{
-			string name = it->first;
-			itsCache.erase(name);
-			itsCacheItems.erase(name);
-			itsLogger->Trace("Data cleared from cache: " + name);
+			oldestName = kv.first;
+			oldestTime = kv.second;
 		}
 	}
+	
+	assert(!oldestName.empty());
+	
+	itsCache.erase(oldestName);
+	itsCacheTime.erase(oldestName);
+	itsLogger->Trace("Data cleared from cache: " + oldestName + " with time: " + boost::lexical_cast<string> (oldestTime));
+	itsLogger->Trace("Cache size: " + boost::lexical_cast<string> (itsCache.size()));
+
 }
 
 shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)

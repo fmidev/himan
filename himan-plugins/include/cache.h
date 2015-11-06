@@ -91,20 +91,27 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(0, 1);
+		return HPVersionNumber(1, 1);
 	}
 
+	void UpdateTime(const std::string& uniqueName);
+	void CacheLimit(int theCacheLimit);
 
 private:
-
 	cache_pool();
-	
+
 	std::map<std::string, std::shared_ptr<himan::info>> itsCache;
 	static cache_pool* itsInstance;
 	std::mutex itsInsertMutex;
 	std::mutex itsGetMutex;
 	std::mutex itsDeleteMutex;
-	std::map<std::string, time_t> itsCacheItems;
+	std::map<std::string,time_t> itsCacheTime;
+	// Cache limit specifies how many grids are held in the cache.
+	// When limit is reached, oldest grids are automatically pruned.
+	// Value of -1 means no limit, 0 is not allowed (since there is a
+	// separate configuration option to prevent himan from using cache)
+	
+	int itsCacheLimit;
 
 };
 
