@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.10.30
+Version: 15.11.6
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -22,7 +22,7 @@ BuildRequires: cub
 BuildRequires: libfmidb-devel >= 15.10.9
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libsmartmet-newbase-devel >= 15.4.29
+BuildRequires: libsmartmet-newbase-devel >= 15.10.26
 BuildRequires: scons
 Provides: libhiman.so
 
@@ -49,6 +49,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Nov  6 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.6-1.fmi
+- Configuration option cache_limit
 * Fri Oct 30 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.30-1.fmi
 - Changes in regular_grid and matrix
 * Mon Oct 24 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.26-1.fmi
