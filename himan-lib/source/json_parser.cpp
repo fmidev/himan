@@ -23,6 +23,7 @@
 
 #include "neons.h"
 #include "radon.h"
+#include "cache.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -251,6 +252,31 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing key use_cache: ") + e.what());
 	}
 
+	// Check global cache_limit option
+
+	try
+	{
+		int theCacheLimit = pt.get<int>("cache_limit");
+
+		if (theCacheLimit < 1)
+		{
+			itsLogger->Warning("cache_limit must be larger than 0");
+		}
+		else
+		{
+			conf->CacheLimit(theCacheLimit);
+			plugin::cache_pool::Instance()->CacheLimit(theCacheLimit);
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing key use_cache: ") + e.what());
+	}
+	
 	// Check global file_type option
 
 	try

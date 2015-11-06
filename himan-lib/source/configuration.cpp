@@ -28,6 +28,7 @@ configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 	itsStatisticsLabel = "";
 	itsForecastStep = kHPMissingInt;
 	itsDatabaseType = kNeonsAndRadon;
+	itsCacheLimit = -1;
 	
 }
 
@@ -67,6 +68,7 @@ configuration::configuration(const configuration& other)
 	itsForecastStep = other.itsForecastStep;
 	
 	itsDatabaseType = other.itsDatabaseType;
+	itsCacheLimit = other.itsCacheLimit;
 }
 
 std::ostream& configuration::Write(std::ostream& file) const
@@ -102,6 +104,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << "__itsUseCache__ " << itsUseCache << std::endl;
 	file << "__itsForecastStep__ " << itsForecastStep << std::endl;
+	file << "__itsCacheLimit__ " << itsCacheLimit << std::endl;
 	
 	for (size_t i = 0; i < itsAuxiliaryFiles.size(); i++)
 	{
@@ -347,4 +350,14 @@ std::string configuration::TargetGeomName() const
 void configuration::TargetGeomName(const std::string& theTargetGeomName)
 {
 	itsTargetGeomName = theTargetGeomName;
+}
+
+int configuration::CacheLimit() const
+{
+	return itsCacheLimit;
+}
+
+void configuration::CacheLimit(int theCacheLimit)
+{
+	itsCacheLimit = theCacheLimit;
 }

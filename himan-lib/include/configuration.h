@@ -249,6 +249,9 @@ public:
 	std::string TargetGeomName() const;
 	void TargetGeomName(const std::string& theTargetGeomName);
 	
+	int CacheLimit() const;
+	void CacheLimit(int theCacheLimit);
+	
 protected:
 	HPFileType itsOutputFileType;
 	std::string itsConfigurationFile;
@@ -283,8 +286,9 @@ protected:
 	short itsCudaDeviceId;
 
 	int itsForecastStep;
-	
+
 	HPDatabaseType itsDatabaseType;
+	int itsCacheLimit;
 };
 
 
