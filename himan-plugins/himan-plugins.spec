@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.11.2
+Version: 15.11.6
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -21,7 +21,7 @@ Requires: himan-bin >= 15.5.27
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 15.9.14
-Requires: libsmartmet-newbase >= 15.4.29
+Requires: libsmartmet-newbase >= 15.10.26
 
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
@@ -31,7 +31,7 @@ BuildRequires: libfmigrib-devel >= 15.9.14
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase-devel >= 15.4.29
+BuildRequires: libsmartmet-newbase-devel >= 15.10.26
 BuildRequires: libsmartmet-smarttools-devel >= 15.3.16
 BuildRequires: grib_api-devel >= 1.14.0
 BuildRequires: redhat-rpm-config
@@ -101,6 +101,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Nov  6 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.2-1.fmi
+- Add limit to cache
 * Mon Nov  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.2-1.fmi
 - Fix to work distribution when primary dimension is time
 - Minor changes to hybrid_height
