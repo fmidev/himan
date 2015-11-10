@@ -285,9 +285,10 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 		{
 			itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
 			itsLogger->Error("Query: " + query.str());
+			
+			return false;
 		}
 
-		return false;
 	}
 
 	itsLogger->Trace("Saved information on file '" + theFileName + "' to radon");
