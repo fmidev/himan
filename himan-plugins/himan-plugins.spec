@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.11.6
+Version: 15.11.10
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -104,6 +104,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Tue Nov 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.10-1.fmi
 - Minor fixes to radon plugin
+- Change of TI2 formula
 * Fri Nov  6 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.6-1.fmi
 - Add limit to cache
 * Mon Nov  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.2-1.fmi
