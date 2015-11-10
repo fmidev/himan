@@ -248,7 +248,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	try
 	{
 		itsRadonDB->Execute(query.str());
-		
 		query.str("");
 		
 		query << "UPDATE as_grid SET record_count = record_count+1 WHERE producer_id = " << resultInfo.Producer().Id()
@@ -258,37 +257,26 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
 	}
-	catch (int e)
+	catch (const pqxx::unique_violation& e)
 	{
 		itsRadonDB->Rollback();
-		
-		if (e == 7)
-		{
-			query.str("");
-			query << "UPDATE data." << table_name << " SET "
-					<< "file_location = '" << theFileName << "', "
-					<< "file_server = '" << host << "' WHERE "
-					<< "producer_id = " << resultInfo.Producer().Id() << " AND "
-					<< "analysis_time = '" << analysisTime << "' AND "
-					<< "geometry_id = " << geom_id << " AND "
-					<< "param_id = " << paraminfo["id"] << " AND "
-					<< "level_id = " << levelinfo["id"] << " AND "
-					<< "level_value = " << resultInfo.Level().Value() << " AND "
-					<< "forecast_period = " << "'" << util::MakeSQLInterval(resultInfo.Time()) << "' AND "
-					<< "forecast_type_id = " << resultInfo.ForecastType().Type() << " AND "
-					<< "forecast_type_value = " << forecastTypeValue;
-					
-			itsRadonDB->Execute(query.str());
-			itsRadonDB->Commit();
-		}
-		else
-		{
-			itsLogger->Error("Error code: " + boost::lexical_cast<string> (e));
-			itsLogger->Error("Query: " + query.str());
-			
-			return false;
-		}
 
+		query.str("");
+		query << "UPDATE data." << table_name << " SET "
+				<< "file_location = '" << theFileName << "', "
+				<< "file_server = '" << host << "' WHERE "
+				<< "producer_id = " << resultInfo.Producer().Id() << " AND "
+				<< "analysis_time = '" << analysisTime << "' AND "
+				<< "geometry_id = " << geom_id << " AND "
+				<< "param_id = " << paraminfo["id"] << " AND "
+				<< "level_id = " << levelinfo["id"] << " AND "
+				<< "level_value = " << resultInfo.Level().Value() << " AND "
+				<< "forecast_period = " << "'" << util::MakeSQLInterval(resultInfo.Time()) << "' AND "
+				<< "forecast_type_id = " << resultInfo.ForecastType().Type() << " AND "
+				<< "forecast_type_value = " << forecastTypeValue;
+
+		itsRadonDB->Execute(query.str());
+		itsRadonDB->Commit();
 	}
 
 	itsLogger->Trace("Saved information on file '" + theFileName + "' to radon");
