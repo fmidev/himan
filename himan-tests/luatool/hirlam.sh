@@ -21,7 +21,7 @@ fi
 
 if [ $(/sbin/lsmod | egrep -c "^nvidia") -gt 0 ]; then
 
-  rm -f DPDEF*grib
+  rm -f N*grib
 
   $HIMAN -s stat -d 5 -f hirlam.json hirlam_npres_source.grib
 
