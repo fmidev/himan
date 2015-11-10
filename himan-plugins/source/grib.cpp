@@ -452,7 +452,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			if (parmName.empty())
 			{
-				itsLogger->Warning("Parameter name not found from Neons for discipline: " +
+				itsLogger->Warning("Parameter name not found from database for discipline: " +
 							boost::lexical_cast<string> (discipline) + ", category: " +
 							boost::lexical_cast<string> (category) + ", number: " +
 							boost::lexical_cast<string> (number));
