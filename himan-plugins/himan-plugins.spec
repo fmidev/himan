@@ -22,11 +22,12 @@ Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 15.9.14
 Requires: libsmartmet-newbase >= 15.10.26
+Requires: libfmidb >= 15.11.10
 
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libfmidb >= 15.10.9
+BuildRequires: libfmidb >= 15.11.10
 BuildRequires: libfmigrib-devel >= 15.9.14
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
@@ -101,7 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Fri Nov  6 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.2-1.fmi
+* Tue Nov 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.10-1.fmi
+- Minor fixes to radon plugin
+* Fri Nov  6 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.6-1.fmi
 - Add limit to cache
 * Mon Nov  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.2-1.fmi
 - Fix to work distribution when primary dimension is time
