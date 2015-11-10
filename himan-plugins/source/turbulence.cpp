@@ -110,9 +110,9 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     prevUInfo = Fetch(forecastTime, prevLevel, UParam, forecastType, false);
     prevVInfo = Fetch(forecastTime, prevLevel, VParam, forecastType, false);
 
-	nextHInfo = Fetch(forecastTime, nextLevel, HParam, forecastType, false);
-	nextUInfo = Fetch(forecastTime, nextLevel, UParam, forecastType, false);
-	nextVInfo = Fetch(forecastTime, nextLevel, VParam, forecastType, false);
+    nextHInfo = Fetch(forecastTime, nextLevel, HParam, forecastType, false);
+    nextUInfo = Fetch(forecastTime, nextLevel, UParam, forecastType, false);
+    nextVInfo = Fetch(forecastTime, nextLevel, VParam, forecastType, false);
 
     HInfo = Fetch(forecastTime, forecastLevel, HParam, forecastType, false);
     UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, false);
@@ -167,8 +167,8 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         double prevV = prevVInfo->Value();
         double prevH = prevHInfo->Value();
         double nextU = nextUInfo->Value();
-		double nextV = nextVInfo->Value();
-		double nextH = nextHInfo->Value();
+	double nextV = nextVInfo->Value();
+	double nextH = nextHInfo->Value();
 
         if (U == kFloatMissing || V == kFloatMissing || H == kFloatMissing || prevU == kFloatMissing || prevV == kFloatMissing || prevH == kFloatMissing || nextU == kFloatMissing || nextV == kFloatMissing || nextH == kFloatMissing)
         {
@@ -176,13 +176,31 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         }
 
         //Precalculation of wind shear, deformation and convergence
+        double WS = sqrt(pow((prevU + U + nextU)/3,2) + pow((prevV + V + nextV)/3,2));
         double VWS = sqrt(pow((nextU-prevU)/(nextH-prevH),2) + pow((nextV-prevV)/(nextH-prevH),2));
         double DEF = sqrt(pow(get<0>(gradU).At(index)-get<1>(gradV).At(index),2) + pow(get<0>(gradV).At(index) + get<1>(gradU).At(index),2));
-        double CVG = -get<0>(gradU).At(index)-get<1>(gradV).At(index);
+        //double CVG = -get<0>(gradU).At(index)-get<1>(gradV).At(index); unused while TI2 is replaced by TIm
+
+	//Calculate scaling factor
+	double S = kFloatMissing;
+        double ScaleMax = 40;
+        double ScaleMin = 10;
+        if (WS >=ScaleMax)
+        {
+            S=1;
+        }
+        else if (WS >= ScaleMin && WS <ScaleMax)
+        {
+            S=WS/ScaleMax;
+        }
+        else
+        {
+            S=ScaleMin/ScaleMax;
+        }
 
         //Calculation of turbulence indices
         double TI = VWS*DEF;
-        double TI2 = VWS*(DEF+CVG);
+        double TI2 = S*TI; //VWS*(DEF+CVG); replace TI2 with TIm for testing
 
         //return result
         myTargetInfo->ParamIndex(0);
