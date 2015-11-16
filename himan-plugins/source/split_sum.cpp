@@ -634,9 +634,10 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 }
 
-void split_sum::WriteToFile(const info& targetInfo) const
+void split_sum::WriteToFile(const info& targetInfo, const write_options& opts) const
 {
 	auto aWriter = GET_PLUGIN(writer);
+	aWriter->WriteOptions(opts);
 
 	// writing might modify iterator positions --> create a copy
 

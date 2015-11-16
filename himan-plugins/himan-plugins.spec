@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.11.10
+Version: 15.11.13
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -102,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Nov 13 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.13-1.fmi
+- Friday hotfix for split_sum: all-missing grids were written to db due to mismatching virtual function signature
 * Tue Nov 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.10-1.fmi
 - Minor fixes to radon plugin
 - Change of TI2 formula

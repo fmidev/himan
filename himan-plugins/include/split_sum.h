@@ -63,7 +63,7 @@ protected:
 	 * single or multiple files.
 	 */
 	
-	virtual void WriteToFile(const info& targetInfo) const;
+	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) const override;
 
 private:
 	void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
