@@ -44,7 +44,7 @@ public:
 		return HPVersionNumber(1, 2);
 	}
 	
-	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) const;
+	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) const override;
 
 private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
