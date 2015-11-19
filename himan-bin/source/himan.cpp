@@ -78,21 +78,7 @@ int main(int argc, char** argv)
 	/*
 	 * Initialize plugin factory before parsing configuration file. This prevents himan from
 	 * terminating suddenly with SIGSEGV on RHEL5 environments.
-	 *
-	 * Also, it may be good to have neons -plugin declared at main level of program. This
-	 * goes also for the cache plugin.
-	 *
-	 * Note that we don't actually do anything with the plugin here.
 	 */
-/*
-	if (conf->DatabaseType() == kNeonsDB || conf->DatabaseType() == kNeonsDBAndRadonDB)
-	{
-		auto n = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("neons"));
-	}
-	if (conf->DatabaseType() == kRadonDB || conf->DatabaseType() == kNeonsDBAndRadonDB)
-	{
-		auto r = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("radon"));
-	}*/
 	
 	shared_ptr<plugin::auxiliary_plugin> c = dynamic_pointer_cast<plugin::auxiliary_plugin> (plugin_factory::Instance()->Plugin("cache"));
 
