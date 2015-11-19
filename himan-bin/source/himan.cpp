@@ -170,6 +170,8 @@ int main(int argc, char** argv)
 			pluginTimes.push_back(t);
 		}
 
+                plugins.erase(plugins.begin()+i);
+
 	}
 
 	if (!conf->StatisticsLabel().empty())
