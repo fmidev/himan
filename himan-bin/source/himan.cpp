@@ -105,10 +105,9 @@ int main(int argc, char** argv)
 	vector<plugin_timing> pluginTimes;
 	size_t totalTime = 0;
 	
-	for (size_t i = 0; i < plugins.size(); i++)
+	while (plugins.size() > 0)
 	{
-
-		shared_ptr<plugin_configuration> pc = plugins[i];
+		auto pc = plugins[0];
 
 		if (pc->StatisticsEnabled())
 		{
@@ -170,7 +169,7 @@ int main(int argc, char** argv)
 			pluginTimes.push_back(t);
 		}
 
-                plugins.erase(plugins.begin()+i);
+                plugins.erase(plugins.begin()); // remove configuration and resize container
 
 	}
 
