@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.9.30
+Version: 15.11.19
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,13 +13,13 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 15.9.30
+Requires: himan-lib >= 15.11.6
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
 Requires: boost-iostreams
 Requires: boost-thread
-Requires: libsmartmet-newbase >= 15.4.29
+Requires: libsmartmet-newbase >= 15.11.10
 Requires: libsmartmet-smarttools >= 15.4.9
 Requires: jasper
 Requires: grib_api >= 1.14.0
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Thu Nov 19 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.19-1.fmi
+- Remove calculated data from memory once plugin is finished
 * Wed Sep 30 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.30-1.fmi
 - Cuda 7.5
 * Tue Sep  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.8-1.fmi
