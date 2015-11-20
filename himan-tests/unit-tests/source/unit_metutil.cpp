@@ -316,6 +316,29 @@ BOOST_AUTO_TEST_CASE(TW)
 	
 }
 
+BOOST_AUTO_TEST_CASE(MOISTLIFT)
+{
+	// With iteration
+
+	double T = 286;
+	double TD = 279;
+	double P = 100000;
+
+	double TmoistIter = metutil::MoistLift_(P, T, TD, 50000);
+
+	BOOST_REQUIRE_CLOSE(TmoistIter, 190.190, 0.01);
+
+	// With approximation
+
+	auto lcl = metutil::LCLA_(P, T, TD);
+	double thetaE = metutil::ThetaE_(lcl.T, lcl.P);
+
+	double TmoistApprox = metutil::Tw_(thetaE, 50000);
+
+	BOOST_REQUIRE_CLOSE(TmoistApprox, 190.190, 0.01);
+
+}
+
 BOOST_AUTO_TEST_CASE(VIRTUAL_TEMPERATURE)
 {
 	double T = 273.15;
