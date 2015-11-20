@@ -159,7 +159,7 @@ double regular_grid::Dj() const
 	return itsDj;
 }
 
-unpacked& regular_grid::Data()
+matrix<double>& regular_grid::Data()
 {
 	return itsData;
 }
@@ -373,7 +373,7 @@ void regular_grid::Orientation(double theOrientation)
 	itsOrientation = theOrientation;
 }
 
-void regular_grid::Data(const unpacked& d)
+void regular_grid::Data(const matrix<double>& d)
 {
 	itsData = d;
 }

@@ -39,9 +39,9 @@ class irregular_grid : public grid
 
 		size_t Size() const;
 
-		unpacked& Data();
+		matrix<double>& Data();
 
-		void Data(const unpacked& d);
+		void Data(const matrix<double>& d);
 
 		/**
 		 * @return True if parameter UV components are irregular_grid relative, false if they are earth-relative.
@@ -107,7 +107,7 @@ class irregular_grid : public grid
 	private:
 		bool EqualsTo(const irregular_grid& other) const;
 
-		unpacked itsData; //<! Variable to hold unpacked data
+		matrix<double> itsData; //<! Variable to hold unpacked data
 
 		HPScanningMode itsScanningMode; //<! When data is read from files, we need to know what is the scanning mode
 

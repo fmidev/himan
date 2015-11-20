@@ -100,14 +100,14 @@ class regular_grid : public grid
 		 * @return Data matrix
 		 */
 
-		unpacked& Data();
+		matrix<double>& Data();
 
 		/**
 		 * @brief Replace current data matrix with the function argument
 		 * @param d shared pointer to a data matrix
 		 */
 
-		void Data(const unpacked& d);
+		void Data(const matrix<double>& d);
 
 		HPScanningMode ScanningMode() const;
 		void ScanningMode(HPScanningMode theScanningMode);
@@ -212,7 +212,7 @@ class regular_grid : public grid
 
 		bool EqualsTo(const regular_grid& other) const;
 
-		unpacked itsData; //<! Variable to hold unpacked data
+		matrix<double> itsData; //<! Variable to hold unpacked data
 		std::unique_ptr<packed_data> itsPackedData; //<! Variable to hold packed data
 
 		HPScanningMode itsScanningMode; //<! When data is read from files, we need to know what is the scanning mode

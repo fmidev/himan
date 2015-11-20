@@ -66,6 +66,8 @@ info::info(const info& other)
 	itsLogger = logger_factory::Instance()->GetLog("info");
 }
 
+
+
 std::ostream& info::Write(std::ostream& file) const
 {
 
@@ -707,7 +709,7 @@ grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
 }
 
-unpacked& info::Data()
+matrix<double>& info::Data()
 {
 	assert(Grid());
 	return Grid()->Data();

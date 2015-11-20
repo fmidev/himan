@@ -23,8 +23,6 @@
 namespace himan
 {
 
-typedef d_matrix_t unpacked;
-
 class grid
 {
 	public:
@@ -68,14 +66,14 @@ class grid
 		 * @return Data matrix
 		 */
 
-		virtual unpacked& Data() = 0;
+		virtual matrix<double>& Data() = 0;
 
 		/**
 		 * @brief Replace current data matrix with the function argument
 		 * @param d shared pointer to a data matrix
 		 */
 
-		virtual void Data(const unpacked& d) = 0;
+		virtual void Data(const matrix<double>& d) = 0;
 
 
 		//HPScanningMode ScanningMode() const;
@@ -144,7 +142,6 @@ class grid
 		virtual bool EqualsTo(const grid& other) const;
 
 		HPGridType itsGridType;
-		//std::unique_ptr<logger> itsLogger;
 
 };
 

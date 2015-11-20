@@ -58,7 +58,7 @@ irregular_grid::irregular_grid(const irregular_grid& other)
 	itsLogger = logger_factory::Instance()->GetLog("irregular_grid");
 }
 
-unpacked& irregular_grid::Data()
+matrix<double>& irregular_grid::Data()
 {
 	return itsData;
 }
@@ -186,7 +186,7 @@ bool irregular_grid::EqualsTo(const irregular_grid& other) const
 	return true;	
 }
 		
-void irregular_grid::Data(const unpacked& d)
+void irregular_grid::Data(const matrix<double>& d)
 {
 	itsData = d;
 }
