@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.11.13
+Version: 15.11.20
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -16,8 +16,8 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 15.9.30
-Requires: himan-bin >= 15.5.27
+Requires: himan-lib >= 15.11.20
+Requires: himan-bin >= 15.11.19
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 15.9.14
@@ -102,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.20-1.fmi
+- Changes in himan-lib
 * Fri Nov 13 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.13-1.fmi
 - Friday hotfix for split_sum: all-missing grids were written to db due to mismatching virtual function signature
 * Tue Nov 10 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.10-1.fmi
