@@ -561,7 +561,7 @@ int InterpolationMethod(const std::string& paramName, int interpolationMethod)
 	return interpolationMethod;
 }
 
-bool fetcher::InterpolateAreaCuda(info& base, info& source, unpacked& targetData) const
+bool fetcher::InterpolateAreaCuda(info& base, info& source, matrix<double>& targetData) const
 {
 
 #ifdef HAVE_CUDA	
@@ -602,7 +602,7 @@ bool fetcher::InterpolateAreaCuda(info& base, info& source, unpacked& targetData
 
 }
 
-bool fetcher::InterpolateAreaNewbase(info& base, info& source, unpacked& targetData) const
+bool fetcher::InterpolateAreaNewbase(info& base, info& source, matrix<double>& targetData) const
 {
 #ifdef HAVE_CUDA
 
@@ -670,7 +670,7 @@ bool fetcher::InterpolateArea(const plugin_configuration& conf, info& base, vect
 			continue;
 		}
 
-		unpacked targetData(base.Data().SizeX(), base.Data().SizeY(), base.Data().SizeZ(), base.Data().MissingValue());
+		matrix<double> targetData(base.Data().SizeX(), base.Data().SizeY(), base.Data().SizeZ(), base.Data().MissingValue());
 
 		if (conf.UseCudaForInterpolation() &&
 				base.Grid()->Type() == kRegularGrid && 

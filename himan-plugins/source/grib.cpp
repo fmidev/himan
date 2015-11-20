@@ -903,7 +903,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		newInfo->Level(l);
 		newInfo->ForecastType(ty);
 
-		unpacked dm(ni, nj, 1, kFloatMissing);
+		matrix<double> dm(ni, nj, 1, kFloatMissing);
 
 		/*
 		 * Read data from grib *

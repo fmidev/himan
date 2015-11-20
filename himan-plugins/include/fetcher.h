@@ -242,8 +242,8 @@ private:
 	bool InterpolateArea(const plugin_configuration& conf, info& targetInfo, std::vector<info_t> infos) const;
 	bool Interpolate(const plugin_configuration& conf, info& baseInfo, std::vector<info_t>& infos) const;
 	bool ReorderPoints(info& base, std::vector<info_t> infos) const;
-	bool InterpolateAreaCuda(info& base, info& target, unpacked& targetData) const;
-	bool InterpolateAreaNewbase(info& base, info& source, unpacked& targetData) const;
+	bool InterpolateAreaCuda(info& base, info& target, matrix<double>& targetData) const;
+	bool InterpolateAreaNewbase(info& base, info& source, matrix<double>& targetData) const;
 
 
 
