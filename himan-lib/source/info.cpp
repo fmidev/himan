@@ -145,6 +145,7 @@ void info::Create()
 		}
 	}
 	
+	itsBaseGrid.release();
 	First();
 }
 
