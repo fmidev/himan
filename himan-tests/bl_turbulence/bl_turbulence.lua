@@ -23,9 +23,13 @@ logger:Info("Calculating boundary layer turbulence")
   
 local kFloatMissing = kFloatMissing
  
--- Surface (10m) wind speed in knots [kt]
-ws = param("FF-MS")
-wsms = hitool:VerticalValue(ws,10)
+-- Surface (10m) wind speed in m/s
+-- ws = param("FF-MS")
+-- wsms = hitool:VerticalValue(ws,10)
+local ws = param("FF-MS")
+local l = level(HPLevelType.kHeight, 10) 
+
+local wsms = luatool:Fetch(current_time, l, ws)
 
 if not wsms then
     logger:Error("No data found")
