@@ -16,14 +16,14 @@ using namespace std;
 using namespace himan;
 
 info::info()
-	: itsLevelOrder(kTopToBottom)
+	: itsBaseGrid()
+	, itsLevelOrder(kTopToBottom)
 	, itsLevelIterator()
 	, itsTimeIterator()
 	, itsParamIterator()
 	, itsForecastTypeIterator()
 	, itsDimensions()
 	, itsStepSizeOverOneByte(false)
-	, itsBaseGrid()
 {
 	itsLogger = logger_factory::Instance()->GetLog("info");
 }
@@ -88,65 +88,6 @@ std::ostream& info::Write(std::ostream& file) const
 	}
 	
 	return file;
-}
-
-void info::Create()
-{
-	assert(itsTimeIterator.Size());
-	assert(itsParamIterator.Size());
-	assert(itsLevelIterator.Size());
-	assert(itsForecastTypeIterator.Size());
-
-	itsDimensions = vector<shared_ptr<grid>> (itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
-
-	Reset();
-
-	assert(itsLevelOrder != kUnknownLevelOrder);
-
-	while (NextForecastType())
-	{
-		while (NextTime())
-		{
-			ResetLevel();
-
-			while (NextLevel())
-			{
-				ResetParam();
-
-				while (NextParam())
-					// Create empty placeholders
-				{
-					assert(itsBaseGrid);
-
-					shared_ptr<grid> g;
-
-					if (itsBaseGrid->Type() == kRegularGrid)
-					{
-						g = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (itsBaseGrid.get()));
-						g->Data().Resize(dynamic_cast<regular_grid*> (itsBaseGrid.get())->Ni(), dynamic_cast<regular_grid*> (itsBaseGrid.get())->Nj());
-					}
-					else if (itsBaseGrid->Type() == kIrregularGrid)
-					{
-						g = make_shared<irregular_grid> (*dynamic_cast<irregular_grid*> (itsBaseGrid.get()));
-						g->Data().Resize(dynamic_cast<irregular_grid*> (itsBaseGrid.get())->Stations().size(), 1, 1);
-					}
-					else
-					{
-						itsLogger->Fatal("Unknown grid type");
-						exit(1);
-					}
-
-					Grid(g);
-
-					Data().MissingValue(kFloatMissing);
-					Data().Fill(kFloatMissing);
-				}
-			}
-		}
-	}
-	
-	itsBaseGrid.release();
-	First();
 }
 
 void info::ReGrid()

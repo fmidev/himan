@@ -27,6 +27,8 @@
 namespace himan
 {
 
+namespace plugin { class compiled_plugin_base; }
+
 /**
 * @class iterator
 *
@@ -345,6 +347,7 @@ class info
 public:
 
 	friend class json_parser;
+	friend class himan::plugin::compiled_plugin_base;
 
 	info();
 	~info();
@@ -435,22 +438,8 @@ public:
 	 * hold the data. The number of the matrices depends on the size
 	 * of times, params and levels.
 	 *
-	 * This function will create grid class based on information read
-	 * from configuration file! If Create() is called on info that is for example
-	 * created from a grib file, the function will abort.
-	 *
- 	 * Will *not* preserve iterator positions.
-	 */
-
-	void Create();
-
-	/**
-	 * @brief Initialize data backend with correct number of matrices
-	 *
-	 * Function will create a number of matrices to
-	 * hold the data. The number of the matrices depends on the size
-	 * of times, params and levels.
-	 *
+	 * Data is copied.
+	 * 
  	 * Will *not* preserve iterator positions.
 	 */
 
@@ -719,7 +708,10 @@ public:
 #endif
 
 	const std::vector<std::shared_ptr<grid>>& Dimensions() const;
-	
+
+protected:
+	std::unique_ptr<grid> itsBaseGrid; //!< grid information from json. used as a template, never to store data
+
 private:
 
 	void Init();
@@ -770,7 +762,6 @@ private:
 
 	bool itsStepSizeOverOneByte; //!< TODO: Remove and implement in fmigrib
 
-	std::unique_ptr<grid> itsBaseGrid; //!< grid information from json. used as a template, never to store data
 };
 
 inline
