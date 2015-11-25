@@ -470,8 +470,21 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 
 	double val = Value();	
 
+        // limits are between hybrid levels
+        if ((itsHeightInMeters && previousHeight <= lowerHeight && theHeight >= lowerHeight && previousHeight <= upperHeight && theHeight >= upperHeight)
+                ||
+                (!itsHeightInMeters && previousHeight >= lowerHeight && theHeight <= lowerHeight && previousHeight >= upperHeight && theHeight <= upperHeight))
+        {
+                double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
+                double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
+
+                Value((upperValue + lowerValue) / 2 * (upperHeight - lowerHeight));
+                itsRange[itsIndex] += upperHeight - lowerHeight;
+                //if upper height is passed for this grid point set OutOfBoundHeight = "true" to skip calculation of the integral in following iterations
+                itsOutOfBoundHeights[itsIndex] = true;
+        }
 	// value is below the lowest limit
-	if ((itsHeightInMeters && previousHeight <= lowerHeight && theHeight >= lowerHeight)
+	else if ((itsHeightInMeters && previousHeight <= lowerHeight && theHeight >= lowerHeight)
 		||
 		(!itsHeightInMeters && previousHeight >= lowerHeight && theHeight <= lowerHeight))
 	{
