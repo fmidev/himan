@@ -8,7 +8,7 @@
 
 using namespace himan;
 
-#ifdef EXTRADEBUG
+#ifdef DEBUG
 #include <boost/foreach.hpp>
 
 void DumpVector(const std::vector<double>& vec)
@@ -440,7 +440,7 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 		itsPreviousHeight.resize(itsResult.size(), kFloatMissing);
 	
 		itsOutOfBoundHeights.resize(itsResult.size(), false);
-		
+
 		InitializeHeights();
 	}
 }
@@ -471,18 +471,18 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 	double val = Value();	
 
 	// value is below the lowest limit
-	if ((itsHeightInMeters && previousHeight < lowerHeight && theHeight > lowerHeight)
+	if ((itsHeightInMeters && previousHeight <= lowerHeight && theHeight >= lowerHeight)
 		||
-		(!itsHeightInMeters && previousHeight > lowerHeight && theHeight < lowerHeight))
+		(!itsHeightInMeters && previousHeight >= lowerHeight && theHeight <= lowerHeight))
 	{
 		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
 		itsRange[itsIndex] += theHeight - lowerHeight;
 	}
 	// value is above the highest limit
-	else if ((itsHeightInMeters && previousHeight < upperHeight && theHeight > upperHeight)
+	else if ((itsHeightInMeters && previousHeight <= upperHeight && theHeight >= upperHeight)
 		||
-		(!itsHeightInMeters && previousHeight > upperHeight && theHeight < upperHeight))
+		(!itsHeightInMeters && previousHeight >= upperHeight && theHeight <= upperHeight))
 	{
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
@@ -498,6 +498,13 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 	{
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
 			itsRange[itsIndex] += theHeight - previousHeight;
+	}
+	else if ((itsHeightInMeters && previousHeight < upperHeight && theHeight < upperHeight)
+			||
+			(!itsHeightInMeters && previousHeight > upperHeight && theHeight > upperHeight))
+	{
+		// surely we are now above the wanted vertical range
+		itsOutOfBoundHeights[itsIndex] = true;
 	}
 }
 
