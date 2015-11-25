@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.11.20
+Version: 15.11.25
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -22,7 +22,7 @@ BuildRequires: cub
 BuildRequires: libfmidb-devel >= 15.10.9
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libsmartmet-newbase-devel >= 15.10.26
+BuildRequires: libsmartmet-newbase-devel >= 15.11.23
 BuildRequires: scons
 Provides: libhiman.so
 
@@ -49,6 +49,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed Nov 25 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-1.fmi
+- Modifier tweak
 * Fri Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.20-1.fmi
 - Reducing memory footpring
 * Thu Nov 19 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.19-1.fmi
