@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.11.20
+Version: 15.11.25
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -16,12 +16,12 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 15.11.20
+Requires: himan-lib >= 15.11.25
 Requires: himan-bin >= 15.11.19
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 15.9.14
-Requires: libsmartmet-newbase >= 15.10.26
+Requires: libsmartmet-newbase >= 15.11.23
 Requires: libfmidb >= 15.11.10
 
 BuildRequires: boost-devel >= 1.55
@@ -32,7 +32,7 @@ BuildRequires: libfmigrib-devel >= 15.9.14
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase-devel >= 15.10.26
+BuildRequires: libsmartmet-newbase-devel >= 15.11.23
 BuildRequires: libsmartmet-smarttools-devel >= 15.3.16
 BuildRequires: grib_api-devel >= 1.14.0
 BuildRequires: redhat-rpm-config
@@ -102,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-1.fmi
+- Changes in himan-lib
 * Fri Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.20-1.fmi
 - Changes in himan-lib
 * Fri Nov 13 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.13-1.fmi
