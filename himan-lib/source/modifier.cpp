@@ -512,9 +512,9 @@ void modifier_mean::Calculate(double theValue, double theHeight)
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
 			itsRange[itsIndex] += theHeight - previousHeight;
 	}
-	else if ((itsHeightInMeters && previousHeight < upperHeight && theHeight < upperHeight)
+	else if ((itsHeightInMeters && previousHeight > upperHeight && theHeight > upperHeight)
 			||
-			(!itsHeightInMeters && previousHeight > upperHeight && theHeight > upperHeight))
+			(!itsHeightInMeters && previousHeight < upperHeight && theHeight < upperHeight))
 	{
 		// surely we are now above the wanted vertical range
 		itsOutOfBoundHeights[itsIndex] = true;
