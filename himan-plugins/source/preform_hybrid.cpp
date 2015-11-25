@@ -291,10 +291,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		
 	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, myTargetInfo->Time(), boost::ref(freezingArea), myTargetInfo->Grid());
 
-	
+	Stratus(itsConfiguration, myTargetInfo->Time(), stratus, myTargetInfo->Grid());
 
 	t.join();
-Stratus(itsConfiguration, myTargetInfo->Time(), stratus, myTargetInfo->Grid());
+
 	if (!stratus)
 	{
 		myThreadedLogger->Error("stratus calculation failed, unable to proceed");
