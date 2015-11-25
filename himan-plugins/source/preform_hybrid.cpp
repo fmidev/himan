@@ -289,12 +289,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	 * and stores them *by value*.
 	 */
 		
-	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, myTargetInfo->Time(), boost::ref(freezingArea));
+	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, myTargetInfo->Time(), boost::ref(freezingArea), myTargetInfo->Grid());
 
-	Stratus(itsConfiguration, myTargetInfo->Time(), stratus);
+	
 
 	t.join();
-
+Stratus(itsConfiguration, myTargetInfo->Time(), stratus, myTargetInfo->Grid());
 	if (!stratus)
 	{
 		myThreadedLogger->Error("stratus calculation failed, unable to proceed");
@@ -571,7 +571,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 }
 
-void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result)
+void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result, const grid* baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 	
@@ -586,7 +586,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	ret->Params(params);
 	ret->Levels(levels);
 	ret->Times(times);
-	ret->Create();
+	ret->Create(baseGrid);
 
 	vector<double> constData1(ret->Data().Size(), 0);
 
@@ -896,7 +896,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 }
 
-void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result)
+void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result, const grid* baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -920,7 +920,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	ret->Params(params);
 	ret->Levels(levels);
 	ret->Times(times);
-	ret->Create();
+	ret->Create(baseGrid);
 
 	vector<double> constData1(ret->Data().Size(), 0);
 

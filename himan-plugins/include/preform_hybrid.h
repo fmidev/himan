@@ -67,13 +67,13 @@ private:
 	 * @return info containing multiple parameters describing stratus
 	 */
 
-	void Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, std::shared_ptr<info>& result);
+	void Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, std::shared_ptr<info>& result, const grid* baseGrid);
 
 	/**
 	 * @brief Calculate freezing area information (number of zero level etc)
 	 */
 
-	void FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, std::shared_ptr<info>& result);
+	void FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, std::shared_ptr<info>& result, const grid* baseGrid);
 
 };
 

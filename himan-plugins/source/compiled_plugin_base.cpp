@@ -460,7 +460,8 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 	 * Create data structures.
 	 */
 
-	itsInfo->Create();
+	itsInfo->Create(itsInfo->itsBaseGrid.get());
+	itsInfo->itsBaseGrid.reset();
 
 	itsInfo->Reset();
 	itsInfo->FirstParam();
