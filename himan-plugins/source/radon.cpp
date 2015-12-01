@@ -84,7 +84,14 @@ vector<string> radon::Files(search_options& options)
 	}
 	
 	string forecastTypeValue = (options.ftype.Type() == kEpsPerturbation) ? boost::lexical_cast<string> (options.ftype.Value()) : "-1";
-			
+	string forecastTypeId = boost::lexical_cast<string> (options.ftype.Type());
+	
+	if (options.time.Step() == 0 && options.ftype.Type() == 1)
+	{
+		// ECMWF (and maybe others) use forecast type id == 2 for analysis hour
+		forecastTypeId += ",2";
+	}
+	
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
 		string tablename = gridgeoms[i][1];
@@ -100,7 +107,7 @@ vector<string> radon::Files(search_options& options)
 				   "AND level_value = "+levelvalue+" "
 				   "AND forecast_period = '"+util::MakeSQLInterval(options.time)+"' "
 				   "AND geometry_id = "+geomid+" "
-				   "AND forecast_type_id = "+boost::lexical_cast<string> (options.ftype.Type())+" "
+				   "AND forecast_type_id IN ("+forecastTypeId+") "
 				   "AND forecast_type_value = "+forecastTypeValue+" "
 				   "ORDER BY forecast_period, level_id, level_value";
 
