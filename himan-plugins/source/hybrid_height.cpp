@@ -10,6 +10,7 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include <boost/iterator/zip_iterator.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -32,6 +33,21 @@ const himan::param TParam("T-K");
 const himan::param TGParam("TG-K");
 
 void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, himan::info targetInfo);
+
+template<class... Conts>
+auto zip_range(Conts&... conts) -> decltype(boost::make_iterator_range(
+  boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
+  boost::make_zip_iterator(boost::make_tuple(conts.end()...))))
+{
+  return
+  {
+                boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
+                boost::make_zip_iterator(boost::make_tuple(conts.end()...))
+  };
+}
+
+#define VEC(I) I->Data().Values()
+
 
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseWriterThreads(false)
 {
@@ -224,6 +240,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	
 	if (!prevTInfo || !prevPInfo || ( !prevHInfo && !firstLevel ) || !PInfo || !TInfo)
 	{
+		itsLogger->Error("Source data missing for level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()) + " step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", stopping processing");
 		return false;
 	}
 	
@@ -253,9 +270,45 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		
 		scale = 0.01;
 	}
+#define ZIP
 
+#ifdef LOCK
 	LOCKSTEP(myTargetInfo, PInfo, prevPInfo, TInfo, prevTInfo)
+#elif defined ZIP
+	vector<double> prevHV;
+
+	if (firstLevel)
 	{
+		prevHV.resize(myTargetInfo->Data().Size(), 0);
+	}
+	else
+	{
+		prevHV = VEC(prevHInfo);
+	}
+
+	auto& target = VEC(myTargetInfo);
+
+	for (auto&& tup : zip_range(target, VEC(PInfo), VEC(prevPInfo), VEC(TInfo), VEC(prevTInfo), prevHV))
+#elif defined FOR
+	auto TV = TInfo->Data().Values(), PV = PInfo->Data().Values(), prevTV = prevTInfo->Data().Values(), prevPV = prevPInfo->Data().Values();
+
+	vector<double> prevHV;
+
+	if (firstLevel)
+	{
+		prevHV.resize(TV.size(), 0);
+	}
+	else
+	{
+		prevHV = prevHInfo->Data().Values();
+	}
+
+	for (size_t i = 0; i < TV.size(); i++)
+#else
+#error must define ZIP, LOCK or FOR
+#endif
+	{
+#ifdef LOCK
 		double T = TInfo->Value();
 		double P = PInfo->Value();
 		double prevT = prevTInfo->Value();
@@ -272,7 +325,17 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		{
 			prevH = 0;
 		}
-
+#elif defined ZIP
+		double& result 	= tup.get<0>();
+		double P 	= tup.get<1>();
+		double prevP	= tup.get<2>();
+		double T 	= tup.get<3>();
+		double prevT 	= tup.get<4>();
+		double prevH 	= tup.get<5>();
+#elif defined FOR
+		double T = TV[i], P = PV[i], prevT = prevTV[i], prevP = prevPV[i], prevH = prevHV[i];
+		myTargetInfo->LocationIndex(i);	
+#endif
 		if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing || prevH == kFloatMissing)
 		{
 			continue;
@@ -282,8 +345,21 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		
 		double deltaZ = 14.628 * (prevT + T) * log(prevP/P);
 		double totalHeight = prevH + deltaZ;
-	
+
+#ifdef ZIP
+		result = totalHeight;
+#else
 		myTargetInfo->Value(totalHeight);
+#endif
+	}
+
+	// Check if we have data in grid. If all values are missing, it is impossible to continue
+	// processing any level above this one.
+
+	if (myTargetInfo->Data().Size() == myTargetInfo->Data().MissingCount())
+	{
+		itsLogger->Error("All data missing for level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()) + " step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", stopping processing");
+		return false;
 	}
 
 	// If we are writing to a single file, launch a separate writing thread and let the main
