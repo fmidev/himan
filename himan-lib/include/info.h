@@ -24,6 +24,8 @@
 #include "grid.h"
 #include "forecast_type.h"
 
+#define VEC(I) I->Data().Values()
+
 namespace himan
 {
 
