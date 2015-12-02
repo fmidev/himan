@@ -694,7 +694,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 		 	long nv = itsGrib->Message().NV();
 		 	long lev = itsGrib->Message().LevelValue();
-			ab = itsGrib->Message().PV(static_cast<size_t> (nv), static_cast<size_t> (lev));
+			
+			if (nv > 0)
+			{
+				ab = itsGrib->Message().PV(static_cast<size_t> (nv), static_cast<size_t> (lev));
+			}
 		}
 
 		forecast_type ty(static_cast<HPForecastType> (itsGrib->Message().ForecastType()), itsGrib->Message().ForecastTypeValue());
