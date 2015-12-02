@@ -10,7 +10,6 @@
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
-#include <boost/iterator/zip_iterator.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -33,21 +32,6 @@ const himan::param TParam("T-K");
 const himan::param TGParam("TG-K");
 
 void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, himan::info targetInfo);
-
-template<class... Conts>
-auto zip_range(Conts&... conts) -> decltype(boost::make_iterator_range(
-  boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
-  boost::make_zip_iterator(boost::make_tuple(conts.end()...))))
-{
-  return
-  {
-                boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
-                boost::make_zip_iterator(boost::make_tuple(conts.end()...))
-  };
-}
-
-#define VEC(I) I->Data().Values()
-
 
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseWriterThreads(false)
 {

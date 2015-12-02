@@ -85,6 +85,30 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
    	double A = ab[0];
    	double B = ab[1];
 
+#define ZIP
+
+#ifdef ZIP
+	auto& target = VEC(myTargetInfo);
+
+	for (auto&& tup : zip_range(target, VEC(PInfo)))
+	{
+		double& result  = tup.get<0>();
+		double P        = tup.get<1>();
+
+		if (P == kFloatMissing)
+		{
+			continue;
+		}
+
+		if (isECMWF)
+		{
+			P = exp (P);
+		}
+
+		result = 0.01 * (A + P * B);
+	}
+
+#else
 	LOCKSTEP(myTargetInfo, PInfo)
 	{
 		double P = PInfo->Value();
@@ -103,7 +127,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 		myTargetInfo->Value(hybrid_pressure);
 	}
-
+#endif
 	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }

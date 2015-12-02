@@ -12,6 +12,20 @@
 #include "plugin_configuration.h"
 #include <mutex>
 #include <write_options.h>
+#include <boost/iterator/zip_iterator.hpp>
+
+template<class... Conts>
+auto zip_range(Conts&... conts) -> decltype(boost::make_iterator_range(
+	boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
+	boost::make_zip_iterator(boost::make_tuple(conts.end()...))))
+{
+	return
+	{
+		boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
+		boost::make_zip_iterator(boost::make_tuple(conts.end()...))
+	};
+}
+
 
 /*
  * Really nice pre-processor macros here
