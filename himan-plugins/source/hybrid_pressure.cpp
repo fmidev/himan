@@ -11,8 +11,25 @@
 #include "level.h"
 #include "forecast_time.h"
 
+#define ZIPONCE
+
+#ifdef ZIPONCE
+#include "util.h"
+#include "plugin_factory.h"
+#endif
+
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "cache.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
+
 using namespace std;
 using namespace himan::plugin;
+
+#ifdef ZIPONCE
+once_flag lnspFlag;
+#endif
 
 hybrid_pressure::hybrid_pressure()
 {
@@ -48,13 +65,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	bool isECMWF = (itsConfiguration->SourceProducer().Id() == 131); // Note! This only checks the *current* source producer
 
-	if (isECMWF)
-	{
-		// For EC we calculate surface pressure from LNSP parameter
-		PParam = { param("LNSP-N") };
-		PLevel = level(himan::kHybrid, 1);
-	}
-
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("hybrid_pressureThread #" + boost::lexical_cast<string> (theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
@@ -63,7 +73,48 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-	info_t PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+	info_t PInfo;
+
+#define ZIP
+
+	if (isECMWF)
+	{
+		// For EC we calculate surface pressure from LNSP parameter
+
+		PLevel = level(himan::kHybrid, 1);
+		PParam = { param("LNSP-N") };
+
+#ifdef ZIPONCE
+		// To make calculation more efficient we calculate surface
+		// pressure once from LNSP and store it to cache as LNSP-PA
+
+		call_once(lnspFlag, [&](){
+
+			PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+
+			myThreadedLogger->Trace("Transforming LNSP to Pa");
+
+			for (auto& val : VEC(PInfo))
+			{
+				val = exp(val);
+			}
+
+			PInfo->SetParam(param("LNSP-PA"));
+
+			auto c = GET_PLUGIN(cache);
+			c->Insert(*PInfo);
+		});
+
+		PParam = { param("LNSP-PA") };
+#endif
+
+		PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+	}
+	else
+	{
+		PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+	}
+
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 
 	if (!PInfo || !TInfo)
@@ -71,7 +122,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
 	}
-	
+
 	SetAB(myTargetInfo, TInfo);
 
 	/* 
@@ -85,8 +136,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
    	double A = ab[0];
    	double B = ab[1];
 
-#define ZIP
-
 #ifdef ZIP
 	auto& target = VEC(myTargetInfo);
 
@@ -99,12 +148,12 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		{
 			continue;
 		}
-
+#ifndef ZIPONCE
 		if (isECMWF)
 		{
 			P = exp (P);
 		}
-
+#endif	
 		result = 0.01 * (A + P * B);
 	}
 
