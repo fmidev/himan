@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.11.25
+Version: 15.12.8
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -102,6 +102,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Dec  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.8-1.fmi
+- Optimizations for hybrid_pressure and hybrid_height
+* Wed Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-2.fmi
+- Removing debug code from preform_hybrid
 * Wed Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-1.fmi
 - Changes in himan-lib
 * Fri Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.20-1.fmi
