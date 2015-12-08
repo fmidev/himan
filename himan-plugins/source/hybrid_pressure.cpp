@@ -102,7 +102,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 			PInfo->SetParam(param("LNSP-PA"));
 
 			auto c = GET_PLUGIN(cache);
-			c->Insert(*PInfo);
+			c->Insert(*PInfo, true, true);
 		});
 
 		PParam = { param("LNSP-PA") };
