@@ -44,12 +44,12 @@ string cache::UniqueNameFromOptions(search_options& options)
 	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
 }
 
-void cache::Insert(info& anInfo, bool activeOnly)
+void cache::Insert(info& anInfo, bool activeOnly, bool pin)
 {
 
 	if (activeOnly)
 	{
-		SplitToPool(anInfo);
+		SplitToPool(anInfo, pin);
 	}
 	else
 	{
@@ -59,14 +59,14 @@ void cache::Insert(info& anInfo, bool activeOnly)
 			{
 				for (anInfo.ResetParam(); anInfo.NextParam(); )
 				{
-					SplitToPool(anInfo);
+					SplitToPool(anInfo, pin);
 				}
 			}
 		}
 	}
 }
 
-void cache::SplitToPool(info& anInfo)
+void cache::SplitToPool(info& anInfo, bool pin)
 {
 
 	// Cached data is never replaced by another data that has
@@ -111,7 +111,7 @@ void cache::SplitToPool(info& anInfo)
 	assert(uniqueName == UniqueName(*newInfo));
 
 	// Race condition?
-	cache_pool::Instance()->Insert(uniqueName, newInfo);
+	cache_pool::Instance()->Insert(uniqueName, newInfo, pin);
 
 }
 
@@ -159,9 +159,9 @@ void cache_pool::CacheLimit(int theCacheLimit)
 
 bool cache_pool::Find(const string& uniqueName) 
 {
-	for (map<string, shared_ptr<himan::info>>::iterator it = itsCache.begin(); it != itsCache.end(); ++it)
+	for (const auto& kv : itsCache)
 	{
-		if (it->first == uniqueName)
+		if (kv.first == uniqueName)
 		{
 			return true;
 		}
@@ -170,13 +170,17 @@ bool cache_pool::Find(const string& uniqueName)
 	return false;
 }
 
-void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo)
+void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo, bool pin)
 {
 	Lock lock(itsInsertMutex);
 
-	itsCache.insert(pair<string, shared_ptr<himan::info>>(uniqueName, anInfo));
-	itsCacheTime.insert(pair<string, time_t>(uniqueName, time(nullptr)));
-	itsLogger->Trace("Data added to cache. UniqueName: " + uniqueName);
+	cache_item item;
+	item.info = anInfo;
+	item.access_time = time(nullptr);
+	item.pinned = pin;
+
+	itsCache.insert(pair<string, cache_item>(uniqueName, item));
+	itsLogger->Trace("Data added to cache with name: " + uniqueName + ", pinned: " + boost::lexical_cast<string> (pin));
 	
 	if (itsCacheLimit > -1 && itsCache.size() > static_cast<size_t> (itsCacheLimit))
 	{
@@ -187,7 +191,7 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 
 void cache_pool::UpdateTime(const std::string& uniqueName)
 {
-	itsCacheTime[uniqueName] = time(nullptr);
+	itsCache[uniqueName].access_time = time(nullptr);
 }
 
 void cache_pool::Clean()
@@ -203,19 +207,18 @@ void cache_pool::Clean()
 	string oldestName;
 	time_t oldestTime = INT_MAX;
 
-	for (const auto& kv : itsCacheTime)
+	for (const auto& kv : itsCache)
 	{
-		if (kv.second < oldestTime)
+		if (kv.second.access_time < oldestTime && !kv.second.pinned)
 		{
 			oldestName = kv.first;
-			oldestTime = kv.second;
+			oldestTime = kv.second.access_time;
 		}
 	}
 	
 	assert(!oldestName.empty());
 	
 	itsCache.erase(oldestName);
-	itsCacheTime.erase(oldestName);
 	itsLogger->Trace("Data cleared from cache: " + oldestName + " with time: " + boost::lexical_cast<string> (oldestTime));
 	itsLogger->Trace("Cache size: " + boost::lexical_cast<string> (itsCache.size()));
 
@@ -225,5 +228,5 @@ shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)
 {
 	Lock lock(itsGetMutex);
 
-	return make_shared<info> (*itsCache[uniqueName]);
+	return make_shared<info> (*itsCache[uniqueName].info);
 }

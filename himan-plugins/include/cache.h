@@ -16,6 +16,15 @@ namespace himan
 namespace plugin
 {
 
+struct cache_item
+{
+	std::shared_ptr<himan::info> info;
+	time_t access_time;
+	bool pinned;
+
+	cache_item() : access_time(0), pinned(false)
+	{}
+};
 
 class cache : public auxiliary_plugin
 {	
@@ -36,7 +45,7 @@ public:
 	 * to cache
 	 */
 
-	void Insert(info& anInfo, bool activeOnly = true);
+	void Insert(info& anInfo, bool activeOnly = true, bool pin = false);
 	std::vector<std::shared_ptr<himan::info>> GetInfo(search_options& options);	
 	void Clean();
 
@@ -57,7 +66,7 @@ public:
 
 
 private:
-	void SplitToPool(info& anInfo);
+	void SplitToPool(info& anInfo, bool pin);
 	std::string UniqueName(const info& anInfo);
 	std::string UniqueNameFromOptions(search_options& options);
 
@@ -75,7 +84,7 @@ public:
 
 	static cache_pool* Instance();
 	bool Find(const std::string& uniqueName);
-	void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info);
+	void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info, bool pin);
 	std::shared_ptr<himan::info> GetInfo(const std::string& uniqueName);
 	void Clean();
 
@@ -100,12 +109,12 @@ public:
 private:
 	cache_pool();
 
-	std::map<std::string, std::shared_ptr<himan::info>> itsCache;
+	std::map<std::string, cache_item> itsCache;
 	static cache_pool* itsInstance;
 	std::mutex itsInsertMutex;
 	std::mutex itsGetMutex;
 	std::mutex itsDeleteMutex;
-	std::map<std::string,time_t> itsCacheTime;
+
 	// Cache limit specifies how many grids are held in the cache.
 	// When limit is reached, oldest grids are automatically pruned.
 	// Value of -1 means no limit, 0 is not allowed (since there is a
