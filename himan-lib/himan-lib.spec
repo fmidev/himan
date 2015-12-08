@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 15.11.25
+Version: 15.12.8
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -49,6 +49,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Dec  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.8-1.fmi
+- Minor changes
+* Wed Nov 25 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-2.fmi
+- More modifier_mean tweaks
 * Wed Nov 25 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-1.fmi
 - Modifier tweak
 * Fri Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.20-1.fmi
