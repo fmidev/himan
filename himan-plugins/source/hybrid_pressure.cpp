@@ -28,7 +28,8 @@ using namespace std;
 using namespace himan::plugin;
 
 #ifdef ZIPONCE
-once_flag lnspFlag;
+mutex lnspMutex;
+map<int, himan::info_t> lnspInfos;
 #endif
 
 hybrid_pressure::hybrid_pressure()
@@ -88,22 +89,37 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		// To make calculation more efficient we calculate surface
 		// pressure once from LNSP and store it to cache as LNSP-PA
 
-		call_once(lnspFlag, [&](){
+		// Double-check pattern
 
-			PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
-
-			myThreadedLogger->Trace("Transforming LNSP to Pa");
-
-			for (auto& val : VEC(PInfo))
+		if (lnspInfos.find(forecastTime.Step()) == lnspInfos.end())
+		{
+			lock_guard<mutex> lock(lnspMutex);
+			
+			if (lnspInfos.find(forecastTime.Step()) == lnspInfos.end())
 			{
-				val = exp(val);
+				PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+
+				if (!PInfo)
+				{
+					myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+					return;
+				}
+
+				myThreadedLogger->Info("Transforming LNSP to Pa");
+
+				for (auto& val : VEC(PInfo))
+				{
+					val = exp(val);
+				}
+
+				PInfo->SetParam(param("LNSP-PA"));
+
+				auto c = GET_PLUGIN(cache);
+				c->Insert(*PInfo, true, true);
+				
+				lnspInfos[forecastTime.Step()] = PInfo;
 			}
-
-			PInfo->SetParam(param("LNSP-PA"));
-
-			auto c = GET_PLUGIN(cache);
-			c->Insert(*PInfo, true, true);
-		});
+		}
 
 		PParam = { param("LNSP-PA") };
 #endif
