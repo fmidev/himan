@@ -96,10 +96,10 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     // käytetään sadeparametrina mallin sateen alueellista keskiarvoa, jotta diskreettejä sadeolioita saadaan vähän levitettyä ympäristöön, tässä toimisi paremmin esim. 30 km säde.
     // Filter RR
     himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
-    filter_kernel.Fill(1/9);
+    filter_kernel.Fill(1.0/9.0);
     himan::matrix<double> filtered_RR = util::Filter2D(RRInfo->Data(), filter_kernel);
     RRInfo->Grid()->Data(filtered_RR);
-
+    
     string deviceType = "CPU";
 
     LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo)
