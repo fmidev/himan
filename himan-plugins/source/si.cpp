@@ -99,7 +99,7 @@ const himan::param MUCAPE1040("CAPEMU1040-JKG", 59);
 const himan::param MUCAPE3km("CAPEMU3KM-JKG", 59);
 const himan::param MUCIN("CINMU-JKG", 66);
 
-si::si() : itsBottomLevel(kHPMissingInt)
+si::si() : itsBottomLevel(kHPMissingInt), itsSourceData(kUnknown)
 {
 	itsClearTextFormula = "<multiple algorithms>";
 
@@ -125,38 +125,93 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	vector<param> theParams;
 	
-	theParams.push_back(SBLCLT);
-	theParams.push_back(SBLCLP);
-	theParams.push_back(SBLFCT);
-	theParams.push_back(SBLFCP);
-	theParams.push_back(SBELT);
-	theParams.push_back(SBELP);
-	theParams.push_back(SBCAPE);
-	theParams.push_back(SBCAPE1040);
-	theParams.push_back(SBCAPE3km);
-	theParams.push_back(SBCIN);
+	if (itsConfiguration->Exists("source-data"))
+	{
+		auto source = itsConfiguration->GetValue("source-data");
+		
+		if (source == "surface")
+		{
+			theParams.push_back(SBLCLT);
+			theParams.push_back(SBLCLP);
+			theParams.push_back(SBLFCT);
+			theParams.push_back(SBLFCP);
+			theParams.push_back(SBELT);
+			theParams.push_back(SBELP);
+			theParams.push_back(SBCAPE);
+			theParams.push_back(SBCAPE1040);
+			theParams.push_back(SBCAPE3km);
+			theParams.push_back(SBCIN);
+			itsSourceData = kSurface;
+		}
+		else if (source == "500m mix")
+		{
+			theParams.push_back(SB500LCLT);
+			theParams.push_back(SB500LCLP);
+			theParams.push_back(SB500LFCT);
+			theParams.push_back(SB500LFCP);
+			theParams.push_back(SB500ELT);
+			theParams.push_back(SB500ELP);
+			theParams.push_back(SB500CAPE);
+			theParams.push_back(SB500CAPE1040);
+			theParams.push_back(SB500CAPE3km);
+			theParams.push_back(SB500CIN);	
+			itsSourceData = k500mAvgMixingRatio;
+		}
+		else if (source == "most unstable")
+		{
+			theParams.push_back(MULCLT);
+			theParams.push_back(MULCLP);
+			theParams.push_back(MULFCT);
+			theParams.push_back(MULFCP);
+			theParams.push_back(MUELT);
+			theParams.push_back(MUELP);
+			theParams.push_back(MUCAPE);
+			theParams.push_back(MUCAPE1040);
+			theParams.push_back(MUCAPE3km);
+			theParams.push_back(MUCIN);	
+			itsSourceData = kMaxThetaE;
+		}
+		else
+		{
+			throw runtime_error("Invalid source data type: " + source);
+		}
+	}
+	else
+	{
 
-	theParams.push_back(SB500LCLT);
-	theParams.push_back(SB500LCLP);
-	theParams.push_back(SB500LFCT);
-	theParams.push_back(SB500LFCP);
-	theParams.push_back(SB500ELT);
-	theParams.push_back(SB500ELP);
-	theParams.push_back(SB500CAPE);
-	theParams.push_back(SB500CAPE1040);
-	theParams.push_back(SB500CAPE3km);
-	theParams.push_back(SB500CIN);
+		theParams.push_back(SBLCLT);
+		theParams.push_back(SBLCLP);
+		theParams.push_back(SBLFCT);
+		theParams.push_back(SBLFCP);
+		theParams.push_back(SBELT);
+		theParams.push_back(SBELP);
+		theParams.push_back(SBCAPE);
+		theParams.push_back(SBCAPE1040);
+		theParams.push_back(SBCAPE3km);
+		theParams.push_back(SBCIN);
 
-	theParams.push_back(MULCLT);
-	theParams.push_back(MULCLP);
-	theParams.push_back(MULFCT);
-	theParams.push_back(MULFCP);
-	theParams.push_back(MUELT);
-	theParams.push_back(MUELP);
-	theParams.push_back(MUCAPE);
-	theParams.push_back(MUCAPE1040);
-	theParams.push_back(MUCAPE3km);
-	theParams.push_back(MUCIN);
+		theParams.push_back(SB500LCLT);
+		theParams.push_back(SB500LCLP);
+		theParams.push_back(SB500LFCT);
+		theParams.push_back(SB500LFCP);
+		theParams.push_back(SB500ELT);
+		theParams.push_back(SB500ELP);
+		theParams.push_back(SB500CAPE);
+		theParams.push_back(SB500CAPE1040);
+		theParams.push_back(SB500CAPE3km);
+		theParams.push_back(SB500CIN);
+
+		theParams.push_back(MULCLT);
+		theParams.push_back(MULCLP);
+		theParams.push_back(MULFCT);
+		theParams.push_back(MULFCP);
+		theParams.push_back(MUELT);
+		theParams.push_back(MUELP);
+		theParams.push_back(MUCAPE);
+		theParams.push_back(MUCAPE1040);
+		theParams.push_back(MUCAPE3km);
+		theParams.push_back(MUCIN);
+	}
 	
 	SetParams(theParams);
 	
@@ -200,22 +255,32 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("siThread #" + boost::lexical_cast<string> (threadIndex));
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " + static_cast<string> (myTargetInfo->Level()));
+
+	boost::thread_group g;
 	
-	// Spinoff thread calculates surface data
+	switch (itsSourceData)
+	{
+		case kUnknown:
+			g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), kSurface));
+			g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), k500mAvgMixingRatio));
+			g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), kMaxThetaE));
+			break;
+		case kSurface:
+			g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), kSurface));
+			break;
+		case k500mAvgMixingRatio:
+			g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), k500mAvgMixingRatio));
+			break;
+		case kMaxThetaE:
+			g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), kMaxThetaE));
+			break;
+		default:
+			throw runtime_error("Invalid source type");
+			break;
+		
+	}
 	
-	boost::thread t1(&si::CalculateVersion, this, boost::ref(myTargetInfo), kSurface);
-	
-	// Spinoff thread calculate 500m data
-	
-	//boost::thread t2(&si::CalculateVersion, this, boost::ref(myTargetInfo), k500mAvgMixingRatio);
-	
-	// Spinoff thread calculates most unstable data
-	
-	//boost::thread t3(&si::CalculateVersion, this, boost::ref(myTargetInfo), kMaxThetaE);
-	
-	t1.join(); 
-	//t2.join(); 
-	//t3.join();
+	g.join_all();
 	
 }
 

@@ -18,7 +18,8 @@ namespace plugin
 
 enum HPSoundingIndexSourceDataType
 {
-	kSurface = 0,			// Use surface data (from 2m)
+	kUnknown = 0,
+	kSurface,				// Use surface data (from 2m)
 	k500mAvg,				// Average data of lowest 500m
 	k500mAvgMixingRatio,	// Average data of lowest 500m using mixing ratio
 	kMaxThetaE				// Find source data with max Theta E with upper limit 500hPa
@@ -80,6 +81,8 @@ private:
 
 	int itsBottomLevel;
 	int itsTopLevel;
+	
+	HPSoundingIndexSourceDataType itsSourceData;
 };
 
 // the class factory
