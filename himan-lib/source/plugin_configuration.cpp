@@ -132,17 +132,20 @@ void plugin_configuration::WriteStatistics()
 	cout << "Target geom_name:\t" << itsTargetGeomName << endl;
 	cout << "Source geom_name:\t" << util::Join(itsSourceGeomNames, ",") << endl;
 
-	itsInfo->First();
+	if (itsInfo->DimensionSize() > 0)
+	{
+		itsInfo->First();
 
-	cout << "Level type:\t\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
-	cout << "Level count:\t\t" << itsInfo->SizeLevels() << endl;
-	cout << "Level order:\t\t" << HPLevelOrderToString.at(itsInfo->LevelOrder()) << endl;
-	
-	// assuming even time step
+		cout << "Level type:\t\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
+		cout << "Level count:\t\t" << itsInfo->SizeLevels() << endl;
+		cout << "Level order:\t\t" << HPLevelOrderToString.at(itsInfo->LevelOrder()) << endl;
 
-	cout << "Time step:\t\t" << itsInfo->Time().Step() << endl;
-	cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsInfo->Time().StepResolution()) << endl;
-	cout << "Time count:\t\t" << itsInfo->SizeTimes() << endl;
+		// assuming even time step
+
+		cout << "Time step:\t\t" << itsInfo->Time().Step() << endl;
+		cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsInfo->Time().StepResolution()) << endl;
+		cout << "Time count:\t\t" << itsInfo->SizeTimes() << endl;
+	}
 
 	cout << "Outfile type:\t\t" << HPFileTypeToString.at(itsOutputFileType) << endl;
 	cout << "Compression type:\t" << HPFileCompressionToString.at(itsFileCompression) << endl;
@@ -150,7 +153,7 @@ void plugin_configuration::WriteStatistics()
 	cout << "Read from database:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
 
 	cout << "Source producer:\t" << SourceProducer().Id() << endl;
-	cout << "Target producer:\t" << itsInfo->Producer().Id() << endl;
+	cout << "Target producer:\t" << TargetProducer().Id() << endl;
 
 	// Statistics from class statistics
 
