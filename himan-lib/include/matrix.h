@@ -411,6 +411,7 @@ public:
 	void Clear()
 	{
 		itsData.clear();
+		itsData.shrink_to_fit();
 		itsWidth=0;
 		itsHeight=0;
 		itsDepth=0;
