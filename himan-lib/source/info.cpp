@@ -834,3 +834,14 @@ bool info::FirstForecastType()
 	ResetForecastType();
 	return NextForecastType();
 }
+
+void info::Clear()
+{
+	itsDimensions.clear();
+
+	itsParamIterator.Clear();
+	itsLevelIterator.Clear();
+	itsTimeIterator.Clear();
+	itsForecastTypeIterator.Clear();
+}
+

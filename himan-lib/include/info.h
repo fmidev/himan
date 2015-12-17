@@ -306,6 +306,15 @@ public:
 
 		return true;
 	}
+	
+	/**
+	 * @brief Remove all elements (iterator size = 0)
+	 */
+
+	void Clear()
+	{
+		itsElements.clear();
+	}
 
 	/**
 	 * @brief Write object to stream
@@ -702,14 +711,22 @@ public:
 	/**
 	 * @brief Stupify this info to a C-style struct
 	 * 
-     * @return
-     */
+	 * @return
+	 */
 
 	info_simple* ToSimple() const;
 
 #endif
 
 	const std::vector<std::shared_ptr<grid>>& Dimensions() const;
+
+	/**
+ 	 * @brief Clear info contents and iterators
+ 	 *
+ 	 * Does not free memory explicitly.
+ 	 */
+ 
+	void Clear();
 
 protected:
 	std::unique_ptr<grid> itsBaseGrid; //!< grid information from json. used as a template, never to store data
