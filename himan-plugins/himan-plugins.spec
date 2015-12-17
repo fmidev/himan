@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.12.15
+Version: 15.12.17
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 15.11.25
+Requires: himan-lib >= 15.12.17
 Requires: himan-bin >= 15.11.19
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -102,6 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Dec 17 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.17-1.fmi
+- Free memory after plugin is finished
+- Select source data for si-plugin
 * Tue Dec 15 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.15-1.fmi
 - Fix for POT
 * Wed Dec  9 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.9-1.fmi
