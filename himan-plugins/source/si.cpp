@@ -1552,7 +1552,6 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 		double E = metutil::E_(MR[i], P[i]);
 
 		double RH = E/Es * 100;
-		//std::cout << "RH " << RH <<"\n";
 		TD[i] = metutil::DewPointFromRH_(T[i], RH);
 	}
 
@@ -1574,15 +1573,23 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 		auto TInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 		auto RHInfo = Fetch(myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
 		auto PInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
-		LOCKSTEP(TInfo, RHInfo, PInfo)
+		
+		if (!TInfo || !RHInfo || !PInfo)
 		{
-			size_t i = TInfo->LocationIndex();
-			
+			throw kFileDataNotFound;
+		}
+	
+		int i = -1;
+
+		for (auto&& tup : zip_range(VEC(TInfo), VEC(RHInfo), VEC(PInfo)))
+		{
+			i++;
+
 			if (found[i]) continue;
 			
-			double T_ = TInfo->Value();
-			double RH = RHInfo->Value();
-			double P = PInfo->Value();
+			double T_ = tup.get<0> ();
+			double RH = tup.get<1> ();
+			double P = tup.get<2> ();
 			
 			if (P < 600.)
 			{
