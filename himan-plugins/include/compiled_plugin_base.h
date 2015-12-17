@@ -175,11 +175,10 @@ protected:
 	 *
 	 * This function will handle jobs (ie. times, levels to process) to each thread.
 	 * 
-	 * @param myTargetInfo A threads own info instance
 	 * @param threadIndex
 	 */
 	
-	virtual void Run(info_t myTargetInfo, unsigned short threadIndex);
+	virtual void Run(unsigned short threadIndex);
 
 	/**
 	 * @brief Set target params

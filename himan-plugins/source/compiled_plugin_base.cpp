@@ -228,11 +228,7 @@ void compiled_plugin_base::Start()
 	{
 
 		printf("Info::compiled_plugin: Thread %d starting\n", (i + 1)); // Printf is thread safe
-
-		boost::thread* t = new boost::thread(&compiled_plugin_base::Run,
-											 this,
-											 make_shared<info> (*itsInfo),
-											 i + 1);
+		boost::thread* t = new boost::thread(&compiled_plugin_base::Run, this, i + 1);
 
 		g.add_thread(t);
 
@@ -248,7 +244,7 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 
 	const short MAX_THREADS = 12; //<! Max number of threads we allow
 
-	itsConfiguration = conf;
+	itsConfiguration = conf;	
 
 	if (itsConfiguration->StatisticsEnabled())
 	{
@@ -323,8 +319,9 @@ void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short 
 	}	
 }
 
-void compiled_plugin_base::Run(info_t myTargetInfo, unsigned short threadIndex)
+void compiled_plugin_base::Run(unsigned short threadIndex)
 {
+	auto myTargetInfo = make_shared<info> (*itsInfo);
 	if (itsPrimaryDimension == kUnknownDimension)
 	{
 		// The general case: all elements are distributed to all threads in an
@@ -364,6 +361,12 @@ void compiled_plugin_base::Finish() const
 	{
 		WriteToFile(*itsInfo);
 	}
+	
+	// If no other info is holding access to grids in this info,
+	// they are automatically destroyed and memory is released.
+
+	itsInfo->Clear();
+
 }
 
 
