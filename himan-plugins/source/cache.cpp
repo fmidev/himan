@@ -135,6 +135,11 @@ void cache::Clean()
 	cache_pool::Instance()->Clean();
 }
 
+size_t cache::Size() const
+{
+	return cache_pool::Instance()->Size();
+}
+
 cache_pool* cache_pool::itsInstance = NULL;
 
 cache_pool::cache_pool() : itsCacheLimit(-1)
@@ -229,4 +234,9 @@ shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)
 	Lock lock(itsGetMutex);
 
 	return make_shared<info> (*itsCache[uniqueName].info);
+}
+
+size_t cache_pool::Size() const
+{
+	return itsCache.size();
 }

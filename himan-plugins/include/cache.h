@@ -63,7 +63,8 @@ public:
 	{
 		return HPVersionNumber(1, 1);
 	}
-
+	
+	size_t Size() const;
 
 private:
 	void SplitToPool(info& anInfo, bool pin);
@@ -105,6 +106,12 @@ public:
 
 	void UpdateTime(const std::string& uniqueName);
 	void CacheLimit(int theCacheLimit);
+
+	/**
+ 	 * @brief Return current cache size (number of elements)
+ 	 */ 
+
+	size_t Size() const;
 
 private:
 	cache_pool();
