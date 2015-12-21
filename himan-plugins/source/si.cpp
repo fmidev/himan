@@ -429,7 +429,13 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 
 	myTargetInfo->Param(CAPE3kmParam);
 	myTargetInfo->Data().Set(get<4> (CAPE));
- 
+
+	DumpVector(get<0> (CAPE), "EL T");
+	DumpVector(get<1> (CAPE), "EL P");
+	DumpVector(get<2> (CAPE), "CAPE");
+	DumpVector(get<3> (CAPE), "CAPE 1040");
+	DumpVector(get<4> (CAPE), "CAPE 3km");
+
 	// 5. 
 
 	cout << "\n--- CIN --\n" << endl;
@@ -514,17 +520,15 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 	
 	// Get LCL and LFC heights in meters
 
-	DumpVector(PLCL, "PLCL");
-
 	auto ZLCL = h->VerticalValue(param("HL-M"), PLCL);
 	auto ZLFC = h->VerticalValue(param("HL-M"), PLFC);
 
 	itsLogger->Debug("Fetching LCL metric height");
 
-	DumpVector(ZLCL, "ZLCL");
+	DumpVector(ZLCL, "LCL Z");
 	
 	itsLogger->Debug("Fetching LFC metric height");
-	DumpVector(ZLFC, "ZLFC");
+	DumpVector(ZLFC, "LFC Z");
 
 	level curLevel(kHybrid, 137);
 	
@@ -548,7 +552,7 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 
 	curLevel.Value(curLevel.Value()-1);
 	
-	while (curLevel.Value() > 70 && foundCount != found.size())
+	while (curLevel.Value() > 60 && foundCount != found.size())
 	{
 
 		auto ZenvInfo = Fetch(ftime, curLevel, param("HL-M"), ftype, false);
@@ -897,7 +901,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 	// Convert pressure to Pa since metutil-library expects that
 	multiply_with(Piter, 100);
 
-	while (curLevel.Value() > 50 && foundCount != found.size())
+	while (curLevel.Value() > 60 && foundCount != found.size())
 	{
 		// Get environment temperature, pressure and height values for this level
 		auto PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
@@ -912,32 +916,34 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 
 		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 	
-		LOCKSTEP(PenvInfo, ZenvInfo, prevZenvInfo, prevTenvInfo, prevPenvInfo, TenvInfo)
+		int i = -1;
+		for (auto&& tup : zip_range(VEC(PenvInfo), VEC(ZenvInfo), VEC(prevZenvInfo), VEC(prevTenvInfo), VEC(prevPenvInfo), VEC(TenvInfo), TparcelVec, prevTparcelVec))
+		//LOCKSTEP(PenvInfo, ZenvInfo, prevZenvInfo, prevTenvInfo, prevPenvInfo, TenvInfo)
 		{
-			size_t i = PenvInfo->LocationIndex();
 
+			i++;
 			// CAPE is a superset of CAPE1040 and CAPE3km
 			if (found[i] & FCAPE) continue;
 
-			double Tenv = TenvInfo->Value(); // K
+			double Tenv = tup.get<5>(); // K
 			assert(Tenv > 100.);
 			
-			double prevTenv = prevTenvInfo->Value(); // K
+			double prevTenv = tup.get<3>(); // K
 			assert(prevTenv > 100.);
 			
-			double Penv = PenvInfo->Value(); // hPa
+			double Penv = tup.get<0>(); // hPa
 			assert(Penv < 1200.);
 			
-			double prevPenv = prevPenvInfo->Value(); // hPa
+			double prevPenv = tup.get<4>(); // hPa
 			assert(prevPenv < 1200.);
 			
-			double Zenv = ZenvInfo->Value(); // m
-			double prevZenv = prevZenvInfo->Value(); // m
+			double Zenv = tup.get<1>(); // m
+			double prevZenv = tup.get<2>(); // m
 			
-			double Tparcel = TparcelVec[i]; // K
+			double Tparcel = tup.get<6>(); // K
 			assert(Tparcel > 100. || Tparcel == kFloatMissing);
 			
-			double prevTparcel = prevTparcelVec[i]; // K
+			double prevTparcel = tup.get<7>(); // K
 			assert(prevTparcel > 100. || Tparcel == kFloatMissing);
 			
 			if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || prevZenv == kFloatMissing || Tparcel == kFloatMissing || Penv > P[i])
@@ -1087,6 +1093,11 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	
 	itsLogger->Info("Searching environment temperature for LCL");
 
+	for (size_t i = 0; i < P.size(); i++)
+	{
+		//if (P[i] < 450) P[i] = 450;
+	}
+
 	auto TenvLCL = h->VerticalValue(param("T-K"), P);
 
 	auto Piter = P, Titer = T; // integration variables
@@ -1108,7 +1119,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 			LFCP[i] = P[i];
 		}
 	}
-
+	
 	size_t foundCount = count(found.begin(), found.end(), true);
 
 	itsLogger->Debug("Found " + boost::lexical_cast<string> (foundCount) + " gridpoints that have LCL=LFC");
@@ -1117,18 +1128,18 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	// among all grid points; most commonly it's the lowest hybrid level
 
 	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::max(P));
-	
+
 	level curLevel = levels.first;
-	
+
 	auto prevPenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 	auto prevTenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
-	
+
 	curLevel.Value(curLevel.Value()-1);
 
 	//auto prevPenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("P-PA"), myTargetInfo->ForecastType(), false);
 	//auto prevTenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("T-K"), myTargetInfo->ForecastType(), false);
 
-	while (curLevel.Value() > 70 && foundCount != found.size())
+	while (curLevel.Value() > 60 && foundCount != found.size())
 	{	
 		// Get environment temperature and pressure values for this level
 		auto TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
@@ -1145,21 +1156,25 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 		vector<double> TparcelVec(P.size(), kFloatMissing);
 		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
-		LOCKSTEP(TenvInfo, PenvInfo, prevPenvInfo, prevTenvInfo)
+		int i = -1;
+		for (auto&& tup : zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(prevPenvInfo), VEC(prevTenvInfo), TparcelVec, LFCT, LFCP))
 		{
-			size_t i = TenvInfo->LocationIndex();
+			i++;
 
 			if (found[i]) continue;
 
-			double Penv = PenvInfo->Value(); // hPa
+			double Tenv = tup.get<0> (); // K
+			assert(Tenv > 100.);
+
+			double Penv = tup.get<1> (); // hPa
 			assert(Penv < 1200.);
 			assert(P[i] < 1200.);
-
-			double Tenv = TenvInfo->Value(); // K
-			assert(Tenv > 100.);
 			
-			double Tparcel = TparcelVec[i]; // K
+			double Tparcel = tup.get<4> (); // K
 			assert(Tparcel > 100.);
+			
+			double& Tresult = tup.get<5> ();
+			double& Presult = tup.get<6> ();
 
 			if (Tparcel == kFloatMissing || Penv > P[i])
 			{
@@ -1176,12 +1191,12 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 				// Or we could if we'd integrate it but it makes the calculation more complex. So maybe in the
 				// future. For now just take an average of upper and lower level values.
 				
-				double prevTenv = prevTenvInfo->Value(); // K
+				double prevTenv = tup.get<3> (); // K
 				assert(prevTenv > 100.);
 
-				LFCT[i] = (Tenv + prevTenv) * 0.5;
+				Tresult = (Tenv + prevTenv) * 0.5;
 
-				double prevP = prevPenvInfo->Value();
+				double prevP = tup.get<2> ();
 				if (prevPenvInfo->Param().Name() == "P-PA") prevP *= 0.01;
 
 				// Never allow LFC pressure to be bigger than LCL pressure; bound lower level (with larger pressure value)
@@ -1189,7 +1204,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 
 				prevP = min(prevP, P[i]);
 				
-				LFCP[i] = (Penv + prevP) * 0.5;
+				Presult = (Penv + prevP) * 0.5;
 			}
 		}
 		
@@ -1351,38 +1366,47 @@ lcl_t CalcLCLPressureFast(double T, double Td, double P)
 #endif
 pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, vector<double>& Tsurf, vector<double>& TDsurf)
 {
-	vector<double> T(Tsurf.size(), kFloatMissing);
-	vector<double> P = T;
-	
+	vector<double> TLCL(Tsurf.size(), kFloatMissing);
+	vector<double> PLCL = TLCL;
+
 	// Need surface pressure
 
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
 	auto Psurf = Fetch(myTargetInfo->Time(), level(kHeight, 0), PParams, myTargetInfo->ForecastType(), false);
 
+	double Pscale = 1.; // P should be Pa
+
 	if (!Psurf)
 	{
-		throw runtime_error("Surface pressure not found");
-	}
-	
-	Psurf->ResetLocation();
-
-	for (size_t i = 0; i < T.size() && Psurf->NextLocation(); i++)
-	{
-	
-#ifdef SMARTTOOL_COMPATIBILITY		
-		auto lcl = smarttool::CalcLCLPressureFast(Tsurf[i], TDsurf[i], _Psurf);
-		P[i] = (lcl.P > _Psurf) ? 0.01 * _Psurf : 0.01 * lcl.P; // hPa
-		T[i] = himan::metutil::DryLift_(_Psurf, Tsurf[i], lcl.P);
-#else
-		double _Psurf = Psurf->Value();
-		auto lcl = metutil::LCLA_(_Psurf, Tsurf[i], TDsurf[i]);
-		T[i] = lcl.T;
-		P[i] = (lcl.P > _Psurf) ? 0.01 * _Psurf : 0.01 * lcl.P; // hPa
-#endif
+		itsLogger->Warning("Surface pressure not found, trying lowest hybrid level pressure");
+		Psurf = Fetch(myTargetInfo->Time(), level(kHybrid, 137), param("P-HPA"), myTargetInfo->ForecastType(), false);
+		
+		if (!Psurf)
+		{
+			throw runtime_error("Pressure data not found");
+		}
+		
+		Pscale = 100.;
 	}
 
-	return make_pair(T,P);
+	assert(Tsurf.size() == VEC(Psurf).size());
+
+	for (auto&& tup : zip_range(Tsurf, TDsurf, VEC(Psurf), TLCL, PLCL))
+	{	
+		double T = tup.get<0> ();
+		double TD = tup.get<1> ();
+		double P = tup.get<2> ();
+		double& Tresult = tup.get<3> ();
+		double& Presult = tup.get<4> ();
+		
+		auto lcl = metutil::LCLA_(P*Pscale, T, TD);
+		
+		Tresult = lcl.T;
+		Presult = (lcl.P > P*Pscale) ? P : 0.01 * lcl.P; // hPa
+	}
+
+	return make_pair(TLCL,PLCL);
 	
 }
 
@@ -1393,7 +1417,7 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 	
 	if (!TInfo || !TDInfo)
 	{
-		throw runtime_error("No data found");
+		throw runtime_error("Surface temperature and/or dewpoint not found");
 	}
 	auto T = TInfo->Data().Values();
 	auto TD = TDInfo->Data().Values();
@@ -1557,14 +1581,21 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 
 	return make_pair(T,TD);
 }
-
+/*
+double CalcThetaE(double T, double P)
+{
+	double tpot = himan::metutil::Theta_(T, P);
+	double w = himan::metutil::MixingRatio_(T, P);
+	return tpot + 3 * w;
+}
+*/
 pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> myTargetInfo)
 {
 	vector<bool> found(myTargetInfo->Data().Size(), false);
 	
 	vector<double> maxThetaE(myTargetInfo->Data().Size(), -1);
-	vector<double> T(myTargetInfo->Data().Size(), kFloatMissing);
-	auto TD = T;
+	vector<double> Tsurf(myTargetInfo->Data().Size(), kFloatMissing);
+	auto TDsurf = Tsurf;
 	
 	level curLevel(kHybrid, 137);
 	
@@ -1581,16 +1612,19 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 	
 		int i = -1;
 
-		for (auto&& tup : zip_range(VEC(TInfo), VEC(RHInfo), VEC(PInfo)))
+		for (auto&& tup : zip_range(VEC(TInfo), VEC(RHInfo), VEC(PInfo), maxThetaE, Tsurf, TDsurf))
 		{
 			i++;
 
 			if (found[i]) continue;
 			
-			double T_ = tup.get<0> ();
-			double RH = tup.get<1> ();
-			double P = tup.get<2> ();
-			
+			double T			= tup.get<0> ();
+			double RH			= tup.get<1> ();
+			double P			= tup.get<2> ();
+			double& refThetaE	= tup.get<3> ();
+			double& Tresult		= tup.get<4> ();
+			double& TDresult	= tup.get<5> ();
+		
 			if (P < 600.)
 			{
 				// Cut search if reach level 600hPa
@@ -1598,15 +1632,23 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 				continue;
 			}
 			
-			double ThetaE = metutil::ThetaE_(T_, P*100);
+			double ThetaE = metutil::ThetaE_(T, P*100); //CalcThetaE(T, P*100);//
+
+			assert(ThetaE >= 0);
 			
-			if (ThetaE >= maxThetaE[i])
+			if (ThetaE >= refThetaE)
 			{
-				maxThetaE[i] = ThetaE;
-				T[i] = T_;
-				if (RH == 0.) RH=0.1;
-				TD[i] = metutil::DewPointFromRH_(T_, RH);
-				assert(TD[i] > 100);
+				refThetaE = ThetaE;
+				Tresult = T;
+				
+				if (RH == 0.) 
+				{
+					RH = 0.1;
+				}
+				
+				TDresult = metutil::DewPointFromRH_(T, RH);
+				
+				assert(TDresult > 100);
 			}
 		}
 		
@@ -1618,11 +1660,12 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 		curLevel.Value(curLevel.Value()-1);
 	}
 	
-	for (size_t i = 0; i < T.size(); i++)
+	for (size_t i = 0; i < Tsurf.size(); i++)
 	{
-		if (T[i] == 0.) T[i] = kFloatMissing;
-		if (TD[i] == 0.) TD[i] = kFloatMissing;
+		if (Tsurf[i] == 0.) Tsurf[i] = kFloatMissing;
+		if (TDsurf[i] == 0.) TDsurf[i] = kFloatMissing;
 	}
-	return make_pair(T,TD);
+
+	return make_pair(Tsurf,TDsurf);
 
 }
