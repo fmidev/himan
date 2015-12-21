@@ -233,6 +233,68 @@ BOOST_AUTO_TEST_CASE(THETAE)
 
 }
 
+BOOST_AUTO_TEST_CASE(THETAESIMPLE)
+{
+	double T = 273.15 + 30;
+	double P = 100 * 1000;
+
+	double thetae = metutil::ThetaESimple_(T,P);
+
+	BOOST_CHECK_CLOSE(thetae, 386.28, 1);
+
+	T -= 10;
+
+	thetae = metutil::ThetaESimple_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 335.61, 1);
+
+	T -= 20;
+
+	thetae = metutil::ThetaESimple_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 283.60, 1);
+
+	T -= 30;
+
+	thetae = metutil::ThetaESimple_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 244.01, 1);
+
+	T = 273.15 + 20;
+	P = 100 * 700;
+
+	thetae = metutil::ThetaESimple_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 394.71, 2);
+
+	T -= 20;
+
+	thetae = metutil::ThetaESimple_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 319.13, 1);	
+
+	T -= 30;
+
+	thetae = metutil::ThetaESimple_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 270.57, 1);
+
+	T = 273.15 - 30;
+	P = 100 * 200;
+
+	thetae = metutil::ThetaESimple_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 391.82, 1);	
+
+	T -= 20;
+
+	thetae = metutil::ThetaESimple_(T,P);	
+
+	BOOST_CHECK_CLOSE(thetae, 354.11, 1);	
+
+
+}
+
 BOOST_AUTO_TEST_CASE(THETAW)
 {
 
@@ -314,29 +376,6 @@ BOOST_AUTO_TEST_CASE(TW)
 
 	BOOST_REQUIRE_CLOSE(Tw, 273.52, 0.01);
 	
-}
-
-BOOST_AUTO_TEST_CASE(MOISTLIFT)
-{
-	// With iteration
-
-	double T = 286;
-	double TD = 279;
-	double P = 100000;
-
-	double TmoistIter = metutil::MoistLift_(P, T, TD, 50000);
-
-	BOOST_REQUIRE_CLOSE(TmoistIter, 190.190, 0.01);
-
-	// With approximation
-
-	auto lcl = metutil::LCLA_(P, T, TD);
-	double thetaE = metutil::ThetaE_(lcl.T, lcl.P);
-
-	double TmoistApprox = metutil::Tw_(thetaE, 50000);
-
-	BOOST_REQUIRE_CLOSE(TmoistApprox, 190.190, 0.01);
-
 }
 
 BOOST_AUTO_TEST_CASE(VIRTUAL_TEMPERATURE)
