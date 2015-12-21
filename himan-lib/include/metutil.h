@@ -545,6 +545,23 @@ CUDA_DEVICE
 double ThetaE_(double T, double P);
 
 /**
+ * @brief Calculate equivalent potential temperature.
+ * 
+ * Formula used is taken from smarttools-library.
+ * 
+ * Formula is computationally simple, but not very accurate (several degrees 
+ * difference between ThetaE_() functions' results)
+ * 
+ * @param T The temperature of a saturated air parcel (Kelvin)
+ * @param P The initial pressure of the parcel (Pa)
+ * @return Equivalent potential temperature ThetaE in Kelvins
+ */
+
+CUDA_DEVICE
+double ThetaESimple_(double T, double P);
+
+
+/**
  * @brief Calculate wet-bulb potential temperature
  * 
  * Formula used is (3.8) from
@@ -1133,6 +1150,15 @@ double himan::metutil::Theta_(double T, double P)
 	
 	return T * pow((100000. / P), 0.28586);
 
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::ThetaESimple_(double T, double P)
+{
+	double tpot = himan::metutil::Theta_(T, P);
+	double w = himan::metutil::MixingRatio_(T, P);
+	return tpot + 3 * w;
 }
 
 CUDA_DEVICE
