@@ -33,7 +33,7 @@ public:
 	
     std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName);
 
-    ~plugin_factory() = default;
+    ~plugin_factory() {}
 
 private:
     // Hide constructor
