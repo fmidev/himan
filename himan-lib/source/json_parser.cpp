@@ -567,6 +567,9 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 			pc->Info(make_shared<info> (*anInfo));	// We have to have a copy for all configs.
 													// Each plugin will later on create a data backend.
+			
+			assert(pc.unique());
+
 			pluginContainer.push_back(pc);
 			
 		}
