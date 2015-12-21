@@ -559,7 +559,6 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 		auto TenvInfo = Fetch(ftime, curLevel, param("T-K"), ftype, false);
 		auto PenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
 		
-//		vector<double> Tdiff(PLCL.size(), kFloatMissing);
 		vector<double> TparcelVec(Piter.size(), kFloatMissing);
 
 		// Convert pressure to Pa since metutil-library expects that
@@ -1036,18 +1035,9 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 
 			}
 		}
-		//DumpVector(CAPE, "CAPE");
-		//DumpVector(CAPE1040, "CAPE1040");
-		//DumpVector(CAPE3km, "CAPE3km");
 
 		curLevel.Value(curLevel.Value() - 1);		
-		/*
-		foundCount = 0;
-		
-		for (auto& val : found)
-		{
-			if (val & FCAPE) foundCount++;
-		}*/
+
 		//itsLogger->Info("CAPE read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 		prevZenvInfo = ZenvInfo;
 		prevTenvInfo = TenvInfo;
@@ -1235,135 +1225,6 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	return make_pair(LFCT, LFCP);
 }
 
-#ifdef SMARTTOOL_COMPATIBILITY
-namespace smarttool {
-
-const double gTMR_alfa = 0.0498646455;
-const double gTMR_beta = 2.4082965;
-const double gTMR_gamma = 0.0915;
-const double gTMR_gamma2 = 38.9114;
-const double gTMR_gamma3 = 1.2035;
-const double gTpot2tConstant1 = 0.2854;
-const double gKelvinChange = 273.16;
-
-
-
-double CalcRH(double T, double Td)
-{
-	double RH = 100 * ::pow((112-0.1*T+Td)/(112+0.9*T) ,8);
-	return RH;
-}
-
-double CalcE(double RH, double es)
-{
-	double e = RH * es / 100;
-	return e;
-}
-
-double CalcEs2(double Tcelsius)
-{
-	const double b = 17.2694;
-	const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
-	const double T1 = 273.16; // [K]
-	const double T2 = 35.86; // [K]
-
-	double T = Tcelsius + T1;
-	double nume = b * (T-T1);
-	double deno = (T-T2);
-
-	double es = e0 * ::exp(nume/deno);
-	return es;
-}
-
-double CalcW(double e, double P)
-{
-	double w = 0.622 * e/P * 1000;
-	return w;
-}
-
-double CalcMixingRatio(double T, double Td, double P)
-{
-	double RH = CalcRH(T, Td);
-	double es = CalcEs2(T);
-	double e = CalcE(RH, es);
-	double w = CalcW(e, P);
-	return w;
-}
-
-double Tpot2t(double tpot, double p)
-{
-	// HUOM! pot lämpötila muutetaan ensin kelvineiksi ja lopuksi tulos muutetaan takaisin celsiuksiksi
-	return ( (gKelvinChange + tpot) * ::pow(p/1000, gTpot2tConstant1) ) - gKelvinChange;
-}
-
-double T2tpot(double T, double P)
-{
-	const double T0 = 273.16; // kelvin asteikon muunnos
-	return ((T+T0) * ::pow(1000/P, 0.2854)) - T0;
-}
-
-double TMR(double W, double P)
-{
-	double X   =  ::log10( W * P / (622.+ W) );
-	double TMR = ::pow(10., ( gTMR_alfa * X + gTMR_beta )) - 7.07475 + gTMR_gamma2 * ( ::pow((::pow(10.,( gTMR_gamma * X )) - gTMR_gamma3 ), 2 ));
-	return TMR - 273.16; // HUOM! lopussa muutetaan kuitenkin celsiuksiksi!!
-}
-
-double IterateMixMoistDiffWithNewtonMethod(double W, double Tpot, double P, double &diffOut)
-{
-	double P2 = P + 0.001;
-	double tmr1 = TMR(W, P);
-	double tmr2 = TMR(W, P2);
-	double Tw1 = Tpot2t(Tpot, P);
-	double Tw2 = Tpot2t(Tpot, P2);
-	double tmrDeri = (tmr2 - tmr1)/(P2-P);
-	double TwDeri = (Tw2 - Tw1)/(P2-P);
-	double mixMoistDiff = tmr1 - Tw1;
-	diffOut = mixMoistDiff;
-	double mixMoistDiffDerivate = tmrDeri - TwDeri;
-	return P - (mixMoistDiff / mixMoistDiffDerivate);
-}
-
-lcl_t CalcLCLPressureFast(double T, double Td, double P)
-{
-	double lastLCL = 900; // aloitetaan haku jostain korkeudesta
-
-	T -= himan::constants::kKelvin;
-	Td -= himan::constants::kKelvin;
-	
-	int iterationCount = 0; // Tämän voi poistaa profiloinnin jälkeen
-	double lclPressure = kFloatMissing;
-	// 2. Laske sekoitussuhde pinnalla
-	double w = CalcMixingRatio(T, Td, P);
-	double tpot = T2tpot(T, P); // pitää laskea mitä lämpötilaa vastaa pinnan 'potentiaalilämpötila'
-	double currentP = lastLCL;
-	double diff = 99999;
-	int maxIterations = 20;
-	// Etsi newtonin menetelmällä LCL pressure
-	do
-	{
-		iterationCount++;
-		currentP = IterateMixMoistDiffWithNewtonMethod(w, tpot, currentP, diff);
-		if(::fabs(diff) < 0.01)
-			break;
-		if(currentP < 100) // most unstable tapauksissa etsintä piste saattaa pompata tosi ylös
-		{ // tässä on paineen arvoksi tullut niin pieni että nostetaan sitä takaisin ylös ja jatketaan etsintöjä
-			currentP = 100;
-		}
-	}while(iterationCount < maxIterations);
-
-	// laske tarkempi paine jos viitsit lastP ja currentP;n avulla interpoloimalla
-	if(iterationCount < maxIterations && currentP != kFloatMissing)
-		lastLCL = currentP;
-	else if(iterationCount >= maxIterations)
-		currentP = kFloatMissing;
-	lclPressure = currentP;
-	lcl_t lcl;
-	lcl.P = lclPressure;
-	return lcl;
-}
-}
-#endif
 pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, vector<double>& Tsurf, vector<double>& TDsurf)
 {
 	vector<double> TLCL(Tsurf.size(), kFloatMissing);
@@ -1581,14 +1442,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 
 	return make_pair(T,TD);
 }
-/*
-double CalcThetaE(double T, double P)
-{
-	double tpot = himan::metutil::Theta_(T, P);
-	double w = himan::metutil::MixingRatio_(T, P);
-	return tpot + 3 * w;
-}
-*/
+
 pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> myTargetInfo)
 {
 	vector<bool> found(myTargetInfo->Data().Size(), false);
