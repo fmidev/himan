@@ -50,8 +50,7 @@ public:
 
 private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
-	double WithQ(double T, double Q, double P);
-	double WithTD(double T, double TD);
+
 #ifdef HAVE_CUDA
 	std::unique_ptr<relative_humidity_cuda::options> CudaPrepareTTD(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> TDInfo, double TDBase, double TBase);
 	std::unique_ptr<relative_humidity_cuda::options> CudaPrepareTQP(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo, std::shared_ptr<info> QInfo, std::shared_ptr<info> PInfo, double PScale, double TBase);

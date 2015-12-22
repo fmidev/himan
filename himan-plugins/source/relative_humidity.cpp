@@ -15,9 +15,9 @@
 using namespace std;
 using namespace himan::plugin;
 
-const double b = 17.27;
-const double c = 237.3;
-const double d = 1.8;
+void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInfo, double TDBase, double TBase);
+void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, himan::info_t PInfo, double PScale, double TBase);
+void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, double P, double TBase);
 
 relative_humidity::relative_humidity()
 {
@@ -159,112 +159,109 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	{
 		deviceType = "CPU";
 
-		if (PInfo)
+		if (calculateWithTD)
 		{
-			PInfo->ResetLocation();
+			WithTD(myTargetInfo, TInfo, TDInfo, TDBase, TBase);
 		}
-
-		if (TDInfo)
+		else
 		{
-			TDInfo->ResetLocation();
-		}
-
-		if (QInfo)
-		{
-			QInfo->ResetLocation();
-		}
-
-		LOCKSTEP(myTargetInfo, TInfo)
-		{
-
-			double T = TInfo->Value();
-
-			if (T == kFloatMissing)
+			if (isPressureLevel)
 			{
-				continue;
-			}
-
-			double TD = kFloatMissing;
-			double P = kFloatMissing;
-			double Q = kFloatMissing;
-			double RH = kFloatMissing;
-
-			T += TBase;
-
-			if (calculateWithTD)
-			{
-				TDInfo->NextLocation();
-				TD = TDInfo->Value();
-
-				if (TD == kFloatMissing)
-				{
-					continue;
-				}
-
-				RH = WithTD(T, TD + TDBase);
+				WithQ(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(), TBase); // Pressure is needed as hPa, no scaling
 			}
 			else
 			{
-				if (isPressureLevel)
-				{
-					P = myTargetInfo->Level().Value(); // Pressure is needed as hPa, no scaling
-				}
-				else
-				{
-					PInfo->NextLocation();
-					P = PInfo->Value();
-				}
-
-				QInfo->NextLocation();
-				Q = QInfo->Value();
-
-				if (P == kFloatMissing || Q == kFloatMissing)
-				{
-					continue;
-				}
-
-				P *= PScale;
-				RH = WithQ(T, Q, P);
+				WithQ(myTargetInfo, TInfo, QInfo, PInfo, PScale, TBase);
 			}
-
-			if (RH > 1.0)
-			{
-				RH = 1.0;
-			}
-			else if (RH < 0.0)
-			{
-				RH = 0.0;
-			}
-
-			RH *= 100;
-
-			myTargetInfo->Value(RH);
 		}
-
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }
 
-inline
-double relative_humidity::WithQ(double T, double Q, double P)
+void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, double P, double TBase)
 {
 	// Pressure needs to be hPa and temperature C
 
-	double es = metutil::Es_(T + constants::kKelvin) * 0.01;
-	return (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
+	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(TInfo), VEC(QInfo)))
+	{
+		double& result = tup.get<0>();
+		double T = tup.get<1>() + TBase;
+		double Q = tup.get<2>();
+
+		double es = himan::metutil::Es_(T + himan::constants::kKelvin) * 0.01;
+
+		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
+
+		if (result > 1.0)
+		{
+			result = 1.0;
+		}
+		else if (result < 0.0)
+		{
+			result = 0.0;
+		}
+
+		result *= 100;
+	}
 }
 
-inline
-double relative_humidity::WithTD(double T, double TD)
+void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, himan::info_t PInfo, double PScale, double TBase)
+{
+	// Pressure needs to be hPa and temperature C
+
+	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(TInfo), VEC(QInfo), VEC(PInfo)))
+	{
+		double& result = tup.get<0>();
+		double T = tup.get<1>() + TBase;
+		double Q = tup.get<2>();
+		double P = tup.get<3>() * PScale;
+
+		double es = himan::metutil::Es_(T + himan::constants::kKelvin) * 0.01;
+		
+		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
+		
+		if (result > 1.0)
+		{
+			result = 1.0;
+		}
+		else if (result < 0.0)
+		{
+			result = 0.0;
+		}
+
+		result *= 100;
+	}
+}
+
+void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInfo, double TDBase, double TBase)
 {
 	const double b = 17.27;
 	const double c = 237.3;
 	const double d = 1.8;
 
-	return exp(d + b * (TD / (TD + c))) / exp(d + b * (T / (T + c)));
+	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(TInfo), VEC(TDInfo)))
+	{
+		double& result = tup.get<0> ();
+		double T = tup.get<1>() + TBase;
+		double TD = tup.get<2>() + TDBase;
+		
+		result = exp(d + b * (TD / (TD + c))) / exp(d + b * (T / (T + c)));
+		
+		if (result > 1.0)
+		{
+			result = 1.0;
+		}
+		else if (result < 0.0)
+		{
+			result = 0.0;
+		}
+
+		result *= 100;
+	}
 }
+
 #ifdef HAVE_CUDA
 // Case where RH is calculated from T and TD
 unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTTD( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TDInfo, double TDBase, double TBase)
