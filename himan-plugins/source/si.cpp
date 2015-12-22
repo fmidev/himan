@@ -95,8 +95,8 @@ const himan::param MULFCP("LFCMU-HPA");
 const himan::param MUELT("ELMU-K");
 const himan::param MUELP("ELMU-HPA");
 const himan::param MUCAPE("CAPEMU-JKG", 59);
-const himan::param MUCAPE1040("CAPEMU1040-JKG", 59);
-const himan::param MUCAPE3km("CAPEMU3KM-JKG", 59);
+const himan::param MUCAPE1040("CAPEMU1040", 59);
+const himan::param MUCAPE3km("CAPEMU3KM", 59);
 const himan::param MUCIN("CINMU-JKG", 66);
 
 si::si() : itsBottomLevel(kHPMissingInt), itsSourceData(kUnknown)
@@ -248,6 +248,39 @@ void DumpVector(const vector<double>& vec, const string& name)
 
 	cout << name << "\tmin " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
 
+	int binn = 10;
+	
+	double binw = (max-min)/10;
+
+	double binmin = min;
+	double binmax = binmin + binw;
+
+	cout << "distribution:" << endl;
+
+	for (int i = 1; i <= binn; i++)
+	{
+		if (i == binn) binmax += 0.001;
+
+		size_t count = 0;
+
+		for (const double& val : vec)
+		{
+			if (val == kFloatMissing) continue;
+
+			if (val >= binmin && val < binmax)
+			{
+				count++;
+			}
+		}
+
+		if (i == binn) binmax -= 0.001;
+
+		cout << binmin << ":" << binmax << " " << count << std::endl;
+
+		binmin += binw;
+		binmax += binw;
+
+	}
 }
 
 void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
@@ -313,8 +346,12 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	
 	// 1. 
 	
+	auto timer = timer_factory::Instance()->GetTimer();
+	timer->Start();
+	
 	cout << "\n--- T AND TD --\n" << endl;
 	
+
 	pair<vector<double>, vector<double>> TandTD;
 	
 	param LCLTParam, LCLPParam, LFCTParam, LFCPParam, ELPParam, ELTParam;
@@ -376,6 +413,10 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	
 	if (TandTD.first.empty()) return;
 	
+	timer->Stop();
+
+	mySubThreadedLogger->Info("Source data calculated in " + boost::lexical_cast<string> (timer->GetTime()) + " ms");
+
 	DumpVector(get<0>(TandTD), "T");
 	DumpVector(get<1>(TandTD), "TD");
 	
@@ -383,8 +424,14 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	
 	cout << "\n--- LCL --\n" << endl;
 	
+	timer->Start();
+	
 	auto LCL = GetLCL(myTargetInfo, TandTD.first, TandTD.second);
 	
+	timer->Stop();
+	
+	mySubThreadedLogger->Info("LCL calculated in " + boost::lexical_cast<string> (timer->GetTime()) + " ms");
+
 	myTargetInfo->Param(LCLTParam);
 	myTargetInfo->Data().Set(LCL.first);
 	
@@ -398,7 +445,13 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	
 	cout << "\n--- LFC --\n" << endl;
 
+	timer->Start();
+	
 	auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
+
+	timer->Stop();
+
+	mySubThreadedLogger->Info("LFC calculated in " + boost::lexical_cast<string> (timer->GetTime()) + " ms");
 
 	myTargetInfo->Param(LFCTParam);
 	myTargetInfo->Data().Set(LFC.first);
@@ -409,11 +462,41 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	DumpVector(LFC.first, "LFC T");
 	DumpVector(LFC.second, "LFC P");
 
-	// 4.
+	// 4. & 5.
 
- 	cout << "\n--- CAPE --\n" << endl;
+	tuple<vector<double>,vector<double>,vector<double>,vector<double>,vector<double>> CAPE;
+	vector<double> CIN;
+
+	timer->Start();
+
+	if (false && itsSourceData != kUnknown)
+	{
+
+		cout << "\n--- CAPE --\n" << endl;
+		boost::thread t1(&si::GetCAPE, this, boost::ref(myTargetInfo), LFC.first, LFC.second);
+
+		cout << "\n--- CIN --\n" << endl;
+		boost::thread t2(&si::GetCIN, this, boost::ref(myTargetInfo), TandTD.first, LCL.first, LCL.second, LFC.second);
+
+		t1.join();
+		t2.join();
 	
-	auto CAPE = GetCAPE(myTargetInfo, LFC.first, LFC.second);
+	}
+	else
+	{
+		cout << "\n--- CAPE --\n" << endl;
+			
+		CAPE = GetCAPE(myTargetInfo, LFC.first, LFC.second);
+/*
+		cout << "\n--- CIN --\n" << endl;
+	
+		CIN = GetCIN(myTargetInfo, TandTD.first, LCL.first, LCL.second, LFC.second);
+ */
+	}
+	
+	timer->Stop();
+
+	mySubThreadedLogger->Info("CAPE and CIN calculated in " + boost::lexical_cast<string> (timer->GetTime()) + " ms");
 
 	myTargetInfo->Param(ELTParam);
 	myTargetInfo->Data().Set(get<0> (CAPE));
@@ -435,17 +518,12 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	DumpVector(get<2> (CAPE), "CAPE");
 	DumpVector(get<3> (CAPE), "CAPE 1040");
 	DumpVector(get<4> (CAPE), "CAPE 3km");
-
-	// 5. 
-
-	cout << "\n--- CIN --\n" << endl;
-	
-	auto CIN = GetCIN(myTargetInfo, TandTD.first, LCL.first, LCL.second, LFC.second);
-
+/*
 	DumpVector(CIN, "CIN");
+
 	myTargetInfo->Param(CINParam);
 	myTargetInfo->Data().Set(CIN);
-
+*/
 	if (sourceType == kMaxThetaE)
 	{
 		// If calculating most unstable CAPE, and the value of CAPE is zero, set it to missing
@@ -567,25 +645,27 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 
 		metutil::LiftLCL(&Piter[0], &Titer[0], &PLCLPa[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 		
-		LOCKSTEP(TenvInfo, PenvInfo, ZenvInfo, prevZenvInfo, basePenvInfo)
+		int i = -1;
+		//LOCKSTEP(TenvInfo, PenvInfo, ZenvInfo, prevZenvInfo, basePenvInfo)
+		for (auto&& tup : zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(ZenvInfo), VEC(prevZenvInfo), VEC(basePenvInfo)))
 		{
-			size_t i = TenvInfo->LocationIndex();
+			i++;
 
 			if (found[i]) continue;
 
-			double Tenv = TenvInfo->Value(); // K
+			double Tenv = tup.get<0> (); // K
 			assert(Tenv >= 100.);
 			
-			double Penv = PenvInfo->Value(); // hPa
+			double Penv = tup.get<1>(); // hPa
 			assert(Penv < 1200.);
 			
-			double Pbase = basePenvInfo->Value(); // hPa
+			double Pbase = tup.get<4>(); // hPa
 			assert(Pbase < 1200.);
 			
 			assert(PLFC[i] < 1200. || PLFC[i] == kFloatMissing);
 			
-			double Zenv = ZenvInfo->Value(); // m
-			double prevZenv = prevZenvInfo->Value(); // m
+			double Zenv = tup.get<2>(); // m
+			double prevZenv = tup.get<3>(); // m
 			
 			double Tparcel = kFloatMissing;
 			
@@ -630,13 +710,13 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 		}
 
 		foundCount = count(found.begin(), found.end(), true);
-		
-		//std::cout << "cinh done for " << foundCount << "/" << found.size() << " gridpoints level " << curLevel.Value() << "\n";
+
+		itsLogger->Debug("CIN read for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 
 		curLevel.Value(curLevel.Value()-1);
 		prevZenvInfo = ZenvInfo;
 		prevTparcelVec = TparcelVec;
-		
+
 		prevZenvInfo = ZenvInfo;
 		prevTenvInfo = TenvInfo;
 		prevPenvInfo = PenvInfo;
@@ -650,7 +730,7 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 				Titer[i] = TparcelVec[i];
 				Piter[i] = PenvVec[i];
 			}
-			
+
 			if (found[i] & FCAPE) Titer[i] = kFloatMissing; // by setting this we prevent MoistLift to integrate particle
 
 		}
@@ -1038,7 +1118,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 
 		curLevel.Value(curLevel.Value() - 1);		
 
-		//itsLogger->Info("CAPE read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
+		itsLogger->Debug("CAPE read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 		prevZenvInfo = ZenvInfo;
 		prevTenvInfo = TenvInfo;
 		prevPenvInfo = PenvInfo;
@@ -1085,7 +1165,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 
 	for (size_t i = 0; i < P.size(); i++)
 	{
-		//if (P[i] < 450) P[i] = 450;
+		if (P[i] < 200) P[i] = 200;
 	}
 
 	auto TenvLCL = h->VerticalValue(param("T-K"), P);
@@ -1107,6 +1187,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 			found[i] = true;
 			LFCT[i] = T[i];
 			LFCP[i] = P[i];
+			Piter[i] = kFloatMissing;
 		}
 	}
 	
@@ -1201,7 +1282,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 		curLevel.Value(curLevel.Value() - 1);	
 	
 		foundCount = count(found.begin(), found.end(), true);
-		itsLogger->Trace("LFC processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
+		itsLogger->Debug("LFC processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
 
 		prevPenvInfo = PenvInfo;
 		prevTenvInfo = TenvInfo;
@@ -1463,7 +1544,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 		{
 			throw kFileDataNotFound;
 		}
-	
+
 		int i = -1;
 
 		for (auto&& tup : zip_range(VEC(TInfo), VEC(RHInfo), VEC(PInfo), maxThetaE, Tsurf, TDsurf))
@@ -1478,7 +1559,13 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 			double& refThetaE	= tup.get<3> ();
 			double& Tresult		= tup.get<4> ();
 			double& TDresult	= tup.get<5> ();
-		
+
+			if (P == kFloatMissing)
+			{
+				found[i] = true;
+				continue;
+			}
+
 			if (P < 600.)
 			{
 				// Cut search if reach level 600hPa
@@ -1486,7 +1573,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 				continue;
 			}
 			
-			double ThetaE = metutil::ThetaE_(T, P*100); //CalcThetaE(T, P*100);//
+			double ThetaE = metutil::ThetaE_(T, P*100);
 
 			assert(ThetaE >= 0);
 			
@@ -1506,10 +1593,14 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 			}
 		}
 		
-		if (static_cast<size_t> (count(found.begin(), found.end(), true)) == found.size())
+		size_t foundCount = count(found.begin(), found.end(), true);
+
+		if (foundCount == found.size())
 		{
 			break;
 		}
+		
+		itsLogger->Debug("Max ThetaE processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
 
 		curLevel.Value(curLevel.Value()-1);
 	}
