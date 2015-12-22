@@ -121,7 +121,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		TDBase = -constants::kKelvin;
 	}
 
-	if (!calculateWithTD && !isPressureLevel && (PInfo->Param().Name() == "P-PA" || PInfo->Param().Unit() == kPa))
+	if (!calculateWithTD && !isPressureLevel && PInfo->Param().Name() == "P-PA")
 	{
 		PScale = 0.01;
 	}
