@@ -1163,11 +1163,6 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	
 	itsLogger->Info("Searching environment temperature for LCL");
 
-	for (size_t i = 0; i < P.size(); i++)
-	{
-		if (P[i] < 200) P[i] = 200;
-	}
-
 	auto TenvLCL = h->VerticalValue(param("T-K"), P);
 
 	auto Piter = P, Titer = T; // integration variables
@@ -1338,14 +1333,19 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 	{	
 		double T = tup.get<0> ();
 		double TD = tup.get<1> ();
-		double P = tup.get<2> ();
+		double P = tup.get<2> () * Pscale; // Pa
 		double& Tresult = tup.get<3> ();
 		double& Presult = tup.get<4> ();
 		
-		auto lcl = metutil::LCLA_(P*Pscale, T, TD);
+		auto lcl = metutil::LCLA_(P, T, TD);
 		
-		Tresult = lcl.T;
-		Presult = (lcl.P > P*Pscale) ? P : 0.01 * lcl.P; // hPa
+		Tresult = lcl.T; // K
+		Presult = 0.01 * ((lcl.P > P) ? P : lcl.P); // hPa
+	}
+
+	for (size_t i = 0; i < PLCL.size(); i++)
+	{
+		if (PLCL[i] < 150.) PLCL[i] = 150.;
 	}
 
 	return make_pair(TLCL,PLCL);
