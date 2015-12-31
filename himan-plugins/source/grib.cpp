@@ -1181,110 +1181,133 @@ void grib::WriteTime(info& anInfo)
 	itsGrib->Message().DataDate(boost::lexical_cast<long> (anInfo.Time().OriginDateTime().String("%Y%m%d")));
 	itsGrib->Message().DataTime(boost::lexical_cast<long> (anInfo.Time().OriginDateTime().String("%H%M")));
 
+	double divisor = 1, unitOfTimeRange = 1;
+
+	if (anInfo.Producer().Id() == 210)
+	{
+		// Harmonie
+		unitOfTimeRange = 13; // 15 minutes
+		divisor = 15;
+	}
+	else if (anInfo.Time().Step() > 255) // Forecast with stepvalues that don't fit in one byte
+	{
+		long step = anInfo.Time().Step();
+
+		if (step % 3 == 0 && step / 3 < 255)
+		{
+			unitOfTimeRange = 13; // 3 hours
+			divisor = 3;
+		}
+		else if (step % 6 == 0 && step / 6 < 255)
+		{
+			unitOfTimeRange = 11; // 6 hours
+			divisor = 6;
+		}
+		else if (step % 12 == 0 && step / 12 < 255)
+		{
+			unitOfTimeRange = 12; // 12 hours
+			divisor = 12;
+		}
+		else
+		{
+			itsLogger->Fatal("Step too large, unable to continue");
+			exit(1);
+		}
+	}
+
+	long period = itsWriteOptions.configuration->ForecastStep();
+
+	if (anInfo.Param().Aggregation().TimeResolution() != kUnknownTimeResolution)
+	{
+		period = anInfo.Param().Aggregation().TimeResolutionValue();
+
+		// Time range and aggregation need to share a common time unit
+		if (anInfo.Param().Aggregation().TimeResolution() == kHourResolution && (unitOfTimeRange == 0 || unitOfTimeRange == 13))
+		{
+			period *= 60;
+		}
+	}
+
 	if (itsGrib->Message().Edition() == 1)
 	{
-		itsGrib->Message().StartStep(anInfo.Time().Step());
-		itsGrib->Message().EndStep(anInfo.Time().Step());
-	}
-	else
-	{
-		itsGrib->Message().ForecastTime(anInfo.Time().Step());
-	}
+		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
 
-	/*
-	 * Check if this is an aggregated parameter.
-	 *
-	 * At least when writing grib2, the aggregation of the parameter is defined outside
-	 * the actual parameter numbering scheme.
-	 *
-	 * One thing to note is that when we have mixed time types in the grib, for example
-	 * when calculating hourly parameters to harmonie (forecast time in minutes, aggregation
-	 * time in hours) we must convert them to the same unit, in harmonies case minute.
-	 */
+		long p1 = static_cast<long> ((anInfo.Time().Step() - period) / divisor);
 
-	long unitOfTimeRange = 1; // hour
-	
-	if (anInfo.Param().Aggregation().Type() != kUnknownAggregationType)
-	{
-		long timeRangeValue = 1;
-
-		if (anInfo.Param().Aggregation().TimeResolution() == kHourResolution)
+		switch (anInfo.Param().Aggregation().Type())
 		{
-			timeRangeValue = 1;
+			default:
+			case kUnknownAggregationType:
+				// Forecast product valid for reference time + P1 (P1 > 0)
+				itsGrib->Message().TimeRangeIndicator(0);
+				itsGrib->Message().P1(static_cast<int> (anInfo.Time().Step() / divisor));
+				break;
+			case kAverage:
+				// Average (reference time + P1 to reference time + P2)
+				itsGrib->Message().TimeRangeIndicator(3);
 
-			int timeResolutionValue = anInfo.Param().Aggregation().TimeResolutionValue();
-
-			if (anInfo.Time().StepResolution() == kHourResolution)
-			{
-				// GRIB1 values !
-				// http://www.nco.ncep.noaa.gov/pmb/docs/on388/table4.html
-				/*
-				if (timeResolutionValue == 1)
+				if (p1 < 0)
 				{
-					unitOfTimeRange = 1; // hour
+					itsLogger->Warning("Forcing starting step from negative value to zero");
+					p1 = 0;
 				}
-				else if (timeResolutionValue == 3)
-				{
-					unitOfTimeRange = 10; // 3 hours
-				}
-				else if (timeResolutionValue == 6)
-				{
-					unitOfTimeRange = 11; // 6 hours
-				}
-				else if (timeResolutionValue == 12)
-				{
-					unitOfTimeRange = 12; // 12 hours
-				}
-				else
-				{
-					throw runtime_error(ClassName() + ": Invalid unitOfTimeRange: " + boost::lexical_cast<string> (timeResolutionValue));
-				}
-				*/
-			}
-			else
-			{
-				// mixed time types in the grib, must convert
-				timeRangeValue = 60 * timeResolutionValue;
-				unitOfTimeRange = 0; // minute
-				
-			}			
-		}
-		else if (anInfo.Param().Aggregation().TimeResolution() == kMinuteResolution)
-		{
-			itsLogger->Warning(ClassName() + ": minute resolution for aggregated data, seems fishy");
 			
-			unitOfTimeRange = 0; // minute
-			timeRangeValue = anInfo.Param().Aggregation().TimeResolutionValue();
+				itsGrib->Message().P1(p1);
+				itsGrib->Message().P2(anInfo.Time().Step() / divisor);
+				break;
+			case kAccumulation:
+				// Accumulation (reference time + P1 to reference time + P2) product considered valid at reference time + P2
+				itsGrib->Message().TimeRangeIndicator(4);			
+
+				if (p1 < 0)
+				{
+					itsLogger->Warning("Forcing starting step from negative value to zero");
+					p1 = 0;
+				}
+				itsGrib->Message().P1(p1);
+				itsGrib->Message().P2(anInfo.Time().Step() / divisor);
+				break;
+			case kDifference:
+				// Difference (reference time + P2 minus reference time + P1) product considered valid at reference time + P2
+				itsGrib->Message().TimeRangeIndicator(5);
+
+				if (p1 < 0)
+				{
+					itsLogger->Warning("Forcing starting step from negative value to zero");
+					p1 = 0;
+				}
+
+				itsGrib->Message().P1(p1);
+				itsGrib->Message().P2(anInfo.Time().Step() / divisor);
+				break;
 		}
 
-		itsGrib->Message().LengthOfTimeRange(timeRangeValue);
-
+		assert(itsGrib->Message().TimeRangeIndicator() != 10);
 	}
 	else
 	{
-		if (anInfo.Time().StepResolution() == kMinuteResolution)
+		if (unitOfTimeRange == 13)
 		{
-			unitOfTimeRange = 0;
-		}		
-	}
-	
-	itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
-	
-	if (anInfo.StepSizeOverOneByte()) // Forecast with stepvalues that don't fit in one byte
-	{
-		itsGrib->Message().TimeRangeIndicator(10);
+			unitOfTimeRange = 254;
+		}
 
-		long step = anInfo.Time().Step();
-		long p1 = (step & 0xFF00) >> 8;
-		long p2 = step & 0x00FF;
+		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
 
-		itsGrib->Message().P1(p1);
-		itsGrib->Message().P2(p2);
-
-	}
-	else
-	{
-		itsGrib->Message().TimeRangeIndicator(0); // Force forecast
+		// Statistical processing is set in WriteParameter()
+		switch (anInfo.Param().Aggregation().Type())
+		{
+			default:
+			case kUnknownAggregationType:
+				itsGrib->Message().ForecastTime(anInfo.Time().Step());
+				break;
+			case kAverage:
+			case kAccumulation:
+			case kDifference:
+				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitOfTimeRange);
+				itsGrib->Message().ForecastTime((anInfo.Time().Step() - period) / divisor); // start step
+				itsGrib->Message().LengthOfTimeRange(itsWriteOptions.configuration->ForecastStep() / divisor); // step length
+				break;
+		}
 	}
 }
 
