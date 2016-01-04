@@ -33,6 +33,14 @@ irregular_grid::irregular_grid()
 
 irregular_grid::irregular_grid(const vector<station>& theStations)
 	: itsData()
+	, itsScanningMode(kUnknownScanningMode)
+	, itsUVRelativeToGrid(false)
+	, itsProjection(kUnknownProjection)
+	, itsAB()
+	, itsBottomLeft()
+	, itsTopRight()
+	, itsSouthPole()
+	, itsOrientation(kHPMissingValue)
 	, itsStations(theStations)
 {
 	itsData.Resize(theStations.size(), 1, 1);
@@ -54,6 +62,7 @@ irregular_grid::irregular_grid(const irregular_grid& other)
 	itsData = other.itsData;
 	itsGridType = other.itsGridType;
 	itsStations = other.itsStations;
+	itsScanningMode = other.itsScanningMode;
 	
 	itsLogger = logger_factory::Instance()->GetLog("irregular_grid");
 }
@@ -261,3 +270,4 @@ bool irregular_grid::operator==(const grid& other) const
 	
 	return false;
 }
+
