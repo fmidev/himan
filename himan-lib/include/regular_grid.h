@@ -235,6 +235,8 @@ class regular_grid : public grid
 		mutable double itsDi;
 		mutable double itsDj;
 
+		size_t itsNi;
+		size_t itsNj;
 };
 
 inline

@@ -23,7 +23,6 @@ info::info()
 	, itsParamIterator()
 	, itsForecastTypeIterator()
 	, itsDimensions()
-	, itsStepSizeOverOneByte(false)
 {
 	itsLogger = logger_factory::Instance()->GetLog("info");
 }
@@ -41,7 +40,6 @@ info::info(const info& other)
 	, itsProducer(other.itsProducer)
 	, itsOriginDateTime(other.itsOriginDateTime)
 	, itsLocationIndex(other.itsLocationIndex)
-	, itsStepSizeOverOneByte(other.itsStepSizeOverOneByte)
 {
 	
 	if (other.itsBaseGrid)
@@ -124,7 +122,7 @@ void info::ReGrid()
 	First(); // "Factory setting"
 }
 
-void info::Create(const grid* baseGrid)
+void info::Create(const grid* baseGrid, bool createDataBackend)
 {
 
 	itsDimensions = vector<shared_ptr<grid>> (itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
@@ -147,6 +145,11 @@ void info::Create(const grid* baseGrid)
 					if (baseGrid->Type() == kRegularGrid)
 					{
 						Grid(make_shared<regular_grid> (*dynamic_cast<const regular_grid*> (baseGrid)));
+						
+						if (createDataBackend)
+						{
+							Grid()->Data().Resize(dynamic_cast<regular_grid*> (Grid())->Ni(), dynamic_cast<regular_grid*> (Grid())->Nj());
+						}
 					}
 					else if (baseGrid->Type() == kIrregularGrid)
 					{
@@ -671,16 +674,6 @@ bool info::Value(double theValue)
 double info::Value() const
 {
 	return Grid()->Data().At(itsLocationIndex);
-}
-
-bool info::StepSizeOverOneByte() const
-{
-	return itsStepSizeOverOneByte;
-}
-
-void info::StepSizeOverOneByte(bool theStepSizeOverOneByte)
-{
-	itsStepSizeOverOneByte = theStepSizeOverOneByte;
 }
 
 HPProjectionType info::Projection() const

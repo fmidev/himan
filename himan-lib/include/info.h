@@ -454,7 +454,7 @@ public:
  	 * Will *not* preserve iterator positions.
 	 */
 
-	void Create(const grid* baseGrid);
+	void Create(const grid* baseGrid, bool createDataBackend = false);
 
 	/**
 	 * @brief Will reset data backend, ie. create new data that is not attached
@@ -701,9 +701,6 @@ public:
 
 	double Value() const;
 
-	bool StepSizeOverOneByte() const;
-	void StepSizeOverOneByte(bool theStepSizeOverOneByte);
-
 	HPProjectionType Projection() const;
 
 #ifdef HAVE_CUDA
@@ -778,8 +775,6 @@ private:
 	raw_time itsOriginDateTime;
 
 	size_t itsLocationIndex;
-
-	bool itsStepSizeOverOneByte; //!< TODO: Remove and implement in fmigrib
 
 };
 

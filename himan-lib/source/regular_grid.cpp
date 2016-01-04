@@ -32,6 +32,8 @@ regular_grid::regular_grid()
 	, itsOrientation(kHPMissingValue)
 	, itsDi(kHPMissingValue)
 	, itsDj(kHPMissingValue)
+	, itsNi(kHPMissingInt)
+	, itsNj(kHPMissingInt)
 {
 	itsGridType = kRegularGrid;
 	itsLogger = logger_factory::Instance()->GetLog("regular_grid");
@@ -56,6 +58,8 @@ regular_grid::regular_grid(HPScanningMode theScanningMode,
 	, itsOrientation(theOrientation)
 	, itsDi(kHPMissingValue)
 	, itsDj(kHPMissingValue)
+	, itsNi(kHPMissingInt)
+	, itsNj(kHPMissingInt)
 {
 	itsGridType = kRegularGrid;
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("regular_grid"));
@@ -78,7 +82,9 @@ regular_grid::regular_grid(const regular_grid& other)
 	itsDj = other.itsDj;
 	itsData = other.itsData;
 	itsGridType = other.itsGridType;
-	
+	itsNi = other.itsNi;
+	itsNj = other.itsNj;
+
 #ifdef HAVE_CUDA
 
 	if (other.itsPackedData)
@@ -103,22 +109,22 @@ regular_grid::regular_grid(const regular_grid& other)
 
 size_t regular_grid::Ni() const
 {
-	return itsData.SizeX();
+	return itsNi;
 }
 
 size_t regular_grid::Nj() const
 {
-	return itsData.SizeY();
+	return itsNj;
 }
 
 void regular_grid::Ni(size_t theNi)
 {
-	itsData.SizeX(theNi);
+	itsNi = theNi;
 }
 
 void regular_grid::Nj(size_t theNj)
 {
-	itsData.SizeY(theNj);
+	itsNj = theNj;
 }
 
 void regular_grid::Di(double theDi)
@@ -443,8 +449,6 @@ ostream& regular_grid::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
-	file << itsData;
-	
 	file << "__dataIsPacked__ " << IsPackedData() << endl;
 	file << "__itsScanningMode__ " << HPScanningModeToString.at(itsScanningMode) << endl;
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
@@ -463,7 +467,10 @@ ostream& regular_grid::Write(std::ostream& file) const
 	file << "__itsOrientation__ " << itsOrientation << endl;
 	file << "__itsDi__ " << itsDi << endl;
 	file << "__itsDj__ " << itsDj << endl;
+	file << "__itsNi__ " << itsNi << endl;
+	file << "__itsNj__ " << itsNj << endl;
 
+	file << itsData;
 
 	return file;
 }
@@ -598,3 +605,4 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 	
 	return true;	
 }
+
