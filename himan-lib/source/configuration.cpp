@@ -29,7 +29,7 @@ configuration::configuration() : itsSourceProducerIterator(new producer_iter())
 	itsForecastStep = kHPMissingInt;
 	itsDatabaseType = kNeonsAndRadon;
 	itsCacheLimit = -1;
-	
+	itsUseDynamicMemoryAllocation = false;
 }
 
 configuration::configuration(const configuration& other)
@@ -69,6 +69,8 @@ configuration::configuration(const configuration& other)
 	
 	itsDatabaseType = other.itsDatabaseType;
 	itsCacheLimit = other.itsCacheLimit;
+	
+	itsUseDynamicMemoryAllocation = other.itsUseDynamicMemoryAllocation;
 }
 
 std::ostream& configuration::Write(std::ostream& file) const
@@ -105,6 +107,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsUseCache__ " << itsUseCache << std::endl;
 	file << "__itsForecastStep__ " << itsForecastStep << std::endl;
 	file << "__itsCacheLimit__ " << itsCacheLimit << std::endl;
+	file << "__itsUseDynamicMemoryAllocation__ " << itsUseDynamicMemoryAllocation << std::endl;
 	
 	for (size_t i = 0; i < itsAuxiliaryFiles.size(); i++)
 	{
@@ -360,4 +363,14 @@ int configuration::CacheLimit() const
 void configuration::CacheLimit(int theCacheLimit)
 {
 	itsCacheLimit = theCacheLimit;
+}
+
+bool configuration::UseDynamicMemoryAllocation() const
+{
+	return itsUseDynamicMemoryAllocation;
+}
+
+void configuration::UseDynamicMemoryAllocation(bool theUseDynamicMemoryAllocation)
+{
+	itsUseDynamicMemoryAllocation = theUseDynamicMemoryAllocation;
 }

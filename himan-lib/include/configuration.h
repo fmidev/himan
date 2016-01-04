@@ -252,6 +252,9 @@ public:
 	int CacheLimit() const;
 	void CacheLimit(int theCacheLimit);
 	
+	bool UseDynamicMemoryAllocation() const;
+	void UseDynamicMemoryAllocation(bool theUseDynamicMemoryAllocation);
+	
 protected:
 	HPFileType itsOutputFileType;
 	std::string itsConfigurationFile;
@@ -289,6 +292,8 @@ protected:
 
 	HPDatabaseType itsDatabaseType;
 	int itsCacheLimit;
+	
+	bool itsUseDynamicMemoryAllocation;
 };
 
 
