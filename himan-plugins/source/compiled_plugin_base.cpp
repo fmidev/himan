@@ -28,7 +28,7 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-mutex dimensionMutex;
+mutex dimensionMutex, singleFileWriteMutex;
 
 compiled_plugin_base::compiled_plugin_base() 
 	: itsDimensionsRemaining(true)
@@ -171,7 +171,7 @@ bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode tar
 	return ret;
 }
 
-void compiled_plugin_base::WriteToFile(const info& targetInfo, const write_options& writeOptions) const
+void compiled_plugin_base::WriteToFile(const info& targetInfo, const write_options& writeOptions) 
 {
 	auto aWriter = GET_PLUGIN(writer);
 	
@@ -181,21 +181,25 @@ void compiled_plugin_base::WriteToFile(const info& targetInfo, const write_optio
 
 	auto tempInfo = targetInfo;
 
-	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	tempInfo.ResetParam();
+
+	while (tempInfo.NextParam())
 	{
-		// If info holds multiple parameters, we must loop over them all
-		// Note! We only loop over the parameters, not over the times or levels!
-
-		tempInfo.ResetParam();
-
-		while (tempInfo.NextParam())
+		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
 			aWriter->ToFile(tempInfo, itsConfiguration);
 		}
+		else
+		{
+			lock_guard<mutex> lock(singleFileWriteMutex);
+
+			aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+		}
 	}
-	else if (itsConfiguration->FileWriteOption() == kSingleFile)
+
+	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
-		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+		DeallocateMemory(targetInfo);
 	}
 }
 
@@ -279,18 +283,22 @@ void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadInde
 {
 	while (Next(*myTargetInfo))
 	{
-		Calculate(myTargetInfo, threadIndex);
-
-		if (itsConfiguration->FileWriteOption() != kSingleFile)
+		if (itsConfiguration->UseDynamicMemoryAllocation())
 		{
-			WriteToFile(*myTargetInfo);
+			AllocateMemory(*myTargetInfo);
 		}
+		
+		assert(myTargetInfo->Data().Size() > 0);
+
+		Calculate(myTargetInfo, threadIndex);
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
 			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
 			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 		}
+
+		WriteToFile(*myTargetInfo);
 	}
 }
 
@@ -302,18 +310,22 @@ void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short 
 		{
 			for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
 			{
-				Calculate(myTargetInfo, threadIndex);
-
-				if (itsConfiguration->FileWriteOption() != kSingleFile)
-				{
-					WriteToFile(*myTargetInfo);
+				if (itsConfiguration->UseDynamicMemoryAllocation())
+				{					
+					AllocateMemory(*myTargetInfo);
 				}
+				
+				assert(myTargetInfo->Data().Size() > 0);
+
+				Calculate(myTargetInfo, threadIndex);
 
 				if (itsConfiguration->StatisticsEnabled())
 				{
 					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
 					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 				}
+				
+				WriteToFile(*myTargetInfo);
 			}
 		}
 	}	
@@ -348,18 +360,13 @@ void compiled_plugin_base::Run(unsigned short threadIndex)
 	
 }
 
-void compiled_plugin_base::Finish() const
+void compiled_plugin_base::Finish()
 {
 
 	if (itsConfiguration->StatisticsEnabled())
 	{
 		itsTimer->Stop();
 		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer->GetTime());
-	}
-
-	if (itsConfiguration->FileWriteOption() == kSingleFile)
-	{
-		WriteToFile(*itsInfo);
 	}
 	
 	// If no other info is holding access to grids in this info,
@@ -463,12 +470,21 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 	 * Create data structures.
 	 */
 
-	itsInfo->Create(itsInfo->itsBaseGrid.get());
+	itsInfo->Create(itsInfo->itsBaseGrid.get(), !itsConfiguration->UseDynamicMemoryAllocation());
 	itsInfo->itsBaseGrid.reset();
 
+	if (!itsConfiguration->UseDynamicMemoryAllocation())
+	{
+		itsBaseLogger->Trace("Using static memory allocation");
+	}
+	else
+	{
+		itsBaseLogger->Trace("Using dynamic memory allocation");
+	}
+	
 	itsInfo->Reset();
 	itsInfo->FirstParam();
-	
+		
 	if (itsPrimaryDimension == kUnknownDimension)
 	{
 		itsInfo->FirstTime();
@@ -668,4 +684,38 @@ void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 	}
 	
 	itsPrimaryDimension = thePrimaryDimension;
+}
+
+void compiled_plugin_base::AllocateMemory(info myTargetInfo)
+{
+	if (myTargetInfo.Grid()->Type() == kIrregularGrid)
+	{
+		return;
+	}
+	
+	size_t paramIndex = myTargetInfo.ParamIndex();
+
+	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)
+	{
+		myTargetInfo.Data().Resize(dynamic_cast<regular_grid*> (myTargetInfo.Grid())->Ni(),dynamic_cast<regular_grid*> (myTargetInfo.Grid())->Nj());
+	}
+
+	myTargetInfo.ParamIndex(paramIndex);
+}
+
+void compiled_plugin_base::DeallocateMemory(info myTargetInfo)
+{
+	if (myTargetInfo.Grid()->Type() == kIrregularGrid)
+	{
+		return;
+	}
+
+	size_t paramIndex = myTargetInfo.ParamIndex();
+	
+	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)
+	{
+		myTargetInfo.Grid()->Data().Clear();
+	}
+
+	myTargetInfo.ParamIndex(paramIndex);
 }

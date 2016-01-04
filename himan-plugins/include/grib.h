@@ -69,11 +69,10 @@ public:
 
 	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options, bool readContents, bool readPackedData, bool forceCaching) const;
 
-	bool ToFile(info& anInfo, std::string& outputFile);
+	bool ToFile(info& anInfo, std::string& outputFile, bool appendToFile = false);
 
 private:
 
-	bool WriteGrib(info& anInfo, std::string& outputFile, bool appendToFile = false);
 	void WriteAreaAndGrid(info& anInfo);
 	void WriteTime(info& anInfo);
 	void WriteParameter(info& anInfo);

@@ -650,7 +650,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 }
 
-void split_sum::WriteToFile(const info& targetInfo, const write_options& opts) const
+void split_sum::WriteToFile(const info& targetInfo, const write_options& opts) 
 {
 	auto aWriter = GET_PLUGIN(writer);
 	aWriter->WriteOptions(opts);
@@ -680,5 +680,10 @@ void split_sum::WriteToFile(const info& targetInfo, const write_options& opts) c
 	else if (itsConfiguration->FileWriteOption() == kSingleFile)
 	{
 		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+	}
+	
+	if (itsConfiguration->UseDynamicMemoryAllocation())
+	{
+		DeallocateMemory(targetInfo);
 	}
 }

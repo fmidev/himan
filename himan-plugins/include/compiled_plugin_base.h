@@ -128,7 +128,7 @@ public:
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) const;
+	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options());
 
 protected:
 
@@ -205,7 +205,7 @@ protected:
 	 * @brief Record timing info and write info contents to disk
 	 */
 
-	virtual void Finish() const;
+	virtual void Finish();
 
 	/**
 	 * @brief Top level entry point for per-thread calculation
@@ -369,6 +369,9 @@ protected:
 	 */
  
 	bool AdjustDimension(info& myTargetInfo, HPDimensionType dim);
+	
+	virtual void AllocateMemory(info myTargetInfo);
+	virtual void DeallocateMemory(info myTargetInfo);
 
 protected:
 	info_t itsInfo;

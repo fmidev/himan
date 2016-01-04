@@ -44,9 +44,10 @@ public:
 		return HPVersionNumber(1, 2);
 	}
 	
-	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) const override;
-
+	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) override;
+	
 private:
+	void Write(himan::info targetInfo);
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 	bool WithIteration(info_t& myTargetInfo);
 	bool WithGeopotential(info_t& myTargetInfo);

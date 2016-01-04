@@ -662,8 +662,6 @@ bool fetcher::InterpolateArea(const plugin_configuration& conf, info& base, vect
 			continue;
 		}
 		
-		//assert(base.Grid()->Type() == kRegularGrid);
-		
 		if (base.Grid()->Type() == kRegularGrid && (*it)->Grid()->Type() == kIrregularGrid)
 		{
 			itsLogger->Error("Unable to interpolate from irregular to regular grid");
@@ -716,7 +714,9 @@ bool fetcher::InterpolateArea(const plugin_configuration& conf, info& base, vect
 			const regular_grid* _bg = dynamic_cast<const regular_grid*> (base.Grid());
 			
 			assert(_g && _bg);
-			
+
+			_g->Ni(_bg->Ni());
+			_g->Nj(_bg->Nj());
 			_g->ScanningMode(_bg->ScanningMode());
 			_g->BottomLeft(_bg->BottomLeft());
 			_g->TopRight(_bg->TopRight());
@@ -825,9 +825,12 @@ bool fetcher::Interpolate(const plugin_configuration& conf, himan::info& baseInf
 	 */
 
 	// 1.
-
+	
 	if (baseInfo.Grid()->Type() == kRegularGrid && theInfos[0]->Grid()->Type() == kRegularGrid)
 	{
+		assert(dynamic_cast<regular_grid*> (theInfos[0]->Grid())->Ni() != 999999);
+		assert(dynamic_cast<regular_grid*> (theInfos[0]->Grid())->Nj() != 999999);
+	
 		if (*baseInfo.Grid() != *theInfos[0]->Grid())
 		{
 			needInterpolation = true;

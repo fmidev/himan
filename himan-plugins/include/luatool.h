@@ -61,7 +61,7 @@ public:
 	void Process(std::shared_ptr<const plugin_configuration> configuration);
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam, const forecast_type& theType = forecast_type(kDeterministic)) const;
-	void WriteToFile(const info_t& targetInfo) const;
+	void WriteToFile(const info_t& targetInfo) ;
 	
 protected:
 	/* These functions exists because we need to stop himan

@@ -41,50 +41,10 @@ shared_ptr<NFmiGrib> grib::Reader()
 	return itsGrib;
 }
 
-bool grib::ToFile(info& anInfo, string& outputFile)
+bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
+	// Write only that data which is currently set at descriptors
 
-	if (itsWriteOptions.configuration->FileWriteOption() == kDatabase || itsWriteOptions.configuration->FileWriteOption() == kMultipleFiles)
-	{
-		// Write only that data which is currently set at descriptors
-
-		WriteGrib(anInfo, outputFile);
-	}
-
-	else
-	{
-		anInfo.ResetForecastType();
-		
-		while(anInfo.NextForecastType())
-		{
-			anInfo.ResetTime();
-
-			while (anInfo.NextTime())
-			{
-				anInfo.ResetLevel();
-
-				while (anInfo.NextLevel())
-				{
-					anInfo.ResetParam();
-
-					while (anInfo.NextParam())
-					{
-						if (!WriteGrib(anInfo, outputFile, true))
-						{
-							itsLogger->Error("Error writing grib to file");
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return true;
-
-}
-
-bool grib::WriteGrib(info& anInfo, string& outputFile, bool appendToFile)
-{
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
 
@@ -93,7 +53,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, bool appendToFile)
 		itsLogger->Error("Unable to write irregular grid to grib");
 		return false;
 	}
-	
+
 	long edition = static_cast<long> (itsWriteOptions.configuration->OutputFileType());
 
 	// Check levelvalue since that might force us to change file type!
@@ -239,7 +199,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, bool appendToFile)
 		assert(!foundNanValue);
 #endif
 
-		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long> (anInfo.Grid()->Size()));
+		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long> (anInfo.Data().Size()));
 	}
 
 	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
@@ -297,7 +257,7 @@ bool grib::WriteGrib(info& anInfo, string& outputFile, bool appendToFile)
 		itsLogger->Warning("Unable to append to a compressed file");
 		appendToFile = false;
 	}
-	
+
 	itsGrib->Message().Write(outputFile, appendToFile);
 	
 	aTimer->Stop();
@@ -768,6 +728,9 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		size_t ni = static_cast<size_t> (itsGrib->Message().SizeX());
 		size_t nj = static_cast<size_t> (itsGrib->Message().SizeY());
+		
+		newGrid.Ni(ni);
+		newGrid.Nj(nj);
 
 		switch (itsGrib->Message().NormalizedGridType())
 		{

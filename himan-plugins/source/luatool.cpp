@@ -938,8 +938,7 @@ void BindPlugins(lua_State* L)
 	module(L) [
 		class_<compiled_plugin_base>("compiled_plugin_base")
 			.def(constructor<>())
-			.def("WriteToFile", LUA_CMEMFN(void, luatool, WriteToFile, const info_t& targetInfo))
-			//.def("WriteToFile", LUA_CMEMFN(void, compiled_plugin_base, WriteToFile, const info&))
+			.def("WriteToFile", LUA_MEMFN(void, luatool, WriteToFile, const info_t& targetInfo))
 		,
 		class_<luatool, compiled_plugin_base>("luatool")
 			.def(constructor<>())
@@ -1078,7 +1077,7 @@ std::vector<double> TableToVector(const object& table)
 	return ret;
 }
 
-void luatool::WriteToFile(const info_t& targetInfo) const
+void luatool::WriteToFile(const info_t& targetInfo)
 {
 	compiled_plugin_base::WriteToFile(*targetInfo, itsWriteOptions);
 }

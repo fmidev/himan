@@ -31,8 +31,6 @@ const himan::param PParam("P-HPA");
 const himan::param TParam("T-K");
 const himan::param TGParam("TG-K");
 
-void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, himan::info targetInfo);
-
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseWriterThreads(false)
 {
 	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
@@ -71,13 +69,13 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	itsUseGeopotential = (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199);
 	
 	// Using separate writer threads is only efficient when we are calculating with iteration (ECMWF)
-	// and if we are using external packing like gzip. In those condition it should give according to inital
-	// tests a ~30% increase in calculation speed.
+	// and if we are using external packing like gzip. In those condition it should give according to initial
+	// tests a ~30% increase in total calculation speed.
 	
 	itsUseWriterThreads = (itsConfiguration->FileCompression() != kNoCompression 
 			&& (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles) 
 			&& !itsUseGeopotential);
-	
+
 	PrimaryDimension(kTimeDimension);
 
 	SetParams({param("HL-M", 3, 0, 3, 6)});
@@ -254,11 +252,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		
 		scale = 0.01;
 	}
-#define ZIP
 
-#ifdef LOCK
-	LOCKSTEP(myTargetInfo, PInfo, prevPInfo, TInfo, prevTInfo)
-#elif defined ZIP
 	vector<double> prevHV;
 
 	if (firstLevel)
@@ -273,53 +267,14 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	auto& target = VEC(myTargetInfo);
 
 	for (auto&& tup : zip_range(target, VEC(PInfo), VEC(prevPInfo), VEC(TInfo), VEC(prevTInfo), prevHV))
-#elif defined FOR
-	auto TV = TInfo->Data().Values(), PV = PInfo->Data().Values(), prevTV = prevTInfo->Data().Values(), prevPV = prevPInfo->Data().Values();
-
-	vector<double> prevHV;
-
-	if (firstLevel)
 	{
-		prevHV.resize(TV.size(), 0);
-	}
-	else
-	{
-		prevHV = prevHInfo->Data().Values();
-	}
-
-	for (size_t i = 0; i < TV.size(); i++)
-#else
-#error must define ZIP, LOCK or FOR
-#endif
-	{
-#ifdef LOCK
-		double T = TInfo->Value();
-		double P = PInfo->Value();
-		double prevT = prevTInfo->Value();
-		double prevP = prevPInfo->Value();
-
-		double prevH = kFloatMissing;
-
-		if (!firstLevel)
-		{
-			prevHInfo->NextLocation();
-			prevH = prevHInfo->Value();
-		}
-		else
-		{
-			prevH = 0;
-		}
-#elif defined ZIP
 		double& result 	= tup.get<0>();
 		double P 	= tup.get<1>();
 		double prevP	= tup.get<2>();
 		double T 	= tup.get<3>();
 		double prevT 	= tup.get<4>();
 		double prevH 	= tup.get<5>();
-#elif defined FOR
-		double T = TV[i], P = PV[i], prevT = prevTV[i], prevP = prevPV[i], prevH = prevHV[i];
-		myTargetInfo->LocationIndex(i);	
-#endif
+
 		if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing || prevH == kFloatMissing)
 		{
 			continue;
@@ -330,11 +285,8 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		double deltaZ = 14.628 * (prevT + T) * log(prevP/P);
 		double totalHeight = prevH + deltaZ;
 
-#ifdef ZIP
 		result = totalHeight;
-#else
-		myTargetInfo->Value(totalHeight);
-#endif
+
 	}
 
 	// Check if we have data in grid. If all values are missing, it is impossible to continue
@@ -363,7 +315,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		}
 
 		// Write to disk asynchronously
-		boost::thread* t = new boost::thread(Write, itsConfiguration, *myTargetInfo);
+		boost::thread* t = new boost::thread(&hybrid_height::Write, this, boost::ref(*myTargetInfo));
 		itsWriterGroup.add_thread(t);
 		itsLogger->Trace("Writer thread started");
 	}
@@ -372,7 +324,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 }
 
 // This functions copies targetInfo intentionally!
-void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, himan::info targetInfo)
+void hybrid_height::Write(himan::info targetInfo)
 {
 	using namespace himan;
 	auto aWriter = GET_PLUGIN(writer);
@@ -380,14 +332,19 @@ void Write(std::shared_ptr<const himan::plugin_configuration> itsConfiguration, 
 	assert(itsConfiguration->FileWriteOption() != kSingleFile);
 
 	targetInfo.ResetParam();
-
+	
 	while (targetInfo.NextParam())
 	{
 		aWriter->ToFile(targetInfo, itsConfiguration);
 	}
+	
+	if (itsConfiguration->UseDynamicMemoryAllocation())
+	{
+		compiled_plugin_base::DeallocateMemory(targetInfo);
+	}
 }
 
-void hybrid_height::WriteToFile(const info& targetInfo, const write_options& writeOptions) const
+void hybrid_height::WriteToFile(const info& targetInfo, const write_options& writeOptions) 
 {
 	if (!itsUseWriterThreads)
 	{

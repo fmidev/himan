@@ -52,7 +52,7 @@ bool writer::ToFile(info& theInfo,
 	
 	itsWriteOptions.configuration = conf;
 
-	if ((itsWriteOptions.configuration->FileWriteOption() == kDatabase || itsWriteOptions.configuration->FileWriteOption() == kMultipleFiles) || correctFileName.empty())
+	if (correctFileName.empty())
 	{
 		correctFileName = util::MakeFileName(itsWriteOptions.configuration->FileWriteOption(), theInfo);
 	}
@@ -91,7 +91,7 @@ bool writer::ToFile(info& theInfo,
 			}
 
 			theGribWriter->WriteOptions(itsWriteOptions);
-			ret = theGribWriter->ToFile(theInfo, correctFileName);
+			ret = theGribWriter->ToFile(theInfo, correctFileName, (itsWriteOptions.configuration->FileWriteOption() == kSingleFile) ? true : false);
 
 			break;
 		}

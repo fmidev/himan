@@ -93,6 +93,9 @@ void cache::SplitToPool(info& anInfo, bool pin)
 	
 	assert(!anInfo.Grid()->IsPackedData());
 	
+	assert(anInfo.Grid()->Type() == kIrregularGrid || !dynamic_cast<regular_grid*> (anInfo.Grid())->Ni() != 999999);
+	assert(anInfo.Grid()->Type() == kIrregularGrid || !dynamic_cast<regular_grid*> (anInfo.Grid())->Nj() != 999999);
+	
 	vector<param> params;
 	vector<level> levels;
 	vector<forecast_time> times;
