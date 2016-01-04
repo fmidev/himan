@@ -201,14 +201,14 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			conf->FileWriteOption(kMultipleFiles);
 		}
 	}
-        catch (boost::property_tree::ptree_bad_path& e)
-        {
-                // Something was not found; do nothing
-        }
-        catch (exception& e)
-        {
-                throw runtime_error(string("Error parsing key file_write: ") + e.what());
-        }
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+			// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+			throw runtime_error(string("Error parsing key file_write: ") + e.what());
+	}
 
 	/* Check read_data_from_database */
 
@@ -369,6 +369,26 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 
 	baseInfo->ForecastTypes(theForecastTypes);
+	
+	/* Check dynamic_memory_allocation */
+
+	try
+	{
+		string theUseDynamicMemoryAllocation = pt.get<string>("dynamic_memory_allocation");
+
+		if (ParseBoolean(theUseDynamicMemoryAllocation))
+		{
+			conf->UseDynamicMemoryAllocation(true);
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+			// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+			throw runtime_error(string("Error parsing key file_write: ") + e.what());
+	}
 	
 	/* 
 	 * Check processqueue.
@@ -756,11 +776,6 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 		
 		HPTimeResolution stepResolution = kHourResolution;
 
-		if (stop > 1<<8)
-		{
-			anInfo->StepSizeOverOneByte(true);
-		}
-
 		int curtime = start;
 
 		vector<forecast_time> theTimes;
@@ -804,11 +819,6 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 		conf->itsForecastStep = step;
 
 		HPTimeResolution stepResolution = kMinuteResolution;
-
-		if (stop > 1<<8)
-		{
-			anInfo->StepSizeOverOneByte(true);
-		}
 
 		int curtime = start;
 
