@@ -124,11 +124,13 @@ public:
 	void PrintData(std::ostream& file, const std::vector<double>& theValues) const
 	{
 
-		if (!itsData.size())
+		if (!theValues.size())
 		{
 			file << "__no-data__" << std::endl;
 			return;
 		}
+
+		assert(theValues.size() > 0);
 
 		double min = 1e38;
 		double max = -1e38;
