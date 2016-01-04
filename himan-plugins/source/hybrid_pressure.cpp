@@ -45,7 +45,10 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	SetParams({param("P-HPA", 1, 0, 3, 0)});
+	param p("P-HPA", 1, 0, 3, 0);
+	p.Unit(kHPa);
+
+	SetParams({p});
 
 	Start();
 
