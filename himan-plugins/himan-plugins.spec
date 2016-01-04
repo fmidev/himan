@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 15.12.21
+Version: 16.1.4
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 15.12.17
+Requires: himan-lib >= 16.1.4
 Requires: himan-bin >= 15.11.19
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -102,6 +102,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan  4 2016 Mikko Partio <mikko.partio@fmi.fi> - 15.12.22-1.fmi
+- Fixes in grib metadata creation for accumulated parameters and Harmonie
+- Fix for relative_humidity
+* Mon Dec 21 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.22-1.fmi
+- relative_humidity-optimizations
 * Mon Dec 21 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.21-1.fmi
 - si-optimizations
 * Thu Dec 17 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.17-1.fmi
