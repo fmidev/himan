@@ -1205,7 +1205,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	//auto prevPenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("P-PA"), myTargetInfo->ForecastType(), false);
 	//auto prevTenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("T-K"), myTargetInfo->ForecastType(), false);
 
-	while (curLevel.Value() > 60 && foundCount != found.size())
+	while (curLevel.Value() > 70 && foundCount != found.size())
 	{	
 		// Get environment temperature and pressure values for this level
 		auto TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
