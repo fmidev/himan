@@ -194,16 +194,7 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 
 		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 
-		if (result > 1.0)
-		{
-			result = 1.0;
-		}
-		else if (result < 0.0)
-		{
-			result = 0.0;
-		}
-
-		result *= 100;
+		result = fmin(fmax(0.0, result), 1.0) * 100; // scale to range 0 .. 100
 	}
 }
 
@@ -222,16 +213,7 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 		
 		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 		
-		if (result > 1.0)
-		{
-			result = 1.0;
-		}
-		else if (result < 0.0)
-		{
-			result = 0.0;
-		}
-
-		result *= 100;
+		result = fmin(fmax(0.0, result), 1.0) * 100; // scale to range 0 .. 100
 	}
 }
 
