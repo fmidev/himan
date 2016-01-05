@@ -158,13 +158,11 @@ bool writer::ToFile(info& theInfo,
 		}
 	}
 
-	bool activeOnly = (conf->FileWriteOption() == kSingleFile) ? false : true;
-
 	if (conf->UseCache())
 	{
 		std::shared_ptr<cache> c = GET_PLUGIN(cache);
 
-		c->Insert(theInfo, activeOnly);
+		c->Insert(theInfo);
 	}
 
 	if (conf->StatisticsEnabled())

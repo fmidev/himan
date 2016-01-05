@@ -45,7 +45,7 @@ public:
 	 * to cache
 	 */
 
-	void Insert(info& anInfo, bool activeOnly = true, bool pin = false);
+	void Insert(info& anInfo, bool pin = false);
 	std::vector<std::shared_ptr<himan::info>> GetInfo(search_options& options);	
 	void Clean();
 
@@ -61,7 +61,7 @@ public:
 
 	virtual HPVersionNumber Version() const
 	{
-		return HPVersionNumber(1, 1);
+		return HPVersionNumber(1, 2);
 	}
 	
 	size_t Size() const;

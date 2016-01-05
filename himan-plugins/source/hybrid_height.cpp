@@ -311,7 +311,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		{
 			auto c = GET_PLUGIN(cache);
 
-			c->Insert(*myTargetInfo, true);
+			c->Insert(*myTargetInfo);
 		}
 
 		// Write to disk asynchronously

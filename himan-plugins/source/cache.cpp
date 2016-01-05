@@ -44,26 +44,9 @@ string cache::UniqueNameFromOptions(search_options& options)
 	return forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
 }
 
-void cache::Insert(info& anInfo, bool activeOnly, bool pin)
+void cache::Insert(info& anInfo, bool pin)
 {
-
-	if (activeOnly)
-	{
-		SplitToPool(anInfo, pin);
-	}
-	else
-	{
-		for (anInfo.ResetTime(); anInfo.NextTime(); )
-		{
-			for (anInfo.ResetLevel(); anInfo.NextLevel(); )
-			{
-				for (anInfo.ResetParam(); anInfo.NextParam(); )
-				{
-					SplitToPool(anInfo, pin);
-				}
-			}
-		}
-	}
+	SplitToPool(anInfo, pin);
 }
 
 void cache::SplitToPool(info& anInfo, bool pin)
