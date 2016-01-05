@@ -228,17 +228,12 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	 * Insert interpolated data to cache if
 	 * 1. Cache is not disabled locally (itsUseCache) AND
 	 * 2. Cache is not disabled globally (config->UseCache()) AND
-	 * 3a. Caller has requested unpacked data (!readPackedData) OR
-	 * 3b. Caller has requested packed data but we were unable to deliver it (readPackedData && !ret->Grid()->IsPackedData())
+	 * 3. Data is not packed
 	 */
 	
-	if (itsUseCache && config->UseCache() && (!readPackedData || (readPackedData && !theInfos[0]->Grid()->IsPackedData())))
+	if (itsUseCache && config->UseCache() && !theInfos[0]->Grid()->IsPackedData())
 	{
 		itsCache->Insert(*theInfos[0]);
-	}
-	else
-	{
-		itsLogger->Trace("Cache disabled (local: " + boost::lexical_cast<string> (itsUseCache) + " global: " + boost::lexical_cast<string> (config->UseCache()) + ")");
 	}
 
 	baseInfo.reset();
