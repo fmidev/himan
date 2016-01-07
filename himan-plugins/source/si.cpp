@@ -524,47 +524,6 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	myTargetInfo->Param(CINParam);
 	myTargetInfo->Data().Set(CIN);
 */
-	if (sourceType == kMaxThetaE)
-	{
-		// If calculating most unstable CAPE, and the value of CAPE is zero, set it to missing
-		// with all its helper parameters
-		
-		myTargetInfo->Param(CAPEParam);
-		
-		for (myTargetInfo->ResetLocation(); myTargetInfo->NextLocation();)
-		{			
-			double CAPEval = myTargetInfo->Value();
-			
-			if (CAPEval <= 0.001)
-			{
-				myTargetInfo->Value(kFloatMissing);
-
-				myTargetInfo->Param(ELTParam);
-				myTargetInfo->Value(kFloatMissing);
-
-				myTargetInfo->Param(ELPParam);
-				myTargetInfo->Value(kFloatMissing);
-	
-				myTargetInfo->Param(CAPE1040Param);
-				myTargetInfo->Value(kFloatMissing);
-
-				myTargetInfo->Param(CAPE3kmParam);
-				myTargetInfo->Value(kFloatMissing);
-				
-				myTargetInfo->Param(LFCTParam);
-				myTargetInfo->Value(kFloatMissing);
-				
-				myTargetInfo->Param(LFCPParam);
-				myTargetInfo->Value(kFloatMissing);
-				
-				myTargetInfo->Param(LCLTParam);
-				myTargetInfo->Value(kFloatMissing);
-				
-				myTargetInfo->Param(LCLPParam);
-				myTargetInfo->Value(kFloatMissing);
-			}
-		}
-	}
 	
 }
 
@@ -932,13 +891,10 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 	h->HeightUnit(kHPa);
 
 	vector<unsigned char> found(T.size(), 0);
-	
-	// CAPE is initialized to -1: in the data we make a difference between
-	// zero CAPE and unknown CAPE (kFloatMissing)
 
-	vector<double> CAPE(T.size(), -1);
-	vector<double> CAPE1040(T.size(), -1);
-	vector<double> CAPE3km(T.size(), -1);
+	vector<double> CAPE(T.size(), 0);
+	vector<double> CAPE1040(T.size(), 0);
+	vector<double> CAPE3km(T.size(), 0);
 	vector<double> ELT(T.size(), kFloatMissing);
 	vector<double> ELP(T.size(), kFloatMissing);
 
@@ -1045,29 +1001,26 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 			{
 				double C = CalcCAPE3km(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 
-				CAPE3km[i] = max(CAPE3km[i], 0.);
 				CAPE3km[i] += C;
 				
-				assert(CAPE3km[i] < 3000.);
-				assert(CAPE3km[i] >= -1.);
+				assert(CAPE3km[i] < 3000.); // 3000J/kg, not 3000m
+				assert(CAPE3km[i] >= 0);
 			}
 
 			if ((found[i] & FCAPE1040) == 0)
 			{
 				double C = CalcCAPE1040(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 					
-				CAPE1040[i] = max(CAPE1040[i], 0.);					
 				CAPE1040[i] += C;
 
 				assert(CAPE1040[i] < 5000.);
-				assert(CAPE1040[i] >= -1.);
+				assert(CAPE1040[i] >= 0);
 			}
 			
 			double C = CalcCAPE(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 			
 			if (C >= 0)
 			{
-				CAPE[i] = max(CAPE[i], 0.);					
 				CAPE[i] += C;
 			}
 			
@@ -1136,13 +1089,6 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 			if (found[i] & FCAPE) Titer[i] = kFloatMissing; // by setting this we prevent MoistLift to integrate particle
 
 		}
-	}
-
-	for (size_t i = 0; i < CAPE.size();i++)
-	{
-		if (CAPE[i] == -1) CAPE[i] = kFloatMissing;
-		if (CAPE3km[i] == -1) CAPE3km[i] = kFloatMissing;
-		if (CAPE1040[i] == -1) CAPE1040[i] = kFloatMissing;
 	}
 	
 	return make_tuple (ELT, ELP, CAPE, CAPE1040, CAPE3km);
