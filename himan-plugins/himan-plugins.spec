@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.1.4
+Version: 16.1.11
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -102,7 +102,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Mon Jan  4 2016 Mikko Partio <mikko.partio@fmi.fi> - 15.12.22-1.fmi
+* Mon Jan 11 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.1.11-1.fmi
+- Allowing mu Cape to be zero
+* Tue Jan  5 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.1.5-1.fmi
+- Support for dynamic memory allocation
+- Simplified grib writing code
+* Mon Jan  4 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.1.4-1.fmi
 - Fixes in grib metadata creation for accumulated parameters and Harmonie
 - Fix for relative_humidity
 * Mon Dec 21 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.22-1.fmi
