@@ -10,7 +10,7 @@ rm -f hybrid_pressure_ec.json.grib
 
 $HIMAN -d 5 -f hybrid_pressure_ec.json -t grib lnsp_ec.grib2 q_ec.grib2 --no-cuda
 
-grib_compare -A 0.01 result_ec.grib hybrid_pressure_ec.json.grib
+grib_compare -r -A 0.01 result_ec.grib hybrid_pressure_ec.json.grib
 
 if [ $? -eq 0 ];then
   echo hybrid_pressure/ec success!
