@@ -199,8 +199,8 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         }
 
         //Calculation of turbulence indices
-        double TI = VWS*DEF;
-        double TI2 = S*TI; //VWS*(DEF+CVG); replace TI2 with TIm for testing
+        double TI = S*VWS*DEF;
+        double TI2 = S*VWS*(DEF+CVG);
 
         //return result
         myTargetInfo->ParamIndex(0);
