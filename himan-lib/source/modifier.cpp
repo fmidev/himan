@@ -208,11 +208,11 @@ bool modifier::Evaluate(double theValue, double theHeight)
 	assert(itsIndex < itsLowerHeight.size());
 	assert(itsIndex < itsUpperHeight.size());
 
-	if (kFloatMissing == theHeight || kFloatMissing == theValue || itsOutOfBoundHeights[itsIndex])
+	if (itsOutOfBoundHeights[itsIndex])
 	{
 		return false;
 	}
-	
+
 	double lowerLimit = itsLowerHeight[itsIndex];
 	double upperLimit = itsUpperHeight[itsIndex];
 
@@ -243,6 +243,11 @@ bool modifier::Evaluate(double theValue, double theHeight)
 			return false;
 		}
 	}	
+
+	if (kFloatMissing == theHeight || kFloatMissing == theValue)
+	{
+		return false;
+	} 
 
 	assert((lowerLimit == kFloatMissing || upperLimit == kFloatMissing) || ((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit)));
 
