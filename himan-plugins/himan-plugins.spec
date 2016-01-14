@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.1.11
+Version: 16.1.14
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -102,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jan 14 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.1.14-1.fmi
+- Changes in turbulence
 * Mon Jan 11 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.1.11-1.fmi
 - Allowing mu Cape to be zero
 * Tue Jan  5 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.1.5-1.fmi
