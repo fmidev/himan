@@ -82,13 +82,20 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 		
 	string deviceType = "CPU";
 
-	LOCKSTEP(myTargetInfo, RhoInfo, RainInfo, SnowInfo, GraupelInfo)
-	{
+	myTargetInfo->ParamIndex(0);
+	auto& targetRain = VEC(myTargetInfo);
+	
+	myTargetInfo->ParamIndex(1);
+	auto& targetSolid = VEC(myTargetInfo);
 
-		double Rho = RhoInfo->Value();
-		double Rain = RainInfo->Value();
-		double Snow = SnowInfo->Value();
-		double Graupel = GraupelInfo->Value();
+	for (auto&& tup : zip_range(targetRain, targetSolid, VEC(RhoInfo), VEC(RainInfo), VEC(SnowInfo), VEC(GraupelInfo)))
+	{
+		double& rain = tup.get<0> ();
+		double& solid = tup.get<1> ();
+		double Rho = tup.get<2> ();
+		double Rain = tup.get<3> ();
+		double Snow = tup.get<4> ();
+		double Graupel = tup.get<5> ();
 
 		// Calculate rain rate if mixing ratio is not missing. If mixing ratio is negative use 0.0 kg/kg instead.
 
@@ -98,10 +105,8 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 			double rain_rate = pow(Rho * fmax(Rain, 0.0) * rain_rate_factor, rain_rate_exponent);
 
 			assert(rain_rate == rain_rate);  // Checking NaN (note: assert() is defined only in debug builds)
-
-			myTargetInfo->ParamIndex(0);
-
-			myTargetInfo->Value(rain_rate);
+			
+			rain = rain_rate;
 		}
 
 		// Calculate solid precipitation rate if mixing ratios are not missing. If sum of mixing ratios is negative use 0.0 kg/kg instead.
@@ -111,10 +116,7 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 
 			assert(sprec_rate == sprec_rate); // Checking NaN (note: assert() is defined only in debug builds)
 
-			myTargetInfo->ParamIndex(1);
-
-			myTargetInfo->Value(sprec_rate);
-
+			solid = sprec_rate;
 		}
 	}
 
