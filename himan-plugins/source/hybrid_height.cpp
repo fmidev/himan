@@ -76,7 +76,10 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 			&& (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles) 
 			&& !itsUseGeopotential);
 
-	PrimaryDimension(kTimeDimension);
+	if (!itsUseGeopotential)
+	{
+		PrimaryDimension(kTimeDimension);
+	}
 
 	SetParams({param("HL-M", 3, 0, 3, 6)});
 
