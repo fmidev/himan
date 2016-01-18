@@ -146,19 +146,20 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 	
 	SetAB(myTargetInfo, GPInfo);
 	
-	LOCKSTEP(myTargetInfo, GPInfo, zeroGPInfo)
+	auto& target = VEC(myTargetInfo);
+
+	for (auto&& tup : zip_range(target, VEC(GPInfo), VEC(zeroGPInfo)))
 	{
-		double GP = GPInfo->Value();
-		double zeroGP = zeroGPInfo->Value();
+		double& result = tup.get<0> ();
+		double GP = tup.get<1> ();
+		double zeroGP = tup.get<2> ();
 		
 		if (GP == kFloatMissing || zeroGP == kFloatMissing)
 		{
 			continue;
 		}
 
-		double height = (GP - zeroGP) * himan::constants::kIg;
-			
-		myTargetInfo->Value(height);
+		result = (GP - zeroGP) * himan::constants::kIg;
 	}
 	
 	return true;
