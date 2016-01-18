@@ -1286,7 +1286,11 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 		auto lcl = metutil::LCLA_(P, T, TD);
 		
 		Tresult = lcl.T; // K
-		Presult = 0.01 * ((lcl.P > P) ? P : lcl.P); // hPa
+		
+		if (lcl.P != kFloatMissing)
+		{
+			Presult = 0.01 * ((lcl.P > P) ? P : lcl.P); // hPa
+		}
 	}
 
 	for (size_t i = 0; i < PLCL.size(); i++)
