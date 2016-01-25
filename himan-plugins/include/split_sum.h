@@ -67,6 +67,7 @@ protected:
 
 private:
 	void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	void DoParam(std::shared_ptr<info> myTargetInfo, std::string myParamName, std::string threadIndex) const;
 
 	/**
 	 * @brief Fetch source data for a rate calculation.
@@ -79,7 +80,7 @@ private:
 	 * @return Requested data, previous and current
 	 */
 
-	std::pair<std::shared_ptr<himan::info>,std::shared_ptr<himan::info>> GetSourceDataForRate(std::shared_ptr<const info> myTargetInfo, int step);
+	std::pair<std::shared_ptr<himan::info>,std::shared_ptr<himan::info>> GetSourceDataForRate(std::shared_ptr<const info> myTargetInfo, int step) const;
 
 	/**
 	 * @brief Fetching source data from cumulative parameter
@@ -90,7 +91,7 @@ private:
 	 * @return himan::info contain source data, empty if no data found
 	 */
 
-	std::shared_ptr<info> FetchSourceData(std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime);
+	std::shared_ptr<info> FetchSourceData(std::shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime) const;
 
 };
 

@@ -13,6 +13,7 @@
 #include <map>
 #include "level.h"
 #include "forecast_time.h"
+#include <boost/thread.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -289,213 +290,241 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("split_sumThread #" + boost::lexical_cast<string> (threadIndex));
+	//auto myThreadedLogger = logger_factory::Instance()->GetLog("split_sumThread #" + boost::lexical_cast<string> (threadIndex));
+
+	boost::thread_group g;
+	vector<info_t> infos;
+	int subThreadIndex = 1;
+	
+	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); ++subThreadIndex)
+	{
+		auto newInfo = make_shared<info> (*myTargetInfo);
+
+		infos.push_back(newInfo); // extend lifetime over this loop
+		
+		boost::thread* t = new boost::thread(&split_sum::DoParam, this, (newInfo), myTargetInfo->Param().Name(), boost::lexical_cast<string> (threadIndex) + "_" + boost::lexical_cast<string> (subThreadIndex));
+
+		g.add_thread(t);
+
+		if (subThreadIndex % 5 == 0)
+		{
+			g.join_all();
+			infos.clear();
+			subThreadIndex=1;
+		}
+	}
+	
+	g.join_all();
+
+	
+}
+
+void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string subThreadIndex) const
+{
+	assert(myTargetInfo);
+	assert(myTargetInfo->Param().Name() == myParamName);
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
-	{
-
-		myThreadedLogger->Info("Calculating parameter " + myTargetInfo->Param().Name() + " time " + static_cast<string>(forecastTime.ValidDateTime()) +
+	auto myThreadedLogger = logger_factory::Instance()->GetLog("splitSumSubThread#" + subThreadIndex);
+			
+	myThreadedLogger->Info("Calculating parameter " + myParamName + " time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) +
 												  " level " + static_cast<string> (forecastLevel));
 
-		string parmName = myTargetInfo->Param().Name();
-
-		bool isRadiationCalculation = (	parmName == "RADGLO-WM2" ||
-										parmName == "RADLW-WM2" ||
-										parmName == "RTOPLW-WM2" ||
-										parmName == "RNETLW-WM2"
-		);
+	bool isRadiationCalculation = (	myParamName == "RADGLO-WM2" ||
+										myParamName == "RADLW-WM2" ||
+										myParamName == "RTOPLW-WM2" ||
+										myParamName == "RNETLW-WM2"
+	);
 			
-		bool isRateCalculation = (isRadiationCalculation || 
-									parmName == "RRR-KGM2" ||
-									parmName == "RRRL-KGM2" ||
-									parmName == "RRRC-KGM2" ||
-									parmName == "SNR-KGM2" ||
-									parmName == "SNRC-KGM2" ||
-									parmName == "SNRL-KGM2" ||
-									parmName == "GRR-MMH" ||
-									parmName == "RRRS-KGM2");
+	bool isRateCalculation = (isRadiationCalculation || 
+								myParamName == "RRR-KGM2" ||
+								myParamName == "RRRL-KGM2" ||
+								myParamName == "RRRC-KGM2" ||
+								myParamName == "SNR-KGM2" ||
+								myParamName == "SNRC-KGM2" ||
+								myParamName == "SNRL-KGM2" ||
+								myParamName == "GRR-MMH" ||
+								myParamName == "RRRS-KGM2");
 
-		// Have to re-fetch infos each time since we might have to change element
-		// from liquid to snow to radiation so we need also different source parameters
+	// Have to re-fetch infos each time since we might have to change element
+	// from liquid to snow to radiation so we need also different source parameters
 
-		info_t curSumInfo;
-		info_t prevSumInfo;
+	info_t curSumInfo;
+	info_t prevSumInfo;
 		
-		if (myTargetInfo->Time().Step() == 0)
-		{
-			// This is the first time step, calculation can not be done
+	if (myTargetInfo->Time().Step() == 0)
+	{
+		// This is the first time step, calculation can not be done
 
-			 myThreadedLogger->Info("This is the first time step -- not calculating " + myTargetInfo->Param().Name() + " for step " + boost::lexical_cast<string> (forecastTime.Step()));
-			 continue;
+		 myThreadedLogger->Info("This is the first time step -- not calculating " + myParamName + " for step " + boost::lexical_cast<string> (forecastTime.Step()));
+		 return;
+	}
+
+	/*
+	 * Two modes of operation:
+	 *
+	 * 1) When calculating split_sum sums, always get the previous
+	 * step value from the current step and get both values (current and
+	 * previous). If either can't be found, skip time step.
+	 *
+	 * 2) When calculating split_sum rate, get the first data that's
+	 * earlier or same than current time step and the next data that's
+	 * later or same than the current time step. Then calculate rate
+	 * based on those values.
+	 */
+
+	int step = itsConfiguration->ForecastStep();
+
+	if (isRateCalculation)
+	{
+
+		// Calculating RATE
+
+		auto infos = GetSourceDataForRate(myTargetInfo, step);
+
+		prevSumInfo = infos.first;
+		curSumInfo = infos.second;
+	}
+	else
+	{
+		// Calculating SUM
+
+		// Fetch data for previous step
+
+		int paramStep = myTargetInfo->Param().Aggregation().TimeResolutionValue();
+
+		if (myTargetInfo->Time().StepResolution() != kHourResolution)
+		{
+			assert(myTargetInfo->Time().StepResolution() == kMinuteResolution);
+
+			paramStep *= 60;
 		}
 
+		// Skip early steps if necessary
+
+		if (myTargetInfo->Time().Step() >= paramStep)
+		{
+			// Data from previous time step
+			forecast_time prevTimeStep = myTargetInfo->Time();
+
+			prevTimeStep.ValidDateTime().Adjust(prevTimeStep.StepResolution(), -paramStep);
+
+			prevSumInfo = FetchSourceData(myTargetInfo, prevTimeStep);
+
+		}
+
+		// Data from current time step, but only if we have data for previous
+		// step
+
+		if (prevSumInfo)
+		{
+			curSumInfo = FetchSourceData(myTargetInfo, myTargetInfo->Time());
+		}
+	}
+
+	if (!prevSumInfo || !curSumInfo)
+	{
+		// Data was not found
+
+		myThreadedLogger->Warning("Data not found: not calculating " + myTargetInfo->Param().Name() + " for step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()));
+		return;
+	}
+
+	myThreadedLogger->Debug("Previous data step is " + boost::lexical_cast<string> (prevSumInfo->Time().Step()));
+	myThreadedLogger->Debug("Current/next data step is " + boost::lexical_cast<string> (curSumInfo->Time().Step()));
+
+	double scaleFactor = 1.;
+
+	// EC gives precipitation in meters, we are calculating millimeters
+
+	if (curSumInfo->Param().Unit() == kM
+		 || (myTargetInfo->Producer().Id() == 240 && !isRadiationCalculation)) // HIMAN-98
+	{
+		scaleFactor = 1000.;
+	}
+
+	string deviceType = "CPU";
+
+	step = static_cast<int> (curSumInfo->Time().Step() - prevSumInfo->Time().Step());
+		
+	if (isRadiationCalculation)
+	{
+
 		/*
-		 * Two modes of operation:
+		 * Radiation unit is W/m^2 which is J/m^2/s, so we need to convert
+		 * time to seconds.
 		 *
-		 * 1) When calculating split_sum sums, always get the previous
-		 * step value from the current step and get both values (current and
-		 * previous). If either can't be found, skip time step.
-		 *
-		 * 2) When calculating split_sum rate, get the first data that's
-		 * earlier or same than current time step and the next data that's
-		 * later or same than the current time step. Then calculate rate
-		 * based on those values.
+		 * Step is always one hour or more, even in the case of Harmonie.
 		 */
 
-
-		int step = itsConfiguration->ForecastStep();
-
-		if (isRateCalculation)
+		if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
 		{
-
-			// Calculating RATE
-
-			auto infos = GetSourceDataForRate(myTargetInfo, step);
-			
-			prevSumInfo = infos.first;
-			curSumInfo = infos.second;
+			step = 3600;
+		}
+		else if (myTargetInfo->Time().StepResolution() == kHourResolution)
+		{
+			step *= 3600;
 		}
 		else
 		{
-			// Calculating SUM
-
-			// Fetch data for previous step
-
-			int paramStep = myTargetInfo->Param().Aggregation().TimeResolutionValue();
-
-			if (myTargetInfo->Time().StepResolution() != kHourResolution)
-			{
-				assert(myTargetInfo->Time().StepResolution() == kMinuteResolution);
-
-				paramStep *= 60;
-			}
-
-			// Skip early steps if necessary
-
-			if (myTargetInfo->Time().Step() >= paramStep)
-			{
-				// Data from previous time step
-				forecast_time prevTimeStep = myTargetInfo->Time();
-
-				prevTimeStep.ValidDateTime().Adjust(prevTimeStep.StepResolution(), -paramStep);
-
-				prevSumInfo = FetchSourceData(myTargetInfo, prevTimeStep);
-
-			}
-					
-			// Data from current time step, but only if we have data for previous
-			// step
-
-			if (prevSumInfo)
-			{
-				curSumInfo = FetchSourceData(myTargetInfo, myTargetInfo->Time());
-			}
+			myThreadedLogger->Error("Unknown time resolution: " + string(HPTimeResolutionToString.at(myTargetInfo->Time().StepResolution())));
+			return;
 		}
 
-		if (!prevSumInfo || !curSumInfo)
+	}
+
+	else if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
+	{
+		/*
+		 * For precipitation:
+		 *
+		 * If calculating for Harmonie, use hour as base time unit!
+		 * This has been agreed with AKS.
+		 *
+		 */
+
+		step = 1;
+	}
+
+	double invstep = 1./step;
+
+	auto& result = VEC(myTargetInfo);
+		
+	for (auto&& tup : zip_range(result, VEC(curSumInfo), VEC(prevSumInfo)))
+	{
+
+		double& sum = tup.get<0>();
+		double currentSum = tup.get<1>();
+		double previousSum = tup.get<2>();
+
+		if (currentSum == kFloatMissing || previousSum == kFloatMissing)
 		{
-			// Data was not found
-
-			myThreadedLogger->Warning("Data not found: not calculating " + myTargetInfo->Param().Name() + " for step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()));
-
 			continue;
 		}
 
-		myThreadedLogger->Debug("Previous data step is " + boost::lexical_cast<string> (prevSumInfo->Time().Step()));
-		myThreadedLogger->Debug("Current/next data step is " + boost::lexical_cast<string> (curSumInfo->Time().Step()));
+		sum = currentSum - previousSum;
 
-		double scaleFactor = 1.;
-
-		// EC gives precipitation in meters, we are calculating millimeters
-
-		if (curSumInfo->Param().Unit() == kM
-			 || (myTargetInfo->Producer().Id() == 240 && !isRadiationCalculation)) // HIMAN-98
+		if (isRateCalculation && step != 1)
 		{
-			scaleFactor = 1000.;
+			sum *= invstep;
 		}
 
-		string deviceType = "CPU";
-
-		step = static_cast<int> (curSumInfo->Time().Step() - prevSumInfo->Time().Step());
-		
-		if (isRadiationCalculation)
+		if (sum < 0 && myParamName != "RTOPLW-WM2")
 		{
-
-			/*
-			 * Radiation unit is W/m^2 which is J/m^2/s, so we need to convert
-			 * time to seconds.
-			 *
-			 * Step is always one hour or more, even in the case of Harmonie.
-			 */
-
-			if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
-			{
-				step = 3600;
-			}
-			else if (myTargetInfo->Time().StepResolution() == kHourResolution)
-			{
-				step *= 3600;
-			}
-			else
-			{
-				itsLogger->Error("Unknown time resolution: " + string(HPTimeResolutionToString.at(myTargetInfo->Time().StepResolution())));
-				continue;
-			}
-
+			sum = 0;
 		}
 
-		else if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
-		{
-			/*
-			 * For precipitation:
-			 *
-			 * If calculating for Harmonie, use hour as base time unit!
-			 * This has been agreed with AKS.
-			 *
-			 */
+		sum *= scaleFactor;
 
-			step = 1;
-		}
-
-		double invstep = 1./step;
-
-		LOCKSTEP(myTargetInfo, curSumInfo, prevSumInfo)
-		{
-
-			double currentSum = curSumInfo->Value();
-			double previousSum = prevSumInfo->Value();
-
-			if (currentSum == kFloatMissing || previousSum == kFloatMissing)
-			{
-				continue;
-			}
-
-			double sum = currentSum - previousSum;
-
-			if (isRateCalculation && step != 1)
-			{
-				sum *= invstep;
-			}
-
-			if (sum < 0 && parmName != "RTOPLW-WM2")
-			{
-				sum = 0;
-			}
-
-			sum *= scaleFactor;
-
-			myTargetInfo->Value(sum);
-
-		}
-
-		myThreadedLogger->Info("[" + deviceType + "] Parameter " + parmName + " missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 	}
+
+	myThreadedLogger->Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
+
 }
 
-pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataForRate(shared_ptr<const info> myTargetInfo, int step)
+pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataForRate(shared_ptr<const info> myTargetInfo, int step) const
 {
 	shared_ptr<info> prevInfo;
 	shared_ptr<info> curInfo;
@@ -608,7 +637,7 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 	return make_pair(prevInfo,curInfo);
 }
 
-shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime)
+shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime) const
 {
 	level wantedLevel(kHeight, 0 ,"HEIGHT");
 
