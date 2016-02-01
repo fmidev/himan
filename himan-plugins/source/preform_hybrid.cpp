@@ -223,11 +223,14 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 
 
-	// Feikkiparametrinimi ja -numero koska alkuperainen on preform_pressurelle varattu!
-	// Uusi neons-rakenne ehka sallii meidan tallentaa eri laskentatavoilla tuotetut
-	// parametrit samalle numerolle
+	vector<param> params ({param("PRECFORM2-N", 1206)});
 
-	SetParams({param("PRECFORM2-N", 1206)});
+	if (itsConfiguration->Exists("potential_precipitation_form") && itsConfiguration->GetValue("potential_precipitation_form") == "true")
+	{
+		params.push_back(param("POTPRECF-N", 1226));
+	}
+
+	SetParams(params);
 
 	Start();
 	
@@ -327,6 +330,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		RHScale = 1;
 	}
 
+	myTargetInfo->FirstParam();
+
+	bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
+
 	LOCKSTEP (myTargetInfo, stratus, freezingArea, TInfo, RRInfo, RHInfo)
 	{
 
@@ -379,9 +386,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		double T = TInfo->Value();
 		double RH = RHInfo->Value();
 
-		if (RR == MISS || RR == 0 || T == MISS || RH == MISS)
+		if (RR == MISS || T == MISS || RH == MISS)
 		{
-			// No rain --> no rain type
+			continue;
+		}
+
+		if (RR == 0 && noPotentialPrecipitationForm)
+		{
 			continue;
 		}
 
@@ -409,8 +420,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		assert(RH >= 0 && RH < 102);
 		assert(T >= -80 && T < 80);
-		assert(RR > 0);
+		assert(!noPotentialPrecipitationForm || RR > 0);
 		assert(Navg == MISS || (Navg >= 0 && Navg <= 100));
+		
 /*
 		cout	<< "base\t\t" << base << endl
 				<< "top\t\t" << top << endl
@@ -563,8 +575,25 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		// FINISHED
 
-		myTargetInfo->Value(PreForm);
+		if (RR == 0)
+		{
+			// If RR is zero, we can only have potential prec form
+			myTargetInfo->ParamIndex(1);
+			myTargetInfo->Value(PreForm);
+		}
+		else
+		{
+			// If there is precipitation, we have at least regular prec form
+			myTargetInfo->ParamIndex(0);
+			myTargetInfo->Value(PreForm);
 
+			if (!noPotentialPrecipitationForm)
+			{
+				// Also potential prec form
+				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Value(PreForm);
+			}
+		}
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
