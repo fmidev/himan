@@ -18,6 +18,7 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "writer.h"
+#include "neons.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -49,6 +50,8 @@ using namespace himan::plugin;
 // Default behavior changed 27.12.2013 (HIMAN-26) // partio
 
 const bool CALCULATE_AVERAGE_RATE = false;
+
+const int SUB_THREAD_COUNT = 5;
 
 map<string,himan::params> sourceParameters;
 
@@ -277,6 +280,16 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams(params);
 
+	// Default max workers (db connections) is 16.
+	// Later in this plugin we launch sub threads so that the total number of 
+	// threads will be over 16. Connection pool is not working 100% correctly
+	// because at that point it will hang.
+	// To prevent this, make the pool larger.
+
+	auto n = GET_PLUGIN(neons);
+	
+	n->PoolMaxWorkers(SUB_THREAD_COUNT * 12); // 12 is the max thread count from compiled_plugin_base
+
 	Start();
 	
 }
@@ -290,11 +303,10 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	//auto myThreadedLogger = logger_factory::Instance()->GetLog("split_sumThread #" + boost::lexical_cast<string> (threadIndex));
-
-	boost::thread_group g;
+	vector<boost::thread> threads(SUB_THREAD_COUNT);
 	vector<info_t> infos;
-	int subThreadIndex = 1;
+	
+	int subThreadIndex = 0;
 	
 	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); ++subThreadIndex)
 	{
@@ -302,21 +314,20 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		infos.push_back(newInfo); // extend lifetime over this loop
 		
-		boost::thread* t = new boost::thread(&split_sum::DoParam, this, (newInfo), myTargetInfo->Param().Name(), boost::lexical_cast<string> (threadIndex) + "_" + boost::lexical_cast<string> (subThreadIndex));
+		threads[subThreadIndex] = boost::thread(&split_sum::DoParam, this, (newInfo), myTargetInfo->Param().Name(), boost::lexical_cast<string> (threadIndex) + "_" + boost::lexical_cast<string> (subThreadIndex));
 
-		g.add_thread(t);
-
-		if (subThreadIndex % 5 == 0)
+		if (subThreadIndex >= SUB_THREAD_COUNT-1)
 		{
-			g.join_all();
+			for (auto& t : threads) t.join();
+
 			infos.clear();
-			subThreadIndex=1;
+			threads.clear();
+			subThreadIndex=0;
 		}
 	}
-	
-	g.join_all();
 
-	
+	for (auto& t : threads) t.join();
+
 }
 
 void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string subThreadIndex) const
