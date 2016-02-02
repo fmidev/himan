@@ -14,8 +14,6 @@
 #include "unistd.h" // getuid())
 #include "regular_grid.h"
 
-void InitPool();
-
 using namespace std;
 using namespace himan::plugin;
 
@@ -26,24 +24,23 @@ neons::neons() : itsInit(false), itsNeonsDB()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("neons"));
 	
-	// no lambda functions for gcc 4.4 :(
-	// call_once(oflag, [](){ NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS); });
+	call_once(oflag, [&](){ 
+		PoolMaxWorkers(MAX_WORKERS);
 
-	std::call_once(oflag, &InitPool);
-
+		uid_t uid = getuid();
+	
+		if (uid == 1459) // weto
+		{
+			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+			NFmiNeonsDBPool::Instance()->Username("wetodb");
+			NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
+		}
+	});
 }
 
-void InitPool()
+void neons::PoolMaxWorkers(int maxWorkers)
 {
-	NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
-	uid_t uid = getuid();
-	
-	if (uid == 1459) // weto
-	{
-		NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
-		NFmiNeonsDBPool::Instance()->Username("wetodb");
-		NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
-	}
+	NFmiNeonsDBPool::Instance()->MaxWorkers(maxWorkers);
 }
 
 vector<string> neons::Files(search_options& options)
