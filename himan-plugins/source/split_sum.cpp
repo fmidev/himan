@@ -19,6 +19,7 @@
 
 #include "writer.h"
 #include "neons.h"
+#include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -287,8 +288,10 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	// To prevent this, make the pool larger.
 
 	auto n = GET_PLUGIN(neons);
-	
 	n->PoolMaxWorkers(SUB_THREAD_COUNT * 12); // 12 is the max thread count from compiled_plugin_base
+
+	auto r = GET_PLUGIN(radon);
+	r->PoolMaxWorkers(SUB_THREAD_COUNT * 12);
 
 	Start();
 	
@@ -303,7 +306,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 
-	vector<boost::thread> threads(SUB_THREAD_COUNT);
+	boost::thread_group threads;
 	vector<info_t> infos;
 	
 	int subThreadIndex = 0;
@@ -314,19 +317,19 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		infos.push_back(newInfo); // extend lifetime over this loop
 		
-		threads[subThreadIndex] = boost::thread(&split_sum::DoParam, this, (newInfo), myTargetInfo->Param().Name(), boost::lexical_cast<string> (threadIndex) + "_" + boost::lexical_cast<string> (subThreadIndex));
+		threads.add_thread(
+			new boost::thread(&split_sum::DoParam, this, (newInfo), myTargetInfo->Param().Name(), boost::lexical_cast<string> (threadIndex) + "_" + boost::lexical_cast<string> (subThreadIndex))
+		);
 
-		if (subThreadIndex >= SUB_THREAD_COUNT-1)
+		if (subThreadIndex % SUB_THREAD_COUNT == 0)
 		{
-			for (auto& t : threads) t.join();
+			threads.join_all();
 
 			infos.clear();
-			threads.clear();
-			subThreadIndex=0;
 		}
 	}
 
-	for (auto& t : threads) t.join();
+	threads.join_all();
 
 }
 
