@@ -24,23 +24,22 @@ radon::radon() : itsInit(false), itsRadonDB()
 {
 	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("radon"));
 
-	// no lambda functions for gcc 4.4 :(
-	// call_once(oflag, [](){ NFmiNeonsDBPool::MaxWorkers(MAX_WORKERS); });
+	call_once(oflag, [&](){ 
+		PoolMaxWorkers(MAX_WORKERS);
 
-	call_once(oflag, &himan::plugin::radon::InitPool, this);
+		uid_t uid = getuid();
+	
+		if (uid == 1459) // weto
+		{
+			NFmiRadonDBPool::Instance()->Username("wetodb");
+			NFmiRadonDBPool::Instance()->Password("3loHRgdio");
+		}
+	});
 }
 
-void radon::InitPool()
+void radon::PoolMaxWorkers(int maxWorkers)
 {
-	NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
-
-	uid_t uid = getuid();
-	
-	if (uid == 1459) // weto
-	{
-		NFmiRadonDBPool::Instance()->Username("wetodb");
-		NFmiRadonDBPool::Instance()->Password("3loHRgdio");
-	}
+	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
 }
 
 vector<string> radon::Files(search_options& options)

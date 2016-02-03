@@ -97,6 +97,8 @@ public:
      */
 	
 	std::string ProducerMetaData(long producerId, const std::string& attribute) const;
+	
+	void PoolMaxWorkers(int maxWorkers);
 
 private:
 
