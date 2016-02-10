@@ -39,6 +39,7 @@ himan::point debugPoint(25.47, 37.03);
 #ifdef DEBUG
 std::vector<double> CAPEZonesEntered;
 std::vector<double> CAPE1040ZonesEntered;
+std::vector<double> CAPE3kmZonesEntered;
 size_t CAPEZoneIndex = 0;
 #endif
 
@@ -78,6 +79,357 @@ void multiply_with(vector<double>& vec, double multiplier)
 	}
 }
 
+namespace CAPE
+{
+himan::point GetPointOfIntersection(const himan::point& a1, const himan::point& a2, const himan::point& b1, const himan::point& b2)
+{
+
+	double x1 = a1.X(), x2 = a2.X(), x3 = b1.X(), x4 = b2.X();
+	double y1 = a1.Y(), y2 = a2.Y(), y3 = b1.Y(), y4 = b2.Y();
+
+	double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+	himan::point null(kFloatMissing,kFloatMissing);
+
+	if (d == 0)
+	{
+		// parallel lines
+		return null;
+	}
+
+	double pre = (x1*y2 - y1*x2);
+	double post = (x3*y4 - y3*x4);
+
+	// Intersection x & y
+	double x = (pre * (x3 - x4) - (x1 - x2) * post) / d;
+	double y = (pre * (y3 - y4) - (y1 - y2) * post) / d;
+
+	if (x < min(x1, x2) || x > max(x1, x2) || x < min(x3, x4) || x > max(x3, x4))
+	{
+		return null;
+	}
+
+	if (y < min(y1, y2) || y > max(y1, y2) || y < min(y3, y4) || y > max(y3, y4))
+	{
+		return null;
+	}
+
+	return himan::point(x,y);
+}
+	
+double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Zenv, double prevZenv)
+{
+	/*
+	 *  We just entered CAPE zone.
+	 * 
+	 *                                             Hybrid level n == Zenv
+	 *                        This point is Tenv --> ======== <-- this point is Tparcel  
+	 *                                                \####/
+	 *                                                 \##/
+	 *                                                  \/  <-- This point is going to be new prevZenv that we get from intersectionWithZ.
+	 *                                                  /\      At this point obviously Tenv = Tparcel.
+	 *                                                 /  \
+	 *          This line is the raising particle --> /    \ <-- This line is the environment temperature
+	 *                                               ========
+	 *                                             Hybrid level n+1 == prevZenv
+	 * 
+	 *  We want to calculate only the upper triangle!
+	 * 
+	 *  Summary:
+	 *  1. Calculate intersection of lines in order to get the height of the point where Tparcel == Tenv. This point is going 
+	 *     to be the new prevZenv.
+	 *  2. Calculate integral using dz = Zenv - prevZenv, for temperatures use the values from Hybrid level n.
+    */
+	
+	using himan::point;
+		
+	auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv), point(prevTparcel, prevZenv));
+	prevZenv = intersection.Y();
+		
+	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+	
+	assert(CAPE >= 0);
+	assert(CAPE < 100);
+	
+	return CAPE;
+}
+
+double IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Zenv, double prevZenv)
+{
+	/*
+	 *  We just left CAPE zone.
+	 * 
+	 *                                             Hybrid level n == Zenv
+	 *                                               ========  
+	 *                                                 \  /
+	 *                                                  \/  <-- This point is going to be new Zenv that we get from intersectionWithZ.
+	 *                                                  /\      At this point obviously Tenv = Tparcel.
+	 *                                                 /##\
+	 *   This line is the environment temperature --> /####\ <-- this line is the raising particle 
+	 *                   This point is prevTenv -->  ========  <-- This point is prevTparcel
+	 *                                             Hybrid level n+1 == prevZenv
+	 *  
+	 *  We want to calculate only the lower triangle!
+	 * 
+	 *  Summary:
+	 *  1. Calculate intersection of lines in order to get the height of the point where Tparcel == Tenv. This point is going 
+	 *     to be the new Zenv.
+	 *  2. Calculate integral using dz = ZenvNew - prevZenv, for temperatures use the values from Hybrid level n+1.
+     */
+
+	using himan::point;
+
+	auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv), point(prevTparcel, prevZenv));
+
+	Zenv = intersection.Y();
+
+	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
+
+	assert(CAPE >= 0);	
+	assert(CAPE < 100);
+	
+	return CAPE;
+}
+
+double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Zenv, double prevZenv, double areaColderLimit, double areaWarmerLimit)
+{
+	/*
+	 * Just entered valid CAPE zone from a non-valid area. 
+	 * 
+	 * Note! Parcel is buoyant at both areas!
+	 *
+	 * In this example we entered a cold cape area (-) from a warmer area (+).
+	 *
+	 *          ##########
+	 *           \-----|  
+	 *            \----|  
+	 *             \---|  
+	 *              \++|  
+	 *               \+|  
+	 *          ##########
+	 *        
+	 * 
+	 *  We want to calculate only the '-' area!
+	 * 
+	 *  Summary:
+	 *  1. Calculate the point where the env temperature crosses to cold area (ie. 263.15K). This point lies somewhere 
+	 *     between the two levels, and it's found with linear interpolation. The result should be new value for prevZ. 
+	 *     Note that the interpolation is done to the virtual temperatures, so that we don't have to interpolate pressure again!
+	 *  2. Sometimes Tparcel is colder than Tenv at that height where Tenv crosser to colder area --> not in CAPE zone. 
+	 *     In that case we must find the first height where Tenv >= 263.15 and Tparcel >= Tenv.
+	 *  3. Calculate integral using dz = Zenv - prevZenv, for temperatures use the values from Hybrid level n.
+	 */
+
+	double areaLimit;
+	bool fromWarmerToCold = true;
+	
+	if (prevTenv > Tenv)
+	{
+		// Entering area from a warmer zone
+		areaLimit = areaWarmerLimit;
+	}
+	else
+	{
+		// Entering area from a colder zone
+		areaLimit = areaColderLimit;
+		fromWarmerToCold = false;
+	}
+
+	double newPrevZenv = NFmiInterpolation::Linear(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+	double newTparcel = NFmiInterpolation::Linear(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);
+
+	if (newTparcel < areaLimit)
+	{
+	   // Tparcel has to be warmer than environment, otherwise no CAPE
+
+	   for (int i = 0; i < 20; i++)
+	   {
+		   areaLimit += (fromWarmerToCold) ? -0.1 : 0.1;
+		   
+		   newPrevZenv = NFmiInterpolation::Linear(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+		   newTparcel = NFmiInterpolation::Linear(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);				
+
+		   if (newPrevZenv >= Zenv)
+		   {
+			   // Lower height reached upper height
+			   return 0;
+		   }
+		   else if (newTparcel >= areaLimit )
+		   {
+			   // Found correct height
+			   break;
+		   }
+	   }
+
+	   if (newTparcel <= areaLimit)
+	   {
+		   // Unable to find the height where env temp is cold enough AND Tparcel is warmer than Tenv
+		   return 0;
+	   }
+   }
+
+   assert(Tparcel >= Tenv);
+   assert(Zenv >= newPrevZenv);
+
+   double CAPE = himan::constants::kG * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
+
+   assert(Zenv >= prevZenv);
+   assert(CAPE >= 0.);
+   assert(CAPE < 100.);
+   
+   return CAPE;
+}
+
+double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Zenv, double prevZenv, double areaColderLimit, double areaWarmerLimit)
+{
+	/* 
+	 * Just left valid CAPE zone to a non-valid area. 
+	 * 
+	 * Note! Parcel is buoyant at both areas!
+	 * 
+	 * In this example cold CAPE area is left for a colder area.
+	 * 
+	 *      ##########
+	 *         \==|
+	 *          \==\
+	 *           \--\
+	 *            \-|
+	 *            |-|
+	 *       ##########
+	 *        
+	 * 
+	 *  We want to calculate only the '-' area!
+	 */
+	
+	double areaLimit;
+	bool fromColdToWarmer = true;
+	
+	if (prevTenv < Tenv)
+	{
+		// Entering to a warmer area
+		areaLimit = areaWarmerLimit;
+	}
+	else
+	{
+		// Entering to a colder area
+		areaLimit = areaColderLimit;
+		fromColdToWarmer = false;
+	}
+
+	double newZenv = NFmiInterpolation::Linear(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+	double newTparcel = NFmiInterpolation::Linear(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);
+
+	if (newTparcel <= areaLimit)
+	{
+		// Tparcel has to be warmer than environment, otherwise no CAPE
+
+		for (int i = 0; i < 20; i++)
+		{
+			areaLimit += (fromColdToWarmer) ? -0.1 : 0.1;
+
+			newZenv = NFmiInterpolation::Linear(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+			newTparcel = NFmiInterpolation::Linear(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);				
+
+			if (newZenv <= prevZenv)
+			{
+				// Lower height reached upper height
+				return 0;
+			}
+			else if (newTparcel >= areaLimit )
+			{
+				// Found correct height
+				break;
+			}
+		}
+
+		if (newTparcel <= areaLimit)
+		{
+			// Unable to find the height where env temp is cold enough AND Tparcel is warmer than Tenv
+			return 0;
+		}
+	}
+
+	assert(Tparcel >= Tenv);
+	assert(newZenv <= Zenv);
+	assert(newZenv >= prevZenv);
+
+	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
+
+	assert(CAPE >= 0.);		
+	assert(CAPE < 100);
+	
+	return CAPE;
+}
+
+double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Zenv, double prevZenv, double areaUpperLimit)
+{
+	/* 
+	 * Just left valid CAPE zone to a non-valid area. 
+	 * 
+	 * Note! Parcel is buoyant at both areas!
+	 * 
+	 * In this example parcel is lifted to over 3km.
+	 * 
+	 *       =========
+	 *         \  |
+	 *          \  \
+	 *           \##\  <-- 3km height
+	 *            \#|
+	 *            |#|
+	 *       =========
+	 *        
+	 * 
+	 *  We want to calculate only the '#' area!
+	 */
+		
+	double newTenv = NFmiInterpolation::Linear(areaUpperLimit, Zenv, prevZenv, Tenv, prevTenv);
+	double newTparcel = NFmiInterpolation::Linear(areaUpperLimit, Zenv, prevZenv, Tparcel, prevTparcel);
+
+	if (newTparcel <= newTenv)
+	{
+		// Tparcel has to be warmer than environment, otherwise no CAPE
+
+		for (int i = 0; i < 20; i++)
+		{
+			areaUpperLimit -= 10;
+
+			newTenv = NFmiInterpolation::Linear(areaUpperLimit, Zenv, prevZenv, Tenv, prevTenv);
+			newTparcel = NFmiInterpolation::Linear(areaUpperLimit, Zenv, prevZenv, Tparcel, prevTparcel);				
+
+			if (areaUpperLimit <= prevZenv)
+			{
+				// Lower height reached upper height
+				return 0;
+			}
+			else if (newTparcel > newTenv)
+			{
+				// Found correct height
+				break;
+			}
+		}
+
+		if (newTparcel <= newTenv)
+		{
+			// Unable to find the height where env temp is cold enough AND Tparcel is warmer than Tenv
+			return 0;
+		}
+	}
+
+	assert(newTparcel >= newTenv);
+	assert(areaUpperLimit > prevZenv);
+
+	double CAPE = himan::constants::kG * (areaUpperLimit - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
+
+	assert(CAPE >= 0.);		
+	assert(CAPE < 100);
+	
+	return CAPE;
+}
+
+
+
+}
+
 const himan::param SBLCLT("LCL-K");
 const himan::param SBLCLP("LCL-HPA", 68);
 const himan::param SBLFCT("LFC-K");
@@ -110,6 +462,12 @@ const himan::param MUCAPE("CAPEMU-JKG", 59);
 const himan::param MUCAPE1040("CAPEMU1040", 59);
 const himan::param MUCAPE3km("CAPEMU3KM", 59);
 const himan::param MUCIN("CINMU-JKG", 66);
+
+#ifdef DEBUG
+const himan::param MUCAPEZoneCount("CAPEMUZONES");
+const himan::param MUCAPE1040ZoneCount("CAPEMU1040ZONES");
+const himan::param MUCAPE3kmZoneCount("CAPEMU3KMZONES");
+#endif
 
 si::si() : itsBottomLevel(kHPMissingInt), itsSourceData(kUnknown)
 {
@@ -181,6 +539,12 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 			theParams.push_back(MUCAPE1040);
 			theParams.push_back(MUCAPE3km);
 			theParams.push_back(MUCIN);	
+			
+#ifdef DEBUG
+			theParams.push_back(MUCAPEZoneCount);
+			theParams.push_back(MUCAPE1040ZoneCount);
+			theParams.push_back(MUCAPE3kmZoneCount);	
+#endif
 			itsSourceData = kMaxThetaE;
 		}
 		else
@@ -524,9 +888,20 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 
 	myTargetInfo->Param(CAPE3kmParam);
 	myTargetInfo->Data().Set(get<4> (CAPE));
+	
+#ifdef DEBUG
+	myTargetInfo->Param(MUCAPEZoneCount);
+	myTargetInfo->Data().Set(CAPEZonesEntered);
+	
+	myTargetInfo->Param(MUCAPE1040ZoneCount);
+	myTargetInfo->Data().Set(CAPE1040ZonesEntered);
+	
+	myTargetInfo->Param(MUCAPE3kmZoneCount);
+	myTargetInfo->Data().Set(CAPE3kmZonesEntered);
+#endif
 
-	DumpVector(get<0> (CAPE), "EL T");
-	DumpVector(get<1> (CAPE), "EL P");
+	//DumpVector(get<0> (CAPE), "EL T");
+	//DumpVector(get<1> (CAPE), "EL P");
 	DumpVector(get<2> (CAPE), "CAPE");
 	DumpVector(get<3> (CAPE), "CAPE 1040");
 	DumpVector(get<4> (CAPE), "CAPE 3km");
@@ -711,9 +1086,6 @@ vector<double> si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& T
 	
 }
 
-
-
-
 double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv, double Zenv, double prevZenv)
 {
 	double C = 0;
@@ -729,156 +1101,25 @@ double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double prevTpa
 	Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
 	Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
 
+	double coldColderLimit = 233.15;
+	double coldWarmerLimit = 263.15;
+
 	if (Tparcel > Tenv)
 	{
 		// Parcel is buoyant at current height
-
-		double coldColderLimit = 233.15;
-		double coldWarmerLimit = 263.15;
 		
 		if (Tenv >= coldColderLimit && Tenv <= coldWarmerLimit)
 		{
 			// Parcel is inside cold area at current height
 			
-			if (prevTenv > coldWarmerLimit)
+			if (prevTenv > coldWarmerLimit || prevTenv < coldColderLimit)
 			{
-				/*
-				 * Check comments for GetCAPE() to get an idea of this drawing.
-				 * 
-				 * Just entered cold CAPE zone from a warmer area
-				 * 
-				 *          ##########
-				 *           \-----|  
-				 *            \----|  
-				 *             \---|  
-				 *              \++|  
-				 *               \+|  
-				 *          ##########
-				 *        
-				 * 
-				 *  We want to calculate only the '-' area!
-				 * 
-				 *  Summary:
-				 *  1. Calculate the point where the env temperature crosses to cold area (ie. 263.15K). This point lies somewhere 
-				 *     between the two levels, and it's found with linear interpolation. The result should be new value for prevZ. 
-				 *     Note that the interpolation is done to the virtual temperatures, so that we don't have to interpolate pressure again!
-				 *  2. Sometimes Tparcel is colder than Tenv at that height where Tenv crosser to colder area --> not in CAPE zone. 
-				 *     In that case we must find the first height where Tenv >= 263.15 and Tparcel >= Tenv.
-				 *  3. Calculate integral using dz = Zenv - prevZenv, for temperatures use the values from Hybrid level n.
-				 */
-
+				// Entering cold cape area from either warmer or colder area
 #ifdef DEBUG
 				CAPE1040ZonesEntered[CAPEZoneIndex] += 1;
 #endif
-
-				double newPrevZenv = NFmiInterpolation::Linear(coldWarmerLimit, Tenv, prevTenv, Zenv, prevZenv);
-				double newTparcel = NFmiInterpolation::Linear(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);
-
-				if (newTparcel <= coldWarmerLimit)
-				{
-					// Tparcel has to be warmer than environment, otherwise no CAPE
-
-					for (int i = 0; i < 20; i++)
-					{
-						coldWarmerLimit -= 0.1;
-						newPrevZenv = NFmiInterpolation::Linear(coldWarmerLimit, Tenv, prevTenv, Zenv, prevZenv);
-						newTparcel = NFmiInterpolation::Linear(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);				
-					
-						if (newPrevZenv >= Zenv)
-						{
-							// Lower height reached upper height
-							return 0;
-						}
-						else if (newTparcel >= coldWarmerLimit )
-						{
-							// Found correct height
-							break;
-						}
-					}
-
-					if (newTparcel <= coldWarmerLimit)
-					{
-						// Unable to find the height where env temp is cold enough AND Tparcel is warmer than Tenv
-						return 0;
-					}
-				}
-
-				assert(Tparcel >= Tenv);
-				assert(Zenv >= newPrevZenv);
-
-				C = himan::constants::kG * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
-
-				assert(Zenv >= prevZenv);
-				assert(C >= 0.);
-			}
-			else if (prevTenv < coldColderLimit)
-			{
-
-				/*
-				 * Check comments for first if() branch to get an idea of this drawing.
-				 * 
-				 * Just entered cold CAPE zone from a colder area.
-				 * 
-				 *         ##########
-				 *           \--\
-				 *           |---\
-				 *           |---|
-				 *           /====|
-				 *          /=====\
-				 *         ##########
-				 *        
-				 * 
-				 *  We want to calculate only the '-' area!
-				 * 
-				 *  Summary:
-				 *  1. Calculate the point where the env temperature crosses to cold area (ie. 233.15K). 
-				 *  2. Find the first height where Tenv < 233.15 and Tparcel >= Tenv if it's not found on the first interpolation.
-				 *     This parameter will be new prevZenv.
-				 *  3. Calculate integral using dz = Zenv - prevZenv, for temperatures use the values from Hybrid level n.
-				 */
-
-#ifdef DEBUG
-				CAPE1040ZonesEntered[CAPEZoneIndex] += 1;
-#endif
-
-				double newPrevZenv = NFmiInterpolation::Linear(coldColderLimit, Tenv, prevTenv, Zenv, prevZenv);
-				double newTparcel = NFmiInterpolation::Linear(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);
-
-				if (newTparcel <= coldColderLimit)
-				{
-
-					for (int i = 0; i < 20; i++)
-					{
-						coldColderLimit += 0.1;
-						newPrevZenv = NFmiInterpolation::Linear(coldColderLimit, Tenv, prevTenv, Zenv, prevZenv);
-						newTparcel = NFmiInterpolation::Linear(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);				
-					
-						if (newPrevZenv >= Zenv)
-						{
-							// Lower height reached upper height
-							return 0;
-						}
-						else if (newTparcel >= coldColderLimit )
-						{
-							// Found correct height
-							break;
-						}
-					}
-
-					if (newTparcel <= coldColderLimit)
-					{
-						// Unable to find the height where env temp is cold enough AND Tparcel is warmer than Tenv
-						return 0;
-					}
-				}
-
-				assert(Tparcel >= Tenv);
-				assert(Zenv >= newPrevZenv);
-
-				C = himan::constants::kG * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
-
-				assert(Zenv >= prevZenv);
-				assert(C >= 0.);
+				
+				C = CAPE::IntegrateTemperatureAreaEnteringParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv, coldColderLimit, coldWarmerLimit);
 			}
 			else
 			{
@@ -888,47 +1129,23 @@ double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double prevTpa
 				
 			}
 		}
-		else if (Tenv < coldColderLimit)
+		else if ((prevTenv > coldColderLimit && prevTenv < coldWarmerLimit) // At previous height conditions were suitable (TODO: buoyancy is not checked!)
+				&& (Tenv < coldColderLimit || Tenv > coldWarmerLimit))
 		{
-			// We have buoyancy, but current env temperature is too cold
-			
-			if (prevTenv > coldColderLimit && prevTenv < coldWarmerLimit)
-			{
-				// We just moved from cold area to too cold area
-			}
-			
-		}
-		else if (Tenv > coldWarmerLimit)
-		{
-			// We have buoyancy, but current env temperature is too warm
-			
-			if (prevTenv > coldColderLimit && prevTenv < coldWarmerLimit)
-			{
-				// We just moved from cold area to warm area
-			}
-			
+			// Current env temperature is too cold or too warm			
+			C = CAPE::IntegrateTemperatureAreaLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv, coldColderLimit, coldWarmerLimit);			
 		}
 	}
-	else
+	else if (prevTparcel >= prevTenv) 
 	{
-		// Out of CAPE zone
-
-		Tenv = (Tenv + prevTenv) * 0.5;
-		Penv = (Penv + prevPenv) * 0.5;
-		Zenv = (Zenv + prevZenv) * 0.5;
-		
-		if (Tenv >= 233.15 && Tenv <= 263.15)
+		// No buoyancy anymore at current height, but
+		// we HAD buoyancy: we just exited from a CAPE zone
+			
+		if (prevTenv >= coldColderLimit && prevTenv <= coldWarmerLimit)
 		{
-			Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
-			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+			/* Just left cold CAPE zone for an warmer or colder area */
+			C = CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv);
 
-			if (Tparcel >= Tenv)
-			{
-				// Approximation worked and particle is still warmer than environment in the 
-				// -10 .. -40 temperature zone
-				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-				assert(C >= 0);
-			}
 		}
 	}
 	
@@ -937,109 +1154,63 @@ double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double prevTpa
 
 double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv, double Zenv, double prevZenv)
 {
-	double C= 0.;
+	double C = 0.;
 
-	if (Tparcel >= Tenv)
+	Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
+	Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+			
+	if (Tparcel > Tenv)
 	{
-		// In general CAPE zone
+		// Have buoyancy at current height
 
 		if (Zenv <= 3000.)
 		{
-			Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
-			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
-
-			assert(Tparcel >= Tenv);
-			C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-			assert(C >= 0);
+		
+			if (prevTparcel >= prevTenv)
+			{
+				// Firmly in the zone
+				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+			
+			}
+			else if  (prevTparcel < prevTenv)
+			{
+				// Just entered CAPE zone
+				C = CAPE::IntegrateEnteringParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv);
+			}
 		}
 		else if (prevZenv <= 3000.)
 		{
-			// Interpolate the final piece of CAPE area just below 3000m		
-			// Interpolate without virtual temp
-
-			if (prevTparcel == kFloatMissing)
-			{
-				// Unable to interpolate value since previous temperature is missing
-				return 0;
-			}
 			
-			Tparcel = NFmiInterpolation::Linear(3000., prevZenv, Zenv, prevTparcel, Tparcel);
-			Tenv = NFmiInterpolation::Linear(3000., prevZenv, Zenv, prevTenv, Tenv);
-			Penv = NFmiInterpolation::Linear(3000., prevZenv, Zenv, prevPenv, Penv);
-
-			Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
-			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
-
-			if (Tparcel >= Tenv)
+			// Parcel has risen over 3km
+			// Integrate from previous level to 3km (if parcel is buoyant the whole height)
+			
+			if (prevTparcel >= prevTenv)
 			{
-				C = himan::constants::kG * (3000. - prevZenv) * ((Tparcel - Tenv) / Tenv);
-				assert(C >= 0);
+				C = CAPE::IntegrateHeightAreaLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv, 3000);
 			}
 		}
 	}
-	else if (prevZenv < 3000.)
+	else
 	{
-		// Out of general CAPE zone
-		// Calculate average between two levels to get an approximate height
-
-		Tenv = (Tenv + prevTenv) * 0.5;
-		Penv = (Penv + prevPenv) * 0.5;
-		Zenv = (Zenv + prevZenv) * 0.5;
-
-		if (Zenv < 3000.)
-		{
-			// If average Zenv is higher than 3000m, we cannot calculate the missing
-			// part of CAPE zone since the location is only an approximation.
-
-			Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv*100);
-			Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv*100);
+		// Exited CAPE zone, no buoyancy at this height
 		
-			if (Tparcel >= Tenv)
+		if (prevTparcel >= prevTenv)
+		{
+			if (Zenv <= 3000.)
 			{
-				// Approximation worked and particle is still warmer than environment
-				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-				assert(C >= 0);
+				// Integrate from previous height to intersection
+				C = CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv);
 			}
-		}		
+			
+			else
+			{
+				// Integrate from previous height to 3km
+				C = CAPE::IntegrateHeightAreaLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv, 3000);
+			}
+		}
 	}
 
 	return C;
-}
-
-himan::point GetPointOfIntersection(const himan::point& a1, const himan::point& a2, const himan::point& b1, const himan::point& b2)
-{
-
-	double x1 = a1.X(), x2 = a2.X(), x3 = b1.X(), x4 = b2.X();
-	double y1 = a1.Y(), y2 = a2.Y(), y3 = b1.Y(), y4 = b2.Y();
-	
-	double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-	
-	himan::point null(kFloatMissing,kFloatMissing);
-	
-	if (d == 0)
-	{
-		// parallel lines
-		return null;
-	}
-
-	double pre = (x1*y2 - y1*x2);
-	double post = (x3*y4 - y3*x4);
-	
-	// Intersection x & y
-	double x = (pre * (x3 - x4) - (x1 - x2) * post) / d;
-	double y = (pre * (y3 - y4) - (y1 - y2) * post) / d;
-	
-	if (x < min(x1, x2) || x > max(x1, x2) || x < min(x3, x4) || x > max(x3, x4))
-	{
-		return null;
-	}
-	
-	if (y < min(y1, y2) || y > max(y1, y2) || y < min(y3, y4) || y > max(y3, y4))
-	{
-		return null;
-	}
-	
-	return himan::point(x,y);
 }
 
 double CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv, double Zenv, double prevZenv)
@@ -1064,73 +1235,17 @@ double CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTparcel
 		assert(C >= 0);
 	}
 	else if (Tparcel >= Tenv && prevTparcel < prevTenv)
-	{
-		/*
-		 *  We just entered CAPE zone.
-		 * 
-		 *                                             Hybrid level n == Zenv
-		 *                        This point is Tenv --> ======== <-- this point is Tparcel  
-		 *                                                \####/
-		 *                                                 \##/
-		 *                                                  \/  <-- This point is going to be new prevZenv that we get from intersectionWithZ.
-		 *                                                  /\      At this point obviously Tenv = Tparcel.
-		 *                                                 /  \
-		 *          This line is the raising particle --> /    \ <-- This line is the environment temperature
-		 *                                               ========
-		 *                                             Hybrid level n+1 == prevZenv
-		 * 
-		 *  We want to calculate only the upper triangle!
-		 * 
-		 *  Summary:
-		 *  1. Calculate intersection of lines in order to get the height of the point where Tparcel == Tenv. This point is going 
-		 *     to be the new prevZenv.
-		 *  2. Calculate integral using dz = Zenv - prevZenv, for temperatures use the values from Hybrid level n.
-		*/
+	{		
 
 #ifdef DEBUG
 		CAPEZonesEntered[CAPEZoneIndex] += 1;
 #endif
-		
-		using himan::point;
-		
-		auto intersection = GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv), point(prevTparcel, prevZenv));
-		prevZenv = intersection.Y();
-		
-		C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-		assert(C >= 0);
+		C = CAPE::IntegrateEnteringParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv);
+
 	}
 	else if (Tparcel < Tenv && prevTparcel >= prevTenv)
 	{
-		/*
-		 *  We just left CAPE zone.
-		 * 
-		 *                                             Hybrid level n == Zenv
-		 *                                               ========  
-		 *                                                 \  /
-		 *                                                  \/  <-- This point is going to be new Zenv that we get from intersectionWithZ.
-		 *                                                  /\      At this point obviously Tenv = Tparcel.
-		 *                                                 /##\
-		 *   This line is the environment temperature --> /####\ <-- this line is the raising particle 
-		 *                   This point is prevTenv -->  ========  <-- This point is prevTparcel
-		 *                                             Hybrid level n+1 == prevZenv
-		 *  
-		 *  We want to calculate only the lower triangle!
-		 * 
-		 *  Summary:
-		 *  1. Calculate intersection of lines in order to get the height of the point where Tparcel == Tenv. This point is going 
-		 *     to be the new Zenv.
-		 *  2. Calculate integral using dz = ZenvNew - prevZenv, for temperatures use the values from Hybrid level n+1.
-		*/
-		
-		using himan::point;
-		
-		auto intersection = GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv), point(prevTparcel, prevZenv));
-				
-		Zenv = intersection.Y();
-
-		C = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
-
-		assert(C >= 0);	
+		C = CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv);
 	}
 
 	assert(C < 100);
@@ -1145,6 +1260,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 #ifdef DEBUG
 	CAPEZonesEntered.resize(T.size(), 0);
 	CAPE1040ZonesEntered.resize(T.size(), 0);
+	CAPE3kmZonesEntered.resize(T.size(), 0);
 #endif
 	
 	auto h = GET_PLUGIN(hitool);
@@ -1160,6 +1276,10 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 	vector<double> CAPE3km(T.size(), 0);
 	vector<double> ELT(T.size(), kFloatMissing);
 	vector<double> ELP(T.size(), kFloatMissing);
+	
+#ifdef DEBUG
+	vector<double> CAPEZones(T.size(), 0);
+#endif
 
 	// Unlike LCL, LFC is *not* found for all grid points
 
@@ -1272,6 +1392,14 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 				continue;
 			}
 
+			if (curLevel.Value() < 85 && (Tenv - Tparcel) > 30.)
+			{
+				// Temperature gap between environment and parcel too large --> abort search.
+				// Only for values higher in the atmosphere, to avoid the effects of inversion
+
+				found[i] = true;
+			}
+		
 			if (prevZenv >= 3000. && Zenv >= 3000.)
 			{
 				found[i] |= FCAPE3km;
@@ -1319,9 +1447,6 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 				Titer[i] = TparcelVec[i];
 				Piter[i] = PenvVec[i];
 			}
-		
-			//if (found[i] & FCAPE) Titer[i] = kFloatMissing; // by setting this we prevent MoistLift to integrate particle
-
 		}
 	}
 	
@@ -1471,6 +1596,13 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 				prevP = min(prevP, P[i]);
 				
 				Presult = (Penv + prevP) * 0.5;
+			}
+			else if (curLevel.Value() < 95 && (Tenv - Tparcel) > 30.)
+			{
+				// Temperature gap between environment and parcel too large --> abort search.
+				// Only for values higher in the atmosphere, to avoid the effects of inversion
+
+				found[i] = true;
 			}
 		}
 		
