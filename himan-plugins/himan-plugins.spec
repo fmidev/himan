@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.2.3
-Release: 1%{dist}.fmi
+Version: 16.2.12
+Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -21,18 +21,18 @@ Requires: himan-bin >= 15.11.19
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 15.9.14
-Requires: libsmartmet-newbase >= 15.11.23
-Requires: libfmidb >= 15.11.10
+Requires: libsmartmet-newbase >= 16.2.4
+Requires: libfmidb >= 16.2.12
 
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libfmidb >= 15.11.10
+BuildRequires: libfmidb-devel >= 16.2.12
 BuildRequires: libfmigrib-devel >= 15.9.14
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase-devel >= 15.11.23
+BuildRequires: libsmartmet-newbase-devel >= 16.2.4
 BuildRequires: libsmartmet-smarttools-devel >= 15.3.16
 BuildRequires: grib_api-devel >= 1.14.0
 BuildRequires: redhat-rpm-config
@@ -102,6 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Feb 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.12-1.fmi
+- Changes to si
+- New newbase and fmidb
 * Mon Feb  3 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.3-1.fmi
 - Fix split_sum crash
 * Mon Feb  1 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.1-1.fmi
