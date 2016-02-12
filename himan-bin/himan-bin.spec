@@ -3,8 +3,8 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 15.12.21
-Release: 1%{dist}.fmi
+Version: 16.2.12
+Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,13 +13,13 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 15.11.6
+Requires: himan-lib >= 16.2.12
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
 Requires: boost-iostreams
 Requires: boost-thread
-Requires: libsmartmet-newbase >= 15.11.10
+Requires: libsmartmet-newbase >= 16.2.4
 Requires: libsmartmet-smarttools >= 15.4.9
 Requires: jasper
 Requires: grib_api >= 1.14.0
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Fri Feb 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.12-1.fmi
+- New newbase
 * Mon Dec 21 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.21-1.fmi
 - himan lib API change
 * Thu Nov 19 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.19-1.fmi
