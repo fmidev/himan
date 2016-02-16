@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.2.12
+Version: 16.2.16
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -102,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Feb 16 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.16-1.fmi
+- Changes to si
 * Fri Feb 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.12-1.fmi
 - Changes to si
 - New newbase and fmidb
