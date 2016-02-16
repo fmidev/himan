@@ -231,6 +231,16 @@ std::string MakeSQLInterval(const himan::forecast_time& theTime);
 
 std::string Expand(const std::string& in);
 
+/**
+ * @brief Dump contents of vector to stdout. Name is used to identify dump, when
+ * multiple vectors are dumped sequentially.
+ * 
+ * @param arr vector of doubles
+ * @param name identifier for vector
+ */
+
+void DumpVector(const std::vector<double>& arr, const std::string& name);
+
 } // namespace util
 } // namespace himan
 

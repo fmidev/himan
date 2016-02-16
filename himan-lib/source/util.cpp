@@ -914,6 +914,69 @@ string util::Expand(const string& in)
 	return ret;
 }
 
+void util::DumpVector(const vector<double>& vec, const string& name)
+{
+	double min = 1e38, max = -1e38, sum = 0;
+	size_t count = 0, missing = 0;
+
+	for(const double& val : vec)
+	{
+		if (val == himan::kFloatMissing)
+		{
+			missing++;
+			continue;
+		}
+
+		min = (val < min) ? val : min;
+		max = (val > max) ? val : max;
+		count++;
+		sum += val;
+	}
+
+	double mean = numeric_limits<double>::quiet_NaN();
+
+	if (count > 0)
+	{
+		mean = sum / static_cast<double> (count);
+	}
+
+	cout << name << "\tmin " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
+
+	int binn = 10;
+	
+	double binw = (max-min)/10;
+
+	double binmin = min;
+	double binmax = binmin + binw;
+
+	cout << "distribution:" << endl;
+
+	for (int i = 1; i <= binn; i++)
+	{
+		if (i == binn) binmax += 0.001;
+
+		size_t count = 0;
+
+		for (const double& val : vec)
+		{
+			if (val == himan::kFloatMissing) continue;
+
+			if (val >= binmin && val < binmax)
+			{
+				count++;
+			}
+		}
+
+		if (i == binn) binmax -= 0.001;
+
+		cout << binmin << ":" << binmax << " " << count << std::endl;
+
+		binmin += binw;
+		binmax += binw;
+
+	}
+}
+
 #ifdef HAVE_CUDA
 void util::Unpack(initializer_list<grid*> grids)
 {
