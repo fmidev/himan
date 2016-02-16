@@ -216,9 +216,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, forecastType, false);
 	info_t TInfo = Fetch(forecastTime, surface0mLevel, TParam, forecastType, false);
-	info_t RHInfo = Fetch(forecastTime, surface2mLevel, RHParam, forecastType, false);
 
-	if (!RRInfo || !TInfo || !RHInfo)
+	if (!RRInfo || !TInfo)
 	{
 		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
@@ -264,26 +263,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	assert(myTargetInfo->SizeLocations() == freezingArea->SizeLocations());
 	assert(myTargetInfo->SizeLocations() == TInfo->SizeLocations());
 	assert(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
-	assert(myTargetInfo->SizeLocations() == RHInfo->SizeLocations());
-
-	double RHScale = 100;
-
-	if (RHInfo->Param().Unit() == kPrcnt)
-	{
-		RHScale = 1;
-	}
-	
-	if (itsConfiguration->SourceProducer().Id() == 199)
-	{
-		// Thanks Harmonie
-		RHScale = 100.;
-	}
 
 	myTargetInfo->FirstParam();
 
 	bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
 
-	LOCKSTEP (myTargetInfo, stratus, freezingArea, TInfo, RRInfo, RHInfo)
+	LOCKSTEP (myTargetInfo, stratus, freezingArea, TInfo, RRInfo)
 	{
 
 		stratus->Param(stratusBaseParam);
@@ -333,9 +318,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		
 		double RR = RRInfo->Value();
 		double T = TInfo->Value();
-		double RH = RHInfo->Value();
 
-		if (RR == MISS || T == MISS || RH == MISS)
+		if (RR == MISS || T == MISS)
 		{
 			continue;
 		}
@@ -350,7 +334,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		// Unit conversions
 
 		T -= himan::constants::kKelvin; // K --> C
-		RH *= RHScale;
 
 		if (Ttop != MISS)
 		{
@@ -367,7 +350,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			Navg *= 100; // --> %
 		}
 
-		assert(RH >= 0 && RH < 102);
 		assert(T >= -80 && T < 80);
 		assert(!noPotentialPrecipitationForm || RR > 0);
 		assert(Navg == MISS || (Navg >= 0 && Navg <= 100));
@@ -380,7 +362,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				<< "RR\t\t" << RR << endl
 				<< "stTavg\t\t" << stTavg << endl
 				<< "T\t\t" << T << endl
-				<< "RH\t\t" << RH << endl
 				<< "plusArea\t" << plusArea << endl
 				<< "plusAreaSfc\t" << plusAreaSfc << endl
 				<< "minusArea\t" << minusArea << endl
