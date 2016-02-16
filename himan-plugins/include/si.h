@@ -76,13 +76,13 @@ private:
 	 * CAPE1040		vertical profile limited to areas where env temperature is between -40 .. -10
 	 * CAPE3km		vertical profile limited to lower 3000 meters
 	 */
-	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>, std::vector<double>, std::vector<double>> GetCAPE(std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P);
-	std::vector<double> GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL, const std::vector<double>& PLFC);
+	void GetCAPE(std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P, himan::param ELTParam, himan::param ELPParam, himan::param CAPEParam, himan::param CAPE1040Param, himan::param CAPE3kmParam);
+	void GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL, const std::vector<double>& PLFC, himan::param CINParam);
 
 	int itsBottomLevel;
 	int itsTopLevel;
 	
-	HPSoundingIndexSourceDataType itsSourceData;
+	std::vector<HPSoundingIndexSourceDataType> itsSourceDatas;
 };
 
 // the class factory
