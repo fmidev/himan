@@ -18,6 +18,7 @@
 #include "forecast_time.h"
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
+#include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -28,64 +29,6 @@
 using namespace std;
 using namespace himan;
 using namespace himan::plugin;
-
-#ifdef DEBUG
-void DumpVector(const vector<double>& vec)
-{
-	double min = 1e38, max = -1e38, sum = 0;
-	size_t count = 0, missing = 0;
-
-	BOOST_FOREACH(double val, vec)
-	{
-		if (val == MISS)
-		{
-			missing++;
-			continue;
-		}
-
-		min = (val < min) ? val : min;
-		max = (val > max) ? val : max;
-		count++;
-		sum += val;
-	}
-
-	double mean = numeric_limits<double>::quiet_NaN();
-
-	if (count > 0)
-	{
-		mean = sum / static_cast<double> (count);
-	}
-
-	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
-
-	int binn = 10;
-	double binw = (max-min)/10;
-
-	double binmin = min;
-	double binmax = binmin + binw;
-
-	for (int i = 1; i <= binn; i++)
-	{
-		if (i == binn) binmax += 0.001;
-
-		size_t count = 0;
-		BOOST_FOREACH(double val, vec)
-        	{
-			if (val >= binmin && val < binmax) count++;
-		}
-
-		if (i == binn) binmax -= 0.001;
-
-		cout << binmin << ":" << binmax << " " << count << endl;
-
-		binmin += binw;
-		binmax += binw;
-
-	}
-
-}
-#endif
-
 
 // 0. Mallissa sadetta (RR>0; RR = rainfall + snowfall, [RR]=mm/h)
 //
@@ -329,6 +272,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	{
 		RHScale = 1;
 	}
+	
+	if (itsConfiguration->SourceProducer().Id() == 199)
+	{
+		// Thanks Harmonie
+		RHScale = 100.;
+	}
 
 	myTargetInfo->FirstParam();
 
@@ -422,7 +371,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		assert(T >= -80 && T < 80);
 		assert(!noPotentialPrecipitationForm || RR > 0);
 		assert(Navg == MISS || (Navg >= 0 && Navg <= 100));
-		
+	
 /*
 		cout	<< "base\t\t" << base << endl
 				<< "top\t\t" << top << endl
@@ -651,7 +600,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			assert(numZeroLevels[i] != MISS);
 		}
 
-		DumpVector(numZeroLevels);
+		util::DumpVector(numZeroLevels, "num zero levels");
 #endif
 
 		zeroLevel1.resize(numZeroLevels.size(), MISS);
@@ -676,56 +625,56 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		zeroLevel1 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 1);
 
 #ifdef DEBUG
-		DumpVector(zeroLevel1);
+		util::DumpVector(zeroLevel1, "zero level 1");
 #endif
 
 		logger->Trace("Searching for average temperature between ground level and first zero level");
 		Tavg01 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
 
 #ifdef DEBUG
-		DumpVector(Tavg01);
+		util::DumpVector(Tavg01, "tavg 01");
 #endif
 
 		logger->Trace("Searching for second zero level height");
 		zeroLevel2 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
 
 #ifdef DEBUG
-		DumpVector(zeroLevel2);
+		util::DumpVector(zeroLevel2, "zero level 2");
 #endif
 
 		logger->Trace("Searching for average temperature between first and second zero level");
 		Tavg12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 
 #ifdef DEBUG
-		DumpVector(Tavg12);
+		util::DumpVector(Tavg12, "tavg 12");
 #endif
 
 		logger->Trace("Searching for third zero level height");
 		zeroLevel3 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
 
 #ifdef DEBUG
-		DumpVector(zeroLevel3);
+		util::DumpVector(zeroLevel3, "zero level 3");
 #endif
 
 		logger->Trace("Searching for average temperature between second and third zero level");
 		Tavg23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
 
 #ifdef DEBUG
-		DumpVector(Tavg23);
+		util::DumpVector(Tavg23, "tavg 23");
 #endif
 
 		logger->Trace("Searching for fourth zero level height");
 		zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
 
 #ifdef DEBUG
-		DumpVector(zeroLevel4);
+		util::DumpVector(zeroLevel4, "zero level 4");
 #endif
 
 		logger->Trace("Searching for average temperature between third and fourth zero level");
 		Tavg34 = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
 
 #ifdef DEBUG
-		DumpVector(Tavg34);
+		util::DumpVector(Tavg34, "tavg 34");
 #endif
 
 		wantedParam = param("RH-PRCNT");
@@ -735,7 +684,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		rhAvg01 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
 		
 #ifdef DEBUG
-		DumpVector(rhAvg01);
+		util::DumpVector(rhAvg01, "rh avg 01");
 #endif
 
 		logger->Trace("Searching for average humidity between first and second zero level");
@@ -744,7 +693,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 		
 #ifdef DEBUG
-		DumpVector(rhAvgUpper12);
+		util::DumpVector(rhAvgUpper12, "rh avg upper 12");
 #endif
 
  		logger->Trace("Searching for average humidity between second and third zero level");
@@ -753,7 +702,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
 		
 #ifdef DEBUG
-		DumpVector(rhAvgUpper23);
+		util::DumpVector(rhAvgUpper23, "rh avg upper 23");
 #endif
 	
 	}
@@ -891,13 +840,13 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	}
 
 #ifdef DEBUG
-	DumpVector(minusArea);
-	DumpVector(plusArea);
-	DumpVector(plusAreaSfc);
-	DumpVector(rhAvg);
-	DumpVector(rhAvgUpper);
-	DumpVector(rhMelt);
-	DumpVector(rhMeltUpper);
+	util::DumpVector(minusArea);
+	util::DumpVector(plusArea);
+	util::DumpVector(plusAreaSfc);
+	util::DumpVector(rhAvg);
+	util::DumpVector(rhAvgUpper);
+	util::DumpVector(rhMelt);
+	util::DumpVector(rhMeltUpper);
 #endif
 
 	ret->Param(minusAreaParam);
@@ -978,7 +927,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		}
 
 #ifdef DEBUG
-		DumpVector(baseThreshold);
+		util::DumpVector(baseThreshold);
 #endif
 
 		ret->Param(stratusBaseParam);
@@ -998,7 +947,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		}
 
 #ifdef DEBUG
-		DumpVector(topThreshold);
+		util::DumpVector(topThreshold);
 #endif
 
 		// Stratus Base/top [m]
@@ -1012,7 +961,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Data().Set(stratusBase);
 
 #ifdef DEBUG
-		DumpVector(stratusBase);
+		util::DumpVector(stratusBase);
 #endif
 
 		logger->Info("Searching for stratus top accurate value");
@@ -1022,7 +971,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Data().Set(stratusTop);
 
 #ifdef DEBUG
-		DumpVector(stratusTop);
+		util::DumpVector(stratusTop);
 #endif
 
 		logger->Info("Searching for cloudiness in layers above stratus top");
@@ -1049,7 +998,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Data().Set(upperLayerN);
 
 #ifdef DEBUG
-		DumpVector(upperLayerN);
+		util::DumpVector(upperLayerN);
 #endif
 
 		logger->Info("Searching for stratus mean cloudiness");
@@ -1058,7 +1007,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		auto stratusMeanN = h->VerticalAverage(wantedParamList, stratusBase, stratusTop);
 
 #ifdef DEBUG
-		DumpVector(stratusMeanN);
+		util::DumpVector(stratusMeanN);
 #endif
 
 		ret->Param(stratusMeanCloudinessParam);
@@ -1072,7 +1021,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		auto stratusTopTemp = h->VerticalValue(wantedParam, stratusTop);
 
 #ifdef DEBUG
-		DumpVector(stratusTopTemp);
+		util::DumpVector(stratusTopTemp);
 #endif
 
 		ret->Param(stratusTopTempParam);
@@ -1106,7 +1055,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		auto stratusMeanTemp = h->VerticalAverage(wantedParam, constData1, constData2);
 
 #ifdef DEBUG
-		DumpVector(stratusMeanTemp);
+		util::DumpVector(stratusMeanTemp);
 #endif
 
 		ret->Param(stratusMeanTempParam);
@@ -1134,13 +1083,13 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 				BOOST_FOREACH(double& d, stratusVerticalVelocity)
 				{
-					d *= 1000;
+					if (d != kFloatMissing) d *= 1000;
 				}
 			}
 		}
 
 #ifdef DEBUG
-		DumpVector(stratusVerticalVelocity);
+		util::DumpVector(stratusVerticalVelocity, "stratus vertical velocity");
 #endif
 
 		ret->Param(stratusVerticalVelocityParam);
