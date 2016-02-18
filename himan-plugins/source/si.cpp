@@ -57,7 +57,7 @@ double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv, doubl
 
 double Min(const vector<double>& vec);
 double Max(const vector<double>& vec);
-void MultiplyWith(const vector<double>& vec, double multiplier);
+void MultiplyWith(vector<double>& vec, double multiplier);
 }
 
 const himan::param SBLCLT("LCL-K");
@@ -1860,7 +1860,7 @@ double Min(const vector<double>& vec)
 	return ret;
 }
 
-double max(const vector<double>& vec)
+double Max(const vector<double>& vec)
 { 
 	double ret = -1e38;
 
