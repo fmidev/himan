@@ -940,7 +940,12 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 		mean = sum / static_cast<double> (count);
 	}
 
-	cout << name << "\tmin " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
+	if (!name.empty())
+	{
+		cout << name << "\t";
+	}
+	
+	cout << "tmin " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
 
 	int binn = 10;
 	

@@ -239,7 +239,7 @@ std::string Expand(const std::string& in);
  * @param name identifier for vector
  */
 
-void DumpVector(const std::vector<double>& arr, const std::string& name);
+void DumpVector(const std::vector<double>& arr, const std::string& name = "");
 
 } // namespace util
 } // namespace himan
