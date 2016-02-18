@@ -15,7 +15,6 @@
 
 #include "assert.h"
 #include "himan_common.h"
-//#include "cuda_helper.h"
 
 #ifdef __CUDACC__
 #define CUDA_DEVICE __device__
@@ -23,6 +22,45 @@
 #else
 #define CUDA_DEVICE
 #define CUDA_KERNEL
+#endif
+
+#if defined FAST_MATH and not defined __CUDACC__
+#include "fastmath.h"
+#define EXP(V) fasterexp(static_cast<float> (V))
+#define EXP10(V) fasterexp((static_cast<float> (V)) * 2.30258509299405f)
+#define LOG(V) fasterlog(static_cast<float> (V))
+
+inline double fastpow(double a, double b) {
+  // calculate approximation with fraction of the exponent
+  int e = (int) b;
+  union {
+    double d;
+    int x[2];
+  } u = { a };
+  u.x[1] = (int)((b - e) * (u.x[1] - 1072632447) + 1072632447);
+  u.x[0] = 0;
+ 
+  // exponentiation by squaring with the exponent's integer part
+  // double r = u.d makes everything much slower, not sure why
+  double r = 1.0;
+  while (e) {
+    if (e & 1) {
+      r *= a;
+    }
+    a *= a;
+    e >>= 1;
+  }
+ 
+  return r * u.d;
+}
+
+#define POW(V,E) fastpow(V, E)
+
+#else
+#define EXP(V) exp(V)
+#define EXP10(V) exp10(V)
+#define LOG(V) log(V)
+#define POW(V,E) pow(V,E)
 #endif
 
 #include <NFmiInterpolation.h>
@@ -549,8 +587,8 @@ double ThetaE_(double T, double P);
  * 
  * Formula used is taken from smarttools-library.
  * 
- * Formula is computationally simple, but not very accurate (several degrees 
- * difference between ThetaE_() functions' results)
+ * Formula is computationally simple, but it's less accurate than
+ * ThetaE_()
  * 
  * @param T The temperature of a saturated air parcel (Kelvin)
  * @param P The initial pressure of the parcel (Pa)
@@ -559,7 +597,6 @@ double ThetaE_(double T, double P);
 
 CUDA_DEVICE
 double ThetaESimple_(double T, double P);
-
 
 /**
  * @brief Calculate wet-bulb potential temperature
@@ -661,7 +698,7 @@ inline double himan::metutil::DewPointFromRH_(double T, double RH)
 	//assert(RH < 101.);
 	assert(T > 0. && T < 500.);
 
-	return (T / (1 - (T * log(RH * 0.01) * constants::kRw_div_L)));
+	return (T / (1 - (T * LOG(RH * 0.01) * constants::kRw_div_L)));
 }
 
 CUDA_DEVICE
@@ -691,9 +728,14 @@ inline double himan::metutil::E_(double R, double P)
 CUDA_DEVICE
 inline double himan::metutil::DryLift_(double P, double T, double targetP)
 {
+	if (T == kFloatMissing || P == kFloatMissing || targetP == kFloatMissing || targetP >= P)
+	{
+		return kFloatMissing;
+	}
+	
 	// Sanity checks
-	assert(P > 1000);
-	assert(T > 0 && T < 500);
+	assert(P > 10000);
+	assert(T > 100 && T < 400);
 	assert(targetP > 10000);
 
 	return T * pow((targetP / P), 0.286);
@@ -702,12 +744,6 @@ inline double himan::metutil::DryLift_(double P, double T, double targetP)
 CUDA_DEVICE
 inline double himan::metutil::Lift_(double P, double T, double TD, double targetP)
 {
-	// Sanity checks
-	assert(P > 10000);
-	assert(T > 0 && T < 500);
-	assert(TD > 0 && TD < 500);
-	assert(targetP > 10000);
-
 	// Search LCL level
 	lcl_t LCL = metutil::LCLA_(P, T, TD);
 
@@ -723,12 +759,6 @@ inline double himan::metutil::Lift_(double P, double T, double TD, double target
 CUDA_DEVICE
 inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double targetP)
 {
-	// Sanity checks
-	assert(P > 10000);
-	assert(T > 0 && T < 500);
-	assert(targetP > 10000);
-	assert(LCLP > 10000);
-
 	if (LCLP < targetP)
 	{
 		// LCL level is higher than requested pressure, only dry lift is needed
@@ -748,9 +778,9 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	}
 	// Sanity checks
 
-	assert(P > 1200);
+	assert(P > 10000);
 	assert(T > 100 && T < 400);
-	assert(targetP > 1200);
+	assert(targetP > 10000);
 	
 	double Pint = P; // Pa
 	double Tint = T; // K
@@ -762,7 +792,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	double T0 = Tint;
 
 	int i = 0;
-	const double Pstep = 100; // Pa
+	const double Pstep = 200; // Pa
 	const int maxIter = static_cast<int> (100000/Pstep+10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
 	double value = kFloatMissing;
@@ -783,7 +813,6 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 #else
 			value = NFmiInterpolation::Linear(targetP, Pint, Pint+Pstep, T0, Tint);
 #endif
-		//	value = Tint;
 			break;
 		}
 	
@@ -897,7 +926,7 @@ lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 	lcl_t ret;
 	
 	double A = 1 / (TD - 56);
-	double B = log(T/TD) / 800;
+	double B = log(T/TD) / 800.;
 	
 	ret.T = 1 / (A + B) + 56;
 	ret.P = P * pow((ret.T / T), 3.5011);
@@ -925,11 +954,11 @@ double himan::metutil::Es_(double T)
 
 	if (T > -5)
 	{
-		Es = 6.107 * exp10(7.5*T/(237.0+T));
+		Es = 6.107 * EXP10(7.5*T/(237.0+T));
 	}
 	else
 	{
-		Es = 6.107 * exp10(9.5*T/(265.5+T));
+		Es = 6.107 * EXP10(9.5*T/(265.5+T));
 	}
 	
 	assert(Es == Es); // check NaN
@@ -1176,8 +1205,8 @@ double himan::metutil::ThetaE_(double T, double P)
 	double A = T * pow(100000./P, 0.2854 * (1 - 0.00028 * r));
 	double B = 3.376 / T - 0.00254;
 	double C = r * (1 + 0.00081 * r);
-	
-	return A * exp(B * C);
+
+	return A * EXP(B * C);
 }
 
 CUDA_DEVICE
