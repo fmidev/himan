@@ -945,7 +945,7 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 		cout << name << "\t";
 	}
 	
-	cout << "tmin " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
+	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
 
 	int binn = 10;
 	
