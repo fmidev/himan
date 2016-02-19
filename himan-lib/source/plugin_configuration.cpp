@@ -61,7 +61,8 @@ string plugin_configuration::Name() const
 
 bool plugin_configuration::Exists(const string & key) const
 {
-	return !(GetValue(key).empty());
+	map<string,vector<string>>::const_iterator iter = itsOptions.find(key);
+	return (iter != itsOptions.end());
 }
 
 string plugin_configuration::GetValue(const string & key) const
