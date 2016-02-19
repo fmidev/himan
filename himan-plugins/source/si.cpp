@@ -58,6 +58,7 @@ double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv, doubl
 double Min(const vector<double>& vec);
 double Max(const vector<double>& vec);
 void MultiplyWith(vector<double>& vec, double multiplier);
+void AddTo(vector<double>& vec, double incr);
 }
 
 const himan::param SBLCLT("LCL-K");
@@ -326,7 +327,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 
 	DumpVector(get<0>(TandTD), "T");
 	DumpVector(get<1>(TandTD), "TD");
-	
+
 	// 2.
 	
 	cout << "\n--- LCL --\n" << endl;
@@ -825,13 +826,15 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 	
 	// Convert pressure to Pa since metutil-library expects that
 	CAPE::MultiplyWith(Piter, 100);
-
+	
+	info_t TenvInfo, PenvInfo, ZenvInfo;
+	
 	while (curLevel.Value() > 60 && foundCount != found.size())
 	{
 		// Get environment temperature, pressure and height values for this level
-		auto PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
-		auto TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
-		auto ZenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
+		PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+		TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+		ZenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
 
 		// Convert pressure to Pa since metutil-library expects that
 		auto PenvVec = PenvInfo->Data().Values();
@@ -961,6 +964,23 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 			}
 		}
 	}
+	
+	// If the CAPE area is continued all the way to level 60 and beyond, we don't have an EL for that
+	// (since integration is forcefully stopped)
+	// In this case level 60 = EL
+	
+	for (size_t i = 0; i < CAPE.size(); i++)
+	{
+		if (CAPE[i] > 0 && ELT[i] == kFloatMissing)
+		{
+			TenvInfo->LocationIndex(i);
+			PenvInfo->LocationIndex(i);
+			
+			ELT[i] = TenvInfo->Value();
+			ELP[i] = PenvInfo->Value();
+		}
+	}
+	
 	
 #ifdef DEBUG
 	DumpVector(MUCAPEZonesEntered, "CAPEZonesEntered");
@@ -1256,32 +1276,37 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	modifier_mean tp, mr;
 	level curLevel(kHybrid, 137);
 
-#if 1
-	itsLogger->Info("Calculating T&Td in smarttool compatibility mode");
 	auto h = GET_PLUGIN(hitool);
+	
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
-	h->HeightUnit(kHPa);
+
+#if 1
+	itsLogger->Info("Calculating T&Td in smarttool compatibility mode");
+
+	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
 
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
-	
+
 	auto PInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 	auto P = PInfo->Data().Values();	
 
+	h->HeightUnit(kHPa);
+
 	tp.LowerHeight(P);
 	mr.LowerHeight(P);
-
-	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
 
 	tp.UpperHeight(P500m);
 	mr.UpperHeight(P500m);
 	
 	vector<bool> found(myTargetInfo->Data().Size(), false);
+	size_t foundCount = 0;
 
-	while (true)
+	while (foundCount != found.size())
 	{
 		auto T = h->VerticalValue(param("T-K"), P);
+		auto RH = h->VerticalValue(param("RH-PRCNT"), P);
 		
 		vector<double> Tpot(T.size(), kFloatMissing);
 		vector<double> MR(T.size(), kFloatMissing);
@@ -1291,30 +1316,56 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 			if (found[i]) continue;
 
 			Tpot[i] = metutil::Theta_(T[i], 100*P[i]);
-			MR[i] = metutil::MixingRatio_(T[i], 100*P[i]);
+			//MR[i] = metutil::MixingRatio_(T[i], 100*P[i]);
+			MR[i] = [&](){
+				
+				// es				
+				const double b = 17.2694;
+				const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
+				const double T1 = 273.16; // [K]
+				const double T2 = 35.86; // [K]
+
+				double nume = b * (T[i]-T1);
+				double deno = (T[i]-T2);
+
+				double es = e0 * ::exp(nume/deno);
+				
+				// e
+				double e = RH[i] * es / 100;
+				
+				// w
+				double w = 0.622 * e/P[i] * 1000;
+	
+				return w;
+			}();
 		}
-		DumpVector(MR, "mr");
 
 		tp.Process(Tpot, P);
 		mr.Process(MR, P);
 
-		auto Z = h->VerticalValue(param("HL-M"), P);
-		
-		for (size_t i = 0; i < Z.size(); i++)
+		foundCount = tp.HeightsCrossed();
+
+		assert(tp.HeightsCrossed() == mr.HeightsCrossed());
+
+		//itsLogger->Debug("Data read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
+
+		for (size_t i = 0; i < found.size(); i++)
 		{
-			if (found[i]) continue;
-			if (Z[i] > 500.) found[i] = true;
+			assert(P[i] > 100 && P[i] < 1500);
+			
+			if (found[i])
+			{
+				P[i] = kFloatMissing; // disable processing of this
+			}
+			else
+			{
+				P[i] -= 2.0;
+			}
 		}
-		
-		auto foundCount = static_cast<size_t> (count(found.begin(), found.end(), true));
-		itsLogger->Debug("Data read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
-
-		if (foundCount == found.size()) break;
-
-		transform(P.begin(), P.end(), P.begin(), bind2nd(minus<double>(), 1.0));
 	}
-		
-#else
+
+#endif	
+#if 0
 	itsLogger->Info("Calculating T&Td himan style");
 	vector<double> zero(myTargetInfo->Data().Size(), 0);
 	vector<double> m500(zero.size(), 500.);
@@ -1333,6 +1384,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 		auto ZInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
 
 		auto T = TInfo->Data().Values();
+
 		auto RH = RHInfo->Data().Values();
 		auto P = PInfo->Data().Values();
 
@@ -1341,8 +1393,32 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 
 		for (size_t i = 0; i < T.size(); i++)
 		{
+			assert(T[i] != kFloatMissing);
+			assert(P[i] != kFloatMissing);
+	
 			Tpot[i] = metutil::Theta_(T[i], 100*P[i]);
-			MR[i] = metutil::MixingRatio_(T[i], 100*P[i]);
+			//MR[i] = metutil::MixingRatio_(T[i], 100*P[i]);
+			MR[i] = [&](){
+				
+				// es				
+				const double b = 17.2694;
+				const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
+				const double T1 = 273.16; // [K]
+				const double T2 = 35.86; // [K]
+
+				double nume = b * (T[i]-T1);
+				double deno = (T[i]-T2);
+
+				double es = e0 * ::exp(nume/deno);
+				
+				// e
+				double e = RH[i] * es / 100;
+				
+				// w
+				double w = 0.622 * e/P[i] * 1000;
+	
+				return w;
+			}();
 		}
 
 		tp.Process(Tpot, ZInfo->Data().Values());
@@ -1358,18 +1434,14 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	DumpVector(Tpot, "Tpot");
 	DumpVector(MR, "MR");
 
-	// Need surface pressure
-
-	const params PParams({param("PGR-PA"), param("P-PA")});
-
-	auto Psurf = Fetch(myTargetInfo->Time(), level(kHeight, 0), PParams, myTargetInfo->ForecastType(), false);
+	auto Psurf = Fetch(myTargetInfo->Time(), level(kHybrid, 137), param("P-HPA"), myTargetInfo->ForecastType(), false);
 	P = Psurf->Data().Values();
 
 	vector<double> T(Tpot.size(), kFloatMissing);			
 
 	for (size_t i = 0; i < Tpot.size(); i++)
 	{
-		T[i] = Tpot[i] * pow((P[i]/100000.), 0.2854);
+		T[i] = Tpot[i] * pow((P[i]/1000.), 0.2854);
 	}
 
 	vector<double> TD(T.size(), kFloatMissing);
@@ -1377,7 +1449,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	for (size_t i = 0; i < MR.size(); i++)
 	{
 		double Es = metutil::Es_(T[i]); // Saturated water vapor pressure
-		double E = metutil::E_(MR[i], P[i]);
+		double E = metutil::E_(MR[i], 100*P[i]);
 
 		double RH = E/Es * 100;
 		TD[i] = metutil::DewPointFromRH_(T[i], RH);
@@ -1570,7 +1642,7 @@ double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparcel, dou
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 	
 	assert(CAPE >= 0);
-	assert(CAPE < 100);
+	assert(CAPE < 150);
 	
 	return CAPE;
 }
@@ -1608,7 +1680,7 @@ tuple<double,double,double> IntegrateLeavingParcel(double Tenv, double prevTenv,
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
 
 	assert(CAPE >= 0);	
-	assert(CAPE < 100);
+	assert(CAPE < 150);
 	
 	return make_tuple(CAPE, intersectionP.X(), intersectionP.Y());
 }
@@ -1697,7 +1769,7 @@ double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTenv, doub
 
    assert(Zenv >= prevZenv);
    assert(CAPE >= 0.);
-   assert(CAPE < 100.);
+   assert(CAPE < 150.);
    
    return CAPE;
 }
@@ -1775,8 +1847,8 @@ double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv, doubl
 
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((newTparcel - areaLimit) / areaLimit);
 
-	assert(CAPE >= 0.);		
-	assert(CAPE < 100);
+	assert(CAPE >= 0.);	
+	assert(CAPE < 150.);
 	
 	return CAPE;
 }
@@ -1841,7 +1913,7 @@ double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, double Tpa
 	double CAPE = himan::constants::kG * (areaUpperLimit - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
 
 	assert(CAPE >= 0.);		
-	assert(CAPE < 100);
+	assert(CAPE < 150);
 	
 	return CAPE;
 }
@@ -1879,6 +1951,14 @@ void MultiplyWith(vector<double>& vec, double multiplier)
 	for(double& val : vec)
 	{
 		if (val != kFloatMissing) val *= multiplier;
+	}
+}
+
+void AddTo(vector<double>& vec, double incr)
+{
+	for(double& val : vec)
+	{
+		if (val != kFloatMissing) val += incr;
 	}
 }
 
