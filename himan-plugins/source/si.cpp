@@ -125,7 +125,13 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 	itsTopLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
 
 	vector<param> theParams;
-	vector<string> sourceDatas = itsConfiguration->GetValueList("source_data");
+	
+	vector<string> sourceDatas;
+	
+	if (itsConfiguration->Exists("source_data"))
+	{
+		sourceDatas = itsConfiguration->GetValueList("source_data");
+	}
 	
 	if (sourceDatas.size() == 0)
 	{
