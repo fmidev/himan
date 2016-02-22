@@ -58,7 +58,6 @@ if os.environ.get('CXX') != None:
 # Includes
 
 includes = []
-
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
@@ -78,7 +77,6 @@ env.Append(CPPPATH = includes)
 
 librarypaths = []
 
-librarypaths.append(workspace + '/fmidb/lib')
 librarypaths.append('/usr/lib64')
 
 if os.environ.get('ORACLE_HOME') is None:
@@ -92,14 +90,15 @@ env.Append(LIBPATH = librarypaths)
 
 libraries = []
 
+libraries.append('fmidb')
 libraries.append('smartmet_newbase')
 libraries.append('dl')
 libraries.append('clntsh')
-libraries.append('fmidb')
 libraries.append('pqxx')
 libraries.append('z')
 libraries.append('bz2')
 libraries.append('boost_iostreams')
+libraries.append('grib_api')
 
 env.Append(LIBS = libraries)
 
@@ -115,6 +114,7 @@ cflags_normal.append('-Wall')
 cflags_normal.append('-W')
 cflags_normal.append('-Wno-unused-parameter')
 cflags_normal.append('-Werror')
+cflags_normal.append('-Wno-narrowing')
 
 # Extra flags
 
@@ -146,11 +146,7 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 
 cflags = []
 
-if not IS_RHEL or (IS_RHEL and OS_VERSION >= 7.0):
-	cflags.append('-std=c++11')
-else:
-	cflags.append('-std=c++0x')
-
+cflags.append('-std=c++11')
 cflags.append('-fPIC')
 
 env.Append(CCFLAGS = cflags)
@@ -173,9 +169,7 @@ env.Append(NVCCFLAGS = ['-m64'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
 env.Append(NVCCFLAGS = ['-arch=compute_35','-code=sm_35'])
-
-if IS_RHEL and OS_VERSION >= 7.0:
-	env.Append(NVCCFLAGS = ['-std=c++11'])
+env.Append(NVCCFLAGS = ['-std=c++11'])
 
 env.Append(NVCCPATH = ['./include'])
 env.Append(NVCCPATH = [workspace + '/himan-plugins/include']) # cuda-helper
