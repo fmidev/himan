@@ -81,11 +81,9 @@ library_paths = []
 
 if RELEASE:
 	library_paths.append(workspace + '/himan-lib/build/release')
-	library_paths.append(workspace + '/fmigrib/build/release')
 
 elif DEBUG:
 	library_paths.append(workspace + '/himan-lib/build/debug')
-	library_paths.append(workspace + '/fmigrib/build/debug')
 
 library_paths.append(workspace + '/fmidb/lib')
 library_paths.append('/usr/lib64')
@@ -126,6 +124,7 @@ cflags_normal.append('-Wall')
 cflags_normal.append('-W')
 cflags_normal.append('-Wno-unused-parameter')
 cflags_normal.append('-Werror')
+cflags_normal.append('-Wno-narrowing')
 
 # Extra flags
 
