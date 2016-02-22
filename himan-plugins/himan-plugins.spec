@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.2.18
+Version: 16.2.22
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -101,6 +101,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Feb 22 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.22-1.fmi
+- Changes to si
 * Thu Feb 18 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.18-1.fmi
 - New release
 * Tue Feb 16 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.16-1.fmi
@@ -108,7 +110,7 @@ rm -rf $RPM_BUILD_ROOT
 * Fri Feb 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.12-1.fmi
 - Changes to si
 - New newbase and fmidb
-* Mon Feb  3 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.3-1.fmi
+* Wed Feb  3 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.3-1.fmi
 - Fix split_sum crash
 * Mon Feb  1 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.1-1.fmi
 - Adding support for potential precipitation form
@@ -138,9 +140,9 @@ rm -rf $RPM_BUILD_ROOT
 - Fix lnsp issue with analysis time
 * Tue Dec  8 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.8-1.fmi
 - Optimizations for hybrid_pressure and hybrid_height
-* Wed Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-2.fmi
+* Fri Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-2.fmi
 - Removing debug code from preform_hybrid
-* Wed Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-1.fmi
+* Fri Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.25-1.fmi
 - Changes in himan-lib
 * Fri Nov 20 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.20-1.fmi
 - Changes in himan-lib
