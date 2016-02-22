@@ -79,8 +79,8 @@ const himan::param SB500LFCP("LFC500-HPA");
 const himan::param SB500ELT("EL500-K");
 const himan::param SB500ELP("EL500-HPA");
 const himan::param SB500CAPE("CAPE500-JKG", 59);
-const himan::param SB500CAPE1040("CAPE5001040-JKG", 59);
-const himan::param SB500CAPE3km("CAPE5003KM-JKG", 59);
+const himan::param SB500CAPE1040("CAPE5001040", 59);
+const himan::param SB500CAPE3km("CAPE5003KM", 59);
 const himan::param SB500CIN("CIN500-JKG", 66);
 
 const himan::param MULCLT("LCLMU-K");
