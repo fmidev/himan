@@ -157,11 +157,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 			continue;
 		}
 
-		if (isECMWF)
-		{
-			P = exp (P);
-		}
-
 		result = 0.01 * (A + P * B);
 	}
 
