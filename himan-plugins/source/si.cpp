@@ -367,6 +367,11 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 
 	mySubThreadedLogger->Info("LFC calculated in " + boost::lexical_cast<string> (timer->GetTime()) + " ms");
 
+	if (LFC.first.empty())
+	{
+		return;
+	}
+
 	myTargetInfo->Param(LFCTParam);
 	myTargetInfo->Data().Set(LFC.first);
 	
@@ -1025,7 +1030,21 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	
 	itsLogger->Info("Searching environment temperature for LCL");
 
-	auto TenvLCL = h->VerticalValue(param("T-K"), P);
+	vector<double> TenvLCL;
+
+	try
+	{
+		TenvLCL = h->VerticalValue(param("T-K"), P);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			return make_pair(vector<double>(), vector<double>());
+		}
+
+		throw e;
+	}
 
 	auto Piter = P, Titer = T; // integration variables
 	
@@ -1248,7 +1267,7 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 	
 	if (!TInfo || !TDInfo)
 	{
-		throw runtime_error("Surface temperature and/or dewpoint not found");
+		return make_pair(vector<double>(),vector<double>());
 	}
 	auto T = TInfo->Data().Values();
 	auto TD = TDInfo->Data().Values();
@@ -1290,13 +1309,34 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 #if 1
 	itsLogger->Info("Calculating T&Td in smarttool compatibility mode");
 
-	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
-
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
 
 	auto PInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+
+	if (!PInfo)
+	{
+		return make_pair(vector<double>(), vector<double>());
+	}
+	else
+	{
+		// Himan specialty: empty data grid
+		
+		size_t miss = 0;
+		for (auto& val : VEC(PInfo))
+		{
+			if (val == kFloatMissing) miss++;
+		}
+
+		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
+		{
+			return make_pair(vector<double>(), vector<double>());
+		}
+	}
+
 	auto P = PInfo->Data().Values();	
+
+	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
 
 	h->HeightUnit(kHPa);
 
@@ -1482,7 +1522,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 		
 		if (!TInfo || !RHInfo || !PInfo)
 		{
-			throw kFileDataNotFound;
+			return make_pair(vector<double>(),vector<double>());
 		}
 
 		int i = -1;
