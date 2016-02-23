@@ -614,6 +614,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 	try
 	{
 		originDateTime = pt.get<string>("origintime");
+
 		mask = "%Y-%m-%d %H:%M:%S";
 
 		boost::algorithm::to_lower(originDateTime);
@@ -659,10 +660,10 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 
 				prod = r->RadonDB().GetProducerDefinition(static_cast<unsigned long> (sourceProducer.Id()));
 
-				if (!prod.empty())
+				if (!prod.empty() && anInfo->OriginDateTime().Empty())
 				{
 					originDateTime = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
-					
+
 					if (!originDateTime.empty())
 					{
 						mask = "%Y-%m-%d %H:%M:00";
@@ -671,14 +672,14 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 				}
 				
 			}
-			
+
 			if (prod.empty())
 			{
 				throw runtime_error("Producer definition not found for procucer id " + boost::lexical_cast<string> (sourceProducer.Id()));
 			}
-			else if (originDateTime.size() == 0)
+			else if (originDateTime.empty())
 			{
-				throw runtime_error("Latest time not found from Neons for producer '" + prod["ref_prod"] + "'");
+				throw runtime_error("Latest time not found from Neons and/or Radon for producer '" + prod["ref_prod"] + "'");
 			}
 		}
 		else
