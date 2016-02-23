@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.2.22
+Version: 16.2.23
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.2.18
+Requires: himan-lib >= 16.2.23
 Requires: himan-bin >= 16.2.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -101,6 +101,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Feb 23 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.23-1.fmi
+- Fix si for forecast step=0
+- Do not write empty grids at hybrid_pressure
 * Mon Feb 22 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.22-1.fmi
 - Changes to si
 * Thu Feb 18 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.18-1.fmi
