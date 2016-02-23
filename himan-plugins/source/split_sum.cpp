@@ -26,6 +26,8 @@
 using namespace std;
 using namespace himan::plugin;
 
+mutex mySingleFileWriteMutex;
+	
 /*
  * When calculating rate, we calculate the average of the time period.
  * So for example if time step is 30 (minutes), we fetch data for time step
@@ -693,40 +695,38 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 }
 
-void split_sum::WriteToFile(const info& targetInfo, const write_options& opts) 
+
+void split_sum::WriteToFile(const info& targetInfo, write_options writeOptions) 
 {
 	auto aWriter = GET_PLUGIN(writer);
-	aWriter->WriteOptions(opts);
+
+	writeOptions.write_empty_grid = false;
+
+	aWriter->WriteOptions(writeOptions);
 
 	// writing might modify iterator positions --> create a copy
 
 	auto tempInfo = targetInfo;
 
-	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	tempInfo.ResetParam();
+
+	while (tempInfo.NextParam())
 	{
-		// If info holds multiple parameters, we must loop over them all
-		// Note! We only loop over the parameters, not over the times or levels!
-
-		tempInfo.ResetParam();
-
-		while (tempInfo.NextParam())
+		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
-			if (itsConfiguration->FileWriteOption() == kDatabase && tempInfo.Data().Size() == tempInfo.Data().MissingCount())
-			{
-				itsLogger->Info("All data missing for " + tempInfo.Param().Name() + " step " + boost::lexical_cast<string> (tempInfo.Time().Step()) + ", not writing to disk");
-				continue;
-			}
-
 			aWriter->ToFile(tempInfo, itsConfiguration);
 		}
+		else
+		{
+			lock_guard<mutex> lock(mySingleFileWriteMutex);
+
+			aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+		}
 	}
-	else if (itsConfiguration->FileWriteOption() == kSingleFile)
-	{
-		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
-	}
-	
+
 	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
 		DeallocateMemory(targetInfo);
 	}
 }
+

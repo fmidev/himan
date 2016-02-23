@@ -44,7 +44,7 @@ public:
 		return HPVersionNumber(1, 2);
 	}
 	
-	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) override;
+	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
 	
 private:
 	void Write(himan::info targetInfo);

@@ -11,26 +11,21 @@
 #include "level.h"
 #include "forecast_time.h"
 
-#define ZIPONCE
-
-#ifdef ZIPONCE
 #include "util.h"
 #include "plugin_factory.h"
-#endif
 
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "cache.h"
+#include "writer.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;
 
-#ifdef ZIPONCE
-mutex lnspMutex;
+mutex lnspMutex, mySingleFileWriteMutex;
 map<int, himan::info_t> lnspInfos;
-#endif
 
 hybrid_pressure::hybrid_pressure()
 {
@@ -79,8 +74,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	info_t PInfo;
 
-#define ZIP
-
 	if (isECMWF)
 	{
 		// For EC we calculate surface pressure from LNSP parameter
@@ -88,7 +81,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		PLevel = level(himan::kHybrid, 1);
 		PParam = { param("LNSP-N") };
 
-#ifdef ZIPONCE
 		// To make calculation more efficient we calculate surface
 		// pressure once from LNSP and store it to cache as LNSP-PA
 
@@ -125,8 +117,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		}
 
 		PParam = { param("LNSP-PA") };
-#endif
-
 		PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
 	}
 	else
@@ -155,7 +145,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
    	double A = ab[0];
    	double B = ab[1];
 
-#ifdef ZIP
 	auto& target = VEC(myTargetInfo);
 
 	for (auto&& tup : zip_range(target, VEC(PInfo)))
@@ -167,35 +156,49 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		{
 			continue;
 		}
-#ifndef ZIPONCE
+
 		if (isECMWF)
 		{
 			P = exp (P);
 		}
-#endif	
+
 		result = 0.01 * (A + P * B);
 	}
 
-#else
-	LOCKSTEP(myTargetInfo, PInfo)
-	{
-		double P = PInfo->Value();
-		
-		if (P == kFloatMissing)
-		{
-			continue;
-		}
-
-		if (isECMWF)
-		{
-			P = exp (P);
-		}
-		
-		double hybrid_pressure = 0.01 * (A + P * B);
-
-		myTargetInfo->Value(hybrid_pressure);
-	}
-#endif
 	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
+}
+
+void hybrid_pressure::WriteToFile(const info& targetInfo, write_options writeOptions) 
+{
+	auto aWriter = GET_PLUGIN(writer);
+
+	writeOptions.write_empty_grid = false;
+
+	aWriter->WriteOptions(writeOptions);
+
+	// writing might modify iterator positions --> create a copy
+
+	auto tempInfo = targetInfo;
+
+	tempInfo.ResetParam();
+
+	while (tempInfo.NextParam())
+	{
+		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+		{
+			aWriter->ToFile(tempInfo, itsConfiguration);
+		}
+		else
+		{
+			lock_guard<mutex> lock(mySingleFileWriteMutex);
+
+			aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+		}
+	}
+
+	if (itsConfiguration->UseDynamicMemoryAllocation())
+	{
+		DeallocateMemory(targetInfo);
+	}
 }

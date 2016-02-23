@@ -53,6 +53,15 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsLogger->Error("Unable to write irregular grid to grib");
 		return false;
 	}
+	
+	if (!itsWriteOptions.write_empty_grid)
+	{
+		if (anInfo.Data().MissingCount() == anInfo.Data().Size())
+		{
+			itsLogger->Debug("Not writing empty grid");
+			return true;
+		}
+	}
 
 	long edition = static_cast<long> (itsWriteOptions.configuration->OutputFileType());
 
@@ -880,27 +889,33 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		if (readPackedData && itsGrib->Message().PackingType() == "grid_simple")
 		{
-			size_t len = itsGrib->Message().PackedValuesLength();
+			// Get coefficient information
 
-			unsigned char* data = 0;
-			int* unpackedBitmap;
-
-			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&data), len * sizeof(unsigned char)));
-
-			// Get packed values from grib
-			
-			itsGrib->Message().PackedValues(data);
-
-			itsLogger->Trace("Retrieved " + boost::lexical_cast<string> (len) + " bytes of packed data from grib");
-			
 			double bsf = itsGrib->Message().BinaryScaleFactor();
 			double dsf = itsGrib->Message().DecimalScaleFactor();
 			double rv = itsGrib->Message().ReferenceValue();
 			long bpv = itsGrib->Message().BitsPerValue();
 
 			auto packed = unique_ptr<simple_packed> (new simple_packed(bpv, util::ToPower(bsf,2), util::ToPower(-dsf, 10), rv));
+			
+			// Get packed values from grib
+			
+			size_t len = itsGrib->Message().PackedValuesLength();
+			unsigned char* data = 0;
+			int* unpackedBitmap = 0;
+	
+			if (len > 0)
+			{
+				CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**> (&data), len * sizeof(unsigned char)));
+			
+				itsGrib->Message().PackedValues(data);
 
-			packed->Set(data, len, static_cast<size_t> (itsGrib->Message().SizeX() * itsGrib->Message().SizeY()));
+				itsLogger->Trace("Retrieved " + boost::lexical_cast<string> (len) + " bytes of packed data from grib");
+			}
+			else
+			{
+				itsLogger->Warning("Grid is constant or empty");
+			}
 
 			if (itsGrib->Message().Bitmap())
 			{
@@ -916,11 +931,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				itsGrib->Message().Bytes("bitmap", bitmap);
 
 				UnpackBitmap(bitmap, unpackedBitmap, bitmap_size, bitmap_len);
-				
+
 				packed->Bitmap(unpackedBitmap, bitmap_len);
 
 				delete [] bitmap;
 			}
+
+			packed->Set(data, len, static_cast<size_t> (itsGrib->Message().SizeX() * itsGrib->Message().SizeY()));
+
 			dynamic_cast<regular_grid*> (newInfo->Grid())->PackedData(move(packed));
 
 		}

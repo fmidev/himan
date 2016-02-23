@@ -52,18 +52,7 @@ public:
 	}
 
 protected:
-	/**
-	 * @brief Write calculated data to file
-	 *
-	 * Function is exactly same as its parent version in compiled_plugin_base
-	 * except that it first checks if info has data. If all data is missing and
-	 * file write target is neons, no file will be written.
-	 *
-	 * For debugging purposes an empty file is written if file write target is
-	 * single or multiple files.
-	 */
-	
-	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options()) override;
+	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
 
 private:
 	void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);

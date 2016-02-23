@@ -128,7 +128,7 @@ public:
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	virtual void WriteToFile(const info& targetInfo, const write_options& opts = write_options());
+	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options());
 
 protected:
 

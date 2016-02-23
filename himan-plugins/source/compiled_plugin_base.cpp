@@ -171,7 +171,7 @@ bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode tar
 	return ret;
 }
 
-void compiled_plugin_base::WriteToFile(const info& targetInfo, const write_options& writeOptions) 
+void compiled_plugin_base::WriteToFile(const info& targetInfo, write_options writeOptions) 
 {
 	auto aWriter = GET_PLUGIN(writer);
 	

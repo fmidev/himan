@@ -348,7 +348,7 @@ void hybrid_height::Write(himan::info targetInfo)
 	}
 }
 
-void hybrid_height::WriteToFile(const info& targetInfo, const write_options& writeOptions) 
+void hybrid_height::WriteToFile(const info& targetInfo, write_options writeOptions) 
 {
 	if (!itsUseWriterThreads)
 	{

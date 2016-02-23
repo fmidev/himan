@@ -1077,7 +1077,7 @@ std::vector<double> TableToVector(const object& table)
 	return ret;
 }
 
-void luatool::WriteToFile(const info& targetInfo, const write_options& writeOptions)
+void luatool::WriteToFile(const info& targetInfo, write_options writeOptions)
 {
 	// Do nothing, override is needed to prevent double write
 }
