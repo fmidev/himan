@@ -198,7 +198,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		{
 			double d = data[i];
 
-			if (d != d)
+			if (!isfinite(d))
 			{
 				foundNanValue = true;
 				break;
