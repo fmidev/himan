@@ -158,8 +158,31 @@ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 	assert(arr);
 	assert(N > 0);
 
-	if (!packedLength)
+	if (packedLength == 0 && coefficients.bitsPerValue == 0)
 	{
+		// Special case for static grid
+
+		// For empty grid (all values missing), grib_api gives reference value 1!
+		
+		double fillValue = coefficients.referenceValue;
+
+		if (HasBitmap())
+		{
+			// Make an assumption: if grid is static and bitmap is defined, it is probably
+			// all missing.
+
+			fillValue = kFloatMissing;
+		}
+
+		if (NFmiGribPacking::IsHostPointer(arr))
+		{
+			std::fill(arr, arr+N, fillValue);			
+		}
+		else
+		{
+			NFmiGribPacking::Fill(arr, N, fillValue);
+		}
+
 		return;
 	}
 
@@ -167,21 +190,7 @@ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 	{
 		std::cerr << "Error::" << ClassName() << " Allocated memory size is different from data: " << N << " vs " << unpackedLength << std::endl;
 		return;
-	}
-
-	// Special case for static grid
-	if (coefficients.bitsPerValue == 0)
-	{
-		if (NFmiGribPacking::IsHostPointer(arr))
-		{
-			std::fill(arr, arr+N, coefficients.referenceValue);			
-		}
-		else
-		{
-			NFmiGribPacking::Fill(arr, N, coefficients.referenceValue);
-		}
-		return;
-	}
+	}	
 	
 	// We need to create a stream if no stream is specified since dereferencing
 	// a null pointer is, well, not a good thing.

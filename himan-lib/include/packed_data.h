@@ -145,7 +145,7 @@ inline
 CUDA_HOST
 bool packed_data::HasData() const
 {
-	return (packedLength > 0);
+	return (unpackedLength > 0);
 }
 
 inline
