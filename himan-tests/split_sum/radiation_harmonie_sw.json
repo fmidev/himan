@@ -1,0 +1,19 @@
+{
+	"target_geom_name" : "HARMONIE022",
+	"source_geom_name" : "HARMONIE022",
+	"source_producer" : "199",
+	"target_producer" : "210",
+	"start_minute" : "2880",
+	"stop_minute" : "2880",
+	"step" : "15",
+	"file_write" : "multiple",
+	"origintime" : "2016-03-17 09:00:00",
+	"read_data_from_database" : false,
+	"processqueue" : [
+	{
+		"leveltype" : "height",
+		"levels" : "0",
+		"plugins" : [ { "name" : "split_sum", "sw" : true } ]
+	} 
+	]
+}

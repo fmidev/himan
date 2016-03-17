@@ -60,3 +60,15 @@ else
   exit 1
 fi
 
+rm -f RADSW*
+
+$HIMAN -d 5 -f radiation_harmonie_sw.json -t grib ./harmonie_source_rad.grib --no-cuda -s harmonie_nocuda
+
+grib_compare harmonie_result_radsw.grib RADSW-WM2_height_0_rll_720_800_0_2880.grib
+
+if [ $? -ne 0 ];then
+  echo radiation/harmonie failed on CPU
+  exit 1
+fi
+
+
