@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.2.23
+Version: 16.3.17
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -101,6 +101,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Mar 17 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.3.17-1.fmi
+- SW radiation support for split_sum
+- Fix area issue with helmi
 * Tue Feb 23 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.23-1.fmi
 - Fix si for forecast step=0
 - Do not write empty grids at hybrid_pressure
