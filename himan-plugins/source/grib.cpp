@@ -812,6 +812,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		if (itsGrib->Message().Edition() == 2 && (centre == 98 || centre == 86) && X0 != 0)
 		{
 			X0 -= 360;
+			if (X0 < -180) X0 += 360;
 		}
 
 		if (newGrid.Projection() == kStereographicProjection)
