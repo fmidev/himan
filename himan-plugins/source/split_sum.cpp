@@ -91,7 +91,7 @@ split_sum::split_sum()
 	sourceParameters["RADLW-WM2"] = { param("RADLWA-JM2"), param("RADLW-WM2") };
 	sourceParameters["RTOPLW-WM2"] = { param("RTOPLWA-JM2"), param("RTOPLW-WM2") };
 	sourceParameters["RNETLW-WM2"] = { param("RNETLWA-JM2"), param("RNETLW-WM2") };
-
+	sourceParameters["RADSW-WM2"] = { param("RADSWA-JM2") };
 }
 
 void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -269,6 +269,12 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
+	if (itsConfiguration->Exists("sw") && itsConfiguration->GetValue("sw") == "true")
+	{
+		param parm("RADSW-WM2", 316, 0, 4, 192);
+
+		params.push_back(parm);
+	}
 
 	if (params.empty())
 	{
@@ -349,9 +355,10 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 												  " level " + static_cast<string> (forecastLevel));
 
 	bool isRadiationCalculation = (	myParamName == "RADGLO-WM2" ||
-										myParamName == "RADLW-WM2" ||
-										myParamName == "RTOPLW-WM2" ||
-										myParamName == "RNETLW-WM2"
+								myParamName == "RADLW-WM2" ||
+								myParamName == "RTOPLW-WM2" ||
+								myParamName == "RNETLW-WM2" ||
+								myParamName == "RADSW-WM2"
 	);
 			
 	bool isRateCalculation = (isRadiationCalculation || 
