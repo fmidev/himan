@@ -410,6 +410,29 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	myTargetInfo->Data().Set(MUCAPE3kmZonesEntered);
 #endif
 
+	// Do smoothening for CAPE & CIN parameters
+	// Calculate average of nearest 4 points + the point in question
+	
+	himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
+	// C was row-major... right?
+	filter_kernel.Set({0, 0.2, 0, 0.2, 0.2, 0.2, 0, 0.2, 0});
+	
+	capeInfo->Param(CAPEParam);
+	himan::matrix<double> filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
+	capeInfo->Grid()->Data(filtered);
+
+	capeInfo->Param(CAPE1040Param);
+	filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
+	capeInfo->Grid()->Data(filtered);
+
+	capeInfo->Param(CAPE3kmParam);
+	filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
+	capeInfo->Grid()->Data(filtered);
+
+	capeInfo->Param(CINParam);
+	filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
+	capeInfo->Grid()->Data(filtered);
+
 }
 
 void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
