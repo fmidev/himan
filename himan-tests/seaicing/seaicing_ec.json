@@ -1,11 +1,11 @@
 {
- 	"source_geom_name" : "ECGLO0125",
-	"target_geom_name" : "ECGLO0125",
+ 	"source_geom_name" : "ECGLO0100",
+	"target_geom_name" : "ECGLO0100",
 	"source_producer" : "131,240",
 	"target_producer" : "240",
 	"hours" : "3",
 	"file_write" : "single",
-	"origintime" : "2014-10-30 00:00:00",
+	"origintime" : "2016-04-04 00:00:00",
 	"read_data_from_database" : "false",
 
 	"processqueue" : [
