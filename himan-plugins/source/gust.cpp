@@ -3,7 +3,7 @@
  *
  * Computes wind gusts
  *
- * @date Jul 8, 2014
+ * @date Feb 15, 2016
  * @author Tack
  */
 
@@ -30,25 +30,62 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-struct potero
+struct deltaT
 {
-	vector<double> potero0;
-	vector<double> potero1;
-	vector<double> potero2;
-	vector<double> potero3;
-	vector<double> potero4;
-	vector<double> potero5;
-	vector<double> potero6;
-	vector<double> potero7;
-	vector<double> potero8;
-	vector<double> potero9;
-	vector<double> potero10;
-	vector<double> potero11;
+	vector<double> deltaT_100;
+	vector<double> deltaT_200;
+	vector<double> deltaT_300;
+	vector<double> deltaT_400;
+	vector<double> deltaT_500;
+	vector<double> deltaT_600;
+	vector<double> deltaT_700;
 
-	potero() {}
+	deltaT() {}
 };
 
-void Potero(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, potero& poterot, bool& succeeded);
+struct deltaTot
+{
+        vector<double> deltaTot_100;
+        vector<double> deltaTot_200;
+        vector<double> deltaTot_300;
+        vector<double> deltaTot_400;
+        vector<double> deltaTot_500;
+        vector<double> deltaTot_600;
+        vector<double> deltaTot_700;
+
+	deltaTot() {}
+};
+
+struct intT
+{
+	vector<double> intT_100;
+        vector<double> intT_200;
+        vector<double> intT_300;
+        vector<double> intT_400;
+        vector<double> intT_500;
+        vector<double> intT_600;
+        vector<double> intT_700;
+
+	intT() {}
+};
+
+struct intTot
+{
+        vector<double> intTot_100;
+        vector<double> intTot_200;
+        vector<double> intTot_300;
+        vector<double> intTot_400;
+        vector<double> intTot_500;
+        vector<double> intTot_600;
+        vector<double> intTot_700;
+
+	intTot() {}
+};
+
+void DeltaT(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, deltaT& dT, bool& succeeded);
+void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize);
+void IntT(intT& iT, const deltaT& dT, size_t gridSize);
+void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
 
 gust::gust()
 {
@@ -70,7 +107,7 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 
 /*
  * Calculate()
- *
+ 
  * This function does the actual calculation.
  */
 
@@ -83,12 +120,14 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	 * Required source parameters
 	 *
 	 */
+        const size_t gridSize = myTargetInfo->Grid()->Size();
 
-	const param WSParam("FF-MS");
-	const param GustParam("FFG-MS");
-	const param TParam("T-K");
-	const param T_LowestLevelParam("T-K");
-	const param TopoParam("Z-M2S2");
+	const param BLHParam("MIXHGT-M");         // boundary layer height
+	const param WSParam("FF-MS");             // wind speed
+	const param GustParam("FFG-MS");          // wind gust
+	const param TParam("T-K");                // temperature
+	const param T_LowestLevelParam("T-K");    // temperature at lowest level
+        const param TopoParam("Z-M2S2");          // geopotential height
 
 	level H0, H10, Ground;
 
@@ -135,7 +174,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		H10 = level(kHeight, 10);
 	}
 	
-	info_t puuskaInfo, T_LowestLevelInfo, TopoInfo;
+	info_t GustInfo, T_LowestLevelInfo, BLHInfo, TopoInfo;
 
 	// Current time and level
 
@@ -143,570 +182,379 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	puuskaInfo = Fetch(forecastTime,H10,GustParam,forecastType,false);
+	GustInfo = Fetch(forecastTime,H10,GustParam,forecastType,false);
 	T_LowestLevelInfo = Fetch(forecastTime,lowestHybridLevel,T_LowestLevelParam,forecastType,false);
+        BLHInfo = Fetch(forecastTime,H0,BLHParam,forecastType,false);
 	TopoInfo = Fetch(forecastTime,H0,TopoParam,forecastType,false);
 
-	if (!puuskaInfo || !T_LowestLevelInfo || !TopoInfo)
+	if (!GustInfo || !T_LowestLevelInfo)
 	{
 		itsLogger->Error("Unable to find all source data");
 		return;
 	}
-	
-	// maybe need adjusting
-	auto h = GET_PLUGIN(hitool);
 
-	h->Configuration(itsConfiguration);
-	h->Time(forecastTime);
+        deltaT dT;
 
-	potero poterot;
+        bool succeeded = false;
 
-	bool succeeded = false;
+        boost::thread t(&DeltaT, itsConfiguration, forecastTime, boost::ref(dT), boost::ref(succeeded));
 
-	boost::thread t(&Potero, itsConfiguration, forecastTime, boost::ref(poterot), boost::ref(succeeded));
+        // calc boundary layer height
+        vector<double> z_boundaryl(gridSize,0);
+        vector<double> z_half_boundaryl(gridSize,0);
+        vector<double> z_zero (gridSize,0);
+        for(size_t i=0; i<gridSize; ++i)	
+        {
+                if (BLHInfo->Data()[i] >=200)
+                {
+                        z_boundaryl[i] = 0.625 * BLHInfo->Data()[i] + 75;
 
-	vector<double> ws_10, ws_100, ws_200, ws_300, ws_400, ws_500, ws_600, ws_700, ws_800, ws_900, ws_1000, ws_1100;
+                        if (BLHInfo->Data()[i] >1000)
+                        {
+                                z_boundaryl[i] = 700;
+                        }
 
-	try
+                        z_half_boundaryl[i] = z_boundaryl[i]/2;
+                }
+        }
+
+        // maybe need adjusting
+        auto h = GET_PLUGIN(hitool);
+        
+        h->Configuration(itsConfiguration);
+        h->Time(forecastTime);
+        
+        vector<double> maxWind;
+        try
+        {
+                maxWind = h->VerticalMaximum(WSParam, z_zero, z_boundaryl);
+        }
+
+        catch (const HPExceptionType& e)
+        {
+                if (e != kFileDataNotFound)
+                {
+                        throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+                }
+                else
+                {
+                        myThreadedLogger->Error("hitool was unable to find data");
+                        return;
+                }
+        }
+
+        try
 	{
-		// Wind speeds
-		ws_10   = h->VerticalValue(WSParam,  10);
-		ws_100  = h->VerticalValue(WSParam, 100);
-		ws_200  = h->VerticalValue(WSParam, 200);
-		ws_300  = h->VerticalValue(WSParam, 300);
-		ws_400  = h->VerticalValue(WSParam, 400);
-		ws_500  = h->VerticalValue(WSParam, 500);
-		ws_600  = h->VerticalValue(WSParam, 600);
-		ws_700  = h->VerticalValue(WSParam, 700);
-		ws_800  = h->VerticalValue(WSParam, 800);
-		ws_900  = h->VerticalValue(WSParam, 900);
-		ws_1000 = h->VerticalValue(WSParam,1000);
-		ws_1100 = h->VerticalValue(WSParam,1100);
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw runtime_error("WindSpeed caught exception " + boost::lexical_cast<string> (e));
-		}
-		else
-		{
-			myThreadedLogger->Error("hitool calculation for windspeed failed, unable to proceed");
-			return;
-		}
-	}
+		z_boundaryl = h->VerticalHeight(WSParam, z_zero, z_boundaryl, maxWind);
+        }
 
-	t.join();
+        catch (const HPExceptionType& e)
+        {
+                if (e != kFileDataNotFound)
+                {
+                        throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+                }
+                else
+                {
+                        myThreadedLogger->Error("hitool was unable to find data");
+                        return;
+                }
+        }
 
-	if (!succeeded)
-	{
-		myThreadedLogger->Error("hitool calculation for potero failed, unable to proceed");
-		return;
-	}
 
-	vector<double> myrsky, maxt, pohja, pohja_0_60;
-	try
-	{
-		// maximum windspeed 0-1200m
-		myrsky = h->VerticalMaximum(WSParam,0,1200);
-	
-		// maximum temperature 0-200m
-		maxt = h->VerticalMaximum(TParam,0,200);
-		
-		// base wind speed
-		pohja = h->VerticalAverage(WSParam,10,200);
+        vector<double> BLtop_ws;
+        try
+        {
+                BLtop_ws = h->VerticalAverage(WSParam, z_half_boundaryl, z_boundaryl);
+        }
 
-		// average wind speed 0-60m
-		pohja_0_60 = h->VerticalAverage(WSParam,0,60);	
-	}
+        catch (const HPExceptionType& e)
+        {
+                if (e != kFileDataNotFound)
+                {
+                        throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+                }
+                else
+                {
+                        myThreadedLogger->Error("hitool was unable to find data");
+                        return;
+                }
+        }
 
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
-		}
-		else
-		{
-			myThreadedLogger->Error("hitool was unable to find data");
-			return;
-		}
-	}
+        vector<double> baseGust;
+        try
+        {
+                baseGust = h->VerticalAverage(WSParam, 10, 170);
+        }
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+        catch (const HPExceptionType& e)
+        {
+                if (e != kFileDataNotFound)
+                {
+                        throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+                }
+                else
+                {
+                        myThreadedLogger->Error("hitool was unable to find data");
+                        return;
+                }
+        }
 
-	const size_t gridSize = myTargetInfo->Grid()->Size();
+        vector<double> t_diff;
+        try
+        {
+                t_diff = h->VerticalAverage(TParam, 0, 200);
+                for(size_t i=0; i<gridSize; ++i)
+                {
+                        t_diff[i] = t_diff[i] - T_LowestLevelInfo->Data()[i];
+                }
+        }
 
-	vector<double> x(gridSize,-0.15);
+        catch (const HPExceptionType& e)
+        {
+                if (e != kFileDataNotFound)
+                {
+                        throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+                }
+                else
+                {
+                        myThreadedLogger->Error("hitool was unable to find data");
+                        return;
+                }
+        }
 
-	for (size_t i = 0; i < gridSize; ++i)
-	{
-		double val = myrsky[i];
-		
-		if (val == kFloatMissing)
-		{
-			continue;
-		}
+        vector<double> BLbottom_ws;
+        try
+        {
+                BLbottom_ws = h->VerticalAverage(WSParam, z_zero, z_half_boundaryl);
+        }
 
-		if (val >= 20)
-		{
-			x[i] = -0.20;
-		}
-		else continue;
+        catch (const HPExceptionType& e)
+        {
+                if (e != kFileDataNotFound)
+                {
+                        throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
+                }
+                else
+                {
+                        myThreadedLogger->Error("hitool was unable to find data");
+                        return;
+                }
+        }
 
-		if (val >= 25)
-		{
-			x[i] = -0.25;
-		}
-		else continue;
+        t.join();
 
-		if (val >= 30)
-		{
-			x[i] = -0.30;
-		}
-	}
-	
-	vector<double> lowerHeight(gridSize,0);
-	vector<double> upperHeight(gridSize,0);
+        deltaTot dTot;
+        intT iT;
+        intTot iTot;
 
-	for (size_t i = 0; i < gridSize; ++i)
-	{
-		if (x[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero1[i] == kFloatMissing || poterot.potero2[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_200[i] == kFloatMissing)
-		{
-			continue;
-		}
-					
-		if (poterot.potero1[i] - poterot.potero2[i] > x[i] && ws_200[i] > ws_100[i])
-		{
-			lowerHeight[i] = 50;
-			upperHeight[i] = 200;
-		}
-		else continue;
+        DeltaTot(dTot, T_LowestLevelInfo, gridSize);
+        IntT(iT, dT, gridSize);
+        IntTot(iTot, dTot, gridSize);
 
-		if (poterot.potero2[i] == kFloatMissing || poterot.potero3[i] == kFloatMissing || ws_200[i] == kFloatMissing || ws_300[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero2[i] - poterot.potero3[i] > x[i] && ws_300[i] > ws_200[i])
-		{
-			lowerHeight[i] = 100;
-			upperHeight[i] = 300;
-		}
-		else continue;
+        string deviceType = "CPU";
 
-		if (poterot.potero3[i] == kFloatMissing || poterot.potero4[i] == kFloatMissing || ws_300[i] == kFloatMissing || ws_400[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero3[i] - poterot.potero4[i] > x[i] && ws_400[i] > ws_300[i])
-		{
-			lowerHeight[i] = 150;
-			upperHeight[i] = 400;
-		}
-		else continue;
-
-		if (poterot.potero4[i] == kFloatMissing || poterot.potero5[i] == kFloatMissing || ws_400[i] == kFloatMissing || ws_500[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero4[i] - poterot.potero5[i] > x[i] && ws_500[i] > ws_400[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 500;
-		}
-		else continue;
-	
-		if (poterot.potero5[i] == kFloatMissing || poterot.potero6[i] == kFloatMissing || ws_500[i] == kFloatMissing || ws_600[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero5[i] - poterot.potero6[i] > x[i] && ws_600[i] > ws_500[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 600;
-		}
-		else continue;
-		
-		if (poterot.potero6[i] == kFloatMissing || poterot.potero7[i] == kFloatMissing || ws_600[i] == kFloatMissing || ws_700[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero6[i] - poterot.potero7[i] > x[i] && ws_700[i] > ws_600[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 700;
-		}
-		else continue;
-
-		if (poterot.potero7[i] == kFloatMissing || poterot.potero8[i] == kFloatMissing || ws_700[i] == kFloatMissing || ws_800[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero7[i] - poterot.potero8[i] > x[i] && ws_800[i] > ws_700[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 800;
-		}
-		else continue;
-
-		if (poterot.potero8[i] == kFloatMissing || poterot.potero9[i] == kFloatMissing || ws_800[i] == kFloatMissing || ws_900[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero8[i] - poterot.potero9[i] > x[i] && ws_900[i] > ws_800[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 900;
-		}
-		else continue;
-
-		if (poterot.potero9[i] == kFloatMissing || poterot.potero10[i] == kFloatMissing || ws_900[i] == kFloatMissing || ws_1000[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero9[i] - poterot.potero10[i] > x[i] && ws_1000[i] > ws_900[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 1000;
-		}
-		else continue;
-
-		if (poterot.potero10[i] == kFloatMissing || poterot.potero11[i] == kFloatMissing || ws_1000[i] == kFloatMissing || ws_1100[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero10[i] - poterot.potero11[i] > x[i] && ws_1100[i] > ws_1000[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 1100;
-		}
-	}
-
-	vector<double> gust;
-	
-	try
-	{
-		gust = h->VerticalAverage(WSParam,lowerHeight,upperHeight);	
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
-		}
-		else
-		{
-			myThreadedLogger->Error("hitool was unable to find data");
-			return;
-		}
-	}
-	
-	for (size_t i = 0; i < gridSize; ++i)
-	{
-		if (poterot.potero0[i] == kFloatMissing || poterot.potero1[i] == kFloatMissing || x[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_10[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero0[i] - poterot.potero1[i] <= x[i] && ws_100[i] <= ws_10[i])
-		{
-			 gust[i] = 0;
-		}
-	}
-
-	const double a = 0.5;
-
-	for (size_t i = 0; i < gridSize; ++i)
-	{
-		if (poterot.potero1[i] == kFloatMissing || poterot.potero2[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_200[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero1[i] - poterot.potero2[i] > a && ws_200[i] > ws_100[i])
-		{
-			lowerHeight[i] = 50;
-			upperHeight[i] = 200;
-		}
-		else continue;
-
-		if (poterot.potero2[i] == kFloatMissing || poterot.potero3[i] == kFloatMissing || ws_200[i] == kFloatMissing || ws_300[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero2[i] - poterot.potero3[i] > a && ws_300[i] > ws_200[i])
-		{
-			lowerHeight[i] = 100;
-			upperHeight[i] = 300;
-		}
-		else continue;
-
-		if (poterot.potero3[i] == kFloatMissing || poterot.potero4[i] == kFloatMissing || ws_300[i] == kFloatMissing || ws_400[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero3[i] - poterot.potero4[i] > a && ws_400[i] > ws_300[i])
-		{
-			lowerHeight[i] = 150;
-			upperHeight[i] = 400;
-		}
-		else continue;
-
-		if (poterot.potero4[i] == kFloatMissing || poterot.potero5[i] == kFloatMissing || ws_400[i] == kFloatMissing || ws_500[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero4[i] - poterot.potero5[i] > a && ws_500[i] > ws_400[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 500;
-		}
-		else continue;
-	
-		if (poterot.potero5[i] == kFloatMissing || poterot.potero6[i] == kFloatMissing || ws_500[i] == kFloatMissing || ws_600[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero5[i] - poterot.potero6[i] > a && ws_600[i] > ws_500[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 600;
-		}
-		else continue;
-		
-		if (poterot.potero6[i] == kFloatMissing || poterot.potero7[i] == kFloatMissing || ws_600[i] == kFloatMissing || ws_700[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero6[i] - poterot.potero7[i] > a && ws_700[i] > ws_600[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 700;
-		}
-		else continue;
-
-		if (poterot.potero7[i] == kFloatMissing || poterot.potero8[i] == kFloatMissing || ws_700[i] == kFloatMissing || ws_800[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero7[i] - poterot.potero8[i] > a && ws_800[i] > ws_700[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 800;
-		}
-		else continue;
-
-		if (poterot.potero8[i] == kFloatMissing || poterot.potero9[i] == kFloatMissing || ws_800[i] == kFloatMissing || ws_900[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero8[i] - poterot.potero9[i] > a && ws_900[i] > ws_800[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 900;
-		}
-		else continue;
-
-		if (poterot.potero9[i] == kFloatMissing || poterot.potero10[i] == kFloatMissing || ws_900[i] == kFloatMissing || ws_1000[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero9[i] - poterot.potero10[i] > a && ws_1000[i] > ws_900[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 1000;
-		}
-		else continue;
-
-		if (poterot.potero10[i] == kFloatMissing || poterot.potero11[i] == kFloatMissing || ws_1000[i] == kFloatMissing || ws_1100[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero10[i] - poterot.potero11[i] > a && ws_1100[i] > ws_1000[i])
-		{
-			lowerHeight[i] = 200;
-			upperHeight[i] = 1100;
-		}
-	}
-
-	vector<double> maxgust;
-	
-	try
-	{
-		maxgust = h->VerticalAverage(WSParam,lowerHeight,upperHeight);	
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string> (e));
-		}
-		else
-		{
-			myThreadedLogger->Error("hitool was unable to find data");
-			return;
-		}
-	}
-	
-	for (size_t i = 0; i < gridSize; ++i)
-	{
-		if (poterot.potero0[i] == kFloatMissing || poterot.potero1[i] == kFloatMissing || ws_100[i] == kFloatMissing || ws_10[i] == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if (poterot.potero0[i] - poterot.potero1[i] <= a && ws_100[i] <= ws_10[i])
-		{
-			 maxgust[i] = 0;
-		}
-	}
-
-	vector<double> par466(gridSize,0);
-
-	string deviceType = "CPU";
-
-	LOCKSTEP(myTargetInfo, puuskaInfo, T_LowestLevelInfo, TopoInfo)
+	LOCKSTEP(myTargetInfo, GustInfo, T_LowestLevelInfo, TopoInfo, BLHInfo)
 	{
 		size_t i = myTargetInfo->LocationIndex();
 
-		double par467 = puuskaInfo->Value();
-		double t_LowestLevel = T_LowestLevelInfo->Value();
-		double topo = TopoInfo->Value();
-		double puuska = pohja[i];
-		double gustval = gust[i];
-		double maxgustval = maxgust[i];
-		double ws10 = ws_10[i];
-
-		if (par467 == kFloatMissing 
-			|| t_LowestLevel == kFloatMissing 
-			|| topo == kFloatMissing 
-			|| puuska == kFloatMissing 
-			|| gustval == kFloatMissing 
-			|| maxgustval == kFloatMissing
-			|| ws10 == kFloatMissing 
-			|| pohja_0_60[i] == kFloatMissing)
-		{
-			continue;
-		}
+                double topo = TopoInfo->Value();
+                double esto = kFloatMissing;
+                double esto_tot = kFloatMissing;
+                double gust = kFloatMissing;
 
 		topo *= himan::constants::kIg;
 		
 		/* Calculations go here */
 
-		puuska = fmax(gustval, puuska);
-		
-		if ((maxgustval - gustval) > 8)
-		{
-			puuska = (maxgustval + pohja[i])/2;
-		}
+                if (z_boundaryl[i] >= 200)
+                {
+                        esto = iT.intT_100[i] + iT.intT_200[i];
+                        esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i];
+                }
+                else if (z_boundaryl[i] >= 300)
+                {
+                        esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i];
+                        esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i];
+                }
+                else if(z_boundaryl[i] >= 400)
+                {
+                        esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i] + iT.intT_400[i];
+                        esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i] + iTot.intTot_400[i];
+                }
+                else if(z_boundaryl[i] >= 500)
+                {
+                        esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i] + iT.intT_400[i] + iT.intT_500[i];
+                        esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i] + iTot.intTot_400[i] + iTot.intTot_500[i];
+                }
+                else if(z_boundaryl[i] >= 600)
+                {
+                        esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i] + iT.intT_400[i] + iT.intT_500[i] + iT.intT_600[i];
+                        esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i] + iTot.intTot_400[i] + iTot.intTot_500[i] + iTot.intTot_600[i];
+                }
+                else if(z_boundaryl[i] == 700)
+                {
+                        esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i] + iT.intT_400[i] + iT.intT_500[i] + iT.intT_600[i] + iT.intT_700[i];
+                        esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i] + iTot.intTot_400[i] + iTot.intTot_500[i] + iTot.intTot_600[i] + iTot.intTot_700[i];
+                }
 
-		if ((maxt[i] - t_LowestLevel) > 1 && topo > 15)
-		{
-			puuska = pohja_0_60[i];
-			par466[i] = ws10;
-			
-			if (maxt[i] - t_LowestLevel > 2)
-			{
-				puuska = ws10;
-				par466[i] = ws10 * 0.7;
-				
-				if (maxt[i] - t_LowestLevel > 4)
-				{
-					puuska = ws10 * 0.7;
-					par466[i] = ws10 * 0.4;
-				}
-			}
-		}
 
-		myTargetInfo->Value(puuska);
+                if(z_boundaryl[i] >= 200 && esto >= 0 && esto <= esto_tot)
+                {
+                        gust = ((baseGust[i] - BLtop_ws[i])/esto_tot)*esto + BLtop_ws[i];
+                }
+
+                if(z_boundaryl[i] >= 200 && esto <= 0 && esto >= -150)
+                {
+                        gust = ((BLtop_ws[i] - maxWind[i])/150)*esto + BLtop_ws[i];
+                }
+
+                if(z_boundaryl[i] >= 200 && esto < -150)
+                {
+                        gust = maxWind[i];
+                }
+
+                if(z_boundaryl[i] >= 200 && esto > esto_tot)
+                {
+                        gust = baseGust[i];
+                }
+ 
+                if(z_boundaryl[i] < 200)
+                {
+                        gust = BLbottom_ws[i];
+                }
+
+                if(gust == kFloatMissing || gust < 1)
+                {
+                        gust = 1;
+                }
+
+                if(topo > 15 && t_diff[i] > 0 && t_diff[i] <=4 && baseGust[i] < 8)
+                {
+                        gust = ((1-baseGust[i])/4) * t_diff[i] + baseGust[i];
+                }
+
+                if(topo > 15 && t_diff[i] > 4 && baseGust[i] < 8)
+                {
+                        gust = 1;
+                }
+
+                if(topo > 400 || T_LowestLevelInfo->Value() == kFloatMissing || BLHInfo->Value() == kFloatMissing)
+                {
+                        gust = GustInfo->Value()*0.95;
+                }
+
+		myTargetInfo->Value(gust);
 
 	}
 
 	himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
 	filter_kernel.Fill(1.0/9.0);
-	himan::matrix<double> puuska_filtered = util::Filter2D(myTargetInfo->Data(), filter_kernel);
+	himan::matrix<double> gust_filtered = util::Filter2D(myTargetInfo->Data(), filter_kernel);
 
+	myTargetInfo->Grid()->Data(gust_filtered);
 	
-	//auto puuska_filtered_ptr = make_shared<himan::matrix<double>> (puuska_filtered);
-	
-	myTargetInfo->Grid()->Data(puuska_filtered);
-	
-	LOCKSTEP(myTargetInfo)
-	{
-		size_t i = myTargetInfo->LocationIndex();
-		
-		if (par466[i] == kFloatMissing || myTargetInfo->Value() == kFloatMissing)
-		{
-			continue;
-		}
-		
-		if( par466[i]*1.12 > myTargetInfo->Value())
-		{
-			myTargetInfo->Value(par466[i]*1.15);
-		}
-	}
-
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
 }
 
-void Potero(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, potero& poterot, bool& succeeded)
+void DeltaT(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, deltaT& dT, bool& succeeded)
 {
-	auto h = GET_PLUGIN(hitool);
+        auto h = GET_PLUGIN(hitool);
+
+        h->Configuration(conf);
+        h->Time(ftime);
+
+        const param TParam("T-K");
+
+        try
+        {
+                // Potential temperature differences
+                dT.deltaT_100  = h->VerticalValue(TParam, 100);
+                dT.deltaT_200  = h->VerticalValue(TParam, 200);
+                dT.deltaT_300  = h->VerticalValue(TParam, 300);
+                dT.deltaT_400  = h->VerticalValue(TParam, 400);
+                dT.deltaT_500  = h->VerticalValue(TParam, 500);
+                dT.deltaT_600  = h->VerticalValue(TParam, 600);
+                dT.deltaT_700  = h->VerticalValue(TParam, 700);
+                succeeded = true;
+        }
+        catch (const HPExceptionType& e)
+        {
+                if (e != kFileDataNotFound)
+                {
+                        throw runtime_error("DeltaT() caught exception " + boost::lexical_cast<string> (e));
+                }
+
+                succeeded = false;
+        }
 	
-	h->Configuration(conf);
-	h->Time(ftime);
-
-	const param TPotParam("TP-K");
-
-	try
-	{
-		// Potential temperature differences
-		poterot.potero0  = h->VerticalValue(TPotParam,  10);
-		poterot.potero1  = h->VerticalValue(TPotParam, 100);
-		poterot.potero2  = h->VerticalValue(TPotParam, 200);
-		poterot.potero3  = h->VerticalValue(TPotParam, 300);
-		poterot.potero4  = h->VerticalValue(TPotParam, 400);
-		poterot.potero5  = h->VerticalValue(TPotParam, 500);
-		poterot.potero6  = h->VerticalValue(TPotParam, 600);
-		poterot.potero7  = h->VerticalValue(TPotParam, 700);
-		poterot.potero8  = h->VerticalValue(TPotParam, 800);
-		poterot.potero9  = h->VerticalValue(TPotParam, 900);
-		poterot.potero10 = h->VerticalValue(TPotParam,1000);
-		poterot.potero11 = h->VerticalValue(TPotParam,1100);
-		succeeded = true;
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw runtime_error("Potero() caught exception " + boost::lexical_cast<string> (e));
-		}
-
-		succeeded = false;
-	}
-
 }
+
+void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize)
+{
+        dTot.deltaTot_100 = vector<double> (gridSize,0);
+        dTot.deltaTot_200 = vector<double> (gridSize,0);
+        dTot.deltaTot_300 = vector<double> (gridSize,0);
+        dTot.deltaTot_400 = vector<double> (gridSize,0);
+        dTot.deltaTot_500 = vector<double> (gridSize,0);
+        dTot.deltaTot_600 = vector<double> (gridSize,0);
+        dTot.deltaTot_700 = vector<double> (gridSize,0);
+
+        for (size_t i=0; i<gridSize; ++i)
+        {
+                dTot.deltaTot_100[i]  = (T_lowestLevel->Data()[i] + 5*(0.010 - (100/1000))) - (T_lowestLevel->Data()[i] + 9.8*(0.010 - (100/1000)));
+                dTot.deltaTot_200[i]  = (T_lowestLevel->Data()[i] + 5*(0.010 - (200/1000))) - (T_lowestLevel->Data()[i] + 9.8*(0.010 - (200/1000)));
+                dTot.deltaTot_300[i]  = (T_lowestLevel->Data()[i] + 5*(0.010 - (300/1000))) - (T_lowestLevel->Data()[i] + 9.8*(0.010 - (300/1000)));
+                dTot.deltaTot_400[i]  = (T_lowestLevel->Data()[i] + 5*(0.010 - (400/1000))) - (T_lowestLevel->Data()[i] + 9.8*(0.010 - (400/1000)));
+                dTot.deltaTot_500[i]  = (T_lowestLevel->Data()[i] + 5*(0.010 - (500/1000))) - (T_lowestLevel->Data()[i] + 9.8*(0.010 - (500/1000)));
+                dTot.deltaTot_600[i]  = (T_lowestLevel->Data()[i] + 5*(0.010 - (600/1000))) - (T_lowestLevel->Data()[i] + 9.8*(0.010 - (600/1000)));
+                dTot.deltaTot_700[i]  = (T_lowestLevel->Data()[i] + 5*(0.010 - (700/1000))) - (T_lowestLevel->Data()[i] + 9.8*(0.010 - (700/1000)));
+        }
+}
+
+void IntT(intT& iT, const deltaT& dT, size_t gridSize)
+{
+        iT.intT_100 = vector<double> (gridSize,0);
+        iT.intT_200 = vector<double> (gridSize,0);
+        iT.intT_300 = vector<double> (gridSize,0);
+        iT.intT_400 = vector<double> (gridSize,0);
+        iT.intT_500 = vector<double> (gridSize,0);
+        iT.intT_600 = vector<double> (gridSize,0);
+        iT.intT_700 = vector<double> (gridSize,0);
+
+
+        for (size_t i=0; i<gridSize; ++i)
+      	{
+                iT.intT_100[i] = 0.5*dT.deltaT_100[i] * 100;
+                iT.intT_200[i] = 0.5*(dT.deltaT_200[i] + dT.deltaT_100[i])*100;
+                iT.intT_300[i] = 0.5*(dT.deltaT_300[i] + dT.deltaT_200[i])*100;
+                iT.intT_400[i] = 0.5*(dT.deltaT_400[i] + dT.deltaT_300[i])*100;
+                iT.intT_500[i] = 0.5*(dT.deltaT_500[i] + dT.deltaT_400[i])*100;
+                iT.intT_600[i] = 0.5*(dT.deltaT_600[i] + dT.deltaT_500[i])*100;
+                iT.intT_700[i] = 0.5*(dT.deltaT_700[i] + dT.deltaT_600[i])*100;
+        }
+}
+
+void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize)
+{
+        iTot.intTot_100 = vector<double> (gridSize,0);
+        iTot.intTot_200 = vector<double> (gridSize,0);
+        iTot.intTot_300 = vector<double> (gridSize,0);
+        iTot.intTot_400 = vector<double> (gridSize,0);
+        iTot.intTot_500 = vector<double> (gridSize,0);
+        iTot.intTot_600 = vector<double> (gridSize,0);
+        iTot.intTot_700 = vector<double> (gridSize,0);
+
+        for (size_t i=0; i<gridSize; ++i)
+        {
+                iTot.intTot_100[i] = 0.5*dTot.deltaTot_100[i] * 100;
+                iTot.intTot_200[i] = 0.5*(dTot.deltaTot_200[i] + dTot.deltaTot_100[i])*100;
+                iTot.intTot_300[i] = 0.5*(dTot.deltaTot_300[i] + dTot.deltaTot_200[i])*100;
+                iTot.intTot_400[i] = 0.5*(dTot.deltaTot_400[i] + dTot.deltaTot_300[i])*100;
+                iTot.intTot_500[i] = 0.5*(dTot.deltaTot_500[i] + dTot.deltaTot_400[i])*100;
+                iTot.intTot_600[i] = 0.5*(dTot.deltaTot_600[i] + dTot.deltaTot_500[i])*100;
+                iTot.intTot_700[i] = 0.5*(dTot.deltaTot_700[i] + dTot.deltaTot_600[i])*100;
+        }
+}
+
