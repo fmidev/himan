@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.3.17
+Version: 16.4.4
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -101,6 +101,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr  4 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.4-1.fmi
+- Totally new gust plugin
+- Seaicing is now index instead of raw value
+- Smoothening for CAPE+CIN
 * Thu Mar 17 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.3.17-1.fmi
 - SW radiation support for split_sum
 - Fix area issue with helmi
