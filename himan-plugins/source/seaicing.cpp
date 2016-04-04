@@ -104,7 +104,6 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 		if (T == kFloatMissing || Tg == kFloatMissing || Ff == kFloatMissing)
 		{
-			myTargetInfo->Value(-10);
 			continue;
 		}
 
@@ -116,42 +115,38 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 		if (Tg < -2 )
 		{
-			seaIcing = -10;
+			seaIcing = 0;
 		}
 		else
 		{
 			seaIcing = Ff * ( -saltinessIndex -T ) / ( 1 + 0.3 * ( Tg + saltinessIndex ));
 
-			if (seaIcing > 100)
-			{
-				seaIcing = 100;
+			// Change values to index
+			// Index by Antonios Niros: Vessel icing forecast and services: further development and perspectives.
+
+			if (seaIcing <= 0)
+			{ // No icing
+				seaIcing = 0;
 			}
+			else if (seaIcing > 0 && seaIcing < 22.4)
+			{ // Light icing ja icing rate <0.7cm/h
+				seaIcing = 1;
+			}
+			else if (seaIcing >= 22.4 && seaIcing < 53.3)
+                	{ // Moderate icing ja icing rate between 0.7cm/h-2cm/h
+                	        seaIcing = 2;
+                	}
+			else if (seaIcing >= 53.3 && seaIcing < 83)
+                	{ //  Heavy icing ja icing rate between 2.0cm/h-4.0cm/h
+                	        seaIcing = 3;
+                	}
+			else if (seaIcing >= 83)
+                	{ // Extreme icing ja icing rate >4cm/h
+                	        seaIcing = 4;
+                	}
 		}
 
-		// Change values to index
-		// Index by Antonios Niros: Vessel icing forecast and services: further development and perspectives.
-/*
-		if (seaIcing <= 0)
-		{ // No icing
-			seaIcing = 1;
-		}
-		else if (seaIcing > 0 && seaIcing < 22.4)
-		{ // Light icing ja icing rate <0.7cm/h
-			seaIcing = 2;
-		}
-		else if (seaIcing >= 22.4 && seaIcing < 53.3)
-                { // Moderate icing ja icing rate between 0.7cm/h-2cm/h
-                        seaIcing = 3;
-                }
-		else if (seaIcing >= 53.3 && seaIcing < 83)
-                { //  Heavy icing ja icing rate between 2.0cm/h-4.0cm/h
-                        seaIcing = 4;
-                }
-		else if (seaIcing >= 83)
-                { // Extreme icing ja icing rate >4cm/h
-                        seaIcing = 5;
-                }
-*/
+
 		myTargetInfo->Value(seaIcing);
 	}
 
