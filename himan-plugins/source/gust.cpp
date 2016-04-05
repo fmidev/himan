@@ -239,6 +239,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
                 else
                 {
                         myThreadedLogger->Error("hitool was unable to find data");
+			t.join();
                         return;
                 }
         }
@@ -257,6 +258,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
                 else
                 {
                         myThreadedLogger->Error("hitool was unable to find data");
+			t.join();
                         return;
                 }
         }
@@ -277,6 +279,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
                 else
                 {
                         myThreadedLogger->Error("hitool was unable to find data");
+			t.join();
                         return;
                 }
         }
@@ -296,6 +299,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
                 else
                 {
                         myThreadedLogger->Error("hitool was unable to find data");
+			t.join();
                         return;
                 }
         }
@@ -319,6 +323,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
                 else
                 {
                         myThreadedLogger->Error("hitool was unable to find data");
+			t.join();
                         return;
                 }
         }
@@ -338,6 +343,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
                 else
                 {
                         myThreadedLogger->Error("hitool was unable to find data");
+			t.join();
                         return;
                 }
         }
