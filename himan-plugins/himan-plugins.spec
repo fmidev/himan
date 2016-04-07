@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.4.5
+Version: 16.4.7
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -101,6 +101,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Apr  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.7-1.fmi
+- Do not use fast_math at si by default
 * Tue Apr  5 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.5-1.fmi
 - Bugfix for gust
 * Mon Apr  4 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.4-1.fmi
