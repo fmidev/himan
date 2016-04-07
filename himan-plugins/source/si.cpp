@@ -14,7 +14,6 @@
 #include <boost/thread.hpp>
 #include "util.h"
 
-#define FAST_MATH
 #include "metutil.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
