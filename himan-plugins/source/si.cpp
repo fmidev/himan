@@ -16,14 +16,10 @@
 
 #include "metutil.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "neons.h"
 #include "fetcher.h"
 #include "querydata.h"
 #include "hitool.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 const unsigned char FCAPE		= (1 << 2);
 const unsigned char FCAPE1040	= (1 << 1);
@@ -232,8 +228,9 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 }
 
 
-void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDataType sourceType)
+void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSourceDataType sourceType)
 {
+	
 	/*
 	 * Algorithm:
 	 * 
@@ -253,6 +250,19 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfo, HPSoundingIndexSourceDa
 	 * 
 	 * 5) Integrate from surface to LFC to find CIN
 	 */
+
+	/* HIMAN-117
+	 * 
+	 * There is a possible (probable?) race-condition when myTargetInfo is accessed from several
+	 * subthreads at the same time. The problem arises when the calculation is finished and data is
+	 * set to info: One thread might set the descriptors to a position, get suspended by the kernel
+	 * and another thread re-sets the desriptors. Then the original thread is resumed and it sets
+	 * the data to wrong parameter.
+	 * 
+	 * Fix: Create a new info for each thread.
+	 */
+	
+	auto myTargetInfo = make_shared<info> (*myTargetInfoOrig);
 
 	auto mySubThreadedLogger = logger_factory::Instance()->GetLog("siVersionThread" + boost::lexical_cast<string> (static_cast<int> (sourceType)));
 
