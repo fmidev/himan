@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.4.7
+Version: 16.4.8
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.2.23
+Requires: himan-lib >= 16.4.8
 Requires: himan-bin >= 16.2.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -101,6 +101,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Apr  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.8-1.fmi
+- Simplified auxiliary plugin includes
+- Removed race condition from si-plugin
 * Thu Apr  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.7-1.fmi
 - Do not use fast_math at si by default
 * Tue Apr  5 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.5-1.fmi
