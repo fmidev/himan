@@ -139,6 +139,7 @@ extern "C" std::shared_ptr<himan_plugin> create()
 	return std::shared_ptr<cache> (new cache());
 }
 
+#define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin

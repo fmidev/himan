@@ -496,13 +496,12 @@ private:
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
-// the class factory
-
 extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::make_shared<hitool> ();
 }
 
+#define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin

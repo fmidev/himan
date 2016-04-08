@@ -26,8 +26,6 @@
 #include "write_options.h"
 #include "search_options.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 namespace himan
 {
 namespace plugin

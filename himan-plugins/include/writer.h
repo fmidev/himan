@@ -63,6 +63,7 @@ extern "C" std::shared_ptr<himan_plugin> create()
 	return std::make_shared<writer> ();
 }
 
+#define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
