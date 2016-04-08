@@ -20,11 +20,7 @@
 #include <boost/thread.hpp>
 #include "util.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "hitool.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan;

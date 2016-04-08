@@ -14,15 +14,11 @@
 #include "cuda_helper.h"
 #include "regular_grid.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "fetcher.h"
 #include "neons.h"
 #include "writer.h"
 #include "cache.h"
 #include "radon.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan;

@@ -275,14 +275,10 @@ private:
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
-// the class factory
-
 extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::make_shared<fetcher> ();
 }
-
-//typedef std::shared_ptr<fetcher> fetcher_t;
 
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

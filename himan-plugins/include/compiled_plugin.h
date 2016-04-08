@@ -13,6 +13,8 @@
 #include "configuration.h"
 #include "plugin_configuration.h"
 
+#define HIMAN_AUXILIARY_INCLUDE
+
 namespace himan
 {
 namespace plugin

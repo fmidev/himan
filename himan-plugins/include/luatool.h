@@ -83,14 +83,10 @@ private:
 	write_options itsWriteOptions;
 };
 
-#ifndef HIMAN_AUXILIARY_INCLUDE
-
-extern "C" std::shared_ptr<himan_plugin> create()
+extern "C" std::shared_ptr<luatool> create()
 {
 	return std::make_shared<luatool> ();
 }
-
-#endif /* HIMAN_AUXILIARY_INCLUDE */
 
 } // namespace plugin
 } // namespace himan

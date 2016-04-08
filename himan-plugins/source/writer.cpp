@@ -14,16 +14,12 @@
 #include "util.h"
 #include "timer_factory.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "grib.h"
 #include "querydata.h"
 #include "neons.h"
 #include "radon.h"
 #include "cache.h"
 #include "csv.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan::plugin;
 

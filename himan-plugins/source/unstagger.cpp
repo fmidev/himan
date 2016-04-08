@@ -18,12 +18,8 @@
 #include "plugin_factory.h"
 #include "regular_grid.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "cache.h"
 #include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;

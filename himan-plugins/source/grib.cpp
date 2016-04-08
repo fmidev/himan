@@ -17,13 +17,9 @@
 using namespace std;
 using namespace himan::plugin;
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "neons.h"
 #include "radon.h"
 #include "cache.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 #include "cuda_helper.h"
 #include "simple_packed.h"

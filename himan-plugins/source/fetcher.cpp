@@ -17,8 +17,6 @@
 #include "regular_grid.h"
 #include "irregular_grid.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "grib.h"
 #include "neons.h"
 #include "radon.h"
@@ -26,8 +24,6 @@
 #include "cache.h"
 #include "querydata.h"
 #include "csv.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan::plugin;
 using namespace std;

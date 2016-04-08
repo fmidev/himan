@@ -17,12 +17,8 @@
 #include "forecast_time.h"
 #include <boost/thread.hpp>
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "hitool.h"
 #include "fetcher.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan;

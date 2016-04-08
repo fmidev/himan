@@ -18,13 +18,9 @@
 #include "logger_factory.h"
 #include <boost/thread.hpp>
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "hitool.h"
 #include "neons.h"
 #include "radon.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan;

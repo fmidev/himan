@@ -11,14 +11,10 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "neons.h"
 #include "radon.h"
 #include "writer.h"
 #include "cache.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;

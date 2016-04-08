@@ -14,12 +14,8 @@
 #include "util.h"
 #include "plugin_factory.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "cache.h"
 #include "writer.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;

@@ -9,13 +9,9 @@
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "hitool.h"
 #include "neons.h"
 #include "radon.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 extern "C"
 {

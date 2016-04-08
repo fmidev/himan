@@ -14,13 +14,9 @@
 #include <boost/format.hpp>
 #include "util.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "fetcher.h"
 #include "neons.h"
 #include "radon.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan;

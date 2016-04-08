@@ -12,12 +12,8 @@
 #include "level.h"
 #include "forecast_time.h"
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "neons.h"
 #include "radon.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;

@@ -15,13 +15,9 @@
 #include "forecast_time.h"
 #include <boost/thread.hpp>
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "writer.h"
 #include "neons.h"
 #include "radon.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan::plugin;
