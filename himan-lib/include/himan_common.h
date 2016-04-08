@@ -22,15 +22,12 @@
 #pragma GCC diagnostic ignored "-Wsign-promo"
 #endif
 
-#ifndef __CUDACC__
 #include <ostream>
 #include <memory>
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
 
 namespace ba = boost::assign;
-
-#endif
 
 namespace himan
 {
@@ -75,7 +72,6 @@ enum HPFileType
 	kCSV
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPFileType,std::string> HPFileTypeToString = ba::map_list_of
 		(kUnknownFile, "unknown")
 		(kGRIB1, "grib edition 1")
@@ -85,7 +81,6 @@ const boost::unordered_map<HPFileType,std::string> HPFileTypeToString = ba::map_
 		(kNetCDF, "NetCDF")
 		(kCSV, "CSV")
 		;
-#endif
 
 // Defined external compression types
 
@@ -97,14 +92,11 @@ enum HPFileCompression
 	kBZIP2
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPFileCompression,std::string> HPFileCompressionToString = ba::map_list_of
 				(kUnknownCompression, "unknown compression")
                 (kNoCompression, "no compression")
                 (kGZIP, "gzip compressed")
                 (kBZIP2, "bzip2 compressed");
-#endif
-
 
 // Define supported projections
 // Values equal to those in newbase
@@ -117,13 +109,11 @@ enum HPProjectionType
 	kStereographicProjection = 13
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPProjectionType,std::string> HPProjectionTypeToString = ba::map_list_of
 		(kUnknownProjection, "unknown projection")
 		(kLatLonProjection, "ll")
 		(kRotatedLatLonProjection, "rll")
 		(kStereographicProjection, "polster");
-#endif
 
 // Define supported parameter units
 
@@ -154,7 +144,6 @@ enum HPInterpolationMethod
 	kNearestPointValue // http://arxiv.org/pdf/1211.1768.pdf
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPInterpolationMethod,std::string> HPInterpolationMethodToString = ba::map_list_of
 		(kUnknownInterpolationMethod, "unknown")
 		(kBiLinear, "bilinear")
@@ -169,7 +158,6 @@ const boost::unordered_map<std::string,HPInterpolationMethod> HPStringToInterpol
 		("nearest point value",kNearestPointValue)
 		;
 
-#endif
 
 enum HPLevelType
 {
@@ -188,7 +176,6 @@ enum HPLevelType
 	kEntireOcean = 201
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPLevelType,std::string> HPLevelTypeToString = ba::map_list_of
 		(kUnknownLevel, "unknown")
 		(kGround, "ground")
@@ -220,7 +207,6 @@ const boost::unordered_map<std::string,HPLevelType> HPStringToLevelType = ba::ma
 		("entocean", kEntireOcean)
 		("lake", kLake)
 		;
-#endif
 
 enum HPFileWriteOption
 {
@@ -230,21 +216,20 @@ enum HPFileWriteOption
 	kDatabase
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPFileWriteOption,std::string> HPFileWriteOptionToString = ba::map_list_of
 		(kUnknownFileWriteOption, "unknown")
 		(kSingleFile, "single file only")
 		(kMultipleFiles, "multiple files")
 		(kDatabase, "write to database")
 		;
-#endif
 
-// Values match to newbase
 
 /**
  * @enum HPScanningMode
  *
  * @brief Describe different data scanning modes (ie in which direction the data is read)
+ * 
+ * Values match to newbase.
  */
 
 enum HPScanningMode
@@ -257,14 +242,12 @@ enum HPScanningMode
 
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPScanningMode,std::string> HPScanningModeToString = ba::map_list_of
 		(kUnknownScanningMode, "unknown")
 		(kTopLeft, "+x-y")
 		(kTopRight, "+x+y")
 		(kBottomLeft, "+x+y")
 		(kBottomRight, "-x-y");
-#endif
 
 enum HPLevelOrder
 {
@@ -273,12 +256,10 @@ enum HPLevelOrder
 	kBottomToTop = 2 
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPLevelOrder,std::string> HPLevelOrderToString = ba::map_list_of
 	(kUnknownLevelOrder, "unknown")
 	(kTopToBottom, "top to bottom")
 	(kBottomToTop, "bottom to top");
-#endif
 
 enum HPExceptionType
 {
@@ -305,7 +286,6 @@ enum HPDimensionType
 	kForecastTypeDimension
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPDimensionType,std::string> HPDimensionTypeToString = ba::map_list_of
 		(kUnknownDimension, "unknown")
 		(kTimeDimension, "time dimension")
@@ -323,7 +303,6 @@ const boost::unordered_map<std::string,HPDimensionType> HPStringToDimensionType 
 		("location",kLocationDimension)
 		("forecast_type",kForecastTypeDimension)
 		;
-#endif
 
 enum HPTimeResolution
 {
@@ -332,12 +311,10 @@ enum HPTimeResolution
 	kMinuteResolution
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPTimeResolution,std::string> HPTimeResolutionToString = ba::map_list_of
 		(kUnknownTimeResolution, "unknown")
 		(kHourResolution, "hour")
 		(kMinuteResolution, "minute");
-#endif
 
 enum HPPackingType
 {
@@ -357,7 +334,6 @@ enum HPAggregationType
 	kDifference
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPAggregationType,std::string> HPAggregationTypeToString = ba::map_list_of
 		(kUnknownAggregationType, "unknown")
 		(kAverage, "average")
@@ -366,7 +342,6 @@ const boost::unordered_map<HPAggregationType,std::string> HPAggregationTypeToStr
 		(kMinimum, "minimum")
 		(kDifference, "difference")
 ;
-#endif
 
 enum HPModifierType
 {
@@ -384,7 +359,6 @@ enum HPModifierType
 	kPlusMinusAreaModifier
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPModifierType,std::string> HPModifierTypeToString = ba::map_list_of
 		(kUnknownModifierType, "unknown modifier")
 		(kAverageModifier, "average modifier")
@@ -399,7 +373,6 @@ const boost::unordered_map<HPModifierType,std::string> HPModifierTypeToString = 
 		(kIntegralModifier, "integral modifier")
 		(kPlusMinusAreaModifier, "plus minus area modifier")
 ;
-#endif
 
 /// Precipitation forms as agreed by FMI
 
@@ -416,7 +389,6 @@ enum HPPrecipitationForm
 	kUnknownPrecipitationForm = 10
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormToString = ba::map_list_of
 		(kDrizzle, "drizzle")
 		(kRain, "rain")
@@ -427,7 +399,6 @@ const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormT
 		(kGraupel, "graupel")
 		(kHail, "hail")
 		(kUnknownPrecipitationForm, "unknown");
-#endif
 
 enum HPGridType
 {
@@ -436,12 +407,10 @@ enum HPGridType
 	kIrregularGrid
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPGridType,std::string> HPGridTypeToString = ba::map_list_of
 		(kUnknownGridType, "unknown")
 		(kRegularGrid, "regular")
 		(kIrregularGrid, "irregular");
-#endif
 
 enum HPDatabaseType
 {
@@ -451,13 +420,11 @@ enum HPDatabaseType
 	kNeonsAndRadon
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPDatabaseType,std::string> HPDatabaseTypeToString = ba::map_list_of
 		(kUnknownDatabaseType, "unknown")
 		(kNeons, "neons")
 		(kRadon, "radon")
 		(kNeonsAndRadon, "neons and radon");
-#endif
 
 enum HPForecastType
 {
@@ -468,7 +435,6 @@ enum HPForecastType
 	kEpsPerturbation
 };
 
-#ifndef __CUDACC__
 const boost::unordered_map<HPForecastType,std::string> HPForecastTypeToString = ba::map_list_of
 		(kUnknownType, "unknown")
 		(kDeterministic, "deterministic")
@@ -484,7 +450,6 @@ const boost::unordered_map<std::string,HPForecastType> HPStringToForecastType = 
 		("eps control",kEpsControl)
 		("eps perturbation",kEpsPerturbation)
 		;
-#endif
 
 /**
  * @struct HPVersionNumber
@@ -493,7 +458,6 @@ const boost::unordered_map<std::string,HPForecastType> HPStringToForecastType = 
  *
  */
 
-#ifndef __CUDACC__
 struct HPVersionNumber
 {
 	unsigned short itsMajorVersion;
@@ -527,7 +491,6 @@ std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers)
 {
 	return vers.Write(file);
 }
-#endif
 
 namespace constants {
 
