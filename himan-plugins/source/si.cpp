@@ -54,6 +54,7 @@ double Min(const vector<double>& vec);
 double Max(const vector<double>& vec);
 void MultiplyWith(vector<double>& vec, double multiplier);
 void AddTo(vector<double>& vec, double incr);
+std::string PrintMean(const vector<double>& vec);
 }
 
 const himan::param SBLCLT("LCL-K");
@@ -197,10 +198,6 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("siThread #" + boost::lexical_cast<string> (threadIndex));
-
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " + static_cast<string> (myTargetInfo->Level()));
-
 	boost::thread_group g;
 	
 	for (auto sourceData : itsSourceDatas)
@@ -208,13 +205,13 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		switch (sourceData)
 		{
 			case kSurface:
-				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), kSurface));
+				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, kSurface));
 				break;
 			case k500mAvgMixingRatio:
-				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), k500mAvgMixingRatio));
+				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, k500mAvgMixingRatio));
 				break;
 			case kMaxThetaE:
-				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), kMaxThetaE));
+				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, kMaxThetaE));
 				break;
 			default:
 				throw runtime_error("Invalid source type");
@@ -228,7 +225,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 }
 
 
-void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSourceDataType sourceType)
+void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short threadIndex, HPSoundingIndexSourceDataType sourceType)
 {
 	
 	/*
@@ -264,9 +261,9 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSour
 	
 	auto myTargetInfo = make_shared<info> (*myTargetInfoOrig);
 
-	auto mySubThreadedLogger = logger_factory::Instance()->GetLog("siVersionThread" + boost::lexical_cast<string> (static_cast<int> (sourceType)));
+	auto mySubThreadedLogger = logger_factory::Instance()->GetLog("siThread#" + boost::lexical_cast<string> (threadIndex) + "Version" + boost::lexical_cast<string> (static_cast<int> (sourceType)));
 
-	mySubThreadedLogger->Info("Calculating source type " + boost::lexical_cast<string> (static_cast<int> (sourceType)));
+	mySubThreadedLogger->Info("Calculating source type " + HPSoundingIndexSourceDataTypeToString.at(sourceType) + " for time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
 	
 	// 1. 
 	
@@ -343,6 +340,9 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSour
 	DumpVector(get<0>(TandTD), "T");
 	DumpVector(get<1>(TandTD), "TD");
 
+	mySubThreadedLogger->Debug("Surface temperature: " + CAPE::PrintMean(TandTD.first));
+	mySubThreadedLogger->Debug("Surface dewpoint: " + CAPE::PrintMean(TandTD.second));
+	
 	// 2.
 	
 	cout << "\n--- LCL --\n" << endl;
@@ -354,6 +354,9 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSour
 	timer->Stop();
 	
 	mySubThreadedLogger->Info("LCL calculated in " + boost::lexical_cast<string> (timer->GetTime()) + " ms");
+
+	mySubThreadedLogger->Debug("LCL temperature: " + CAPE::PrintMean(LCL.first));
+	mySubThreadedLogger->Debug("LCL pressure: " + CAPE::PrintMean(LCL.second));
 
 	myTargetInfo->Param(LCLTParam);
 	myTargetInfo->Data().Set(LCL.first);
@@ -380,6 +383,9 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSour
 	{
 		return;
 	}
+
+	mySubThreadedLogger->Debug("LFC temperature: " + CAPE::PrintMean(LFC.first));
+	mySubThreadedLogger->Debug("LFC pressure: " + CAPE::PrintMean(LFC.second));
 
 	myTargetInfo->Param(LFCTParam);
 	myTargetInfo->Data().Set(LFC.first);
@@ -408,6 +414,15 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSour
 
 	mySubThreadedLogger->Info("CAPE and CIN calculated in " + boost::lexical_cast<string> (timer->GetTime()) + " ms");
 
+	capeInfo->Param(CAPEParam);
+	mySubThreadedLogger->Debug("CAPE: " + CAPE::PrintMean(VEC(capeInfo)));
+	capeInfo->Param(CAPE1040Param);
+	mySubThreadedLogger->Debug("CAPE1040: " + CAPE::PrintMean(VEC(capeInfo)));
+	capeInfo->Param(CAPE3kmParam);
+	mySubThreadedLogger->Debug("CAPE3km: " + CAPE::PrintMean(VEC(capeInfo)));
+	cinInfo->Param(CINParam);
+	mySubThreadedLogger->Debug("CIN: " + CAPE::PrintMean(VEC(cinInfo)));
+	
 #ifdef DEBUG
 	myTargetInfo->Param(MUCAPEZoneCount);
 	myTargetInfo->Data().Set(MUCAPEZonesEntered);
@@ -421,6 +436,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSour
 
 	// Do smoothening for CAPE & CIN parameters
 	// Calculate average of nearest 4 points + the point in question
+	mySubThreadedLogger->Info("Smoothening");
 	
 	himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
 	// C was row-major... right?
@@ -442,6 +458,15 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, HPSoundingIndexSour
 	filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
 	capeInfo->Grid()->Data(filtered);
 
+	capeInfo->Param(CAPEParam);
+	mySubThreadedLogger->Debug("CAPE: " + CAPE::PrintMean(VEC(capeInfo)));
+	capeInfo->Param(CAPE1040Param);
+	mySubThreadedLogger->Debug("CAPE1040: " + CAPE::PrintMean(VEC(capeInfo)));
+	capeInfo->Param(CAPE3kmParam);
+	mySubThreadedLogger->Debug("CAPE3km: " + CAPE::PrintMean(VEC(capeInfo)));
+	cinInfo->Param(CINParam);
+	mySubThreadedLogger->Debug("CIN: " + CAPE::PrintMean(VEC(cinInfo)));
+	
 }
 
 void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
@@ -1285,7 +1310,7 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 	for (size_t i = 0; i < PLCL.size(); i++)
 	{
-		if (PLCL[i] < 150.) PLCL[i] = 150.;
+		if (PLCL[i] < 250.) PLCL[i] = 250.;
 	}
 
 	return make_pair(TLCL,PLCL);
@@ -2038,6 +2063,35 @@ void AddTo(vector<double>& vec, double incr)
 	{
 		if (val != kFloatMissing) val += incr;
 	}
+}
+
+std::string PrintMean(const vector<double>& vec)
+{
+	double min = 1e38, max = -1e38, sum = 0;
+	size_t count = 0, missing = 0;
+
+	for(const double& val : vec)
+	{
+		if (val == himan::kFloatMissing)
+		{
+			missing++;
+			continue;
+		}
+
+		min = (val < min) ? val : min;
+		max = (val > max) ? val : max;
+		count++;
+		sum += val;
+	}
+
+	double mean = numeric_limits<double>::quiet_NaN();
+
+	if (count > 0)
+	{
+		mean = sum / static_cast<double> (count);
+	}
+	
+	return "min " + boost::lexical_cast<string> (static_cast<int> (min)) + " max " + boost::lexical_cast<string> (static_cast<int> (max)) + " mean " + boost::lexical_cast<string> (static_cast<int> (mean)) + " missing " + boost::lexical_cast<string> (missing);
 }
 
 } // namespace CAPE

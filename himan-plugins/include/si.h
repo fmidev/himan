@@ -26,6 +26,14 @@ enum HPSoundingIndexSourceDataType
 	
 };
 
+const boost::unordered_map<HPSoundingIndexSourceDataType,std::string> HPSoundingIndexSourceDataTypeToString = ba::map_list_of
+		(kUnknown, "unknown")
+		(kSurface, "surfcae")
+		(k500mAvg, "500m avg")
+		(k500mAvgMixingRatio, "500m mix")
+		(kMaxThetaE, "max theta e")
+		;
+
 class si : public compiled_plugin, private compiled_plugin_base
 {
 public:
@@ -54,8 +62,8 @@ public:
 	}
 
 private:
-	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-	void CalculateVersion(std::shared_ptr<info> theTargetInfo, HPSoundingIndexSourceDataType sourceType);
+	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex);
+	void CalculateVersion(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex, HPSoundingIndexSourceDataType sourceType);
 	void ScaleBase(std::shared_ptr<info> anInfo, double scale, double base);
 	
 	std::pair<std::vector<double>,std::vector<double>> GetLCL(std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& TD);
