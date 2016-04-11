@@ -1740,6 +1740,9 @@ double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparcel, dou
 	using himan::point;
 		
 	auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv), point(prevTparcel, prevZenv));
+	
+	if (intersection.Y() == kFloatMissing) return 0;
+	
 	prevZenv = intersection.Y();
 		
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
@@ -1776,8 +1779,13 @@ tuple<double,double,double> IntegrateLeavingParcel(double Tenv, double prevTenv,
 	using himan::point;
 
 	auto intersectionZ = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv), point(prevTparcel, prevZenv));
+	
+	if (intersectionZ.Y() == kFloatMissing) return make_tuple(0, kFloatMissing, kFloatMissing);
+	
 	auto intersectionP = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv), point(Tparcel, Penv), point(prevTparcel, prevPenv));
 
+	if (intersectionP.X() == kFloatMissing) return make_tuple(0, kFloatMissing, kFloatMissing);
+	
 	Zenv = intersectionZ.Y();
 	assert(fabs(intersectionZ.X() - intersectionP.X()) < 1.);
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
