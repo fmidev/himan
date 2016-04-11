@@ -845,6 +845,7 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 	h->Time(myTargetInfo->Time());
 	h->HeightUnit(kHPa);
 
+	// Found count determines if we have calculated all three CAPE variation for a single grid point
 	vector<unsigned char> found(T.size(), 0);
 
 	vector<double> CAPE(T.size(), 0);
@@ -859,21 +860,15 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 
 	// Unlike LCL, LFC is *not* found for all grid points
 
+	size_t foundCount = 0;
+
 	for (size_t i = 0; i < P.size(); i++)
 	{
 		if (P[i] == kFloatMissing)
 		{
 			found[i] |= FCAPE;
+			foundCount++;
 		}
-	}
-
-	// Found count determines if we have calculated all three CAPE variation for a single grid point
-	
-	size_t foundCount = 0;
-	
-	for (auto& val : found)
-	{
-		if (val & FCAPE) foundCount++;
 	}
 	
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
@@ -964,18 +959,22 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 							<< "------\n";
 			}
 #endif
-			if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || prevZenv == kFloatMissing || Tparcel == kFloatMissing || prevTparcel == kFloatMissing || Penv > P[i])
+			if (found[i] & FCAPE)
+			{
+				continue;
+			}
+			else if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || prevZenv == kFloatMissing || Tparcel == kFloatMissing || prevTparcel == kFloatMissing || Penv > P[i])
 			{
 				// Missing data or current grid point is below LFC
 				continue;
 			}
-
-			if (curLevel.Value() < 85 && (Tenv - Tparcel) > 30.)
+			else if (curLevel.Value() < 85 && (Tenv - Tparcel) > 25.)
 			{
 				// Temperature gap between environment and parcel too large --> abort search.
 				// Only for values higher in the atmosphere, to avoid the effects of inversion
 
-				found[i] = true;
+				found[i] |= FCAPE;
+				continue;
 			}
 		
 			if (prevZenv >= 3000. && Zenv >= 3000.)
@@ -1014,7 +1013,13 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 			}
 		}
 
-		curLevel.Value(curLevel.Value() - 1);		
+		curLevel.Value(curLevel.Value() - 1);
+
+		foundCount = 0;
+		for (auto& val : found)
+		{
+			if (val & FCAPE) foundCount++;
+		}	
 
 		itsLogger->Debug("CAPE read for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 		prevZenvInfo = ZenvInfo;
