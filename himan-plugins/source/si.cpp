@@ -1763,9 +1763,10 @@ double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparcel, dou
 	prevZenv = intersection.Y();
 		
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+	CAPE = min(CAPE, 150.);
 	
 	assert(CAPE >= 0);
-	assert(CAPE < 150);
+	assert(CAPE <= 150);
 	
 	return CAPE;
 }
@@ -1806,9 +1807,10 @@ tuple<double,double,double> IntegrateLeavingParcel(double Tenv, double prevTenv,
 	Zenv = intersectionZ.Y();
 	assert(fabs(intersectionZ.X() - intersectionP.X()) < 1.);
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
+	CAPE = min(CAPE, 150.);
 
 	assert(CAPE >= 0);	
-	assert(CAPE < 150);
+	assert(CAPE <= 150);
 	
 	return make_tuple(CAPE, intersectionP.X(), intersectionP.Y());
 }
@@ -1894,10 +1896,11 @@ double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTenv, doub
    assert(Zenv >= newPrevZenv);
 
    double CAPE = himan::constants::kG * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
+   CAPE = min(CAPE, 150.);
 
    assert(Zenv >= prevZenv);
    assert(CAPE >= 0.);
-   assert(CAPE < 150.);
+   assert(CAPE <= 150.);
    
    return CAPE;
 }
@@ -1974,9 +1977,11 @@ double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv, doubl
 	assert(newZenv >= prevZenv);
 
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((newTparcel - areaLimit) / areaLimit);
+	assert(CAPE >= 0.);
 
-	assert(CAPE >= 0.);	
-	assert(CAPE < 150.);
+	CAPE = min(CAPE, 150.);
+
+	assert(CAPE <= 150.);
 	
 	return CAPE;
 }
@@ -2040,8 +2045,10 @@ double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, double Tpa
 
 	double CAPE = himan::constants::kG * (areaUpperLimit - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
 
+	CAPE = min(CAPE, 150.);
+
 	assert(CAPE >= 0.);		
-	assert(CAPE < 150);
+	assert(CAPE <= 150);
 	
 	return CAPE;
 }
