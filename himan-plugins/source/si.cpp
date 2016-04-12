@@ -703,7 +703,7 @@ double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double prevTpa
 		else if ((prevTenv > coldColderLimit && prevTenv < coldWarmerLimit) // At previous height conditions were suitable (TODO: buoyancy is not checked!)
 				&& (Tenv < coldColderLimit || Tenv > coldWarmerLimit))
 		{
-			// Current env temperature is too cold or too warm			
+			// Current env temperature is too cold or too warm
 			C = CAPE::IntegrateTemperatureAreaLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv, coldColderLimit, coldWarmerLimit);			
 		}
 	}
@@ -1325,14 +1325,25 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTargetInfo)
 {
 	auto TInfo = Fetch(myTargetInfo->Time(), level(himan::kHybrid, 137), param("T-K"), myTargetInfo->ForecastType(), false);
-	auto TDInfo = Fetch(myTargetInfo->Time(), level(himan::kHybrid, 137), param("TD-C"), myTargetInfo->ForecastType(), false);
+	auto RHInfo = Fetch(myTargetInfo->Time(), level(himan::kHybrid, 137), param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
 	
-	if (!TInfo || !TDInfo)
+	if (!TInfo || !RHInfo)
 	{
 		return make_pair(vector<double>(),vector<double>());
 	}
-	auto T = TInfo->Data().Values();
-	auto TD = TDInfo->Data().Values();
+
+	auto T = VEC(TInfo);
+	auto RH = VEC(RHInfo);
+
+	vector<double> TD(T.size(), kFloatMissing);
+
+	for (size_t i = 0; i < TD.size(); i++)
+	{
+		if (T[i] != kFloatMissing && RH[i] != kFloatMissing)
+		{
+			TD[i] = metutil::DewPointFromRH_(T[i], RH[i]);
+		}
+	}
 
 	return make_pair(T,TD);
 
