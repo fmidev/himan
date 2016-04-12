@@ -1324,8 +1324,8 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTargetInfo)
 {
-	auto TInfo = Fetch(myTargetInfo->Time(), level(himan::kHeight,2), param("T-K"), myTargetInfo->ForecastType(), false);
-	auto TDInfo = Fetch(myTargetInfo->Time(), level(himan::kHeight,2), param("TD-C"), myTargetInfo->ForecastType(), false);
+	auto TInfo = Fetch(myTargetInfo->Time(), level(himan::kHybrid, 137), param("T-K"), myTargetInfo->ForecastType(), false);
+	auto TDInfo = Fetch(myTargetInfo->Time(), level(himan::kHybrid, 137), param("TD-C"), myTargetInfo->ForecastType(), false);
 	
 	if (!TInfo || !TDInfo)
 	{
@@ -1424,7 +1424,6 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 			if (found[i]) continue;
 
 			Tpot[i] = metutil::Theta_(T[i], 100*P[i]);
-			//MR[i] = metutil::MixingRatio_(T[i], 100*P[i]);
 			MR[i] = [&](){
 				
 				// es				
@@ -1443,6 +1442,8 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 				
 				// w
 				double w = 0.622 * e/P[i] * 1000;
+				
+				assert(w < 60);
 	
 				return w;
 			}();
