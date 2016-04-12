@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.4.11
+Version: 16.4.12
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -93,6 +93,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libtransformer.so
 %{_libdir}/himan-plugins/libturbulence.so
 %{_libdir}/himan-plugins/libunstagger.so
+%{_libdir}/himan-plugins/libvisibility.so
 %{_libdir}/himan-plugins/libvvms.so
 %{_libdir}/himan-plugins/libweather_symbol.so
 %{_libdir}/himan-plugins/libweather_code_1.so
@@ -101,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.12-1.fmi
+- Initial import of visibility
 * Mon Apr 11 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.11-1.fmi
 - New release
 * Fri Apr  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.8-1.fmi
