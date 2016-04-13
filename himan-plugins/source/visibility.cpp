@@ -182,14 +182,14 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
         auto h = GET_PLUGIN(hitool);
 	
 	h->Configuration(itsConfiguration);
-        h->Time(forecastTime);
+	h->Time(forecastTime);
 
 	vector<double> stratus;
 	vector<double> stratus30;
 	vector<double> stratus300;
 	vector<double> lowclouds;
 	vector<double> highclouds;
-	VertMax(myTargetInfo, stratus, NParam, 0, 340);
+	VertMax(myTargetInfo, stratus, NParam, 0, 304);
 	VertMax(myTargetInfo, stratus30, NParam, 0, 30);
 	VertMax(myTargetInfo, stratus300, NParam, 31, 300);
 	VertMax(myTargetInfo, lowclouds, NParam, 60, 600);
@@ -222,7 +222,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	
 	string deviceType = "CPU";
 	
-	LOCKSTEP(myTargetInfo,NInfo,TInfo,CFInfo,PFInfo,RHInfo,RRInfo,NextRRInfo)
+	LOCKSTEP(myTargetInfo,NInfo,TInfo,CFInfo,PFInfo,RHInfo,FFInfo,RRInfo,NextRRInfo)
 	{
 
 		size_t i = myTargetInfo->LocationIndex();
@@ -252,7 +252,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double T125 = temp125[i];
 		double FFBLH = ffblh[i];		
 		
-		if (IsMissingValue({N, CF, T, FF, RH, RR}))
+		if (IsMissingValue({N, CF, T, FF, PF, RH, RR, strat, lowC, HUM25, T25, FFBLH}))
 		{
 			continue;
 		}
@@ -290,7 +290,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		{		
 		
   			// Drizzle (tai j��t�v� tihku)
-  			if ((PF == 0) || (PF == 4))
+  			if (PF == 0 || PF == 4)
   			{
     			// Nakyvyys intensiteetin perusteella
     				visPre = 1/RR*500;
@@ -300,7 +300,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
   			}
  
   			// Vesisade (tai jäätävä vesisade)
-  			if ((PF == 1) || (PF == 5))
+  			if (PF == 1 || PF == 5)
   			{
     				// Nakyvyys intensiteetin perusteella
     				// (kaava antaa ehkä turhan huonoja <4000m näkyvyyksiä reippaassa RR>4 vesisateessa)
@@ -344,21 +344,19 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		}
 		
 		double visMist = defaultVis;
-				
-		
+	        double stHmist = 1;	
 		// SUMUP��TTELY
 		
 		// *** Utuisuuskertoimien laskenta stratuksen määrän ja korkeuden perusteella ***
 		// Kertoimia saatamalla voi saataa kunkin parametrin vaikutusta/painoarvoa.
  
 		// Näkyvyyden utuisuuskerroin udussa/sumussa sumupilven maaran perusteella [7,0...0,7, kun stN = 0...100%]
-		double stNmist = sqrt(50/(N+1));
+		double stNmist = sqrt(50/(strat+1));
  
 		// Näkyvyyden utuisuuskerroin udussa/sumussa sumupilvikorkeuden perusteella [ 0,47...1, kun par500 = 50...999ft]
-		double stHmist = 1;
 		if (CF < 1000)
 		{  
-			stHmist = pow((CF/999),0.25);
+			stHmist = pow((CF/999), 0.25);
 		}
  
 		// *** end utuisuuskertoimet ***
@@ -367,7 +365,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		// sfcCloud parametri saa arvon 1 jos mallin pilvi on vain alimman 30m korkeudessa. Jos pilveä on yli 1/10 31-300m korkeudessa, sfcCloud saa arvon 0
 		double sfcCloud = 0;
 		
-		if ((strat30 > 55) && (strat300 < 10))
+		if (strat30 > 55 && strat300 < 10)
 		{  
 			sfcCloud = 1;
 		}
@@ -375,7 +373,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		// Näkyvyys udussa/sumussa, lasketaan myös heikossa sateessa (tarkoituksena tasoittaa suuria näkyvyysgradientteja sateen reunalla)
 		// (ehkä syytä rajata vain tilanteisiin, jossa sateen perusteella saatu näkyvyys oli vielä >8000?)
  
-		if ((RR < 0.5 ) && ( sfcCloud < 1 ))
+		if (RR < 0.5 && sfcCloud < 1)
 		{
   			// Oletus RH:n kynnysarvo utuisuudelle, kun T>=0C [%]
   			// Jos muutat tata, pitaa myos allaolevaa pakkaskynnysarvon laskentakaavaa muokata!
@@ -406,7 +404,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		}
 		
 		// Jos sumupilven perusteella laskettu näkyvyys edelleen yli 8km tutkitaan säteilysumujen mahdollisuutta.
-		if (visMist < 8000)
+		if (visMist > 8000)
 		{
 		
   		// Säteilysumuun vaikuttavat parametrit ja niiden painoarvot
@@ -451,7 +449,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
   			// painokerroin tuulen nopeudelle 1 m/s = 0, 1,6m/s = 0.3, 2,6m/s = 0.7  4m/s = 1 (eksponentiaalinen riippuvuus)
   			// eli tuulen nopeus estää säteilysumun synnyn jos se on suurempi kuin 4 m/s
    
-        		double Wind_coeff = log(pow(FF, 2))*0.361;
+        		double Wind_coeff = log(FF*FF)*0.361;
          
         		//huolehditaan etta Wind_coeff arvo pysyy nollan ja ykkosen valilla
         		if (Wind_coeff < 0)
@@ -525,7 +523,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
   			// Näkyvyys lasketaan mallin suhteellisen kosteuden ja aikaisemmin lasketun humidity_min parametrin erotuksesta. 
 			// humidity_min on lämpötilaan suhteutettu alin suhteellinen kosteus jossa säteilysumuja voi vielä esiintyä.
   			
-			if ((visibility_sum < threshold) && (Cloud_coeff < 1) && (Wind_coeff < 1) && (Humidity_coeff < 1) && (Humidity_upper_coeff < 1) && (Wind_upper_coeff < 1))
+			if (visibility_sum < threshold && Cloud_coeff < 1 && Wind_coeff < 1 && Humidity_coeff < 1 && Humidity_upper_coeff < 1 && Wind_upper_coeff < 1)
   			{  
 				visMist = (8000 - (RH - humidity_min) * 900);
 			}
@@ -533,7 +531,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
   			// Lisähuononnus näkyvyyteen muiden parametrien kautta (tuuli, pilvisyys, auringonsäteily, suhteellinen kosteus alailmakehässä)
   			// parametri saa maksimissaan arvon 1.8 = 80% huononnus näkyvyyteen
   			double extra = 1.8 - (Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff + 0.1) / 3;
-  			if ((extra < 3) && (extra > 0.01))
+  			if (extra < 3 && extra > 0.01)
   			{  
 				visMist = visMist/extra;
 			}			 
