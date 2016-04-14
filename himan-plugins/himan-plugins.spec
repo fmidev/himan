@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.4.12
+Version: 16.4.14
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -102,7 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Mon Apr 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.12-1.fmi
+* Thu Apr 14 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.14-1.fmi
+- Enabling debug symbols for release builds
+* Tue Apr 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.12-1.fmi
 - Initial import of visibility
 * Mon Apr 11 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.11-1.fmi
 - New release
