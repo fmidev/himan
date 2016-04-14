@@ -174,60 +174,62 @@ BOOST_AUTO_TEST_CASE(THETAE)
 	// are most likely caused by mixing ratio formula which is not the
 	// same one Bolton is using.
 
+	// Air parcel is saturated (T=TD).
+
 	double T = 273.15 + 30;
 	double P = 100 * 1000;
 
-	double thetae = metutil::ThetaE_(T,P);
+	double thetae = metutil::ThetaE_(T,T,P);
 
 	BOOST_CHECK_CLOSE(thetae, 386.28, 0.1);
 
 	T -= 10;
 
-	thetae = metutil::ThetaE_(T,P);	
+	thetae = metutil::ThetaE_(T,T,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 335.61, 0.1);
 
 	T -= 20;
 
-	thetae = metutil::ThetaE_(T,P);	
+	thetae = metutil::ThetaE_(T,T,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 283.60, 0.1);
 
 	T -= 30;
 
-	thetae = metutil::ThetaE_(T,P);	
+	thetae = metutil::ThetaE_(T,T,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 244.01, 0.1);
 
 	T = 273.15 + 20;
 	P = 100 * 700;
 
-	thetae = metutil::ThetaE_(T,P);	
+	thetae = metutil::ThetaE_(T,T,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 394.71, 0.1);
 
 	T -= 20;
 
-	thetae = metutil::ThetaE_(T,P);	
+	thetae = metutil::ThetaE_(T,T,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 319.13, 0.1);	
 
 	T -= 30;
 
-	thetae = metutil::ThetaE_(T,P);	
+	thetae = metutil::ThetaE_(T,T,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 270.57, 0.2);
 
 	T = 273.15 - 30;
 	P = 100 * 200;
 
-	thetae = metutil::ThetaE_(T,P);	
+	thetae = metutil::ThetaE_(T,T,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 391.82, 0.5);	
 
 	T -= 20;
 
-	thetae = metutil::ThetaE_(T,P);	
+	thetae = metutil::ThetaE_(T,T,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 354.11, 0.1);	
 
@@ -303,7 +305,7 @@ BOOST_AUTO_TEST_CASE(THETAW)
 	double T = 12 + 273.15;
 	double P = 36960;
 
-	double thetaE = metutil::ThetaE_(T,P);
+	double thetaE = metutil::ThetaE_(T,T,P);
 	double thetaW = metutil::ThetaW_(thetaE, P);
 
 	BOOST_CHECK_CLOSE(thetaW - 273.15, 39.9, 0.1);
@@ -311,7 +313,7 @@ BOOST_AUTO_TEST_CASE(THETAW)
 	T = -32 + 273.15;
 	P = 18820;
 
-	thetaE = metutil::ThetaE_(T,P);
+	thetaE = metutil::ThetaE_(T,T,P);
 	thetaW = metutil::ThetaW_(thetaE, P);
 
 	BOOST_CHECK_CLOSE(thetaW - 273.15, 30.97, 0.1);
@@ -319,7 +321,7 @@ BOOST_AUTO_TEST_CASE(THETAW)
 	T = 38 + 273.15;
 	P = 106980;
 
-	thetaE = metutil::ThetaE_(T,P);
+	thetaE = metutil::ThetaE_(T,T,P);
 	thetaW = metutil::ThetaW_(thetaE, P);
 
 	BOOST_CHECK_CLOSE(thetaW - 273.15, 36.05, 0.1);
@@ -327,7 +329,7 @@ BOOST_AUTO_TEST_CASE(THETAW)
 	T = 10 + 273.15;
 	P = 90800;
 
-	thetaE = metutil::ThetaE_(T,P);
+	thetaE = metutil::ThetaE_(T,T,P);
 	thetaW = metutil::ThetaW_(thetaE, P);
 
 	BOOST_CHECK_CLOSE(thetaW - 273.15, 14.02, 0.1);
@@ -335,7 +337,7 @@ BOOST_AUTO_TEST_CASE(THETAW)
 	T = -14 + 273.15;
 	P = 64800;
 
-	thetaE = metutil::ThetaE_(T,P);
+	thetaE = metutil::ThetaE_(T,T,P);
 	thetaW = metutil::ThetaW_(thetaE, P);
 
 	BOOST_CHECK_CLOSE(thetaW - 273.15, 7.54, 0.1);
@@ -343,7 +345,7 @@ BOOST_AUTO_TEST_CASE(THETAW)
 	T = -50 + 273.15;
 	P = 30170;
 
-	thetaE = metutil::ThetaE_(T,P);
+	thetaE = metutil::ThetaE_(T,T,P);
 	thetaW = metutil::ThetaW_(thetaE, P);
 
 	BOOST_CHECK_CLOSE(thetaW - 273.15, 13.68, 0.1);
@@ -354,7 +356,7 @@ BOOST_AUTO_TEST_CASE(TW)
 	double TLCL = 273.15;
 	double PLCL = 100000;
 
-	double thetaE = metutil::ThetaE_(TLCL,PLCL);
+	double thetaE = metutil::ThetaE_(TLCL,TLCL,PLCL);
 
 	double Tw = metutil::Tw_(thetaE, 85000);
 
@@ -363,7 +365,7 @@ BOOST_AUTO_TEST_CASE(TW)
 	TLCL = 250;
 	PLCL = 50000;
 
-	thetaE = metutil::ThetaE_(TLCL,PLCL);
+	thetaE = metutil::ThetaE_(TLCL,TLCL,PLCL);
 
  	Tw = metutil::Tw_(thetaE, 20000);
 
@@ -372,7 +374,7 @@ BOOST_AUTO_TEST_CASE(TW)
 	TLCL = 280.01;
 	PLCL = 84011;
 
-	Tw = metutil::Tw_(metutil::ThetaE_(TLCL, PLCL),  72570);
+	Tw = metutil::Tw_(metutil::ThetaE_(TLCL, TLCL,PLCL),  72570);
 
 	BOOST_REQUIRE_CLOSE(Tw, 273.52, 0.01);
 	
