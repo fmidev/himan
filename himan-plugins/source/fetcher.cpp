@@ -28,8 +28,6 @@
 using namespace himan::plugin;
 using namespace std;
 
-shared_ptr<cache> itsCache;
-
 #ifdef HAVE_CUDA
 extern bool InterpolateCuda(himan::info_simple* baseInfo, himan::info_simple* targetInfo);
 #endif
@@ -229,7 +227,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	
 	if (itsUseCache && config->UseCache() && !theInfos[0]->Grid()->IsPackedData())
 	{
-		itsCache->Insert(*theInfos[0]);
+		auto c = GET_PLUGIN(cache);
+		c->Insert(*theInfos[0]);
 	}
 
 	baseInfo.reset();
@@ -298,7 +297,9 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 
 vector<shared_ptr<himan::info> > fetcher::FromCache(search_options& options)
 {
-	vector<shared_ptr<himan::info>> infos = itsCache->GetInfo(options);
+	auto c = GET_PLUGIN(cache);
+
+	vector<shared_ptr<himan::info>> infos = c->GetInfo(options);
 
 	return infos;
 }
@@ -422,12 +423,6 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 	{
 
 		// 1. Fetch data from cache
-
-		if (!itsCache)
-		{
-			itsCache = GET_PLUGIN(cache);
-		}
-
 		ret = FromCache(opts);
 
 		if (ret.size())
