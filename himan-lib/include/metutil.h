@@ -15,14 +15,7 @@
 
 #include "assert.h"
 #include "himan_common.h"
-
-#ifdef __CUDACC__
-#define CUDA_DEVICE __device__
-#define CUDA_KERNEL __global__
-#else
-#define CUDA_DEVICE
-#define CUDA_KERNEL
-#endif
+#include "cuda_helper.h"
 
 #if defined FAST_MATH and not defined __CUDACC__
 #include "fastmath.h"
@@ -86,9 +79,6 @@ struct lcl_t
 };
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
-
-typedef double* __restrict darr_t;
-typedef const double* __restrict cdarr_t;
 
 namespace himan
 {

@@ -4,6 +4,14 @@
 #include <iostream>
 #include <cassert>
 
+#ifdef __CUDACC__
+#define CUDA_DEVICE __device__
+#define CUDA_KERNEL __global__
+#else
+#define CUDA_DEVICE
+#define CUDA_KERNEL
+#endif
+
 #ifdef HAVE_CUDA
 
 #include "info_simple.h"
