@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 16.4.14
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.4.8
+Requires: himan-lib >= 16.4.14
 Requires: himan-bin >= 16.2.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -102,6 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Apr 14 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.14-2.fmi
+- ThetaE change
+- Filter2D changed namespaces
 * Thu Apr 14 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.14-1.fmi
 - Enabling debug symbols for release builds
 * Tue Apr 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.12-1.fmi
