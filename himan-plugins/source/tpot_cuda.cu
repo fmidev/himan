@@ -75,14 +75,7 @@ __device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD
 
 	if (T != kFloatMissing && P != kFloatMissing & TD != kFloatMissing)
 	{
-		// Search LCL level
-
-		lcl_t LCL = himan::metutil::LCLA_(P, T, TD);
-
-		if (LCL.T != kFloatMissing)
-		{
-			value = metutil::ThetaE_(LCL.T, LCL.P);
-		}
+		value = metutil::ThetaE_(T, TD, P);
 	}
 
 	return value;

@@ -240,7 +240,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			if (itsThetaECalculation)
 			{
-				double value = ThetaE(P, T, TD);
+				double value = metutil::ThetaE_(T, TD, P);
 
 				myTargetInfo->Param(param("TPE-K"));
 
@@ -256,7 +256,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 double tpot::ThetaW(double P, double T, double TD)
 {
 	
-	double thetae = ThetaE(P, T, TD);
+	double thetae = metutil::ThetaE_(T, TD, P);
 
 	if (thetae == kFloatMissing)
 	{
@@ -264,19 +264,6 @@ double tpot::ThetaW(double P, double T, double TD)
 	}
 
 	return metutil::ThetaW_(thetae, P);
-}
-
-double tpot::ThetaE(double P, double T, double TD)
-{
-	lcl_t LCL = metutil::LCLA_(P, T, TD);
-
-	if (LCL.T == kFloatMissing)
-	{
-		return kFloatMissing;
-	}
-
-	return metutil::ThetaE_(LCL.T, LCL.P);
-
 }
 
 #ifdef HAVE_CUDA
