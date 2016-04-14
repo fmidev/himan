@@ -107,7 +107,7 @@ namespace metutil
  * Basically this is inverse of mixing ratio, formula used is (2.18)
  * from Rogers & Yau: A Short Course in Cloud Physics (3rd edition).
  * 
- * @param R Mixing ration in g/kg
+ * @param R Mixing ratio in g/kg
  * @param P Pressure in Pa
  * @return Water vapour pressure in Pa 
  */
@@ -560,17 +560,15 @@ double Theta_(double T, double P);
  * Formula used is (43) from 
  * 
  * Bolton: The Computation of Equivalent Potential Temperature (1980)
- * 
- * Note! Input temperature and pressure are assumed to be from a saturated
- * air parcel (ie. LCL temperature and pressure).
- * 
- * @param T The temperature of a saturated air parcel (Kelvin)
- * @param P The initial pressure of the parcel (Pa)
+* 
+ * @param T Temperature at initial level (Kelvin)
+ * @param TD Dewpoint temperature at inital level (Kelvin)
+ * @param P Pressure at initial level (Pa)
  * @return Equivalent potential temperature ThetaE in Kelvins
  */
 
 CUDA_DEVICE
-double ThetaE_(double T, double P);
+double ThetaE_(double T, double TD, double P);
 
 /**
  * @brief Calculate equivalent potential temperature.
@@ -708,7 +706,6 @@ inline double himan::metutil::E_(double R, double P)
 {
 	assert(P > 1000);
 	assert(R > 0.001);
-
 	
 	// R is g/kg, converting it to g/g gives multiplier 1000
 
@@ -768,9 +765,9 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	}
 	// Sanity checks
 
-	assert(P > 10000);
+	assert(P > 2000);
 	assert(T > 100 && T < 400);
-	assert(targetP > 10000);
+	assert(targetP > 2000);
 	
 	double Pint = P; // Pa
 	double Tint = T; // K
@@ -1182,21 +1179,25 @@ double himan::metutil::ThetaESimple_(double T, double P)
 
 CUDA_DEVICE
 inline
-double himan::metutil::ThetaE_(double T, double P)
+double himan::metutil::ThetaE_(double T, double TD, double P)
 {
 	assert(T > 0);
 	assert(P > 1000);
-	
-	double r = himan::metutil::MixingRatio_(T, P);
-	
-	// Assuming fully saturated air parcel, ie. T = T_lcl
+
+	// Get LCL temperature
+	const double A = 1 / (TD - 56);
+	const double B = log(T/TD) / 800.;
+	const double TLCL = 1 / (A + B) + 56;
+
+	// Mixing ratio at initial level
+	const double r = himan::metutil::MixingRatio_(T, P);
 	
 	// 100000 = reference pressure 1000hPa
-	double A = T * pow(100000./P, 0.2854 * (1 - 0.00028 * r));
-	double B = 3.376 / T - 0.00254;
-	double C = r * (1 + 0.00081 * r);
+	const double C = T * pow(100000./P, 0.2854 * (1 - 0.00028 * r));
+	const double D = 3.376 / TLCL - 0.00254;
+	const double F = r * (1 + 0.00081 * r);
 
-	return A * EXP(B * C);
+	return C * EXP(D * F);
 }
 
 CUDA_DEVICE
@@ -1335,4 +1336,5 @@ double himan::metutil::VirtualTemperature_(double T, double P)
 	double r = 0.001 * MixingRatio_(T, P); // kg/kg
 	return (1 + 0.61 * r) * T;
 }
+
 #endif /* METUTIL_H_ */
