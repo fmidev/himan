@@ -88,6 +88,15 @@ std::valarray<double> integral::Interpolate(std::valarray<double> currentLevelVa
 	return (previousLevelValue + (currentLevelValue - previousLevelValue) * (itsBound - previousLevelHeight) / (currentLevelHeight - previousLevelHeight));
 }
 
+/**
+ * @brief Compute convolution of matrix A by matrix B
+ * @param A Data
+ * @param B Convolution kernel
+ * @return Data convolved by kernel
+ */
+
+himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& B);
+    
 } // namespace numerical_functions
 
 } // namespace himan

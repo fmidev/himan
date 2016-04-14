@@ -2,7 +2,7 @@
 #include <boost/filesystem.hpp>
 #include "logger_factory.h"
 #include "forecast_time.h"
-#include "util.h"
+#include "numerical_functions.h"
 #include "metutil.h"
 #include "regular_grid.h"
 #include "plugin_factory.h"
@@ -126,6 +126,8 @@ void luatool::InitLua(info_t myTargetInfo)
 	globals(L)["current_level"] = level(myTargetInfo->Level());
 	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
 	globals(L)["kFloatMissing"] = kFloatMissing;
+
+	globals(L)["kKelvin"] = constants::kKelvin;
 	
 	auto h = GET_PLUGIN(hitool);
 	
@@ -909,7 +911,7 @@ void BindLib(lua_State* L)
 			.def_readwrite("use_bitmap", &write_options::use_bitmap)
 		,
 		// util namespace
-		def("Filter2D", &util::Filter2D)
+		def("Filter2D", &numerical_functions::Filter2D)
 		,
 		// metutil namespace
 		def("LCL_", &metutil::LCL_)

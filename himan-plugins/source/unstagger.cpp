@@ -10,6 +10,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "util.h"
+#include "numerical_functions.h"
 #include "matrix.h"
 #include "unstagger.h"
 #include "logger_factory.h"
@@ -131,7 +132,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	himan::matrix<double> filter_kernel_U(2,1,1,kFloatMissing);
 	filter_kernel_U.Fill(0.5);
 
-	himan::matrix<double> unstaggered_U = util::Filter2D(UInfo->Data(), filter_kernel_U);	
+	himan::matrix<double> unstaggered_U = numerical_functions::Filter2D(UInfo->Data(), filter_kernel_U);	
 
 	myTargetInfo->ParamIndex(0);
 	myTargetInfo->Grid()->Data(unstaggered_U);
@@ -140,7 +141,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	himan::matrix<double> filter_kernel_V(1,2,1,kFloatMissing);
 	filter_kernel_V.Fill(0.5);
 
-	himan::matrix<double> unstaggered_V = util::Filter2D(VInfo->Data(), filter_kernel_V);	
+	himan::matrix<double> unstaggered_V = numerical_functions::Filter2D(VInfo->Data(), filter_kernel_V);	
 
 	myTargetInfo->ParamIndex(1);
 	myTargetInfo->Grid()->Data(unstaggered_V);

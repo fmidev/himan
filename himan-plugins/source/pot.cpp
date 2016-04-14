@@ -15,7 +15,7 @@
 #include "level.h"
 #include "forecast_time.h"
 #include "regular_grid.h"
-#include "util.h"
+#include "numerical_functions.h"
 #include "matrix.h"
 
 
@@ -97,7 +97,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     // Filter RR
     himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
     filter_kernel.Fill(1.0/9.0);
-    himan::matrix<double> filtered_RR = util::Filter2D(RRInfo->Data(), filter_kernel);
+    himan::matrix<double> filtered_RR = numerical_functions::Filter2D(RRInfo->Data(), filter_kernel);
     RRInfo->Grid()->Data(filtered_RR);
     
     string deviceType = "CPU";

@@ -13,6 +13,7 @@
 #include "NFmiInterpolation.h"
 #include <boost/thread.hpp>
 #include "util.h"
+#include "numerical_functions.h"
 
 #include "metutil.h"
 
@@ -443,19 +444,19 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	filter_kernel.Set({0, 0.2, 0, 0.2, 0.2, 0.2, 0, 0.2, 0});
 	
 	capeInfo->Param(CAPEParam);
-	himan::matrix<double> filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
+	himan::matrix<double> filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
 	capeInfo->Grid()->Data(filtered);
 
 	capeInfo->Param(CAPE1040Param);
-	filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
+	filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
 	capeInfo->Grid()->Data(filtered);
 
 	capeInfo->Param(CAPE3kmParam);
-	filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
+	filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
 	capeInfo->Grid()->Data(filtered);
 
 	capeInfo->Param(CINParam);
-	filtered = util::Filter2D(capeInfo->Data(), filter_kernel);
+	filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
 	capeInfo->Grid()->Data(filtered);
 
 	capeInfo->Param(CAPEParam);

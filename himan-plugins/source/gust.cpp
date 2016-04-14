@@ -10,7 +10,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "gust.h"
-#include "util.h"
+#include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include "level.h"
@@ -452,7 +452,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
 	filter_kernel.Fill(1.0/9.0);
-	himan::matrix<double> gust_filtered = util::Filter2D(myTargetInfo->Data(), filter_kernel);
+	himan::matrix<double> gust_filtered = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
 	myTargetInfo->Grid()->Data(gust_filtered);
 	

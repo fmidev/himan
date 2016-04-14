@@ -172,15 +172,6 @@ double ToPower(double value, double power);
 void Unpack(std::initializer_list<grid*> grids);
 
 /**
- * @brief Compute convolution of matrix A by matrix B
- * @param A Data
- * @param B Convolution kernel
- * @return Data convolved by kernel
- */
-
-himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& B);
-
-/**
  * @brief Compute the x/y-derivative of input A
  * @param A Data field of input values
  * @param dx vector of x-spacing as function of y
