@@ -28,7 +28,7 @@ enum HPSoundingIndexSourceDataType
 
 const boost::unordered_map<HPSoundingIndexSourceDataType,std::string> HPSoundingIndexSourceDataTypeToString = ba::map_list_of
 		(kUnknown, "unknown")
-		(kSurface, "surfcae")
+		(kSurface, "surface")
 		(k500mAvg, "500m avg")
 		(k500mAvgMixingRatio, "500m mix")
 		(kMaxThetaE, "max theta e")
