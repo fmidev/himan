@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.4.8
+Version: 16.4.14
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -49,6 +49,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Apr 14 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.14-1.fmi
+- Moving Filter2D() to numerical_functions
+- ThetaE signature change
 * Fri Apr  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.8-1.fmi
 - Simplifying code, thanks partly to Cuda 7.5 and C++11
 * Mon Apr  4 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.4-1.fmi
