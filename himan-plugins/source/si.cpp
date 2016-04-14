@@ -1628,7 +1628,8 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 				continue;
 			}
 			
-			double ThetaE = metutil::ThetaE_(T, P*100);
+			double TD = metutil::DewPointFromRH_(T, RH);
+			double ThetaE = metutil::ThetaE_(T, TD, P*100);
 
 #ifdef POINTDEBUG
 			myTargetInfo->LocationIndex(i);
@@ -1653,14 +1654,8 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 			{
 				refThetaE = ThetaE;
 				Tresult = T;
-				
-				if (RH == 0.) 
-				{
-					RH = 0.1;
-				}
-				
-				TDresult = metutil::DewPointFromRH_(T, RH);
-				
+				TDresult = TD;
+
 				assert(TDresult > 100);
 			}
 		}
