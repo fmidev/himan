@@ -178,13 +178,15 @@ env.Append(NVCCPATH = [workspace + '/himan-plugins/include']) # cuda-helper
 
 build_dir = ""
 
+env.Append(CCFLAGS = ['-g'])
+
 if RELEASE:
 	env.Append(CCFLAGS = ['-O2'])
 	env.Append(CPPDEFINES = ['NDEBUG'])
 	build_dir = 'build/release'
 
 if DEBUG:
-	env.Append(CCFLAGS = ['-g','-O0'])
+	env.Append(CCFLAGS = ['-O0'])
 	env.Append(CCFLAGS = cflags_extra)
 	#env.Append(CCFLAGS = cflags_difficult)
 	env.Append(CPPDEFINES = ['DEBUG'])
