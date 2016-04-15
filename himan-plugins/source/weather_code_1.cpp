@@ -27,10 +27,10 @@ const himan::param CloudParam("CLDSYM-N");
 const himan::param KindexParam("KINDEX-N");
 
 // ..and their levels
-himan::level Z1000Level(himan::kPressure, 1000, "PRESSURE");
-himan::level Z850Level(himan::kPressure, 850, "PRESSURE");
-himan::level T2Level(himan::kHeight, 2, "HEIGHT");
-himan::level NLevel(himan::kHeight, 0, "HEIGHT");
+const himan::level Z1000Level(himan::kPressure, 1000, "PRESSURE");
+const himan::level Z850Level(himan::kPressure, 850, "PRESSURE");
+const himan::level T2Level(himan::kHeight, 2, "HEIGHT");
+const himan::level NLevel(himan::kHeight, 0, "HEIGHT");
 
 weather_code_1::weather_code_1()
 {
