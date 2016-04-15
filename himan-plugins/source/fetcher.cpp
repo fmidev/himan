@@ -814,27 +814,29 @@ bool fetcher::Interpolate(const plugin_configuration& conf, himan::info& baseInf
 	
 	if (baseInfo.Grid()->Type() == kRegularGrid && theInfos[0]->Grid()->Type() == kRegularGrid)
 	{
-		assert(dynamic_cast<regular_grid*> (theInfos[0]->Grid())->Ni() != 999999);
-		assert(dynamic_cast<regular_grid*> (theInfos[0]->Grid())->Nj() != 999999);
+		regular_grid* base = dynamic_cast<regular_grid*> (baseInfo.Grid());
+		regular_grid* target = dynamic_cast<regular_grid*> (theInfos[0]->Grid());
+		
+		assert(target->Ni() != 999999);
+		assert(target->Nj() != 999999);
 	
-		if (*baseInfo.Grid() != *theInfos[0]->Grid())
+		if (*base != *target)
 		{
 			needInterpolation = true;
 		}		
-		else if (baseInfo.Grid()->Type() == kRegularGrid && 
-				dynamic_cast<regular_grid*>(baseInfo.Grid())->ScanningMode() != dynamic_cast<regular_grid*>(theInfos[0]->Grid())->ScanningMode())
+		else if (base->ScanningMode() != target->ScanningMode())
 		{
 			// == operator does not test scanning mode !
-			itsLogger->Trace("Swapping area");
+			itsLogger->Debug("Swapping area from " + HPScanningModeToString.at(target->ScanningMode()) + " to " + HPScanningModeToString.at(base->ScanningMode()));
 #ifdef HAVE_CUDA
 			if (theInfos[0]->Grid()->IsPackedData())
 			{
 				// must unpack before swapping
-
+				itsLogger->Debug("Unpacking before swapping");
 				util::Unpack({theInfos[0]->Grid()});
 			}
 #endif
-			dynamic_cast<regular_grid*>(theInfos[0]->Grid())->Swap(dynamic_cast<regular_grid*>(baseInfo.Grid())->ScanningMode());
+			target->Swap(base->ScanningMode());
 
 		}
 	}
@@ -865,12 +867,12 @@ bool fetcher::Interpolate(const plugin_configuration& conf, himan::info& baseInf
 
 	if (needInterpolation)
 	{
-		itsLogger->Trace("Interpolating area with method: " + HPInterpolationMethodToString.at(baseInfo.Param().InterpolationMethod()));
+		itsLogger->Debug("Interpolating area with method: " + HPInterpolationMethodToString.at(baseInfo.Param().InterpolationMethod()));
 		return InterpolateArea(conf, baseInfo, theInfos);
 	}
 	else if (needPointReordering)
 	{
-		itsLogger->Trace("Reordering points to match");
+		itsLogger->Debug("Reordering points to match");
 		return ReorderPoints(baseInfo, theInfos);
 	}
 	else
