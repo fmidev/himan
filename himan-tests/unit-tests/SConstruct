@@ -26,7 +26,7 @@ if os.environ['HOME'] == "/home/weto":
 	
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-7.0'
+cuda_toolkit_path = '/usr/local/cuda-7.5'
 
 if os.environ.get('CUDA_TOOLKIT_PATH') is None:
 	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
@@ -48,7 +48,6 @@ if os.environ.get('CC') != None:
 
 if os.environ.get('CXX') != None:
         env['CXX'] = os.environ.get('CXX')
-
 
 # Includes
 
@@ -90,10 +89,12 @@ env.Append(LIBPATH = librarypaths)
 libraries = []
 
 # Do we really need to link all plugins here ?
+libraries.append('himan')
 
+# Library linking order! argh!
+libraries.append('fetcher')
 libraries.append('querydata')
 
-libraries.append('himan')
 libraries.append('fmidb')
 libraries.append('clntsh')
 libraries.append('odbc')
@@ -106,7 +107,12 @@ if have_cuda:
 
 # plugins 
 libraries.append('hitool')
-libraries.append('fetcher')
+libraries.append('neons')
+libraries.append('radon')
+libraries.append('cache')
+
+libraries.append('csv')
+libraries.append('grib')
 
 libraries.append('smartmet_smarttools')
 libraries.append('smartmet_newbase')
@@ -173,6 +179,20 @@ env.Append(CPPDEFINES=['UNIX'])
 if have_cuda:
 	env.Append(CPPDEFINES=['HAVE_CUDA'])
 
+# Clean fails without this
+env.Append(NVCCDEFINES = [])
+        
+env.Append(NVCCFLAGS = ['-m64'])
+env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
+env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
+env.Append(NVCCFLAGS = ['-arch=compute_52','-code=sm_52'])
+env.Append(NVCCFLAGS = ['-std=c++11'])
+
+env.Append(NVCCPATH = ['./include'])
+env.Append(NVCCPATH = [workspace + '/himan-lib/include']) # cuda-helper
+
+# Other
+
 build_dir = ""
 
 if RELEASE:
@@ -185,6 +205,11 @@ if DEBUG:
 	env.Append(CCFLAGS = ['-O0', '-g'])
 	env.Append(CCFLAGS = cflags_extra)
 #	env.Append(CCFLAGS = cflags_difficult)
+
+	# Cuda
+	env.Append(NVCCFLAGS = ['-O0','-g','-G', '-lineinfo'])
+	env.Append(NVCCDEFINES = ['DEBUG'])
+        
 	build_dir = "build/debug"
 
 SConscript('SConscript', exports = ['env'], variant_dir=build_dir, duplicate=0)
