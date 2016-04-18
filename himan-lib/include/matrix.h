@@ -444,7 +444,7 @@ public:
 	 * @return Number of missing values in data.
 	 */
 
-	size_t MissingCount()
+	size_t MissingCount() const
 	{
 		size_t missing = 0;
 

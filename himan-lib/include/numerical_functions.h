@@ -97,7 +97,7 @@ std::valarray<double> integral::Interpolate(std::valarray<double> currentLevelVa
  * @return Data convolved by kernel
  */
 
-himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& B);
+himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
 
 /*
  * CUDA version of Filter2D
