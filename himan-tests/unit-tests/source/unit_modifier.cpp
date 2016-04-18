@@ -3,6 +3,8 @@
 #include "himan_unit.h"
 #include "modifier.h"
 
+#include <iostream>
+
 #define BOOST_TEST_MODULE modifier
 
 using namespace std;
