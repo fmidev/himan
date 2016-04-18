@@ -10,7 +10,9 @@
 
 #include "himan_common.h"
 #include "plugin_configuration.h"
+#include "cuda_helper.h"
 #include <valarray>
+
 namespace himan
 {
 
@@ -96,6 +98,126 @@ std::valarray<double> integral::Interpolate(std::valarray<double> currentLevelVa
  */
 
 himan::matrix<double> Filter2D(himan::matrix<double>& A, himan::matrix<double>& B);
+
+/*
+ * CUDA version of Filter2D
+ */
+
+#ifdef HAVE_CUDA
+
+/* Inline CUDA functions for accessing / setting the input matrix elements */
+CUDA_DEVICE size_t CudaMatrixIndex(size_t x, size_t y, size_t z, size_t W, size_t H);
+CUDA_DEVICE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W, size_t H, double v);
+
+/**
+ * @brief Structure passed to CUDA Filter2D kernel containing the input matrix sizes.
+ *
+ * Set these before calling the CUDA kernel. 
+ */
+
+struct filter_opts
+{
+    int aDimX;            /**< input matrix width */
+    int aDimY;            /**< input matrix height */
+    int bDimX;            /**< convolution kernel width */
+    int bDimY;            /**< convolution kernel height */
+    double missingValue;  /**< input matrix missing value (used for detecting missing values in the CUDA kernel) */
+};
+
+/**
+ * @brief Filter2D CUDA Kernel
+ * @param A Input data
+ * @param B Convolution kernel
+ * @param C Output matrix of the same size as A
+ * @param opts Structure filled with the dimensions of the matrices A, B, C
+ */
+
+#ifdef __CUDACC__
+CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
+{
+    const double missing = opts.missingValue;
+    
+    const int kCenterX = opts.bDimX / 2;
+    const int kCenterY = opts.bDimY / 2;
+
+    const int M = opts.aDimX;
+    const int N = opts.aDimY;
+    
+    const int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    size_t kernelMissingCount = 0;
+
+    if (i < M && j < N)
+    {
+        double convolutionValue = 0.0;
+        double kernelWeightSum = 0.0;
+
+        for (int n = 0; n < opts.bDimY; n++)
+        {
+            const int nn = opts.bDimY - 1 - n;
+                
+            for (int m = 0; m < opts.bDimX; m++)
+            {
+                const int mm = opts.bDimX - 1 - m;
+
+                const int ii = i + (m - kCenterX);
+                const int jj = j + (n - kCenterY);
+
+                if (ii >= 0 && ii < M && jj >= 0 && jj < N)
+                {
+                    const int aIdx = CudaMatrixIndex(ii, jj, 0, M, N);
+                    const int bIdx = CudaMatrixIndex(mm, nn, 0, opts.bDimX, opts.bDimY);
+                    const double aVal = A[aIdx];
+                    const double bVal = B[bIdx];
+
+                    if (aVal == missing)
+                    {
+                        kernelMissingCount++;
+                        continue;
+                    }
+                    convolutionValue += aVal * bVal;
+                    kernelWeightSum += bVal;
+                } 
+            }
+        }
+        if (kernelMissingCount < 3)
+        {
+            CudaMatrixSet(C, i, j, 0, M, N, convolutionValue / kernelWeightSum);
+        } else
+        {
+            CudaMatrixSet(C, i, j, 0, M, N, kFloatMissing);
+        }
+    }
+}
+
+/**
+ * @brief himan::matrix indexing for identical behaviour with the CPU Filter2D
+ * @param W width of the matrix
+ * @param H height of the matrix
+ */
+CUDA_DEVICE CUDA_INLINE size_t CudaMatrixIndex(size_t x, size_t y, size_t z, size_t W, size_t H)
+{
+    return z * W * H + y * W + x;
+}
+
+/**
+ * @brief Set C at CudaMatrixIndex(x, y, z, W, H) to v
+ * @param C matrix to be modified
+ * @param v value to be placed at the index
+ */
+CUDA_DEVICE CUDA_INLINE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W, size_t H, double v)
+{
+    const size_t index = CudaMatrixIndex(x, y, z, W, H);
+    C[index] = v;
+}
+
+// __CUDACC__
+#endif
+
+
+// HAVE_CUDA
+#endif 
     
 } // namespace numerical_functions
 

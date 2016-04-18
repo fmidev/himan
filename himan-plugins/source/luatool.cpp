@@ -910,7 +910,7 @@ void BindLib(lua_State* L)
 			.def(constructor<>())
 			.def_readwrite("use_bitmap", &write_options::use_bitmap)
 		,
-		// util namespace
+		// numerical_functions namespace
 		def("Filter2D", &numerical_functions::Filter2D)
 		,
 		// metutil namespace

@@ -7,9 +7,11 @@
 #ifdef __CUDACC__
 #define CUDA_DEVICE __device__
 #define CUDA_KERNEL __global__
+#define CUDA_INLINE __forceinline__
 #else
 #define CUDA_DEVICE
 #define CUDA_KERNEL
+#define CUDA_INLINE
 #endif
 
 #ifdef HAVE_CUDA
