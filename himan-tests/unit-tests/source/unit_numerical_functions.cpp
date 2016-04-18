@@ -3,6 +3,8 @@
 
 #include "numerical_functions_helper.h"
 
+#include "timer.h"
+
 #define BOOST_TEST_MODULE numerical_functions
 
 using namespace std;
@@ -48,5 +50,34 @@ BOOST_AUTO_TEST_CASE(FILTER2D)
     		}
     		std::cout << std::endl;
   	}
+
+}
+
+BOOST_AUTO_TEST_CASE(FILTER2D_LARGE)
+{
+    // Filter a plane with given filter kernel
+    
+    // Declare matrices
+    himan::matrix<double> A(2001,1000,1,kFloatMissing);
+    himan::matrix<double> B(3,3,1,kFloatMissing);
+    himan::matrix<double> D(2001,1000,1,kFloatMissing);
+
+    FilterTestSetup(A, B, D);
+
+    himan::timer timer;
+    timer.Start();
+
+    // Compute smoothened matrix
+    himan::matrix<double> C = himan::numerical_functions::Filter2D(A,B);
+
+    timer.Stop();
+
+    // Compare results
+    for(size_t i=0; i < C.Size(); ++i)
+    {
+        BOOST_CHECK_CLOSE(C.At(i),D.At(i),kEpsilon);
+    }
+
+    std::cout << "Filter2D took " << timer.GetTime() << " ms " << std::endl;
 
 }

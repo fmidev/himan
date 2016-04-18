@@ -388,7 +388,7 @@ std::pair<level,level> integral::LevelForHeight(const producer& prod, double hei
         return std::make_pair<level, level> (level(kHybrid, newlowest), level(kHybrid, newhighest));
 }
 
-matrix<double> numerical_functions::Filter2D(matrix<double>& A, matrix<double>& B)
+matrix<double> numerical_functions::Filter2D(const matrix<double>& A, const matrix<double>& B)
 {
 	// find center position of kernel (half of kernel size)
 	matrix<double> ret(A.SizeX(),A.SizeY(),1,A.MissingValue());
@@ -411,44 +411,45 @@ matrix<double> numerical_functions::Filter2D(matrix<double>& A, matrix<double>& 
 		// calculate for inner field
 		// the weights are used as given on input
 		// assert (sum(B) == 1)
-		for(int i=kCenterX; i < ASizeX-kCenterX; ++i)	// rows
+		for(int j=kCenterY; j < ASizeY-kCenterY; ++j)	// columns
 		{
-			for(int j=kCenterY; j < ASizeY-kCenterY; ++j)	// columns
+		        for(int i=kCenterX; i < ASizeX-kCenterX; ++i)	// rows
 			{
 		  		convolution_value = 0;
-		  		for(int m=0; m < BSizeX; ++m)	// kernel rows
+                                for(int n=0; n < BSizeY; ++n)	// kernel columns
 		  		{
-	            			int mm = BSizeX - 1 - m;	// row index of flipped kernel
-	           			for(int n=0; n < BSizeY; ++n)	// kernel columns
+	            			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+	           			for(int m=0; m < BSizeX; ++m)	// kernel rows
 	            			{
-						int nn = BSizeY - 1 - n;  // column index of flipped kernel
-
+                                                int mm = BSizeX - 1 - m;	// row index of flipped kernel
+                                                
 			                	// index of input signal, used for checking boundary
                 	                	int ii = i + (m - kCenterX);
                 	                	int jj = j + (n - kCenterY);
 	               				convolution_value += A.At(ii,jj,0) * B.At(mm,nn,0);
 					}
 	                	}
-	                	ret.Set(i,j,0,convolution_value);
+                                const size_t index = ret.Index(i, j, 0);
+                                ret[index] = convolution_value;
 			}
 		}
 	
 		// treat boundaries separately
 		// weights get adjusted so that the sum of weights for the active part of the kernel remains 1
  		// calculate for upper boundary
-		for(int i=0; i < ASizeX; ++i)              // rows
+                for(int j=0; j < kCenterY; ++j)          // columns
 	  	{
-	    		for(int j=0; j < kCenterY; ++j)          // columns
+                        for(int i=0; i < ASizeX; ++i)              // rows
 	    		{
 				convolution_value = 0;
 				kernel_weight_sum = 0;
-	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+                                for(int n=0; n < BSizeY; ++n) // kernel columns
 	       			{
-	            			int mm = BSizeX - 1 - m;      // row index of flipped kernel
-	
-					for(int n=0; n < BSizeY; ++n) // kernel columns
+                                        int nn = BSizeY - 1 - n;  // column index of flipped kernel	    	
+					for(int m=0; m < BSizeX; ++m)     // kernel rows
 	            			{
-	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel	    	
+	                			int mm = BSizeX - 1 - m;      // row index of flipped kernel
+                                                
 						// index of input signal, used for checking boundary
 
 						int ii = i + (m - kCenterX);
@@ -462,24 +463,25 @@ matrix<double> numerical_functions::Filter2D(matrix<double>& A, matrix<double>& 
 						}
 	            			}
 	 			}
-	        		ret.Set(i,j,0,convolution_value/kernel_weight_sum);
+                                const size_t index = ret.Index(i, j, 0);
+                                ret[index] = convolution_value / kernel_weight_sum;
 	    		}
 	  	}
 
 		// calculate for lower boundary
-		for(int i=0; i < ASizeX; ++i)              // rows
+                for(int j=ASizeY-kCenterY; j < ASizeY; ++j)          // columns
 	  	{
-	    		for(int j=ASizeY-kCenterY; j < ASizeY; ++j)          // columns
+	    		for(int i=0; i < ASizeX; ++i)              // rows
 	    		{
 				convolution_value = 0;
 				kernel_weight_sum = 0;
-	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+                                for(int n=0; n < BSizeY; ++n) // kernel columns
 	        		{
-	            			int mm = BSizeX - 1 - m;      // row index of flipped kernel
-	
-	            			for(int n=0; n < BSizeY; ++n) // kernel columns
+                                        int nn = BSizeY - 1 - n;  // column index of flipped kernel
+	            			
+                                        for(int m=0; m < BSizeX; ++m)     // kernel rows
 	            			{
-	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+	                			int mm = BSizeX - 1 - m;      // row index of flipped kernel
 
 						// index of input signal, used for checking boundary
 						int ii = i + (m - kCenterX);
@@ -493,24 +495,25 @@ matrix<double> numerical_functions::Filter2D(matrix<double>& A, matrix<double>& 
 						}
 	            			}
 	        		}
-	        		ret.Set(i,j,0,convolution_value/kernel_weight_sum);
+                                const size_t index = ret.Index(i, j, 0);
+                                ret[index] = convolution_value / kernel_weight_sum;
 	    		}
 	  	}
 
 		// calculate for left boundary
-		for(int i=0; i < kCenterX; ++i)              // rows
+                for(int j=0; j < ASizeY; ++j)          // columns
 	  	{
-	    		for(int j=0; j < ASizeY; ++j)          // columns
+                        for(int i=0; i < kCenterX; ++i)              // rows
 	    		{
 				convolution_value = 0;
 				kernel_weight_sum = 0;
-	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+                                for(int n=0; n < BSizeY; ++n) // kernel columns
 	        		{
-	            			int mm = BSizeX - 1 - m;      // row index of flipped kernel
+                                        int nn = BSizeY - 1 - n;  // column index of flipped kernel
 	
-	            			for(int n=0; n < BSizeY; ++n) // kernel columns
+	            			for(int m=0; m < BSizeX; ++m)     // kernel rows
 	            			{
-	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+	                			int mm = BSizeX - 1 - m;      // row index of flipped kernel
 
 						// index of input signal, used for checking boundary
 						int ii = i + (m - kCenterX);
@@ -524,24 +527,24 @@ matrix<double> numerical_functions::Filter2D(matrix<double>& A, matrix<double>& 
 						}
 	            			}
 	        		}
-	        		ret.Set(i,j,0,convolution_value/kernel_weight_sum);
+                                const size_t index = ret.Index(i, j, 0);
+                                ret[index] = convolution_value / kernel_weight_sum;
 	    		}
 	  	}
 
 		// calculate for right boundary
-		for(int i=ASizeX-kCenterX; i < ASizeX; ++i)              // rows
+                for(int j=0; j < ASizeY; ++j)          // columns
 	  	{
-	    		for(int j=0; j < ASizeY; ++j)          // columns
+                        for(int i=ASizeX-kCenterX; i < ASizeX; ++i)              // rows
 	    		{
 				convolution_value = 0;
 				kernel_weight_sum = 0;
-	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+                                for(int n=0; n < BSizeY; ++n) // kernel columns
 	        		{
-	            			int mm = BSizeX - 1 - m;      // row index of flipped kernel
-	
-	            			for(int n=0; n < BSizeY; ++n) // kernel columns
+                                        int nn = BSizeY - 1 - n;  // column index of flipped kernel
+	            			for(int m=0; m < BSizeX; ++m)     // kernel rows
 	            			{
-	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+	                			int mm = BSizeX - 1 - m;      // row index of flipped kernel
 
 	                			// index of input signal, used for checking boundary
 	                 	                int ii = i + (m - kCenterX);
@@ -555,7 +558,8 @@ matrix<double> numerical_functions::Filter2D(matrix<double>& A, matrix<double>& 
 						}
 	            			}
 	        		}
-	        		ret.Set(i,j,0,convolution_value/kernel_weight_sum);
+                                const size_t index = ret.Index(i, j, 0);
+                                ret[index] = convolution_value / kernel_weight_sum;
 	    		}
 	  	}
 	}
@@ -563,20 +567,20 @@ matrix<double> numerical_functions::Filter2D(matrix<double>& A, matrix<double>& 
 	{
 		std::cout << "util::Filter2D: Data contains missing values -> Choosing slow algorithm." << std::endl;
 		double kernel_missing_count;
-		for(int i=0; i < ASizeX; ++i)              // rows
+                for(int j=0; j < ASizeY; ++j)          // columns
 	  	{
-	    		for(int j=0; j < ASizeY; ++j)          // columns
+                        for(int i=0; i < ASizeX; ++i)              // rows
 	    		{
 				convolution_value = 0;
 				kernel_weight_sum = 0;
 				kernel_missing_count = 0;
-	        		for(int m=0; m < BSizeX; ++m)     // kernel rows
+                                for(int n=0; n < BSizeY; ++n) // kernel columns
 	        		{
-	            			int mm = BSizeX- 1 - m;      // row index of flipped kernel
+                                        int nn = BSizeY - 1 - n;  // column index of flipped kernel
 	
-	            			for(int n=0; n < BSizeY; ++n) // kernel columns
+	            			for(int m=0; m < BSizeX; ++m)     // kernel rows
 	            			{
-	                			int nn = BSizeY - 1 - n;  // column index of flipped kernel
+	                			int mm = BSizeX- 1 - m;      // row index of flipped kernel
 	
 	                			// index of input signal, used for checking boundary
 	                 	                int ii = i + (m - kCenterX);
@@ -598,11 +602,13 @@ matrix<double> numerical_functions::Filter2D(matrix<double>& A, matrix<double>& 
 	        		}
 	        		if (kernel_missing_count < 3)
 				{
-		  			ret.Set(i,j,0,convolution_value/kernel_weight_sum); // if less than three values are missing in kernel fill gap by average of surrounding values
+                                    const size_t index = ret.Index(i, j, 0);
+                                    ret[index] = convolution_value / kernel_weight_sum;
 				}
 				else
 				{
-		  			ret.Set(i,j,0,himan::kFloatMissing); // if three or more values are missing in kernel put kFloatMissing
+                                    const size_t index = ret.Index(i, j, 0);
+                                    ret[index] = himan::kFloatMissing;
 				}
 	    	}
 	  	}

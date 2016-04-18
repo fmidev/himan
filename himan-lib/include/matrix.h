@@ -82,7 +82,7 @@ public:
 		return !(*this == other);
 	}
 	
-	T& operator[](size_t& i)
+	T& operator[](const size_t& i)
 	{
 		return itsData[i];
 	}
@@ -459,13 +459,12 @@ public:
 		return missing;
 	}
 
-private:
-
-	size_t Index(size_t x, size_t y, size_t z) const
+       size_t Index(size_t x, size_t y, size_t z) const
 	{
 		return z * itsWidth * itsHeight + y * itsWidth + x;
 	}
 
+private:
 	std::vector<T> itsData;
 
 	size_t itsWidth, itsHeight, itsDepth;
