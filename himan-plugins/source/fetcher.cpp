@@ -620,15 +620,52 @@ bool fetcher::InterpolateAreaNewbase(info& base, info& source, matrix<double>& t
 	
 	interpInfo.Param().GetParam()->InterpolationMethod(static_cast<FmiInterpolationMethod> (method));
 
-	size_t i;
+	size_t i = 0;
 
-	baseInfo.First();
-
-	for (baseInfo.ResetLocation(), i = 0; baseInfo.NextLocation(); i++)
+	if (base.Grid()->Type() == kIrregularGrid)
 	{
-		double value = interpInfo.InterpolatedValue(baseInfo.LatLon());
+		for (baseInfo.ResetLocation(), i = 0; baseInfo.NextLocation(); i++)
+		{
+			double value = interpInfo.InterpolatedValue(baseInfo.LatLon());
+			targetData.Set(i, value);
+		}
+	}
+	else
+	{
+		HPScanningMode mode = dynamic_cast<regular_grid*> (base.Grid())->ScanningMode(); 
 
-		targetData.Set(i, value);
+		if (mode == kBottomLeft)
+		{
+			baseInfo.Bottom();
+
+			do
+			{
+				baseInfo.Left();
+
+				do 
+				{
+					double value = interpInfo.InterpolatedValue(baseInfo.LatLon());	
+					targetData.Set(i, value);
+					i++;
+				} while(baseInfo.MoveRight());
+			} while (baseInfo.MoveUp());
+		}
+		else if (mode == kTopLeft)
+		{
+			baseInfo.Top();
+
+			do
+			{
+				baseInfo.Left();
+
+				do 
+				{
+					double value = interpInfo.InterpolatedValue(baseInfo.LatLon());	
+					targetData.Set(i, value);
+					i++;
+				} while(baseInfo.MoveRight());
+			} while (baseInfo.MoveDown());
+		}
 	}
 	
 	return true;
@@ -706,23 +743,6 @@ bool fetcher::InterpolateArea(const plugin_configuration& conf, info& base, vect
 			_g->ScanningMode(_bg->ScanningMode());
 			_g->BottomLeft(_bg->BottomLeft());
 			_g->TopRight(_bg->TopRight());
-		
-			// Newbase always normalizes data to +x+y
-			// So if source scanning mode is eg. +x-y, we have to swap the interpolated
-			// data to back to original scanningmode
-
-			if (_g->ScanningMode() != kBottomLeft)
-			{
-				HPScanningMode targetMode = _bg->ScanningMode();
-
-				// this is what newbase did to the data
-				_g->ScanningMode(kBottomLeft);
-
-				// let's swap it back
-				_g->Swap(targetMode);
-
-				assert(targetMode == _g->ScanningMode());
-			}
 		}
 		else
 		{
