@@ -33,7 +33,7 @@ unsigned int Index(point p, unsigned int sx)
 }
 
 __global__
-void Flip(double* __restrict__ arr, size_t ni, size_t nj)
+void Swap(double* __restrict__ arr, size_t ni, size_t nj)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -41,8 +41,6 @@ void Flip(double* __restrict__ arr, size_t ni, size_t nj)
 
 	if (idx < nj * ni * 0.5)
 	{
-		size_t half = static_cast<size_t> (floor(static_cast<double>(nj/2)));
-
 		const int i = fmod(static_cast<double> (idx), static_cast<double> (ni));
 		const int j = floor(static_cast<double> (idx / ni));
 
@@ -51,7 +49,6 @@ void Flip(double* __restrict__ arr, size_t ni, size_t nj)
 
 		arr[idx] = lower;
 		arr[Index(i,nj-1-j,ni)] = upper;
-		
 	}
 }
 
@@ -127,13 +124,15 @@ point* CreateGrid(himan::info_simple* sourceInfo, himan::info_simple* targetInfo
 	targetGrid.Reset();
 	
 	int i = 0;
+
 	
 	while(targetGrid.Next())
 	{
-		NFmiPoint latlon = targetGrid.LatLon();
 		NFmiPoint gp = sourceGrid.LatLonToGrid(targetGrid.LatLon());
 
 #ifdef EXTRADEBUG
+		NFmiPoint latlon = targetGrid.LatLon();
+
 		if (!sourceArea->IsInside(latlon))
 		{
 			std::cout << "Latlon " << latlon << " is outside source area!" << std::endl;
@@ -589,11 +588,17 @@ bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetI
 	{
 		// Force +x-y --> +x+y
 
+		// This is needed because latlon coordinates are created from newbase area
+		// and they are in +x+y. This also means that we have to flip the data
+		// back after interpolation.
+
+		// TODO: Do not flip the data twice, but create the grid in the correct scanning mode!
+		
 		size_t N = sourceInfo->size_x * sourceInfo->size_y * 0.5 ;
 
 		int bs = 256;
 		int gs = N/bs + (N % bs == 0?0:1);
-		Flip <<<gs,bs,0,stream>>>(d_source, sourceInfo->size_x, sourceInfo->size_y);
+		Swap <<<gs,bs,0,stream>>>(d_source, sourceInfo->size_x, sourceInfo->size_y);
 
 		sourceInfo->j_scans_positive = true;
 	}
@@ -603,7 +608,18 @@ bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetI
 
 	// Do bilinear transform on CUDA device
 	InterpolateCudaKernel <<<gs,bs,0,stream>>>(d_source, d_target, d_grid, *sourceInfo, *targetInfo);
- 
+
+	if (!targetInfo->j_scans_positive)
+	{
+		// Flip data back
+
+		size_t N = targetInfo->size_x * targetInfo->size_y * 0.5 ;
+
+		int bs = 256;
+		int gs = N/bs + (N % bs == 0?0:1);
+		Swap <<<gs,bs,0,stream>>>(d_target, targetInfo->size_x, targetInfo->size_y);
+	}
+
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 	
 	himan::ReleaseInfo(sourceInfo);
