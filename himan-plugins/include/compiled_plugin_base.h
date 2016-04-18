@@ -153,16 +153,6 @@ protected:
 	bool SetAB(const info_t& myTargetInfo, const info_t& sourceInfo);
 
 	/**
-	 * @brief Swap data ordering in a grid
-	 *
-	 * Can handle only swapping from bottom-left to top-right or vise versa. Swapping
-	 * is done in-place.
-	 *
-	 */
-
-	bool SwapTo(const info_t& myTargetInfo, HPScanningMode targetScanningMode);
-
-	/**
 	 * @brief Distribute work equally to all threads
 	 * @param myTargetInfo
 	 * @return 

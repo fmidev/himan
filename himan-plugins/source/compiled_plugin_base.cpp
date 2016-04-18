@@ -145,28 +145,6 @@ bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourc
 	return true;
 }
 
-bool compiled_plugin_base::SwapTo(const info_t& myTargetInfo, HPScanningMode targetScanningMode)
-{
-	bool ret = false;
-
-	if (myTargetInfo->Grid()->Type() == kRegularGrid)
-	{
-		regular_grid* g = dynamic_cast<regular_grid*> (myTargetInfo->Grid());
-		if (g->ScanningMode() != targetScanningMode)
-		{
-			HPScanningMode originalMode = g->ScanningMode();
-
-			g->ScanningMode(targetScanningMode);
-
-			g->Swap(originalMode);
-		}
-
-		return true;
-	}
-
-	return ret;
-}
-
 void compiled_plugin_base::WriteToFile(const info& targetInfo, write_options writeOptions) 
 {
 	auto aWriter = GET_PLUGIN(writer);
