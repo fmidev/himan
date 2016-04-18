@@ -74,13 +74,13 @@ void transformer::SetAdditionalParameters()
 		itsLogger->Warning("Scale not specified, using default value 1.0");
 	}
 
-	if(!itsConfiguration->GetValue("target_univ_ID").empty())
+	if(!itsConfiguration->GetValue("target_univ_id").empty())
 	{
 		itsTargetUnivID = boost::lexical_cast<int>(itsConfiguration->GetValue("target_univ_id"));
 	}
 	else
 	{
-		itsLogger->Warning("Target_univ_ID not specified, using default value 9999");
+		itsLogger->Warning("Target_univ_id not specified, using default value 9999");
 	}
 	
 	if(!itsConfiguration->GetValue("target_param").empty())
