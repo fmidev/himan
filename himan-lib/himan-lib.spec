@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.4.14
+Version: 16.4.19
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -49,6 +49,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Apr 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.19-1.fmi
+- Filter2D() GPU version
 * Thu Apr 14 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.14-1.fmi
 - Moving Filter2D() to numerical_functions
 - ThetaE signature change
