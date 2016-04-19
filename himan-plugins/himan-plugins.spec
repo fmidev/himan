@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.4.14
-Release: 2.el7.fmi
+Version: 16.4.19
+Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -102,6 +102,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Apr 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.19-1.fmi
+- Simplified interpolation/Swap code (HIMAN-120)
+* Fri Apr 15 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.15-1.fmi
+- New release
 * Thu Apr 14 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.14-2.fmi
 - ThetaE change
 - Filter2D changed namespaces
