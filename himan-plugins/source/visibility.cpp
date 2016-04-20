@@ -31,16 +31,18 @@ const string itsName("visibility");
 
 const double defaultVis = 50000;
 const double pseudoRR = 0.13;
+const double threshold = 1.5;
+
 // Required source parameters
 
-const himan::param PFParam("PRECFORM2-N");
+const himan::param PFParam("PRECFORM-N");
 const himan::param RHParam("RH-PRCNT");
 const himan::param CFParam("CL-FT");
 const himan::param TParam("T-K");
 const himan::param FFParam("FF-MS");
 const himan::param BLHParam("MIXHGT-M");
-const himan::param PrecParam(himan::param("RR-1-MM"));
-const himan::param NParam(himan::param("N-PRCNT"));
+const himan::param RRParam(himan::param("RRR-KGM2"));
+const himan::param NParam(himan::param("N-PRCNT")); // , himan::param("N-0TO1")});
 
 // ..and their levels
 himan::level NLevel(himan::kHeight, 0, "HEIGHT");
@@ -58,7 +60,7 @@ void visibility::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	SetParams({param("VV-M", 407)});
+	SetParams({param("VV2-M", 407)});
 
 	Start();
 }
@@ -80,49 +82,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 	
-	int paramStep = itsConfiguration->ForecastStep();
-
-	if (paramStep == kHPMissingInt)
-	{
-
-		if (myTargetInfo->SizeTimes() == 1)
-		{
-			paramStep = 1;
-			itsLogger->Warning("Unable to determine step from current configuration, assuming one hour");
-		}
-		else
-		{
-
-			if (myTargetInfo->TimeIndex() == 0)
-			{
-				forecast_time otherTime = myTargetInfo->PeekTime(myTargetInfo->TimeIndex()+1);
-				paramStep = otherTime.Step() - myTargetInfo->Time().Step();
-			}
-			else
-			{
-				forecast_time otherTime = myTargetInfo->PeekTime(myTargetInfo->TimeIndex()-1);
-				paramStep = myTargetInfo->Time().Step() - otherTime.Step();
-			}
-		}
-	}
-	
-	param RRParam("RR-1-MM"); // Default
-
-	if (paramStep == 3)
-	{
-		RRParam = param("RR-3-MM");
-	}
-	else if (paramStep == 6)
-	{
-		RRParam = param("RR-6-MM");
-	}
-	else if (paramStep != 1)
-	{
-		myThreadedLogger->Error("Unsupported step: " + boost::lexical_cast<string> (paramStep));
-		return;
-	}
-	
-	info_t NInfo = Fetch(forecastTime, NLevel, NParam, forecastType, false);
 	info_t CFInfo = Fetch(forecastTime, NLevel, CFParam, forecastType, false);
 	info_t RHInfo = Fetch(forecastTime, RHLevel, RHParam, forecastType, false);
 	info_t PFInfo = Fetch(forecastTime, NLevel, PFParam, forecastType, false);
@@ -131,49 +90,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	info_t TInfo = Fetch(forecastTime, RHLevel, TParam, forecastType, false);
 	info_t RRInfo = Fetch(forecastTime, NLevel, RRParam, forecastType, false);
 
-	forecast_time nextTimeStep = forecastTime;
-	nextTimeStep.ValidDateTime().Adjust(myTargetInfo->Time().StepResolution(), paramStep);
-
-	info_t NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, forecastType, false);
-
-	/* 
-	 * Sometimes we cannot find data for either time with the current forecast step.
-	 * 
-	 * This happens for example with EC when the forecast step changes at forecast hour 90.
-	 * At that hour the forecast step is 1, so current RR is fetched from hour 90 as parameter
-	 * RR-1-MM. Hour 91 does not exist so that data is unavailable. In the database we have data
-	 * for hour 93, but that is parameter RR-3-MM. As both precipitation parameters have to be
-	 * of the same aggregation period, we have re-fetch both.
-	 * 
-	 * This same thing happens at forecast hour 144 when step changes from 3h --> 6h.
-	 */
-	
-	if (!RRInfo || !NextRRInfo)
-	{
-		if (paramStep == 1)
-		{
-			paramStep = 3;
-			RRParam = param("RR-3-MM");
-		}
-		else if (paramStep == 3)
-		{
-			paramStep = 6;
-			RRParam = param("RR-6-MM");
-		}
-		else
-		{
-			myThreadedLogger->Error("Precipitation data not found");
-			return;
-		}
-		
-		RRInfo = Fetch(forecastTime, forecastLevel, RRParam, forecastType, false);
-		nextTimeStep = forecastTime;
-		nextTimeStep.ValidDateTime().Adjust(myTargetInfo->Time().StepResolution(), paramStep);
-
-		NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, forecastType, false);
-	}
-	
-	if (!NInfo || !TInfo || !CFInfo || !NInfo || !RRInfo || !NextRRInfo)
+	if (!TInfo || !CFInfo || !RRInfo || !RHInfo || !FFInfo || !PFInfo || !BLHInfo)
 	{
 		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
 		return;
@@ -221,14 +138,13 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	VertFFValue(myTargetInfo, ffblh, BLHInfo->Value());
 	
 	string deviceType = "CPU";
-	
-	LOCKSTEP(myTargetInfo,NInfo,TInfo,CFInfo,PFInfo,RHInfo,FFInfo,RRInfo,NextRRInfo)
+
+	LOCKSTEP(myTargetInfo,TInfo,CFInfo,PFInfo,RHInfo,FFInfo,RRInfo)
 	{
 
 		size_t i = myTargetInfo->LocationIndex();
 		double vis = defaultVis;
 
-		double N = NInfo->Value();
 		double T = TInfo->Value();
 		double CF = CFInfo->Value();
 		double PF = PFInfo->Value();
@@ -252,8 +168,9 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double T125 = temp125[i];
 		double FFBLH = ffblh[i];		
 		
-		if (IsMissingValue({N, CF, T, FF, PF, RH, RR, strat, lowC, HUM25, T25, FFBLH}))
+		if (IsMissingValue({CF, T, FF, PF, RH, RR, strat, HUM25, T25, FFBLH}))
 		{
+			myTargetInfo->Value(vis);
 			continue;
 		}
 		
@@ -263,7 +180,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		T75 -= himan::constants::kKelvin;
 		T100 -= himan::constants::kKelvin;
 		T125 -= himan::constants::kKelvin;
-		N *= 100;
 		strat *= 100;
 		strat30 *= 100;
 		strat300 *= 100;
@@ -285,7 +201,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			stHpre = pow((CF / 500), 0.15); 
 		}  
 		
-		// Nakyvyyden laskenta sateessa
+		// Nakyvyys sateessa
 		if (RR > 0)
 		{		
 		
@@ -347,22 +263,20 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	        double stHmist = 1;	
 		// SUMUP��TTELY
 		
-		// *** Utuisuuskertoimien laskenta stratuksen määrän ja korkeuden perusteella ***
+		// Utuisuuskertoimien laskenta stratuksen maaran ja korkeuden perusteella
 		// Kertoimia saatamalla voi saataa kunkin parametrin vaikutusta/painoarvoa.
  
 		// Näkyvyyden utuisuuskerroin udussa/sumussa sumupilven maaran perusteella [7,0...0,7, kun stN = 0...100%]
 		double stNmist = sqrt(50/(strat+1));
  
-		// Näkyvyyden utuisuuskerroin udussa/sumussa sumupilvikorkeuden perusteella [ 0,47...1, kun par500 = 50...999ft]
+		// Nakyvyyden utuisuuskerroin udussa/sumussa sumupilvikorkeuden perusteella [ 0,47...1, kun par500 = 50...999ft]
 		if (CF < 1000)
 		{  
 			stHmist = pow((CF/999), 0.25);
 		}
  
-		// *** end utuisuuskertoimet ***
- 
-		// Ehto pilvipäättelyyn menemiselle. Tarkoituksena poistaa mallin virheelliset vain alimman mallipinnan sumupilvitulkinnat.
-		// sfcCloud parametri saa arvon 1 jos mallin pilvi on vain alimman 30m korkeudessa. Jos pilveä on yli 1/10 31-300m korkeudessa, sfcCloud saa arvon 0
+		// Ehto pilvipaatteyyn menemiselle. Tarkoituksena poistaa mallin virheelliset vain alimman mallipinnan sumupilvitulkinnat.
+		// sfcCloud parametri saa arvon 1 jos mallin pilvi on vain alimman 30m korkeudessa. Jos pilvea on yli 1/10 31-300m korkeudessa, sfcCloud saa arvon 0
 		double sfcCloud = 0;
 		
 		if (strat30 > 55 && strat300 < 10)
@@ -370,16 +284,13 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			sfcCloud = 1;
 		}
  
-		// Näkyvyys udussa/sumussa, lasketaan myös heikossa sateessa (tarkoituksena tasoittaa suuria näkyvyysgradientteja sateen reunalla)
-		// (ehkä syytä rajata vain tilanteisiin, jossa sateen perusteella saatu näkyvyys oli vielä >8000?)
+		// Nakyvyys udussa/sumussa, lasketaan myos heikossa sateessa (tarkoituksena tasoittaa suuria nakyvyysgradientteja sateen reunalla)
+		// (ehka syyta rajata vain tilanteisiin, jossa sateen perusteella saatu nakyvyys oli viela >8000?)
  
 		if (RR < 0.5 && sfcCloud < 1)
-		{
-  			// Oletus RH:n kynnysarvo utuisuudelle, kun T>=0C [%]
-  			// Jos muutat tata, pitaa myos allaolevaa pakkaskynnysarvon laskentakaavaa muokata!
-  			double RHmistLim = 90;
- 
-  			// Pakkasella asetetaan utuisuuden kynnysarvo pienemmäksi [%]
+		{	
+			double RHmistLim = 90; // Oletus RH:n kynnysarvo utuisuudelle, kun T>=0C [%]
+  			// Pakkasella asetetaan utuisuuden kynnysarvo pienemmaksi [%]
   			// Alkuarvauksena yksinkertainen lineaarinen riippuvuus -> kynnysarvon minimi=80%, kun T=-8C
   			if (T < 0)
   			{  
@@ -398,34 +309,33 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
   			{   		
       				// Alkuarvo suht. kosteuden perusteella [700-31400m, kun 100<=RH<80]
       				visMist = pow((101 - RH), 1.25) *700;
-      				// Lisammuokkaus sumupilven määrän ja korkeuden perusteella
+      				// Lisamuokkaus sumupilven maaran ja korkeuden perusteella
       				visMist = visMist * stNmist * stHmist;
   			}
 		}
 		
-		// Jos sumupilven perusteella laskettu näkyvyys edelleen yli 8km tutkitaan säteilysumujen mahdollisuutta.
+		// Jos sumupilven perusteella laskettu näkyvyys edelleen yli 8km tutkitaan sateilysumujen mahdollisuutta.
 		if (visMist > 8000)
 		{
 		
   		// Säteilysumuun vaikuttavat parametrit ja niiden painoarvot
   		//----------------------------------------------------------------------------------------
-  		// pintatuulen nopeus (WS)
-  		// ala + keskipilvien määrä (par273, par274)
-  		// Suhteellisen kosteuden ja lämpötilaan kokeellisesti suhteutetun suhteellisen kosteuden erotus on positiivinen
-  		// (koska kovemmissa pakkasissa riittää pienempi suhteellisen kosteuden arvo sumun syntymiselle)
-  		// Suhteellinen kosteus alin 125m (suhteutettuna lämpötilaan)
-  		// [ Auringonsäteily (PAR317) --ei enää käytössä ]
-  		// Tuulen nopeus rajakerroksen yläosassa (kuvaa mekaanisen turbulenssin avulla tapahtuvaa kuivemman ilman sekoittumista rajakerroksen yläpuolelta)
+  		// pintatuulen nopeus (FF)
+  		// ala + keskipilvien maara (par273, par274)
+  		// Suhteellisen kosteuden ja lampotilaan kokeellisesti suhteutetun suhteellisen kosteuden erotus on positiivinen
+  		// (koska kovemmissa pakkasissa riittavan pienempi suhteellisen kosteuden arvo sumun syntymiselle)
+  		// Suhteellinen kosteus alin 125m (suhteutettuna T:en)
+  		// Tuulen nopeus rajakerroksen ylaosassa (kuvaa mekaanisen turbulenssin avulla tapahtuvaa kuivemman ilman sekoittumista rajakerroksen yläpuolelta)
    
-  		// Näitä parametreja painotetaan siten että arvolla 0 ne eivät estä yhtään säteilysumun syntymistä ja arvolla 1 ne estävät yksinään säteilysumun syntymisen.
-  		// kokonaisvaikutus sumun syntymiseen saadaan kaikkien ainesosasten yhteisvaikutuksena, siten että suhteellinen kosteus pinnalla saa kaksinkertaisen painoarvon.
+  		// Naita parametreja painotetaan siten etta arvolla 0 ne eivat esta yhtaan sateilysumun syntymistä ja arvolla 1 ne estavat yksinaan säteilysumun syntymisen.
+  		// kokonaisvaikutus sumun syntymiseen saadaan kaikkien ainesosasten yhteisvaikutuksena, siten etta suhteellinen kosteus pinnalla saa kaksinkertaisen painoarvon.
    			// ********* Ala- ja keskipilven määrän vaikutus ---------------------------------------------------
   			//painokerroin ala- ja keskipilvisyydelle 0 = 0, 30 = 0,16, 40 = 0,40, 55 = 1
-  			//eli pilvisyys estää yksinään säteilysumun synnyn jos sitä on yli puoli taivasta (55%).
+  			//eli pilvisyys estaa yksinaan sateilysumun synnyn jos sita on yli puoli taivasta (55%).
        		
         
     			double Cloud_coeff = pow((lowC), 3) * 0.000006;
-  			 //jos ylä- tai alapilviä yksinään yli 8/10 taivasta -> painokerroin on 1
+  			 //jos yla- tai alapilvia yksinaan yli 8/10 taivasta -> painokerroin on 1
       			if (highC > 80) 
 			{
       				Cloud_coeff = 1;
@@ -503,8 +413,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
   			// painokerroin saa arvon 0, kun rajakerroksen yläosan tuuli on 7.5 m/s tai alle. Painokerroin 1 tulee arvolla 12.5 m/s tai yli
   			// Rajakerroksen korkeus PAR180
 			
-       			//double Blh_WS = FFBLH;
-      		//	double Wind_upper_coeff = log(Blh_WS * Blh_WS * Blh_WS) * 0.67 - 3.91;
        			double Wind_upper_coeff = log(FFBLH * FFBLH * FFBLH) * 0.67 - 3.91;
       
        			if (Wind_upper_coeff < 0)
@@ -516,8 +424,8 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
   
   			double visibility_sum = Humidity_coeff + Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff;
  
-  			//===================  Eri ainesosasten yhteenlasketun summan raja-arvo  MUUTA TARVITTAESSA
-  			double threshold = 1.5;
+  			// Eri ainesosasten yhteenlasketun summan raja-arvo
+  			// threshold = 1.5;
    
   			//huonoja näkyvyyksiä jos "todennäköisyys" alle määritetyn alarajan ja yksittäiset parametrit alle 1
   			// Näkyvyys lasketaan mallin suhteellisen kosteuden ja aikaisemmin lasketun humidity_min parametrin erotuksesta. 
@@ -545,7 +453,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		}
 				
 		// Lopuksi valitaan sade- ja sumu/utunakyvyyksista huonompi
-		
+
 		if (visMist < visPre)
 		{  
 		   vis = visMist; 
@@ -553,8 +461,8 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		else
 		{  
 		   vis = visPre; 
-		}  
- 
+		} 
+
 		myTargetInfo->Value(vis);
 		
 	}	
