@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.4.19
+Version: 16.4.20
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -102,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Apr 20 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.20-1.fmi
+- Visibility fixes
 * Tue Apr 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.19-1.fmi
 - Simplified interpolation/Swap code (HIMAN-120)
 * Fri Apr 15 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.15-1.fmi
