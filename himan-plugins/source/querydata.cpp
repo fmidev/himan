@@ -68,8 +68,10 @@ bool querydata::ToFile(info& theInfo, string& theOutputFile)
 	
 }
 
-shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeOnly)
+shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, bool activeOnly)
 {
+
+	auto localInfo(originalInfo);
 
 	/*
 	 * Create required descriptors
@@ -77,10 +79,10 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 
 	shared_ptr<NFmiQueryData> qdata;
 	
-	NFmiParamDescriptor pdesc = CreateParamDescriptor(theInfo, activeOnly);
-	NFmiTimeDescriptor tdesc = CreateTimeDescriptor(theInfo, activeOnly);
-	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(theInfo, activeOnly);
-	NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(theInfo, activeOnly);
+	NFmiParamDescriptor pdesc = CreateParamDescriptor(localInfo, activeOnly);
+	NFmiTimeDescriptor tdesc = CreateTimeDescriptor(localInfo, activeOnly);
+	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(localInfo, activeOnly);
+	NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(localInfo, activeOnly);
 
 	assert(pdesc.Size());
 	assert(tdesc.Size());
@@ -112,7 +114,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 
 	qdata = make_shared<NFmiQueryData> (new NFmiQueryData(qi));
     qdata->Init();
-	qdata->Info()->SetProducer(NFmiProducer(static_cast<unsigned long> (theInfo.Producer().Id()), theInfo.Producer().Name()));
+	qdata->Info()->SetProducer(NFmiProducer(static_cast<unsigned long> (localInfo.Producer().Id()), localInfo.Producer().Name()));
 
 	NFmiFastQueryInfo qinfo = qdata.get();
 
@@ -127,7 +129,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 		qinfo.FirstLevel();
 		qinfo.FirstTime();
 
-		CopyData(theInfo, qinfo);
+		CopyData(localInfo, qinfo);
 	}
 	else
 	{
@@ -138,31 +140,31 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 		 * before writing querydata.
 		 */
 
-		theInfo.ResetTime();
+		localInfo.ResetTime();
 		qinfo.ResetTime();
 
-		while (theInfo.NextTime() && qinfo.NextTime())
+		while (localInfo.NextTime() && qinfo.NextTime())
 		{
 
-			theInfo.ResetLevel();
+			localInfo.ResetLevel();
 			qinfo.ResetLevel();
 
-			while (theInfo.NextLevel() && qinfo.NextLevel())
+			while (localInfo.NextLevel() && qinfo.NextLevel())
 			{
-				theInfo.ResetParam();
+				localInfo.ResetParam();
 				qinfo.ResetParam();
 
-				while (theInfo.NextParam() && qinfo.NextParam())
+				while (localInfo.NextParam() && qinfo.NextParam())
 				{
 					
-					if (!theInfo.Grid())
+					if (!localInfo.Grid())
 					{
 						// No data in info (sparse info class)
 						
 						continue;
 					}
 
-					CopyData(theInfo, qinfo);
+					CopyData(localInfo, qinfo);
 
 				}
 			}
@@ -170,6 +172,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 	}
 
 	qdata->LatLonCache();
+
 	return qdata;
 
 }
@@ -177,43 +180,41 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(info& theInfo, bool activeO
 
 bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 {
-	bool swapped = false;
-	
-	HPScanningMode originalMode = kUnknownScanningMode;
-	
-	if (theInfo.Grid()->Type() == kRegularGrid)
-	{
-		originalMode = dynamic_cast<regular_grid*> (theInfo.Grid())->ScanningMode();
-
-		if (originalMode == kTopLeft)
-		{
-			// For newbase we have swap data to kBottomLeft.
-
-			swapped = true;
-
-			dynamic_cast<regular_grid*> (theInfo.Grid())->Swap(kBottomLeft);
-
-		}
-		else if (originalMode != kBottomLeft)
-		{
-			itsLogger->Fatal("Invalid scannignmode: " + string(HPScanningModeToString.at(originalMode)));
-			exit(1);
-		}
-	}
-	
 	assert(theInfo.Data().Size() == qinfo.Size());
 
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
-	while (theInfo.NextLocation() && qinfo.NextLocation())
+	if (theInfo.Grid()->Type() == kRegularGrid && dynamic_cast<regular_grid*> (theInfo.Grid())->ScanningMode() != kBottomLeft)
 	{
-		qinfo.FloatValue(static_cast<float> (theInfo.Value()));
-	}
+		assert(dynamic_cast<regular_grid*> (theInfo.Grid())->ScanningMode() == kTopLeft);
 
-	if (swapped)
+		size_t nj = theInfo.Data().SizeY();
+		size_t ni = theInfo.Data().SizeX();
+
+		int y = static_cast<int> (nj) - 1;
+
+		do
+		{
+			size_t x = 0;
+
+			do
+			{
+				qinfo.NextLocation();
+				qinfo.FloatValue(static_cast<float> (theInfo.Data().At(x, y)));
+				x++;
+			} while (x < ni);
+
+			y--;
+		} while (y != -1);
+	}
+	else
 	{
-		dynamic_cast<regular_grid*> (theInfo.Grid())->Swap(originalMode);
+		// Grid is irregular OR source & dest are both kBottomLeft
+		while (theInfo.NextLocation() && qinfo.NextLocation())
+		{
+			qinfo.FloatValue(static_cast<float> (theInfo.Value()));
+		}
 	}
 
 	return true;

@@ -99,7 +99,7 @@ public:
 	 * @return shared pointer to querydata instance
 	 */
 	
-	std::shared_ptr<NFmiQueryData> CreateQueryData(info& theInfo, bool activeOnly);
+	std::shared_ptr<NFmiQueryData> CreateQueryData(const info& theInfo, bool activeOnly);
 
 	/**
 	 * @brief Create info from a given querydata
