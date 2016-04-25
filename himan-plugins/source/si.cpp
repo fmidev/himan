@@ -22,6 +22,8 @@
 #include "querydata.h"
 #include "hitool.h"
 
+#include "si_cuda.h"
+
 const unsigned char FCAPE		= (1 << 2);
 const unsigned char FCAPE1040	= (1 << 1);
 const unsigned char FCAPE3km	= (1 << 0);
@@ -271,8 +273,6 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	auto timer = timer_factory::Instance()->GetTimer();
 	timer->Start();
 	
-	cout << "\n--- T AND TD --\n" << endl;	
-
 	pair<vector<double>, vector<double>> TandTD;
 	
 	param LCLTParam, LCLPParam, LFCTParam, LFCPParam, ELPParam, ELTParam;
@@ -295,7 +295,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 			break;
 		
 		case k500mAvg:
-			TandTD = Get500mTAndTD(myTargetInfo);
+			throw runtime_error("Source type 500m avg not implemented");
 			break;
 		
 		case k500mAvgMixingRatio:
@@ -338,15 +338,10 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 
 	mySubThreadedLogger->Info("Source data calculated in " + boost::lexical_cast<string> (timer->GetTime()) + " ms");
 
-	DumpVector(get<0>(TandTD), "T");
-	DumpVector(get<1>(TandTD), "TD");
-
 	mySubThreadedLogger->Debug("Surface temperature: " + CAPE::PrintMean(TandTD.first));
 	mySubThreadedLogger->Debug("Surface dewpoint: " + CAPE::PrintMean(TandTD.second));
 	
 	// 2.
-	
-	cout << "\n--- LCL --\n" << endl;
 	
 	timer->Start();
 	
@@ -369,8 +364,6 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	DumpVector(LCL.second, "LCL P");
 
 	// 3.
-	
-	cout << "\n--- LFC --\n" << endl;
 
 	timer->Start();
 	
@@ -401,7 +394,6 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 
 	timer->Start();
 
-	cout << "\n--- CAPE AND CIN --\n" << endl;
 	auto capeInfo = make_shared<info> (*myTargetInfo);
 	boost::thread t1(&si::GetCAPE, this, boost::ref(capeInfo), LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 
@@ -1080,6 +1072,7 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 
 pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P)
 {
+
 	auto h = GET_PLUGIN(hitool);
 
 	assert(T.size() == P.size());
@@ -1108,6 +1101,28 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 
 		throw e;
 	}
+	
+//	if (itsConfiguration->UseCuda())
+	{
+		return GetLFCCPU(myTargetInfo, T, P, TenvLCL);
+	}
+/*	else
+	{
+		return si_cuda::GetLFCGPU(itsConfiguration, myTargetInfo, T, P, TenvLCL);
+	}
+*/ 
+}
+
+pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P, vector<double>& TenvLCL)
+{
+
+	auto h = GET_PLUGIN(hitool);
+
+	assert(T.size() == P.size());
+	
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+	h->HeightUnit(kHPa);
 
 	auto Piter = P, Titer = T; // integration variables
 	
@@ -1350,26 +1365,6 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 
 }
 
-pair<vector<double>,vector<double>> si::Get500mTAndTD(shared_ptr<info> myTargetInfo)
-{
-	auto h = GET_PLUGIN(hitool);
-	h->Configuration(itsConfiguration);
-	h->Time(myTargetInfo->Time());
-
-	auto T = h->VerticalAverage(param("T-K"), 0, 500);
-	auto RH = h->VerticalAverage(param("RH-PRCNT"), 0, 500);
-
-	auto TD = T;
-
-	for (size_t i = 0; i < T.size(); i++)
-	{
-		TD[i] = metutil::DewPointFromRH_(T[i], RH[i]);
-	}
-
-	return make_pair(T,TD);
-
-}
-
 pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info> myTargetInfo)
 {
 	modifier_mean tp, mr;
@@ -1380,7 +1375,6 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
 
-#if 1
 	itsLogger->Info("Calculating T&Td in smarttool compatibility mode");
 
 	tp.HeightInMeters(false);
@@ -1484,70 +1478,6 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 			}
 		}
 	}
-
-#endif	
-#if 0
-	itsLogger->Info("Calculating T&Td himan style");
-	vector<double> zero(myTargetInfo->Data().Size(), 0);
-	vector<double> m500(zero.size(), 500.);
-
-	tp.LowerHeight(zero);
-	mr.LowerHeight(zero);
-
-	tp.UpperHeight(m500);
-	mr.UpperHeight(m500);
-
-	while (!tp.CalculationFinished() && !mr.CalculationFinished())
-	{
-		auto TInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
-		auto RHInfo = Fetch(myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
-		auto PInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
-		auto ZInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
-
-		auto T = TInfo->Data().Values();
-
-		auto RH = RHInfo->Data().Values();
-		auto P = PInfo->Data().Values();
-
-		vector<double> Tpot(T.size(), kFloatMissing);
-		vector<double> MR(T.size(), kFloatMissing);
-
-		for (size_t i = 0; i < T.size(); i++)
-		{
-			assert(T[i] != kFloatMissing);
-			assert(P[i] != kFloatMissing);
-	
-			Tpot[i] = metutil::Theta_(T[i], 100*P[i]);
-			//MR[i] = metutil::MixingRatio_(T[i], 100*P[i]);
-			MR[i] = [&](){
-				
-				// es				
-				const double b = 17.2694;
-				const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
-				const double T1 = 273.16; // [K]
-				const double T2 = 35.86; // [K]
-
-				double nume = b * (T[i]-T1);
-				double deno = (T[i]-T2);
-
-				double es = e0 * ::exp(nume/deno);
-				
-				// e
-				double e = RH[i] * es / 100;
-				
-				// w
-				double w = 0.622 * e/P[i] * 1000;
-	
-				return w;
-			}();
-		}
-
-		tp.Process(Tpot, ZInfo->Data().Values());
-		mr.Process(MR, ZInfo->Data().Values());
-
-		curLevel.Value(curLevel.Value()-1);
-	}
-#endif
 	
 	auto Tpot = tp.Result();
 	auto MR = mr.Result();
@@ -1580,6 +1510,18 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 }
 
 pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> myTargetInfo)
+{
+	if (itsConfiguration->UseCuda())
+	{
+		return si_cuda::GetHighestThetaETAndTDGPU(itsConfiguration, myTargetInfo);
+	}
+	else
+	{
+		return GetHighestThetaETAndTDCPU(myTargetInfo);
+	}
+}
+
+pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<info> myTargetInfo)
 {
 	vector<bool> found(myTargetInfo->Data().Size(), false);
 	
@@ -1630,7 +1572,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 			
 			double TD = metutil::DewPointFromRH_(T, RH);
 			double ThetaE = metutil::ThetaE_(T, TD, P*100);
-
+			
 #ifdef POINTDEBUG
 			myTargetInfo->LocationIndex(i);
 			point currentPoint = myTargetInfo->LatLon();
@@ -1666,8 +1608,8 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 		{
 			break;
 		}
-		
-		itsLogger->Debug("Max ThetaE processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
+
+		itsLogger->Trace("Max ThetaE processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
 
 		curLevel.Value(curLevel.Value()-1);
 	}

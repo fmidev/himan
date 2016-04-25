@@ -68,6 +68,8 @@ private:
 	
 	std::pair<std::vector<double>,std::vector<double>> GetLCL(std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& TD);
 	std::pair<std::vector<double>,std::vector<double>> GetLFC(std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& P);
+
+	std::pair<std::vector<double>,std::vector<double>> GetLFCCPU(std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& P, std::vector<double>& TenvLCL);
 	
 	// Functions to fetch different kinds of source data
 
@@ -76,6 +78,7 @@ private:
 	std::pair<std::vector<double>,std::vector<double>> Get500mMixingRatioTAndTD(std::shared_ptr<info> myTargetInfo);
 	std::pair<std::vector<double>,std::vector<double>> GetHighestThetaETAndTD(std::shared_ptr<info> myTargetInfo);
 
+	std::pair<std::vector<double>,std::vector<double>> GetHighestThetaETAndTDCPU(std::shared_ptr<info> myTargetInfo);
 
 	/**
 	 * @brief Integrate CAPE values
