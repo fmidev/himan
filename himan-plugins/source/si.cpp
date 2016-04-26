@@ -360,9 +360,6 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	myTargetInfo->Param(LCLPParam);
 	myTargetInfo->Data().Set(LCL.second);
 	
-	DumpVector(LCL.first, "LCL T");
-	DumpVector(LCL.second, "LCL P");
-
 	// 3.
 
 	timer->Start();
@@ -386,9 +383,6 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	
 	myTargetInfo->Param(LFCPParam);
 	myTargetInfo->Data().Set(LFC.second);
-
-	DumpVector(LFC.first, "LFC T");
-	DumpVector(LFC.second, "LFC P");
 
 	// 4. & 5.
 
@@ -1102,15 +1096,15 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 		throw e;
 	}
 	
-//	if (itsConfiguration->UseCuda())
-	{
-		return GetLFCCPU(myTargetInfo, T, P, TenvLCL);
-	}
-/*	else
+	if (itsConfiguration->UseCuda())
 	{
 		return si_cuda::GetLFCGPU(itsConfiguration, myTargetInfo, T, P, TenvLCL);
 	}
-*/ 
+	else
+	{
+		return GetLFCCPU(myTargetInfo, T, P, TenvLCL);
+	}
+
 }
 
 pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P, vector<double>& TenvLCL)
@@ -1185,7 +1179,7 @@ pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo,
 		for (auto&& tup : zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(prevPenvInfo), VEC(prevTenvInfo), TparcelVec, LFCT, LFCP))
 		{
 			i++;
-
+	
 			if (found[i]) continue;
 
 			double Tenv = tup.get<0> (); // K
@@ -1200,7 +1194,7 @@ pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo,
 			
 			double& Tresult = tup.get<5> ();
 			double& Presult = tup.get<6> ();
-
+	
 #ifdef POINTDEBUG
 			myTargetInfo->LocationIndex(i);
 			point currentPoint = myTargetInfo->LatLon();
@@ -1259,7 +1253,7 @@ pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo,
 		curLevel.Value(curLevel.Value() - 1);	
 	
 		foundCount = count(found.begin(), found.end(), true);
-		itsLogger->Debug("LFC processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
+		itsLogger->Trace("LFC processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
 
 		prevPenvInfo = PenvInfo;
 		prevTenvInfo = TenvInfo;

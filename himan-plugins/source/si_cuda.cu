@@ -189,21 +189,49 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 }
 
 __global__
-void MoistLiftKernel(info_simple d_T, info_simple d_P, info_simple d_Ptarget, double* __restrict__ d_Tparcel)
+void CopyLFCIteratorValuesKernel(double* __restrict__ d_Titer, const double* __restrict__ d_Tparcel, double* __restrict__ d_Piter, info_simple d_Penv)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	assert(d_T.values);
-	assert(d_P.values);
-
-	if (idx < d_T.size_x * d_T.size_y)
+	if (idx < d_Penv.size_x * d_Penv.size_y)
 	{
-		d_Tparcel[idx] = metutil::MoistLift_(d_P.values[idx], d_T.values[idx], d_Ptarget.values[idx]);
+		if (d_Tparcel[idx] != kFloatMissing && d_Penv.values[idx] != kFloatMissing)
+		{
+			d_Titer[idx] = d_Tparcel[idx];
+			d_Piter[idx] = d_Penv.values[idx];
+		}
+	}
+}
+__global__
+void MoistLiftKernel(const double* __restrict__ d_T, const double* __restrict__  d_P, info_simple d_Ptarget, double* __restrict__ d_Tparcel)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	assert(d_T);
+	assert(d_P);
+
+	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
+	{
+		assert(d_P[idx] > 10);
+		assert(d_P[idx] < 1500);
+
+		assert(d_Ptarget.values[idx] > 10);
+		assert(d_Ptarget.values[idx] < 1500);
+
+		assert(d_T[idx] > 100);
+		assert(d_T[idx] < 350 || d_T[idx] == kFloatMissing);
+
+		double T = metutil::MoistLift_(d_P[idx]*100, d_T[idx], d_Ptarget.values[idx]*100);
+
+		assert(T > 100);
+		assert(T < 350 || T == kFloatMissing);
+
+		d_Tparcel[idx] = T;
 	}
 }
 
 __global__
-void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simple d_prevP, double* __restrict__ d_Tparcel, double* __restrict__ d_LCLP, double* __restrict__ d_LFCT, double* __restrict__ d_LFCP)
+void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simple d_prevP, double* __restrict__ d_Tparcel, double* __restrict__ d_LCLP, double* __restrict__ d_LFCT, double* __restrict__ d_LFCP, unsigned char* __restrict__ d_found, int d_curLevel)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -215,29 +243,50 @@ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simpl
 		double Tparcel = d_Tparcel[idx];
 		double Tenv = d_T.values[idx];
 		
+		assert(Tenv < 350.);
+		assert(Tenv > 100.);
+		
+		double prevTenv = d_prevT.values[idx];
+		assert(prevTenv < 350.);
+		assert(prevTenv > 100.);
+
 		double Penv = d_P.values[idx];
 		double LCLP = d_LCLP[idx];
 		
-		if (Tparcel != kFloatMissing && Penv > LCLP)
+		if (Tparcel != kFloatMissing && d_curLevel < 95 && (Tenv - Tparcel) > 30.)
 		{
-			if (Tparcel >= Tenv)
+			// Temperature gap between environment and parcel too large --> abort search.
+			// Only for values higher in the atmosphere, to avoid the effects of inversion
+
+			d_found[idx] = 1;
+		}
+		
+		if (Tparcel != kFloatMissing && Penv <= LCLP)
+		{
+			if (Tparcel >= Tenv && d_found[idx] == 0)
 			{
+				d_found[idx] = 1;
+
 				// We have no specific information on the precise height where the temperature has crossed
 				// Or we could if we'd integrate it but it makes the calculation more complex. So maybe in the
 				// future. For now just take an average of upper and lower level values.
 				
-				double prevTenv = d_prevT.values[idx]; // K
-				assert(prevTenv > 100.);
+				if (prevTenv == kFloatMissing) prevTenv = Tenv;
 
-				d_LFCT[idx] = (Tenv + prevTenv) * 0.5;
+				d_LFCT[idx] = (Tenv + prevTenv) * 0.5; // K
+
+				assert(d_LFCT[idx] > 100);
+				assert(d_LFCT[idx] < 350);
 
 				// Never allow LFC pressure to be bigger than LCL pressure; bound lower level (with larger pressure value)
 				// to LCL level if it below LCL
 
 				double prevPenv = d_prevP.values[idx];
 				prevPenv = min(prevPenv, LCLP);
-				
-				d_LFCP[idx] = (Penv + prevPenv) * 0.5;
+				assert(prevPenv > 10);
+				assert(prevPenv < 1500);
+
+				d_LFCP[idx] = (Penv + prevPenv) * 0.5; // hPa
 			}
 		}
 	}
@@ -263,7 +312,7 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, double* __
 		double& refThetaE = d_maxThetaE[idx];
 		double ThetaE = metutil::ThetaE_(T, TD, P*100);
 
-		if (P == kFloatMissing || P < 600)
+		if (P == kFloatMissing || P < 600.)
 		{
 			d_found[idx] = 1;
 		}
@@ -339,6 +388,10 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 		CUDA_CHECK(cudaFree(h_RH->values));
 		CUDA_CHECK(cudaFree(h_T->values));
 		
+		delete h_P;
+		delete h_T;
+		delete h_RH;
+
 		curLevel.Value(curLevel.Value()-1);
 
 		size_t foundCount = std::count(found.begin(), found.end(), 1);
@@ -354,8 +407,10 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 	
+	CUDA_CHECK(cudaFree(d_maxThetaE));
 	CUDA_CHECK(cudaFree(d_Tresult));
 	CUDA_CHECK(cudaFree(d_TDresult));
+	CUDA_CHECK(cudaFree(d_found));
 	
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
@@ -376,25 +431,30 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetLFCGPU(const std:
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
 	double* d_TenvLCL = 0;
-	double* d_T = 0;
-	double* d_P = 0;
+	double* d_Titer = 0;
+	double* d_Piter = 0;
+	double* d_LCLP = 0;
 	double* d_LFCT = 0;
 	double* d_LFCP = 0;
+	double* d_Tparcel = 0;
+
 	unsigned char* d_found = 0;
 	
 	CUDA_CHECK(cudaMalloc((double**) &d_TenvLCL, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_P, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_T, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_Piter, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_Titer, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_LCLP, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**) &d_LFCT, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**) &d_LFCP, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**) &d_found, sizeof(unsigned char) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_Tparcel, sizeof(double) * N));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_T, &T[0], sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_P, &P[0], sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-
-	// Convert pressure to Pa since metutil-library expects that
-	MultiplyWith<double>(d_P, 100., N, stream);
+	CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &T[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &P[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	
+	CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
+	
 	InitializeArray<double> (d_LFCT, kFloatMissing, N, stream);
 	InitializeArray<double> (d_LFCP, kFloatMissing, N, stream);
 	InitializeArray<unsigned char> (d_found, 0, N, stream);
@@ -417,6 +477,26 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetLFCGPU(const std:
 
 	curLevel.Value(curLevel.Value()-1);
 
+	std::vector<unsigned char> found(N, 0);
+	std::vector<double> LFCT(N, kFloatMissing);
+	std::vector<double> LFCP(N, kFloatMissing);
+
+	for (size_t i = 0; i < N; i++)
+	{
+		if (T[i] >= TenvLCL[i])
+		{
+			found[i] = true;
+			LFCT[i] = T[i];
+			LFCP[i] = P[i];
+			//Piter[i] = kFloatMissing;
+		}
+	}
+
+	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, &LFCT[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, &LFCP[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
 	while (curLevel.Value() > 70)
 	{	
 		// Get environment temperature and pressure values for this level
@@ -425,65 +505,57 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetLFCGPU(const std:
 
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
 		auto h_Tenv = PrepareInfo(TenvInfo, stream);
-		
-		// Convert pressure to Pa since metutil-library expects that
-		MultiplyWith<double>(h_Penv->values, 100., N, stream);
-		
+
 		// Lift the particle from previous level to this level. In the first revolution
 		// of this loop the starting level is LCL. If target level level is below current level
 		// (ie. we would be lowering the particle) missing value is returned.
 
-		double* d_Tparcel = 0;
-		
-		CUDA_CHECK(cudaMalloc((double**) &d_Tparcel, sizeof(double) * N));
+		MoistLiftKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Piter, *h_Penv, d_Tparcel);
 
-		MoistLiftKernel <<< gridSize, blockSize, 0, stream >>> (*h_prevPenv, *h_prevTenv, *h_Penv, d_Tparcel);
+		LFCKernel <<< gridSize, blockSize, 0, stream >>> (*h_Tenv, *h_Penv, *h_prevTenv, *h_prevPenv, d_Tparcel, d_LCLP, d_LFCT, d_LFCP, d_found, curLevel.Value());
 
-		LFCKernel <<< gridSize, blockSize, 0, stream >>> (*h_Tenv, *h_Penv, *h_prevTenv, *h_prevPenv, d_Tparcel, d_P, d_LFCT, d_LFCP);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
 
 		CUDA_CHECK(cudaFree(h_prevPenv->values));
 		CUDA_CHECK(cudaFree(h_prevTenv->values));
 
+		delete h_prevPenv;
+		delete h_prevTenv;
+
 		h_prevPenv = h_Penv;
 		h_prevTenv = h_Tenv;
 
-#if 0
-			else if (curLevel.Value() < 95 && (Tenv - Tparcel) > 30.)
-			{
-				// Temperature gap between environment and parcel too large --> abort search.
-				// Only for values higher in the atmosphere, to avoid the effects of inversion
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-				found[i] = true;
-			}
-#endif
+		if (static_cast<size_t> (std::count(found.begin(), found.end(), 1)) == found.size()) break;
+
+		// preserve starting position for those grid points that have value
+
+		CopyLFCIteratorValuesKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Tparcel, d_Piter, *h_Penv);
+		
 		curLevel.Value(curLevel.Value() - 1);	
-	
-#if 0
-		for (size_t i = 0; i < Titer.size(); i++)
-		{
-			// preserve starting position for those grid points that have value
-			if (TparcelVec[i] != kFloatMissing && PenvVec[i] != kFloatMissing)
-			{
-				Titer[i] = TparcelVec[i];
-				Piter[i] = PenvVec[i];
-			}
-			if (found[i]) Titer[i] = kFloatMissing; // by setting this we prevent MoistLift to integrate particle
-		}
-#endif
+
 	}
 
-	std::vector<double> LFCT(myTargetInfo->Data().Size());
-	std::vector<double> LFCP(myTargetInfo->Data().Size());
+	CUDA_CHECK(cudaFree(h_prevPenv->values));
+	CUDA_CHECK(cudaFree(h_prevTenv->values));
+
+	delete h_prevPenv;
+	delete h_prevTenv;
 
 	CUDA_CHECK(cudaMemcpyAsync(&LFCT[0], d_LFCT, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(&LFCP[0], d_LFCP, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-	
+
 	CUDA_CHECK(cudaFree(d_LFCT));
 	CUDA_CHECK(cudaFree(d_LFCP));
+	CUDA_CHECK(cudaFree(d_LCLP));
+	CUDA_CHECK(cudaFree(d_Tparcel));
+	CUDA_CHECK(cudaFree(d_found));
+	CUDA_CHECK(cudaFree(d_Titer));
+	CUDA_CHECK(cudaFree(d_Piter));
+	CUDA_CHECK(cudaFree(d_TenvLCL));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
