@@ -322,8 +322,7 @@ double LiftLCL_(double P, double T, double LCLP, double targetP);
 /**
  * @brief Lift a parcel of air moist-adiabatically to wanted pressure
  *
- * Function will calculate LCL from given arguments and starts
- * lifting from that pressure and temperature.
+ * Initial temperature is assumed to be saturated ie. LCL level temperature.
  *
  * @param P Pressure of LCL in Pascals
  * @param T Temperature of LCL in K
@@ -763,6 +762,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	{
 		return kFloatMissing;
 	}
+
 	// Sanity checks
 
 	assert(P > 2000);
