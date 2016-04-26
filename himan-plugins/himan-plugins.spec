@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.4.21
+Version: 16.4.26
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.14.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.4.14
+Requires: himan-lib >= 16.4.26
 Requires: himan-bin >= 16.2.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -102,6 +102,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Apr 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.26-1.fmi
+- Cuda version of si-plugin (partial support)
 * Thu Apr 21 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.21-1.fmi
 - Remove swapping code from querydata-plugin (HIMAN-120)
 * Wed Apr 20 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.20-1.fmi
