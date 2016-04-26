@@ -214,8 +214,19 @@ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 	// Allocate memory on device for unpacked data
 
 	double* d_arr = 0;
-	CUDA_CHECK(cudaMalloc(reinterpret_cast<void **> (&d_arr), sizeof(double) * N));
-
+	
+	bool releaseUnpackedDeviceMemory = false;
+	
+	if (NFmiGribPacking::IsHostPointer(arr))
+	{
+		CUDA_CHECK(cudaMalloc(reinterpret_cast<void **> (&d_arr), sizeof(double) * N));
+		releaseUnpackedDeviceMemory = true;
+	}
+	else
+	{
+		d_arr = arr;		
+	}
+	
 	int blockSize = 512;
 	int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
 
@@ -230,12 +241,16 @@ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 
 	simple_packed_util::Unpack <<< gridSize, blockSize, 0, *stream >>> (d_p, d_arr, d_b, coefficients, HasBitmap(), unpackedLength);
 
-	CUDA_CHECK(cudaMemcpyAsync(arr, d_arr, sizeof(double) * N, cudaMemcpyDeviceToHost, *stream));
+	if (releaseUnpackedDeviceMemory)
+	{
+		CUDA_CHECK(cudaMemcpyAsync(arr, d_arr, sizeof(double) * N, cudaMemcpyDeviceToHost, *stream));
+		CUDA_CHECK(cudaStreamSynchronize(*stream));
+		CUDA_CHECK(cudaFree(d_arr));
+	}
+
 	CUDA_CHECK(cudaStreamSynchronize(*stream));
-
-	CUDA_CHECK(cudaFree(d_arr));
 	CUDA_CHECK(cudaFree(d_p));
-
+	
 	if (HasBitmap())
 	{
 		CUDA_CHECK(cudaFree(d_b));
