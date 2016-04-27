@@ -362,7 +362,11 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 		auto RHInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType());
 		auto PInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
-		assert(TInfo && RHInfo && PInfo);
+		if (!TInfo || !RHInfo || !PInfo)
+		{
+			return std::make_pair(std::vector<double>(),std::vector<double>());
+		}
+
 		assert(TInfo->Data().MissingCount() == 0);
 
 		auto h_T = TInfo->ToSimple();
