@@ -147,6 +147,8 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 
 pair<level,level> hitool::LevelForHeight(const producer& prod, double height) const
 {
+	assert(itsConfiguration);
+
 	using boost::lexical_cast;
 
 	long producerId = 0;
