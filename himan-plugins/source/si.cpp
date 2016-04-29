@@ -99,7 +99,7 @@ const himan::param MUCAPE1040ZoneCount("CAPEMU1040ZONES");
 const himan::param MUCAPE3kmZoneCount("CAPEMU3KMZONES");
 #endif
 
-si::si() : itsBottomLevel(kHPMissingInt)
+si::si() : itsBottomLevel(kHybrid, kHPMissingInt)
 {
 	itsClearTextFormula = "<multiple algorithms>";
 
@@ -120,9 +120,12 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	auto theNeons = GET_PLUGIN(neons);
 
-	itsBottomLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
-	itsTopLevel = boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
+	itsBottomLevel = level(kHybrid, boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number")));
 
+#ifdef HAVE_CUDA
+	si_cuda::itsBottomLevel = itsBottomLevel;
+#endif
+	
 	vector<param> theParams;
 	
 	vector<string> sourceDatas;
@@ -423,7 +426,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 
 	// Do smoothening for CAPE & CIN parameters
 	// Calculate average of nearest 4 points + the point in question
-	mySubThreadedLogger->Info("Smoothening");
+	mySubThreadedLogger->Trace("Smoothening");
 	
 	himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
 	// C was row-major... right?
@@ -458,10 +461,19 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 
 void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
 {
-	const params PParams({param("PGR-PA"), param("P-PA")});
-	
-	//auto PsurfInfo = Fetch(myTargetInfo->Time(), level(kHeight, 0), PParams, myTargetInfo->ForecastType(), false);
-	
+	if (itsConfiguration->UseCuda())
+	{
+		si_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsurf, TLCL, PLCL, PLFC, CINParam);
+	}
+	else
+	{
+		GetCINCPU(myTargetInfo, Tsurf, TLCL, PLCL, PLFC, CINParam);
+	}
+	DumpVector(VEC(myTargetInfo), "CIN");
+}
+
+void si::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
+{
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
@@ -499,7 +511,7 @@ void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, cons
 	itsLogger->Debug("Fetching LFC metric height");
 	DumpVector(ZLFC, "LFC Z");
 
-	level curLevel(kHybrid, 137);
+	level curLevel = itsBottomLevel;
 	
 	auto basePenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
 	auto prevZenvInfo = Fetch(ftime, curLevel, param("HL-M"), ftype, false);
@@ -520,10 +532,11 @@ void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, cons
 	auto prevTparcelVec = Tsurf;
 
 	curLevel.Value(curLevel.Value()-1);
-	
-	while (curLevel.Value() > 60 && foundCount != found.size())
-	{
 
+	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+
+	while (curLevel.Value() > hPa100.first.Value() && foundCount != found.size())
+	{
 		auto ZenvInfo = Fetch(ftime, curLevel, param("HL-M"), ftype, false);
 		auto TenvInfo = Fetch(ftime, curLevel, param("T-K"), ftype, false);
 		auto PenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
@@ -538,7 +551,7 @@ void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, cons
 
 		int i = -1;
 
-		for (auto&& tup : zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(ZenvInfo), VEC(prevZenvInfo), VEC(basePenvInfo)))
+		for (auto&& tup : zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(ZenvInfo), VEC(prevZenvInfo), Titer))
 		{
 			i++;
 
@@ -550,16 +563,14 @@ void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, cons
 			double Penv = tup.get<1>(); // hPa
 			assert(Penv < 1200.);
 			
-			double Pbase = tup.get<4>(); // hPa
-			assert(Pbase < 1200.);
-			
-			assert(PLFC[i] < 1200. || PLFC[i] == kFloatMissing);
-			
 			double Zenv = tup.get<2>(); // m
 			double prevZenv = tup.get<3>(); // m
+						
+			double Tparcel = tup.get<4>(); // K
+			assert(Tparcel >= 100.);
 			
-			double Tparcel = kFloatMissing;
-			
+			assert(PLFC[i] < 1200. || PLFC[i] == kFloatMissing);
+					
 			if (PLFC[i] == kFloatMissing)
 			{
 				found[i] = true;
@@ -572,26 +583,10 @@ void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, cons
 				found[i] = true;
 				continue;
 			}
-			else if (curLevel.Value() < 85 && (Tenv - Tparcel) > 30.)
-			{
-				// Temperature gap between environment and parcel too large --> abort search.
-				// Only for values higher in the atmosphere, to avoid the effects of inversion
-
-				found[i] = true;
-				continue;
-			}
 			
-			if (Penv > PLCL[i])
+			if (Penv < PLCL[i])
 			{
-				// Below LCL --> Lift to cloud base
-				assert(Tsurf[i] >0);
-				assert(Tsurf[i] < 500);
-				Tparcel = metutil::DryLift_(Pbase*100, Tsurf[i], Penv * 100);
-			}
-			else
-			{
-				// Above LCL --> Integrate to current hybrid level height
-				Tparcel = metutil::MoistLift_(Pbase*100, Tsurf[i], Penv * 100);
+				// Above LCL, switch to virtual temperature
 				
 				if (Tparcel == kFloatMissing) continue;
 				
@@ -602,6 +597,7 @@ void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, cons
 			if (Tparcel <= Tenv)
 			{
 				cinh[i] += constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+
 				assert(cinh[i] <= 0);
 			}
 			else if (cinh[i] != 0)
@@ -614,7 +610,7 @@ void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, cons
 
 		foundCount = count(found.begin(), found.end(), true);
 
-		itsLogger->Debug("CIN read for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
+		itsLogger->Trace("CIN read for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 
 		curLevel.Value(curLevel.Value()-1);
 		prevZenvInfo = ZenvInfo;
@@ -879,7 +875,9 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 	
 	info_t TenvInfo, PenvInfo, ZenvInfo;
 	
-	while (curLevel.Value() > 60 && foundCount != found.size())
+	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+
+	while (curLevel.Value() > hPa100.first.Value() && foundCount != found.size())
 	{
 		// Get environment temperature, pressure and height values for this level
 		PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
@@ -1078,7 +1076,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 	// The arguments given to this function are LCL temperature and pressure
 	// Often LFC height is the same as LCL height, check that now
 	
-	itsLogger->Info("Searching environment temperature for LCL");
+	itsLogger->Trace("Searching environment temperature for LCL");
 
 	vector<double> TenvLCL;
 
@@ -1158,7 +1156,9 @@ pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo,
 	//auto prevPenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("P-PA"), myTargetInfo->ForecastType(), false);
 	//auto prevTenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("T-K"), myTargetInfo->ForecastType(), false);
 
-	while (curLevel.Value() > 70 && foundCount != found.size())
+	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+
+	while (curLevel.Value() > hPa150.first.Value() && foundCount != found.size())
 	{	
 		// Get environment temperature and pressure values for this level
 		auto TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
@@ -1290,10 +1290,11 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 	double Pscale = 1.; // P should be Pa
 
+	
 	if (!Psurf)
 	{
 		itsLogger->Warning("Surface pressure not found, trying lowest hybrid level pressure");
-		Psurf = Fetch(myTargetInfo->Time(), level(kHybrid, 137), param("P-HPA"), myTargetInfo->ForecastType(), false);
+		Psurf = Fetch(myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 		
 		if (!Psurf)
 		{
@@ -1325,7 +1326,7 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 	for (size_t i = 0; i < PLCL.size(); i++)
 	{
-		if (PLCL[i] < 250.) PLCL[i] = 250.;
+		if (PLCL[i] < 200.) PLCL[i] = 200.;
 	}
 
 	return make_pair(TLCL,PLCL);
@@ -1334,8 +1335,8 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTargetInfo)
 {
-	auto TInfo = Fetch(myTargetInfo->Time(), level(himan::kHybrid, 137), param("T-K"), myTargetInfo->ForecastType(), false);
-	auto RHInfo = Fetch(myTargetInfo->Time(), level(himan::kHybrid, 137), param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
+	auto TInfo = Fetch(myTargetInfo->Time(), itsBottomLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+	auto RHInfo = Fetch(myTargetInfo->Time(), itsBottomLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
 	
 	if (!TInfo || !RHInfo)
 	{
@@ -1362,7 +1363,7 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info> myTargetInfo)
 {
 	modifier_mean tp, mr;
-	level curLevel(kHybrid, 137);
+	level curLevel = itsBottomLevel;
 
 	auto h = GET_PLUGIN(hitool);
 	
@@ -1479,7 +1480,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	DumpVector(Tpot, "Tpot");
 	DumpVector(MR, "MR");
 
-	auto Psurf = Fetch(myTargetInfo->Time(), level(kHybrid, 137), param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto Psurf = Fetch(myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 	P = Psurf->Data().Values();
 
 	vector<double> T(Tpot.size(), kFloatMissing);			
@@ -1523,7 +1524,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<inf
 	vector<double> Tsurf(myTargetInfo->Data().Size(), kFloatMissing);
 	auto TDsurf = Tsurf;
 	
-	level curLevel(kHybrid, 137);
+	level curLevel = itsBottomLevel;
 	
 	while (true)
 	{
