@@ -343,7 +343,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 
 	mySubThreadedLogger->Debug("Surface temperature: " + CAPE::PrintMean(TandTD.first));
 	mySubThreadedLogger->Debug("Surface dewpoint: " + CAPE::PrintMean(TandTD.second));
-	
+
 	// 2.
 	
 	timer->Start();
@@ -362,7 +362,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	
 	myTargetInfo->Param(LCLPParam);
 	myTargetInfo->Data().Set(LCL.second);
-	
+
 	// 3.
 
 	timer->Start();
@@ -1006,7 +1006,7 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 			if (val & FCAPE) foundCount++;
 		}	
 
-		itsLogger->Debug("CAPE read for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
+		itsLogger->Trace("CAPE read for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 		prevZenvInfo = ZenvInfo;
 		prevTenvInfo = TenvInfo;
 		prevPenvInfo = PenvInfo;
@@ -1153,10 +1153,8 @@ pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo,
 
 	curLevel.Value(curLevel.Value()-1);
 
-	//auto prevPenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("P-PA"), myTargetInfo->ForecastType(), false);
-	//auto prevTenvInfo = Fetch(myTargetInfo->Time(), level(kGround, 0), param("T-K"), myTargetInfo->ForecastType(), false);
-
 	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
 
 	while (curLevel.Value() > hPa150.first.Value() && foundCount != found.size())
 	{	
@@ -1231,17 +1229,17 @@ pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo,
 
 				Tresult = (Tenv + prevTenv) * 0.5;
 
-				double prevP = tup.get<2> ();
-				if (prevPenvInfo->Param().Name() == "P-PA") prevP *= 0.01;
+				double prevPenv = tup.get<2> ();
+				if (prevPenvInfo->Param().Name() == "P-PA") prevPenv *= 0.01;
 
 				// Never allow LFC pressure to be bigger than LCL pressure; bound lower level (with larger pressure value)
 				// to LCL level if it below LCL
 
-				prevP = min(prevP, P[i]);
+				prevPenv = min(prevPenv, P[i]);
 				
-				Presult = (Penv + prevP) * 0.5;
+				Presult = (Penv + prevPenv) * 0.5;
 			}
-			else if (curLevel.Value() < 95 && (Tenv - Tparcel) > 30.)
+			else if (curLevel.Value() < hPa450.first.Value() && (Tenv - Tparcel) > 30.)
 			{
 				// Temperature gap between environment and parcel too large --> abort search.
 				// Only for values higher in the atmosphere, to avoid the effects of inversion
@@ -1326,7 +1324,7 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 	for (size_t i = 0; i < PLCL.size(); i++)
 	{
-		if (PLCL[i] < 200.) PLCL[i] = 200.;
+		if (PLCL[i] < 250.) PLCL[i] = 250.;
 	}
 
 	return make_pair(TLCL,PLCL);
@@ -1526,6 +1524,8 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<inf
 	
 	level curLevel = itsBottomLevel;
 	
+	info_t prevTInfo, prevRHInfo, prevPInfo;
+	
 	while (true)
 	{
 		auto TInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
@@ -1561,10 +1561,21 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<inf
 			if (P < 600.)
 			{
 				// Cut search if reach level 600hPa
-				found[i] = true;
-				continue;
+				prevPInfo->LocationIndex(i);
+				prevTInfo->LocationIndex(i);
+				prevRHInfo->LocationIndex(i);
+				
+				// Linearly interpolate temperature and humidity values to 600hPa, to check
+				// if highest theta e is found there
+				
+				T = NFmiInterpolation::Linear(600., P, prevPInfo->Value(), T, prevTInfo->Value());
+				RH = NFmiInterpolation::Linear(600., P, prevPInfo->Value(), RH, prevRHInfo->Value());
+				
+				found[i] = true; // Make sure this is the last time we access this grid point
+				
+				P = 600.;
 			}
-			
+				
 			double TD = metutil::DewPointFromRH_(T, RH);
 			double ThetaE = metutil::ThetaE_(T, TD, P*100);
 			
@@ -1607,6 +1618,10 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<inf
 		itsLogger->Trace("Max ThetaE processed for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " grid points");
 
 		curLevel.Value(curLevel.Value()-1);
+		
+		prevPInfo = PInfo;
+		prevTInfo = TInfo;
+		prevRHInfo = RHInfo;
 	}
 	
 	for (size_t i = 0; i < Tsurf.size(); i++)

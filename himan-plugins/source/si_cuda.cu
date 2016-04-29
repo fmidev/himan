@@ -31,6 +31,20 @@ using namespace himan::plugin;
 
 level si_cuda::itsBottomLevel;
 
+__device__
+double Linear(double factor, double Y1, double Y2)
+{
+	return fma(factor, Y2, fma(-factor, Y1, Y1));
+}
+
+__device__
+double Linear(double X, double X1, double X2, double Y1, double Y2)
+{
+	double factor = (X - X1) / (X2 - X1);
+	return Linear(factor, Y1, Y2);
+	
+}
+
 double Max(const std::vector<double>& vec)
 { 
 	double ret = -1e38;
@@ -289,14 +303,14 @@ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict_
 }
 
 __global__
-void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simple d_prevP, double* __restrict__ d_Tparcel, double* __restrict__ d_LCLP, double* __restrict__ d_LFCT, double* __restrict__ d_LFCP, unsigned char* __restrict__ d_found, int d_curLevel)
+void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simple d_prevP, double* __restrict__ d_Tparcel, double* __restrict__ d_LCLP, double* __restrict__ d_LFCT, double* __restrict__ d_LFCP, unsigned char* __restrict__ d_found, int d_curLevel, int d_breakLevel)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	assert(d_T.values);
 	assert(d_P.values);
 
-	if (idx < d_T.size_x * d_T.size_y)
+	if (idx < d_T.size_x * d_T.size_y && d_found[idx] == 0)
 	{
 		double Tparcel = d_Tparcel[idx];
 		double Tenv = d_T.values[idx];
@@ -311,7 +325,7 @@ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simpl
 		double Penv = d_P.values[idx];
 		double LCLP = d_LCLP[idx];
 		
-		if (Tparcel != kFloatMissing && d_curLevel < 95 && (Tenv - Tparcel) > 30.)
+		if (Tparcel != kFloatMissing && d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
 		{
 			// Temperature gap between environment and parcel too large --> abort search.
 			// Only for values higher in the atmosphere, to avoid the effects of inversion
@@ -352,7 +366,7 @@ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simpl
 
 
 __global__
-void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, double* __restrict__ d_maxThetaE, double* __restrict__ d_Tresult, double* __restrict__ d_TDresult, unsigned char* __restrict__ d_found)
+void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simple d_prevT, info_simple d_prevRH, info_simple d_prevP, double* __restrict__ d_maxThetaE, double* __restrict__ d_Tresult, double* __restrict__ d_TDresult, unsigned char* __restrict__ d_found)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	
@@ -360,26 +374,40 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, double* __
 	assert(d_RH.values);
 	assert(d_P.values);
 	
-	if (idx < d_T.size_x * d_T.size_y)
+	if (idx < d_T.size_x * d_T.size_y && d_found[idx] == 0)
 	{
 		double T = d_T.values[idx];
 		double P = d_P.values[idx];
 		double RH = d_RH.values[idx];
-		double TD = metutil::DewPointFromRH_(T, RH);
 		
-		double& refThetaE = d_maxThetaE[idx];
-		double ThetaE = metutil::ThetaE_(T, TD, P*100);
-
-		if (P == kFloatMissing || P < 600.)
+		if (P == kFloatMissing)
 		{
 			d_found[idx] = 1;
 		}
 		else
 		{
+			if (P < 600.)
+			{
+				// Cut search if reach level 600hPa
+
+				// Linearly interpolate temperature and humidity values to 600hPa, to check
+				// if highest theta e is found there
+
+				T = ::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
+				RH = ::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
+
+				d_found[idx] = 1; // Make sure this is the last time we access this grid point
+				P = 600.;
+			}
+
+			double TD = metutil::DewPointFromRH_(T, RH);
+
+			double& refThetaE = d_maxThetaE[idx];
+			double ThetaE = metutil::ThetaE_(T, TD, P*100);
+
 			if (ThetaE >= refThetaE)
 			{
 				refThetaE = ThetaE;
-
 				d_Tresult[idx] = T;
 				d_TDresult[idx] = TD;
 			}
@@ -414,8 +442,13 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 	InitializeArray<double> (d_TDresult, kFloatMissing, N, stream);
 	InitializeArray<unsigned char> (d_found, 0, N, stream);
 	
-	while (curLevel.Value() > 90)
+	info_simple* h_prevT = 0;
+	info_simple* h_prevP = 0;
+	info_simple* h_prevRH = 0;
+	
+	while (true)
 	{
+
 		auto TInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 		auto RHInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType());
 		auto PInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
@@ -435,20 +468,39 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 		assert(h_RH->values);
 		assert(h_P->values);
 
-		ThetaEKernel <<< gridSize, blockSize, 0, stream >>> (*h_T, *h_RH, *h_P, d_maxThetaE, d_Tresult, d_TDresult, d_found);
+		bool release = true;
+
+		if (!h_prevT)
+		{
+			// first time
+			h_prevT = new info_simple(*h_T);
+			h_prevP = new info_simple(*h_P);
+			h_prevRH = new info_simple(*h_RH);
+
+			release = false;
+		}
+
+		ThetaEKernel <<< gridSize, blockSize, 0, stream >>> (*h_T, *h_RH, *h_P, *h_prevT, *h_prevRH, *h_prevP, d_maxThetaE, d_Tresult, d_TDresult, d_found);
 
 		std::vector<unsigned char> found(N, 0);
 		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		CUDA_CHECK(cudaFree(h_P->values));
-		CUDA_CHECK(cudaFree(h_RH->values));
-		CUDA_CHECK(cudaFree(h_T->values));
-		
-		delete h_P;
-		delete h_T;
-		delete h_RH;
+		if (release)
+		{
+			CUDA_CHECK(cudaFree(h_prevP->values));
+			CUDA_CHECK(cudaFree(h_prevRH->values));
+			CUDA_CHECK(cudaFree(h_prevT->values));
+		}
+				
+		delete h_prevP;
+		delete h_prevT;
+		delete h_prevRH;
 
+		h_prevP = h_P;
+		h_prevRH = h_RH;
+		h_prevT = h_T;
+		
 		curLevel.Value(curLevel.Value()-1);
 
 		size_t foundCount = std::count(found.begin(), found.end(), 1);
@@ -456,6 +508,14 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 		if (foundCount == found.size()) break;
 	}
 	
+	CUDA_CHECK(cudaFree(h_prevP->values));
+	CUDA_CHECK(cudaFree(h_prevRH->values));
+	CUDA_CHECK(cudaFree(h_prevT->values));
+	
+	delete h_prevP;
+	delete h_prevT;
+	delete h_prevRH;
+
 	std::vector<double> Tsurf(myTargetInfo->Data().Size());
 	std::vector<double> TDsurf(myTargetInfo->Data().Size());
 
@@ -545,19 +605,21 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetLFCGPU(const std:
 	{
 		if (T[i] >= TenvLCL[i])
 		{
-			found[i] = true;
+			found[i] = 1;
 			LFCT[i] = T[i];
 			LFCP[i] = P[i];
-			//Piter[i] = kFloatMissing;
 		}
 	}
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, &LFCT[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, &LFCP[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, &LFCT[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, &LFCP[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	while (curLevel.Value() > 70)
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
+	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+
+	while (curLevel.Value() > hPa150.first.Value())
 	{	
 		// Get environment temperature and pressure values for this level
 		auto TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
@@ -572,7 +634,7 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetLFCGPU(const std:
 
 		MoistLiftKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Piter, *h_Penv, d_Tparcel);
 
-		LFCKernel <<< gridSize, blockSize, 0, stream >>> (*h_Tenv, *h_Penv, *h_prevTenv, *h_prevPenv, d_Tparcel, d_LCLP, d_LFCT, d_LFCP, d_found, curLevel.Value());
+		LFCKernel <<< gridSize, blockSize, 0, stream >>> (*h_Tenv, *h_Penv, *h_prevTenv, *h_prevPenv, d_Tparcel, d_LCLP, d_LFCT, d_LFCP, d_found, curLevel.Value(), hPa450.first.Value());
 
 		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
 
@@ -704,7 +766,9 @@ void si_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, 
 	
 	curLevel.Value(curLevel.Value()-1);
 
-	while (curLevel.Value() > 70)
+	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+
+	while (curLevel.Value() > hPa150.first.Value())
 	{
 
 		auto ZenvInfo = Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
