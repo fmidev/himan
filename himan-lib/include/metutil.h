@@ -751,7 +751,13 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 		return DryLift_(P, T, targetP);
 	}
 	
-	return MoistLift_(P, T, targetP);
+	// Wanted height is above LCL.
+	// First lift dry adiabatically to LCL height
+	
+	double LCLT = DryLift_(P, T, LCLP);
+	
+	// Lift from LCL to wanted pressure
+	return MoistLift_(LCLP, LCLT, targetP);
 }
 
 CUDA_DEVICE
