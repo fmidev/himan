@@ -847,12 +847,12 @@ bool fetcher::Interpolate(const plugin_configuration& conf, himan::info& baseInf
 		else if (base->ScanningMode() != target->ScanningMode())
 		{
 			// == operator does not test scanning mode !
-			itsLogger->Debug("Swapping area from " + HPScanningModeToString.at(target->ScanningMode()) + " to " + HPScanningModeToString.at(base->ScanningMode()));
+			itsLogger->Trace("Swapping area from " + HPScanningModeToString.at(target->ScanningMode()) + " to " + HPScanningModeToString.at(base->ScanningMode()));
 #ifdef HAVE_CUDA
 			if (theInfos[0]->Grid()->IsPackedData())
 			{
 				// must unpack before swapping
-				itsLogger->Debug("Unpacking before swapping");
+				itsLogger->Trace("Unpacking before swapping");
 				util::Unpack({theInfos[0]->Grid()});
 			}
 #endif
@@ -887,12 +887,12 @@ bool fetcher::Interpolate(const plugin_configuration& conf, himan::info& baseInf
 
 	if (needInterpolation)
 	{
-		itsLogger->Debug("Interpolating area with method: " + HPInterpolationMethodToString.at(baseInfo.Param().InterpolationMethod()));
+		itsLogger->Trace("Interpolating area with method: " + HPInterpolationMethodToString.at(baseInfo.Param().InterpolationMethod()));
 		return InterpolateArea(conf, baseInfo, theInfos);
 	}
 	else if (needPointReordering)
 	{
-		itsLogger->Debug("Reordering points to match");
+		itsLogger->Trace("Reordering points to match");
 		return ReorderPoints(baseInfo, theInfos);
 	}
 	else
