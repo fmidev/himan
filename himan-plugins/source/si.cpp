@@ -1220,7 +1220,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	{
 		auto T = h->VerticalValue(param("T-K"), P);
 		auto RH = h->VerticalValue(param("RH-PRCNT"), P);
-		
+
 		vector<double> Tpot(T.size(), kFloatMissing);
 		vector<double> MR(T.size(), kFloatMissing);
 
@@ -1228,9 +1228,15 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 		{
 			if (found[i]) continue;
 
+			assert((T[i] > 150 && T[i] < 350) || T[i] == kFloatMissing);
+			assert((P[i] > 100 && P[i] < 1500) || P[i] == kFloatMissing);
+			assert((RH[i] > 0 && RH[i] < 102) || RH[i] == kFloatMissing);
+			
 			Tpot[i] = metutil::Theta_(T[i], 100*P[i]);
 			MR[i] = [&](){
 				
+				if (T[i] == kFloatMissing || P[i] == kFloatMissing || RH[i] == kFloatMissing) return kFloatMissing;
+
 				// es				
 				const double b = 17.2694;
 				const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
@@ -1261,17 +1267,17 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 
 		assert(tp.HeightsCrossed() == mr.HeightsCrossed());
 
-		//itsLogger->Debug("Data read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
+		itsLogger->Debug("Data read " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 
 		for (size_t i = 0; i < found.size(); i++)
 		{
-			assert(P[i] > 100 && P[i] < 1500);
+			assert((P[i] > 100 && P[i] < 1500) || P[i] == kFloatMissing);
 			
 			if (found[i])
 			{
 				P[i] = kFloatMissing; // disable processing of this
 			}
-			else
+			else if (P[i] != kFloatMissing)
 			{
 				P[i] -= 2.0;
 			}
@@ -1288,18 +1294,25 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 
 	for (size_t i = 0; i < Tpot.size(); i++)
 	{
-		T[i] = Tpot[i] * pow((P[i]/1000.), 0.2854);
+		assert((P[i] > 100 && P[i] < 1500) || P[i] == kFloatMissing);
+		if (Tpot[i] != kFloatMissing && P[i] != kFloatMissing)
+		{
+			T[i] = Tpot[i] * pow((P[i]/1000.), 0.2854);
+		}
 	}
 
 	vector<double> TD(T.size(), kFloatMissing);
 
 	for (size_t i = 0; i < MR.size(); i++)
 	{
-		double Es = metutil::Es_(T[i]); // Saturated water vapor pressure
-		double E = metutil::E_(MR[i], 100*P[i]);
+		if (T[i] != kFloatMissing && MR[i] != kFloatMissing && P[i] != kFloatMissing)
+		{
+			double Es = metutil::Es_(T[i]); // Saturated water vapor pressure
+			double E = metutil::E_(MR[i], 100*P[i]);
 
-		double RH = E/Es * 100;
-		TD[i] = metutil::DewPointFromRH_(T[i], RH);
+			double RH = E/Es * 100;
+			TD[i] = metutil::DewPointFromRH_(T[i], RH);
+		}
 	}
 
 	return make_pair(T,TD);

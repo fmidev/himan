@@ -319,9 +319,6 @@ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict_
 		double Penv = d_Penv.values[idx]; // hPa
 		assert(Penv < 1200. || Penv == kFloatMissing);
 
-		double Pparcel = d_Piter[idx]; // hPa
-		assert(Pparcel < 1200. || Pparcel == kFloatMissing);
-
 		double Tparcel = d_Titer[idx]; // K
 		assert(Tparcel >= 150. || Tparcel == kFloatMissing);
 
