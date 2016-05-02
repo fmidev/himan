@@ -215,10 +215,46 @@ CUDA_DEVICE CUDA_INLINE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t 
 // __CUDACC__
 #endif
 
-
 // HAVE_CUDA
 #endif 
-    
+
+namespace interpolation
+{
+/*
+ * Basic interpolation functions.
+ */
+
+CUDA_HOST CUDA_DEVICE
+inline
+double Linear(double factor, double Y1, double Y2)
+{
+	return fma(factor, Y2, fma(-factor, Y1, Y1));
+}
+
+CUDA_HOST CUDA_DEVICE
+inline
+double Linear(double X, double X1, double X2, double Y1, double Y2)
+{
+	double factor = (X - X1) / (X2 - X1);
+	return Linear(factor, Y1, Y2);	
+}
+
+CUDA_HOST CUDA_DEVICE
+inline
+double BiLinear(double dx, double dy, double a, double b, double c, double d)
+{
+	// Method below is faster but gives visible interpolation artifacts
+
+	//double ab = Linear(dx, a, b);
+	//double cd = Linear(dx, c, d);
+	//return Linear(dy, ab, cd);
+
+	// This one gives smooth interpolation surfaces
+	return (1 - dx) * (1 - dy) * c + dx * (1 - dy) * d + (1 - dx) * dy * a + dx * dy * b;
+}
+
+} // namespace interpolation
+
 } // namespace numerical_functions
 
 } // namespace himan
