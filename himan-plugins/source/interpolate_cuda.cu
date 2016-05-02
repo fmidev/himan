@@ -5,6 +5,7 @@
 #include <NFmiGrid.h>
 #include "cuda_helper.h"
 #include <thrust/sort.h>
+#include "numerical_functions.h"
 
 const double kEpsilon = 1e-6;
 
@@ -207,26 +208,6 @@ double Mode(double* arr)
 }
 
 __device__
-double Linear(double dx, double left, double right)
-{
-	// return (1 - dx) * left + dx * right;
-	return fma(dx, right, fma(-dx, left, left)); 
-}
-
-__device__ 
-double BiLinear(double dx, double dy, double a, double b, double c, double d)
-{
-	// Method below is faster but gives visible interpolation artifacts
-
-	//double ab = Linear(dx, a, b);
-	//double cd = Linear(dx, c, d);
-	//return Linear(dy, ab, cd);
-
-	// This one gives smooth interpolation surfaces
-	return (1 - dx) * (1 - dy) * c + dx * (1 - dy) * d + (1 - dx) * dy * a + dx * dy * b;
-}
-
-__device__
 bool IsInsideGrid(point& gp, size_t size_x, size_t size_y)
 {
 	// if interpolated grid points are negative, it means that we are outside the grid
@@ -319,6 +300,8 @@ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_si
 	// if wanted grid point =~ source grid point, the bilinear interpolation
 	// value will be very close to nearest point value
 	
+	using namespace himan::numerical_functions::interpolation;
+
 	if ( 
 			(dist.x < kEpsilon || fabs(dist.x-1) < kEpsilon) && 
 			(dist.y < kEpsilon || fabs(dist.y-1) < kEpsilon) )

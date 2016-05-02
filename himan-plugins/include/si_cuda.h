@@ -16,6 +16,12 @@
  * that are called from CPU and GPU code.
  */
 
+#ifdef __CUDACC__
+#define LINEAR himan::numerical_functions::interpolation::Linear
+#else
+#define LINEAR NFmiInterpolation::Linear
+#endif
+
 namespace CAPE
 {
 const double kFloatMissing = 32700.;
@@ -182,8 +188,8 @@ double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, double Tpa
 	 *  We want to calculate only the '#' area!
 	 */
 		
-	double newTenv = himan::numerical_functions::Linear(areaUpperLimit, Zenv, prevZenv, Tenv, prevTenv);
-	double newTparcel = himan::numerical_functions::Linear(areaUpperLimit, Zenv, prevZenv, Tparcel, prevTparcel);
+	double newTenv = LINEAR(areaUpperLimit, Zenv, prevZenv, Tenv, prevTenv);
+	double newTparcel = LINEAR(areaUpperLimit, Zenv, prevZenv, Tparcel, prevTparcel);
 
 	if (newTparcel <= newTenv)
 	{
@@ -193,8 +199,8 @@ double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, double Tpa
 		{
 			areaUpperLimit -= 10;
 
-			newTenv = himan::numerical_functions::Linear(areaUpperLimit, Zenv, prevZenv, Tenv, prevTenv);
-			newTparcel = himan::numerical_functions::Linear(areaUpperLimit, Zenv, prevZenv, Tparcel, prevTparcel);				
+			newTenv = LINEAR(areaUpperLimit, Zenv, prevZenv, Tenv, prevTenv);
+			newTparcel = LINEAR(areaUpperLimit, Zenv, prevZenv, Tparcel, prevTparcel);				
 
 			if (areaUpperLimit <= prevZenv)
 			{
@@ -274,8 +280,8 @@ double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTenv, doub
 		fromWarmerToCold = false;
 	}
 
-	double newPrevZenv = himan::numerical_functions::Linear(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
-	double newTparcel = himan::numerical_functions::Linear(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);
+	double newPrevZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+	double newTparcel = LINEAR(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);
 
 	if (newTparcel < areaLimit)
 	{
@@ -285,8 +291,8 @@ double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTenv, doub
 	   {
 		   areaLimit += (fromWarmerToCold) ? -0.1 : 0.1;
 		   
-		   newPrevZenv = himan::numerical_functions::Linear(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
-		   newTparcel = himan::numerical_functions::Linear(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);				
+		   newPrevZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+		   newTparcel = LINEAR(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);				
 
 		   if (newPrevZenv >= Zenv)
 		   {
@@ -308,7 +314,6 @@ double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTenv, doub
    }
 
    assert(Tparcel >= Tenv);
-   if (Zenv < newPrevZenv) printf("T: %f %f %f Z: %f %f --> %f\n", areaLimit, Tenv, prevTenv, Zenv, prevZenv, newPrevZenv);
    assert(Zenv >= newPrevZenv);
 
    double CAPE = himan::constants::kG * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
@@ -357,8 +362,8 @@ double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv, doubl
 		fromColdToWarmer = false;
 	}
 
-	double newZenv = himan::numerical_functions::Linear(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
-	double newTparcel = himan::numerical_functions::Linear(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);
+	double newZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+	double newTparcel = LINEAR(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);
 
 	if (newTparcel <= areaLimit)
 	{
@@ -368,8 +373,8 @@ double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv, doubl
 		{
 			areaLimit += (fromColdToWarmer) ? -0.1 : 0.1;
 
-			newZenv = himan::numerical_functions::Linear(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
-			newTparcel = himan::numerical_functions::Linear(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);				
+			newZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+			newTparcel = LINEAR(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);				
 
 			if (newZenv <= prevZenv)
 			{

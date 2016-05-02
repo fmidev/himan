@@ -457,8 +457,8 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simpl
 				// Linearly interpolate temperature and humidity values to 600hPa, to check
 				// if highest theta e is found there
 
-				T = numerical_functions::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
-				RH = numerical_functions::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
+				T = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
+				RH = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
 
 				d_found[idx] = 1; // Make sure this is the last time we access this grid point
 				P = 600.;
