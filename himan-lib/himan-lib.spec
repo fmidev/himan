@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.4.26
+Version: 16.5.2
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -49,6 +49,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon May  2 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.2-1.fmi
+- Changes in metutil and point
 * Tue Apr 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.26-1.fmi
 - New release
 * Tue Apr 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.19-1.fmi
