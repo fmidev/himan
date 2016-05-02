@@ -483,6 +483,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			p.Unit(kKgm2);
 		}
+		else if (unit == "hPa")
+		{
+			p.Unit(kHPa);
+		}
 		else
 		{
 			itsLogger->Trace("Unable to determine himan parameter unit for grib unit " + itsGrib->Message().ParameterUnit());
