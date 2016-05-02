@@ -908,6 +908,12 @@ CUDA_DEVICE
 inline
 lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 {
+	lcl_t ret;
+
+	if (P == kFloatMissing || T == kFloatMissing || TD == kFloatMissing)
+	{
+		return ret;
+	}
 	// Sanity checks
 
 	assert(P > 10000);
@@ -916,14 +922,12 @@ lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 	assert(TD > 0);
 	assert(TD < 500);
 
-	lcl_t ret;
 	
 	double A = 1 / (TD - 56);
 	double B = log(T/TD) / 800.;
 	
 	ret.T = 1 / (A + B) + 56;
 	ret.P = P * pow((ret.T / T), 3.5011);
-	ret.Q = kFloatMissing;
 
 	return ret;
 	
