@@ -31,33 +31,10 @@ using namespace himan::plugin;
 
 level si_cuda::itsBottomLevel;
 
-__device__
-double Linear(double factor, double Y1, double Y2)
-{
-	return fma(factor, Y2, fma(-factor, Y1, Y1));
-}
+const unsigned char FCAPE		= (1 << 2);
+const unsigned char FCAPE3km	= (1 << 0);
 
-__device__
-double Linear(double X, double X1, double X2, double Y1, double Y2)
-{
-	double factor = (X - X1) / (X2 - X1);
-	return Linear(factor, Y1, Y2);
-	
-}
-
-double Max(const std::vector<double>& vec)
-{ 
-	double ret = -1e38;
-
-	for(const double& val : vec)
-	{
-		if (val != kFloatMissing && val > ret) ret = val;
-	}
-
-	if (ret == -1e38) ret = kFloatMissing;
-
-	return ret;
-}
+extern double Max(const std::vector<double>& vec);
 
 template <typename T>
 __global__ void InitializeArrayKernel(T* d_arr, T val, size_t N)
@@ -195,10 +172,10 @@ void LiftLCLKernel(const double* __restrict__ d_P, const double* __restrict__ d_
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
 		assert(d_P[idx] > 10);
-		assert(d_P[idx] < 1500);
+		assert(d_P[idx] < 1500 || d_P[idx] == kFloatMissing);
 
 		assert(d_Ptarget.values[idx] > 10);
-		assert(d_Ptarget.values[idx] < 1500);
+		assert(d_Ptarget.values[idx] < 1500 || d_Ptarget.values[idx] == kFloatMissing);
 
 		assert(d_T[idx] > 100);
 		assert(d_T[idx] < 350 || d_T[idx] == kFloatMissing);
@@ -223,10 +200,10 @@ void MoistLiftKernel(const double* __restrict__ d_T, const double* __restrict__ 
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
 		assert(d_P[idx] > 10);
-		assert(d_P[idx] < 1500);
+		assert(d_P[idx] < 1500 || d_P[idx] == kFloatMissing);
 
 		assert(d_Ptarget.values[idx] > 10);
-		assert(d_Ptarget.values[idx] < 1500);
+		assert(d_Ptarget.values[idx] < 1500 || d_Ptarget.values[idx] == kFloatMissing);
 
 		assert(d_T[idx] > 100);
 		assert(d_T[idx] < 350 || d_T[idx] == kFloatMissing);
@@ -237,6 +214,93 @@ void MoistLiftKernel(const double* __restrict__ d_T, const double* __restrict__ 
 		assert(T < 350 || T == kFloatMissing);
 
 		d_Tparcel[idx] = T;
+	}
+}
+
+__global__
+void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d_Zenv, info_simple d_prevTenv, info_simple d_prevPenv, info_simple d_prevZenv, 
+		const double* __restrict d_Tparcel, const double* __restrict d_prevTparcel, const double* __restrict__ d_LFCP, double* __restrict__ d_CAPE, 
+		double* __restrict__ d_CAPE1040, double* __restrict__ d_CAPE3km, double* __restrict__ d_ELT, double* __restrict__ d_ELP, unsigned char* __restrict__ d_found, int d_curLevel, int d_breakLevel)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < d_Tenv.size_x * d_Tenv.size_y && d_found[idx] != 4)
+	{
+		double Tenv = d_Tenv.values[idx];
+		assert(Tenv > 100.);
+
+		double Penv = d_Penv.values[idx]; // hPa
+		assert(Penv < 1200.);
+		
+		double Zenv = d_Zenv.values[idx]; // m
+		
+		double prevTenv = d_prevTenv.values[idx]; // K
+		assert(prevTenv > 100.);
+
+		double prevPenv = d_prevPenv.values[idx]; // hPa
+		assert(prevPenv < 1200.);
+		
+		double prevZenv = d_prevZenv.values[idx]; // m
+
+		double Tparcel = d_Tparcel[idx]; // K
+		assert(Tparcel > 100. || Tparcel == kFloatMissing);
+
+		double prevTparcel = d_prevTparcel[idx]; // K
+		assert(prevTparcel > 100. || Tparcel == kFloatMissing);
+
+		double LFCP = d_LFCP[idx]; // hPa
+		assert(LFCP < 1200.);
+				
+		if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || prevZenv == kFloatMissing || Tparcel == kFloatMissing || prevTparcel == kFloatMissing || Penv > LFCP)
+		{
+			// Missing data or current grid point is below LFC
+			;
+		}
+		else if (d_curLevel < d_breakLevel && (Tenv - Tparcel) > 25.)
+		{
+			// Temperature gap between environment and parcel too large --> abort search.
+			// Only for values higher in the atmosphere, to avoid the effects of inversion
+
+			d_found[idx] |= FCAPE;
+		}
+		else
+		{
+			if (prevZenv >= 3000. && Zenv >= 3000.)
+			{
+				d_found[idx] |= FCAPE3km;
+			}
+
+			if ((d_found[idx] & FCAPE3km) == 0)
+			{
+				double C = CAPE::CalcCAPE3km(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
+
+				d_CAPE3km[idx] += C;
+
+				assert(d_CAPE3km[idx] < 3000.); // 3000J/kg, not 3000m
+				assert(d_CAPE3km[idx] >= 0);
+			}
+
+			double C = CAPE::CalcCAPE1040(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
+
+			d_CAPE1040[idx] += C;
+
+			assert(d_CAPE1040[idx] < 5000.);
+			assert(d_CAPE1040[idx] >= 0);
+
+			double CAPE, ELT, ELP;
+			CAPE::CalcCAPE(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE, ELT, ELP);
+
+			d_CAPE[idx] += CAPE;
+
+			assert(CAPE >= 0.);				
+			assert(d_CAPE[idx] < 8000);
+
+			if (ELT != kFloatMissing)
+			{
+				d_ELT[idx] = ELT;
+				d_ELP[idx] = ELP;
+			}
+		}
 	}
 }
 
@@ -253,13 +317,13 @@ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict_
 		assert(Tenv >= 150.);
 
 		double Penv = d_Penv.values[idx]; // hPa
-		assert(Penv < 1200.);
+		assert(Penv < 1200. || Penv == kFloatMissing);
 
 		double Pparcel = d_Piter[idx]; // hPa
-		assert(Pparcel < 1200.);
+		assert(Pparcel < 1200. || Pparcel == kFloatMissing);
 
 		double Tparcel = d_Titer[idx]; // K
-		assert(Tparcel >= 150.);
+		assert(Tparcel >= 150. || Tparcel == kFloatMissing);
 
 		double PLFC = d_PLFC[idx]; // hPa
 		assert(PLFC < 1200. || PLFC == kFloatMissing);
@@ -380,7 +444,7 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simpl
 		double P = d_P.values[idx];
 		double RH = d_RH.values[idx];
 		
-		if (P == kFloatMissing)
+		if (P == kFloatMissing || T == kFloatMissing || RH == kFloatMissing)
 		{
 			d_found[idx] = 1;
 		}
@@ -393,8 +457,8 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simpl
 				// Linearly interpolate temperature and humidity values to 600hPa, to check
 				// if highest theta e is found there
 
-				T = ::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
-				RH = ::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
+				T = numerical_functions::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
+				RH = numerical_functions::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
 
 				d_found[idx] = 1; // Make sure this is the last time we access this grid point
 				P = 600.;
@@ -457,8 +521,6 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 		{
 			return std::make_pair(std::vector<double>(),std::vector<double>());
 		}
-		
-		assert(TInfo->Data().MissingCount() == 0);
 
 		auto h_T = PrepareInfo(TInfo, stream);
 		auto h_P = PrepareInfo(PInfo, stream);
@@ -839,3 +901,202 @@ void si_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, 
 
 }
 
+void si_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P, param ELTParam, param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+{
+	assert(T.size() == P.size());
+
+	auto h = GET_PLUGIN(hitool);
+	
+	h->Configuration(conf);
+	h->Time(myTargetInfo->Time());
+	h->HeightUnit(kHPa);
+
+	// Found count determines if we have calculated all three CAPE variation for a single grid point
+	std::vector<unsigned char> found(T.size(), 0);
+
+	// No LFC --> No CAPE
+	
+	for (size_t i = 0; i < P.size(); i++)
+	{
+		if (P[i] == kFloatMissing)
+		{
+			found[i] |= FCAPE;
+		}
+	}
+	
+	const size_t N = myTargetInfo->Data().Size();
+	const int blockSize = 256;
+	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+
+	cudaStream_t stream;
+
+	CUDA_CHECK(cudaStreamCreate(&stream));
+
+	double* d_CAPE = 0;
+	double* d_CAPE1040 = 0;
+	double* d_CAPE3km = 0;
+	double* d_ELT = 0;
+	double* d_ELP = 0;
+	double* d_Titer = 0;
+	double* d_Piter = 0;
+	double* d_prevTparcel = 0;
+	double* d_Tparcel = 0;
+	double* d_LFC = 0;
+	
+	unsigned char* d_found = 0;
+	
+	CUDA_CHECK(cudaMalloc((double**) &d_CAPE, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_CAPE1040, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_CAPE3km, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_ELP, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_ELT, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_Piter, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_Titer, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_Tparcel, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_prevTparcel, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**) &d_LFC, sizeof(double) * N));
+	
+	CUDA_CHECK(cudaMalloc((double**) &d_found, sizeof(unsigned char) * N));
+	
+	InitializeArray<unsigned char> (d_found, 0, N, stream);
+
+	//CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &T[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Titer, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &P[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFC, &P[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+
+	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
+	
+	//CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
+	
+	InitializeArray<double> (d_CAPE, 0., N, stream);
+	InitializeArray<double> (d_CAPE1040, 0., N, stream);
+	InitializeArray<double> (d_CAPE3km, 0., N, stream);
+	
+	InitializeArray<double> (d_ELP, kFloatMissing, N, stream);
+	InitializeArray<double> (d_ELT, kFloatMissing, N, stream);
+
+	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
+	// among all grid points
+		
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
+	
+	level curLevel = levels.first;
+
+	auto prevZenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+	auto prevTenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+	auto prevPenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	
+	auto h_prevZenv = PrepareInfo(prevZenvInfo, stream);
+	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
+	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
+	
+	curLevel.Value(curLevel.Value() - 1);
+	
+	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+
+	while (curLevel.Value() > hPa100.first.Value())
+	{
+		auto PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		auto TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+		auto ZenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+
+		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
+		auto h_Penv = PrepareInfo(PenvInfo, stream);
+		auto h_Tenv = PrepareInfo(TenvInfo, stream);
+	
+		MoistLiftKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Piter, *h_Penv, d_Tparcel);
+			
+		CAPEKernel <<< gridSize, blockSize, 0, stream >>> (*h_Tenv, *h_Penv, *h_Zenv, *h_prevTenv, *h_prevPenv, *h_prevZenv, d_Tparcel, d_prevTparcel, d_LFC, d_CAPE, d_CAPE1040, d_CAPE3km, d_ELT, d_ELP, d_found, curLevel.Value(), hPa100.first.Value());
+		
+		CUDA_CHECK(cudaFree(h_prevZenv->values));
+		CUDA_CHECK(cudaFree(h_prevTenv->values));
+		CUDA_CHECK(cudaFree(h_prevPenv->values));
+		
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
+		
+		delete h_prevZenv;
+		delete h_prevPenv;
+		delete h_prevTenv;
+		
+		h_prevZenv = h_Zenv;
+		h_prevTenv = h_Tenv;
+		h_prevPenv = h_Penv;
+
+		CopyLFCIteratorValuesKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Tparcel, d_Piter, *h_Penv);
+		
+		curLevel.Value(curLevel.Value() - 1);
+
+	}
+	
+	CUDA_CHECK(cudaFree(h_prevZenv->values));
+	CUDA_CHECK(cudaFree(h_prevTenv->values));
+	CUDA_CHECK(cudaFree(h_prevPenv->values));
+
+	delete h_prevZenv;
+	delete h_prevPenv;
+	delete h_prevTenv;
+
+#if 0
+		
+	// If the CAPE area is continued all the way to level 60 and beyond, we don't have an EL for that
+	// (since integration is forcefully stopped)
+	// In this case level 60 = EL
+	
+	for (size_t i = 0; i < CAPE.size(); i++)
+	{
+		if (CAPE[i] > 0 && ELT[i] == kFloatMissing)
+		{
+			TenvInfo->LocationIndex(i);
+			PenvInfo->LocationIndex(i);
+			
+			ELT[i] = TenvInfo->Value();
+			ELP[i] = PenvInfo->Value();
+		}
+	}
+#endif
+	
+	std::vector<double> CAPE(T.size(), 0);
+	std::vector<double> CAPE1040(T.size(), 0);
+	std::vector<double> CAPE3km(T.size(), 0);
+	std::vector<double> ELT(T.size(), kFloatMissing);
+	std::vector<double> ELP(T.size(), kFloatMissing);
+
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	CUDA_CHECK(cudaMemcpyAsync(&CAPE[0], d_CAPE, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&CAPE1040[0], d_CAPE1040, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&CAPE3km[0], d_CAPE3km, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&ELT[0], d_ELT, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&ELP[0], d_ELP, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+
+	CUDA_CHECK(cudaFree(d_Tparcel));
+	CUDA_CHECK(cudaFree(d_prevTparcel));
+	CUDA_CHECK(cudaFree(d_LFC));
+	CUDA_CHECK(cudaFree(d_found));
+	
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+	
+	CUDA_CHECK(cudaFree(d_CAPE));
+	CUDA_CHECK(cudaFree(d_CAPE1040));
+	CUDA_CHECK(cudaFree(d_CAPE3km));
+	CUDA_CHECK(cudaFree(d_ELT));
+	CUDA_CHECK(cudaFree(d_ELP));
+	
+	myTargetInfo->Param(ELTParam);
+	myTargetInfo->Data().Set(ELT);
+	
+	myTargetInfo->Param(ELPParam);
+	myTargetInfo->Data().Set(ELP);
+
+	myTargetInfo->Param(CAPEParam);
+	myTargetInfo->Data().Set(CAPE);
+	
+	myTargetInfo->Param(CAPE1040Param);
+	myTargetInfo->Data().Set(CAPE1040);
+
+	myTargetInfo->Param(CAPE3kmParam);
+	myTargetInfo->Data().Set(CAPE3km);
+
+}
