@@ -10,6 +10,7 @@
 
 #include <ostream>
 #include "himan_common.h"
+#include "cuda_helper.h"
 
 namespace himan
 {
@@ -24,15 +25,15 @@ namespace himan
 class point
 {
 public:
-	point();
-	point(double itsX, double itsY);
-	~point() {}
+	CUDA_DEVICE point();
+	CUDA_DEVICE point(double itsX, double itsY);
+	CUDA_DEVICE ~point() {}
 
-	point(const point& other);
-	point& operator=(const point& other);
+	CUDA_DEVICE point(const point& other);
+	CUDA_DEVICE point& operator=(const point& other);
 
-	bool operator==(const point& thePoint) const;
-	bool operator!=(const point& thePoint) const;
+	CUDA_DEVICE bool operator==(const point& thePoint) const;
+	CUDA_DEVICE bool operator!=(const point& thePoint) const;
 
 	std::string ClassName() const
 	{
@@ -43,16 +44,16 @@ public:
 	 * @return X coordinate value
 	 */
 
-	double X() const;
+	CUDA_DEVICE double X() const;
 
 	/**
 	 * @return Y coordinate value
 	 */
 
-	double Y() const;
+	CUDA_DEVICE double Y() const;
 
-	void X(double theX);
-	void Y(double theY);
+	CUDA_DEVICE void X(double theX);
+	CUDA_DEVICE void Y(double theY);
 
 	std::ostream& Write(std::ostream& file) const
 	{
@@ -68,18 +69,22 @@ private:
 	double itsY;
 };
 
+CUDA_DEVICE
 inline point::point() : itsX(kHPMissingValue), itsY(kHPMissingValue)
 {
 }
 
+CUDA_DEVICE
 inline point::point(double theX, double theY) : itsX(theX), itsY(theY)
 {
 }
 
+CUDA_DEVICE
 inline point::point(const point& other) : itsX(other.X()), itsY(other.Y())
 {
 }
 
+CUDA_DEVICE
 inline point& point::operator=(const point& other)
 {
 	itsX = other.X();
@@ -88,6 +93,7 @@ inline point& point::operator=(const point& other)
 	return *this;
 }
 
+CUDA_DEVICE
 inline bool point::operator==(const point& other) const
 {
 	const double kCoordinateEpsilon = 0.00001;
@@ -98,26 +104,31 @@ inline bool point::operator==(const point& other) const
 	return (xEquals && yEquals);
 }
 
+CUDA_DEVICE
 inline bool point::operator!=(const point& thePoint) const
 {
 	return !(*this == thePoint);
 }
 
+CUDA_DEVICE
 inline double point::X() const
 {
 	return itsX;
 }
 
+CUDA_DEVICE
 inline double point::Y() const
 {
 	return itsY;
 }
 
+CUDA_DEVICE
 inline void point::X(double theX)
 {
 	itsX = theX;
 }
 
+CUDA_DEVICE
 inline void point::Y(double theY)
 {
 	itsY = theY;
