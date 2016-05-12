@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.5.2
+Version: 16.5.12
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -21,7 +21,7 @@ Requires: himan-bin >= 16.2.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 16.2.12
-Requires: libsmartmet-newbase >= 16.2.4
+Requires: libsmartmet-newbase >= 16.5.4
 Requires: libfmidb >= 16.2.12
 
 BuildRequires: boost-devel >= 1.55
@@ -32,7 +32,7 @@ BuildRequires: libfmigrib-devel >= 16.2.12
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase-devel >= 16.2.4
+BuildRequires: libsmartmet-newbase-devel >= 16.5.4
 BuildRequires: grib_api-devel >= 1.14.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
@@ -102,6 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu May 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.12-1.fmi
+- Hirlam support for visibility
+- New newbase
 * Mon May  2 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.2-1.fmi
 - Cuda for si-plugin
 * Wed Apr 27 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.27-1.fmi
