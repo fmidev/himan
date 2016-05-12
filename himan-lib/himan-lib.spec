@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.5.2
+Version: 16.5.12
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -22,7 +22,7 @@ BuildRequires: cub
 BuildRequires: libfmidb-devel >= 16.2.12
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libsmartmet-newbase-devel >= 16.2.4
+BuildRequires: libsmartmet-newbase-devel >= 16.5.4
 BuildRequires: scons
 Provides: libhiman.so
 
@@ -49,6 +49,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu May 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.12-1.fmi
+- New newbase
 * Mon May  2 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.2-1.fmi
 - Changes in metutil and point
 * Tue Apr 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.4.26-1.fmi
