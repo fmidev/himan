@@ -42,7 +42,7 @@ const himan::param TParam("T-K");
 const himan::param FFParam("FF-MS");
 const himan::param BLHParam("MIXHGT-M");
 const himan::param RRParam(himan::param("RRR-KGM2"));
-const himan::param NParam(himan::param("N-PRCNT")); // , himan::param("N-0TO1")});
+const himan::params NParam({himan::param("N-PRCNT"), himan::param("N-0TO1")});
 
 // ..and their levels
 himan::level NLevel(himan::kHeight, 0, "HEIGHT");
@@ -481,6 +481,18 @@ void visibility::VertMax(shared_ptr<info> myTargetInfo, vector<double>& result, 
 	h->Time(myTargetInfo->Time());
 
         result = h->VerticalMaximum(p,low,high);
+
+}
+
+void visibility::VertMax(shared_ptr<info> myTargetInfo, vector<double>& result, vector<himan::param> p, int low, int high)
+{
+
+   	auto h = GET_PLUGIN(hitool);
+	
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+
+	result = h->VerticalMaximum(p,low,high);
 
 }
 
