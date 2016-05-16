@@ -135,7 +135,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	VertTMin(myTargetInfo, temp125, 101, 125);
 	
 	vector<double> ffblh;
-	VertFFValue(myTargetInfo, ffblh, BLHInfo->Value());
+	VertFFValue(myTargetInfo, ffblh, VEC(BLHInfo));
 	
 	string deviceType = "CPU";
 
@@ -168,11 +168,33 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double T125 = temp125[i];
 		double FFBLH = ffblh[i];		
 		
-		if (IsMissingValue({CF, T, FF, PF, RH, RR, strat, HUM25, T25, FFBLH}))
+		if (IsMissingValue({CF, T, FF, PF, RH, RR, strat, HUM25, HUM50, HUM75, HUM100, HUM125, T25, FFBLH}))
 		{
 			myTargetInfo->Value(vis);
 			continue;
 		}
+		
+		assert(T > 200);
+		assert(T25 > 200);
+		assert(T50 > 200);
+		assert(T75 > 200);
+		assert(T100 > 200);
+		assert(T125 > 200);
+
+		assert(strat <= 1.0);
+		assert(strat30 <= 1.0);
+		assert(strat300 <= 1.0);
+		
+		assert(lowC <= 1.0);
+		assert(lowC <= 1.0);
+		
+		assert(HUM25 < 102.);
+		assert(HUM50 < 102.);
+		assert(HUM75 < 102.);
+		assert(HUM100 < 102.);
+		assert(HUM125 < 102.);
+		
+		assert(RR < 50);
 		
 		T -= himan::constants::kKelvin;
 		T25 -= himan::constants::kKelvin;
@@ -205,7 +227,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		if (RR > 0)
 		{		
 		
-  			// Drizzle (tai jäätävä tihku)
+  			// Drizzle (tai jï¿½ï¿½tï¿½vï¿½ tihku)
   			if (PF == 0 || PF == 4)
   			{
     			// Nakyvyys intensiteetin perusteella
@@ -261,7 +283,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		
 		double visMist = defaultVis;
 	        double stHmist = 1;	
-		// SUMUPÄÄTTELY
+		// SUMUPï¿½ï¿½TTELY
 		
 		// Utuisuuskertoimien laskenta stratuksen maaran ja korkeuden perusteella
 		// Kertoimia saatamalla voi saataa kunkin parametrin vaikutusta/painoarvoa.
@@ -508,7 +530,7 @@ void visibility::VertTMin(shared_ptr<info> myTargetInfo, vector<double>& result,
 
 }
 
-void visibility::VertFFValue(shared_ptr<info> myTargetInfo, vector<double>& result, double value)
+void visibility::VertFFValue(shared_ptr<info> myTargetInfo, vector<double>& result, vector<double>& value)
 {
 
    	auto h = GET_PLUGIN(hitool);
