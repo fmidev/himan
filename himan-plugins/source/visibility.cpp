@@ -45,9 +45,9 @@ const himan::param RRParam(himan::param("RRR-KGM2"));
 const himan::params NParam({himan::param("N-PRCNT"), himan::param("N-0TO1")});
 
 // ..and their levels
-himan::level NLevel(himan::kHeight, 0, "HEIGHT");
-himan::level RHLevel(himan::kHeight, 2, "HEIGHT");
-himan::level FFLevel(himan::kHeight, 10, "HEIGHT");
+const himan::level NLevel(himan::kHeight, 0, "HEIGHT");
+const himan::level RHLevel(himan::kHeight, 2, "HEIGHT");
+const himan::level FFLevel(himan::kHeight, 10, "HEIGHT");
 
 visibility::visibility()
 {
@@ -168,7 +168,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double T125 = temp125[i];
 		double FFBLH = ffblh[i];		
 		
-		if (IsMissingValue({CF, T, FF, PF, RH, RR, strat, HUM25, HUM50, HUM75, HUM100, HUM125, T25, FFBLH}))
+		if (IsMissingValue({CF, T, FF, RH, RR, strat, HUM25, HUM50, HUM75, HUM100, HUM125, T25, FFBLH}))
 		{
 			myTargetInfo->Value(vis);
 			continue;
