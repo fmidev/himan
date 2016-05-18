@@ -96,6 +96,13 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		return;
 	}
 	
+	double RHScale = 1;
+
+	if (itsConfiguration->SourceProducer().Id() == 1)
+	{
+		RHScale = 100;
+	}
+
         auto h = GET_PLUGIN(hitool);
 	
 	h->Configuration(itsConfiguration);
@@ -144,6 +151,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		size_t i = myTargetInfo->LocationIndex();
 		double vis = defaultVis;
+		double visPre = defaultVis;
 
 		double T = TInfo->Value();
 		double CF = CFInfo->Value();
@@ -208,9 +216,12 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		lowC *= 100;
 		highC *= 100;
 		
+		RH *= RHScale;
+
+		assert(RH < 102.);
+
 		double RHpre = 85/RH;
 		double stNpre = 1;
-		double visPre = 1;
 		double stHpre = 1;
 		
 		if (strat >= 50)
