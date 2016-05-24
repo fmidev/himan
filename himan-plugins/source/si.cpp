@@ -1166,6 +1166,18 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 
 pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info> myTargetInfo)
 {
+	if (false && itsConfiguration->UseCuda())
+	{
+		return si_cuda::Get500mMixingRatioTAndTDGPU(itsConfiguration, myTargetInfo);
+	}
+	else
+	{
+		return Get500mMixingRatioTAndTDCPU(myTargetInfo);
+	}
+}
+
+pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTDCPU(shared_ptr<info> myTargetInfo)
+{
 	modifier_mean tp, mr;
 	level curLevel = itsBottomLevel;
 

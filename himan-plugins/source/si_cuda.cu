@@ -476,6 +476,95 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simpl
 	}
 }
 
+__global__
+void MixingRatioKernel(const double* __restrict__ d_T, double* __restrict__ d_P, const double* __restrict__ d_RH, double* __restrict__ d_Tpot, double* __restrict__ d_MR, size_t N)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	assert(d_T);
+	assert(d_RH);
+	assert(d_P);
+	
+	if (idx < N)
+	{
+		double T = d_T[idx];
+		double P = d_P[idx];
+		double RH = d_RH[idx];
+		
+		assert((T > 150 && T < 350) || T == kFloatMissing);
+		assert((P > 100 && P < 1500) || P == kFloatMissing);
+		assert((RH > 0 && RH < 102) || RH == kFloatMissing);
+
+		if (T == kFloatMissing || P == kFloatMissing || RH == kFloatMissing)
+		{
+			d_P[idx] = kFloatMissing;
+		}
+		else
+		{
+			d_Tpot[idx] = metutil::Theta_(T, 100*P);
+			
+			// es				
+			const double b = 17.2694;
+			const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
+			const double T1 = 273.16; // [K]
+			const double T2 = 35.86; // [K]
+
+			double nume = b * (T-T1);
+			double deno = (T-T2);
+
+			double es = e0 * ::exp(nume/deno);
+
+			// e
+			double e = RH * es / 100;
+
+			// w
+			double w = 0.622 * e/P * 1000;
+
+			assert(w < 60);
+
+			d_MR[idx] = w;
+			
+			d_P[idx] = P - 2.0;
+		}
+	}
+}
+
+__global__
+void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __restrict__ d_TD, info_simple d_P, const double* __restrict__ d_Tpot, const double* __restrict__ d_MR, size_t N)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	assert(d_T);
+	assert(d_P.values);
+	
+	if (idx < N)
+	{
+		double P = d_P.values[idx];
+		
+		double MR = d_MR[idx];
+		double Tpot = d_Tpot[idx];
+
+		assert((P > 100 && P < 1500) || P == kFloatMissing);
+
+		if (Tpot != kFloatMissing && P != kFloatMissing)
+		{
+			d_T[idx] = Tpot * pow((P/1000.), 0.2854);
+		}
+	
+		double T = d_T[idx];
+		
+		if (T != kFloatMissing && MR != kFloatMissing && P != kFloatMissing)
+		{
+			
+			double Es = metutil::Es_(T); // Saturated water vapor pressure
+			double E = metutil::E_(MR, 100*P);
+
+			double RH = E/Es * 100;
+			d_TD[idx] = metutil::DewPointFromRH_(T, RH);
+		}
+	}
+}
+
 std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAndTDGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	himan::level curLevel = itsBottomLevel;
@@ -592,6 +681,146 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 
 	return std::make_pair(Tsurf, TDsurf);
 	
+}
+
+std::pair<std::vector<double>,std::vector<double>> si_cuda::Get500mMixingRatioTAndTDGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+{
+	const size_t N = myTargetInfo->Data().Size();
+	const int blockSize = 256;
+	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+
+	cudaStream_t stream;
+
+	CUDA_CHECK(cudaStreamCreate(&stream));
+
+	level curLevel = itsBottomLevel;
+
+	auto h = GET_PLUGIN(hitool);
+	
+	h->Configuration(conf);
+	h->Time(myTargetInfo->Time());
+
+	modifier_mean tp, mr;
+
+	tp.HeightInMeters(false);
+	mr.HeightInMeters(false);
+
+	auto f = GET_PLUGIN(fetcher);
+	auto PInfo = f->Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	
+	if (!PInfo)
+	{
+		return std::make_pair(std::vector<double>(), std::vector<double>());
+	}
+	else
+	{
+		// Himan specialty: empty data grid
+		
+		size_t miss = 0;
+		for (auto& val : VEC(PInfo))
+		{
+			if (val == kFloatMissing) miss++;
+		}
+
+		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
+		{
+			return std::make_pair(std::vector<double>(), std::vector<double>());
+		}
+	}
+
+	auto PVec = VEC(PInfo);
+
+	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
+
+	h->HeightUnit(kHPa);
+
+	tp.LowerHeight(PVec);
+	mr.LowerHeight(PVec);
+
+	tp.UpperHeight(P500m);
+	mr.UpperHeight(P500m);
+
+	double* d_Tpot = 0;
+	double* d_MR = 0;
+	double* d_T = 0;
+	double* d_RH = 0;
+	double* d_P = 0;
+	double* d_TD = 0;
+	
+	CUDA_CHECK(cudaMalloc((double**) &d_Tpot, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**) &d_MR, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**) &d_T, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**) &d_RH, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**) &d_P, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**) &d_TD, N * sizeof(double)));
+
+	InitializeArray<double> (d_Tpot, kFloatMissing, N, stream);
+	InitializeArray<double> (d_MR, kFloatMissing, N, stream);
+	
+	while (true)
+	{
+		auto TVec = h->VerticalValue(param("T-K"), PVec);
+		auto RHVec = h->VerticalValue(param("RH-PRCNT"), PVec);
+
+		CUDA_CHECK(cudaMemcpyAsync(d_T, &TVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_RH, &RHVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_P, &PVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+
+		MixingRatioKernel <<< gridSize, blockSize, 0, stream >>> (d_T, d_P, d_RH, d_Tpot, d_MR, N);
+		
+		std::vector<double> Tpot(N, kFloatMissing);
+		std::vector<double> MR(N, kFloatMissing);
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		CUDA_CHECK(cudaMemcpyAsync(&Tpot[0], d_Tpot, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(&MR[0], d_MR, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+		
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		tp.Process(Tpot, PVec);
+		mr.Process(MR, PVec);
+
+		size_t foundCount = tp.HeightsCrossed();
+
+		assert(tp.HeightsCrossed() == mr.HeightsCrossed());
+		
+		if (foundCount == N)
+		{
+			break;
+		}
+		
+		CUDA_CHECK(cudaMemcpyAsync(&PVec[0], d_P, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+	}
+	
+	auto Tpot = tp.Result();
+	auto MR = mr.Result();
+
+	auto Psurf = Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	auto h_P = PrepareInfo(Psurf, stream);
+
+	InitializeArray<double> (d_T, kFloatMissing, N, stream);
+	InitializeArray<double> (d_TD, kFloatMissing, N, stream);
+	
+	std::vector<double> T(Tpot.size(), kFloatMissing);			
+	std::vector<double> TD(T.size(), kFloatMissing);
+
+	MixingRatioFinalizeKernel <<< gridSize, blockSize, 0, stream >>> (d_T, d_TD, *h_P, d_Tpot, d_MR, N);
+
+	CUDA_CHECK(cudaMemcpyAsync(&T[0], d_T, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&TD[0], d_TD, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	CUDA_CHECK(cudaFree(d_Tpot));
+	CUDA_CHECK(cudaFree(d_MR));
+	CUDA_CHECK(cudaFree(d_RH));
+	CUDA_CHECK(cudaFree(d_P));
+	CUDA_CHECK(cudaFree(d_T));
+	CUDA_CHECK(cudaFree(d_TD));
+	
+	CUDA_CHECK(cudaStreamDestroy(stream));
+
+	return std::make_pair(T,TD);
 }
 
 std::pair<std::vector<double>,std::vector<double>> si_cuda::GetLFCGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& P, std::vector<double>& TenvLCL)

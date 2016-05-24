@@ -75,7 +75,9 @@ private:
 
 	std::pair<std::vector<double>,std::vector<double>> GetSurfaceTAndTD(std::shared_ptr<info> myTargetInfo);
 	std::pair<std::vector<double>,std::vector<double>> Get500mTAndTD(std::shared_ptr<info> myTargetInfo);
+	
 	std::pair<std::vector<double>,std::vector<double>> Get500mMixingRatioTAndTD(std::shared_ptr<info> myTargetInfo);
+	std::pair<std::vector<double>,std::vector<double>> Get500mMixingRatioTAndTDCPU(std::shared_ptr<info> myTargetInfo);
 
 	std::pair<std::vector<double>,std::vector<double>> GetHighestThetaETAndTD(std::shared_ptr<info> myTargetInfo);
 	std::pair<std::vector<double>,std::vector<double>> GetHighestThetaETAndTDCPU(std::shared_ptr<info> myTargetInfo);
