@@ -38,38 +38,47 @@ himan::point debugPoint(25.47, 37.03);
 #define DumpVector(A, B)
 #endif
 
-const himan::param SBLCLT("LCL-K");
-const himan::param SBLCLP("LCL-HPA", 68);
-const himan::param SBLFCT("LFC-K");
-const himan::param SBLFCP("LFC-HPA");
-const himan::param SBELT("EL-K");
-const himan::param SBELP("EL-HPA");
-const himan::param SBCAPE("CAPE-JKG", 59);
-const himan::param SBCAPE1040("CAPE1040-JKG", 59);
-const himan::param SBCAPE3km("CAPE3KM-JKG", 59);
-const himan::param SBCIN("CIN-JKG", 66);
+const himan::param SBLCLT("LCL-K", 4);
+const himan::param SBLCLP("LCL-HPA", 4720);
+const himan::param SBLCLZ("LCL-M", 4726);
+const himan::param SBLFCT("LFC-K", 4);
+const himan::param SBLFCP("LFC-HPA", 4721);
+const himan::param SBLFCZ("LFC-M", 4727);
+const himan::param SBELT("EL-K", 4);
+const himan::param SBELP("EL-HPA", 4722);
+const himan::param SBELZ("EL-M", 4728);
+const himan::param SBCAPE("CAPE-JKG", 4723);
+const himan::param SBCAPE1040("CAPE1040-JKG", 4729);
+const himan::param SBCAPE3km("CAPE3KM-JKG", 4724);
+const himan::param SBCIN("CIN-JKG", 4725);
 
-const himan::param SB500LCLT("LCL500-K");
-const himan::param SB500LCLP("LCL500-HPA", 68);
-const himan::param SB500LFCT("LFC500-K");
-const himan::param SB500LFCP("LFC500-HPA");
-const himan::param SB500ELT("EL500-K");
-const himan::param SB500ELP("EL500-HPA");
-const himan::param SB500CAPE("CAPE500-JKG", 59);
-const himan::param SB500CAPE1040("CAPE5001040", 59);
-const himan::param SB500CAPE3km("CAPE5003KM", 59);
-const himan::param SB500CIN("CIN500-JKG", 66);
+const himan::param SB500LCLT("LCL500-K", 4);
+const himan::param SB500LCLP("LCL500-HPA", 4730);
+const himan::param SB500LCLZ("LCL500-M", 4736);
+const himan::param SB500LFCT("LFC500-K", 4);
+const himan::param SB500LFCP("LFC500-HPA", 4731);
+const himan::param SB500LFCZ("LFC500-M", 4737);
+const himan::param SB500ELT("EL500-K", 4);
+const himan::param SB500ELP("EL500-HPA", 4732);
+const himan::param SB500ELZ("EL500-M", 4738);
+const himan::param SB500CAPE("CAPE500-JKG", 4733);
+const himan::param SB500CAPE1040("CAPE5001040", 4739);
+const himan::param SB500CAPE3km("CAPE5003KM", 4734);
+const himan::param SB500CIN("CIN500-JKG", 4735);
 
-const himan::param MULCLT("LCLMU-K");
-const himan::param MULCLP("LCLMU-HPA", 68);
-const himan::param MULFCT("LFCMU-K");
-const himan::param MULFCP("LFCMU-HPA");
-const himan::param MUELT("ELMU-K");
-const himan::param MUELP("ELMU-HPA");
-const himan::param MUCAPE("CAPEMU-JKG", 59);
-const himan::param MUCAPE1040("CAPEMU1040", 59);
-const himan::param MUCAPE3km("CAPEMU3KM", 59);
-const himan::param MUCIN("CINMU-JKG", 66);
+const himan::param MULCLT("LCLMU-K", 4);
+const himan::param MULCLP("LCLMU-HPA", 4740);
+const himan::param MULCLZ("LCLMU-M", 4746);
+const himan::param MULFCT("LFCMU-K", 4);
+const himan::param MULFCP("LFCMU-HPA", 4741);
+const himan::param MULFCZ("LFCMU-M", 4747);
+const himan::param MUELT("ELMU-K", 4);
+const himan::param MUELP("ELMU-HPA", 4742);
+const himan::param MUELZ("ELMU-M", 4748);
+const himan::param MUCAPE("CAPEMU-JKG", 4743);
+const himan::param MUCAPE1040("CAPEMU1040", 4749);
+const himan::param MUCAPE3km("CAPEMU3KM", 4744);
+const himan::param MUCIN("CINMU-JKG", 4745);
 
 double Max(const vector<double>& vec)
 { 
@@ -171,10 +180,13 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 		{
 			theParams.push_back(SBLCLT);
 			theParams.push_back(SBLCLP);
+			theParams.push_back(SBLCLZ);
 			theParams.push_back(SBLFCT);
 			theParams.push_back(SBLFCP);
+			theParams.push_back(SBLFCZ);
 			theParams.push_back(SBELT);
 			theParams.push_back(SBELP);
+			theParams.push_back(SBELZ);
 			theParams.push_back(SBCAPE);
 			theParams.push_back(SBCAPE1040);
 			theParams.push_back(SBCAPE3km);
@@ -185,10 +197,13 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 		{
 			theParams.push_back(SB500LCLT);
 			theParams.push_back(SB500LCLP);
+			theParams.push_back(SB500LCLZ);
 			theParams.push_back(SB500LFCT);
 			theParams.push_back(SB500LFCP);
+			theParams.push_back(SB500LFCZ);
 			theParams.push_back(SB500ELT);
 			theParams.push_back(SB500ELP);
+			theParams.push_back(SB500ELZ);
 			theParams.push_back(SB500CAPE);
 			theParams.push_back(SB500CAPE1040);
 			theParams.push_back(SB500CAPE3km);
@@ -199,10 +214,13 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 		{
 			theParams.push_back(MULCLT);
 			theParams.push_back(MULCLP);
+			theParams.push_back(MULCLZ);
 			theParams.push_back(MULFCT);
 			theParams.push_back(MULFCP);
+			theParams.push_back(MULFCZ);
 			theParams.push_back(MUELT);
 			theParams.push_back(MUELP);
+			theParams.push_back(MUELZ);
 			theParams.push_back(MUCAPE);
 			theParams.push_back(MUCAPE1040);
 			theParams.push_back(MUCAPE3km);
@@ -295,7 +313,9 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	
 	pair<vector<double>, vector<double>> TandTD;
 	
-	param LCLTParam, LCLPParam, LFCTParam, LFCPParam, ELPParam, ELTParam;
+	param LCLTParam, LCLPParam, LCLZParam;
+	param LFCTParam, LFCPParam, LFCZParam;
+	param ELPParam, ELTParam, ELZParam;
 	param CINParam, CAPEParam, CAPE1040Param, CAPE3kmParam;
 	
 	switch (sourceType)
@@ -304,14 +324,17 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 			TandTD = GetSurfaceTAndTD(myTargetInfo);
 			LCLTParam = SBLCLT;
 			LCLPParam = SBLCLP;
+			LCLZParam = SBLCLZ;
 			LFCTParam = SBLFCT;
 			LFCPParam = SBLFCP;
+			LFCZParam = SBLCLZ;
 			CAPEParam = SBCAPE;
 			CAPE1040Param = SBCAPE1040;
 			CAPE3kmParam = SBCAPE3km;
 			CINParam = SBCIN;
 			ELPParam = SBELP;
 			ELTParam = SBELT;
+			ELZParam = SBELZ;
 			break;
 		
 		case k500mAvg:
@@ -322,29 +345,34 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 			TandTD = Get500mMixingRatioTAndTD(myTargetInfo);
 			LCLTParam = SB500LCLT;
 			LCLPParam = SB500LCLP;
+			LCLZParam = SB500LCLZ;
 			LFCTParam = SB500LFCT;
 			LFCPParam = SB500LFCP;
+			LFCZParam = SB500LFCZ;
 			CAPEParam = SB500CAPE;
 			CAPE1040Param = SB500CAPE1040;
 			CAPE3kmParam = SB500CAPE3km;
 			CINParam = SB500CIN;
 			ELPParam = SB500ELP;
 			ELTParam = SB500ELT;
+			ELZParam = SB500ELZ;
 			break;
 			
 		case kMaxThetaE:
 			TandTD = GetHighestThetaETAndTD(myTargetInfo);
 			LCLTParam = MULCLT;
 			LCLPParam = MULCLP;
+			LCLZParam = MULCLZ;
 			LFCTParam = MULFCT;
 			LFCPParam = MULFCP;
+			LFCZParam = MULFCZ;
 			CAPEParam = MUCAPE;
 			CAPE1040Param = MUCAPE1040;
 			CAPE3kmParam = MUCAPE3km;
 			CINParam = MUCIN;
 			ELPParam = MUELP;
 			ELTParam = MUELT;
-
+			ELZParam = MUELZ;
 			break;
 		
 		default:
@@ -379,6 +407,17 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	
 	myTargetInfo->Param(LCLPParam);
 	myTargetInfo->Data().Set(LCL.second);
+	
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+	h->HeightUnit(kHPa);
+
+	auto height = h->VerticalValue(param("HL-M"), LCL.second);
+
+	myTargetInfo->Param(LCLZParam);
+	myTargetInfo->Data().Set(height);
+
 
 	// 3.
 
@@ -403,6 +442,11 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	
 	myTargetInfo->Param(LFCPParam);
 	myTargetInfo->Data().Set(LFC.second);
+	
+	height = h->VerticalValue(param("HL-M"), LFC.second);
+
+	myTargetInfo->Param(LFCZParam);
+	myTargetInfo->Data().Set(height);
 
 	// 4. & 5.
 
@@ -629,7 +673,7 @@ void si::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, c
 	
 }
 
-void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, param ELTParam, param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, param ELTParam, param ELPParam, param ELZParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
 	if (itsConfiguration->UseCuda())
 	{
@@ -639,6 +683,19 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const v
 	{
 		GetCAPECPU(myTargetInfo, T, P, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 	}
+	
+	auto h = GET_PLUGIN(hitool);
+	
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+	h->HeightUnit(kHPa);
+	
+	myTargetInfo->Param(ELPParam);
+	auto height = h->VerticalValue(param("HL-M"), VEC(myTargetInfo));
+
+	myTargetInfo->Param(ELZParam);
+	myTargetInfo->Data().Set(height);
+
 }
 
 void si::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, param ELTParam, param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
