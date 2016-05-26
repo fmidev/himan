@@ -51,6 +51,25 @@ param::param(const string& theName, unsigned long theUnivId)
 {
 }
 
+param::param(const string& theName, unsigned long theUnivId, HPParameterUnit theUnit)
+	: itsId(kHPMissingInt)
+	, itsName(theName)
+	, itsScale(1)
+	, itsBase(0)
+	, itsUnivId(theUnivId)
+	, itsGribParameter(kHPMissingInt)
+	, itsGribCategory(kHPMissingInt)
+	, itsGribDiscipline(kHPMissingInt)
+	, itsGribTableVersion(kHPMissingInt)
+	, itsGribIndicatorOfParameter(kHPMissingInt)
+	, itsVersion(1)
+	, itsInterpolationMethod(kBiLinear)
+	, itsUnit(theUnit)
+	, itsMissingValue(kHPMissingValue)
+	, itsAggregation()
+{
+}
+
 param::param(const string& theName)
 	: itsId(kHPMissingInt)
 	, itsName(theName)
