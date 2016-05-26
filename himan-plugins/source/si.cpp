@@ -453,7 +453,7 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	timer->Start();
 
 	auto capeInfo = make_shared<info> (*myTargetInfo);
-	boost::thread t1(&si::GetCAPE, this, boost::ref(capeInfo), LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
+	boost::thread t1(&si::GetCAPE, this, boost::ref(capeInfo), LFC, ELTParam, ELPParam, ELZParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 
 	auto cinInfo = make_shared<info> (*myTargetInfo);
 	boost::thread t2(&si::GetCIN, this, boost::ref(cinInfo), TandTD.first, LCL.first, LCL.second, LFC.second, CINParam);
@@ -673,15 +673,15 @@ void si::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, c
 	
 }
 
-void si::GetCAPE(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, param ELTParam, param ELPParam, param ELZParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+void si::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>,vector<double>>& LFC, param ELTParam, param ELPParam, param ELZParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
 	if (itsConfiguration->UseCuda())
 	{
-		si_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, T, P, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
+		si_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 	}
 	else
 	{
-		GetCAPECPU(myTargetInfo, T, P, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
+		GetCAPECPU(myTargetInfo, LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 	}
 	
 	auto h = GET_PLUGIN(hitool);
