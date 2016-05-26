@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.5.12
+Version: 16.5.26
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -13,13 +13,13 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 16.2.12
+Requires: libfmidb >= 16.5.26
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 BuildRequires: boost-devel >= 1.55
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
-BuildRequires: libfmidb-devel >= 16.2.12
+BuildRequires: libfmidb-devel >= 16.5.26
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
 BuildRequires: libsmartmet-newbase-devel >= 16.5.4
@@ -49,6 +49,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu May 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.26-1.fmi
+- fmidb header change
 * Thu May 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.12-1.fmi
 - New newbase
 * Mon May  2 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.2-1.fmi
