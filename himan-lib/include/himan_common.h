@@ -431,8 +431,8 @@ enum HPForecastType
 	kUnknownType = 0,
 	kDeterministic,
 	kAnalysis,
-	kEpsControl,
-	kEpsPerturbation
+	kEpsPerturbation = 3,
+	kEpsControl = 4
 };
 
 const boost::unordered_map<HPForecastType,std::string> HPForecastTypeToString = ba::map_list_of
