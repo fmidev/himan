@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.5.16
+Version: 16.5.26
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -22,12 +22,12 @@ Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 16.2.12
 Requires: libsmartmet-newbase >= 16.5.4
-Requires: libfmidb >= 16.2.12
+Requires: libfmidb >= 16.5.26
 
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libfmidb-devel >= 16.2.12
+BuildRequires: libfmidb-devel >= 16.5.26
 BuildRequires: libfmigrib-devel >= 16.2.12
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
@@ -102,6 +102,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu May 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.26-1.fmi
+- LCL,LFC,EL metric height (HIMAN-123)
+- Change in fmidb headers
+* Mon May 17 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.17-1.fmi
+- Another fix for visibility
 * Mon May 16 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.16-1.fmi
 - Fix for visibility
 * Thu May 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.12-1.fmi
