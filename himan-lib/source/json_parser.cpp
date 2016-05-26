@@ -1134,7 +1134,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 	try
 	{
-		conf->itsSourceGeomNames = util::Split(pt.get<string>("source_geom_name"), ",", false);
+		conf->SourceGeomNames(util::Split(pt.get<string>("source_geom_name"), ",", false));
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{

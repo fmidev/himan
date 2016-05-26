@@ -207,6 +207,7 @@ public:
 	bool UseCache() const;
 	void UseCache(bool theUseCache);
 
+	void SourceGeomNames(std::vector<std::string> theNames);
 	std::vector<std::string> SourceGeomNames() const;
 
 	/**
