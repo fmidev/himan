@@ -204,11 +204,11 @@ void BindEnum(lua_State* L)
 			.enum_("constants")
 		[
 			value("kUnknownLevel", kUnknownLevel),
-			value("kGround", kHeight),
-			value("kTopOfAtmosphere", kHeight),
-			value("kPressure", kHeight),
-			value("kMeanSea", kHeight),
-			value("kAltitude", kHeight),
+			value("kGround", kGround),
+			value("kTopOfAtmosphere", kTopOfAtmosphere),
+			value("kPressure", kPressure),
+			value("kMeanSea", kMeanSea),
+			value("kAltitude", kAltitude),
 			value("kHeight", kHeight),
 			value("kHybrid", kHybrid),
 			value("kGndLayer", kGndLayer),
