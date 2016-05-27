@@ -15,6 +15,7 @@
 #include "logger_factory.h"
 #include "util.h"
 #include <map>
+#include <utility>
 #include "point.h"
 #include "regular_grid.h"
 #include "irregular_grid.h"
@@ -562,13 +563,54 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				{
 					pc->Name(value);
 				}
+				else if (key == "param_list")
+				{
+					boost::property_tree::ptree& params = plugin.second.get_child("param_list");
+
+					if (params.empty())
+					{
+						throw runtime_error(ClassName() + ": param_list definition is empty");
+					}
+
+					BOOST_FOREACH(boost::property_tree::ptree::value_type& param, params)
+					{
+						string name;
+						std::vector<std::pair<std::string, std::string>> opts;
+
+						BOOST_FOREACH(boost::property_tree::ptree::value_type& paramOpt, param.second)
+						{
+							string paramOptName = paramOpt.first;
+							string paramOptValue = paramOpt.second.get<string> ("");
+
+							if (paramOptName.empty())
+							{
+								throw runtime_error(ClassName() + ": param_list parameter option name is empty");
+							}
+
+                            
+							if (paramOptValue.empty())
+							{
+								throw runtime_error(ClassName() + ": param_list parameter option '" + paramOptName + "' value is empty");
+							}
+                            
+							if (paramOptName == "name") 
+							{
+								name = paramOptValue;
+							}
+							else
+							{
+								opts.push_back(std::make_pair(paramOptName, paramOptValue));
+							}
+						}
+						pc->AddParameter(name, opts);
+					}
+				}
 				else
 				{
 					if (value.empty())
 					{
 						BOOST_FOREACH(boost::property_tree::ptree::value_type& listval, kv.second)
 						{
-
 							//pc->AddOption(key, value);
 							pc->AddOption(key, util::Expand(listval.second.get<string> ("")));
 						}
@@ -591,7 +633,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			assert(pc.unique());
 
 			pluginContainer.push_back(pc);
-			
 		}
 
 	} // END BOOST_FOREACH

@@ -16,6 +16,7 @@ using namespace std;
 plugin_configuration::plugin_configuration() 
 	: itsName("")
 	, itsOptions()
+	, itsPreconfiguredParams()
 	, itsStatistics(new statistics)
 {
 }
@@ -24,6 +25,7 @@ plugin_configuration::plugin_configuration(const configuration& theConfiguration
 	: configuration(theConfiguration)
 	, itsName("")
 	, itsOptions()
+	, itsPreconfiguredParams()
 {
 	itsStatistics = make_shared<statistics> ();
 }
@@ -32,6 +34,7 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
 	: configuration(other)
 	, itsName(other.itsName)
 	, itsOptions(other.itsOptions)
+	, itsPreconfiguredParams(other.itsPreconfiguredParams)
 {
 	itsStatistics = make_shared<statistics> (*other.itsStatistics);
 	itsInfo = make_shared<info> (*other.itsInfo);
@@ -40,6 +43,7 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
 plugin_configuration::plugin_configuration(const string& theName, const map<string,vector<string>>& theOptions)
 	: itsName(theName)
 	, itsOptions(theOptions)
+	, itsPreconfiguredParams()
 	, itsStatistics(new statistics)
 {
 }
@@ -87,6 +91,37 @@ string plugin_configuration::GetValue(const string & key) const
 const vector<string>& plugin_configuration::GetValueList(const string& key) const
 {
 	return itsOptions.at(key);
+}
+
+void plugin_configuration::AddParameter(const string& paramName, const vector<pair<string, string>>& opts)
+{
+	if (!itsPreconfiguredParams[paramName].empty())
+	{
+		throw runtime_error(ClassName() + ": duplicate parameter options definition:: '" + paramName + "'");
+	}
+
+	for (const auto & p : opts)
+	{
+		itsPreconfiguredParams[paramName].push_back(p);
+	}
+}
+
+bool plugin_configuration::ParameterExists(const std::string& paramName) const
+{
+	auto iter = itsPreconfiguredParams.find(paramName);
+	return iter != itsPreconfiguredParams.end();
+}
+
+const vector<pair<string, string>>& plugin_configuration::GetParameterOptions(const string& paramName) const
+{
+	auto iter = itsPreconfiguredParams.find(paramName);
+
+	if (iter == itsPreconfiguredParams.end())
+	{
+		throw runtime_error(ClassName() + ": parameter not found in preconfigured parameter list:: '" + paramName + "'");
+	}
+
+	return iter->second;
 }
 
 shared_ptr<info> plugin_configuration::Info() const

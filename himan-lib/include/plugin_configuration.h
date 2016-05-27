@@ -10,6 +10,7 @@
 
 #include "himan_common.h"
 #include <map>
+#include <utility>
 #include "statistics.h"
 #include "configuration.h"
 
@@ -77,6 +78,31 @@ public:
 	std::string GetValue(const std::string & key) const;
     const std::vector<std::string>& GetValueList(const std::string& key) const;
 
+	/**
+	  * @brief Add a new parameter to the preconfigured parameters map
+	  * @param paramName Parameter name
+	  * @param opts      Parameter specific options
+	  */
+
+	void AddParameter(const std::string& paramName, const std::vector<std::pair<std::string, std::string>>& opts);
+
+	/**
+	* @brief Check if the preconfigured parameter exists
+	* @param paramName Parameter name
+	*/
+
+	bool ParameterExists(const std::string& paramName) const;
+
+	/**
+	* @brief Get parameter options
+	* @param paramName Parameter name
+	* @return Parameter options as a vector of strings, empty vector if the parameter doesn't exist
+	* @throws runtime_error if the parameter was not found, use ParamExists(paramName) to check if the parameter exists
+	*/
+
+	const std::vector<std::pair<std::string, std::string>>& GetParameterOptions(const std::string& paramName) const;
+
+
 	void Info(std::shared_ptr<info> theInfo);
 	std::shared_ptr<info> Info() const;
 
@@ -90,6 +116,7 @@ private:
 
 	std::string itsName;
 	std::map<std::string,std::vector<std::string>> itsOptions;
+	std::map<std::string,std::vector<std::pair<std::string, std::string>>> itsPreconfiguredParams;
 	std::shared_ptr<info> itsInfo;
 	std::shared_ptr<statistics> itsStatistics;
 };
