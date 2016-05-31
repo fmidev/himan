@@ -12,6 +12,17 @@ using namespace himan;
 
 const double kEpsilon = 1e-3;
 
+void Dump(const himan::matrix<double>& m)
+{
+	for (size_t i=0; i < m.SizeX();++i){
+    		for (size_t j=0; j < m.SizeY();++j){
+      			std::cout << m.At(i,j,0) << " ";
+    		}
+    		std::cout << std::endl;
+  	}
+
+}
+
 BOOST_AUTO_TEST_CASE(FILTER2D)
 {
 	// Filter a plane with given filter kernel
@@ -35,21 +46,10 @@ BOOST_AUTO_TEST_CASE(FILTER2D)
 
 	// computed filtered matrix
 	std::cout << "Matrix C computed with Filter2D:" << std::endl;
-	for (size_t i=0; i < C.SizeX();++i){
-    		for (size_t j=0; j < C.SizeY();++j){
-      			std::cout << C.At(i,j,0) << " ";
-    		}
-    		std::cout << std::endl;
-  	}
+	Dump(C);
 
 	std::cout << std::endl << "Matrix D as reference case for Filter2D computation:" << std::endl; 
-
-	for (size_t i=0; i < D.SizeX();++i){
-    		for (size_t j=0; j < D.SizeY();++j){
-      			std::cout << D.At(i,j,0) << " ";
-    		}
-    		std::cout << std::endl;
-  	}
+	Dump(D);
 
 }
 
@@ -80,4 +80,39 @@ BOOST_AUTO_TEST_CASE(FILTER2D_LARGE)
 
     std::cout << "Filter2D took " << timer.GetTime() << " ms " << std::endl;
 
+}
+
+BOOST_AUTO_TEST_CASE(MAX2D)
+{
+	himan::matrix<double> A(5, 5, 1, kFloatMissing);
+	A.Set({1, 2, 3, 4, 5,
+		6, 7, 8, 9, 0,
+		1, 2, 3, 4, 5,
+		6, 7, 8, 9, 0,
+		1, 2, 3, 4, 5});
+
+
+	himan::matrix<double> B(3, 3, 1, kFloatMissing);
+	B.Set({0, 1, 0, 1, 1, 1, 0, 1, 0});
+
+	auto result = numerical_functions::Max2D(A, B);
+
+	std::cout << "source" << std::endl;
+	Dump(A);
+	std::cout << "kernel" << std::endl;
+	Dump(B);
+	std::cout << "result of Max2D()" << std::endl;
+	Dump(result);
+
+	BOOST_REQUIRE(result.At(0) == 6);
+	BOOST_REQUIRE(result.At(19) == 9);
+
+	B.Set({0, 0, 0, 0, 1, 0, 0, 0, 0}); // should return A
+
+	result = numerical_functions::Max2D(A, B);
+
+	for(size_t i=0; i < A.Size(); ++i)
+	{
+		BOOST_REQUIRE(A.At(i) == result.At(i));
+	}
 }
