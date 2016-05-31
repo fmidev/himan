@@ -615,3 +615,204 @@ matrix<double> numerical_functions::Filter2D(const matrix<double>& A, const matr
 	}
 	return ret;
 }
+
+
+himan::matrix<double> numerical_functions::Max2D(const himan::matrix<double>& A, const himan::matrix<double>& B)
+{
+	using himan::kFloatMissing;
+
+	// find center position of kernel (half of kernel size)
+	himan::matrix<double> ret(A.SizeX(),A.SizeY(),1,A.MissingValue());
+
+	double max_value; // maximum value of the convolution 
+
+	int ASizeX = int(A.SizeX());
+	int ASizeY = int(A.SizeY());
+	int BSizeX = int(B.SizeX());
+	int BSizeY = int(B.SizeY());
+
+	int kCenterX = BSizeX / 2;
+	int kCenterY = BSizeY / 2;
+	
+	// calculate for inner field
+	// the weights are used as given on input
+	// assert (sum(B) == 1)
+	
+	assert(B.MissingCount() == 0);
+
+	for(int j=kCenterY; j < ASizeY-kCenterY; ++j)	// columns
+	{
+		for(int i=kCenterX; i < ASizeX-kCenterX; ++i)	// rows
+		{
+			max_value = kFloatMissing;
+			for(int n=0; n < BSizeY; ++n)	// kernel columns
+			{
+				int nn = BSizeY - 1 - n;  // column index of flipped kernel
+				for(int m=0; m < BSizeX; ++m)	// kernel rows
+				{
+					int mm = BSizeX - 1 - m;	// row index of flipped kernel
+
+					// index of input signal, used for checking boundary
+					int ii = i + (m - kCenterX);
+					int jj = j + (n - kCenterY);
+
+					double val = A.At(ii,jj,0) * B.At(mm,nn,0);
+
+					if (val != kFloatMissing && (max_value == kFloatMissing || val > max_value))
+					{
+						max_value = val;
+					}
+				}
+			}
+			const size_t index = ret.Index(i, j, 0);
+			ret[index] = max_value;
+		}
+	}
+
+	// treat boundaries separately
+	// weights get adjusted so that the sum of weights for the active part of the kernel remains 1
+	// calculate for upper boundary
+	for(int j=0; j < kCenterY; ++j)		  // columns
+	{
+		for(int i=0; i < ASizeX; ++i)			  // rows
+		{
+			max_value = -1e38;
+
+			for(int n=0; n < BSizeY; ++n) // kernel columns
+			{
+				int nn = BSizeY - 1 - n;  // column index of flipped kernel			
+				for(int m=0; m < BSizeX; ++m)	 // kernel rows
+				{
+					int mm = BSizeX - 1 - m;	  // row index of flipped kernel
+
+					// index of input signal, used for checking boundary
+
+					int ii = i + (m - kCenterX);
+					int jj = j + (n - kCenterY);
+
+					// ignore input samples which are out of bound
+					if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+					{
+						double val = A.At(ii,jj,0) * B.At(mm,nn,0);
+
+						if (val != kFloatMissing && (max_value == kFloatMissing || val > max_value))
+						{
+							max_value = val;
+						}
+					}
+				}
+			}
+			const size_t index = ret.Index(i, j, 0);
+			ret[index] = max_value;
+		}
+	}
+
+	// calculate for lower boundary
+	for(int j=ASizeY-kCenterY; j < ASizeY; ++j)		  // columns
+	{
+		for(int i=0; i < ASizeX; ++i)			  // rows
+		{
+			max_value = -1e38;
+
+			for(int n=0; n < BSizeY; ++n) // kernel columns
+			{
+				int nn = BSizeY - 1 - n;  // column index of flipped kernel
+
+				for(int m=0; m < BSizeX; ++m)	 // kernel rows
+				{
+					int mm = BSizeX - 1 - m;	  // row index of flipped kernel
+
+					// index of input signal, used for checking boundary
+					int ii = i + (m - kCenterX);
+					int jj = j + (n - kCenterY);
+
+					// ignore input samples which are out of bound
+					if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+					{
+						double val = A.At(ii,jj,0) * B.At(mm,nn,0);
+
+						if (val != kFloatMissing && (max_value == kFloatMissing || val > max_value))
+						{
+							max_value = val;
+						}
+					}
+				}
+			}
+			const size_t index = ret.Index(i, j, 0);
+			ret[index] = max_value;
+		}
+	}
+
+	// calculate for left boundary
+	for(int j=0; j < ASizeY; ++j)		  // columns
+	{
+		for(int i=0; i < kCenterX; ++i)			  // rows
+		{
+			max_value = -1e38;
+
+			for(int n=0; n < BSizeY; ++n) // kernel columns
+			{
+				int nn = BSizeY - 1 - n;  // column index of flipped kernel
+
+				for(int m=0; m < BSizeX; ++m)	 // kernel rows
+				{
+					int mm = BSizeX - 1 - m;	  // row index of flipped kernel
+
+					// index of input signal, used for checking boundary
+					int ii = i + (m - kCenterX);
+					int jj = j + (n - kCenterY);
+
+					// ignore input samples which are out of bound
+					if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+					{
+						double val = A.At(ii,jj,0) * B.At(mm,nn,0);
+
+						if (val != kFloatMissing && (max_value == kFloatMissing || val > max_value))
+						{
+							max_value = val;
+						}
+					}
+				}
+			}
+			const size_t index = ret.Index(i, j, 0);
+			ret[index] = max_value;
+		}
+	}
+
+	// calculate for right boundary
+	for(int j=0; j < ASizeY; ++j)		  // columns
+	{
+		for(int i=ASizeX-kCenterX; i < ASizeX; ++i)			  // rows
+		{
+			max_value = -1e38;
+
+			for(int n=0; n < BSizeY; ++n) // kernel columns
+			{
+				int nn = BSizeY - 1 - n;  // column index of flipped kernel
+				for(int m=0; m < BSizeX; ++m)	 // kernel rows
+				{
+					int mm = BSizeX - 1 - m;	  // row index of flipped kernel
+
+					// index of input signal, used for checking boundary
+					int ii = i + (m - kCenterX);
+					int jj = j + (n - kCenterY);
+
+					// ignore input samples which are out of bound
+					if( ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY )
+					{
+						double val = A.At(ii,jj,0) * B.At(mm,nn,0);
+
+						if (val != kFloatMissing && (max_value == kFloatMissing || val > max_value))
+						{
+							max_value = val;
+						}
+					}
+				}
+			}
+			const size_t index = ret.Index(i, j, 0);
+			ret[index] = max_value;
+		}
+	}
+	
+	return ret;
+}

@@ -99,6 +99,22 @@ std::valarray<double> integral::Interpolate(std::valarray<double> currentLevelVa
 
 himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
 
+/**
+ * @brief Compute the maximum value in matrix A from the area specified by matrix B
+ * 
+ * Matrix B acts also as a weight; a default boxed maximum search would have all matrix B
+ * elements set to 1, but if for example origin needs to be excluded, that value 
+ * can be set to 0.
+ * 
+ * TODO: 0 might not be good choice if data is all negative; consider using kFloatMissing ?
+ * 
+ * @param A Data
+ * @param B Kernel
+ * @return Maximum data
+ */
+
+himan::matrix<double> Max2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
+
 /*
  * CUDA version of Filter2D
  */
