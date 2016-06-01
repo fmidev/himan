@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(MAX2D)
 {
 	himan::matrix<double> A(5, 5, 1, kFloatMissing);
 	A.Set({1, 2, 3, 4, 5,
-		6, 7, 8, 9, 0,
+		6, 7, 8, -9, 0,
 		1, 2, 3, 4, 5,
 		6, 7, 8, 9, 0,
 		1, 2, 3, 4, 5});
@@ -115,4 +115,26 @@ BOOST_AUTO_TEST_CASE(MAX2D)
 	{
 		BOOST_REQUIRE(A.At(i) == result.At(i));
 	}
+
+	A.Set({-1, -2, -3, -4, -5,
+		-6, -7, -8, -9, -0,
+		-1, -2, -3, -4, -5,
+		-6, -7, -8, -9, -0,
+		-1, -2, -3, -4, -5});
+
+	B.Set(std::vector<double>(9, 1));
+
+	result = numerical_functions::Max2D(A, B);
+
+	std::cout << "source" << std::endl;
+	Dump(A);
+	std::cout << "kernel" << std::endl;
+	Dump(B);
+	std::cout << "result of Max2D()" << std::endl;
+	Dump(result);
+
+
+	BOOST_REQUIRE(result.At(0) == -1);
+	BOOST_REQUIRE(result.At(19) == 0);
+
 }
