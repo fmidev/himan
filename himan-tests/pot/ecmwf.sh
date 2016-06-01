@@ -8,14 +8,14 @@ fi
 
 rm -f POT-PRCNT*.grib
 
-$HIMAN -d 5 -j 1 -f pot_ec.json --no-cuda CAPE-JKG_GROUND_0_0_ll_2880_1441_0_015_1.grib RRR-KGM2_height_0_ll_2880_1441_0_015.grib
+$HIMAN -d 5 -j 1 -f pot_ec.json --no-cuda CAPE-JKG_GROUND_0_0_ll_3600_1801_0_001_1.grib RRR-KGM2_height_0_ll_3600_1801_0_001.grib RRR-KGM2_height_0_ll_3600_1801_0_002.grib
 
-grib_compare POT-PRCNT_height_0_ll_2880_1441_0_015.grib result.grib 
+grib_compare POT-PRCNT_height_0_ll_3600_1801_0_001.grib result.grib 
 
 if [ $? -eq 0 ];then
-  echo pot/hirlam success on CPU!
+  echo pot/ecmwf success on CPU!
 else
-  echo pot/hirlam failed on CPU
+  echo pot/ecmwf failed on CPU
   exit 1
 fi
 
