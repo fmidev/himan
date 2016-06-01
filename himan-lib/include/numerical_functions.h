@@ -53,7 +53,7 @@ class integral
 		const std::valarray<double>& Result() const;
 
 		//pass configuration to integration object (needed for fetching values)
-                std::shared_ptr<const plugin_configuration> itsConfiguration;
+		std::shared_ptr<const plugin_configuration> itsConfiguration;
 		
 		//evaluate the integral expression
 		void Evaluate();
@@ -65,12 +65,12 @@ class integral
 		int itsLowestLevel;
 		int itsHighestLevel;
 
-                forecast_time itsTime;
-                forecast_type itsType;
+		forecast_time itsTime;
+		forecast_type itsType;
 		level itsLevel;
 
 		params itsParams;
-                std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> itsFunction;
+		std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> itsFunction;
 
 		std::valarray<double> itsLowerBound;
 		std::valarray<double> itsUpperBound;
@@ -80,7 +80,7 @@ class integral
 		std::valarray<double> itsResult; // variable is modified in some Result() const functions
 		size_t itsIndex;
 
-                std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>) const __attribute__((always_inline));
+		std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>) const __attribute__((always_inline));
 		std::pair<level,level> LevelForHeight(const producer&, double) const;
 };
 
@@ -105,8 +105,6 @@ himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matr
  * Matrix B acts also as a weight; a default boxed maximum search would have all matrix B
  * elements set to 1, but if for example origin needs to be excluded, that value 
  * can be set to 0.
- * 
- * TODO: 0 might not be good choice if data is all negative; consider using kFloatMissing ?
  * 
  * @param A Data
  * @param B Kernel
@@ -133,11 +131,11 @@ CUDA_DEVICE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W,
 
 struct filter_opts
 {
-    int aDimX;            /**< input matrix width */
-    int aDimY;            /**< input matrix height */
-    int bDimX;            /**< convolution kernel width */
-    int bDimY;            /**< convolution kernel height */
-    double missingValue;  /**< input matrix missing value (used for detecting missing values in the CUDA kernel) */
+	int aDimX;			/**< input matrix width */
+	int aDimY;			/**< input matrix height */
+	int bDimX;			/**< convolution kernel width */
+	int bDimY;			/**< convolution kernel height */
+	double missingValue;  /**< input matrix missing value (used for detecting missing values in the CUDA kernel) */
 };
 
 /**
@@ -151,60 +149,60 @@ struct filter_opts
 #ifdef __CUDACC__
 CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 {
-    const double missing = opts.missingValue;
-    
-    const int kCenterX = opts.bDimX / 2;
-    const int kCenterY = opts.bDimY / 2;
+	const double missing = opts.missingValue;
+	
+	const int kCenterX = opts.bDimX / 2;
+	const int kCenterY = opts.bDimY / 2;
 
-    const int M = opts.aDimX;
-    const int N = opts.aDimY;
-    
-    const int i = blockIdx.x * blockDim.x + threadIdx.x;
-    const int j = blockIdx.y * blockDim.y + threadIdx.y;
+	const int M = opts.aDimX;
+	const int N = opts.aDimY;
+	
+	const int i = blockIdx.x * blockDim.x + threadIdx.x;
+	const int j = blockIdx.y * blockDim.y + threadIdx.y;
 
-    size_t kernelMissingCount = 0;
+	size_t kernelMissingCount = 0;
 
-    if (i < M && j < N)
-    {
-        double convolutionValue = 0.0;
-        double kernelWeightSum = 0.0;
+	if (i < M && j < N)
+	{
+		double convolutionValue = 0.0;
+		double kernelWeightSum = 0.0;
 
-        for (int n = 0; n < opts.bDimY; n++)
-        {
-            const int nn = opts.bDimY - 1 - n;
-                
-            for (int m = 0; m < opts.bDimX; m++)
-            {
-                const int mm = opts.bDimX - 1 - m;
+		for (int n = 0; n < opts.bDimY; n++)
+		{
+			const int nn = opts.bDimY - 1 - n;
+				
+			for (int m = 0; m < opts.bDimX; m++)
+			{
+				const int mm = opts.bDimX - 1 - m;
 
-                const int ii = i + (m - kCenterX);
-                const int jj = j + (n - kCenterY);
+				const int ii = i + (m - kCenterX);
+				const int jj = j + (n - kCenterY);
 
-                if (ii >= 0 && ii < M && jj >= 0 && jj < N)
-                {
-                    const int aIdx = CudaMatrixIndex(ii, jj, 0, M, N);
-                    const int bIdx = CudaMatrixIndex(mm, nn, 0, opts.bDimX, opts.bDimY);
-                    const double aVal = A[aIdx];
-                    const double bVal = B[bIdx];
+				if (ii >= 0 && ii < M && jj >= 0 && jj < N)
+				{
+					const int aIdx = CudaMatrixIndex(ii, jj, 0, M, N);
+					const int bIdx = CudaMatrixIndex(mm, nn, 0, opts.bDimX, opts.bDimY);
+					const double aVal = A[aIdx];
+					const double bVal = B[bIdx];
 
-                    if (aVal == missing)
-                    {
-                        kernelMissingCount++;
-                        continue;
-                    }
-                    convolutionValue += aVal * bVal;
-                    kernelWeightSum += bVal;
-                } 
-            }
-        }
-        if (kernelMissingCount < 3)
-        {
-            CudaMatrixSet(C, i, j, 0, M, N, convolutionValue / kernelWeightSum);
-        } else
-        {
-            CudaMatrixSet(C, i, j, 0, M, N, kFloatMissing);
-        }
-    }
+					if (aVal == missing)
+					{
+						kernelMissingCount++;
+						continue;
+					}
+					convolutionValue += aVal * bVal;
+					kernelWeightSum += bVal;
+				} 
+			}
+		}
+		if (kernelMissingCount < 3)
+		{
+			CudaMatrixSet(C, i, j, 0, M, N, convolutionValue / kernelWeightSum);
+		} else
+		{
+			CudaMatrixSet(C, i, j, 0, M, N, kFloatMissing);
+		}
+	}
 }
 
 /**
@@ -214,7 +212,7 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
  */
 CUDA_DEVICE CUDA_INLINE size_t CudaMatrixIndex(size_t x, size_t y, size_t z, size_t W, size_t H)
 {
-    return z * W * H + y * W + x;
+	return z * W * H + y * W + x;
 }
 
 /**
@@ -224,8 +222,8 @@ CUDA_DEVICE CUDA_INLINE size_t CudaMatrixIndex(size_t x, size_t y, size_t z, siz
  */
 CUDA_DEVICE CUDA_INLINE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W, size_t H, double v)
 {
-    const size_t index = CudaMatrixIndex(x, y, z, W, H);
-    C[index] = v;
+	const size_t index = CudaMatrixIndex(x, y, z, W, H);
+	C[index] = v;
 }
 
 // __CUDACC__
