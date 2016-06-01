@@ -73,8 +73,14 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     // ----
 
     // Current time and level as given to this thread
+    int paramStep = 1; // myTargetInfo->Param().Aggregation().TimeResolutionValue();
+    HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
     forecast_time forecastTime = myTargetInfo->Time();
+    forecast_time forecastTimePrev = myTargetInfo->Time();
+    forecastTimePrev.ValidDateTime().Adjust(timeResolution, -paramStep);
+    forecast_time forecastTimeNext = myTargetInfo->Time();
+    forecastTimeNext.ValidDateTime().Adjust(timeResolution, +paramStep);
     level forecastLevel = myTargetInfo->Level();
     forecast_type forecastType = myTargetInfo->ForecastType();
 
@@ -82,11 +88,12 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
     myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
 
-    info_t CAPEInfo, RRInfo;
+    info_t CAPEInfo, RRInfo, RRPrevInfo, RRNextInfo;
 
     CAPEInfo = Fetch(forecastTime, forecastLevel, CapeParam, forecastType, false);
     RRInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);
-
+    RRPrevInfo = Fetch(forecastTimePrev, forecastLevel, RainParam, forecastType, false);
+    RRNextInfo = Fetch(forecastTimeNext, forecastLevel, RainParam, forecastType, false);
     if (!(CAPEInfo && RRInfo))
     {
         myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
@@ -95,18 +102,41 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
     // käytetään sadeparametrina mallin sateen alueellista keskiarvoa, jotta diskreettejä sadeolioita saadaan vähän levitettyä ympäristöön, tässä toimisi paremmin esim. 30 km säde.
     // Filter RR
+    /* This will be requested back soon
     himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
     filter_kernel.Fill(1.0/9.0);
     himan::matrix<double> filtered_RR = numerical_functions::Filter2D(RRInfo->Data(), filter_kernel);
     RRInfo->Grid()->Data(filtered_RR);
-    
+    */
+
+    himan::matrix<double> filter_kernel(5,5,1,kFloatMissing);
+    filter_kernel.Fill(1.0/25.0);
+    himan::matrix<double> filtered_CAPE = numerical_functions::Filter2D(CAPEInfo->Data(), filter_kernel);
+
+    CAPEInfo->Grid()->Data(filtered_CAPE);
+
+    if (!CAPEInfo || !RRInfo)
+    {
+
+        myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+        return;
+
+    }
+
+    if (!RRPrevInfo) RRPrevInfo = RRInfo;
+    if (!RRNextInfo) RRNextInfo = RRInfo;    
+ 
     string deviceType = "CPU";
 
-    LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo)
+    LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo, RRPrevInfo, RRNextInfo)
     {
 	double POT;
         double CAPE_ec = CAPEInfo->Value();
+
+        double RRPrev = RRPrevInfo->Value();
         double RR = RRInfo->Value();
+        double RRNext = RRNextInfo->Value();
+
         double LAT = myTargetInfo->LatLon().Y();
 
 	double PoLift_ec = 0;
@@ -114,25 +144,47 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// Määritetään salamointi vs. CAPE riippuvuutta varten tarvitaan CAPEn ala- ja ylärajoille yhtälöt. Ala- ja ylärajat muuttuvat leveyspiirin funktiona.
 	double lat_abs = abs(LAT);
-	double cape_low = -25*lat_abs + 1225;
-	double cape_high = -40*lat_abs + 3250;
+	double cape_low0 = 50;
+	double cape_low1 = 400;
+	double cape_high0 = 300;
+	double cape_high1 = 800;
+
+	double cape_low = 50;
+	double cape_high = 800;
+
+        if (CAPE_ec == kFloatMissing || RRPrev == kFloatMissing || RR == kFloatMissing || RRNext == kFloatMissing)
+        {
+                continue;
+        }
+
+        // time average rain parameter over three timesteps
+        RR = (RRPrev + RR + RRNext) / 3.0;
 
 	// Kiinnitetään cape_low ja high levespiirien 25...45  ulkopuolella vakioarvoihin.
-	if (lat_abs <25)
+	if (lat_abs > 30)
 	{
-		cape_low = 600;
-		cape_high = 2000;
+		cape_low = cape_low0;
+		cape_high = cape_high0;
 	}
 
-	if (lat_abs > 45)
+	if (lat_abs < 10)
 	{
-		cape_low = 100;
-		cape_high = 1000;
+		cape_low = cape_low1;
+		cape_high = cape_high1;
+	}
+
+	if(lat_abs <= 30 && lat_abs >= 10)
+	{
+		double lowk = (cape_low1 - cape_low0)/(10-30);
+		double highk = (cape_high1 - cape_high0)/(10-30);
+		cape_low = lowk*lat_abs + (cape_low0 - lowk*30);
+		cape_high = highk*lat_abs + (cape_high0 - highk*30);
 	}
 
 	// CAPE-arvot skaalataan arvoihin 1....10. Ala- ja ylärajat muuttuvat leveyspiirin funktiona.
 	double k =  9/(cape_high - cape_low);
 	double scaled_cape = 1;
+
         if (CAPE_ec >= cape_low) scaled_cape = k*CAPE_ec + (1- k*cape_low);
 
 	assert( scaled_cape > 0);
@@ -146,12 +198,12 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// Laukaisevan tekijän (Lift) todennäköisyys kasvaa ennustetun sateen intensiteetin funktiona.
 	// Perustelu: Konvektioparametrisointi (eli malli saa nollasta poikkeavaa sademäärää) malleissa käynnistyy useimmiten alueilla, missä mallissa on konvergenssia tai liftiä tarjolla
 
-	if (RR >= 0.05 && RR <= 5)           
+	if (RR >= 0.02 && RR <= 2)           
 	{
-		PoLift_ec  = 0.217147241 * log(RR) + 0.650514998;  // Funktio kasvaa nopeasti logaritmisesti nollasta ykköseen
+		PoLift_ec  = 0.217147241 * log(RR) + 0.849485;  // Funktio kasvaa nopeasti logaritmisesti nollasta ykköseen
 	}
 
-	if (RR > 5)
+	if (RR > 2)
 	{
 		PoLift_ec  = 1;
 	}
