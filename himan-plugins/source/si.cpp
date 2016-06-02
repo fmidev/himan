@@ -1445,6 +1445,14 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<inf
 
 			if (P < 600.)
 			{
+				found[i] = true; // Make sure this is the last time we access this grid point
+				
+				if (!prevPInfo || !prevTInfo || !prevRHInfo)
+				{
+					// Lowest grid point located above 600hPa, hmm...
+					continue;
+				}
+
 				// Cut search if reach level 600hPa
 				prevPInfo->LocationIndex(i);
 				prevTInfo->LocationIndex(i);
@@ -1455,9 +1463,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<inf
 				
 				T = NFmiInterpolation::Linear(600., P, prevPInfo->Value(), T, prevTInfo->Value());
 				RH = NFmiInterpolation::Linear(600., P, prevPInfo->Value(), RH, prevRHInfo->Value());
-				
-				found[i] = true; // Make sure this is the last time we access this grid point
-				
+
 				P = 600.;
 			}
 				
