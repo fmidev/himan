@@ -284,6 +284,16 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	shared_ptr<neons> n;
 	shared_ptr<radon> r;
 
+	if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+	{
+		n = GET_PLUGIN(neons);
+	}
+	
+	if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
+	{
+		r = GET_PLUGIN(radon);
+	}
+
 	vector<shared_ptr<himan::info>> infos;
 
 	if (!itsGrib->Open(theInputFile))
@@ -341,21 +351,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
 			{
-				if (!n)
-				{
-					n = GET_PLUGIN(neons);
-				}
-
 				parmName = n->GribParameterName(number, no_vers, timeRangeIndicator);
 			}
 
 			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon))
 			{
-				if (!r)
-				{
-					r = GET_PLUGIN(radon);
-				}
-
 				auto parminfo = r->RadonDB().GetParameterFromGrib1(options.prod.Id(), no_vers, number, timeRangeIndicator,
 				itsGrib->Message().NormalizedLevelType(), itsGrib->Message().LevelValue());
 
@@ -391,21 +391,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
 			{
-				if (!n)
-				{
-					n = GET_PLUGIN(neons);
-				}
-
 				parmName = n->GribParameterName(number, category, discipline, process);
 			}
 
 			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon))
 			{
-				if (!r)
-				{
-					r = GET_PLUGIN(radon);
-				}
-
 				auto parminfo = r->RadonDB().GetParameterFromGrib2(options.prod.Id(), discipline, category, number,
 				itsGrib->Message().NormalizedLevelType(), itsGrib->Message().LevelValue());
 
@@ -701,11 +691,31 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		shared_ptr<info> newInfo (new info());
 		regular_grid newGrid;
 
-		producer prod(itsGrib->Message().Centre(), process);
+		producer prod(centre, process);
 
-		newGrid.AB(ab);
+		if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+		{
+			// No easy way to get fmi producer id from from Neons based on centre/ident.
+			// Use given producer id instead.
+
+			prod.Id(options.prod.Id());
+		}			
+			
+		if (prod.Id() == kHPMissingInt && (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon))
+		{
+			// Do a double check and fetch the fmi producer id from database.
+
+			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process);
+			
+			if (!prodInfo.empty())
+			{
+				prod.Id(boost::lexical_cast<int> (prodInfo["id"]));
+			}
+		}
 
 		newInfo->Producer(prod);
+
+		newGrid.AB(ab);
 
 		vector<param> theParams;
 
