@@ -1,7 +1,7 @@
 {
 	"target_geom_name" : "AROME022",
 	"target_geom_name" : "AROME022",
-	"source_producer" : "199",
+	"source_producer" : "199,210",
 	"target_producer" : "210",
 	"start_minute" : "360",
 	"stop_minute" : "360",
@@ -9,7 +9,7 @@
 	"step_unit" : "minute",
 	"file_write" : "multiple",
 	"origintime" : "2014-03-19 00:00:00",
-	"read_data_from_database" : "true",
+	"read_data_from_database" : "false",
 	"processqueue" : [
 	{
 		"leveltype" : "hybrid",
