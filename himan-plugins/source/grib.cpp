@@ -705,7 +705,18 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 			// Do a double check and fetch the fmi producer id from database.
 
-			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process);
+			long typeId = 1; // deterministic forecast, default
+			long msgType = itsGrib->Message().ForecastType();
+			
+			if (msgType == 2) {
+				typeId = 2; // ANALYSIS
+			}
+			else if (msgType == 3 || msgType == 4)
+			{
+				typeId = 3; // ENSEMBLE
+			}
+
+			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process, typeId);
 			
 			if (!prodInfo.empty())
 			{
