@@ -465,6 +465,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			{
 				delayedFileType = kGRIB;
 			}
+			else if (theFileType == "GRIB1")
+			{
+				delayedFileType = kGRIB1;
+			}
 			else if (theFileType == "GRIB2")
 			{
 				delayedFileType = kGRIB2;
