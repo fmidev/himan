@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.5.26
+Version: 16.6.6
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: jasper-libs
-Requires: grib_api >= 1.14.0
+Requires: grib_api >= 1.15.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
 Requires: himan-lib >= 16.5.2
 Requires: himan-bin >= 16.2.12
@@ -22,18 +22,18 @@ Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 16.2.12
 Requires: libsmartmet-newbase >= 16.5.4
-Requires: libfmidb >= 16.5.26
+Requires: libfmidb >= 16.6.6
 
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libfmidb-devel >= 16.5.26
+BuildRequires: libfmidb-devel >= 16.6.6
 BuildRequires: libfmigrib-devel >= 16.2.12
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase-devel >= 16.5.4
-BuildRequires: grib_api-devel >= 1.14.0
+BuildRequires: grib_api-devel >= 1.15.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
@@ -102,6 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun  6 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.6-1.fmi
+- New grib_api
+- New pot
 * Thu May 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.26-1.fmi
 - LCL,LFC,EL metric height (HIMAN-123)
 - Change in fmidb headers
