@@ -94,6 +94,12 @@ public:
 	bool ParameterExists(const std::string& paramName) const;
 
 	/**
+	 * @brief Get parameter names 
+	 * @return Parameter names as a vector<string>
+	 */
+	std::vector<std::string> GetParameterNames() const;
+
+	/**
 	* @brief Get parameter options
 	* @param paramName Parameter name
 	* @return Parameter options as a vector of strings, empty vector if the parameter doesn't exist
@@ -101,7 +107,6 @@ public:
 	*/
 
 	const std::vector<std::pair<std::string, std::string>>& GetParameterOptions(const std::string& paramName) const;
-
 
 	void Info(std::shared_ptr<info> theInfo);
 	std::shared_ptr<info> Info() const;

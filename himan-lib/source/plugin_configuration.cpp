@@ -10,6 +10,9 @@
 #include "plugin_configuration.h"
 #include "util.h"
 
+#include <algorithm>
+#include <iterator>
+
 using namespace himan;
 using namespace std;
 
@@ -110,6 +113,18 @@ bool plugin_configuration::ParameterExists(const std::string& paramName) const
 {
 	auto iter = itsPreconfiguredParams.find(paramName);
 	return iter != itsPreconfiguredParams.end();
+}
+
+vector<string> plugin_configuration::GetParameterNames() const
+{
+	vector<string> names;
+
+	for (auto it = itsPreconfiguredParams.begin(); it != itsPreconfiguredParams.end(); ++it)
+	{
+		names.push_back(it->first);
+	}
+
+	return names;
 }
 
 const vector<pair<string, string>>& plugin_configuration::GetParameterOptions(const string& paramName) const
