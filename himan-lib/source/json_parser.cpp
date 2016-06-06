@@ -288,6 +288,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			conf->itsOutputFileType = kGRIB;
 		}
+		else if (theFileType == "GRIB1")
+		{
+			conf->itsOutputFileType = kGRIB1;
+		}
 		else if (theFileType == "GRIB2")
 		{
 			conf->itsOutputFileType = kGRIB2;
