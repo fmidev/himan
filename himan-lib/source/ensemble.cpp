@@ -98,4 +98,11 @@ std::vector<double> ensemble::Values() const
 	return ret;
 }
 
+std::vector<double> ensemble::SortedValues() const
+{
+	std::vector<double> v = Values();
+	std::sort(v.begin(), v.end());
+	return v;
+}
+
 } // namespace himan

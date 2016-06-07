@@ -42,6 +42,9 @@ struct ensemble
 	// @brief Returns the current values of the ensemble
 	std::vector<double> Values() const;
 
+	// @brief Returns the current values of the ensemble sorted from in increasing order
+	std::vector<double> SortedValues() const;
+
 	std::string ClassName() const;
 
 	size_t Size() const;
