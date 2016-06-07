@@ -91,9 +91,11 @@ bool ensemble::NextLocation()
 std::vector<double> ensemble::Values() const
 {
 	std::vector<double> ret (m_forecastCount);
+	size_t i = 0;
 	for (auto& f : m_forecasts)
 	{
-		ret.push_back(f->Value());
+		ret[i] = f->Value();
+		i++;
 	}
 	return ret;
 }
