@@ -98,6 +98,14 @@ public:
 	
 	std::string ProducerMetaData(long producerId, const std::string& attribute) const;
 	
+        /**
+         * @brief Make generic query to radon
+         *
+         * @return result of the query
+         */
+   
+        std::vector<std::string> Query(const std::string& theQuery);
+
 	void PoolMaxWorkers(int maxWorkers);
 
 private:

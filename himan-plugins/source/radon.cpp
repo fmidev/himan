@@ -369,3 +369,11 @@ string radon::ProducerMetaData(long producerId, const string& attribute) const
 	//string query = "SELECT value FROM producers_eav WHERE producer_id = " + boost::lexical_cast<string> (producerId) + " AND attribute = '" + attribute + "'";
 }
 
+vector<string> radon::Query(const string& theQuery)
+{
+        Init();
+
+        itsRadonDB->Query(theQuery);
+
+        return itsRadonDB->FetchRow();
+}
