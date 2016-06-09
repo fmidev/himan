@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.6.6
+Version: 16.6.9
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.15.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.5.2
+Requires: himan-lib >= 16.6.9
 Requires: himan-bin >= 16.2.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -65,6 +65,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libdewpoint.so
 %{_libdir}/himan-plugins/libfetcher.so
 %{_libdir}/himan-plugins/libfog.so
+%{_libdir}/himan-plugins/libfractile.so
 %{_libdir}/himan-plugins/libgrib.so
 %{_libdir}/himan-plugins/libgust.so
 %{_libdir}/himan-plugins/libhitool.so
@@ -102,6 +103,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jun  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.9-1.fmi
+- New plugin fractile
+- Cache support for ensemble members
 * Mon Jun  6 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.6-1.fmi
 - New grib_api
 - New pot
