@@ -31,9 +31,10 @@ string cache::UniqueName(const info& info)
 	string param = info.Param().Name();
 	string level_value = boost::lexical_cast<string>(info.Level().Value());
 	string level = HPLevelTypeToString.at(info.Level().Type());
-	string forecast_value = boost::lexical_cast<string>(info.ForecastType().Value());
+	string forecast_type = boost::lexical_cast<string>(info.ForecastType().Type());
+	string forecast_type_value = boost::lexical_cast<string>(info.ForecastType().Value());
 	return producer_id + '_' + forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value 
-		+ '_' + forecast_value;
+		+ '_' + forecast_type + '_' + forecast_type_value;
 }
 
 string cache::UniqueNameFromOptions(search_options& options)
@@ -44,7 +45,10 @@ string cache::UniqueNameFromOptions(search_options& options)
 	string param = options.param.Name();
 	string level_value = boost::lexical_cast<string>((options.level).Value());
 	string level = HPLevelTypeToString.at(options.level.Type());
-	return producer_id + "_" + forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value;
+	string forecast_type = boost::lexical_cast<string>(options.ftype.Type());
+	string forecast_type_value = boost::lexical_cast<string>(options.ftype.Value());
+	return producer_id + "_" + forecast_time + '_' + valid_time + '_' + param + '_' + level + '_' + level_value
+		+ '_' + forecast_type + '_' + forecast_type_value;
 }
 
 void cache::Insert(info& anInfo, bool pin)
