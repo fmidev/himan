@@ -19,7 +19,6 @@
 #include "json_parser.h"
 #include "fetcher.h"
 #include "ensemble.h"
-#include "radon.h"
 
 namespace himan
 {
@@ -59,9 +58,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
     for (const std::string& fractile : fractiles)
     {
-        r->RadonDB().Query("select param_name, univ_id from param_newbase_v where param_name = '" + fractile + itsParamName + "' and producer_id = " + boost::lexical_cast<std::string>(conf->TargetProducer().Id()));
-        auto answer = r->RadonDB().FetchRow();
-	calculatedParams.push_back(param(answer[0],std::stoi(answer[1])));
+	calculatedParams.push_back(param(fractile + itsParamName));
     }
 
     SetParams(calculatedParams);
