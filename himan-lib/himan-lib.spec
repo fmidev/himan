@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.6.6
+Version: 16.6.9
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -49,6 +49,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Jun  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.9-1.fmi
+- Ensemble helper additions
+- Option to explicitly select grib1 output in json
 * Mon Jun  6 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.6-1.fmi
 - New ensemble helper
 - New method of passing parameters from json to plugin
