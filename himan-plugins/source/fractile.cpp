@@ -51,8 +51,6 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
         exit(1);
     }
 
-    auto r = GET_PLUGIN(radon);
-
     params calculatedParams;
     std::vector<std::string> fractiles = {"F0-","F10-","F25-","F50-","F75-","F90-","F100-"};
 
