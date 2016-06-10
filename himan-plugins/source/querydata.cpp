@@ -180,7 +180,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 
 bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 {
-	assert(theInfo.Data().Size() == qinfo.Size());
+	assert(theInfo.Data().Size() == qinfo.SizeLocations());
 
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
@@ -407,7 +407,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 
 					if (!firstGrid)
 					{
-						if (firstGrid->Type() == kRegularGrid)
+						if (g->Type() == kRegularGrid)
 						{
 							firstGrid = dynamic_cast<regular_grid*> (g);
 						}
