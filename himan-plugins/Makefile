@@ -1,6 +1,6 @@
 LIB = himan-plugins
 
-SCONS_FLAGS=-j 4
+SCONS_FLAGS=-j 8
 
 # How to install
 
@@ -16,6 +16,8 @@ all release:
 	scons $(SCONS_FLAGS)
 debug: 
 	scons $(SCONS_FLAGS) --debug-build
+nocuda: 
+	scons $(SCONS_FLAGS) --no-cuda-build
 
 clean:
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~

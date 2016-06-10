@@ -19,10 +19,18 @@ AddOption(
     help='debug build',
     default=False)
 
+AddOption(
+    '--no-cuda-build',
+    dest='no-cuda-build',
+    action='store_true',
+    help='no cuda build',
+    default=False)
+
 env = Environment()
 
 # Check build
 
+NOCUDA = GetOption('no-cuda-build')
 DEBUG = GetOption('debug-build')
 RELEASE = (not DEBUG)
 
@@ -34,16 +42,17 @@ workspace = os.getcwd() + "/../"
 
 # cuda toolkit path
 
-cuda_toolkit_path = '/usr/local/cuda-7.5'
+if not NOCUDA:
+	cuda_toolkit_path = '/usr/local/cuda-7.5'
 
-if os.environ.get('CUDA_TOOLKIT_PATH') is None:
-        print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
-else:
-        cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
+	if os.environ.get('CUDA_TOOLKIT_PATH') is None:
+        	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path
+	else:
+        	cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
 
 have_cuda = False
 
-if os.path.isfile(cuda_toolkit_path + '/lib64/libcudart_static.a'):
+if not NOCUDA and os.path.isfile(cuda_toolkit_path + '/lib64/libcudart_static.a'):
 	have_cuda = True
 
 env['CC'] = 'gcc'
@@ -193,7 +202,7 @@ env.Append(NVCCPATH = ['/usr/include/smartmet/newbase'])
 
 build_dir = ""
 
-env.Append(CCFLAGS = [ '-g' ])
+env.Append(NOCUDA = NOCUDA)
 
 if RELEASE:
 	env.Append(CCFLAGS = ['-O2'])
@@ -206,6 +215,8 @@ if RELEASE:
 
 if DEBUG:
 	env.Append(CCFLAGS = ['-O0'])
+	env.Append(CCFLAGS = [ '-g' ])
+
 	env.Append(CCFLAGS = cflags_extra)
 	#env.Append(CCFLAGS = cflags_difficult)
 	env.Append(CPPDEFINES = ['DEBUG'])
