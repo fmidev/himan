@@ -337,8 +337,8 @@ std::pair<level,level> integral::LevelForHeight(const producer& prod, double hei
 
 				row = r->RadonDB().FetchRow();
 
-				absolutelowest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
-				absolutehighest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
+				absolutelowest = lexical_cast<long> (r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+				absolutehighest = lexical_cast<long> (r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
 		}
 
 		long newlowest = absolutelowest, newhighest = absolutehighest;
