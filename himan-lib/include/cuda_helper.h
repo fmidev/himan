@@ -5,14 +5,19 @@
 #include <cassert>
 
 #ifdef __CUDACC__
+#define CUDA_HOST __host__
 #define CUDA_DEVICE __device__
 #define CUDA_KERNEL __global__
 #define CUDA_INLINE __forceinline__
 #else
+#define CUDA_HOST 
 #define CUDA_DEVICE
 #define CUDA_KERNEL
 #define CUDA_INLINE
 #endif
+
+typedef const double* __restrict__ cdarr_t;
+typedef double* __restrict__ darr_t;
 
 #ifdef HAVE_CUDA
 
@@ -29,9 +34,6 @@ namespace himan
  * benefit from cuda read-only memory which is supposed to be (according
  * to nvidia) faster than regular global memory.
  */
-
-typedef const double* __restrict__ cdarr_t;
-typedef double* __restrict__ darr_t;
 
 void CheckCudaError(cudaError_t errarg, const char* file, const int line);
 void CheckCudaErrorString(const char* errstr, const char* file,	const int line);

@@ -29,14 +29,7 @@ struct packed_data
 
 #else
 
-#ifdef __CUDACC__
-#define CUDA_HOST __host__
-#define CUDA_DEVICE __device__
-#else
-#define CUDA_HOST
-#define CUDA_DEVICE
-#endif
-
+#include "cuda_helper.h"
 #include <cuda_runtime_api.h>
 #include "himan_common.h"
 #include <string>
