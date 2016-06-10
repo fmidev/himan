@@ -187,6 +187,8 @@ env.Append(NVCCPATH = [workspace + '/himan-plugins/include']) # cuda-helper
 
 build_dir = ""
 
+env.Append(NOCUDA = NOCUDA)
+
 if RELEASE:
 	env.Append(CCFLAGS = ['-O2'])
 	env.Append(CPPDEFINES = ['NDEBUG'])
