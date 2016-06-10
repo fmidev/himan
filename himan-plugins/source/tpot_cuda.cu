@@ -2,9 +2,8 @@
 #include <iostream>
 #include <string>
 
-// CUDA runtime
-#include <cuda_runtime.h>
-#include "stdio.h"
+#include "cuda_plugin_helper.h"
+
 #include "tpot_cuda.h"
 #include "metutil.h"
 

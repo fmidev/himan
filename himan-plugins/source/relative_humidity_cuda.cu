@@ -2,10 +2,7 @@
 #include <iostream>
 #include <string>
 
-// CUDA runtime
-#include <cuda_runtime.h>
-
-#include "cuda_helper.h"
+#include "cuda_plugin_helper.h"
 #include "relative_humidity_cuda.h"
 #include "metutil.h"
 

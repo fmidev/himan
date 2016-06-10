@@ -2,11 +2,8 @@
 #include <iostream>
 #include <string>
 
-// CUDA runtime
-#include <cuda_runtime.h>
-
+#include "cuda_plugin_helper.h"
 #include "stability_cuda.h"
-#include "cuda_helper.h"
 #include "metutil.h"
 
 __global__ void himan::plugin::stability_cuda::Calculate(

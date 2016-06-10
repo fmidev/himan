@@ -2,9 +2,7 @@
 #include <iostream>
 #include <string>
 
-// CUDA runtime
-#include <cuda_runtime.h>
-#include "cuda_helper.h"
+#include "cuda_plugin_helper.h"
 #include "vvms_cuda.h"
 
 __global__ void himan::plugin::vvms_cuda::Calculate(cdarr_t d_t, cdarr_t d_vv, cdarr_t d_p, darr_t d_vv_ms, options opts)

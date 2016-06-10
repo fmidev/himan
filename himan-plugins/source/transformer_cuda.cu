@@ -2,10 +2,7 @@
 #include <iostream>
 #include <string>
 
-// CUDA runtime
-#include <cuda_runtime.h>
-
-#include "cuda_helper.h"
+#include "cuda_plugin_helper.h"
 #include "transformer_cuda.h"
 
 __global__ void himan::plugin::transformer_cuda::Calculate(cdarr_t d_source, darr_t d_dest, options opts)

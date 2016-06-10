@@ -3,7 +3,7 @@
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
 #include <NFmiGrid.h>
-#include "cuda_helper.h"
+#include "cuda_plugin_helper.h"
 #include <thrust/sort.h>
 #include "numerical_functions.h"
 

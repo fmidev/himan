@@ -502,11 +502,13 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 
 void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
 {
+#ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
 		si_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsurf, TLCL, PLCL, PLFC, CINParam);
 	}
 	else
+#endif
 	{
 		GetCINCPU(myTargetInfo, Tsurf, TLCL, PLCL, PLFC, CINParam);
 	}
@@ -675,11 +677,13 @@ void si::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, c
 
 void si::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>,vector<double>>& LFC, param ELTParam, param ELPParam, param ELZParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
+#ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
 		si_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 	}
 	else
+#endif
 	{
 		GetCAPECPU(myTargetInfo, LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 	}
@@ -962,11 +966,13 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 		throw e;
 	}
 	
+#ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
 		return si_cuda::GetLFCGPU(itsConfiguration, myTargetInfo, T, P, TenvLCL);
 	}
 	else
+#endif
 	{
 		return GetLFCCPU(myTargetInfo, T, P, TenvLCL);
 	}
@@ -1223,11 +1229,13 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 
 pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info> myTargetInfo)
 {
+#ifdef HAVE_CUDA
 	if (false && itsConfiguration->UseCuda())
 	{
 		return si_cuda::Get500mMixingRatioTAndTDGPU(itsConfiguration, myTargetInfo);
 	}
 	else
+#endif
 	{
 		return Get500mMixingRatioTAndTDCPU(myTargetInfo);
 	}
@@ -1389,11 +1397,13 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTDCPU(shared_ptr<i
 
 pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> myTargetInfo)
 {
+#ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
 		return si_cuda::GetHighestThetaETAndTDGPU(itsConfiguration, myTargetInfo);
 	}
 	else
+#endif
 	{
 		return GetHighestThetaETAndTDCPU(myTargetInfo);
 	}

@@ -13,7 +13,6 @@
 #ifdef HAVE_CUDA
 
 #include "info_simple.h"
-//#include "cuda_helper.h"
 
 namespace himan
 {

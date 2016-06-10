@@ -2,11 +2,8 @@
 #include <iostream>
 #include <string>
 
-// CUDA runtime
-#include <cuda_runtime.h>
-
 #include "windvector_cuda.h"
-#include "cuda_helper.h"
+#include "cuda_plugin_helper.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
