@@ -19,6 +19,7 @@
 #include "json_parser.h"
 #include "fetcher.h"
 #include "ensemble.h"
+#include "radon.h"
 
 namespace himan
 {
@@ -47,8 +48,8 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
     }
     else
     {
-        throw std::runtime_error("Fractile_plugin: param not specified.");
-        exit(1);
+        itsLogger->Error("Param not specified");
+        return;
     }
 
     params calculatedParams;
@@ -56,7 +57,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
     for (const std::string& fractile : fractiles)
     {
-	calculatedParams.push_back(param(fractile + itsParamName));
+		calculatedParams.push_back(param(fractile + itsParamName));
     }
 
     SetParams(calculatedParams);
@@ -67,7 +68,16 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex)
 {
 
-    const int numForecasts = 51;
+    auto r = GET_PLUGIN(radon);
+    std::string numPermutations = r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
+	
+    if (numPermutations.empty())
+    {
+        itsLogger->Error("Unable to find permutation count from database");
+        return;
+    }
+	
+    const int numForecasts = boost::lexical_cast<int> (numPermutations);
     std::vector<int> fractile = {0,10,25,50,75,90,100};
 
     const std::string deviceType = "CPU";
@@ -99,8 +109,8 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 
     while (myTargetInfo->NextLocation() && ens.NextLocation())
     {
-	auto sortedValues = ens.SortedValues();
-
+        auto sortedValues = ens.SortedValues();
+	
         size_t targetInfoIndex = 0;
         for (auto i : fractile)
         {
