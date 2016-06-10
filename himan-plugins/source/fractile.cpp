@@ -69,15 +69,15 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 {
 
     auto r = GET_PLUGIN(radon);
-    std::string numPermutations = r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
+    std::string ensembleSizeStr = r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
 	
-    if (numPermutations.empty())
+    if (ensembleSizeStr.empty())
     {
-        itsLogger->Error("Unable to find permutation count from database");
+        itsLogger->Error("Unable to find ensemble size from database");
         return;
     }
 	
-    const int numForecasts = boost::lexical_cast<int> (numPermutations);
+    const int ensembleSize = boost::lexical_cast<int> (ensembleSizeStr);
     std::vector<int> fractile = {0,10,25,50,75,90,100};
 
     const std::string deviceType = "CPU";
@@ -90,7 +90,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
     threadedLogger->Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) +
                          " level " + static_cast<std::string>(forecastLevel));
     
-    ensemble ens(param(itsParamName), numForecasts);
+    ensemble ens(param(itsParamName), ensembleSize);
 
     try
     {
@@ -115,7 +115,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
         for (auto i : fractile)
         {
             myTargetInfo->ParamIndex(targetInfoIndex);
-            myTargetInfo->Value(sortedValues[i*(numForecasts-1)/100]);
+            myTargetInfo->Value(sortedValues[i*(ensembleSize-1)/100]);
             ++targetInfoIndex;
         }
     }
