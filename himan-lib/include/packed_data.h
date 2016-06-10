@@ -30,7 +30,6 @@ struct packed_data
 #else
 
 #include "cuda_helper.h"
-#include <cuda_runtime_api.h>
 #include "himan_common.h"
 #include <string>
 #include <stdexcept>

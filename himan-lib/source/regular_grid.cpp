@@ -12,6 +12,10 @@
 #include <NFmiLatLonArea.h>
 #include "logger_factory.h"
 
+#ifdef HAVE_CUDA
+#include "simple_packed.h"
+#endif
+
 using namespace himan;
 using namespace std;
 
@@ -172,7 +176,7 @@ matrix<double>& regular_grid::Data()
 
 size_t regular_grid::Size() const
 {
-	return itsData.Size();
+	return Ni() * Nj();
 }
 
 HPScanningMode regular_grid::ScanningMode() const
@@ -492,7 +496,7 @@ point regular_grid::LatLon(size_t locationIndex) const
 
 	point firstPoint = FirstGridPoint();
 
-	double j = floor(static_cast<double> (locationIndex / itsData.SizeX()));//fmod(static_cast<double> (locationIndex), Nj()); 
+	double j = floor(static_cast<double> (locationIndex / Ni()));//fmod(static_cast<double> (locationIndex), Nj()); 
 	double i = fmod(static_cast<double> (locationIndex), Ni());
 
 	point ret(firstPoint.X() + i * Di(), kHPMissingInt);

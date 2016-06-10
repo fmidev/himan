@@ -6,7 +6,6 @@
  */
 
 #include "packed_data.h"
-#include "cuda_helper.h"
 
 #ifdef HAVE_CUDA
 

@@ -10,7 +10,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "simple_packed.h"
+#include "himan_common.h"
 
 namespace himan
 {
@@ -46,7 +46,9 @@ namespace himan
  *    info class vector, no memcpy inside host memory is necessary.
  * 6) Unregister page-locked memory.
  */
-	
+
+class simple_packed;
+
 struct info_simple
 {
 
