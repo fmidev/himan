@@ -88,16 +88,6 @@ public:
 
 	NFmiRadonDB& RadonDB();
 
-	/**
-	 * @brief Fetch producer metadata from radon (eventually)
-	 *
-     * @param producerId Producer id
-     * @param attribute
-     * @return String containing the result, empty string if attribute is not found
-     */
-	
-	std::string ProducerMetaData(long producerId, const std::string& attribute) const;
-	
 	void PoolMaxWorkers(int maxWorkers);
 
 private:

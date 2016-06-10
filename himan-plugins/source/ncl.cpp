@@ -45,8 +45,8 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		auto r = GET_PLUGIN(radon);
 
-		itsBottomLevel = boost::lexical_cast<int> (r->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
-		itsTopLevel = boost::lexical_cast<int> (r->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));	
+		itsBottomLevel = boost::lexical_cast<int> (r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		itsTopLevel = boost::lexical_cast<int> (r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));	
 	}
 
 	param theRequestedParam;

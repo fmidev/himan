@@ -704,7 +704,7 @@ namespace radon_wrapper
 {
 std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, const std::string& attName)
 {
-	return r->ProducerMetaData(prod.Id(), attName);
+	return r->RadonDB().GetProducerMetaData(prod.Id(), attName);
 }
 } // namespace radon_wrapper
 

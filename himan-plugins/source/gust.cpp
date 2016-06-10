@@ -144,7 +144,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		auto r = GET_PLUGIN(radon);
 
-		lowestHybridLevelNumber = boost::lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		lowestHybridLevelNumber = boost::lexical_cast<long> (r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
 	}
 
 	assert(lowestHybridLevelNumber != kHPMissingInt);

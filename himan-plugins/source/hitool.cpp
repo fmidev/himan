@@ -226,8 +226,8 @@ pair<level,level> hitool::LevelForHeight(const producer& prod, double height) co
 	
 		row = r->RadonDB().FetchRow();
 		
-		absolutelowest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
-		absolutehighest = lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
+		absolutelowest = lexical_cast<long> (r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+		absolutehighest = lexical_cast<long> (r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
 	}
 
 	long newlowest = absolutelowest, newhighest = absolutehighest;
@@ -328,8 +328,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod,
 	{
 		auto r = GET_PLUGIN(radon);
 
-		highestHybridLevel = boost::lexical_cast<long> (r->ProducerMetaData(prod.Id(), "first hybrid level number"));
-		lowestHybridLevel = boost::lexical_cast<long> (r->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		highestHybridLevel = boost::lexical_cast<long> (r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
+		lowestHybridLevel = boost::lexical_cast<long> (r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
 	}
 	
 	// Karkeaa haarukointia
