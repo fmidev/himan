@@ -395,9 +395,18 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 				{
 					auto prodinfo = n->NeonsDB().GetProducerDefinition(itsInfo->Producer().Id());
 					
-					table2Version = boost::lexical_cast<long> (prodinfo["no_vers"]);
+					if (!prodinfo.empty())
+					{
+						table2Version = boost::lexical_cast<long> (prodinfo["no_vers"]);
+					}
 				}
 				
+				if (table2Version == kHPMissingInt)
+				{
+					itsBaseLogger->Warning("table2Version not found from Neons for producer " + boost::lexical_cast<string> (itsInfo->Producer().Name()));
+					continue;
+				}
+
 				long parm_id = n->NeonsDB().GetGridParameterId(table2Version, params[i].Name());
 
 				if (parm_id == -1)
@@ -406,7 +415,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 					itsBaseLogger->Warning("table2Version is " + boost::lexical_cast<string> (table2Version) + ", parm_name is " + params[i].Name());
 					continue;
 				}
-				
+
 				params[i].GribIndicatorOfParameter(parm_id);
 				params[i].GribTableVersion(table2Version);
 			}
