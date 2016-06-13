@@ -82,7 +82,13 @@ vector<string> radon::Files(search_options& options)
 		return files;
 	}
 	
-	string forecastTypeValue = (options.ftype.Type() == kEpsPerturbation) ? boost::lexical_cast<string> (options.ftype.Value()) : "-1";
+	string forecastTypeValue = "-1"; // default, deterministic/analysis
+
+	if (options.ftype.Type() > 2)
+	{
+		forecastTypeValue = boost::lexical_cast<string> (options.ftype.Value());
+	}
+
 	string forecastTypeId = boost::lexical_cast<string> (options.ftype.Type());
 	
 	if (options.time.Step() == 0 && options.ftype.Type() == 1)
@@ -231,9 +237,13 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	 */
 	
 	// itsRadonDB->Verbose(false);
-	
-	double forecastTypeValue = (resultInfo.ForecastType().Type() == kEpsPerturbation) ? resultInfo.ForecastType().Value() : -1.;
-	
+	int forecastTypeValue = -1; // default, deterministic/analysis
+
+	if (resultInfo.ForecastType().Type() > 2)
+	{
+		forecastTypeValue = resultInfo.ForecastType().Value();
+	}
+
 	string analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 			
 	query  << "INSERT INTO data." << table_name
