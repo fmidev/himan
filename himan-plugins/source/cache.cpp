@@ -89,16 +89,19 @@ void cache::SplitToPool(info& anInfo, bool pin)
 	vector<param> params;
 	vector<level> levels;
 	vector<forecast_time> times;
+	vector<forecast_type> ftype;
 
 	params.push_back(anInfo.Param());
 	levels.push_back(anInfo.Level());
 	times.push_back(anInfo.Time());
+	ftype.push_back(anInfo.ForecastType());
 
 	auto newInfo = make_shared<info> (anInfo);
 
 	newInfo->Params(params);
 	newInfo->Levels(levels);
 	newInfo->Times(times);
+	newInfo->ForecastTypes(ftype);
 	newInfo->Create(anInfo.Grid());
 
 	assert(uniqueName == UniqueName(*newInfo));
