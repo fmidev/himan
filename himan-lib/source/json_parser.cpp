@@ -325,7 +325,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		BOOST_FOREACH(string& type, types)
 		{
 			boost::algorithm::to_lower(type);
-			
 			HPForecastType forecastType;
 			
 			if (boost::regex_search(type, boost::regex("pf")))
@@ -333,19 +332,32 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				forecastType = kEpsPerturbation;
 				string list = "";
 				for (size_t i = 2; i < type.size(); i++) list += type[i];
-				
-				vector<string> members = util::Split(list, "-", true);
-				
-				BOOST_FOREACH(const string& member, members)
+
+				vector<string> range = util::Split(list, "-", false);
+			
+				if (range.size() == 1)
 				{
-					theForecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double> (member)));
+					theForecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double> (range[0])));	
+				}
+				else 
+				{
+					assert(range.size() == 2);
+
+					int start = boost::lexical_cast<int> (range[0]);
+					int stop = boost::lexical_cast<int> (range[1]);
+				
+					while (start <= stop)
+					{
+						theForecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double> (start)));
+						start++;
+					}
 				}
 			}
 			else
 			{
 				if (type == "cf")
 				{
-					theForecastTypes.push_back(forecast_type(kEpsControl));
+					theForecastTypes.push_back(forecast_type(kEpsControl, 0));
 				}
 				else if (type == "deterministic")
 				{

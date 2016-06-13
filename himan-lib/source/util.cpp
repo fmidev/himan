@@ -83,10 +83,17 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 		}
 		
 		fileName	<< "_0_"
-					<< setw(3)
-					<< setfill('0')
-					<< info.Time().Step()
+				<< setw(3)
+				<< setfill('0')
+				<< info.Time().Step();
+		if (static_cast<int> (info.ForecastType().Type()) > 2)
+		{
+			fileName	<< "_"
+					<< info.ForecastType().Type()
+					<< "_"
+					<< info.ForecastType().Value()
 					;
+		}
 
 	}
 	else

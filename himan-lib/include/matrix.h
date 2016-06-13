@@ -33,6 +33,15 @@ public:
 	{
 	}
 
+	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue, T theFillValue)
+		: itsData(theWidth* theHeight* theDepth, theFillValue)
+		, itsWidth(theWidth)
+		, itsHeight(theHeight)
+		, itsDepth(theDepth)
+		, itsMissingValue(theMissingValue)
+	{
+	}
+
 	matrix(const matrix& other)
 		: itsData(other.itsData) // Copy contents!
 		, itsWidth(other.itsWidth)

@@ -42,7 +42,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 	try
 	{
 		// First get the control forecast
-		m_forecasts[0] = f->Fetch(config, time, forecastLevel, m_param, forecast_type(kEpsControl), false);
+		m_forecasts[0] = f->Fetch(config, time, forecastLevel, m_param, forecast_type(kEpsControl, 0), false);
 
 		// Then get the perturbations
 		for (size_t i = 1; i < m_perturbations.size() + 1; i++)

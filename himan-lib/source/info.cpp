@@ -127,10 +127,12 @@ void info::Create(const grid* baseGrid, bool createDataBackend)
 
 	itsDimensions = vector<shared_ptr<grid>> (itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
-	Reset();
+	ResetForecastType();
 
 	while (NextForecastType())
 	{
+		ResetTime();
+
 		while (NextTime())
 		{
 			ResetLevel();
