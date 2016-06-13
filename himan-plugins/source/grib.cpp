@@ -61,13 +61,14 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	long edition = static_cast<long> (itsWriteOptions.configuration->OutputFileType());
 
-	// Check levelvalue since that might force us to change file type!
+	// Check levelvalue and forecast type since those might force us to change to grib2!
 	
 	double levelValue = anInfo.Level().Value();
+	HPForecastType forecastType = anInfo.ForecastType().Type();
 
-	if (edition == 1 && anInfo.Level().Type() == kHybrid && levelValue > 127)
+	if (edition == 1 && ((anInfo.Level().Type() == kHybrid && levelValue > 127) || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
-		itsLogger->Info("Level value is larger than 127, changing file type to GRIB2");
+		itsLogger->Debug("File type forced to GRIB2 (level value: " + boost::lexical_cast<string> (levelValue) + ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
 		edition = 2;
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression && itsWriteOptions.configuration->FileWriteOption() != kSingleFile)
 		{	
@@ -145,11 +146,13 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(anInfo.Level().Type(),2));
 	}
 
-	// Misc
+	// Forecast type
 
-	if (edition == 2)
+	itsGrib->Message().ForecastType(anInfo.ForecastType().Type());
+
+	if (static_cast<int> (anInfo.ForecastType().Type()) > 2)
 	{
-		itsGrib->Message().TypeOfGeneratingProcess(2); // Forecast
+		itsGrib->Message().ForecastTypeValue(anInfo.ForecastType().Value());
 	}
 
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
@@ -1342,27 +1345,33 @@ void grib::WriteParameter(info& anInfo)
 				if (tableVersion == kHPMissingInt)
 				{
 					auto prodinfo = n->NeonsDB().GetProducerDefinition(anInfo.Producer().Id());
-					tableVersion = boost::lexical_cast<long> (prodinfo["no_vers"]);
+					
+					if (prodinfo.empty())
+					{
+						itsLogger->Warning("Producer information not found from neons for producer " + boost::lexical_cast<string> (anInfo.Producer().Id()));
+						itsLogger->Warning("Setting table2version to 203");	
+						tableVersion = 203;
+					}
+					else
+					{
+						tableVersion = boost::lexical_cast<long> (prodinfo["no_vers"]);
+					}
 				}
-				
-				assert(tableVersion != kHPMissingInt);
 
 				if (parm_id == kHPMissingInt)
 				{
 					parm_id = n->NeonsDB().GetGridParameterId(tableVersion, anInfo.Param().Name());
 				}
 				
-				if (parm_id == -1 || tableVersion == -1)
+				if (parm_id == -1)
 				{
 					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " + boost::lexical_cast<string> (anInfo.Producer().TableVersion()) + " in neons");
-					itsLogger->Warning("Setting table2version to 203");
-					itsGrib->Message().Table2Version(203);
+					itsLogger->Warning("Setting parameter to 1");
+					parm_id = 1;
 				}
-				else
-				{
-					itsGrib->Message().ParameterNumber(parm_id);
-					itsGrib->Message().Table2Version(tableVersion);
-				}
+
+				itsGrib->Message().ParameterNumber(parm_id);
+				itsGrib->Message().Table2Version(tableVersion);
 			}
 			
 			if (itsWriteOptions.configuration->DatabaseType() == kRadon || (itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon && parm_id == kHPMissingInt))
