@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.6.9
+Version: 16.6.13
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -16,19 +16,19 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.15.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.6.9
-Requires: himan-bin >= 16.2.12
+Requires: himan-lib >= 16.6.13
+Requires: himan-bin >= 16.6.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 16.2.12
+Requires: libfmigrib >= 16.2.13
 Requires: libsmartmet-newbase >= 16.5.4
-Requires: libfmidb >= 16.6.6
+Requires: libfmidb >= 16.6.9
 
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libfmidb-devel >= 16.6.6
-BuildRequires: libfmigrib-devel >= 16.2.12
+BuildRequires: libfmidb-devel >= 16.6.9
+BuildRequires: libfmigrib-devel >= 16.6.13
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
@@ -103,6 +103,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun 13 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.13-1.fmi
+- Fixes to forecast type in several plugins
 * Thu Jun  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.9-1.fmi
 - New plugin fractile
 - Cache support for ensemble members
