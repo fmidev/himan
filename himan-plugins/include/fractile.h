@@ -48,6 +48,7 @@ public:
 private:
     virtual void Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex);
     std::string itsParamName;
+    int itsEnsembleSize;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()

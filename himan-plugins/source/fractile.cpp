@@ -27,7 +27,7 @@ namespace himan
 namespace plugin
 {
 
-fractile::fractile()
+fractile::fractile() : itsEnsembleSize(0)
 {
     itsClearTextFormula = "%";
     itsCudaEnabledCalculation = false;
@@ -60,14 +60,6 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		calculatedParams.push_back(param(fractile + itsParamName));
     }
 
-    SetParams(calculatedParams);
-
-    Start();
-}
-
-void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex)
-{
-
     auto r = GET_PLUGIN(radon);
     std::string ensembleSizeStr = r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
 	
@@ -76,8 +68,17 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
         itsLogger->Error("Unable to find ensemble size from database");
         return;
     }
-	
-    const int ensembleSize = boost::lexical_cast<int> (ensembleSizeStr);
+
+    itsEnsembleSize = boost::lexical_cast<int> (ensembleSizeStr);
+ 
+    SetParams(calculatedParams);
+
+    Start();
+}
+
+void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex)
+{
+
     std::vector<int> fractile = {0,10,25,50,75,90,100};
 
     const std::string deviceType = "CPU";
@@ -90,7 +91,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
     threadedLogger->Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) +
                          " level " + static_cast<std::string>(forecastLevel));
     
-    ensemble ens(param(itsParamName), ensembleSize);
+    ensemble ens(param(itsParamName), itsEnsembleSize);
 
     try
     {
@@ -115,7 +116,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
         for (auto i : fractile)
         {
             myTargetInfo->ParamIndex(targetInfoIndex);
-            myTargetInfo->Value(sortedValues[i*(ensembleSize-1)/100]);
+            myTargetInfo->Value(sortedValues[i*(itsEnsembleSize-1)/100]);
             ++targetInfoIndex;
         }
     }
