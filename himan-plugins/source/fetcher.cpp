@@ -90,6 +90,11 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
 
+	if (static_cast<int> (requestedType.Type()) > 2)
+	{
+		optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" + boost::lexical_cast<string> (requestedType.Value());
+	}
+
 	itsLogger->Warning("No valid data found with given search options " + optsStr);
 
 	throw kFileDataNotFound;
@@ -170,6 +175,11 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " + boost::lexical_cast<string> (requestedTime.Step());
 			optsStr += " param: " + requestedParam.Name();
 			optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " + boost::lexical_cast<string> (requestedLevel.Value());
+
+			if (static_cast<int> (requestedType.Type()) > 2)
+			{
+				optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" + boost::lexical_cast<string> (requestedType.Value());
+			}
 
 			itsLogger->Warning("No valid data found with given search options " + optsStr);
 		}
