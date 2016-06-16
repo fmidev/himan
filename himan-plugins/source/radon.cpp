@@ -17,7 +17,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-const int MAX_WORKERS = 16;
+const int MAX_WORKERS = 32;
 static once_flag oflag;
 
 radon::radon() : itsInit(false), itsRadonDB()
@@ -241,7 +241,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	if (resultInfo.ForecastType().Type() > 2)
 	{
-		forecastTypeValue = resultInfo.ForecastType().Value();
+		forecastTypeValue = static_cast<int> (resultInfo.ForecastType().Value());
 	}
 
 	string analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");

@@ -44,8 +44,8 @@ public:
 	{
 		if (itsRadonDB)
 		{
-			NFmiRadonDBPool::Instance()->Release(&(*itsRadonDB)); // Return connection back to pool
-			itsRadonDB.release();
+			auto raw = itsRadonDB.release(); // Give up ownership
+			NFmiRadonDBPool::Instance()->Release(raw); // Return connection back to pool
 		}
 	}
 
