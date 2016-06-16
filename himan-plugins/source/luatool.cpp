@@ -374,9 +374,9 @@ void SetValues(info_t& anInfo, const object& table)
 	}
 }
 
-std::vector<double> GetValues(info_t& anInfo)
+object GetValues(info_t& anInfo)
 {
-	return anInfo->Data().Values();
+	return VectorToTable(VEC(anInfo));
 }
 
 point GetLatLon(info_t& anInfo, size_t theIndex)
@@ -746,7 +746,7 @@ void BindLib(lua_State* L)
 			.def("SetParamIndex", &info_wrapper::SetParamIndex)
 			.def("SetLevelIndex", &info_wrapper::SetLevelIndex)
 			.def("SetValues", &info_wrapper::SetValues)
-			.def("GetValues", &info_wrapper::GetValues, return_stl_iterator)
+			.def("GetValues", &info_wrapper::GetValues)
 			.def("GetLatLon", &info_wrapper::GetLatLon)
 			.def("GetMissingValue", &info_wrapper::GetMissingValue)
 			.def("SetMissingValue", &info_wrapper::SetMissingValue)
@@ -941,7 +941,7 @@ void BindPlugins(lua_State* L)
 		class_<luatool, compiled_plugin_base>("luatool")
 			.def(constructor<>())
 			.def("ClassName", &luatool::ClassName)
-			// .def("FetchRaw", &luatool::FetchRaw)
+			.def("FetchInfo", &luatool::FetchInfo)
 			.def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&))
 		,
 		class_<hitool, std::shared_ptr<hitool>>("hitool")
@@ -1002,12 +1002,10 @@ void luatool::Finish() const
 	}
 }
 
-/*
-std::shared_ptr<info> luatool::FetchRaw(const forecast_time& theTime, const level& theLevel, const param& theParam) const
+std::shared_ptr<info> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel, const param& theParam) const
 {
-	return compiled_plugin_base::Fetch(theTime,theLevel,theParam,false);
+	return compiled_plugin_base::Fetch(theTime, theLevel, theParam, forecast_type(kDeterministic), false);
 }
-*/
 
 luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const
 {
