@@ -15,15 +15,16 @@
 namespace himan
 {
 
-ensemble::ensemble(const param& parameter, size_t forecastCount)
-	: m_param(parameter)
-	, m_forecastCount(forecastCount)
+ensemble::ensemble(const param& parameter, size_t ensembleSize)
+	: itsParam(parameter)
+	, itsEnsembleSize(ensembleSize)
 {
-	m_perturbations = std::vector<forecast_type> (forecastCount - 1); // forecast count includes the control forecast
-	m_forecasts = std::vector<info_t> (forecastCount);
+	// ensembleSize includes the control forecast
+	itsPerturbations = std::vector<forecast_type> (ensembleSize - 1);
+	itsForecasts = std::vector<info_t> (ensembleSize);
 
 	int perturbationNumber = 1;
-	for (auto & p : m_perturbations)
+	for (auto & p : itsPerturbations)
 	{
 		p = forecast_type (kEpsPerturbation, static_cast<double>(perturbationNumber));
 		perturbationNumber++;
@@ -34,6 +35,23 @@ ensemble::~ensemble()
 {
 }
 
+ensemble::ensemble(const ensemble& other)
+	: itsParam(other.itsParam)
+	, itsEnsembleSize(other.itsEnsembleSize)
+	, itsPerturbations(other.itsPerturbations)
+	, itsForecasts(other.itsForecasts)
+{
+}
+
+ensemble& ensemble::operator=(const ensemble& other)
+{
+	itsParam = other.itsParam;
+	itsEnsembleSize = other.itsEnsembleSize;
+	itsPerturbations = other.itsPerturbations;
+	itsForecasts = other.itsForecasts;
+	return *this;
+}
+
 void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time, const level& forecastLevel)
 {
 	// NOTE should this be stored some where else? Every time you call Fetch(), the instantiation will happen
@@ -42,12 +60,12 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 	try
 	{
 		// First get the control forecast
-		m_forecasts[0] = f->Fetch(config, time, forecastLevel, m_param, forecast_type(kEpsControl, 0), false);
+		itsForecasts[0] = f->Fetch(config, time, forecastLevel, itsParam, forecast_type(kEpsControl, 0), false);
 
 		// Then get the perturbations
-		for (size_t i = 1; i < m_perturbations.size() + 1; i++)
+		for (size_t i = 1; i < itsPerturbations.size() + 1; i++)
 		{
-			m_forecasts[i] = f->Fetch(config, time, forecastLevel, m_param, m_perturbations[i-1], false);
+			itsForecasts[i] = f->Fetch(config, time, forecastLevel, itsParam, itsPerturbations[i-1], false);
 		}
 	}
 	catch (HPExceptionType& e)
@@ -66,21 +84,21 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 
 void ensemble::ResetLocation()
 {
-	for (size_t i = 0; i < m_forecasts.size(); i++) 
+	for (size_t i = 0; i < itsForecasts.size(); i++) 
 	{
-		assert(m_forecasts[i]);
+		assert(itsForecasts[i]);
 
-		m_forecasts[i]->ResetLocation();
+		itsForecasts[i]->ResetLocation();
 	}
 }
 
 bool ensemble::NextLocation()
 {
-	for (size_t i = 0; i < m_forecasts.size(); i++)
+	for (size_t i = 0; i < itsForecasts.size(); i++)
 	{
-		assert(m_forecasts[i]);
+		assert(itsForecasts[i]);
 
-		if (!m_forecasts[i]->NextLocation())
+		if (!itsForecasts[i]->NextLocation())
 		{
 			return false;
 		}
@@ -90,9 +108,9 @@ bool ensemble::NextLocation()
 
 std::vector<double> ensemble::Values() const
 {
-	std::vector<double> ret (m_forecastCount);
+	std::vector<double> ret (itsEnsembleSize);
 	size_t i = 0;
-	for (auto& f : m_forecasts)
+	for (auto& f : itsForecasts)
 	{
 		ret[i] = f->Value();
 		i++;
