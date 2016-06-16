@@ -139,7 +139,7 @@ class grid
 		
 	protected:
 	
-		virtual bool EqualsTo(const grid& other) const;
+		bool EqualsTo(const grid& other) const;
 
 		HPGridType itsGridType;
 
