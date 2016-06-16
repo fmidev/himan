@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.6.13
+Version: 16.6.16
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -103,6 +103,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jun 16 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.16-1.fmi
+- Minor fixes to radon, luatool, fractile
 * Mon Jun 13 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.13-1.fmi
 - Fixes to forecast type in several plugins
 * Thu Jun  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.9-1.fmi
