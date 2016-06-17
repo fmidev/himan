@@ -136,49 +136,6 @@ CUDA_DEVICE
 double Es_(double T);
 
 /**
- * @brief Calculate water vapor saturated pressure in Pa
- * 
- * Equation is used in smarttools-library (NFmiSoundingFunctions::ESAT(double))
- * 
- * Original version of the formula is found here:
- * 
- * http://www.iac.ethz.ch/staff/dominik/idltools/atmos_phys/esat.pro
- * 
- * The following notes are copied from file above:
- * 
- * ------------------------------------------------------------------------
- * PURPOSE:
- *  compute saturation vapor pressure given temperature in K or C
- *
- * EXAMPLE:
- *  print,esat(15)
- *   prints    17.0523
- * 
- * Formula with T = temperature in K
- * esat = exp( -6763.6/(T+T0) - 4.9283*alog((T+T0)) + 54.2190 )
- *
- * Formula close to that of Magnus, 1844 with temperature TC in Celsius
- *    ESAT = 6.1078 * EXP( 17.2693882 * TC / (TC + 237.3) ) ; TC in Celsius
- *
- * or Emanuel's formula (also approximation in form of Magnus' formula,
- * 1844), which was taken from Bolton, Mon. Wea. Rev. 108, 1046-1053, 1980.
- * This formula is very close to Goff and Gratch with differences of
- * less than 0.25% between -50 and 0 deg C (and only 0.4% at -60degC)    
- *    esat=6.112*EXP(17.67*TC/(243.5+TC))
- *
- * WMO reference formula is that of Goff and Gratch (1946), slightly
- * modified by Goff in 1965:
- *
- * ------------------------------------------------------------------------
- *  
- * @param T Temperature in K
- * @return Pressure in Pa
- */
-
-CUDA_DEVICE
-double Es2_(double T);
-
-/**
  * @brief Calculates pseudo-adiabatic lapse rate
  *
  * Original author AK Sarkanen May 1985.
@@ -570,22 +527,6 @@ CUDA_DEVICE
 double ThetaE_(double T, double TD, double P);
 
 /**
- * @brief Calculate equivalent potential temperature.
- * 
- * Formula used is taken from smarttools-library.
- * 
- * Formula is computationally simple, but it's less accurate than
- * ThetaE_()
- * 
- * @param T The temperature of a saturated air parcel (Kelvin)
- * @param P The initial pressure of the parcel (Pa)
- * @return Equivalent potential temperature ThetaE in Kelvins
- */
-
-CUDA_DEVICE
-double ThetaESimple_(double T, double P);
-
-/**
  * @brief Calculate wet-bulb potential temperature
  * 
  * Formula used is (3.8) from
@@ -668,6 +609,61 @@ __global__ void LCL(cdarr_t d_p, cdarr_t d_t, cdarr_t d_td, darr_t d_t_result, d
 
 #endif
 
+namespace smarttool
+{
+// smarttool namespace contains functions copied from smarttools with just the most necessary modifications
+// made (like using SI units)
+
+// these functions are needed in some applications, but generally they should not be used since their origins
+// are unknown
+	
+/**
+ * @brief Calculate equivalent potential temperature.
+ * 
+ * Original:
+ * double NFmiSoundingFunctions::CalcThetaE(double T, double Td, double P)
+ * 
+ * Function has been modified so that it takes humidity as an argument;
+ * the original function took dewpoint and calculated humidity from that.
+ */
+
+CUDA_DEVICE
+double ThetaE_(double T, double RH, double P);
+
+/**
+ * Original:
+ * double NFmiSoundingFunctions::CalcEs2(double Tcelsius)
+ */
+
+CUDA_DEVICE
+double Es2_(double T);
+
+/**
+ * @brief Mixing ratio formula from smarttool library
+ * 
+ * Original:
+ * double NFmiSoundingFunctions::CalcMixingRatio(double T, double Td, double P)
+ * 
+ * Function has been modified so that it takes humidity as an argument;
+ * the original function took dewpoint and calculated humidity from that.
+ */
+
+CUDA_DEVICE
+double MixingRatio_(double T, double RH, double P);
+
+/**
+ * Original:
+ * double NFmiSoundingFunctions::CalcW(double e, double P)
+ */
+
+CUDA_DEVICE
+double W_(double e, double P);
+
+
+CUDA_DEVICE
+double E_(double RH, double es);
+
+} // namespace smarttool
 } // namespace metutil
 } // namespace himan
 
@@ -964,28 +960,6 @@ double himan::metutil::Es_(double T)
 
 }
 
-
-CUDA_DEVICE
-inline 
-double himan::metutil::Es2_(double T)
-{
-	assert(T > 0);
-	
-	const double e1 = 1013.250;
-	const double T0 = 0.;
-	
-	// Horrible, just horrible!
-	
-    double Es = e1 * 
-		::pow(10., (10.79586 * (1 - constants::kKelvin / (T+T0)) - 5.02808 * ::log10((T + T0) / constants::kKelvin) +
-		1.50474 * 1e-4 * (1- ::pow(10.,(-8.29692 * ((T + T0) / constants::kKelvin - 1)))) +
-		0.42873 * 1e-3 * (::pow(10., (4.76955 * (1 - constants::kKelvin / (T + T0)))) - 1) - 2.2195983)
-	);
-	
-	return 100 * Es; // Pa
-	
-}
-
 CUDA_DEVICE
 inline
 double himan::metutil::Gammas_(double P, double T)
@@ -1180,15 +1154,6 @@ double himan::metutil::Theta_(double T, double P)
 
 CUDA_DEVICE
 inline
-double himan::metutil::ThetaESimple_(double T, double P)
-{
-	double tpot = himan::metutil::Theta_(T, P);
-	double w = himan::metutil::MixingRatio_(T, P);
-	return tpot + 3 * w;
-}
-
-CUDA_DEVICE
-inline
 double himan::metutil::ThetaE_(double T, double TD, double P)
 {
 	assert(T > 0);
@@ -1346,5 +1311,78 @@ double himan::metutil::VirtualTemperature_(double T, double P)
 	double r = 0.001 * MixingRatio_(T, P); // kg/kg
 	return (1 + 0.61 * r) * T;
 }
+
+CUDA_DEVICE
+inline 
+double himan::metutil::smarttool::Es2_(double T)
+{
+	assert(T > 100);
+	assert(T < 350);
+	
+	const double b = 17.2694;
+	const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
+	const double T2 = 35.86; // [K]
+				
+	double nume = b * (T-himan::constants::kKelvin);
+	double deno = (T-T2);
+
+	return e0 * ::exp(nume/deno);
+	
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::smarttool::E_(double RH, double es)
+{
+	assert(RH >= 0);
+	assert(RH < 102);
+	
+	return RH * es / 100;
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::smarttool::ThetaE_(double T, double RH, double P)
+{
+	assert(RH >= 0);
+	assert(RH < 102);
+	assert(T > 150);
+	assert(T < 350);
+	assert(P > 1500);
+	
+	double tpot = himan::metutil::Theta_(T, P);
+	double w = himan::metutil::smarttool::MixingRatio_(T, RH, P);
+	return tpot + 3 * w;
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::smarttool::W_(double e, double P)
+{
+	assert(P > 1500);
+
+	double w = 0.622 * e / P * 1000;
+	assert(w < 60);
+
+	return w;
+}
+
+CUDA_DEVICE
+inline
+double himan::metutil::smarttool::MixingRatio_(double T, double RH, double P)
+{
+	assert(RH >= 0);
+	assert(RH < 102);
+	assert(T > 150);
+	assert(T < 350);
+	assert(P > 1500);
+	
+	double es = himan::metutil::smarttool::Es2_(T);
+	double e = himan::metutil::smarttool::E_(RH, es);
+	double w = himan::metutil::smarttool::W_(e, P);
+	
+	return w;
+}
+
 
 #endif /* METUTIL_H_ */
