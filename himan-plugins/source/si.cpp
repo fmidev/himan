@@ -1304,37 +1304,14 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTDCPU(shared_ptr<i
 		for (size_t i = 0; i < T.size(); i++)
 		{
 			if (found[i]) continue;
+			if (T[i] == kFloatMissing || P[i] == kFloatMissing || RH[i] == kFloatMissing) continue;
 
-			assert((T[i] > 150 && T[i] < 350) || T[i] == kFloatMissing);
-			assert((P[i] > 100 && P[i] < 1500) || P[i] == kFloatMissing);
-			assert((RH[i] > 0 && RH[i] < 102) || RH[i] == kFloatMissing);
+			assert(T[i] > 150 && T[i] < 350);
+			assert(P[i] > 100 && P[i] < 1500);
+			assert(RH[i] > 0 && RH[i] < 102);
 			
 			Tpot[i] = metutil::Theta_(T[i], 100*P[i]);
-			MR[i] = [&](){
-				
-				if (T[i] == kFloatMissing || P[i] == kFloatMissing || RH[i] == kFloatMissing) return kFloatMissing;
-
-				// es				
-				const double b = 17.2694;
-				const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
-				const double T1 = 273.16; // [K]
-				const double T2 = 35.86; // [K]
-
-				double nume = b * (T[i]-T1);
-				double deno = (T[i]-T2);
-
-				double es = e0 * ::exp(nume/deno);
-				
-				// e
-				double e = RH[i] * es / 100;
-				
-				// w
-				double w = 0.622 * e/P[i] * 1000;
-				
-				assert(w < 60);
-	
-				return w;
-			}();
+			MR[i] = metutil::smarttool::MixingRatio_(T[i], RH[i], 100*P[i]);
 		}
 
 		tp.Process(Tpot, P);
@@ -1478,7 +1455,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<inf
 			}
 				
 			double TD = metutil::DewPointFromRH_(T, RH);
-			double ThetaE = metutil::ThetaE_(T, TD, P*100);
+			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P*100);
 			
 #ifdef POINTDEBUG
 			myTargetInfo->LocationIndex(i);
