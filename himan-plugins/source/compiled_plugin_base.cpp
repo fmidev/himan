@@ -118,10 +118,11 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 
 	if (itsInfo->NextForecastType())
 	{
-		myTargetInfo.Time(itsInfo->Time());
-		myTargetInfo.Level(itsInfo->Level());
-	
-		bool ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		bool ret = myTargetInfo.Time(itsInfo->Time());
+		assert(ret);
+		ret = myTargetInfo.Level(itsInfo->Level());
+		assert(ret);
+		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
 		assert(ret);
 
 		return ret;
