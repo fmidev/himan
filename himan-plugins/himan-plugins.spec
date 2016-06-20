@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.6.16
+Version: 16.6.20
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -103,6 +103,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun 20 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.20-1.fmi
+- Change si to use smarttool thetae function
 * Thu Jun 16 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.16-1.fmi
 - Minor fixes to radon, luatool, fractile
 * Mon Jun 13 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.13-1.fmi
@@ -116,7 +118,7 @@ rm -rf $RPM_BUILD_ROOT
 * Thu May 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.26-1.fmi
 - LCL,LFC,EL metric height (HIMAN-123)
 - Change in fmidb headers
-* Mon May 17 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.17-1.fmi
+* Tue May 17 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.17-1.fmi
 - Another fix for visibility
 * Mon May 16 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.5.16-1.fmi
 - Fix for visibility
