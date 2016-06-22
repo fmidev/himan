@@ -26,6 +26,8 @@ class ensemble
 public:
 	ensemble(const param& parameter, size_t ensembleSize);
 
+	ensemble();
+
 	~ensemble();
 
 	ensemble(const ensemble& other);
@@ -54,6 +56,8 @@ public:
 	std::string ClassName() const;
 
 	size_t Size() const;
+
+	param Param() const;
 
 private:
 	/// @brief The parameter of the ensemble
@@ -84,6 +88,10 @@ inline std::string ensemble::ClassName() const
 	return "himan::ensemble";
 }
 
+inline param ensemble::Param() const
+{
+	return itsParam;
+}
 
 } // namespace himan
 

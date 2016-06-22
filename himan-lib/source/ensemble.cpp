@@ -31,6 +31,10 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
 	}
 }
 
+ensemble::ensemble()
+{
+}
+
 ensemble::~ensemble()
 {
 }
@@ -52,7 +56,8 @@ ensemble& ensemble::operator=(const ensemble& other)
 	return *this;
 }
 
-void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time, const level& forecastLevel)
+void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
+		const forecast_time& time, const level& forecastLevel)
 {
 	// NOTE should this be stored some where else? Every time you call Fetch(), the instantiation will happen
 	auto f = GET_PLUGIN(fetcher);
