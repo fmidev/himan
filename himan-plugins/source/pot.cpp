@@ -72,6 +72,9 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     const param CapeParamHiman("CAPEMU1040");
     const param RainParam("RRR-KGM2");
     // ----
+    
+    // switch indicating which version of cape is used
+    bool cape1040 = true;
 
     // Current time and level as given to this thread
     int paramStep = 1; // myTargetInfo->Param().Aggregation().TimeResolutionValue();
@@ -92,8 +95,11 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     info_t CAPEInfo, RRInfo, RRPrevInfo, RRNextInfo;
 
     CAPEInfo = Fetch(forecastTime, forecastLevel, CapeParamHiman, forecastType, false);
-    if (!CAPEInfo) CAPEInfo = Fetch(forecastTime, forecastLevel, CapeParamEC, forecastType, false);
-
+    if (!CAPEInfo)
+    {
+         CAPEInfo = Fetch(forecastTime, forecastLevel, CapeParamEC, forecastType, false);
+         cape1040 = false;
+    }
     RRInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);
     RRPrevInfo = Fetch(forecastTimePrev, forecastLevel, RainParam, forecastType, false);
     RRNextInfo = Fetch(forecastTimeNext, forecastLevel, RainParam, forecastType, false);
@@ -149,11 +155,19 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	double lat_abs = abs(LAT);
 	double cape_low0 = 50;
 	double cape_low1 = 400;
-	double cape_high0 = 300;
-	double cape_high1 = 800;
+	double cape_high0 = 600;
+	double cape_high1 = 1100;
 
-	double cape_low = 50;
-	double cape_high = 800;
+	double cape_low = kFloatMissing;
+	double cape_high = kFloatMissing;
+
+        if (!cape1040)
+        {
+            cape_low0 = 100;
+            cape_low1 = 800;
+            cape_high0 = 1200;
+            cape_high1 = 2200;
+        }
 
         if (CAPE_ec == kFloatMissing || RRPrev == kFloatMissing || RR == kFloatMissing || RRNext == kFloatMissing)
         {
@@ -201,12 +215,12 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// Laukaisevan tekijän (Lift) todennäköisyys kasvaa ennustetun sateen intensiteetin funktiona.
 	// Perustelu: Konvektioparametrisointi (eli malli saa nollasta poikkeavaa sademäärää) malleissa käynnistyy useimmiten alueilla, missä mallissa on konvergenssia tai liftiä tarjolla
 
-	if (RR >= 0.02 && RR <= 2)           
+	if (RR >= 0.05 && RR <= 5)           
 	{
-		PoLift_ec  = 0.217147241 * log(RR) + 0.849485;  // Funktio kasvaa nopeasti logaritmisesti nollasta ykköseen
+		PoLift_ec  = 0.217147241 * log(RR) + 0.650514998;  // Funktio kasvaa nopeasti logaritmisesti nollasta ykköseen
 	}
 
-	if (RR > 2)
+	if (RR > 5)
 	{
 		PoLift_ec  = 1;
 	}
