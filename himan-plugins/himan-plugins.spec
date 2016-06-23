@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.6.20
+Version: 16.6.23
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -103,6 +103,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jun 23 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.23-1.fmi
+- Update to pot
 * Mon Jun 20 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.20-1.fmi
 - Change si to use smarttool thetae function
 * Thu Jun 16 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.16-1.fmi
