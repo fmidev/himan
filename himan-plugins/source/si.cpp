@@ -29,7 +29,8 @@ using namespace std;
 using namespace himan::plugin;
 
 #ifdef POINTDEBUG
-himan::point debugPoint(25.47, 37.03);
+const double epsilon = 0.07;
+himan::point debugPoint(25.417, 37.099);
 #endif
 
 #ifdef DEBUG
@@ -803,21 +804,18 @@ void si::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, cons
 			myTargetInfo->LocationIndex(i);
 			point currentPoint = myTargetInfo->LatLon();
 			
-			if (fabs(currentPoint.X() - debugPoint.X()) < 0.08 && fabs(currentPoint.Y() - debugPoint.Y()) < 0.08)
+			if (fabs(currentPoint.X() - debugPoint.X()) < epsilon && fabs(currentPoint.Y() - debugPoint.Y()) < epsilon)
 			{
-				std::cout << "LatLon\t" << currentPoint.X() << "," << currentPoint.Y() << std::endl
-							<< "Tparcel\t" << Tparcel << std::endl
-							<< "Tenv\t" << Tenv << std::endl
-							<< "startP\t" << P[i] << std::endl
-							<< "Penv\t" << Penv << std::endl
-							<< "CAPE\t" << CAPE[i] << std::endl
-							<< "CAPE1040\t" << CAPE1040[i] << std::endl
-							<< "MoistLift" << std::endl
-							<< "currP\t" << Piter[i] << std::endl
-							<< "currT\t" << Titer[i] << std::endl
-							<< "targetP\t" << PenvVec[i] << std::endl
-							<< "result\t" << TparcelVec[i] << std::endl
-							<< "------\n";
+				std::cout << "CAPE LatLon " 
+					<< currentPoint.X() << "," << currentPoint.Y()
+					<< " Tparcel " << Tparcel
+					<< " Tenv " << Tenv
+					<< " startP " << P[i]
+					<< " Penv " << Penv
+					<< " CAPE " << CAPE[i]
+					<< " CAPE3km " << CAPE3km[i]
+					<< " CAPE1040 " << CAPE1040[i]
+					<< std::endl;
 			}
 #endif
 			if (found[i] & FCAPE)
@@ -1070,16 +1068,15 @@ pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo,
 			myTargetInfo->LocationIndex(i);
 			point currentPoint = myTargetInfo->LatLon();
 			
-			if (fabs(currentPoint.X() - debugPoint.X()) < 0.08 && fabs(currentPoint.Y() - debugPoint.Y()) < 0.08)
+			if (fabs(currentPoint.X() - debugPoint.X()) < epsilon && fabs(currentPoint.Y() - debugPoint.Y()) < epsilon)
 			{
-				std::cout << "LatLon\t" << currentPoint.X() << "," << currentPoint.Y() << std::endl
-							<< "Tparcel\t" << Tparcel << std::endl
-							<< "Tenv\t" << Tenv << std::endl
-							<< "LCLP\t" << P[i] << std::endl
-							<< "Penv\t" << Penv << std::endl
-							<< "Tresult\t" << Tresult << std::endl
-							<< "Presult\t" << Presult << std::endl
-							<< "------\n";
+				std::cout << "LFC LatLon " << currentPoint.X() << "," << currentPoint.Y()
+						<< " Tparcel " << Tparcel
+						<< " Tenv " << Tenv
+						<< " startP " << P[i]
+						<< " Penv " << Penv
+						<< " Tresult " << Tresult
+						<< " Presult " << Presult << std::endl;
 			}
 #endif
 			if (Tparcel == kFloatMissing || Penv > P[i])
@@ -1173,8 +1170,10 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 	assert(Tsurf.size() == VEC(Psurf).size());
 
+	int i = -1;
 	for (auto&& tup : zip_range(Tsurf, TDsurf, VEC(Psurf), TLCL, PLCL))
 	{	
+		i++;
 		double T = tup.get<0> ();
 		double TD = tup.get<1> ();
 		double P = tup.get<2> () * Pscale; // Pa
@@ -1189,6 +1188,23 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 		{
 			Presult = 0.01 * ((lcl.P > P) ? P : lcl.P); // hPa
 		}
+		
+#ifdef POINTDEBUG
+		myTargetInfo->LocationIndex(i);
+		point currentPoint = myTargetInfo->LatLon();
+
+		if (fabs(currentPoint.X() - debugPoint.X()) < epsilon && fabs(currentPoint.Y() - debugPoint.Y()) < epsilon)
+		{
+				std::cout << "LCL LatLon " << currentPoint.X() << "," << currentPoint.Y()
+										<< " T " << T
+										<< " TD " << TD
+										<< " P " << P
+										<< " TLCL " << Tresult
+										<< " PLCL " << Presult
+										<< std::endl;
+		}
+#endif
+
 	}
 
 	for (size_t i = 0; i < PLCL.size(); i++)
@@ -1461,17 +1477,27 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<inf
 			myTargetInfo->LocationIndex(i);
 			point currentPoint = myTargetInfo->LatLon();
 			
-			if (fabs(currentPoint.X() - debugPoint.X()) < 0.08 && fabs(currentPoint.Y() - debugPoint.Y()) < 0.08)
+			if (fabs(currentPoint.X() - debugPoint.X()) < epsilon && fabs(currentPoint.Y() - debugPoint.Y()) < epsilon)
 			{
-				std::cout << "LatLon\t" << currentPoint.X() << "," << currentPoint.Y() << std::endl
-							<< "T\t\t" << T << std::endl
-							<< "RH\t\t" << RH << std::endl
-							<< "P\t\t" << P << std::endl
-							<< "ThetaE\t\t" << ThetaE << std::endl
-							<< "refThetaE\t" << refThetaE << std::endl
-							<< "Tresult\t\t" << Tresult << std::endl
-							<< "TDresult\t" << TDresult << std::endl
-							<< "------\n";
+				
+				std::cout << "MU LatLon " << currentPoint.X() << "," << currentPoint.Y()
+										<< " level " << curLevel.Value()
+										<< " T " << (T-273.15)
+										<< " TD " << (TD-273.15)
+										<< " RH " << RH
+										<< " P " << P
+										<< " ThetaE " << (ThetaE-273.15)
+										<< " refThetaE " << (refThetaE-273.15)
+										<< " Tresult " << (Tresult-273.15)
+										<< " TDresult " << (TDresult-273.15)
+										<< " \"Presult\" " << P;
+				if (ThetaE >= refThetaE)
+				{
+						 std::cout << " new local maximum found";
+				}
+
+				std::cout << std::endl;
+
 			}
 #endif
 			assert(ThetaE >= 0);
