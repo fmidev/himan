@@ -1352,7 +1352,7 @@ double himan::metutil::smarttool::ThetaE_(double T, double RH, double P)
 	
 	double tpot = himan::metutil::Theta_(T, P);
 	double w = himan::metutil::smarttool::MixingRatio_(T, RH, P);
-	return (tpot-himan::constants::kKelvin) + 3 * w;
+	return tpot + 3 * w;
 }
 
 CUDA_DEVICE
@@ -1361,7 +1361,7 @@ double himan::metutil::smarttool::W_(double e, double P)
 {
 	assert(P > 1500);
 
-	double w = 0.622 * e / P * 1000;
+	double w = 0.622 * e / P * 100000;
 	assert(w < 60);
 
 	return w;
