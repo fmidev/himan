@@ -121,33 +121,33 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		auto f = GET_PLUGIN(fetcher);
 		auto cnf = make_shared<plugin_configuration> (*itsConfiguration);
 
+		auto prevTime = forecastTime;
+		prevTime.OriginDateTime().Adjust(kHourResolution, -12);
+
 		// ECMWF probabilities from EPS
 		cnf->SourceProducers({producer(242, 0, 0, "ECM_PROB")});
 		cnf->SourceGeomNames({itsECEPSGeom});
 		
 		// PROB-RR-1 = "RR>= 1mm 6h"
-		ECprob1 = f->Fetch(cnf, forecastTime, forecastLevel, param("PROB-RR-1"), forecastType, false);
+		ECprob1 = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-1"), forecastType, false);
 		
 		// PROB-RR-01 = "RR>= 0.1mm 6h"
-		ECprob01 = f->Fetch(cnf, forecastTime, forecastLevel, param("PROB-RR-01"), forecastType, false);
+		ECprob01 = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-01"), forecastType, false);
 
 		// ECMWF fractiles from EPS
 		cnf->SourceProducers({producer(240, 0, 0, "ECGMTA")});
 
 		// 50th fractile (median)
-		ECfract50 = f->Fetch(cnf, forecastTime, level(kGround, 0), param("F50-RR-6"), forecastType, false);
+		ECfract50 = f->Fetch(cnf, prevTime, level(kGround, 0), param("F50-RR-6"), forecastType, false);
 		
 		// 75th fractile
-		ECfract75 = f->Fetch(cnf, forecastTime, level(kGround, 0), param("F75-RR-6"), forecastType, false);
+		ECfract75 = f->Fetch(cnf, prevTime, level(kGround, 0), param("F75-RR-6"), forecastType, false);
 
 		// ECMWF deterministic
 		cnf->SourceGeomNames({itsECGeom});
 		
 		// Current forecast
 		EC = f->Fetch(cnf, forecastTime, level(kHeight, 0), param("RRR-KGM2"), forecastType, false);
-
-		auto prevTime = forecastTime;
-		prevTime.OriginDateTime().Adjust(kHourResolution, -12);
 
 		// Previous forecast
 		ECprev = f->Fetch(cnf, prevTime, level(kHeight, 0), param("RRR-KGM2"), forecastType, false);
@@ -179,7 +179,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		// GFS
 		cnf->SourceGeomNames({itsGFSGeom});
 		cnf->SourceProducers({producer(250,0, 0, "GFSMTA")});
-		GFS = f->Fetch(cnf, forecastTime, level(kGround, 0), param("RRR-KGM2"), forecastType, false);
+		GFS = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
 	}
 	catch (HPExceptionType e)
 	{
