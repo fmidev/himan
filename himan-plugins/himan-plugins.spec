@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.6.23
+Version: 16.6.27
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.15.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.6.13
+Requires: himan-lib >= 16.6.27
 Requires: himan-bin >= 16.6.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -76,10 +76,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libluatool.so
 %{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
+%{_libdir}/himan-plugins/libpop.so
 %{_libdir}/himan-plugins/libpot.so
 %{_libdir}/himan-plugins/libprecipitation_rate.so
 %{_libdir}/himan-plugins/libpreform_hybrid.so
 %{_libdir}/himan-plugins/libpreform_pressure.so
+%{_libdir}/himan-plugins/libprobability.so
 %{_libdir}/himan-plugins/libqnh.so
 %{_libdir}/himan-plugins/libquerydata.so
 %{_libdir}/himan-plugins/libradon.so
@@ -103,6 +105,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun 27 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.27-1.fmi
+- New plugin probability
+- New plugin pop
+- Changes si (metutil)
 * Thu Jun 23 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.23-1.fmi
 - Update to pot
 * Mon Jun 20 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.20-1.fmi
