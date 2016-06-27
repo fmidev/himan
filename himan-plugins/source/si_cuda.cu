@@ -464,7 +464,7 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simpl
 			double TD = metutil::DewPointFromRH_(T, RH);
 
 			double& refThetaE = d_maxThetaE[idx];
-			double ThetaE = metutil::ThetaE_(T, TD, P*100);
+			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P*100);
 
 			if (ThetaE >= refThetaE)
 			{
