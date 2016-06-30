@@ -114,12 +114,13 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * Required source parameters
 	 */
 
-	info_t ECprob1, ECprob01, ECfract50, ECfract75, EC, ECprev, PEPS, Hirlam, Harmonie, GFS;
-	
+	info_t ECprob1, ECprob01, ECfract50, ECfract75, EC, ECprev;
+
+	auto cnf = make_shared<plugin_configuration> (*itsConfiguration);
+	auto f = GET_PLUGIN(fetcher);
+
 	try 
 	{
-		auto f = GET_PLUGIN(fetcher);
-		auto cnf = make_shared<plugin_configuration> (*itsConfiguration);
 
 		auto prevTime = forecastTime;
 		prevTime.OriginDateTime().Adjust(kHourResolution, -12);
@@ -152,34 +153,6 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		// Previous forecast
 		ECprev = f->Fetch(cnf, prevTime, level(kHeight, 0), param("RRR-KGM2"), forecastType, false);
 
-		// PEPS
-		
-		// Peps uses grib2, neons support for this is patchy and we have to give grib centre & ident
-		// so that correct name is found
-
-		cnf->SourceGeomNames({itsPEPSGeom});
-		cnf->SourceProducers({producer(121,86,121,"PEPSSCAN")});
-
-		// PROB-RR-1 = "RR>= 0.2mm 1h"
-		PEPS = f->Fetch(cnf, forecastTime, level(kHeight, 2), param("PROB-RR-1"), forecastType, false);
-
-		// Hirlam
-		cnf->SourceGeomNames({itsHirlamGeom});
-		cnf->SourceProducers({producer(230, 0, 0, "HL2MTA")});
-		Hirlam = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
-
-		// Harmonie
-		cnf->SourceGeomNames({itsHarmonieGeom});
-		cnf->SourceProducers({producer(210, 0, 0, "AROMTA")});
-
-		forecastTime.StepResolution(kMinuteResolution);
-		Harmonie = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
-		forecastTime.StepResolution(kHourResolution);
-
-		// GFS
-		cnf->SourceGeomNames({itsGFSGeom});
-		cnf->SourceProducers({producer(250,0, 0, "GFSMTA")});
-		GFS = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
 	}
 	catch (HPExceptionType e)
 	{
@@ -192,6 +165,109 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	}	
 
+	/*
+	 * Optional source parameters
+	 */
+
+	vector<double> PEPS, Hirlam, Harmonie, GFS;
+
+	// PEPS
+
+	try
+	{		
+		// Peps uses grib2, neons support for this is patchy and we have to give grib centre & ident
+		// so that correct name is found
+
+		cnf->SourceGeomNames({itsPEPSGeom});
+		cnf->SourceProducers({producer(121,86,121,"PEPSSCAN")});
+
+		// PROB-RR-1 = "RR>= 0.2mm 1h"
+		auto PEPSInfo = f->Fetch(cnf, forecastTime, level(kHeight, 2), param("PROB-RR-1"), forecastType, false);
+		PEPS = VEC(PEPSInfo);
+	}
+	catch (HPExceptionType e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			PEPS.resize(myTargetInfo->Data().Size(), kFloatMissing);
+		}
+		else
+		{
+			throw e;
+		}
+	}
+
+	// Hirlam
+	
+	try
+	{
+		cnf->SourceGeomNames({itsHirlamGeom});
+		cnf->SourceProducers({producer(230, 0, 0, "HL2MTA")});
+	
+		auto HirlamInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
+
+		Hirlam = VEC(HirlamInfo);
+	}
+	catch (HPExceptionType e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			Hirlam.resize(myTargetInfo->Data().Size(), kFloatMissing);
+		}
+		else
+		{
+			throw e;
+		}
+	}
+
+	// Harmonie
+	
+	try
+	{
+		cnf->SourceGeomNames({itsHarmonieGeom});
+		cnf->SourceProducers({producer(210, 0, 0, "AROMTA")});
+
+		forecastTime.StepResolution(kMinuteResolution);
+		auto HarmonieInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
+
+		Harmonie = VEC(HarmonieInfo);
+	}
+	catch (HPExceptionType e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			Harmonie.resize(myTargetInfo->Data().Size(), kFloatMissing);
+		}
+		else
+		{
+			throw e;
+		}
+	}
+
+	// GFS
+
+	try
+	{
+		forecastTime.StepResolution(kHourResolution);
+
+		cnf->SourceGeomNames({itsGFSGeom});
+		cnf->SourceProducers({producer(250,0, 0, "GFSMTA")});
+		auto GFSInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
+
+		GFS = VEC(GFSInfo);
+	}
+	catch (HPExceptionType e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			GFS.resize(myTargetInfo->Data().Size(), kFloatMissing);
+		}
+		else
+		{
+			throw e;
+		}
+	}
+
 	const string deviceType = "CPU";
 
 	matrix<double> area(myTargetInfo->Data().SizeX(), myTargetInfo->Data().SizeY(), 1, kFloatMissing, 0); // "A"
@@ -202,7 +278,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 #endif
 	// 1. Calculate initial area and confidence of precipitation
 	
-	for (auto&& tup : zip_range(confidence.Values(), area.Values(), VEC(ECfract50), VEC(ECfract75), VEC(EC), VEC(ECprev), VEC(PEPS), VEC(Hirlam), VEC(Harmonie), VEC(GFS)))
+	for (auto&& tup : zip_range(confidence.Values(), area.Values(), VEC(ECfract50), VEC(ECfract75), VEC(EC), VEC(ECprev), PEPS, Hirlam, Harmonie, GFS))
 	{
 #ifdef POINTDEBUG
 		bool print = false;
@@ -214,7 +290,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 #endif
 		double& out_confidence		= tup.get<0>();
-		double& out_area			= tup.get<1>();
+		double& out_area		= tup.get<1>();
 		double rr_f50			= tup.get<2>();
 		double rr_f75			= tup.get<3>();
 		double rr_ec			= tup.get<4>();
