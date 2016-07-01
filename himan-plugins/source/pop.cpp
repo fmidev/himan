@@ -114,36 +114,16 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * Required source parameters
 	 */
 
-	info_t ECprob1, ECprob01, ECfract50, ECfract75, EC, ECprev;
+	info_t EC, ECprev;
 
 	auto cnf = make_shared<plugin_configuration> (*itsConfiguration);
 	auto f = GET_PLUGIN(fetcher);
 
+	auto prevTime = forecastTime;
+	prevTime.OriginDateTime().Adjust(kHourResolution, -12);
+
 	try 
 	{
-
-		auto prevTime = forecastTime;
-		prevTime.OriginDateTime().Adjust(kHourResolution, -12);
-
-		// ECMWF probabilities from EPS
-		cnf->SourceProducers({producer(242, 0, 0, "ECM_PROB")});
-		cnf->SourceGeomNames({itsECEPSGeom});
-		
-		// PROB-RR-1 = "RR>= 1mm 6h"
-		ECprob1 = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-1"), forecastType, false);
-		
-		// PROB-RR-01 = "RR>= 0.1mm 6h"
-		ECprob01 = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-01"), forecastType, false);
-
-		// ECMWF fractiles from EPS
-		cnf->SourceProducers({producer(240, 0, 0, "ECGMTA")});
-
-		// 50th fractile (median)
-		ECfract50 = f->Fetch(cnf, prevTime, level(kGround, 0), param("F50-RR-6"), forecastType, false);
-		
-		// 75th fractile
-		ECfract75 = f->Fetch(cnf, prevTime, level(kGround, 0), param("F75-RR-6"), forecastType, false);
-
 		// ECMWF deterministic
 		cnf->SourceGeomNames({itsECGeom});
 		
@@ -158,7 +138,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			myThreadedLogger->Error("Some data not found");
+			myThreadedLogger->Error("ECMWF deterministic precipitation data not found");
 		}
 
 		return;
@@ -169,7 +149,62 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * Optional source parameters
 	 */
 
-	vector<double> PEPS, Hirlam, Harmonie, GFS;
+	vector<double> PEPS, Hirlam, Harmonie, GFS, ECprob1, ECprob01, ECfract50, ECfract75;
+
+	// ECMWF probabilities from EPS
+	
+	try
+	{
+		cnf->SourceProducers({producer(242, 0, 0, "ECM_PROB")});
+		cnf->SourceGeomNames({itsECEPSGeom});
+		
+		// PROB-RR-1 = "RR>= 1mm 6h"
+		auto ECprob1Info = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-1"), forecastType, false);
+		ECprob1 = VEC(ECprob1Info);
+
+		// PROB-RR-01 = "RR>= 0.1mm 6h"
+		auto ECprob01Info = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-01"), forecastType, false);
+		ECprob01 = VEC(ECprob01Info);
+	}
+	catch (HPExceptionType e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			ECprob1.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			ECprob01.resize(myTargetInfo->Data().Size(), kFloatMissing);
+		}
+		else
+		{
+			throw e;
+		}
+	}
+
+	// ECMWF fractiles from EPS
+
+	try
+	{
+		cnf->SourceProducers({producer(240, 0, 0, "ECGMTA")});
+
+		// 50th fractile (median)
+		auto ECfract50Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("F50-RR-6"), forecastType, false);
+		ECfract50 = VEC(ECfract50Info);
+
+		// 75th fractile
+		auto ECfract75Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("F75-RR-6"), forecastType, false);
+		ECfract75 = VEC(ECfract75Info);
+	}
+	catch (HPExceptionType e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			ECfract50.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			ECfract75.resize(myTargetInfo->Data().Size(), kFloatMissing);
+		}
+		else
+		{
+			throw e;
+		}
+	}
 
 	// PEPS
 
@@ -278,7 +313,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 #endif
 	// 1. Calculate initial area and confidence of precipitation
 	
-	for (auto&& tup : zip_range(confidence.Values(), area.Values(), VEC(ECfract50), VEC(ECfract75), VEC(EC), VEC(ECprev), PEPS, Hirlam, Harmonie, GFS))
+	for (auto&& tup : zip_range(confidence.Values(), area.Values(), ECfract50, ECfract75, VEC(EC), VEC(ECprev), PEPS, Hirlam, Harmonie, GFS))
 	{
 #ifdef POINTDEBUG
 		bool print = false;
@@ -315,15 +350,27 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 #endif
 
-		if (rr_ec == kFloatMissing || rr_ecprev == kFloatMissing || rr_f50 == kFloatMissing || rr_f75 == kFloatMissing)
+		if (rr_ec == kFloatMissing || rr_ecprev == kFloatMissing)
 		{
 			continue;
 		}
 
+		double _K1 = K1;
+		double _K2 = K2;
 		double _K4 = K4;
 		double _K6 = K6;
 		double _K7 = K7;
 		double _K8 = K8;
+
+		if (rr_f50 == kFloatMissing)
+		{
+			_K1 = 0;
+		}
+
+		if (rr_f75 == kFloatMissing)
+		{
+			_K2 = 0;
+		}
 
 		if (rr_peps == kFloatMissing)
 		{
@@ -394,7 +441,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			gfs = 1;
 		}
 
-		out_confidence = (K1*f50 + K2*f75 + K3*ecprev + _K4*peps + K5*ec + _K6*hirlam + _K7*gfs + _K8*harmonie) / (K1+K2+K3+_K4+K5+_K6+_K7+_K8); 
+		out_confidence = (_K1*f50 + _K2*f75 + K3*ecprev + _K4*peps + K5*ec + _K6*hirlam + _K7*gfs + _K8*harmonie) / (_K1+_K2+K3+_K4+K5+_K6+_K7+_K8); 
 		
 		assert(out_confidence <= 1.01);
 
@@ -406,10 +453,10 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 #ifdef POINTDEBUG
 		if (print)
 		{
-			std::cout << "(" <<K1<<"*" <<f50 << " + "<< K2 << "*" << f75 << "+" << K3 <<"*" << ecprev <<"+" <<_K4 <<"*"<<peps <<"+" <<K5<<"*"<<ec <<"+" <<_K6<<"*"<<hirlam <<"+" <<_K7<<"*"<<gfs <<" + "<<_K8<<"*"<<harmonie<<") = "
-					<< (K1*f50 + K2*f75 + K3*ecprev + _K4*peps + K5*ec + _K6*hirlam + _K7*gfs + _K8*harmonie) << std::endl
-					<< "("<<K1<<"+"<<K2<<"+"<<K3<<"+"<<_K4<<"+"<<K5<<"+"<<_K6<<"+"<<_K7<<"+"<<_K8<<")" << " = " 
-					<< (K1+K2+K3+_K4+K5+_K6+_K7+_K8) << std::endl
+			std::cout << "(" <<_K1<<"*" <<f50 << " + "<< _K2 << "*" << f75 << "+" << K3 <<"*" << ecprev <<"+" <<_K4 <<"*"<<peps <<"+" <<K5<<"*"<<ec <<"+" <<_K6<<"*"<<hirlam <<"+" <<_K7<<"*"<<gfs <<" + "<<_K8<<"*"<<harmonie<<") = "
+					<< (_K1*f50 + _K2*f75 + K3*ecprev + _K4*peps + K5*ec + _K6*hirlam + _K7*gfs + _K8*harmonie) << std::endl
+					<< "("<<_K1<<"+"<<_K2<<"+"<<K3<<"+"<<_K4<<"+"<<K5<<"+"<<_K6<<"+"<<_K7<<"+"<<_K8<<")" << " = " 
+					<< (_K1+_K2+K3+_K4+K5+_K6+_K7+_K8) << std::endl
 					<< "confidence " << _confidence << " area " << _area << std::endl;
 		}
 #endif
@@ -449,7 +496,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	i = -1;
 #endif
 	
-	for (auto&& tup : zip_range(result, confidence.Values(), area.Values(), VEC(ECprob1), VEC(ECprob01)))
+	for (auto&& tup : zip_range(result, confidence.Values(), area.Values(), ECprob1, ECprob01))
 	{
 
 #ifdef POINTDEBUG
