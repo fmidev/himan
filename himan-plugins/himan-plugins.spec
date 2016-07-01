@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.6.27
+Version: 16.7.1
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -105,6 +105,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Jul  1 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.7.1-1.fmi
+- More changes to pop
+* Thu Jun 30 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.30-1.fmi
+- Changes to pop
 * Mon Jun 27 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.27-1.fmi
 - New plugin probability
 - New plugin pop
