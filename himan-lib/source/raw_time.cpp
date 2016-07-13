@@ -100,6 +100,24 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 
         itsDateTime = itsDateTime + adjustment;
     }
+    else if (timeResolution == kYearResolution)
+    {
+        boost::gregorian::years adjustment (theValue);
+
+        itsDateTime = itsDateTime + adjustment;
+    }
+    else if (timeResolution == kMonthResolution)
+    {
+        boost::gregorian::months adjustment (theValue);
+
+        itsDateTime = itsDateTime + adjustment;
+    }
+    else if (timeResolution == kDayResolution)
+    {
+        boost::gregorian::days adjustment (theValue);
+
+        itsDateTime = itsDateTime + adjustment;
+    }
     else
     {
     	throw std::runtime_error(ClassName() + ": Invalid time adjustment unit: " + boost::lexical_cast<std::string> (timeResolution) + "'");

@@ -308,13 +308,19 @@ enum HPTimeResolution
 {
 	kUnknownTimeResolution = 0,
 	kHourResolution,
-	kMinuteResolution
+	kMinuteResolution,
+	kYearResolution,
+	kMonthResolution,
+	kDayResolution
 };
 
 const boost::unordered_map<HPTimeResolution,std::string> HPTimeResolutionToString = ba::map_list_of
 		(kUnknownTimeResolution, "unknown")
 		(kHourResolution, "hour")
-		(kMinuteResolution, "minute");
+		(kMinuteResolution, "minute")
+		(kYearResolution, "year")
+		(kMonthResolution, "month")
+		(kDayResolution, "day");
 
 enum HPPackingType
 {
