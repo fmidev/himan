@@ -24,6 +24,8 @@ namespace himan
 namespace plugin
 {
 
+static std::mutex singleFileWriteMutex;
+
 static const std::string kClassName = "himan::plugin::probability";
 
 /// @brief Used for calculating wind vector magnitude
@@ -331,7 +333,16 @@ void probability::WriteToFile(const info& targetInfo, const size_t targetInfoInd
 	info.ResetParam();
 	info.ParamIndex(targetInfoIndex);
 
-	writer->ToFile(info, itsConfiguration);
+	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	{
+		writer->ToFile(info, itsConfiguration);
+	}
+	else
+	{
+		std::lock_guard<std::mutex> lock(singleFileWriteMutex);
+
+		writer->ToFile(info, itsConfiguration, itsConfiguration->ConfigurationFile());
+	}
 
 	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
