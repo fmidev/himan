@@ -701,8 +701,6 @@ public:
 
 	double Value() const;
 
-	HPProjectionType Projection() const;
-
 #ifdef HAVE_CUDA
 
 	/**

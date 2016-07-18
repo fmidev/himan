@@ -1,0 +1,298 @@
+#include "stereographic_grid.h"
+#include <boost/lexical_cast.hpp>
+#include "logger_factory.h"
+
+using namespace himan;
+using namespace std;
+
+stereographic_grid::stereographic_grid()
+	: grid(kRegularGrid, kStereographic) 
+	, itsBottomLeft()
+	, itsTopRight()
+	, itsOrientation(kHPMissingInt)
+	, itsDi(kHPMissingValue)
+	, itsDj(kHPMissingValue)
+	, itsNi(kHPMissingInt)
+	, itsNj(kHPMissingInt)
+{
+	itsLogger = logger_factory::Instance()->GetLog("stereographic_grid");
+}
+
+stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight, double theOrientation)
+	: grid(kRegularGrid, kStereographic, theScanningMode) 
+	, itsBottomLeft(theBottomLeft)
+	, itsTopRight(theTopRight)
+	, itsOrientation(theOrientation)
+{
+	if (itsScanningMode != kBottomLeft)
+	{
+		throw runtime_error("Only bottom left is supported for stereographic grids");
+	}
+	
+	itsLogger = logger_factory::Instance()->GetLog("stereographic_grid");
+}
+
+stereographic_grid::stereographic_grid(const stereographic_grid& other)
+	: grid(other)
+	, itsBottomLeft(other.itsBottomLeft)
+	, itsTopRight(other.itsTopRight)
+	, itsOrientation(other.itsOrientation)
+	, itsDi(other.itsDi)
+	, itsDj(other.itsDj)
+	, itsNi(other.itsNi)
+	, itsNj(other.itsNj)
+{
+	itsLogger = logger_factory::Instance()->GetLog("stereographic_grid");
+}
+
+size_t stereographic_grid::Size() const
+{
+	if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+	{
+		return kHPMissingInt;
+	}
+	
+	return itsNi * itsNj;
+}
+
+void stereographic_grid::Ni(size_t theNi)
+{
+	itsNi = theNi;
+}
+
+void stereographic_grid::Nj(size_t theNj)
+{
+	itsNj = theNj;
+}
+
+size_t stereographic_grid::Ni() const
+{
+	return itsNi;
+}
+
+size_t stereographic_grid::Nj() const
+{
+	return itsNj;
+}
+
+void stereographic_grid::Di(double theDi)
+{
+	itsDi = theDi;
+}
+
+void stereographic_grid::Dj(double theDj)
+{
+	itsDj = theDj;
+}
+
+double stereographic_grid::Di() const
+{
+	return itsDi;
+}
+
+double stereographic_grid::Dj() const
+{
+	return itsDj;
+}
+
+void stereographic_grid::Orientation(double theOrientation)
+{
+	itsOrientation = theOrientation;
+}
+
+double stereographic_grid::Orientation() const
+{
+	return itsOrientation;
+}
+
+HPScanningMode stereographic_grid::ScanningMode() const
+{
+	return itsScanningMode;
+}
+
+void stereographic_grid::ScanningMode(HPScanningMode theScanningMode)
+{
+	if (theScanningMode != kBottomLeft)
+	{
+		throw runtime_error("Only bottom left is supported for stereographic grids");
+	}
+	
+	itsScanningMode = theScanningMode;
+}
+
+point stereographic_grid::LatLon(size_t locationIndex) const
+{
+	// not implemented yet
+	return point();
+}
+
+void stereographic_grid::BottomLeft(const point& theBottomLeft)
+{
+	itsBottomLeft = theBottomLeft;
+}
+
+void stereographic_grid::TopRight(const point& theTopRight)
+{
+	itsTopRight = theTopRight;
+}
+
+point stereographic_grid::BottomLeft() const
+{
+	return itsBottomLeft;
+}
+
+point stereographic_grid::TopRight() const
+{
+	return itsTopRight;
+}
+
+point stereographic_grid::FirstPoint() const
+{
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return itsBottomLeft;
+			break;
+		case kUnknownScanningMode:
+			throw runtime_error("Scanning mode not set");		
+		default:
+			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
+	}
+}
+
+point stereographic_grid::LastPoint() const
+{
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return itsTopRight;
+			break;
+		case kUnknownScanningMode:
+			throw runtime_error("Scanning mode not set");
+		default:
+			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
+	}
+}
+
+bool stereographic_grid::Swap(HPScanningMode newScanningMode)
+{
+	if (itsScanningMode == newScanningMode)
+	{
+		return true;
+	}
+	
+	// Flip with regards to x axis
+
+	if ((itsScanningMode == kTopLeft && newScanningMode == kBottomLeft) || (itsScanningMode == kBottomLeft && newScanningMode == kTopLeft))
+	{
+		size_t halfSize = static_cast<size_t> (floor(Nj()/2));
+
+		for (size_t y = 0; y < halfSize; y++)
+		{
+			for (size_t x = 0; x < Ni(); x++)
+			{
+				double upper = itsData.At(x,y);
+				double lower = itsData.At(x, Nj()-1-y);
+
+				itsData.Set(x,y,0,lower);
+				itsData.Set(x,Nj()-1-y,0,upper);
+		}
+		}
+	}
+	else
+	{
+		itsLogger->Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " + string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
+		return false;
+	}
+
+	itsScanningMode = newScanningMode;
+
+	return true;
+}
+
+stereographic_grid* stereographic_grid::Clone() const
+{
+	return new stereographic_grid(*this);
+}
+
+ostream& stereographic_grid::Write(std::ostream& file) const
+{
+	grid::Write(file);
+	
+	file << itsBottomLeft;
+	file << itsTopRight;
+	file << "__itsOrientation__ " << itsOrientation << endl;
+
+	return file;
+}
+
+bool stereographic_grid::operator!=(const grid& other) const
+{
+	return !(other == *this);
+}
+
+bool stereographic_grid::operator==(const grid& other) const
+{
+	const stereographic_grid* g = dynamic_cast<const stereographic_grid*> (&other);
+
+	if (g)
+	{
+		return EqualsTo(*g);
+	}
+
+	return false;
+}
+
+bool stereographic_grid::EqualsTo(const stereographic_grid& other) const
+{
+	if (!grid::EqualsTo(other))
+	{
+		return false;
+	}
+
+	if (itsBottomLeft != other.BottomLeft())
+	{
+		itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string> (itsBottomLeft.X()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().X()));
+		itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string> (itsBottomLeft.Y()) + " vs " + boost::lexical_cast<std::string> (other.BottomLeft().Y()));
+		return false;
+	}
+
+	if (itsTopRight != other.TopRight())
+	{
+		itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<std::string> (itsTopRight.X()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().X()));
+		itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<std::string> (itsTopRight.Y()) + " vs " + boost::lexical_cast<std::string> (other.TopRight().Y()));
+		return false;
+	}
+
+	if (itsDi != other.Di())
+	{
+		itsLogger->Trace("Di does not match: " + boost::lexical_cast<std::string> (itsDi) + " vs " + boost::lexical_cast<std::string> (other.Di()));
+		return false;
+	}
+
+	if (itsDj != other.Dj())
+	{
+		itsLogger->Trace("Dj does not match: " + boost::lexical_cast<std::string> (itsDj) + " vs " + boost::lexical_cast<std::string> (other.Dj()));
+		return false;
+	}
+	
+	if (itsNi != other.Ni())
+	{
+		itsLogger->Trace("Ni does not match: " + boost::lexical_cast<std::string> (itsNi) + " vs " + boost::lexical_cast<std::string> (other.Ni()));
+		return false;
+	}
+	
+	if (itsNj != other.Nj())
+	{
+		itsLogger->Trace("Nj does not match: " + boost::lexical_cast<std::string> (itsNj) + " vs " + boost::lexical_cast<std::string> (other.Nj()));
+		return false;
+	}
+	
+	if (itsOrientation != other.Orientation())
+	{
+		itsLogger->Trace("Orientation does not match: " + boost::lexical_cast<std::string> (itsOrientation) + " vs " + boost::lexical_cast<std::string> (other.Orientation()));
+		return false;
+	}
+
+	return true;
+}

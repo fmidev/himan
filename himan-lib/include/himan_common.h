@@ -98,23 +98,6 @@ const boost::unordered_map<HPFileCompression,std::string> HPFileCompressionToStr
                 (kGZIP, "gzip compressed")
                 (kBZIP2, "bzip2 compressed");
 
-// Define supported projections
-// Values equal to those in newbase
-
-enum HPProjectionType
-{
-	kUnknownProjection = 0,
-	kLatLonProjection = 10,
-	kRotatedLatLonProjection = 11,
-	kStereographicProjection = 13
-};
-
-const boost::unordered_map<HPProjectionType,std::string> HPProjectionTypeToString = ba::map_list_of
-		(kUnknownProjection, "unknown projection")
-		(kLatLonProjection, "ll")
-		(kRotatedLatLonProjection, "rll")
-		(kStereographicProjection, "polster");
-
 // Define supported parameter units
 
 enum HPParameterUnit
@@ -241,11 +224,17 @@ enum HPScanningMode
 	kBottomRight = 34,	// -x+y
 
 };
+const boost::unordered_map<std::string,HPScanningMode> HPScanningModeFromString = ba::map_list_of
+		("unknown", kUnknownScanningMode)
+		("+x-y", kTopLeft)
+		("-x+y", kTopRight)
+		("+x+y", kBottomLeft)
+		("-x-y", kBottomRight);
 
 const boost::unordered_map<HPScanningMode,std::string> HPScanningModeToString = ba::map_list_of
 		(kUnknownScanningMode, "unknown")
 		(kTopLeft, "+x-y")
-		(kTopRight, "+x+y")
+		(kTopRight, "-x+y")
 		(kBottomLeft, "+x+y")
 		(kBottomRight, "-x-y");
 
@@ -406,17 +395,40 @@ const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormT
 		(kHail, "hail")
 		(kUnknownPrecipitationForm, "unknown");
 
-enum HPGridType
+enum HPGridClass
 {
-	kUnknownGridType = 0,
+	kUnknownGridClass = 0,
 	kRegularGrid,
 	kIrregularGrid
 };
 
-const boost::unordered_map<HPGridType,std::string> HPGridTypeToString = ba::map_list_of
-		(kUnknownGridType, "unknown")
+const boost::unordered_map<HPGridClass,std::string> HPGridClassToString = ba::map_list_of
+		(kUnknownGridClass, "unknown")
 		(kRegularGrid, "regular")
 		(kIrregularGrid, "irregular");
+
+// Define supported grid types
+// Values equal to those in radon
+
+enum HPGridType
+{
+	kUnknownGridType = 0,
+	kLatitudeLongitude = 1,
+	kStereographic,
+	kAzimuthalEquidistant,
+	kRotatedLatitudeLongitude,
+	kReducedGaussian,
+	kPointList
+};
+
+const boost::unordered_map<HPGridType,std::string> HPGridTypeToString = ba::map_list_of
+		(kUnknownGridType, "unknown grid type")
+		(kLatitudeLongitude, "ll")
+		(kStereographic, "polster")
+		(kAzimuthalEquidistant, "azimuthal")
+		(kRotatedLatitudeLongitude, "rll")
+		(kReducedGaussian, "rgg")
+;
 
 enum HPDatabaseType
 {

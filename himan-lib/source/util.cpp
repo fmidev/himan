@@ -18,7 +18,6 @@
 #include "param.h"
 #include "forecast_time.h"
 #include "cuda_helper.h"
-#include "regular_grid.h"
 #include <wordexp.h>
 
 using namespace himan;
@@ -72,14 +71,14 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 					<< "_"
 					<< info.Level().Value()
 					<< "_"
-					<< HPProjectionTypeToString.at(info.Grid()->Projection());
+					<< HPGridTypeToString.at(info.Grid()->Type());
 
-		if (info.Grid()->Type() == kRegularGrid)
+		if (info.Grid()->Class() == kRegularGrid)
 		{
 			fileName	<< "_"
-						<< dynamic_cast<regular_grid*> (info.Grid())->Ni()
+						<< info.Grid()->Ni()
 						<< "_"
-						<< dynamic_cast<regular_grid*> (info.Grid())->Nj();
+						<< info.Grid()->Nj();
 		}
 		
 		fileName	<< "_0_"
@@ -89,7 +88,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 		if (static_cast<int> (info.ForecastType().Type()) > 2)
 		{
 			fileName	<< "_"
-					<< info.ForecastType().Type()
+					<< static_cast<int> (info.ForecastType().Type())
 					<< "_"
 					<< info.ForecastType().Value()
 					;
@@ -100,7 +99,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 	{
 		// TODO!
 		
-		fileName	<< base
+		fileName	<< base.str()
 					<< "/"
 					<< "TODO.file";
 	}

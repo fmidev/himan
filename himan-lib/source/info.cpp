@@ -9,8 +9,8 @@
 #include <limits> // for std::numeric_limits<size_t>::max();
 #include <boost/lexical_cast.hpp>
 #include "logger_factory.h"
-#include "regular_grid.h"
-#include "irregular_grid.h"
+#include "grid.h"
+#include "point_list.h"
 
 using namespace std;
 using namespace himan;
@@ -44,21 +44,22 @@ info::info(const info& other)
 	
 	if (other.itsBaseGrid)
 	{
-		if (other.itsBaseGrid->Type() == kRegularGrid)
+		itsBaseGrid = unique_ptr<grid> (other.itsBaseGrid->Clone());
+	/*	if (other.itsBaseGrid->Class() == kRegularGrid)
 		{
 			itsBaseGrid = unique_ptr<regular_grid> (new regular_grid(*dynamic_cast<regular_grid*> (other.itsBaseGrid.get())));
 		}
-		else if (other.itsBaseGrid->Type() == kIrregularGrid)
+		else if (other.itsBaseGrid->Class() == kIrregularGrid)
 		{
-			itsBaseGrid = unique_ptr<irregular_grid> (new irregular_grid(*dynamic_cast<irregular_grid*> (other.itsBaseGrid.get())));
+			itsBaseGrid = unique_ptr<point_list> (new point_list(*dynamic_cast<point_list*> (other.itsBaseGrid.get())));
 		}
 		else
 		{
 			itsLogger->Fatal("Invalid grid type for base grid");
 			exit(1);
 		}
-
-		assert(itsBaseGrid);
+*/
+	
 	}
 	
 	itsLogger = logger_factory::Instance()->GetLog("info");
@@ -109,9 +110,7 @@ void info::ReGrid()
 				{
 					assert(Grid());
 
-					auto newGrid = make_shared<regular_grid> (*dynamic_cast<regular_grid*> (Grid()));
-
-					newDimensions[Index()] = newGrid;
+					newDimensions[Index()] = shared_ptr<grid> (Grid()->Clone());
 
 				}
 			}
@@ -124,6 +123,7 @@ void info::ReGrid()
 
 void info::Create(const grid* baseGrid, bool createDataBackend)
 {
+	assert(baseGrid);
 
 	itsDimensions = vector<shared_ptr<grid>> (itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
@@ -144,18 +144,21 @@ void info::Create(const grid* baseGrid, bool createDataBackend)
 				while (NextParam())
 					// Create empty placeholders
 				{
-					if (baseGrid->Type() == kRegularGrid)
+					Grid(shared_ptr<grid> (baseGrid->Clone()));
+
+					if (baseGrid->Class() == kRegularGrid)
 					{
-						Grid(make_shared<regular_grid> (*dynamic_cast<const regular_grid*> (baseGrid)));
-						
 						if (createDataBackend)
 						{
-							Grid()->Data().Resize(dynamic_cast<regular_grid*> (Grid())->Ni(), dynamic_cast<regular_grid*> (Grid())->Nj());
+							Grid()->Data().Resize(Grid()->Ni(), Grid()->Nj());
 						}
 					}
-					else if (baseGrid->Type() == kIrregularGrid)
-					{
-						Grid(make_shared<irregular_grid> (*dynamic_cast<const irregular_grid*> (baseGrid)));
+					else if (baseGrid->Class() == kIrregularGrid)
+					{						
+						if (baseGrid->Type() == kReducedGaussian)
+						{
+							Grid()->Data().Resize(Grid()->Size(), 1, 1);
+						}
 					}
 					else
 					{
@@ -240,7 +243,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 						exit(1);
 					}
 
-					Grid(make_shared<regular_grid> (*dynamic_cast<regular_grid*> (otherInfo->Grid())));
+					Grid(shared_ptr<grid> (otherInfo->Grid()->Clone()));
 				}
 			}
 		}
@@ -678,11 +681,6 @@ double info::Value() const
 	return Grid()->Data().At(itsLocationIndex);
 }
 
-HPProjectionType info::Projection() const
-{
-	return Grid()->Projection();
-}
-
 size_t info::DimensionSize() const
 {
 	return itsDimensions.size();
@@ -795,13 +793,13 @@ station info::Station() const
 		itsLogger->Error("Location iterator position is not set");
 		return station();
 	}
-	else if (Grid()->Type() != kIrregularGrid)
+	else if (Grid()->Class() != kIrregularGrid)
 	{
 		itsLogger->Error("regular_grid does not hold station information");
 		return station();
 	}
 
-	return dynamic_cast<irregular_grid*> (Grid())->Station(itsLocationIndex);
+	return dynamic_cast<point_list*> (Grid())->Station(itsLocationIndex);
 }
 
 void info::ForecastTypes(const std::vector<forecast_type>& theTypes)

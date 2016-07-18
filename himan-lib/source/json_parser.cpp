@@ -17,8 +17,10 @@
 #include <map>
 #include <utility>
 #include "point.h"
-#include "regular_grid.h"
-#include "irregular_grid.h"
+#include "latitude_longitude_grid.h"
+#include "stereographic_grid.h"
+#include "reduced_gaussian_grid.h"
+#include "point_list.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -31,8 +33,8 @@
 using namespace himan;
 using namespace std;
 
-unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
-unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
+unique_ptr<point_list> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
+unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
 void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
 void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
 
@@ -420,10 +422,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		throw runtime_error(ClassName() + ": processqueue missing");
 	}
-	
+
 	BOOST_FOREACH(boost::property_tree::ptree::value_type &element, pq)
 	{
-		std::shared_ptr<info> anInfo (new info(*baseInfo));
+		auto anInfo = make_shared<info> (*baseInfo);
 
 		try
 		{
@@ -910,16 +912,14 @@ void json_parser::ParseTime(shared_ptr<configuration> conf,
 
 }
 
-unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
+unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
 {
-	unique_ptr<regular_grid> g;
+	unique_ptr<grid> g;
 		
 	try
 	{
 		string geom = pt.get<string>("target_geom_name");
-
-		g = unique_ptr<regular_grid> (new regular_grid);
-		
+	
 		conf.TargetGeomName(geom);
 
 		HPDatabaseType dbtype = conf.DatabaseType();
@@ -947,82 +947,164 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 		{
 			throw runtime_error("Fatal::json_parser Unknown geometry '" + geom + "' found");	
 		}
-
-		/*
-		 *  In Neons we don't have rotlatlon projection used separately, instead we have
-		 *  to check if geom_parm_1 and geom_parm_2 specify the regular rotated location
-		 *  if south pole (0,30).
-		 */
-
-		double di = boost::lexical_cast<double>(geominfo["pas_longitude"]);
-		double dj = boost::lexical_cast<double>(geominfo["pas_latitude"]);
-
-		if (
-				(geominfo["prjn_name"] == "latlon" && (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0")) // neons
-				||
-				(geominfo["prjn_id"] == "4")) // radon
+	
+		if ((geominfo["prjn_name"] == "latlon" && geominfo["geom_parm_1"] == "0") || geominfo["prjn_id"] == "1")
 		{
-			g->Projection(kRotatedLatLonProjection);
-			g->SouthPole(point(
-							boost::lexical_cast<double>(geominfo["geom_parm_2"]) * scale, 
-							boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale)
-			);
-		
-			di *= scale;
-			dj *= scale;
+			g = unique_ptr<latitude_longitude_grid> (new latitude_longitude_grid);
+			latitude_longitude_grid* const llg = dynamic_cast<latitude_longitude_grid*> (g.get());
+			
+			const double di = scale * boost::lexical_cast<double>(geominfo["pas_longitude"]);
+			const double dj = scale * boost::lexical_cast<double>(geominfo["pas_latitude"]);
+
+			llg->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
+			llg->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
+			llg->Di(di);
+			llg->Dj(dj);
+
+			if (geominfo["stor_desc"] == "+x-y")
+			{
+				llg->ScanningMode(kTopLeft);
+			}
+			else if (geominfo["stor_desc"] == "+x+y")
+			{
+				llg->ScanningMode(kBottomLeft);
+			}
+			else
+			{
+				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
+			}
+			
+			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
+			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
+
+			const auto coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), llg->Ni(), llg->Nj(), di, dj, llg->ScanningMode());
+
+			llg->BottomLeft(coordinates.first);
+			llg->TopRight(coordinates.second);
 		}
-		else if (geominfo["prjn_name"] == "latlon" || geominfo["prjn_id"] == "1")
+		else if (
+					(geominfo["prjn_name"] == "latlon" && (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0")) // neons
+					||
+					(geominfo["prjn_id"] == "4")) // radon
 		{
-			g->Projection(kLatLonProjection);
-			di *= scale;
-			dj *= scale;
+			g = unique_ptr<rotated_latitude_longitude_grid> (new rotated_latitude_longitude_grid);
+			rotated_latitude_longitude_grid* const rllg = dynamic_cast<rotated_latitude_longitude_grid*> (g.get());
+			
+			const double di = scale * boost::lexical_cast<double>(geominfo["pas_longitude"]);
+			const double dj = scale * boost::lexical_cast<double>(geominfo["pas_latitude"]);
+
+			rllg->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
+			rllg->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
+			rllg->Di(di);
+			rllg->Dj(dj);
+			
+			if (geominfo["stor_desc"] == "+x-y")
+			{
+				rllg->ScanningMode(kTopLeft);
+			}
+			else if (geominfo["stor_desc"] == "+x+y")
+			{
+				rllg->ScanningMode(kBottomLeft);
+			}
+			else
+			{
+				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
+			}
+			
+			rllg->SouthPole(point(
+								boost::lexical_cast<double>(geominfo["geom_parm_2"]) * scale, 
+								boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale)
+				);
+			
+			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
+			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
+
+			const auto coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), rllg->Ni(), rllg->Nj(), di, dj, rllg->ScanningMode());
+
+			rllg->BottomLeft(coordinates.first);
+			rllg->TopRight(coordinates.second);
 		}
 		else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo" || geominfo["prjn_id"] == "2")
 		{
-			g->Projection(kStereographicProjection);
-			g->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale);
-			g->Di(di);
-			g->Dj(dj);
+			g = unique_ptr<stereographic_grid> (new stereographic_grid);
+			stereographic_grid* const sg = dynamic_cast<stereographic_grid*> (g.get());
+			
+			const double di = boost::lexical_cast<double>(geominfo["pas_longitude"]);
+			const double dj = boost::lexical_cast<double>(geominfo["pas_latitude"]);
+
+			sg->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale);
+			sg->Di(di);
+			sg->Dj(dj);
+
+			sg->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
+			sg->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
+			
+			if (geominfo["stor_desc"] == "+x+y")
+			{
+				sg->ScanningMode(kBottomLeft);
+			}
+			else
+			{
+				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet for stereographic grid");
+			}
+			
+			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
+			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
+
+			const auto coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), sg->Orientation(), sg->Ni(), sg->Nj(), di, dj);
+
+			sg->BottomLeft(coordinates.first);
+			sg->TopRight(coordinates.second);
+			
+		}
+		else if (geominfo["prjn_id"] == "5")
+		{
+			g = unique_ptr<reduced_gaussian_grid> (new reduced_gaussian_grid);
+			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*> (g.get());
+			
+			gg->N(boost::lexical_cast<int> (geominfo["n"]));
+			gg->Nj(boost::lexical_cast<int> (geominfo["nj"]));
+
+			auto strlongitudes = util::Split(geominfo["longitudes_along_parallels"], ",", false);
+			vector<int> longitudes;
+			
+			for (auto& l : strlongitudes)
+			{
+				longitudes.push_back(boost::lexical_cast<int> (l));
+			}
+
+			gg->NumberOfLongitudesAlongParallels(longitudes);
+			
+			assert(boost::lexical_cast<size_t> (geominfo["n"]) * 2 == longitudes.size());
+
+			const point first(boost::lexical_cast<double>(geominfo["first_point_lon"]), boost::lexical_cast<double>(geominfo["first_point_lat"]));
+			const point last(boost::lexical_cast<double>(geominfo["last_point_lon"]), boost::lexical_cast<double>(geominfo["last_point_lat"]));
+
+			if (geominfo["scanning_mode"] == "+x-y")
+			{
+				gg->ScanningMode(kTopLeft);
+				gg->BottomLeft(point(first.X(), last.Y()));
+				gg->TopRight(point(last.X(), first.Y()));
+				gg->TopLeft(first);
+				gg->BottomRight(last);
+			}
+			else if (geominfo["scanning_mode"] == "+x+y")
+			{
+				gg->ScanningMode(kBottomLeft);			
+				gg->BottomLeft(first);
+				gg->TopRight(last);
+				gg->TopLeft(point(first.X(), last.Y()));
+				gg->BottomRight(point(last.X(), first.Y()));
+			}
+			else
+			{
+				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
+			}	
 		}
 		else
 		{
 			throw runtime_error("Fatal::json_parser Unknown projection: " + geominfo["prjn_name"]);
 		}
-
-		g->Ni(boost::lexical_cast<size_t> (geominfo["col_cnt"]));
-		g->Nj(boost::lexical_cast<size_t> (geominfo["row_cnt"]));
-
-		if (geominfo["stor_desc"] == "+x-y")
-		{
-			g->ScanningMode(kTopLeft);
-		}
-		else if (geominfo["stor_desc"] == "+x+y")
-		{
-			g->ScanningMode(kBottomLeft);
-		}
-		else
-		{
-			throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
-		}
-
-		double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
-		double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
-
-		std::pair<point, point> coordinates;
-
-		if (g->Projection() == kStereographicProjection)
-		{
-			assert(g->ScanningMode() == kBottomLeft);
-			coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), g->Orientation(), g->Ni(), g->Nj(), di, dj);
-		}
-		else
-		{
-			coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), g->Ni(), g->Nj(), di, dj, g->ScanningMode());
-		}
-
-		g->BottomLeft(coordinates.first);
-		g->TopRight(coordinates.second);
-
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -1036,9 +1118,9 @@ unique_ptr<regular_grid> ParseAreaAndGridFromDatabase(configuration& conf, const
 	return g;
 }
 
-unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt)
+unique_ptr<point_list> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt)
 {
-	unique_ptr<irregular_grid> g;
+	unique_ptr<point_list> g;
 	
 	// check points
 	
@@ -1046,11 +1128,11 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 	{
 		vector<string> stations = util::Split(pt.get<string>("points"), ",", false);
 
-		g = unique_ptr<irregular_grid> (new irregular_grid());
+		g = unique_ptr<point_list> (new point_list());
 	
 		// hard coded projection to latlon
 		
-		g->Projection(kLatLonProjection);
+		g->Type(kLatitudeLongitude);
 
 		vector<station> theStations;
 		
@@ -1103,11 +1185,11 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 	{
 		vector<string> stations = util::Split(pt.get<string>("stations"), ",", false);
 
-		g = unique_ptr<irregular_grid> (new irregular_grid());
+		g = unique_ptr<point_list> (new point_list);
 	
 		// hard coded projection to latlon
 		
-		g->Projection(kLatLonProjection);
+		g->Type(kLatitudeLongitude);
 
 		vector<station> theStations;
 		
@@ -1166,8 +1248,6 @@ unique_ptr<irregular_grid> ParseAreaAndGridFromPoints(configuration& conf, const
 
 unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
-
-	unique_ptr<grid> g;
 	
 	/* 
 	 * Parse area and grid from different possible options.
@@ -1185,11 +1265,9 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 	 * -> 'south_pole_longitude', 'south_pole_latitude'
 	 * -> 'ni', 'nj'
 	 * -> 'scanning_mode'
-	 * 
-	 
+	 * 	 
 	 */
 
-	bool haveArea = false;
 	
 	// 1. Check for source geom name
 
@@ -1208,7 +1286,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 	// 2. neons-style geom_name
 	
-	g = ParseAreaAndGridFromDatabase(*conf, pt);
+	auto g = ParseAreaAndGridFromDatabase(*conf, pt);
 	
 	if (g)
 	{
@@ -1217,181 +1295,100 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 	// 3. Points
 	
-	g = ParseAreaAndGridFromPoints(*conf, pt);
+	auto ig = ParseAreaAndGridFromPoints(*conf, pt);
 	
-	if (g)
+	if (ig)
 	{
-		return g;
+		return ig;
 	}
 	
 	// 4. Target geometry is still not set, check for bbox
 
-	// From this point forward we only support regular grids
-	
-	g = unique_ptr<regular_grid> (new regular_grid());
+	unique_ptr<grid> rg;
 
 	try
 	{
 
 		vector<string> coordinates = util::Split(pt.get<string>("bbox"), ",", false);
 
-		// hard coded projection to latlon
+		rg = unique_ptr<latitude_longitude_grid> (new latitude_longitude_grid);
 		
-		g->Projection(kLatLonProjection);
+		dynamic_cast<latitude_longitude_grid*> (rg.get())->BottomLeft(point(boost::lexical_cast<double>(coordinates[0]), boost::lexical_cast<double>(coordinates[1])));
+		dynamic_cast<latitude_longitude_grid*> (rg.get())->TopRight(point(boost::lexical_cast<double>(coordinates[2]), boost::lexical_cast<double>(coordinates[3])));
 
-		g->BottomLeft(point(boost::lexical_cast<double>(coordinates[0]), boost::lexical_cast<double>(coordinates[1])));
-		g->TopRight(point(boost::lexical_cast<double>(coordinates[2]), boost::lexical_cast<double>(coordinates[3])));
+		dynamic_cast<latitude_longitude_grid*> (rg.get())->Ni(pt.get<size_t>("ni"));
+		dynamic_cast<latitude_longitude_grid*> (rg.get())->Nj(pt.get<size_t>("nj"));
+		
+		rg->ScanningMode(HPScanningModeFromString.at(pt.get<string> ("scanning_mode")));
 
-		haveArea = true;
+		return rg;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		// Something was not found; do nothing
 	}
 	catch (exception& e)
 	{
 		throw runtime_error(string("Error parsing bbox: ") + e.what());
 	}
 
-	// Check for manual definition of area
-	
-	if (!haveArea)
-	{
-
-		try
-		{
-			string projection = pt.get<string>("projection");
-
-			if (projection == "latlon")
-			{
-				g->Projection(kLatLonProjection);
-			}
-			else if (projection == "rotated_latlon")
-			{
-				g->Projection(kRotatedLatLonProjection);
-			}
-			else if (projection == "stereographic")
-			{
-				g->Projection(kStereographicProjection);
-			}
-			else
-			{
-				throw runtime_error(ClassName() + ": Unknown projection: " + projection);
-			}
-
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			throw runtime_error(string("Projection definition not found: ") + e.what());
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing projection: ") + e.what());
-		}
-
-		try
-		{
-			g->BottomLeft(point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
-			g->TopRight(point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			throw runtime_error(string("Area corner definitions not found: ") + e.what());
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing area corners: ") + e.what());
-		}
-
-		/* Check orientation */
-
-		try
-		{
-			g->Orientation(pt.get<double>("orientation"));
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			if (g->Projection() == kStereographicProjection)
-			{
-				throw runtime_error(string("Orientation not found for stereographic projection: ") + e.what());
-			}
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing area orientation: ") + e.what());
-		}
-
-		/* Check south pole coordinates */
-
-		try
-		{
-			g->SouthPole(point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude")));
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			if (g->Projection() == kRotatedLatLonProjection)
-			{
-				throw runtime_error(string("South pole coordinates not found for rotated latlon projection: ") + e.what());
-			}
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing south pole location: ") + e.what());
-		}
-	}
-
-	/* Finally check grid definitions */
-
-	regular_grid* _g = dynamic_cast<regular_grid*> (g.get()); // shortcut to avoid a million dynamic casts
+	// 5. Check for manual definition of area
 
 	try
 	{
-		_g->Ni(pt.get<size_t>("ni"));
-		_g->Nj(pt.get<size_t>("nj"));
-
 		
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		throw runtime_error(string("Grid definitions not found: ") + e.what());
-
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing grid dimensions: ") + e.what());
-	}
-
-	// Default scanningmode to +x+y
-	
-	_g->ScanningMode(kBottomLeft);
-	
-	try
-	{
-		string mode = pt.get<string> ("scanning_mode");
-
-		if (mode == "+x-y")
+		HPScanningMode mode = HPScanningModeFromString.at(pt.get<string> ("scanning_mode"));
+		
+		if (mode != kTopLeft && mode != kBottomLeft)
 		{
-			_g->ScanningMode(kTopLeft);
+			throw runtime_error(ClassName() + ": scanning mode " + HPScanningModeToString.at(mode) + " not supported (ever)");
 		}
-		else if (mode == "+x+y")
+
+		string projection = pt.get<string>("projection");
+
+		if (projection == "latlon")
 		{
-			_g->ScanningMode(kBottomLeft);
+			rg = unique_ptr<latitude_longitude_grid> (new latitude_longitude_grid);
+			dynamic_cast<latitude_longitude_grid*> (rg.get())->BottomLeft(point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
+			dynamic_cast<latitude_longitude_grid*> (rg.get())->TopRight(point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
+			dynamic_cast<latitude_longitude_grid*> (rg.get())->Ni(pt.get<size_t>("ni"));
+			dynamic_cast<latitude_longitude_grid*> (rg.get())->Nj(pt.get<size_t>("nj"));
+		}
+		else if (projection == "rotated_latlon")
+		{
+			rg = unique_ptr<rotated_latitude_longitude_grid> (new rotated_latitude_longitude_grid);
+			dynamic_cast<rotated_latitude_longitude_grid*> (rg.get())->BottomLeft(point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
+			dynamic_cast<rotated_latitude_longitude_grid*> (rg.get())->TopRight(point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
+			dynamic_cast<rotated_latitude_longitude_grid*> (rg.get())->SouthPole(point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude")));
+			dynamic_cast<rotated_latitude_longitude_grid*> (rg.get())->Ni(pt.get<size_t>("ni"));
+			dynamic_cast<rotated_latitude_longitude_grid*> (rg.get())->Nj(pt.get<size_t>("nj"));
+		}
+		else if (projection == "stereographic")
+		{
+			rg = unique_ptr<stereographic_grid> (new stereographic_grid);
+			dynamic_cast<stereographic_grid*> (rg.get())->BottomLeft(point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
+			dynamic_cast<stereographic_grid*> (rg.get())->TopRight(point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
+			dynamic_cast<stereographic_grid*> (rg.get())->Orientation(pt.get<double>("orientation"));
+			dynamic_cast<stereographic_grid*> (rg.get())->Ni(pt.get<size_t>("ni"));
+			dynamic_cast<stereographic_grid*> (rg.get())->Nj(pt.get<size_t>("nj"));
 		}
 		else
 		{
-			throw runtime_error(ClassName() + ": scanning mode " + mode + " not supported (yet)");
+			throw runtime_error(ClassName() + ": Unknown type: " + projection);
 		}
+		
+		rg->ScanningMode(mode);
+
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		// Do nothing
+		throw runtime_error(e.what());
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing scanning mode: ") + e.what());
+		throw runtime_error(string("Error parsing area: ") + e.what());
 	}
-	
-	return g;
+
+	return rg;
 
 }
 

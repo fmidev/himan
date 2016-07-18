@@ -11,12 +11,14 @@
 /**
  * @class grid
  *
- * @brief Parent class for grids
+ * @brief Interface for all grids
  */
 
 #include <string>
 #include "himan_common.h"
 #include "point.h"
+#include "logger.h"
+#include "packed_data.h"
 
 #include "matrix.h"
 
@@ -27,121 +29,103 @@ class grid
 {
 	public:
 		grid();
+		grid(HPGridClass theGridClass, HPGridType theGridType);
+		grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theScanningMode);
+		
 		virtual ~grid();
 
-		/**
-		 * @brief Copy constructor for grid
-		 *
-		 * When grid is copied, the contents (ie. class d_matrix_t) is copied as
-		 * well.
-		 *
-		 * @param other 
-		 */
-		
-		//grid(const grid& other);
+		grid(const grid& other);
 		grid& operator=(const grid& other) = delete;
-
-
+		
 		virtual std::string ClassName() const
 		{
 			return "himan::grid";
 		}
 
-		virtual HPGridType Type() const
-		{
-			return itsGridType;
-		}
+		virtual bool operator==(const grid& other) const ;
+		virtual bool operator!=(const grid& other) const ;
 		
-		virtual std::ostream& Write(std::ostream& file) const = 0;
+		virtual std::ostream& Write(std::ostream& file) const;
 
-		/**
+		virtual grid* Clone() const = 0;
+
+		/* 
+		 * Functions that are common and valid to all types of grids,
+		 * and are implemented in this class. 
+		 */
+		
+		HPGridType Type() const;
+		void Type(HPGridType theGridType);
+		
+		HPGridClass Class() const ;
+		void Class(HPGridClass theGridClass);
+		
+		matrix<double>& Data();
+		void Data(const matrix<double>& d);
+		
+		std::vector<double> AB() const ;
+		void AB(const std::vector<double>& theAB) ;
+
+		/* 
+		 * Functions that are common and valid to all types of grids.
 		 * 
-		 * @return  Grid size
+		 * For those functions that clearly have some kind of default
+		 * implementation, that implementation is done in grid-class,
+		 * but so that it can be overridden in inheriting classes.
+		 * 
+		 * Functions whos implementation depends on the grid type are
+		 * declared abstract should be implemented by deriving classes.
 		 */
 		
-		virtual size_t Size() const = 0;
+		virtual size_t Size() const;
+		
+		virtual bool Value(size_t locationIndex, double theValue);
+		virtual double Value(size_t locationIndex) const;
 
-		/**
-		 *
-		 * @return Data matrix
+		virtual point FirstPoint() const = 0;
+		virtual point LastPoint() const = 0;
+		virtual point LatLon(size_t locationIndex) const = 0 ;
+
+		/*
+		 * Functions that are only valid for some grid types, but for ease 
+		 * of use they are declared here. It is up to the actual grid classes
+		 * to implement correct functionality.
 		 */
-
-		virtual matrix<double>& Data() = 0;
-
-		/**
-		 * @brief Replace current data matrix with the function argument
-		 * @param d shared pointer to a data matrix
-		 */
-
-		virtual void Data(const matrix<double>& d) = 0;
-
-
-		//HPScanningMode ScanningMode() const;
-		//void ScanningMode(HPScanningMode theScanningMode);
-
-		/**
-		 * @return True if parameter UV components are grid relative, false if they are earth-relative.
-		 * On parameters with no UV components this has no meaning.
-		 */
-
-		virtual bool UVRelativeToGrid() const = 0;
-		virtual void UVRelativeToGrid(bool theUVRelativeToGrid) = 0;
-
-		/**
-		 * @brief Set the data value pointed by the iterators with a new one
-		 * @return True if assignment was succesfull
-		 */
-
-		virtual bool Value(size_t locationIndex, double theValue) = 0;
-
-		/**
-		 * @return Data value pointed by the iterators
-		 */
-
-		virtual double Value(size_t locationIndex) const = 0;
-
-		/**
-		 * @return Projection type of this info
-		 *
-		 * One info can hold only one type of projection
-		 */
-
-		virtual HPProjectionType Projection() const = 0;
-		virtual void Projection(HPProjectionType theProjection) = 0;
-
-		virtual std::vector<double> AB() const = 0;
-		virtual void AB(const std::vector<double>& theAB) = 0;
 
 		virtual point BottomLeft() const = 0;
 		virtual point TopRight() const = 0;
 
-		virtual void BottomLeft(const point& theBottomLeft) = 0;
-		virtual void TopRight(const point& theTopRight) = 0;
-
-		virtual void Orientation(double theOrientation) = 0;
-		virtual double Orientation() const = 0;
-
-		virtual point SouthPole() const = 0;
-		virtual void SouthPole(const point& theSouthPole) = 0;
-
-		/**
-		 * @brief Create a newbase grid (NFmiGrid) from current data
-		 * @return Raw pointer to NFmiGrid
-		 */
-
-		//NFmiGrid* ToNewbaseGrid() const;
-
-		virtual bool IsPackedData() const = 0;
-
-		virtual point LatLon(size_t locationIndex) const = 0;
-		virtual bool operator==(const grid& other) const = 0;
-		virtual bool operator!=(const grid& other) const = 0;
+//		virtual void BottomLeft(const point& theBottomLeft) = 0 ;
+//		virtual void TopRight(const point& theTopRight) = 0;
 		
+		virtual HPScanningMode ScanningMode() const;
+		virtual void ScanningMode(HPScanningMode theScanningMode) ;
+
+		virtual bool IsPackedData() const ;
+
+		virtual bool Swap(HPScanningMode newScanningMode) = 0;
+		
+		virtual size_t Ni() const = 0;
+		virtual size_t Nj() const = 0;
+		
+		virtual double Di() const = 0;
+		virtual double Dj() const = 0;
+
 	protected:
 	
 		bool EqualsTo(const grid& other) const;
 
+		matrix<double> itsData; //<! Variable to hold unpacked data
+
+		HPGridClass itsGridClass;
 		HPGridType itsGridType;
+
+		std::vector<double> itsAB;
+
+		std::unique_ptr<logger> itsLogger;
+		
+		HPScanningMode itsScanningMode;
+		std::unique_ptr<packed_data> itsPackedData; //<! Variable to hold packed data
 
 };
 

@@ -9,6 +9,7 @@
 using namespace himan;
 
 #ifdef DEBUG
+#include <iostream>
 #include <boost/foreach.hpp>
 
 void DumpVector(const std::vector<double>& vec)
@@ -708,7 +709,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight)
 
 	double findValue = itsFindValue[itsIndex];
 	
-	if (itsFindNthValue > 0 && !kFloatMissing == Value())
+	if (itsFindNthValue > 0 && kFloatMissing != Value())
 	{
 		return;
 	}
