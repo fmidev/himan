@@ -75,16 +75,16 @@ __global__ void Print(double* __restrict__ arr, int i) { printf("%d %f\n", i, ar
 
 	NFmiArea* area = 0;
 
-	if (info->projection == himan::kLatLonProjection)
+	if (info->projection == himan::kLatitudeLongitude)
 	{
 		area = new NFmiLatLonArea(bl, tr);
 	}
-	else if (info->projection == himan::kRotatedLatLonProjection)
+	else if (info->projection == himan::kRotatedLatitudeLongitude)
 	{
 		NFmiPoint sp(info->south_pole_lon, info->south_pole_lat);
 		area = new NFmiRotatedLatLonArea(bl, tr, sp, NFmiPoint(0,0), NFmiPoint(1,1), true);
 	}
-	else if (info->projection == himan::kStereographicProjection)
+	else if (info->projection == himan::kStereographic)
 	{
 		area = new NFmiStereographicArea(bl, (info->size_x - 1) * info->di, (info->size_y - 1) * info->dj, info->orientation);
 	}

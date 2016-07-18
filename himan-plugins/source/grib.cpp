@@ -171,7 +171,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	if (anInfo.Grid()->IsPackedData() && anInfo.Grid()->PackedData().ClassName() == "simple_packed")
 	{
 		itsLogger->Trace("Writing packed data");
-		simple_packed* s = reinterpret_cast<simple_packed*> (anInfo.Grid()->PackedData());
+		simple_packed* s = reinterpret_cast<simple_packed*> (&anInfo.Grid()->PackedData());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
 		itsGrib->Message().BinaryScaleFactor(s->coefficients.binaryScaleFactor);
@@ -395,6 +395,27 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			p.GribParameter(number);
 			p.GribTableVersion(no_vers);
 
+			// Determine aggregation
+
+			aggregation a;
+			a.TimeResolution(kHourResolution);
+	
+			switch (timeRangeIndicator)
+			{
+				case 0: // forecast
+				case 1: // analysis
+				break;
+
+				case 3: // average
+					a.Type(kAverage);
+					a.TimeResolutionValue(itsGrib->Message().P2() - itsGrib->Message().P1());
+				break;
+			}
+
+			if (a.TimeResolutionValue() != kHPMissingInt)
+			{
+				p.Aggregation(a);
+			}
 		}
 		else
 		{
@@ -438,8 +459,42 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			if (p.Name() == "T-C" && options.prod.Centre() == 7)
 			{
+				//Fixed in radon
 				p.Name("T-K");
 			}
+
+			aggregation a;
+			a.TimeResolution(kHourResolution);
+			switch (itsGrib->Message().TypeOfStatisticalProcessing())
+			{
+				case 0: // Average
+					a.Type(kAverage);
+					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+				break;
+	
+				case 1: // Accumulation
+					a.Type(kAccumulation);
+					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+				break;
+
+				case 2: // Maximum
+					a.Type(kMaximum);
+					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+				break;
+
+				case 3: // Minimum
+					a.Type(kMinimum);
+					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+				break;
+
+
+			}
+
+			if (a.TimeResolutionValue() != kHPMissingInt)
+			{
+				p.Aggregation(a);
+			}
+
 		}
 		
 		string unit = itsGrib->Message().ParameterUnit();
