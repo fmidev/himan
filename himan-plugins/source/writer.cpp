@@ -93,6 +93,12 @@ bool writer::ToFile(info& theInfo,
 		}
 		case kQueryData:
 		{
+			if (theInfo.Grid()->Type() == kReducedGaussian)
+			{
+				itsLogger->Error("Reduced gaussian grid cannot be written to querydata");
+				return false;
+			}
+			
 			auto theWriter = GET_PLUGIN(querydata);
 			theWriter->WriteOptions(itsWriteOptions);
 

@@ -4,7 +4,6 @@
 #include "forecast_time.h"
 #include "numerical_functions.h"
 #include "metutil.h"
-#include "regular_grid.h"
 #include "plugin_factory.h"
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
@@ -236,13 +235,13 @@ void BindEnum(lua_State* L)
 			value("kNetCDF", kNetCDF)
 		]
 		,
-		class_<HPProjectionType>("HPProjectionType")
+		class_<HPGridType>("HPGridType")
 			.enum_("constants")
 		[
-			value("kUnknownProjection", kUnknownProjection),
-			value("kLatLonProjection", kLatLonProjection),
-			value("kRotatedLatLonProjection", kRotatedLatLonProjection),
-			value("kStereographicProjection", kStereographicProjection)
+			value("kUnknownGridType", kUnknownGridType),
+			value("kLatitudeLongitude", kLatitudeLongitude),
+			value("kRotatedLatitudeLongitude", kRotatedLatitudeLongitude),
+			value("kStereographic", kStereographic)
 		]
 		,
 		class_<HPScanningMode>("HPScanningMode")
@@ -281,12 +280,17 @@ void BindEnum(lua_State* L)
 			value("kIntegralModifier", kIntegralModifier),
 			value("kPlusMinusAreaModifier", kPlusMinusAreaModifier)
 		],
+		class_<HPGridType>("HPGridClass")
+			.enum_("constants")
+		[
+			value("kUnknownGridClass", kUnknownGridClass),
+			value("kRegularGrid", kRegularGrid),
+			value("kIrregularGrid", kIrregularGrid)
+		],
 		class_<HPGridType>("HPGridType")
 			.enum_("constants")
 		[
-			value("kUnknownGridType", kUnknownGridType),
-			value("kRegularGrid", kRegularGrid),
-			value("kIrregularGrid", kIrregularGrid)
+			value("kUnknownGridType", kUnknownGridType)
 		],
 		class_<HPParameterUnit>("HPParameterUnit")
 			.enum_("constants")
@@ -752,8 +756,9 @@ void BindLib(lua_State* L)
 			.def("SetMissingValue", &info_wrapper::SetMissingValue)
 		,
 		class_<grid, std::shared_ptr<grid>>("grid")
-		,
-		class_<regular_grid, grid, std::shared_ptr<regular_grid>>("regular_grid")
+#if 0
+			,
+			class_<regular_grid, grid, std::shared_ptr<regular_grid>>("regular_grid")
 			.def(constructor<>())
 			.def("ClassName", &grid::ClassName)
 			.def("GetSize", &grid::Size)
@@ -762,7 +767,7 @@ void BindLib(lua_State* L)
 			.def("GetDi", LUA_CMEMFN(double, regular_grid, Di, void))
 			.def("GetDj", LUA_CMEMFN(double, regular_grid, Dj, void))
 			.def("GetScanningMode", LUA_CMEMFN(HPScanningMode, regular_grid, ScanningMode, void))
-			.def("GetProjection", LUA_CMEMFN(HPProjectionType, regular_grid, Projection, void))
+			.def("GetGridType", LUA_CMEMFN(HPGridType, regular_grid, Type, void))
 			.def("GetAB", LUA_CMEMFN(std::vector<double>, regular_grid, AB, void))
 			//.def("SetAB", LUA_MEMFN(void, regular_grid, AB, const std::vector<double>&))
 			.def("GetBottomLeft", LUA_CMEMFN(point, regular_grid, BottomLeft, void))
@@ -771,7 +776,8 @@ void BindLib(lua_State* L)
 			.def("SetTopRight", LUA_MEMFN(void, regular_grid, BottomLeft, const point&))
 			.def("GetFirstGridPoint", LUA_CMEMFN(point, regular_grid, FirstGridPoint, void))
 			.def("GetLastGridPoint", LUA_CMEMFN(point, regular_grid, LastGridPoint, void))
-		,
+#endif
+			,
 		class_<matrix<double>>("matrix")
 			.def(constructor<size_t,size_t,size_t,double>())
 			/*.def("Size", &matrix<double>::Size)

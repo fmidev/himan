@@ -11,7 +11,10 @@
 #include "timer_factory.h"
 #include "producer.h"
 #include "util.h"
-#include "regular_grid.h"
+#include "grid.h"
+#include "latitude_longitude_grid.h"
+#include "stereographic_grid.h"
+#include "reduced_gaussian_grid.h"
 #include <boost/filesystem.hpp>
 
 using namespace std;
@@ -44,9 +47,9 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
 
-	if (anInfo.Grid()->Type() == kIrregularGrid)
+	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
 	{
-		itsLogger->Error("Unable to write irregular grid to grib");
+		itsLogger->Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) + " to grib");
 		return false;
 	}
 	
@@ -152,7 +155,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	if (static_cast<int> (anInfo.ForecastType().Type()) > 2)
 	{
-		itsGrib->Message().ForecastTypeValue(anInfo.ForecastType().Value());
+		itsGrib->Message().ForecastTypeValue(static_cast<long> (anInfo.ForecastType().Value()));
 	}
 
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
@@ -165,10 +168,10 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 #if defined GRIB_WRITE_PACKED_DATA and defined HAVE_CUDA
 
-	if (anInfo.Grid()->IsPackedData() && dynamic_cast<regular_grid*> (anInfo.Grid())->PackedData().ClassName() == "simple_packed")
+	if (anInfo.Grid()->IsPackedData() && anInfo.Grid()->PackedData().ClassName() == "simple_packed")
 	{
 		itsLogger->Trace("Writing packed data");
-		simple_packed* s = reinterpret_cast<simple_packed*> (&dynamic_cast<regular_grid*> (anInfo.Grid())->PackedData());
+		simple_packed* s = reinterpret_cast<simple_packed*> (anInfo.Grid()->PackedData());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
 		itsGrib->Message().BinaryScaleFactor(s->coefficients.binaryScaleFactor);
@@ -186,6 +189,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 #endif
 	{
 		itsLogger->Trace("Writing unpacked data");
+
 #ifdef DEBUG
 		// Check that data is not NaN, otherwise grib_api will go to 
 		// an eternal loop
@@ -243,13 +247,21 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	 *
 	 */
 
-	if (edition == 1)
+	if (anInfo.Grid()->Type() == kReducedGaussian)
 	{
-		itsGrib->Message().ResolutionAndComponentFlags(128); // 10000000
+		itsGrib->Message().ResolutionAndComponentFlags(0);
 	}
 	else
 	{
-		itsGrib->Message().ResolutionAndComponentFlags(48); // 00110000
+		// TODO: check if parameter really is rotated uv
+		if (edition == 1)
+		{
+			itsGrib->Message().ResolutionAndComponentFlags(128); // 10000000
+		}
+		else
+		{
+			itsGrib->Message().ResolutionAndComponentFlags(48); // 00110000
+		}
 	}
 
 	vector<double> AB = anInfo.Grid()->AB();
@@ -650,19 +662,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			}
 		}
 
-		std::vector<double> ab;
-
-		if (levelType == himan::kHybrid)
-		{
-		 	long nv = itsGrib->Message().NV();
-		 	long lev = itsGrib->Message().LevelValue();
-			
-			if (nv > 0)
-			{
-				ab = itsGrib->Message().PV(static_cast<size_t> (nv), static_cast<size_t> (lev));
-			}
-		}
-
 		forecast_type ty(static_cast<HPForecastType> (itsGrib->Message().ForecastType()), itsGrib->Message().ForecastTypeValue());
 		
 		if (options.ftype.Type() != ty.Type() || options.ftype.Value() != ty.Value())
@@ -692,7 +691,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		// END VALIDATION OF SEARCH PARAMETERS
 
 		shared_ptr<info> newInfo (new info());
-		regular_grid newGrid;
 
 		producer prod(centre, process);
 
@@ -729,8 +727,6 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 		newInfo->Producer(prod);
 
-		newGrid.AB(ab);
-
 		vector<param> theParams;
 
 		theParams.push_back(p);
@@ -759,143 +755,26 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		 * Get area information from grib.
 		 */
 
-		size_t ni = static_cast<size_t> (itsGrib->Message().SizeX());
-		size_t nj = static_cast<size_t> (itsGrib->Message().SizeY());
+		unique_ptr<grid> newGrid = ReadAreaAndGrid();
+
+		assert(newGrid);
 		
-		newGrid.Ni(ni);
-		newGrid.Nj(nj);
+		std::vector<double> ab;
 
-		switch (itsGrib->Message().NormalizedGridType())
+		if (levelType == himan::kHybrid)
 		{
-		case 0:
-			newGrid.Projection(kLatLonProjection);
-			break;
-
-		case 5:
-			newGrid.Projection(kStereographicProjection);
-
-			newGrid.Orientation(itsGrib->Message().GridOrientation());
-			newGrid.Di(itsGrib->Message().XLengthInMeters());
-			newGrid.Dj(itsGrib->Message().YLengthInMeters());
-			break;
-
-		case 10:
-			newGrid.Projection(kRotatedLatLonProjection);
-			newGrid.SouthPole(himan::point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY()));
-			break;
-
-		default:
-			throw runtime_error(ClassName() + ": Unsupported projection: " + boost::lexical_cast<string> (itsGrib->Message().NormalizedGridType()));
-			break;
-
-		}
-
-		bool iNegative = itsGrib->Message().IScansNegatively();
-		bool jPositive = itsGrib->Message().JScansPositively();
-
-		HPScanningMode m = kUnknownScanningMode;
-
-		if (!iNegative && !jPositive)
-		{
-			m = kTopLeft;
-		}
-		else if (iNegative && !jPositive)
-		{
-			m = kTopRight;
-		}
-		else if (iNegative && jPositive)
-		{
-			m = kBottomRight;
-		}
-		else if (!iNegative && jPositive)
-		{
-			m = kBottomLeft;
-		}
-		else
-		{
-			throw runtime_error("WHAT?");
-		}
-
-		newGrid.ScanningMode(m);
-
-		if (newGrid.Projection() == kRotatedLatLonProjection)
-		{
-			newGrid.UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
-		}
-
-		double X0 = itsGrib->Message().X0();
-		double Y0 = itsGrib->Message().Y0();
-
-		// GRIB2 has longitude 0 .. 360, but in neons we have it -180 .. 180
-		// NB! ONLY FOR EC and FMI! GFS and GEM geometries are in grib2 format
-		//
-		// Make conversion to GRIB1 style coordinates, but in the long run we should figure out how to
-		// handle grib 1 & grib 2 longitude values in a smart way. (a single geometry
-		// can have coordinates in both ways!)
-		
-		if (itsGrib->Message().Edition() == 2 && (centre == 98 || centre == 86) && X0 != 0)
-		{
-			X0 -= 360;
-			if (X0 < -180) X0 += 360;
-		}
-
-		if (newGrid.Projection() == kStereographicProjection)
-		{
-			/*
-			 * Do not support stereographic projections but in bottom left scanning mode.
-			 *
-			 * The calculation of grid extremes could be done with f.ex. NFmiAzimuthalArea
-			 * but lets not do that unless it's absolutely necessary.
-			 */
+		 	long nv = itsGrib->Message().NV();
+		 	long lev = itsGrib->Message().LevelValue();
 			
-			if (newGrid.ScanningMode() != kBottomLeft)
+			if (nv > 0)
 			{
-				itsLogger->Error(ClassName() + ": stereographic projection only supported when scanning mode is bottom left");
-				continue;
+				ab = itsGrib->Message().PV(static_cast<size_t> (nv), static_cast<size_t> (lev));
 			}
-
-			const point first(X0, Y0);
-
-			newGrid.BottomLeft(first);
-
-			assert(newGrid.ScanningMode() == kBottomLeft);
-			
-			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(first, newGrid.Orientation(), ni, nj, newGrid.Di(), newGrid.Dj());
-
-			newGrid.TopRight(coordinates.second);
+		}
 		
-		}
-		else
-		{
+		newGrid->AB(ab);
 
-			himan::point firstPoint(X0, Y0);
-
-			if (centre == 98 && firstPoint.X() == 180)
-			{
-
-				/**
-				 * Global EC data area is defined as
-				 *
-				 * latitudeOfFirstGridPointInDegrees = 90;
-				 * longitudeOfFirstGridPointInDegrees = 180;
-				 * latitudeOfLastGridPointInDegrees = 0;
-				 * longitudeOfLastGridPointInDegrees = 180;
-				 *
-				 * This area makes no sense, normalize the first value to -180.
-				 */
-
-				assert(m == kBottomLeft || m == kTopLeft); // Want to make sure we always read from left to right
-				
-				firstPoint.X(-180.);
-			}
-
-			pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),itsGrib->Message().jDirectionIncrement(), m);
-
-			newGrid.BottomLeft(coordinates.first);
-			newGrid.TopRight(coordinates.second);
-		}
-
-		newInfo->Create(&newGrid);
+		newInfo->Create(newGrid.get());
 
 		// Set descriptors
 
@@ -904,11 +783,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		newInfo->Level(l);
 		newInfo->ForecastType(ty);
 
-		matrix<double> dm(ni, nj, 1, kFloatMissing);
-
 		/*
 		 * Read data from grib *
 		 */
+		
+		auto& dm = newInfo->Grid()->Data();
 
 #if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
 
@@ -964,7 +843,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			packed->Set(data, len, static_cast<size_t> (itsGrib->Message().SizeX() * itsGrib->Message().SizeY()));
 
-			dynamic_cast<regular_grid*> (newInfo->Grid())->PackedData(move(packed));
+			newInfo->Grid()->PackedData(move(packed));
 
 		}
 		else
@@ -991,8 +870,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			// to wanted grid. This is a requirement since can't interpolate area here.
 			
 			if (options.configuration->UseCache() && 
-					dynamic_pointer_cast<const plugin_configuration> (options.configuration)->Info()->Grid()->Type() == kRegularGrid &&
-					dynamic_pointer_cast<const plugin_configuration> (options.configuration)->Info()->Grid()->Type() == newInfo->Grid()->Type() &&
+					dynamic_pointer_cast<const plugin_configuration> (options.configuration)->Info()->Grid()->Class() == kRegularGrid &&
+					dynamic_pointer_cast<const plugin_configuration> (options.configuration)->Info()->Grid()->Class() == newInfo->Grid()->Class() &&
 					*dynamic_pointer_cast<const plugin_configuration> (options.configuration)->Info()->Grid() == *newInfo->Grid())
 			{
 				itsLogger->Trace("Force cache insert");
@@ -1056,19 +935,210 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 	}
 }
 
+unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
+{
+		
+	bool iNegative = itsGrib->Message().IScansNegatively();
+	bool jPositive = itsGrib->Message().JScansPositively();
+
+	HPScanningMode m = kUnknownScanningMode;
+
+	if (!iNegative && !jPositive)
+	{
+		m = kTopLeft;
+	}
+	else if (iNegative && !jPositive)
+	{
+		m = kTopRight;
+	}
+	else if (iNegative && jPositive)
+	{
+		m = kBottomRight;
+	}
+	else if (!iNegative && jPositive)
+	{
+		m = kBottomLeft;
+	}
+	else
+	{
+		throw runtime_error("WHAT?");
+	}
+
+	double X0 = itsGrib->Message().X0();
+	double Y0 = itsGrib->Message().Y0();
+	
+	// GRIB2 has longitude 0 .. 360, but in neons we have it -180 .. 180
+	// NB! ONLY FOR EC and FMI! GFS and GEM geometries are in grib2 format
+	//
+	// Make conversion to GRIB1 style coordinates, but in the long run we should figure out how to
+	// handle grib 1 & grib 2 longitude values in a smart way. (a single geometry
+	// can have coordinates in both ways!)
+
+	long centre = itsGrib->Message().Centre();
+
+	if (itsGrib->Message().Edition() == 2 && (centre == 98 || centre == 86) && X0 != 0)
+	{
+		X0 -= 360;
+		if (X0 < -180) X0 += 360;
+	}
+
+	himan::point firstPoint(X0, Y0);
+
+	if (centre == 98 && firstPoint.X() == 180)
+	{
+
+		/**
+		 * Global EC data area is defined as
+		 *
+		 * latitudeOfFirstGridPointInDegrees = 90;
+		 * longitudeOfFirstGridPointInDegrees = 180;
+		 * latitudeOfLastGridPointInDegrees = 0;
+		 * longitudeOfLastGridPointInDegrees = 180;
+		 *
+		 * Normalize the first value to -180.
+		 */
+
+		assert(m == kBottomLeft || m == kTopLeft); // Want to make sure we always read from left to right
+
+		firstPoint.X(-180.);
+	}
+		
+	unique_ptr<grid> newGrid;
+	
+	switch (itsGrib->Message().NormalizedGridType())
+	{
+		case 0:
+		{
+			newGrid = unique_ptr<latitude_longitude_grid> (new latitude_longitude_grid);
+			latitude_longitude_grid* const rg = dynamic_cast<latitude_longitude_grid*> (newGrid.get());
+
+			size_t ni = static_cast<size_t> (itsGrib->Message().SizeX());
+			size_t nj = static_cast<size_t> (itsGrib->Message().SizeY());
+			
+			rg->Ni(ni);
+			rg->Nj(nj);
+
+			rg->ScanningMode(m);
+			
+			pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),itsGrib->Message().jDirectionIncrement(), m);
+
+			rg->BottomLeft(coordinates.first);
+			rg->TopRight(coordinates.second);
+
+			rg->Data(matrix<double> (ni, nj, 1, kFloatMissing));
+
+			break;
+		}
+		case 4:
+		{
+			newGrid = unique_ptr<reduced_gaussian_grid> (new reduced_gaussian_grid);
+			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*> (newGrid.get());
+
+			gg->N(static_cast<size_t> (itsGrib->Message().GetLongKey("N")));
+			gg->NumberOfLongitudesAlongParallels(itsGrib->Message().PL());
+			gg->Nj(static_cast<size_t> (itsGrib->Message().SizeY()));
+			gg->ScanningMode(m);
+			
+			assert(m == kTopLeft);
+			
+			//pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),itsGrib->Message().jDirectionIncrement(), m);
+
+			gg->TopLeft(firstPoint);
+			
+			point lastPoint(itsGrib->Message().X1(), itsGrib->Message().Y1());
+			gg->BottomRight(lastPoint);
+
+			break;
+		}
+		case 5:
+		{
+			newGrid = unique_ptr<stereographic_grid> (new stereographic_grid);
+			stereographic_grid* const rg = dynamic_cast<stereographic_grid*> (newGrid.get());
+
+			size_t ni = static_cast<size_t> (itsGrib->Message().SizeX());
+			size_t nj = static_cast<size_t> (itsGrib->Message().SizeY());
+			
+			rg->Ni(ni);
+			rg->Nj(nj);
+
+			rg->Orientation(itsGrib->Message().GridOrientation());
+			rg->Di(itsGrib->Message().XLengthInMeters());
+			rg->Dj(itsGrib->Message().YLengthInMeters());
+			
+			/*
+			 * Do not support stereographic projections but in bottom left scanning mode.
+			 *
+			 * The calculation of grid extremes could be done with f.ex. NFmiAzimuthalArea
+			 * but lets not do that unless it's absolutely necessary.
+			 */
+
+			if (m != kBottomLeft)
+			{
+				throw runtime_error("Stereographic projection only supported when scanning mode is bottom left");
+			}
+
+			rg->ScanningMode(m);
+
+			const point first(X0, Y0);
+
+			rg->BottomLeft(first);
+
+			std::pair<point, point> coordinates = util::CoordinatesFromFirstGridPoint(first, rg->Orientation(), ni, nj, rg->Di(), rg->Dj());
+
+			rg->TopRight(coordinates.second);
+			rg->Data(matrix<double> (ni, nj, 1, kFloatMissing));
+
+			break;
+		}
+		
+		case 10:
+		{
+			newGrid = unique_ptr<rotated_latitude_longitude_grid> (new rotated_latitude_longitude_grid);
+			rotated_latitude_longitude_grid* const rg = dynamic_cast<rotated_latitude_longitude_grid*> (newGrid.get());
+
+			size_t ni = static_cast<size_t> (itsGrib->Message().SizeX());
+			size_t nj = static_cast<size_t> (itsGrib->Message().SizeY());
+
+			rg->Ni(ni);
+			rg->Nj(nj);
+
+			rg->SouthPole(himan::point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY()));
+			rg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
+
+			rg->ScanningMode(m);
+			
+			pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),itsGrib->Message().jDirectionIncrement(), m);
+
+			rg->BottomLeft(coordinates.first);
+			rg->TopRight(coordinates.second);
+
+			rg->Data(matrix<double> (ni, nj, 1, kFloatMissing));
+
+			break;
+		}
+		default:
+			throw runtime_error(ClassName() + ": Unsupported grid type: " + boost::lexical_cast<string> (itsGrib->Message().NormalizedGridType()));
+			break;
+
+	}
+
+	return newGrid;
+}
+
 void grib::WriteAreaAndGrid(info& anInfo)
 {
-	regular_grid* g = dynamic_cast<regular_grid*> (anInfo.Grid());
-
-	himan::point firstGridPoint = g->FirstGridPoint();
-	himan::point lastGridPoint = g->LastGridPoint();
-
 	long edition = itsGrib->Message().Edition();
-	
-	switch (anInfo.Grid()->Projection())
+	HPScanningMode scmode = kUnknownScanningMode;
+
+	switch (anInfo.Grid()->Type())
 	{
-		case kLatLonProjection:
+		case kLatitudeLongitude:
 		{
+			latitude_longitude_grid* const rg = dynamic_cast<latitude_longitude_grid*> (anInfo.Grid());
+
+			himan::point firstGridPoint = rg->FirstPoint();
+			himan::point lastGridPoint = rg->LastPoint();
+
 			long gridType = 0; // Grib 1
 
 			if (edition == 2)
@@ -1083,15 +1153,24 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			itsGrib->Message().Y0(firstGridPoint.Y());
 			itsGrib->Message().Y1(lastGridPoint.Y());
 
-			itsGrib->Message().iDirectionIncrement(g->Di());
-			itsGrib->Message().jDirectionIncrement(g->Dj());
+			itsGrib->Message().iDirectionIncrement(rg->Di());
+			itsGrib->Message().jDirectionIncrement(rg->Dj());
 
+			itsGrib->Message().SizeX(static_cast<long> (rg->Ni()));
+			itsGrib->Message().SizeY(static_cast<long> (rg->Nj()));
+	
+			scmode = rg->ScanningMode();
+			
 			break;
 		}
 
-		case kRotatedLatLonProjection:
+		case kRotatedLatitudeLongitude:
 		{
+			rotated_latitude_longitude_grid* const rg = dynamic_cast<rotated_latitude_longitude_grid*> (anInfo.Grid());
 
+			himan::point firstGridPoint = rg->FirstPoint();
+			himan::point lastGridPoint = rg->LastPoint();
+			
 			long gridType = 10; // Grib 1
 
 			if (edition == 2)
@@ -1106,23 +1185,30 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			itsGrib->Message().X1(lastGridPoint.X());
 			itsGrib->Message().Y1(lastGridPoint.Y());
 
-			itsGrib->Message().SouthPoleX(g->SouthPole().X());
-			itsGrib->Message().SouthPoleY(g->SouthPole().Y());
+			itsGrib->Message().SouthPoleX(rg->SouthPole().X());
+			itsGrib->Message().SouthPoleY(rg->SouthPole().Y());
 
-			itsGrib->Message().iDirectionIncrement(g->Di());
-			itsGrib->Message().jDirectionIncrement(g->Dj());
+			itsGrib->Message().iDirectionIncrement(rg->Di());
+			itsGrib->Message().jDirectionIncrement(rg->Dj());
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().UVRelativeToGrid(g->UVRelativeToGrid());
+			itsGrib->Message().UVRelativeToGrid(rg->UVRelativeToGrid());
 
+			itsGrib->Message().SizeX(static_cast<long> (rg->Ni()));
+			itsGrib->Message().SizeY(static_cast<long> (rg->Nj()));
+	
+			scmode = rg->ScanningMode();
+			
 			break;
 		}
 
-		case kStereographicProjection:
+		case kStereographic:
 		{
-			long gridType = 5; // Grib 1
+			stereographic_grid* const rg = dynamic_cast<stereographic_grid*> (anInfo.Grid());
 
+			long gridType = 5; // Grib 1
+			
 			if (edition == 2)
 			{
 				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
@@ -1130,28 +1216,66 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().X0(g->BottomLeft().X());
-			itsGrib->Message().Y0(g->BottomLeft().Y());
+			itsGrib->Message().X0(rg->BottomLeft().X());
+			itsGrib->Message().Y0(rg->BottomLeft().Y());
 
-			itsGrib->Message().GridOrientation(g->Orientation());
+			itsGrib->Message().GridOrientation(rg->Orientation());
 
-			itsGrib->Message().XLengthInMeters(g->Di());
-			itsGrib->Message().YLengthInMeters(g->Dj());
+			itsGrib->Message().XLengthInMeters(rg->Di());
+			itsGrib->Message().YLengthInMeters(rg->Dj());
+			
+			itsGrib->Message().SizeX(static_cast<long> (rg->Ni()));
+			itsGrib->Message().SizeY(static_cast<long> (rg->Nj()));
+			
+			scmode = rg->ScanningMode();
+			
 			break;
 		}
 
+		case kReducedGaussian:
+		{
+			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*> (anInfo.Grid());
+
+			//himan::point firstGridPoint = gg->FirstGridPoint();
+			//himan::point lastGridPoint = gg->LastGridPoint();
+
+			long gridType = 4; // Grib 1
+			
+			if (edition == 2)
+			{
+				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+			}
+
+			assert(gg->ScanningMode() == kTopLeft);
+
+			itsGrib->Message().GridType(gridType);
+			
+			itsGrib->Message().X0(gg->BottomLeft().X());
+			itsGrib->Message().Y0(gg->BottomLeft().Y());
+			itsGrib->Message().X1(gg->TopRight().X());
+			itsGrib->Message().Y1(gg->TopRight().Y());
+				
+			//itsGrib->Message().SizeX(static_cast<long> (65535));
+			//itsGrib->Message().SizeY(static_cast<long> (gg->Nj()));
+			itsGrib->Message().SetLongKey("iDirectionIncrement", 65535);
+			itsGrib->Message().SetLongKey("numberOfPointsAlongAParallel", 65535);
+
+			itsGrib->Message().SetLongKey("N", static_cast<long> (gg->N()));
+
+			itsGrib->Message().PL(gg->NumberOfLongitudesAlongParallels());
+			
+			scmode = gg->ScanningMode();
+			
+			break;
+		}
 		default:
-			throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (g->Projection()));
+			throw runtime_error(ClassName() + ": invalid projection while writing grib: " + boost::lexical_cast<string> (anInfo.Grid()->Type()));
 			break;
 	}
 
-	itsGrib->Message().SizeX(static_cast<long> (g->Ni()));
-	itsGrib->Message().SizeY(static_cast<long> (g->Nj()));
+	bool iNegative, jPositive;
 
-	bool iNegative = itsGrib->Message().IScansNegatively();
-	bool jPositive = itsGrib->Message().JScansPositively();
-
-	switch (g->ScanningMode())
+	switch (scmode)
 	{
 		case kTopLeft:
 			iNegative = false;
@@ -1174,7 +1298,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			break;
 
 		default:
-			throw runtime_error(ClassName() + ": Uknown scanning mode when writing grib");
+			throw runtime_error(ClassName() + ": Unknown scanning mode when writing grib");
 			break;
 	}
 
@@ -1187,7 +1311,8 @@ void grib::WriteTime(info& anInfo)
 	itsGrib->Message().DataDate(boost::lexical_cast<long> (anInfo.Time().OriginDateTime().String("%Y%m%d")));
 	itsGrib->Message().DataTime(boost::lexical_cast<long> (anInfo.Time().OriginDateTime().String("%H%M")));
 
-	double divisor = 1, unitOfTimeRange = 1;
+	double divisor = 1;
+	long unitOfTimeRange = 1;
 
 	if (anInfo.Producer().Id() == 210)
 	{
@@ -1259,7 +1384,7 @@ void grib::WriteTime(info& anInfo)
 				}
 			
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(anInfo.Time().Step() / divisor);
+				itsGrib->Message().P2(static_cast<long> (anInfo.Time().Step() / divisor));
 				break;
 			case kAccumulation:
 				// Accumulation (reference time + P1 to reference time + P2) product considered valid at reference time + P2
@@ -1271,7 +1396,7 @@ void grib::WriteTime(info& anInfo)
 					p1 = 0;
 				}
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(anInfo.Time().Step() / divisor);
+				itsGrib->Message().P2(static_cast<long> (anInfo.Time().Step() / divisor));
 				break;
 			case kDifference:
 				// Difference (reference time + P2 minus reference time + P1) product considered valid at reference time + P2
@@ -1284,7 +1409,7 @@ void grib::WriteTime(info& anInfo)
 				}
 
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(anInfo.Time().Step() / divisor);
+				itsGrib->Message().P2(static_cast<long> (anInfo.Time().Step() / divisor));
 				break;
 		}
 
@@ -1310,8 +1435,8 @@ void grib::WriteTime(info& anInfo)
 			case kAccumulation:
 			case kDifference:
 				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitOfTimeRange);
-				itsGrib->Message().ForecastTime((anInfo.Time().Step() - period) / divisor); // start step
-				itsGrib->Message().LengthOfTimeRange(itsWriteOptions.configuration->ForecastStep() / divisor); // step length
+				itsGrib->Message().ForecastTime(static_cast<long> ((anInfo.Time().Step() - period) / divisor)); // start step
+				itsGrib->Message().LengthOfTimeRange(static_cast<long> (itsWriteOptions.configuration->ForecastStep() / divisor)); // step length
 				break;
 		}
 	}

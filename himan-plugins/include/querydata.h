@@ -109,6 +109,11 @@ public:
 	
 	std::shared_ptr<info> CreateInfo(std::shared_ptr<NFmiQueryData> theData) const;
 
+	NFmiTimeDescriptor CreateTimeDescriptor(info& info, bool activeOnly);
+	NFmiParamDescriptor CreateParamDescriptor(info& info, bool activeOnly);
+	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
+	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
+
 private:
 	/**
 	 * @brief Copy data from info to querydata
@@ -119,11 +124,6 @@ private:
      */
 	bool CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const;
 
-	NFmiTimeDescriptor CreateTimeDescriptor(info& info, bool activeOnly);
-	NFmiParamDescriptor CreateParamDescriptor(info& info, bool activeOnly);
-	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
-	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
-   
 	NFmiHPlaceDescriptor CreateGrid(info& info) const;
 	NFmiHPlaceDescriptor CreatePoint(info& info) const;
 

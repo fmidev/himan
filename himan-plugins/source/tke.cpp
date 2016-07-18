@@ -14,7 +14,6 @@
 #include "logger_factory.h"
 #include "level.h"
 #include "forecast_time.h"
-#include "regular_grid.h"
 #include "util.h"
 #include "numerical_functions.h"
 

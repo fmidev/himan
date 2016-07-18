@@ -9,9 +9,9 @@
 #include "querydata.h"
 #include "logger_factory.h"
 #include <fstream>
-#include "regular_grid.h"
-#include "irregular_grid.h"
-#include <boost/foreach.hpp>
+#include "latitude_longitude_grid.h"
+#include "stereographic_grid.h"
+#include "point_list.h"
 
 #ifdef __clang__
 
@@ -78,7 +78,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 	 */
 
 	shared_ptr<NFmiQueryData> qdata;
-	
+
 	NFmiParamDescriptor pdesc = CreateParamDescriptor(localInfo, activeOnly);
 	NFmiTimeDescriptor tdesc = CreateTimeDescriptor(localInfo, activeOnly);
 	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(localInfo, activeOnly);
@@ -185,9 +185,9 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
-	if (theInfo.Grid()->Type() == kRegularGrid && dynamic_cast<regular_grid*> (theInfo.Grid())->ScanningMode() != kBottomLeft)
+	if (theInfo.Grid()->Class() == kRegularGrid && theInfo.Grid()->ScanningMode() != kBottomLeft)
 	{
-		assert(dynamic_cast<regular_grid*> (theInfo.Grid())->ScanningMode() == kTopLeft);
+		assert(theInfo.Grid()->ScanningMode() == kTopLeft);
 
 		size_t nj = theInfo.Data().SizeY();
 		size_t ni = theInfo.Data().SizeX();
@@ -308,10 +308,10 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 NFmiHPlaceDescriptor querydata::CreatePoint(info& info) const
 {
-	const irregular_grid* g = dynamic_cast<irregular_grid*> (info.Grid());
+	const point_list* g = dynamic_cast<point_list*> (info.Grid());
 	NFmiLocationBag bag;
 	
-	BOOST_FOREACH(const station& s, g->Stations())
+	for(const station& s : g->Stations())
 	{
 		NFmiStation stat(s.Id(), s.Name(), s.X(), s.Y());
 		bag.AddLocation(stat);
@@ -332,20 +332,22 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 
 	NFmiArea* theArea = 0;
 
-	const regular_grid* g = dynamic_cast<const regular_grid*> (info.Grid());
-	
-	switch (g->Projection())
+	switch (info.Grid()->Type())
 	{
-		case kLatLonProjection:
+		case kLatitudeLongitude:
 		{
+			latitude_longitude_grid* const g = dynamic_cast<latitude_longitude_grid*> (info.Grid());
+			
 			theArea = new NFmiLatLonArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
 										 NFmiPoint(g->TopRight().X(), g->TopRight().Y()));
 
 			break;
 		}
 
-		case kRotatedLatLonProjection:
+		case kRotatedLatitudeLongitude:
 		{
+			rotated_latitude_longitude_grid* const g = dynamic_cast<rotated_latitude_longitude_grid*> (info.Grid());
+
 			theArea = new NFmiRotatedLatLonArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
 												NFmiPoint(g->TopRight().X(), g->TopRight().Y()),
 												NFmiPoint(g->SouthPole().X(), g->SouthPole().Y()),
@@ -356,8 +358,10 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			break;
 		}
 
-		case kStereographicProjection:
+		case kStereographic:
 		{
+			stereographic_grid* const g = dynamic_cast<stereographic_grid*> (info.Grid());
+			
 			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
 												g->Di() * static_cast<double> ((g->Ni()-1)),
 												g->Dj() * static_cast<double> ((g->Nj()-1)),
@@ -373,7 +377,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			break;
 	}
 
-	NFmiGrid theGrid (theArea, g->Ni(), g->Nj());
+	NFmiGrid theGrid (theArea, info.Grid()->Ni(), info.Grid()->Nj());
 
 	delete theArea;
 
@@ -407,15 +411,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 
 					if (!firstGrid)
 					{
-						if (g->Type() == kRegularGrid)
-						{
-							firstGrid = dynamic_cast<regular_grid*> (g);
-						}
-						else
-						{
-							firstGrid = dynamic_cast<irregular_grid*> (g);	
-						}
-						
+						firstGrid = g ;
 						continue;
 					}
 
@@ -425,12 +421,9 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 						return NFmiHPlaceDescriptor();
 					}
 					
-					if (firstGrid->Type() == kRegularGrid)
+					if (firstGrid->Class() == kRegularGrid)
 					{
-						const regular_grid* fg_ = dynamic_cast<const regular_grid*> (firstGrid);
-						regular_grid* g_ = dynamic_cast<regular_grid*> (info.Grid());
-					
-						if (*fg_ != *g_)
+						if (*firstGrid != *g)
 						{
 							itsLogger->Error("All grids in info are not equal, unable to write querydata");
 							return NFmiHPlaceDescriptor();
@@ -438,8 +431,8 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 					}
 					else
 					{
-						const irregular_grid* fg_ = dynamic_cast<const irregular_grid*> (firstGrid);
-						irregular_grid* g_ = dynamic_cast<irregular_grid*> (info.Grid());
+						const point_list* fg_ = dynamic_cast<const point_list*> (firstGrid);
+						point_list* g_ = dynamic_cast<point_list*> (info.Grid());
 					
 						if (*fg_ != *g_)
 						{
@@ -453,7 +446,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 	}
 
 
-	if (info.Grid()->Type() == kRegularGrid)
+	if (info.Grid()->Class() == kRegularGrid)
 	{
 		return CreateGrid(info);
 	}
@@ -496,7 +489,7 @@ shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const searc
 shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
 {
 	auto newInfo = make_shared<info> ();
-	regular_grid newGrid;
+	grid* newGrid = 0;
 
 	NFmiQueryInfo qinfo = theData.get();
 
@@ -578,40 +571,56 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	
 	// Grid
 
-	newGrid.ScanningMode(kBottomLeft);
-	newGrid.UVRelativeToGrid(false);
-
+	const size_t ni = qinfo.Grid()->XNumber();
+	const size_t nj = qinfo.Grid()->YNumber();
+	
 	switch (qinfo.Area()->ClassId())
 	{
 		case kNFmiLatLonArea:
-			newGrid.Projection(kLatLonProjection);
+		{
+			newGrid = new latitude_longitude_grid;
+			latitude_longitude_grid* const ll = dynamic_cast<latitude_longitude_grid*> (newGrid);
+			ll->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
+			ll->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
+			ll->Ni(ni);
+			ll->Nj(nj);
+		}
 			break;
 
 		case kNFmiRotatedLatLonArea:
 		{
-			newGrid.Projection(kRotatedLatLonProjection);
+			newGrid = new rotated_latitude_longitude_grid;
+			rotated_latitude_longitude_grid* const rll = dynamic_cast<rotated_latitude_longitude_grid*> (newGrid);
 			NFmiPoint southPole = reinterpret_cast<const NFmiRotatedLatLonArea*> (qinfo.Area())->SouthernPole();
-			newGrid.SouthPole(point(southPole.X(), southPole.Y()));
+			rll->SouthPole(point(southPole.X(), southPole.Y()));
+			rll->UVRelativeToGrid(false);
+			rll->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
+			rll->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
+			rll->Ni(ni);
+			rll->Nj(nj);
+	
 		}
 			break;
 
 		case kNFmiStereographicArea:
-			newGrid.Projection(kStereographicProjection);
-			newGrid.Orientation(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->Orientation());
-			//newGrid.Di(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->);
-			//newGrid.Dj(itsGrib->Message()->YLengthInMeters());
-
+		{
+			newGrid = new stereographic_grid;
+			stereographic_grid* const s = dynamic_cast<stereographic_grid*> (newGrid);
+			s->Orientation(reinterpret_cast<const NFmiStereographicArea*> (qinfo.Area())->Orientation());
+			s->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
+			s->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
+			s->Ni(ni);
+			s->Nj(nj);
+		}	
 			break;
 	}
 
-	size_t ni = qinfo.Grid()->XNumber();
-	size_t nj = qinfo.Grid()->YNumber();
+	newGrid->ScanningMode(kBottomLeft);
+
+	newInfo->Create(newGrid);
+
+	delete newGrid;
 	
-	newGrid.BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
-	newGrid.TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
-
-	newInfo->Create(&newGrid);
-
 	// Copy data
 
 	newInfo->FirstForecastType();

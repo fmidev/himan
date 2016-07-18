@@ -226,45 +226,6 @@ private:
 
 	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData);
 
-	/**
-	 * @brief Function to perform area interpolation
-	 *
-	 * If target area is not identical to source area, perform area interpolation. Newbase
-	 * is used to do the actual job. If data is packed, it will be unpacked before interpolation.
-	 *
-	 * Only the active part of infos is accessed; function does not move iterator positions.
-	 *
-	 * @param targetInfo Target info (ie. area)
-	 * @param infos List of source infos, all elements of list will be interpolated.
-	 * @return True if interpolation succeeds for all infos
-	 */
-
-	bool InterpolateArea(const plugin_configuration& conf, info& targetInfo, std::vector<info_t> infos) const;
-	bool Interpolate(const plugin_configuration& conf, info& baseInfo, std::vector<info_t>& infos) const;
-	bool ReorderPoints(info& base, std::vector<info_t> infos) const;
-	bool InterpolateAreaCuda(info& base, info& target, matrix<double>& targetData) const;
-	bool InterpolateAreaNewbase(info& base, info& source, matrix<double>& targetData) const;
-
-
-
-	/**
-	 * @brief Swap scanning mode if needed
-	 *
-	 * If source area != target area and interpolation is done, we might need to swap. This is because
-	 * newbase is used to do the interpolation, and newbase will always normalize the scanning mode to
-	 * bottom left. So if our target area is top left, we need to swap.
-	 *
-	 * Function will be a no-op if target grid scanning mode == wanted scanning mode.
-	 *
-	 * If target grid data is packed, function will unpack it.
-	 * 
-	 * @param targetGrid grid that's swapped
-	 * @param targetScanningMode The scanning mode that the grid is swapped to
-	 * @return True if swapping succeeds
-	 */
-
-	bool SwapTo(const std::shared_ptr<grid>& targetGrid, HPScanningMode targetScanningMode);
-
 	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform; //<! Default true
 	bool itsDoInterpolation; //<! Default true

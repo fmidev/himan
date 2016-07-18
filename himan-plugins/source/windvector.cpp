@@ -11,12 +11,16 @@
 #include "util.h"
 #include <math.h>
 #include "logger_factory.h"
+#include "plugin_factory.h"
 #include "level.h"
 #include "forecast_time.h"
-#include "NFmiArea.h"
+//#include "NFmiArea.h"
 #include "NFmiRotatedLatLonArea.h"
 #include "NFmiStereographicArea.h"
+#include "latitude_longitude_grid.h"
 #include <boost/thread.hpp>
+
+#include "querydata.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -213,18 +217,18 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		VInfo->Grid()->Stagger(0, -0.5);
 	}*/
 
-	assert(UInfo->Grid()->Projection() == VInfo->Grid()->Projection());
+	assert(UInfo->Grid()->Type() == VInfo->Grid()->Type());
 
 	string deviceType;
 
 #ifdef HAVE_CUDA
-	bool needStereographicGridRotation = (UInfo->Grid()->Projection() == kStereographicProjection && UInfo->Grid()->UVRelativeToGrid());
+	bool needStereographicGridRotation = (UInfo->Grid()->Type() == kStereographic && UInfo->Grid()->UVRelativeToGrid());
 
 	if (itsConfiguration->UseCuda() && !needStereographicGridRotation)
 	{
 		deviceType = "GPU";
 
-		assert(UInfo->Grid()->Projection() == kLatLonProjection || UInfo->Grid()->Projection() == kRotatedLatLonProjection);
+		assert(UInfo->Grid()->Type() == kLatitudeLongitude || UInfo->Grid()->Type() == kRotatedLatitudeLongitude);
 			
 		auto opts = CudaPrepare(myTargetInfo, UInfo, VInfo);
 
@@ -273,7 +277,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				continue;
 			}
 
-			if (UInfo->Grid()->Projection() == kRotatedLatLonProjection)
+			if (UInfo->Grid()->Type() == kRotatedLatitudeLongitude)
 			{
 				const point regPoint = myTargetInfo->LatLon();
 
@@ -285,7 +289,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 				double newU = kFloatMissing, newV = kFloatMissing;
 
-				if (myTargetInfo->Grid()->Projection() == kRotatedLatLonProjection || myTargetInfo->Grid()->Projection() == kLatLonProjection)
+				if (myTargetInfo->Grid()->Type() == kRotatedLatitudeLongitude || myTargetInfo->Grid()->Type() == kLatitudeLongitude)
 				{
 
 					/*
@@ -303,7 +307,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 					}
 					else
 					{
-						coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+						coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->SouthPole()); // inefficient cast
 						(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
 					}
 
@@ -311,7 +315,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 					newV = get<2> (coeffs) * U + get<3> (coeffs) * V;
 						
 				}
-				else if (myTargetInfo->Grid()->Projection() == kStereographicProjection)
+				else if (myTargetInfo->Grid()->Type() == kStereographic)
 				{
 					/*
 					 * This modification of the PA,PB,PC,PD coefficients has been
@@ -333,7 +337,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 					}
 					else
 					{
-						coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, UInfo->Grid()->SouthPole());
+						coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->SouthPole());
 						(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
 					}
 
@@ -348,7 +352,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				}
 				else
 				{
-					myThreadedLogger->Error("Invalid target projection: " + string(HPProjectionTypeToString.at(myTargetInfo->Grid()->Projection())));
+					myThreadedLogger->Error("Invalid target projection: " + string(HPGridTypeToString.at(myTargetInfo->Grid()->Type())));
 					return;
 				}
 
@@ -360,7 +364,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				V = newV;
 
 			}
-			else if (UInfo->Grid()->Projection() == kStereographicProjection)
+			else if (UInfo->Grid()->Type() == kStereographic)
 			{
 				//const point regPoint = myTargetInfo->LatLon();
 				throw runtime_error("Rotation of stereographic UV coordinates not confirmed yet");
@@ -461,7 +465,7 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
 
 	opts->vector_calculation = itsVectorCalculation;
-	opts->need_grid_rotation = (UInfo->Grid()->Projection() == kRotatedLatLonProjection && UInfo->Grid()->UVRelativeToGrid());
+	opts->need_grid_rotation = (UInfo->Grid()->Type() == kRotatedLatitudeLongitude && UInfo->Grid()->UVRelativeToGrid());
 	opts->target_type = itsCalculationTarget;
 
 	opts->u = UInfo->ToSimple();
@@ -491,55 +495,12 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 
 unique_ptr<NFmiArea> windvector::ToNewbaseArea(shared_ptr<info> myTargetInfo) const
 {
+	auto q = GET_PLUGIN(querydata);
+	
+	auto hdesc = q->CreateHPlaceDescriptor(*myTargetInfo, true);
 
-	unique_ptr<NFmiArea> theArea;
-
-	// Newbase does not understand grib2 longitude coordinates
-
-	double bottomLeftLongitude = myTargetInfo->Grid()->BottomLeft().X();
-	double topRightLongitude = myTargetInfo->Grid()->TopRight().X();
-
-	if (bottomLeftLongitude > 180 || topRightLongitude > 180)
-	{
-		bottomLeftLongitude -= 180;
-		topRightLongitude -= 180;
-	}
-
-	switch (myTargetInfo->Grid()->Projection())
-	{
-		case kLatLonProjection:
-		{
-			theArea = unique_ptr<NFmiLatLonArea> (new NFmiLatLonArea(NFmiPoint(bottomLeftLongitude, myTargetInfo->Grid()->BottomLeft().Y()),
-										 NFmiPoint(topRightLongitude, myTargetInfo->Grid()->TopRight().Y())));
-
-			break;
-		}
-
-		case kRotatedLatLonProjection:
-		{
-			theArea = unique_ptr<NFmiRotatedLatLonArea> (new NFmiRotatedLatLonArea(NFmiPoint(bottomLeftLongitude, myTargetInfo->Grid()->BottomLeft().Y()),
-												NFmiPoint(topRightLongitude, myTargetInfo->Grid()->TopRight().Y()),
-												NFmiPoint(myTargetInfo->Grid()->SouthPole().X(), myTargetInfo->Grid()->SouthPole().Y()),
-												NFmiPoint(0.,0.), // default values
-												NFmiPoint(1.,1.), // default values
-												true));
-			break;
-		}
-
-		case kStereographicProjection:
-		{
-			theArea = unique_ptr<NFmiStereographicArea> (new NFmiStereographicArea(NFmiPoint(bottomLeftLongitude, myTargetInfo->Grid()->BottomLeft().Y()),
-												NFmiPoint(topRightLongitude, myTargetInfo->Grid()->TopRight().Y()),
-												myTargetInfo->Grid()->Orientation()));
-			break;
-
-		}
-
-		default:
-			throw runtime_error(ClassName() + ": No supported projection found");
-			break;
-	}
-
+	unique_ptr<NFmiArea> theArea = unique_ptr<NFmiArea> (hdesc.Area()->Clone());
+	
 	assert(theArea);
 
 	return theArea;

@@ -12,7 +12,6 @@
 #include "logger_factory.h"
 #include "level.h"
 #include "forecast_time.h"
-#include "regular_grid.h"
 #include "util.h"
 
 using namespace std;
@@ -134,12 +133,12 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
     string deviceType = "CPU";
 
-    double Di = dynamic_cast<regular_grid*> (myTargetInfo->Grid())->Di();
-    double Dj = dynamic_cast<regular_grid*> (myTargetInfo->Grid())->Dj();
-    point firstPoint = dynamic_cast<regular_grid*> (myTargetInfo->Grid())->FirstGridPoint();
+    double Di = myTargetInfo->Grid()->Di();
+    double Dj = myTargetInfo->Grid()->Dj();
+    point firstPoint = myTargetInfo->Grid()->FirstPoint();
 
-    size_t Ni = dynamic_cast<regular_grid*> (myTargetInfo->Grid())->Ni();
-    size_t Nj = dynamic_cast<regular_grid*> (myTargetInfo->Grid())->Nj();
+    size_t Ni = myTargetInfo->Grid()->Ni();
+    size_t Nj = myTargetInfo->Grid()->Nj();
 
     vector<double> dx (Nj, kFloatMissing);
     vector<double> dy (Ni, kFloatMissing);

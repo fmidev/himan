@@ -77,6 +77,8 @@ private:
 	void WriteTime(info& anInfo);
 	void WriteParameter(info& anInfo);
 
+	std::unique_ptr<grid> ReadAreaAndGrid() const;
+
 	/**
 	 * @brief UnpackBitmap
 	 *

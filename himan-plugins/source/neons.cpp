@@ -12,7 +12,6 @@
 #include <sstream>
 #include "util.h"
 #include "unistd.h" // getuid())
-#include "regular_grid.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -152,13 +151,11 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 	stringstream query;
 
-	if (resultInfo.Grid()->Type() != kRegularGrid)
+	if (resultInfo.Grid()->Class() != kRegularGrid)
 	{
 		itsLogger->Error("Only grid data can be stored to neons for now");
 		return false;
 	}
-
-	const regular_grid* g = dynamic_cast<regular_grid*> (resultInfo.Grid());
 
 	/*
 	 * 1. Get grid information
@@ -167,24 +164,14 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 	 * 4. Insert or update
 	 */
 
-	himan::point firstGridPoint = g->FirstGridPoint();
-
-	/*
-	 * pas_latitude and pas_longitude cannot be checked programmatically
-	 * since f.ex. in the case for GFS in neons we have value 500 and
-	 * by calculating we have value 498. But not check these columns should
-	 * not matter as long as row_cnt, col_cnt, lat_orig and lon_orig match
-	 * (since pas_latitude and pas_longitude are derived from these anyway)
-	 */
+	himan::point firstGridPoint = resultInfo.Grid()->FirstPoint();
 
 	query 	<< "SELECT geom_name "
 			<< "FROM grid_reg_geom "
-			<< "WHERE row_cnt = " << g->Nj()
-			<< " AND col_cnt = " << g->Ni()
+			<< "WHERE row_cnt = " << resultInfo.Grid()->Nj()
+			<< " AND col_cnt = " << resultInfo.Grid()->Ni()
 			<< " AND lat_orig = " << (firstGridPoint.Y() * 1e3)
 			<< " AND long_orig = " << (firstGridPoint.X() * 1e3);
-//			<< " AND pas_latitude = " << static_cast<long> (resultInfo.Dj() * 1e3)
-//			<< " AND pas_longitude = " << static_cast<long> (resultInfo.Di() * 1e3);
 
 	itsNeonsDB->Query(query.str());
 
@@ -230,27 +217,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 		return false;
 	}
 
-	// string process = row[0];
-
-	//string centre = row[1];
-	//string model_name = row[2];
 	string model_type = row[3];
-
-	/*
-		query 	<< "SELECT "
-				<< "m.model_name, "
-				<< "model_type, "
-				<< "type_smt "
-				<< "FROM grid_num_model_grib nu, "
-				<< "grid_model m, "
-				<< "grid_model_name na "
-				<< "WHERE nu.model_id = " << info.process
-				<< " AND nu.ident_id = " << info.centre
-				<< " AND m.flag_mod = 0 "
-				<< " AND nu.model_name = na.model_name "
-				<< " AND m.model_name = na.model_name";
-
-	*/
 
 	query.str("");
 

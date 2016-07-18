@@ -614,5 +614,7 @@ bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetI
 	
 	CUDA_CHECK(cudaStreamDestroy(stream));
 	
+	delete [] grid;
+
 	return true;
 }

@@ -14,10 +14,8 @@
 #include "logger_factory.h"
 #include "level.h"
 #include "forecast_time.h"
-#include "regular_grid.h"
 #include "numerical_functions.h"
 #include "matrix.h"
-
 
 using namespace std;
 using namespace himan::plugin;

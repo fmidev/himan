@@ -12,7 +12,6 @@
 #include "logger_factory.h"
 #include "util.h"
 #include "cuda_helper.h"
-#include "regular_grid.h"
 
 #include "fetcher.h"
 #include "neons.h"
@@ -515,15 +514,14 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 	for (auto it = infos.begin(); it != infos.end(); ++it)
 	{
 		info_t tempInfo = *it;
-		regular_grid* g = dynamic_cast<regular_grid*> (tempInfo->Grid());
 
-		if (g->PackedData().packedLength == 0)
+		if (tempInfo->Grid()->PackedData().packedLength == 0)
 		{
 			// Safeguard: This particular info does not have packed data
 			continue;
 		}
 
-		assert(g->PackedData().ClassName() == "simple_packed");
+		assert(tempInfo->Grid()->PackedData().ClassName() == "simple_packed");
 
 		util::Unpack({ tempInfo->Grid() });
 
@@ -599,7 +597,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(dynamic_cast<regular_grid*> (ret->Grid())->PackedData().ClassName() == "simple_packed");
+			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 			
@@ -633,7 +631,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(dynamic_cast<regular_grid*> (ret->Grid())->PackedData().ClassName() == "simple_packed");
+			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 									
@@ -672,7 +670,7 @@ void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 
 void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 {
-	if (myTargetInfo.Grid()->Type() == kIrregularGrid)
+	if (myTargetInfo.Grid()->Class() == kIrregularGrid)
 	{
 		return;
 	}
@@ -681,7 +679,7 @@ void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 
 	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)
 	{
-		myTargetInfo.Data().Resize(dynamic_cast<regular_grid*> (myTargetInfo.Grid())->Ni(),dynamic_cast<regular_grid*> (myTargetInfo.Grid())->Nj());
+		myTargetInfo.Data().Resize(myTargetInfo.Grid()->Ni(),myTargetInfo.Grid()->Nj());
 	}
 
 	myTargetInfo.ParamIndex(paramIndex);
@@ -689,7 +687,7 @@ void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 
 void compiled_plugin_base::DeallocateMemory(info myTargetInfo)
 {
-	if (myTargetInfo.Grid()->Type() == kIrregularGrid)
+	if (myTargetInfo.Grid()->Class() == kIrregularGrid)
 	{
 		return;
 	}

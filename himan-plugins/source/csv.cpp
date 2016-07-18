@@ -9,8 +9,7 @@
 #include "csv.h"
 #include "logger_factory.h"
 #include <fstream>
-#include "regular_grid.h"
-#include "irregular_grid.h"
+#include "point_list.h"
 #include <boost/foreach.hpp>
 #include "csv_v3.h"
 #include <boost/filesystem.hpp>
@@ -68,7 +67,7 @@ csv::csv()
 
 bool csv::ToFile(info& theInfo, string& theOutputFile)
 {
-	if (theInfo.Grid()->Type() != kIrregularGrid)
+	if (theInfo.Grid()->Class() != kIrregularGrid)
 	{
 		itsLogger->Error("Only irregular grids can be written to CSV");
 		return false;
@@ -271,12 +270,13 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	
 	ret->ForecastTypes(ftypes);
 
-	auto base = unique_ptr<grid> (new irregular_grid()); // placeholder
-	base->Projection(kLatLonProjection);
+	auto base = unique_ptr<grid> (new point_list()); // placeholder
+	base->Type(kLatitudeLongitude);
+	base->Class(kIrregularGrid);
 	
 	ret->Create(base.get());
 
-	dynamic_cast<irregular_grid*> (ret->Grid())->Stations(stats);
+	dynamic_cast<point_list*> (ret->Grid())->Stations(stats);
 
 	itsLogger->Debug("Read " + boost::lexical_cast<string> (times.size()) 
 			+ " times, " + boost::lexical_cast<string> (levels.size())

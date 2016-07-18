@@ -12,7 +12,6 @@
 #include <sstream>
 #include "util.h"
 #include "unistd.h" // getuid())
-#include "regular_grid.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -144,13 +143,11 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	
 	stringstream query;
 
-	if (resultInfo.Grid()->Type() != kRegularGrid)
+	if (resultInfo.Grid()->Class() != kRegularGrid)
 	{
 		itsLogger->Error("Only grid data can be stored to radon for now");
 		return false;
 	}
-
-	const regular_grid* g = dynamic_cast<regular_grid*> (resultInfo.Grid());
 
 	/*
 	 * 1. Get grid information
@@ -159,27 +156,37 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	 * 4. Insert or update
 	 */
 
-	himan::point firstGridPoint = g->FirstGridPoint();
+	himan::point firstGridPoint = resultInfo.Grid()->FirstPoint();
 
 	// get grib1 gridType
 
 	int gridType = -1;
 
-	switch (g->Projection()) {
-		case 10:
+	switch (resultInfo.Grid()->Type()) {
+		case 1:
 			gridType = 0; // latlon
 			break;
-		case 11:
+		case 3:
 			gridType = 10; // rot latlon
 			break;
-		case 13:
+		case 2:
 			gridType = 5; // polster
 			break;
 		default:	
-			throw runtime_error("Unsupported projection: " + HPProjectionTypeToString.at(g->Projection()));
+			throw runtime_error("Unsupported projection: " + HPGridTypeToString.at(resultInfo.Grid()->Type()));
 	}
 
-        auto geominfo = itsRadonDB->GetGeometryDefinition(g->Ni(), g->Nj(), firstGridPoint.Y(), firstGridPoint.X(), g->Di(), g->Dj(), 1, gridType);
+	map<string,string> geominfo;
+	
+	if (resultInfo.Grid()->Class() == kRegularGrid)
+	{
+		geominfo = itsRadonDB->GetGeometryDefinition(resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(), firstGridPoint.Y(), firstGridPoint.X(), resultInfo.Grid()->Di(), resultInfo.Grid()->Dj(), 1, gridType);
+	}
+	else
+	{
+		itsLogger->Error("Irregular grid not support yet");
+		return false;
+	}
 
 	if (geominfo.empty())
 	{
@@ -255,7 +262,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 		   << levelinfo["id"] << ", "
 		   << resultInfo.Level().Value() << ", "
 		   << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
-		   << resultInfo.ForecastType().Type() << ", "
+		   << static_cast<int> (resultInfo.ForecastType().Type()) << ", "
 		   << forecastTypeValue << ","
 		   << "'" << theFileName << "', "
 		   << "'" << host << "')"
@@ -288,7 +295,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 				<< "level_id = " << levelinfo["id"] << " AND "
 				<< "level_value = " << resultInfo.Level().Value() << " AND "
 				<< "forecast_period = " << "'" << util::MakeSQLInterval(resultInfo.Time()) << "' AND "
-				<< "forecast_type_id = " << resultInfo.ForecastType().Type() << " AND "
+				<< "forecast_type_id = " << static_cast<int> (resultInfo.ForecastType().Type()) << " AND "
 				<< "forecast_type_value = " << forecastTypeValue;
 
 		itsRadonDB->Execute(query.str());

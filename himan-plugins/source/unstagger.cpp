@@ -17,7 +17,8 @@
 #include "level.h"
 #include "forecast_time.h"
 #include "plugin_factory.h"
-#include "regular_grid.h"
+#include "latitude_longitude_grid.h"
+#include "stereographic_grid.h"
 
 #include "cache.h"
 #include "fetcher.h"
@@ -72,7 +73,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("unstagger Thread #" + boost::lexical_cast<string> (threadIndex));
 
-	if (myTargetInfo->Grid()->Type() != kRegularGrid)
+	if (myTargetInfo->Grid()->Class() != kRegularGrid)
 	{
 		itsLogger->Error("Unable to stagger irregular grids");
 		return;
@@ -147,18 +148,36 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	myTargetInfo->Grid()->Data(unstaggered_V);
 
 	// Re-calculate grid coordinates
-
-	point bl = UInfo->Grid()->BottomLeft(), tr = UInfo->Grid()->TopRight();
-
-	double u_di = dynamic_cast<regular_grid*> (UInfo->Grid())->Di();
-	double v_dj = dynamic_cast<regular_grid*> (VInfo->Grid())->Dj();
 	
-	UInfo->Grid()->BottomLeft(point(bl.X() - (u_di * 0.5), bl.Y()));
-	UInfo->Grid()->TopRight(point(tr.X() - (u_di * 0.5), tr.Y()));
-
-	bl = VInfo->Grid()->BottomLeft(), tr = VInfo->Grid()->TopRight();
-	VInfo->Grid()->BottomLeft(point(bl.X(), bl.Y() - (v_dj * 0.5)));
-	VInfo->Grid()->TopRight(point(tr.X(), tr.Y() - (v_dj * 0.5)));
+	point u_bl = UInfo->Grid()->BottomLeft(), u_tr = UInfo->Grid()->TopRight();
+	point v_bl = VInfo->Grid()->BottomLeft(), v_tr = VInfo->Grid()->TopRight();
+	double u_di = UInfo->Grid()->Di();
+	double v_dj = VInfo->Grid()->Dj();
+	
+	// this is ugly, there has to be a better solution
+	switch (UInfo->Grid()->Type())
+	{
+		case kLatitudeLongitude:
+			dynamic_cast<latitude_longitude_grid*> (UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
+			dynamic_cast<latitude_longitude_grid*> (UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
+			dynamic_cast<latitude_longitude_grid*> (VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
+			dynamic_cast<latitude_longitude_grid*> (VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
+			break;
+		case kRotatedLatitudeLongitude:
+			dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
+			dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
+			dynamic_cast<rotated_latitude_longitude_grid*> (VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
+			dynamic_cast<rotated_latitude_longitude_grid*> (VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
+			break;
+		case kStereographic:
+			dynamic_cast<stereographic_grid*> (UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
+			dynamic_cast<stereographic_grid*> (UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
+			dynamic_cast<stereographic_grid*> (VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
+			dynamic_cast<stereographic_grid*> (VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
+			break;
+		default:
+			throw runtime_error("Unsupported grid type: " + HPGridTypeToString.at(UInfo->Grid()->Type()));
+	}
 
 	auto c = GET_PLUGIN(cache);
 
