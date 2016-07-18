@@ -168,7 +168,7 @@ env.Append(CCFLAGS = cflags_normal)
 
 # Linker flags
 
-env.Append(LINKFLAGS = ['-rdynamic','-Wl,--as-needed' ,'-pthread'])
+env.Append(LINKFLAGS = ['-rdynamic','-pthread'])
 
 # '-Wl,-rpath,.'
 

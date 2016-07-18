@@ -15,9 +15,11 @@ fi
 if [ $? -eq 0 ]; then
 	for i in $(find $path -maxdepth 1 -type f -executable); do 
 		$i --build_info --log_level=test_suite --show_progress
+
+		ret=$?
 	
-		if [ $? -ne 0 ]; then
-			exit $?
+		if [ $ret -ne 0 ]; then
+			exit $ret
 		fi
 	done
 fi

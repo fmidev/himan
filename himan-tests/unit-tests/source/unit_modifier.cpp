@@ -2,6 +2,7 @@
 
 #include "himan_unit.h"
 #include "modifier.h"
+#include <iostream>
 
 #include <iostream>
 

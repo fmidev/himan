@@ -110,17 +110,15 @@ BOOST_AUTO_TEST_CASE(ES2)
 {
 	// water vapour pressure, another formula
 
-	double E = metutil::Es2_(285);
+	double E = metutil::smarttool::Es2_(285);
 
-	BOOST_CHECK_CLOSE(E, 1388.65877, kEpsilon);
+	BOOST_CHECK_CLOSE(E, 13.8921, kEpsilon);
 
 	// negative temperatures
 
-	E = metutil::Es2_(266);
+	E = metutil::smarttool::Es2_(266);
 
-	BOOST_CHECK_CLOSE(E, 357.80213, kEpsilon);
-
-
+	BOOST_CHECK_CLOSE(E, 3.57298, kEpsilon);
 
 }
 
@@ -240,57 +238,61 @@ BOOST_AUTO_TEST_CASE(THETAESIMPLE)
 	double T = 273.15 + 30;
 	double P = 100 * 1000;
 
-	double thetae = metutil::ThetaESimple_(T,P);
+	// Air parcel is saturated (T=TD).
 
-	BOOST_CHECK_CLOSE(thetae, 386.28, 1);
+	const double RH = 100;
+
+	double thetae = metutil::smarttool::ThetaE_(T,RH,P);
+
+	BOOST_CHECK_CLOSE(thetae, 386.28, 2);
 
 	T -= 10;
 
-	thetae = metutil::ThetaESimple_(T,P);	
+	thetae = metutil::smarttool::ThetaE_(T,RH,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 335.61, 1);
 
 	T -= 20;
 
-	thetae = metutil::ThetaESimple_(T,P);	
+	thetae = metutil::smarttool::ThetaE_(T,RH,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 283.60, 1);
 
 	T -= 30;
 
-	thetae = metutil::ThetaESimple_(T,P);	
+	thetae = metutil::smarttool::ThetaE_(T,RH,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 244.01, 1);
 
 	T = 273.15 + 20;
 	P = 100 * 700;
 
-	thetae = metutil::ThetaESimple_(T,P);	
+	thetae = metutil::smarttool::ThetaE_(T,RH,P);	
 
-	BOOST_CHECK_CLOSE(thetae, 394.71, 2);
+	BOOST_CHECK_CLOSE(thetae, 394.71, 2.1);
 
 	T -= 20;
 
-	thetae = metutil::ThetaESimple_(T,P);	
+	thetae = metutil::smarttool::ThetaE_(T,RH,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 319.13, 1);	
 
 	T -= 30;
 
-	thetae = metutil::ThetaESimple_(T,P);	
+	thetae = metutil::smarttool::ThetaE_(T,RH,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 270.57, 1);
 
 	T = 273.15 - 30;
 	P = 100 * 200;
 
-	thetae = metutil::ThetaESimple_(T,P);	
+	thetae = metutil::smarttool::ThetaE_(T,RH,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 391.82, 1);	
 
 	T -= 20;
 
-	thetae = metutil::ThetaESimple_(T,P);	
+	thetae = metutil::smarttool::ThetaE_(T,RH,P);	
 
 	BOOST_CHECK_CLOSE(thetae, 354.11, 1);	
 
