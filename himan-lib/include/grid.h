@@ -102,6 +102,8 @@ class grid
 		virtual void ScanningMode(HPScanningMode theScanningMode) ;
 
 		virtual bool IsPackedData() const ;
+		void PackedData(std::unique_ptr<packed_data> thePackedData);
+                packed_data& PackedData();
 
 		virtual bool Swap(HPScanningMode newScanningMode) = 0;
 		

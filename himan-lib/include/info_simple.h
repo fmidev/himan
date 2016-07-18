@@ -76,7 +76,7 @@ struct info_simple
 	double *values;
 	simple_packed* packed_values;
 
-	HPProjectionType projection;
+	HPGridType projection;
 	HPInterpolationMethod interpolation;
 
 	// true if area extends over zero meridian (important information in interpolation)
@@ -95,7 +95,7 @@ struct info_simple
 		, j_scans_positive(true)
 		, values(0)
 		, packed_values(0)
-		, projection(kUnknownProjection)
+		, projection(kUnknownGridType)
 		, interpolation(kBiLinear)
 		, wraps_globally(false)
 	{}

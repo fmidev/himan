@@ -33,7 +33,7 @@
 using namespace himan;
 using namespace std;
 
-unique_ptr<point_list> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
+unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
 void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
 void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
@@ -1118,9 +1118,9 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	return g;
 }
 
-unique_ptr<point_list> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt)
+unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt)
 {
-	unique_ptr<point_list> g;
+	unique_ptr<grid> g;
 	
 	// check points
 	
@@ -1166,7 +1166,7 @@ unique_ptr<point_list> ParseAreaAndGridFromPoints(configuration& conf, const boo
 
 		if (theStations.size())
 		{
-			g->Stations(theStations);
+			dynamic_cast<point_list*> (g.get())->Stations(theStations);
 			return g;
 		}
 	}
@@ -1226,7 +1226,7 @@ unique_ptr<point_list> ParseAreaAndGridFromPoints(configuration& conf, const boo
 			);
 		}
 		
-		g->Stations(theStations);
+		dynamic_cast<point_list*> (g.get())->Stations(theStations);
 
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -1238,7 +1238,7 @@ unique_ptr<point_list> ParseAreaAndGridFromPoints(configuration& conf, const boo
 		throw runtime_error(string("Fatal::json_parser Error parsing stations: ") + e.what());
 	}
 	
-	if (g && g->Stations().empty())
+	if (g && dynamic_cast<point_list*> (g.get())->Stations().empty())
 	{
 		throw runtime_error("Fatal::json_parser No valid points or stations found");
 	}

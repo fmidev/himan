@@ -11,6 +11,8 @@
 #include "logger_factory.h"
 #include "grid.h"
 #include "point_list.h"
+#include "latitude_longitude_grid.h"
+#include "stereographic_grid.h"
 
 using namespace std;
 using namespace himan;
@@ -692,35 +694,45 @@ info_simple* info::ToSimple() const
 {
 	info_simple* ret = new info_simple();
 
-	regular_grid* g = dynamic_cast<regular_grid*> (Grid());
+	ret->size_x = Grid()->Data().SizeX();
+	ret->size_y = Grid()->Data().SizeY();
 
-	ret->size_x = g->Data().SizeX();
-	ret->size_y = g->Data().SizeY();
+	ret->di = Grid()->Di();
+	ret->dj = Grid()->Dj();
 
-	ret->di = g->Di();
-	ret->dj = g->Dj();
+	ret->first_lat = Grid()->FirstPoint().Y();
+	ret->first_lon = Grid()->FirstPoint().X();
 
-	ret->first_lat = g->FirstGridPoint().Y();
-	ret->first_lon = g->FirstGridPoint().X();
+	if (Grid()->Type() == kRotatedLatitudeLongitude)
+	{
+		ret->south_pole_lat = dynamic_cast<rotated_latitude_longitude_grid*> (Grid())->SouthPole().Y();
+		ret->south_pole_lon = dynamic_cast<rotated_latitude_longitude_grid*> (Grid())->SouthPole().X();
+	}
+	else
+	{
+		ret->south_pole_lat = kHPMissingValue;
+		ret->south_pole_lon = kHPMissingValue;
+	}
 
-	ret->south_pole_lat = g->SouthPole().Y();
-	ret->south_pole_lon = g->SouthPole().X();
+	if (Grid()->Type() == kStereographic)
+	{
+		ret->orientation = dynamic_cast<stereographic_grid*> (Grid())->Orientation();
+	}
 
-	ret->orientation = g->Orientation();
 	ret->interpolation = Param().InterpolationMethod();
 
-	if (g->ScanningMode() == kTopLeft)
+	if (Grid()->ScanningMode() == kTopLeft)
 	{
 		ret->j_scans_positive = false;
 	}
-	else if (g->ScanningMode() != kBottomLeft)
+	else if (Grid()->ScanningMode() != kBottomLeft)
 	{
-		throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " + string(HPScanningModeToString.at(g->ScanningMode())));
+		throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " + string(HPScanningModeToString.at(Grid()->ScanningMode())));
 	}
 	
-	ret->projection = g->Projection();
+	ret->projection = Grid()->Type();
 
-	if (g->IsPackedData())
+	if (Grid()->IsPackedData())
 	{
 
 		/*
@@ -728,14 +740,14 @@ info_simple* info::ToSimple() const
 		 * Also allocate page-locked memory for the unpacked data.
 		 */
 
-		assert(g->PackedData().ClassName() == "simple_packed");
+		assert(Grid()->PackedData().ClassName() == "simple_packed");
 		
-		ret->packed_values = reinterpret_cast<simple_packed*> (&g->PackedData());
+		ret->packed_values = reinterpret_cast<simple_packed*> (&Grid()->PackedData());
 
 	}
 
 	// Reserve a place for the unpacked data
-	ret->values = const_cast<double*> (g->Data().ValuesAsPOD());
+	ret->values = const_cast<double*> (Grid()->Data().ValuesAsPOD());
 	
 	return ret;
 }

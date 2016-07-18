@@ -4,6 +4,7 @@
 #include "point_list.h"
 #include "reduced_gaussian_grid.h"
 #include "numerical_functions.h"
+#include "util.h"
 
 #include "plugin_factory.h"
 
@@ -138,7 +139,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 	std::vector<double> result(baseGrid->Data().Size(), kFloatMissing);
 
 	HPInterpolationMethod interpolationMethod = InterpolationMethod(source.Param().Name(), base.Param().InterpolationMethod());
-	std::cout << HPInterpolationMethodToString.at(interpolationMethod);
+
 	if (interpolationMethod == kNearestPoint)
 	{
 		for (size_t i = 0; i < baseGrid->Data().Size(); i++)
@@ -408,14 +409,14 @@ bool InterpolateAreaGPU(info& base, info& source, matrix<double>& targetData)
 
 	simple_target.values = new double[simple_target.size_x * simple_target.size_y];
 	
-	int method = InterpolationMethod(source.Param().Name(), static_cast<int> (simple_target.interpolation));
+	HPInterpolationMethod method = InterpolationMethod(source.Param().Name(), simple_target.interpolation);
 	
-	if (method != static_cast<int> (simple_target.interpolation))
+	if (method != simple_target.interpolation)
 	{
-		itsLogger->Warning("Interpolation method forced to " + HPInterpolationMethodToString.at(static_cast<HPInterpolationMethod> (method)) + " for parameter " + source.Param().Name());
+//		itsLogger->Warning("Interpolation method forced to " + HPInterpolationMethodToString.at(static_cast<HPInterpolationMethod> (method)) + " for parameter " + source.Param().Name());
 	}
 	
-	simple_target.interpolation = static_cast<HPInterpolationMethod> (method);
+	simple_target.interpolation = method;
 
 #ifdef DEBUG
 	memset(simple_target.values, 0, simple_target.size_x * simple_target.size_y * sizeof(double));
@@ -671,7 +672,7 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 			if (infos[0]->Grid()->IsPackedData())
 			{
 				// must unpack before swapping
-				itsLogger->Trace("Unpacking before swapping");
+				//itsLogger->Trace("Unpacking before swapping");
 				util::Unpack({infos[0]->Grid()});
 			}
 #endif

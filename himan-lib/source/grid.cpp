@@ -6,7 +6,7 @@
  */
 
 #include "grid.h"
-
+#include "simple_packed.h"
 
 using namespace himan;
 using namespace std;
@@ -94,6 +94,17 @@ bool grid::EqualsTo(const grid& other) const
 	}
 	
 	return true;
+}
+
+packed_data& grid::PackedData()
+{
+        assert(itsPackedData);
+        return *itsPackedData;
+}
+
+void grid::PackedData(unique_ptr<packed_data> thePackedData)
+{
+        itsPackedData = move(thePackedData);
 }
 
 HPGridType grid::Type() const
