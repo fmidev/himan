@@ -222,18 +222,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	string deviceType;
 
 #ifdef HAVE_CUDA
-	bool needStereographicGridRotation = (UInfo->Grid()->Type() == kStereographic && UInfo->Grid()->UVRelativeToGrid());
-
-	if (itsConfiguration->UseCuda() && !needStereographicGridRotation)
+	if (itsConfiguration->UseCuda() && (UInfo->Grid()->Type() == kLatitudeLongitude || UInfo->Grid()->Type() == kRotatedLatitudeLongitude))
 	{
 		deviceType = "GPU";
 
-		assert(UInfo->Grid()->Type() == kLatitudeLongitude || UInfo->Grid()->Type() == kRotatedLatitudeLongitude);
-			
 		auto opts = CudaPrepare(myTargetInfo, UInfo, VInfo);
 
 		windvector_cuda::Process(*opts);
-
 	}
 	else
 #endif
@@ -465,7 +460,14 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
 
 	opts->vector_calculation = itsVectorCalculation;
-	opts->need_grid_rotation = (UInfo->Grid()->Type() == kRotatedLatitudeLongitude && UInfo->Grid()->UVRelativeToGrid());
+
+	opts->need_grid_rotation = false;
+
+	if (UInfo->Grid()->Type() == kRotatedLatitudeLongitude)
+	{
+		opts->need_grid_rotation = dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->UVRelativeToGrid();
+	}
+
 	opts->target_type = itsCalculationTarget;
 
 	opts->u = UInfo->ToSimple();

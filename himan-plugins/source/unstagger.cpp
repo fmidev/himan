@@ -103,7 +103,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 #ifdef HAVE_CUDA
 		if (UInfo->Grid()->IsPackedData())
 		{
-			assert(dynamic_cast<regular_grid*> (UInfo->Grid())->PackedData().ClassName() == "simple_packed");
+			assert(UInfo->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({UInfo->Grid(), VInfo->Grid()});
 		}

@@ -15,7 +15,7 @@
 
 #include <NFmiGribPacking.h>
 
-#include "regular_grid.h"
+//#include "regular_grid.h"
 #include "forecast_time.h"
 #include "level.h"
 
@@ -92,7 +92,7 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 	CUDA_CHECK(cudaMalloc(reinterpret_cast<double**> (&d_arr), N * sizeof(double)));
 
 	// 2. Unpack if needed, leave data to device and simultaneously copy it back to cpu (himan cache)
-	auto tempGrid = dynamic_cast<himan::regular_grid*> (fullInfo->Grid());
+	auto tempGrid = fullInfo->Grid();
 
 	if (tempGrid->IsPackedData())
 	{
