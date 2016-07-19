@@ -511,7 +511,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		{
 		   	p.Unit(kPrcnt);
 		}
-		else if (unit == "m s**-1" || unit == "m s-k1")
+		else if (unit == "m s**-1" || unit == "m s-1")
 		{
 			p.Unit(kMs);
 		}
@@ -953,7 +953,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
 
 	itsLogger->Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string> (speed) + " MB/s)");
-	
+
 	return infos;
 }
 
