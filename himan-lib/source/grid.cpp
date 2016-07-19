@@ -78,21 +78,8 @@ bool grid::EqualsTo(const grid& other) const
 		return false;
 	}
 	
-	if (itsAB.size() != other.itsAB.size())
-	{
-		return false;
-	}
-	else
-	{
-		for (size_t i = 0; i < itsAB.size(); i++)
-		{
-			if (fabs(itsAB[i] - other.itsAB[i]) > 0.0001)
-			{
-				return false;
-			}
-		}
-	}
-	
+	// We DON'T test for AB !
+
 	return true;
 }
 
@@ -221,6 +208,5 @@ bool grid::operator!=(const grid& other) const
 
 bool grid::operator==(const grid& other) const
 {
-	
 	return EqualsTo(other);
 }

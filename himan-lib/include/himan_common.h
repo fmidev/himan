@@ -428,6 +428,7 @@ const boost::unordered_map<HPGridType,std::string> HPGridTypeToString = ba::map_
 		(kAzimuthalEquidistant, "azimuthal")
 		(kRotatedLatitudeLongitude, "rll")
 		(kReducedGaussian, "rgg")
+		(kPointList, "pointlist")
 ;
 
 enum HPDatabaseType

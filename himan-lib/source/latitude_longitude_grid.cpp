@@ -312,13 +312,15 @@ bool latitude_longitude_grid::EqualsTo(const latitude_longitude_grid& other) con
 		return false;
 	}
 
-	if (Di() != other.Di())
+	const double kEpsilon = 0.0001;
+	
+	if (fabs(Di() - other.Di()) > kEpsilon)
 	{
 		itsLogger->Trace("Di does not match: " + boost::lexical_cast<std::string> (Di()) + " vs " + boost::lexical_cast<std::string> (other.Di()));
 		return false;
 	}
 
-	if (Dj() != other.Dj())
+	if (fabs(Dj() - other.Dj()) > kEpsilon)
 	{
 		itsLogger->Trace("Dj does not match: " + boost::lexical_cast<std::string> (Dj()) + " vs " + boost::lexical_cast<std::string> (other.Dj()));
 		return false;
@@ -385,6 +387,14 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode 
 	itsLogger = logger_factory::Instance()->GetLog("rotated_latitude_longitude_grid");	
 }
 
+rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other)
+	: latitude_longitude_grid(other)
+	, itsUVRelativeToGrid(other.itsUVRelativeToGrid)
+	, itsSouthPole(other.itsSouthPole)
+{
+	itsLogger = logger_factory::Instance()->GetLog("rotated_latitude_longitude_grid");
+}
+
 bool rotated_latitude_longitude_grid::operator!=(const grid& other) const
 {
 	return !(other == *this);
@@ -416,11 +426,12 @@ bool rotated_latitude_longitude_grid::EqualsTo(const rotated_latitude_longitude_
 		return false;
 	}
 	
-	if (itsUVRelativeToGrid != other.UVRelativeToGrid())
-	{
-		itsLogger->Trace("UVRelativeToGrid does not match: " + boost::lexical_cast<std::string> (itsUVRelativeToGrid) + " vs " + boost::lexical_cast<std::string> (other.UVRelativeToGrid()));
-		return false;
-	}
+	// Note! We DON'T test for uv relative to grid!
+	//if (itsUVRelativeToGrid != other.UVRelativeToGrid())
+	//{
+	//	itsLogger->Trace("UVRelativeToGrid does not match: " + boost::lexical_cast<std::string> (itsUVRelativeToGrid) + " vs " + boost::lexical_cast<std::string> (other.UVRelativeToGrid()));
+	//	return false;
+	//}
 
 	return true;
 }
@@ -473,7 +484,6 @@ point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 
 ostream& rotated_latitude_longitude_grid::Write(std::ostream& file) const
 {
-	grid::Write(file);
 	latitude_longitude_grid::Write(file);
 	
 	file << itsSouthPole;

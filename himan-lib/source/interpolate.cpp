@@ -500,79 +500,13 @@ bool InterpolateArea(info& target, std::vector<info_t> sources, bool useCudaForI
 				throw std::runtime_error("Unsupported target grid type: " + HPGridTypeToString.at(sourceType));
 		}
 
-		std::shared_ptr<grid> interpGrid;
+		auto interpGrid = std::shared_ptr<grid> (target.Grid()->Clone());
 
-		// new data backend
-		// TODO: move this to actual interpolation functions?
-		
-		switch (targetType)
+		if (targetType == kRotatedLatitudeLongitude && sourceType == kRotatedLatitudeLongitude)
 		{
-			case kLatitudeLongitude:
-			{
-				interpGrid = std::make_shared<latitude_longitude_grid> ();
-				latitude_longitude_grid* _g = dynamic_cast<latitude_longitude_grid*> (interpGrid.get());
-				const latitude_longitude_grid* _bg = dynamic_cast<const latitude_longitude_grid*> (target.Grid());
-				
-				_g->Ni(_bg->Ni());
-				_g->Nj(_bg->Nj());
-				_g->ScanningMode(_bg->ScanningMode());
-				_g->BottomLeft(_bg->BottomLeft());
-				_g->TopRight(_bg->TopRight());
-			}
-				break;
-			case kRotatedLatitudeLongitude:
-			{
-				interpGrid = std::make_shared<rotated_latitude_longitude_grid> ();
-				rotated_latitude_longitude_grid* _g = dynamic_cast<rotated_latitude_longitude_grid*> (interpGrid.get());
-				const rotated_latitude_longitude_grid* _bg = dynamic_cast<const rotated_latitude_longitude_grid*> (target.Grid());
-				
-				_g->Ni(_bg->Ni());
-				_g->Nj(_bg->Nj());
-				_g->ScanningMode(_bg->ScanningMode());
-				_g->BottomLeft(_bg->BottomLeft());
-				_g->TopRight(_bg->TopRight());
-				_g->SouthPole(_bg->SouthPole());
-			}
-				break;
-			case kStereographic:
-			{
-				interpGrid = std::make_shared<stereographic_grid> ();
-				stereographic_grid* _g = dynamic_cast<stereographic_grid*> (interpGrid.get());
-				const stereographic_grid* _bg = dynamic_cast<const stereographic_grid*> (target.Grid());
-				
-				_g->Ni(_bg->Ni());
-				_g->Nj(_bg->Nj());
-				_g->ScanningMode(_bg->ScanningMode());
-				_g->BottomLeft(_bg->BottomLeft());
-				_g->TopRight(_bg->TopRight());
-				_g->Orientation(_bg->Orientation());
-			}
-				break;	
-			case kReducedGaussian:
-			{
-				interpGrid = std::make_shared<reduced_gaussian_grid> ();
-				reduced_gaussian_grid* _g = dynamic_cast<reduced_gaussian_grid*> (interpGrid.get());
-				const reduced_gaussian_grid* _bg = dynamic_cast<const reduced_gaussian_grid*> (target.Grid());
-				
-				_g->Nj(_bg->Nj());
-				_g->ScanningMode(_bg->ScanningMode());
-				_g->BottomLeft(_bg->BottomLeft());
-				_g->TopRight(_bg->TopRight());
-				_g->TopLeft(_bg->TopLeft());
-				_g->BottomRight(_bg->BottomRight());
-				_g->N(_bg->N());
-				_g->NumberOfLongitudesAlongParallels(_bg->NumberOfLongitudesAlongParallels());
-			}
-				break;
-			case kPointList:
-			{
-				dynamic_cast<point_list*> (interpGrid.get())->Stations(dynamic_cast<point_list*> (target.Grid())->Stations());
-			}
-				break;
-			default:
-				throw std::runtime_error("Unknown grid type: " + HPGridTypeToString.at(targetType));
+			dynamic_cast<rotated_latitude_longitude_grid*> (interpGrid.get())->UVRelativeToGrid(dynamic_cast<rotated_latitude_longitude_grid*> (source->Grid())->UVRelativeToGrid()); // copy from source
 		}
-
+		
 		interpGrid->Data(targetData);
 		interpGrid->AB(source->Grid()->AB());
 
@@ -660,7 +594,7 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 	
 	if (base.Grid()->Class() == kRegularGrid && infos[0]->Grid()->Class() == kRegularGrid)
 	{
-		if (*base.Grid() != *infos[0]->Grid())
+		if (*(base).Grid() != *(infos[0])->Grid())
 		{
 			needInterpolation = true;
 		}		

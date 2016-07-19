@@ -147,6 +147,9 @@ public:
 
 	virtual ~rotated_latitude_longitude_grid() {}
 
+	rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other);
+	rotated_latitude_longitude_grid& operator=(const rotated_latitude_longitude_grid& other) = delete;
+
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
 		
