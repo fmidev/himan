@@ -7,6 +7,9 @@
 #include "plugin_factory.h"
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
+#include "latitude_longitude_grid.h"
+#include "stereographic_grid.h"
+#include "reduced_gaussian_grid.h"
 
 #include "hitool.h"
 #include "neons.h"
@@ -235,15 +238,6 @@ void BindEnum(lua_State* L)
 			value("kNetCDF", kNetCDF)
 		]
 		,
-		class_<HPGridType>("HPGridType")
-			.enum_("constants")
-		[
-			value("kUnknownGridType", kUnknownGridType),
-			value("kLatitudeLongitude", kLatitudeLongitude),
-			value("kRotatedLatitudeLongitude", kRotatedLatitudeLongitude),
-			value("kStereographic", kStereographic)
-		]
-		,
 		class_<HPScanningMode>("HPScanningMode")
 			.enum_("constants")
 		[
@@ -280,7 +274,7 @@ void BindEnum(lua_State* L)
 			value("kIntegralModifier", kIntegralModifier),
 			value("kPlusMinusAreaModifier", kPlusMinusAreaModifier)
 		],
-		class_<HPGridType>("HPGridClass")
+		class_<HPGridClass>("HPGridClass")
 			.enum_("constants")
 		[
 			value("kUnknownGridClass", kUnknownGridClass),
@@ -290,7 +284,13 @@ void BindEnum(lua_State* L)
 		class_<HPGridType>("HPGridType")
 			.enum_("constants")
 		[
-			value("kUnknownGridType", kUnknownGridType)
+			value("kUnknownGridType", kUnknownGridType),
+			value("kLatitudeLongitude", kLatitudeLongitude),
+			value("kStereographic", kStereographic),
+			value("kAzimuthalEquidistant", kAzimuthalEquidistant),
+			value("kRotatedLatitudeLongitude", kRotatedLatitudeLongitude),
+			value("kReducedGaussian", kReducedGaussian),
+			value("kPointList", kPointList)
 		],
 		class_<HPParameterUnit>("HPParameterUnit")
 			.enum_("constants")
@@ -756,28 +756,67 @@ void BindLib(lua_State* L)
 			.def("SetMissingValue", &info_wrapper::SetMissingValue)
 		,
 		class_<grid, std::shared_ptr<grid>>("grid")
-#if 0
-			,
-			class_<regular_grid, grid, std::shared_ptr<regular_grid>>("regular_grid")
-			.def(constructor<>())
-			.def("ClassName", &grid::ClassName)
+			.def("ClassName", &grid::ClassName)	
+			.def("GetScanningMode", LUA_CMEMFN(HPScanningMode, grid, ScanningMode, void))
+			.def("GetGridType", LUA_CMEMFN(HPGridType, grid, Type, void))
+			.def("GetGridClass", LUA_CMEMFN(HPGridClass, grid, Class, void))
+			.def("GetAB", LUA_CMEMFN(std::vector<double>, grid, AB, void))
 			.def("GetSize", &grid::Size)
-			.def("GetNi", LUA_CMEMFN(size_t, regular_grid, Ni, void))
-			.def("GetNj", LUA_CMEMFN(size_t, regular_grid, Nj, void))
-			.def("GetDi", LUA_CMEMFN(double, regular_grid, Di, void))
-			.def("GetDj", LUA_CMEMFN(double, regular_grid, Dj, void))
-			.def("GetScanningMode", LUA_CMEMFN(HPScanningMode, regular_grid, ScanningMode, void))
-			.def("GetGridType", LUA_CMEMFN(HPGridType, regular_grid, Type, void))
-			.def("GetAB", LUA_CMEMFN(std::vector<double>, regular_grid, AB, void))
-			//.def("SetAB", LUA_MEMFN(void, regular_grid, AB, const std::vector<double>&))
-			.def("GetBottomLeft", LUA_CMEMFN(point, regular_grid, BottomLeft, void))
-			.def("SetBottomLeft", LUA_MEMFN(void, regular_grid, BottomLeft, const point&))
-			.def("GetTopRight", LUA_CMEMFN(point, regular_grid, TopRight, void))
-			.def("SetTopRight", LUA_MEMFN(void, regular_grid, BottomLeft, const point&))
-			.def("GetFirstGridPoint", LUA_CMEMFN(point, regular_grid, FirstGridPoint, void))
-			.def("GetLastGridPoint", LUA_CMEMFN(point, regular_grid, LastGridPoint, void))
-#endif
-			,
+		,
+		class_<latitude_longitude_grid, grid, std::shared_ptr<latitude_longitude_grid>>("latitude_longitude_grid")
+			.def(constructor<>())
+			.def("ClassName", &latitude_longitude_grid::ClassName)
+			.def("GetNi", LUA_CMEMFN(size_t, latitude_longitude_grid, Ni, void))
+			.def("GetNj", LUA_CMEMFN(size_t, latitude_longitude_grid, Nj, void))
+			.def("GetDi", LUA_CMEMFN(double, latitude_longitude_grid, Di, void))
+			.def("GetDj", LUA_CMEMFN(double, latitude_longitude_grid, Dj, void))
+			.def("GetBottomLeft", LUA_CMEMFN(point, latitude_longitude_grid, BottomLeft, void))
+			.def("SetBottomLeft", LUA_MEMFN(void, latitude_longitude_grid, BottomLeft, const point&))
+			.def("GetTopRight", LUA_CMEMFN(point, latitude_longitude_grid, TopRight, void))
+			.def("SetTopRight", LUA_MEMFN(void, latitude_longitude_grid, BottomLeft, const point&))
+			.def("GetFirstPoint", LUA_CMEMFN(point, latitude_longitude_grid, FirstPoint, void))
+			.def("GetLastPoint", LUA_CMEMFN(point, latitude_longitude_grid, LastPoint, void))
+		,
+		class_<rotated_latitude_longitude_grid, latitude_longitude_grid, std::shared_ptr<rotated_latitude_longitude_grid>>("rotated_latitude_longitude_grid")
+			.def(constructor<>())
+			.def("ClassName", &rotated_latitude_longitude_grid::ClassName)
+			.def("GetSouthPole", LUA_CMEMFN(point, rotated_latitude_longitude_grid, SouthPole, void))
+			.def("SetSouthPole", LUA_MEMFN(void, rotated_latitude_longitude_grid, SouthPole, const point&))
+			.def("GetUVRelativeToGrid", LUA_CMEMFN(bool, rotated_latitude_longitude_grid, UVRelativeToGrid, void))
+			.def("SetUVRelativeToGrid", LUA_MEMFN(void, rotated_latitude_longitude_grid, UVRelativeToGrid, bool))
+		,
+		class_<stereographic_grid, grid, std::shared_ptr<stereographic_grid>>("stereographic_grid")
+			.def(constructor<>())
+			.def("ClassName", &stereographic_grid::ClassName)
+			.def("GetNi", LUA_CMEMFN(size_t, stereographic_grid, Ni, void))
+			.def("GetNj", LUA_CMEMFN(size_t, stereographic_grid, Nj, void))
+			.def("GetDi", LUA_CMEMFN(double, stereographic_grid, Di, void))
+			.def("GetDj", LUA_CMEMFN(double, stereographic_grid, Dj, void))
+			.def("GetBottomLeft", LUA_CMEMFN(point, stereographic_grid, BottomLeft, void))
+			.def("SetBottomLeft", LUA_MEMFN(void, stereographic_grid, BottomLeft, const point&))
+			.def("GetTopRight", LUA_CMEMFN(point, stereographic_grid, TopRight, void))
+			.def("SetTopRight", LUA_MEMFN(void, stereographic_grid, BottomLeft, const point&))
+			.def("GetFirstPoint", LUA_CMEMFN(point, stereographic_grid, FirstPoint, void))
+			.def("GetLastPoint", LUA_CMEMFN(point, stereographic_grid, LastPoint, void))
+			.def("GetOrientation", LUA_CMEMFN(double, stereographic_grid, Orientation, void))
+			.def("SetOrientation", LUA_MEMFN(void, stereographic_grid, Orientation, double))
+		,
+		class_<reduced_gaussian_grid, grid, std::shared_ptr<reduced_gaussian_grid>>("reduced_gaussian_grid")
+			.def(constructor<>())
+			.def("ClassName", &reduced_gaussian_grid::ClassName)
+			.def("GetNj", LUA_CMEMFN(size_t, reduced_gaussian_grid, Nj, void))
+			.def("GetDj", LUA_CMEMFN(double, reduced_gaussian_grid, Dj, void))
+			.def("GetN", LUA_CMEMFN(int, reduced_gaussian_grid, N, void))
+			.def("SetN", LUA_MEMFN(void, reduced_gaussian_grid, N, int))
+			.def("GetBottomLeft", LUA_CMEMFN(point, reduced_gaussian_grid, BottomLeft, void))
+			.def("SetBottomLeft", LUA_MEMFN(void, reduced_gaussian_grid, BottomLeft, const point&))
+			.def("GetTopRight", LUA_CMEMFN(point, reduced_gaussian_grid, TopRight, void))
+			.def("SetTopRight", LUA_MEMFN(void, reduced_gaussian_grid, BottomLeft, const point&))
+			.def("GetFirstPoint", LUA_CMEMFN(point, reduced_gaussian_grid, FirstPoint, void))
+			.def("GetLastPoint", LUA_CMEMFN(point, reduced_gaussian_grid, LastPoint, void))
+			//.def("GetNumberOfLongitudesAlongParallels", LUA_CMEMFN(double, reduced_gaussian_grid, NumberOfLongitudesAlongParallels, void))
+			//.def("SetNumberOfLongitudesAlongParallels", LUA_MEMFN(void, reduced_gaussian_grid, NumberOfLongitudesAlongParallels, std::vector<int>))
+		,
 		class_<matrix<double>>("matrix")
 			.def(constructor<size_t,size_t,size_t,double>())
 			/*.def("Size", &matrix<double>::Size)
