@@ -8,7 +8,7 @@ fi
 
 rm -f R*.grib
 
-$HIMAN -d 4 -f precipitation_rate_harmonie.json -t grib harmonie_p_source.grib harmonie_t_source.grib harmonie_rain_source.grib harmonie_snow_source.grib harmonie_graupel_source.grib --no-cuda
+$HIMAN -d 5 -f precipitation_rate_harmonie.json -t grib harmonie_p_source.grib harmonie_t_source.grib harmonie_rain_source.grib harmonie_snow_source.grib harmonie_graupel_source.grib --no-cuda
 
 grib_compare ./RSI-KGM2_hybrid_60_rll_290_594_0_360.grib result_solidpr_harmonie.grib
 VAR_1=$?
