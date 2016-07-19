@@ -3,6 +3,7 @@
 	"bbox" : "0,10,30,40",
 	"ni" : "100",
 	"nj" : "100",
+	"scanning_mode" : "+x+y",
 	"source_producer" : "1",
 	"target_producer" : "230",
 	"hours" : "10",
