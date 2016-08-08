@@ -502,28 +502,8 @@ void MixingRatioKernel(const double* __restrict__ d_T, double* __restrict__ d_P,
 		else
 		{
 			d_Tpot[idx] = metutil::Theta_(T, 100*P);
-			
-			// es				
-			const double b = 17.2694;
-			const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
-			const double T1 = 273.16; // [K]
-			const double T2 = 35.86; // [K]
+			d_MR[idx] = metutil::smarttool::MixingRatio_(T, RH, 100*P);
 
-			double nume = b * (T-T1);
-			double deno = (T-T2);
-
-			double es = e0 * ::exp(nume/deno);
-
-			// e
-			double e = RH * es / 100;
-
-			// w
-			double w = 0.622 * e/P * 1000;
-
-			assert(w < 60);
-
-			d_MR[idx] = w;
-			
 			d_P[idx] = P - 2.0;
 		}
 	}
@@ -561,7 +541,7 @@ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __restrict__ d_
 
 			double RH = E/Es * 100;
 			d_TD[idx] = metutil::DewPointFromRH_(T, RH);
-		}
+		}	
 	}
 }
 
@@ -770,6 +750,7 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::Get500mMixingRatioTA
 		
 		std::vector<double> Tpot(N, kFloatMissing);
 		std::vector<double> MR(N, kFloatMissing);
+
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		CUDA_CHECK(cudaMemcpyAsync(&Tpot[0], d_Tpot, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
@@ -790,12 +771,20 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::Get500mMixingRatioTA
 		}
 		
 		CUDA_CHECK(cudaMemcpyAsync(&PVec[0], d_P, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+
 	}
+	
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+	
+	// Calculate averages
 	
 	auto Tpot = tp.Result();
 	auto MR = mr.Result();
 
+	// Copy averages to GPU for final calculation
+	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, &Tpot[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_MR, &MR[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	
 	auto Psurf = Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
 	auto h_P = PrepareInfo(Psurf, stream);
 

@@ -1153,7 +1153,6 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 	auto Psurf = Fetch(myTargetInfo->Time(), level(kHeight, 0), PParams, myTargetInfo->ForecastType(), false);
 
 	double Pscale = 1.; // P should be Pa
-
 	
 	if (!Psurf)
 	{
@@ -1179,7 +1178,7 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 		double P = tup.get<2> () * Pscale; // Pa
 		double& Tresult = tup.get<3> ();
 		double& Presult = tup.get<4> ();
-		
+
 		auto lcl = metutil::LCLA_(P, T, TD);
 		
 		Tresult = lcl.T; // K
@@ -1218,6 +1217,12 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 
 pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTargetInfo)
 {
+	/*
+	 * 1. Get temperature and relative humidity from lowest hybrid level.
+	 * 2. Calculate dewpoint
+	 * 3. Return temperature and dewpoint
+	 */
+
 	auto TInfo = Fetch(myTargetInfo->Time(), itsBottomLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 	auto RHInfo = Fetch(myTargetInfo->Time(), itsBottomLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
 	
@@ -1245,8 +1250,17 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 
 pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info> myTargetInfo)
 {
+	/*
+	 * 1. Calculate potential temperature and mixing ratio for vertical profile
+	 *    0...500m for every 2 hPa
+	 * 2. Take an average from all values
+	 * 3. Calculate temperature from potential temperature, and dewpoint temperature
+	 *    from temperature and mixing ratio
+	 * 4. Return the two calculated values
+	 */
+
 #ifdef HAVE_CUDA
-	if (false && itsConfiguration->UseCuda())
+	if (itsConfiguration->UseCuda())
 	{
 		return si_cuda::Get500mMixingRatioTAndTDGPU(itsConfiguration, myTargetInfo);
 	}
@@ -1266,8 +1280,6 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTDCPU(shared_ptr<i
 	
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
-
-	itsLogger->Info("Calculating T&Td in smarttool compatibility mode");
 
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
@@ -1368,6 +1380,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTDCPU(shared_ptr<i
 		if (Tpot[i] != kFloatMissing && P[i] != kFloatMissing)
 		{
 			T[i] = Tpot[i] * pow((P[i]/1000.), 0.2854);
+
 		}
 	}
 
@@ -1390,6 +1403,15 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTDCPU(shared_ptr<i
 
 pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> myTargetInfo)
 {
+	/*
+	 * 1. Calculate equivalent potential temperature for all hybrid levels 
+	 *    below 600hPa
+	 * 2. Take temperature and relative humidity from the level that had
+	 *    highest theta e
+	 * 3. Calculate dewpoint temperature from temperature and relative humidity.
+	 * 4. Return temperature and dewpoint
+	 */
+
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
