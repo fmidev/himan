@@ -75,7 +75,18 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     bool cape1040 = true;
 
     // Current time and level as given to this thread
-    int paramStep = 1; // myTargetInfo->Param().Aggregation().TimeResolutionValue();
+    long step = myTargetInfo->Time().Step();
+
+    int paramStep = 1;
+    if (step == 0)
+    {
+        paramStep = 0;
+    }
+    else if (step >= 90)
+    {
+        paramStep = 3;
+    }
+
     HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
     forecast_time forecastTime = myTargetInfo->Time();
@@ -130,19 +141,38 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
     }
 
-    if (!RRPrevInfo) RRPrevInfo = RRInfo;
-    if (!RRNextInfo) RRNextInfo = RRInfo;    
- 
     string deviceType = "CPU";
+
+    if (RRPrevInfo)
+    {
+        RRPrevInfo->ResetLocation();
+    }
+
+    if (RRNextInfo)
+    {
+        RRNextInfo->ResetLocation();
+    }
 
     LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo, RRPrevInfo, RRNextInfo)
     {
+        double RR = RRInfo->Value();
+        double RRPrev = RR;
+        double RRNext = RR;
+
+        if (RRPrevInfo)
+        {
+            RRPrevInfo->NextLocation();
+            RRPrev = RRPrevInfo->Value();
+        }
+
+        if (RRNextInfo)
+        {
+            RRNextInfo->NextLocation();
+            RRNext = RRNextInfo->Value();
+        }
+
 	double POT;
         double CAPE_ec = CAPEInfo->Value();
-
-        double RRPrev = RRPrevInfo->Value();
-        double RR = RRInfo->Value();
-        double RRNext = RRNextInfo->Value();
 
         double LAT = myTargetInfo->LatLon().Y();
 
