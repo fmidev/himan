@@ -153,7 +153,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         RRNextInfo->ResetLocation();
     }
 
-    LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo, RRPrevInfo, RRNextInfo)
+    LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo)
     {
         double RR = RRInfo->Value();
         double RRPrev = RR;
