@@ -74,26 +74,50 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
     // switch indicating which version of cape is used
     bool cape1040 = true;
 
-    // Current time and level as given to this thread
-    long step = myTargetInfo->Time().Step();
+	// Step from previous leadtime, taken from configuration file
+	int step = itsConfiguration->ForecastStep();
 
-    int paramStep = 1;
-    if (step == 0)
-    {
-        paramStep = 0;
-    }
-    else if (step >= 90)
-    {
-        paramStep = 3;
-    }
+	if (step == kHPMissingInt)
+	{
+		// himan was mabe started with configuration option "hours"
+		// so step is not readily available
+
+		if (myTargetInfo->SizeTimes() > 1)
+		{
+			// More than one time is calculated - check the difference to previous
+			// or next time
+
+			int leadtime = myTargetInfo->Time().Step();
+			int otherLeadtime;
+
+			if (myTargetInfo->PreviousTime())
+			{
+				otherLeadtime = myTargetInfo->Time().Step();
+				myTargetInfo->NextTime(); // return
+			}
+			else
+			{
+				myTargetInfo->NextTime();
+				otherLeadtime = myTargetInfo->Time().Step();
+				myTargetInfo->PreviousTime(); // return
+			}
+
+			step = abs(otherLeadtime - leadtime);
+		}
+		else
+		{
+			// default
+			step = 1;
+		}
+	}
 
     HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
     forecast_time forecastTime = myTargetInfo->Time();
     forecast_time forecastTimePrev = myTargetInfo->Time();
-    forecastTimePrev.ValidDateTime().Adjust(timeResolution, -paramStep);
+    forecastTimePrev.ValidDateTime().Adjust(timeResolution, -step);
     forecast_time forecastTimeNext = myTargetInfo->Time();
-    forecastTimeNext.ValidDateTime().Adjust(timeResolution, +paramStep);
+    forecastTimeNext.ValidDateTime().Adjust(timeResolution, +step);
     level forecastLevel = myTargetInfo->Level();
     forecast_type forecastType = myTargetInfo->ForecastType();
 
@@ -153,7 +177,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         RRNextInfo->ResetLocation();
     }
 
-    LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo, RRPrevInfo, RRNextInfo)
+    LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo)
     {
         double RR = RRInfo->Value();
         double RRPrev = RR;
