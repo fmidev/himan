@@ -3,7 +3,7 @@
 #include <string>
 
 #include "cuda_plugin_helper.h"
-#include "vvms_cuda.h"
+#include "vvms.cuh"
 
 __global__ void himan::plugin::vvms_cuda::Calculate(cdarr_t d_t, cdarr_t d_vv, cdarr_t d_p, darr_t d_vv_ms, options opts)
 {

@@ -1,11 +1,11 @@
 /**
- * @file si.cpp
+ * @file cape.cpp
  *
  * @date Feb 13, 2014
  * @author partio
  */
 
-#include "si.h"
+#include "cape.h"
 #include "plugin_factory.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
@@ -20,7 +20,7 @@
 #include "querydata.h"
 #include "hitool.h"
 
-#include "si_cuda.h"
+#include "cape.cuh"
 
 const unsigned char FCAPE		= (1 << 2);
 const unsigned char FCAPE3km	= (1 << 0);
@@ -132,14 +132,14 @@ std::string PrintMean(const vector<double>& vec)
 	return "min " + boost::lexical_cast<string> (static_cast<int> (min)) + " max " + boost::lexical_cast<string> (static_cast<int> (max)) + " mean " + boost::lexical_cast<string> (static_cast<int> (mean)) + " missing " + boost::lexical_cast<string> (missing);
 }
 
-si::si() : itsBottomLevel(kHybrid, kHPMissingInt)
+cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt)
 {
 	itsClearTextFormula = "<multiple algorithms>";
 
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("si"));
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("cape"));
 }
 
-void si::Process(std::shared_ptr<const plugin_configuration> conf)
+void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	compiled_plugin_base::Init(conf);
 
@@ -156,7 +156,7 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 	itsBottomLevel = level(kHybrid, boost::lexical_cast<int> (theNeons->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number")));
 
 #ifdef HAVE_CUDA
-	si_cuda::itsBottomLevel = itsBottomLevel;
+	cape_cuda::itsBottomLevel = itsBottomLevel;
 #endif
 	
 	vector<param> theParams;
@@ -238,7 +238,7 @@ void si::Process(std::shared_ptr<const plugin_configuration> conf)
 
 
 
-void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 	boost::thread_group g;
 	
@@ -247,13 +247,13 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		switch (sourceData)
 		{
 			case kSurface:
-				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, kSurface));
+				g.add_thread(new boost::thread(&cape::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, kSurface));
 				break;
 			case k500mAvgMixingRatio:
-				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, k500mAvgMixingRatio));
+				g.add_thread(new boost::thread(&cape::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, k500mAvgMixingRatio));
 				break;
 			case kMaxThetaE:
-				g.add_thread(new boost::thread(&si::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, kMaxThetaE));
+				g.add_thread(new boost::thread(&cape::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, kMaxThetaE));
 				break;
 			default:
 				throw runtime_error("Invalid source type");
@@ -267,7 +267,7 @@ void si::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 }
 
 
-void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short threadIndex, HPSoundingIndexSourceDataType sourceType)
+void cape::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short threadIndex, HPSoundingIndexSourceDataType sourceType)
 {
 	
 	/*
@@ -454,10 +454,10 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	timer->Start();
 
 	auto capeInfo = make_shared<info> (*myTargetInfo);
-	boost::thread t1(&si::GetCAPE, this, boost::ref(capeInfo), LFC, ELTParam, ELPParam, ELZParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
+	boost::thread t1(&cape::GetCAPE, this, boost::ref(capeInfo), LFC, ELTParam, ELPParam, ELZParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 
 	auto cinInfo = make_shared<info> (*myTargetInfo);
-	boost::thread t2(&si::GetCIN, this, boost::ref(cinInfo), TandTD.first, LCL.first, LCL.second, LFC.second, CINParam);
+	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), TandTD.first, LCL.first, LCL.second, LFC.second, CINParam);
 
 	t1.join();
 	t2.join();
@@ -501,12 +501,12 @@ void si::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short thre
 	
 }
 
-void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
+void cape::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		si_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsurf, TLCL, PLCL, PLFC, CINParam);
+		cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsurf, TLCL, PLCL, PLFC, CINParam);
 	}
 	else
 #endif
@@ -515,7 +515,7 @@ void si::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, cons
 	}
 }
 
-void si::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
+void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
 {
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
@@ -676,12 +676,12 @@ void si::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, c
 	
 }
 
-void si::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>,vector<double>>& LFC, param ELTParam, param ELPParam, param ELZParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+void cape::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>,vector<double>>& LFC, param ELTParam, param ELPParam, param ELZParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		si_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
+		cape_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
 	}
 	else
 #endif
@@ -703,7 +703,7 @@ void si::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>,vector
 
 }
 
-void si::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, param ELTParam, param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, param ELTParam, param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
 	assert(T.size() == P.size());
 	
@@ -932,7 +932,7 @@ void si::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, cons
 
 }
 
-pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P)
+pair<vector<double>,vector<double>> cape::GetLFC(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P)
 {
 
 	auto h = GET_PLUGIN(hitool);
@@ -967,7 +967,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		return si_cuda::GetLFCGPU(itsConfiguration, myTargetInfo, T, P, TenvLCL);
+		return cape_cuda::GetLFCGPU(itsConfiguration, myTargetInfo, T, P, TenvLCL);
 	}
 	else
 #endif
@@ -977,7 +977,7 @@ pair<vector<double>,vector<double>> si::GetLFC(shared_ptr<info> myTargetInfo, ve
 
 }
 
-pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P, vector<double>& TenvLCL)
+pair<vector<double>,vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetInfo, vector<double>& T, vector<double>& P, vector<double>& TenvLCL)
 {
 
 	auto h = GET_PLUGIN(hitool);
@@ -1141,7 +1141,7 @@ pair<vector<double>,vector<double>> si::GetLFCCPU(shared_ptr<info> myTargetInfo,
 	return make_pair(LFCT, LFCP);
 }
 
-pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, vector<double>& Tsurf, vector<double>& TDsurf)
+pair<vector<double>,vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo, vector<double>& Tsurf, vector<double>& TDsurf)
 {
 	vector<double> TLCL(Tsurf.size(), kFloatMissing);
 	vector<double> PLCL = TLCL;
@@ -1215,7 +1215,7 @@ pair<vector<double>,vector<double>> si::GetLCL(shared_ptr<info> myTargetInfo, ve
 	
 }
 
-pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTargetInfo)
+pair<vector<double>,vector<double>> cape::GetSurfaceTAndTD(shared_ptr<info> myTargetInfo)
 {
 	/*
 	 * 1. Get temperature and relative humidity from lowest hybrid level.
@@ -1248,7 +1248,7 @@ pair<vector<double>,vector<double>> si::GetSurfaceTAndTD(shared_ptr<info> myTarg
 
 }
 
-pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info> myTargetInfo)
+pair<vector<double>,vector<double>> cape::Get500mMixingRatioTAndTD(shared_ptr<info> myTargetInfo)
 {
 	/*
 	 * 1. Calculate potential temperature and mixing ratio for vertical profile
@@ -1262,7 +1262,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		return si_cuda::Get500mMixingRatioTAndTDGPU(itsConfiguration, myTargetInfo);
+		return cape_cuda::Get500mMixingRatioTAndTDGPU(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
@@ -1271,7 +1271,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTD(shared_ptr<info
 	}
 }
 
-pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTDCPU(shared_ptr<info> myTargetInfo)
+pair<vector<double>,vector<double>> cape::Get500mMixingRatioTAndTDCPU(shared_ptr<info> myTargetInfo)
 {
 	modifier_mean tp, mr;
 	level curLevel = itsBottomLevel;
@@ -1401,7 +1401,7 @@ pair<vector<double>,vector<double>> si::Get500mMixingRatioTAndTDCPU(shared_ptr<i
 	return make_pair(T,TD);
 }
 
-pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> myTargetInfo)
+pair<vector<double>,vector<double>> cape::GetHighestThetaETAndTD(shared_ptr<info> myTargetInfo)
 {
 	/*
 	 * 1. Calculate equivalent potential temperature for all hybrid levels 
@@ -1415,7 +1415,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		return si_cuda::GetHighestThetaETAndTDGPU(itsConfiguration, myTargetInfo);
+		return cape_cuda::GetHighestThetaETAndTDGPU(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
@@ -1424,7 +1424,7 @@ pair<vector<double>,vector<double>> si::GetHighestThetaETAndTD(shared_ptr<info> 
 	}
 }
 
-pair<vector<double>,vector<double>> si::GetHighestThetaETAndTDCPU(shared_ptr<info> myTargetInfo)
+pair<vector<double>,vector<double>> cape::GetHighestThetaETAndTDCPU(shared_ptr<info> myTargetInfo)
 {
 	vector<bool> found(myTargetInfo->Data().Size(), false);
 	

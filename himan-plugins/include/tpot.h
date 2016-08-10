@@ -10,7 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "tpot_cuda.h"
+#include "tpot.cuh"
 
 namespace himan
 {

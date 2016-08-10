@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include "windvector_cuda.h"
+#include "windvector.cuh"
 #include "cuda_plugin_helper.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))

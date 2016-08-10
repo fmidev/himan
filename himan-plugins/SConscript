@@ -38,7 +38,7 @@ compiled_plugins = ['icing', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid
 
 # List all compiled plugins that have both CPU and GPU implementation here
 
-cuda_plugins = ['dewpoint', 'tpot', 'windvector', 'vvms', 'relative_humidity', 'transformer', 'stability', 'si']
+cuda_plugins = ['dewpoint', 'tpot', 'windvector', 'vvms', 'relative_humidity', 'transformer', 'stability', 'cape']
 
 if have_cuda:
 	env.Tool('cuda')
@@ -67,12 +67,20 @@ for p in compiled_plugins:
 
 if have_cuda:
 	for p in cuda_plugins:
+		objects = []
 
-		file = 'source/' + p + '.cpp'
+
 		base = 'source/compiled_plugin_base.cpp'
-		cufile = 'source/' + p + '_cuda.cu'
- 
-		files = [file, base, cufile]
+		obj='obj/'+ base.replace(".cpp","")
+		objects += env.SharedObject(obj, base)
 
-		env.SharedLibrary(target = p, source = files)
+		file="source/" + p + ".cpp"
 
+		obj='obj/'+ file.replace(".cpp","")
+		objects += env.SharedObject(obj, file)
+
+		cufile="source/" + p + ".cu"	
+                obj='obj/cu_'+ cufile.replace(".cu","")
+                objects += env.SharedObject(obj, cufile)
+
+		env.SharedLibrary(target = p, source = objects)

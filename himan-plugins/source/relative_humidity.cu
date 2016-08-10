@@ -3,7 +3,7 @@
 #include <string>
 
 #include "cuda_plugin_helper.h"
-#include "relative_humidity_cuda.h"
+#include "relative_humidity.cuh"
 #include "metutil.h"
 
 // CUDA-kernel that computes RH from T and TD

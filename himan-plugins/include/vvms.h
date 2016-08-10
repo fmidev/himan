@@ -10,7 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "vvms_cuda.h"
+#include "vvms.cuh"
 
 namespace himan
 {

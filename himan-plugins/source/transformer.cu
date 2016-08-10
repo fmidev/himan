@@ -3,7 +3,7 @@
 #include <string>
 
 #include "cuda_plugin_helper.h"
-#include "transformer_cuda.h"
+#include "transformer.cuh"
 
 __global__ void himan::plugin::transformer_cuda::Calculate(cdarr_t d_source, darr_t d_dest, options opts)
 {

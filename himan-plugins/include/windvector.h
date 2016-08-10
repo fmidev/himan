@@ -11,11 +11,7 @@
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
 
-//#define WINDVECTOR_HEADER_INCLUDE
-
-#include "windvector_cuda.h" // need to have this here because of HPTargetType
-
-//#undef WINDVECTOR_HEADER_INCLUDE
+#include "windvector.cuh" // need to have this here because of HPTargetType
 
 class NFmiArea;
 

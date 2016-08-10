@@ -10,7 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "dewpoint_cuda.h"
+#include "dewpoint.cuh"
 
 namespace himan
 {
