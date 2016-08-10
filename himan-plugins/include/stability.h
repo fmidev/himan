@@ -10,7 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "stability_cuda.h"
+#include "stability.cuh"
 
 namespace himan
 {

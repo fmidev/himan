@@ -3,7 +3,7 @@
 #include <string>
 
 #include "cuda_plugin_helper.h"
-#include "stability_cuda.h"
+#include "stability.cuh"
 #include "metutil.h"
 
 __global__ void himan::plugin::stability_cuda::Calculate(

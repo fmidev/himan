@@ -588,7 +588,7 @@ namespace himan
 {
 namespace plugin
 {
-namespace si_cuda 
+namespace cape_cuda 
 {
 
 std::pair<std::vector<double>,std::vector<double>> GetHighestThetaETAndTDGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo);

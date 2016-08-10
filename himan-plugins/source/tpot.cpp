@@ -18,7 +18,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "tpot_cuda.h"
+#include "tpot.cuh"
 #include "cuda_helper.h"
 #include "metutil.h"
 
@@ -244,7 +244,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 				myTargetInfo->Param(param("TPE-K"));
 
-				!myTargetInfo->Value(value);
+				myTargetInfo->Value(value);
 			}
 		}
 	}

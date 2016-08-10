@@ -15,7 +15,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "vvms_cuda.h"
+#include "vvms.cuh"
 #include "cuda_helper.h"
 
 // Required source parameters

@@ -1,12 +1,12 @@
 /**
- * @file si.h
+ * @file cape.h
  *
  * @date Feb 13, 2014
  * @author partio
  */
 
-#ifndef SI_H
-#define SI_H
+#ifndef CAPE_H
+#define CAPE_H
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
@@ -19,10 +19,10 @@ namespace plugin
 enum HPSoundingIndexSourceDataType
 {
 	kUnknown = 0,
-	kSurface,				// Use surface data (from 2m)
-	k500mAvg,				// Average data of lowest 500m
-	k500mAvgMixingRatio,	// Average data of lowest 500m using mixing ratio
-	kMaxThetaE				// Find source data with max Theta E with upper limit 500hPa
+	kSurface,			// Use surface data (from 2m)
+	k500mAvg,			// Average data of lowest 500m
+	k500mAvgMixingRatio,		// Average data of lowest 500m using mixing ratio
+	kMaxThetaE			// Find source data with max Theta E with upper limit 500hPa
 	
 };
 
@@ -34,21 +34,21 @@ const boost::unordered_map<HPSoundingIndexSourceDataType,std::string> HPSounding
 		(kMaxThetaE, "max theta e")
 		;
 
-class si : public compiled_plugin, private compiled_plugin_base
+class cape : public compiled_plugin, private compiled_plugin_base
 {
 public:
-	si();
+	cape();
 
-	inline virtual ~si() {}
+	inline virtual ~cape() {}
 
-	si(const si& other) = delete;
-	si& operator=(const si& other) = delete;
+	cape(const cape& other) = delete;
+	cape& operator=(const cape& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
 	virtual std::string ClassName() const
 	{
-		return "himan::plugin::si";
+		return "himan::plugin::cape";
 	}
 
 	virtual HPPluginClass PluginClass() const
@@ -97,8 +97,7 @@ private:
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	//return std::make_shared<si> ();
-	return std::shared_ptr<si> (new si());
+	return std::make_shared<cape> ();
 }
 
 } // namespace plugin

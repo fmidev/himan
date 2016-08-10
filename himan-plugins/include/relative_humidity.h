@@ -10,7 +10,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "relative_humidity_cuda.h"
+#include "relative_humidity.cuh"
 namespace himan
 {
 namespace plugin

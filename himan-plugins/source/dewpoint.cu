@@ -3,7 +3,7 @@
 #include <string>
 
 #include "cuda_plugin_helper.h"
-#include "dewpoint_cuda.h"
+#include "dewpoint.cuh"
 #include "metutil.h"
 
 __global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_rh, darr_t d_td,	options opts)

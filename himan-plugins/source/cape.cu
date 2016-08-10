@@ -8,14 +8,13 @@
 
 #include "plugin_factory.h"
 
-#include "si_cuda.h"
+#include "cape.cuh"
 #include "cuda_helper.h"
 #include "metutil.h"
 #include "util.h"
 
 #include <NFmiGribPacking.h>
 
-//#include "regular_grid.h"
 #include "forecast_time.h"
 #include "level.h"
 
@@ -25,11 +24,12 @@
 #include "cache.h"
 #include "hitool.h"
 
+#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
 using namespace himan::plugin;
 
-level si_cuda::itsBottomLevel;
+himan::level cape_cuda::itsBottomLevel;
 
 const unsigned char FCAPE		= (1 << 2);
 const unsigned char FCAPE3km	= (1 << 0);
@@ -142,7 +142,7 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw std::runtime_error("si_cuda::Fetch(): Unable to proceed");
+			throw std::runtime_error("cape_cuda::Fetch(): Unable to proceed");
 		}
 		
 		return std::shared_ptr<info> ();
@@ -545,7 +545,7 @@ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __restrict__ d_
 	}
 }
 
-std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAndTDGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetHighestThetaETAndTDGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	himan::level curLevel = itsBottomLevel;
 	
@@ -663,7 +663,7 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetHighestThetaETAnd
 	
 }
 
-std::pair<std::vector<double>,std::vector<double>> si_cuda::Get500mMixingRatioTAndTDGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatioTAndTDGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
@@ -812,7 +812,7 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::Get500mMixingRatioTA
 	return std::make_pair(T,TD);
 }
 
-std::pair<std::vector<double>,std::vector<double>> si_cuda::GetLFCGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& P, std::vector<double>& TenvLCL)
+std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& P, std::vector<double>& TenvLCL)
 {
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(conf);
@@ -962,7 +962,7 @@ std::pair<std::vector<double>,std::vector<double>> si_cuda::GetLFCGPU(const std:
 }
 
 
-void si_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL, const std::vector<double>& PLFC, param CINParam)
+void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL, const std::vector<double>& PLFC, param CINParam)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
@@ -1116,7 +1116,7 @@ void si_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, 
 
 }
 
-void si_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P, param ELTParam, param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P, param ELTParam, param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
 	assert(T.size() == P.size());
 

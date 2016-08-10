@@ -4,7 +4,7 @@
 
 #include "cuda_plugin_helper.h"
 
-#include "tpot_cuda.h"
+#include "tpot.cuh"
 #include "metutil.h"
 
 __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d_t,
