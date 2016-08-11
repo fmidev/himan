@@ -64,6 +64,9 @@ if os.environ.get('CC') != None:
 if os.environ.get('CXX') != None:
         env['CXX'] = os.environ.get('CXX')
 
+# Required for scan-build
+env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
+
 # Includes
 
 includes = []
