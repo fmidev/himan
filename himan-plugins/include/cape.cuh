@@ -496,7 +496,7 @@ double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double prevTpar
 				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 			
 			}
-			else if  (prevTparcel < prevTenv)
+			else
 			{
 				// Just entered CAPE zone
 				C = CAPE::IntegrateEnteringParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv);

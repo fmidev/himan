@@ -417,7 +417,7 @@ object VerticalMaximumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 	
@@ -434,7 +434,7 @@ object VerticalMaximum(std::shared_ptr<hitool> h, const param& theParam, double 
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -451,7 +451,7 @@ object VerticalMinimumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -468,7 +468,7 @@ object VerticalMinimum(std::shared_ptr<hitool> h, const param& theParam, double 
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -485,7 +485,7 @@ object VerticalSumGrid(std::shared_ptr<hitool> h, const param& theParam, const o
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -502,7 +502,7 @@ object VerticalSum(std::shared_ptr<hitool> h, const param& theParam, double firs
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -519,7 +519,7 @@ object VerticalAverageGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -536,7 +536,7 @@ object VerticalAverage(std::shared_ptr<hitool> h, const param& theParams, double
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -553,7 +553,7 @@ object VerticalCountGrid(std::shared_ptr<hitool> h, const param& theParams, cons
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -570,7 +570,7 @@ object VerticalCount(std::shared_ptr<hitool> h, const param& theParams, double f
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -587,7 +587,7 @@ object VerticalHeightGrid(std::shared_ptr<hitool> h, const param& theParam, cons
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -604,7 +604,7 @@ object VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double 
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -621,7 +621,7 @@ object VerticalValueGrid(std::shared_ptr<hitool> h, const param& theParam, const
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -638,7 +638,7 @@ object VerticalValue(std::shared_ptr<hitool> h, const param& theParam, double fi
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -655,7 +655,7 @@ object VerticalPlusMinusAreaGrid(std::shared_ptr<hitool> h, const param& thePara
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -672,7 +672,7 @@ object VerticalPlusMinusArea(std::shared_ptr<hitool> h, const param& theParams, 
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw e;
+			throw;
 		}
 	}
 

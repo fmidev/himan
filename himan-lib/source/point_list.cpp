@@ -20,26 +20,25 @@ point_list::point_list()
 	: grid(kIrregularGrid, kPointList)
 	, itsStations()
 {
-	itsLogger = logger_factory::Instance()->GetLog("point_list");
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("point_list"));
 }
 
 point_list::point_list(const vector<station>& theStations)
 	: grid(kIrregularGrid, kPointList)
 	, itsStations(theStations)
 {
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("point_list"));
+
 	itsData.Resize(theStations.size(), 1, 1);
 	
 	assert(itsData.Size() == theStations.size());
-	
-	itsLogger = logger_factory::Instance()->GetLog("point_list");
 }
 
 point_list::point_list(const point_list& other)
 	: grid(other)
+	, itsStations(other.itsStations)
 {
-	itsStations = other.itsStations;
-	
-	itsLogger = logger_factory::Instance()->GetLog("point_list");
+	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("point_list"));
 }
 
 size_t point_list::Size() const

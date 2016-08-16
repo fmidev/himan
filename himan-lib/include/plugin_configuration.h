@@ -26,7 +26,7 @@ public:
 	plugin_configuration(const plugin_configuration& other);
 	plugin_configuration& operator=(const plugin_configuration& other) = delete;
 
-	plugin_configuration(const configuration& theConfiguration);
+	explicit plugin_configuration(const configuration& theConfiguration);
 	plugin_configuration(const std::string& theName, const std::map<std::string, std::vector<std::string>>& theOptions);
 
 	~plugin_configuration() = default;

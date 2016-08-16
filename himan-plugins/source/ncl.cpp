@@ -20,7 +20,7 @@ using namespace himan::plugin;
 
 const string itsName("ncl");
 
-ncl::ncl() : itsBottomLevel(kHPMissingInt), itsTopLevel(kHPMissingInt)
+ncl::ncl() : itsBottomLevel(kHPMissingInt), itsTopLevel(kHPMissingInt), itsTargetTemperature(kHPMissingInt)
 {
 	itsClearTextFormula = "???";
 	itsLogger = logger_factory::Instance()->GetLog(itsName);

@@ -24,7 +24,7 @@ class level
 public:
 
     level();
-    level(const NFmiLevel& theLevel);
+    explicit level(const NFmiLevel& theLevel);
     level(HPLevelType theType, double theValue, const std::string& theName = "");
     level(HPLevelType theType, double theValue, int theIndex, const std::string& theName = "");
 

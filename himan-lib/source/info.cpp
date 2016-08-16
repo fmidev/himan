@@ -25,8 +25,9 @@ info::info()
 	, itsParamIterator()
 	, itsForecastTypeIterator()
 	, itsDimensions()
+	, itsLogger(logger_factory::Instance()->GetLog("info"))
+	, itsLocationIndex(kIteratorResetValue)
 {
-	itsLogger = logger_factory::Instance()->GetLog("info");
 }
 
 info::~info() {}

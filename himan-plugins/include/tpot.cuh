@@ -41,7 +41,7 @@ struct options
 	bool thetaw;
 	bool thetae;
 
-	options() : N(0), missing(0), t_base(0), td_base(0), p_scale(1), is_constant_pressure(false), theta(false), thetaw(false), thetae(false) {}
+	options() : t(0), td(0), p(0), tp(0), tpw(0), tpe(0), N(0), missing(0), t_base(0), td_base(0), p_scale(1), p_const(0), is_constant_pressure(false), theta(false), thetaw(false), thetae(false) {}
 
 };
 

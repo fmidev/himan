@@ -131,9 +131,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			T += TBase;
 			RH *= RHScale;
 
-			double TD = kFloatMissing;
-
-			TD = metutil::DewPointFromRH_(T, RH);
+			double TD = metutil::DewPointFromRH_(T, RH);
 
 			myTargetInfo->Value(TD);
 

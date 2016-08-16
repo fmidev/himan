@@ -31,12 +31,11 @@ plugin_factory* plugin_factory::Instance()
     return itsInstance.get();
 }
 
-plugin_factory::plugin_factory() : itsPluginSearchPath()
+plugin_factory::plugin_factory() 
+	: itsPluginSearchPath()
+	, itsLogger(logger_factory::Instance()->GetLog("plugin_factory"))
 {
-
-    itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("plugin_factory"));
-
-    char* path = std::getenv("HIMAN_LIBRARY_PATH");
+    const char* path = std::getenv("HIMAN_LIBRARY_PATH");
 
     if (path != NULL)
     {

@@ -207,7 +207,7 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 		else if ( precForm == 5 ) // sleet
 		{
 			if ( totalPrec <= 0.4 ) weather_symbol = 66; // Light Freezing Rain: a dark cloud and a drop of the arc line
-			else if ( totalPrec > 0.4 ) weather_symbol = 67; // moderate or heavy freezing rain: a dark cloud, and two drops of the arc line
+			else weather_symbol = 67; // moderate or heavy freezing rain: a dark cloud, and two drops of the arc line
 			/*
 			 * Thunder so far determined by using the probability of thunder
 			 * weak thunder when tn < 20%

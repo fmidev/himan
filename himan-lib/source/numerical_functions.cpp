@@ -209,7 +209,7 @@ void integral::SetLevelLimits()
 		producer prod = itsConfiguration->SourceProducer(0);
 
 		double max_value = itsHeightInMeters ? itsUpperBound.max() : itsUpperBound.min();
-		double min_value = itsHeightInMeters ? itsLowerBound.max() : itsLowerBound.max();
+		double min_value = itsHeightInMeters ? itsLowerBound.min() : itsLowerBound.max();
 
 		if (max_value == kFloatMissing || min_value == kFloatMissing)
 		{

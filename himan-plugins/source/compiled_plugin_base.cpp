@@ -26,11 +26,12 @@ using namespace himan::plugin;
 mutex dimensionMutex, singleFileWriteMutex;
 
 compiled_plugin_base::compiled_plugin_base() 
-	: itsDimensionsRemaining(true)
+	: itsThreadCount(-1)
+	, itsDimensionsRemaining(true)
+	, itsBaseLogger(logger_factory::Instance()->GetLog("compiled_plugin_base"))
 	, itsPluginIsInitialized(false)
 	, itsPrimaryDimension(kUnknownDimension)
 {
-	itsBaseLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("compiled_plugin_base"));
 }
 
 bool compiled_plugin_base::AdjustDimension(info& myTargetInfo, HPDimensionType dim)

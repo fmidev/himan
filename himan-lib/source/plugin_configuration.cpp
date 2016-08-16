@@ -29,8 +29,9 @@ plugin_configuration::plugin_configuration(const configuration& theConfiguration
 	, itsName("")
 	, itsOptions()
 	, itsPreconfiguredParams()
+	, itsInfo(new info)
+	, itsStatistics(new statistics)
 {
-	itsStatistics = make_shared<statistics> ();
 }
 
 plugin_configuration::plugin_configuration(const plugin_configuration& other)
@@ -38,9 +39,9 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
 	, itsName(other.itsName)
 	, itsOptions(other.itsOptions)
 	, itsPreconfiguredParams(other.itsPreconfiguredParams)
-{
-	itsStatistics = make_shared<statistics> (*other.itsStatistics);
-	itsInfo = make_shared<info> (*other.itsInfo);
+	, itsInfo(new info(*other.itsInfo))	
+	, itsStatistics(new statistics(*other.itsStatistics))
+{	
 }
 
 plugin_configuration::plugin_configuration(const string& theName, const map<string,vector<string>>& theOptions)

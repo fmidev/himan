@@ -17,12 +17,10 @@ namespace himan
 
 ensemble::ensemble(const param& parameter, size_t ensembleSize)
 	: itsParam(parameter)
-	, itsEnsembleSize(ensembleSize)
+	, itsEnsembleSize(ensembleSize) // ensembleSize includes the control forecast
+	, itsPerturbations(std::vector<forecast_type> (ensembleSize - 1))
+	, itsForecasts(std::vector<info_t> (ensembleSize))
 {
-	// ensembleSize includes the control forecast
-	itsPerturbations = std::vector<forecast_type> (ensembleSize - 1);
-	itsForecasts = std::vector<info_t> (ensembleSize);
-
 	int perturbationNumber = 1;
 	for (auto & p : itsPerturbations)
 	{
@@ -82,7 +80,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config,
 		else
 		{
 			// NOTE let the plugin decide what to do with missing data
-			throw e;
+			throw;
 		}
 	}
 }

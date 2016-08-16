@@ -362,11 +362,9 @@ himan::level fetcher::LevelTransform(const producer& sourceProducer, const param
 			return targetLevel;
 		}
 
-		HPLevelType lvlType = kUnknownLevel;
-
 		double lvlValue = targetLevel.Value();
 
-		lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
+		HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
 
 		if (lvlType == kGround)
 		{

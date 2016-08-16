@@ -587,7 +587,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				}
 				else if (key == "param_list")
 				{
-					boost::property_tree::ptree& params = plugin.second.get_child("param_list");
+					boost::property_tree::ptree params = plugin.second.get_child("param_list");
 
 					if (params.empty())
 					{

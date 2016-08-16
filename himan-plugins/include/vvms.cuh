@@ -34,7 +34,18 @@ struct options
 	bool is_constant_pressure;
 	double vv_ms_scale;
 	
-	options() : N(0), p_const(0), t_base(0), p_scale(1), is_constant_pressure(false), vv_ms_scale(1) {}
+	options() 
+		: t(0)
+		, p(0)
+		, vv(0)
+		, vv_ms(0)
+		, N(0)
+		, p_const(0)
+		, t_base(0) 
+		, p_scale(1)
+		, is_constant_pressure(false)
+		, vv_ms_scale(1) 
+	{}
 
 };
 

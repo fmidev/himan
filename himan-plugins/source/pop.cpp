@@ -134,7 +134,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		ECprev = f->Fetch(cnf, prevTime, level(kHeight, 0), param("RRR-KGM2"), forecastType, false);
 
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
@@ -166,7 +166,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		auto ECprob01Info = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-01"), forecastType, false);
 		ECprob01 = VEC(ECprob01Info);
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
@@ -175,7 +175,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -193,7 +193,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		auto ECfract75Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("F75-RR-6"), forecastType, false);
 		ECfract75 = VEC(ECfract75Info);
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
@@ -202,7 +202,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -220,7 +220,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		auto PEPSInfo = f->Fetch(cnf, forecastTime, level(kHeight, 2), param("PROB-RR-1"), forecastType, false);
 		PEPS = VEC(PEPSInfo);
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
@@ -228,7 +228,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -243,7 +243,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		Hirlam = VEC(HirlamInfo);
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
@@ -251,7 +251,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -267,7 +267,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		Harmonie = VEC(HarmonieInfo);
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
@@ -275,7 +275,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			throw e;
+			throw;
 		}
 	}
 
@@ -291,7 +291,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		GFS = VEC(GFSInfo);
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
@@ -299,7 +299,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			throw e;
+			throw;
 		}
 	}
 

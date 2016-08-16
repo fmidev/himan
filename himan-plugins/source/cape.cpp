@@ -649,8 +649,6 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf,
 		itsLogger->Trace("CIN read for " + boost::lexical_cast<string> (foundCount) + "/" + boost::lexical_cast<string> (found.size()) + " gridpoints");
 
 		curLevel.Value(curLevel.Value()-1);
-		prevZenvInfo = ZenvInfo;
-		prevTparcelVec = TparcelVec;
 
 		prevZenvInfo = ZenvInfo;
 		prevTenvInfo = TenvInfo;
@@ -961,7 +959,7 @@ pair<vector<double>,vector<double>> cape::GetLFC(shared_ptr<info> myTargetInfo, 
 			return make_pair(vector<double>(), vector<double>());
 		}
 
-		throw e;
+		throw;
 	}
 	
 #ifdef HAVE_CUDA

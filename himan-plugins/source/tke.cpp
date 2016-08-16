@@ -20,7 +20,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-tke::tke()
+tke::tke() : itsTopLevel()
 {
     itsClearTextFormula = "complex formula";
 

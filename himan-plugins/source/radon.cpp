@@ -216,7 +216,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	}
 
 	string table_name = row[1];
-	string dset_id = row[0];
 
 	query.str("");
 

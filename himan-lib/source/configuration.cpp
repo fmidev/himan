@@ -10,67 +10,63 @@
 
 using namespace himan;
 
-configuration::configuration() : itsSourceProducerIterator(new producer_iter())
-{
-	itsOutputFileType = kGRIB1;
-	itsFileWriteOption = kSingleFile;
-	itsFileCompression = kNoCompression;
-	itsReadDataFromDatabase = true;
-	itsUseCuda = true;
-	itsThreadCount = -1;
-	itsTargetGeomName = "";
-	itsConfigurationFile = "";
-	itsUseCudaForPacking = true;
-	itsUseCudaForUnpacking = true;
-	itsUseCudaForInterpolation = true;
-	itsUseCache = true;
-	itsCudaDeviceId = 0;
-	itsStatisticsLabel = "";
-	itsForecastStep = kHPMissingInt;
-	itsDatabaseType = kNeonsAndRadon;
-	itsCacheLimit = -1;
-	itsUseDynamicMemoryAllocation = false;
+configuration::configuration() 
+	: itsSourceProducerIterator(new producer_iter())
+	, itsOutputFileType(kGRIB1)
+	, itsFileWriteOption(kSingleFile)
+	, itsFileCompression(kNoCompression)
+	, itsDatabaseType(kNeonsAndRadon)
+	, itsConfigurationFile()
+	, itsAuxiliaryFiles()
+	, itsOriginTime()
+	, itsReadDataFromDatabase(true)
+	, itsThreadCount(-1)
+	, itsTargetGeomName()
+	, itsSourceGeomNames()
+	, itsStatisticsLabel()
+	, itsTargetProducer()
+	, itsUseCuda(true)
+	, itsUseCudaForPacking(true)
+	, itsUseCudaForUnpacking(true)
+	, itsUseCudaForInterpolation(true)
+	, itsUseCache(true)
+	, itsUseDynamicMemoryAllocation(false)
+	, itsCudaDeviceCount(-1)
+	, itsCudaDeviceId(0)
+	, itsForecastStep(kHPMissingInt)
+	, itsCacheLimit(-1)
+{	
 }
 
 configuration::configuration(const configuration& other)
+	: itsSourceProducerIterator(std::unique_ptr<producer_iter> (new producer_iter(*other.itsSourceProducerIterator)))
+	, itsOutputFileType(other.itsOutputFileType)
+	, itsFileWriteOption(other.itsFileWriteOption)
+	, itsFileCompression(other.itsFileCompression)
+	, itsDatabaseType(other.itsDatabaseType)
+	, itsConfigurationFile(other.itsConfigurationFile)
+	, itsAuxiliaryFiles(other.itsAuxiliaryFiles)
+	, itsOriginTime(other.itsOriginTime)
+	, itsReadDataFromDatabase(other.itsReadDataFromDatabase)
+	, itsThreadCount(other.itsThreadCount)
+	, itsTargetGeomName(other.itsTargetGeomName)
+	, itsSourceGeomNames(other.itsSourceGeomNames)
+	, itsStatisticsLabel(other.itsStatisticsLabel)
+	, itsTargetProducer(other.itsTargetProducer)
+	, itsUseCuda(other.itsUseCuda)
+	, itsUseCudaForPacking(other.itsUseCudaForPacking)
+	, itsUseCudaForUnpacking(other.itsUseCudaForUnpacking)
+	, itsUseCudaForInterpolation(other.itsUseCudaForInterpolation)
+	, itsUseCache(other.itsUseCache)
+	, itsUseDynamicMemoryAllocation(other.itsUseDynamicMemoryAllocation)
+	, itsCudaDeviceCount(other.itsCudaDeviceCount)
+	, itsCudaDeviceId(other.itsCudaDeviceId)
+	, itsForecastStep(other.itsForecastStep)
+	, itsCacheLimit(other.itsCacheLimit)
+
 {
-
-	itsOutputFileType = other.itsOutputFileType;
-	itsConfigurationFile = other.itsConfigurationFile;
-	itsAuxiliaryFiles = other.itsAuxiliaryFiles;
-	itsOriginTime = other.itsOriginTime;
-
-	itsFileWriteOption = other.itsFileWriteOption;
-	itsFileCompression = other.itsFileCompression;
-	itsReadDataFromDatabase = other.itsReadDataFromDatabase;
-
-	itsUseCuda = other.itsUseCuda;
-	itsUseCudaForPacking = other.itsUseCudaForPacking;
-	itsUseCudaForUnpacking = other.itsUseCudaForUnpacking;
-	itsUseCudaForInterpolation = other.itsUseCudaForInterpolation;
-	itsCudaDeviceCount = other.itsCudaDeviceCount;
-	itsCudaDeviceId = other.itsCudaDeviceId;
-	
-	itsUseCache = other.itsUseCache;
-	
-	itsThreadCount = other.itsThreadCount;
-
-	itsTargetGeomName = other.itsTargetGeomName;
-	itsSourceGeomNames = other.itsSourceGeomNames;
-	
-	itsTargetProducer = other.itsTargetProducer;
-
-	itsStatisticsLabel = other.itsStatisticsLabel;
-
-	itsSourceProducerIterator = std::unique_ptr<producer_iter> (new producer_iter(*other.itsSourceProducerIterator));
+	assert(itsSourceProducerIterator);
 	itsSourceProducerIterator->Set(other.itsSourceProducerIterator->Index());
-
-	itsForecastStep = other.itsForecastStep;
-	
-	itsDatabaseType = other.itsDatabaseType;
-	itsCacheLimit = other.itsCacheLimit;
-	
-	itsUseDynamicMemoryAllocation = other.itsUseDynamicMemoryAllocation;
 }
 
 std::ostream& configuration::Write(std::ostream& file) const

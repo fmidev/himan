@@ -31,7 +31,7 @@ class param
 public:
 
 	param();
-	param(const std::string& theName);
+	explicit param(const std::string& theName);
 	param(const std::string& theName, unsigned long theUnivId);
 	param(const std::string& theName, unsigned long theUnivId, HPParameterUnit theUnit);
 

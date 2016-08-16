@@ -46,18 +46,18 @@ class iterator
 public:
 
 	iterator<T>() : itsIndex(kIteratorResetValue) {}
-	iterator<T>(const std::vector<T>& theElements)
+	explicit iterator<T>(const std::vector<T>& theElements)
+	:	itsElements(theElements)
 	{
-		itsElements = theElements;
 		Reset();
 	}
 
-	iterator<T>(const iterator<T>& other)
+	explicit iterator(const iterator& other)
 		: itsElements(other.itsElements)
 		, itsIndex(other.itsIndex)
 	{}
 	
-	iterator<T>& operator=(const iterator<T>& other)
+	iterator& operator=(const iterator& other)
 	{
 		itsElements = other.itsElements;
 		itsIndex = other.itsIndex;

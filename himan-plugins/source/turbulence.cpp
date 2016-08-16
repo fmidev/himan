@@ -17,7 +17,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-turbulence::turbulence()
+turbulence::turbulence() : itsTopLevel()
 {
     itsClearTextFormula = "complex formula";
 

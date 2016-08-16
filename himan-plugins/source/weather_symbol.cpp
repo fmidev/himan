@@ -278,7 +278,7 @@ double weather_symbol::rain_type(double rr) {
 double weather_symbol::cloud_type(double cloud) {
     // etsi_pilvityyppi
 	typedef std::map<double, double>::const_iterator MapIter;
-	for (MapIter iter = cloudMap.begin(); iter != cloudMap.end(); iter++)
+	for (MapIter iter = cloudMap.begin(); iter != cloudMap.end(); ++iter)
     {
     	if (iter->first == cloud)
     	{

@@ -62,7 +62,7 @@ class modifier
 		void HeightInMeters(bool theHeightInMeters);
 
 	protected:
-		modifier(HPModifierType theModifierType);
+		explicit modifier(HPModifierType theModifierType);
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
 		/**
@@ -211,7 +211,7 @@ class modifier_integral : public modifier
 		virtual bool CalculationFinished() const;
 
 	protected:
-		modifier_integral(HPModifierType theModifierType) : modifier(theModifierType) {}
+		explicit modifier_integral(HPModifierType theModifierType) : modifier(theModifierType) {}
 
 		virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 		virtual bool Evaluate(double theValue, double theHeight);

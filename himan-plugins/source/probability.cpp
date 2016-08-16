@@ -317,6 +317,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		WriteToFile(myTargetInfo, pc.targetInfoIndex);
 
 	} while (myTargetInfo.NextTime());
+	threadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<std::string> (myTargetInfo.Data().MissingCount()) + "/" + boost::lexical_cast<std::string> (myTargetInfo.Data().Size()));
 }
 
 // Usually himan writes all the parameters out on a call to WriteToFile, but probability calculates

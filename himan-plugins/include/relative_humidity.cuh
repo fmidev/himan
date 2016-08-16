@@ -35,7 +35,7 @@ struct options
 	double PScale;
 	double P_level;
 
-	options() : select_case(1), N(0), missing(0), TDBase(0), TBase(0), PScale(1), P_level(0) {}
+	options() : T(0), TD(0), Q(0), P(0), RH(0), select_case(1), N(0), missing(0), TDBase(0), TBase(0), PScale(1), P_level(0) {}
 
 };
 

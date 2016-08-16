@@ -29,7 +29,7 @@ class hitool : public auxiliary_plugin
 public:
 
 	hitool();
-	hitool(std::shared_ptr<plugin_configuration> conf);
+	explicit hitool(std::shared_ptr<plugin_configuration> conf);
 
 	virtual ~hitool() {};
 

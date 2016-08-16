@@ -29,7 +29,7 @@ class forecast_type
 public:
 
 	forecast_type() {}
-	forecast_type(HPForecastType theType);
+	explicit forecast_type(HPForecastType theType);
 	forecast_type(HPForecastType theType, double theValue);
 	
 	bool operator==(const forecast_type& theType) const;

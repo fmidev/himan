@@ -581,15 +581,15 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 #endif
 
 		zeroLevel1.resize(numZeroLevels.size(), MISS);
-		zeroLevel2 = zeroLevel1;
-		zeroLevel3 = zeroLevel1;
-		zeroLevel4 = zeroLevel1;
-		
+		zeroLevel2.resize(numZeroLevels.size(), MISS);
+		zeroLevel3.resize(numZeroLevels.size(), MISS);
+		zeroLevel4.resize(numZeroLevels.size(), MISS);
+
 		// Keskim. lämpötila 1. nollarajan alapuolella, 1/2. ja 2/3. nollarajojen välisissä kerroksissa [C]
-		Tavg01 = zeroLevel1;
-		Tavg12 = zeroLevel1;
-		Tavg23 = zeroLevel1;
-		Tavg34 = zeroLevel1;
+		Tavg01.resize(numZeroLevels.size(), MISS);
+		Tavg12.resize(numZeroLevels.size(), MISS);
+		Tavg23.resize(numZeroLevels.size(), MISS);
+		Tavg34.resize(numZeroLevels.size(), MISS);
 		
 		// 1. nollarajan alapuolisen, 2/3. nollarajojen välisen, ja koko T>0 alueen koko [mC, "metriastetta"]
 		plusArea = zeroLevel1;

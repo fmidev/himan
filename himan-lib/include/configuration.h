@@ -257,44 +257,39 @@ public:
 	void UseDynamicMemoryAllocation(bool theUseDynamicMemoryAllocation);
 	
 protected:
+	std::unique_ptr<producer_iter> itsSourceProducerIterator;
+
 	HPFileType itsOutputFileType;
-	std::string itsConfigurationFile;
-	std::vector<std::string> itsAuxiliaryFiles;
-
-	std::string itsOriginTime;
-
 	HPFileWriteOption itsFileWriteOption;
 	HPFileCompression itsFileCompression;
+	HPDatabaseType itsDatabaseType;
+
+	std::string itsConfigurationFile;
+	std::vector<std::string> itsAuxiliaryFiles;
+	std::string itsOriginTime;
+
 	bool itsReadDataFromDatabase;
-
-	bool itsUseCuda;
-
 	short itsThreadCount;
-
 	std::string itsTargetGeomName;
 	std::vector<std::string> itsSourceGeomNames;
-	
-	producer itsTargetProducer;
-
 	std::string itsStatisticsLabel;
 
+	producer itsTargetProducer;
+
+	bool itsUseCuda;
 	bool itsUseCudaForPacking;
 	bool itsUseCudaForUnpacking;
 	bool itsUseCudaForInterpolation;
 	bool itsUseCache;
+	bool itsUseDynamicMemoryAllocation;
 
 	short itsCudaDeviceCount;
-
-	std::unique_ptr<producer_iter> itsSourceProducerIterator;
-
 	short itsCudaDeviceId;
 
 	int itsForecastStep;
 
-	HPDatabaseType itsDatabaseType;
 	int itsCacheLimit;
 	
-	bool itsUseDynamicMemoryAllocation;
 };
 
 

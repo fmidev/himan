@@ -20,7 +20,7 @@ class point_list : public grid
 {
 	public:
 		point_list();
-		point_list(const std::vector<station>& theStations);
+		explicit point_list(const std::vector<station>& theStations);
 
 		virtual ~point_list() = default;
 

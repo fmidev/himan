@@ -58,7 +58,7 @@ plugin_container::~plugin_container()
 
     if (dlclose(itsLibraryHandle) != 0)
     {
-        throw std::runtime_error("Library close failed");
+        std::cerr << "Library close failed" << std::endl;
     }
 
 }

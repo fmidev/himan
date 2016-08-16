@@ -90,7 +90,6 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		throw runtime_error("Transformer_plugin: target_param not specified.");
-		exit(1);
 	}
 
 	if(!itsConfiguration->GetValue("source_param").empty())
@@ -110,7 +109,6 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		throw runtime_error("Transformer_plugin: source_level_type not specified.");
-		exit(1);
 	}
 	
 	if(!itsConfiguration->GetValue("source_levels").empty())
@@ -120,7 +118,6 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		throw runtime_error("Transformer_plugin: source_level_type not specified.");
-		exit(1);
 	}
 	
 	// Check apply land sea mask parameter

@@ -514,7 +514,7 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam,	
 								wantedType);
 		}
 	}
-	catch (HPExceptionType e)
+	catch (HPExceptionType& e)
 	{
 		switch (e)
 		{

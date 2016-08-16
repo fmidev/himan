@@ -81,7 +81,7 @@ vector<string> neons::Files(search_options& options)
 		
 		return files;
 	}
-
+	/*
 	string neonsForecastType = "";
 
 	switch (options.ftype.Type())
@@ -98,7 +98,7 @@ vector<string> neons::Files(search_options& options)
 			neonsForecastType = "4_" + boost::lexical_cast<string> (options.ftype.Value());
 			break;
 	}
-	
+	*/
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
 		string tablename = gridgeoms[i][1];

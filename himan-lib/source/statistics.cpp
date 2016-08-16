@@ -9,8 +9,8 @@ using namespace std;
 using namespace himan;
 
 statistics::statistics()
+	: itsTimer(timer_factory::Instance()->GetTimer())
 {
-	itsTimer = unique_ptr<timer> (timer_factory::Instance()->GetTimer());
 	Init();
 }
 
