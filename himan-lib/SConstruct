@@ -220,6 +220,7 @@ def PhonyTargets(env = None, **kw):
 		env.AlwaysBuild(env.Alias(target, [], action))
 
 PhonyTargets(CPPCHECK = 'cppcheck --std=c++11 --enable=all -I ./include -I ../himan-plugins/include ./')
+PhonyTargets(SCANBUILD = 'scan-build make debug')
 
 SConscript('SConscript', exports = ['env'], variant_dir=build_dir, duplicate=0)
 Clean('.', build_dir)
