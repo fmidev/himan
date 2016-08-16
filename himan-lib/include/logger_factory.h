@@ -23,6 +23,7 @@ class logger_factory
 public:
 	static logger_factory* Instance();
 
+	~logger_factory() = default;
 	logger_factory(const logger_factory& other) = delete;
 	logger_factory& operator=(const logger_factory& other) = delete;
 
@@ -33,7 +34,6 @@ public:
 
 private:
 	logger_factory();
-	~logger_factory() = default;
 
 	HPDebugState itsDebugStateMain;
 	static std::unique_ptr<logger_factory> itsInstance;

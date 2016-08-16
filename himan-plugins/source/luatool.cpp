@@ -15,6 +15,8 @@
 #include "neons.h"
 #include "radon.h"
 
+#ifndef __clang_analyzer__
+
 extern "C"
 {
 #include <lualib.h>
@@ -1127,3 +1129,5 @@ void luatool::WriteToFile(const info_t& targetInfo)
 {
 	compiled_plugin_base::WriteToFile(*targetInfo, itsWriteOptions);
 }
+
+#endif // __clang_analyzer__

@@ -613,6 +613,10 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			s->Nj(nj);
 		}	
 			break;
+			
+		default:
+			itsLogger->Fatal("Invalid projection");
+			exit(1);
 	}
 
 	newGrid->ScanningMode(kBottomLeft);

@@ -8,6 +8,7 @@
 #include "plugin_container.h"
 #include <stdexcept>
 #include <dlfcn.h>
+#include <iostream>
 
 using namespace himan;
 
