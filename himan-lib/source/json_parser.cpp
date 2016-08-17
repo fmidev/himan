@@ -1405,6 +1405,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
 			auto n = GET_PLUGIN(neons);
+			auto r = GET_PLUGIN(radon);
 
 			for (size_t i = 0; i < sourceProducersStr.size(); i++)
 			{
@@ -1423,7 +1424,21 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 				}
 				else
 				{
-					itsLogger->Warning("Unknown source producer: " + sourceProducersStr[i]);
+					itsLogger->Warning("Failed to find source producer from Neons: " + sourceProducersStr[i]);
+
+					map<string,string> radonProdInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long> (pid));
+
+					if (!radonProdInfo.empty())
+					{
+						prod.Centre(boost::lexical_cast<long> (radonProdInfo["ident_id"]));
+						prod.Name(radonProdInfo["ref_prod"]);
+						prod.Process(boost::lexical_cast<long> (radonProdInfo["model_id"]));
+					}
+					else
+					{
+						itsLogger->Warning("Failed to find source producer from Radon: " + sourceProducersStr[i]);
+					}
+					
 				}
 
 				sourceProducers.push_back(prod);
