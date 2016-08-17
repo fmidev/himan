@@ -520,10 +520,15 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 				return ret;
  			}
 		}
+
+		const string ref_prod = opts.prod.Name();
+		const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
+		const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
+		itsLogger->Warning("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
+		                   ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
 	}
 
 	return ret;
-
 }
 
 bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime, forecast_type& requestedType)
