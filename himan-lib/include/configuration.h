@@ -18,18 +18,14 @@
 
 namespace himan
 {
-
 class logger;
 class configuration
 {
-
-public:
-
+   public:
 	friend class json_parser;
 
 	configuration();
 	virtual ~configuration() {}
-
 	configuration(const configuration& other);
 	configuration& operator=(const configuration& other) = delete;
 
@@ -37,11 +33,7 @@ public:
 	 * @return Class name
 	 */
 
-	std::string ClassName() const
-	{
-		return "himan::configuration";
-	}
-
+	std::string ClassName() const { return "himan::configuration"; }
 	std::ostream& Write(std::ostream& file) const;
 
 	/**
@@ -99,7 +91,7 @@ public:
 	 * @return True if not at last source producer
 	 */
 
-	bool NextSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+	bool NextSourceProducer() const;  // THIS SHOULD NOT BE CONST ??
 
 	/**
 	 * @brief Goto first source producer
@@ -110,7 +102,7 @@ public:
 	 * @return True if iterator has at least one source producer
 	 */
 
-	bool FirstSourceProducer() const; // THIS SHOULD NOT BE CONST ??
+	bool FirstSourceProducer() const;  // THIS SHOULD NOT BE CONST ??
 
 	/**
 	 * @brief Reset source producer iterator
@@ -124,7 +116,7 @@ public:
 
 	/**
 	 * @brief Return number of source producers
-	 * 
+	 *
 	 * @return Number of source producers
 	 */
 
@@ -140,10 +132,10 @@ public:
 
 	/**
 	 * @brief Set target producer
-	 * 
+	 *
 	 * @param theTargetProducer New target producer
 	 */
-	
+
 	void TargetProducer(const producer& theTargetProducer);
 
 	/**
@@ -156,11 +148,11 @@ public:
 	void FileWriteOption(HPFileWriteOption theFileWriteOption);
 	HPFileWriteOption FileWriteOption() const;
 
-        /**
-         * @brief Enable or disable output file compression
-         *
-         * @param theFileCompression set output file compression to gzip, bzip2 or none
-         */
+	/**
+	 * @brief Enable or disable output file compression
+	 *
+	 * @param theFileCompression set output file compression to gzip, bzip2 or none
+	 */
 
 	void FileCompression(HPFileCompression theFileCompression);
 	HPFileCompression FileCompression() const;
@@ -194,7 +186,7 @@ public:
 	 * @brief Top level function for CUDA grib packing and unpacking.
 	 * @return True if CUDA can be used (does not tell IF it's used)
 	 */
-	
+
 	bool UseCudaForPacking() const;
 	void UseCudaForPacking(bool theUseCudaForPacking);
 
@@ -203,7 +195,7 @@ public:
 
 	bool UseCudaForInterpolation() const;
 	void UseCudaForInterpolation(bool theUseCudaForInterpolation);
-	
+
 	bool UseCache() const;
 	void UseCache(bool theUseCache);
 
@@ -238,25 +230,25 @@ public:
 
 	/**
 	 * @brief Return the value if key 'step'.
-	 * 
+	 *
 	 * @return Value of 'step' if present
 	 */
-	
+
 	int ForecastStep() const;
 
 	HPDatabaseType DatabaseType() const;
 	void DatabaseType(HPDatabaseType theDatabaseType);
-	
+
 	std::string TargetGeomName() const;
 	void TargetGeomName(const std::string& theTargetGeomName);
-	
+
 	int CacheLimit() const;
 	void CacheLimit(int theCacheLimit);
-	
+
 	bool UseDynamicMemoryAllocation() const;
 	void UseDynamicMemoryAllocation(bool theUseDynamicMemoryAllocation);
-	
-protected:
+
+   protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
 	HPFileType itsOutputFileType;
@@ -289,16 +281,9 @@ protected:
 	int itsForecastStep;
 
 	int itsCacheLimit;
-	
 };
 
-
-inline
-std::ostream& operator<<(std::ostream& file, const configuration& ob)
-{
-	return ob.Write(file);
-}
-
-} // namespace himan
+inline std::ostream& operator<<(std::ostream& file, const configuration& ob) { return ob.Write(file); }
+}  // namespace himan
 
 #endif /* CONFIGURATION_H */

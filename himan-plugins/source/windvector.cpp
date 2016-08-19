@@ -6,14 +6,14 @@
  */
 
 #include "windvector.h"
-#include <iostream>
-#include <boost/lexical_cast.hpp>
-#include "util.h"
-#include <math.h>
+#include "forecast_time.h"
+#include "level.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
-#include "level.h"
-#include "forecast_time.h"
+#include "util.h"
+#include <boost/lexical_cast.hpp>
+#include <iostream>
+#include <math.h>
 //#include "NFmiArea.h"
 #include "NFmiRotatedLatLonArea.h"
 #include "NFmiStereographicArea.h"
@@ -27,21 +27,20 @@ using namespace himan::plugin;
 
 #include "cuda_helper.h"
 
-typedef tuple<double,double,double,double> coefficients;
+typedef tuple<double, double, double, double> coefficients;
 
 // std::thread_local is implemented only in g++ 4.8 !
 
-boost::thread_specific_ptr <map<size_t, coefficients>> myCoefficientCache;
+boost::thread_specific_ptr<map<size_t, coefficients>> myCoefficientCache;
 
-windvector::windvector()
-	: itsCalculationTarget(kUnknownElement)
-	, itsVectorCalculation(false)
+windvector::windvector() : itsCalculationTarget(kUnknownElement), itsVectorCalculation(false)
 {
-	itsClearTextFormula = "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * round(speed)";
+	itsClearTextFormula =
+	    "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * "
+	    "round(speed)";
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger_factory::Instance()->GetLog("windvector");
-
 }
 
 void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
@@ -53,7 +52,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	 */
 
 	vector<param> theParams;
-	
+
 	param requestedDirParam;
 	param requestedSpeedParam;
 	param requestedVectorParam;
@@ -74,7 +73,6 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		{
 			itsLogger->Warning("Unable to calculate vector for ice");
 		}
-
 	}
 	else if (itsConfiguration->Exists("for_sea") && itsConfiguration->GetValue("for_sea") == "true")
 	{
@@ -87,12 +85,11 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		{
 			itsLogger->Warning("Unable to calculate vector for sea");
 		}
-
 	}
 	else if (itsConfiguration->Exists("for_gust") && itsConfiguration->GetValue("for_gust") == "true")
 	{
 		requestedSpeedParam = param("FFG-MS", 417, 0, 2, 22);
-		
+
 		itsCalculationTarget = kGust;
 
 		if (itsVectorCalculation)
@@ -109,9 +106,9 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		if (itsVectorCalculation)
 		{
-			requestedVectorParam = param("DF-MS", 22);	
+			requestedVectorParam = param("DF-MS", 22);
 		}
-		
+
 		itsCalculationTarget = kWind;
 	}
 
@@ -126,11 +123,10 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	{
 		theParams.push_back(requestedVectorParam);
 	}
-	
+
 	SetParams(theParams);
 
 	Start();
-	
 }
 
 /*
@@ -141,7 +137,6 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
 	if (!myCoefficientCache.get())
 	{
 		myCoefficientCache.reset(new map<size_t, coefficients>());
@@ -152,7 +147,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	param UParam;
 	param VParam;
 
-	double directionOffset = 180; // For wind direction add this
+	double directionOffset = 180;  // For wind direction add this
 
 	switch (itsCalculationTarget)
 	{
@@ -179,42 +174,45 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			break;
 
 		default:
-			throw runtime_error("Invalid calculation target element: " + boost::lexical_cast<string> (static_cast<int> (itsCalculationTarget)));
+			throw runtime_error("Invalid calculation target element: " +
+			                    boost::lexical_cast<string>(static_cast<int>(itsCalculationTarget)));
 			break;
 	}
-	
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string> (threadIndex));
+
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) +
-								" level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
 	info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 	if (!UInfo || !VInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
 	assert(UInfo->Grid()->AB() == VInfo->Grid()->AB());
 
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); )
+	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
 	{
 		SetAB(myTargetInfo, UInfo);
-	}		
-				
+	}
+
 	// if source producer is Hirlam, we must de-stagger U and V grid
 	// edit: Nope, do not de-stagger but interpolate
 
 	/*if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
 	{
-		UInfo->Grid()->Stagger(-0.5, 0);
-		VInfo->Grid()->Stagger(0, -0.5);
+	    UInfo->Grid()->Stagger(-0.5, 0);
+	    VInfo->Grid()->Stagger(0, -0.5);
 	}*/
 
 	assert(UInfo->Grid()->Type() == VInfo->Grid()->Type());
@@ -222,7 +220,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	string deviceType;
 
 #ifdef HAVE_CUDA
-	if (itsConfiguration->UseCuda() && (UInfo->Grid()->Type() == kLatitudeLongitude || UInfo->Grid()->Type() == kRotatedLatitudeLongitude))
+	if (itsConfiguration->UseCuda() &&
+	    (UInfo->Grid()->Type() == kLatitudeLongitude || UInfo->Grid()->Type() == kRotatedLatitudeLongitude))
 	{
 		deviceType = "GPU";
 
@@ -235,8 +234,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	{
 		deviceType = "CPU";
 
-		//UGrid->InterpolationMethod(kNearestPoint);
-		//VGrid->InterpolationMethod(kNearestPoint);
+		// UGrid->InterpolationMethod(kNearestPoint);
+		// VGrid->InterpolationMethod(kNearestPoint);
 
 		unique_ptr<NFmiArea> sourceArea = ToNewbaseArea(UInfo);
 		unique_ptr<NFmiArea> targetArea = ToNewbaseArea(myTargetInfo);
@@ -254,9 +253,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			/*
 			 * Speed can be calculated with rotated U and V components
 			 */
-				
-			double speed = sqrt(U*U + V*V);
-	
+
+			double speed = sqrt(U * U + V * V);
+
 			/*
 			 * The order of parameters in infos is and must be always:
 			 * index 0 : speed parameter
@@ -276,7 +275,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			{
 				const point regPoint = myTargetInfo->LatLon();
 
-				const NFmiPoint rp = reinterpret_cast<NFmiRotatedLatLonArea*> ((sourceArea.get()))->ToRotLatLon(NFmiPoint(regPoint.X(), regPoint.Y()));
+				const NFmiPoint rp = reinterpret_cast<NFmiRotatedLatLonArea*>((sourceArea.get()))
+				                         ->ToRotLatLon(NFmiPoint(regPoint.X(), regPoint.Y()));
 				const point rotPoint(rp.X(), rp.Y());
 
 				// We use UGrid area to do to the rotation even though UGrid area might be
@@ -284,9 +284,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 				double newU = kFloatMissing, newV = kFloatMissing;
 
-				if (myTargetInfo->Grid()->Type() == kRotatedLatitudeLongitude || myTargetInfo->Grid()->Type() == kLatitudeLongitude)
+				if (myTargetInfo->Grid()->Type() == kRotatedLatitudeLongitude ||
+				    myTargetInfo->Grid()->Type() == kLatitudeLongitude)
 				{
-
 					/*
 					* 1. Get coordinates of current grid point in earth-relative form
 					* 2. Get coordinates of current grid point in grid-relative form
@@ -302,13 +302,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 					}
 					else
 					{
-						coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->SouthPole()); // inefficient cast
+						coeffs = util::EarthRelativeUVCoefficients(
+						    regPoint, rotPoint, dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())
+						                            ->SouthPole());  // inefficient cast
 						(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
 					}
 
-					newU = get<0> (coeffs) * U + get<1> (coeffs) * V;
-					newV = get<2> (coeffs) * U + get<3> (coeffs) * V;
-						
+					newU = get<0>(coeffs) * U + get<1>(coeffs) * V;
+					newV = get<2>(coeffs) * U + get<3>(coeffs) * V;
 				}
 				else if (myTargetInfo->Grid()->Type() == kStereographic)
 				{
@@ -319,49 +320,50 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 					double cosL, sinL;
 
-					double ang = reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->CentralLongitude();
+					double ang = reinterpret_cast<NFmiStereographicArea*>(targetArea.get())->CentralLongitude();
 					double cLon = regPoint.X();
-						
+
 					sincos((ang - cLon) * himan::constants::kDeg, &sinL, &cosL);
 
 					coefficients coeffs;
 
 					if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
 					{
-							coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
+						coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
 					}
 					else
 					{
-						coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->SouthPole());
+						coeffs = util::EarthRelativeUVCoefficients(
+						    regPoint, rotPoint,
+						    dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())->SouthPole());
 						(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
 					}
 
-					double PA = get<0> (coeffs) * cosL - get<1> (coeffs) * sinL;
-					double PB = get<0> (coeffs) * sinL + get<1> (coeffs) * cosL;
-					double PC = get<2> (coeffs) * cosL - get<3> (coeffs) * sinL;
-					double PD = get<2> (coeffs) * sinL + get<3> (coeffs) * cosL;
-						
+					double PA = get<0>(coeffs) * cosL - get<1>(coeffs) * sinL;
+					double PB = get<0>(coeffs) * sinL + get<1>(coeffs) * cosL;
+					double PC = get<2>(coeffs) * cosL - get<3>(coeffs) * sinL;
+					double PD = get<2>(coeffs) * sinL + get<3>(coeffs) * cosL;
+
 					newU = PA * U + PB * V;
 					newV = PC * U + PD * V;
-
 				}
 				else
 				{
-					myThreadedLogger->Error("Invalid target projection: " + string(HPGridTypeToString.at(myTargetInfo->Grid()->Type())));
+					myThreadedLogger->Error("Invalid target projection: " +
+					                        string(HPGridTypeToString.at(myTargetInfo->Grid()->Type())));
 					return;
 				}
 
 				// Wind speed should the same with both forms of U and V
 
-				assert(fabs(sqrt(U*U+V*V) - sqrt(newU*newU + newV * newV)) < 0.01);
+				assert(fabs(sqrt(U * U + V * V) - sqrt(newU * newU + newV * newV)) < 0.01);
 
 				U = newU;
 				V = newV;
-
 			}
 			else if (UInfo->Grid()->Type() == kStereographic)
 			{
-				//const point regPoint = myTargetInfo->LatLon();
+				// const point regPoint = myTargetInfo->LatLon();
 				throw runtime_error("Rotation of stereographic UV coordinates not confirmed yet");
 #if 0
 				double j;
@@ -407,36 +409,33 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 			if (speed > 0)
 			{
-				dir = himan::constants::kRad * atan2(U,V) + directionOffset;
+				dir = himan::constants::kRad * atan2(U, V) + directionOffset;
 
 				// reduce the angle
-				dir = fmod(dir,360);
-					
+				dir = fmod(dir, 360);
+
 				// force it to be the positive remainder, so that 0 <= dir < 360
 				dir = fmod((dir + 360), 360);
-
 			}
 
 #ifdef HIL_PP_DD_COMPATIBILITY_MODE
-				
-			double windVector = round(dir/10) + 100 * round(speed);
-			dir = 10 * (static_cast<int> (round(windVector)) % 100);
-				
+
+			double windVector = round(dir / 10) + 100 * round(speed);
+			dir = 10 * (static_cast<int>(round(windVector)) % 100);
+
 #endif
 			myTargetInfo->ParamIndex(1);
 			myTargetInfo->Value(round(dir));
-				
+
 			if (itsVectorCalculation)
 			{
-
 #ifndef HIL_PP_DD_COMPATIBILITY_MODE
-				double windVector = round(dir/10) + 100 * round(speed);
+				double windVector = round(dir / 10) + 100 * round(speed);
 #endif
 
 				myTargetInfo->ParamIndex(2);
 
 				myTargetInfo->Value(windVector);
-			
 			}
 		}
 	}
@@ -448,14 +447,15 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		missing += myTargetInfo->Data().MissingCount();
 		total += myTargetInfo->Data().Size();
 	}
-	
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (missing) + "/" + boost::lexical_cast<string> (total));
 
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string>(missing) + "/" +
+	                       boost::lexical_cast<string>(total));
 }
 
 #ifdef HAVE_CUDA
 
-unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> UInfo, shared_ptr<info> VInfo)
+unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> UInfo,
+                                                             shared_ptr<info> VInfo)
 {
 	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
 
@@ -465,14 +465,14 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 
 	if (UInfo->Grid()->Type() == kRotatedLatitudeLongitude)
 	{
-		opts->need_grid_rotation = dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->UVRelativeToGrid();
+		opts->need_grid_rotation = dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())->UVRelativeToGrid();
 	}
 
 	opts->target_type = itsCalculationTarget;
 
 	opts->u = UInfo->ToSimple();
 	opts->v = VInfo->ToSimple();
-	
+
 	myTargetInfo->ParamIndex(0);
 	opts->speed = myTargetInfo->ToSimple();
 
@@ -488,7 +488,7 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 		opts->vector = myTargetInfo->ToSimple();
 	}
 
-	opts->N = opts->speed->size_x*opts->speed->size_y;
+	opts->N = opts->speed->size_x * opts->speed->size_y;
 
 	return opts;
 }
@@ -498,13 +498,12 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 unique_ptr<NFmiArea> windvector::ToNewbaseArea(shared_ptr<info> myTargetInfo) const
 {
 	auto q = GET_PLUGIN(querydata);
-	
+
 	auto hdesc = q->CreateHPlaceDescriptor(*myTargetInfo, true);
 
-	unique_ptr<NFmiArea> theArea = unique_ptr<NFmiArea> (hdesc.Area()->Clone());
-	
+	unique_ptr<NFmiArea> theArea = unique_ptr<NFmiArea>(hdesc.Area()->Clone());
+
 	assert(theArea);
 
 	return theArea;
-
 }

@@ -23,46 +23,33 @@
 #define AUXILIARY_PLUGIN_H
 
 #include "himan_plugin.h"
-#include "write_options.h"
 #include "search_options.h"
+#include "write_options.h"
 
 namespace himan
 {
 namespace plugin
 {
-
 class auxiliary_plugin : public himan_plugin
 {
+   public:
+	auxiliary_plugin(){};
 
-public:
-    auxiliary_plugin() {};
-
-    virtual ~auxiliary_plugin() {};
-
+	virtual ~auxiliary_plugin(){};
 };
 
 class io_plugin : public auxiliary_plugin
 {
-
-public:
+   public:
 	io_plugin() {}
 	virtual ~io_plugin() {}
-	
-	virtual write_options WriteOptions() const
-	{
-		return itsWriteOptions;
-	}
-
-	virtual void WriteOptions(const write_options& theWriteOptions)
-	{
-		itsWriteOptions = theWriteOptions;
-	}
-	
-protected:
+	virtual write_options WriteOptions() const { return itsWriteOptions; }
+	virtual void WriteOptions(const write_options& theWriteOptions) { itsWriteOptions = theWriteOptions; }
+   protected:
 	write_options itsWriteOptions;
 };
 
-} // namespace plugin
-} // namespace himan
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* AUXILIARY_PLUGIN_H */

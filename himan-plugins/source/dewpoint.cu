@@ -6,20 +6,19 @@
 #include "dewpoint.cuh"
 #include "metutil.h"
 
-__global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_rh, darr_t d_td,	options opts)
+__global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_rh, darr_t d_td, options opts)
 {
-
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
 	{
 		d_td[idx] = kFloatMissing;
-		
+
 		if (d_t[idx] != kFloatMissing && d_rh[idx] != kFloatMissing)
 		{
 			double RH = d_rh[idx] * opts.rh_scale;
-			
-			d_td[idx] = metutil::DewPointFromRH_(d_t[idx]+opts.t_base, RH);
+
+			d_td[idx] = metutil::DewPointFromRH_(d_t[idx] + opts.t_base, RH);
 		}
 	}
 }
@@ -36,12 +35,12 @@ void himan::plugin::dewpoint_cuda::Process(options& opts)
 	double* d_t = 0;
 	double* d_rh = 0;
 	double* d_td = 0;
-	
+
 	// Allocate memory on device
 
-	CUDA_CHECK(cudaMalloc((void **) &d_t, memsize));
-	CUDA_CHECK(cudaMalloc((void **) &d_rh, memsize));
-	CUDA_CHECK(cudaMalloc((void **) &d_td, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_rh, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_td, memsize));
 
 	himan::PrepareInfo(opts.t, d_t, stream);
 	himan::PrepareInfo(opts.rh, d_rh, stream);
@@ -50,11 +49,11 @@ void himan::plugin::dewpoint_cuda::Process(options& opts)
 	// dims
 
 	const int blockSize = 512;
-	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
+	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-	
-	Calculate <<< gridSize, blockSize, 0, stream >>> (d_t, d_rh, d_td, opts);
+
+	Calculate<<<gridSize, blockSize, 0, stream>>>(d_t, d_rh, d_td, opts);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");

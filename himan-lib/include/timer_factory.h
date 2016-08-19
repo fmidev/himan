@@ -13,31 +13,28 @@
 
 namespace himan
 {
-
 class timer_factory
 {
+   public:
+	static timer_factory* Instance();
 
-public:
-    static timer_factory* Instance();
+	timer_factory(const timer_factory& other) = delete;
+	timer_factory& operator=(const timer_factory& other) = delete;
 
-    timer_factory(const timer_factory& other) = delete;
-    timer_factory& operator=(const timer_factory& other) = delete;
+	timer* GetTimer();
 
-    timer* GetTimer();
+	~timer_factory() = default;
 
-    ~timer_factory() = default;
-
-private:
-    timer_factory() {}
-
-/*#ifdef __CUDACC__
-    timer_factory(const timer_factory& other);
-    timer_factory& operator=(const timer_factory& other);
-#endif
-*/
-    static std::unique_ptr<timer_factory> itsInstance;
+   private:
+	timer_factory() {}
+	/*#ifdef __CUDACC__
+	    timer_factory(const timer_factory& other);
+	    timer_factory& operator=(const timer_factory& other);
+	#endif
+	*/
+	static std::unique_ptr<timer_factory> itsInstance;
 };
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* TIMER_FACTORY_H */

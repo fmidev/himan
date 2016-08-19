@@ -6,21 +6,19 @@
  */
 
 #include "seaicing.h"
+#include "forecast_time.h"
+#include "level.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "level.h"
-#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
 
-seaicing::seaicing()
-	: global(false)
+seaicing::seaicing() : global(false)
 {
 	itsClearTextFormula = "SeaIcing = FF * ( -sIndex -T2m ) / ( 1 + 0.3 * ( T0 + sIndex ))";
 
 	itsLogger = logger_factory::Instance()->GetLog("seaicing");
-
 }
 
 void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -40,7 +38,6 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	Start();
-
 }
 
 /*
@@ -51,38 +48,38 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
+	const params TParam = {param("T-K"), param("TG-K")};
+	const level TLevel(himan::kHeight, 2, "HEIGHT");
+	const param FfParam("FF-MS");  // 10 meter wind
+	const level FfLevel(himan::kHeight, 10, "HEIGHT");
 
-  const params TParam = {param("T-K"), param("TG-K")};
-  const level TLevel(himan::kHeight, 2, "HEIGHT");
-  const param FfParam("FF-MS"); // 10 meter wind
-  const level FfLevel(himan::kHeight, 10, "HEIGHT");
+	level ground;
+	double saltinessIndex = 0.35;
 
-  level ground;
-  double saltinessIndex = 0.35;
-  
-  if (global) 
-  {
-	saltinessIndex = 1.5;
-  }
+	if (global)
+	{
+		saltinessIndex = 1.5;
+	}
 
-  // this will come back to us
-  if ( itsConfiguration->SourceProducer().Id() == 131)
-  {
-       ground = level(himan::kGndLayer, 0, "GNDLAYER");
-  }
-  else
-  {
-       ground = level(himan::kHeight, 0, "HEIGHT");
-  }
+	// this will come back to us
+	if (itsConfiguration->SourceProducer().Id() == 131)
+	{
+		ground = level(himan::kGndLayer, 0, "GNDLAYER");
+	}
+	else
+	{
+		ground = level(himan::kHeight, 0, "HEIGHT");
+	}
 
-
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("seaicingThread #" + boost::lexical_cast<string> (theThreadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("seaicingThread #" + boost::lexical_cast<string>(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	info_t TInfo = Fetch(forecastTime, TLevel, TParam, forecastType, false);
 	info_t TgInfo = Fetch(forecastTime, ground, TParam, forecastType, false);
@@ -90,7 +87,8 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 	if (!TInfo || !TgInfo || !FfInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -113,43 +111,43 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		T = T - TBase;
 		Tg = Tg - TBase;
 
-		if (Tg < -2 )
+		if (Tg < -2)
 		{
 			seaIcing = 0;
 		}
 		else
 		{
-			seaIcing = Ff * ( -saltinessIndex -T ) / ( 1 + 0.3 * ( Tg + saltinessIndex ));
+			seaIcing = Ff * (-saltinessIndex - T) / (1 + 0.3 * (Tg + saltinessIndex));
 
 			// Change values to index
 			// Index by Antonios Niros: Vessel icing forecast and services: further development and perspectives.
 
 			if (seaIcing <= 0)
-			{ // No icing
+			{  // No icing
 				seaIcing = 0;
 			}
 			else if (seaIcing > 0 && seaIcing < 22.4)
-			{ // Light icing ja icing rate <0.7cm/h
+			{  // Light icing ja icing rate <0.7cm/h
 				seaIcing = 1;
 			}
 			else if (seaIcing >= 22.4 && seaIcing < 53.3)
-                	{ // Moderate icing ja icing rate between 0.7cm/h-2cm/h
-                	        seaIcing = 2;
-                	}
+			{  // Moderate icing ja icing rate between 0.7cm/h-2cm/h
+				seaIcing = 2;
+			}
 			else if (seaIcing >= 53.3 && seaIcing < 83)
-                	{ //  Heavy icing ja icing rate between 2.0cm/h-4.0cm/h
-                	        seaIcing = 3;
-                	}
+			{  //  Heavy icing ja icing rate between 2.0cm/h-4.0cm/h
+				seaIcing = 3;
+			}
 			else if (seaIcing >= 83)
-                	{ // Extreme icing ja icing rate >4cm/h
-                	        seaIcing = 4;
-                	}
+			{  // Extreme icing ja icing rate >4cm/h
+				seaIcing = 4;
+			}
 		}
-
 
 		myTargetInfo->Value(seaIcing);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

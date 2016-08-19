@@ -14,46 +14,49 @@
 #define METUTIL_H_
 
 #include "assert.h"
-#include "himan_common.h"
 #include "cuda_helper.h"
+#include "himan_common.h"
 
 #if defined FAST_MATH and not defined __CUDACC__
 #include "fastmath.h"
-#define EXP(V) fasterexp(static_cast<float> (V))
-#define EXP10(V) fasterexp((static_cast<float> (V)) * 2.30258509299405f)
-#define LOG(V) fasterlog(static_cast<float> (V))
+#define EXP(V) fasterexp(static_cast<float>(V))
+#define EXP10(V) fasterexp((static_cast<float>(V)) * 2.30258509299405f)
+#define LOG(V) fasterlog(static_cast<float>(V))
 
-inline double fastpow(double a, double b) {
-  // calculate approximation with fraction of the exponent
-  int e = (int) b;
-  union {
-    double d;
-    int x[2];
-  } u = { a };
-  u.x[1] = (int)((b - e) * (u.x[1] - 1072632447) + 1072632447);
-  u.x[0] = 0;
- 
-  // exponentiation by squaring with the exponent's integer part
-  // double r = u.d makes everything much slower, not sure why
-  double r = 1.0;
-  while (e) {
-    if (e & 1) {
-      r *= a;
-    }
-    a *= a;
-    e >>= 1;
-  }
- 
-  return r * u.d;
+inline double fastpow(double a, double b)
+{
+	// calculate approximation with fraction of the exponent
+	int e = (int)b;
+	union {
+		double d;
+		int x[2];
+	} u = {a};
+	u.x[1] = (int)((b - e) * (u.x[1] - 1072632447) + 1072632447);
+	u.x[0] = 0;
+
+	// exponentiation by squaring with the exponent's integer part
+	// double r = u.d makes everything much slower, not sure why
+	double r = 1.0;
+	while (e)
+	{
+		if (e & 1)
+		{
+			r *= a;
+		}
+		a *= a;
+		e >>= 1;
+	}
+
+	return r * u.d;
 }
 
-#define POW(V,E) fastpow(V, E)
+#define POW(V, E) fastpow(V, E)
 
 #else
 #define EXP(V) exp(V)
 #define EXP10(V) exp10(V)
 #define LOG(V) log(V)
-#define POW(V,E) pow(V,E)
+#define POW(V, E) pow(V, E)
 #endif
 
 #include <NFmiInterpolation.h>
@@ -66,23 +69,15 @@ struct lcl_t
 	double Q;
 
 	CUDA_DEVICE
-	lcl_t()
-	: T(himan::kFloatMissing)
-	, P(himan::kFloatMissing)
-	, Q(himan::kFloatMissing)
-	{}
-
+	lcl_t() : T(himan::kFloatMissing), P(himan::kFloatMissing), Q(himan::kFloatMissing) {}
 	CUDA_DEVICE
-	lcl_t(double T, double P, double Q)
-	: T(T), P(P), Q(Q)
-	{}
+	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q) {}
 };
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 namespace himan
 {
-
 /**
  * @namespace himan::metutil
  * @brief Namespace for all meteorological utility functions
@@ -95,21 +90,20 @@ namespace himan
  *   name. For example, DryLift_().
  *
  * The caller can the defined which function he wants to call.
- * 
+ *
  */
 
 namespace metutil
 {
-
 /**
  * @brief Calculate partial water vapor pressure from mixing ratio and pressure
- * 
+ *
  * Basically this is inverse of mixing ratio, formula used is (2.18)
  * from Rogers & Yau: A Short Course in Cloud Physics (3rd edition).
- * 
+ *
  * @param R Mixing ratio in g/kg
  * @param P Pressure in Pa
- * @return Water vapour pressure in Pa 
+ * @return Water vapour pressure in Pa
  */
 
 CUDA_DEVICE
@@ -119,7 +113,7 @@ double E_(double R, double P);
  * @brief Calculate water vapor saturated pressure in Pa
  *
  * Equation inherited from hilake.
- * 
+ *
  * Equation found in f.ex. Smithsonian meteorological tables or
  * http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
  *
@@ -139,7 +133,7 @@ double Es_(double T);
  * @brief Calculates pseudo-adiabatic lapse rate
  *
  * Original author AK Sarkanen May 1985.
- * 
+ *
  * @param P Pressure in Pa
  * @param T Temperature in K
  * @return Lapse rate in K/km
@@ -150,16 +144,16 @@ double Gammas_(double P, double T);
 
 /**
  * @brief Calculate moist-adiabatic lapse rate (MALR).
- * 
+ *
  * Also known as saturated adiabatic lapse rate (SALR)
- * 
- * Formula used is (3.16) from 
- * 
+ *
+ * Formula used is (3.16) from
+ *
  * Rogers&Yun: A short course in cloud physics 3rd edition
  *
  * combined with gamma (g/Cp) and transformed from m to Pa
  * with inverse of hydropstatic equation.
- * 
+ *
  * @param P Pressure in Pa
  * @param T Temperature in K
  * @return Lapse rate in K/Pa
@@ -188,14 +182,14 @@ lcl_t LCL_(double P, double T, double TD);
 
 /**
  * @brief LCL level temperature and pressure approximation.
- * 
+ *
  * For temperature, the used formula is (15) of
- * 
+ *
  * Bolton: The Computation of Equivalent Potential Temperature (1980)
- * 
+ *
  * LCL pressure is calculated using starting T and P and T_LCL with
  * Poissons formula assuming dry-adiabatic conditions.
- * 
+ *
  * @param P Ground pressure in Pa
  * @param T Ground temperature in Kelvin
  * @param TD Ground dewpoint temperature in TD
@@ -206,13 +200,13 @@ lcl_t LCLA_(double P, double T, double TD);
 
 /**
  * @brief Calculate water probability based on T and RH
- * 
+ *
  * So-called "Koistinen formula"
- * 
+ *
  * https://wiki.fmi.fi/download/attachments/21139101/IL_olomuototuote_JK.ppt
  *
  * Currently only CPU implementation exists.
- * 
+ *
  * @param T Surface temperature in K
  * @param RH Surface relative humidity in %
  * @return Water probability
@@ -274,7 +268,6 @@ void LiftLCL(cdarr_t P, cdarr_t T, cdarr_t LCP, cdarr_t targetP, darr_t result, 
 
 CUDA_DEVICE
 double LiftLCL_(double P, double T, double LCLP, double targetP);
-
 
 /**
  * @brief Lift a parcel of air moist-adiabatically to wanted pressure
@@ -342,7 +335,6 @@ double DewPointFromRHSimple_(double T, double RH);
 CUDA_DEVICE
 double DewPointFromRH_(double T, double RH);
 
-
 /**
  * @brief Calculates Relative Topography between the two given fields in Geop
  *
@@ -365,7 +357,7 @@ double RelativeTopography_(int level1, int level2, double z1, double z2);
  * T0m height was commented as 2m, but calculated as 0m temperature in hil_pp
  *
  * Currently only CPU implementation exists.
- * 
+ *
  * @param T0m Value of 0m temperature in K
  * @param T850 Value of temperature at 850 hPa pressure level in K
  * @return convection value.
@@ -471,21 +463,21 @@ CUDA_DEVICE
 double BulkShear_(double U, double V);
 
 /**
- * @brief Calculate adiabatic saturation temperature at given pressure. 
- * 
+ * @brief Calculate adiabatic saturation temperature at given pressure.
+ *
  * Function approximates the temperature at given pressure when equivalent
  * potential temperature is given. ThetaE should be evaluated at saturation (LCL)
  * level.
- * 
- * Maximum relative error in the initial guess compared to integrated value is 
- * 1.8K; the value is further corrected with Newton-Raphson so that the error 
+ *
+ * Maximum relative error in the initial guess compared to integrated value is
+ * 1.8K; the value is further corrected with Newton-Raphson so that the error
  * reduces to 0.34K.
- * 
+ *
  * Formula derived by Davies-Jones in:
- * 
+ *
  * An Efficient and Accurate Method for Computing the Wet-Bulb Temperature
  * along Pseudoadiabat (2007)
- * 
+ *
  * @param thetaE Equivalent potential temperature in K
  * @param P Target pressure in Pa
  * @return Temperature along a saturated adiabat at wanted height in Kelvins
@@ -499,7 +491,7 @@ void Tw(cdarr_t thetaE, cdarr_t P, darr_t result, size_t N);
 
 /**
  * @brief Calculate "dry" potential temperature with poissons equation.
- * 
+ *
  * http://san.hufs.ac.kr/~gwlee/session3/potential.html
  *
  * @param T Temperature in K
@@ -512,11 +504,11 @@ double Theta_(double T, double P);
 
 /**
  * @brief Calculate equivalent potential temperature.
- * 
- * Formula used is (43) from 
- * 
+ *
+ * Formula used is (43) from
+ *
  * Bolton: The Computation of Equivalent Potential Temperature (1980)
-* 
+*
  * @param T Temperature at initial level (Kelvin)
  * @param TD Dewpoint temperature at inital level (Kelvin)
  * @param P Pressure at initial level (Pa)
@@ -528,9 +520,9 @@ double ThetaE_(double T, double TD, double P);
 
 /**
  * @brief Calculate wet-bulb potential temperature
- * 
+ *
  * Formula used is (3.8) from
- * 
+ *
  * Davies-Jones: An Efficient and Accurate Method for Computing the Wet-Bulb Temperature
  * along Pseudoadiabats (2007)
  *
@@ -544,11 +536,11 @@ double ThetaW_(double thetaE, double P);
 
 /**
  * @brief Calculate virtual temperature
- * 
+ *
  * Formula is 1.13 from
- * 
+ *
  * Stull: Meteorology for Scientists and Engineers, 2nd edition (2000)
- * 
+ *
  * @param T Temperature in K
  * @param P Pressure in Pa
  * @return Virtual temperature in K
@@ -582,7 +574,8 @@ __global__ void Lift(cdarr_t d_p, cdarr_t d_t, cdarr_t d_td, darr_t d_result, do
 	}
 }
 
-__global__ void LCL(cdarr_t d_p, cdarr_t d_t, cdarr_t d_td, darr_t d_t_result, darr_t d_p_result, darr_t d_q_result, size_t N)
+__global__ void LCL(cdarr_t d_p, cdarr_t d_t, cdarr_t d_td, darr_t d_t_result, darr_t d_p_result, darr_t d_q_result,
+                    size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -616,13 +609,13 @@ namespace smarttool
 
 // these functions are needed in some applications, but generally they should not be used since their origins
 // are unknown
-	
+
 /**
  * @brief Calculate equivalent potential temperature.
- * 
+ *
  * Original:
  * double NFmiSoundingFunctions::CalcThetaE(double T, double Td, double P)
- * 
+ *
  * Function has been modified so that it takes humidity as an argument;
  * the original function took dewpoint and calculated humidity from that.
  */
@@ -640,10 +633,10 @@ double Es2_(double T);
 
 /**
  * @brief Mixing ratio formula from smarttool library
- * 
+ *
  * Original:
  * double NFmiSoundingFunctions::CalcMixingRatio(double T, double Td, double P)
- * 
+ *
  * Function has been modified so that it takes humidity as an argument;
  * the original function took dewpoint and calculated humidity from that.
  */
@@ -659,26 +652,21 @@ double MixingRatio_(double T, double RH, double P);
 CUDA_DEVICE
 double W_(double e, double P);
 
-
 CUDA_DEVICE
 double E_(double RH, double es);
 
-} // namespace smarttool
-} // namespace metutil
-} // namespace himan
+}  // namespace smarttool
+}  // namespace metutil
+}  // namespace himan
 
 CUDA_DEVICE
-inline double himan::metutil::DewPointFromRHSimple_(double T, double RH)
-{
-	return (T - ((100 - RH) * 0.2));
-}
-
+inline double himan::metutil::DewPointFromRHSimple_(double T, double RH) { return (T - ((100 - RH) * 0.2)); }
 CUDA_DEVICE
 inline double himan::metutil::DewPointFromRH_(double T, double RH)
 {
-	if (RH == 0.) RH = 0.01; // formula does not work if RH = 0; actually all small values give extreme Td values
+	if (RH == 0.) RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
 	assert(RH > 0.);
-	//assert(RH < 101.);
+	// assert(RH < 101.);
 	assert(T > 0. && T < 500.);
 
 	return (T / (1 - (T * LOG(RH * 0.01) * constants::kRw_div_L)));
@@ -691,7 +679,7 @@ inline double himan::metutil::MixingRatio_(double T, double P)
 	assert(P > 1000);
 	assert(T > 0 && T < 500);
 
-	double E = Es_(T); // Pa
+	double E = Es_(T);  // Pa
 
 	return 621.97 * E / (P - E);
 }
@@ -701,7 +689,7 @@ inline double himan::metutil::E_(double R, double P)
 {
 	assert(P > 1000);
 	assert(R > 0.001);
-	
+
 	// R is g/kg, converting it to g/g gives multiplier 1000
 
 	return (R * P / (constants::kEp * 1000));
@@ -714,7 +702,7 @@ inline double himan::metutil::DryLift_(double P, double T, double targetP)
 	{
 		return kFloatMissing;
 	}
-	
+
 	// Sanity checks
 	assert(P > 10000);
 	assert(T > 100 && T < 400);
@@ -734,7 +722,7 @@ inline double himan::metutil::Lift_(double P, double T, double TD, double target
 		// LCL level is higher than requested pressure, only dry lift is needed
 		return DryLift_(P, T, targetP);
 	}
-	
+
 	return MoistLift_(P, T, targetP);
 }
 
@@ -746,12 +734,12 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 		// LCL level is higher than requested pressure, only dry lift is needed
 		return DryLift_(P, T, targetP);
 	}
-	
+
 	// Wanted height is above LCL.
 	// First lift dry adiabatically to LCL height
-	
+
 	double LCLT = DryLift_(P, T, LCLP);
-	
+
 	// Lift from LCL to wanted pressure
 	return MoistLift_(LCLP, LCLT, targetP);
 }
@@ -759,7 +747,6 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 CUDA_DEVICE
 inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 {
-
 	if (T == kFloatMissing || P == kFloatMissing || targetP >= P)
 	{
 		return kFloatMissing;
@@ -770,9 +757,9 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	assert(P > 2000);
 	assert(T > 100 && T < 400);
 	assert(targetP > 2000);
-	
-	double Pint = P; // Pa
-	double Tint = T; // K
+
+	double Pint = P;  // Pa
+	double Tint = T;  // K
 
 	/*
 	 * Units: Temperature in Kelvins, Pressure in Pascals
@@ -781,40 +768,38 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	double T0 = Tint;
 
 	int i = 0;
-	const double Pstep = 200; // Pa
-	const int maxIter = static_cast<int> (100000/Pstep+10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
+	const double Pstep = 200;                                   // Pa
+	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
 	double value = kFloatMissing;
-	
+
 	while (++i < maxIter)
 	{
 		Tint = T0 - metutil::Gammaw_(Pint, Tint) * Pstep;
-		
+
 		assert(Tint != kFloatMissing);
-		
+
 		Pint -= Pstep;
 
 		if (Pint <= targetP)
 		{
 #ifdef __CUDACC__
-			double dx = (targetP-Pint)/(Pint+Pstep-Pint);
+			double dx = (targetP - Pint) / (Pint + Pstep - Pint);
 			value = fma(dx, Tint, fma(-dx, T0, T0));
 #else
-			value = NFmiInterpolation::Linear(targetP, Pint, Pint+Pstep, T0, Tint);
+			value = NFmiInterpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
 #endif
 			break;
 		}
-	
-		T0=Tint;
 
+		T0 = Tint;
 	}
 
 	return value;
 }
 
 CUDA_DEVICE
-inline
-lcl_t himan::metutil::LCL_(double P, double T, double TD)
+inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 {
 	// Sanity checks
 
@@ -828,11 +813,11 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 	double Tstep = 0.05;
 
-	P *= 0.01; // HPa
+	P *= 0.01;  // HPa
 
 	// saturated vapor pressure
 
-	double E0 = himan::metutil::Es_(TD) * 0.01; // HPa
+	double E0 = himan::metutil::Es_(TD) * 0.01;  // HPa
 
 	double Q = constants::kEp * E0 / P;
 	double C = T / pow(E0, constants::kRd_div_Cp);
@@ -846,24 +831,23 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	short nq = 0;
 
 	lcl_t ret;
-	
+
 	while (++nq < 100)
 	{
-		double TEs = C * pow(himan::metutil::Es_(T)*0.01, constants::kRd_div_Cp);
+		double TEs = C * pow(himan::metutil::Es_(T) * 0.01, constants::kRd_div_Cp);
 
 		if (fabs(TEs - T) < 0.05)
 		{
 			TLCL = T;
-			PLCL = pow((TLCL/Torig), (1/constants::kRd_div_Cp)) * P;
+			PLCL = pow((TLCL / Torig), (1 / constants::kRd_div_Cp)) * P;
 
-			ret.P = PLCL * 100; // Pa
-			ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // K
+			ret.P = PLCL * 100;                                      // Pa
+			ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL;  // K
 			ret.Q = Q;
-
 		}
 		else
 		{
-			Tstep = MIN((TEs - T) / (2 * (nq+1)), 15.);
+			Tstep = MIN((TEs - T) / (2 * (nq + 1)), 15.);
 			T -= Tstep;
 		}
 	}
@@ -879,30 +863,29 @@ lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 		while (++nq <= 500)
 		{
-			if ((C * pow(himan::metutil::Es_(T)*0.01, constants::kRd_div_Cp)-T) > 0)
+			if ((C * pow(himan::metutil::Es_(T) * 0.01, constants::kRd_div_Cp) - T) > 0)
 			{
 				T -= Tstep;
 			}
 			else
 			{
 				TLCL = T;
-				PLCL = pow(TLCL / Torig, (1/constants::kRd_div_Cp)) * Porig;
+				PLCL = pow(TLCL / Torig, (1 / constants::kRd_div_Cp)) * Porig;
 
-				ret.P = PLCL * 100; // Pa
-				ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL; // K
+				ret.P = PLCL * 100;                                      // Pa
+				ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL;  // K
 				ret.Q = Q;
 
 				break;
 			}
 		}
 	}
-	
+
 	return ret;
 }
 
 CUDA_DEVICE
-inline
-lcl_t himan::metutil::LCLA_(double P, double T, double TD)
+inline lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 {
 	lcl_t ret;
 
@@ -918,23 +901,20 @@ lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 	assert(TD > 0);
 	assert(TD < 500);
 
-	
 	double A = 1 / (TD - 56);
-	double B = log(T/TD) / 800.;
-	
+	double B = log(T / TD) / 800.;
+
 	ret.T = 1 / (A + B) + 56;
 	ret.P = P * pow((ret.T / T), 3.5011);
 
 	return ret;
-	
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::Es_(double T)
+inline double himan::metutil::Es_(double T)
 {
 	// Sanity checks
-	assert(T == T && T > 0 && T < 500); // check also NaN
+	assert(T == T && T > 0 && T < 500);  // check also NaN
 
 	double Es;
 
@@ -947,22 +927,20 @@ double himan::metutil::Es_(double T)
 
 	if (T > -5)
 	{
-		Es = 6.107 * EXP10(7.5*T/(237.0+T));
+		Es = 6.107 * EXP10(7.5 * T / (237.0 + T));
 	}
 	else
 	{
-		Es = 6.107 * EXP10(9.5*T/(265.5+T));
+		Es = 6.107 * EXP10(9.5 * T / (265.5 + T));
 	}
-	
-	assert(Es == Es); // check NaN
 
-	return 100 * Es; // Pa
+	assert(Es == Es);  // check NaN
 
+	return 100 * Es;  // Pa
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::Gammas_(double P, double T)
+inline double himan::metutil::Gammas_(double P, double T)
 {
 	// Sanity checks
 
@@ -980,16 +958,15 @@ double himan::metutil::Gammas_(double P, double T)
 
 	namespace hc = himan::constants;
 
-	double Q = hc::kEp * (himan::metutil::Es_(T) * 0.01) / (P*0.01);
+	double Q = hc::kEp * (himan::metutil::Es_(T) * 0.01) / (P * 0.01);
 
-	double A = hc::kRd * T / hc::kCp / P * (1+hc::kL*Q/hc::kRd/T);
+	double A = hc::kRd * T / hc::kCp / P * (1 + hc::kL * Q / hc::kRd / T);
 
-	return A / (1 + hc::kEp / hc::kCp * (hc::kL * hc::kL) / hc::kRd * Q / (T*T));
+	return A / (1 + hc::kEp / hc::kCp * (hc::kL * hc::kL) / hc::kRd * Q / (T * T));
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::Gammaw_(double P, double T)
+inline double himan::metutil::Gammaw_(double P, double T)
 {
 	// Sanity checks
 
@@ -1002,57 +979,44 @@ double himan::metutil::Gammaw_(double P, double T)
 	assert(T > 0 && T < 500);
 
 	namespace hc = himan::constants;
-	
+
 	double esat = Es_(T);
-	double wsat = hc::kEp * esat / (P - esat); // Rogers&Yun 2.18
-	double numerator = (2./7.) * T + (2./7. * hc::kL / hc::kRd) * wsat;
-	double denominator = P * (1 + (hc::kEp * hc::kL * hc::kL / (hc::kRd * hc::kCp)) * wsat / (T*T));
+	double wsat = hc::kEp * esat / (P - esat);  // Rogers&Yun 2.18
+	double numerator = (2. / 7.) * T + (2. / 7. * hc::kL / hc::kRd) * wsat;
+	double denominator = P * (1 + (hc::kEp * hc::kL * hc::kL / (hc::kRd * hc::kCp)) * wsat / (T * T));
 
 	assert(numerator != 0);
 	assert(denominator != 0);
 
-	return numerator / denominator; // Rogers&Yun 3.16
-	
-/*	double r = himan::metutil::MixingRatio_(T, P);
+	return numerator / denominator;  // Rogers&Yun 3.16
 
-	double numerator = hc::kG * (1 + (hc::kL * r) / (hc::kRd * T));
-	double denominator = hc::kCp + ((hc::kL*hc::kL * r * hc::kEp) / (hc::kRd * T * T));
+	/*	double r = himan::metutil::MixingRatio_(T, P);
 
-	return numerator / denominator;
- * */
+	    double numerator = hc::kG * (1 + (hc::kL * r) / (hc::kRd * T));
+	    double denominator = hc::kCp + ((hc::kL*hc::kL * r * hc::kEp) / (hc::kRd * T * T));
+
+	    return numerator / denominator;
+	 * */
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::CTI_(double TD850, double T500)
-{
-	return TD850 - T500;
-}
-
+inline double himan::metutil::CTI_(double TD850, double T500) { return TD850 - T500; }
 CUDA_DEVICE
-inline
-double himan::metutil::VTI_(double T850, double T500)
-{
-	return T850 - T500;
-}
-
+inline double himan::metutil::VTI_(double T850, double T500) { return T850 - T500; }
 CUDA_DEVICE
-inline
-double himan::metutil::TTI_(double T850, double T500, double TD850)
+inline double himan::metutil::TTI_(double T850, double T500, double TD850)
 {
 	return CTI_(TD850, T500) + VTI_(T850, T500);
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::KI_(double T850, double T700, double T500, double TD850, double TD700)
+inline double himan::metutil::KI_(double T850, double T700, double T500, double TD850, double TD700)
 {
 	return (T850 - T500 + TD850 - (T700 - TD700)) - constants::kKelvin;
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::LI_(double T500, double T500m, double TD500m, double P500m)
+inline double himan::metutil::LI_(double T500, double T500m, double TD500m, double P500m)
 {
 	lcl_t LCL = LCL_(50000, T500m, TD500m);
 
@@ -1093,8 +1057,7 @@ double himan::metutil::LI_(double T500, double T500m, double TD500m, double P500
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::SI_(double T850, double T500, double TD850)
+inline double himan::metutil::SI_(double T850, double T500, double TD850)
 {
 	lcl_t LCL = metutil::LCL_(85000, T850, TD850);
 
@@ -1106,14 +1069,14 @@ double himan::metutil::SI_(double T850, double T500, double TD850)
 	{
 		return si;
 	}
-	
+
 	if (LCL.P <= 85000)
 	{
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
 		// lifting
 
 		double dryT = DryLift_(85000, T850, TARGET_PRESSURE);
-		
+
 		if (dryT != kFloatMissing)
 		{
 			si = T500 - dryT;
@@ -1122,7 +1085,7 @@ double himan::metutil::SI_(double T850, double T500, double TD850)
 	else
 	{
 		// Grid point is inside or above cloud
-		
+
 		double wetT = Lift_(85000, T850, TD850, TARGET_PRESSURE);
 
 		if (wetT != kFloatMissing)
@@ -1135,40 +1098,36 @@ double himan::metutil::SI_(double T850, double T500, double TD850)
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::BulkShear_(double U, double V)
+inline double himan::metutil::BulkShear_(double U, double V)
 {
-	return sqrt(U*U + V*V) * 1.943844492; // converting to knots
+	return sqrt(U * U + V * V) * 1.943844492;  // converting to knots
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::Theta_(double T, double P)
+inline double himan::metutil::Theta_(double T, double P)
 {
 	assert(T > 0);
 	assert(P > 1000);
-	
-	return T * pow((100000. / P), 0.28586);
 
+	return T * pow((100000. / P), 0.28586);
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::ThetaE_(double T, double TD, double P)
+inline double himan::metutil::ThetaE_(double T, double TD, double P)
 {
 	assert(T > 0);
 	assert(P > 1000);
 
 	// Get LCL temperature
 	const double A = 1 / (TD - 56);
-	const double B = log(T/TD) / 800.;
+	const double B = log(T / TD) / 800.;
 	const double TLCL = 1 / (A + B) + 56;
 
 	// Mixing ratio at initial level
 	const double r = himan::metutil::MixingRatio_(T, P);
-	
+
 	// 100000 = reference pressure 1000hPa
-	const double C = T * pow(100000./P, 0.2854 * (1 - 0.00028 * r));
+	const double C = T * pow(100000. / P, 0.2854 * (1 - 0.00028 * r));
 	const double D = 3.376 / TLCL - 0.00254;
 	const double F = r * (1 + 0.00081 * r);
 
@@ -1176,45 +1135,44 @@ double himan::metutil::ThetaE_(double T, double TD, double P)
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::Tw_(double thetaE, double P)
+inline double himan::metutil::Tw_(double thetaE, double P)
 {
 	assert(thetaE > 0);
 	assert(P > 1000);
-	
+
 	if (thetaE == kFloatMissing) return kFloatMissing;
 
 	using namespace himan::constants;
-	
+
 	const double P0 = 100000;
-	const double lambda = 1/kRd_div_Cp;
+	const double lambda = 1 / kRd_div_Cp;
 	const double a = 17.67;
-	const double b = 243.5; // K
+	const double b = 243.5;  // K
 	const double C = kKelvin;
-	const double pi = pow(P / P0, kRd_div_Cp); // Nondimensional pressure, exner function
-	const double Te = thetaE * pi; // Equivalent temperature
+	const double pi = pow(P / P0, kRd_div_Cp);  // Nondimensional pressure, exner function
+	const double Te = thetaE * pi;              // Equivalent temperature
 	const double ratio = pow((C / Te), lambda);
 
 	// Quadratic regression curves for thetaW
-	
-	const double k1 = -38.5*pi*pi + 137.81 * pi - 53.737;
+
+	const double k1 = -38.5 * pi * pi + 137.81 * pi - 53.737;
 	const double k2 = -4.392 * pi * pi + 56.831 * pi - 0.384;
-	
+
 	// Regression line for transition points of different Tw formulas
-	
+
 	const double dpi = 1 / (0.1859 * (P / P0) + 0.6512);
 
 	const double p0 = P0 * 0.01;
 	const double p = P * 0.01;
-	
+
 	double Tw = kFloatMissing;
-	
+
 	if (ratio > dpi)
 	{
 		const double r = MixingRatio_(Te, P) * 0.001;
 
-		const double A = 2675; // K
-		
+		const double A = 2675;  // K
+
 		Tw = Te - C - (A * r) / (1 + A * r * (a * b / pow((Te - C + b), 2)));
 	}
 	else
@@ -1223,60 +1181,59 @@ double himan::metutil::Tw_(double thetaE, double P)
 		const double cold = (ratio >= 1 && ratio <= dpi) ? 0 : 1;
 
 		Tw = k1 - 1.21 * cold - 1.45 * hot - (k2 - 1.21 * cold) * ratio + (0.58 / ratio) * hot;
- 	}
-	
+	}
+
 	Tw += C;
-	
+
 	// Improve accuracy with Newton-Raphson
 	// Current Tw is used as initial guess
-	
+
 	for (int i = 0; i < 1; i++)
 	{
 		const double newRatio = pow((C / Tw), lambda);
 		const double r = MixingRatio_(Tw, P) * 0.001;
 		const double e = Es_(Tw) * 0.01;
-		
+
 		// e & r as Davies-Jones implemented them
-		//const double e = 6.112 * exp((a * (Tw - C)) / (Tw - C + b));
-		//const double r = (kEp * e) / (p0 * pow(pi, lambda) - e);
-		
+		// const double e = 6.112 * exp((a * (Tw - C)) / (Tw - C + b));
+		// const double r = (kEp * e) / (p0 * pow(pi, lambda) - e);
+
 		// Evaluate f(x)
 
 		const double A = newRatio * (1 - e / (p0 * pow(pi, lambda)));
 		const double B = (3036 / Tw - 1.78) * (r + 0.448 * r * r);
 
 		const double TwNew = A * exp(-lambda * B);
-		
+
 		// Partial derivative des/dTw
 		const double desTw = e * (a * b) / pow((Tw - C + b), 2);
-		
+
 		// Partial derivative drs/dTw
 		const double drsTw = desTw * (kEp * p) / pow((p - e), 2);
 
 		// Evaluate f'(x)
-		
+
 		const double A_ = (1 / Tw) + (kRd_div_Cp / (p - e)) * desTw;
 		const double B_ = -3036 * (r + 0.448 * r * r) / (Tw * Tw);
 		const double C_ = (3036 / Tw - 1.78) * (1 + 2 * (0.448 * r)) * drsTw;
-		
+
 		const double dTw = -lambda * (A_ + B_ * C_);
 
 		Tw = Tw - (TwNew - ratio) / dTw;
 	}
-	
+
 	return Tw;
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::ThetaW_(double thetaE, double P)
+inline double himan::metutil::ThetaW_(double thetaE, double P)
 {
 	assert(P > 1000);
-	
+
 	if (thetaE == kFloatMissing) return kFloatMissing;
 
 	double thetaW = thetaE;
-	
+
 	if (thetaE >= 173.15)
 	{
 		const double X = thetaE / constants::kKelvin;
@@ -1293,71 +1250,65 @@ double himan::metutil::ThetaW_(double thetaE, double P)
 
 		double A = a0 + a1 * X + a2 * X * X + a3 * pow(X, 3.) + a4 * pow(X, 4.);
 		double B = 1 + b1 * X + b2 * X * X + b3 * pow(X, 3.) + b4 * pow(X, 4.);
-		
-		thetaW = thetaW - exp(A/B);
+
+		thetaW = thetaW - exp(A / B);
 	}
 
 	return thetaW;
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::VirtualTemperature_(double T, double P)
+inline double himan::metutil::VirtualTemperature_(double T, double P)
 {
 	assert(T > 100);
 	assert(T < 400);
 	assert(P > 1000);
 
-	double r = 0.001 * MixingRatio_(T, P); // kg/kg
+	double r = 0.001 * MixingRatio_(T, P);  // kg/kg
 	return (1 + 0.61 * r) * T;
 }
 
 CUDA_DEVICE
-inline 
-double himan::metutil::smarttool::Es2_(double T)
+inline double himan::metutil::smarttool::Es2_(double T)
 {
 	assert(T > 100);
 	assert(T < 350);
-	
-	const double b = 17.2694;
-	const double e0 = 6.11; // 6.11 <- 0.611 [kPa]
-	const double T2 = 35.86; // [K]
-				
-	double nume = b * (T-himan::constants::kKelvin);
-	double deno = (T-T2);
 
-	return e0 * ::exp(nume/deno);
-	
+	const double b = 17.2694;
+	const double e0 = 6.11;   // 6.11 <- 0.611 [kPa]
+	const double T2 = 35.86;  // [K]
+
+	double nume = b * (T - himan::constants::kKelvin);
+	double deno = (T - T2);
+
+	return e0 * ::exp(nume / deno);
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::smarttool::E_(double RH, double es)
+inline double himan::metutil::smarttool::E_(double RH, double es)
 {
 	assert(RH >= 0);
 	assert(RH < 102);
-	
+
 	return RH * es / 100;
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::smarttool::ThetaE_(double T, double RH, double P)
+inline double himan::metutil::smarttool::ThetaE_(double T, double RH, double P)
 {
 	assert(RH >= 0);
 	assert(RH < 102);
 	assert(T > 150);
 	assert(T < 350);
 	assert(P > 1500);
-	
+
 	double tpot = himan::metutil::Theta_(T, P);
 	double w = himan::metutil::smarttool::MixingRatio_(T, RH, P);
 	return tpot + 3 * w;
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::smarttool::W_(double e, double P)
+inline double himan::metutil::smarttool::W_(double e, double P)
 {
 	assert(P > 1500);
 
@@ -1368,21 +1319,19 @@ double himan::metutil::smarttool::W_(double e, double P)
 }
 
 CUDA_DEVICE
-inline
-double himan::metutil::smarttool::MixingRatio_(double T, double RH, double P)
+inline double himan::metutil::smarttool::MixingRatio_(double T, double RH, double P)
 {
 	assert(RH >= 0);
 	assert(RH < 102);
 	assert(T > 150);
 	assert(T < 350);
 	assert(P > 1500);
-	
+
 	double es = himan::metutil::smarttool::Es2_(T);
 	double e = himan::metutil::smarttool::E_(RH, es);
 	double w = himan::metutil::smarttool::W_(e, P);
-	
+
 	return w;
 }
-
 
 #endif /* METUTIL_H_ */

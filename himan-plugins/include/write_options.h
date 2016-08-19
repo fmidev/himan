@@ -1,4 +1,4 @@
-/** 
+/**
  * @file	write_options.h
  * @autho	partio
  *
@@ -6,28 +6,24 @@
  */
 
 #ifndef WRITE_OPTIONS_H
-#define	WRITE_OPTIONS_H
+#define WRITE_OPTIONS_H
 
 #include <plugin_configuration.h>
 
-namespace himan {
-namespace plugin {
-
-struct write_options {
+namespace himan
+{
+namespace plugin
+{
+struct write_options
+{
 	std::shared_ptr<const plugin_configuration> configuration;
-	bool use_bitmap;			// use bitmap for grib if missing data exists
-	HPPackingType packing_type; // for grib, ie simple_packing, jpeg_packing
-	bool write_empty_grid;		// write file even if all data is missing
-	
-	write_options()
-		: use_bitmap(true)
-		, packing_type(kSimplePacking)
-		, write_empty_grid(true)
-	{}
+	bool use_bitmap;             // use bitmap for grib if missing data exists
+	HPPackingType packing_type;  // for grib, ie simple_packing, jpeg_packing
+	bool write_empty_grid;       // write file even if all data is missing
+
+	write_options() : use_bitmap(true), packing_type(kSimplePacking), write_empty_grid(true) {}
 };
-
 }
 }
 
-#endif	/* WRITE_OPTIONS_H */
-
+#endif /* WRITE_OPTIONS_H */

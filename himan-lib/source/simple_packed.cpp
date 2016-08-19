@@ -6,4 +6,3 @@
  */
 
 #include "simple_packed.h"
-

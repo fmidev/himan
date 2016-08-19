@@ -10,41 +10,25 @@
 #ifndef GRIB_H
 #define GRIB_H
 
-#include "auxiliary_plugin.h"
 #include "NFmiGrib.h"
+#include "auxiliary_plugin.h"
 
 namespace himan
 {
 namespace plugin
 {
-
 class grib : public io_plugin
 {
-
-public:
-
+   public:
 	grib();
 
 	virtual ~grib() {}
-
 	grib(const grib& other) = delete;
 	grib& operator=(const grib& other) = delete;
 
-	virtual std::string ClassName() const
-	{
-		return "himan::plugin::grib";
-	};
-
-	virtual HPPluginClass PluginClass() const
-	{
-		return kAuxiliary;
-	};
-
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
-
+	virtual std::string ClassName() const { return "himan::plugin::grib"; };
+	virtual HPPluginClass PluginClass() const { return kAuxiliary; };
+	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
 	std::shared_ptr<NFmiGrib> Reader();
 
 	/**
@@ -67,12 +51,12 @@ public:
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options, bool readContents, bool readPackedData, bool forceCaching) const;
+	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options,
+	                                            bool readContents, bool readPackedData, bool forceCaching) const;
 
 	bool ToFile(info& anInfo, std::string& outputFile, bool appendToFile = false);
 
-private:
-
+   private:
 	void WriteAreaAndGrid(info& anInfo);
 	void WriteTime(info& anInfo);
 	void WriteParameter(info& anInfo);
@@ -86,33 +70,30 @@ private:
 	 * an actual data value. If bitmap is zero for that key, zero is also put to the int array. If bitmap
 	 * is set for that key, the value is one.
 	 *
-	 * TODO: Change int-array to unpacked unsigned char array (reducing size 75%) or even not unpack bitmap beforehand but do it
+	 * TODO: Change int-array to unpacked unsigned char array (reducing size 75%) or even not unpack bitmap beforehand
+	 * but do it
 	 * while computing stuff with the data array.
 	 *
 	 * @param bitmap Original bitmap read from grib
 	 * @param unpacked Unpacked bitmap where number of keys is the same as in the data array
 	 * @param len Length of original bitmap
 	 */
-	
-	void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen) const;
-	
-	std::shared_ptr<NFmiGrib> itsGrib;
 
+	void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len,
+	                  size_t unpackedLen) const;
+
+	std::shared_ptr<NFmiGrib> itsGrib;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-	return std::make_shared<grib> ();
-}
-
+extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<grib>(); }
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
-} // namespace plugin
-} // namespace himan
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* GRIB_H */

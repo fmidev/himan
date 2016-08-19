@@ -18,25 +18,24 @@
 // Work around "passing 'T' chooses 'int' over 'unsigned int'" warnings when T
 // is an enum type:
 
-#if !defined __clang__ && defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)) && ! __CUDACC__
+#if !defined __clang__ && defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)) && !__CUDACC__
 #pragma GCC diagnostic ignored "-Wsign-promo"
 #endif
 
-#include <ostream>
-#include <memory>
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
+#include <memory>
+#include <ostream>
 
 namespace ba = boost::assign;
 
 namespace himan
 {
-
 // Define some constants
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = -999.;
-const double kFloatMissing = 32700.; // From newbase
+const double kFloatMissing = 32700.;  // From newbase
 
 // Define different plugin types
 
@@ -66,21 +65,15 @@ enum HPFileType
 	kUnknownFile = 0,
 	kGRIB1,
 	kGRIB2,
-	kGRIB, // when we don't know if its 1 or 2
+	kGRIB,  // when we don't know if its 1 or 2
 	kQueryData,
 	kNetCDF,
 	kCSV
 };
 
-const boost::unordered_map<HPFileType,std::string> HPFileTypeToString = ba::map_list_of
-		(kUnknownFile, "unknown")
-		(kGRIB1, "grib edition 1")
-		(kGRIB2, "grib edition 2")
-		(kGRIB, "grib edition 1 or 2")
-		(kQueryData, "QueryData")
-		(kNetCDF, "NetCDF")
-		(kCSV, "CSV")
-		;
+const boost::unordered_map<HPFileType, std::string> HPFileTypeToString =
+    ba::map_list_of(kUnknownFile, "unknown")(kGRIB1, "grib edition 1")(kGRIB2, "grib edition 2")(
+        kGRIB, "grib edition 1 or 2")(kQueryData, "QueryData")(kNetCDF, "NetCDF")(kCSV, "CSV");
 
 // Defined external compression types
 
@@ -92,11 +85,9 @@ enum HPFileCompression
 	kBZIP2
 };
 
-const boost::unordered_map<HPFileCompression,std::string> HPFileCompressionToString = ba::map_list_of
-				(kUnknownCompression, "unknown compression")
-                (kNoCompression, "no compression")
-                (kGZIP, "gzip compressed")
-                (kBZIP2, "bzip2 compressed");
+const boost::unordered_map<HPFileCompression, std::string> HPFileCompressionToString =
+    ba::map_list_of(kUnknownCompression, "unknown compression")(kNoCompression, "no compression")(
+        kGZIP, "gzip compressed")(kBZIP2, "bzip2 compressed");
 
 // Define supported parameter units
 
@@ -106,17 +97,17 @@ enum HPParameterUnit
 	kPa,
 	kK,
 	kC,
-	kPas, // Pa/s
+	kPas,  // Pa/s
 	kHPa,
 	kPrcnt,
-	kMs, // m/s
-	kM, // meters
-	kMm, // millimeters
-	kGph, // geopotential height, m^2 / s^2
-	kKgkg, // kg/kg
-	kJm2, // J per square meter
-	kKgm2, // kg/m^2
-	kS2 // 1/s^2
+	kMs,    // m/s
+	kM,     // meters
+	kMm,    // millimeters
+	kGph,   // geopotential height, m^2 / s^2
+	kKgkg,  // kg/kg
+	kJm2,   // J per square meter
+	kKgm2,  // kg/m^2
+	kS2     // 1/s^2
 };
 
 enum HPInterpolationMethod
@@ -124,23 +115,16 @@ enum HPInterpolationMethod
 	kUnknownInterpolationMethod = 0,
 	kBiLinear = 1,
 	kNearestPoint = 2,
-	kNearestPointValue // http://arxiv.org/pdf/1211.1768.pdf
+	kNearestPointValue  // http://arxiv.org/pdf/1211.1768.pdf
 };
 
-const boost::unordered_map<HPInterpolationMethod,std::string> HPInterpolationMethodToString = ba::map_list_of
-		(kUnknownInterpolationMethod, "unknown")
-		(kBiLinear, "bilinear")
-		(kNearestPoint, "nearest point")
-		(kNearestPointValue, "nearest point value")
-		;
+const boost::unordered_map<HPInterpolationMethod, std::string> HPInterpolationMethodToString =
+    ba::map_list_of(kUnknownInterpolationMethod, "unknown")(kBiLinear, "bilinear")(kNearestPoint, "nearest point")(
+        kNearestPointValue, "nearest point value");
 
-const boost::unordered_map<std::string,HPInterpolationMethod> HPStringToInterpolationMethod = ba::map_list_of
-		("unknown",kUnknownInterpolationMethod)
-		("bilinear",kBiLinear)
-		("nearest point",kNearestPoint)
-		("nearest point value",kNearestPointValue)
-		;
-
+const boost::unordered_map<std::string, HPInterpolationMethod> HPStringToInterpolationMethod =
+    ba::map_list_of("unknown", kUnknownInterpolationMethod)("bilinear", kBiLinear)("nearest point", kNearestPoint)(
+        "nearest point value", kNearestPointValue);
 
 enum HPLevelType
 {
@@ -159,37 +143,15 @@ enum HPLevelType
 	kEntireOcean = 201
 };
 
-const boost::unordered_map<HPLevelType,std::string> HPLevelTypeToString = ba::map_list_of
-		(kUnknownLevel, "unknown")
-		(kGround, "ground")
-		(kPressure, "pressure")
-		(kMeanSea, "meansea")
-		(kAltitude, "altitude")
-		(kHeight, "height")
-		(kHybrid, "hybrid")
-		(kGndLayer, "gndlayer")
-		(kDepth, "depth")
-		(kTopOfAtmosphere, "top")
-		(kEntireAtmosphere, "entatm")
-		(kEntireOcean, "entocean")
-		(kLake, "lake")
-		;
+const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
+    ba::map_list_of(kUnknownLevel, "unknown")(kGround, "ground")(kPressure, "pressure")(kMeanSea, "meansea")(
+        kAltitude, "altitude")(kHeight, "height")(kHybrid, "hybrid")(kGndLayer, "gndlayer")(kDepth, "depth")(
+        kTopOfAtmosphere, "top")(kEntireAtmosphere, "entatm")(kEntireOcean, "entocean")(kLake, "lake");
 
-const boost::unordered_map<std::string,HPLevelType> HPStringToLevelType = ba::map_list_of
-		("unknown",kUnknownLevel)
-		("ground",kGround)
-		("pressure",kPressure)
-		("meansea",kMeanSea)
-		("altitude",kAltitude)
-		("height",kHeight)
-		("hybrid",kHybrid)
-		("gndlayer",kGndLayer)
-		("depth",kDepth)
-		("top",kTopOfAtmosphere)
-		("entatm", kEntireAtmosphere)
-		("entocean", kEntireOcean)
-		("lake", kLake)
-		;
+const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
+    ba::map_list_of("unknown", kUnknownLevel)("ground", kGround)("pressure", kPressure)("meansea", kMeanSea)(
+        "altitude", kAltitude)("height", kHeight)("hybrid", kHybrid)("gndlayer", kGndLayer)("depth", kDepth)(
+        "top", kTopOfAtmosphere)("entatm", kEntireAtmosphere)("entocean", kEntireOcean)("lake", kLake);
 
 enum HPFileWriteOption
 {
@@ -199,56 +161,42 @@ enum HPFileWriteOption
 	kDatabase
 };
 
-const boost::unordered_map<HPFileWriteOption,std::string> HPFileWriteOptionToString = ba::map_list_of
-		(kUnknownFileWriteOption, "unknown")
-		(kSingleFile, "single file only")
-		(kMultipleFiles, "multiple files")
-		(kDatabase, "write to database")
-		;
-
+const boost::unordered_map<HPFileWriteOption, std::string> HPFileWriteOptionToString =
+    ba::map_list_of(kUnknownFileWriteOption, "unknown")(kSingleFile, "single file only")(
+        kMultipleFiles, "multiple files")(kDatabase, "write to database");
 
 /**
  * @enum HPScanningMode
  *
  * @brief Describe different data scanning modes (ie in which direction the data is read)
- * 
+ *
  * Values match to newbase.
  */
 
 enum HPScanningMode
 {
 	kUnknownScanningMode = 0,
-	kTopLeft = 17, 		// +x-y
-	kTopRight = 18,		// -x-y
-	kBottomLeft = 33,	// +x+y
-	kBottomRight = 34,	// -x+y
+	kTopLeft = 17,      // +x-y
+	kTopRight = 18,     // -x-y
+	kBottomLeft = 33,   // +x+y
+	kBottomRight = 34,  // -x+y
 
 };
-const boost::unordered_map<std::string,HPScanningMode> HPScanningModeFromString = ba::map_list_of
-		("unknown", kUnknownScanningMode)
-		("+x-y", kTopLeft)
-		("-x+y", kTopRight)
-		("+x+y", kBottomLeft)
-		("-x-y", kBottomRight);
+const boost::unordered_map<std::string, HPScanningMode> HPScanningModeFromString = ba::map_list_of(
+    "unknown", kUnknownScanningMode)("+x-y", kTopLeft)("-x+y", kTopRight)("+x+y", kBottomLeft)("-x-y", kBottomRight);
 
-const boost::unordered_map<HPScanningMode,std::string> HPScanningModeToString = ba::map_list_of
-		(kUnknownScanningMode, "unknown")
-		(kTopLeft, "+x-y")
-		(kTopRight, "-x+y")
-		(kBottomLeft, "+x+y")
-		(kBottomRight, "-x-y");
+const boost::unordered_map<HPScanningMode, std::string> HPScanningModeToString = ba::map_list_of(
+    kUnknownScanningMode, "unknown")(kTopLeft, "+x-y")(kTopRight, "-x+y")(kBottomLeft, "+x+y")(kBottomRight, "-x-y");
 
 enum HPLevelOrder
 {
 	kUnknownLevelOrder = 0,
 	kTopToBottom = 1,
-	kBottomToTop = 2 
+	kBottomToTop = 2
 };
 
-const boost::unordered_map<HPLevelOrder,std::string> HPLevelOrderToString = ba::map_list_of
-	(kUnknownLevelOrder, "unknown")
-	(kTopToBottom, "top to bottom")
-	(kBottomToTop, "bottom to top");
+const boost::unordered_map<HPLevelOrder, std::string> HPLevelOrderToString =
+    ba::map_list_of(kUnknownLevelOrder, "unknown")(kTopToBottom, "top to bottom")(kBottomToTop, "bottom to top");
 
 enum HPExceptionType
 {
@@ -275,23 +223,14 @@ enum HPDimensionType
 	kForecastTypeDimension
 };
 
-const boost::unordered_map<HPDimensionType,std::string> HPDimensionTypeToString = ba::map_list_of
-		(kUnknownDimension, "unknown")
-		(kTimeDimension, "time dimension")
-		(kLevelDimension, "level dimension")
-		(kParamDimension, "param dimension")
-		(kLocationDimension, "location dimension")
-		(kForecastTypeDimension, "forecast type dimension")
-		;
+const boost::unordered_map<HPDimensionType, std::string> HPDimensionTypeToString =
+    ba::map_list_of(kUnknownDimension, "unknown")(kTimeDimension, "time dimension")(kLevelDimension, "level dimension")(
+        kParamDimension, "param dimension")(kLocationDimension, "location dimension")(kForecastTypeDimension,
+                                                                                      "forecast type dimension");
 
-const boost::unordered_map<std::string,HPDimensionType> HPStringToDimensionType = ba::map_list_of
-		("unknown",kUnknownDimension)
-		("time",kTimeDimension)
-		("level",kLevelDimension)
-		("param",kParamDimension)
-		("location",kLocationDimension)
-		("forecast_type",kForecastTypeDimension)
-		;
+const boost::unordered_map<std::string, HPDimensionType> HPStringToDimensionType =
+    ba::map_list_of("unknown", kUnknownDimension)("time", kTimeDimension)("level", kLevelDimension)(
+        "param", kParamDimension)("location", kLocationDimension)("forecast_type", kForecastTypeDimension);
 
 enum HPTimeResolution
 {
@@ -303,13 +242,9 @@ enum HPTimeResolution
 	kDayResolution
 };
 
-const boost::unordered_map<HPTimeResolution,std::string> HPTimeResolutionToString = ba::map_list_of
-		(kUnknownTimeResolution, "unknown")
-		(kHourResolution, "hour")
-		(kMinuteResolution, "minute")
-		(kYearResolution, "year")
-		(kMonthResolution, "month")
-		(kDayResolution, "day");
+const boost::unordered_map<HPTimeResolution, std::string> HPTimeResolutionToString =
+    ba::map_list_of(kUnknownTimeResolution, "unknown")(kHourResolution, "hour")(kMinuteResolution, "minute")(
+        kYearResolution, "year")(kMonthResolution, "month")(kDayResolution, "day");
 
 enum HPPackingType
 {
@@ -329,14 +264,9 @@ enum HPAggregationType
 	kDifference
 };
 
-const boost::unordered_map<HPAggregationType,std::string> HPAggregationTypeToString = ba::map_list_of
-		(kUnknownAggregationType, "unknown")
-		(kAverage, "average")
-		(kAccumulation, "accumulation")
-		(kMaximum, "maximum")
-		(kMinimum, "minimum")
-		(kDifference, "difference")
-;
+const boost::unordered_map<HPAggregationType, std::string> HPAggregationTypeToString =
+    ba::map_list_of(kUnknownAggregationType, "unknown")(kAverage, "average")(kAccumulation, "accumulation")(
+        kMaximum, "maximum")(kMinimum, "minimum")(kDifference, "difference");
 
 enum HPModifierType
 {
@@ -354,20 +284,13 @@ enum HPModifierType
 	kPlusMinusAreaModifier
 };
 
-const boost::unordered_map<HPModifierType,std::string> HPModifierTypeToString = ba::map_list_of
-		(kUnknownModifierType, "unknown modifier")
-		(kAverageModifier, "average modifier")
-		(kAccumulationModifier, "accumulation modifier")
-		(kMaximumModifier, "maximum modifier")
-		(kMinimumModifier, "minimum modifier")
-		(kDifferenceModifier, "difference modifier")
-		(kMaximumMinimumModifier, "maximum minimum modifier")
-		(kCountModifier, "count modifier")
-		(kFindHeightModifier, "find height modifier")
-		(kFindValueModifier, "find value modifier")
-		(kIntegralModifier, "integral modifier")
-		(kPlusMinusAreaModifier, "plus minus area modifier")
-;
+const boost::unordered_map<HPModifierType, std::string> HPModifierTypeToString =
+    ba::map_list_of(kUnknownModifierType, "unknown modifier")(kAverageModifier, "average modifier")(
+        kAccumulationModifier, "accumulation modifier")(kMaximumModifier, "maximum modifier")(
+        kMinimumModifier, "minimum modifier")(kDifferenceModifier, "difference modifier")(
+        kMaximumMinimumModifier, "maximum minimum modifier")(kCountModifier, "count modifier")(
+        kFindHeightModifier, "find height modifier")(kFindValueModifier, "find value modifier")(
+        kIntegralModifier, "integral modifier")(kPlusMinusAreaModifier, "plus minus area modifier");
 
 /// Precipitation forms as agreed by FMI
 
@@ -384,16 +307,9 @@ enum HPPrecipitationForm
 	kUnknownPrecipitationForm = 10
 };
 
-const boost::unordered_map<HPPrecipitationForm,const char*> HPPrecipitationFormToString = ba::map_list_of
-		(kDrizzle, "drizzle")
-		(kRain, "rain")
-		(kSleet, "sleet")
-		(kSnow, "snow")
-		(kFreezingDrizzle, "freezing drizzle")
-		(kFreezingRain, "freezing rain")
-		(kGraupel, "graupel")
-		(kHail, "hail")
-		(kUnknownPrecipitationForm, "unknown");
+const boost::unordered_map<HPPrecipitationForm, const char*> HPPrecipitationFormToString = ba::map_list_of(
+    kDrizzle, "drizzle")(kRain, "rain")(kSleet, "sleet")(kSnow, "snow")(kFreezingDrizzle, "freezing drizzle")(
+    kFreezingRain, "freezing rain")(kGraupel, "graupel")(kHail, "hail")(kUnknownPrecipitationForm, "unknown");
 
 enum HPGridClass
 {
@@ -402,10 +318,8 @@ enum HPGridClass
 	kIrregularGrid
 };
 
-const boost::unordered_map<HPGridClass,std::string> HPGridClassToString = ba::map_list_of
-		(kUnknownGridClass, "unknown")
-		(kRegularGrid, "regular")
-		(kIrregularGrid, "irregular");
+const boost::unordered_map<HPGridClass, std::string> HPGridClassToString =
+    ba::map_list_of(kUnknownGridClass, "unknown")(kRegularGrid, "regular")(kIrregularGrid, "irregular");
 
 // Define supported grid types
 // Values equal to those in radon
@@ -421,15 +335,10 @@ enum HPGridType
 	kPointList
 };
 
-const boost::unordered_map<HPGridType,std::string> HPGridTypeToString = ba::map_list_of
-		(kUnknownGridType, "unknown grid type")
-		(kLatitudeLongitude, "ll")
-		(kStereographic, "polster")
-		(kAzimuthalEquidistant, "azimuthal")
-		(kRotatedLatitudeLongitude, "rll")
-		(kReducedGaussian, "rgg")
-		(kPointList, "pointlist")
-;
+const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
+    ba::map_list_of(kUnknownGridType, "unknown grid type")(kLatitudeLongitude, "ll")(kStereographic, "polster")(
+        kAzimuthalEquidistant, "azimuthal")(kRotatedLatitudeLongitude, "rll")(kReducedGaussian, "rgg")(kPointList,
+                                                                                                       "pointlist");
 
 enum HPDatabaseType
 {
@@ -439,11 +348,8 @@ enum HPDatabaseType
 	kNeonsAndRadon
 };
 
-const boost::unordered_map<HPDatabaseType,std::string> HPDatabaseTypeToString = ba::map_list_of
-		(kUnknownDatabaseType, "unknown")
-		(kNeons, "neons")
-		(kRadon, "radon")
-		(kNeonsAndRadon, "neons and radon");
+const boost::unordered_map<HPDatabaseType, std::string> HPDatabaseTypeToString = ba::map_list_of(
+    kUnknownDatabaseType, "unknown")(kNeons, "neons")(kRadon, "radon")(kNeonsAndRadon, "neons and radon");
 
 enum HPForecastType
 {
@@ -454,21 +360,13 @@ enum HPForecastType
 	kEpsControl = 4
 };
 
-const boost::unordered_map<HPForecastType,std::string> HPForecastTypeToString = ba::map_list_of
-		(kUnknownType, "unknown")
-		(kDeterministic, "deterministic")
-		(kAnalysis, "analysis")
-		(kEpsControl, "eps control")
-		(kEpsPerturbation, "eps perturbation")
-		;
+const boost::unordered_map<HPForecastType, std::string> HPForecastTypeToString =
+    ba::map_list_of(kUnknownType, "unknown")(kDeterministic, "deterministic")(kAnalysis, "analysis")(
+        kEpsControl, "eps control")(kEpsPerturbation, "eps perturbation");
 
-const boost::unordered_map<std::string,HPForecastType> HPStringToForecastType = ba::map_list_of
-		("unknown",kUnknownType)
-		("deterministic",kDeterministic)
-		("analysis", kAnalysis)
-		("eps control",kEpsControl)
-		("eps perturbation",kEpsPerturbation)
-		;
+const boost::unordered_map<std::string, HPForecastType> HPStringToForecastType =
+    ba::map_list_of("unknown", kUnknownType)("deterministic", kDeterministic)("analysis", kAnalysis)(
+        "eps control", kEpsControl)("eps perturbation", kEpsPerturbation);
 
 /**
  * @struct HPVersionNumber
@@ -482,15 +380,8 @@ struct HPVersionNumber
 	unsigned short itsMajorVersion;
 	unsigned short itsMinorVersion;
 
-	unsigned short Minor()
-	{
-		return itsMinorVersion;
-	}
-	unsigned short Major()
-	{
-		return itsMajorVersion;
-	}
-
+	unsigned short Minor() { return itsMinorVersion; }
+	unsigned short Major() { return itsMajorVersion; }
 	HPVersionNumber(unsigned short theMajorVersion, unsigned short theMinorVersion)
 	{
 		itsMinorVersion = theMinorVersion;
@@ -502,124 +393,119 @@ struct HPVersionNumber
 		file << itsMajorVersion << "." << itsMinorVersion;
 		return file;
 	}
-
 };
 
-inline
-std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers)
+inline std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers) { return vers.Write(file); }
+namespace constants
 {
-	return vers.Write(file);
-}
+/**
+ * @brief Zero degrees celsius in Kelvins
+ */
 
-namespace constants {
+const double kKelvin = 273.15;
 
-	/**
-	 * @brief Zero degrees celsius in Kelvins
-	 */
+/**
+ * @brief Gas constant for water vapor (J / K kg)
+ */
 
-	const double kKelvin = 273.15;
+const double kRw = 461.5;
 
-	/**
-	 * @brief Gas constant for water vapor (J / K kg)
-	 */
+/**
+ * @brief Latent heat for water vaporization or condensation (J / kg)
+ *
+ * http://glossary.ametsoc.org/wiki/Latent_heat
+ */
 
-	const double kRw = 461.5;
+const double kL = 2.5e6;
 
-	/**
-	 * @brief Latent heat for water vaporization or condensation (J / kg)
-	 *
-	 * http://glossary.ametsoc.org/wiki/Latent_heat
-	 */
+/**
+ * @brief One radian in degrees (180 / PI)
+ */
 
-	const double kL = 2.5e6;
+const double kRad = 57.29577951307855;
 
-	/**
-	 * @brief One radian in degrees (180 / PI)
-	 */
+/**
+ * @brief One degree in radians (PI / 180)
+ */
 
-	const double kRad = 57.29577951307855;
+const double kDeg = 0.017453292519944;
 
-	/**
-	 * @brief One degree in radians (PI / 180)
-	 */
+/**
+ * @brief Dimensionless ratio of the specific gas constant of dry air to the specific gas constant for water vapor, ie
+ * kRd / kRw
+ *
+ *
+ * http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate
+ */
 
-	const double kDeg = 0.017453292519944;
+const double kEp = 0.622;
 
-	/**
-	 * @brief Dimensionless ratio of the specific gas constant of dry air to the specific gas constant for water vapor, ie kRd / kRw
-	 *
-	 *
-	 * http://en.wikipedia.org/wiki/Lapse_rate#Saturated_adiabatic_lapse_rate
-	 */
+/**
+ * @brief Specific gas constant of dry air (J / K / kg)
+ */
 
-	const double kEp = 0.622;
+const double kRd = 287;
 
-	/**
-	 * @brief Specific gas constant of dry air (J / K / kg)
-	 */
+/**
+ * @brief Specific heat of dry air at constant pressure (J / K / kg)
+ */
 
-	const double kRd = 287;
+const double kCp = 1003.5;
 
-	/**
-	 * @brief Specific heat of dry air at constant pressure (J / K / kg)
-	 */
+/**
+ * @brief Gravity constant approximation (m/s^2)
+ */
 
-	const double kCp = 1003.5;
+const double kG = 9.80665;
 
-	/**
-	 * @brief Gravity constant approximation (m/s^2)
-	 */
+/**
+ * @brief Inverse g constant (ie. 1/g)
+ */
 
-	const double kG = 9.80665;
+const double kIg = 0.10197;
 
-	/**
-	 * @brief Inverse g constant (ie. 1/g)
-	 */
+/**
+ * @brief R / Cp, where R = Rd. Unitless quantity.
+ */
 
-	const double kIg = 0.10197;
+const double kRd_div_Cp = kRd / kCp;
 
-	/**
-	 * @brief R / Cp, where R = Rd. Unitless quantity.
-	 */
+/**
+ * @brief von Karman constant
+ */
 
-	const double kRd_div_Cp = kRd / kCp;
+const double kK = 0.41;
 
-	/**
- 	 * @brief von Karman constant
- 	 */
+/**
+ * @brief Gas constant for water divided by latent heat (used in dewpoint)
+ */
 
-	const double kK = 0.41;	
+const double kRw_div_L = himan::constants::kRw / himan::constants::kL;
 
-	/**
-	 * @brief Gas constant for water divided by latent heat (used in dewpoint)
-	 */
-	
-	const double kRw_div_L = himan::constants::kRw / himan::constants::kL;
+/**
+ * @brief Mean radius of the earth in meters
+ */
 
-	/**
-	 * @brief Mean radius of the earth in meters
-	 */
+const double kR = 6371009;
 
-	const double kR = 6371009;
-	
-	/**
-	 * @brief Molar mass of water in g/mol
-	 * 
-	 * See also kEp = kMW / kMA
-	 */
-	
-	const double kMW = 18.01528;
+/**
+ * @brief Molar mass of water in g/mol
+ *
+ * See also kEp = kMW / kMA
+ */
 
-	/**
-	 * @brief Molar mass of dry air in g/mol
-	 * 
-	 * See also kEp = kMW / kMA
-	 */
+const double kMW = 18.01528;
 
-	const double kMA = 28.9644;
+/**
+ * @brief Molar mass of dry air in g/mol
+ *
+ * See also kEp = kMW / kMA
+ */
 
-} // namespace constants
+const double kMA = 28.9644;
 
-} // namespace himan
+}  // namespace constants
+
+}  // namespace himan
 
 #endif /* HIMAN_COMMON_H */

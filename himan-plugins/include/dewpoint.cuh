@@ -18,7 +18,6 @@ namespace plugin
 {
 namespace dewpoint_cuda
 {
-
 struct options
 {
 	info_simple* t;
@@ -30,16 +29,7 @@ struct options
 	double t_base;
 	double rh_scale;
 
-	options()
-		: t(0)
-		, rh(0)
-		, td(0)
-		, N(0)
-		, missing(0)
-		, t_base(0)
-		, rh_scale(1) 
-	{}
-
+	options() : t(0), rh(0), td(0), N(0), missing(0), t_base(0), rh_scale(1) {}
 };
 
 void Process(options& opts);
@@ -48,10 +38,9 @@ void Process(options& opts);
 __global__ void Calculate(cdarr_t d_t, cdarr_t d_rh, darr_t d_td, options opts);
 #endif
 
-} // namespace dewpoint_cuda
-} // namespace plugin
-} // namespace himan
+}  // namespace dewpoint_cuda
+}  // namespace plugin
+}  // namespace himan
 
-#endif  /* HAVE_CUDA */
-#endif	/* DEWPOINT_CUDA_H */
-
+#endif /* HAVE_CUDA */
+#endif /* DEWPOINT_CUDA_H */

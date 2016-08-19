@@ -8,45 +8,37 @@
 #ifndef JSON_PARSER_H
 #define JSON_PARSER_H
 
-#include <string>
-#include <vector>
 #include "plugin_configuration.h"
 #include <boost/property_tree/ptree.hpp>
+#include <string>
+#include <vector>
 
 namespace himan
 {
-
 class json_parser
 {
+   public:
+	static json_parser* Instance();
 
-public:
+	json_parser(const json_parser& other) = delete;
+	json_parser& operator=(const json_parser& other) = delete;
 
-    static json_parser* Instance();
+	std::vector<std::shared_ptr<plugin_configuration>> Parse(std::shared_ptr<configuration> conf);
 
-    json_parser(const json_parser& other) = delete;
-    json_parser& operator=(const json_parser& other) = delete;
+	std::string ClassName() const { return "himan::json_parser"; }
+	~json_parser() = default;
 
-    std::vector<std::shared_ptr<plugin_configuration>> Parse(std::shared_ptr<configuration> conf);
+   private:
+	json_parser();
 
-    std::string ClassName() const
-    {
-        return "himan::json_parser";
-    }
+	std::vector<std::shared_ptr<plugin_configuration>> ParseConfigurationFile(std::shared_ptr<configuration> conf);
+	std::unique_ptr<grid> ParseAreaAndGrid(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
+	void ParseTime(std::shared_ptr<configuration> conf, std::shared_ptr<info> baseInfo,
+	               const boost::property_tree::ptree& pt);
 
-    ~json_parser() = default;
-
-private:
-
-    json_parser();
-
-    std::vector<std::shared_ptr<plugin_configuration>> ParseConfigurationFile(std::shared_ptr<configuration> conf);
-    std::unique_ptr<grid> ParseAreaAndGrid(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
-    void ParseTime(std::shared_ptr<configuration> conf, std::shared_ptr<info> baseInfo, const boost::property_tree::ptree& pt);
-
-    static std::unique_ptr<json_parser> itsInstance;
-
+	static std::unique_ptr<json_parser> itsInstance;
 };
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* JSON_PARSER_H */

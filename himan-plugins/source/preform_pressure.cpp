@@ -11,10 +11,10 @@
 #define MISS kFloatMissing
 
 #include "preform_pressure.h"
+#include "forecast_time.h"
+#include "level.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "level.h"
-#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -22,7 +22,8 @@ using namespace himan::plugin;
 // Olomuotopäättely pinta/peruspainepintadatalla tiivistettynä (tässä järjestyksessä):
 //
 // 0. Mallissa sadetta (RR>0; RR = rainfall + snowfall)
-// 1. Jäätävää tihkua, jos -10<T2m<=0C, pakkasstratus (~-10...-0) jossa nousuliikettä, sade heikkoa, ei satavaa keskipilveä
+// 1. Jäätävää tihkua, jos -10<T2m<=0C, pakkasstratus (~-10...-0) jossa nousuliikettä, sade heikkoa, ei satavaa
+// keskipilveä
 // 2. Jäätävää vesisadetta, jos T2m<=0C ja pinnan yläpuolella on T>0C kerros, jossa kosteaa (pilveä)
 // 3. Lunta, jos snowfall/RR>0.8, tai T<=0C
 // 4. Räntää, jos 0.15<snowfall/RR<0.8
@@ -46,7 +47,7 @@ const double stTlimit = -12.;
 const double dzLim = 0.3;
 const double fzdzLim = 0.2;
 
- // Max sallittu nousuliike stratuksessa [mm/s] jäätävässä tihkussa (vähentää fzdz esiintymistä)
+// Max sallittu nousuliike stratuksessa [mm/s] jäätävässä tihkussa (vähentää fzdz esiintymistä)
 const double wMax = 50.;
 
 // 925 tai 850hPa:n stratuksen ~vähimmäispaksuus [hPa] jäätävässä tihkussa, ja
@@ -56,13 +57,12 @@ const double stH = 15.;
 
 // Suht. kosteuden raja-arvo alapilvelle (925/850/700hPa) [%]
 const double rhLim = 90.;
-		
+
 preform_pressure::preform_pressure()
 {
 	itsClearTextFormula = "<algorithm>";
 
 	itsLogger = logger_factory::Instance()->GetLog("preform_pressure");
-
 }
 
 void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -84,14 +84,15 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->OutputFileType() == kGRIB2)
 	{
-		itsLogger->Error("GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not lossless");
+		itsLogger->Error(
+		    "GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not "
+		    "lossless");
 		return;
 	}
 
 	SetParams({param("PRECFORM-N", 57)});
 
 	Start();
-	
 }
 
 /*
@@ -102,7 +103,6 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
-
 	// Required source parameters
 
 	const param TParam("T-K");
@@ -114,12 +114,12 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	// b) forecast time step, if step < 1 hour (for example 15 minutes with harmonie)
 	//
 	// For backwards compatibility also support one hour precipitation
-	
+
 	params RRParams({param("RRR-KGM2"), param("RR-1-MM")});
-	
+
 	const params PParams({param("PGR-PA"), param("P-PA")});
-	const params WParams({param ("VV-MMS"), param("VV-MS")});
-	
+	const params WParams({param("VV-MMS"), param("VV-MS")});
+
 	level groundLevel(kHeight, 2);
 
 	level surface0mLevel(kHeight, 0);
@@ -129,13 +129,15 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	level P925(kPressure, 925);
 	level P1000(kPressure, 1000);
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("preformPressureThread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("preformPressureThread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	// Source infos
 
@@ -157,9 +159,11 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 	info_t SNRInfo = Fetch(forecastTime, surface0mLevel, SNRParam, forecastType, false);
 
-	if (!TInfo || !T700Info || !T850Info || !T925Info || !RHInfo || !RH700Info || !RH850Info || !RH925Info || !W925Info || !W850Info || !RRInfo || !PInfo || !SNRInfo)
+	if (!TInfo || !T700Info || !T850Info || !T925Info || !RHInfo || !RH700Info || !RH850Info || !RH925Info ||
+	    !W925Info || !W850Info || !RRInfo || !PInfo || !SNRInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -186,9 +190,9 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		RHScale = 1;
 	}
 
-	LOCKSTEP(myTargetInfo,TInfo,T700Info,T850Info,T925Info,RHInfo,RH700Info,RH850Info,RH925Info,W925Info,W850Info,RRInfo,PInfo,SNRInfo)
+	LOCKSTEP(myTargetInfo, TInfo, T700Info, T850Info, T925Info, RHInfo, RH700Info, RH850Info, RH925Info, W925Info,
+	         W850Info, RRInfo, PInfo, SNRInfo)
 	{
-
 		double RR = RRInfo->Value();
 
 		// No rain --> no rain type
@@ -212,7 +216,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		double W925 = W925Info->Value();
 
 		double P = PInfo->Value();
-		
+
 		double SNR = SNRInfo->Value();
 
 		if (IsMissingValue({T, T850, T925, RH, RH700, RH925, RH850, T700, P, W925, W850}))
@@ -220,7 +224,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			continue;
 		}
 
-		int PreForm = static_cast<int> (kFloatMissing);
+		int PreForm = static_cast<int>(kFloatMissing);
 
 		// Unit conversions
 
@@ -236,43 +240,44 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		RH850 *= RHScale;
 		RH925 *= RHScale;
 
-		P *= 0.01; // ground pressure is always Pa in model
+		P *= 0.01;  // ground pressure is always Pa in model
 
 		W850 *= WScale;
 		W925 *= WScale;
-/*
-		cout	<< "T\t\t" << T << endl
-				<< "T700\t\t" << T700 << endl
-				<< "T850\t\t" << T850 << endl
-				<< "T925\t\t" << T925 << endl
-				<< "RH\t\t" << RH << endl
-				<< "RH700\t\t" << RH700 << endl
-				<< "RH850\t\t" << RH850 << endl
-				<< "RH925\t\t" << RH925 << endl
-				<< "P\t\t" << P << endl
-				<< "W850\t\t" << W850 << endl
-				<< "W925\t\t" << W925 << endl
-				<< "RR\t\t" << RR << endl
-				<< "stH\t\t" << stH << endl
-				<< "sfcMin\t\t" << sfcMin << endl
-				<< "sfcMax\t\t" << sfcMax << endl
-				<< "fzdzLim\t\t" << fzdzLim << endl
-				<< "wMax\t\t" << wMax << endl
-				<< "stTlimit\t" << stTlimit << endl
-				<< "SNR\t\t" << SNR << endl;
+		/*
+		        cout	<< "T\t\t" << T << endl
+		                << "T700\t\t" << T700 << endl
+		                << "T850\t\t" << T850 << endl
+		                << "T925\t\t" << T925 << endl
+		                << "RH\t\t" << RH << endl
+		                << "RH700\t\t" << RH700 << endl
+		                << "RH850\t\t" << RH850 << endl
+		                << "RH925\t\t" << RH925 << endl
+		                << "P\t\t" << P << endl
+		                << "W850\t\t" << W850 << endl
+		                << "W925\t\t" << W925 << endl
+		                << "RR\t\t" << RR << endl
+		                << "stH\t\t" << stH << endl
+		                << "sfcMin\t\t" << sfcMin << endl
+		                << "sfcMax\t\t" << sfcMax << endl
+		                << "fzdzLim\t\t" << fzdzLim << endl
+		                << "wMax\t\t" << wMax << endl
+		                << "stTlimit\t" << stTlimit << endl
+		                << "SNR\t\t" << SNR << endl;
 
-		exit(1);
-*/
+		        exit(1);
+		*/
 		// (0=tihku, 1=vesi, 2=räntä, 3=lumi, 4=jäätävä tihku, 5=jäätävä sade)
 
-		// jäätävää tihkua: "-10<T2m<=0, pakkasstratus (pinnassa/sen yläpuolella pakkasta & kosteaa), päällä ei (satavaa) keskipilveä, sade heikkoa"
+		// jäätävää tihkua: "-10<T2m<=0, pakkasstratus (pinnassa/sen yläpuolella pakkasta & kosteaa), päällä ei
+		// (satavaa) keskipilveä, sade heikkoa"
 
-		if ((T <= sfcMax) AND (T > sfcMin) AND (RH700 < 80) AND (RH > 90) AND (RR <= fzdzLim))
+		if ((T <= sfcMax)AND(T > sfcMin) AND(RH700 < 80) AND(RH > 90) AND(RR <= fzdzLim))
 		{
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925),
 			// tai kun Psfc ei löydy (riittävän paksu/jäätävä) stratus 925hPa:ssa, jossa nousuliikettä?
 
-			if (P > (925 + stH) AND RH925 > rhLim AND T925 < 0 AND T925 > stTlimit AND W925 > 0 AND W925 < wMax)
+			if (P > (925 + stH)AND RH925 > rhLim AND T925<0 AND T925> stTlimit AND W925 > 0 AND W925 < wMax)
 			{
 				PreForm = kFreezingDrizzle;
 			}
@@ -280,7 +285,8 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
 			// (riittävän paksu/jäätävä) stratus 850hPa:ssa, jossa nousuliikettä?
 
-			if ((P <= 925+stH) AND (P > 850+stH) AND (RH850 > rhLim) AND (T850 < 0) AND (T850 > stTlimit) AND (W850 > 0) AND (W850 < wMax))
+			if ((P <= 925 + stH)AND(P > 850 + stH) AND(RH850 > rhLim) AND(T850 < 0) AND(T850 > stTlimit) AND(W850 > 0)
+			        AND(W850 < wMax))
 			{
 				PreForm = kFreezingDrizzle;
 			}
@@ -288,13 +294,12 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// jäätävää vesisadetta: "pinnassa pakkasta ja sulamiskerros pinnan lähellä"
 
-		if ((PreForm == MISS) AND (T <= 0) AND ((T925 > 0) OR (T850 > 0) OR (T700 > 0)))
+		if ((PreForm == MISS)AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
 		{
-
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925), tai kun Psfc ei löydy?
 			// (riittävän paksu) sulamiskerros ja pilveä 925/850hPa:ssa?
-			
-			if (P > (925+stH) AND ((T925 > 0 AND RH925 >= rhLim) OR (T850 > 0 AND RH850 >= rhLim)))
+
+			if (P > (925 + stH)AND((T925 > 0 AND RH925 >= rhLim)OR(T850 > 0 AND RH850 >= rhLim)))
 			{
 				PreForm = kFreezingRain;
 			}
@@ -302,7 +307,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
 			// (riittävän paksu) sulamiskerros 850hPa:ssa (tai pakkaskerros sen alla)?
 
-			if (P <= (925+stH) AND P > (850+stH) AND T850 > 0 AND RH850 >= rhLim)
+			if (P <= (925 + stH)AND P > (850 + stH)AND T850 > 0 AND RH850 >= rhLim)
 			{
 				PreForm = kFreezingRain;
 			}
@@ -310,44 +315,44 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			// ollaanko ~1500-3000m merenpinnasta (850<pintapaine<700)?
 			// (riittävän paksu) sulamiskerros 700hPa:ssa ja pilveä 700hPa:ssa
 
-			if (P <= 850+stH AND P > 700+stH AND T700 > 0 AND RH700 >= rhLim)
+			if (P <= 850 + stH AND P > 700 + stH AND T700 > 0 AND RH700 >= rhLim)
 			{
 				PreForm = kFreezingRain;
 			}
 		}
 
-		double SNR_RR = 0; // oletuksena kaikki sade vetta
+		double SNR_RR = 0;  // oletuksena kaikki sade vetta
 
 		if (SNR != MISS)
 		{
 			// lasketaan oikea suhde vain jos lumidataa on (kesalla ei ole)
-			SNR_RR = SNR/RR;
+			SNR_RR = SNR / RR;
 		}
 
 		// lumisadetta: snowfall >=80% kokonaissateesta
 
-		if (PreForm == MISS AND (SNR_RR >= snowLim OR T <= 0))
+		if (PreForm == MISS AND(SNR_RR >= snowLim OR T <= 0))
 		{
 			PreForm = kSnow;
 		}
 
 		// räntää: snowfall 15...80% kokonaissateesta
-		if ((PreForm == MISS) AND (SNR_RR > waterLim) AND (SNR_RR<snowLim))
+		if ((PreForm == MISS)AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
 		{
 			PreForm = kSleet;
 		}
 
 		// tihkua tai vesisadetta: Rain>=85% kokonaissateesta
-		if ((PreForm == MISS) AND (SNR_RR) <= waterLim)
+		if ((PreForm == MISS)AND(SNR_RR) <= waterLim)
 		{
 			// tihkua: "ei (satavaa) keskipilveä, pinnan lähellä kosteaa (stratus), sade heikkoa"
-			if ((RH700 < 80) AND (RH > 90) AND (RR <= dzLim))
+			if ((RH700 < 80)AND(RH > 90) AND(RR <= dzLim))
 			{
 				// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925),
 				// tai kun Psfc ei (enää) löydy (eli ei mp-dataa, 6-10vrk)?
 				// stratus 925hPa:ssa?
 
-				if ((P > 925) AND (RH925 > rhLim))
+				if ((P > 925)AND(RH925 > rhLim))
 				{
 					PreForm = kDrizzle;
 				}
@@ -355,7 +360,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 				// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
 				// stratus 850hPa:ssa?
 
-				if ((P <= 925) AND (P > 850) AND (RH850 > rhLim))
+				if ((P <= 925)AND(P > 850) AND(RH850 > rhLim))
 				{
 					PreForm = kDrizzle;
 				}
@@ -369,8 +374,8 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		}
 
 		myTargetInfo->Value(PreForm);
-
 	}
 
-	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
+	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                       "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

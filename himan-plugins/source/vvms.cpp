@@ -7,21 +7,21 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "vvms.h"
-#include "logger_factory.h"
-#include "level.h"
 #include "forecast_time.h"
+#include "level.h"
+#include "logger_factory.h"
+#include "vvms.h"
 
 using namespace std;
 using namespace himan::plugin;
 
-#include "vvms.cuh"
 #include "cuda_helper.h"
+#include "vvms.cuh"
 
 // Required source parameters
 
 const himan::param TParam("T-K");
-const himan::params PParam = { himan::param("P-PA"), himan::param("P-HPA") };
+const himan::params PParam = {himan::param("P-PA"), himan::param("P-HPA")};
 const himan::param VVParam("VV-PAS");
 
 vvms::vvms() : itsScale(1)
@@ -40,20 +40,18 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Set target parameter to vertical velocity
 	 */
 
-	param theRequestedParam ("VV-MS", 143);
+	param theRequestedParam("VV-MS", 143);
 
 	if (itsConfiguration->Exists("millimeters") && itsConfiguration->GetValue("millimeters") == "true")
 	{
 		theRequestedParam = param("VV-MMS", 43, 0, 2, 9);
 		itsScale = 1000;
 	}
-	
+
 	SetParams({theRequestedParam});
 
 	Start();
-
 }
-
 
 /*
  * Calculate()
@@ -63,13 +61,15 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("vvmsThread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	double PScale = 1;
 	double TBase = 0;
@@ -95,9 +95,9 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (!VVInfo || !TInfo || (!isPressureLevel && !PInfo))
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
-
 	}
 
 	if (PInfo && (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA"))
@@ -105,7 +105,8 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		PScale = 100;
 	}
 
-	assert(TInfo->Grid()->AB() == VVInfo->Grid()->AB() && (isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB()));
+	assert(TInfo->Grid()->AB() == VVInfo->Grid()->AB() &&
+	       (isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB()));
 
 	SetAB(myTargetInfo, TInfo);
 
@@ -140,7 +141,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		double P = 100 * myTargetInfo->Level().Value();
 
-		LOCKSTEP(myTargetInfo,TInfo,VVInfo)
+		LOCKSTEP(myTargetInfo, TInfo, VVInfo)
 		{
 			double T = TInfo->Value();
 			double VV = VVInfo->Value();
@@ -158,18 +159,21 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			double w = itsScale * (287 * -VV * (T + TBase) / (himan::constants::kG * P * PScale));
 
-			assert(isfinite(w)); // Some erroneous values of T, P or VV produce infinite values
+			assert(isfinite(w));  // Some erroneous values of T, P or VV produce infinite values
 
 			myTargetInfo->Value(w);
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 #ifdef HAVE_CUDA
 
-unique_ptr<vvms_cuda::options> vvms::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> VVInfo, shared_ptr<info> PInfo)
+unique_ptr<vvms_cuda::options> vvms::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo,
+                                                 shared_ptr<info> VVInfo, shared_ptr<info> PInfo)
 {
 	unique_ptr<vvms_cuda::options> opts(new vvms_cuda::options);
 
@@ -177,7 +181,7 @@ unique_ptr<vvms_cuda::options> vvms::CudaPrepare(shared_ptr<info> myTargetInfo, 
 
 	opts->t = TInfo->ToSimple();
 	opts->vv = VVInfo->ToSimple();
-	opts->vv_ms= myTargetInfo->ToSimple();
+	opts->vv_ms = myTargetInfo->ToSimple();
 
 	if (!opts->is_constant_pressure)
 	{
@@ -190,7 +194,7 @@ unique_ptr<vvms_cuda::options> vvms::CudaPrepare(shared_ptr<info> myTargetInfo, 
 	}
 	else
 	{
-		opts->p_const = myTargetInfo->Level().Value() * 100; // Pa
+		opts->p_const = myTargetInfo->Level().Value() * 100;  // Pa
 	}
 
 	if (TInfo->Param().Unit() == kC)

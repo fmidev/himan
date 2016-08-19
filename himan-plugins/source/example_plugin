@@ -10,9 +10,9 @@
 #include <boost/lexical_cast.hpp>
 
 #include "example_header.h"
-#include "logger_factory.h"
-#include "level.h"
 #include "forecast_time.h"
+#include "level.h"
+#include "logger_factory.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -44,7 +44,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 	// specified
 
 	theRequestedParam.Unit(kSOME_UNIT);
-	
+
 	SetParams({theRequestedParam});
 
 	Start();
@@ -58,7 +58,6 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
-
 	/*
 	 * Required source parameters
 	 *
@@ -68,7 +67,7 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	const param exampleParam("quantity-unit_name");
 
-	// ----	
+	// ----
 
 	// Current time and level as given to this thread
 
@@ -77,21 +76,22 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("example_pluginThread #" + boost::lexical_cast<string> (threadIndex)));
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                        static_cast<string>(forecastLevel));
 
 	info_t exampleInfo = Fetch(forecastTime, forecastLevel, exampleParam);
 
 	if (!exampleInfo)
 	{
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                       static_cast<string>(forecastLevel));
 
 		return;
-
 	}
 
 	// If calculating for hybrid levels, A/B vertical coordinates must be set
 	// (copied from source)
-	
+
 	SetAB(myTargetInfo, exampleInfo);
 
 	string deviceType = "CPU";
@@ -101,7 +101,6 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	LOCKSTEP(myTargetInfo, exampleInfo)
 	{
-
 		double x = exampleInfo->Value();
 
 		if (x == kFloatMissing)
@@ -114,9 +113,9 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double y = a * example + b;
 
 		myTargetInfo->Value(y);
-
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data()->MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data()->Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data()->MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data()->Size()));
 }

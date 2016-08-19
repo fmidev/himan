@@ -16,95 +16,83 @@ class NFmiLevel;
 
 namespace himan
 {
-
 class logger;
 class level
 {
+   public:
+	level();
+	explicit level(const NFmiLevel& theLevel);
+	level(HPLevelType theType, double theValue, const std::string& theName = "");
+	level(HPLevelType theType, double theValue, int theIndex, const std::string& theName = "");
 
-public:
+	~level() = default;
+	level(const level& other);
+	level& operator=(const level& other);
+	operator std::string() const;
 
-    level();
-    explicit level(const NFmiLevel& theLevel);
-    level(HPLevelType theType, double theValue, const std::string& theName = "");
-    level(HPLevelType theType, double theValue, int theIndex, const std::string& theName = "");
+	std::string ClassName() const { return "himan::level"; }
+	bool operator==(const level& other) const;
+	bool operator!=(const level& other) const;
 
-    ~level() = default;
-    level(const level& other);
-    level& operator=(const level& other);
-	operator std::string () const;
+	/**
+	 * @brief Set level values (for pressure levels)
+	 */
 
-    std::string ClassName() const
-    {
-        return "himan::level";
-    }
+	void Value(double theLevelValue);
 
-    bool operator==(const level& other) const;
-    bool operator!=(const level& other) const;
+	/**
+	 * @return Level value (for pressure levels)
+	 */
 
-    /**
-     * @brief Set level values (for pressure levels)
-     */
+	double Value() const;
 
-    void Value(double theLevelValue);
+	/**
+	 * @brief Set level index number
+	 */
+	void Index(int theIndex);
 
-    /**
-     * @return Level value (for pressure levels)
-     */
+	/**
+	 * @return Level index number
+	 */
 
-    double Value() const;
-
-    /**
-     * @brief Set level index number
-     */
-    void Index(int theIndex);
-
-    /**
-     * @return Level index number
-     */
-
-    int Index() const;
+	int Index() const;
 
 	/**
 	 * @brief Set Level type
-     * @param theType
-     */
-	
-    void Type(HPLevelType theLevelType);
+	 * @param theType
+	 */
 
-    /**
-     * @return Return level type
-     * @see himan_common.h
-     */
+	void Type(HPLevelType theLevelType);
 
-    HPLevelType Type() const;
+	/**
+	 * @return Return level type
+	 * @see himan_common.h
+	 */
 
-    /**
-     * @brief deprecated
-     */
+	HPLevelType Type() const;
 
-    std::string Name() const;
+	/**
+	 * @brief deprecated
+	 */
 
-    /**
-     * @brief deprecated
-     */
+	std::string Name() const;
 
-    void Name(const std::string& theName);
+	/**
+	 * @brief deprecated
+	 */
 
-    std::ostream& Write(std::ostream& file) const;
+	void Name(const std::string& theName);
 
-private:
-    HPLevelType itsType;
+	std::ostream& Write(std::ostream& file) const;
+
+   private:
+	HPLevelType itsType;
 	double itsValue;
-    int itsIndex;
+	int itsIndex;
 	std::string itsName;
 };
 
-inline
-std::ostream& operator<<(std::ostream& file, const level& ob)
-{
-    return ob.Write(file);
-}
-
-} // namespace himan
+inline std::ostream& operator<<(std::ostream& file, const level& ob) { return ob.Write(file); }
+}  // namespace himan
 
 #endif /* LEVEL_H */

@@ -2,57 +2,36 @@
 
 using namespace himan;
 
-forecast_type::forecast_type(HPForecastType theType)
-	: itsForecastType(theType)
-	, itsForecastTypeValue(kHPMissingValue)
-{}
+forecast_type::forecast_type(HPForecastType theType) : itsForecastType(theType), itsForecastTypeValue(kHPMissingValue)
+{
+}
 
 forecast_type::forecast_type(HPForecastType theType, double theValue)
-	: itsForecastType(theType)
-	, itsForecastTypeValue(theValue)
-{}
-
-HPForecastType forecast_type::Type() const
+    : itsForecastType(theType), itsForecastTypeValue(theValue)
 {
-	return itsForecastType;
 }
 
-void forecast_type::Type(HPForecastType theForecastType)
-{
-	itsForecastType = theForecastType;
-}
-
-double forecast_type::Value() const
-{
-	return itsForecastTypeValue;
-}
-
-void forecast_type::Value(double theValue)
-{
-	itsForecastTypeValue = theValue;
-}
-
+HPForecastType forecast_type::Type() const { return itsForecastType; }
+void forecast_type::Type(HPForecastType theForecastType) { itsForecastType = theForecastType; }
+double forecast_type::Value() const { return itsForecastTypeValue; }
+void forecast_type::Value(double theValue) { itsForecastTypeValue = theValue; }
 std::ostream& forecast_type::Write(std::ostream& file) const
 {
+	file << "<" << ClassName() << ">" << std::endl;
+	file << "__itsForecastType__ " << HPForecastTypeToString.at(itsForecastType) << std::endl;
+	file << "__itsForecastTypeValue__ " << itsForecastTypeValue << std::endl;
 
-    file << "<" << ClassName() << ">" << std::endl;
-    file << "__itsForecastType__ " << HPForecastTypeToString.at(itsForecastType) << std::endl;
-    file << "__itsForecastTypeValue__ " << itsForecastTypeValue << std::endl;
-
-    return file;
+	return file;
 }
 
 bool forecast_type::operator==(const forecast_type& other) const
 {
-    if (this == &other)
-    {
-        return true;
-    }
+	if (this == &other)
+	{
+		return true;
+	}
 
-    return (itsForecastType == other.itsForecastType && itsForecastTypeValue == other.itsForecastTypeValue);
+	return (itsForecastType == other.itsForecastType && itsForecastTypeValue == other.itsForecastTypeValue);
 }
 
-bool forecast_type::operator!=(const forecast_type& other) const
-{
-    return !(*this == other);
-}
+bool forecast_type::operator!=(const forecast_type& other) const { return !(*this == other); }

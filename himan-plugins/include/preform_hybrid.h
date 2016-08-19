@@ -30,62 +30,44 @@ namespace himan
 {
 namespace plugin
 {
-
 class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	preform_hybrid();
 
 	inline virtual ~preform_hybrid() {}
-
 	preform_hybrid(const preform_hybrid& other) = delete;
 	preform_hybrid& operator=(const preform_hybrid& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const
-	{
-		return "himan::plugin::preform_hybrid";
-	}
-
-	virtual HPPluginClass PluginClass() const
-	{
-		return kCompiled;
-	}
-
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
-
-protected:
+	virtual std::string ClassName() const { return "himan::plugin::preform_hybrid"; }
+	virtual HPPluginClass PluginClass() const { return kCompiled; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+   protected:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
-	
-private:
+
+   private:
 	/**
 	 * @brief Calculate properties of a stratus cloud
 	 * @return info containing multiple parameters describing stratus
 	 */
 
-	void Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, std::shared_ptr<info>& result, const grid* baseGrid);
+	void Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
+	             std::shared_ptr<info>& result, const grid* baseGrid);
 
 	/**
 	 * @brief Calculate freezing area information (number of zero level etc)
 	 */
 
-	void FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, std::shared_ptr<info>& result, const grid* baseGrid);
-
+	void FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
+	                  std::shared_ptr<info>& result, const grid* baseGrid);
 };
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-	return std::shared_ptr<himan_plugin>(new preform_hybrid());
-}
-
-} // namespace plugin
-} // namespace himan
-
+extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<himan_plugin>(new preform_hybrid()); }
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* PREFORM_HYBRID_H */

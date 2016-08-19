@@ -32,32 +32,18 @@ namespace himan
 {
 namespace plugin
 {
-
 class querydata : public io_plugin
 {
-public:
+   public:
 	querydata();
 
 	virtual ~querydata() {}
-
 	querydata(const querydata& other) = delete;
 	querydata& operator=(const querydata& other) = delete;
 
-	virtual std::string ClassName() const
-	{
-		return "himan::plugin::querydata";
-	}
-
-	virtual HPPluginClass PluginClass() const
-	{
-		return kAuxiliary;
-	}
-
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
-
+	virtual std::string ClassName() const { return "himan::plugin::querydata"; }
+	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
 	/**
 	 * @brief Return all data from a querydata file.
 	 *
@@ -78,7 +64,7 @@ public:
 	/**
 	 * @brief Write info contents to a querydata file
 	 *
-	 * @param theInfo 
+	 * @param theInfo
 	 * @param outputFile Name of output file
 	 * @param fileWriteOption Determine whether to write whole contents or just the active part
 	 * @return True if writing succeeds
@@ -93,12 +79,12 @@ public:
 	 * conversion: sometimes the data needs to swapped to a form understood
 	 * by newbase. Function will eventually swap it back but if some other
 	 * thread accessed this data while it's swapped strange thinga will happen.
-	 * 
+	 *
 	 * @param theInfo source data
 	 * @param activeOnly If set only the active part (current iterator positions) are read
 	 * @return shared pointer to querydata instance
 	 */
-	
+
 	std::shared_ptr<NFmiQueryData> CreateQueryData(const info& theInfo, bool activeOnly);
 
 	/**
@@ -106,7 +92,7 @@ public:
 	 * @param theData
 	 * @return shared_ptr to info instance
 	 */
-	
+
 	std::shared_ptr<info> CreateInfo(std::shared_ptr<NFmiQueryData> theData) const;
 
 	NFmiTimeDescriptor CreateTimeDescriptor(info& info, bool activeOnly);
@@ -114,34 +100,28 @@ public:
 	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
 	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
 
-private:
+   private:
 	/**
 	 * @brief Copy data from info to querydata
-	 * 
-     * @param theInfo
-     * @param theQueryData
-     * @return 
-     */
+	 *
+	 * @param theInfo
+	 * @param theQueryData
+	 * @return
+	 */
 	bool CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const;
 
 	NFmiHPlaceDescriptor CreateGrid(info& info) const;
 	NFmiHPlaceDescriptor CreatePoint(info& info) const;
-
-
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-	return std::make_shared<querydata> ();
-}
-
+extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<querydata>(); }
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
-} // namespace plugin
-} // namespace himan
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* QUERYDATA_H */

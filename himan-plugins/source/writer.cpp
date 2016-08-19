@@ -6,34 +6,31 @@
  */
 
 #include "writer.h"
-#include "plugin_factory.h"
 #include "logger_factory.h"
-#include <fstream>
-#include <boost/lexical_cast.hpp>
-#include <boost/filesystem.hpp>
-#include "util.h"
+#include "plugin_factory.h"
 #include "timer_factory.h"
+#include "util.h"
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
+#include <fstream>
 
-#include "grib.h"
-#include "querydata.h"
-#include "neons.h"
-#include "radon.h"
 #include "cache.h"
 #include "csv.h"
+#include "grib.h"
+#include "neons.h"
+#include "querydata.h"
+#include "radon.h"
 
 using namespace himan::plugin;
 
 writer::writer() : itsWriteOptions()
 {
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("writer"));
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("writer"));
 }
 
-bool writer::ToFile(info& theInfo,
-					std::shared_ptr<const plugin_configuration> conf,
-					const std::string& theOutputFile)
+bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, const std::string& theOutputFile)
 {
-
-	std::unique_ptr<himan::timer> t = std::unique_ptr<himan::timer> (timer_factory::Instance()->GetTimer());
+	std::unique_ptr<himan::timer> t = std::unique_ptr<himan::timer>(timer_factory::Instance()->GetTimer());
 
 	if (conf->StatisticsEnabled())
 	{
@@ -45,7 +42,7 @@ bool writer::ToFile(info& theInfo,
 	bool ret = false;
 
 	std::string correctFileName = theOutputFile;
-	
+
 	itsWriteOptions.configuration = conf;
 
 	if (correctFileName.empty())
@@ -62,12 +59,10 @@ bool writer::ToFile(info& theInfo,
 
 	switch (itsWriteOptions.configuration->OutputFileType())
 	{
-
 		case kGRIB:
 		case kGRIB1:
 		case kGRIB2:
 		{
-
 			auto theGribWriter = GET_PLUGIN(grib);
 
 			correctFileName += ".grib";
@@ -87,7 +82,9 @@ bool writer::ToFile(info& theInfo,
 			}
 
 			theGribWriter->WriteOptions(itsWriteOptions);
-			ret = theGribWriter->ToFile(theInfo, correctFileName, (itsWriteOptions.configuration->FileWriteOption() == kSingleFile) ? true : false);
+			ret =
+			    theGribWriter->ToFile(theInfo, correctFileName,
+			                          (itsWriteOptions.configuration->FileWriteOption() == kSingleFile) ? true : false);
 
 			break;
 		}
@@ -98,7 +95,7 @@ bool writer::ToFile(info& theInfo,
 				itsLogger->Error("Reduced gaussian grid cannot be written to querydata");
 				return false;
 			}
-			
+
 			auto theWriter = GET_PLUGIN(querydata);
 			theWriter->WriteOptions(itsWriteOptions);
 
@@ -121,21 +118,21 @@ bool writer::ToFile(info& theInfo,
 			ret = theWriter->ToFile(theInfo, correctFileName);
 			break;
 		}
-			// Must have this or compiler complains
+		// Must have this or compiler complains
 		default:
-			throw std::runtime_error(ClassName() + ": Invalid file type: " + HPFileTypeToString.at(itsWriteOptions.configuration->OutputFileType()));
+			throw std::runtime_error(ClassName() + ": Invalid file type: " +
+			                         HPFileTypeToString.at(itsWriteOptions.configuration->OutputFileType()));
 			break;
-
 	}
 
 	if (ret && itsWriteOptions.configuration->FileWriteOption() == kDatabase)
 	{
 		HPDatabaseType dbtype = conf->DatabaseType();
-		
+
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
 			auto n = GET_PLUGIN(neons);
-			
+
 			ret = n->Save(theInfo, correctFileName);
 
 			if (!ret)
@@ -143,7 +140,7 @@ bool writer::ToFile(info& theInfo,
 				itsLogger->Warning("Saving file information to neons failed");
 			}
 		}
-		
+
 		if (dbtype == kRadon || dbtype == kNeonsAndRadon)
 		{
 			auto r = GET_PLUGIN(radon);
@@ -153,9 +150,9 @@ bool writer::ToFile(info& theInfo,
 			{
 				ret = r->Save(theInfo, correctFileName);
 			}
-			catch(...)
+			catch (...)
 			{
-				itsLogger->Error("Writing to radon failed"); 
+				itsLogger->Error("Writing to radon failed");
 			}
 		}
 	}
@@ -177,12 +174,5 @@ bool writer::ToFile(info& theInfo,
 	return ret;
 }
 
-write_options writer::WriteOptions() const
-{
-	return itsWriteOptions;
-}
-
-void writer::WriteOptions(const write_options& theWriteOptions)
-{
-	itsWriteOptions = theWriteOptions;
-}
+write_options writer::WriteOptions() const { return itsWriteOptions; }
+void writer::WriteOptions(const write_options& theWriteOptions) { itsWriteOptions = theWriteOptions; }

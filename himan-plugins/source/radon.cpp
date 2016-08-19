@@ -8,10 +8,10 @@
 #include "radon.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
-#include <thread>
-#include <sstream>
+#include "unistd.h"  // getuid())
 #include "util.h"
-#include "unistd.h" // getuid())
+#include <sstream>
+#include <thread>
 
 using namespace std;
 using namespace himan::plugin;
@@ -21,14 +21,14 @@ static once_flag oflag;
 
 radon::radon() : itsInit(false), itsRadonDB()
 {
-	itsLogger = unique_ptr<logger> (logger_factory::Instance()->GetLog("radon"));
+	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("radon"));
 
-	call_once(oflag, [&](){ 
+	call_once(oflag, [&]() {
 		PoolMaxWorkers(MAX_WORKERS);
 
 		uid_t uid = getuid();
-	
-		if (uid == 1459) // weto
+
+		if (uid == 1459)  // weto
 		{
 			NFmiRadonDBPool::Instance()->Username("wetodb");
 			NFmiRadonDBPool::Instance()->Password("3loHRgdio");
@@ -36,27 +36,22 @@ radon::radon() : itsInit(false), itsRadonDB()
 	});
 }
 
-void radon::PoolMaxWorkers(int maxWorkers)
-{
-	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
-}
-
+void radon::PoolMaxWorkers(int maxWorkers) { NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers); }
 vector<string> radon::Files(search_options& options)
 {
-
 	Init();
 
 	vector<string> files;
 
 	string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
-	string levelvalue = boost::lexical_cast<string> (options.level.Value());
+	string levelvalue = boost::lexical_cast<string>(options.level.Value());
 
 	string ref_prod = options.prod.Name();
 	// long no_vers = options.prod.TableVersion();
 
 	string level_name = HPLevelTypeToString.at(options.level.Type());
 
-	vector<vector<string> > gridgeoms;
+	vector<vector<string>> gridgeoms;
 	vector<string> sourceGeoms = options.configuration->SourceGeomNames();
 
 	if (sourceGeoms.empty())
@@ -78,22 +73,22 @@ vector<string> radon::Files(search_options& options)
 		// No geometries found, fetcher checks this
 		return files;
 	}
-	
-	string forecastTypeValue = "-1"; // default, deterministic/analysis
+
+	string forecastTypeValue = "-1";  // default, deterministic/analysis
 
 	if (options.ftype.Type() > 2)
 	{
-		forecastTypeValue = boost::lexical_cast<string> (options.ftype.Value());
+		forecastTypeValue = boost::lexical_cast<string>(options.ftype.Value());
 	}
 
-	string forecastTypeId = boost::lexical_cast<string> (options.ftype.Type());
-	
+	string forecastTypeId = boost::lexical_cast<string>(options.ftype.Type());
+
 	if (options.time.Step() == 0 && options.ftype.Type() == 1)
 	{
 		// ECMWF (and maybe others) use forecast type id == 2 for analysis hour
 		forecastTypeId += ",2";
 	}
-	
+
 	for (size_t i = 0; i < gridgeoms.size(); i++)
 	{
 		string tablename = gridgeoms[i][1];
@@ -101,17 +96,36 @@ vector<string> radon::Files(search_options& options)
 
 		string parm_name = options.param.Name();
 
-		string query = "SELECT param_id, level_id, level_value, forecast_period, file_location, file_server "
-				   "FROM "+tablename+"_v "
-				   "WHERE analysis_time = '"+analtime+"' "
-				   "AND param_name = '"+parm_name+"' "
-				   "AND level_name = upper('"+level_name+"') "
-				   "AND level_value = "+levelvalue+" "
-				   "AND forecast_period = '"+util::MakeSQLInterval(options.time)+"' "
-				   "AND geometry_id = "+geomid+" "
-				   "AND forecast_type_id IN ("+forecastTypeId+") "
-				   "AND forecast_type_value = "+forecastTypeValue+" "
-				   "ORDER BY forecast_period, level_id, level_value";
+		string query =
+		    "SELECT param_id, level_id, level_value, forecast_period, file_location, file_server "
+		    "FROM " +
+		    tablename +
+		    "_v "
+		    "WHERE analysis_time = '" +
+		    analtime +
+		    "' "
+		    "AND param_name = '" +
+		    parm_name +
+		    "' "
+		    "AND level_name = upper('" +
+		    level_name +
+		    "') "
+		    "AND level_value = " +
+		    levelvalue +
+		    " "
+		    "AND forecast_period = '" +
+		    util::MakeSQLInterval(options.time) +
+		    "' "
+		    "AND geometry_id = " +
+		    geomid +
+		    " "
+		    "AND forecast_type_id IN (" +
+		    forecastTypeId +
+		    ") "
+		    "AND forecast_type_value = " +
+		    forecastTypeValue +
+		    " "
+		    "ORDER BY forecast_period, level_id, level_value";
 
 		itsRadonDB->Query(query);
 
@@ -123,22 +137,19 @@ vector<string> radon::Files(search_options& options)
 		}
 
 		itsLogger->Trace("Found data for parameter " + parm_name + " from radon geometry " + gridgeoms[i][3]);
-		
+
 		files.push_back(values[4]);
 
-		break; // discontinue loop on first positive match
-
+		break;  // discontinue loop on first positive match
 	}
 
 	return files;
-
 }
 
 bool radon::Save(const info& resultInfo, const string& theFileName)
 {
-	
 	Init();
-	
+
 	stringstream query;
 
 	if (resultInfo.Grid()->Class() != kRegularGrid)
@@ -160,25 +171,28 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	int gridType = -1;
 
-	switch (resultInfo.Grid()->Type()) {
+	switch (resultInfo.Grid()->Type())
+	{
 		case 1:
-			gridType = 0; // latlon
+			gridType = 0;  // latlon
 			break;
 		case 3:
-			gridType = 10; // rot latlon
+			gridType = 10;  // rot latlon
 			break;
 		case 2:
-			gridType = 5; // polster
+			gridType = 5;  // polster
 			break;
-		default:	
+		default:
 			throw runtime_error("Unsupported projection: " + HPGridTypeToString.at(resultInfo.Grid()->Type()));
 	}
 
-	map<string,string> geominfo;
-	
+	map<string, string> geominfo;
+
 	if (resultInfo.Grid()->Class() == kRegularGrid)
 	{
-		geominfo = itsRadonDB->GetGeometryDefinition(resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(), firstGridPoint.Y(), firstGridPoint.X(), resultInfo.Grid()->Di(), resultInfo.Grid()->Dj(), 1, gridType);
+		geominfo = itsRadonDB->GetGeometryDefinition(resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(),
+		                                             firstGridPoint.Y(), firstGridPoint.X(), resultInfo.Grid()->Di(),
+		                                             resultInfo.Grid()->Dj(), 1, gridType);
 	}
 	else
 	{
@@ -196,12 +210,12 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	query.str("");
 
-	query	<< "SELECT "
-			<< "id, table_name "
-			<< "FROM as_grid "
-			<< "WHERE geometry_id = '" << geom_id << "'"
-			<< " AND analysis_time = '" << resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "'"
-			<< " AND producer_id = " << resultInfo.Producer().Id();
+	query << "SELECT "
+	      << "id, table_name "
+	      << "FROM as_grid "
+	      << "WHERE geometry_id = '" << geom_id << "'"
+	      << " AND analysis_time = '" << resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "'"
+	      << " AND producer_id = " << resultInfo.Producer().Id();
 
 	itsRadonDB->Query(query.str());
 
@@ -219,7 +233,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	char host[255];
 	gethostname(host, 255);
-	
+
 	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name());
 
 	if (paraminfo.empty())
@@ -239,40 +253,35 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	/*
 	 * We have our own error logging for unique key violations
 	 */
-	
+
 	// itsRadonDB->Verbose(false);
-	int forecastTypeValue = -1; // default, deterministic/analysis
+	int forecastTypeValue = -1;  // default, deterministic/analysis
 
 	if (resultInfo.ForecastType().Type() > 2)
 	{
-		forecastTypeValue = static_cast<int> (resultInfo.ForecastType().Value());
+		forecastTypeValue = static_cast<int>(resultInfo.ForecastType().Value());
 	}
 
 	string analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
-			
-	query  << "INSERT INTO data." << table_name
-		   << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, forecast_period, forecast_type_id, forecast_type_value, file_location, file_server) VALUES ("
-		   << resultInfo.Producer().Id() << ", "
-		   << "'" << analysisTime << "', "
-		   << geom_id << ", "
-		   << paraminfo["id"] << ", "
-		   << levelinfo["id"] << ", "
-		   << resultInfo.Level().Value() << ", "
-		   << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
-		   << static_cast<int> (resultInfo.ForecastType().Type()) << ", "
-		   << forecastTypeValue << ","
-		   << "'" << theFileName << "', "
-		   << "'" << host << "')"
-		   ;
-	
+
+	query << "INSERT INTO data." << table_name
+	      << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, forecast_period, "
+	         "forecast_type_id, forecast_type_value, file_location, file_server) VALUES ("
+	      << resultInfo.Producer().Id() << ", "
+	      << "'" << analysisTime << "', " << geom_id << ", " << paraminfo["id"] << ", " << levelinfo["id"] << ", "
+	      << resultInfo.Level().Value() << ", "
+	      << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
+	      << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
+	      << "'" << theFileName << "', "
+	      << "'" << host << "')";
+
 	try
 	{
 		itsRadonDB->Execute(query.str());
 		query.str("");
-		
+
 		query << "UPDATE as_grid SET record_count = record_count+1 WHERE producer_id = " << resultInfo.Producer().Id()
-				<< " AND geometry_id = " << geom_id
-				<< " AND analysis_time = '" << analysisTime << "'";
+		      << " AND geometry_id = " << geom_id << " AND analysis_time = '" << analysisTime << "'";
 
 		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
@@ -283,17 +292,18 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 		query.str("");
 		query << "UPDATE data." << table_name << " SET "
-				<< "file_location = '" << theFileName << "', "
-				<< "file_server = '" << host << "' WHERE "
-				<< "producer_id = " << resultInfo.Producer().Id() << " AND "
-				<< "analysis_time = '" << analysisTime << "' AND "
-				<< "geometry_id = " << geom_id << " AND "
-				<< "param_id = " << paraminfo["id"] << " AND "
-				<< "level_id = " << levelinfo["id"] << " AND "
-				<< "level_value = " << resultInfo.Level().Value() << " AND "
-				<< "forecast_period = " << "'" << util::MakeSQLInterval(resultInfo.Time()) << "' AND "
-				<< "forecast_type_id = " << static_cast<int> (resultInfo.ForecastType().Type()) << " AND "
-				<< "forecast_type_value = " << forecastTypeValue;
+		      << "file_location = '" << theFileName << "', "
+		      << "file_server = '" << host << "' WHERE "
+		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
+		      << "analysis_time = '" << analysisTime << "' AND "
+		      << "geometry_id = " << geom_id << " AND "
+		      << "param_id = " << paraminfo["id"] << " AND "
+		      << "level_id = " << levelinfo["id"] << " AND "
+		      << "level_value = " << resultInfo.Level().Value() << " AND "
+		      << "forecast_period = "
+		      << "'" << util::MakeSQLInterval(resultInfo.Time()) << "' AND "
+		      << "forecast_type_id = " << static_cast<int>(resultInfo.ForecastType().Type()) << " AND "
+		      << "forecast_type_value = " << forecastTypeValue;
 
 		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
@@ -304,18 +314,22 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	return true;
 }
 
-map<string,string> radon::Grib1ParameterName(long producer, long fmiParameterId, long codeTableVersion, long timeRangeIndicator, long levelId, double level_value)
-{	
-	Init();
-	
-	map<string,string> paramName = itsRadonDB->GetParameterFromGrib1(producer, codeTableVersion, fmiParameterId, timeRangeIndicator, levelId, level_value);
-	return paramName; 
-}
-
-map<string,string> radon::Grib2ParameterName(long fmiParameterId, long category, long discipline, long producer, long levelId, double level_value)
+map<string, string> radon::Grib1ParameterName(long producer, long fmiParameterId, long codeTableVersion,
+                                              long timeRangeIndicator, long levelId, double level_value)
 {
 	Init();
-	
-	map<string,string> paramName = itsRadonDB->GetParameterFromGrib2(producer, discipline, category, fmiParameterId, levelId, level_value);
+
+	map<string, string> paramName = itsRadonDB->GetParameterFromGrib1(producer, codeTableVersion, fmiParameterId,
+	                                                                  timeRangeIndicator, levelId, level_value);
+	return paramName;
+}
+
+map<string, string> radon::Grib2ParameterName(long fmiParameterId, long category, long discipline, long producer,
+                                              long levelId, double level_value)
+{
+	Init();
+
+	map<string, string> paramName =
+	    itsRadonDB->GetParameterFromGrib2(producer, discipline, category, fmiParameterId, levelId, level_value);
 	return paramName;
 }

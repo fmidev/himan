@@ -3,7 +3,7 @@
  * Author: Tack
  *
  * Created on May 07, 2014
- * 
+ *
  * List of extern functions compiled by nvcc for plugins (compiled by gcc)
  */
 
@@ -20,7 +20,6 @@ namespace plugin
 {
 namespace transformer_cuda
 {
-
 struct options
 {
 	size_t N;
@@ -32,18 +31,15 @@ struct options
 	info_simple* dest;
 
 	options() : N(0), missing(0), scale(1), base(0), source(0), dest(0) {}
-
 };
 
 void Process(options& opts);
 
 __global__ void Calculate(const double* __restrict__ d_source, double* __restrict__ d_dest, options opts);
 
+}  // namespace transformer_cuda
+}  // namespace plugin
+}  // namespace himan
 
-} // namespace transformer_cuda
-} // namespace plugin
-} // namespace himan
-
-#endif  /* HAVE_CUDA */
-#endif	/* TRANSFORMER_CUDA_H */
-
+#endif /* HAVE_CUDA */
+#endif /* TRANSFORMER_CUDA_H */

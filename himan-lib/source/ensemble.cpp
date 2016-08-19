@@ -9,39 +9,33 @@
 #include "fetcher.h"
 #include "plugin_factory.h"
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace himan
 {
-
 ensemble::ensemble(const param& parameter, size_t ensembleSize)
-	: itsParam(parameter)
-	, itsEnsembleSize(ensembleSize) // ensembleSize includes the control forecast
-	, itsPerturbations(std::vector<forecast_type> (ensembleSize - 1))
-	, itsForecasts(std::vector<info_t> (ensembleSize))
+    : itsParam(parameter),
+      itsEnsembleSize(ensembleSize)  // ensembleSize includes the control forecast
+      ,
+      itsPerturbations(std::vector<forecast_type>(ensembleSize - 1)),
+      itsForecasts(std::vector<info_t>(ensembleSize))
 {
 	int perturbationNumber = 1;
-	for (auto & p : itsPerturbations)
+	for (auto& p : itsPerturbations)
 	{
-		p = forecast_type (kEpsPerturbation, static_cast<double>(perturbationNumber));
+		p = forecast_type(kEpsPerturbation, static_cast<double>(perturbationNumber));
 		perturbationNumber++;
 	}
 }
 
-ensemble::ensemble()
-{
-}
-
-ensemble::~ensemble()
-{
-}
-
+ensemble::ensemble() {}
+ensemble::~ensemble() {}
 ensemble::ensemble(const ensemble& other)
-	: itsParam(other.itsParam)
-	, itsEnsembleSize(other.itsEnsembleSize)
-	, itsPerturbations(other.itsPerturbations)
-	, itsForecasts(other.itsForecasts)
+    : itsParam(other.itsParam),
+      itsEnsembleSize(other.itsEnsembleSize),
+      itsPerturbations(other.itsPerturbations),
+      itsForecasts(other.itsForecasts)
 {
 }
 
@@ -54,8 +48,8 @@ ensemble& ensemble::operator=(const ensemble& other)
 	return *this;
 }
 
-void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
-		const forecast_time& time, const level& forecastLevel)
+void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
+                     const level& forecastLevel)
 {
 	// NOTE should this be stored some where else? Every time you call Fetch(), the instantiation will happen
 	auto f = GET_PLUGIN(fetcher);
@@ -68,7 +62,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config,
 		// Then get the perturbations
 		for (size_t i = 1; i < itsPerturbations.size() + 1; i++)
 		{
-			itsForecasts[i] = f->Fetch(config, time, forecastLevel, itsParam, itsPerturbations[i-1], false);
+			itsForecasts[i] = f->Fetch(config, time, forecastLevel, itsParam, itsPerturbations[i - 1], false);
 		}
 	}
 	catch (HPExceptionType& e)
@@ -76,7 +70,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config,
 		if (e != kFileDataNotFound)
 		{
 			throw std::runtime_error("Ensemble: unable to proceed");
-		} 
+		}
 		else
 		{
 			// NOTE let the plugin decide what to do with missing data
@@ -87,7 +81,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config,
 
 void ensemble::ResetLocation()
 {
-	for (size_t i = 0; i < itsForecasts.size(); i++) 
+	for (size_t i = 0; i < itsForecasts.size(); i++)
 	{
 		assert(itsForecasts[i]);
 
@@ -111,7 +105,7 @@ bool ensemble::NextLocation()
 
 std::vector<double> ensemble::Values() const
 {
-	std::vector<double> ret (itsEnsembleSize);
+	std::vector<double> ret(itsEnsembleSize);
 	size_t i = 0;
 	for (auto& f : itsForecasts)
 	{
@@ -128,4 +122,4 @@ std::vector<double> ensemble::SortedValues() const
 	return v;
 }
 
-} // namespace himan
+}  // namespace himan

@@ -9,16 +9,16 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "util.h"
-#include "numerical_functions.h"
-#include "matrix.h"
-#include "unstagger.h"
-#include "logger_factory.h"
-#include "level.h"
 #include "forecast_time.h"
-#include "plugin_factory.h"
 #include "latitude_longitude_grid.h"
+#include "level.h"
+#include "logger_factory.h"
+#include "matrix.h"
+#include "numerical_functions.h"
+#include "plugin_factory.h"
 #include "stereographic_grid.h"
+#include "unstagger.h"
+#include "util.h"
 
 #include "cache.h"
 #include "fetcher.h"
@@ -35,7 +35,6 @@ unstagger::unstagger()
 
 void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-
 	Init(conf);
 
 	/*
@@ -70,8 +69,8 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("unstagger Thread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("unstagger Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	if (myTargetInfo->Grid()->Class() != kRegularGrid)
 	{
@@ -86,7 +85,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                        static_cast<string>(forecastLevel));
 
 	auto f = GET_PLUGIN(fetcher);
 
@@ -97,8 +97,10 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		f->DoInterpolation(false);
 		f->UseCache(false);
 
-		UInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
-		VInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
+		UInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, UParam, forecastType,
+		                 itsConfiguration->UseCudaForPacking());
+		VInfo = f->Fetch(itsConfiguration, forecastTime, forecastLevel, VParam, forecastType,
+		                 itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
 		if (UInfo->Grid()->IsPackedData())
@@ -115,13 +117,14 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		{
 			throw runtime_error(ClassName() + ": Unable to proceed");
 		}
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                       static_cast<string>(forecastLevel));
 		return;
 	}
 
 	// If calculating for hybrid levels, A/B vertical coordinates must be set
 	// (copied from source)
-	
+
 	myTargetInfo->ParamIndex(0);
 	SetAB(myTargetInfo, UInfo);
 
@@ -130,50 +133,54 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	string deviceType = "CPU";
 	// calculate for U
-	himan::matrix<double> filter_kernel_U(2,1,1,kFloatMissing);
+	himan::matrix<double> filter_kernel_U(2, 1, 1, kFloatMissing);
 	filter_kernel_U.Fill(0.5);
 
-	himan::matrix<double> unstaggered_U = numerical_functions::Filter2D(UInfo->Data(), filter_kernel_U);	
+	himan::matrix<double> unstaggered_U = numerical_functions::Filter2D(UInfo->Data(), filter_kernel_U);
 
 	myTargetInfo->ParamIndex(0);
 	myTargetInfo->Grid()->Data(unstaggered_U);
 
 	// calculate for V
-	himan::matrix<double> filter_kernel_V(1,2,1,kFloatMissing);
+	himan::matrix<double> filter_kernel_V(1, 2, 1, kFloatMissing);
 	filter_kernel_V.Fill(0.5);
 
-	himan::matrix<double> unstaggered_V = numerical_functions::Filter2D(VInfo->Data(), filter_kernel_V);	
+	himan::matrix<double> unstaggered_V = numerical_functions::Filter2D(VInfo->Data(), filter_kernel_V);
 
 	myTargetInfo->ParamIndex(1);
 	myTargetInfo->Grid()->Data(unstaggered_V);
 
 	// Re-calculate grid coordinates
-	
+
 	point u_bl = UInfo->Grid()->BottomLeft(), u_tr = UInfo->Grid()->TopRight();
 	point v_bl = VInfo->Grid()->BottomLeft(), v_tr = VInfo->Grid()->TopRight();
 	double u_di = UInfo->Grid()->Di();
 	double v_dj = VInfo->Grid()->Dj();
-	
+
 	// this is ugly, there has to be a better solution
 	switch (UInfo->Grid()->Type())
 	{
 		case kLatitudeLongitude:
-			dynamic_cast<latitude_longitude_grid*> (UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
-			dynamic_cast<latitude_longitude_grid*> (UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
-			dynamic_cast<latitude_longitude_grid*> (VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
-			dynamic_cast<latitude_longitude_grid*> (VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
+			dynamic_cast<latitude_longitude_grid*>(UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
+			dynamic_cast<latitude_longitude_grid*>(UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
+			dynamic_cast<latitude_longitude_grid*>(VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
+			dynamic_cast<latitude_longitude_grid*>(VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
 			break;
 		case kRotatedLatitudeLongitude:
-			dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
-			dynamic_cast<rotated_latitude_longitude_grid*> (UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
-			dynamic_cast<rotated_latitude_longitude_grid*> (VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
-			dynamic_cast<rotated_latitude_longitude_grid*> (VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
+			dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())
+			    ->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
+			dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())
+			    ->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
+			dynamic_cast<rotated_latitude_longitude_grid*>(VInfo->Grid())
+			    ->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
+			dynamic_cast<rotated_latitude_longitude_grid*>(VInfo->Grid())
+			    ->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
 			break;
 		case kStereographic:
-			dynamic_cast<stereographic_grid*> (UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
-			dynamic_cast<stereographic_grid*> (UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
-			dynamic_cast<stereographic_grid*> (VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
-			dynamic_cast<stereographic_grid*> (VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
+			dynamic_cast<stereographic_grid*>(UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
+			dynamic_cast<stereographic_grid*>(UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
+			dynamic_cast<stereographic_grid*>(VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
+			dynamic_cast<stereographic_grid*>(VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
 			break;
 		default:
 			throw runtime_error("Unsupported grid type: " + HPGridTypeToString.at(UInfo->Grid()->Type()));
@@ -184,9 +191,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	c->Insert(*UInfo);
 	c->Insert(*VInfo);
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + 
-		boost::lexical_cast<string> (UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) +
-		"/" + boost::lexical_cast<string> (UInfo->Data().Size() + VInfo->Data().Size()));
-
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) +
+	                       "/" + boost::lexical_cast<string>(UInfo->Data().Size() + VInfo->Data().Size()));
 }

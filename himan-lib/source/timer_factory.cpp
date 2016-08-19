@@ -13,15 +13,12 @@ std::unique_ptr<timer_factory> timer_factory::itsInstance;
 
 timer_factory* timer_factory::Instance()
 {
-    if (!itsInstance)
-    {
-        itsInstance = std::unique_ptr<timer_factory> (new timer_factory());
-    }
+	if (!itsInstance)
+	{
+		itsInstance = std::unique_ptr<timer_factory>(new timer_factory());
+	}
 
-    return itsInstance.get();
+	return itsInstance.get();
 }
 
-timer* timer_factory::GetTimer()
-{
-    return new timer();
-}
+timer* timer_factory::GetTimer() { return new timer(); }

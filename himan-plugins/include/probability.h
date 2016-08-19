@@ -18,7 +18,6 @@ namespace himan
 {
 namespace plugin
 {
-
 /// @brief describes how output parameters are calculated from input parameters
 struct param_configuration
 {
@@ -36,7 +35,7 @@ struct param_configuration
 
 class probability : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	probability();
 
 	virtual ~probability();
@@ -49,22 +48,10 @@ public:
 	virtual void WriteToFile(const info& targetInfo, const size_t targetInfoIndex,
 	                         write_options opts = write_options());
 
-	virtual std::string ClassName() const
-	{
-		return "himan::plugin::probability";
-	}
-
-	virtual HPPluginClass PluginClass() const
-	{
-		return kCompiled;
-	}
-
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
-
-private:
+	virtual std::string ClassName() const { return "himan::plugin::probability"; }
+	virtual HPPluginClass PluginClass() const { return kCompiled; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+   private:
 	virtual void Calculate(uint16_t threadIndex, const param_configuration& pc);
 
 	int itsEnsembleSize;
@@ -72,11 +59,7 @@ private:
 	std::vector<param_configuration> itsParamConfigurations;
 };
 
-extern "C" std::shared_ptr<himan_plugin> create() 
-{ 
-	return std::make_shared<probability>();
-}
-
+extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<probability>(); }
 }  // plugin
 }  // himan
 

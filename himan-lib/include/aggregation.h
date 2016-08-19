@@ -14,25 +14,19 @@
 
 namespace himan
 {
-
 class aggregation
 {
-public:
+   public:
 	aggregation();
 	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theResolutionValue);
 	~aggregation() {}
-
 	aggregation(const aggregation& other);
 	aggregation& operator=(const aggregation& other);
 
 	bool operator==(const aggregation& other) const;
 	bool operator!=(const aggregation& other) const;
 
-	std::string ClassName() const
-	{
-		return "himan::aggregation";
-	}
-
+	std::string ClassName() const { return "himan::aggregation"; }
 	HPAggregationType Type() const;
 	void Type(HPAggregationType theType);
 
@@ -44,20 +38,13 @@ public:
 
 	std::ostream& Write(std::ostream& file) const;
 
-private:
-
+   private:
 	HPAggregationType itsType;
 	HPTimeResolution itsTimeResolution;
 	int itsTimeResolutionValue;
 };
 
-inline
-std::ostream& operator<<(std::ostream& file, const aggregation& ob)
-{
-    return ob.Write(file);
-}
+inline std::ostream& operator<<(std::ostream& file, const aggregation& ob) { return ob.Write(file); }
+}  // namespace himan
 
-} // namespace himan
-
-#endif	/* AGGREGATION_H */
-
+#endif /* AGGREGATION_H */

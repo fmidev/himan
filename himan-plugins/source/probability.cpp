@@ -1,14 +1,14 @@
 // vim: set ai shiftwidth=4 softtabstop=4 tabstop=4
 #include "probability.h"
 
-#include <iostream>
 #include <algorithm>
 #include <exception>
+#include <iostream>
 
 #include <math.h>
 
-#include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/thread.hpp>
 
 #include "logger_factory.h"
 #include "plugin_factory.h"
@@ -16,21 +16,19 @@
 #include "fetcher.h"
 #include "writer.h"
 
-#include "util.h"
 #include "ensemble.h"
+#include "util.h"
 
 namespace himan
 {
 namespace plugin
 {
-
 static std::mutex singleFileWriteMutex;
 
 static const std::string kClassName = "himan::plugin::probability";
 
 /// @brief Used for calculating wind vector magnitude
 static inline double Magnitude(double u, double v) { return sqrt(u * u + v * v); }
-
 probability::probability()
 {
 	itsClearTextFormula = "???";
@@ -42,12 +40,11 @@ probability::probability()
 }
 
 probability::~probability() {}
-
-/// @brief Gnarrrly configuration reading 
+/// @brief Gnarrrly configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
 static param GetConfigurationParameter(const std::string& name, const std::shared_ptr<const plugin_configuration> conf,
-                                param_configuration* outParamConfig)
+                                       param_configuration* outParamConfig)
 {
 	long univId = 0;
 
@@ -198,7 +195,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	boost::thread_group g;
 	auto paramConfigurations = itsParamConfigurations;
 
-	// I only get 3 threads even if I specify -j [6,12]? 
+	// I only get 3 threads even if I specify -j [6,12]?
 	// itsThreadCount = 6;
 
 	while (!paramConfigurations.empty())
@@ -306,7 +303,6 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 			                normalized, ens1);
 		}
 
-
 		if (itsConfiguration->StatisticsEnabled())
 		{
 			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo.Data().MissingCount());
@@ -317,7 +313,9 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		WriteToFile(myTargetInfo, pc.targetInfoIndex);
 
 	} while (myTargetInfo.NextTime());
-	threadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<std::string> (myTargetInfo.Data().MissingCount()) + "/" + boost::lexical_cast<std::string> (myTargetInfo.Data().Size()));
+	threadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                     boost::lexical_cast<std::string>(myTargetInfo.Data().MissingCount()) + "/" +
+	                     boost::lexical_cast<std::string>(myTargetInfo.Data().Size()));
 }
 
 // Usually himan writes all the parameters out on a call to WriteToFile, but probability calculates

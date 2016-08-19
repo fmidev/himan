@@ -17,47 +17,30 @@ namespace himan
 {
 namespace plugin
 {
-
 class fractile : public compiled_plugin, private compiled_plugin_base
 {
-public:
-    fractile();
-    
-    virtual ~fractile();
-    
-    fractile(const fractile& other) = delete;
-    fractile& operator=(const fractile& other) = delete;
+   public:
+	fractile();
 
-    virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual ~fractile();
 
-    virtual std::string ClassName() const
-    {
-        return "himan::plugin::fractile";
-    }
+	fractile(const fractile& other) = delete;
+	fractile& operator=(const fractile& other) = delete;
 
-    virtual HPPluginClass PluginClass() const
-    {
-        return kCompiled;
-    }
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
-    
-private:
-    virtual void Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex);
-    std::string itsParamName;
-    int itsEnsembleSize;
+	virtual std::string ClassName() const { return "himan::plugin::fractile"; }
+	virtual HPPluginClass PluginClass() const { return kCompiled; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+   private:
+	virtual void Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex);
+	std::string itsParamName;
+	int itsEnsembleSize;
 };
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-    return std::make_shared<fractile>();
-}
-
-} // plugin
-} // himan
+extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<fractile>(); }
+}  // plugin
+}  // himan
 
 // FRACTILE_PLUGIN_H
 #endif

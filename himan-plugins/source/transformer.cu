@@ -7,7 +7,6 @@
 
 __global__ void himan::plugin::transformer_cuda::Calculate(cdarr_t d_source, darr_t d_dest, options opts)
 {
-
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
@@ -16,14 +15,13 @@ __global__ void himan::plugin::transformer_cuda::Calculate(cdarr_t d_source, dar
 
 		if (d_source[idx] != himan::kFloatMissing)
 		{
-			d_dest[idx] = __fma_rn (d_source[idx], opts.scale, opts.base);
+			d_dest[idx] = __fma_rn(d_source[idx], opts.scale, opts.base);
 		}
 	}
 }
 
 void himan::plugin::transformer_cuda::Process(options& opts)
 {
-
 	cudaStream_t stream;
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -32,12 +30,12 @@ void himan::plugin::transformer_cuda::Process(options& opts)
 
 	// Allocate device arrays
 
-	double* d_source = 0, *d_dest = 0;
+	double *d_source = 0, *d_dest = 0;
 
 	// Allocate memory on device
 
-	CUDA_CHECK(cudaMalloc((void **) &d_source, memsize));
-	CUDA_CHECK(cudaMalloc((void **) &d_dest, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_source, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_dest, memsize));
 
 	// Copy data to device
 
@@ -47,11 +45,11 @@ void himan::plugin::transformer_cuda::Process(options& opts)
 	// dims
 
 	const int blockSize = 512;
-	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
+	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	Calculate <<< gridSize, blockSize, 0, stream >>> (d_source, d_dest, opts);
+	Calculate<<<gridSize, blockSize, 0, stream>>>(d_source, d_dest, opts);
 
 	// block until the stream has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -69,6 +67,5 @@ void himan::plugin::transformer_cuda::Process(options& opts)
 	CUDA_CHECK(cudaFree(d_source));
 	CUDA_CHECK(cudaFree(d_dest));
 
-    cudaStreamDestroy(stream);
-
+	cudaStreamDestroy(stream);
 }

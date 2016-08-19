@@ -2,19 +2,19 @@
 #include <iostream>
 #include <string>
 
-#include "windvector.cuh"
 #include "cuda_plugin_helper.h"
+#include "windvector.cuh"
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 /*
  * Calculate results. At this point it as assumed that U and V are in correct form.
  */
 
-__global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir, darr_t d_vector, options opts)
+__global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir,
+                                                          darr_t d_vector, options opts)
 {
-
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.N)
@@ -26,18 +26,16 @@ __global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d
 
 		if (U != kFloatMissing && V != kFloatMissing)
 		{
-
-			double speed = sqrt(U*U + V*V);
+			double speed = sqrt(U * U + V * V);
 
 			d_speed[idx] = speed;
 
-			double dir = 0;	// Direction is double although we round the result so that it *could* be int as well.
-								// This is because if we use int the windvector calculation will have a small bias due
-								// to int decimal value truncation.
+			double dir = 0;  // Direction is double although we round the result so that it *could* be int as well.
+			                 // This is because if we use int the windvector calculation will have a small bias due
+			                 // to int decimal value truncation.
 
 			if (opts.target_type != kGust)
 			{
-
 				int offset = 180;
 
 				if (opts.target_type == kSea || opts.target_type == kIce)
@@ -47,13 +45,13 @@ __global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d
 
 				if (speed > 0)
 				{
-					dir = himan::constants::kRad * atan2(U,V) + offset;
+					dir = himan::constants::kRad * atan2(U, V) + offset;
 
 					// modulo operator is supposedly slow on cuda ?
 
 					/*
 					 * quote:
-					 * 
+					 *
 					 * Integer division and modulo operation are costly: tens of instructions on devices of
 					 * compute capability 1.x, below 20 instructions on devices of compute capability 2.x and
 					 * higher.
@@ -64,15 +62,13 @@ __global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d
 					{
 						dir -= 360;
 					}
-					
+
 					// force it to be the positive remainder, so that 0 <= dir < 360
 
 					while (dir < 0)
 					{
 						dir += 360;
 					}
-
-
 				}
 
 				d_dir[idx] = round(dir);
@@ -80,7 +76,7 @@ __global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d
 
 			if (opts.vector_calculation)
 			{
-				d_vector[idx] = round(dir/10) + 100 * round(speed);
+				d_vector[idx] = round(dir / 10) + 100 * round(speed);
 			}
 		}
 	}
@@ -95,21 +91,20 @@ __global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d
  *
  */
 
-__global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u, double* __restrict__ d_v, info_simple opts)
+__global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u, double* __restrict__ d_v,
+                                                       info_simple opts)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < opts.size_x * opts.size_y)
 	{
-
 		double U = d_u[idx];
 		double V = d_v[idx];
 
 		if (U != himan::kFloatMissing && V != himan::kFloatMissing)
 		{
-
-			int i = fmod(static_cast<double> (idx), static_cast<double> (opts.size_x)); //idx - j * opts.size_x;
-			int j = floor(static_cast<double> (idx / opts.size_x));
+			int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));  // idx - j * opts.size_x;
+			int j = floor(static_cast<double>(idx / opts.size_x));
 
 			double lon = opts.first_lon + i * opts.di;
 
@@ -129,8 +124,8 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u,
 
 			double SinXRot, CosXRot, SinYRot, CosYRot;
 
-			sincos(lon*himan::constants::kDeg, &SinXRot, &CosXRot);
-			sincos(lat*himan::constants::kDeg, &SinYRot, &CosYRot);
+			sincos(lon * himan::constants::kDeg, &SinXRot, &CosXRot);
+			sincos(lat * himan::constants::kDeg, &SinYRot, &CosYRot);
 
 			double SinYReg = CosYPole * SinYRot + SinYPole * CosYRot * CosXRot;
 
@@ -138,7 +133,7 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u,
 
 			double YReg = asin(SinYReg) * himan::constants::kRad;
 
-			double CosYReg = cos(YReg*himan::constants::kDeg);
+			double CosYReg = cos(YReg * himan::constants::kDeg);
 
 			double CosXReg = (CosYPole * CosYRot * CosXRot - SinYPole * SinYRot) / CosYReg;
 
@@ -163,7 +158,8 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u,
 			sincos(zxmxc, &sinxmxc, &cosxmxc);
 
 			double PA = cosxmxc * CosXRot + CosYPole * sinxmxc * SinXRot;
-			double PB = CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
+			double PB =
+			    CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
 			double PC = (-SinYPole) * SinXRot / CosYReg;
 			double PD = (CosYPole * CosYRot - SinYPole * CosXRot * SinYRot) / CosYReg;
 
@@ -178,7 +174,6 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u,
 
 void himan::plugin::windvector_cuda::Process(options& opts)
 {
-
 	cudaStream_t stream;
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -190,25 +185,25 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	double* d_speed = 0;
 	double* d_dir = 0;
 	double* d_vector = 0;
-	
+
 	// Allocate memory on device
 
-	size_t memsize = opts.N*sizeof(double);
+	size_t memsize = opts.N * sizeof(double);
 
-	CUDA_CHECK(cudaMalloc((void **) &d_u, memsize));
-	CUDA_CHECK(cudaMalloc((void **) &d_v, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
 
-	CUDA_CHECK(cudaMalloc((void **) &d_speed, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_speed, memsize));
 
 	if (opts.target_type != kGust)
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_dir, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_dir, memsize));
 		PrepareInfo(opts.dir);
 	}
 
 	if (opts.vector_calculation)
 	{
-		CUDA_CHECK(cudaMalloc((void **) &d_vector, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_vector, memsize));
 		PrepareInfo(opts.vector);
 	}
 
@@ -217,11 +212,11 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	PrepareInfo(opts.u, d_u, stream);
 	PrepareInfo(opts.v, d_v, stream);
 	PrepareInfo(opts.speed);
-	
+
 	// dims
 
 	const int blockSize = 256;
-	const int gridSize = opts.N/blockSize + (opts.N%blockSize == 0?0:1);
+	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
 
 	if (opts.u->south_pole_lat > 0)
 	{
@@ -238,10 +233,10 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 
 	if (opts.target_type != kGust && opts.need_grid_rotation)
 	{
-		Rotate <<< gridSize, blockSize, 0, stream >>> (d_u, d_v, *opts.u);
+		Rotate<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, *opts.u);
 	}
 
-	Calculate <<< gridSize, blockSize, 0, stream >>> (d_u, d_v, d_speed, d_dir, d_vector, opts);
+	Calculate<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_speed, d_dir, d_vector, opts);
 
 	// block until the stream has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -271,7 +266,7 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	CUDA_CHECK(cudaFree(d_u));
 	CUDA_CHECK(cudaFree(d_v));
 	CUDA_CHECK(cudaFree(d_speed));
-	
+
 	if (d_dir)
 	{
 		CUDA_CHECK(cudaFree(d_dir));

@@ -1,4 +1,4 @@
-/** 
+/**
  * @file   cuda_plugin_helper.h
  * @author partio
  *
@@ -18,26 +18,23 @@ namespace himan
 {
 #ifdef __NVCC__
 
-inline
-void PrepareInfo(info_simple* source)
+inline void PrepareInfo(info_simple* source)
 {
 	size_t memsize = source->size_x * source->size_y * sizeof(double);
 
 	assert(source->values);
 
-	CUDA_CHECK(cudaHostRegister(reinterpret_cast <void*> (source->values), memsize, 0));
-
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(source->values), memsize, 0));
 }
 
-inline
-void PrepareInfo(info_simple* source, double* devptr, cudaStream_t& stream)
+inline void PrepareInfo(info_simple* source, double* devptr, cudaStream_t& stream)
 {
 	PrepareInfo(source);
 
 	assert(devptr);
-	
+
 	size_t memsize = source->size_x * source->size_y * sizeof(double);
-	
+
 	if (source->packed_values)
 	{
 		// Unpack data and copy it back to host, we need it because its put back to cache
@@ -50,16 +47,11 @@ void PrepareInfo(info_simple* source, double* devptr, cudaStream_t& stream)
 	}
 }
 
-inline
-void ReleaseInfo(info_simple* source)
+inline void ReleaseInfo(info_simple* source) { CUDA_CHECK(cudaHostUnregister(source->values)); }
+inline void ReleaseInfo(info_simple* source, double* devptr, cudaStream_t& stream)
 {
-	CUDA_CHECK(cudaHostUnregister(source->values));
-}
-
-inline
-void ReleaseInfo(info_simple* source, double *devptr, cudaStream_t& stream)
-{
-	CUDA_CHECK(cudaMemcpyAsync(source->values, devptr, source->size_x * source->size_y * sizeof(double), cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(source->values, devptr, source->size_x * source->size_y * sizeof(double),
+	                           cudaMemcpyDeviceToHost, stream));
 
 	if (0)
 	{
@@ -73,7 +65,7 @@ void ReleaseInfo(info_simple* source, double *devptr, cudaStream_t& stream)
 				break;
 			}
 		}
-		
+
 		if (pack)
 		{
 			assert(source->packed_values);
@@ -87,10 +79,8 @@ void ReleaseInfo(info_simple* source, double *devptr, cudaStream_t& stream)
 	ReleaseInfo(source);
 }
 
-
-template<typename T>
-__global__
-void Fill(T* devptr, size_t N, T fillValue)
+template <typename T>
+__global__ void Fill(T* devptr, size_t N, T fillValue)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -102,9 +92,8 @@ void Fill(T* devptr, size_t N, T fillValue)
 
 #endif /* __NVCC__ */
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* HAVE_CUDA */
 
 #endif /* CUDA_PLUGIN_HELPER_H */
-

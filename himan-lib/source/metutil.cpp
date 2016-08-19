@@ -52,7 +52,6 @@ void metutil::Lift(cdarr_t P, cdarr_t T, cdarr_t TD, cdarr_t targetP, darr_t res
 	}
 }
 
-
 void metutil::LiftLCL(cdarr_t P, cdarr_t T, cdarr_t PLCL, cdarr_t targetP, darr_t result, size_t N)
 {
 	for (size_t i = 0; i < N; i++)
@@ -71,22 +70,21 @@ void metutil::Tw(cdarr_t thetaE, cdarr_t P, darr_t result, size_t N)
 
 double metutil::WaterProbability_(double T, double RH)
 {
-	return 1 / (1 + exp(22 - 2.7 * (T-constants::kKelvin) - 0.2 * RH));
+	return 1 / (1 + exp(22 - 2.7 * (T - constants::kKelvin) - 0.2 * RH));
 }
 
 double metutil::RelativeTopography_(int level1, int level2, double z1, double z2)
 {
-
 	int coefficient = 1;
 	double topography;
 	double height1, height2;
 
 	if (level1 > level2)
 	{
-	  coefficient = -1;
+		coefficient = -1;
 	}
 
-	height1 = z1 * constants::kIg; // convert to metres z/9.81
+	height1 = z1 * constants::kIg;  // convert to metres z/9.81
 	height2 = z2 * constants::kIg;
 
 	topography = coefficient * (height1 - height2);
@@ -103,16 +101,16 @@ int metutil::LowConvection_(double T0m, double T850)
 	T850 -= constants::kKelvin;
 
 	// Lability during summer (T0m > 8C)
-	if ( T0m >= 8 && T0m - T850 >= 10 )
+	if (T0m >= 8 && T0m - T850 >= 10)
 	{
 		return 2;
 	}
-	
+
 	// Lability during winter (T850 < 0C) Probably above sea
-	else if ( T0m >= 0 && T850 <= 0 && T0m - T850 >= 10 )
+	else if (T0m >= 0 && T850 <= 0 && T0m - T850 >= 10)
 	{
 		return 1;
 	}
-	
+
 	return 0;
 }

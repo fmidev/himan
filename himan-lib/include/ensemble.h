@@ -8,22 +8,21 @@
 #ifndef ENSEMBLE_H
 #define ENSEMBLE_H
 
-#include "himan_common.h"
-#include "param.h"
-#include "level.h"
 #include "forecast_time.h"
+#include "himan_common.h"
+#include "level.h"
+#include "param.h"
 #include "plugin_configuration.h"
 
 namespace himan
 {
-
 // ensemble is a thin layer on top of the usual himan data utilities.
 // It is used to make working with ensemble forecasts a bit nicer and
 // feel more like working with deterministic forecasts
 
 class ensemble
 {
-public:
+   public:
 	ensemble(const param& parameter, size_t ensembleSize);
 
 	ensemble();
@@ -35,7 +34,8 @@ public:
 	ensemble& operator=(const ensemble& other);
 
 	/// @brief Fetch the specified forecasts for the ensemble
-	void Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time, const level& forecastLevel);
+	void Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
+	           const level& forecastLevel);
 
 	/// @brief Reset the location of all the ensembles
 	void ResetLocation();
@@ -59,12 +59,12 @@ public:
 
 	param Param() const;
 
-private:
+   private:
 	/// @brief The parameter of the ensemble
 	param itsParam;
 
 	/// @brief The number of forecasts in this ensemble
-    size_t itsEnsembleSize;
+	size_t itsEnsembleSize;
 
 	/// @brief Initialized perturbations forecast_types used by Fetch()
 	std::vector<forecast_type> itsPerturbations;
@@ -73,27 +73,11 @@ private:
 	std::vector<info_t> itsForecasts;
 };
 
-inline size_t ensemble::Size() const
-{
-	return itsEnsembleSize;
-}
-
-inline double ensemble::Value(size_t forecastIndex) const
-{
-	return itsForecasts[forecastIndex]->Value();
-}
-
-inline std::string ensemble::ClassName() const
-{
-	return "himan::ensemble";
-}
-
-inline param ensemble::Param() const
-{
-	return itsParam;
-}
-
-} // namespace himan
+inline size_t ensemble::Size() const { return itsEnsembleSize; }
+inline double ensemble::Value(size_t forecastIndex) const { return itsForecasts[forecastIndex]->Value(); }
+inline std::string ensemble::ClassName() const { return "himan::ensemble"; }
+inline param ensemble::Param() const { return itsParam; }
+}  // namespace himan
 
 // ENSEMBLE_H
 #endif

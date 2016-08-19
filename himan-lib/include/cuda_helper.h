@@ -1,8 +1,8 @@
 #ifndef CUDA_HELPER_H
 #define CUDA_HELPER_H
 
-#include <iostream>
 #include <cassert>
+#include <iostream>
 
 #ifdef __CUDACC__
 #define CUDA_HOST __host__
@@ -10,7 +10,7 @@
 #define CUDA_KERNEL __global__
 #define CUDA_INLINE __forceinline__
 #else
-#define CUDA_HOST 
+#define CUDA_HOST
 #define CUDA_DEVICE
 #define CUDA_KERNEL
 #define CUDA_INLINE
@@ -28,7 +28,6 @@ typedef double* __restrict__ darr_t;
 
 namespace himan
 {
-
 /*
  * Two very commonly used data types with cuda calculations.
  * By defining double pointers __restrict__ we guarantee to the compiler
@@ -39,42 +38,34 @@ namespace himan
  */
 
 void CheckCudaError(cudaError_t errarg, const char* file, const int line);
-void CheckCudaErrorString(const char* errstr, const char* file,	const int line);
+void CheckCudaErrorString(const char* errstr, const char* file, const int line);
 
-#define CUDA_CHECK(errarg)	 himan::CheckCudaError(errarg, __FILE__, __LINE__)
+#define CUDA_CHECK(errarg) himan::CheckCudaError(errarg, __FILE__, __LINE__)
 #define CUDA_CHECK_ERROR_MSG(errstr) himan::CheckCudaErrorString(errstr, __FILE__, __LINE__)
 
 inline void CheckCudaError(cudaError_t errarg, const char* file, const int line)
 {
-	if(errarg)
+	if (errarg)
 	{
 		std::cerr << "Error at " << file << "(" << line << "): " << cudaGetErrorString(errarg) << std::endl;
 		exit(1);
 	}
 }
 
-
-inline void CheckCudaErrorString(const char* errstr, const char* file,	const int line)
+inline void CheckCudaErrorString(const char* errstr, const char* file, const int line)
 {
 	cudaError_t err = cudaGetLastError();
 
-	if(err != cudaSuccess)
+	if (err != cudaSuccess)
 	{
-		std::cerr	<< "Error: "
-					<< errstr
-					<< " "
-					<< file 
-					<< " at ("
-					<< line
-					<< "): "
-					<< cudaGetErrorString(err)
-					<< std::endl;
-		
+		std::cerr << "Error: " << errstr << " " << file << " at (" << line << "): " << cudaGetErrorString(err)
+		          << std::endl;
+
 		exit(1);
 	}
 }
 
-} // namespace himan
+}  // namespace himan
 
-#endif // HAVE_CUDA
-#endif // CUDA_HELPER_H
+#endif  // HAVE_CUDA
+#endif  // CUDA_HELPER_H

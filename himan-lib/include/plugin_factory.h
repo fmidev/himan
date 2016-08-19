@@ -8,56 +8,52 @@
 #ifndef PLUGIN_FACTORY_H
 #define PLUGIN_FACTORY_H
 
-#include <vector>
 #include "plugin_container.h"
-#include <mutex>
 #include <memory>
+#include <mutex>
+#include <vector>
 
-#define GET_PLUGIN(P) std::dynamic_pointer_cast<himan::plugin::P> (plugin_factory::Instance()->Plugin(#P))
+#define GET_PLUGIN(P) std::dynamic_pointer_cast<himan::plugin::P>(plugin_factory::Instance()->Plugin(#P))
 
 namespace himan
 {
-
 class plugin_factory
 {
-public:
-    static plugin_factory* Instance();
+   public:
+	static plugin_factory* Instance();
 
-    std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins(HPPluginClass = kUnknownPlugin); // Kinda ugly
+	std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins(HPPluginClass = kUnknownPlugin);  // Kinda ugly
 
-	
 	/**
 	 * @brief Return instance of the requested plugin if found. Caller must cast
-	 * the plugin to the derived class. 
+	 * the plugin to the derived class.
 	 */
-	
-    std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName);
 
-    ~plugin_factory() {}
+	std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName);
 
-private:
-    // Hide constructor
-    plugin_factory();
+	~plugin_factory() {}
+   private:
+	// Hide constructor
+	plugin_factory();
 
-    plugin_factory(const plugin_factory&) = delete;
+	plugin_factory(const plugin_factory&) = delete;
 
-    static std::unique_ptr<plugin_factory> itsInstance;
+	static std::unique_ptr<plugin_factory> itsInstance;
 
-    void ReadPlugins();
+	void ReadPlugins();
 
-    bool Load(const std::string& thePluginFileName);
+	bool Load(const std::string& thePluginFileName);
 
-    void Unload();
+	void Unload();
 
-    std::vector<std::shared_ptr<plugin_container>> itsPluginFactory;
+	std::vector<std::shared_ptr<plugin_container>> itsPluginFactory;
 
-    std::vector<std::string> itsPluginSearchPath;
-    std::unique_ptr<logger> itsLogger;
+	std::vector<std::string> itsPluginSearchPath;
+	std::unique_ptr<logger> itsLogger;
 
 	std::mutex itsPluginMutex;
-
 };
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* PLUGIN_FACTORY_H */

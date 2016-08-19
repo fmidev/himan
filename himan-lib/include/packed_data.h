@@ -15,15 +15,15 @@
  */
 
 #ifndef PACKED_DATA_H
-#define	PACKED_DATA_H
+#define PACKED_DATA_H
 
 #ifndef HAVE_CUDA
 // Define shells so that compilation succeeds
 namespace himan
 {
-struct packed_data 
+struct packed_data
 {
-	   	bool HasData() const { return false; }
+	bool HasData() const { return false; }
 };
 }
 
@@ -31,12 +31,11 @@ struct packed_data
 
 #include "cuda_helper.h"
 #include "himan_common.h"
-#include <string>
 #include <stdexcept>
+#include <string>
 
 namespace himan
 {
-
 struct packing_coefficients
 {
 	int bitsPerValue;
@@ -45,46 +44,45 @@ struct packing_coefficients
 	double referenceValue;
 
 	CUDA_HOST
-	packing_coefficients()
-		: bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0)
-	{}
-
+	packing_coefficients() : bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0) {}
 };
 
 struct packed_data
 {
-
 	CUDA_HOST
-	packed_data() : data(0), packedLength(0), unpackedLength(0), bitmap(0), bitmapLength(0), packingType(kUnknownPackingType) {}
+	packed_data()
+	    : data(0), packedLength(0), unpackedLength(0), bitmap(0), bitmapLength(0), packingType(kUnknownPackingType)
+	{
+	}
 
-	CUDA_HOST CUDA_DEVICE
-	virtual ~packed_data();
+	CUDA_HOST CUDA_DEVICE virtual ~packed_data();
 
 	/**
 	 * @brief Copy constructor for packed data
 	 *
 	 * This is defined for both gcc and nvcc separately
-	 * 
+	 *
 	 * @param other packed_data instance that we are copying from
 	 */
-	
+
 	CUDA_HOST
 	packed_data(const packed_data& other);
 
 	virtual std::string ClassName() const { return "packed_data"; }
-
 	void Resize(size_t newPackedLength, size_t newUnpackedLength);
 	void Set(unsigned char* packedData, size_t packedDataLength, size_t unpackedDataLength);
 	void Bitmap(int* newBitmap, size_t newBitmapLength);
 	void Clear();
-	
+
 	CUDA_HOST
 	bool HasData() const;
 
-	CUDA_HOST CUDA_DEVICE
-	bool HasBitmap() const;
+	CUDA_HOST CUDA_DEVICE bool HasBitmap() const;
 
-	virtual void Unpack(double* d_arr, size_t N, cudaStream_t* stream) { throw std::runtime_error("top level Unpack called"); }
+	virtual void Unpack(double* d_arr, size_t N, cudaStream_t* stream)
+	{
+		throw std::runtime_error("top level Unpack called");
+	}
 
 	unsigned char* data;
 	size_t packedLength;
@@ -95,28 +93,24 @@ struct packed_data
 	HPPackingType packingType;
 
 	packing_coefficients coefficients;
-
 };
 
 namespace packed_data_util
 {
-CUDA_HOST CUDA_DEVICE
-double GetGribPower(long s, long n);
+CUDA_HOST CUDA_DEVICE double GetGribPower(long s, long n);
 }
 
-inline
-CUDA_HOST CUDA_DEVICE
-double himan::packed_data_util::GetGribPower(long s, long n)
+inline CUDA_HOST CUDA_DEVICE double himan::packed_data_util::GetGribPower(long s, long n)
 {
 	double divisor = 1.0;
-	double dn = static_cast<double> (n);
+	double dn = static_cast<double>(n);
 
-	while(s < 0)
+	while (s < 0)
 	{
 		divisor /= dn;
 		s++;
 	}
-	while(s > 0)
+	while (s > 0)
 	{
 		divisor *= dn;
 		s--;
@@ -124,30 +118,16 @@ double himan::packed_data_util::GetGribPower(long s, long n)
 	return divisor;
 }
 
-inline
-CUDA_HOST CUDA_DEVICE
-packed_data::~packed_data()
+inline CUDA_HOST CUDA_DEVICE packed_data::~packed_data()
 {
 #ifndef __CUDACC__
 	Clear();
 #endif
 }
 
-inline
-CUDA_HOST
-bool packed_data::HasData() const
-{
-	return (unpackedLength > 0);
-}
+inline CUDA_HOST bool packed_data::HasData() const { return (unpackedLength > 0); }
+inline CUDA_HOST CUDA_DEVICE bool packed_data::HasBitmap() const { return (bitmapLength > 0); }
+}  // namespace himan
 
-inline
-CUDA_HOST CUDA_DEVICE
-bool packed_data::HasBitmap() const
-{
-	return (bitmapLength > 0);
-}
-
-} // namespace himan
-
-#endif  /* HAVE_CUDA */
-#endif	/* PACKED_DATA_H */
+#endif /* HAVE_CUDA */
+#endif /* PACKED_DATA_H */

@@ -16,52 +16,39 @@
 
 namespace himan
 {
-
 class logger;
 class raw_time
 {
-
-public:
+   public:
 	friend class forecast_time;
-	
-    raw_time() : itsDateTime(boost::posix_time::not_a_date_time) {}
-    raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 
-    ~raw_time() {}
-    raw_time(const raw_time& other);
-    raw_time& operator=(const raw_time& other);
-	operator std::string () const;
-	
-    std::string String(const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S") const;
+	raw_time() : itsDateTime(boost::posix_time::not_a_date_time) {}
+	raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 
-    std::ostream& Write(std::ostream& file) const;
+	~raw_time() {}
+	raw_time(const raw_time& other);
+	raw_time& operator=(const raw_time& other);
+	operator std::string() const;
 
-    std::string ClassName() const
-    {
-        return "himan::raw_time";
-    }
+	std::string String(const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S") const;
 
-    bool operator==(const raw_time& other) const;
-    bool operator!=(const raw_time& other) const;
+	std::ostream& Write(std::ostream& file) const;
 
-    bool Adjust(HPTimeResolution timeResolution, int theValue);
+	std::string ClassName() const { return "himan::raw_time"; }
+	bool operator==(const raw_time& other) const;
+	bool operator!=(const raw_time& other) const;
 
-    bool Empty() const;
+	bool Adjust(HPTimeResolution timeResolution, int theValue);
 
-private:
+	bool Empty() const;
 
-    std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
+   private:
+	std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
 
-    boost::posix_time::ptime itsDateTime;
-
+	boost::posix_time::ptime itsDateTime;
 };
 
-inline
-std::ostream& operator<<(std::ostream& file, const raw_time& ob)
-{
-    return ob.Write(file);
-}
-
-} // namespace himan
+inline std::ostream& operator<<(std::ostream& file, const raw_time& ob) { return ob.Write(file); }
+}  // namespace himan
 
 #endif /* RAW_TIME_H */

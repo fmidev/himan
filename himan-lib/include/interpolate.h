@@ -1,4 +1,4 @@
-/** 
+/**
  * @file   interpolate.h
  * @author partio
  *
@@ -14,13 +14,10 @@ namespace himan
 {
 namespace interpolate
 {
-
-bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData);	
+bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData);
 bool InterpolateArea(info& base, std::vector<info_t> infos, bool useCudaForInterpolation = true);
 bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpolation = true);
-
 }
 }
 
 #endif /* INTERPOLATE_H */
-

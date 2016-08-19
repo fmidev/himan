@@ -18,7 +18,6 @@ namespace plugin
 {
 namespace relative_humidity_cuda
 {
-
 struct options
 {
 	info_simple* T;
@@ -35,8 +34,10 @@ struct options
 	double PScale;
 	double P_level;
 
-	options() : T(0), TD(0), Q(0), P(0), RH(0), select_case(1), N(0), missing(0), TDBase(0), TBase(0), PScale(1), P_level(0) {}
-
+	options()
+	    : T(0), TD(0), Q(0), P(0), RH(0), select_case(1), N(0), missing(0), TDBase(0), TBase(0), PScale(1), P_level(0)
+	{
+	}
 };
 
 void Process(options& opts);
@@ -48,10 +49,9 @@ __global__ void CalculateTQ(cdarr_t d_T, cdarr_t d_Q, darr_t d_RH, options opts)
 
 #endif
 
-} // namespace relative_humidity_cuda
-} // namespace plugin
-} // namespace himan
+}  // namespace relative_humidity_cuda
+}  // namespace plugin
+}  // namespace himan
 
-#endif  /* HAVE_CUDA */
-#endif	/* RELATIVE_HUMIDITY_CUDA_H */
-
+#endif /* HAVE_CUDA */
+#endif /* RELATIVE_HUMIDITY_CUDA_H */

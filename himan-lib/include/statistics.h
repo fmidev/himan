@@ -8,10 +8,10 @@
 #ifndef STATISTICS_H
 #define STATISTICS_H
 
-#include "timer_factory.h"
 #include "raw_time.h"
+#include "timer_factory.h"
 
-#if ! defined __clang__ && defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
+#if !defined __clang__ && defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
 #include <cstdatomic>
 #else
 #include <atomic>
@@ -19,10 +19,9 @@
 
 namespace himan
 {
-
 class statistics
 {
-public:
+   public:
 	friend class plugin_configuration;
 
 	statistics();
@@ -31,11 +30,7 @@ public:
 	statistics(const statistics& other);
 	statistics& operator=(const statistics& other) = delete;
 
-	std::string ClassName() const
-	{
-		return "himan::statistics";
-	}
-
+	std::string ClassName() const { return "himan::statistics"; }
 	bool Start();
 	bool Store();
 
@@ -57,8 +52,8 @@ public:
 	void UsedGPUCount(short theGPUCount);
 
 	size_t FetchingTime() const;
-	
-private:
+
+   private:
 	void Init();
 	bool StoreToDatabase();
 	bool StoreToFile();
@@ -75,10 +70,8 @@ private:
 	std::unique_ptr<timer> itsTimer;
 	short itsUsedThreadCount;
 	short itsUsedGPUCount;
-	
-
 };
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* STATISTICS_H */

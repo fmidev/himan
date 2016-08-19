@@ -6,24 +6,24 @@
  */
 
 #include "split_sum.h"
-#include <iostream>
-#include "plugin_factory.h"
-#include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
-#include <map>
-#include "level.h"
 #include "forecast_time.h"
+#include "level.h"
+#include "logger_factory.h"
+#include "plugin_factory.h"
+#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include <iostream>
+#include <map>
 
-#include "writer.h"
 #include "neons.h"
 #include "radon.h"
+#include "writer.h"
 
 using namespace std;
 using namespace himan::plugin;
 
 mutex mySingleFileWriteMutex;
-	
+
 /*
  * When calculating rate, we calculate the average of the time period.
  * So for example if time step is 30 (minutes), we fetch data for time step
@@ -36,8 +36,8 @@ mutex mySingleFileWriteMutex;
  * would have to have data for the time step after last time step. Extrapolating
  * the data is really not an option since the parameters in question (precipitation and
  * to some degree radiation) are simply not suitable for extrapolation.
- * 
- * For the latter case we cannot calculate data for the first time step since in 
+ *
+ * For the latter case we cannot calculate data for the first time step since in
  * that case we would need to have data for the time step previous to first time
  * step. Again, extrapolation is not really an option.
  *
@@ -52,7 +52,7 @@ const bool CALCULATE_AVERAGE_RATE = false;
 
 const int SUB_THREAD_COUNT = 5;
 
-map<string,himan::params> sourceParameters;
+map<string, himan::params> sourceParameters;
 
 split_sum::split_sum()
 {
@@ -61,33 +61,33 @@ split_sum::split_sum()
 	itsLogger = logger_factory::Instance()->GetLog("split_sum");
 
 	// Define source parameters for each output parameter
-	
+
 	// General precipitation (liquid + solid)
-	sourceParameters["RR-1-MM"] = { param("RR-KGM2") };
-	sourceParameters["RR-3-MM"] = { param("RR-KGM2") };
-	sourceParameters["RR-6-MM"] = { param("RR-KGM2") };
-	sourceParameters["RR-12-MM"] = { param("RR-KGM2") };	
-	sourceParameters["RRR-KGM2"] = { param("RR-KGM2") }; // So-called HHSade
-	sourceParameters["RRRC-KGM2"] = { param("RRC-KGM2") };
-	sourceParameters["RRRL-KGM2"] = { param("RRL-KGM2") };
+	sourceParameters["RR-1-MM"] = {param("RR-KGM2")};
+	sourceParameters["RR-3-MM"] = {param("RR-KGM2")};
+	sourceParameters["RR-6-MM"] = {param("RR-KGM2")};
+	sourceParameters["RR-12-MM"] = {param("RR-KGM2")};
+	sourceParameters["RRR-KGM2"] = {param("RR-KGM2")};  // So-called HHSade
+	sourceParameters["RRRC-KGM2"] = {param("RRC-KGM2")};
+	sourceParameters["RRRL-KGM2"] = {param("RRL-KGM2")};
 
 	// Snow
-	sourceParameters["SNR-KGM2"] = { param("SNACC-KGM2") };
-	sourceParameters["SNRC-KGM2"] = { param("SNC-KGM2") };
-	sourceParameters["SNRL-KGM2"] = { param("SNL-KGM2") };
+	sourceParameters["SNR-KGM2"] = {param("SNACC-KGM2")};
+	sourceParameters["SNRC-KGM2"] = {param("SNC-KGM2")};
+	sourceParameters["SNRL-KGM2"] = {param("SNL-KGM2")};
 
 	// Graupel
-	sourceParameters["GRR-MMH"] = { param("GR-KGM2") };
+	sourceParameters["GRR-MMH"] = {param("GR-KGM2")};
 
 	// Solid (snow + graupel + hail)
-	sourceParameters["RRRS-KGM2"] = { param("RRS-KGM2") };
+	sourceParameters["RRRS-KGM2"] = {param("RRS-KGM2")};
 
 	// Radiation
-	sourceParameters["RADGLO-WM2"] = { param("RADGLOA-JM2"), param("RADGLO-WM2") };
-	sourceParameters["RADLW-WM2"] = { param("RADLWA-JM2"), param("RADLW-WM2") };
-	sourceParameters["RTOPLW-WM2"] = { param("RTOPLWA-JM2"), param("RTOPLW-WM2") };
-	sourceParameters["RNETLW-WM2"] = { param("RNETLWA-JM2"), param("RNETLW-WM2") };
-	sourceParameters["RADSW-WM2"] = { param("RADSWA-JM2") };
+	sourceParameters["RADGLO-WM2"] = {param("RADGLOA-JM2"), param("RADGLO-WM2")};
+	sourceParameters["RADLW-WM2"] = {param("RADLWA-JM2"), param("RADLW-WM2")};
+	sourceParameters["RTOPLW-WM2"] = {param("RTOPLWA-JM2"), param("RTOPLW-WM2")};
+	sourceParameters["RNETLW-WM2"] = {param("RNETLWA-JM2"), param("RNETLW-WM2")};
+	sourceParameters["RADSW-WM2"] = {param("RADSWA-JM2")};
 }
 
 void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -112,7 +112,6 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1));
 
 		params.push_back(parm);
-
 	}
 
 	if (itsConfiguration->Exists("rr3h") && itsConfiguration->GetValue("rr3h") == "true")
@@ -199,7 +198,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	// Snow
-	
+
 	if (itsConfiguration->Exists("snr") && itsConfiguration->GetValue("snr") == "true")
 	{
 		param parm("SNR-KGM2", 264, 0, 1, 53);
@@ -256,10 +255,9 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		params.push_back(parm);
 	}
-	
+
 	if (itsConfiguration->Exists("netlw") && itsConfiguration->GetValue("netlw") == "true")
 	{
-
 		param parm("RNETLW-WM2", 312, 0, 5, 5);
 
 		params.push_back(parm);
@@ -275,30 +273,29 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (params.empty())
 	{
 		itsLogger->Trace("No parameter definition given, defaulting to rr6h");
-		
+
 		param parm("RR-6-MM", 355, 0, 1, 8);
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
-		
+
 		params.push_back(parm);
 	}
 
 	SetParams(params);
 
 	// Default max workers (db connections) is 16.
-	// Later in this plugin we launch sub threads so that the total number of 
+	// Later in this plugin we launch sub threads so that the total number of
 	// threads will be over 16. Connection pool is not working 100% correctly
 	// because at that point it will hang.
 	// To prevent this, make the pool larger.
 
 	auto n = GET_PLUGIN(neons);
-	n->PoolMaxWorkers(SUB_THREAD_COUNT * 12); // 12 is the max thread count from compiled_plugin_base
+	n->PoolMaxWorkers(SUB_THREAD_COUNT * 12);  // 12 is the max thread count from compiled_plugin_base
 
 	auto r = GET_PLUGIN(radon);
 	r->PoolMaxWorkers(SUB_THREAD_COUNT * 12);
 
 	Start();
-	
 }
 
 /*
@@ -309,21 +306,20 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
 	boost::thread_group threads;
 	vector<info_t> infos;
-	
+
 	int subThreadIndex = 0;
-	
+
 	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); ++subThreadIndex)
 	{
-		auto newInfo = make_shared<info> (*myTargetInfo);
+		auto newInfo = make_shared<info>(*myTargetInfo);
 
-		infos.push_back(newInfo); // extend lifetime over this loop
-		
-		threads.add_thread(
-			new boost::thread(&split_sum::DoParam, this, (newInfo), myTargetInfo->Param().Name(), boost::lexical_cast<string> (threadIndex) + "_" + boost::lexical_cast<string> (subThreadIndex))
-		);
+		infos.push_back(newInfo);  // extend lifetime over this loop
+
+		threads.add_thread(new boost::thread(
+		    &split_sum::DoParam, this, (newInfo), myTargetInfo->Param().Name(),
+		    boost::lexical_cast<string>(threadIndex) + "_" + boost::lexical_cast<string>(subThreadIndex)));
 
 		if (subThreadIndex % SUB_THREAD_COUNT == 0)
 		{
@@ -334,7 +330,6 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	}
 
 	threads.join_all();
-
 }
 
 void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string subThreadIndex) const
@@ -346,39 +341,32 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	level forecastLevel = myTargetInfo->Level();
 
 	auto myThreadedLogger = logger_factory::Instance()->GetLog("splitSumSubThread#" + subThreadIndex);
-			
-	myThreadedLogger->Info("Calculating parameter " + myParamName + " time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) +
-												  " level " + static_cast<string> (forecastLevel));
 
-	bool isRadiationCalculation = (	myParamName == "RADGLO-WM2" ||
-								myParamName == "RADLW-WM2" ||
-								myParamName == "RTOPLW-WM2" ||
-								myParamName == "RNETLW-WM2" ||
-								myParamName == "RADSW-WM2"
-	);
-			
-	bool isRateCalculation = (isRadiationCalculation || 
-								myParamName == "RRR-KGM2" ||
-								myParamName == "RRRL-KGM2" ||
-								myParamName == "RRRC-KGM2" ||
-								myParamName == "SNR-KGM2" ||
-								myParamName == "SNRC-KGM2" ||
-								myParamName == "SNRL-KGM2" ||
-								myParamName == "GRR-MMH" ||
-								myParamName == "RRRS-KGM2");
+	myThreadedLogger->Info("Calculating parameter " + myParamName + " time " +
+	                       static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
+
+	bool isRadiationCalculation =
+	    (myParamName == "RADGLO-WM2" || myParamName == "RADLW-WM2" || myParamName == "RTOPLW-WM2" ||
+	     myParamName == "RNETLW-WM2" || myParamName == "RADSW-WM2");
+
+	bool isRateCalculation = (isRadiationCalculation || myParamName == "RRR-KGM2" || myParamName == "RRRL-KGM2" ||
+	                          myParamName == "RRRC-KGM2" || myParamName == "SNR-KGM2" || myParamName == "SNRC-KGM2" ||
+	                          myParamName == "SNRL-KGM2" || myParamName == "GRR-MMH" || myParamName == "RRRS-KGM2");
 
 	// Have to re-fetch infos each time since we might have to change element
 	// from liquid to snow to radiation so we need also different source parameters
 
 	info_t curSumInfo;
 	info_t prevSumInfo;
-		
+
 	if (myTargetInfo->Time().Step() == 0)
 	{
 		// This is the first time step, calculation can not be done
 
-		 myThreadedLogger->Info("This is the first time step -- not calculating " + myParamName + " for step " + boost::lexical_cast<string> (forecastTime.Step()));
-		 return;
+		myThreadedLogger->Info("This is the first time step -- not calculating " + myParamName + " for step " +
+		                       boost::lexical_cast<string>(forecastTime.Step()));
+		return;
 	}
 
 	/*
@@ -398,7 +386,6 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 	if (isRateCalculation)
 	{
-
 		// Calculating RATE
 
 		auto infos = GetSourceDataForRate(myTargetInfo, step);
@@ -431,7 +418,6 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 			prevTimeStep.ValidDateTime().Adjust(prevTimeStep.StepResolution(), -paramStep);
 
 			prevSumInfo = FetchSourceData(myTargetInfo, prevTimeStep);
-
 		}
 
 		// Data from current time step, but only if we have data for previous
@@ -447,30 +433,30 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	{
 		// Data was not found
 
-		myThreadedLogger->Warning("Data not found: not calculating " + myTargetInfo->Param().Name() + " for step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()));
+		myThreadedLogger->Warning("Data not found: not calculating " + myTargetInfo->Param().Name() + " for step " +
+		                          boost::lexical_cast<string>(myTargetInfo->Time().Step()));
 		return;
 	}
 
-	myThreadedLogger->Debug("Previous data step is " + boost::lexical_cast<string> (prevSumInfo->Time().Step()));
-	myThreadedLogger->Debug("Current/next data step is " + boost::lexical_cast<string> (curSumInfo->Time().Step()));
+	myThreadedLogger->Debug("Previous data step is " + boost::lexical_cast<string>(prevSumInfo->Time().Step()));
+	myThreadedLogger->Debug("Current/next data step is " + boost::lexical_cast<string>(curSumInfo->Time().Step()));
 
 	double scaleFactor = 1.;
 
 	// EC gives precipitation in meters, we are calculating millimeters
 
-	if (curSumInfo->Param().Unit() == kM
-		 || (myTargetInfo->Producer().Id() == 240 && !isRadiationCalculation)) // HIMAN-98
+	if (curSumInfo->Param().Unit() == kM ||
+	    (myTargetInfo->Producer().Id() == 240 && !isRadiationCalculation))  // HIMAN-98
 	{
 		scaleFactor = 1000.;
 	}
 
 	string deviceType = "CPU";
 
-	step = static_cast<int> (curSumInfo->Time().Step() - prevSumInfo->Time().Step());
-		
+	step = static_cast<int>(curSumInfo->Time().Step() - prevSumInfo->Time().Step());
+
 	if (isRadiationCalculation)
 	{
-
 		/*
 		 * Radiation unit is W/m^2 which is J/m^2/s, so we need to convert
 		 * time to seconds.
@@ -488,10 +474,10 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		}
 		else
 		{
-			myThreadedLogger->Error("Unknown time resolution: " + string(HPTimeResolutionToString.at(myTargetInfo->Time().StepResolution())));
+			myThreadedLogger->Error("Unknown time resolution: " +
+			                        string(HPTimeResolutionToString.at(myTargetInfo->Time().StepResolution())));
 			return;
 		}
-
 	}
 
 	else if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
@@ -507,13 +493,12 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		step = 1;
 	}
 
-	double invstep = 1./step;
+	double invstep = 1. / step;
 
 	auto& result = VEC(myTargetInfo);
-		
+
 	for (auto&& tup : zip_range(result, VEC(curSumInfo), VEC(prevSumInfo)))
 	{
-
 		double& sum = tup.get<0>();
 		double currentSum = tup.get<1>();
 		double previousSum = tup.get<2>();
@@ -536,14 +521,15 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		}
 
 		sum *= scaleFactor;
-
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
-pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataForRate(shared_ptr<const info> myTargetInfo, int step) const
+pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataForRate(
+    shared_ptr<const info> myTargetInfo, int step) const
 {
 	shared_ptr<info> prevInfo;
 	shared_ptr<info> curInfo;
@@ -557,9 +543,9 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 	{
 		if (myTargetInfo->Producer().Id() == 210)
 		{
-			step = 60;	// Forecast step is 15 (Harmonie), but it has been agreed
-						// with AKS that we'll use one hour since editor displays
-						// only hourly data.
+			step = 60;  // Forecast step is 15 (Harmonie), but it has been agreed
+			// with AKS that we'll use one hour since editor displays
+			// only hourly data.
 		}
 
 		forecast_time wantedTimeStep(myTargetInfo->Time());
@@ -567,7 +553,7 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 
 		if (wantedTimeStep.Step() >= 0)
 		{
-			prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
+			prevInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
 		}
 	}
 	else
@@ -575,32 +561,33 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 		itsLogger->Debug("Configuration file does not have key 'step': trying to guess correct step");
 	}
 
-	curInfo = FetchSourceData(myTargetInfo,myTargetInfo->Time());
+	curInfo = FetchSourceData(myTargetInfo, myTargetInfo->Time());
 
 	if (curInfo && prevInfo)
 	{
 		itsLogger->Debug("Found previous and current data");
-		return make_pair(prevInfo,curInfo);
+		return make_pair(prevInfo, curInfo);
 	}
 
 	// 2. Data was not found on the requested steps. Now we have to scan the database
 	// for data which is slow.
-	
+
 	itsLogger->Debug("Scanning database for source data");
-	
-	int maxSteps = 6; // by default look for 6 hours forward or backward
-	step = 1; // by default the difference between time steps is one (ie. one hour))
+
+	int maxSteps = 6;  // by default look for 6 hours forward or backward
+	step = 1;          // by default the difference between time steps is one (ie. one hour))
 
 	if (myTargetInfo->Producer().Id() == 210)
 	{
-		step = 60;	// see comment on line 512
+		step = 60;  // see comment on line 512
 	}
 	else if (timeResolution != kHourResolution)
 	{
-		throw runtime_error(ClassName() + ": Invalid time resolution value: " + HPTimeResolutionToString.at(timeResolution));
+		throw runtime_error(ClassName() + ": Invalid time resolution value: " +
+		                    HPTimeResolutionToString.at(timeResolution));
 	}
 
-	itsLogger->Trace("Target time is " + static_cast<string> (myTargetInfo->Time().ValidDateTime()));
+	itsLogger->Trace("Target time is " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
 
 	if (!prevInfo)
 	{
@@ -611,7 +598,7 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 
 		forecast_time wantedTimeStep(myTargetInfo->Time());
 
-		for (int i = 0; !prevInfo && i <= maxSteps*step; i++)
+		for (int i = 0; !prevInfo && i <= maxSteps * step; i++)
 		{
 			wantedTimeStep.ValidDateTime().Adjust(timeResolution, -step);
 
@@ -620,8 +607,8 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 				continue;
 			}
 
-			itsLogger->Debug("Trying time " + static_cast<string> (wantedTimeStep.ValidDateTime()));
-			prevInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
+			itsLogger->Debug("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
+			prevInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
 
 			if (prevInfo)
 			{
@@ -639,12 +626,12 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 
 		forecast_time wantedTimeStep(myTargetInfo->Time());
 
-		for (int i = 0; !curInfo && i <= maxSteps*step; i++)
+		for (int i = 0; !curInfo && i <= maxSteps * step; i++)
 		{
 			wantedTimeStep.ValidDateTime().Adjust(timeResolution, step);
 
-			itsLogger->Debug("Trying time " + static_cast<string> (wantedTimeStep.ValidDateTime()));
-			curInfo = FetchSourceData(myTargetInfo,wantedTimeStep);
+			itsLogger->Debug("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
+			curInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
 
 			if (curInfo)
 			{
@@ -652,13 +639,14 @@ pair<shared_ptr<himan::info>,shared_ptr<himan::info>> split_sum::GetSourceDataFo
 			}
 		}
 	}
-	
-	return make_pair(prevInfo,curInfo);
+
+	return make_pair(prevInfo, curInfo);
 }
 
-shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTargetInfo, const forecast_time& wantedTime) const
+shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTargetInfo,
+                                                   const forecast_time& wantedTime) const
 {
-	level wantedLevel(kHeight, 0 ,"HEIGHT");
+	level wantedLevel(kHeight, 0, "HEIGHT");
 
 	// Transform ground level based on only the first source parameter
 
@@ -680,10 +668,10 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 	if (!SumInfo && wantedTime.Step() == 0)
 	{
-		SumInfo = make_shared<info> (*myTargetInfo);
-		vector<forecast_time> times = { wantedTime };
-		vector<level> levels = { wantedLevel };
-		vector<param> params = { sourceParameters[myTargetInfo->Param().Name()][0] };
+		SumInfo = make_shared<info>(*myTargetInfo);
+		vector<forecast_time> times = {wantedTime};
+		vector<level> levels = {wantedLevel};
+		vector<param> params = {sourceParameters[myTargetInfo->Param().Name()][0]};
 
 		SumInfo->Params(params);
 		SumInfo->Levels(levels);
@@ -691,15 +679,12 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 		SumInfo->Create(myTargetInfo->Grid());
 		SumInfo->Data().Fill(0);
-
 	}
-	
-	return SumInfo;
 
+	return SumInfo;
 }
 
-
-void split_sum::WriteToFile(const info& targetInfo, write_options writeOptions) 
+void split_sum::WriteToFile(const info& targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
 
@@ -732,4 +717,3 @@ void split_sum::WriteToFile(const info& targetInfo, write_options writeOptions)
 		DeallocateMemory(targetInfo);
 	}
 }
-

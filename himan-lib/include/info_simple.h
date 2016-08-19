@@ -6,7 +6,7 @@
  */
 
 #ifndef INFO_SIMPLE_H
-#define	INFO_SIMPLE_H
+#define INFO_SIMPLE_H
 
 #ifdef HAVE_CUDA
 
@@ -14,7 +14,6 @@
 
 namespace himan
 {
-
 /**
  * @brief Dumbed-down version of info-class
  *
@@ -51,7 +50,6 @@ class simple_packed;
 
 struct info_simple
 {
-
 	// grid size
 	size_t size_x;
 	size_t size_y;
@@ -66,14 +64,14 @@ struct info_simple
 
 	// only stereographic projection
 	double orientation;
-	
+
 	// distance between two grid points, degrees or meters (stereographic))
 	double di;
 	double dj;
 
 	bool j_scans_positive;
 
-	double *values;
+	double* values;
 	simple_packed* packed_values;
 
 	HPGridType projection;
@@ -81,30 +79,28 @@ struct info_simple
 
 	// true if area extends over zero meridian (important information in interpolation)
 	bool wraps_globally;
-	
+
 	info_simple()
-		: size_x(0)
-		, size_y(0)
-		, first_lat(kFloatMissing)
-		, first_lon(kFloatMissing)
-		, south_pole_lat(kFloatMissing)
-		, south_pole_lon(kFloatMissing)
-		, orientation(kFloatMissing)
-		, di(kFloatMissing)
-		, dj(kFloatMissing)
-		, j_scans_positive(true)
-		, values(0)
-		, packed_values(0)
-		, projection(kUnknownGridType)
-		, interpolation(kBiLinear)
-		, wraps_globally(false)
-	{}
-
+	    : size_x(0),
+	      size_y(0),
+	      first_lat(kFloatMissing),
+	      first_lon(kFloatMissing),
+	      south_pole_lat(kFloatMissing),
+	      south_pole_lon(kFloatMissing),
+	      orientation(kFloatMissing),
+	      di(kFloatMissing),
+	      dj(kFloatMissing),
+	      j_scans_positive(true),
+	      values(0),
+	      packed_values(0),
+	      projection(kUnknownGridType),
+	      interpolation(kBiLinear),
+	      wraps_globally(false)
+	{
+	}
 };
-
 }
 
-#endif // /* HAVE_CUDA */
+#endif  // /* HAVE_CUDA */
 
-#endif	/* INFO_SIMPLE_H */
-
+#endif /* INFO_SIMPLE_H */

@@ -11,131 +11,106 @@ using namespace himan;
 
 raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMask)
 {
+	std::stringstream s(theDateTime);
+	std::locale l(s.getloc(), new boost::posix_time::time_input_facet(theTimeMask.c_str()));
 
-    std::stringstream s(theDateTime);
-    std::locale l(s.getloc(), new boost::posix_time::time_input_facet(theTimeMask.c_str()));
+	s.imbue(l);
 
-    s.imbue(l);
+	s >> itsDateTime;
 
-    s >> itsDateTime;
-
-    if (itsDateTime == boost::date_time::not_a_date_time)
-    {
-        throw std::runtime_error(ClassName() + ": Unable to create time from '" + theDateTime + "' with mask '" + theTimeMask + "'");
-    }
+	if (itsDateTime == boost::date_time::not_a_date_time)
+	{
+		throw std::runtime_error(ClassName() + ": Unable to create time from '" + theDateTime + "' with mask '" +
+		                         theTimeMask + "'");
+	}
 }
 
-raw_time::raw_time(const raw_time& other)
-    : itsDateTime(other.itsDateTime)
-{
-}
-
+raw_time::raw_time(const raw_time& other) : itsDateTime(other.itsDateTime) {}
 raw_time& raw_time::operator=(const raw_time& other)
 {
-    itsDateTime = other.itsDateTime;
+	itsDateTime = other.itsDateTime;
 
-    return *this;
+	return *this;
 }
-
 
 bool raw_time::operator==(const raw_time& other) const
 {
-    if (this == &other)
-    {
-        return true;
-    }
+	if (this == &other)
+	{
+		return true;
+	}
 
-    return (itsDateTime == other.itsDateTime);
+	return (itsDateTime == other.itsDateTime);
 }
 
-bool raw_time::operator!=(const raw_time& other) const
-{
-    return !(*this == other);
-}
-
-raw_time::operator std::string () const
-{
-	return String("%Y%m%d%H%M");
-}
-
-std::string raw_time::String(const std::string& theTimeMask) const
-{
-    return FormatTime(itsDateTime, theTimeMask);
-}
-
-
+bool raw_time::operator!=(const raw_time& other) const { return !(*this == other); }
+raw_time::operator std::string() const { return String("%Y%m%d%H%M"); }
+std::string raw_time::String(const std::string& theTimeMask) const { return FormatTime(itsDateTime, theTimeMask); }
 std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, const std::string& theTimeMask) const
 {
+	if (theFormattedDateTime == boost::date_time::not_a_date_time)
+	{
+		throw std::runtime_error(ClassName() + ": input argument is 'not-a-date-time'");
+	}
 
-    if (theFormattedDateTime == boost::date_time::not_a_date_time)
-    {
-        throw std::runtime_error(ClassName() + ": input argument is 'not-a-date-time'");
-    }
+	std::stringstream s;
+	std::locale l(s.getloc(), new boost::posix_time::time_facet(theTimeMask.c_str()));
 
-    std::stringstream s;
-    std::locale l(s.getloc(), new boost::posix_time::time_facet(theTimeMask.c_str()));
+	s.imbue(l);
 
-    s.imbue(l);
+	s << theFormattedDateTime;
 
-    s << theFormattedDateTime;
+	s.flush();
 
-    s.flush();
-	
-    return s.str();
-
+	return s.str();
 }
 
 bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 {
+	if (timeResolution == kHourResolution)
+	{
+		boost::posix_time::hours adjustment(theValue);
 
-    if (timeResolution == kHourResolution)
-    {
-        boost::posix_time::hours adjustment (theValue);
+		itsDateTime = itsDateTime + adjustment;
+	}
+	else if (timeResolution == kMinuteResolution)
+	{
+		boost::posix_time::minutes adjustment(theValue);
 
-        itsDateTime = itsDateTime + adjustment;
-    }
-    else if (timeResolution == kMinuteResolution)
-    {
-        boost::posix_time::minutes adjustment (theValue);
+		itsDateTime = itsDateTime + adjustment;
+	}
+	else if (timeResolution == kYearResolution)
+	{
+		boost::gregorian::years adjustment(theValue);
 
-        itsDateTime = itsDateTime + adjustment;
-    }
-    else if (timeResolution == kYearResolution)
-    {
-        boost::gregorian::years adjustment (theValue);
+		itsDateTime = itsDateTime + adjustment;
+	}
+	else if (timeResolution == kMonthResolution)
+	{
+		boost::gregorian::months adjustment(theValue);
 
-        itsDateTime = itsDateTime + adjustment;
-    }
-    else if (timeResolution == kMonthResolution)
-    {
-        boost::gregorian::months adjustment (theValue);
+		itsDateTime = itsDateTime + adjustment;
+	}
+	else if (timeResolution == kDayResolution)
+	{
+		boost::gregorian::days adjustment(theValue);
 
-        itsDateTime = itsDateTime + adjustment;
-    }
-    else if (timeResolution == kDayResolution)
-    {
-        boost::gregorian::days adjustment (theValue);
+		itsDateTime = itsDateTime + adjustment;
+	}
+	else
+	{
+		throw std::runtime_error(ClassName() + ": Invalid time adjustment unit: " +
+		                         boost::lexical_cast<std::string>(timeResolution) + "'");
+	}
 
-        itsDateTime = itsDateTime + adjustment;
-    }
-    else
-    {
-    	throw std::runtime_error(ClassName() + ": Invalid time adjustment unit: " + boost::lexical_cast<std::string> (timeResolution) + "'");
-    }
-
-    return true;
+	return true;
 }
 
-bool raw_time::Empty() const
-{
-	return (itsDateTime == boost::posix_time::not_a_date_time);
-}
-
+bool raw_time::Empty() const { return (itsDateTime == boost::posix_time::not_a_date_time); }
 std::ostream& raw_time::Write(std::ostream& file) const
 {
+	file << "<" << ClassName() << ">" << std::endl;
+	file << "__itsDateTime__ " << FormatTime(itsDateTime, "%Y-%m-%d %H:%M:%S") << std::endl;
 
-    file << "<" << ClassName() << ">" << std::endl;
-    file << "__itsDateTime__ " << FormatTime(itsDateTime, "%Y-%m-%d %H:%M:%S") << std::endl;
-
-    return file;
+	return file;
 }

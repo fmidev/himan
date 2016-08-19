@@ -7,11 +7,11 @@
  */
 
 #include "weather_code_1.h"
+#include "forecast_time.h"
+#include "level.h"
 #include "logger_factory.h"
 #include "metutil.h"
 #include <boost/lexical_cast.hpp>
-#include "level.h"
-#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -36,7 +36,6 @@ weather_code_1::weather_code_1()
 {
 	itsClearTextFormula = "<algorithm>";
 	itsLogger = logger_factory::Instance()->GetLog(itsName);
-
 }
 
 void weather_code_1::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -56,14 +55,15 @@ void weather_code_1::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
-	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	/*
 	 * In order to know which source precipitation parameter should be used we need
@@ -74,7 +74,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	 * try to determine the step by comparing earlier or later times with the current time.
 	 * If this doesn't work then default to one hour time step.
 	 */
-	
+
 	int paramStep = itsConfiguration->ForecastStep();
 
 	if (paramStep == kHPMissingInt)
@@ -88,21 +88,20 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		}
 		else
 		{
-
 			if (myTargetInfo->TimeIndex() == 0)
 			{
-				forecast_time otherTime = myTargetInfo->PeekTime(myTargetInfo->TimeIndex()+1);
+				forecast_time otherTime = myTargetInfo->PeekTime(myTargetInfo->TimeIndex() + 1);
 				paramStep = otherTime.Step() - myTargetInfo->Time().Step();
 			}
 			else
 			{
-				forecast_time otherTime = myTargetInfo->PeekTime(myTargetInfo->TimeIndex()-1);
+				forecast_time otherTime = myTargetInfo->PeekTime(myTargetInfo->TimeIndex() - 1);
 				paramStep = myTargetInfo->Time().Step() - otherTime.Step();
 			}
 		}
 	}
-	
-	param RRParam("RR-1-MM"); // Default
+
+	param RRParam("RR-1-MM");  // Default
 
 	if (paramStep == 3)
 	{
@@ -114,10 +113,10 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	}
 	else if (paramStep != 1)
 	{
-		myThreadedLogger->Error("Unsupported step: " + boost::lexical_cast<string> (paramStep));
+		myThreadedLogger->Error("Unsupported step: " + boost::lexical_cast<string>(paramStep));
 		return;
 	}
-	
+
 	info_t Z1000Info = Fetch(forecastTime, Z1000Level, ZParam, forecastType, false);
 	info_t Z850Info = Fetch(forecastTime, Z850Level, ZParam, forecastType, false);
 	info_t T850Info = Fetch(forecastTime, Z850Level, TParam, forecastType, false);
@@ -132,18 +131,18 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	info_t NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, forecastType, false);
 
-	/* 
+	/*
 	 * Sometimes we cannot find data for either time with the current forecast step.
-	 * 
+	 *
 	 * This happens for example with EC when the forecast step changes at forecast hour 90.
 	 * At that hour the forecast step is 1, so current RR is fetched from hour 90 as parameter
 	 * RR-1-MM. Hour 91 does not exist so that data is unavailable. In the database we have data
 	 * for hour 93, but that is parameter RR-3-MM. As both precipitation parameters have to be
 	 * of the same aggregation period, we have re-fetch both.
-	 * 
+	 *
 	 * This same thing happens at forecast hour 144 when step changes from 3h --> 6h.
 	 */
-	
+
 	if (!RRInfo || !NextRRInfo)
 	{
 		if (paramStep == 1)
@@ -161,24 +160,25 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			myThreadedLogger->Error("Precipitation data not found");
 			return;
 		}
-		
+
 		RRInfo = Fetch(forecastTime, forecastLevel, RRParam, forecastType, false);
 		nextTimeStep = forecastTime;
 		nextTimeStep.ValidDateTime().Adjust(myTargetInfo->Time().StepResolution(), paramStep);
 
 		NextRRInfo = Fetch(nextTimeStep, forecastLevel, RRParam, forecastType, false);
 	}
-	
+
 	if (!Z1000Info || !Z850Info || !T850Info || !NInfo || !TInfo || !CloudInfo || !KindexInfo || !RRInfo || !NextRRInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
 	string deviceType = "CPU";
 
 	// Precipitation limits copied from TEE_Hsade.F
-	
+
 	double RRLimit1 = 0.01;
 	double RRLimit2 = 0.1;
 	double RRLimit3 = 1.;
@@ -202,10 +202,9 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		RRLimit3 = 4.;
 		RRLimit4 = 8.;
 	}
-	
-	LOCKSTEP(myTargetInfo,Z1000Info,Z850Info,T850Info,NInfo,TInfo,CloudInfo,KindexInfo,RRInfo,NextRRInfo)
-	{
 
+	LOCKSTEP(myTargetInfo, Z1000Info, Z850Info, T850Info, NInfo, TInfo, CloudInfo, KindexInfo, RRInfo, NextRRInfo)
+	{
 		double N = NInfo->Value();
 		double T = TInfo->Value();
 		double Z1000 = Z1000Info->Value();
@@ -223,8 +222,8 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		double reltopo = metutil::RelativeTopography_(1000, 850, Z1000, Z850);
 
-		double rain = 0; // default, no rain
-		double cloudType = 1; // default
+		double rain = 0;       // default, no rain
+		double cloudType = 1;  // default
 
 		// from rain intensity determine WaWa-code
 
@@ -244,55 +243,48 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		{
 			rain = 60;
 		}
-		
-		
-
 
 		// cloud code determines cloud type
 
 		N *= 100;
 
-		if (cloud == 3307 )
+		if (cloud == 3307)
 		{
 			cloudType = 2;  // sade alapilvesta
 		}
-		else if (cloud == 2307 && N > 70 )
+		else if (cloud == 2307 && N > 70)
 		{
 			cloudType = 2;
 		}
 		else if (cloud == 3604)
 		{
-			cloudType = 3;	// sade paksusta pilvesta
+			cloudType = 3;  // sade paksusta pilvesta
 		}
-		else if (cloud == 3309 || cloud == 2303 || cloud == 2302
-			 || cloud == 1309 || cloud == 1303 || cloud == 1302)
+		else if (cloud == 3309 || cloud == 2303 || cloud == 2302 || cloud == 1309 || cloud == 1303 || cloud == 1302)
 		{
-		   cloudType = 4; 	// kuuropilvi
+			cloudType = 4;  // kuuropilvi
 		}
 
 		// Ukkoset
 		T850 = T850 - himan::constants::kKelvin;
 
-		if ( cloudType == 2 && T850 < -9 )
-			cloudType = 5;  // lumisade
+		if (cloudType == 2 && T850 < -9) cloudType = 5;  // lumisade
 
-		if ( cloudType == 4 )
+		if (cloudType == 4)
 		{
 			if (kindex >= 37)
 				cloudType = 45;  // ukkossade
 
 			else if (kindex >= 27)
-				cloudType = 35; // ukkossade
+				cloudType = 35;  // ukkossade
 		}
-
 
 		// from here HSADE1-N
 
 		if (rain >= 60 && rain <= 65)
 		{
-			if (cloudType == 3) // Jatkuva sade
+			if (cloudType == 3)  // Jatkuva sade
 			{
-
 				if (reltopo < 1288)
 				{
 					rain = rain + 10;  // Lumi
@@ -306,12 +298,11 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					rain = 68;  // Räntä
 				}
 			}
-			else if (cloudType == 45) // Kuuroja + voimakasta ukkosta
+			else if (cloudType == 45)  // Kuuroja + voimakasta ukkosta
 			{
 				if (reltopo < 1285)
 				{
-
-					if (rain >= 63) //Lumikuuroja
+					if (rain >= 63)  // Lumikuuroja
 					{
 						rain = 86;
 					}
@@ -325,12 +316,11 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					rain = 97;  // Kesällä ukkosta
 				}
 			}
-			else if (cloudType == 35)   // Kuuroja + ukkosta
+			else if (cloudType == 35)  // Kuuroja + ukkosta
 			{
 				if (reltopo < 1285)
 				{
-
-					if (rain >= 63)   // Lumikuuroja
+					if (rain >= 63)  // Lumikuuroja
 					{
 						rain = 86;
 					}
@@ -344,12 +334,10 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					rain = 95;  // Kesällä ukkosta
 				}
 			}
-			else if (cloudType == 4) // Kuuroja - ukkosta
+			else if (cloudType == 4)  // Kuuroja - ukkosta
 			{
-
 				if (reltopo < 1285)
 				{
-
 					if (rain >= 63)
 					{
 						rain = 86;
@@ -361,7 +349,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				}
 				else
 				{
-					if (rain >= 63) // Vesikuuroja
+					if (rain >= 63)  // Vesikuuroja
 					{
 						rain = 82;
 					}
@@ -371,9 +359,9 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					}
 				}
 			}
-			else if (cloudType == 2)   // Tihkua
+			else if (cloudType == 2)  // Tihkua
 			{
-				if (rain <= 61) // Sademäärä ei saa olla suuri
+				if (rain <= 61)  // Sademäärä ei saa olla suuri
 				{
 					if (reltopo < 1288)
 					{
@@ -385,17 +373,16 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 					}
 				}
 			}
-			else if (cloudType == 5) //Lumisadetta alapilvistä
+			else if (cloudType == 5)  // Lumisadetta alapilvistä
 			{
 				rain = rain + 10;
 			}
-			else // Hetkellisen sateen virhe, siis poutaa
+			else  // Hetkellisen sateen virhe, siis poutaa
 			{
 				rain = 0;
 			}
 
-
-			if (reltopo >= 1289) // Lopuksi jäätävä sade
+			if (reltopo >= 1289)  // Lopuksi jäätävä sade
 			{
 				if (rain >= 60 && rain <= 61 && T <= 270.15)
 				{
@@ -413,13 +400,13 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				{
 					rain = 57;
 				}
-
 			}
 		}
 
 		myTargetInfo->Value(rain);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

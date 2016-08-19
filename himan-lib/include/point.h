@@ -8,13 +8,12 @@
 #ifndef POINT_H
 #define POINT_H
 
-#include <ostream>
-#include "himan_common.h"
 #include "cuda_helper.h"
+#include "himan_common.h"
+#include <ostream>
 
 namespace himan
 {
-
 /**
  * @class point
  *
@@ -24,22 +23,17 @@ namespace himan
 
 class point
 {
-public:
+   public:
 	CUDA_DEVICE point();
 	CUDA_DEVICE point(double itsX, double itsY);
 	CUDA_DEVICE ~point() {}
-
 	CUDA_DEVICE point(const point& other);
 	CUDA_DEVICE point& operator=(const point& other);
 
 	CUDA_DEVICE bool operator==(const point& thePoint) const;
 	CUDA_DEVICE bool operator!=(const point& thePoint) const;
 
-	std::string ClassName() const
-	{
-		return "himan::point";
-	}
-
+	std::string ClassName() const { return "himan::point"; }
 	/**
 	 * @return X coordinate value
 	 */
@@ -64,26 +58,17 @@ public:
 		return file;
 	}
 
-private:
+   private:
 	double itsX;
 	double itsY;
 };
 
 CUDA_DEVICE
-inline point::point() : itsX(kHPMissingValue), itsY(kHPMissingValue)
-{
-}
-
+inline point::point() : itsX(kHPMissingValue), itsY(kHPMissingValue) {}
 CUDA_DEVICE
-inline point::point(double theX, double theY) : itsX(theX), itsY(theY)
-{
-}
-
+inline point::point(double theX, double theY) : itsX(theX), itsY(theY) {}
 CUDA_DEVICE
-inline point::point(const point& other) : itsX(other.X()), itsY(other.Y())
-{
-}
-
+inline point::point(const point& other) : itsX(other.X()), itsY(other.Y()) {}
 CUDA_DEVICE
 inline point& point::operator=(const point& other)
 {
@@ -105,90 +90,43 @@ inline bool point::operator==(const point& other) const
 }
 
 CUDA_DEVICE
-inline bool point::operator!=(const point& thePoint) const
-{
-	return !(*this == thePoint);
-}
-
+inline bool point::operator!=(const point& thePoint) const { return !(*this == thePoint); }
 CUDA_DEVICE
-inline double point::X() const
-{
-	return itsX;
-}
-
+inline double point::X() const { return itsX; }
 CUDA_DEVICE
-inline double point::Y() const
-{
-	return itsY;
-}
-
+inline double point::Y() const { return itsY; }
 CUDA_DEVICE
-inline void point::X(double theX)
-{
-	itsX = theX;
-}
-
+inline void point::X(double theX) { itsX = theX; }
 CUDA_DEVICE
-inline void point::Y(double theY)
-{
-	itsY = theY;
-}
-
-inline std::ostream& operator<<(std::ostream& file, const point& ob)
-{
-	return ob.Write(file);
-}
-
+inline void point::Y(double theY) { itsY = theY; }
+inline std::ostream& operator<<(std::ostream& file, const point& ob) { return ob.Write(file); }
 class station : public point
 {
-public:
+   public:
 	station();
 	station(int theId, const std::string& theName, double lon, double lat);
 
 	int Id() const;
 	void Id(int theId);
-	
+
 	std::string Name() const;
 	void Name(const std::string& theName);
-	
-private:
-	int itsId; // FMISID
+
+   private:
+	int itsId;  // FMISID
 	std::string itsName;
 };
 
-inline station::station()
-	: point()
-	, itsId(kHPMissingInt)
-	, itsName("Himan default station")
-{}
-
+inline station::station() : point(), itsId(kHPMissingInt), itsName("Himan default station") {}
 inline station::station(int theId, const std::string& theName, double lon, double lat)
-	: point(lon,lat)
-	, itsId(theId)
-	, itsName(theName)
-{}
-
-inline int station::Id() const
+    : point(lon, lat), itsId(theId), itsName(theName)
 {
-	return itsId;
 }
 
-inline void station::Id(int theId)
-{
-	itsId = theId;
-}
-
-inline std::string station::Name() const
-{
-	return itsName;
-}
-
-inline void station::Name(const std::string& theName)
-{
-	itsName = theName;
-}
-
-
-} // namespace himan
+inline int station::Id() const { return itsId; }
+inline void station::Id(int theId) { itsId = theId; }
+inline std::string station::Name() const { return itsName; }
+inline void station::Name(const std::string& theName) { itsName = theName; }
+}  // namespace himan
 
 #endif /* POINT_H */

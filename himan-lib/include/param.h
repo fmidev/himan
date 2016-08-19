@@ -23,34 +23,26 @@
 
 namespace himan
 {
-
 class logger;
 class param
 {
-
-public:
-
+   public:
 	param();
 	explicit param(const std::string& theName);
 	param(const std::string& theName, unsigned long theUnivId);
 	param(const std::string& theName, unsigned long theUnivId, HPParameterUnit theUnit);
 
-	param(const std::string& theName, unsigned long theUnivId, long itsGribDiscipline, long itsGribCategory, long itsGribParameter);
-	param(const std::string& theName, unsigned long theUnivId,
-		  double theScale,
-		  double theBase,
-		  HPInterpolationMethod theInterpolationMethod = kBiLinear);
+	param(const std::string& theName, unsigned long theUnivId, long itsGribDiscipline, long itsGribCategory,
+	      long itsGribParameter);
+	param(const std::string& theName, unsigned long theUnivId, double theScale, double theBase,
+	      HPInterpolationMethod theInterpolationMethod = kBiLinear);
 
 	~param();
 
 	param(const param& other);
 	param& operator=(const param& other);
 
-	std::string ClassName() const
-	{
-		return "himan::param";
-	}
-
+	std::string ClassName() const { return "himan::param"; }
 	bool operator==(const param& other) const;
 	bool operator!=(const param& other) const;
 
@@ -125,41 +117,34 @@ public:
 
 	long Id() const;
 	void Id(long theId);
-	
+
 	std::ostream& Write(std::ostream& file) const;
 
-private:
-
-	long itsId; //<! neons id
-	std::string itsName; //!< neons name
+   private:
+	long itsId;           //<! neons id
+	std::string itsName;  //!< neons name
 	double itsScale;
 	double itsBase;
 	long itsUnivId;
-	
-	long itsGribParameter; //!< Grib parameter number (only for grib2)
-	long itsGribCategory; //!< Grib parameter category (only for grib2)
-	long itsGribDiscipline; //!< Grib parameter discipline (only for grib2)
-	long itsGribTableVersion; //!< Grib table version (only in grib 1)
-	long itsGribIndicatorOfParameter; //!< Grib parameter number (only in grib 1)
+
+	long itsGribParameter;             //!< Grib parameter number (only for grib2)
+	long itsGribCategory;              //!< Grib parameter category (only for grib2)
+	long itsGribDiscipline;            //!< Grib parameter discipline (only for grib2)
+	long itsGribTableVersion;          //!< Grib table version (only in grib 1)
+	long itsGribIndicatorOfParameter;  //!< Grib parameter number (only in grib 1)
 
 	int itsVersion;
 	HPInterpolationMethod itsInterpolationMethod;
-	
-	HPParameterUnit itsUnit; //!< Unit of the parameter
-	double itsMissingValue; //!< Missing value
+
+	HPParameterUnit itsUnit;  //!< Unit of the parameter
+	double itsMissingValue;   //!< Missing value
 
 	aggregation itsAggregation;
-
 };
 
-inline
-std::ostream& operator<<(std::ostream& file, const param& ob)
-{
-	return ob.Write(file);
-}
-
+inline std::ostream& operator<<(std::ostream& file, const param& ob) { return ob.Write(file); }
 typedef std::vector<himan::param> params;
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* PARAM_H */

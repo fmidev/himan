@@ -5,9 +5,9 @@
  * @author partio
  */
 
-#include "level.h"
-#include "forecast_time.h"
 #include "plugin_configuration.h"
+#include "forecast_time.h"
+#include "level.h"
 #include "util.h"
 
 #include <algorithm>
@@ -16,67 +16,48 @@
 using namespace himan;
 using namespace std;
 
-plugin_configuration::plugin_configuration() 
-	: itsName("")
-	, itsOptions()
-	, itsPreconfiguredParams()
-	, itsStatistics(new statistics)
+plugin_configuration::plugin_configuration()
+    : itsName(""), itsOptions(), itsPreconfiguredParams(), itsStatistics(new statistics)
 {
 }
 
 plugin_configuration::plugin_configuration(const configuration& theConfiguration)
-	: configuration(theConfiguration)
-	, itsName("")
-	, itsOptions()
-	, itsPreconfiguredParams()
-	, itsInfo(new info)
-	, itsStatistics(new statistics)
+    : configuration(theConfiguration),
+      itsName(""),
+      itsOptions(),
+      itsPreconfiguredParams(),
+      itsInfo(new info),
+      itsStatistics(new statistics)
 {
 }
 
 plugin_configuration::plugin_configuration(const plugin_configuration& other)
-	: configuration(other)
-	, itsName(other.itsName)
-	, itsOptions(other.itsOptions)
-	, itsPreconfiguredParams(other.itsPreconfiguredParams)
-	, itsInfo(new info(*other.itsInfo))	
-	, itsStatistics(new statistics(*other.itsStatistics))
-{	
-}
-
-plugin_configuration::plugin_configuration(const string& theName, const map<string,vector<string>>& theOptions)
-	: itsName(theName)
-	, itsOptions(theOptions)
-	, itsPreconfiguredParams()
-	, itsStatistics(new statistics)
+    : configuration(other),
+      itsName(other.itsName),
+      itsOptions(other.itsOptions),
+      itsPreconfiguredParams(other.itsPreconfiguredParams),
+      itsInfo(new info(*other.itsInfo)),
+      itsStatistics(new statistics(*other.itsStatistics))
 {
 }
 
-void plugin_configuration::AddOption(const string& key, const string& value)
+plugin_configuration::plugin_configuration(const string& theName, const map<string, vector<string>>& theOptions)
+    : itsName(theName), itsOptions(theOptions), itsPreconfiguredParams(), itsStatistics(new statistics)
 {
-	itsOptions[key].push_back(value);
 }
 
-void plugin_configuration::Name(const string& theName)
+void plugin_configuration::AddOption(const string& key, const string& value) { itsOptions[key].push_back(value); }
+void plugin_configuration::Name(const string& theName) { itsName = theName; }
+string plugin_configuration::Name() const { return itsName; }
+bool plugin_configuration::Exists(const string& key) const
 {
-	itsName = theName;
-}
-
-string plugin_configuration::Name() const
-{
-	return itsName;
-}
-
-bool plugin_configuration::Exists(const string & key) const
-{
-	map<string,vector<string>>::const_iterator iter = itsOptions.find(key);
+	map<string, vector<string>>::const_iterator iter = itsOptions.find(key);
 	return (iter != itsOptions.end());
 }
 
-string plugin_configuration::GetValue(const string & key) const
+string plugin_configuration::GetValue(const string& key) const
 {
-
-	map<string,vector<string>>::const_iterator iter = itsOptions.find(key);
+	map<string, vector<string>>::const_iterator iter = itsOptions.find(key);
 
 	if (iter == itsOptions.end())
 	{
@@ -92,11 +73,7 @@ string plugin_configuration::GetValue(const string & key) const
 	return iter->second[0];
 }
 
-const vector<string>& plugin_configuration::GetValueList(const string& key) const
-{
-	return itsOptions.at(key);
-}
-
+const vector<string>& plugin_configuration::GetValueList(const string& key) const { return itsOptions.at(key); }
 void plugin_configuration::AddParameter(const string& paramName, const vector<pair<string, string>>& opts)
 {
 	if (!itsPreconfiguredParams[paramName].empty())
@@ -104,7 +81,7 @@ void plugin_configuration::AddParameter(const string& paramName, const vector<pa
 		throw runtime_error(ClassName() + ": duplicate parameter options definition:: '" + paramName + "'");
 	}
 
-	for (const auto & p : opts)
+	for (const auto& p : opts)
 	{
 		itsPreconfiguredParams[paramName].push_back(p);
 	}
@@ -134,44 +111,24 @@ const vector<pair<string, string>>& plugin_configuration::GetParameterOptions(co
 
 	if (iter == itsPreconfiguredParams.end())
 	{
-		throw runtime_error(ClassName() + ": parameter not found in preconfigured parameter list:: '" + paramName + "'");
+		throw runtime_error(ClassName() + ": parameter not found in preconfigured parameter list:: '" + paramName +
+		                    "'");
 	}
 
 	return iter->second;
 }
 
-shared_ptr<info> plugin_configuration::Info() const
-{
-	return itsInfo;
-}
-
-void plugin_configuration::Info(shared_ptr<info> theInfo) 
-{
-	itsInfo = theInfo;
-}
-
-shared_ptr<statistics> plugin_configuration::Statistics() const
-{
-	return itsStatistics;
-}
-
-bool plugin_configuration::StatisticsEnabled() const
-{
-	return !(itsStatisticsLabel.empty());
-
-}
-
-void plugin_configuration::StartStatistics()
-{
-	itsStatistics->Start();
-}
-
+shared_ptr<info> plugin_configuration::Info() const { return itsInfo; }
+void plugin_configuration::Info(shared_ptr<info> theInfo) { itsInfo = theInfo; }
+shared_ptr<statistics> plugin_configuration::Statistics() const { return itsStatistics; }
+bool plugin_configuration::StatisticsEnabled() const { return !(itsStatisticsLabel.empty()); }
+void plugin_configuration::StartStatistics() { itsStatistics->Start(); }
 void plugin_configuration::WriteStatistics()
 {
 	itsStatistics->itsTimer->Stop();
 
 	cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << endl;
-	
+
 	cout << "Plugin:\t\t\t" << itsName << endl;
 	cout << "Use cache:\t\t" << (itsUseCache ? "true" : "false") << endl;
 	cout << "Use cuda:\t\t" << (itsUseCuda ? "true" : "false") << endl;
@@ -210,12 +167,18 @@ void plugin_configuration::WriteStatistics()
 	// Statistics from class statistics
 
 	// total elapsed time
-	
-	size_t elapsedTime = static_cast<size_t> (itsStatistics->itsTimer->GetTime());
 
-	int fetchingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsFetchingTime)/static_cast<double>(itsStatistics->itsUsedThreadCount)/static_cast<double> (elapsedTime));
-	int processingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsProcessingTime-itsStatistics->itsFetchingTime/itsStatistics->itsUsedThreadCount)/static_cast<double> (elapsedTime));
-	int initTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsInitTime)/static_cast<double> (elapsedTime));
+	size_t elapsedTime = static_cast<size_t>(itsStatistics->itsTimer->GetTime());
+
+	int fetchingTimePercentage =
+	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsFetchingTime) /
+	                     static_cast<double>(itsStatistics->itsUsedThreadCount) / static_cast<double>(elapsedTime));
+	int processingTimePercentage =
+	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsProcessingTime -
+	                                               itsStatistics->itsFetchingTime / itsStatistics->itsUsedThreadCount) /
+	                     static_cast<double>(elapsedTime));
+	int initTimePercentage =
+	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsInitTime) / static_cast<double>(elapsedTime));
 
 	int writingTimePercentage = 0;
 
@@ -223,53 +186,62 @@ void plugin_configuration::WriteStatistics()
 
 	if (itsFileWriteOption == kSingleFile)
 	{
-		writingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsWritingTime)/static_cast<double> (elapsedTime));
+		writingTimePercentage = static_cast<int>(100 * static_cast<double>(itsStatistics->itsWritingTime) /
+		                                         static_cast<double>(elapsedTime));
 		writingThreads = ", single thread";
 	}
 	else
 	{
-		writingTimePercentage = static_cast<int> (100*static_cast<double> (itsStatistics->itsWritingTime/itsStatistics->itsUsedThreadCount)/static_cast<double> (elapsedTime));
+		writingTimePercentage = static_cast<int>(
+		    100 * static_cast<double>(itsStatistics->itsWritingTime / itsStatistics->itsUsedThreadCount) /
+		    static_cast<double>(elapsedTime));
 		writingThreads = ", average over used threads";
 	}
 
 	assert(itsStatistics->itsValueCount >= itsStatistics->itsMissingValueCount);
 
-	cout << "Thread count:\t\t" <<  itsStatistics->itsUsedThreadCount << endl
-		<< "Used GPU count:\t\t" << itsStatistics->itsUsedGPUCount << endl
-		<< "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
-		<< "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
-		<< "Elapsed time:\t\t" <<  elapsedTime << " milliseconds" << endl
-		<< "Plugin init time\t" << itsStatistics->itsInitTime << " milliseconds, single thread (" << initTimePercentage << "%)" << endl
-		<< "Fetching time:\t\t" << itsStatistics->itsFetchingTime/itsStatistics->itsUsedThreadCount << " milliseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
-		<< "Process time:\t\t" << itsStatistics->itsProcessingTime/itsStatistics->itsUsedThreadCount << " milliseconds, total over used threads (" << processingTimePercentage << "%)" << endl
-		<< "Writing time:\t\t" << itsStatistics->itsWritingTime/itsStatistics->itsUsedThreadCount << " milliseconds" << writingThreads << " (" << writingTimePercentage << "%)" << endl
-		<< "Values:\t\t\t" << itsStatistics->itsValueCount << endl
-		<< "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " (" << static_cast<int> (100*static_cast<double>(itsStatistics->itsMissingValueCount)/static_cast<double>(itsStatistics->itsValueCount)) << "%)" << endl
-		<< "Million PPS:\t\t" << static_cast<double>(itsStatistics->itsValueCount)/(static_cast<double>(elapsedTime)*1e3) << endl; // million points per second
-
+	cout << "Thread count:\t\t" << itsStatistics->itsUsedThreadCount << endl
+	     << "Used GPU count:\t\t" << itsStatistics->itsUsedGPUCount << endl
+	     << "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
+	     << "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
+	     << "Elapsed time:\t\t" << elapsedTime << " milliseconds" << endl
+	     << "Plugin init time\t" << itsStatistics->itsInitTime << " milliseconds, single thread (" << initTimePercentage
+	     << "%)" << endl
+	     << "Fetching time:\t\t" << itsStatistics->itsFetchingTime / itsStatistics->itsUsedThreadCount
+	     << " milliseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
+	     << "Process time:\t\t" << itsStatistics->itsProcessingTime / itsStatistics->itsUsedThreadCount
+	     << " milliseconds, total over used threads (" << processingTimePercentage << "%)" << endl
+	     << "Writing time:\t\t" << itsStatistics->itsWritingTime / itsStatistics->itsUsedThreadCount << " milliseconds"
+	     << writingThreads << " (" << writingTimePercentage << "%)" << endl
+	     << "Values:\t\t\t" << itsStatistics->itsValueCount << endl
+	     << "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " ("
+	     << static_cast<int>(100 * static_cast<double>(itsStatistics->itsMissingValueCount) /
+	                         static_cast<double>(itsStatistics->itsValueCount))
+	     << "%)" << endl
+	     << "Million PPS:\t\t"
+	     << static_cast<double>(itsStatistics->itsValueCount) / (static_cast<double>(elapsedTime) * 1e3)
+	     << endl;  // million points per second
 }
 
 ostream& plugin_configuration::Write(ostream& file) const
 {
-
 	// configuration::Write();
-	
+
 	file << "<" << ClassName() << ">" << endl;
 	file << "__itsName__ " << itsName << endl;
 
-	for(map<string, vector<string>>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)
+	for (map<string, vector<string>>::const_iterator iter = itsOptions.begin(); iter != itsOptions.end(); ++iter)
 	{
 		file << "__" << iter->first << "__ ";
-		
+
 		for (size_t i = 0; i < iter->second.size(); i++)
 		{
 			if (i > 1)
 			{
 				file << ",";
 			}
-			
-			file << iter->second[i] << endl;
 
+			file << iter->second[i] << endl;
 		}
 	}
 

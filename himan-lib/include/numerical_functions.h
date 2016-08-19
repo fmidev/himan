@@ -6,88 +6,92 @@
  */
 
 #ifndef NUMERICAL_FUNCTIONS_H
-#define	NUMERICAL_FUNCTIONS_H
+#define NUMERICAL_FUNCTIONS_H
 
+#include "cuda_helper.h"
 #include "himan_common.h"
 #include "plugin_configuration.h"
-#include "cuda_helper.h"
 #include <valarray>
 
 namespace himan
 {
-
-
 namespace numerical_functions
 {
 /**
  * @class Integral
- * An object of type integral that can perform vertical integration in the atmosphere from a lower bound to an upper bound height. It can either be used to integrate a single variable (i.e. /int{x(h) dh} or a function /int{f(x(h)) dh}
+ * An object of type integral that can perform vertical integration in the atmosphere from a lower bound to an upper
+ * bound height. It can either be used to integrate a single variable (i.e. /int{x(h) dh} or a function /int{f(x(h)) dh}
  */
-	
+
 class integral
 {
-	public:
+   public:
+	integral();
+	~integral() {}
+	// virtual std::string ClassName() const { return "himan::numerical_functions::integral"; }
 
-		integral();
-		~integral() {}
+	// provide list of parameters that will be integrated over
+	void Params(params theParams);
 
-		//virtual std::string ClassName() const { return "himan::numerical_functions::integral"; }
+	// provide function of parameters that will be integrated over. TODO I'll document an example how that lambda
+	// function has to look like.
+	void Function(std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> theFunction);
 
-		//provide list of parameters that will be integrated over
-		void Params(params theParams);
+	// set bounds
+	void LowerBound(const std::valarray<double>& theLowerBound);
+	void UpperBound(const std::valarray<double>& theUpperBound);
+	void LowerLevelLimit(int theLowestLevel);
+	void UpperLevelLimit(int theHighestLevel);
+	void SetLevelLimits();
+	void ForecastType(forecast_type theType);
+	void ForecastTime(forecast_time theTime);
+	void LevelType(level theLevel);
+	void HeightInMeters(bool theHeightInMeters);
+	// return result
+	const std::valarray<double>& Result() const;
 
-		//provide function of parameters that will be integrated over. TODO I'll document an example how that lambda function has to look like.
-		void Function(std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> theFunction);
+	// pass configuration to integration object (needed for fetching values)
+	std::shared_ptr<const plugin_configuration> itsConfiguration;
 
-		//set bounds
-		void LowerBound(const std::valarray<double>& theLowerBound);
-		void UpperBound(const std::valarray<double>& theUpperBound);
-		void LowerLevelLimit(int theLowestLevel);
-		void UpperLevelLimit(int theHighestLevel);
-		void SetLevelLimits();
-		void ForecastType(forecast_type theType);
-		void ForecastTime(forecast_time theTime);
-		void LevelType(level theLevel);
-		void HeightInMeters (bool theHeightInMeters);
-		//return result
-		const std::valarray<double>& Result() const;
+	// evaluate the integral expression
+	void Evaluate();
+	bool Complete();
 
-		//pass configuration to integration object (needed for fetching values)
-		std::shared_ptr<const plugin_configuration> itsConfiguration;
-		
-		//evaluate the integral expression
-		void Evaluate();
-		bool Complete();
+   private:
+	bool itsHeightInMeters;
+	int itsLowestLevel;
+	int itsHighestLevel;
 
-	private:
+	forecast_time itsTime;
+	forecast_type itsType;
+	level itsLevel;
 
-		bool itsHeightInMeters;
-		int itsLowestLevel;
-		int itsHighestLevel;
+	params itsParams;
+	std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> itsFunction;
 
-		forecast_time itsTime;
-		forecast_type itsType;
-		level itsLevel;
+	std::valarray<double> itsLowerBound;
+	std::valarray<double> itsUpperBound;
 
-		params itsParams;
-		std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> itsFunction;
+	std::vector<bool> itsComplete;
 
-		std::valarray<double> itsLowerBound;
-		std::valarray<double> itsUpperBound;
+	std::valarray<double> itsResult;  // variable is modified in some Result() const functions
+	size_t itsIndex;
 
-		std::vector<bool> itsComplete;
-
-		std::valarray<double> itsResult; // variable is modified in some Result() const functions
-		size_t itsIndex;
-
-		std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>, std::valarray<double>) const __attribute__((always_inline));
-		std::pair<level,level> LevelForHeight(const producer&, double) const;
+	std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>,
+	                                  std::valarray<double>, std::valarray<double>) const
+	    __attribute__((always_inline));
+	std::pair<level, level> LevelForHeight(const producer&, double) const;
 };
 
-inline
-std::valarray<double> integral::Interpolate(std::valarray<double> currentLevelValue, std::valarray<double> previousLevelValue, std::valarray<double> currentLevelHeight, std::valarray<double> previousLevelHeight, std::valarray<double> itsBound) const
+inline std::valarray<double> integral::Interpolate(std::valarray<double> currentLevelValue,
+                                                   std::valarray<double> previousLevelValue,
+                                                   std::valarray<double> currentLevelHeight,
+                                                   std::valarray<double> previousLevelHeight,
+                                                   std::valarray<double> itsBound) const
 {
-	return (previousLevelValue + (currentLevelValue - previousLevelValue) * (itsBound - previousLevelHeight) / (currentLevelHeight - previousLevelHeight));
+	return (previousLevelValue +
+	        (currentLevelValue - previousLevelValue) * (itsBound - previousLevelHeight) /
+	            (currentLevelHeight - previousLevelHeight));
 }
 
 /**
@@ -101,11 +105,11 @@ himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matr
 
 /**
  * @brief Compute the maximum value in matrix A from the area specified by matrix B
- * 
+ *
  * Matrix B acts also as a weight; a default boxed maximum search would have all matrix B
- * elements set to 1, but if for example origin needs to be excluded, that value 
+ * elements set to 1, but if for example origin needs to be excluded, that value
  * can be set to 0.
- * 
+ *
  * @param A Data
  * @param B Kernel
  * @return Maximum data
@@ -126,16 +130,16 @@ CUDA_DEVICE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W,
 /**
  * @brief Structure passed to CUDA Filter2D kernel containing the input matrix sizes.
  *
- * Set these before calling the CUDA kernel. 
+ * Set these before calling the CUDA kernel.
  */
 
 struct filter_opts
 {
-	int aDimX;			/**< input matrix width */
-	int aDimY;			/**< input matrix height */
-	int bDimX;			/**< convolution kernel width */
-	int bDimY;			/**< convolution kernel height */
-	double missingValue;  /**< input matrix missing value (used for detecting missing values in the CUDA kernel) */
+	int aDimX;           /**< input matrix width */
+	int aDimY;           /**< input matrix height */
+	int bDimX;           /**< convolution kernel width */
+	int bDimY;           /**< convolution kernel height */
+	double missingValue; /**< input matrix missing value (used for detecting missing values in the CUDA kernel) */
 };
 
 /**
@@ -150,13 +154,13 @@ struct filter_opts
 CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 {
 	const double missing = opts.missingValue;
-	
+
 	const int kCenterX = opts.bDimX / 2;
 	const int kCenterY = opts.bDimY / 2;
 
 	const int M = opts.aDimX;
 	const int N = opts.aDimY;
-	
+
 	const int i = blockIdx.x * blockDim.x + threadIdx.x;
 	const int j = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -170,7 +174,7 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 		for (int n = 0; n < opts.bDimY; n++)
 		{
 			const int nn = opts.bDimY - 1 - n;
-				
+
 			for (int m = 0; m < opts.bDimX; m++)
 			{
 				const int mm = opts.bDimX - 1 - m;
@@ -192,13 +196,14 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 					}
 					convolutionValue += aVal * bVal;
 					kernelWeightSum += bVal;
-				} 
+				}
 			}
 		}
 		if (kernelMissingCount < 3)
 		{
 			CudaMatrixSet(C, i, j, 0, M, N, convolutionValue / kernelWeightSum);
-		} else
+		}
+		else
 		{
 			CudaMatrixSet(C, i, j, 0, M, N, kFloatMissing);
 		}
@@ -230,7 +235,7 @@ CUDA_DEVICE CUDA_INLINE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t 
 #endif
 
 // HAVE_CUDA
-#endif 
+#endif
 
 namespace interpolation
 {
@@ -238,40 +243,33 @@ namespace interpolation
  * Basic interpolation functions.
  */
 
-CUDA_HOST CUDA_DEVICE
-inline
-double Linear(double factor, double Y1, double Y2)
+CUDA_HOST CUDA_DEVICE inline double Linear(double factor, double Y1, double Y2)
 {
 	return fma(factor, Y2, fma(-factor, Y1, Y1));
 }
 
-CUDA_HOST CUDA_DEVICE
-inline
-double Linear(double X, double X1, double X2, double Y1, double Y2)
+CUDA_HOST CUDA_DEVICE inline double Linear(double X, double X1, double X2, double Y1, double Y2)
 {
 	double factor = (X - X1) / (X2 - X1);
-	return Linear(factor, Y1, Y2);	
+	return Linear(factor, Y1, Y2);
 }
 
-CUDA_HOST CUDA_DEVICE
-inline
-double BiLinear(double dx, double dy, double a, double b, double c, double d)
+CUDA_HOST CUDA_DEVICE inline double BiLinear(double dx, double dy, double a, double b, double c, double d)
 {
 	// Method below is faster but gives visible interpolation artifacts
 
-	//double ab = Linear(dx, a, b);
-	//double cd = Linear(dx, c, d);
-	//return Linear(dy, ab, cd);
+	// double ab = Linear(dx, a, b);
+	// double cd = Linear(dx, c, d);
+	// return Linear(dy, ab, cd);
 
 	// This one gives smooth interpolation surfaces
 	return (1 - dx) * (1 - dy) * c + dx * (1 - dy) * d + (1 - dx) * dy * a + dx * dy * b;
 }
 
-} // namespace interpolation
+}  // namespace interpolation
 
-} // namespace numerical_functions
+}  // namespace numerical_functions
 
-} // namespace himan
+}  // namespace himan
 
-#endif	/* NUMERICAL_FUNCTIONS_H */
-
+#endif /* NUMERICAL_FUNCTIONS_H */

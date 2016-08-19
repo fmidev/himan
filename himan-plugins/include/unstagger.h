@@ -1,5 +1,5 @@
 /*
- * unstagger.h 
+ * unstagger.h
  *
  *  Created on: Oct 16, 2014
  *      Author: Tack
@@ -15,9 +15,8 @@ namespace himan
 {
 namespace plugin
 {
-
 /**
- * @class unstagger 
+ * @class unstagger
  *
  * @brief Calculate the co-located velocity field for U and V
  *
@@ -25,44 +24,26 @@ namespace plugin
 
 class unstagger : public compiled_plugin, private compiled_plugin_base
 {
-public:
-    unstagger();
+   public:
+	unstagger();
 
-    inline virtual ~unstagger() {}
+	inline virtual ~unstagger() {}
+	unstagger(const unstagger& other) = delete;
+	unstagger& operator=(const unstagger& other) = delete;
 
-    unstagger(const unstagger& other) = delete;
-    unstagger& operator=(const unstagger& other) = delete;
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-    virtual void Process(std::shared_ptr<const plugin_configuration> conf);
-
-    virtual std::string ClassName() const
-    {
-        return "himan::plugin::unstagger";
-    }
-
-    virtual HPPluginClass PluginClass() const
-    {
-        return kCompiled;
-    }
-
-    virtual HPVersionNumber Version() const
-    {
-        return HPVersionNumber(0, 1);
-    }
-
-private:
-    virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-
+	virtual std::string ClassName() const { return "himan::plugin::unstagger"; }
+	virtual HPPluginClass PluginClass() const { return kCompiled; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+   private:
+	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-    return std::shared_ptr<unstagger> (new unstagger());
-}
-
-} // namespace plugin
-} // namespace himan
+extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<unstagger>(new unstagger()); }
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* UNSTAGGER_H */

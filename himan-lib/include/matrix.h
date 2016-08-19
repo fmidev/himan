@@ -11,49 +11,49 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#include <mutex>
 #include "himan_common.h"
+#include <mutex>
 
 namespace himan
 {
 class grid;
 
-template<class T>
+template <class T>
 class matrix
 {
-public:
+   public:
 	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0) {}
-
-	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue )
-		: itsData(theWidth* theHeight* theDepth)
-		, itsWidth(theWidth)
-		, itsHeight(theHeight)
-		, itsDepth(theDepth)
-		, itsMissingValue(theMissingValue)
+	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue)
+	    : itsData(theWidth * theHeight * theDepth),
+	      itsWidth(theWidth),
+	      itsHeight(theHeight),
+	      itsDepth(theDepth),
+	      itsMissingValue(theMissingValue)
 	{
 	}
 
 	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue, T theFillValue)
-		: itsData(theWidth* theHeight* theDepth, theFillValue)
-		, itsWidth(theWidth)
-		, itsHeight(theHeight)
-		, itsDepth(theDepth)
-		, itsMissingValue(theMissingValue)
+	    : itsData(theWidth * theHeight * theDepth, theFillValue),
+	      itsWidth(theWidth),
+	      itsHeight(theHeight),
+	      itsDepth(theDepth),
+	      itsMissingValue(theMissingValue)
 	{
 	}
 
 	matrix(const matrix& other)
-		: itsData(other.itsData) // Copy contents!
-		, itsWidth(other.itsWidth)
-		, itsHeight(other.itsHeight)
-		, itsDepth(other.itsDepth)
-		, itsMissingValue(other.itsMissingValue)
+	    : itsData(other.itsData)  // Copy contents!
+	      ,
+	      itsWidth(other.itsWidth),
+	      itsHeight(other.itsHeight),
+	      itsDepth(other.itsDepth),
+	      itsMissingValue(other.itsMissingValue)
 	{
 	}
 
 	matrix& operator=(const matrix& other)
 	{
-		itsData = other.itsData; // Copy contents!
+		itsData = other.itsData;  // Copy contents!
 		itsWidth = other.itsWidth;
 		itsHeight = other.itsHeight;
 		itsDepth = other.itsDepth;
@@ -65,11 +65,9 @@ public:
 	bool operator==(const matrix& other) const
 	{
 		assert(itsData.size() == other.itsData.size());
-		
-		if (itsWidth	!= other.itsWidth ||
-			itsHeight	!= other.itsHeight ||
-			itsDepth	!= other.itsDepth ||
-			itsMissingValue != other.itsMissingValue)
+
+		if (itsWidth != other.itsWidth || itsHeight != other.itsHeight || itsDepth != other.itsDepth ||
+		    itsMissingValue != other.itsMissingValue)
 		{
 			return false;
 		}
@@ -83,35 +81,18 @@ public:
 		}
 
 		return true;
-		
 	}
 
-	bool operator!=(const matrix& other) const
-	{
-		return !(*this == other);
-	}
-	
-	T& operator[](const size_t& i)
-	{
-		return itsData[i];
-	}
-	
-	std::string ClassName() const
-	{
-		return "himan::matrix";
-	}
-
+	bool operator!=(const matrix& other) const { return !(*this == other); }
+	T& operator[](const size_t& i) { return itsData[i]; }
+	std::string ClassName() const { return "himan::matrix"; }
 	T At(size_t combinedIndex) const
 	{
 		assert(itsData.size() > combinedIndex);
 		return itsData[combinedIndex];
 	}
 
-	T At(size_t x, size_t y, size_t z = 0) const
-	{
-		return itsData[Index(x, y, z)];
-	}
-
+	T At(size_t x, size_t y, size_t z = 0) const { return itsData[Index(x, y, z)]; }
 	std::ostream& Write(std::ostream& file) const
 	{
 		file << "<" << ClassName() << ">" << std::endl;
@@ -125,14 +106,13 @@ public:
 		return file;
 	}
 
-	/**
-	 * @brief Print information on contents if T == double
-	 *
-	 */
+/**
+ * @brief Print information on contents if T == double
+ *
+ */
 #ifndef __NVCC__
 	void PrintData(std::ostream& file, const std::vector<double>& theValues) const
 	{
-
 		if (!theValues.size())
 		{
 			file << "__no-data__" << std::endl;
@@ -171,7 +151,8 @@ public:
 
 		file << "__min__ " << (min == 1e38 ? std::numeric_limits<double>::quiet_NaN() : min) << std::endl;
 		file << "__max__ " << (max == -1e38 ? std::numeric_limits<double>::quiet_NaN() : max) << std::endl;
-		file << "__avg__ " << (count == 0 ? std::numeric_limits<double>::quiet_NaN() : sum / static_cast<double> (count)) << std::endl;
+		file << "__avg__ " << (count == 0 ? std::numeric_limits<double>::quiet_NaN() : sum / static_cast<double>(count))
+		     << std::endl;
 		file << "__missing__ " << missing << std::endl;
 		file << "__nan__ " << nan << std::endl;
 
@@ -179,13 +160,13 @@ public:
 		{
 			return;
 		}
-		
+
 		int binn = 10;
-		double binw = (max-min)/10;
+		double binw = (max - min) / 10;
 
 		double binmin = min;
 		double binmax = binmin + binw;
-		
+
 		file << "distribution:" << std::endl;
 
 		for (int i = 1; i <= binn; i++)
@@ -197,9 +178,9 @@ public:
 			for (size_t j = 0; j < theValues.size(); j++)
 			{
 				double val = theValues[j];
-				
+
 				if (val == itsMissingValue) continue;
-				
+
 				if (val >= binmin && val < binmax)
 				{
 					count++;
@@ -212,47 +193,17 @@ public:
 
 			binmin += binw;
 			binmax += binw;
-
 		}
-
 	}
 #endif
 
-	size_t Size() const
-	{
-		return itsData.size();
-	}
-
-	size_t SizeX() const
-	{
-		return itsWidth;
-	}
-
-	size_t SizeY() const
-	{
-		return itsHeight;
-	}
-
-	size_t SizeZ() const
-	{
-		return itsDepth;
-	}
-
-	void SizeX(size_t theWidth)
-	{
-		Resize(theWidth, itsHeight, itsDepth);
-	}
-
-	void SizeY(size_t theHeight)
-	{
-		Resize(itsWidth, theHeight, itsDepth);
-	}
-
-	void SizeZ(size_t theDepth)
-	{
-		Resize(itsWidth, itsHeight, theDepth);
-	}
-
+	size_t Size() const { return itsData.size(); }
+	size_t SizeX() const { return itsWidth; }
+	size_t SizeY() const { return itsHeight; }
+	size_t SizeZ() const { return itsDepth; }
+	void SizeX(size_t theWidth) { Resize(theWidth, itsHeight, itsDepth); }
+	void SizeY(size_t theHeight) { Resize(itsWidth, theHeight, itsDepth); }
+	void SizeZ(size_t theDepth) { Resize(itsWidth, itsHeight, theDepth); }
 	/**
 	 * @brief Resize matrix to given size
 	 *
@@ -275,16 +226,8 @@ public:
 		return &itsData[0];
 	}
 
-	std::vector<T>& Values()
-	{
-		return itsData;
-	}
-
-	friend std::ostream& operator<<(std::ostream& file, const matrix<T> & ob)
-	{
-		return ob.Write(file);
-	}
-
+	std::vector<T>& Values() { return itsData; }
+	friend std::ostream& operator<<(std::ostream& file, const matrix<T>& ob) { return ob.Write(file); }
 	/**
 	 * @brief Set value of whole matrix or a slice of it.
 	 *
@@ -305,7 +248,7 @@ public:
 		std::lock_guard<std::mutex> lock(itsValueMutex);
 
 		assert(itsData.size() == len);
-		
+
 		if (itsData.size() != len)
 		{
 			return false;
@@ -317,11 +260,11 @@ public:
 
 	/**
 	 * @brief Set value of whole matrix
-	 * 
+	 *
 	 * The size of the new data must be equal to size of old data
-	 * 
+	 *
 	 * @param theData
-	 * @return 
+	 * @return
 	 */
 	bool Set(const std::vector<T>& theData)
 	{
@@ -356,14 +299,14 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
 
-		size_t index = Index(x,y,z);
+		size_t index = Index(x, y, z);
 		assert(index < itsData.size());
 
 		if (index >= itsData.size())
 		{
 			return false;
 		}
-		
+
 		itsData[index] = theValue;
 
 		return true;
@@ -398,23 +341,11 @@ public:
 	 * @brief Fill matrix with a given value
 	 */
 
-	void Fill(T fillValue)
-	{
-		std::fill(itsData.begin(),itsData.end(),fillValue);
-	}
-
+	void Fill(T fillValue) { std::fill(itsData.begin(), itsData.end(), fillValue); }
 	// Only used for calculating statistics in PrintFloatData()
 
-	void MissingValue(T theMissingValue)
-	{
-		itsMissingValue = theMissingValue;
-	}
-
-	T MissingValue() const
-	{
-		return itsMissingValue;
-	}
-
+	void MissingValue(T theMissingValue) { itsMissingValue = theMissingValue; }
+	T MissingValue() const { return itsMissingValue; }
 	/**
 	 * @brief Clear contents of matrix (set size = 0)
 	 */
@@ -423,9 +354,9 @@ public:
 	{
 		itsData.clear();
 		itsData.shrink_to_fit();
-		itsWidth=0;
-		itsHeight=0;
-		itsDepth=0;
+		itsWidth = 0;
+		itsHeight = 0;
+		itsDepth = 0;
 	}
 
 	bool IsMissing(size_t theIndex) const
@@ -434,11 +365,7 @@ public:
 		return (itsData[theIndex] == itsMissingValue);
 	}
 
-	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const
-	{
-		return IsMissing(Index(theX, theY, theZ));
-	}
-
+	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const { return IsMissing(Index(theX, theY, theZ)); }
 	/**
 	 * @brief Calculate missing values in data
 	 *
@@ -449,7 +376,7 @@ public:
 	 *
 	 * The proportion of missing values in the data does not make any difference
 	 * in performance.
-	 * 
+	 *
 	 * @return Number of missing values in data.
 	 */
 
@@ -468,23 +395,19 @@ public:
 		return missing;
 	}
 
-       size_t Index(size_t x, size_t y, size_t z) const
-	{
-		return z * itsWidth * itsHeight + y * itsWidth + x;
-	}
-
-private:
+	size_t Index(size_t x, size_t y, size_t z) const { return z * itsWidth * itsHeight + y * itsWidth + x; }
+   private:
 	std::vector<T> itsData;
 
 	size_t itsWidth, itsHeight, itsDepth;
 
 	T itsMissingValue;
-	
+
 	std::mutex itsValueMutex;
 };
 
-typedef matrix <double> d_matrix_t;
+typedef matrix<double> d_matrix_t;
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* MATRIX_H */

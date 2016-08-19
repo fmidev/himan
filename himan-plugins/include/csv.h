@@ -15,32 +15,18 @@ namespace himan
 {
 namespace plugin
 {
-
 class csv : public io_plugin
 {
-public:
+   public:
 	csv();
 
 	virtual ~csv() {}
-
 	csv(const csv& other) = delete;
 	csv& operator=(const csv& other) = delete;
 
-	virtual std::string ClassName() const
-	{
-		return "himan::plugin::csv";
-	}
-
-	virtual HPPluginClass PluginClass() const
-	{
-		return kAuxiliary;
-	}
-
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
-
+	virtual std::string ClassName() const { return "himan::plugin::csv"; }
+	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
 	/**
 	 * @brief Return all data from a csv file.
 	 *
@@ -60,29 +46,25 @@ public:
 	/**
 	 * @brief Write info contents to a csv file
 	 *
-	 * @param theInfo 
+	 * @param theInfo
 	 * @param outputFile Name of output file
 	 * @param fileWriteOption Determine whether to write whole contents or just the active part
 	 * @return True if writing succeeds
 	 */
 
 	bool ToFile(info& theInfo, std::string& outputFile);
-private:
 
+   private:
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-	return std::make_shared<csv> ();
-}
-
+extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<csv>(); }
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
-} // namespace plugin
-} // namespace himan
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* CSV_H */

@@ -6,10 +6,10 @@
  */
 
 #include "icing.h"
+#include "forecast_time.h"
+#include "level.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "level.h"
-#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -19,9 +19,8 @@ const double kValueEpsilon = 0.00001;
 icing::icing()
 {
 	itsClearTextFormula = "Icing = round(log(CW) +6) + VVcor + Tcor";
-	
-	itsLogger = logger_factory::Instance()->GetLog("icing");
 
+	itsLogger = logger_factory::Instance()->GetLog("icing");
 }
 
 void icing::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -44,31 +43,33 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	// Required source parameters
 
 	const param TParam("T-K");
-	const params VvParam = { param("VV-MS"), param("VV-MMS")};
+	const params VvParam = {param("VV-MS"), param("VV-MMS")};
 	const param ClParam("CLDWAT-KGKG");
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string> (theThreadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string>(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
-	
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 	info_t VvInfo = Fetch(forecastTime, forecastLevel, VvParam, forecastType, false);
 	info_t ClInfo = Fetch(forecastTime, forecastLevel, ClParam, forecastType, false);
 
 	if (!TInfo || !VvInfo || !ClInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
-	double VvScale = 1; // Assume we'll have VV-MMS
+	double VvScale = 1;  // Assume we'll have VV-MMS
 	double ClScale = 1000;
-		
+
 	if (VvInfo->Param().Name() == "VV-MS")
 	{
 		VvScale = 1000;
@@ -77,12 +78,11 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	assert(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
 
 	SetAB(myTargetInfo, TInfo);
-		
+
 	string deviceType = "CPU";
-		
+
 	LOCKSTEP(myTargetInfo, TInfo, VvInfo, ClInfo)
 	{
-
 		double T = TInfo->Value();
 		double Vv = VvInfo->Value();
 		double Cl = ClInfo->Value();
@@ -99,7 +99,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 		T = T - TBase;
 		Vv *= VvScale;
- 		Cl *= ClScale;
+		Cl *= ClScale;
 
 		// Vertical velocity correction factor
 
@@ -171,7 +171,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		{
 			Icing = 0;
 		}
-		else {
+		else
+		{
 			Icing = round(log(Cl) + 6) + vCor + tCor;
 		}
 
@@ -190,6 +191,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		myTargetInfo->Value(Icing);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

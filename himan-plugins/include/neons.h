@@ -2,7 +2,7 @@
  * @file neons.h
  *
  * @date Nov 17, 2012
- * 
+ *
  * @author: partio
  *
  * @class neons
@@ -25,26 +25,24 @@
 #ifndef NEONS_H
 #define NEONS_H
 
-#include "auxiliary_plugin.h"
 #include "NFmiNeonsDB.h"
+#include "auxiliary_plugin.h"
 #include "search_options.h"
 
 namespace himan
 {
 namespace plugin
 {
-
 class neons : public auxiliary_plugin
 {
-
-public:
+   public:
 	neons();
 
 	inline virtual ~neons()
 	{
 		if (itsNeonsDB)
 		{
-			NFmiNeonsDBPool::Instance()->Release(&(*itsNeonsDB)); // Return connection back to pool
+			NFmiNeonsDBPool::Instance()->Release(&(*itsNeonsDB));  // Return connection back to pool
 			itsNeonsDB.release();
 		}
 	}
@@ -52,21 +50,9 @@ public:
 	neons(const neons& other) = delete;
 	neons& operator=(const neons& other) = delete;
 
-	virtual std::string ClassName() const
-	{
-		return "himan::plugin::neons";
-	}
-
-	virtual HPPluginClass PluginClass() const
-	{
-		return kAuxiliary;
-	}
-
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
-
+	virtual std::string ClassName() const { return "himan::plugin::neons"; }
+	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
 	std::vector<std::string> Files(search_options& options);
 	bool Save(const info& resultInfo, const std::string& theFileName);
 
@@ -77,8 +63,9 @@ public:
 	 *  \par timeRangeIndicator - time range indicator (grib 1)
 	 */
 
-	std::string GribParameterName(const long fmiParameterId,const long codeTableVersion, long timeRangeIndicator);
-	std::string GribParameterName(const long fmiParameterId,const long category, const long discipline, const long producer);
+	std::string GribParameterName(const long fmiParameterId, const long codeTableVersion, long timeRangeIndicator);
+	std::string GribParameterName(const long fmiParameterId, const long category, const long discipline,
+	                              const long producer);
 
 	/**
 	 * @brief Function to expose the NFmiNeonsDB interface
@@ -91,17 +78,16 @@ public:
 	/**
 	 * @brief Fetch producer metadata from neons (eventually)
 	 *
-     * @param producerId Producer id
-     * @param attribute
-     * @return String containing the result, empty string if attribute is not found
-     */
-	
+	 * @param producerId Producer id
+	 * @param attribute
+	 * @return String containing the result, empty string if attribute is not found
+	 */
+
 	std::string ProducerMetaData(long producerId, const std::string& attribute) const;
 
 	void PoolMaxWorkers(int maxWorkers);
 
-private:
-
+   private:
 	/**
 	 * @brief Connect to database
 	 *
@@ -111,9 +97,8 @@ private:
 
 	inline void Init();
 
-	bool itsInit; //!< Holds the initialization status of the database connection
-	std::unique_ptr<NFmiNeonsDB> itsNeonsDB; //<! The actual database class instance
-
+	bool itsInit;                             //!< Holds the initialization status of the database connection
+	std::unique_ptr<NFmiNeonsDB> itsNeonsDB;  //<! The actual database class instance
 };
 
 inline void neons::Init()
@@ -122,7 +107,7 @@ inline void neons::Init()
 	{
 		try
 		{
-			itsNeonsDB = std::unique_ptr<NFmiNeonsDB> (NFmiNeonsDBPool::Instance()->GetConnection());
+			itsNeonsDB = std::unique_ptr<NFmiNeonsDB>(NFmiNeonsDBPool::Instance()->GetConnection());
 		}
 		catch (int e)
 		{
@@ -140,19 +125,14 @@ inline NFmiNeonsDB& neons::NeonsDB()
 	return *itsNeonsDB.get();
 }
 
-
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-	return std::shared_ptr<neons> (new neons());
-}
-
+extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<neons>(new neons()); }
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
-} // namespace plugin
-} // namespace himan
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* NEONS_H */

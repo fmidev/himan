@@ -9,29 +9,25 @@
  */
 
 #include "tpot.h"
-#include "plugin_factory.h"
-#include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
-#include "level.h"
 #include "forecast_time.h"
+#include "level.h"
+#include "logger_factory.h"
+#include "plugin_factory.h"
+#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
 
-#include "tpot.cuh"
 #include "cuda_helper.h"
 #include "metutil.h"
+#include "tpot.cuh"
 
-tpot::tpot()
-: itsThetaCalculation(false)
-, itsThetaWCalculation(false)
-, itsThetaECalculation(false)
+tpot::tpot() : itsThetaCalculation(false), itsThetaWCalculation(false), itsThetaECalculation(false)
 {
-	itsClearTextFormula = "TP = Tk * pow((1000/P), 0.286) ; TPW calculated with LCL ; TPE = X"; 
+	itsClearTextFormula = "TP = Tk * pow((1000/P), 0.286) ; TPW calculated with LCL ; TPE = X";
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger_factory::Instance()->GetLog("tpot");
-
 }
 
 void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -95,7 +91,6 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 	SetParams(theParams);
 
 	Start();
-
 }
 
 /*
@@ -106,30 +101,33 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string>(threadIndex));
 
 	const param TParam("T-K");
-	const params PParam = { param("P-PA"), param("P-HPA") };
-	const params TDParam = { param("TD-C"), param("TD-K") };
-	
+	const params PParam = {param("P-PA"), param("P-HPA")};
+	const params TDParam = {param("TD-C"), param("TD-K")};
+
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	myThreadedLogger->Info("Calculating time " +static_cast<string> (forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	double PScale = 1;
 	double TBase = 0;
-	double TDBase  = 0;
-		
-	info_t TInfo = Fetch(forecastTime, forecastLevel, param("T-K"), myTargetInfo->ForecastType(), itsConfiguration->UseCudaForPacking());
+	double TDBase = 0;
+
+	info_t TInfo = Fetch(forecastTime, forecastLevel, param("T-K"), myTargetInfo->ForecastType(),
+	                     itsConfiguration->UseCudaForPacking());
 	info_t TDInfo, PInfo;
 
 	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
 	if (!isPressureLevel)
 	{
-		PInfo = Fetch(forecastTime, forecastLevel, PParam, myTargetInfo->ForecastType(), itsConfiguration->UseCudaForPacking());
+		PInfo = Fetch(forecastTime, forecastLevel, PParam, myTargetInfo->ForecastType(),
+		              itsConfiguration->UseCudaForPacking());
 
 		if (PInfo && (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA"))
 		{
@@ -139,16 +137,19 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (itsThetaWCalculation || itsThetaECalculation)
 	{
-		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, myTargetInfo->ForecastType(), itsConfiguration->UseCudaForPacking());
+		TDInfo = Fetch(forecastTime, forecastLevel, TDParam, myTargetInfo->ForecastType(),
+		               itsConfiguration->UseCudaForPacking());
 	}
 
 	if (!TInfo || (!isPressureLevel && !PInfo) || ((itsThetaWCalculation || itsThetaECalculation) && !TDInfo))
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
-	assert(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB()) && (!TDInfo || (PInfo->Grid()->AB() == TDInfo->Grid()->AB()))));
+	assert(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB()) &&
+	                           (!TDInfo || (PInfo->Grid()->AB() == TDInfo->Grid()->AB()))));
 
 	SetAB(myTargetInfo, TInfo);
 
@@ -173,7 +174,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		auto opts = CudaPrepare(myTargetInfo, TInfo, PInfo, TDInfo);
 
 		tpot_cuda::Process(*opts);
-
 	}
 	else
 #endif
@@ -192,9 +192,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		LOCKSTEP(myTargetInfo, TInfo)
 		{
-		
-			double T = TInfo->Value() + TBase; // to Kelvin
-			
+			double T = TInfo->Value() + TBase;  // to Kelvin
+
 			double P = kFloatMissing, TD = kFloatMissing;
 
 			if (isPressureLevel)
@@ -204,16 +203,17 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			else
 			{
 				PInfo->NextLocation();
-				P = PInfo->Value() * PScale; // to Pa
+				P = PInfo->Value() * PScale;  // to Pa
 			}
 
 			if (itsThetaWCalculation || itsThetaECalculation)
 			{
 				TDInfo->NextLocation();
-				TD = TDInfo->Value() + TDBase; // to Kelvin
+				TD = TDInfo->Value() + TDBase;  // to Kelvin
 			}
 
-			if (T == kFloatMissing || P == kFloatMissing || ((itsThetaECalculation || itsThetaWCalculation) && TD == kFloatMissing))
+			if (T == kFloatMissing || P == kFloatMissing ||
+			    ((itsThetaECalculation || itsThetaWCalculation) && TD == kFloatMissing))
 			{
 				continue;
 			}
@@ -249,13 +249,13 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 double tpot::ThetaW(double P, double T, double TD)
 {
-	
 	double thetae = metutil::ThetaE_(T, TD, P);
 
 	if (thetae == kFloatMissing)
@@ -268,7 +268,8 @@ double tpot::ThetaW(double P, double T, double TD)
 
 #ifdef HAVE_CUDA
 
-unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> PInfo, shared_ptr<info> TDInfo)
+unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo,
+                                                 shared_ptr<info> PInfo, shared_ptr<info> TDInfo)
 {
 	unique_ptr<tpot_cuda::options> opts(new tpot_cuda::options);
 
@@ -295,7 +296,7 @@ unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, 
 
 	if (opts->thetae)
 	{
-		myTargetInfo->Param(param("TPE-K")); 
+		myTargetInfo->Param(param("TPE-K"));
 		opts->tpe = myTargetInfo->ToSimple();
 	}
 
@@ -310,7 +311,7 @@ unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, 
 	}
 	else
 	{
-		opts->p_const = myTargetInfo->Level().Value() * 100; // Pa
+		opts->p_const = myTargetInfo->Level().Value() * 100;  // Pa
 	}
 
 	if (TDInfo)

@@ -20,8 +20,8 @@
 
 #define HIMAN_AUXILIARY_INCLUDE
 
-#include "fetcher.h"
 #include "cache.h"
+#include "fetcher.h"
 #include "hitool.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
@@ -31,8 +31,8 @@ using namespace himan::plugin;
 
 himan::level cape_cuda::itsBottomLevel;
 
-const unsigned char FCAPE		= (1 << 2);
-const unsigned char FCAPE3km	= (1 << 0);
+const unsigned char FCAPE = (1 << 2);
+const unsigned char FCAPE3km = (1 << 0);
 
 extern double Max(const std::vector<double>& vec);
 
@@ -42,7 +42,7 @@ __global__ void InitializeArrayKernel(T* d_arr, T val, size_t N)
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
 	int stride = blockDim.x * gridDim.x;
 
-	for(; idx < N; idx += stride)
+	for (; idx < N; idx += stride)
 	{
 		d_arr[idx] = val;
 	}
@@ -52,10 +52,9 @@ template <typename T>
 void InitializeArray(T* d_arr, T val, size_t N, cudaStream_t& stream)
 {
 	const int blockSize = 128;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
-	InitializeArrayKernel<T> <<< gridSize, blockSize, 0, stream >>> (d_arr, val, N);
-
+	InitializeArrayKernel<T><<<gridSize, blockSize, 0, stream>>>(d_arr, val, N);
 }
 
 template <typename T>
@@ -64,7 +63,7 @@ __global__ void MultiplyWith(T* d_arr, T val, size_t N)
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
 	int stride = blockDim.x * gridDim.x;
 
-	for(; idx < N; idx += stride)
+	for (; idx < N; idx += stride)
 	{
 		d_arr[idx] = d_arr[idx] * val;
 	}
@@ -74,34 +73,34 @@ template <typename T>
 void MultiplyWith(T* d_arr, T val, size_t N, cudaStream_t& stream)
 {
 	const int blockSize = 128;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
-	MultiplyWith<T> <<< gridSize, blockSize, 0, stream >>> (d_arr, val, N);
-
+	MultiplyWith<T><<<gridSize, blockSize, 0, stream>>>(d_arr, val, N);
 }
 
 info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream)
 {
 	auto h_info = fullInfo->ToSimple();
 	size_t N = h_info->size_x * h_info->size_y;
-	
+
 	assert(N > 0);
 
 	// 1. Reserve memory at device for unpacked data
 	double* d_arr = 0;
-	CUDA_CHECK(cudaMalloc(reinterpret_cast<double**> (&d_arr), N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc(reinterpret_cast<double**>(&d_arr), N * sizeof(double)));
 
 	// 2. Unpack if needed, leave data to device and simultaneously copy it back to cpu (himan cache)
 	auto tempGrid = fullInfo->Grid();
 
 	if (tempGrid->IsPackedData())
 	{
-		assert(tempGrid->PackedData().ClassName() == "simple_packed" || tempGrid->PackedData().ClassName() == "jpeg_packed");
+		assert(tempGrid->PackedData().ClassName() == "simple_packed" ||
+		       tempGrid->PackedData().ClassName() == "jpeg_packed");
 		assert(N > 0);
 		assert(tempGrid->Data().Size() == N);
 
-		double* arr = const_cast<double*> (tempGrid->Data().ValuesAsPOD());
-		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*> (arr), sizeof(double) * N, 0));
+		double* arr = const_cast<double*>(tempGrid->Data().ValuesAsPOD());
+		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
 
 		assert(arr);
 
@@ -115,7 +114,7 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		c->Insert(*fullInfo);	
+		c->Insert(*fullInfo);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
 
@@ -123,15 +122,18 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 	}
 	else
 	{
-		CUDA_CHECK(cudaMemcpyAsync(d_arr, fullInfo->Data().ValuesAsPOD(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(
+		    cudaMemcpyAsync(d_arr, fullInfo->Data().ValuesAsPOD(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	}
 
 	h_info->values = d_arr;
-	
+
 	return h_info;
 }
 
-std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf, const himan::forecast_time& theTime, const himan::level& theLevel, const himan::param& theParam, const himan::forecast_type& theType)
+std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
+                                   const himan::forecast_time& theTime, const himan::level& theLevel,
+                                   const himan::param& theParam, const himan::forecast_type& theType)
 {
 	try
 	{
@@ -144,13 +146,13 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 		{
 			throw std::runtime_error("cape_cuda::Fetch(): Unable to proceed");
 		}
-		
-		return std::shared_ptr<info> ();
+
+		return std::shared_ptr<info>();
 	}
 }
 
-__global__
-void CopyLFCIteratorValuesKernel(double* __restrict__ d_Titer, const double* __restrict__ d_Tparcel, double* __restrict__ d_Piter, info_simple d_Penv)
+__global__ void CopyLFCIteratorValuesKernel(double* __restrict__ d_Titer, const double* __restrict__ d_Tparcel,
+                                            double* __restrict__ d_Piter, info_simple d_Penv)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -164,8 +166,8 @@ void CopyLFCIteratorValuesKernel(double* __restrict__ d_Titer, const double* __r
 	}
 }
 
-__global__
-void LiftLCLKernel(const double* __restrict__ d_P, const double* __restrict__ d_T, const double* __restrict__ d_PLCL, info_simple d_Ptarget, double* __restrict__ d_Tparcel)
+__global__ void LiftLCLKernel(const double* __restrict__ d_P, const double* __restrict__ d_T,
+                              const double* __restrict__ d_PLCL, info_simple d_Ptarget, double* __restrict__ d_Tparcel)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -180,7 +182,7 @@ void LiftLCLKernel(const double* __restrict__ d_P, const double* __restrict__ d_
 		assert(d_T[idx] > 100);
 		assert(d_T[idx] < 350 || d_T[idx] == kFloatMissing);
 
-		double T = metutil::LiftLCL_(d_P[idx]*100, d_T[idx], d_PLCL[idx]*100, d_Ptarget.values[idx]*100);
+		double T = metutil::LiftLCL_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
 
 		assert(T > 100);
 		assert(T < 350 || T == kFloatMissing);
@@ -189,8 +191,8 @@ void LiftLCLKernel(const double* __restrict__ d_P, const double* __restrict__ d_
 	}
 }
 
-__global__
-void MoistLiftKernel(const double* __restrict__ d_T, const double* __restrict__  d_P, info_simple d_Ptarget, double* __restrict__ d_Tparcel)
+__global__ void MoistLiftKernel(const double* __restrict__ d_T, const double* __restrict__ d_P, info_simple d_Ptarget,
+                                double* __restrict__ d_Tparcel)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -208,7 +210,7 @@ void MoistLiftKernel(const double* __restrict__ d_T, const double* __restrict__ 
 		assert(d_T[idx] > 100);
 		assert(d_T[idx] < 350 || d_T[idx] == kFloatMissing);
 
-		double T = metutil::MoistLift_(d_P[idx]*100, d_T[idx], d_Ptarget.values[idx]*100);
+		double T = metutil::MoistLift_(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
 
 		assert(T > 100);
 		assert(T < 350 || T == kFloatMissing);
@@ -217,10 +219,12 @@ void MoistLiftKernel(const double* __restrict__ d_T, const double* __restrict__ 
 	}
 }
 
-__global__
-void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d_Zenv, info_simple d_prevTenv, info_simple d_prevPenv, info_simple d_prevZenv, 
-		const double* __restrict d_Tparcel, const double* __restrict d_prevTparcel, const double* __restrict__ d_LFCP, double* __restrict__ d_CAPE, 
-		double* __restrict__ d_CAPE1040, double* __restrict__ d_CAPE3km, double* __restrict__ d_ELT, double* __restrict__ d_ELP, unsigned char* __restrict__ d_found, int d_curLevel, int d_breakLevel)
+__global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d_Zenv, info_simple d_prevTenv,
+                           info_simple d_prevPenv, info_simple d_prevZenv, const double* __restrict d_Tparcel,
+                           const double* __restrict d_prevTparcel, const double* __restrict__ d_LFCP,
+                           double* __restrict__ d_CAPE, double* __restrict__ d_CAPE1040, double* __restrict__ d_CAPE3km,
+                           double* __restrict__ d_ELT, double* __restrict__ d_ELP, unsigned char* __restrict__ d_found,
+                           int d_curLevel, int d_breakLevel)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -229,29 +233,30 @@ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d_Zenv, info
 		double Tenv = d_Tenv.values[idx];
 		assert(Tenv > 100.);
 
-		double Penv = d_Penv.values[idx]; // hPa
+		double Penv = d_Penv.values[idx];  // hPa
 		assert(Penv < 1200.);
-		
-		double Zenv = d_Zenv.values[idx]; // m
-		
-		double prevTenv = d_prevTenv.values[idx]; // K
+
+		double Zenv = d_Zenv.values[idx];  // m
+
+		double prevTenv = d_prevTenv.values[idx];  // K
 		assert(prevTenv > 100.);
 
-		double prevPenv = d_prevPenv.values[idx]; // hPa
+		double prevPenv = d_prevPenv.values[idx];  // hPa
 		assert(prevPenv < 1200.);
-		
-		double prevZenv = d_prevZenv.values[idx]; // m
 
-		double Tparcel = d_Tparcel[idx]; // K
+		double prevZenv = d_prevZenv.values[idx];  // m
+
+		double Tparcel = d_Tparcel[idx];  // K
 		assert(Tparcel > 100. || Tparcel == kFloatMissing);
 
-		double prevTparcel = d_prevTparcel[idx]; // K
+		double prevTparcel = d_prevTparcel[idx];  // K
 		assert(prevTparcel > 100. || Tparcel == kFloatMissing);
 
-		double LFCP = d_LFCP[idx]; // hPa
+		double LFCP = d_LFCP[idx];  // hPa
 		assert(LFCP < 1200.);
-				
-		if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || prevZenv == kFloatMissing || Tparcel == kFloatMissing || prevTparcel == kFloatMissing || Penv > LFCP)
+
+		if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing || prevZenv == kFloatMissing ||
+		    Tparcel == kFloatMissing || prevTparcel == kFloatMissing || Penv > LFCP)
 		{
 			// Missing data or current grid point is below LFC
 			;
@@ -276,7 +281,7 @@ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d_Zenv, info
 
 				d_CAPE3km[idx] += C;
 
-				assert(d_CAPE3km[idx] < 3000.); // 3000J/kg, not 3000m
+				assert(d_CAPE3km[idx] < 3000.);  // 3000J/kg, not 3000m
 				assert(d_CAPE3km[idx] >= 0);
 			}
 
@@ -292,7 +297,7 @@ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d_Zenv, info
 
 			d_CAPE[idx] += CAPE;
 
-			assert(CAPE >= 0.);				
+			assert(CAPE >= 0.);
 			assert(d_CAPE[idx] < 8000);
 
 			if (ELT != kFloatMissing)
@@ -304,37 +309,37 @@ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d_Zenv, info
 	}
 }
 
-__global__
-void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict__ d_Titer, const double* __restrict__ d_Piter, info_simple d_Zenv, info_simple d_prevZenv, const double* __restrict__ d_Tparcel, const double* __restrict__ d_PLCL, const double* __restrict__ d_PLFC, double* __restrict__ d_cinh, unsigned char* __restrict__ d_found)
+__global__ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict__ d_Titer,
+                          const double* __restrict__ d_Piter, info_simple d_Zenv, info_simple d_prevZenv,
+                          const double* __restrict__ d_Tparcel, const double* __restrict__ d_PLCL,
+                          const double* __restrict__ d_PLFC, double* __restrict__ d_cinh,
+                          unsigned char* __restrict__ d_found)
 {
-	
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < d_Tenv.size_x * d_Tenv.size_y && d_found[idx] == 0)
 	{
-		
-		double Tenv = d_Tenv.values[idx]; // K
+		double Tenv = d_Tenv.values[idx];  // K
 		assert(Tenv >= 150.);
 
-		double Penv = d_Penv.values[idx]; // hPa
+		double Penv = d_Penv.values[idx];  // hPa
 		assert(Penv < 1200. || Penv == kFloatMissing);
 
-		double Tparcel = d_Titer[idx]; // K
+		double Tparcel = d_Titer[idx];  // K
 		assert(Tparcel >= 150. || Tparcel == kFloatMissing);
 
-		double PLFC = d_PLFC[idx]; // hPa
+		double PLFC = d_PLFC[idx];  // hPa
 		assert(PLFC < 1200. || PLFC == kFloatMissing);
-		
-		double PLCL = d_PLCL[idx]; // hPa
-		assert(PLCL < 1200. || PLCL == kFloatMissing);
-		
-		double Zenv = d_Zenv.values[idx]; // m
-		double prevZenv = d_prevZenv.values[idx]; // m
 
-		if (
-				PLFC == kFloatMissing || // No LFC
-				Penv <= PLFC // reached max height; TODO: final piece integration
-				)
+		double PLCL = d_PLCL[idx];  // hPa
+		assert(PLCL < 1200. || PLCL == kFloatMissing);
+
+		double Zenv = d_Zenv.values[idx];          // m
+		double prevZenv = d_prevZenv.values[idx];  // m
+
+		if (PLFC == kFloatMissing ||  // No LFC
+		    Penv <= PLFC              // reached max height; TODO: final piece integration
+		    )
 		{
 			d_found[idx] = 1;
 		}
@@ -343,7 +348,7 @@ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict_
 			if (Penv < PLCL)
 			{
 				// Above LCL, switch to virtual temperature
-				
+
 				Tparcel = metutil::VirtualTemperature_(Tparcel, Penv * 100);
 				Tenv = metutil::VirtualTemperature_(Tenv, Penv * 100);
 			}
@@ -359,12 +364,14 @@ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict_
 				// TODO: final piece integration
 				d_found[idx] = 1;
 			}
-		}	
+		}
 	}
 }
 
-__global__
-void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simple d_prevP, double* __restrict__ d_Tparcel, double* __restrict__ d_LCLP, double* __restrict__ d_LFCT, double* __restrict__ d_LFCP, unsigned char* __restrict__ d_found, int d_curLevel, int d_breakLevel)
+__global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simple d_prevP,
+                          double* __restrict__ d_Tparcel, double* __restrict__ d_LCLP, double* __restrict__ d_LFCT,
+                          double* __restrict__ d_LFCP, unsigned char* __restrict__ d_found, int d_curLevel,
+                          int d_breakLevel)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -375,17 +382,17 @@ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simpl
 	{
 		double Tparcel = d_Tparcel[idx];
 		double Tenv = d_T.values[idx];
-		
+
 		assert(Tenv < 350.);
 		assert(Tenv > 100.);
-		
+
 		double prevTenv = d_prevT.values[idx];
 		assert(prevTenv < 350.);
 		assert(prevTenv > 100.);
 
 		double Penv = d_P.values[idx];
 		double LCLP = d_LCLP[idx];
-		
+
 		if (Tparcel != kFloatMissing && d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
 		{
 			// Temperature gap between environment and parcel too large --> abort search.
@@ -393,7 +400,7 @@ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simpl
 
 			d_found[idx] = 1;
 		}
-		
+
 		if (Tparcel != kFloatMissing && Penv <= LCLP)
 		{
 			if (Tparcel >= Tenv && d_found[idx] == 0)
@@ -403,15 +410,16 @@ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simpl
 				// We have no specific information on the precise height where the temperature has crossed
 				// Or we could if we'd integrate it but it makes the calculation more complex. So maybe in the
 				// future. For now just take an average of upper and lower level values.
-				
+
 				if (prevTenv == kFloatMissing) prevTenv = Tenv;
 
-				d_LFCT[idx] = (Tenv + prevTenv) * 0.5; // K
+				d_LFCT[idx] = (Tenv + prevTenv) * 0.5;  // K
 
 				assert(d_LFCT[idx] > 100);
 				assert(d_LFCT[idx] < 350);
 
-				// Never allow LFC pressure to be bigger than LCL pressure; bound lower level (with larger pressure value)
+				// Never allow LFC pressure to be bigger than LCL pressure; bound lower level (with larger pressure
+				// value)
 				// to LCL level if it below LCL
 
 				double prevPenv = d_prevP.values[idx];
@@ -419,28 +427,29 @@ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simpl
 				assert(prevPenv > 10);
 				assert(prevPenv < 1500);
 
-				d_LFCP[idx] = (Penv + prevPenv) * 0.5; // hPa
+				d_LFCP[idx] = (Penv + prevPenv) * 0.5;  // hPa
 			}
 		}
 	}
 }
 
-
-__global__
-void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simple d_prevT, info_simple d_prevRH, info_simple d_prevP, double* __restrict__ d_maxThetaE, double* __restrict__ d_Tresult, double* __restrict__ d_TDresult, unsigned char* __restrict__ d_found)
+__global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simple d_prevT,
+                             info_simple d_prevRH, info_simple d_prevP, double* __restrict__ d_maxThetaE,
+                             double* __restrict__ d_Tresult, double* __restrict__ d_TDresult,
+                             unsigned char* __restrict__ d_found)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	
+
 	assert(d_T.values);
 	assert(d_RH.values);
 	assert(d_P.values);
-	
+
 	if (idx < d_T.size_x * d_T.size_y && d_found[idx] == 0)
 	{
 		double T = d_T.values[idx];
 		double P = d_P.values[idx];
 		double RH = d_RH.values[idx];
-		
+
 		if (P == kFloatMissing || T == kFloatMissing || RH == kFloatMissing)
 		{
 			d_found[idx] = 1;
@@ -457,14 +466,14 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simpl
 				T = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
 				RH = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
 
-				d_found[idx] = 1; // Make sure this is the last time we access this grid point
+				d_found[idx] = 1;  // Make sure this is the last time we access this grid point
 				P = 600.;
 			}
 
 			double TD = metutil::DewPointFromRH_(T, RH);
 
 			double& refThetaE = d_maxThetaE[idx];
-			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P*100);
+			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P * 100);
 
 			if (ThetaE >= refThetaE)
 			{
@@ -476,21 +485,22 @@ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simpl
 	}
 }
 
-__global__
-void MixingRatioKernel(const double* __restrict__ d_T, double* __restrict__ d_P, const double* __restrict__ d_RH, double* __restrict__ d_Tpot, double* __restrict__ d_MR, size_t N)
+__global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __restrict__ d_P,
+                                  const double* __restrict__ d_RH, double* __restrict__ d_Tpot,
+                                  double* __restrict__ d_MR, size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	
+
 	assert(d_T);
 	assert(d_RH);
 	assert(d_P);
-	
+
 	if (idx < N)
 	{
 		double T = d_T[idx];
 		double P = d_P[idx];
 		double RH = d_RH[idx];
-		
+
 		assert((T > 150 && T < 350) || T == kFloatMissing);
 		assert((P > 100 && P < 1500) || P == kFloatMissing);
 		assert((RH > 0 && RH < 102) || RH == kFloatMissing);
@@ -501,26 +511,26 @@ void MixingRatioKernel(const double* __restrict__ d_T, double* __restrict__ d_P,
 		}
 		else
 		{
-			d_Tpot[idx] = metutil::Theta_(T, 100*P);
-			d_MR[idx] = metutil::smarttool::MixingRatio_(T, RH, 100*P);
+			d_Tpot[idx] = metutil::Theta_(T, 100 * P);
+			d_MR[idx] = metutil::smarttool::MixingRatio_(T, RH, 100 * P);
 
 			d_P[idx] = P - 2.0;
 		}
 	}
 }
 
-__global__
-void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __restrict__ d_TD, info_simple d_P, const double* __restrict__ d_Tpot, const double* __restrict__ d_MR, size_t N)
+__global__ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __restrict__ d_TD, info_simple d_P,
+                                          const double* __restrict__ d_Tpot, const double* __restrict__ d_MR, size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	
+
 	assert(d_T);
 	assert(d_P.values);
-	
+
 	if (idx < N)
 	{
 		double P = d_P.values[idx];
-		
+
 		double MR = d_MR[idx];
 		double Tpot = d_Tpot[idx];
 
@@ -528,64 +538,63 @@ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __restrict__ d_
 
 		if (Tpot != kFloatMissing && P != kFloatMissing)
 		{
-			d_T[idx] = Tpot * pow((P/1000.), 0.2854);
+			d_T[idx] = Tpot * pow((P / 1000.), 0.2854);
 		}
-	
+
 		double T = d_T[idx];
-		
+
 		if (T != kFloatMissing && MR != kFloatMissing && P != kFloatMissing)
 		{
-			
-			double Es = metutil::Es_(T); // Saturated water vapor pressure
-			double E = metutil::E_(MR, 100*P);
+			double Es = metutil::Es_(T);  // Saturated water vapor pressure
+			double E = metutil::E_(MR, 100 * P);
 
-			double RH = E/Es * 100;
+			double RH = E / Es * 100;
 			d_TD[idx] = metutil::DewPointFromRH_(T, RH);
-		}	
+		}
 	}
 }
 
-std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetHighestThetaETAndTDGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetHighestThetaETAndTDGPU(
+    const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	himan::level curLevel = itsBottomLevel;
-	
+
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
 	cudaStream_t stream;
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
-	
+
 	double* d_maxThetaE = 0;
 	double* d_Tresult = 0;
 	double* d_TDresult = 0;
 	unsigned char* d_found = 0;
-	
-	CUDA_CHECK(cudaMalloc((double**) &d_maxThetaE, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_Tresult, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_TDresult, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_found, sizeof(unsigned char) * N));
 
-	InitializeArray<double> (d_maxThetaE, -1, N, stream);
-	InitializeArray<double> (d_Tresult, kFloatMissing, N, stream);
-	InitializeArray<double> (d_TDresult, kFloatMissing, N, stream);
-	InitializeArray<unsigned char> (d_found, 0, N, stream);
-	
+	CUDA_CHECK(cudaMalloc((double**)&d_maxThetaE, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_Tresult, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_TDresult, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
+
+	InitializeArray<double>(d_maxThetaE, -1, N, stream);
+	InitializeArray<double>(d_Tresult, kFloatMissing, N, stream);
+	InitializeArray<double>(d_TDresult, kFloatMissing, N, stream);
+	InitializeArray<unsigned char>(d_found, 0, N, stream);
+
 	info_simple* h_prevT = 0;
 	info_simple* h_prevP = 0;
 	info_simple* h_prevRH = 0;
-	
+
 	while (true)
 	{
-
 		auto TInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 		auto RHInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType());
 		auto PInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
-			return std::make_pair(std::vector<double>(),std::vector<double>());
+			return std::make_pair(std::vector<double>(), std::vector<double>());
 		}
 
 		auto h_T = PrepareInfo(TInfo, stream);
@@ -608,7 +617,8 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetHighestThetaETA
 			release = false;
 		}
 
-		ThetaEKernel <<< gridSize, blockSize, 0, stream >>> (*h_T, *h_RH, *h_P, *h_prevT, *h_prevRH, *h_prevP, d_maxThetaE, d_Tresult, d_TDresult, d_found);
+		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(*h_T, *h_RH, *h_P, *h_prevT, *h_prevRH, *h_prevP, d_maxThetaE,
+		                                                 d_Tresult, d_TDresult, d_found);
 
 		std::vector<unsigned char> found(N, 0);
 		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
@@ -620,7 +630,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetHighestThetaETA
 			CUDA_CHECK(cudaFree(h_prevRH->values));
 			CUDA_CHECK(cudaFree(h_prevT->values));
 		}
-				
+
 		delete h_prevP;
 		delete h_prevT;
 		delete h_prevRH;
@@ -628,18 +638,18 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetHighestThetaETA
 		h_prevP = h_P;
 		h_prevRH = h_RH;
 		h_prevT = h_T;
-		
-		curLevel.Value(curLevel.Value()-1);
+
+		curLevel.Value(curLevel.Value() - 1);
 
 		size_t foundCount = std::count(found.begin(), found.end(), 1);
 
 		if (foundCount == found.size()) break;
 	}
-	
+
 	CUDA_CHECK(cudaFree(h_prevP->values));
 	CUDA_CHECK(cudaFree(h_prevRH->values));
 	CUDA_CHECK(cudaFree(h_prevT->values));
-	
+
 	delete h_prevP;
 	delete h_prevT;
 	delete h_prevRH;
@@ -651,23 +661,23 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetHighestThetaETA
 	CUDA_CHECK(cudaMemcpyAsync(&TDsurf[0], d_TDresult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-	
+
 	CUDA_CHECK(cudaFree(d_maxThetaE));
 	CUDA_CHECK(cudaFree(d_Tresult));
 	CUDA_CHECK(cudaFree(d_TDresult));
 	CUDA_CHECK(cudaFree(d_found));
-	
+
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
 	return std::make_pair(Tsurf, TDsurf);
-	
 }
 
-std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatioTAndTDGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+std::pair<std::vector<double>, std::vector<double>> cape_cuda::Get500mMixingRatioTAndTDGPU(
+    std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
 	cudaStream_t stream;
 
@@ -676,7 +686,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatio
 	level curLevel = itsBottomLevel;
 
 	auto h = GET_PLUGIN(hitool);
-	
+
 	h->Configuration(conf);
 	h->Time(myTargetInfo->Time());
 
@@ -687,7 +697,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatio
 
 	auto f = GET_PLUGIN(fetcher);
 	auto PInfo = f->Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
-	
+
 	if (!PInfo)
 	{
 		return std::make_pair(std::vector<double>(), std::vector<double>());
@@ -695,7 +705,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatio
 	else
 	{
 		// Himan specialty: empty data grid
-		
+
 		size_t miss = 0;
 		for (auto& val : VEC(PInfo))
 		{
@@ -726,17 +736,17 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatio
 	double* d_RH = 0;
 	double* d_P = 0;
 	double* d_TD = 0;
-	
-	CUDA_CHECK(cudaMalloc((double**) &d_Tpot, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_MR, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_T, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_RH, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_P, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_TD, N * sizeof(double)));
 
-	InitializeArray<double> (d_Tpot, kFloatMissing, N, stream);
-	InitializeArray<double> (d_MR, kFloatMissing, N, stream);
-	
+	CUDA_CHECK(cudaMalloc((double**)&d_Tpot, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_MR, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_T, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_RH, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_P, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_TD, N * sizeof(double)));
+
+	InitializeArray<double>(d_Tpot, kFloatMissing, N, stream);
+	InitializeArray<double>(d_MR, kFloatMissing, N, stream);
+
 	while (true)
 	{
 		auto TVec = h->VerticalValue(param("T-K"), PVec);
@@ -746,8 +756,8 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatio
 		CUDA_CHECK(cudaMemcpyAsync(d_RH, &RHVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_P, &PVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
-		MixingRatioKernel <<< gridSize, blockSize, 0, stream >>> (d_T, d_P, d_RH, d_Tpot, d_MR, N);
-		
+		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
+
 		std::vector<double> Tpot(N, kFloatMissing);
 		std::vector<double> MR(N, kFloatMissing);
 
@@ -755,7 +765,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatio
 
 		CUDA_CHECK(cudaMemcpyAsync(&Tpot[0], d_Tpot, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 		CUDA_CHECK(cudaMemcpyAsync(&MR[0], d_MR, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-		
+
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		tp.Process(Tpot, PVec);
@@ -764,37 +774,36 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatio
 		size_t foundCount = tp.HeightsCrossed();
 
 		assert(tp.HeightsCrossed() == mr.HeightsCrossed());
-		
+
 		if (foundCount == N)
 		{
 			break;
 		}
-		
-		CUDA_CHECK(cudaMemcpyAsync(&PVec[0], d_P, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 
+		CUDA_CHECK(cudaMemcpyAsync(&PVec[0], d_P, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 	}
-	
+
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-	
+
 	// Calculate averages
-	
+
 	auto Tpot = tp.Result();
 	auto MR = mr.Result();
 
 	// Copy averages to GPU for final calculation
 	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, &Tpot[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_MR, &MR[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	
+
 	auto Psurf = Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
 	auto h_P = PrepareInfo(Psurf, stream);
 
-	InitializeArray<double> (d_T, kFloatMissing, N, stream);
-	InitializeArray<double> (d_TD, kFloatMissing, N, stream);
-	
-	std::vector<double> T(Tpot.size(), kFloatMissing);			
+	InitializeArray<double>(d_T, kFloatMissing, N, stream);
+	InitializeArray<double>(d_TD, kFloatMissing, N, stream);
+
+	std::vector<double> T(Tpot.size(), kFloatMissing);
 	std::vector<double> TD(T.size(), kFloatMissing);
 
-	MixingRatioFinalizeKernel <<< gridSize, blockSize, 0, stream >>> (d_T, d_TD, *h_P, d_Tpot, d_MR, N);
+	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, *h_P, d_Tpot, d_MR, N);
 
 	CUDA_CHECK(cudaMemcpyAsync(&T[0], d_T, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(&TD[0], d_TD, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
@@ -806,13 +815,15 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::Get500mMixingRatio
 	CUDA_CHECK(cudaFree(d_P));
 	CUDA_CHECK(cudaFree(d_T));
 	CUDA_CHECK(cudaFree(d_TD));
-	
+
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	return std::make_pair(T,TD);
+	return std::make_pair(T, TD);
 }
 
-std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, std::vector<double>& T, std::vector<double>& P, std::vector<double>& TenvLCL)
+std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
+    const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, std::vector<double>& T,
+    std::vector<double>& P, std::vector<double>& TenvLCL)
 {
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(conf);
@@ -821,7 +832,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const st
 
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
 	cudaStream_t stream;
 
@@ -836,25 +847,25 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const st
 	double* d_Tparcel = 0;
 
 	unsigned char* d_found = 0;
-	
-	CUDA_CHECK(cudaMalloc((double**) &d_TenvLCL, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_Piter, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_Titer, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_LCLP, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_LFCT, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_LFCP, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_found, sizeof(unsigned char) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_Tparcel, sizeof(double) * N));
+
+	CUDA_CHECK(cudaMalloc((double**)&d_TenvLCL, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_Piter, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_Titer, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_LCLP, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_LFCT, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_LFCP, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, sizeof(double) * N));
 
 	CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &T[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &P[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	
+
 	CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
-	
-	InitializeArray<double> (d_LFCT, kFloatMissing, N, stream);
-	InitializeArray<double> (d_LFCP, kFloatMissing, N, stream);
-	InitializeArray<unsigned char> (d_found, 0, N, stream);
+
+	InitializeArray<double>(d_LFCT, kFloatMissing, N, stream);
+	InitializeArray<double>(d_LFCP, kFloatMissing, N, stream);
+	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
 	// among all grid points; most commonly it's the lowest hybrid level
@@ -862,7 +873,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const st
 	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
 
 	level curLevel = levels.first;
-	
+
 	auto prevPenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 	auto prevTenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 
@@ -872,7 +883,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const st
 	assert(h_prevTenv->values);
 	assert(h_prevPenv->values);
 
-	curLevel.Value(curLevel.Value()-1);
+	curLevel.Value(curLevel.Value() - 1);
 
 	std::vector<unsigned char> found(N, 0);
 	std::vector<double> LFCT(N, kFloatMissing);
@@ -897,7 +908,7 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const st
 	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
 
 	while (curLevel.Value() > hPa150.first.Value())
-	{	
+	{
 		// Get environment temperature and pressure values for this level
 		auto TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 		auto PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
@@ -909,9 +920,10 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const st
 		// of this loop the starting level is LCL. If target level level is below current level
 		// (ie. we would be lowering the particle) missing value is returned.
 
-		MoistLiftKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Piter, *h_Penv, d_Tparcel);
+		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, *h_Penv, d_Tparcel);
 
-		LFCKernel <<< gridSize, blockSize, 0, stream >>> (*h_Tenv, *h_Penv, *h_prevTenv, *h_prevPenv, d_Tparcel, d_LCLP, d_LFCT, d_LFCP, d_found, curLevel.Value(), hPa450.first.Value());
+		LFCKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, *h_prevTenv, *h_prevPenv, d_Tparcel, d_LCLP,
+		                                              d_LFCT, d_LFCP, d_found, curLevel.Value(), hPa450.first.Value());
 
 		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
 
@@ -926,14 +938,13 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const st
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		if (static_cast<size_t> (std::count(found.begin(), found.end(), 1)) == found.size()) break;
+		if (static_cast<size_t>(std::count(found.begin(), found.end(), 1)) == found.size()) break;
 
 		// preserve starting position for those grid points that have value
 
-		CopyLFCIteratorValuesKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Tparcel, d_Piter, *h_Penv);
-		
-		curLevel.Value(curLevel.Value() - 1);	
+		CopyLFCIteratorValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Tparcel, d_Piter, *h_Penv);
 
+		curLevel.Value(curLevel.Value() - 1);
 	}
 
 	CUDA_CHECK(cudaFree(h_prevPenv->values));
@@ -961,8 +972,9 @@ std::pair<std::vector<double>,std::vector<double>> cape_cuda::GetLFCGPU(const st
 	return std::make_pair(LFCT, LFCP);
 }
 
-
-void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL, const std::vector<double>& PLFC, param CINParam)
+void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+                          const std::vector<double>& Tsurf, const std::vector<double>& TLCL,
+                          const std::vector<double>& PLCL, const std::vector<double>& PLFC, param CINParam)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
@@ -976,26 +988,26 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	/*
 	 * Modus operandi:
-	 * 
+	 *
 	 * 1. Integrate from ground to LCL dry adiabatically
-	 * 
-	 * This can be done always since LCL is known at all grid points 
+	 *
+	 * This can be done always since LCL is known at all grid points
 	 * (that have source data values defined).
-	 * 
+	 *
 	 * 2. Integrate from LCL to LFC moist adiabatically
-	 * 
+	 *
 	 * Note! For some points integration will fail (no LFC found)
-	 * 
+	 *
 	 * We stop integrating at first time CAPE area is found!
 	 */
-	
+
 	// Get LCL and LFC heights in meters
 
 	auto ZLCL = h->VerticalValue(param("HL-M"), PLCL);
 	auto ZLFC = h->VerticalValue(param("HL-M"), PLFC);
 
 	level curLevel = itsBottomLevel;
-	
+
 	auto basePenvInfo = Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
 	auto prevZenvInfo = Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
 	auto prevTenvInfo = Fetch(conf, ftime, curLevel, param("T-K"), ftype);
@@ -1003,7 +1015,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
 	cudaStream_t stream;
 
@@ -1013,7 +1025,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	auto h_prevZenv = PrepareInfo(prevZenvInfo, stream);
 	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
 	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
-	
+
 	double* d_Tparcel = 0;
 	double* d_Piter = 0;
 	double* d_Titer = 0;
@@ -1021,15 +1033,15 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	double* d_PLFC = 0;
 	double* d_cinh = 0;
 	unsigned char* d_found = 0;
-	
-	CUDA_CHECK(cudaMalloc((double**) &d_Tparcel, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_Piter, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_Titer, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_PLCL, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_PLFC, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**) &d_cinh, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((unsigned char**) &d_found, N * sizeof(unsigned char)));
-	
+
+	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_Piter, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_Titer, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_PLCL, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_PLFC, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_cinh, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((unsigned char**)&d_found, N * sizeof(unsigned char)));
+
 	InitializeArray<double>(d_cinh, 0., N, stream);
 	InitializeArray<double>(d_Tparcel, kFloatMissing, N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
@@ -1038,28 +1050,28 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaMemcpyAsync(d_Piter, h_basePenv->values, sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_PLCL, &PLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_PLFC, &PLFC[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	
+
 	std::vector<unsigned char> found(N, 0);
-	
-	curLevel.Value(curLevel.Value()-1);
+
+	curLevel.Value(curLevel.Value() - 1);
 
 	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
 
 	while (curLevel.Value() > hPa150.first.Value())
 	{
-
 		auto ZenvInfo = Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
 		auto TenvInfo = Fetch(conf, ftime, curLevel, param("T-K"), ftype);
 		auto PenvInfo = Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
-	
+
 		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
 		auto h_Tenv = PrepareInfo(TenvInfo, stream);
-		
-		LiftLCLKernel <<< gridSize, blockSize, 0, stream >>> (d_Piter, d_Titer, d_PLCL, *h_Penv, d_Tparcel);
-		
-		CINKernel <<< gridSize, blockSize, 0, stream >>> (*h_Tenv, *h_Penv, d_Titer, d_Piter, *h_Zenv, *h_prevZenv, d_Tparcel, d_PLCL, d_PLFC, d_cinh, d_found);
-		
+
+		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Piter, d_Titer, d_PLCL, *h_Penv, d_Tparcel);
+
+		CINKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, d_Titer, d_Piter, *h_Zenv, *h_prevZenv,
+		                                              d_Tparcel, d_PLCL, d_PLFC, d_cinh, d_found);
+
 		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
 
 		CUDA_CHECK(cudaFree(h_prevPenv->values));
@@ -1076,17 +1088,15 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		if (static_cast<size_t> (std::count(found.begin(), found.end(), 1)) == found.size()) break;
+		if (static_cast<size_t>(std::count(found.begin(), found.end(), 1)) == found.size()) break;
 
 		// preserve starting position for those grid points that have value
 
-		CopyLFCIteratorValuesKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Tparcel, d_Piter, *h_Penv);
-		
-		curLevel.Value(curLevel.Value() - 1);
+		CopyLFCIteratorValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Tparcel, d_Piter, *h_Penv);
 
-		
+		curLevel.Value(curLevel.Value() - 1);
 	}
-	
+
 	CUDA_CHECK(cudaFree(h_prevPenv->values));
 	CUDA_CHECK(cudaFree(h_prevTenv->values));
 	CUDA_CHECK(cudaFree(h_prevZenv->values));
@@ -1096,7 +1106,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	delete h_prevZenv;
 
 	std::vector<double> cinh(N, 0);
-	
+
 	CUDA_CHECK(cudaMemcpyAsync(&cinh[0], d_cinh, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -1113,15 +1123,16 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	myTargetInfo->Param(CINParam);
 	myTargetInfo->Data().Set(cinh);
-
 }
 
-void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, const std::vector<double>& T, const std::vector<double>& P, param ELTParam, param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+                           const std::vector<double>& T, const std::vector<double>& P, param ELTParam, param ELPParam,
+                           param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
 	assert(T.size() == P.size());
 
 	auto h = GET_PLUGIN(hitool);
-	
+
 	h->Configuration(conf);
 	h->Time(myTargetInfo->Time());
 	h->HeightUnit(kHPa);
@@ -1130,7 +1141,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	std::vector<unsigned char> found(T.size(), 0);
 
 	// No LFC --> No CAPE
-	
+
 	for (size_t i = 0; i < P.size(); i++)
 	{
 		if (P[i] == kFloatMissing)
@@ -1138,10 +1149,10 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 			found[i] |= FCAPE;
 		}
 	}
-	
+
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
-	const int gridSize = N/blockSize + (N%blockSize == 0?0:1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
 	cudaStream_t stream;
 
@@ -1157,58 +1168,58 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	double* d_prevTparcel = 0;
 	double* d_Tparcel = 0;
 	double* d_LFC = 0;
-	
-	unsigned char* d_found = 0;
-	
-	CUDA_CHECK(cudaMalloc((double**) &d_CAPE, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_CAPE1040, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_CAPE3km, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_ELP, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_ELT, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_Piter, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_Titer, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_Tparcel, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_prevTparcel, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**) &d_LFC, sizeof(double) * N));
-	
-	CUDA_CHECK(cudaMalloc((double**) &d_found, sizeof(unsigned char) * N));
-	
-	InitializeArray<unsigned char> (d_found, 0, N, stream);
 
-	//CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	unsigned char* d_found = 0;
+
+	CUDA_CHECK(cudaMalloc((double**)&d_CAPE, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_CAPE1040, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_CAPE3km, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_ELP, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_ELT, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_Piter, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_Titer, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_prevTparcel, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_LFC, sizeof(double) * N));
+
+	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
+
+	InitializeArray<unsigned char>(d_found, 0, N, stream);
+
+	// CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &T[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Titer, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &P[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_LFC, &P[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
-	
-	//CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
-	
-	InitializeArray<double> (d_CAPE, 0., N, stream);
-	InitializeArray<double> (d_CAPE1040, 0., N, stream);
-	InitializeArray<double> (d_CAPE3km, 0., N, stream);
-	
-	InitializeArray<double> (d_ELP, kFloatMissing, N, stream);
-	InitializeArray<double> (d_ELT, kFloatMissing, N, stream);
+
+	// CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
+
+	InitializeArray<double>(d_CAPE, 0., N, stream);
+	InitializeArray<double>(d_CAPE1040, 0., N, stream);
+	InitializeArray<double>(d_CAPE3km, 0., N, stream);
+
+	InitializeArray<double>(d_ELP, kFloatMissing, N, stream);
+	InitializeArray<double>(d_ELT, kFloatMissing, N, stream);
 
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
-		
+
 	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
-	
+
 	level curLevel = levels.first;
 
 	auto prevZenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
 	auto prevTenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 	auto prevPenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
-	
+
 	auto h_prevZenv = PrepareInfo(prevZenvInfo, stream);
 	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
 	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
-	
+
 	curLevel.Value(curLevel.Value() - 1);
-	
+
 	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
 
 	while (curLevel.Value() > hPa100.first.Value())
@@ -1220,31 +1231,32 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
 		auto h_Tenv = PrepareInfo(TenvInfo, stream);
-	
-		MoistLiftKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Piter, *h_Penv, d_Tparcel);
-			
-		CAPEKernel <<< gridSize, blockSize, 0, stream >>> (*h_Tenv, *h_Penv, *h_Zenv, *h_prevTenv, *h_prevPenv, *h_prevZenv, d_Tparcel, d_prevTparcel, d_LFC, d_CAPE, d_CAPE1040, d_CAPE3km, d_ELT, d_ELP, d_found, curLevel.Value(), hPa100.first.Value());
-		
+
+		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, *h_Penv, d_Tparcel);
+
+		CAPEKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, *h_Zenv, *h_prevTenv, *h_prevPenv, *h_prevZenv,
+		                                               d_Tparcel, d_prevTparcel, d_LFC, d_CAPE, d_CAPE1040, d_CAPE3km,
+		                                               d_ELT, d_ELP, d_found, curLevel.Value(), hPa100.first.Value());
+
 		CUDA_CHECK(cudaFree(h_prevZenv->values));
 		CUDA_CHECK(cudaFree(h_prevTenv->values));
 		CUDA_CHECK(cudaFree(h_prevPenv->values));
-		
+
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
-		
+
 		delete h_prevZenv;
 		delete h_prevPenv;
 		delete h_prevTenv;
-		
+
 		h_prevZenv = h_Zenv;
 		h_prevTenv = h_Tenv;
 		h_prevPenv = h_Penv;
 
-		CopyLFCIteratorValuesKernel <<< gridSize, blockSize, 0, stream >>> (d_Titer, d_Tparcel, d_Piter, *h_Penv);
-		
-		curLevel.Value(curLevel.Value() - 1);
+		CopyLFCIteratorValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Tparcel, d_Piter, *h_Penv);
 
+		curLevel.Value(curLevel.Value() - 1);
 	}
-	
+
 	CUDA_CHECK(cudaFree(h_prevZenv->values));
 	CUDA_CHECK(cudaFree(h_prevTenv->values));
 	CUDA_CHECK(cudaFree(h_prevPenv->values));
@@ -1271,7 +1283,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		}
 	}
 #endif
-	
+
 	std::vector<double> CAPE(T.size(), 0);
 	std::vector<double> CAPE1040(T.size(), 0);
 	std::vector<double> CAPE3km(T.size(), 0);
@@ -1290,28 +1302,27 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaFree(d_prevTparcel));
 	CUDA_CHECK(cudaFree(d_LFC));
 	CUDA_CHECK(cudaFree(d_found));
-	
+
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-	
+
 	CUDA_CHECK(cudaFree(d_CAPE));
 	CUDA_CHECK(cudaFree(d_CAPE1040));
 	CUDA_CHECK(cudaFree(d_CAPE3km));
 	CUDA_CHECK(cudaFree(d_ELT));
 	CUDA_CHECK(cudaFree(d_ELP));
-	
+
 	myTargetInfo->Param(ELTParam);
 	myTargetInfo->Data().Set(ELT);
-	
+
 	myTargetInfo->Param(ELPParam);
 	myTargetInfo->Data().Set(ELP);
 
 	myTargetInfo->Param(CAPEParam);
 	myTargetInfo->Data().Set(CAPE);
-	
+
 	myTargetInfo->Param(CAPE1040Param);
 	myTargetInfo->Data().Set(CAPE1040);
 
 	myTargetInfo->Param(CAPE3kmParam);
 	myTargetInfo->Data().Set(CAPE3km);
-
 }

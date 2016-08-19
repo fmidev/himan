@@ -6,11 +6,11 @@
  */
 
 #include "dewpoint.h"
-#include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
-#include "level.h"
 #include "forecast_time.h"
+#include "level.h"
+#include "logger_factory.h"
 #include "metutil.h"
+#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -21,20 +21,18 @@ dewpoint::dewpoint()
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger_factory::Instance()->GetLog("dewpoint");
-
 }
 
 void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 {
-
 	Init(conf);
-	
+
 	/*
 	 * Set target parameter to dewpoint.
 	 *
 	 */
 
-	param requestedParam ("TD-C", 10, 0, 0, 6);
+	param requestedParam("TD-C", 10, 0, 0, 6);
 	requestedParam.Unit(kK);
 
 	SetParams({requestedParam});
@@ -50,39 +48,41 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 
 void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
 	const param TParam("T-K");
 	const param RHParam("RH-PRCNT");
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("dewpointThread #" + boost::lexical_cast<string> (threadIndex));
-	
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("dewpointThread #" + boost::lexical_cast<string>(threadIndex));
+
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
-	
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
+
 	double TBase = 0;
 	double RHScale = 1;
-		
+
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
 	info_t RHInfo = Fetch(forecastTime, forecastLevel, RHParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 	if (!TInfo || !RHInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
 	assert(TInfo->Grid()->AB() == RHInfo->Grid()->AB());
-		
+
 	SetAB(myTargetInfo, TInfo);
 
-    // Special case for harmonie
-    if (itsConfiguration->SourceProducer().Id() == 199)
-    { 
+	// Special case for harmonie
+	if (itsConfiguration->SourceProducer().Id() == 199)
+	{
 		RHScale = 100;
-	} 
+	}
 
 	if (RHInfo->Param().Unit() != kPrcnt)
 	{
@@ -93,7 +93,6 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 	if (TInfo->Param().Unit() == kC)
 	{
-
 		TBase = himan::constants::kKelvin;
 	}
 
@@ -103,25 +102,21 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 	if (itsConfiguration->UseCuda())
 	{
-
 		deviceType = "GPU";
 
-		auto opts = CudaPrepare(myTargetInfo, TInfo, RHInfo); 
+		auto opts = CudaPrepare(myTargetInfo, TInfo, RHInfo);
 
 		dewpoint_cuda::Process(*opts);
-
 	}
 	else
 #endif
 	{
 		deviceType = "CPU";
-			
-		LOCKSTEP(myTargetInfo, TInfo, RHInfo)
-		{		
 
+		LOCKSTEP(myTargetInfo, TInfo, RHInfo)
+		{
 			double T = TInfo->Value();
 			double RH = RHInfo->Value();
-
 
 			if (T == kFloatMissing || RH == kFloatMissing)
 			{
@@ -134,17 +129,18 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			double TD = metutil::DewPointFromRH_(T, RH);
 
 			myTargetInfo->Value(TD);
-
 		}
 	}
-	
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
 
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 #ifdef HAVE_CUDA
 
-unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> RHInfo)
+unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo,
+                                                         shared_ptr<info> RHInfo)
 {
 	unique_ptr<dewpoint_cuda::options> opts(new dewpoint_cuda::options);
 

@@ -31,32 +31,18 @@ namespace himan
 {
 namespace plugin
 {
-
 class fetcher : public auxiliary_plugin
 {
-public:
+   public:
 	fetcher();
 
 	virtual ~fetcher() {}
-
 	fetcher(const fetcher& other) = delete;
 	fetcher& operator=(const fetcher& other) = delete;
 
-	virtual std::string ClassName() const
-	{
-		return "himan::plugin::fetcher";
-	}
-
-	virtual HPPluginClass PluginClass() const
-	{
-		return kAuxiliary;
-	}
-
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
-
+	virtual std::string ClassName() const { return "himan::plugin::fetcher"; }
+	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
 	/**
 	 * @brief Multi-param overcoat for the other Fetch() function
 	 *
@@ -70,17 +56,15 @@ public:
 	 * @return Data for first param found.
 	 */
 
-	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, 
-		forecast_time requestedValidTime, 
-		level requestedLevel, 
-		const params& requestedParams, 
-		forecast_type requestedType = forecast_type(kDeterministic),
-		bool readPackedData = false);
+	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime,
+	                            level requestedLevel, const params& requestedParams,
+	                            forecast_type requestedType = forecast_type(kDeterministic),
+	                            bool readPackedData = false);
 
 	/**
 	 * @brief Fetch data based on given arguments.
-	 * 
- 	 * Data can be defined in command line when himan started, or it can be already
+	 *
+	 * Data can be defined in command line when himan started, or it can be already
 	 * in cache or it can be fetched from neons.
 	 *
 	 * Will throw kFileDataNotFound if data is not found.
@@ -93,13 +77,10 @@ public:
 	 * @return shared_ptr to info-instance
 	 */
 
-	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, 
-		forecast_time requestedValidTime, 
-		level requestedLevel, 
-		param requestedParam, 
-		forecast_type requestedType = forecast_type(kDeterministic),
-		bool readPackedData = false,
-		bool suppressLogging = false);
+	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime,
+	                            level requestedLevel, param requestedParam,
+	                            forecast_type requestedType = forecast_type(kDeterministic),
+	                            bool readPackedData = false, bool suppressLogging = false);
 
 	/**
 	 * @brief Set flag for level transform
@@ -120,28 +101,28 @@ public:
 
 	void LandSeaMaskThreshold(double theLandSeaMaskThreshold);
 	double LandSeaMaskThreshold() const;
-	
-private:
 
+   private:
 	/**
 	 * @brief Apply land-sea mask to requested data.
-	 * 
+	 *
 	 * Threshold value can range from -1 to 1.
 	 * If threshold < 0, masking will be done so that land is masked missing
 	 * If threshold > 0, masking will be done so that sea is masked missing
-	 * 
+	 *
 	 * @param theInfo Info that's masked
-	 * @param requestedTime 
+	 * @param requestedTime
 	 * @return True if masking is successful
 	 */
-	
-	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo, forecast_time& requestedTime, forecast_type& requestedType);
+
+	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo,
+	                      forecast_time& requestedTime, forecast_type& requestedType);
 
 	std::vector<std::shared_ptr<info>> FromCache(search_options& options);
 
 	/**
 	 * @brief Get data and metadata from a file.
-	 * 
+	 *
 	 * Returns a vector of infos, mainly because one grib file can contain many
 	 * grib messages. If read file is querydata, the vector size is always one
 	 * (or zero if the read fails)
@@ -157,11 +138,9 @@ private:
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files,
-												search_options& options,
-												bool readContents = true,
-												bool readPackedData = false,
-												bool forceCaching = false);
+	std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, search_options& options,
+	                                            bool readContents = true, bool readPackedData = false,
+	                                            bool forceCaching = false);
 
 	/**
 	 * @brief Return all data from a grib file, overcoat for himan::plugin::grib::FromFile().
@@ -176,8 +155,10 @@ private:
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options, bool readContents = true, bool readPackedData = false, bool forceCaching = false);
-	
+	std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options,
+	                                            bool readContents = true, bool readPackedData = false,
+	                                            bool forceCaching = false);
+
 	/**
 	 * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
 	 * @see himan::plugin::querydata::FromFile()
@@ -189,7 +170,8 @@ private:
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, search_options& options, bool readContents = true);
+	std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, search_options& options,
+	                                                 bool readContents = true);
 
 	/**
 	 * @brief Return all data from a CSV file, overcoat for himan::plugin::csv::FromFile().
@@ -207,13 +189,13 @@ private:
 	 * @brief Map level definitions between models and code tables
 	 *
 	 * Ie. Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.
-	 * 
+	 *
 	 * @param sourceProducer Id of source producer
 	 * @param targetParam
 	 * @param targetLevel
 	 * @return New level. If mapping is not found, new level == targetLevel.
 	 */
-	
+
 	level LevelTransform(const producer& sourceProducer, const param& targetParam, const level& targetLevel) const;
 
 	/**
@@ -227,8 +209,8 @@ private:
 	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData);
 
 	HPFileType FileType(const std::string& theInputFile);
-	bool itsDoLevelTransform; //<! Default true
-	bool itsDoInterpolation; //<! Default true
+	bool itsDoLevelTransform;  //<! Default true
+	bool itsDoInterpolation;   //<! Default true
 	bool itsUseCache;
 	bool itsApplyLandSeaMask;
 	double itsLandSeaMaskThreshold;
@@ -236,15 +218,11 @@ private:
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-	return std::make_shared<fetcher> ();
-}
-
+extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<fetcher>(); }
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
-} // namespace plugin
-} // namespace himan
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* FETCHER_H */

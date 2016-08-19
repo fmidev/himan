@@ -6,12 +6,12 @@
  */
 
 #include "cloud_code.h"
+#include "forecast_time.h"
+#include "level.h"
 #include "logger_factory.h"
+#include "metutil.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
-#include "metutil.h"
-#include "level.h"
-#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -22,19 +22,16 @@ cloud_code::cloud_code()
 {
 	itsClearTextFormula = "algorithm>";
 	itsLogger = logger_factory::Instance()->GetLog(itsName);
-
 }
 
 void cloud_code::Process(std::shared_ptr<const plugin_configuration> conf)
 {
-
 	Init(conf);
 
 	SetParams({param("CLDSYM-N", 328, 0, 6, 8)});
 
 	Start();
 }
-
 
 /*
  * Calculate()
@@ -48,7 +45,7 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	const param TParam("T-K");
 	const param RHParam("RH-PRCNT");
-	const params NParams = { param("N-0TO1"), param("N-PRCNT") };
+	const params NParams = {param("N-0TO1"), param("N-PRCNT")};
 	const param KParam("KINDEX-N");
 
 	level T0mLevel(himan::kHeight, 0, "HEIGHT");
@@ -56,14 +53,16 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
 	level RH700Level(himan::kPressure, 700, "PRESSURE");
 	level RH500Level(himan::kPressure, 500, "PRESSURE");
-	
-	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
+
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, forecastType, false);
 	info_t NInfo = Fetch(forecastTime, NKLevel, NParams, forecastType, false);
@@ -75,10 +74,11 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	if (!T0mInfo || !NInfo || !KInfo || !T850Info || !RH850Info || !RH700Info || !RH500Info)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
-	
+
 	string deviceType = "CPU";
 
 	int percentMultiplier = 1;
@@ -88,10 +88,8 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		percentMultiplier = 100;
 	}
 
-	LOCKSTEP(myTargetInfo,T0mInfo,NInfo,KInfo,T850Info,RH850Info,RH700Info,RH500Info)
+	LOCKSTEP(myTargetInfo, T0mInfo, NInfo, KInfo, T850Info, RH850Info, RH700Info, RH500Info)
 	{
-
-
 		double T0m = T0mInfo->Value();
 		double N = NInfo->Value();
 		double kIndex = KInfo->Value();
@@ -100,27 +98,28 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double RH700 = RH700Info->Value();
 		double RH500 = RH500Info->Value();
 
-		if ( T0m == kFloatMissing || N == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing || RH850 == kFloatMissing || RH700 == kFloatMissing || RH500 == kFloatMissing )
+		if (T0m == kFloatMissing || N == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing ||
+		    RH850 == kFloatMissing || RH700 == kFloatMissing || RH500 == kFloatMissing)
 		{
 			continue;
 		}
 
-		//error codes from fortran
+		// error codes from fortran
 		int cloudCode = 704;
 
 		int lowConvection = metutil::LowConvection_(T0m, T850);
 
-		//data comes as 0..1 instead of 0-100%
+		// data comes as 0..1 instead of 0-100%
 		N *= 100;
 
 		RH500 *= percentMultiplier;
 		RH700 *= percentMultiplier;
 		RH850 *= percentMultiplier;
 
-		if ( N > 90 )
-		//Jos N = 90…100 % (pilvistä), niin
+		if (N > 90)
+		// Jos N = 90…100 % (pilvistä), niin
 		{
-			if ( RH500 > 65 )
+			if (RH500 > 65)
 			{
 				cloudCode = 3502;
 			}
@@ -129,14 +128,14 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				cloudCode = 3306;
 			}
 
-			if ( RH700 > 80)
+			if (RH700 > 80)
 			{
 				cloudCode = 3405;
 			}
 
-			if ( RH850 > 60 )
+			if (RH850 > 60)
 			{
-				if ( RH700 > 80 )
+				if (RH700 > 80)
 				{
 					cloudCode = 3604;
 					myTargetInfo->Value(cloudCode);
@@ -148,34 +147,34 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				}
 			}
 
-			//jos RH500 > 65, tulos 3502 (yläpilvi)
-			//ellei, niin tulos 3306 (yhtenäinen alapilvi)
-			//Jos kuitenkin RH700 > 80, tulos 3405 (keskipilvi)
-			//Jos kuitenkin RH850 > 60, niin
-				//jos RH700 > 80, tulos 3604 (paksut kerrospilvet) tyyppi = 3 (sade) > ulos
-					//ellei, niin tulos 3307 (alapilvi) tyyppi = 2
+			// jos RH500 > 65, tulos 3502 (yläpilvi)
+			// ellei, niin tulos 3306 (yhtenäinen alapilvi)
+			// Jos kuitenkin RH700 > 80, tulos 3405 (keskipilvi)
+			// Jos kuitenkin RH850 > 60, niin
+			// jos RH700 > 80, tulos 3604 (paksut kerrospilvet) tyyppi = 3 (sade) > ulos
+			// ellei, niin tulos 3307 (alapilvi) tyyppi = 2
 
-			if ( kIndex > 25 )
+			if (kIndex > 25)
 			{
 				cloudCode = 3309;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 
-			else if ( kIndex > 20)
+			else if (kIndex > 20)
 			{
 				cloudCode = 2303;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 
-			else if ( kIndex > 15 )
+			else if (kIndex > 15)
 			{
 				cloudCode = 2302;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
-			else if ( lowConvection == 1 )
+			else if (lowConvection == 1)
 			{
 				cloudCode = 2303;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 			/*
 			Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
@@ -183,12 +182,11 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			Jos kIndex > 15, niin tulos 2302 (konvektiopilvi), tyyppi 4
 			Jos lowConvection = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
 			*/
-
 		}
-		else if ( N > 50 )
-		//Jos N = 50…90 % (puolipilvistä tai pilvistä), niin
+		else if (N > 50)
+		// Jos N = 50…90 % (puolipilvistä tai pilvistä), niin
 		{
-			if ( RH500 > 65 )
+			if (RH500 > 65)
 			{
 				cloudCode = 2501;
 			}
@@ -198,46 +196,46 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				cloudCode = 2305;
 			}
 
-			if ( RH700 > 80 )
+			if (RH700 > 80)
 			{
 				cloudCode = 2403;
 			}
 
-			if ( RH850 > 80 )
+			if (RH850 > 80)
 			{
 				cloudCode = 2307;
 
-			//	if ( N > 70 )
-			//		cloudType = 2;
+				//	if ( N > 70 )
+				//		cloudType = 2;
 			}
 			/*	jos RH500 > 65, tulos 2501 (cirrus)
-				ellei, niin tulos 2305 (stratocumulus)
-				Jos kuitenkin RH700 > 80, tulos 2403 (keskipilvi)
-				Jos kuitenkin RH850 > 80, tulos 2307 (matala alapilvi)
-					ja jos N > 70 %, tyyppi 2
+			    ellei, niin tulos 2305 (stratocumulus)
+			    Jos kuitenkin RH700 > 80, tulos 2403 (keskipilvi)
+			    Jos kuitenkin RH850 > 80, tulos 2307 (matala alapilvi)
+			        ja jos N > 70 %, tyyppi 2
 			*/
 
-			if ( kIndex > 25 )
+			if (kIndex > 25)
 			{
 				cloudCode = 3309;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 
-			else if ( kIndex > 20 )
+			else if (kIndex > 20)
 			{
 				cloudCode = 2303;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 
-			else if ( kIndex > 15 )
+			else if (kIndex > 15)
 			{
 				cloudCode = 2302;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
-			else if ( lowConvection == 1 )
+			else if (lowConvection == 1)
 			{
 				cloudCode = 2303;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 			/*
 			Jos kIndex > 25, niin tulos 3309 (iso kuuropilvi), tyyppi 4
@@ -246,10 +244,10 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			Jos lowConvection = 1, niin tulos 2303 (korkea konvektiopilvi), tyyppi 4
 			*/
 		}
-		else if ( N > 10 )
-		//Jos N = 10… 50 % (hajanaista pilvisyyttä)
+		else if (N > 10)
+		// Jos N = 10… 50 % (hajanaista pilvisyyttä)
 		{
-			if ( RH500 > 60 )
+			if (RH500 > 60)
 			{
 				cloudCode = 1501;
 			}
@@ -259,12 +257,12 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				cloudCode = 1305;
 			}
 
-			if ( RH700 > 70 )
+			if (RH700 > 70)
 			{
 				cloudCode = 1403;
 			}
 
-			if ( RH850 > 80 )
+			if (RH850 > 80)
 			{
 				cloudCode = 1305;
 			}
@@ -273,33 +271,33 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			//	Jos RH700 > 70, tulos 1403 (keskipilveä)
 			//	Jos RH850 > 80, tulos 1305 (alapilveä)
 
-			if ( kIndex > 25 )
+			if (kIndex > 25)
 			{
 				cloudCode = 1309;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 
-			else if ( kIndex > 20 )
+			else if (kIndex > 20)
 			{
 				cloudCode = 1303;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 
-			else if ( kIndex > 15 )
+			else if (kIndex > 15)
 			{
 				cloudCode = 1302;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 
-			else if ( lowConvection == 2 )
+			else if (lowConvection == 2)
 			{
 				cloudCode = 1301;
 			}
 
-			else if ( lowConvection == 1 )
+			else if (lowConvection == 1)
 			{
 				cloudCode = 1303;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 
 			/*
@@ -311,20 +309,21 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			*/
 		}
 		else
-			//Jos N 0…10 %
+		// Jos N 0…10 %
 		{
-			//tulos 0. Jos lowConvection = 1, tulos 1303, tyyppi 4
+			// tulos 0. Jos lowConvection = 1, tulos 1303, tyyppi 4
 			cloudCode = 0;
-			if ( lowConvection == 1 )
+			if (lowConvection == 1)
 			{
 				cloudCode = 1303;
-			//	cloudType = 4;
+				//	cloudType = 4;
 			}
 		}
-		
+
 		myTargetInfo->Value(cloudCode);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

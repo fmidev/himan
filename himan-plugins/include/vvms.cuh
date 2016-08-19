@@ -3,7 +3,7 @@
  * Author: partio
  *
  * Created on February 17, 2013, 3:32 PMi
- * 
+ *
  * List of extern functions compiled by nvcc for plugins (compiled by gcc)
  */
 
@@ -19,7 +19,6 @@ namespace plugin
 {
 namespace vvms_cuda
 {
-
 struct options
 {
 	info_simple* t;
@@ -33,20 +32,20 @@ struct options
 	double p_scale;
 	bool is_constant_pressure;
 	double vv_ms_scale;
-	
-	options() 
-		: t(0)
-		, p(0)
-		, vv(0)
-		, vv_ms(0)
-		, N(0)
-		, p_const(0)
-		, t_base(0) 
-		, p_scale(1)
-		, is_constant_pressure(false)
-		, vv_ms_scale(1) 
-	{}
 
+	options()
+	    : t(0),
+	      p(0),
+	      vv(0),
+	      vv_ms(0),
+	      N(0),
+	      p_const(0),
+	      t_base(0),
+	      p_scale(1),
+	      is_constant_pressure(false),
+	      vv_ms_scale(1)
+	{
+	}
 };
 
 void Process(options& opts);
@@ -55,10 +54,9 @@ void Process(options& opts);
 __global__ void Calculate(cdarr_t d_t, cdarr_t d_vv, cdarr_t d_p, darr_t d_vv_ms, options opts);
 #endif
 
-} // namespace vvms_cuda
-} // namespace plugin
-} // namespace himan
+}  // namespace vvms_cuda
+}  // namespace plugin
+}  // namespace himan
 
-#endif	/* HAVE_CUDA */
-#endif	/* VVMS_CUDA_H */
-
+#endif /* HAVE_CUDA */
+#endif /* VVMS_CUDA_H */

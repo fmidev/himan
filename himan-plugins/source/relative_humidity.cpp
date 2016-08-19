@@ -6,17 +6,18 @@
  */
 
 #include "relative_humidity.h"
-#include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
-#include "metutil.h"
-#include "level.h"
 #include "forecast_time.h"
+#include "level.h"
+#include "logger_factory.h"
+#include "metutil.h"
+#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
 
 void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInfo, double TDBase, double TBase);
-void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, himan::info_t PInfo, double PScale, double TBase);
+void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, himan::info_t PInfo, double PScale,
+           double TBase);
 void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, double P, double TBase);
 
 relative_humidity::relative_humidity()
@@ -25,7 +26,6 @@ relative_humidity::relative_humidity()
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger_factory::Instance()->GetLog("relative_humidity");
-
 }
 
 void relative_humidity::Process(shared_ptr<const plugin_configuration> conf)
@@ -44,20 +44,21 @@ void relative_humidity::Process(shared_ptr<const plugin_configuration> conf)
  */
 
 void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
-{	
-
+{
 	const param TParam("T-K");
-	const params PParams = { param("P-HPA"), param("P-PA") };
+	const params PParams = {param("P-HPA"), param("P-PA")};
 	const param QParam("Q-KGKG");
 	const params TDParams = {param("TD-C"), param("TD-K")};
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("relative_humidityThread #" + boost::lexical_cast<string> (threadIndex));
-	
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("relative_humidityThread #" + boost::lexical_cast<string>(threadIndex));
+
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	double TBase = 0;
 	double TDBase = 0;
@@ -70,7 +71,8 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	if (!TInfo)
 	{
-		itsLogger->Warning("Skipping step " + boost::lexical_cast<string> (myTargetInfo->Time().Step()) + ", level " + boost::lexical_cast<string> (myTargetInfo->Level().Value()));
+		itsLogger->Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", level " +
+		                   boost::lexical_cast<string>(myTargetInfo->Level().Value()));
 		return;
 	}
 
@@ -80,7 +82,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, forecastType, itsConfiguration->UseCudaForPacking());
 	info_t PInfo;
-	
+
 	if (!isPressureLevel)
 	{
 		PInfo = Fetch(forecastTime, forecastLevel, PParams, forecastType, itsConfiguration->UseCudaForPacking());
@@ -93,14 +95,15 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	}
 
 	info_t TDInfo;
-	
+
 	if (calculateWithTD)
 	{
 		TDInfo = Fetch(forecastTime, forecastLevel, TDParams, forecastType, itsConfiguration->UseCudaForPacking());
-		
+
 		if (!TDInfo)
 		{
-			myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+			myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+			                          static_cast<string>(forecastLevel));
 			return;
 		}
 	}
@@ -132,7 +135,6 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	if (itsConfiguration->UseCuda())
 	{
-
 		deviceType = "GPU";
 
 		if (calculateWithTD)
@@ -167,7 +169,8 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		{
 			if (isPressureLevel)
 			{
-				WithQ(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(), TBase); // Pressure is needed as hPa, no scaling
+				WithQ(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value(),
+				      TBase);  // Pressure is needed as hPa, no scaling
 			}
 			else
 			{
@@ -176,8 +179,9 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, double P, double TBase)
@@ -194,11 +198,12 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 
 		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 
-		result = fmin(fmax(0.0, result), 1.0) * 100; // scale to range 0 .. 100
+		result = fmin(fmax(0.0, result), 1.0) * 100;  // scale to range 0 .. 100
 	}
 }
 
-void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, himan::info_t PInfo, double PScale, double TBase)
+void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, himan::info_t PInfo, double PScale,
+           double TBase)
 {
 	// Pressure needs to be hPa and temperature C
 
@@ -210,10 +215,10 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 		double P = tup.get<3>() * PScale;
 
 		double es = himan::metutil::Es_(T + himan::constants::kKelvin) * 0.01;
-		
+
 		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
-		
-		result = fmin(fmax(0.0, result), 1.0) * 100; // scale to range 0 .. 100
+
+		result = fmin(fmax(0.0, result), 1.0) * 100;  // scale to range 0 .. 100
 	}
 }
 
@@ -225,12 +230,12 @@ void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInf
 
 	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(TInfo), VEC(TDInfo)))
 	{
-		double& result = tup.get<0> ();
+		double& result = tup.get<0>();
 		double T = tup.get<1>() + TBase;
 		double TD = tup.get<2>() + TDBase;
-		
+
 		result = exp(d + b * (TD / (TD + c))) / exp(d + b * (T / (T + c)));
-		
+
 		if (result > 1.0)
 		{
 			result = 1.0;
@@ -246,7 +251,10 @@ void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInf
 
 #ifdef HAVE_CUDA
 // Case where RH is calculated from T and TD
-unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTTD( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> TDInfo, double TDBase, double TBase)
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTTD(shared_ptr<info> myTargetInfo,
+                                                                              shared_ptr<info> TInfo,
+                                                                              shared_ptr<info> TDInfo, double TDBase,
+                                                                              double TBase)
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
@@ -263,7 +271,11 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTTD( s
 	return opts;
 }
 // Case where RH is calculated from T, Q and P
-unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQP( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, shared_ptr<info> PInfo, double PScale, double TBase)
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQP(shared_ptr<info> myTargetInfo,
+                                                                              shared_ptr<info> TInfo,
+                                                                              shared_ptr<info> QInfo,
+                                                                              shared_ptr<info> PInfo, double PScale,
+                                                                              double TBase)
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 
@@ -282,7 +294,10 @@ unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQP( s
 	return opts;
 }
 // Case where RH is calculated for pressure levels from T and Q
-unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQ( shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo, shared_ptr<info> QInfo, double P_level, double TBase)
+unique_ptr<relative_humidity_cuda::options> relative_humidity::CudaPrepareTQ(shared_ptr<info> myTargetInfo,
+                                                                             shared_ptr<info> TInfo,
+                                                                             shared_ptr<info> QInfo, double P_level,
+                                                                             double TBase)
 {
 	unique_ptr<relative_humidity_cuda::options> opts(new relative_humidity_cuda::options);
 

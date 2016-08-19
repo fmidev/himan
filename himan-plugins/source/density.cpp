@@ -8,11 +8,11 @@
  */
 
 #include "density.h"
+#include "forecast_time.h"
+#include "level.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
-#include "level.h"
-#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -42,19 +42,20 @@ void density::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-
 	// Required source parameters
 
-	const params PParam = { param("P-PA"), param("P-HPA"), param("PGR-PA") };
+	const params PParam = {param("P-PA"), param("P-HPA"), param("PGR-PA")};
 	const param TParam("T-K");
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	double PScale = 1;
 
@@ -63,17 +64,17 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 	info_t PInfo;
 	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-	if(!isPressureLevel)
+	if (!isPressureLevel)
 	{
 		PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
 	}
 
 	if (!TInfo || (!isPressureLevel && !PInfo))
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
-
 
 	if (!isPressureLevel && (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA"))
 	{
@@ -81,7 +82,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 	}
 
 	SetAB(myTargetInfo, TInfo);
-		
+
 	string deviceType = "CPU";
 
 	if (PInfo)
@@ -91,7 +92,6 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 
 	LOCKSTEP(myTargetInfo, TInfo)
 	{
-
 		double P = kFloatMissing;
 		double T = TInfo->Value();
 
@@ -105,7 +105,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 			P = PInfo->Value();
 		}
 
-		if (P == kFloatMissing || T == kFloatMissing )
+		if (P == kFloatMissing || T == kFloatMissing)
 		{
 			continue;
 		}
@@ -114,9 +114,9 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 		double rho = P * PScale / (constants::kRd * T);
 
 		myTargetInfo->Value(rho);
-		
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

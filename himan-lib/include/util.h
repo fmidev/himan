@@ -17,14 +17,12 @@
 
 namespace himan
 {
-
 /**
- * @namespace himan::util 
+ * @namespace himan::util
  * @brief Namespace for all utility functions and classes
  */
 namespace util
 {
-
 /**
  * @brief Determine file type by looking at the first few bytes of the file
  * @return Filetype of given argument, one of: grib, netcdf, querydata (or unknown)
@@ -41,7 +39,8 @@ std::string MakeFileName(HPFileWriteOption fileWriteOption, const info& info);
 /**
  * @brief Splits a string and fills the gaps if requested
  * @param s Input string that should be splitted
- * @param delims String containing the characters that are used in splitting. If string length > 1, all characters are used
+ * @param delims String containing the characters that are used in splitting. If string length > 1, all characters are
+ * used
  * in splitting
  * @param fill Specify if gaps should be filled. For example string 1-4 can be splitted at - and filled with 2 and 3.
  * @return Vector or strings
@@ -63,7 +62,8 @@ std::string Join(const std::vector<std::string>& elements, const std::string& de
  *
  * Works for (rotated) latlon projections only!
  *
- * This function is the opposite of FirstGridPoint(). NOTE: scanning mode must already be set when calling this function!
+ * This function is the opposite of FirstGridPoint(). NOTE: scanning mode must already be set when calling this
+ * function!
  *
  * @param firstPoint Latitude and longitude of first gridpoint
  * @param ni Grid size in X direction
@@ -75,7 +75,8 @@ std::string Join(const std::vector<std::string>& elements, const std::string& de
  * @return std::pair of points, first=bottomLeft, second=topRight
  */
 
-std::pair<point,point> CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di, double dj, HPScanningMode scanningMode);
+std::pair<point, point> CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di,
+                                                      double dj, HPScanningMode scanningMode);
 
 /**
  * @brief Calculate area coordinates from first gridpoint. Works for stereographic projections only!
@@ -88,8 +89,8 @@ std::pair<point,point> CoordinatesFromFirstGridPoint(const point& firstPoint, si
  * @return
  */
 
-std::pair<point,point> CoordinatesFromFirstGridPoint(const point& firstPoint,  double orientation, size_t ni, size_t nj, double xSizeInMeters, double ySizeInMeters);
-
+std::pair<point, point> CoordinatesFromFirstGridPoint(const point& firstPoint, double orientation, size_t ni, size_t nj,
+                                                      double xSizeInMeters, double ySizeInMeters);
 
 /**
  * @brief Calculate coefficients for transforming U and V from grid relative to earth relative.
@@ -107,7 +108,9 @@ std::pair<point,point> CoordinatesFromFirstGridPoint(const point& firstPoint,  d
  * @return Four coefficients for transforming U and V
  */
 
-std::tuple<double,double,double,double> EarthRelativeUVCoefficients(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole);
+std::tuple<double, double, double, double> EarthRelativeUVCoefficients(const himan::point& regPoint,
+                                                                       const himan::point& rotPoint,
+                                                                       const himan::point& southPole);
 
 /**
  * @brief Calculate coefficients for transforming U and V from earth relative to grid relative.
@@ -125,7 +128,9 @@ std::tuple<double,double,double,double> EarthRelativeUVCoefficients(const himan:
  * @return Four coefficients for transforming U and V
  */
 
-std::tuple<double,double,double,double> GridRelativeUVCoefficients(const himan::point& regPoint, const himan::point& rotPoint, const himan::point& southPole);
+std::tuple<double, double, double, double> GridRelativeUVCoefficients(const himan::point& regPoint,
+                                                                      const himan::point& rotPoint,
+                                                                      const himan::point& southPole);
 
 /**
  * @brief If U and V components of a parameter are grid relative, transform them to be earth-relative
@@ -179,7 +184,9 @@ void Unpack(std::initializer_list<grid*> grids);
  * @return pair of dA/dx,dA/Dy
  */
 
-std::pair<himan::matrix<double>,himan::matrix<double>> CentralDifference(himan::matrix<double>& A, std::vector<double>& dx, std::vector<double>& dy);
+std::pair<himan::matrix<double>, himan::matrix<double>> CentralDifference(himan::matrix<double>& A,
+                                                                          std::vector<double>& dx,
+                                                                          std::vector<double>& dy);
 
 /**
  * @brief Round a double to requested precision
@@ -188,7 +195,7 @@ std::pair<himan::matrix<double>,himan::matrix<double>> CentralDifference(himan::
  * @return Rounded value
  */
 
-double round(double val,unsigned short numdigits);
+double round(double val, unsigned short numdigits);
 
 /**
  * @brief Calculate the length of a latitude on a sphere with mean radius of the earth
@@ -204,7 +211,7 @@ double LatitudeLength(double phi);
  * SQL interval is like: 01:00:00, as in 1 hour 0 minutes 0 seconds
  *
  * This function will not handle seconds.
- * 
+ *
  * @param theTime The forecast time
  * @return Interval string
  */
@@ -213,9 +220,9 @@ std::string MakeSQLInterval(const himan::forecast_time& theTime);
 
 /**
  * @brief Expand possible environmental variables from a string.
- * 
- * For example $HOME --> /home/weto 
- * 
+ *
+ * For example $HOME --> /home/weto
+ *
  * @param in string where there might be env variables
  * @return string that contains the variables expanded
  */
@@ -225,15 +232,14 @@ std::string Expand(const std::string& in);
 /**
  * @brief Dump contents of vector to stdout. Name is used to identify dump, when
  * multiple vectors are dumped sequentially.
- * 
+ *
  * @param arr vector of doubles
  * @param name identifier for vector
  */
 
 void DumpVector(const std::vector<double>& arr, const std::string& name = "");
 
-} // namespace util
-} // namespace himan
-
+}  // namespace util
+}  // namespace himan
 
 #endif /* UTIL_H_ */

@@ -12,24 +12,26 @@
 #ifndef INFO_H
 #define INFO_H
 
-#include "raw_time.h"
-#include "himan_common.h"
-#include "producer.h"
-#include <vector>
-#include "info_simple.h"
-#include <boost/lexical_cast.hpp>
-#include "param.h"
-#include "level.h"
 #include "forecast_time.h"
-#include "grid.h"
 #include "forecast_type.h"
+#include "grid.h"
+#include "himan_common.h"
+#include "info_simple.h"
+#include "level.h"
+#include "param.h"
+#include "producer.h"
+#include "raw_time.h"
+#include <boost/lexical_cast.hpp>
+#include <vector>
 
 #define VEC(I) I->Data().Values()
 
 namespace himan
 {
-
-namespace plugin { class compiled_plugin_base; }
+namespace plugin
+{
+class compiled_plugin_base;
+}
 
 /**
 * @class iterator
@@ -43,20 +45,10 @@ const size_t kIteratorResetValue = std::numeric_limits<size_t>::max();
 template <class T>
 class iterator
 {
-public:
-
+   public:
 	iterator<T>() : itsIndex(kIteratorResetValue) {}
-	explicit iterator<T>(const std::vector<T>& theElements)
-	:	itsElements(theElements)
-	{
-		Reset();
-	}
-
-	explicit iterator(const iterator& other)
-		: itsElements(other.itsElements)
-		, itsIndex(other.itsIndex)
-	{}
-	
+	explicit iterator<T>(const std::vector<T>& theElements) : itsElements(theElements) { Reset(); }
+	explicit iterator(const iterator& other) : itsElements(other.itsElements), itsIndex(other.itsIndex) {}
 	iterator& operator=(const iterator& other)
 	{
 		itsElements = other.itsElements;
@@ -64,11 +56,7 @@ public:
 		return *this;
 	}
 
-	std::string ClassName() const
-	{
-		return "himan::iterator";
-	}
-
+	std::string ClassName() const { return "himan::iterator"; }
 	/**
 	 * @brief Reset iterator
 	 *
@@ -78,11 +66,7 @@ public:
 	 *
 	 */
 
-	void Reset()
-	{
-		itsIndex = kIteratorResetValue;
-	}
-
+	void Reset() { itsIndex = kIteratorResetValue; }
 	/**
 	 * @brief Set iterator to first element
 	 *
@@ -124,10 +108,11 @@ public:
 		{
 			return false;
 		}
-		
+
 		if (itsIndex == kIteratorResetValue)
 		{
-			itsIndex = itsElements.size() == 0 ? 0 : itsElements.size() - 1; // Reset() has been called before this function
+			itsIndex =
+			    itsElements.size() == 0 ? 0 : itsElements.size() - 1;  // Reset() has been called before this function
 		}
 
 		else if (itsIndex == 0)
@@ -160,7 +145,7 @@ public:
 
 		if (itsIndex == kIteratorResetValue)
 		{
-			itsIndex = 0;	// Reset() has been called before this function
+			itsIndex = 0;  // Reset() has been called before this function
 		}
 
 		else if (itsIndex >= (itsElements.size() - 1))
@@ -188,8 +173,7 @@ public:
 			return itsElements[itsIndex];
 		}
 
-		throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string> (itsIndex));
-
+		throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string>(itsIndex));
 	}
 
 	/**
@@ -203,8 +187,7 @@ public:
 			return itsElements[theIndex];
 		}
 
-		throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string> (theIndex));
-
+		throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string>(theIndex));
 	}
 
 	/**
@@ -216,7 +199,6 @@ public:
 
 	bool Set(const T& theElement)
 	{
-
 		for (size_t i = 0; i < itsElements.size(); i++)
 		{
 			if (itsElements[i] == theElement)
@@ -237,44 +219,24 @@ public:
 	 * @todo Should return bool like Set(const T theElement) ?
 	 */
 
-	void Set(size_t theIndex)
-	{
-		itsIndex = theIndex;
-	}
-
+	void Set(size_t theIndex) { itsIndex = theIndex; }
 	/**
 	 * @brief Replace the value at current iterator position with a new value
 	 *
 	 */
-	
-	void Replace(const T& theNewValue)
-	{
-		itsElements[itsIndex] = theNewValue;
-	}
-	
+
+	void Replace(const T& theNewValue) { itsElements[itsIndex] = theNewValue; }
 	/**
 	 * @return Current index value
 	 */
 
-	size_t Index() const
-	{
-		return itsIndex;
-	}
-
+	size_t Index() const { return itsIndex; }
 	/**
 	 * @return Iterator size
 	 */
 
-	size_t Size() const
-	{
-		return itsElements.size();
-	}
-
-	friend std::ostream& operator<<(std::ostream& file, const iterator<T> & ob)
-	{
-		return ob.Write(file);
-	}
-
+	size_t Size() const { return itsElements.size(); }
+	friend std::ostream& operator<<(std::ostream& file, const iterator<T>& ob) { return ob.Write(file); }
 	/**
 	 * @brief Add element to iterator
 	 *
@@ -299,23 +261,18 @@ public:
 			}
 
 			itsIndex = tempIndex;
-
 		}
 
 		itsElements.push_back(newElement);
 
 		return true;
 	}
-	
+
 	/**
 	 * @brief Remove all elements (iterator size = 0)
 	 */
 
-	void Clear()
-	{
-		itsElements.clear();
-	}
-
+	void Clear() { itsElements.clear(); }
 	/**
 	 * @brief Write object to stream
 	 */
@@ -334,10 +291,9 @@ public:
 		return file;
 	}
 
-private:
-	std::vector<T> itsElements; //<! Vector to hold the elements
-	size_t itsIndex; //<! Current index of iterator
-
+   private:
+	std::vector<T> itsElements;  //<! Vector to hold the elements
+	size_t itsIndex;             //<! Current index of iterator
 };
 
 class forecast_time;
@@ -354,9 +310,7 @@ typedef iterator<forecast_type> forecast_type_iter;
 
 class info
 {
-
-public:
-
+   public:
 	friend class json_parser;
 	friend class himan::plugin::compiled_plugin_base;
 
@@ -376,11 +330,7 @@ public:
 
 	info& operator=(const info& other) = delete;
 
-	std::string ClassName() const
-	{
-		return "himan::info";
-	}
-
+	std::string ClassName() const { return "himan::info"; }
 	std::ostream& Write(std::ostream& file) const;
 
 	/**
@@ -441,7 +391,7 @@ public:
 
 	void ForecastTypes(const std::vector<forecast_type>& theTypes);
 	void ForecastTypeIterator(const forecast_type_iter& theForecastTypeIterator);
-	
+
 	/**
 	 * @brief Initialize data backend with correct number of matrices
 	 *
@@ -450,8 +400,8 @@ public:
 	 * of times, params and levels.
 	 *
 	 * Data is copied.
-	 * 
- 	 * Will *not* preserve iterator positions.
+	 *
+	 * Will *not* preserve iterator positions.
 	 */
 
 	void Create(const grid* baseGrid, bool createDataBackend = false);
@@ -515,7 +465,7 @@ public:
 	param Param() const;
 	const param& PeekParam(size_t theIndex) const;
 	void SetParam(const param& theParam);
-	
+
 	size_t SizeParams() const;
 
 	/**
@@ -630,24 +580,24 @@ public:
 	size_t SizeForecastTypes() const;
 	bool ForecastType(const forecast_type& theType);
 	forecast_type ForecastType() const;
-	
+
 	/**
 	 * @brief Return current latlon coordinates
 	 *
 	 * Does not currently support stereographic projection.
 	 * In rotated latlon projection function return coordinates in rotated form.
 	 *
-     * @return Latitude and longitude of current grid point
-     */
+	 * @return Latitude and longitude of current grid point
+	 */
 
 	point LatLon() const;
-	
+
 	/**
 	 * @brief Return station information corresponding to current location. Only valid
 	 * for irregular grids.
-	 * 
-     * @return station information
-     */
+	 *
+	 * @return station information
+	 */
 
 	station Station() const;
 
@@ -665,7 +615,7 @@ public:
 	 * @return Data matrix pointed by the given function arguments.
 	 */
 
-	grid* Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const; // Always this order
+	grid* Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const;  // Always this order
 
 	/**
 	 * @brief Replace current grid with the function argument
@@ -705,7 +655,7 @@ public:
 
 	/**
 	 * @brief Stupify this info to a C-style struct
-	 * 
+	 *
 	 * @return
 	 */
 
@@ -716,18 +666,17 @@ public:
 	const std::vector<std::shared_ptr<grid>>& Dimensions() const;
 
 	/**
- 	 * @brief Clear info contents and iterators
- 	 *
- 	 * Does not free memory explicitly.
- 	 */
- 
+	 * @brief Clear info contents and iterators
+	 *
+	 * Does not free memory explicitly.
+	 */
+
 	void Clear();
 
-protected:
-	std::unique_ptr<grid> itsBaseGrid; //!< grid information from json. used as a template, never to store data
+   protected:
+	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
 
-private:
-
+   private:
 	void Init();
 
 	/**
@@ -741,22 +690,22 @@ private:
 	 * ReIndex() moves data around but does not copy (ie allocate new memory).
 	 *
 	*/
-	
+
 	void ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize);
 
 	/**
 	 * @brief Return running index nuimber when given relative index for each
 	 * three dimension
-	 * 
-     * @param timeIndex x-dimension index
-     * @param levelIndex y-dimension index
-     * @param paramIndex z-dimension index
-     * @return 
-     */
-	
+	 *
+	 * @param timeIndex x-dimension index
+	 * @param levelIndex y-dimension index
+	 * @param paramIndex z-dimension index
+	 * @return
+	 */
+
 	size_t Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const;
 	size_t Index() const;
-	
+
 	HPLevelOrder itsLevelOrder;
 
 	level_iter itsLevelIterator;
@@ -773,39 +722,24 @@ private:
 	raw_time itsOriginDateTime;
 
 	size_t itsLocationIndex;
-
 };
 
-inline
-std::ostream& operator<<(std::ostream& file, const info& ob)
-{
-	return ob.Write(file);
-}
-
-inline
-size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+inline std::ostream& operator<<(std::ostream& file, const info& ob) { return ob.Write(file); }
+inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
 	assert(forecastTypeIndex != kIteratorResetValue);
 	assert(timeIndex != kIteratorResetValue);
 	assert(levelIndex != kIteratorResetValue);
 	assert(paramIndex != kIteratorResetValue);
-	
-	return (
-			paramIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() + 
-			levelIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() + 
-			timeIndex * itsForecastTypeIterator.Size() +
-			forecastTypeIndex
-			);
+
+	return (paramIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() +
+	        levelIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() +
+	        timeIndex * itsForecastTypeIterator.Size() + forecastTypeIndex);
 }
 
-inline
-size_t himan::info::Index() const
-{
-	return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex());
-}
-
+inline size_t himan::info::Index() const { return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex()); }
 typedef std::shared_ptr<info> info_t;
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* INFO_H */

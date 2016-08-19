@@ -15,61 +15,46 @@
 
 namespace himan
 {
-
 class producer
 {
+   public:
+	producer();
+	explicit producer(long theFmiProducerId);
+	producer(long theCentre, long theProcess);
+	producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName);
 
-public:
+	~producer() {}
+	std::string ClassName() const { return "himan::producer"; }
+	std::ostream& Write(std::ostream& file) const;
 
-    producer();
-    explicit producer(long theFmiProducerId);
-    producer(long theCentre, long theProcess);
-    producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName);
+	void Centre(long theCentre);
+	long Centre() const;
 
-    ~producer() {}
+	void Process(long theProcess);
+	long Process() const;
 
-    std::string ClassName() const
-    {
-        return "himan::producer";
-    }
+	void Id(long theId);
+	long Id() const;
 
-    std::ostream& Write(std::ostream& file) const;
+	void Name(const std::string& theName);
+	std::string Name() const;
 
-    void Centre(long theCentre);
-    long Centre() const;
+	long TableVersion() const;
+	void TableVersion(long theTableVersion);
 
-    void Process(long theProcess);
-    long Process() const;
+	bool operator==(const producer& other);
+	bool operator!=(const producer& other);
 
-    void Id(long theId);
-    long Id() const;
+   private:
+	long itsFmiProducerId;
+	long itsProcess;
+	long itsCentre;
+	long itsTableVersion;
 
-    void Name(const std::string& theName);
-    std::string Name() const;
-
-    long TableVersion() const;
-    void TableVersion(long theTableVersion);
-
-    bool operator==(const producer& other);
-    bool operator!=(const producer& other);
-
-private:
-
-    long itsFmiProducerId;
-    long itsProcess;
-    long itsCentre;
-    long itsTableVersion;
-
-    std::string itsNeonsName;
-
+	std::string itsNeonsName;
 };
 
-inline
-std::ostream& operator<<(std::ostream& file, const producer& ob)
-{
-    return ob.Write(file);
-}
-
-} // namespace himan
+inline std::ostream& operator<<(std::ostream& file, const producer& ob) { return ob.Write(file); }
+}  // namespace himan
 
 #endif /* PRODUCER_H */

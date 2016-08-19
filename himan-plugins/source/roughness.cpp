@@ -8,10 +8,10 @@
  */
 
 #include "roughness.h"
+#include "forecast_time.h"
+#include "level.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
-#include "level.h"
-#include "forecast_time.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -28,7 +28,7 @@ roughness::roughness()
 void roughness::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
-	
+
 	SetParams({param("SR-M", 283, 2, 0, 1)});
 
 	Start();
@@ -42,23 +42,26 @@ void roughness::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void roughness::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	const param RoughTParam("SR-M"); // Surface roughness terrain contribution
-	const param RoughVParam("SRMOM-M"); // Surface roughness vegetation contribution
+	const param RoughTParam("SR-M");     // Surface roughness terrain contribution
+	const param RoughVParam("SRMOM-M");  // Surface roughness vegetation contribution
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	info_t RoughTInfo = Fetch(forecastTime, forecastLevel, RoughTParam, forecastType, false);
 	info_t RoughVInfo = Fetch(forecastTime, forecastLevel, RoughVParam, forecastType, false);
 
 	if (!RoughTInfo || !RoughVInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -66,20 +69,20 @@ void roughness::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	LOCKSTEP(myTargetInfo, RoughTInfo, RoughVInfo)
 	{
-
 		double RoughT = RoughTInfo->Value();
 		double RoughV = RoughVInfo->Value();
 
-		if (RoughT == kFloatMissing || RoughV == kFloatMissing )
+		if (RoughT == kFloatMissing || RoughV == kFloatMissing)
 		{
 			continue;
 		}
 
-		RoughT+=RoughV;
+		RoughT += RoughV;
 
 		myTargetInfo->Value(RoughT);
-
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

@@ -2,7 +2,7 @@
  * @file radon.h
  *
  * @date Oct 28, 2014
- * 
+ *
  * @author: tack
  *
  * @class radon
@@ -25,48 +25,34 @@
 #ifndef RADON_H
 #define RADON_H
 
-#include "auxiliary_plugin.h"
 #include "NFmiRadonDB.h"
+#include "auxiliary_plugin.h"
 #include "search_options.h"
 
 namespace himan
 {
 namespace plugin
 {
-
 class radon : public auxiliary_plugin
 {
-
-public:
+   public:
 	radon();
 
 	inline virtual ~radon()
 	{
 		if (itsRadonDB)
 		{
-			auto raw = itsRadonDB.release(); // Give up ownership
-			NFmiRadonDBPool::Instance()->Release(raw); // Return connection back to pool
+			auto raw = itsRadonDB.release();            // Give up ownership
+			NFmiRadonDBPool::Instance()->Release(raw);  // Return connection back to pool
 		}
 	}
 
 	radon(const radon& other) = delete;
 	radon& operator=(const radon& other) = delete;
 
-	virtual std::string ClassName() const
-	{
-		return "himan::plugin::radon";
-	}
-
-	virtual HPPluginClass PluginClass() const
-	{
-		return kAuxiliary;
-	}
-
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
-
+	virtual std::string ClassName() const { return "himan::plugin::radon"; }
+	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
+	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
 	std::vector<std::string> Files(search_options& options);
 	bool Save(const info& resultInfo, const std::string& theFileName);
 
@@ -77,8 +63,12 @@ public:
 	 *  \par timeRangeIndicator - time range indicator (grib 1)
 	 */
 
-	std::map<std::string,std::string> Grib1ParameterName(const long producer, const long fmiParameterId,const long codeTableVersion, long timeRangeIndicator, const long levelId, double level_value);
-	std::map<std::string,std::string> Grib2ParameterName(const long fmiParameterId,const long category, const long discipline, const long producer, const long levelId, double level_value);
+	std::map<std::string, std::string> Grib1ParameterName(const long producer, const long fmiParameterId,
+	                                                      const long codeTableVersion, long timeRangeIndicator,
+	                                                      const long levelId, double level_value);
+	std::map<std::string, std::string> Grib2ParameterName(const long fmiParameterId, const long category,
+	                                                      const long discipline, const long producer,
+	                                                      const long levelId, double level_value);
 
 	/**
 	 * @brief Function to expose the NFmiRadonDB interface
@@ -90,8 +80,7 @@ public:
 
 	void PoolMaxWorkers(int maxWorkers);
 
-private:
-
+   private:
 	/**
 	 * @brief Initialize connection pool
 	 *
@@ -110,9 +99,8 @@ private:
 
 	inline void Init();
 
-	bool itsInit; //!< Holds the initialization status of the database connection
-	std::unique_ptr<NFmiRadonDB> itsRadonDB; //<! The actual database class instance
-
+	bool itsInit;                             //!< Holds the initialization status of the database connection
+	std::unique_ptr<NFmiRadonDB> itsRadonDB;  //<! The actual database class instance
 };
 
 inline void radon::Init()
@@ -121,7 +109,7 @@ inline void radon::Init()
 	{
 		try
 		{
-			itsRadonDB = std::unique_ptr<NFmiRadonDB> (NFmiRadonDBPool::Instance()->GetConnection());
+			itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
 		}
 		catch (int e)
 		{
@@ -139,19 +127,14 @@ inline NFmiRadonDB& radon::RadonDB()
 	return *itsRadonDB.get();
 }
 
-
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create()
-{
-	return std::shared_ptr<radon> (new radon());
-}
-
+extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<radon>(new radon()); }
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
-} // namespace plugin
-} // namespace himan
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* RADON_H */

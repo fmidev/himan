@@ -9,18 +9,16 @@
 #define LOGGER_FACTORY_H
 
 #include "himan_common.h"
-#include "logger.h" 	// Include logger.h here since logger_factory.h is used *everywhere*
-			// and by including logger.h we need only include one file. And besides
-			// logger.h isn't *that* big!
+#include "logger.h"  // Include logger.h here since logger_factory.h is used *everywhere*
+                     // and by including logger.h we need only include one file. And besides
+                     // logger.h isn't *that* big!
 
 namespace himan
 {
-
 class logger;
 class logger_factory
 {
-
-public:
+   public:
 	static logger_factory* Instance();
 
 	~logger_factory() = default;
@@ -32,13 +30,13 @@ public:
 	void DebugState(HPDebugState theDebugState);
 	HPDebugState DebugState();
 
-private:
+   private:
 	logger_factory();
 
 	HPDebugState itsDebugStateMain;
 	static std::unique_ptr<logger_factory> itsInstance;
 };
 
-} // namespace himan
+}  // namespace himan
 
 #endif /* LOGGER_FACTORY_H */

@@ -10,15 +10,15 @@
 #define MISS kFloatMissing
 
 #include "preform_hybrid.h"
-#include <iostream>
-#include "plugin_factory.h"
-#include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
-#include "level.h"
 #include "forecast_time.h"
-#include <boost/foreach.hpp>
-#include <boost/thread.hpp>
+#include "level.h"
+#include "logger_factory.h"
+#include "plugin_factory.h"
 #include "util.h"
+#include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/thread.hpp>
+#include <iostream>
 
 #include "hitool.h"
 
@@ -103,13 +103,13 @@ const double fzraPA = 100.;
 
 // Pinnan yläpuolisen plussakerroksen pinta-alan raja-arvot [mC, "metriastetta"]:
 const double waterArea = 200.;  // alkup. PK:n arvo oli 300
-const double snowArea = 50.;	// alkup. PK:n arvo oli 50
+const double snowArea = 50.;    // alkup. PK:n arvo oli 50
 
 // Max sallittu nousuliike st:ssa [mm/s]
 const double wMax = 50.;
 
 // Suht. kosteuden raja-arvo alapilvelle (925/850/700hPa) [%]
-const double rhLim = 90.; 
+const double rhLim = 90.;
 
 const param stratusBaseParam("STRATUS-BASE-M");
 const param stratusTopParam("STRATUS-TOP-M");
@@ -119,10 +119,10 @@ const param stratusMeanCloudinessParam("STRATUS-MEAN-N-PRCNT");
 const param stratusUpperLayerNParam("STRATUS-UPPER-LAYER-N-PRCNT");
 const param stratusVerticalVelocityParam("STRATUS-VERTICAL-VELOCITY-MMS");
 
-const param minusAreaParam("MINUS-AREA-MC"); // metriastetta, mC
-const param plusAreaParam("PLUS-AREA-MC"); // metriastetta, mC
-const param plusAreaSfcParam("PLUS-AREA-SFC-MC"); // metriastetta, mC
-const param numZeroLevelsParam("NUMZEROLEVELS-N"); // nollakohtien lkm
+const param minusAreaParam("MINUS-AREA-MC");        // metriastetta, mC
+const param plusAreaParam("PLUS-AREA-MC");          // metriastetta, mC
+const param plusAreaSfcParam("PLUS-AREA-SFC-MC");   // metriastetta, mC
+const param numZeroLevelsParam("NUMZEROLEVELS-N");  // nollakohtien lkm
 const param rhAvgParam("RHAVG-PRCNT");
 const param rhAvgUpperParam("RHAVG-UPPER-PRCNT");
 const param rhMeltParam("RHMELT-PRCNT");
@@ -133,7 +133,6 @@ preform_hybrid::preform_hybrid()
 	itsClearTextFormula = "<algorithm>";
 
 	itsLogger = logger_factory::Instance()->GetLog("preform_hybrid");
-
 }
 
 void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -157,14 +156,16 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->OutputFileType() == kGRIB2)
 	{
-		itsLogger->Error("GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not lossless");
+		itsLogger->Error(
+		    "GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not "
+		    "lossless");
 		return;
 	}
 
+	vector<param> params({param("PRECFORM2-N", 1206)});
 
-	vector<param> params ({param("PRECFORM2-N", 1206)});
-
-	if (itsConfiguration->Exists("potential_precipitation_form") && itsConfiguration->GetValue("potential_precipitation_form") == "true")
+	if (itsConfiguration->Exists("potential_precipitation_form") &&
+	    itsConfiguration->GetValue("potential_precipitation_form") == "true")
 	{
 		params.push_back(param("POTPRECF-N", 1226));
 	}
@@ -172,7 +173,6 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 	SetParams(params);
 
 	Start();
-	
 }
 
 /*
@@ -187,14 +187,15 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	// Required source parameters
 
-	params RRParam({ param("RR-1-MM"), param("RRR-KGM2")}); // one hour prec OR precipitation rate (HHsade)
+	params RRParam({param("RR-1-MM"), param("RRR-KGM2")});  // one hour prec OR precipitation rate (HHsade)
 	const param TParam("T-K");
 	const param RHParam("RH-PRCNT");
 
 	level surface0mLevel(kHeight, 0);
 	level surface2mLevel(kHeight, 2);
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("preformHybridThread #" + boost::lexical_cast<string> (threadIndex));
+	auto myThreadedLogger =
+	    logger_factory::Instance()->GetLog("preformHybridThread #" + boost::lexical_cast<string>(threadIndex));
 
 	auto h = GET_PLUGIN(hitool);
 
@@ -204,7 +205,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " + static_cast<string> (forecastLevel));
+	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	h->Time(forecastTime);
 
@@ -215,7 +217,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	if (!RRInfo || !TInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", level " + static_cast<string> (forecastLevel));
+		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                          static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -229,8 +232,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	 * The constructor of std::thread (and boost::thread) deduces argument types
 	 * and stores them *by value*.
 	 */
-		
-	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, myTargetInfo->Time(), boost::ref(freezingArea), myTargetInfo->Grid());
+
+	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, myTargetInfo->Time(),
+	                boost::ref(freezingArea), myTargetInfo->Grid());
 
 	Stratus(itsConfiguration, myTargetInfo->Time(), stratus, myTargetInfo->Grid());
 
@@ -252,7 +256,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	stratus->First();
 
 	myThreadedLogger->Info("Stratus and freezing area calculated");
-		
+
 	string deviceType = "CPU";
 
 	assert(myTargetInfo->SizeLocations() == stratus->SizeLocations());
@@ -264,9 +268,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
 
-	LOCKSTEP (myTargetInfo, stratus, freezingArea, TInfo, RRInfo)
+	LOCKSTEP(myTargetInfo, stratus, freezingArea, TInfo, RRInfo)
 	{
-
 		stratus->Param(stratusBaseParam);
 		double base = stratus->Value();
 
@@ -296,22 +299,22 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		freezingArea->Param(minusAreaParam);
 		double minusArea = freezingArea->Value();
-		
+
 		freezingArea->Param(numZeroLevelsParam);
 		double nZeroLevel = freezingArea->Value();
 
 		freezingArea->Param(rhAvgParam);
 		double rhAvg = freezingArea->Value();
-		
+
 		freezingArea->Param(rhAvgUpperParam);
 		double rhAvgUpper = freezingArea->Value();
-		
+
 		freezingArea->Param(rhMeltParam);
 		double rhMelt = freezingArea->Value();
-		
+
 		freezingArea->Param(rhMeltUpperParam);
 		double rhMeltUpper = freezingArea->Value();
-		
+
 		double RR = RRInfo->Value();
 		double T = TInfo->Value();
 
@@ -329,7 +332,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		// Unit conversions
 
-		T -= himan::constants::kKelvin; // K --> C
+		T -= himan::constants::kKelvin;  // K --> C
 
 		if (Ttop != MISS)
 		{
@@ -343,110 +346,87 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		if (Navg != MISS)
 		{
-			Navg *= 100; // --> %
+			Navg *= 100;  // --> %
 		}
 
 		assert(T >= -80 && T < 80);
 		assert(!noPotentialPrecipitationForm || RR > 0);
 		assert(Navg == MISS || (Navg >= 0 && Navg <= 100));
-	
-/*
-		cout	<< "base\t\t" << base << endl
-				<< "top\t\t" << top << endl
-				<< "Navg\t\t" << Navg << endl
-				<< "upperLayerN\t" << upperLayerN << endl
-				<< "RR\t\t" << RR << endl
-				<< "stTavg\t\t" << stTavg << endl
-				<< "T\t\t" << T << endl
-				<< "plusArea\t" << plusArea << endl
-				<< "plusAreaSfc\t" << plusAreaSfc << endl
-				<< "minusArea\t" << minusArea << endl
-				<< "nZeroLevel\t" << nZeroLevel << endl
-				<< "rhAvg\t\t" << rhAvg << endl
-				<< "rhAvgUpper\t" << rhAvgUpper << endl
-				<< "rhMelt\t\t" << rhMelt << endl
-				<< "rhMeltUpper\t" << rhMeltUpper << endl
-				<< "wAvg\t\t" << wAvg << endl
-				<< "baseLimit\t" << baseLimit << endl
-				<< "topLimit\t" << stLimit << endl
-				<< "Nlimit\t\t" << Nlimit << endl
-				<< "dryNlim\t\t" << dryNlim << endl
-				<< "waterArea\t" << waterArea << endl
-				<< "snowArea\t" << snowArea << endl
-				<< "wMax\t\t" << wMax << endl
-				<< "sfcMin\t\t" << sfcMin << endl
-				<< "sfcMax\t\t" << sfcMax << endl
-				<< "fzdzLim\t\t" << fzdzLim << endl
-				<< "fzStLimit\t" << fzStLimit << endl
-				<< "fzraPA\t\t" << fzraPA << endl
-				<< "fzraMA\t\t" << fzraMA << endl;
-*/
+
+		/*
+		        cout	<< "base\t\t" << base << endl
+		                << "top\t\t" << top << endl
+		                << "Navg\t\t" << Navg << endl
+		                << "upperLayerN\t" << upperLayerN << endl
+		                << "RR\t\t" << RR << endl
+		                << "stTavg\t\t" << stTavg << endl
+		                << "T\t\t" << T << endl
+		                << "plusArea\t" << plusArea << endl
+		                << "plusAreaSfc\t" << plusAreaSfc << endl
+		                << "minusArea\t" << minusArea << endl
+		                << "nZeroLevel\t" << nZeroLevel << endl
+		                << "rhAvg\t\t" << rhAvg << endl
+		                << "rhAvgUpper\t" << rhAvgUpper << endl
+		                << "rhMelt\t\t" << rhMelt << endl
+		                << "rhMeltUpper\t" << rhMeltUpper << endl
+		                << "wAvg\t\t" << wAvg << endl
+		                << "baseLimit\t" << baseLimit << endl
+		                << "topLimit\t" << stLimit << endl
+		                << "Nlimit\t\t" << Nlimit << endl
+		                << "dryNlim\t\t" << dryNlim << endl
+		                << "waterArea\t" << waterArea << endl
+		                << "snowArea\t" << snowArea << endl
+		                << "wMax\t\t" << wMax << endl
+		                << "sfcMin\t\t" << sfcMin << endl
+		                << "sfcMax\t\t" << sfcMax << endl
+		                << "fzdzLim\t\t" << fzdzLim << endl
+		                << "fzStLimit\t" << fzStLimit << endl
+		                << "fzraPA\t\t" << fzraPA << endl
+		                << "fzraMA\t\t" << fzraMA << endl;
+		*/
 
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
 		// 1. jäätävää tihkua? (tai lumijyväsiä)
 
-		if (	base			!= MISS AND
-				top				!= MISS AND
-				upperLayerN		!= MISS AND
-				wAvg			!= MISS AND
-				Navg			!= MISS AND
-				stTavg			!= MISS AND
-				Ttop			!= MISS AND
-				RR				<= fzdzLim AND
-				base			< baseLimit AND
-				(top - base)	>= fzStLimit AND
-				wAvg			< wMax AND
-				wAvg			>= 0 AND
-				Navg			> Nlimit AND
-				Ttop			> stTlimit AND
-				stTavg			> stTlimit AND
-				T				> sfcMin AND
-				T				<= sfcMax AND
-				upperLayerN		< dryNlim)
+		if (base != MISS AND top != MISS AND upperLayerN != MISS AND wAvg != MISS AND Navg != MISS AND stTavg !=
+		    MISS AND Ttop !=
+		    MISS AND RR <=
+		        fzdzLim AND
+		            base<baseLimit AND(top - base) >= fzStLimit AND wAvg<wMax AND wAvg >= 0 AND Navg> Nlimit AND Ttop>
+		                stTlimit AND stTavg > stTlimit AND T > sfcMin AND T <= sfcMax AND upperLayerN < dryNlim)
 		{
-				PreForm = kFreezingDrizzle;
+			PreForm = kFreezingDrizzle;
 		}
 
-		// 2. jäätävää vesisadetta? (tai jääjyväsiä (ice pellets), jos pakkaskerros hyvin paksu, ja/tai sulamiskerros ohut)
-		// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros, jossa pilveä/ei liian kuivaa?
+		// 2. jäätävää vesisadetta? (tai jääjyväsiä (ice pellets), jos pakkaskerros hyvin paksu, ja/tai sulamiskerros
+		// ohut)
+		// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros, jossa pilveä/ei liian
+		// kuivaa?
 		// (Huom. hyvin paksu pakkaskerros (tai ohut sulamiskerros) -> oikeasti jääjyväsiä/ice pellets fzra sijaan)
 
-		if (PreForm == MISS AND
-			plusArea != MISS AND
-			minusArea != MISS AND
-			rhAvgUpper != MISS AND
-			rhMeltUpper != MISS AND
-			plusArea > fzraPA AND
-			minusArea < fzraMA AND
-			T <= 0 AND
-			(upperLayerN == MISS OR upperLayerN > dryNlim) AND
-			rhAvgUpper > rhMeltUpper)
+		if (PreForm == MISS AND plusArea != MISS AND minusArea != MISS AND rhAvgUpper != MISS AND rhMeltUpper !=
+		    MISS AND plusArea >
+		        fzraPA AND minusArea<fzraMA AND T <= 0 AND(upperLayerN == MISS OR upperLayerN > dryNlim) AND rhAvgUpper>
+		            rhMeltUpper)
 		{
 			PreForm = kFreezingRain;
 		}
 
 		// 3. Lunta, räntää, tihkua vai vettä? PK:n koodia mukaillen
-		
+
 		if (PreForm == MISS)
 		{
-			
 			// Tihkua tai vettä jos "riitävän paksu lämmin kerros pinnan yläpuolella"
-			
+
 			if (plusArea != MISS AND plusArea > waterArea)
 			{
 				// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
-				// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään mukana)
-				if (base			!= MISS &&
-					top				!= MISS &&
-					Navg			!= MISS &&
-					upperLayerN		!= MISS &&
-					RR				<= dzLim &&
-					base			< baseLimit &&
-					(top - base)	> stLimit &&
-					Navg			> Nlimit &&
-					upperLayerN		< dryNlim)
+				// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään
+				// mukana)
+				if (base != MISS && top != MISS && Navg != MISS && upperLayerN != MISS && RR <= dzLim &&
+				    base < baseLimit && (top - base) > stLimit && Navg > Nlimit && upperLayerN < dryNlim)
 				{
 					PreForm = kDrizzle;
 				}
@@ -454,17 +434,18 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				{
 					PreForm = kRain;
 				}
-				
-				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan      
-				
+
+				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan
+
 				if (nZeroLevel != MISS AND rhAvg != MISS AND rhMelt != MISS AND nZeroLevel == 1 AND rhAvg < rhMelt)
-				{  
+				{
 					PreForm = kSleet;
 				}
-				
-				// Lisäys, jolla korjataan vesi/tihku lumeksi, jos pintakerros pakkasella (mutta jäätävän sateen/tihkun kriteerit eivät toteudu, 
+
+				// Lisäys, jolla korjataan vesi/tihku lumeksi, jos pintakerros pakkasella (mutta jäätävän sateen/tihkun
+				// kriteerit eivät toteudu,
 				// esim. paksu plussakerros pakkas-st/sc:n yllä)
-				if (minusArea != MISS OR (plusAreaSfc != MISS AND plusAreaSfc < snowArea))
+				if (minusArea != MISS OR(plusAreaSfc != MISS AND plusAreaSfc < snowArea))
 				{
 					PreForm = kSnow;
 				}
@@ -475,17 +456,17 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			if (plusArea != MISS AND plusArea >= snowArea AND plusArea <= waterArea)
 			{
 				PreForm = kSleet;
-				
+
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi lumi rännän sijaan
-				
+
 				if (nZeroLevel != MISS AND rhAvg != MISS AND rhMelt != MISS AND nZeroLevel == 1 AND rhAvg < rhMelt)
 				{
 					PreForm = kSnow;
 				}
-				
+
 				// lisäys, jolla korjataan räntä lumeksi, kun pintakerros pakkasella tai vain ohuelti plussalla
-				
-				if (minusArea != MISS OR (plusAreaSfc != MISS AND plusAreaSfc < snowArea))
+
+				if (minusArea != MISS OR(plusAreaSfc != MISS AND plusAreaSfc < snowArea))
 				{
 					PreForm = kSnow;
 				}
@@ -522,22 +503,25 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string> (myTargetInfo->Data().MissingCount()) + "/" + boost::lexical_cast<string> (myTargetInfo->Data().Size()));
-
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
-void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result, const grid* baseGrid)
+void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
+                                  shared_ptr<info>& result, const grid* baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
-	
+
 	h->Configuration(conf);
 	h->Time(ftime);
 
-	vector<param> params = { minusAreaParam, plusAreaParam, plusAreaSfcParam, numZeroLevelsParam, rhAvgParam, rhAvgUpperParam, rhMeltParam, rhMeltUpperParam };
-	vector<forecast_time> times = { ftime };
-	vector<level> levels = { level(kHeight, 0, "HEIGHT") };
+	vector<param> params = {minusAreaParam, plusAreaParam,   plusAreaSfcParam, numZeroLevelsParam,
+	                        rhAvgParam,     rhAvgUpperParam, rhMeltParam,      rhMeltUpperParam};
+	vector<forecast_time> times = {ftime};
+	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info> (*conf->Info());
+	auto ret = make_shared<info>(*conf->Info());
 	ret->Params(params);
 	ret->Levels(levels);
 	ret->Times(times);
@@ -549,20 +533,20 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	fill(constData2.begin(), constData2.end(), 5000);
 
 	auto constData3 = constData1;
-	fill(constData3.begin(), constData3.end(), himan::constants::kKelvin); // 0C
+	fill(constData3.begin(), constData3.end(), himan::constants::kKelvin);  // 0C
 
 	vector<double> numZeroLevels, zeroLevel1, zeroLevel2, zeroLevel3, zeroLevel4;
 	vector<double> Tavg01, Tavg12, Tavg23, Tavg34;
 	vector<double> plusArea, minusArea, plusAreaSfc;
 	vector<double> rhAvg01, rhAvgUpper12, rhAvgUpper23;
-	
+
 	auto logger = logger_factory::Instance()->GetLog("preform_hybrid-freezing_area");
-	
+
 	try
 	{
 		// 0-kohtien lkm pinnasta (yläraja 5km, jotta ylinkin nollakohta varmasti löytyy)
 
-		param wantedParam ("T-K");
+		param wantedParam("T-K");
 
 		logger->Trace("Counting number of zero levels");
 
@@ -570,7 +554,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		ret->Param(numZeroLevelsParam);
 		ret->Data().Set(numZeroLevels);
-		
+
 #ifdef DEBUG
 		for (size_t i = 0; i < numZeroLevels.size(); i++)
 		{
@@ -590,11 +574,11 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		Tavg12.resize(numZeroLevels.size(), MISS);
 		Tavg23.resize(numZeroLevels.size(), MISS);
 		Tavg34.resize(numZeroLevels.size(), MISS);
-		
+
 		// 1. nollarajan alapuolisen, 2/3. nollarajojen välisen, ja koko T>0 alueen koko [mC, "metriastetta"]
 		plusArea = zeroLevel1;
 		plusAreaSfc = zeroLevel1;
-		
+
 		// Mahdollisen pinta- tai 1/2. nollarajojen välisen pakkaskerroksen koko [mC, "metriastetta"]
 		minusArea = zeroLevel1;
 
@@ -659,7 +643,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		logger->Trace("Searching for average humidity between ground and first zero level");
 		// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa
 		rhAvg01 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
-		
+
 #ifdef DEBUG
 		util::DumpVector(rhAvg01, "rh avg 01");
 #endif
@@ -668,47 +652,47 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
 		rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
-		
+
 #ifdef DEBUG
 		util::DumpVector(rhAvgUpper12, "rh avg upper 12");
 #endif
 
- 		logger->Trace("Searching for average humidity between second and third zero level");
+		logger->Trace("Searching for average humidity between second and third zero level");
 
 		// Keskimääräinen RH ylemmässä plussakerroksessa
 		rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
-		
+
 #ifdef DEBUG
 		util::DumpVector(rhAvgUpper23, "rh avg upper 23");
 #endif
-	
 	}
 	catch (const HPExceptionType& e)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("FreezingArea() caught exception " + boost::lexical_cast<string> (e));
+			throw runtime_error("FreezingArea() caught exception " + boost::lexical_cast<string>(e));
 		}
 		else
 		{
 			return;
 		}
 	}
-	
-	// Keskimääräinen rhMelt nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa plussakerroksessa
+
+	// Keskimääräinen rhMelt nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa
+	// plussakerroksessa
 	vector<double> rhMeltUpper(rhAvg01.size(), MISS);
 	vector<double> rhMelt(rhAvg01.size(), MISS);
-	
+
 	// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa plussakerroksessa
 	vector<double> rhAvgUpper(rhAvg01.size(), MISS);
 	vector<double> rhAvg(rhAvg01.size(), MISS);
-			
+
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
-		short numZeroLevel = static_cast<short> (numZeroLevels[i]);
+		short numZeroLevel = static_cast<short>(numZeroLevels[i]);
 
 		double pa = MISS, ma = MISS, pasfc = MISS;
-		
+
 		// Kommentteja Simolta nollakohtien lukumäärään:
 		// * Nollakohtien löytymättömyys ei ole ongelma, sillä tällöin olomuoto on aina lumi tai jäätävä tihku
 		// * Parittomilla nollakohdilla ei voi tulla koskaan jäätävää sadetta koska pintakerros on plussalla
@@ -716,11 +700,11 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		// nollarajoja parillinen määrä (pintakerros pakkasella)
 
-		if (numZeroLevel%2 == 0)
+		if (numZeroLevel % 2 == 0)
 		{
 			double zl1 = zeroLevel1[i], zl2 = zeroLevel2[i];
 			double ta1 = Tavg01[i], ta2 = Tavg12[i];
-						
+
 			double paloft = MISS;
 
 			if (zl1 != MISS && zl2 != MISS && ta1 != MISS && ta2 != MISS)
@@ -729,17 +713,18 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				ta2 -= constants::kKelvin;
 				ma = zl1 * ta1;
 				paloft = (zl2 - zl1) * ta2;
-				
+
 				// Keskimääräinen rhMelt pakkaskerroksen yläpuolisessa plussakerroksessa
 				rhMeltUpper[i] = 9.5 * exp((-17.27 * ta2) / (ta2 + 238.3)) * (10.5 - ta2);
 			}
 
 			rhAvgUpper[i] = rhAvgUpper12[i];
-			
-			// Jos ylempänä toinen T>0 kerros, lasketaan myös sen koko (vähintään 4 nollarajaa) ja lisätään se alemman kerroksen kokoon  
-			// (mahdollisista vielä ylempänä olevista plussakerroksista ei välitetä)  
+
+			// Jos ylempänä toinen T>0 kerros, lasketaan myös sen koko (vähintään 4 nollarajaa) ja lisätään se alemman
+			// kerroksen kokoon
+			// (mahdollisista vielä ylempänä olevista plussakerroksista ei välitetä)
 			// (tässäkin pitäisi tarkkaan ottaen tutkia rhAvgUpper, eli sulaako kerroksen läpi putoava lumi)
-			
+
 			if (numZeroLevel >= 4)
 			{
 				double zl3 = zeroLevel3[i], zl4 = zeroLevel4[i];
@@ -752,12 +737,11 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			}
 
 			pa = paloft;
-
 		}
-		
+
 		// nollarajoja pariton määrä (pintakerros plussalla)
 
-		else if (numZeroLevel%2 == 1)
+		else if (numZeroLevel % 2 == 1)
 		{
 			double zl1 = zeroLevel1[i], ta1 = Tavg01[i];
 			double paloft = MISS;
@@ -767,22 +751,21 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				ta1 -= constants::kKelvin;
 				pasfc = zl1 * ta1;
 				pa = pasfc;
-						
-				// Lisäys 3.2.2015: Suhteellisen kosteuden (raja-) arvot pinnan plussakerroksessa:  
-				// Jos nollarajan alapuolisessa plussakerroksessa on kuivaa, asetetaan olomuodoksi lumi    
-				// (Shaviv, 2006: http://www.sciencebits.com/SnowAboveFreezing)   
-				
-				// rhMelt = suht. kosteuden raja-arvo, jota pienemmillä kosteuksilla lumihiutaleet eivät sula   
+
+				// Lisäys 3.2.2015: Suhteellisen kosteuden (raja-) arvot pinnan plussakerroksessa:
+				// Jos nollarajan alapuolisessa plussakerroksessa on kuivaa, asetetaan olomuodoksi lumi
+				// (Shaviv, 2006: http://www.sciencebits.com/SnowAboveFreezing)
+
+				// rhMelt = suht. kosteuden raja-arvo, jota pienemmillä kosteuksilla lumihiutaleet eivät sula
 
 				// Keskimääräinen rhMelt nollarajan alapuolisessa plussakerroksessa
 
 				rhMelt[i] = 9.5 * exp((-17.27 * ta1) / (ta1 + 238.3)) * (10.5 - ta1);
-
 			}
-			
+
 			// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa
 			rhAvg[i] = rhAvg01[i];
-			
+
 			// Jos ylempänä toinen T>0 kerros, lasketaan myös sen koko (vähintään 3 nollarajaa)
 			// (mahdollisista vielä ylempänä olevista plussakerroksista ei välitetä)
 
@@ -794,16 +777,17 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				if (zl2 != MISS && zl3 != MISS && ta2 != MISS)
 				{
 					ta2 -= constants::kKelvin;
-				
+
 					paloft = (zl3 - zl2) * ta2;
-								
-					// Keskimääräinen rhMelt ylemmässä plussakerroksessa    
+
+					// Keskimääräinen rhMelt ylemmässä plussakerroksessa
 					rhMeltUpper[i] = 9.5 * exp((-17.27 * ta2) / (ta2 + 238.3)) * (10.5 - ta2);
-				
-					// Keskimääräinen RH ylemmässä plussakerroksessa    
+
+					// Keskimääräinen RH ylemmässä plussakerroksessa
 					rhAvgUpper[i] = rhAvgUpper23[i];
-					
-					if (rhAvgUpper[i] != MISS AND rhMeltUpper[i] != MISS AND rhAvgUpper[i] > rhMeltUpper[i] && pasfc != MISS)
+
+					if (rhAvgUpper[i] != MISS AND rhMeltUpper[i] != MISS AND rhAvgUpper[i] > rhMeltUpper[i] &&
+					    pasfc != MISS)
 					{
 						pa = pasfc + paloft;
 					}
@@ -848,10 +832,10 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	ret->Data().Set(rhMeltUpper);
 
 	result = ret;
-
 }
 
-void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, shared_ptr<info>& result, const grid* baseGrid)
+void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
+                             shared_ptr<info>& result, const grid* baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -867,11 +851,13 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	// Kynnysarvo vaaditulle stratuksen yläpuolisen kuivan kerroksen paksuudelle [m] (jäätävässä) tihkussa:
 	const double drydz = 1500.;
 
-	vector<param> params = { stratusBaseParam, stratusTopParam, stratusTopTempParam, stratusMeanTempParam, stratusMeanCloudinessParam, stratusUpperLayerNParam, stratusVerticalVelocityParam };
-	vector<forecast_time> times = { ftime };
-	vector<level> levels = { level(kHeight, 0, "HEIGHT") };
+	vector<param> params = {
+	    stratusBaseParam,           stratusTopParam,         stratusTopTempParam,         stratusMeanTempParam,
+	    stratusMeanCloudinessParam, stratusUpperLayerNParam, stratusVerticalVelocityParam};
+	vector<forecast_time> times = {ftime};
+	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info> (*conf->Info());
+	auto ret = make_shared<info>(*conf->Info());
 	ret->Params(params);
 	ret->Levels(levels);
 	ret->Times(times);
@@ -886,7 +872,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	{
 		// baseThreshold ja topThreshold:
 		// (Paikan mukaan vaihtuva) N-kynnysarvo stratuksen ala- ja ylärajalle [%] (tarkkaa stCover arvoa ei aina löydy)
-		
+
 		vector<param> wantedParamList({param("N-0TO1"), param("N-PRCNT")});
 
 		logger->Info("Searching for stratus lower limit");
@@ -929,7 +915,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		// Stratus Base/top [m]
 		// _findh: 0 = viimeinen löytyvä arvo pinnasta ylöspäin, 1 = ensimmäinen löytyvä arvo
-	
+
 		logger->Info("Searching for stratus base accurate value");
 
 		auto stratusBase = h->VerticalHeight(wantedParamList, 0, stLimit, baseThreshold);
@@ -1016,7 +1002,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 				constData1[i] = MISS;
 				constData2[i] = MISS;
 			}
-			else if (fabs(lower-upper) < 100)
+			else if (fabs(lower - upper) < 100)
 			{
 				constData1[i] = lower;
 				constData2[i] = upper;
@@ -1058,7 +1044,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 				stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
 
-				BOOST_FOREACH(double& d, stratusVerticalVelocity)
+				BOOST_FOREACH (double& d, stratusVerticalVelocity)
 				{
 					if (d != kFloatMissing) d *= 1000;
 				}
@@ -1071,13 +1057,12 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		ret->Param(stratusVerticalVelocityParam);
 		ret->Data().Set(stratusVerticalVelocity);
-
 	}
 	catch (const HPExceptionType& e)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Stratus() caught exception " + boost::lexical_cast<string> (e));
+			throw runtime_error("Stratus() caught exception " + boost::lexical_cast<string>(e));
 		}
 		else
 		{
@@ -1086,5 +1071,4 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	}
 
 	result = ret;
-
 }
