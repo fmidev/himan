@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 16.2.18
+Version: 16.8.23
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 16.2.18
+Requires: himan-lib >= 16.8.23
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
@@ -21,7 +21,7 @@ Requires: boost-iostreams
 Requires: boost-thread
 Requires: libsmartmet-newbase >= 16.2.4
 Requires: jasper
-Requires: grib_api >= 1.14.0
+Requires: grib_api >= 1.15.0
 Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
 Requires: bzip2-libs
@@ -58,6 +58,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Tue Aug 23 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.8.23-1.fmi
+- New release
+* Mon Jun  6 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.6-1.fmi
+- New release
 * Thu Feb 18 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.18-1.fmi
 - Remove dependency to smarttools
 * Fri Feb 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.2.12-1.fmi

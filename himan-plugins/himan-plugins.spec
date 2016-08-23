@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.7.1
+Version: 16.8.23
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -16,19 +16,18 @@ Requires: libstdc++
 Requires: jasper-libs
 Requires: grib_api >= 1.15.0
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.6.27
+Requires: himan-lib >= 16.8.23
 Requires: himan-bin >= 16.6.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 16.2.13
+Requires: libfmigrib >= 16.8.15
 Requires: libsmartmet-newbase >= 16.5.4
-Requires: libfmidb >= 16.6.9
-
+Requires: libfmidb >= 16.8.23
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libfmidb-devel >= 16.6.9
-BuildRequires: libfmigrib-devel >= 16.6.13
+BuildRequires: libfmidb-devel >= 16.8.23
+BuildRequires: libfmigrib-devel >= 16.8.15
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
@@ -59,6 +58,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libabsolute_humidity.so
 %{_libdir}/himan-plugins/libcache.so
+%{_libdir}/himan-plugins/libcape.so
 %{_libdir}/himan-plugins/libcloud_code.so
 %{_libdir}/himan-plugins/libcsv.so
 %{_libdir}/himan-plugins/libdensity.so
@@ -88,7 +88,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/librelative_humidity.so
 %{_libdir}/himan-plugins/libroughness.so
 %{_libdir}/himan-plugins/libseaicing.so
-%{_libdir}/himan-plugins/libsi.so
 %{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libstability.so
 %{_libdir}/himan-plugins/libtke.so
@@ -105,6 +104,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Aug 23 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.8.23-1.fmi
+- New release
+* Mon Aug 15 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.8.15-1.fmi
+- New fmigrib
+* Wed Aug 10 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.8.10-1.fmi
+- Fixes to pot
+- Renaming si to cape
 * Fri Jul  1 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.7.1-1.fmi
 - More changes to pop
 * Thu Jun 30 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.30-1.fmi
