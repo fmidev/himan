@@ -18,10 +18,12 @@
 #include "plugin_factory.h"
 #include "stereographic_grid.h"
 #include "unstagger.h"
+#include "unstagger.cuh"
 #include "util.h"
 
 #include "cache.h"
 #include "fetcher.h"
+#include "radon.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -36,6 +38,21 @@ unstagger::unstagger()
 void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
+
+#ifdef HAVE_CUDA
+        // Initialise sparse matrix for interpolation grid
+        if (itsConfiguration->UseCuda())
+        {
+                auto r = GET_PLUGIN(radon);
+
+                string query = "SELECT ni,nj FROM geom WHERE name = '"+itsConfiguration->TargetGeomName()+"' ";
+                r->RadonDB().Query(query);
+                vector<string> gridSize = r->RadonDB().FetchRow();
+
+                unstagger_cuda::Init(stoi(gridSize[0]),stoi(gridSize[1]));
+        }
+#endif
+
 
 	/*
 	 * Set target parameter properties
@@ -131,7 +148,25 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	myTargetInfo->ParamIndex(1);
 	SetAB(myTargetInfo, VInfo);
 
-	string deviceType = "CPU";
+        string deviceType;
+
+#ifdef HAVE_CUDA
+        if (itsConfiguration->UseCuda())
+        {
+                deviceType = "GPU";
+                std::pair<std::vector<double>, std::vector<double>> unstaggered_UV;
+                unstaggered_UV = unstagger_cuda::Process(UInfo->Data().Values(), VInfo->Data().Values());
+
+                myTargetInfo->ParamIndex(0);
+                myTargetInfo->Grid()->Data().Set(unstaggered_UV.first);
+
+                myTargetInfo->ParamIndex(1);
+                myTargetInfo->Grid()->Data().Set(unstaggered_UV.second);
+        }
+        else
+#endif
+	{
+	deviceType = "CPU";
 	// calculate for U
 	himan::matrix<double> filter_kernel_U(2, 1, 1, kFloatMissing);
 	filter_kernel_U.Fill(0.5);
@@ -149,6 +184,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	myTargetInfo->ParamIndex(1);
 	myTargetInfo->Grid()->Data(unstaggered_V);
+	}
 
 	// Re-calculate grid coordinates
 
