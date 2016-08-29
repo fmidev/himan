@@ -697,13 +697,13 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 				}
 			}
 
-			if (prod.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+			if (originDateTime == "latest" && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 			{
 				auto r = GET_PLUGIN(radon);
 
 				prod = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(sourceProducer.Id()));
 
-				if (!prod.empty() && anInfo->OriginDateTime().Empty())
+				if (!prod.empty())
 				{
 					originDateTime = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
 
@@ -715,15 +715,10 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 				}
 			}
 
-			if (prod.empty())
+			if (originDateTime == "latest")
 			{
-				throw runtime_error("Producer definition not found for procucer id " +
-				                    boost::lexical_cast<string>(sourceProducer.Id()));
-			}
-			else if (originDateTime.empty())
-			{
-				throw runtime_error("Latest time not found from Neons and/or Radon for producer '" + prod["ref_prod"] +
-				                    "'");
+				throw runtime_error("Latest time not found from Neons and/or Radon for producer " +
+				                    boost::lexical_cast<string>(sourceProducer.Id()) + "'");
 			}
 		}
 		else
@@ -740,7 +735,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+		throw runtime_error(ClassName() + ": " + string("Error parsing origin time information: ") + e.what());
 	}
 
 	/* Check time steps */
