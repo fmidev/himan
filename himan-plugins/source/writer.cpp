@@ -149,10 +149,15 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 			try
 			{
 				ret = r->Save(theInfo, correctFileName);
+				if (!ret) itsLogger->Error("Writing to radon failed");
+			}
+			catch (const std::exception& e)
+			{
+				itsLogger->Error("Writing to radon failed: " + std::string(e.what()));
 			}
 			catch (...)
 			{
-				itsLogger->Error("Writing to radon failed");
+				itsLogger->Error("Writing to radon failed: general exception");
 			}
 		}
 	}
