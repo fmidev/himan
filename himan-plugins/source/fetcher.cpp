@@ -115,7 +115,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
 		{
-			newLevel = LevelTransform(sourceProd, requestedParam, requestedLevel);
+			newLevel = LevelTransform(config, sourceProd, requestedParam, requestedLevel);
 
 			if (newLevel != requestedLevel)
 			{
@@ -334,42 +334,76 @@ vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search
 	return infos;
 }
 
-himan::level fetcher::LevelTransform(const producer& sourceProducer, const param& targetParam,
+himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration> &conf,const producer& sourceProducer, const param& targetParam,
                                      const level& targetLevel) const
 {
-	level sourceLevel = targetLevel;
+	level ret = targetLevel;
 
-	if (sourceProducer.TableVersion() != kHPMissingInt)
+	HPDatabaseType dbtype = conf->DatabaseType();
+
+	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 	{
 		auto n = GET_PLUGIN(neons);
 
 		string lvlName =
 		    n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
 
-		if (lvlName.empty())
+		if (!lvlName.empty())
 		{
-			itsLogger->Trace("No level transformation found for param " + targetParam.Name() + " level " +
-			                 HPLevelTypeToString.at(targetLevel.Type()));
-			return targetLevel;
+			double lvlValue = targetLevel.Value();
+
+			HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
+
+			if (lvlType == kGround)
+			{
+				lvlValue = 0;
+			}
+
+			ret = level(lvlType, lvlValue, lvlName);
 		}
-
-		double lvlValue = targetLevel.Value();
-
-		HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
-
-		if (lvlType == kGround)
-		{
-			lvlValue = 0;
-		}
-
-		sourceLevel = level(lvlType, lvlValue, lvlName);
 	}
-	else
+	
+	if (ret == targetLevel && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 	{
-		sourceLevel = targetLevel;
+		auto r = GET_PLUGIN(radon);
+
+		auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(sourceProducer.Id(), targetParam.Name());
+
+		if (paramInfo.empty())
+		{
+			itsLogger->Trace("Level transform failed: no parameter information for param " + targetParam.Name()); 
+			return ret;
+		}
+
+		auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(targetLevel.Type())));
+
+		if (levelInfo.empty()) return ret;
+
+		auto levelXrefInfo = r->RadonDB().GetLevelTransform(sourceProducer.Id(), boost::lexical_cast<int> (paramInfo["id"]), boost::lexical_cast<int> (levelInfo["id"]),
+		                                                targetLevel.Value());
+
+		if (!levelXrefInfo.empty())
+		{
+			double lvlValue = targetLevel.Value();
+
+			HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(levelXrefInfo["name"]));
+
+			if (lvlType == kGround)
+			{
+				lvlValue = 0;
+			}
+
+			ret = level(lvlType, lvlValue);
+		}
 	}
 
-	return sourceLevel;
+	if (ret == targetLevel)
+	{
+		itsLogger->Trace("No level transformation found for param " + targetParam.Name() + " level " +
+		                 static_cast<string>(targetLevel));
+	}
+
+	return ret;
 }
 
 void fetcher::DoLevelTransform(bool theDoLevelTransform) { itsDoLevelTransform = theDoLevelTransform; }
