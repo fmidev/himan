@@ -186,17 +186,19 @@ class fetcher : public auxiliary_plugin
 	std::vector<std::shared_ptr<info>> FromCSV(const std::string& inputFile, search_options& options);
 
 	/**
-	 * @brief Map level definitions between models and code tables
+	 * @brief Map level definitions between models and our expected levels.
 	 *
-	 * Ie. Fetch level that matches level 'targetLevel' for producer 'sourceProducer' from neons.
+	 * For example we expect normal surface temperature to be found at level
+	 * height/2, whereas ECMWF provides it at level ground/0.
 	 *
-	 * @param sourceProducer Id of source producer
-	 * @param targetParam
-	 * @param targetLevel
+	 * @param conf
+	 * @param sourceProducer Source producer (in the example case ECMWF)
+	 * @param targetParam Target param (in the example case T-K)
+	 * @param targetLevel Target level (in the example case height/2)
 	 * @return New level. If mapping is not found, new level == targetLevel.
 	 */
 
-	level LevelTransform(const producer& sourceProducer, const param& targetParam, const level& targetLevel) const;
+	level LevelTransform(const std::shared_ptr<const plugin_configuration> &conf, const producer& sourceProducer, const param& targetParam, const level& targetLevel) const;
 
 	/**
 	 * @brief Try to fetch data from a single producer
