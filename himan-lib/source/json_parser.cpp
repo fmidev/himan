@@ -137,12 +137,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		string theFileWriteOption = pt.get<string>("file_write");
 
-		if (theFileWriteOption == "neons")
-		{
-			itsLogger->Warning("file_write_option value 'neons' has been deprecated, use 'database' instead");
-			conf->FileWriteOption(kDatabase);
-		}
-		else if (theFileWriteOption == "database")
+		if (theFileWriteOption == "database")
 		{
 			conf->FileWriteOption(kDatabase);
 		}
@@ -153,6 +148,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		else if (theFileWriteOption == "multiple")
 		{
 			conf->FileWriteOption(kMultipleFiles);
+		}
+		else if (theFileWriteOption == "cache only")
+		{
+			conf->FileWriteOption(kCacheOnly);
 		}
 		else
 		{
@@ -499,12 +498,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			string theFileWriteOption = element.second.get<string>("file_write");
 
-			if (theFileWriteOption == "neons")
-			{
-				itsLogger->Warning("file_write_option value 'neons' has been deprecated, use 'database' instead");
-				delayedFileWrite = kDatabase;
-			}
-			else if (theFileWriteOption == "database")
+			if (theFileWriteOption == "database")
 			{
 				delayedFileWrite = kDatabase;
 			}
@@ -515,6 +509,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			else if (theFileWriteOption == "multiple")
 			{
 				delayedFileWrite = kMultipleFiles;
+			}
+			else if (theFileWriteOption == "cache only")
+			{
+				delayedFileWrite = kCacheOnly;
 			}
 			else
 			{
