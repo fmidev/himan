@@ -334,8 +334,8 @@ vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search
 	return infos;
 }
 
-himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration> &conf,const producer& sourceProducer, const param& targetParam,
-                                     const level& targetLevel) const
+himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration>& conf, const producer& sourceProducer,
+                                     const param& targetParam, const level& targetLevel) const
 {
 	level ret = targetLevel;
 
@@ -362,7 +362,7 @@ himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration
 			ret = level(lvlType, lvlValue, lvlName);
 		}
 	}
-	
+
 	if (ret == targetLevel && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 	{
 		auto r = GET_PLUGIN(radon);
@@ -371,16 +371,18 @@ himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration
 
 		if (paramInfo.empty())
 		{
-			itsLogger->Trace("Level transform failed: no parameter information for param " + targetParam.Name()); 
+			itsLogger->Trace("Level transform failed: no parameter information for param " + targetParam.Name());
 			return ret;
 		}
 
-		auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(targetLevel.Type())));
+		auto levelInfo =
+		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(targetLevel.Type())));
 
 		if (levelInfo.empty()) return ret;
 
-		auto levelXrefInfo = r->RadonDB().GetLevelTransform(sourceProducer.Id(), boost::lexical_cast<int> (paramInfo["id"]), boost::lexical_cast<int> (levelInfo["id"]),
-		                                                targetLevel.Value());
+		auto levelXrefInfo =
+		    r->RadonDB().GetLevelTransform(sourceProducer.Id(), boost::lexical_cast<int>(paramInfo["id"]),
+		                                   boost::lexical_cast<int>(levelInfo["id"]), targetLevel.Value());
 
 		if (!levelXrefInfo.empty())
 		{
@@ -440,12 +442,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		}
 	}
 
-	/*
-	 *  2. Fetch data from auxiliary files specified at command line
-	 *
-	 *  Even if file_wait_timeout is specified, auxiliary files is searched
-	 *  only once.
-	 */
+	/* 2. Fetch data from auxiliary files specified at command line */
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
@@ -531,8 +528,8 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		const string ref_prod = opts.prod.Name();
 		const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
 		const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
-		itsLogger->Warning("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
-		                   ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
+		itsLogger->Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
+		                 ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
 	}
 
 	return ret;
