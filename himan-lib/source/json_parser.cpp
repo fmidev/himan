@@ -15,7 +15,6 @@
 #include "stereographic_grid.h"
 #include "util.h"
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/foreach.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/regex.hpp>
 #include <map>
@@ -37,6 +36,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
 void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
 void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
+vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 
 bool ParseBoolean(string booleanValue);
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
@@ -137,12 +137,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		string theFileWriteOption = pt.get<string>("file_write");
 
-		if (theFileWriteOption == "neons")
-		{
-			itsLogger->Warning("file_write_option value 'neons' has been deprecated, use 'database' instead");
-			conf->FileWriteOption(kDatabase);
-		}
-		else if (theFileWriteOption == "database")
+		if (theFileWriteOption == "database")
 		{
 			conf->FileWriteOption(kDatabase);
 		}
@@ -153,6 +148,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		else if (theFileWriteOption == "multiple")
 		{
 			conf->FileWriteOption(kMultipleFiles);
+		}
+		else if (theFileWriteOption == "cache only")
+		{
+			conf->FileWriteOption(kCacheOnly);
 		}
 		else
 		{
@@ -306,75 +305,15 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	// Check global forecast_type option
 
-	vector<forecast_type> theForecastTypes;
-	try
-	{
-		vector<string> types = util::Split(pt.get<string>("forecast_type"), ",", false);
+	auto forecastTypes = ParseForecastTypes(pt);
 
-		BOOST_FOREACH (string& type, types)
-		{
-			boost::algorithm::to_lower(type);
-			HPForecastType forecastType;
-
-			if (boost::regex_search(type, boost::regex("pf")))
-			{
-				forecastType = kEpsPerturbation;
-				string list = "";
-				for (size_t i = 2; i < type.size(); i++) list += type[i];
-
-				vector<string> range = util::Split(list, "-", false);
-
-				if (range.size() == 1)
-				{
-					theForecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double>(range[0])));
-				}
-				else
-				{
-					assert(range.size() == 2);
-
-					int start = boost::lexical_cast<int>(range[0]);
-					int stop = boost::lexical_cast<int>(range[1]);
-
-					while (start <= stop)
-					{
-						theForecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double>(start)));
-						start++;
-					}
-				}
-			}
-			else
-			{
-				if (type == "cf")
-				{
-					theForecastTypes.push_back(forecast_type(kEpsControl, 0));
-				}
-				else if (type == "deterministic")
-				{
-					theForecastTypes.push_back(forecast_type(kDeterministic));
-				}
-				else
-				{
-					throw runtime_error("Invalid forecast_type: " + type);
-				}
-			}
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
+	if (forecastTypes.empty())
 	{
 		// Default to deterministic
-		theForecastTypes.push_back(forecast_type(kDeterministic));
-	}
-	catch (const boost::exception& e)
-	{
-		// int errno = boost::get_error_info<boost::errinfo_errno> (&e);
-		throw runtime_error(string("Invalid forecast_type value"));
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key forecast_type: ") + e.what());
+		forecastTypes.push_back(forecast_type(kDeterministic));
 	}
 
-	baseInfo->ForecastTypes(theForecastTypes);
+	baseInfo->ForecastTypes(forecastTypes);
 
 	/* Check dynamic_memory_allocation */
 
@@ -410,7 +349,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(ClassName() + ": processqueue missing");
 	}
 
-	BOOST_FOREACH (boost::property_tree::ptree::value_type& element, pq)
+	for (boost::property_tree::ptree::value_type& element : pq)
 	{
 		auto anInfo = make_shared<info>(*baseInfo);
 
@@ -499,12 +438,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			string theFileWriteOption = element.second.get<string>("file_write");
 
-			if (theFileWriteOption == "neons")
-			{
-				itsLogger->Warning("file_write_option value 'neons' has been deprecated, use 'database' instead");
-				delayedFileWrite = kDatabase;
-			}
-			else if (theFileWriteOption == "database")
+			if (theFileWriteOption == "database")
 			{
 				delayedFileWrite = kDatabase;
 			}
@@ -515,6 +449,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			else if (theFileWriteOption == "multiple")
 			{
 				delayedFileWrite = kMultipleFiles;
+			}
+			else if (theFileWriteOption == "cache only")
+			{
+				delayedFileWrite = kCacheOnly;
 			}
 			else
 			{
@@ -530,6 +468,15 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			throw runtime_error(string("Error parsing meta information: ") + e.what());
 		}
 
+		// Check local forecast_type option
+
+		forecastTypes = ParseForecastTypes(element.second);
+
+		if (!forecastTypes.empty())
+		{
+			anInfo->ForecastTypes(forecastTypes);
+		}
+
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
 
 		if (plugins.empty())
@@ -537,7 +484,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			throw runtime_error(ClassName() + ": plugin definitions not found");
 		}
 
-		BOOST_FOREACH (boost::property_tree::ptree::value_type& plugin, plugins)
+		for (boost::property_tree::ptree::value_type& plugin : plugins)
 		{
 			shared_ptr<plugin_configuration> pc = make_shared<plugin_configuration>(*conf);
 
@@ -550,7 +497,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				throw runtime_error(ClassName() + ": plugin definition is empty");
 			}
 
-			BOOST_FOREACH (boost::property_tree::ptree::value_type& kv, plugin.second)
+			for (boost::property_tree::ptree::value_type& kv : plugin.second)
 			{
 				string key = kv.first;
 				string value;
@@ -577,12 +524,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 						throw runtime_error(ClassName() + ": param_list definition is empty");
 					}
 
-					BOOST_FOREACH (boost::property_tree::ptree::value_type& param, params)
+					for (boost::property_tree::ptree::value_type& param : params)
 					{
 						string name;
 						std::vector<std::pair<std::string, std::string>> opts;
 
-						BOOST_FOREACH (boost::property_tree::ptree::value_type& paramOpt, param.second)
+						for (boost::property_tree::ptree::value_type& paramOpt : param.second)
 						{
 							string paramOptName = paramOpt.first;
 							string paramOptValue = paramOpt.second.get<string>("");
@@ -614,7 +561,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				{
 					if (value.empty())
 					{
-						BOOST_FOREACH (boost::property_tree::ptree::value_type& listval, kv.second)
+						for (boost::property_tree::ptree::value_type& listval : kv.second)
 						{
 							// pc->AddOption(key, value);
 							pc->AddOption(key, util::Expand(listval.second.get<string>("")));
@@ -640,7 +587,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pluginContainer.push_back(pc);
 		}
 
-	}  // END BOOST_FOREACH
+	}  // END for
 
 	return pluginContainer;
 }
@@ -1110,7 +1057,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 
 		int i = 1;
 
-		BOOST_FOREACH (const string& line, stations)
+		for (const string& line : stations)
 		{
 			vector<string> point = util::Split(line, " ", false);
 
@@ -1163,7 +1110,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 
 		auto r = GET_PLUGIN(radon);
 
-		BOOST_FOREACH (const string& str, stations)
+		for (const string& str : stations)
 		{
 			unsigned long fmisid;
 
@@ -1565,4 +1512,75 @@ bool ParseBoolean(string booleanValue)
 	}
 
 	return ret;
+}
+
+vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
+{
+	vector<forecast_type> forecastTypes;
+
+	try
+	{
+		vector<string> types = util::Split(pt.get<string>("forecast_type"), ",", false);
+
+		for (string& type : types)
+		{
+			boost::algorithm::to_lower(type);
+			HPForecastType forecastType;
+
+			if (boost::regex_search(type, boost::regex("pf")))
+			{
+				forecastType = kEpsPerturbation;
+				string list = "";
+				for (size_t i = 2; i < type.size(); i++) list += type[i];
+
+				vector<string> range = util::Split(list, "-", false);
+
+				if (range.size() == 1)
+				{
+					forecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double>(range[0])));
+				}
+				else
+				{
+					assert(range.size() == 2);
+
+					int start = boost::lexical_cast<int>(range[0]);
+					int stop = boost::lexical_cast<int>(range[1]);
+
+					while (start <= stop)
+					{
+						forecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double>(start)));
+						start++;
+					}
+				}
+			}
+			else
+			{
+				if (type == "cf")
+				{
+					forecastTypes.push_back(forecast_type(kEpsControl, 0));
+				}
+				else if (type == "deterministic")
+				{
+					forecastTypes.push_back(forecast_type(kDeterministic));
+				}
+				else
+				{
+					throw runtime_error("Invalid forecast_type: " + type);
+				}
+			}
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+	}
+	catch (const boost::exception& e)
+	{
+		throw runtime_error(string("Invalid forecast_type value"));
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing key forecast_type: ") + e.what());
+	}
+
+	return forecastTypes;
 }

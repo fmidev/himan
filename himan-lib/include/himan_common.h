@@ -158,12 +158,13 @@ enum HPFileWriteOption
 	kUnknownFileWriteOption = 0,
 	kSingleFile,
 	kMultipleFiles,
-	kDatabase
+	kDatabase,
+	kCacheOnly
 };
 
 const boost::unordered_map<HPFileWriteOption, std::string> HPFileWriteOptionToString =
     ba::map_list_of(kUnknownFileWriteOption, "unknown")(kSingleFile, "single file only")(
-        kMultipleFiles, "multiple files")(kDatabase, "write to database");
+        kMultipleFiles, "multiple files")(kDatabase, "write to database")(kCacheOnly, "cache only");
 
 /**
  * @enum HPScanningMode
