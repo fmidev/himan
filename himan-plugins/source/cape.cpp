@@ -39,47 +39,25 @@ himan::point debugPoint(25.417, 37.099);
 #define DumpVector(A, B)
 #endif
 
-const himan::param SBLCLT("LCL-K", 4);
-const himan::param SBLCLP("LCL-HPA", 4720);
-const himan::param SBLCLZ("LCL-M", 4726);
-const himan::param SBLFCT("LFC-K", 4);
-const himan::param SBLFCP("LFC-HPA", 4721);
-const himan::param SBLFCZ("LFC-M", 4727);
-const himan::param SBELT("EL-K", 4);
-const himan::param SBELP("EL-HPA", 4722);
-const himan::param SBELZ("EL-M", 4728);
-const himan::param SBCAPE("CAPE-JKG", 4723);
-const himan::param SBCAPE1040("CAPE1040-JKG", 4729);
-const himan::param SBCAPE3km("CAPE3KM-JKG", 4724);
-const himan::param SBCIN("CIN-JKG", 4725);
+extern mutex dimensionMutex;
 
-const himan::param SB500LCLT("LCL500-K", 4);
-const himan::param SB500LCLP("LCL500-HPA", 4730);
-const himan::param SB500LCLZ("LCL500-M", 4736);
-const himan::param SB500LFCT("LFC500-K", 4);
-const himan::param SB500LFCP("LFC500-HPA", 4731);
-const himan::param SB500LFCZ("LFC500-M", 4737);
-const himan::param SB500ELT("EL500-K", 4);
-const himan::param SB500ELP("EL500-HPA", 4732);
-const himan::param SB500ELZ("EL500-M", 4738);
-const himan::param SB500CAPE("CAPE500-JKG", 4733);
-const himan::param SB500CAPE1040("CAPE5001040", 4739);
-const himan::param SB500CAPE3km("CAPE5003KM", 4734);
-const himan::param SB500CIN("CIN500-JKG", 4735);
+const himan::param LCLTParam("LCL-K", 4, 0, 0, 0);
+const himan::param LCLPParam("LCL-HPA", 4720, 0, 3, 0);
+const himan::param LCLZParam("LCL-M", 4726, 0, 3, 6);
+const himan::param LFCTParam("LFC-K", 4, 0, 0, 0);
+const himan::param LFCPParam("LFC-HPA", 4721, 0, 3, 0);
+const himan::param LFCZParam("LFC-M", 4727, 0, 3, 6);
+const himan::param ELTParam("EL-K", 4, 0, 0, 0);
+const himan::param ELPParam("EL-HPA", 4722, 0, 3, 0);
+const himan::param ELZParam("EL-M", 4728, 0, 3, 6);
+const himan::param CAPEParam("CAPE-JKG", 4723, 0, 7, 6);
+const himan::param CAPE1040Param("CAPE1040-JKG", 4729, 0, 7, 6);
+const himan::param CAPE3kmParam("CAPE3KM-JKG", 4724, 0, 7, 6);
+const himan::param CINParam("CIN-JKG", 4725, 0, 7, 7);
 
-const himan::param MULCLT("LCLMU-K", 4);
-const himan::param MULCLP("LCLMU-HPA", 4740);
-const himan::param MULCLZ("LCLMU-M", 4746);
-const himan::param MULFCT("LFCMU-K", 4);
-const himan::param MULFCP("LFCMU-HPA", 4741);
-const himan::param MULFCZ("LFCMU-M", 4747);
-const himan::param MUELT("ELMU-K", 4);
-const himan::param MUELP("ELMU-HPA", 4742);
-const himan::param MUELZ("ELMU-M", 4748);
-const himan::param MUCAPE("CAPEMU-JKG", 4743);
-const himan::param MUCAPE1040("CAPEMU1040", 4749);
-const himan::param MUCAPE3km("CAPEMU3KM", 4744);
-const himan::param MUCIN("CINMU-JKG", 4745);
+const himan::level SURFACE(himan::kHeight, 0);
+const himan::level M500(himan::kHeightLayer, 500, 0);
+const himan::level UNSTABLE(himan::kMaximumThetaE, 0);
 
 double Max(const vector<double>& vec)
 {
@@ -163,7 +141,6 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 #endif
 
 	vector<param> theParams;
-
 	vector<string> sourceDatas;
 
 	if (itsConfiguration->Exists("source_data"))
@@ -178,60 +155,39 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 		sourceDatas.push_back("most unstable");
 	}
 
+	theParams.push_back(LCLTParam);
+	theParams.push_back(LCLPParam);
+	theParams.push_back(LCLZParam);
+	theParams.push_back(LFCTParam);
+	theParams.push_back(LFCPParam);
+	theParams.push_back(LFCZParam);
+	theParams.push_back(ELTParam);
+	theParams.push_back(ELPParam);
+	theParams.push_back(ELZParam);
+	theParams.push_back(CAPEParam);
+	theParams.push_back(CAPE1040Param);
+	theParams.push_back(CAPE3kmParam);
+	theParams.push_back(CINParam);
+
 	for (const auto& source : sourceDatas)
 	{
 		if (source == "surface")
 		{
-			theParams.push_back(SBLCLT);
-			theParams.push_back(SBLCLP);
-			theParams.push_back(SBLCLZ);
-			theParams.push_back(SBLFCT);
-			theParams.push_back(SBLFCP);
-			theParams.push_back(SBLFCZ);
-			theParams.push_back(SBELT);
-			theParams.push_back(SBELP);
-			theParams.push_back(SBELZ);
-			theParams.push_back(SBCAPE);
-			theParams.push_back(SBCAPE1040);
-			theParams.push_back(SBCAPE3km);
-			theParams.push_back(SBCIN);
-			itsSourceDatas.push_back(kSurface);
+			itsSourceLevels.push_back(SURFACE);
 		}
 		else if (source == "500m mix")
 		{
-			theParams.push_back(SB500LCLT);
-			theParams.push_back(SB500LCLP);
-			theParams.push_back(SB500LCLZ);
-			theParams.push_back(SB500LFCT);
-			theParams.push_back(SB500LFCP);
-			theParams.push_back(SB500LFCZ);
-			theParams.push_back(SB500ELT);
-			theParams.push_back(SB500ELP);
-			theParams.push_back(SB500ELZ);
-			theParams.push_back(SB500CAPE);
-			theParams.push_back(SB500CAPE1040);
-			theParams.push_back(SB500CAPE3km);
-			theParams.push_back(SB500CIN);
-			itsSourceDatas.push_back(k500mAvgMixingRatio);
+			itsSourceLevels.push_back(M500);
 		}
 		else if (source == "most unstable")
 		{
-			theParams.push_back(MULCLT);
-			theParams.push_back(MULCLP);
-			theParams.push_back(MULCLZ);
-			theParams.push_back(MULFCT);
-			theParams.push_back(MULFCP);
-			theParams.push_back(MULFCZ);
-			theParams.push_back(MUELT);
-			theParams.push_back(MUELP);
-			theParams.push_back(MUELZ);
-			theParams.push_back(MUCAPE);
-			theParams.push_back(MUCAPE1040);
-			theParams.push_back(MUCAPE3km);
-			theParams.push_back(MUCIN);
-			itsSourceDatas.push_back(kMaxThetaE);
+			itsSourceLevels.push_back(UNSTABLE);
 		}
 	}
+
+	// disregard the level information provided by user
+
+	itsConfiguration->Info()->Levels(itsSourceLevels);
 
 	SetParams(theParams);
 
@@ -239,36 +195,6 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 }
 
 void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
-{
-	boost::thread_group g;
-
-	for (auto sourceData : itsSourceDatas)
-	{
-		switch (sourceData)
-		{
-			case kSurface:
-				g.add_thread(
-				    new boost::thread(&cape::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex, kSurface));
-				break;
-			case k500mAvgMixingRatio:
-				g.add_thread(new boost::thread(&cape::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex,
-				                               k500mAvgMixingRatio));
-				break;
-			case kMaxThetaE:
-				g.add_thread(new boost::thread(&cape::CalculateVersion, this, boost::ref(myTargetInfo), threadIndex,
-				                               kMaxThetaE));
-				break;
-			default:
-				throw runtime_error("Invalid source type");
-				break;
-		}
-	}
-
-	g.join_all();
-}
-
-void cape::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short threadIndex,
-                            HPSoundingIndexSourceDataType sourceType)
 {
 	/*
 	 * Algorithm:
@@ -290,24 +216,13 @@ void cape::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short th
 	 * 5) Integrate from surface to LFC to find CIN
 	 */
 
-	/* HIMAN-117
-	 *
-	 * There is a possible (probable?) race-condition when myTargetInfo is accessed from several
-	 * subthreads at the same time. The problem arises when the calculation is finished and data is
-	 * set to info: One thread might set the descriptors to a position, get suspended by the kernel
-	 * and another thread re-sets the desriptors. Then the original thread is resumed and it sets
-	 * the data to wrong parameter.
-	 *
-	 * Fix: Create a new info for each thread.
-	 */
-
-	auto myTargetInfo = make_shared<info>(*myTargetInfoOrig);
+	auto sourceLevel = myTargetInfo->Level();
 
 	auto mySubThreadedLogger =
 	    logger_factory::Instance()->GetLog("siThread#" + boost::lexical_cast<string>(threadIndex) + "Version" +
-	                                       boost::lexical_cast<string>(static_cast<int>(sourceType)));
+	                                       boost::lexical_cast<string>(static_cast<int>(sourceLevel.Type())));
 
-	mySubThreadedLogger->Info("Calculating source type " + HPSoundingIndexSourceDataTypeToString.at(sourceType) +
+	mySubThreadedLogger->Info("Calculating source level type " + HPLevelTypeToString.at(sourceLevel.Type()) +
 	                          " for time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
 
 	// 1.
@@ -317,72 +232,26 @@ void cape::CalculateVersion(shared_ptr<info> myTargetInfoOrig, unsigned short th
 
 	pair<vector<double>, vector<double>> TandTD;
 
-	param LCLTParam, LCLPParam, LCLZParam;
-	param LFCTParam, LFCPParam, LFCZParam;
-	param ELPParam, ELTParam, ELZParam;
-	param CINParam, CAPEParam, CAPE1040Param, CAPE3kmParam;
-
-	switch (sourceType)
+	switch (sourceLevel.Type())
 	{
-		case kSurface:
+		case kHeight:
 			TandTD = GetSurfaceTAndTD(myTargetInfo);
-			LCLTParam = SBLCLT;
-			LCLPParam = SBLCLP;
-			LCLZParam = SBLCLZ;
-			LFCTParam = SBLFCT;
-			LFCPParam = SBLFCP;
-			LFCZParam = SBLCLZ;
-			CAPEParam = SBCAPE;
-			CAPE1040Param = SBCAPE1040;
-			CAPE3kmParam = SBCAPE3km;
-			CINParam = SBCIN;
-			ELPParam = SBELP;
-			ELTParam = SBELT;
-			ELZParam = SBELZ;
 			break;
 
-		case k500mAvg:
-			throw runtime_error("Source type 500m avg not implemented");
-			break;
-
-		case k500mAvgMixingRatio:
+		case kHeightLayer:
 			TandTD = Get500mMixingRatioTAndTD(myTargetInfo);
-			LCLTParam = SB500LCLT;
-			LCLPParam = SB500LCLP;
-			LCLZParam = SB500LCLZ;
-			LFCTParam = SB500LFCT;
-			LFCPParam = SB500LFCP;
-			LFCZParam = SB500LFCZ;
-			CAPEParam = SB500CAPE;
-			CAPE1040Param = SB500CAPE1040;
-			CAPE3kmParam = SB500CAPE3km;
-			CINParam = SB500CIN;
-			ELPParam = SB500ELP;
-			ELTParam = SB500ELT;
-			ELZParam = SB500ELZ;
 			break;
 
-		case kMaxThetaE:
+		case kMaximumThetaE:
 			TandTD = GetHighestThetaETAndTD(myTargetInfo);
-			LCLTParam = MULCLT;
-			LCLPParam = MULCLP;
-			LCLZParam = MULCLZ;
-			LFCTParam = MULFCT;
-			LFCPParam = MULFCP;
-			LFCZParam = MULFCZ;
-			CAPEParam = MUCAPE;
-			CAPE1040Param = MUCAPE1040;
-			CAPE3kmParam = MUCAPE3km;
-			CINParam = MUCIN;
-			ELPParam = MUELP;
-			ELTParam = MUELT;
-			ELZParam = MUELZ;
 			break;
 
 		default:
-			throw runtime_error("Invalid source data type");
+			throw runtime_error("Invalid source level: " + static_cast<std::string>(sourceLevel));
 			break;
 	}
+
+	myTargetInfo->Level(sourceLevel);
 
 	if (TandTD.first.empty()) return;
 
