@@ -57,7 +57,14 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
 	{
 		fileName << base.str() << "/" << info.Param().Name() << "_" << HPLevelTypeToString.at(info.Level().Type())
-		         << "_" << info.Level().Value() << "_" << HPGridTypeToString.at(info.Grid()->Type());
+		         << "_" << info.Level().Value();
+
+		if (info.Level().Value2() != kHPMissingValue)
+		{
+			fileName << "-" << info.Level().Value2();
+		}
+
+		fileName << "_" << HPGridTypeToString.at(info.Grid()->Type());
 
 		if (info.Grid()->Class() == kRegularGrid)
 		{

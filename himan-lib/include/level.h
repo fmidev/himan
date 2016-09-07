@@ -22,45 +22,30 @@ class level
    public:
 	level();
 	explicit level(const NFmiLevel& theLevel);
-	level(HPLevelType theType, double theValue, const std::string& theName = "");
-	level(HPLevelType theType, double theValue, int theIndex, const std::string& theName = "");
+	level(HPLevelType theType, double theValue);
+	level(HPLevelType theType, double theValue, const std::string& theName);
+	level(HPLevelType theType, double theValue, double theValue2);
 
 	~level() = default;
-	level(const level& other);
-	level& operator=(const level& other);
 	operator std::string() const;
 
 	std::string ClassName() const { return "himan::level"; }
 	bool operator==(const level& other) const;
 	bool operator!=(const level& other) const;
 
-	/**
-	 * @brief Set level values (for pressure levels)
-	 */
-
 	void Value(double theLevelValue);
-
-	/**
-	 * @return Level value (for pressure levels)
-	 */
-
 	double Value() const;
 
-	/**
-	 * @brief Set level index number
+	/*
+	 * Some levels have two values, like height delta.
 	 */
+
+	void Value2(double theLevelValue2);
+	double Value2() const;
+
 	void Index(int theIndex);
 
-	/**
-	 * @return Level index number
-	 */
-
 	int Index() const;
-
-	/**
-	 * @brief Set Level type
-	 * @param theType
-	 */
 
 	void Type(HPLevelType theLevelType);
 
@@ -71,16 +56,7 @@ class level
 
 	HPLevelType Type() const;
 
-	/**
-	 * @brief deprecated
-	 */
-
 	std::string Name() const;
-
-	/**
-	 * @brief deprecated
-	 */
-
 	void Name(const std::string& theName);
 
 	std::ostream& Write(std::ostream& file) const;
@@ -88,6 +64,7 @@ class level
    private:
 	HPLevelType itsType;
 	double itsValue;
+	double itsValue2;
 	int itsIndex;
 	std::string itsName;
 };
