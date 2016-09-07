@@ -136,17 +136,38 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	// Level
 
-	itsGrib->Message().LevelValue(static_cast<long>(levelValue));
+	auto lev = anInfo.Level();
 
 	// Himan levels equal to grib 1
 
 	if (edition == 1)
 	{
-		itsGrib->Message().LevelType(anInfo.Level().Type());
+		itsGrib->Message().LevelType(lev.Type());
 	}
 	else if (edition == 2)
 	{
-		itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(anInfo.Level().Type(), 2));
+		if (lev.Type() == kHeightLayer)
+		{
+			itsGrib->Message().LevelType(103);
+			itsGrib->Message().SetLongKey("typeOfSecondFixedSurface", 103);
+		}
+		else
+		{
+			itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(lev.Type(), 2));
+		}
+	}
+
+	switch (lev.Type())
+	{
+		case kHeightLayer:
+		{
+			itsGrib->Message().LevelValue(static_cast<long>(0.01 * levelValue), 100);     // top
+			itsGrib->Message().LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
+			break;
+		}
+		default:
+			itsGrib->Message().LevelValue(static_cast<long>(levelValue));
+			break;
 	}
 
 	// Forecast type
@@ -693,6 +714,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				levelType = himan::kHeight;
 				break;
 
+			case 106:
+				levelType = himan::kHeightLayer;
+				break;
+
 			case 109:
 				levelType = himan::kHybrid;
 				break;
@@ -701,13 +726,28 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				levelType = himan::kGndLayer;
 				break;
 
+			case 246:
+				levelType = himan::kMaximumThetaE;
+				break;
+
 			default:
 				itsLogger->Error(ClassName() + ": Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
 				continue;
 				break;
 		}
 
-		level l(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+		level l;
+
+		switch (levelType)
+		{
+			case kHeightLayer:
+				l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
+				break;
+
+			default:
+				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+				break;
+		}
 
 		if (l != options.level)
 		{
