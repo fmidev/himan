@@ -626,6 +626,8 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 			map<string, string> prod;
 
+			string realOriginDateTime = "";
+
 			if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 			{
 				auto n = GET_PLUGIN(neons);
@@ -634,17 +636,17 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 				if (!prod.empty())
 				{
-					originDateTime = n->NeonsDB().GetLatestTime(prod["ref_prod"], "", offset);
+					realOriginDateTime = n->NeonsDB().GetLatestTime(prod["ref_prod"], "", offset);
 
-					if (!originDateTime.empty())
+					if (!realOriginDateTime.empty())
 					{
 						mask = "%Y%m%d%H%M";
-						anInfo->OriginDateTime(originDateTime, mask);
+						anInfo->OriginDateTime(realOriginDateTime, mask);
 					}
 				}
 			}
 
-			if (originDateTime == "latest" && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+			if (realOriginDateTime.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 			{
 				auto r = GET_PLUGIN(radon);
 
@@ -652,21 +654,23 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 				if (!prod.empty())
 				{
-					originDateTime = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
+					realOriginDateTime = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
 
-					if (!originDateTime.empty())
+					if (!realOriginDateTime.empty())
 					{
 						mask = "%Y-%m-%d %H:%M:00";
-						anInfo->OriginDateTime(originDateTime, mask);
+						anInfo->OriginDateTime(realOriginDateTime, mask);
 					}
 				}
 			}
 
-			if (originDateTime == "latest")
+			if (realOriginDateTime.empty())
 			{
-				throw runtime_error("Latest time not found from Neons and/or Radon for producer " +
-				                    boost::lexical_cast<string>(sourceProducer.Id()) + "'");
+				throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) + " for producer " +
+				                    boost::lexical_cast<string>(sourceProducer.Id()));
 			}
+
+			originDateTime = realOriginDateTime;
 		}
 		else
 		{
