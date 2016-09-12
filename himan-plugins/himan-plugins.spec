@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.8.31
+Version: 16.9.8
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -20,14 +20,14 @@ Requires: himan-lib >= 16.8.23
 Requires: himan-bin >= 16.6.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 16.8.15
+Requires: libfmigrib >= 16.9.8
 Requires: libsmartmet-newbase >= 16.5.4
-Requires: libfmidb >= 16.8.23
+Requires: libfmidb >= 16.9.8
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libfmidb-devel >= 16.8.23
-BuildRequires: libfmigrib-devel >= 16.8.15
+BuildRequires: libfmidb-devel >= 16.9.8
+BuildRequires: libfmigrib-devel >= 16.9.8
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
@@ -104,6 +104,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.8-1.fmi
+- fmigrib api change
 * Wed Aug 31 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.8.31-1.fmi
 - New release
 * Tue Aug 30 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.8.30-1.fmi
