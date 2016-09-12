@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.9.8
+Version: 16.9.12
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -104,6 +104,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Sep 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.12-1.fmi
+- Fix in visibility
 * Thu Sep  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.8-1.fmi
 - fmigrib api change
 * Wed Aug 31 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.8.31-1.fmi
