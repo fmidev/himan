@@ -67,11 +67,16 @@ split_sum::split_sum()
 	sourceParameters["RR-3-MM"] = {param("RR-KGM2")};
 	sourceParameters["RR-6-MM"] = {param("RR-KGM2")};
 	sourceParameters["RR-12-MM"] = {param("RR-KGM2")};
+	sourceParameters["RR-24-MM"] = {param("RR-KGM2")};
+
 	sourceParameters["RRR-KGM2"] = {param("RR-KGM2")};  // So-called HHSade
 	sourceParameters["RRRC-KGM2"] = {param("RRC-KGM2")};
 	sourceParameters["RRRL-KGM2"] = {param("RRL-KGM2")};
 
 	// Snow
+	sourceParameters["SN-6-MM"]  = {param("SNACC-KGM2")};
+	sourceParameters["SN-24-MM"] = {param("SNACC-KGM2")};
+
 	sourceParameters["SNR-KGM2"] = {param("SNACC-KGM2")};
 	sourceParameters["SNRC-KGM2"] = {param("SNC-KGM2")};
 	sourceParameters["SNRL-KGM2"] = {param("SNL-KGM2")};
@@ -139,6 +144,36 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		parm.Unit(kMm);
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 12));
+
+		params.push_back(parm);
+	}
+
+	if (itsConfiguration->Exists("rr24h") && itsConfiguration->GetValue("rr24h") == "true")
+	{
+		param parm("RR-24-MM", 53, 0, 1, 8);
+		parm.Unit(kMm);
+
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24));
+
+		params.push_back(parm);
+	}
+
+	if (itsConfiguration->Exists("sn6h") && itsConfiguration->GetValue("sn6h") == "true")
+	{
+		param parm("SN-6-MM", 764, 0, 1, 8);
+		parm.Unit(kMm);
+
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
+
+		params.push_back(parm);
+	}
+
+	if (itsConfiguration->Exists("sn24h") && itsConfiguration->GetValue("sn24h") == "true")
+	{
+		param parm("SN-24-MM", 766, 0, 1, 8);
+		parm.Unit(kMm);
+
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24));
 
 		params.push_back(parm);
 	}
