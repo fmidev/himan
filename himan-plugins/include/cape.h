@@ -15,20 +15,6 @@ namespace himan
 {
 namespace plugin
 {
-enum HPSoundingIndexSourceDataType
-{
-	kUnknown = 0,
-	kSurface,             // Use surface data (from 2m)
-	k500mAvg,             // Average data of lowest 500m
-	k500mAvgMixingRatio,  // Average data of lowest 500m using mixing ratio
-	kMaxThetaE            // Find source data with max Theta E with upper limit 500hPa
-
-};
-
-const boost::unordered_map<HPSoundingIndexSourceDataType, std::string> HPSoundingIndexSourceDataTypeToString =
-    ba::map_list_of(kUnknown, "unknown")(kSurface, "surface")(k500mAvg, "500m avg")(k500mAvgMixingRatio, "500m mix")(
-        kMaxThetaE, "max theta e");
-
 class cape : public compiled_plugin, private compiled_plugin_base
 {
    public:
@@ -45,9 +31,6 @@ class cape : public compiled_plugin, private compiled_plugin_base
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex);
-	void CalculateVersion(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex,
-	                      HPSoundingIndexSourceDataType sourceType);
-	void ScaleBase(std::shared_ptr<info> anInfo, double scale, double base);
 
 	std::pair<std::vector<double>, std::vector<double>> GetLCL(std::shared_ptr<info> myTargetInfo,
 	                                                           std::vector<double>& T, std::vector<double>& TD);
@@ -84,7 +67,7 @@ class cape : public compiled_plugin, private compiled_plugin_base
 
 	level itsBottomLevel;
 
-	std::vector<HPSoundingIndexSourceDataType> itsSourceDatas;
+	std::vector<level> itsSourceLevels;
 };
 
 // the class factory
