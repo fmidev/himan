@@ -148,7 +148,14 @@ __device__ double NearestPointInterpolation(const double* __restrict__ d_source,
 	assert(rx >= 0 && rx <= sourceInfo.size_x);
 	assert(ry >= 0 && ry <= sourceInfo.size_y);
 
-	return d_source[Index(rx, ry, sourceInfo.size_x)];
+	double npValue = d_source[Index(rx, ry, sourceInfo.size_x)];
+
+	// Sometimes nearest point value is missing, but there is another point almost as close that
+	// is not missing. Should we try to use that instead? This would mean that the interpolation
+	// result would in some cases contain less missing values, but the cost is an extra branch
+	// for *every* nearest point interpolation ever done!
+
+	return npValue;
 }
 
 __device__ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo,
