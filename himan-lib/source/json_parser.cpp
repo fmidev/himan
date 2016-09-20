@@ -902,7 +902,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 			const double X1 = fmod(X0 + (llg->Ni() - 1) * di, 360);
 
-			double Y1;
+			double Y1 = kHPMissingValue;
 
 			switch (llg->ScanningMode())
 			{
@@ -955,7 +955,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 			const double X1 = fmod(X0 + (rllg->Ni() - 1) * di, 360);
 
-			double Y1;
+			double Y1 = kHPMissingValue;
 
 			switch (rllg->ScanningMode())
 			{
