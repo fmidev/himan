@@ -632,7 +632,7 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 	    (
 	        // vector parameters
 	        paramName == "U-MS" || paramName == "V-MS" || paramName == "DD-D" || paramName == "FF-MS" ||
-	        paramName == "WGU-MS" || paramName == "WGV-MS" ||
+	        paramName == "WGU-MS" || paramName == "WGV-MS" || paramName == "IVELU-MS" || paramName == "IVELV-MS" ||
 	        // precipitation
 	        paramName == "RR-KGM2" || paramName == "SNR-KGM2" || paramName == "GRI-KGM2" || paramName == "RRR-KGM2" ||
 	        paramName == "RRRC-KGM2" || paramName == "RRRL-KGM2" || paramName == "SNRC-KGM2" ||
