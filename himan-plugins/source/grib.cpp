@@ -1136,6 +1136,9 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			rg->Ni(ni);
 			rg->Nj(nj);
 
+			rg->Di(itsGrib->Message().iDirectionIncrement());
+			rg->Dj(itsGrib->Message().jDirectionIncrement());
+
 			rg->ScanningMode(m);
 
 			rg->FirstPoint(firstPoint);
@@ -1220,6 +1223,9 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->Ni(ni);
 			rg->Nj(nj);
+
+			rg->Di(itsGrib->Message().iDirectionIncrement());
+			rg->Dj(itsGrib->Message().jDirectionIncrement());
 
 			rg->SouthPole(himan::point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY()));
 			rg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
