@@ -497,17 +497,9 @@ point rotated_latitude_longitude_grid::XY(const point& latlon) const
 		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
 	}
 
-	if (!itsRotLatLonGrid)
-	{
-		assert(itsScanningMode == kBottomLeft);
-		assert(itsNi != kHPMissingInt && itsNj != kHPMissingInt);
-		itsRotLatLonGrid = unique_ptr<NFmiGrid>(new NFmiGrid(itsRotLatLonArea.get(), itsNi, itsNj));
-	}
+	auto rotpoint = itsRotLatLonArea->ToRotLatLon(NFmiPoint(latlon.X(), latlon.Y()));
 
-	auto xy = itsRotLatLonGrid->LatLonToGrid(latlon.X(), latlon.Y());
-
-	assert(xy.X() == xy.X());
-	return point(xy.X(), xy.Y());
+	return latitude_longitude_grid::XY(point(rotpoint.X(), rotpoint.Y()));
 }
 
 point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
@@ -516,9 +508,12 @@ point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 
 	if (!itsRotLatLonArea)
 	{
+		assert(itsBottomLeft != point());
+		assert(itsTopRight != point());
+
 		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
 		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
-		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(0., 0.), true));
+		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
 	}
 
 	auto regpoint = itsRotLatLonArea->ToRegLatLon(NFmiPoint(rll.X(), rll.Y()));

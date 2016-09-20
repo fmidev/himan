@@ -11,7 +11,6 @@
 #include "grid.h"
 #include "logger.h"
 #include "point.h"
-#include <NFmiGrid.h>
 #include <NFmiRotatedLatLonArea.h>
 #include <string>
 
@@ -163,7 +162,6 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;
 	mutable std::unique_ptr<NFmiRotatedLatLonArea> itsRotLatLonArea;
-	mutable std::unique_ptr<NFmiGrid> itsRotLatLonGrid;
 
 	bool itsUVRelativeToGrid;
 
