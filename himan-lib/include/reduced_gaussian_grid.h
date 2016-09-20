@@ -54,16 +54,11 @@ class reduced_gaussian_grid : public grid
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
 
+	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const;
 
 	point FirstPoint() const;
 	point LastPoint() const;
-
-	/**
-	 * @brief Return grid point location for a given latlon point
-	 */
-
-	point LatLonToGridPoint(const point& latlon) const;
 
 	/**
 	 * @brief Return value of given grid point coordinates

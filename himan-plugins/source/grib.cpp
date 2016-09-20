@@ -1138,12 +1138,12 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->ScanningMode(m);
 
-			pair<point, point> coordinates =
-			    util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),
-			                                        itsGrib->Message().jDirectionIncrement(), m);
+			rg->FirstPoint(firstPoint);
 
-			rg->BottomLeft(coordinates.first);
-			rg->TopRight(coordinates.second);
+			double X1 = itsGrib->Message().X1();
+			double Y1 = itsGrib->Message().Y1();
+
+			rg->LastPoint(point(X1, Y1));
 
 			rg->Data(matrix<double>(ni, nj, 1, kFloatMissing));
 
@@ -1160,9 +1160,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			gg->ScanningMode(m);
 
 			assert(m == kTopLeft);
-
-			// pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj,
-			// itsGrib->Message().iDirectionIncrement(),itsGrib->Message().jDirectionIncrement(), m);
 
 			gg->TopLeft(firstPoint);
 
@@ -1229,12 +1226,12 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->ScanningMode(m);
 
-			pair<point, point> coordinates =
-			    util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),
-			                                        itsGrib->Message().jDirectionIncrement(), m);
+			rg->FirstPoint(firstPoint);
 
-			rg->BottomLeft(coordinates.first);
-			rg->TopRight(coordinates.second);
+			double X1 = itsGrib->Message().X1();
+			double Y1 = itsGrib->Message().Y1();
+
+			rg->LastPoint(point(X1, Y1));
 
 			rg->Data(matrix<double>(ni, nj, 1, kFloatMissing));
 

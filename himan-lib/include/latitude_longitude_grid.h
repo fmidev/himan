@@ -11,6 +11,8 @@
 #include "grid.h"
 #include "logger.h"
 #include "point.h"
+#include <NFmiGrid.h>
+#include <NFmiRotatedLatLonArea.h>
 #include <string>
 
 #include "packed_data.h"
@@ -86,6 +88,9 @@ class latitude_longitude_grid : public grid
 	void BottomRight(const point& theBottomRight);
 	void TopLeft(const point& theTopLeft);
 
+	void FirstPoint(const point& theFirstPoint);
+	void LastPoint(const point& theLastPoint);
+
 	point FirstPoint() const;
 	point LastPoint() const;
 
@@ -97,6 +102,7 @@ class latitude_longitude_grid : public grid
 
 	bool Swap(HPScanningMode newScanningMode) override;
 
+	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
 	latitude_longitude_grid* Clone() const override;
@@ -115,6 +121,9 @@ class latitude_longitude_grid : public grid
 
 	size_t itsNi;
 	size_t itsNj;
+
+   private:
+	mutable bool itsIsGlobal;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const latitude_longitude_grid& ob) { return ob.Write(file); }
@@ -148,10 +157,13 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	point SouthPole() const;
 	void SouthPole(const point& theSouthPole);
 
+	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;
+	mutable std::unique_ptr<NFmiRotatedLatLonArea> itsRotLatLonArea;
+	mutable std::unique_ptr<NFmiGrid> itsRotLatLonGrid;
 
 	bool itsUVRelativeToGrid;
 

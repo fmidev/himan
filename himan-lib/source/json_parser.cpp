@@ -666,8 +666,8 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 			if (realOriginDateTime.empty())
 			{
-				throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) + " for producer " +
-				                    boost::lexical_cast<string>(sourceProducer.Id()));
+				throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) +
+				                    " for producer " + boost::lexical_cast<string>(sourceProducer.Id()));
 			}
 
 			originDateTime = realOriginDateTime;
@@ -834,6 +834,9 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
 {
+	using himan::kTopLeft;
+	using himan::kBottomLeft;
+
 	unique_ptr<grid> g;
 
 	try
@@ -897,11 +900,24 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
 			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
 
-			const auto coordinates =
-			    util::CoordinatesFromFirstGridPoint(point(X0, Y0), llg->Ni(), llg->Nj(), di, dj, llg->ScanningMode());
+			const double X1 = fmod(X0 + (llg->Ni() - 1) * di, 360);
 
-			llg->BottomLeft(coordinates.first);
-			llg->TopRight(coordinates.second);
+			double Y1;
+
+			switch (llg->ScanningMode())
+			{
+				case kTopLeft:
+					Y1 = Y0 - (llg->Nj() - 1) * dj;
+					break;
+				case kBottomLeft:
+					Y1 = Y0 + (llg->Nj() - 1) * dj;
+					break;
+				default:
+					break;
+			}
+
+			llg->FirstPoint(point(X0, Y0));
+			llg->LastPoint(point(X1, Y1));
 		}
 		else if ((geominfo["prjn_name"] == "latlon" &&
 		          (geominfo["geom_parm_1"] != "0" || geominfo["geom_parm_2"] != "0"))  // neons
@@ -937,11 +953,24 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
 			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
 
-			const auto coordinates = util::CoordinatesFromFirstGridPoint(point(X0, Y0), rllg->Ni(), rllg->Nj(), di, dj,
-			                                                             rllg->ScanningMode());
+			const double X1 = fmod(X0 + (rllg->Ni() - 1) * di, 360);
 
-			rllg->BottomLeft(coordinates.first);
-			rllg->TopRight(coordinates.second);
+			double Y1;
+
+			switch (rllg->ScanningMode())
+			{
+				case kTopLeft:
+					Y1 = Y0 - (rllg->Nj() - 1) * dj;
+					break;
+				case kBottomLeft:
+					Y1 = Y0 + (rllg->Nj() - 1) * dj;
+					break;
+				default:
+					break;
+			}
+
+			rllg->FirstPoint(point(X0, Y0));
+			rllg->LastPoint(point(X1, Y1));
 		}
 		else if (geominfo["prjn_name"] == "polster" || geominfo["prjn_name"] == "polarstereo" ||
 		         geominfo["prjn_id"] == "2")

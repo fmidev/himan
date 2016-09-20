@@ -234,49 +234,6 @@ string util::Join(const vector<string>& elements, const string& delim)
 	return s.str();
 }
 
-pair<point, point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di,
-                                                       double dj, HPScanningMode scanningMode)
-{
-	double dni = static_cast<double>(ni) - 1;
-	double dnj = static_cast<double>(nj) - 1;
-
-	point bottomLeft, topRight, topLeft, bottomRight;
-
-	// longitude is normalized to -180 .. 180
-
-	switch (scanningMode)
-	{
-		case kBottomLeft:
-			bottomLeft = firstPoint;
-			topRight = point(bottomLeft.X() + dni * di, bottomLeft.Y() + dnj * dj);
-			break;
-
-		case kTopLeft:  // +x-y
-			bottomRight = point(firstPoint.X() + dni * di, firstPoint.Y() - dnj * dj);
-			bottomLeft = point(bottomRight.X() - dni * di, firstPoint.Y() - dnj * dj);
-			topRight = point(bottomLeft.X() + dni * di, bottomLeft.Y() + dnj * dj);
-			break;
-
-		case kTopRight:  // -x-y
-			topRight = firstPoint;
-			bottomLeft = point(topRight.X() - dni * di, topRight.Y() - dnj * dj);
-			break;
-
-		case kBottomRight:  // -x+y
-			topLeft = point(firstPoint.X() - dni * di, firstPoint.Y() + dnj * dj);
-			bottomLeft = point(firstPoint.X() - dni * di, topLeft.Y() - dnj * dj);
-			topRight = point(bottomLeft.X() + dni * di, bottomLeft.Y() + dnj * dj);
-			break;
-
-		default:
-			throw runtime_error(
-			    "util::CoordinatesFromFirstGridPoint(): Calculating first grid point when scanning mode is unknown");
-			break;
-	}
-
-	return pair<point, point>(bottomLeft, topRight);
-}
-
 pair<point, point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, double orientation, size_t ni,
                                                        size_t nj, double xSizeInMeters, double ySizeInMeters)
 {

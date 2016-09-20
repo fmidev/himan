@@ -210,9 +210,9 @@ void BindEnum(lua_State* L)
 	         .enum_("constants")[value("kUnknownFile", kUnknownFile), value("kGRIB1", kGRIB1), value("kGRIB2", kGRIB2),
 	                             value("kGRIB", kGRIB), value("kQueryData", kQueryData), value("kNetCDF", kNetCDF)],
 	     class_<HPScanningMode>("HPScanningMode")
-	         .enum_("constants")[value("kUnknownScanningMode", kUnknownScanningMode), value("kTopLeft", kTopLeft),
-	                             value("kTopRight", kTopRight), value("kBottomLeft", kBottomLeft),
-	                             value("kBottomRight", kBottomRight)],
+	         .enum_("constants")[value("kUnknownScanningMode", kUnknownScanningMode), value("kTopLeft", himan::kTopLeft),
+	                             value("kTopRight", himan::kTopRight), value("kBottomLeft", himan::kBottomLeft),
+	                             value("kBottomRight", himan::kBottomRight)],
 	     class_<HPAggregationType>("HPAggregationType")
 	         .enum_("constants")[value("kUnknownAggregationType", kUnknownAggregationType), value("kAverage", kAverage),
 	                             value("kAccumulation", kAccumulation), value("kMaximum", kMaximum),
@@ -962,7 +962,7 @@ std::vector<double> TableToVector(const object& table)
 		}
 		catch (cast_failed& e)
 		{
-			ret.push_back(kFloatMissing);
+			ret.push_back(himan::kFloatMissing);
 		}
 	}
 

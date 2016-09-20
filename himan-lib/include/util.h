@@ -58,27 +58,6 @@ std::vector<std::string> Split(const std::string& s, const std::string& delims, 
 std::string Join(const std::vector<std::string>& elements, const std::string& delim);
 
 /**
- * @brief Calculate area coordinates from first gridpoint, scanning mode, grid size and distance between two gridpoints.
- *
- * Works for (rotated) latlon projections only!
- *
- * This function is the opposite of FirstGridPoint(). NOTE: scanning mode must already be set when calling this
- * function!
- *
- * @param firstPoint Latitude and longitude of first gridpoint
- * @param ni Grid size in X direction
- * @param ny Grid size in Y direction
- * @param di Distance between two points in X direction
- * @param dj Distance between two points in Y direction
- * @param scanningMode Scanningmode of data
- *
- * @return std::pair of points, first=bottomLeft, second=topRight
- */
-
-std::pair<point, point> CoordinatesFromFirstGridPoint(const point& firstPoint, size_t ni, size_t nj, double di,
-                                                      double dj, HPScanningMode scanningMode);
-
-/**
  * @brief Calculate area coordinates from first gridpoint. Works for stereographic projections only!
  * @param firstPoint First point specified in grib
  * @param orientation Orientation of grid

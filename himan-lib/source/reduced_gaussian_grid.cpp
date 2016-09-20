@@ -167,7 +167,7 @@ point reduced_gaussian_grid::LatLon(size_t theLocationIndex) const
 	return LatLon(x, y);
 }
 
-point reduced_gaussian_grid::LatLonToGridPoint(const himan::point& latlon) const
+point reduced_gaussian_grid::XY(const himan::point& latlon) const
 {
 	double offset = 0;
 

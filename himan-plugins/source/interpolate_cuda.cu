@@ -1,13 +1,11 @@
 #include "cuda_plugin_helper.h"
 #include "info_simple.h"
+#include "interpolate.h"
 #include "numerical_functions.h"
-#include <NFmiGrid.h>
-#include <NFmiLatLonArea.h>
-#include <NFmiRotatedLatLonArea.h>
-#include <NFmiStereographicArea.h>
 #include <thrust/sort.h>
 
 const double kEpsilon = 1e-6;
+using himan::kFloatMissing;
 
 struct point
 {
@@ -44,104 +42,20 @@ __global__ void Swap(double* __restrict__ arr, size_t ni, size_t nj)
 }
 
 __global__ void Print(double* __restrict__ arr, int i) { printf("%d %f\n", i, arr[i]); }
-NFmiArea* CreateArea(himan::info_simple* info)
+void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, ::point* grid)
 {
-	NFmiPoint bl, tr;
-
-	bl.X(info->first_lon);
-	tr.X(bl.X() + (info->size_x - 1) * info->di);
-
-	if (info->j_scans_positive)
-	{
-		bl.Y(info->first_lat);
-		tr.Y(bl.Y() + (info->size_y - 1) * info->dj);
-	}
-	else
-	{
-		tr.Y(info->first_lat);
-		bl.Y(tr.Y() - (info->size_y - 1) * info->dj);
-	}
-
-	NFmiArea* area = 0;
-
-	if (info->projection == himan::kLatitudeLongitude)
-	{
-		area = new NFmiLatLonArea(bl, tr);
-	}
-	else if (info->projection == himan::kRotatedLatitudeLongitude)
-	{
-		NFmiPoint sp(info->south_pole_lon, info->south_pole_lat);
-		area = new NFmiRotatedLatLonArea(bl, tr, sp, NFmiPoint(0, 0), NFmiPoint(1, 1), true);
-	}
-	else if (info->projection == himan::kStereographic)
-	{
-		area = new NFmiStereographicArea(bl, (info->size_x - 1) * info->di, (info->size_y - 1) * info->dj,
-		                                 info->orientation);
-	}
-	else
-	{
-		throw std::runtime_error("Invalid projection for cuda interpolation");
-	}
-
-	info->wraps_globally = area->PacificView();
-
-	assert(area);
-	return area;
-}
-
-point* CreateGrid(himan::info_simple* sourceInfo, himan::info_simple* targetInfo)
-{
-	NFmiArea* sourceArea = CreateArea(sourceInfo);
-	NFmiArea* targetArea = CreateArea(targetInfo);
-
-	NFmiGrid sourceGrid(sourceArea, sourceInfo->size_x, sourceInfo->size_y, kBottomLeft);
-	NFmiGrid targetGrid(targetArea, targetInfo->size_x, targetInfo->size_y, kBottomLeft);
-	/*
-	    std::cout	<< "Source area BL: " << sourceArea->BottomLeftLatLon()
-	                << "Source area TR: " << sourceArea->TopRightLatLon()
-	                << "Source grid BL: " << sourceGrid.LatLonToGrid(sourceArea->BottomLeftLatLon())
-	                << "Source grid TR: " << sourceGrid.LatLonToGrid(sourceArea->TopRightLatLon())
-	                << "Source J scans positive: " << sourceInfo->j_scans_positive << std::endl
-	                << "Target area BL: " << targetArea->BottomLeftLatLon()
-	                << "Target area TR: " << targetArea->TopRightLatLon()
-	                << "Target grid BL (relative): " << sourceGrid.LatLonToGrid(targetArea->BottomLeftLatLon())
-	                << "Target grid TR (relative): " << sourceGrid.LatLonToGrid(targetArea->TopRightLatLon())
-	                << "Target J scans positive: " << targetInfo->j_scans_positive << std::endl
-	                ;
-	    */
-	point* ret = new point[targetGrid.XNumber() * targetGrid.YNumber()];
-
-	targetGrid.Reset();
+	targetInfo.ResetLocation();
 
 	int i = 0;
 
-	while (targetGrid.Next())
+	while (targetInfo.NextLocation())
 	{
-		NFmiPoint gp = sourceGrid.LatLonToGrid(targetGrid.LatLon());
+		himan::point gp = sourceInfo.Grid()->XY(targetInfo.LatLon());
 
-#ifdef EXTRADEBUG
-		NFmiPoint latlon = targetGrid.LatLon();
-
-		if (!sourceArea->IsInside(latlon))
-		{
-			std::cout << "Latlon " << latlon << " is outside source area!" << std::endl;
-		}
-		if (!sourceGrid.IsInsideGrid(gp))
-		{
-			std::cout << "Gridpoint " << gp << " is outside source grid!" << std::endl;
-		}
-
-#endif
-		ret[i].x = gp.X();
-		ret[i].y = gp.Y();
-
+		grid[i].x = gp.X();
+		grid[i].y = gp.Y();
 		i++;
 	}
-
-	delete (sourceArea);
-	delete (targetArea);
-
-	return ret;
 }
 
 __device__ double Mode(double* arr)
@@ -463,16 +377,6 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 
 		point gp = d_grid[Index(i, j, targetInfo.size_x)];
 
-		if (sourceInfo.wraps_globally && (gp.x < 0 || gp.x > sourceInfo.size_x - 1))
-		{
-			// wrap x if necessary
-			// this might happen f.ex. with EC where grid start at 0 meridian and
-			// we interpolate from say -10 to 40 longitude
-
-			while (gp.x < 0) gp.x += sourceInfo.size_x;
-			while (gp.x > sourceInfo.size_x - 1) gp.x -= sourceInfo.size_x - 1;
-		}
-
 		double interp = kFloatMissing;
 
 		if (IsInsideGrid(gp, sourceInfo.size_x, sourceInfo.size_y))
@@ -507,79 +411,64 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 	}
 }
 
-bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetInfo)
+bool InterpolateCuda(himan::info& source, himan::info& base, himan::matrix<double>& targetData)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	if (targetInfo->interpolation == himan::kUnknownInterpolationMethod)
+	if (base.Param().InterpolationMethod() == himan::kUnknownInterpolationMethod)
 	{
-		targetInfo->interpolation = himan::kBiLinear;
+		base.Param().InterpolationMethod(himan::kBiLinear);
+	}
+	else
+	{
+		auto newMethod =
+		    himan::interpolate::InterpolationMethod(source.Param().Name(), base.Param().InterpolationMethod());
+		auto newParam = base.Param();
+		newParam.InterpolationMethod(newMethod);
+
+		base.SetParam(newParam);
 	}
 
-	/* Determine all grid point coordinates that need to be interpolated.
-	 * This is done with newbase by explicitly looping through the grid.
-	 * Initially I tried to implement it with just starting point and offset
-	 * but the code was awkward and would not work with stereographic projections
-	 * anyway.
-	 */
+#ifdef DEBUG
+	std::cout << "Debug::interpolate_cuda Interpolation method: " << (base.Param().InterpolationMethod()) << std::endl;
+#endif
 
-	point* grid = CreateGrid(sourceInfo, targetInfo);
+	// Determine all grid point coordinates that need to be interpolated.
+	const size_t N = base.SizeLocations();
 
-	const size_t N = targetInfo->size_x * targetInfo->size_y;
+	::point* grid = new point[N];
+
+	CreateGrid(source, base, grid);
 
 	point* d_grid = 0;
-	CUDA_CHECK(cudaMalloc((void**)&d_grid, sizeof(point) * N));
-	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid, sizeof(point) * N, cudaMemcpyHostToDevice, stream));
+
+	CUDA_CHECK(cudaMalloc((void**)&d_grid, sizeof(::point) * N));
+	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid, sizeof(::point) * N, cudaMemcpyHostToDevice, stream));
 
 	double* d_source = 0;
 	double* d_target = 0;
 
-	CUDA_CHECK(cudaMalloc((void**)&d_source, sourceInfo->size_x * sourceInfo->size_y * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((void**)&d_source, source.SizeLocations() * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((void**)&d_target, N * sizeof(double)));
 
-#ifdef DEBUG
-	CUDA_CHECK(cudaMemset(d_target, 0, targetInfo->size_x * targetInfo->size_y * 8));
-#endif
+	auto sourceInfo = source.ToSimple();
+	auto targetInfo = base.ToSimple();
+	targetInfo->values = targetData.ValuesAsPOD();
 
 	PrepareInfo(sourceInfo, d_source, stream);
 	PrepareInfo(targetInfo);
 
-	if (!sourceInfo->j_scans_positive)
-	{
-		// Force +x-y --> +x+y
-
-		// This is needed because latlon coordinates are created from newbase area
-		// and they are in +x+y. This also means that we have to flip the data
-		// back after interpolation.
-
-		// TODO: Do not flip the data twice, but create the grid in the correct scanning mode!
-
-		size_t N = sourceInfo->size_x * sourceInfo->size_y * 0.5;
-
-		int bs = 256;
-		int gs = N / bs + (N % bs == 0 ? 0 : 1);
-		Swap<<<gs, bs, 0, stream>>>(d_source, sourceInfo->size_x, sourceInfo->size_y);
-
-		sourceInfo->j_scans_positive = true;
-	}
+#ifdef DEBUG
+	memset(targetInfo->values, 0, N * sizeof(double));
+#endif
 
 	const int bs = 256;
 	const int gs = N / bs + (N % bs == 0 ? 0 : 1);
 
-	// Do bilinear transform on CUDA device
 	InterpolateCudaKernel<<<gs, bs, 0, stream>>>(d_source, d_target, d_grid, *sourceInfo, *targetInfo);
 
-	if (!targetInfo->j_scans_positive)
-	{
-		// Flip data back
-
-		size_t N = targetInfo->size_x * targetInfo->size_y * 0.5;
-
-		int bs = 256;
-		int gs = N / bs + (N % bs == 0 ? 0 : 1);
-		Swap<<<gs, bs, 0, stream>>>(d_target, targetInfo->size_x, targetInfo->size_y);
-	}
+	delete[] grid;
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -591,8 +480,6 @@ bool InterpolateCuda(himan::info_simple* sourceInfo, himan::info_simple* targetI
 	CUDA_CHECK(cudaFree(d_grid));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
-
-	delete[] grid;
 
 	return true;
 }

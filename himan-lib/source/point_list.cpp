@@ -177,3 +177,20 @@ bool point_list::operator==(const point_list& other) const
 }
 
 point_list* point_list::Clone() const { return new point_list(*this); }
+point point_list::XY(const point& latlon) const
+{
+	// Linear search
+	// Returned value is in 1D vector format, ie. Y = 0.
+	int x = 0;
+	for (const auto& p : itsStations)
+	{
+		if (p == latlon)
+		{
+			return point(x, 0);
+		}
+
+		x++;
+	}
+
+	return point();
+}

@@ -15,7 +15,7 @@
 #undef HIMAN_AUXILIARY_INCLUDE
 
 #ifdef HAVE_CUDA
-extern bool InterpolateCuda(himan::info_simple* baseInfo, himan::info_simple* targetInfo);
+extern bool InterpolateCuda(himan::info& baseInfo, himan::info& targetInfo, himan::matrix<double>& targetData);
 #endif
 
 using namespace himan;
@@ -24,30 +24,6 @@ namespace himan
 {
 namespace interpolate
 {
-HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod)
-{
-	// Later we'll add this information to radon directly
-	if (interpolationMethod == kBiLinear &&
-	    (
-	        // vector parameters
-	        paramName == "U-MS" || paramName == "V-MS" || paramName == "DD-D" || paramName == "FF-MS" ||
-	        paramName == "WGU-MS" || paramName == "WGV-MS" ||
-	        // precipitation
-	        paramName == "RR-KGM2" || paramName == "SNR-KGM2" || paramName == "GRI-KGM2" || paramName == "RRR-KGM2" ||
-	        paramName == "RRRC-KGM2" || paramName == "RRRL-KGM2" || paramName == "SNRC-KGM2" ||
-	        paramName == "SNRL-KGM2" || paramName == "RRRS-KGM2" || paramName == "RR-1-MM" || paramName == "RR-3-MM" ||
-	        paramName == "RR-6-MM" || paramName == "RRI-KGM2" || paramName == "SNRI-KGM2" ||
-	        paramName == "SNACC-KGM2" ||
-	        // symbols
-	        paramName == "CLDSYM-N" || paramName == "PRECFORM-N" || paramName == "PRECFORM2-N" ||
-	        paramName == "FOGSYM-N" || paramName == "ICING-N"))
-	{
-		return kNearestPoint;  // nearest point in himan and newbase
-	}
-
-	return interpolationMethod;
-}
-
 bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
 	auto q = GET_PLUGIN(querydata);
@@ -182,7 +158,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 
 			const double interpValue = gg->Value(np_x, np_y);
 #endif
-			const point gpoint = gg->LatLonToGridPoint(llpoint);
+			const point gpoint = gg->XY(llpoint);
 			const point npoint = point(rint(gpoint.X()), rint(gpoint.Y()));
 
 			// grid point coordinates are always positive
@@ -262,10 +238,10 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			const point c(c_lon, lat_lower);
 			const point d(d_lon, lat_lower);
 
-			const point a_gp = gg->LatLonToGridPoint(a);  // point a in grid space
-			const point b_gp = gg->LatLonToGridPoint(b);
-			const point c_gp = gg->LatLonToGridPoint(b);
-			const point d_gp = gg->LatLonToGridPoint(b);
+			const point a_gp = gg->XY(a);  // point a in grid space
+			const point b_gp = gg->XY(b);
+			const point c_gp = gg->XY(b);
+			const point d_gp = gg->XY(b);
 
 			const double av = gg->Value(static_cast<size_t>(a_gp.X()), static_cast<size_t>(a_gp.Y()));  // point a value
 			const double bv = gg->Value(static_cast<size_t>(b_gp.X()), static_cast<size_t>(b_gp.Y()));
@@ -355,6 +331,11 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 	int method = InterpolationMethod(param, base.Param().InterpolationMethod());
 	sourceInfo.Param().GetParam()->InterpolationMethod(static_cast<FmiInterpolationMethod>(method));
 
+#ifdef DEBUG
+	std::cout << "Debug::interpolate Interpolation method: " << (sourceInfo.Param().GetParam()->InterpolationMethod())
+	          << std::endl;
+#endif
+
 	size_t i = 0;
 
 	if (base.Grid()->Class() == kIrregularGrid)
@@ -380,6 +361,7 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 				do
 				{
 					double value = sourceInfo.InterpolatedValue(baseInfo.LatLon());
+
 					targetData.Set(i, value);
 					i++;
 				} while (baseInfo.MoveRight());
@@ -409,39 +391,7 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 bool InterpolateAreaGPU(info& base, info& source, matrix<double>& targetData)
 {
 #ifdef HAVE_CUDA
-	auto simple_base = base.ToSimple();
-	auto simple_source = source.ToSimple();
-
-	info_simple simple_target(*simple_base);
-
-	simple_target.values = new double[simple_target.size_x * simple_target.size_y];
-
-	HPInterpolationMethod method = InterpolationMethod(source.Param().Name(), simple_target.interpolation);
-
-	if (method != simple_target.interpolation)
-	{
-		//		itsLogger->Warning("Interpolation method forced to " +
-		//HPInterpolationMethodToString.at(static_cast<HPInterpolationMethod> (method)) + " for parameter " +
-		//source.Param().Name());
-	}
-
-	simple_target.interpolation = method;
-
-#ifdef DEBUG
-	memset(simple_target.values, 0, simple_target.size_x * simple_target.size_y * sizeof(double));
-#endif
-
-	if (!InterpolateCuda(simple_source, &simple_target))
-	{
-		return false;
-	}
-
-	targetData.Set(simple_target.values, simple_target.size_x * simple_target.size_y);
-
-	delete[](simple_target.values);
-
-	return true;
-
+	return InterpolateCuda(source, base, targetData);
 #else
 	return false;
 #endif
@@ -674,5 +624,33 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 
 	return true;
 }
+
+HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod)
+{
+	// Later we'll add this information to radon directly
+	if (interpolationMethod == kBiLinear &&
+	    (
+	        // vector parameters
+	        paramName == "U-MS" || paramName == "V-MS" || paramName == "DD-D" || paramName == "FF-MS" ||
+	        paramName == "WGU-MS" || paramName == "WGV-MS" ||
+	        // precipitation
+	        paramName == "RR-KGM2" || paramName == "SNR-KGM2" || paramName == "GRI-KGM2" || paramName == "RRR-KGM2" ||
+	        paramName == "RRRC-KGM2" || paramName == "RRRL-KGM2" || paramName == "SNRC-KGM2" ||
+	        paramName == "SNRL-KGM2" || paramName == "RRRS-KGM2" || paramName == "RR-1-MM" || paramName == "RR-3-MM" ||
+	        paramName == "RR-6-MM" || paramName == "RRI-KGM2" || paramName == "SNRI-KGM2" ||
+	        paramName == "SNACC-KGM2" ||
+	        // symbols
+	        paramName == "CLDSYM-N" || paramName == "PRECFORM-N" || paramName == "PRECFORM2-N" ||
+	        paramName == "FOGSYM-N" || paramName == "ICING-N"))
+	{
+#ifdef DEBUG
+		std::cout << "Debug::interpolation Switching interpolation method from bilinear to nearest point" << std::endl;
+#endif
+		return kNearestPoint;  // nearest point in himan and newbase
+	}
+
+	return interpolationMethod;
 }
-}
+
+}  // namespace interpolate
+}  // namespace himan
