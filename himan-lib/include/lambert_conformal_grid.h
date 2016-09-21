@@ -1,0 +1,137 @@
+/**
+ * @file   lambert_conformal_grid.h
+ * @author partio
+ *
+ * @date Sep 16, 2016
+ */
+
+#ifndef LAMBERT_CONFORMAL_GRID_H
+#define LAMBERT_CONFORMAL_GRID_H
+
+#include "grid.h"
+#include "logger.h"
+#include "point.h"
+#include <ogr_spatialref.h>
+#include <string>
+
+#include "packed_data.h"
+
+namespace himan
+{
+class lambert_conformal_grid : public grid
+{
+   public:
+	lambert_conformal_grid();
+	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirsPoint);
+
+	virtual ~lambert_conformal_grid() {}
+	lambert_conformal_grid(const lambert_conformal_grid& other);
+	lambert_conformal_grid& operator=(const lambert_conformal_grid& other) = delete;
+
+	virtual std::string ClassName() const { return "himan::lambert_conformal_grid"; }
+	virtual std::ostream& Write(std::ostream& file) const;
+
+	/**
+	 * @return Number of points along X axis
+	 */
+
+	size_t Ni() const override;
+
+	/**
+	 * @return Number of points along Y axis
+	 */
+
+	size_t Nj() const override;
+
+	/**
+	 *
+	 * @return  Grid size
+	 */
+
+	size_t Size() const override;
+
+	/**
+	 * @return Distance between two points in X axis in degrees
+	 */
+
+	double Di() const override;
+
+	/**
+	 * @return Distance between two points in Y axis in degrees
+	 */
+
+	double Dj() const override;
+
+	void Ni(size_t theNi);
+	void Nj(size_t theNj);
+
+	void Di(double theDi);
+	void Dj(double theDj);
+
+	point BottomLeft() const override;
+	point TopRight() const override;
+	point BottomRight() const;
+	point TopLeft() const;
+
+	void BottomLeft(const point& theBottomLeft);
+	void TopLeft(const point& theTopLeft);
+
+	point FirstPoint() const;
+	point LastPoint() const;
+
+	bool operator==(const grid& other) const;
+	bool operator!=(const grid& other) const;
+
+	void PackedData(std::unique_ptr<packed_data> thePackedData);
+	packed_data& PackedData();
+
+	bool Swap(HPScanningMode newScanningMode) override;
+
+	point XY(const point& latlon) const override;
+	point LatLon(size_t locationIndex) const override;
+
+	lambert_conformal_grid* Clone() const override;
+
+	void Orientation(double theOrientation);
+	double Orientation() const;
+
+	void StandardParallel1(double theStandardParallel1);
+	double StandardParallel1() const;
+
+	void StandardParallel2(double theStandardParallel2);
+	double StandardParallel2() const;
+
+	bool UVRelativeToGrid() const;
+	void UVRelativeToGrid(bool theUVRelativeToGrid);
+
+	OGRSpatialReference SpatialReference() const;
+
+   private:
+	bool EqualsTo(const lambert_conformal_grid& other) const;
+	bool SetCoordinates() const;
+
+	point itsBottomLeft;
+	point itsTopLeft;
+
+	double itsDi;
+	double itsDj;
+
+	size_t itsNi;
+	size_t itsNj;
+
+	double itsOrientation;
+	double itsStandardParallel1;
+	mutable double itsStandardParallel2;
+
+	point itsSouthPole;
+	bool itsUVRelativeToGrid;
+
+	mutable std::unique_ptr<OGRCoordinateTransformation> itsXYToLatLonTransformer;
+	mutable std::unique_ptr<OGRCoordinateTransformation> itsLatLonToXYTransformer;
+	mutable std::unique_ptr<OGRSpatialReference> itsSpatialReference;
+};
+
+inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid& ob) { return ob.Write(file); }
+}  // namespace himan
+
+#endif /* LAMBERT_CONFORMAL_GRID_H */

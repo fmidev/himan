@@ -7,6 +7,7 @@
 
 #include "grib.h"
 #include "grid.h"
+#include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
@@ -1156,6 +1157,35 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			rg->LastPoint(point(X1, Y1));
 
 			rg->Data(matrix<double>(ni, nj, 1, kFloatMissing));
+
+			break;
+		}
+		case 3:
+		{
+			newGrid = unique_ptr<lambert_conformal_grid>(
+			    new lambert_conformal_grid(m, point(itsGrib->Message().X0(), itsGrib->Message().Y0())));
+			lambert_conformal_grid* const lccg = dynamic_cast<lambert_conformal_grid*>(newGrid.get());
+
+			lccg->Ni(static_cast<size_t>(itsGrib->Message().SizeX()));
+			lccg->Nj(static_cast<size_t>(itsGrib->Message().SizeY()));
+
+			lccg->ScanningMode(m);
+			lccg->Orientation(itsGrib->Message().GridOrientation());
+			lccg->Di(itsGrib->Message().XLengthInMeters());
+			lccg->Dj(itsGrib->Message().YLengthInMeters());
+
+			lccg->StandardParallel1(itsGrib->Message().GetLongKey("Latin1InDegrees"));
+			lccg->StandardParallel2(itsGrib->Message().GetLongKey("Latin2InDegrees"));
+			lccg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
+
+			long earthIsOblate = itsGrib->Message().GetLongKey("earthIsOblate");
+
+			if (earthIsOblate)
+			{
+				itsLogger->Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
+			}
+
+			lccg->Data(matrix<double>(lccg->Ni(), lccg->Nj(), 1, kFloatMissing));
 
 			break;
 		}

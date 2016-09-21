@@ -6,6 +6,7 @@
  */
 
 #include "querydata.h"
+#include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger_factory.h"
 #include "point_list.h"
@@ -21,6 +22,7 @@
 
 #endif
 
+#include <NFmiGdalArea.h>
 #include <NFmiLatLonArea.h>
 #include <NFmiQueryData.h>
 #include <NFmiRotatedLatLonArea.h>
@@ -344,6 +346,22 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			                                    g->Di() * static_cast<double>((g->Ni() - 1)),
 			                                    g->Dj() * static_cast<double>((g->Nj() - 1)), g->Orientation());
 
+			break;
+		}
+
+		case kLambertConformalConic:
+		{
+			lambert_conformal_grid* const g = dynamic_cast<lambert_conformal_grid*>(info.Grid());
+
+			std::stringstream ss;
+			ss << "GEOGCS[\"MEPS\","
+			   << " DATUM[\"unknown\","
+			   << "     SPHEROID[\"Sphere\",6367470,0]],"
+			   << " PRIMEM[\"Greenwich\",0],"
+			   << " UNIT[\"degree\",0.0174532925199433]]";
+
+			new NFmiGdalArea(ss.str(), g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
+			                 g->Dj() * (static_cast<double>(g->Nj()) - 1));
 			break;
 		}
 

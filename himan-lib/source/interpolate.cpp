@@ -422,12 +422,14 @@ bool InterpolateArea(info& target, std::vector<info_t> sources, bool useCudaForI
 			case kLatitudeLongitude:
 			case kRotatedLatitudeLongitude:
 			case kStereographic:
+			case kLambertConformalConic:
 			{
 				switch (targetType)
 				{
 					case kLatitudeLongitude:
 					case kRotatedLatitudeLongitude:
 					case kStereographic:
+					case kLambertConformalConic:
 						useCudaForInterpolation ? InterpolateAreaGPU(target, *source, targetData)
 						                        : InterpolateAreaCPU(target, *source, targetData);
 						break;

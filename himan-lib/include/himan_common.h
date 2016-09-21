@@ -336,13 +336,14 @@ enum HPGridType
 	kAzimuthalEquidistant,
 	kRotatedLatitudeLongitude,
 	kReducedGaussian,
-	kPointList
+	kPointList,
+	kLambertConformalConic
 };
 
 const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
     ba::map_list_of(kUnknownGridType, "unknown grid type")(kLatitudeLongitude, "ll")(kStereographic, "polster")(
-        kAzimuthalEquidistant, "azimuthal")(kRotatedLatitudeLongitude, "rll")(kReducedGaussian, "rgg")(kPointList,
-                                                                                                       "pointlist");
+        kAzimuthalEquidistant, "azimuthal")(kRotatedLatitudeLongitude, "rll")(kReducedGaussian, "rgg")(
+        kPointList, "pointlist")(kLambertConformalConic, "lcc");
 
 enum HPDatabaseType
 {
