@@ -51,13 +51,13 @@ class lambert_conformal_grid : public grid
 	size_t Size() const override;
 
 	/**
-	 * @return Distance between two points in X axis in degrees
+	 * @return Distance between two points in X axis in meters
 	 */
 
 	double Di() const override;
 
 	/**
-	 * @return Distance between two points in Y axis in degrees
+	 * @return Distance between two points in Y axis in meters
 	 */
 
 	double Dj() const override;

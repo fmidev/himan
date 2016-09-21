@@ -258,11 +258,11 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 		}
 	}
 
-	const double jIndex = floor(static_cast<double>(locationIndex / itsNi));
-	const double iIndex = fmod(static_cast<double>(locationIndex), itsNi);
+	const size_t jIndex = static_cast<size_t> (floor(static_cast<double>(locationIndex / itsNi)));
+	const size_t iIndex = static_cast<size_t> (locationIndex % itsNi);
 
-	double x = iIndex * Di();
-	double y = jIndex * Dj();
+	double x = static_cast<double> (iIndex) * Di();
+	double y = static_cast<double> (jIndex) * Dj();
 
 	if (itsScanningMode == kTopLeft)
 	{
