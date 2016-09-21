@@ -106,6 +106,9 @@ class lambert_conformal_grid : public grid
 
 	OGRSpatialReference SpatialReference() const;
 
+	point SouthPole() const;
+	void SouthPole(const point& theSouthPole);
+
    private:
 	bool EqualsTo(const lambert_conformal_grid& other) const;
 	bool SetCoordinates() const;

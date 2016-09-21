@@ -6,6 +6,7 @@
  */
 
 #include "json_parser.h"
+#include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
@@ -1007,7 +1008,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			sg->BottomLeft(coordinates.first);
 			sg->TopRight(coordinates.second);
 		}
-		else if (geominfo["prjn_id"] == "5")
+		else if (geominfo["prjn_id"] == "6")
 		{
 			g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
@@ -1047,6 +1048,52 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 				gg->TopRight(last);
 				gg->TopLeft(point(first.X(), last.Y()));
 				gg->BottomRight(point(last.X(), first.Y()));
+			}
+			else
+			{
+				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
+			}
+		}
+		else if (geominfo["prjn_id"] == "5")
+		{
+			g = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid);
+			lambert_conformal_grid* const lcg = dynamic_cast<lambert_conformal_grid*>(g.get());
+
+			lcg->Ni(boost::lexical_cast<int>(geominfo["ni"]));
+			lcg->Nj(boost::lexical_cast<int>(geominfo["nj"]));
+
+			lcg->Di(boost::lexical_cast<double>(geominfo["di"]));
+			lcg->Dj(boost::lexical_cast<double>(geominfo["dj"]));
+
+			lcg->Orientation(boost::lexical_cast<double>(geominfo["orientation"]));
+
+			lcg->StandardParallel1(boost::lexical_cast<double>(geominfo["latin1"]));
+
+			if (!geominfo["latin2"].empty())
+			{
+				lcg->StandardParallel1(boost::lexical_cast<double>(geominfo["latin2"]));
+			}
+
+			if (!geominfo["south_pole_lon"].empty())
+			{
+				const point sp(boost::lexical_cast<double>(geominfo["south_pole_lon"]),
+				               boost::lexical_cast<double>(geominfo["south_pole_lat"]));
+
+				lcg->SouthPole(sp);
+			}
+
+			const point first(boost::lexical_cast<double>(geominfo["first_point_lon"]),
+			                  boost::lexical_cast<double>(geominfo["first_point_lat"]));
+
+			if (geominfo["scanning_mode"] == "+x-y")
+			{
+				lcg->ScanningMode(kTopLeft);
+				lcg->TopLeft(first);
+			}
+			else if (geominfo["scanning_mode"] == "+x+y")
+			{
+				lcg->ScanningMode(kBottomLeft);
+				lcg->BottomLeft(first);
 			}
 			else
 			{

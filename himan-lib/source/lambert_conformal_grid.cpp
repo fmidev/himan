@@ -20,7 +20,7 @@ lambert_conformal_grid::lambert_conformal_grid()
       itsOrientation(kHPMissingValue),
       itsStandardParallel1(kHPMissingValue),
       itsStandardParallel2(kHPMissingValue),
-      itsSouthPole(),
+      itsSouthPole(0, -90),
       itsUVRelativeToGrid(true)
 {
 	itsLogger = logger_factory::Instance()->GetLog("lambert_conformal_grid");
@@ -37,7 +37,7 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, p
       itsOrientation(kHPMissingValue),
       itsStandardParallel1(kHPMissingValue),
       itsStandardParallel2(kHPMissingValue),
-      itsSouthPole(),
+      itsSouthPole(0, -90),
       itsUVRelativeToGrid(true)
 {
 	itsLogger = logger_factory::Instance()->GetLog("lambert_conformal_grid");
@@ -318,6 +318,8 @@ bool lambert_conformal_grid::Swap(HPScanningMode newScanningMode)
 	return true;
 }
 
+void lambert_conformal_grid::SouthPole(const point& theSouthPole) { itsSouthPole = theSouthPole; }
+point lambert_conformal_grid::SouthPole() const { return itsSouthPole; }
 void lambert_conformal_grid::Ni(size_t theNi) { itsNi = theNi; }
 void lambert_conformal_grid::Nj(size_t theNj) { itsNj = theNj; }
 size_t lambert_conformal_grid::Ni() const { return itsNi; }
@@ -457,7 +459,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 	// Build OGR presentation of LCC
 	std::stringstream ss;
 
-	if (itsStandardParallel1 == kHPMissingValue || itsOrientation == kHPMissingValue)
+	if (itsStandardParallel1 == kHPMissingValue || itsOrientation == kHPMissingValue || FirstPoint() == point())
 	{
 		// itsLogger->Error("First standard latitude or orientation missing");
 		return false;

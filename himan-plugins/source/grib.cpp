@@ -1432,10 +1432,48 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			break;
 		}
-		default:
-			throw runtime_error(ClassName() + ": invalid projection while writing grib: " +
-			                    boost::lexical_cast<string>(anInfo.Grid()->Type()));
+		case kLambertConformalConic:
+		{
+			lambert_conformal_grid* const lccg = dynamic_cast<lambert_conformal_grid*>(anInfo.Grid());
+
+			long gridType = 3;  // Grib 1
+
+			if (edition == 2)
+			{
+				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+			}
+
+			itsGrib->Message().GridType(gridType);
+
+			itsGrib->Message().X0(lccg->FirstPoint().X());
+			itsGrib->Message().Y0(lccg->FirstPoint().Y());
+
+			itsGrib->Message().GridOrientation(lccg->Orientation());
+
+			itsGrib->Message().XLengthInMeters(lccg->Di());
+			itsGrib->Message().YLengthInMeters(lccg->Dj());
+
+			itsGrib->Message().SizeX(static_cast<long>(lccg->Ni()));
+			itsGrib->Message().SizeY(static_cast<long>(lccg->Nj()));
+
+			itsGrib->Message().SetLongKey("Latin1InDegrees", static_cast<long>(lccg->StandardParallel1()));
+
+			if (lccg->StandardParallel2() != kHPMissingValue)
+			{
+				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
+			}
+
+			itsGrib->Message().SetLongKey("earthIsOblate", 0);
+
+			scmode = lccg->ScanningMode();
+
 			break;
+		}
+
+		default:
+			itsLogger->Fatal("Invalid projection while writing grib: " +
+			                 boost::lexical_cast<string>(anInfo.Grid()->Type()));
+			exit(1);
 	}
 
 	bool iNegative, jPositive;
