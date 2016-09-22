@@ -8,7 +8,6 @@
 #include "radon.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
-#include "unistd.h"  // getuid())
 #include "util.h"
 #include <sstream>
 #include <thread>
@@ -26,13 +25,8 @@ radon::radon() : itsInit(false), itsRadonDB()
 	call_once(oflag, [&]() {
 		PoolMaxWorkers(MAX_WORKERS);
 
-		uid_t uid = getuid();
-
-		if (uid == 1459)  // weto
-		{
-			NFmiRadonDBPool::Instance()->Username("wetodb");
-			NFmiRadonDBPool::Instance()->Password("3loHRgdio");
-		}
+		NFmiRadonDBPool::Instance()->Username("wetodb");
+		NFmiRadonDBPool::Instance()->Password("3loHRgdio");
 	});
 }
 
@@ -246,8 +240,9 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	if (levelinfo.empty())
 	{
-		itsLogger->Error("Level information not found from radon for level " + resultInfo.Level().Name() +
-		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger->Error("Level information not found from radon for level " +
+		                 HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+		                 boost::lexical_cast<string>(resultInfo.Producer().Id()));
 		return false;
 	}
 

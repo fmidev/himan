@@ -8,7 +8,6 @@
 #include "neons.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
-#include "unistd.h"  // getuid())
 #include "util.h"
 #include <sstream>
 #include <thread>
@@ -26,14 +25,9 @@ neons::neons() : itsInit(false), itsNeonsDB()
 	call_once(oflag, [&]() {
 		PoolMaxWorkers(MAX_WORKERS);
 
-		uid_t uid = getuid();
-
-		if (uid == 1459)  // weto
-		{
-			NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
-			NFmiNeonsDBPool::Instance()->Username("wetodb");
-			NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
-		}
+		NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+		NFmiNeonsDBPool::Instance()->Username("wetodb");
+		NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
 	});
 }
 
