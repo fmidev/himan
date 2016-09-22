@@ -1023,7 +1023,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 				longitudes.push_back(boost::lexical_cast<int>(l));
 			}
 
-			gg->NumberOfLongitudesAlongParallels(longitudes);
+			gg->NumberOfPointsAlongParallels(longitudes);
 
 			assert(boost::lexical_cast<size_t>(geominfo["n"]) * 2 == longitudes.size());
 

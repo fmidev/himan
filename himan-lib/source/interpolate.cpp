@@ -48,7 +48,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 {
 	reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(source.Grid());
 
-	std::vector<int> numOfLongitudesAlongParallels = gg->NumberOfLongitudesAlongParallels();
+	std::vector<int> numOfPointsAlongParallels = gg->NumberOfPointsAlongParallels();
 
 	double offset = 0;
 
@@ -89,7 +89,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 		double xlen = tr.X() - bl.X();
 		if (xlen < 0) xlen += 360;
 
-		const int numEquatorLongitudes = gg->NumberOfLongitudesAlongParallels()[gg->N()];
+		const int numEquatorLongitudes = gg->NumberOfPointsAlongParallels()[gg->N()];
 
 		baseGrid->Di(xlen / numEquatorLongitudes);
 		baseGrid->Dj((tr.Y() - bl.Y()) / static_cast<double>(gg->Nj()));
@@ -135,7 +135,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 
 			const int np_y = static_cast<int> (rint(gg_y)); // nearest grid point in y direction
 
-			const int numCurrentLongitudes = numOfLongitudesAlongParallels[static_cast<size_t> (np_y)]; // number of longitudes for the current parallel
+			const int numCurrentLongitudes = numOfPointsAlongParallels[static_cast<size_t> (np_y)]; // number of longitudes for the current parallel
 			assert(numCurrentLongitudes > 0);
 
 			const double di = (lonspan / (numCurrentLongitudes-1)); // longitude distance between two gaussian points in degrees for the current parallel
@@ -202,9 +202,9 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 				continue;
 			}
 
-			const int numUpperLongitudes = numOfLongitudesAlongParallels[static_cast<size_t>(
+			const int numUpperLongitudes = numOfPointsAlongParallels[static_cast<size_t>(
 			    static_cast<int>(floor(gg_y)))];  // number of longitudes for the upper parallel
-			const int numLowerLongitudes = numOfLongitudesAlongParallels[static_cast<size_t>(
+			const int numLowerLongitudes = numOfPointsAlongParallels[static_cast<size_t>(
 			    static_cast<int>(ceil(gg_y)))];  // number of longitudes for the lower parallel
 			assert(numUpperLongitudes > 0 && numLowerLongitudes > 0);
 
