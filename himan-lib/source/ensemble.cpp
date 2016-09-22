@@ -122,4 +122,10 @@ std::vector<double> ensemble::SortedValues() const
 	return v;
 }
 
+double ensemble::Mean() const
+{
+	std::vector<double> v = Values();
+	return std::accumulate(v.begin(),v.end(),0.0)/static_cast<double>(v.size());
+}
+
 }  // namespace himan
