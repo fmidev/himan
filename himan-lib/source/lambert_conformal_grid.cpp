@@ -262,7 +262,7 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 		}
 	}
 
-	const size_t jIndex = static_cast<size_t>(floor(static_cast<double>(locationIndex / itsNi)));
+	const size_t jIndex = static_cast<size_t>(locationIndex / itsNi);
 	const size_t iIndex = static_cast<size_t>(locationIndex % itsNi);
 
 	double x = static_cast<double>(iIndex) * Di();
@@ -528,6 +528,8 @@ bool lambert_conformal_grid::SetCoordinates() const
 		itsLogger->Error("Error in area definition");
 		return false;
 	}
+
+	delete lccll;
 
 	lccll = itsSpatialReference->CloneGeogCS();
 
