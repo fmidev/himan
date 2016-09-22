@@ -76,6 +76,7 @@ std::ostream& level::Write(std::ostream& file) const
 	file << "__itsType__ " << HPLevelTypeToString.at(itsType) << std::endl;
 	file << "__itsIndex__ " << itsIndex << std::endl;
 	file << "__itsValue__ " << itsValue << std::endl;
+	file << "__itsValue2__ " << itsValue2 << std::endl;
 	file << "__itsName__ " << itsName << std::endl;
 
 	return file;

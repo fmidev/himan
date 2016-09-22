@@ -201,7 +201,8 @@ void BindEnum(lua_State* L)
 	                             value("kTopOfAtmosphere", kTopOfAtmosphere), value("kPressure", kPressure),
 	                             value("kMeanSea", kMeanSea), value("kAltitude", kAltitude), value("kHeight", kHeight),
 	                             value("kHybrid", kHybrid), value("kGndLayer", kGndLayer), value("kDepth", kDepth),
-	                             value("kEntireAtmosphere", kEntireAtmosphere), value("kEntireOcean", kEntireOcean)],
+	                             value("kEntireAtmosphere", kEntireAtmosphere), value("kEntireOcean", kEntireOcean),
+	                             value("kMaximumThetaE", kMaximumThetaE), value("kHeightLayer", kHeightLayer)],
 	     class_<HPTimeResolution>("HPTimeResolution")
 	         .enum_(
 	             "constants")[value("kUnknownTimeResolution", kUnknownTimeResolution),
@@ -210,9 +211,9 @@ void BindEnum(lua_State* L)
 	         .enum_("constants")[value("kUnknownFile", kUnknownFile), value("kGRIB1", kGRIB1), value("kGRIB2", kGRIB2),
 	                             value("kGRIB", kGRIB), value("kQueryData", kQueryData), value("kNetCDF", kNetCDF)],
 	     class_<HPScanningMode>("HPScanningMode")
-	         .enum_("constants")[value("kUnknownScanningMode", kUnknownScanningMode), value("kTopLeft", himan::kTopLeft),
-	                             value("kTopRight", himan::kTopRight), value("kBottomLeft", himan::kBottomLeft),
-	                             value("kBottomRight", himan::kBottomRight)],
+	         .enum_("constants")[value("kUnknownScanningMode", kUnknownScanningMode),
+	                             value("kTopLeft", himan::kTopLeft), value("kTopRight", himan::kTopRight),
+	                             value("kBottomLeft", himan::kBottomLeft), value("kBottomRight", himan::kBottomRight)],
 	     class_<HPAggregationType>("HPAggregationType")
 	         .enum_("constants")[value("kUnknownAggregationType", kUnknownAggregationType), value("kAverage", kAverage),
 	                             value("kAccumulation", kAccumulation), value("kMaximum", kMaximum),
@@ -690,10 +691,10 @@ void BindLib(lua_State* L)
 	              .def("SetTopRight", LUA_MEMFN(void, reduced_gaussian_grid, BottomLeft, const point&))
 	              .def("GetFirstPoint", LUA_CMEMFN(point, reduced_gaussian_grid, FirstPoint, void))
 	              .def("GetLastPoint", LUA_CMEMFN(point, reduced_gaussian_grid, LastPoint, void))
-	          //.def("GetNumberOfLongitudesAlongParallels", LUA_CMEMFN(double, reduced_gaussian_grid,
-	          //NumberOfLongitudesAlongParallels, void))
-	          //.def("SetNumberOfLongitudesAlongParallels", LUA_MEMFN(void, reduced_gaussian_grid,
-	          //NumberOfLongitudesAlongParallels, std::vector<int>))
+	          //	.def("GetNumberOfPointsAlongParallels", LUA_CMEMFN(double, reduced_gaussian_grid,
+	          // NumberOfPointsAlongParallels, void))
+	          //.def("SetNumberOfPointsAlongParallels", LUA_MEMFN(void, reduced_gaussian_grid,
+	          // NumberOfPointsAlongParallels, std::vector<int>))
 	          ,
 	          class_<matrix<double>>("matrix").def(constructor<size_t, size_t, size_t, double>())
 	          /*.def("Size", &matrix<double>::Size)
@@ -731,6 +732,7 @@ void BindLib(lua_State* L)
 	              .def("SetAggregation", LUA_MEMFN(void, param, Aggregation, const aggregation&)),
 	          class_<level>("level")
 	              .def(constructor<HPLevelType, double>())
+	              .def(constructor<HPLevelType, double, double>())
 	              .def("ClassName", &level::ClassName)
 	              .def(tostring(self))
 	              .def("GetType", LUA_CMEMFN(HPLevelType, level, Type, void))
@@ -930,7 +932,8 @@ object VectorToTable(const std::vector<double>& vec)
 	{
 		ret[++i] = val;
 
-		/*		"Lua tables make no distinction between a table value being nil and the corresponding key not existing in
+		/*		"Lua tables make no distinction between a table value being nil and the corresponding key not existing
+		   in
 		   the table"
 		        if (val == kFloatMissing)
 		        {

@@ -764,6 +764,13 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
 				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
 			}
+
+			if (options.level.Value2() != l.Value2())
+			{
+				itsLogger->Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
+				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
+			}
+
 			if (forceCaching)
 			{
 				dataIsValid = false;
@@ -1158,7 +1165,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(newGrid.get());
 
 			gg->N(static_cast<size_t>(itsGrib->Message().GetLongKey("N")));
-			gg->NumberOfLongitudesAlongParallels(itsGrib->Message().PL());
+			gg->NumberOfPointsAlongParallels(itsGrib->Message().PL());
 			gg->Nj(static_cast<size_t>(itsGrib->Message().SizeY()));
 			gg->ScanningMode(m);
 
@@ -1389,7 +1396,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().SetLongKey("N", static_cast<long>(gg->N()));
 
-			itsGrib->Message().PL(gg->NumberOfLongitudesAlongParallels());
+			itsGrib->Message().PL(gg->NumberOfPointsAlongParallels());
 
 			scmode = gg->ScanningMode();
 
