@@ -225,7 +225,10 @@ point lambert_conformal_grid::XY(const point& latlon) const
 	double projX = latlon.X(), projY = latlon.Y();
 	assert(itsLatLonToXYTransformer);
 
-	// 1. Transform latlon to projected coordinates
+	// 1. Transform latlon to projected coordinates.
+	// Projected coordinates are in meters, with false easting and
+	// false northing applied so that point 0,0 is top left or bottom left,
+	// depending on the scanning mode.
 
 	if (!itsLatLonToXYTransformer->Transform(1, &projX, &projY))
 	{
@@ -234,11 +237,12 @@ point lambert_conformal_grid::XY(const point& latlon) const
 		return point();
 	}
 
-	// 2. Transform projected coordinates to grid xy
-	//    First grid point projected coordinates are 0,0
+	// 2. Transform projected coordinates (meters) to grid xy (no unit).
+	// Projected coordinates run from 0 ... area width and 0 ... area height.
+	// Grid point coordinates run from 0 ... ni and 0 ... nj.
 
-	double x = (projX / itsDi);
-	double y = (projY / itsDj);
+	const double x = (projX / itsDi);
+	const double y = (projY / itsDj);
 
 	return point(x, y);
 }
@@ -258,11 +262,11 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 		}
 	}
 
-	const size_t jIndex = static_cast<size_t> (floor(static_cast<double>(locationIndex / itsNi)));
-	const size_t iIndex = static_cast<size_t> (locationIndex % itsNi);
+	const size_t jIndex = static_cast<size_t>(floor(static_cast<double>(locationIndex / itsNi)));
+	const size_t iIndex = static_cast<size_t>(locationIndex % itsNi);
 
-	double x = static_cast<double> (iIndex) * Di();
-	double y = static_cast<double> (jIndex) * Dj();
+	double x = static_cast<double>(iIndex) * Di();
+	double y = static_cast<double>(jIndex) * Dj();
 
 	if (itsScanningMode == kTopLeft)
 	{
