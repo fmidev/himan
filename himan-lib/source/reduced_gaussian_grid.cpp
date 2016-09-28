@@ -14,7 +14,7 @@ using namespace himan;
 reduced_gaussian_grid::reduced_gaussian_grid()
     : grid(kIrregularGrid, kReducedGaussian),
       itsN(kHPMissingInt),
-      itsNumberOfLongitudesAlongParallels(),
+      itsNumberOfPointsAlongParallels(),
       itsNj(kHPMissingInt),
       itsBottomLeft(),
       itsTopRight(),
@@ -28,7 +28,7 @@ reduced_gaussian_grid::reduced_gaussian_grid()
 reduced_gaussian_grid::reduced_gaussian_grid(const reduced_gaussian_grid& other)
     : grid(other),
       itsN(other.itsN),
-      itsNumberOfLongitudesAlongParallels(other.itsNumberOfLongitudesAlongParallels),
+      itsNumberOfPointsAlongParallels(other.itsNumberOfPointsAlongParallels),
       itsNj(other.itsNj),
       itsBottomLeft(other.itsBottomLeft),
       itsTopRight(other.itsTopRight),
@@ -43,21 +43,17 @@ int reduced_gaussian_grid::N() const { return itsN; }
 void reduced_gaussian_grid::N(int theN) { itsN = theN; }
 size_t reduced_gaussian_grid::Size() const
 {
-	assert(itsNumberOfLongitudesAlongParallels.size() == 2 * static_cast<size_t>(itsN));
+	assert(itsNumberOfPointsAlongParallels.size() == 2 * static_cast<size_t>(itsN));
 
-	return std::accumulate(itsNumberOfLongitudesAlongParallels.begin(), itsNumberOfLongitudesAlongParallels.end(), 0);
+	return std::accumulate(itsNumberOfPointsAlongParallels.begin(), itsNumberOfPointsAlongParallels.end(), 0);
 }
 
-std::vector<int> reduced_gaussian_grid::NumberOfLongitudesAlongParallels() const
+std::vector<int> reduced_gaussian_grid::NumberOfPointsAlongParallels() const { return itsNumberOfPointsAlongParallels; }
+void reduced_gaussian_grid::NumberOfPointsAlongParallels(std::vector<int> theNumberOfPointsAlongParallels)
 {
-	return itsNumberOfLongitudesAlongParallels;
-}
-
-void reduced_gaussian_grid::NumberOfLongitudesAlongParallels(std::vector<int> theNumberOfLongitudesAlongParallels)
-{
-	assert((itsN == kHPMissingInt && itsNumberOfLongitudesAlongParallels.size() == 0) ||
-	       static_cast<size_t>(itsN * 2) == theNumberOfLongitudesAlongParallels.size());
-	itsNumberOfLongitudesAlongParallels = theNumberOfLongitudesAlongParallels;
+	assert((itsN == kHPMissingInt && itsNumberOfPointsAlongParallels.size() == 0) ||
+	       static_cast<size_t>(itsN * 2) == theNumberOfPointsAlongParallels.size());
+	itsNumberOfPointsAlongParallels = theNumberOfPointsAlongParallels;
 }
 
 point reduced_gaussian_grid::FirstPoint() const
@@ -92,9 +88,9 @@ std::ostream& reduced_gaussian_grid::Write(std::ostream& file) const
 
 	file << "__itsN__ " << itsN << std::endl;
 	file << "__itsNj__ " << itsNj << std::endl;
-	file << "__itsNumberOfLongitudesAlongParallels__";
+	file << "__itsNumberOfPointsAlongParallels__";
 
-	for (auto& num : itsNumberOfLongitudesAlongParallels)
+	for (auto& num : itsNumberOfPointsAlongParallels)
 	{
 		file << " " << num;
 	}
@@ -119,7 +115,7 @@ point reduced_gaussian_grid::LatLon(size_t x, size_t y) const
 	lonspan = (lonspan < 0) ? lonspan + 360 : lonspan;
 	assert(lonspan >= 0 && lonspan <= 360);
 
-	const size_t currentNumOfLongitudes = itsNumberOfLongitudesAlongParallels[y];
+	const size_t currentNumOfLongitudes = itsNumberOfPointsAlongParallels[y];
 	const double di = (lonspan / (static_cast<double>(currentNumOfLongitudes) - 1.));
 	const double dj = Dj();
 
@@ -137,9 +133,9 @@ point reduced_gaussian_grid::LatLon(size_t x, size_t y) const
 point reduced_gaussian_grid::LatLon(size_t theLocationIndex) const
 {
 	assert(itsNj > 0);
-	assert(itsNumberOfLongitudesAlongParallels.size() > 0);
+	assert(itsNumberOfPointsAlongParallels.size() > 0);
 
-	if (theLocationIndex < static_cast<size_t>(itsNumberOfLongitudesAlongParallels[0]))
+	if (theLocationIndex < static_cast<size_t>(itsNumberOfPointsAlongParallels[0]))
 	{
 		return LatLon(theLocationIndex, 0);
 	}
@@ -148,7 +144,7 @@ point reduced_gaussian_grid::LatLon(size_t theLocationIndex) const
 
 	for (size_t i = 0; i < itsNj; i++)
 	{
-		int numLongitudes = itsNumberOfLongitudesAlongParallels[i];
+		int numLongitudes = itsNumberOfPointsAlongParallels[i];
 
 		if (sum + numLongitudes > theLocationIndex)
 		{
@@ -167,7 +163,7 @@ point reduced_gaussian_grid::LatLon(size_t theLocationIndex) const
 	return LatLon(x, y);
 }
 
-point reduced_gaussian_grid::LatLonToGridPoint(const himan::point& latlon) const
+point reduced_gaussian_grid::XY(const himan::point& latlon) const
 {
 	double offset = 0;
 
@@ -189,8 +185,8 @@ point reduced_gaussian_grid::LatLonToGridPoint(const himan::point& latlon) const
 		return point();
 	}
 
-	const int numCurrentLongitudes = itsNumberOfLongitudesAlongParallels[static_cast<size_t>(
-	    rint(y))];  // number of longitudes for the nearest parallel
+	const int numCurrentLongitudes =
+	    itsNumberOfPointsAlongParallels[static_cast<size_t>(rint(y))];  // number of longitudes for the nearest parallel
 
 	assert(numCurrentLongitudes > 0);
 
@@ -221,7 +217,7 @@ double reduced_gaussian_grid::Value(size_t x, size_t y) const
 
 	while (i < itsNj && i <= (y - 1))
 	{
-		sum += itsNumberOfLongitudesAlongParallels[i];
+		sum += itsNumberOfPointsAlongParallels[i];
 		i++;
 	}
 
@@ -250,7 +246,7 @@ double reduced_gaussian_grid::Dj() const
 size_t reduced_gaussian_grid::Ni() const
 {
 	// no bound checking ...
-	return itsNumberOfLongitudesAlongParallels[itsN];
+	return itsNumberOfPointsAlongParallels[itsN];
 }
 
 void reduced_gaussian_grid::Nj(size_t theNj) { itsNj = theNj; }
@@ -352,18 +348,18 @@ bool reduced_gaussian_grid::EqualsTo(const reduced_gaussian_grid& other) const
 		return false;
 	}
 
-	if (itsNumberOfLongitudesAlongParallels.size() != other.NumberOfLongitudesAlongParallels().size())
+	if (itsNumberOfPointsAlongParallels.size() != other.NumberOfPointsAlongParallels().size())
 	{
-		itsLogger->Trace("NumberOfLongitudesAlongParallels size does not match: " +
-		                 boost::lexical_cast<std::string>(itsNumberOfLongitudesAlongParallels.size()) + " vs " +
-		                 boost::lexical_cast<std::string>(other.NumberOfLongitudesAlongParallels().size()));
+		itsLogger->Trace("NumberOfPointsAlongParallels size does not match: " +
+		                 boost::lexical_cast<std::string>(itsNumberOfPointsAlongParallels.size()) + " vs " +
+		                 boost::lexical_cast<std::string>(other.NumberOfPointsAlongParallels().size()));
 		return false;
 	}
 	else
 	{
-		for (size_t i = 0; i < itsNumberOfLongitudesAlongParallels.size(); i++)
+		for (size_t i = 0; i < itsNumberOfPointsAlongParallels.size(); i++)
 		{
-			if (itsNumberOfLongitudesAlongParallels[i] != other.NumberOfLongitudesAlongParallels()[i])
+			if (itsNumberOfPointsAlongParallels[i] != other.NumberOfPointsAlongParallels()[i])
 			{
 				return false;
 			}

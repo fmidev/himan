@@ -78,10 +78,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		optsStr += requestedParams[i].Name() + ",";
 	}
 
-	optsStr = optsStr.substr(0, optsStr.size() - 1);
-
-	optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " +
-	           boost::lexical_cast<string>(requestedLevel.Value());
+	optsStr = optsStr.substr(0, optsStr.size() - 1) + " level: " + static_cast<std::string>(requestedLevel);
 
 	if (static_cast<int>(requestedType.Type()) > 2)
 	{
@@ -113,7 +110,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		producer sourceProd(config->SourceProducer(prodNum));
 
-		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
+		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure &&
+		                            requestedLevel.Type() != kHeightLayer))
 		{
 			newLevel = LevelTransform(config, sourceProd, requestedParam, requestedLevel);
 
@@ -160,8 +158,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
 			           boost::lexical_cast<string>(requestedTime.Step());
 			optsStr += " param: " + requestedParam.Name();
-			optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " +
-			           boost::lexical_cast<string>(requestedLevel.Value());
+			optsStr += " level: " + static_cast<string>(requestedLevel);
 
 			if (static_cast<int>(requestedType.Type()) > 2)
 			{

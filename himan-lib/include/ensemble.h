@@ -53,6 +53,9 @@ class ensemble
 	/// @brief Returns the current values of the ensemble sorted in increasing order
 	std::vector<double> SortedValues() const;
 
+	/// @brief Returns the mean value of the ensemble
+	double Mean() const;
+
 	std::string ClassName() const;
 
 	size_t Size() const;

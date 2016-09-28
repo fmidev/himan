@@ -21,8 +21,10 @@ Requires: himan-bin >= 16.6.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 16.9.8
-Requires: libsmartmet-newbase >= 16.5.4
 Requires: libfmidb >= 16.9.8
+Requires: libsmartmet-newbase >= 16.9.20
+
+BuildRequires: gdal-devel
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
@@ -31,7 +33,7 @@ BuildRequires: libfmigrib-devel >= 16.9.8
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
-BuildRequires: libsmartmet-newbase-devel >= 16.5.4
+BuildRequires: libsmartmet-newbase-devel >= 16.9.20
 BuildRequires: grib_api-devel >= 1.15.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0

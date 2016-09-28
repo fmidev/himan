@@ -44,8 +44,8 @@ class reduced_gaussian_grid : public grid
 	double Dj() const override;
 	bool Swap(HPScanningMode newScanningMode) override;
 
-	std::vector<int> NumberOfLongitudesAlongParallels() const;
-	void NumberOfLongitudesAlongParallels(std::vector<int> theNumberOfLongitudeAlongParallels);
+	std::vector<int> NumberOfPointsAlongParallels() const;
+	void NumberOfPointsAlongParallels(std::vector<int> theNumberOfPointsAlongParallels);
 
 	reduced_gaussian_grid* Clone() const override;
 
@@ -54,16 +54,11 @@ class reduced_gaussian_grid : public grid
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
 
+	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const;
 
 	point FirstPoint() const;
 	point LastPoint() const;
-
-	/**
-	 * @brief Return grid point location for a given latlon point
-	 */
-
-	point LatLonToGridPoint(const point& latlon) const;
 
 	/**
 	 * @brief Return value of given grid point coordinates
@@ -77,7 +72,7 @@ class reduced_gaussian_grid : public grid
 	void UpdateCoordinates() const;
 
 	int itsN;
-	std::vector<int> itsNumberOfLongitudesAlongParallels;
+	std::vector<int> itsNumberOfPointsAlongParallels;
 
 	size_t itsNj;
 

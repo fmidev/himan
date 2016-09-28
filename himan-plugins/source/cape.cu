@@ -503,7 +503,7 @@ __global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __rest
 
 		assert((T > 150 && T < 350) || T == kFloatMissing);
 		assert((P > 100 && P < 1500) || P == kFloatMissing);
-		assert((RH > 0 && RH < 102) || RH == kFloatMissing);
+		assert((RH >= 0 && RH < 102) || RH == kFloatMissing);
 
 		if (T == kFloatMissing || P == kFloatMissing || RH == kFloatMissing)
 		{

@@ -48,7 +48,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	params calculatedParams;
-	std::vector<std::string> fractiles = {"F0-", "F10-", "F25-", "F50-", "F75-", "F90-", "F100-"};
+	std::vector<std::string> fractiles = {"F0-", "F10-", "F25-", "F50-", "F75-", "F90-", "F100-", ""};
 
 	for (const std::string& fractile : fractiles)
 	{
@@ -115,6 +115,9 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			myTargetInfo->Value(sortedValues[i * (itsEnsembleSize - 1) / 100]);
 			++targetInfoIndex;
 		}
+		// write mean value to last target info index
+		myTargetInfo->ParamIndex(targetInfoIndex);
+		myTargetInfo->Value(ens.Mean());
 	}
 
 	threadedLogger->Info("[" + deviceType + "] Missing values: " +

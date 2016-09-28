@@ -75,6 +75,7 @@ includes.append('./include')
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
+includes.append('/usr/include/gdal')
 
 if os.environ.get('ORACLE_HOME') is None:
 	includes.append('/usr/include/oracle')
