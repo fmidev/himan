@@ -81,6 +81,13 @@ if have_cuda:
 
 		cufile="source/" + p + ".cu"	
                 obj='obj/cu_'+ cufile.replace(".cu","")
-                objects += env.SharedObject(obj, cufile)
+
+		if p == "unstagger":
+			nvcc = env['NVCCFLAGS'][:] # need to copy flags or changes affect all cufiles
+			nvcc.remove('-G')
+	                objects += env.SharedObject(obj, cufile, NVCCFLAGS=nvcc)
+
+		else:
+	                objects += env.SharedObject(obj, cufile)
 
 		env.SharedLibrary(target = p, source = objects)

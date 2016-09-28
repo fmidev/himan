@@ -225,7 +225,7 @@ if DEBUG:
 	env.Append(CPPDEFINES = ['DEBUG'])
 
 	# Cuda
-	env.Append(NVCCFLAGS = ['-O0','-g','-G', '-lineinfo', '--relocatable-device-code=true'])
+	env.Append(NVCCFLAGS = ['-O0','-g','-G', '-lineinfo'])
 	env.Append(NVCCDEFINES = ['DEBUG'])
 
 	build_dir = 'build/debug'
