@@ -28,11 +28,12 @@ const string itsName("visibility");
 const double defaultVis = 50000;
 const double pseudoRR = 0.13;
 const double threshold = 1.5;
+const double stLimit = 55;  // %
 
 // Required source parameters
 
 // const himan::param PFParam("PRECFORM-N");
-const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")}); 
+const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
 const himan::param RHParam("RH-PRCNT");
 const himan::param CFParam("CL-FT");
 const himan::param TParam("T-K");
@@ -102,13 +103,28 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	}
 
 	vector<double> stratus;
+	vector<double> stratusavg;
+	vector<double> stratus15;
+	vector<double> stratus45;
 	vector<double> stratus30;
 	vector<double> stratus300;
 	vector<double> lowclouds;
 	vector<double> highclouds;
+
+	// Alle 304m (1000ft) sumupilven (max) määrä [%]
 	VertMax(myTargetInfo, stratus, NParam, 0, 304);
+
+	// Lisäksi ylempää otetaan keskiarvo, jottei mahdollinen ylempi st-kerros huononna näkyvyyttä liikaa (stN kautta)
+	VertAvg(myTargetInfo, stratusavg, NParam, 15, 304);
+
+	// Alle 15m sumupilven määrä
+	VertMax(myTargetInfo, stratus15, NParam, 0, 15);
+
+	// 15-45m sumupilven määrä
+	VertMax(myTargetInfo, stratus45, NParam, 15, 45);
+
 	VertMax(myTargetInfo, stratus30, NParam, 0, 30);
-	VertMax(myTargetInfo, stratus300, NParam, 31, 300);
+	VertMax(myTargetInfo, stratus300, NParam, 15, 300);
 	VertMax(myTargetInfo, lowclouds, NParam, 60, 6000);
 	VertMax(myTargetInfo, highclouds, NParam, 6001, 12000);
 
@@ -152,6 +168,9 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double FF = FFInfo->Value();
 		double RH = RHInfo->Value();
 		double strat = stratus[i];
+		double stratavg = stratusavg[i];
+		double strat15 = stratus15[i];
+		double strat45 = stratus45[i];
 		double strat30 = stratus30[i];
 		double strat300 = stratus300[i];
 		double lowC = lowclouds[i];
@@ -182,6 +201,9 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		assert(T125 > 200);
 
 		assert(strat <= 1.0);
+		assert(stratavg <= 1.0);
+		assert(strat15 <= 1.0);
+		assert(strat45 <= 1.0);
 		assert(strat30 <= 1.0);
 		assert(strat300 <= 1.0);
 
@@ -203,6 +225,9 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		T100 -= himan::constants::kKelvin;
 		T125 -= himan::constants::kKelvin;
 		strat *= 100;
+		stratavg *= 100;
+		strat15 *= 100;
+		strat45 *= 100;
 		strat30 *= 100;
 		strat300 *= 100;
 		lowC *= 100;
@@ -212,9 +237,22 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		assert(RH < 102.);
 
-		double RHpre = 85 / RH;
+		// Jos sumupilveä >55% ohut kerros vain ~alimmalla mallipinnalla, jätetään alin kerros huomioimatta
+		if (strat15 > stLimit && strat45 < stLimit)
+		{
+			strat = stratavg;
+		}
+
+		// Näkyvyyden utuisuuskerroin sateessa 2m suhteellisen kosteuden perusteella [0,85...8,5, kun 100%<rh<10%]
+		// (jos rh<85%, näkyvyyttä parannetaan)
+		const double RHpre = 85 / RH;
+
 		double stNpre = 1;
 		double stHpre = 1;
+
+		// Näkyvyyden utuisuuskerroin sateessa matalan sumupilven (alle 1000ft) määrän perusteella [1...0,85, kun
+		// 50<N<100%]
+		// Alle 50% sumupilven määrä ei siis huononna näkyvyyttä sateessa
 
 		if (strat >= 50)
 		{
@@ -233,14 +271,14 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			if (PF == 0 || PF == 4)
 			{
 				// Nakyvyys intensiteetin perusteella
-				visPre = 1 / RR * 500;
+				visPre = 1. / RR * 500;
 
 				// Mahdollinen lisahuononnus utuisuuden perusteella
 				visPre = visPre * RHpre * stNpre * stHpre;
 			}
 
 			// Vesisade (tai jäätävä vesisade)
-			if (PF == 1 || PF == 5)
+			else if (PF == 1 || PF == 5)
 			{
 				// Nakyvyys intensiteetin perusteella
 				// (kaava antaa ehkä turhan huonoja <4000m näkyvyyksiä reippaassa RR>4 vesisateessa)
@@ -258,7 +296,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			}
 
 			// Snow
-			if (PF == 3)
+			else if (PF == 3)
 			{
 				// Näkyvyys intensiteetin perusteella
 				visPre = 1 / (RR + pseudoRR) * 1400;
@@ -268,7 +306,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			}
 
 			// Sleet
-			if (PF == 2)
+			else if (PF == 2)
 			{
 				// Näkyvyys intensiteetin perusteella
 				visPre = 1 / (RR + pseudoRR) * 2000;
@@ -290,8 +328,8 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		// Utuisuuskertoimien laskenta stratuksen maaran ja korkeuden perusteella
 		// Kertoimia saatamalla voi saataa kunkin parametrin vaikutusta/painoarvoa.
 
-		// Näkyvyyden utuisuuskerroin udussa/sumussa sumupilven maaran perusteella [7,0...0,7, kun stN = 0...100%]
-		double stNmist = sqrt(50 / (strat + 1));
+		// Näkyvyyden utuisuuskerroin udussa/sumussa sumupilven määrän perusteella [7,5...0,68, kun stN = 0...100%]
+		const double stNmist = 75. / (strat + 10);
 
 		// Nakyvyyden utuisuuskerroin udussa/sumussa sumupilvikorkeuden perusteella [ 0,47...1, kun par500 = 50...999ft]
 		if (CF < 1000)
@@ -299,24 +337,27 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			stHmist = pow((CF / 999), 0.25);
 		}
 
-		// Ehto pilvipaatteyyn menemiselle. Tarkoituksena poistaa mallin virheelliset vain alimman mallipinnan
-		// sumupilvitulkinnat.
-		// sfcCloud parametri saa arvon 1 jos mallin pilvi on vain alimman 30m korkeudessa. Jos pilvea on yli 1/10
-		// 31-300m korkeudessa, sfcCloud saa arvon 0
-		double sfcCloud = 0;
+		// Tutkitaan vielä, onko sumupilveä vain ohut alimman mallipinnan kerros
 
-		if (strat30 > 55 && strat300 < 10)
+		// Jos sumupilveä on vain ohut alimman mallipinnan kerros, poistetaan sumupilvikorkeuden utuisuusvaikutus
+		// (stHmist=1)
+		// Tällöin pilvipäättelyssä näkyvyys lasketaan siis (vain) RH:n ja stNmist:n perusteella
+		// Esim1. kostea tilanne missä ei sumupilveä: RH=100 ja stN=0 (eli stNmist=7,5) => visMist = 700m*7,5 = 5250m
+		// Esim2. kostea tilanne missä sumupilveä 50%: RH=100 ja stN=50 (eli stNmist=1,25) => visMist = 700m*1,25 = 875m
+
+		if (strat15 > stLimit && strat300 < 10)
 		{
-			sfcCloud = 1;
+			stHmist = 1;
 		}
 
 		// Nakyvyys udussa/sumussa, lasketaan myos heikossa sateessa (tarkoituksena tasoittaa suuria
 		// nakyvyysgradientteja sateen reunalla)
 		// (ehka syyta rajata vain tilanteisiin, jossa sateen perusteella saatu nakyvyys oli viela >8000?)
 
-		if (RR < 0.5 && sfcCloud < 1)
+		if (RR < 0.5)
 		{
 			double RHmistLim = 90;  // Oletus RH:n kynnysarvo utuisuudelle, kun T>=0C [%]
+
 			// Pakkasella asetetaan utuisuuden kynnysarvo pienemmaksi [%]
 			// Alkuarvauksena yksinkertainen lineaarinen riippuvuus -> kynnysarvon minimi=80%, kun T=-8C
 			if (T < 0)
@@ -363,7 +404,8 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			// painokerroin ala- ja keskipilvisyydelle 0 = 0, 30 = 0,16, 40 = 0,40, 55 = 1
 			// eli pilvisyys estaa yksinaan sateilysumun synnyn jos sita on yli puoli taivasta (55%).
 
-			double Cloud_coeff = pow((lowC), 3) * 0.000006;
+			double Cloud_coeff = lowC * lowC * lowC * 0.000006;
+
 			// jos yla- tai alapilvia yksinaan yli 8/10 taivasta -> painokerroin on 1
 			if (highC > 80)
 			{
@@ -429,11 +471,15 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				Humidity_coeff = 0;
 			}
 
-			double RH_upper = HUM25 * 0.1 + HUM50 * 0.2 + HUM75 * 0.2 + HUM100 * 0.2 + HUM125 * 0.3;
-			double T_upper = T25 * 0.1 + T50 * 0.2 + T75 * 0.2 + T100 * 0.2 + T125 * 0.3;
+			// Suhteellisen kosteuden pystyjakauma alimmalta 125 metriltä (25m kerroksin) painotettuna siten että ylin
+			// saa suurimman painoarvon 30%, 20%, 20%, 20, 10%
+			const double RH_upper = HUM25 * 0.1 + HUM50 * 0.2 + HUM75 * 0.2 + HUM100 * 0.2 + HUM125 * 0.3;
 
-			double humidity_min_upper = -0.0028 * T_upper * T_upper + 0.35 * T_upper + 92.5;
-			double humidity_max_upper = -0.0004 * T_upper * T_upper + 0.14 * T_upper + 97;
+			// lämpötilan pystyjakauma alimmalta 125 metriltä
+			const double T_upper = T25 * 0.1 + T50 * 0.2 + T75 * 0.2 + T100 * 0.2 + T125 * 0.3;
+
+			const double humidity_min_upper = -0.0028 * T_upper * T_upper + 0.35 * T_upper + 92.5;
+			const double humidity_max_upper = -0.0004 * T_upper * T_upper + 0.14 * T_upper + 97;
 
 			double Humidity_upper_coeff =
 			    1 - (RH_upper - humidity_min_upper) / (humidity_max_upper - humidity_min_upper);
@@ -460,7 +506,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			double visibility_sum = Humidity_coeff + Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff;
 
 			// Eri ainesosasten yhteenlasketun summan raja-arvo
-			// threshold = 1.5;
 
 			// huonoja näkyvyyksiä jos "todennäköisyys" alle määritetyn alarajan ja yksittäiset parametrit alle 1
 			// Näkyvyys lasketaan mallin suhteellisen kosteuden ja aikaisemmin lasketun humidity_min parametrin
@@ -476,7 +521,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			// Lisähuononnus näkyvyyteen muiden parametrien kautta (tuuli, pilvisyys, auringonsäteily, suhteellinen
 			// kosteus alailmakehässä)
 			// parametri saa maksimissaan arvon 1.8 = 80% huononnus näkyvyyteen
-			double extra = 1.8 - (Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff + 0.1) / 3;
+			const double extra = 1.8 - (Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff + 0.1) / 3;
 			if (extra < 3 && extra > 0.01)
 			{
 				visMist = visMist / extra;
@@ -528,6 +573,17 @@ void visibility::VertMax(shared_ptr<info> myTargetInfo, vector<double>& result, 
 	h->Time(myTargetInfo->Time());
 
 	result = h->VerticalMaximum(p, low, high);
+}
+
+void visibility::VertAvg(shared_ptr<info> myTargetInfo, vector<double>& result, vector<himan::param> p, int low,
+                         int high)
+{
+	auto h = GET_PLUGIN(hitool);
+
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+
+	result = h->VerticalAverage(p, low, high);
 }
 
 void visibility::VertTMin(shared_ptr<info> myTargetInfo, vector<double>& result, int low, int high)

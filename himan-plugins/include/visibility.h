@@ -42,6 +42,9 @@ class visibility : public compiled_plugin, private compiled_plugin_base
 	void VertMax(std::shared_ptr<info> myTargetInfo, std::vector<double>& in, himan::param p, int low, int high);
 	void VertMax(std::shared_ptr<info> myTargetInfo, std::vector<double>& in, std::vector<himan::param> p, int low,
 	             int high);
+	void VertAvg(std::shared_ptr<info> myTargetInfo, std::vector<double>& in, std::vector<himan::param> p, int low,
+	             int high);
+
 	void VertTMin(std::shared_ptr<info> myTargetInfo, std::vector<double>& in, int low, int high);
 	void VertFFValue(std::shared_ptr<info> myTargetInfo, std::vector<double>& in, std::vector<double>&);
 };
