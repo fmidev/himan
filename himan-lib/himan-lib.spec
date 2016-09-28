@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.9.12
+Version: 16.9.28
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -24,7 +24,7 @@ BuildRequires: libfmidb-devel >= 16.9.8
 BuildRequires: libfmigrib-devel >= 16.9.8
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
-BuildRequires: libsmartmet-newbase-devel >= 16.5.4
+BuildRequires: libsmartmet-newbase-devel >= 16.9.20
 BuildRequires: scons
 BuildRequires: gdal-devel
 Provides: libhiman.so
@@ -52,6 +52,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed Sep 28 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.28-1.fmi
+- Lambert projection support
 * Mon Sep 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.12-1.fmi
 - Latest time fixes for json_parser
 * Thu Sep  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.8-1.fmi

@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.9.15
+Version: 16.9.28
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -106,6 +106,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Sep 28 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.28-1.fmi
+- Ensemble mean calculation
+- Different CAPE&CIN variations are separated with levels (not par ids)
 * Thu Sep 15 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.15-1.fmi
 - New sums for split_sum
 * Mon Sep 12 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.12-1.fmi
