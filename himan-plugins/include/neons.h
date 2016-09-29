@@ -63,9 +63,8 @@ class neons : public auxiliary_plugin
 	 *  \par timeRangeIndicator - time range indicator (grib 1)
 	 */
 
-	std::string GribParameterName(const long fmiParameterId, const long codeTableVersion, long timeRangeIndicator);
-	std::string GribParameterName(const long fmiParameterId, const long category, const long discipline,
-	                              const long producer);
+	std::string GribParameterName(long fmiParameterId, long codeTableVersion, long timeRangeIndicator, long levelType);
+	std::string GribParameterName(long fmiParameterId, long category, long discipline, long producer, long levelType);
 
 	/**
 	 * @brief Function to expose the NFmiNeonsDB interface
