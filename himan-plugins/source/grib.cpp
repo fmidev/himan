@@ -396,7 +396,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			if (options.configuration->DatabaseType() == kNeons ||
 			    options.configuration->DatabaseType() == kNeonsAndRadon)
 			{
-				parmName = n->GribParameterName(number, no_vers, timeRangeIndicator);
+				parmName =
+				    n->GribParameterName(number, no_vers, timeRangeIndicator, static_cast<long>(options.level.Type()));
 			}
 
 			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
@@ -460,7 +461,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			if (options.configuration->DatabaseType() == kNeons ||
 			    options.configuration->DatabaseType() == kNeonsAndRadon)
 			{
-				parmName = n->GribParameterName(number, category, discipline, process);
+				parmName = n->GribParameterName(number, category, discipline, process,
+				                                static_cast<long>(options.level.Type()));
 			}
 
 			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||

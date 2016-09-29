@@ -52,10 +52,10 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 
 	// Required source parameters (Density from plug-in density; rain, snow and graupel from Harmonie model output)
 
-	const param RhoParam("RHO-KGM3");      // Density in kg/m3
-	const param RainParam("RRI-KGM2");     // Large Scale precipitation in kg/m2
-	const param SnowParam("SNRI-KGM2");    // Large scale snow accumulation in kg/m2
-	const param GraupelParam("GRI-KGM2");  // Graupel precipitation in kg/m2
+	const param RhoParam("RHO-KGM3");          // Density in kg/m3
+	const param RainParam("RAINMR-KGKG");      // Rain water mixing ratio in kg/kg
+	const param SnowParam("SNOWMR-KGKG");      // Snow mixing ratio in kg/kg
+	const param GraupelParam("GRAUPMR-KGKG");  // Graupel mixing ratio in kg/kg
 
 	auto myThreadedLogger =
 	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));

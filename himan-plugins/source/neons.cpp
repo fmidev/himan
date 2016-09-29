@@ -364,16 +364,16 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 	return true;
 }
 
-string neons::GribParameterName(long fmiParameterId, long codeTableVersion, long timeRangeIndicator)
+string neons::GribParameterName(long fmiParameterId, long codeTableVersion, long timeRangeIndicator, long levelType)
 {
 	Init();
 
-	string paramName =
-	    itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, codeTableVersion, timeRangeIndicator);
+	string paramName = itsNeonsDB->GetGridParameterName(fmiParameterId, codeTableVersion, codeTableVersion,
+	                                                    timeRangeIndicator, levelType);
 	return paramName;
 }
 
-string neons::GribParameterName(long fmiParameterId, long category, long discipline, long producer)
+string neons::GribParameterName(long fmiParameterId, long category, long discipline, long producer, long levelType)
 {
 	Init();
 

@@ -23,16 +23,20 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-const string itsName("visibility");
-
 const double defaultVis = 50000;
+
+// Lumi- tai räntäsateen intensiteetin "tehostus" [mm/h]
+// Tällä siis tarkoitus saada mallin heikotkin lumisadeintensiteetit huonontamaan näkyvyyttä
 const double pseudoRR = 0.13;
 const double threshold = 1.5;
+
+// Raja-arvo merkittävälle sumupilven määrälle [%]
+const double stLimit = 55;
 
 // Required source parameters
 
 // const himan::param PFParam("PRECFORM-N");
-const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")}); 
+const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
 const himan::param RHParam("RH-PRCNT");
 const himan::param CFParam("CL-FT");
 const himan::param TParam("T-K");
@@ -46,10 +50,15 @@ const himan::level NLevel(himan::kHeight, 0, "HEIGHT");
 const himan::level RHLevel(himan::kHeight, 2, "HEIGHT");
 const himan::level FFLevel(himan::kHeight, 10, "HEIGHT");
 
+double VisibilityInRain(double PF, double RH, double RR, double CF, double strat);
+double VisibilityInMist(double strat, double strat15, double strat300, double lowC, double highC, double RR, double CF,
+                        double FF, double FFBLH, double T, double T25, double T50, double T75, double T100, double T125,
+                        double RH, double HUM25, double HUM50, double HUM75, double HUM100, double HUM125);
+
 visibility::visibility()
 {
 	itsClearTextFormula = "<algorithm>";
-	itsLogger = logger_factory::Instance()->GetLog(itsName);
+	itsLogger = logger_factory::Instance()->GetLog("visibility");
 }
 
 void visibility::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -70,7 +79,7 @@ void visibility::Process(std::shared_ptr<const plugin_configuration> conf)
 void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
+	    logger_factory::Instance()->GetLog("visibilityThread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -102,13 +111,29 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	}
 
 	vector<double> stratus;
+	vector<double> stratusavg;
+	vector<double> stratus15;
+	vector<double> stratus45;
 	vector<double> stratus30;
 	vector<double> stratus300;
 	vector<double> lowclouds;
 	vector<double> highclouds;
+
+	// Alle 304m (1000ft) sumupilven (max) määrä [%]
 	VertMax(myTargetInfo, stratus, NParam, 0, 304);
+
+	// Lisäksi ylempää otetaan keskiarvo, jottei mahdollinen ylempi st-kerros huononna näkyvyyttä liikaa (stratus
+	// kautta)
+	VertAvg(myTargetInfo, stratusavg, NParam, 15, 304);
+
+	// Alle 15m sumupilven määrä
+	VertMax(myTargetInfo, stratus15, NParam, 0, 15);
+
+	// 15-45m sumupilven määrä
+	VertMax(myTargetInfo, stratus45, NParam, 15, 45);
+
 	VertMax(myTargetInfo, stratus30, NParam, 0, 30);
-	VertMax(myTargetInfo, stratus300, NParam, 31, 300);
+	VertMax(myTargetInfo, stratus300, NParam, 15, 300);
 	VertMax(myTargetInfo, lowclouds, NParam, 60, 6000);
 	VertMax(myTargetInfo, highclouds, NParam, 6001, 12000);
 
@@ -143,7 +168,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	{
 		size_t i = myTargetInfo->LocationIndex();
 		double vis = defaultVis;
-		double visPre = defaultVis;
 
 		double T = TInfo->Value();
 		double CF = CFInfo->Value();
@@ -152,6 +176,9 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double FF = FFInfo->Value();
 		double RH = RHInfo->Value();
 		double strat = stratus[i];
+		double stratavg = stratusavg[i];
+		double strat15 = stratus15[i];
+		double strat45 = stratus45[i];
 		double strat30 = stratus30[i];
 		double strat300 = stratus300[i];
 		double lowC = lowclouds[i];
@@ -182,6 +209,9 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		assert(T125 > 200);
 
 		assert(strat <= 1.0);
+		assert(stratavg <= 1.0);
+		assert(strat15 <= 1.0);
+		assert(strat45 <= 1.0);
 		assert(strat30 <= 1.0);
 		assert(strat300 <= 1.0);
 
@@ -203,6 +233,9 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		T100 -= himan::constants::kKelvin;
 		T125 -= himan::constants::kKelvin;
 		strat *= 100;
+		stratavg *= 100;
+		strat15 *= 100;
+		strat45 *= 100;
 		strat30 *= 100;
 		strat300 *= 100;
 		lowC *= 100;
@@ -212,285 +245,29 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		assert(RH < 102.);
 
-		double RHpre = 85 / RH;
-		double stNpre = 1;
-		double stHpre = 1;
-
-		if (strat >= 50)
+		// Jos sumupilveä >55% ohut kerros vain ~alimmalla mallipinnalla, jätetään alin kerros huomioimatta
+		if (strat15 > stLimit && strat45 < stLimit)
 		{
-			stNpre = log(50) / log(strat);
-		}
-
-		if (CF <= 500)
-		{
-			stHpre = pow((CF / 500), 0.15);
+			strat = stratavg;
 		}
 
 		// Nakyvyys sateessa
+
+		double visPre = defaultVis;
+
 		if (RR > 0)
 		{
-			// Drizzle (tai j��t�v� tihku)
-			if (PF == 0 || PF == 4)
-			{
-				// Nakyvyys intensiteetin perusteella
-				visPre = 1 / RR * 500;
-
-				// Mahdollinen lisahuononnus utuisuuden perusteella
-				visPre = visPre * RHpre * stNpre * stHpre;
-			}
-
-			// Vesisade (tai jäätävä vesisade)
-			if (PF == 1 || PF == 5)
-			{
-				// Nakyvyys intensiteetin perusteella
-				// (kaava antaa ehkä turhan huonoja <4000m näkyvyyksiä reippaassa RR>4 vesisateessa)
-				visPre = 1 / RR * 6000 + 2000;
-
-				// Voimakkaalla sateella jätetään matalimpien stratuksien utuisuusvaikutus huomioimatta
-				// (malleissa usein reippaassa rintamasateessa liian matalaa ~100-200ft stratusta)
-				// Tätä pitää varmasti parantaa/säätää... esim. intensiteetin raja-arvoa. Käyttö myös
-				// lumi/räntäsateessa?
-				// IF ((PAR49_HIR>2) AND (par500_HIR<300))
-				//    {  stHpre = 1 }
-
-				// Mahdollinen lisähuononnus utuisuuden perusteella
-				visPre = visPre * RHpre * stNpre * stHpre;
-			}
-
-			// Snow
-			if (PF == 3)
-			{
-				// Näkyvyys intensiteetin perusteella
-				visPre = 1 / (RR + pseudoRR) * 1400;
-
-				// Mahdollinen lisähuononnus utuisuuden perusteella
-				visPre = visPre * RHpre * stNpre * stHpre;
-			}
-
-			// Sleet
-			if (PF == 2)
-			{
-				// Näkyvyys intensiteetin perusteella
-				visPre = 1 / (RR + pseudoRR) * 2000;
-
-				// Mahdollinen lisähuononnus utuisuuden perusteella
-				visPre = visPre * RHpre * stNpre * stHpre;
-			}
+			visPre = VisibilityInRain(PF, RH, RR, CF, strat);
 		}
 
-		if (visPre > defaultVis)
-		{
-			visPre = defaultVis;
-		}
+		// Näkyvyys sumussa
 
-		double visMist = defaultVis;
-		double stHmist = 1;
-		// SUMUP��TTELY
-
-		// Utuisuuskertoimien laskenta stratuksen maaran ja korkeuden perusteella
-		// Kertoimia saatamalla voi saataa kunkin parametrin vaikutusta/painoarvoa.
-
-		// Näkyvyyden utuisuuskerroin udussa/sumussa sumupilven maaran perusteella [7,0...0,7, kun stN = 0...100%]
-		double stNmist = sqrt(50 / (strat + 1));
-
-		// Nakyvyyden utuisuuskerroin udussa/sumussa sumupilvikorkeuden perusteella [ 0,47...1, kun par500 = 50...999ft]
-		if (CF < 1000)
-		{
-			stHmist = pow((CF / 999), 0.25);
-		}
-
-		// Ehto pilvipaatteyyn menemiselle. Tarkoituksena poistaa mallin virheelliset vain alimman mallipinnan
-		// sumupilvitulkinnat.
-		// sfcCloud parametri saa arvon 1 jos mallin pilvi on vain alimman 30m korkeudessa. Jos pilvea on yli 1/10
-		// 31-300m korkeudessa, sfcCloud saa arvon 0
-		double sfcCloud = 0;
-
-		if (strat30 > 55 && strat300 < 10)
-		{
-			sfcCloud = 1;
-		}
-
-		// Nakyvyys udussa/sumussa, lasketaan myos heikossa sateessa (tarkoituksena tasoittaa suuria
-		// nakyvyysgradientteja sateen reunalla)
-		// (ehka syyta rajata vain tilanteisiin, jossa sateen perusteella saatu nakyvyys oli viela >8000?)
-
-		if (RR < 0.5 && sfcCloud < 1)
-		{
-			double RHmistLim = 90;  // Oletus RH:n kynnysarvo utuisuudelle, kun T>=0C [%]
-			// Pakkasella asetetaan utuisuuden kynnysarvo pienemmaksi [%]
-			// Alkuarvauksena yksinkertainen lineaarinen riippuvuus -> kynnysarvon minimi=80%, kun T=-8C
-			if (T < 0)
-			{
-				RHmistLim = 90 + T * 1.25;
-			}
-			if (RHmistLim < 80)
-			{
-				RHmistLim = 80;
-			}
-
-			// Nakyvyys udussa/sumussa
-
-			// Yksinkertaistetty kaava, eli lasketaan samalla tavalla riippumatta siita, onko pakkasta vai ei
-			// (pakkaset eri tavalla voisi olla parempi tapa)
-			if (RH > RHmistLim)
-			{
-				// Alkuarvo suht. kosteuden perusteella [700-31400m, kun 100<=RH<80]
-				visMist = pow((101 - RH), 1.25) * 700;
-				// Lisamuokkaus sumupilven maaran ja korkeuden perusteella
-				visMist = visMist * stNmist * stHmist;
-			}
-		}
-
-		// Jos sumupilven perusteella laskettu näkyvyys edelleen yli 8km tutkitaan sateilysumujen mahdollisuutta.
-		if (visMist > 8000)
-		{
-			// Säteilysumuun vaikuttavat parametrit ja niiden painoarvot
-			//----------------------------------------------------------------------------------------
-			// pintatuulen nopeus (FF)
-			// ala + keskipilvien maara (par273, par274)
-			// Suhteellisen kosteuden ja lampotilaan kokeellisesti suhteutetun suhteellisen kosteuden erotus on
-			// positiivinen
-			// (koska kovemmissa pakkasissa riittavan pienempi suhteellisen kosteuden arvo sumun syntymiselle)
-			// Suhteellinen kosteus alin 125m (suhteutettuna T:en)
-			// Tuulen nopeus rajakerroksen ylaosassa (kuvaa mekaanisen turbulenssin avulla tapahtuvaa kuivemman ilman
-			// sekoittumista rajakerroksen yläpuolelta)
-
-			// Naita parametreja painotetaan siten etta arvolla 0 ne eivat esta yhtaan sateilysumun syntymistä ja
-			// arvolla 1 ne estavat yksinaan säteilysumun syntymisen.
-			// kokonaisvaikutus sumun syntymiseen saadaan kaikkien ainesosasten yhteisvaikutuksena, siten etta
-			// suhteellinen kosteus pinnalla saa kaksinkertaisen painoarvon.
-			// ********* Ala- ja keskipilven määrän vaikutus ---------------------------------------------------
-			// painokerroin ala- ja keskipilvisyydelle 0 = 0, 30 = 0,16, 40 = 0,40, 55 = 1
-			// eli pilvisyys estaa yksinaan sateilysumun synnyn jos sita on yli puoli taivasta (55%).
-
-			double Cloud_coeff = pow((lowC), 3) * 0.000006;
-			// jos yla- tai alapilvia yksinaan yli 8/10 taivasta -> painokerroin on 1
-			if (highC > 80)
-			{
-				Cloud_coeff = 1;
-			}
-			if (lowC > 80)
-			{
-				Cloud_coeff = 1;
-			}
-
-			// huolehditaan etta Cloud_coeff arvo pysyy nollan ja ykkosen valilla
-			if (Cloud_coeff < 0)
-			{
-				Cloud_coeff = 0;
-			}
-			if (Cloud_coeff > 1)
-			{
-				Cloud_coeff = 1;
-			}
-
-			// ********* Pintatuulen nopeuden vaikutus ------------------------------------------------------------
-			// painokerroin tuulen nopeudelle 1 m/s = 0, 1,6m/s = 0.3, 2,6m/s = 0.7  4m/s = 1 (eksponentiaalinen
-			// riippuvuus)
-			// eli tuulen nopeus estää säteilysumun synnyn jos se on suurempi kuin 4 m/s
-
-			double Wind_coeff = log(FF * FF) * 0.361;
-
-			// huolehditaan etta Wind_coeff arvo pysyy nollan ja ykkosen valilla
-			if (Wind_coeff < 0)
-			{
-				Wind_coeff = 0;
-			}
-			if (Wind_coeff > 1)
-			{
-				Wind_coeff = 1;
-			}
-
-			// ********* Pinnan suhteellisen kosteuden vaikutus
-			// -------------------------------------------------------------------
-			// kokeellinen lämpötilaan suhteutettu RH:n alin arvo jossa säteilysumuja voi vielä syntyä (sovitettu
-			// excelissä)
-			// tällä suhteelisen kosteuden arvolla painokerroin saa arvon 1 ja jos suhteellinen kosteus on tietyssä
-			// lämpötilassa alle tämän arvon säteilysumua ei voi esiintyä.
-
-			double humidity_min = -0.0028 * T * T + 0.3 * T + 91.5;
-
-			// kokeellinen lämpötilaan suhteutettu RH:n ylin arvo jossa säteilysumujen esiintyminen on jo todennäköistä
-			// (sovitettu excelissä)
-			// tällä suhteelisen kosteuden arvolla painokerroin saa siis arvon 0
-			double humidity_max = -0.0016 * T * T + 0.2 * T + 96;
-
-			// Suhteellisen kosteuden minimiarvo
-			if (humidity_min < 75)
-			{
-				humidity_min = 75;
-			}
-
-			// painokerroin suhteelliselle kosteudelle
-			double Humidity_coeff = 1 - (RH - humidity_min) / (humidity_max - humidity_min);
-
-			if (Humidity_coeff < 0)
-			{
-				Humidity_coeff = 0;
-			}
-
-			double RH_upper = HUM25 * 0.1 + HUM50 * 0.2 + HUM75 * 0.2 + HUM100 * 0.2 + HUM125 * 0.3;
-			double T_upper = T25 * 0.1 + T50 * 0.2 + T75 * 0.2 + T100 * 0.2 + T125 * 0.3;
-
-			double humidity_min_upper = -0.0028 * T_upper * T_upper + 0.35 * T_upper + 92.5;
-			double humidity_max_upper = -0.0004 * T_upper * T_upper + 0.14 * T_upper + 97;
-
-			double Humidity_upper_coeff =
-			    1 - (RH_upper - humidity_min_upper) / (humidity_max_upper - humidity_min_upper);
-
-			if (Humidity_upper_coeff < 0)
-			{
-				Humidity_upper_coeff = 0;
-			}
-
-			// *************** Rajakerroksen yläosien tuulen nopeuden vaikutus
-			// painokerroin saa arvon 0, kun rajakerroksen yläosan tuuli on 7.5 m/s tai alle. Painokerroin 1 tulee
-			// arvolla 12.5 m/s tai yli
-			// Rajakerroksen korkeus PAR180
-
-			double Wind_upper_coeff = log(FFBLH * FFBLH * FFBLH) * 0.67 - 3.91;
-
-			if (Wind_upper_coeff < 0)
-			{
-				Wind_upper_coeff = 0;
-			}
-
-			// Näkyvyyden ainesosien yhteenlasketut painokertoimet kuvaavat huonon näkyvyyden mahdollisuutta
-
-			double visibility_sum = Humidity_coeff + Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff;
-
-			// Eri ainesosasten yhteenlasketun summan raja-arvo
-			// threshold = 1.5;
-
-			// huonoja näkyvyyksiä jos "todennäköisyys" alle määritetyn alarajan ja yksittäiset parametrit alle 1
-			// Näkyvyys lasketaan mallin suhteellisen kosteuden ja aikaisemmin lasketun humidity_min parametrin
-			// erotuksesta.
-			// humidity_min on lämpötilaan suhteutettu alin suhteellinen kosteus jossa säteilysumuja voi vielä esiintyä.
-
-			if (visibility_sum < threshold && Cloud_coeff < 1 && Wind_coeff < 1 && Humidity_coeff < 1 &&
-			    Humidity_upper_coeff < 1 && Wind_upper_coeff < 1)
-			{
-				visMist = (8000 - (RH - humidity_min) * 900);
-			}
-
-			// Lisähuononnus näkyvyyteen muiden parametrien kautta (tuuli, pilvisyys, auringonsäteily, suhteellinen
-			// kosteus alailmakehässä)
-			// parametri saa maksimissaan arvon 1.8 = 80% huononnus näkyvyyteen
-			double extra = 1.8 - (Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff + 0.1) / 3;
-			if (extra < 3 && extra > 0.01)
-			{
-				visMist = visMist / extra;
-			}
-		}
-
-		// Säteilysumun perusteella laskettu VisMist voi mennä negatiiviseksi ainakin kovilla pakkasilla vuoristossa
-		// joten annetaan minimiarvoksi 150m joka vastaa hyvin pienimpiä päättelysssä havaittuja näkyvyyksiä
-		if (visMist < 150)
-		{
-			visMist = 150;
-		}
+		double visMist = VisibilityInMist(strat, strat15, strat300, lowC, highC, RR, CF, FF, FFBLH, T, T25, T50, T75,
+		                                  T100, T125, RH, HUM25, HUM50, HUM75, HUM100, HUM125);
 
 		// Lopuksi valitaan sade- ja sumu/utunakyvyyksista huonompi
+
+		vis = fmin(visMist, visPre);
 
 		if (visMist < visPre)
 		{
@@ -530,6 +307,17 @@ void visibility::VertMax(shared_ptr<info> myTargetInfo, vector<double>& result, 
 	result = h->VerticalMaximum(p, low, high);
 }
 
+void visibility::VertAvg(shared_ptr<info> myTargetInfo, vector<double>& result, vector<himan::param> p, int low,
+                         int high)
+{
+	auto h = GET_PLUGIN(hitool);
+
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+
+	result = h->VerticalAverage(p, low, high);
+}
+
 void visibility::VertTMin(shared_ptr<info> myTargetInfo, vector<double>& result, int low, int high)
 {
 	auto h = GET_PLUGIN(hitool);
@@ -548,4 +336,285 @@ void visibility::VertFFValue(shared_ptr<info> myTargetInfo, vector<double>& resu
 	h->Time(myTargetInfo->Time());
 
 	result = h->VerticalValue(himan::param("FF-MS"), value);
+}
+
+double VisibilityInRain(double PF, double RH, double RR, double CF, double strat)
+{
+	double visPre = defaultVis;
+
+	// Näkyvyyden utuisuuskerroin sateessa 2m suhteellisen kosteuden perusteella [0,85...8,5, kun 100%<rh<10%]
+	// (jos rh<85%, näkyvyyttä parannetaan)
+	const double RHpre = 85 / RH;
+
+	double stNpre = 1;
+
+	// Näkyvyyden utuisuuskerroin sateessa matalan sumupilven (alle 1000ft) määrän perusteella [1...0,85, kun
+	// 50<N<100%]
+	// Alle 50% sumupilven määrä ei siis huononna näkyvyyttä sateessa
+
+	if (strat >= 50)
+	{
+		stNpre = log(50) / log(strat);
+	}
+
+	double stHpre = 1;
+
+	if (CF <= 500)
+	{
+		stHpre = pow((CF / 500), 0.15);
+	}
+
+	assert(PF != kFloatMissing);
+
+	// Drizzle (tai jäätävä tihku)
+	if (PF == 0 || PF == 4)
+	{
+		// Nakyvyys intensiteetin perusteella
+		visPre = 1. / RR * 500;
+
+		// Mahdollinen lisahuononnus utuisuuden perusteella
+		visPre = visPre * RHpre * stNpre * stHpre;
+	}
+
+	// Vesisade (tai jäätävä vesisade)
+	else if (PF == 1 || PF == 5)
+	{
+		// Nakyvyys intensiteetin perusteella
+		// (kaava antaa ehkä turhan huonoja <4000m näkyvyyksiä reippaassa RR>4 vesisateessa)
+		visPre = 1 / RR * 6000 + 2000;
+
+		// Voimakkaalla sateella jätetään matalimpien stratuksien utuisuusvaikutus huomioimatta
+		// (malleissa usein reippaassa rintamasateessa liian matalaa ~100-200ft stratusta)
+		// Tätä pitää varmasti parantaa/säätää... esim. intensiteetin raja-arvoa. Käyttö myös
+		// lumi/räntäsateessa?
+
+		// Mahdollinen lisähuononnus utuisuuden perusteella
+		visPre = visPre * RHpre * stNpre * stHpre;
+	}
+
+	// Snow
+	else if (PF == 3)
+	{
+		// Näkyvyys intensiteetin perusteella
+		visPre = 1 / (RR + pseudoRR) * 1400;
+
+		// Mahdollinen lisähuononnus utuisuuden perusteella
+		visPre = visPre * RHpre * stNpre * stHpre;
+	}
+
+	// Sleet
+	else if (PF == 2)
+	{
+		// Näkyvyys intensiteetin perusteella
+		visPre = 1 / (RR + pseudoRR) * 2000;
+
+		// Mahdollinen lisähuononnus utuisuuden perusteella
+		visPre = visPre * RHpre * stNpre * stHpre;
+	}
+
+	return fmin(visPre, defaultVis);
+}
+
+double VisibilityInMist(double strat, double strat15, double strat300, double lowC, double highC, double RR, double CF,
+                        double FF, double FFBLH, double T, double T25, double T50, double T75, double T100, double T125,
+                        double RH, double HUM25, double HUM50, double HUM75, double HUM100, double HUM125)
+{
+	double visMist = defaultVis;
+
+	// Utuisuuskertoimien laskenta stratuksen maaran ja korkeuden perusteella
+	// Kertoimia saatamalla voi saataa kunkin parametrin vaikutusta/painoarvoa.
+
+	// Näkyvyyden utuisuuskerroin udussa/sumussa sumupilven määrän perusteella [7,5...0,68, kun stN = 0...100%]
+	const double stNmist = 75. / (strat + 10);
+
+	// Nakyvyyden utuisuuskerroin udussa/sumussa sumupilvikorkeuden perusteella [ 0,47...1, kun par500 = 50...999ft]
+	double stHmist = 1;
+
+	if (CF < 1000)
+	{
+		stHmist = pow((CF / 999), 0.25);
+	}
+
+	// Tutkitaan vielä, onko sumupilveä vain ohut alimman mallipinnan kerros
+
+	// Jos sumupilveä on vain ohut alimman mallipinnan kerros, poistetaan sumupilvikorkeuden utuisuusvaikutus
+	// (stHmist=1)
+	// Tällöin pilvipäättelyssä näkyvyys lasketaan siis (vain) RH:n ja stNmist:n perusteella
+	// Esim1. kostea tilanne missä ei sumupilveä: RH=100 ja stN=0 (eli stNmist=7,5) => visMist = 700m*7,5 = 5250m
+	// Esim2. kostea tilanne missä sumupilveä 50%: RH=100 ja stN=50 (eli stNmist=1,25) => visMist = 700m*1,25 = 875m
+
+	if (strat15 > stLimit && strat300 < 10)
+	{
+		stHmist = 1;
+	}
+
+	// Nakyvyys udussa/sumussa, lasketaan myos heikossa sateessa (tarkoituksena tasoittaa suuria
+	// nakyvyysgradientteja sateen reunalla)
+	// (ehka syyta rajata vain tilanteisiin, jossa sateen perusteella saatu nakyvyys oli viela >8000?)
+
+	if (RR < 0.5)
+	{
+		double RHmistLim = 90;  // Oletus RH:n kynnysarvo utuisuudelle, kun T>=0C [%]
+
+		// Pakkasella asetetaan utuisuuden kynnysarvo pienemmaksi [%]
+		// Alkuarvauksena yksinkertainen lineaarinen riippuvuus -> kynnysarvon minimi=80%, kun T=-8C
+		if (T < 0)
+		{
+			RHmistLim = 90 + T * 1.25;
+		}
+		if (RHmistLim < 80)
+		{
+			RHmistLim = 80;
+		}
+
+		// Nakyvyys udussa/sumussa
+
+		// Yksinkertaistetty kaava, eli lasketaan samalla tavalla riippumatta siita, onko pakkasta vai ei
+		// (pakkaset eri tavalla voisi olla parempi tapa)
+		if (RH > RHmistLim)
+		{
+			// Alkuarvo suht. kosteuden perusteella [700-31400m, kun 100<=RH<80]
+			visMist = pow((101 - RH), 1.25) * 700;
+			// Lisamuokkaus sumupilven maaran ja korkeuden perusteella
+			visMist = visMist * stNmist * stHmist;
+		}
+	}
+
+	// Jos sumupilven perusteella laskettu näkyvyys edelleen yli 8km tutkitaan sateilysumujen mahdollisuutta.
+	if (visMist > 8000)
+	{
+		// Säteilysumuun vaikuttavat parametrit ja niiden painoarvot
+		//----------------------------------------------------------------------------------------
+		// pintatuulen nopeus (FF)
+		// ala + keskipilvien maara (par273, par274)
+		// Suhteellisen kosteuden ja lampotilaan kokeellisesti suhteutetun suhteellisen kosteuden erotus on
+		// positiivinen
+		// (koska kovemmissa pakkasissa riittavan pienempi suhteellisen kosteuden arvo sumun syntymiselle)
+		// Suhteellinen kosteus alin 125m (suhteutettuna T:en)
+		// Tuulen nopeus rajakerroksen ylaosassa (kuvaa mekaanisen turbulenssin avulla tapahtuvaa kuivemman ilman
+		// sekoittumista rajakerroksen yläpuolelta)
+
+		// Naita parametreja painotetaan siten etta arvolla 0 ne eivat esta yhtaan sateilysumun syntymistä ja
+		// arvolla 1 ne estavat yksinaan säteilysumun syntymisen.
+		// kokonaisvaikutus sumun syntymiseen saadaan kaikkien ainesosasten yhteisvaikutuksena, siten etta
+		// suhteellinen kosteus pinnalla saa kaksinkertaisen painoarvon.
+		// ********* Ala- ja keskipilven määrän vaikutus ---------------------------------------------------
+		// painokerroin ala- ja keskipilvisyydelle 0 = 0, 30 = 0,16, 40 = 0,40, 55 = 1
+		// eli pilvisyys estaa yksinaan sateilysumun synnyn jos sita on yli puoli taivasta (55%).
+
+		double Cloud_coeff = lowC * lowC * lowC * 0.000006;
+
+		// jos yla- tai alapilvia yksinaan yli 8/10 taivasta -> painokerroin on 1
+		if (highC > 80)
+		{
+			Cloud_coeff = 1;
+		}
+		if (lowC > 80)
+		{
+			Cloud_coeff = 1;
+		}
+
+		// huolehditaan etta Cloud_coeff arvo pysyy nollan ja ykkosen valilla
+		Cloud_coeff = fmax(fmin(1, Cloud_coeff), 0);
+
+		// ********* Pintatuulen nopeuden vaikutus ------------------------------------------------------------
+		// painokerroin tuulen nopeudelle 1 m/s = 0, 1,6m/s = 0.3, 2,6m/s = 0.7  4m/s = 1 (eksponentiaalinen
+		// riippuvuus)
+		// eli tuulen nopeus estää säteilysumun synnyn jos se on suurempi kuin 4 m/s
+
+		double Wind_coeff = log(FF * FF) * 0.361;
+
+		// huolehditaan etta Wind_coeff arvo pysyy nollan ja ykkosen valilla
+		Wind_coeff = fmax(fmin(1, Wind_coeff), 0);
+
+		// ********* Pinnan suhteellisen kosteuden vaikutus
+		// -------------------------------------------------------------------
+		// kokeellinen lämpötilaan suhteutettu RH:n alin arvo jossa säteilysumuja voi vielä syntyä (sovitettu
+		// excelissä)
+		// tällä suhteelisen kosteuden arvolla painokerroin saa arvon 1 ja jos suhteellinen kosteus on tietyssä
+		// lämpötilassa alle tämän arvon säteilysumua ei voi esiintyä.
+
+		double humidity_min = -0.0028 * T * T + 0.3 * T + 91.5;
+
+		// kokeellinen lämpötilaan suhteutettu RH:n ylin arvo jossa säteilysumujen esiintyminen on jo todennäköistä
+		// (sovitettu excelissä)
+		// tällä suhteelisen kosteuden arvolla painokerroin saa siis arvon 0
+		double humidity_max = -0.0016 * T * T + 0.2 * T + 96;
+
+		// Suhteellisen kosteuden minimiarvo
+		if (humidity_min < 75)
+		{
+			humidity_min = 75;
+		}
+
+		// painokerroin suhteelliselle kosteudelle
+		double Humidity_coeff = 1 - (RH - humidity_min) / (humidity_max - humidity_min);
+
+		if (Humidity_coeff < 0)
+		{
+			Humidity_coeff = 0;
+		}
+
+		// Suhteellisen kosteuden pystyjakauma alimmalta 125 metriltä (25m kerroksin) painotettuna siten että ylin
+		// saa suurimman painoarvon 30%, 20%, 20%, 20, 10%
+		const double RH_upper = HUM25 * 0.1 + HUM50 * 0.2 + HUM75 * 0.2 + HUM100 * 0.2 + HUM125 * 0.3;
+
+		// lämpötilan pystyjakauma alimmalta 125 metriltä
+		const double T_upper = T25 * 0.1 + T50 * 0.2 + T75 * 0.2 + T100 * 0.2 + T125 * 0.3;
+
+		const double humidity_min_upper = -0.0028 * T_upper * T_upper + 0.35 * T_upper + 92.5;
+		const double humidity_max_upper = -0.0004 * T_upper * T_upper + 0.14 * T_upper + 97;
+
+		double Humidity_upper_coeff = 1 - (RH_upper - humidity_min_upper) / (humidity_max_upper - humidity_min_upper);
+
+		if (Humidity_upper_coeff < 0)
+		{
+			Humidity_upper_coeff = 0;
+		}
+
+		// *************** Rajakerroksen yläosien tuulen nopeuden vaikutus
+		// painokerroin saa arvon 0, kun rajakerroksen yläosan tuuli on 7.5 m/s tai alle. Painokerroin 1 tulee
+		// arvolla 12.5 m/s tai yli
+		// Rajakerroksen korkeus PAR180
+
+		double Wind_upper_coeff = log(FFBLH * FFBLH * FFBLH) * 0.67 - 3.91;
+
+		if (Wind_upper_coeff < 0)
+		{
+			Wind_upper_coeff = 0;
+		}
+
+		// Näkyvyyden ainesosien yhteenlasketut painokertoimet kuvaavat huonon näkyvyyden mahdollisuutta
+
+		double visibility_sum = Humidity_coeff + Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff;
+
+		// Eri ainesosasten yhteenlasketun summan raja-arvo
+
+		// huonoja näkyvyyksiä jos "todennäköisyys" alle määritetyn alarajan ja yksittäiset parametrit alle 1
+		// Näkyvyys lasketaan mallin suhteellisen kosteuden ja aikaisemmin lasketun humidity_min parametrin
+		// erotuksesta.
+		// humidity_min on lämpötilaan suhteutettu alin suhteellinen kosteus jossa säteilysumuja voi vielä esiintyä.
+
+		if (visibility_sum < threshold && Cloud_coeff < 1 && Wind_coeff < 1 && Humidity_coeff < 1 &&
+		    Humidity_upper_coeff < 1 && Wind_upper_coeff < 1)
+		{
+			visMist = 8000 - (RH - humidity_min) * 900;
+		}
+
+		// Lisähuononnus näkyvyyteen muiden parametrien kautta (tuuli, pilvisyys, auringonsäteily, suhteellinen
+		// kosteus alailmakehässä)
+		// parametri saa maksimissaan arvon 1.8 = 80% huononnus näkyvyyteen
+
+		const double extra = 1.8 - (Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff + 0.1) / 3;
+
+		if (extra < 3 && extra > 0.01)
+		{
+			visMist = visMist / extra;
+		}
+	}
+
+	// Säteilysumun perusteella laskettu VisMist voi mennä negatiiviseksi ainakin kovilla pakkasilla vuoristossa
+	// joten annetaan minimiarvoksi 150m joka vastaa hyvin pienimpiä päättelysssä havaittuja näkyvyyksiä
+
+	return fmax(150., visMist);
 }
