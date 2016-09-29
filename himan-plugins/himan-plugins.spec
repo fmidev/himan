@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.9.28
+Version: 16.9.29
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -106,6 +106,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep 29 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.29-1.fmi
+- Visibility v1.2
+- Harmonie mixing ratios in correct name and unit (kg/kg)
 * Wed Sep 28 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.28-1.fmi
 - Ensemble mean calculation
 - Different CAPE&CIN variations are separated with levels (not par ids)
