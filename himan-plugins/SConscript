@@ -84,7 +84,8 @@ if have_cuda:
 
 		if p == "unstagger":
 			nvcc = env['NVCCFLAGS'][:] # need to copy flags or changes affect all cufiles
-			nvcc.remove('-G')
+			if '-G' in nvcc:
+				nvcc.remove('-G')
 	                objects += env.SharedObject(obj, cufile, NVCCFLAGS=nvcc)
 
 		else:
