@@ -33,12 +33,12 @@ auxiliary_plugins = ['cache','csv','fetcher','grib','hitool','neons','querydata'
 compiled_plugins = ['icing', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid_height',
 'cloud_code', 'ncl', 'weather_code_1', 'preform_pressure', 'preform_hybrid', 'density',
 'precipitation_rate', 'absolute_humidity', 'roughness', 'weather_symbol',
-'weather_code_2', 'gust', 'monin_obukhov', 'unstagger', 'fog', 'qnh', 'luatool', 'turbulence',
+'weather_code_2', 'gust', 'monin_obukhov', 'fog', 'qnh', 'luatool', 'turbulence',
 'pot','tke','visibility','fractile','pop','probability']
 
 # List all compiled plugins that have both CPU and GPU implementation here
 
-cuda_plugins = ['dewpoint', 'tpot', 'windvector', 'vvms', 'relative_humidity', 'transformer', 'stability', 'cape']
+cuda_plugins = ['dewpoint', 'tpot', 'windvector', 'vvms', 'relative_humidity', 'transformer', 'stability', 'cape', 'unstagger']
 
 if have_cuda:
 	env.Tool('cuda')
@@ -81,6 +81,14 @@ if have_cuda:
 
 		cufile="source/" + p + ".cu"	
                 obj='obj/cu_'+ cufile.replace(".cu","")
-                objects += env.SharedObject(obj, cufile)
+
+		if p == "unstagger":
+			nvcc = env['NVCCFLAGS'][:] # need to copy flags or changes affect all cufiles
+			if '-G' in nvcc:
+				nvcc.remove('-G')
+	                objects += env.SharedObject(obj, cufile, NVCCFLAGS=nvcc)
+
+		else:
+	                objects += env.SharedObject(obj, cufile)
 
 		env.SharedLibrary(target = p, source = objects)
