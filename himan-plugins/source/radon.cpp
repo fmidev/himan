@@ -8,7 +8,6 @@
 #include "radon.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
-#include "unistd.h"  // getuid())
 #include "util.h"
 #include <sstream>
 #include <thread>
@@ -26,13 +25,8 @@ radon::radon() : itsInit(false), itsRadonDB()
 	call_once(oflag, [&]() {
 		PoolMaxWorkers(MAX_WORKERS);
 
-		uid_t uid = getuid();
-
-		if (uid == 1459)  // weto
-		{
-			NFmiRadonDBPool::Instance()->Username("wetodb");
-			NFmiRadonDBPool::Instance()->Password("3loHRgdio");
-		}
+		NFmiRadonDBPool::Instance()->Username("wetodb");
+		NFmiRadonDBPool::Instance()->Password("3loHRgdio");
 	});
 }
 
@@ -169,36 +163,35 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	// get grib1 gridType
 
+	int gribVersion = 1;
 	int gridType = -1;
 
 	switch (resultInfo.Grid()->Type())
 	{
-		case 1:
-			gridType = 0;  // latlon
+		case kLatitudeLongitude:
+			gridType = 0;
 			break;
-		case 3:
-			gridType = 10;  // rot latlon
+		case kRotatedLatitudeLongitude:
+			gridType = 10;
 			break;
-		case 2:
-			gridType = 5;  // polster
+		case kStereographic:
+			gridType = 5;
+			break;
+		case kReducedGaussian:
+			gridType = 24;  // "stretched" gaussian
+			break;
+		case kAzimuthalEquidistant:
+			gribVersion = 2;
+			gridType = 110;
 			break;
 		default:
-			throw runtime_error("Unsupported projection: " + HPGridTypeToString.at(resultInfo.Grid()->Type()));
+			throw runtime_error("Unsupported projection: " + boost::lexical_cast<string>(resultInfo.Grid()->Type()) +
+			                    " " + HPGridTypeToString.at(resultInfo.Grid()->Type()));
 	}
 
-	map<string, string> geominfo;
-
-	if (resultInfo.Grid()->Class() == kRegularGrid)
-	{
-		geominfo = itsRadonDB->GetGeometryDefinition(resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(),
-		                                             firstGridPoint.Y(), firstGridPoint.X(), resultInfo.Grid()->Di(),
-		                                             resultInfo.Grid()->Dj(), 1, gridType);
-	}
-	else
-	{
-		itsLogger->Error("Irregular grid not support yet");
-		return false;
-	}
+	map<string, string> geominfo = itsRadonDB->GetGeometryDefinition(
+	    resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
+	    resultInfo.Grid()->Di(), resultInfo.Grid()->Dj(), gribVersion, gridType);
 
 	if (geominfo.empty())
 	{
@@ -238,7 +231,8 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	if (paraminfo.empty())
 	{
-		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name());
+		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
+		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -246,7 +240,9 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	if (levelinfo.empty())
 	{
-		itsLogger->Error("Level information not found from radon for level " + resultInfo.Level().Name());
+		itsLogger->Error("Level information not found from radon for level " +
+		                 HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+		                 boost::lexical_cast<string>(resultInfo.Producer().Id()));
 		return false;
 	}
 

@@ -12,6 +12,8 @@
 #include "logger.h"
 #include <string>
 
+#include <NFmiGrid.h>
+
 namespace himan
 {
 class stereographic_grid : public grid
@@ -72,14 +74,18 @@ class stereographic_grid : public grid
 
 	bool Swap(HPScanningMode newScanningMode) override;
 
+	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
 	stereographic_grid* Clone() const override;
 
    private:
 	bool SetCoordinates();
+	void CreateAreaAndGrid() const;
 
 	bool EqualsTo(const stereographic_grid& other) const;
+
+	mutable std::unique_ptr<NFmiGrid> itsStereGrid;
 
 	point itsBottomLeft;
 	point itsTopRight;

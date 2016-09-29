@@ -79,7 +79,12 @@ class grid
 
 	virtual point FirstPoint() const = 0;
 	virtual point LastPoint() const = 0;
+
+	/* Return latlon coordinates of a given grid point */
 	virtual point LatLon(size_t locationIndex) const = 0;
+
+	/* Return grid point value (incl. fractions) of a given latlon point */
+	virtual point XY(const point& latlon) const = 0;
 
 	/*
 	 * Functions that are only valid for some grid types, but for ease
@@ -89,9 +94,6 @@ class grid
 
 	virtual point BottomLeft() const = 0;
 	virtual point TopRight() const = 0;
-
-	//		virtual void BottomLeft(const point& theBottomLeft) = 0 ;
-	//		virtual void TopRight(const point& theTopRight) = 0;
 
 	virtual HPScanningMode ScanningMode() const;
 	virtual void ScanningMode(HPScanningMode theScanningMode);

@@ -15,13 +15,9 @@
 #include <boost/lexical_cast.hpp>
 #include <cmath>
 
-#define HIMAN_AUXILIARY_INCLUDE
-
 #include "fetcher.h"
 #include "hitool.h"
 #include "neons.h"
-
-#undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace std;
 using namespace himan;
@@ -35,7 +31,8 @@ const double threshold = 1.5;
 
 // Required source parameters
 
-const himan::param PFParam("PRECFORM-N");
+// const himan::param PFParam("PRECFORM-N");
+const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")}); 
 const himan::param RHParam("RH-PRCNT");
 const himan::param CFParam("CL-FT");
 const himan::param TParam("T-K");
@@ -84,7 +81,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	info_t CFInfo = Fetch(forecastTime, NLevel, CFParam, forecastType, false);
 	info_t RHInfo = Fetch(forecastTime, RHLevel, RHParam, forecastType, false);
-	info_t PFInfo = Fetch(forecastTime, NLevel, PFParam, forecastType, false);
+	info_t PFInfo = Fetch(forecastTime, NLevel, PFParams, forecastType, false);
 	info_t FFInfo = Fetch(forecastTime, FFLevel, FFParam, forecastType, false);
 	info_t BLHInfo = Fetch(forecastTime, NLevel, BLHParam, forecastType, false);
 	info_t TInfo = Fetch(forecastTime, RHLevel, TParam, forecastType, false);
@@ -104,11 +101,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		RHScale = 100;
 	}
 
-	auto h = GET_PLUGIN(hitool);
-
-	h->Configuration(itsConfiguration);
-	h->Time(forecastTime);
-
 	vector<double> stratus;
 	vector<double> stratus30;
 	vector<double> stratus300;
@@ -117,7 +109,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	VertMax(myTargetInfo, stratus, NParam, 0, 304);
 	VertMax(myTargetInfo, stratus30, NParam, 0, 30);
 	VertMax(myTargetInfo, stratus300, NParam, 31, 300);
-	VertMax(myTargetInfo, lowclouds, NParam, 60, 600);
+	VertMax(myTargetInfo, lowclouds, NParam, 60, 6000);
 	VertMax(myTargetInfo, highclouds, NParam, 6001, 12000);
 
 	vector<double> hum25;
@@ -176,7 +168,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double T125 = temp125[i];
 		double FFBLH = ffblh[i];
 
-		if (IsMissingValue({CF, T, FF, RH, RR, strat, HUM25, HUM50, HUM75, HUM100, HUM125, T25, FFBLH}))
+		if (IsMissingValue({CF, T, FF, RH, RR, HUM25, HUM50, HUM75, HUM100, HUM125, T25, FFBLH}))
 		{
 			myTargetInfo->Value(vis);
 			continue;

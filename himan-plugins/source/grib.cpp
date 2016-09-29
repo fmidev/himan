@@ -7,6 +7,7 @@
 
 #include "grib.h"
 #include "grid.h"
+#include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
@@ -136,17 +137,38 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	// Level
 
-	itsGrib->Message().LevelValue(static_cast<long>(levelValue));
+	auto lev = anInfo.Level();
 
 	// Himan levels equal to grib 1
 
 	if (edition == 1)
 	{
-		itsGrib->Message().LevelType(anInfo.Level().Type());
+		itsGrib->Message().LevelType(lev.Type());
 	}
 	else if (edition == 2)
 	{
-		itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(anInfo.Level().Type(), 2));
+		if (lev.Type() == kHeightLayer)
+		{
+			itsGrib->Message().LevelType(103);
+			itsGrib->Message().SetLongKey("typeOfSecondFixedSurface", 103);
+		}
+		else
+		{
+			itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(lev.Type(), 2));
+		}
+	}
+
+	switch (lev.Type())
+	{
+		case kHeightLayer:
+		{
+			itsGrib->Message().LevelValue(static_cast<long>(0.01 * levelValue), 100);     // top
+			itsGrib->Message().LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
+			break;
+		}
+		default:
+			itsGrib->Message().LevelValue(static_cast<long>(levelValue));
+			break;
 	}
 
 	// Forecast type
@@ -693,6 +715,10 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				levelType = himan::kHeight;
 				break;
 
+			case 106:
+				levelType = himan::kHeightLayer;
+				break;
+
 			case 109:
 				levelType = himan::kHybrid;
 				break;
@@ -701,13 +727,28 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				levelType = himan::kGndLayer;
 				break;
 
+			case 246:
+				levelType = himan::kMaximumThetaE;
+				break;
+
 			default:
 				itsLogger->Error(ClassName() + ": Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
 				continue;
 				break;
 		}
 
-		level l(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+		level l;
+
+		switch (levelType)
+		{
+			case kHeightLayer:
+				l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
+				break;
+
+			default:
+				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+				break;
+		}
 
 		if (l != options.level)
 		{
@@ -724,6 +765,13 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
 				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
 			}
+
+			if (options.level.Value2() != l.Value2())
+			{
+				itsLogger->Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
+				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
+			}
+
 			if (forceCaching)
 			{
 				dataIsValid = false;
@@ -1096,16 +1144,48 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			rg->Ni(ni);
 			rg->Nj(nj);
 
+			rg->Di(itsGrib->Message().iDirectionIncrement());
+			rg->Dj(itsGrib->Message().jDirectionIncrement());
+
 			rg->ScanningMode(m);
 
-			pair<point, point> coordinates =
-			    util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),
-			                                        itsGrib->Message().jDirectionIncrement(), m);
+			rg->FirstPoint(firstPoint);
 
-			rg->BottomLeft(coordinates.first);
-			rg->TopRight(coordinates.second);
+			double X1 = itsGrib->Message().X1();
+			double Y1 = itsGrib->Message().Y1();
+
+			rg->LastPoint(point(X1, Y1));
 
 			rg->Data(matrix<double>(ni, nj, 1, kFloatMissing));
+
+			break;
+		}
+		case 3:
+		{
+			newGrid = unique_ptr<lambert_conformal_grid>(
+			    new lambert_conformal_grid(m, point(itsGrib->Message().X0(), itsGrib->Message().Y0())));
+			lambert_conformal_grid* const lccg = dynamic_cast<lambert_conformal_grid*>(newGrid.get());
+
+			lccg->Ni(static_cast<size_t>(itsGrib->Message().SizeX()));
+			lccg->Nj(static_cast<size_t>(itsGrib->Message().SizeY()));
+
+			lccg->ScanningMode(m);
+			lccg->Orientation(itsGrib->Message().GridOrientation());
+			lccg->Di(itsGrib->Message().XLengthInMeters());
+			lccg->Dj(itsGrib->Message().YLengthInMeters());
+
+			lccg->StandardParallel1(itsGrib->Message().GetLongKey("Latin1InDegrees"));
+			lccg->StandardParallel2(itsGrib->Message().GetLongKey("Latin2InDegrees"));
+			lccg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
+
+			long earthIsOblate = itsGrib->Message().GetLongKey("earthIsOblate");
+
+			if (earthIsOblate)
+			{
+				itsLogger->Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
+			}
+
+			lccg->Data(matrix<double>(lccg->Ni(), lccg->Nj(), 1, kFloatMissing));
 
 			break;
 		}
@@ -1115,14 +1195,11 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(newGrid.get());
 
 			gg->N(static_cast<size_t>(itsGrib->Message().GetLongKey("N")));
-			gg->NumberOfLongitudesAlongParallels(itsGrib->Message().PL());
+			gg->NumberOfPointsAlongParallels(itsGrib->Message().PL());
 			gg->Nj(static_cast<size_t>(itsGrib->Message().SizeY()));
 			gg->ScanningMode(m);
 
 			assert(m == kTopLeft);
-
-			// pair<point,point> coordinates = util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj,
-			// itsGrib->Message().iDirectionIncrement(),itsGrib->Message().jDirectionIncrement(), m);
 
 			gg->TopLeft(firstPoint);
 
@@ -1184,17 +1261,20 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			rg->Ni(ni);
 			rg->Nj(nj);
 
+			rg->Di(itsGrib->Message().iDirectionIncrement());
+			rg->Dj(itsGrib->Message().jDirectionIncrement());
+
 			rg->SouthPole(himan::point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY()));
 			rg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
 
 			rg->ScanningMode(m);
 
-			pair<point, point> coordinates =
-			    util::CoordinatesFromFirstGridPoint(firstPoint, ni, nj, itsGrib->Message().iDirectionIncrement(),
-			                                        itsGrib->Message().jDirectionIncrement(), m);
+			rg->FirstPoint(firstPoint);
 
-			rg->BottomLeft(coordinates.first);
-			rg->TopRight(coordinates.second);
+			double X1 = itsGrib->Message().X1();
+			double Y1 = itsGrib->Message().Y1();
+
+			rg->LastPoint(point(X1, Y1));
 
 			rg->Data(matrix<double>(ni, nj, 1, kFloatMissing));
 
@@ -1346,16 +1426,54 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().SetLongKey("N", static_cast<long>(gg->N()));
 
-			itsGrib->Message().PL(gg->NumberOfLongitudesAlongParallels());
+			itsGrib->Message().PL(gg->NumberOfPointsAlongParallels());
 
 			scmode = gg->ScanningMode();
 
 			break;
 		}
-		default:
-			throw runtime_error(ClassName() + ": invalid projection while writing grib: " +
-			                    boost::lexical_cast<string>(anInfo.Grid()->Type()));
+		case kLambertConformalConic:
+		{
+			lambert_conformal_grid* const lccg = dynamic_cast<lambert_conformal_grid*>(anInfo.Grid());
+
+			long gridType = 3;  // Grib 1
+
+			if (edition == 2)
+			{
+				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+			}
+
+			itsGrib->Message().GridType(gridType);
+
+			itsGrib->Message().X0(lccg->FirstPoint().X());
+			itsGrib->Message().Y0(lccg->FirstPoint().Y());
+
+			itsGrib->Message().GridOrientation(lccg->Orientation());
+
+			itsGrib->Message().XLengthInMeters(lccg->Di());
+			itsGrib->Message().YLengthInMeters(lccg->Dj());
+
+			itsGrib->Message().SizeX(static_cast<long>(lccg->Ni()));
+			itsGrib->Message().SizeY(static_cast<long>(lccg->Nj()));
+
+			itsGrib->Message().SetLongKey("Latin1InDegrees", static_cast<long>(lccg->StandardParallel1()));
+
+			if (lccg->StandardParallel2() != kHPMissingValue)
+			{
+				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
+			}
+
+			itsGrib->Message().SetLongKey("earthIsOblate", 0);
+
+			scmode = lccg->ScanningMode();
+
 			break;
+		}
+
+		default:
+			itsLogger->Fatal("Invalid projection while writing grib: " +
+			                 boost::lexical_cast<string>(anInfo.Grid()->Type()));
+			exit(1);
 	}
 
 	bool iNegative, jPositive;

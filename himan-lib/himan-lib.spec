@@ -24,6 +24,7 @@ BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-7-5
 BuildRequires: libsmartmet-newbase-devel >= 16.5.4
 BuildRequires: scons
+BuildRequires: gdal-devel
 Provides: libhiman.so
 
 %description

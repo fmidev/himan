@@ -136,34 +136,38 @@ enum HPLevelType
 	kMeanSea = 102,
 	kAltitude = 103,
 	kHeight = 105,
+	kHeightLayer = 106,  // layer between two metric heights from ground level
 	kHybrid = 109,
 	kGndLayer = 112,
 	kDepth = 160,
 	kEntireAtmosphere = 200,
-	kEntireOcean = 201
+	kEntireOcean = 201,
+	// reserved numbers starting here
+	kMaximumThetaE = 246  // maximum theta e level, like grib2
 };
 
-const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
-    ba::map_list_of(kUnknownLevel, "unknown")(kGround, "ground")(kPressure, "pressure")(kMeanSea, "meansea")(
-        kAltitude, "altitude")(kHeight, "height")(kHybrid, "hybrid")(kGndLayer, "gndlayer")(kDepth, "depth")(
-        kTopOfAtmosphere, "top")(kEntireAtmosphere, "entatm")(kEntireOcean, "entocean")(kLake, "lake");
+const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString = ba::map_list_of(kUnknownLevel, "unknown")(
+    kGround, "ground")(kPressure, "pressure")(kMeanSea, "meansea")(kAltitude, "altitude")(kHeight, "height")(
+    kHeightLayer, "heightlayer")(kHybrid, "hybrid")(kGndLayer, "gndlayer")(kDepth, "depth")(kTopOfAtmosphere, "top")(
+    kEntireAtmosphere, "entatm")(kEntireOcean, "entocean")(kLake, "lake")(kMaximumThetaE, "maxthetae");
 
-const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
-    ba::map_list_of("unknown", kUnknownLevel)("ground", kGround)("pressure", kPressure)("meansea", kMeanSea)(
-        "altitude", kAltitude)("height", kHeight)("hybrid", kHybrid)("gndlayer", kGndLayer)("depth", kDepth)(
-        "top", kTopOfAtmosphere)("entatm", kEntireAtmosphere)("entocean", kEntireOcean)("lake", kLake);
+const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType = ba::map_list_of("unknown", kUnknownLevel)(
+    "ground", kGround)("pressure", kPressure)("meansea", kMeanSea)("altitude", kAltitude)("height", kHeight)(
+    "heightlayer", kHeightLayer)("hybrid", kHybrid)("gndlayer", kGndLayer)("depth", kDepth)("top", kTopOfAtmosphere)(
+    "entatm", kEntireAtmosphere)("entocean", kEntireOcean)("lake", kLake)("maxthetae", kMaximumThetaE);
 
 enum HPFileWriteOption
 {
 	kUnknownFileWriteOption = 0,
 	kSingleFile,
 	kMultipleFiles,
-	kDatabase
+	kDatabase,
+	kCacheOnly
 };
 
 const boost::unordered_map<HPFileWriteOption, std::string> HPFileWriteOptionToString =
     ba::map_list_of(kUnknownFileWriteOption, "unknown")(kSingleFile, "single file only")(
-        kMultipleFiles, "multiple files")(kDatabase, "write to database");
+        kMultipleFiles, "multiple files")(kDatabase, "write to database")(kCacheOnly, "cache only");
 
 /**
  * @enum HPScanningMode
@@ -332,13 +336,14 @@ enum HPGridType
 	kAzimuthalEquidistant,
 	kRotatedLatitudeLongitude,
 	kReducedGaussian,
-	kPointList
+	kPointList,
+	kLambertConformalConic
 };
 
 const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
     ba::map_list_of(kUnknownGridType, "unknown grid type")(kLatitudeLongitude, "ll")(kStereographic, "polster")(
-        kAzimuthalEquidistant, "azimuthal")(kRotatedLatitudeLongitude, "rll")(kReducedGaussian, "rgg")(kPointList,
-                                                                                                       "pointlist");
+        kAzimuthalEquidistant, "azimuthal")(kRotatedLatitudeLongitude, "rll")(kReducedGaussian, "rgg")(
+        kPointList, "pointlist")(kLambertConformalConic, "lcc");
 
 enum HPDatabaseType
 {

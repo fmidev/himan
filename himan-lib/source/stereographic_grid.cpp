@@ -1,5 +1,6 @@
 #include "stereographic_grid.h"
 #include "logger_factory.h"
+#include <NFmiStereographicArea.h>
 #include <boost/lexical_cast.hpp>
 
 using namespace himan;
@@ -77,10 +78,40 @@ void stereographic_grid::ScanningMode(HPScanningMode theScanningMode)
 	itsScanningMode = theScanningMode;
 }
 
+void stereographic_grid::CreateAreaAndGrid() const
+{
+	NFmiPoint bl(itsBottomLeft.X(), itsBottomLeft.Y());
+	auto area = unique_ptr<NFmiStereographicArea>(new NFmiStereographicArea(
+	    bl, itsDi * (static_cast<double>(itsNi) - 1), itsDj * (static_cast<double>(itsNj) - 1), itsOrientation));
+
+	itsStereGrid = unique_ptr<NFmiGrid>(new NFmiGrid(area.get(), itsNi, itsNj));
+}
+
+point stereographic_grid::XY(const point& latlon) const
+{
+	assert(itsScanningMode == kBottomLeft);
+
+	if (!itsStereGrid)
+	{
+		CreateAreaAndGrid();
+	}
+
+	auto xy = itsStereGrid->LatLonToGrid(latlon.X(), latlon.Y());
+	return point(xy.X(), xy.Y());
+}
+
 point stereographic_grid::LatLon(size_t locationIndex) const
 {
-	// not implemented yet
-	return point();
+	assert(itsScanningMode == kBottomLeft);
+
+	if (!itsStereGrid)
+	{
+		CreateAreaAndGrid();
+	}
+
+	auto ll = itsStereGrid->LatLon(locationIndex);
+
+	return point(ll.X(), ll.Y());
 }
 
 void stereographic_grid::BottomLeft(const point& theBottomLeft) { itsBottomLeft = theBottomLeft; }

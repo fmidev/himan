@@ -1,9 +1,6 @@
 #include "latitude_longitude_grid.h"
 #include "info.h"
 #include "logger_factory.h"
-#include <NFmiLatLonArea.h>
-#include <NFmiRotatedLatLonArea.h>
-#include <NFmiStereographicArea.h>
 
 #ifdef HAVE_CUDA
 #include "simple_packed.h"
@@ -11,8 +8,6 @@
 
 using namespace himan;
 using namespace std;
-
-std::unique_ptr<NFmiRotatedLatLonArea> rotlatlonArea;
 
 latitude_longitude_grid::latitude_longitude_grid()
     : grid(kRegularGrid, kLatitudeLongitude),
@@ -23,7 +18,8 @@ latitude_longitude_grid::latitude_longitude_grid()
       itsDi(kHPMissingValue),
       itsDj(kHPMissingValue),
       itsNi(kHPMissingInt),
-      itsNj(kHPMissingInt)
+      itsNj(kHPMissingInt),
+      itsIsGlobal(false)
 {
 	itsLogger = logger_factory::Instance()->GetLog("latitude_longitude_grid");
 }
@@ -37,7 +33,8 @@ latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode,
       itsDi(kHPMissingValue),
       itsDj(kHPMissingValue),
       itsNi(kHPMissingInt),
-      itsNj(kHPMissingInt)
+      itsNj(kHPMissingInt),
+      itsIsGlobal(false)
 {
 	itsLogger = logger_factory::Instance()->GetLog("latitude_longitude_grid");
 	UpdateCoordinates();
@@ -52,7 +49,8 @@ latitude_longitude_grid::latitude_longitude_grid(const latitude_longitude_grid& 
       itsDi(other.itsDi),
       itsDj(other.itsDj),
       itsNi(other.itsNi),
-      itsNj(other.itsNj)
+      itsNj(other.itsNj),
+      itsIsGlobal(other.itsIsGlobal)
 {
 	itsLogger = logger_factory::Instance()->GetLog("latitude_longitude_grid");
 }
@@ -104,7 +102,7 @@ point latitude_longitude_grid::FirstPoint() const
 		case kBottomLeft:
 			return itsBottomLeft;
 		default:
-			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
+			return point();
 	}
 }
 
@@ -117,8 +115,40 @@ point latitude_longitude_grid::LastPoint() const
 		case kBottomLeft:
 			return itsTopRight;
 		default:
-			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
+			return point();
 	}
+}
+
+point latitude_longitude_grid::XY(const himan::point& latlon) const
+{
+	double x = (latlon.X() - itsBottomLeft.X()) / Di();
+
+	if (itsIsGlobal && (x < 0 || x > Ni() - 1))
+	{
+		// wrap x if necessary
+		// this might happen f.ex. with EC where grid start at 0 meridian and
+		// we interpolate from say -10 to 40 longitude
+
+		while (x < 0) x += static_cast<double>(Ni());
+		while (x > Ni() - 1) x -= static_cast<double>(Ni()) - 1.;
+	}
+
+	double y;
+
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			y = (latlon.Y() - itsBottomLeft.Y()) / Dj();
+			break;
+		case kTopLeft:
+			y = (itsTopLeft.Y() - latlon.Y()) / Dj();
+			break;
+		default:
+			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
+			break;
+	}
+
+	return point(x, y);
 }
 
 point latitude_longitude_grid::LatLon(size_t locationIndex) const
@@ -198,11 +228,14 @@ void latitude_longitude_grid::Di(double theDi) { itsDi = theDi; }
 void latitude_longitude_grid::Dj(double theDj) { itsDj = theDj; }
 double latitude_longitude_grid::Di() const
 {
-	if (itsDi == kHPMissingValue)
+	if (itsDi == kHPMissingValue && FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
 	{
-		assert(itsBottomLeft.X() != static_cast<size_t>(kHPMissingInt));
-		assert(itsTopRight.X() != static_cast<size_t>(kHPMissingInt));
-		itsDi = fabs((itsBottomLeft.X() - itsTopRight.X()) / (static_cast<double>(itsNi) - 1.));
+		double fx = FirstPoint().X();
+		double lx = LastPoint().X();
+
+		if (fx == 0. && lx < 0) lx += 360;
+
+		itsDi = fabs((fx - lx) / (static_cast<double>(itsNi) - 1.));
 	}
 
 	return itsDi;
@@ -210,14 +243,44 @@ double latitude_longitude_grid::Di() const
 
 double latitude_longitude_grid::Dj() const
 {
-	if (itsDj == kHPMissingValue)
+	if (itsDj == kHPMissingValue && FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
 	{
-		assert(itsBottomLeft.X() != static_cast<size_t>(kHPMissingInt));
-		assert(itsTopRight.X() != static_cast<size_t>(kHPMissingInt));
-		itsDj = fabs((itsBottomLeft.Y() - itsTopRight.Y()) / (static_cast<double>(itsNj) - 1.));
+		itsDj = fabs((FirstPoint().Y() - LastPoint().Y()) / (static_cast<double>(itsNj) - 1.));
 	}
 
 	return itsDj;
+}
+
+void latitude_longitude_grid::FirstPoint(const point& theFirstPoint)
+{
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			itsBottomLeft = theFirstPoint;
+			break;
+		case kTopLeft:
+			itsTopLeft = theFirstPoint;
+			break;
+		default:
+			break;
+	}
+	UpdateCoordinates();
+}
+
+void latitude_longitude_grid::LastPoint(const point& theLastPoint)
+{
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			itsTopRight = theLastPoint;
+			break;
+		case kTopLeft:
+			itsBottomRight = theLastPoint;
+			break;
+		default:
+			break;
+	}
+	UpdateCoordinates();
 }
 
 void latitude_longitude_grid::UpdateCoordinates() const
@@ -226,14 +289,33 @@ void latitude_longitude_grid::UpdateCoordinates() const
 
 	if ((itsBottomLeft != missing && itsTopRight != missing) && (itsTopLeft == missing || itsBottomRight == missing))
 	{
+		if (itsBottomLeft.X() == 0. && itsTopRight.X() < 0)
+		{
+			itsTopRight.X(itsTopRight.X() + 360.);
+		}
+
 		itsTopLeft = point(itsBottomLeft.X(), itsTopRight.Y());
 		itsBottomRight = point(itsTopRight.X(), itsBottomLeft.Y());
 	}
 	else if ((itsBottomLeft == missing || itsTopRight == missing) &&
 	         (itsTopLeft != missing && itsBottomRight != missing))
 	{
+		if (itsTopLeft.X() == 0. && itsBottomRight.X() < 0)
+		{
+			itsBottomRight.X(itsBottomRight.X() + 360.);
+		}
+
 		itsBottomLeft = point(itsTopLeft.X(), itsBottomRight.Y());
 		itsTopRight = point(itsBottomRight.X(), itsTopLeft.Y());
+	}
+
+	Di();
+	Dj();
+
+	if (FirstPoint() != missing && LastPoint() != missing && Di() != kHPMissingValue)
+	{
+		double span = itsBottomLeft.X() + itsTopRight.X() + Di();
+		itsIsGlobal = (span == 0. || span == 360.);
 	}
 }
 
@@ -313,14 +395,11 @@ ostream& latitude_longitude_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
 
-	file << itsBottomLeft;
-	file << itsTopLeft;
-	file << itsTopRight;
-	file << itsBottomRight;
-	file << "__itsNi__ " << itsNi << endl;
-	file << "__itsNj__ " << itsNj << endl;
-	file << "__itsDi__ " << Di() << endl;
-	file << "__itsDj__ " << Dj() << endl;
+	file << itsBottomLeft << itsTopLeft << itsTopRight << itsBottomRight << "__itsNi__ " << itsNi << endl
+	     << "__itsNj__ " << itsNj << endl
+	     << "__itsDi__ " << itsDi << endl
+	     << "__itsDj__ " << itsDj << endl
+	     << "__itsIsGlobal__" << itsIsGlobal << endl;
 
 	return file;
 }
@@ -405,18 +484,39 @@ void rotated_latitude_longitude_grid::UVRelativeToGrid(bool theUVRelativeToGrid)
 	itsUVRelativeToGrid = theUVRelativeToGrid;
 }
 
+point rotated_latitude_longitude_grid::XY(const point& latlon) const
+{
+	if (!itsRotLatLonArea)
+	{
+		assert(itsBottomLeft != point());
+		assert(itsTopRight != point());
+		assert(itsSouthPole != point());
+
+		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
+		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
+		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
+	}
+
+	auto rotpoint = itsRotLatLonArea->ToRotLatLon(NFmiPoint(latlon.X(), latlon.Y()));
+
+	return latitude_longitude_grid::XY(point(rotpoint.X(), rotpoint.Y()));
+}
+
 point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 {
 	point rll = latitude_longitude_grid::LatLon(locationIndex);  // rotated coordinates
 
-	if (!rotlatlonArea)
+	if (!itsRotLatLonArea)
 	{
-		rotlatlonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
+		assert(itsBottomLeft != point());
+		assert(itsTopRight != point());
+
+		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
 		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
-		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(0., 0.), true));
+		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
 	}
 
-	auto regpoint = rotlatlonArea->ToRegLatLon(NFmiPoint(rll.X(), rll.Y()));
+	auto regpoint = itsRotLatLonArea->ToRegLatLon(NFmiPoint(rll.X(), rll.Y()));
 
 	return point(regpoint.X(), regpoint.Y());
 }

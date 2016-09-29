@@ -66,7 +66,8 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 */
 
 	const param CapeParamEC("CAPE-JKG");
-	const param CapeParamHiman("CAPEMU1040");
+	const param CapeParamHiman("CAPE1040-JKG");
+	const level CapeLevelHiman(kMaximumThetaE, 0);
 	const param RainParam("RRR-KGM2");
 	// ----
 
@@ -128,7 +129,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	info_t CAPEInfo, RRInfo, RRPrevInfo, RRNextInfo;
 
-	CAPEInfo = Fetch(forecastTime, forecastLevel, CapeParamHiman, forecastType, false);
+	CAPEInfo = Fetch(forecastTime, CapeLevelHiman, CapeParamHiman, forecastType, false);
 	if (!CAPEInfo)
 	{
 		CAPEInfo = Fetch(forecastTime, forecastLevel, CapeParamEC, forecastType, false);

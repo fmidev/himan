@@ -22,73 +22,63 @@ class level
    public:
 	level();
 	explicit level(const NFmiLevel& theLevel);
-	level(HPLevelType theType, double theValue, const std::string& theName = "");
-	level(HPLevelType theType, double theValue, int theIndex, const std::string& theName = "");
+	level(HPLevelType theType, double theValue);
+	level(HPLevelType theType, double theValue, const std::string& theName);
+	level(HPLevelType theType, double theValue, double theValue2);
 
 	~level() = default;
-	level(const level& other);
-	level& operator=(const level& other);
 	operator std::string() const;
 
 	std::string ClassName() const { return "himan::level"; }
 	bool operator==(const level& other) const;
 	bool operator!=(const level& other) const;
 
-	/**
-	 * @brief Set level values (for pressure levels)
-	 */
-
 	void Value(double theLevelValue);
-
-	/**
-	 * @return Level value (for pressure levels)
-	 */
-
 	double Value() const;
 
-	/**
-	 * @brief Set level index number
-	 */
-	void Index(int theIndex);
+	void Value2(double theLevelValue2);
+	double Value2() const;
 
-	/**
-	 * @return Level index number
-	 */
+	void Index(int theIndex);
 
 	int Index() const;
 
-	/**
-	 * @brief Set Level type
-	 * @param theType
-	 */
-
 	void Type(HPLevelType theLevelType);
-
-	/**
-	 * @return Return level type
-	 * @see himan_common.h
-	 */
-
 	HPLevelType Type() const;
 
-	/**
-	 * @brief deprecated
-	 */
-
 	std::string Name() const;
-
-	/**
-	 * @brief deprecated
-	 */
-
 	void Name(const std::string& theName);
 
 	std::ostream& Write(std::ostream& file) const;
 
    private:
 	HPLevelType itsType;
+
+	/*
+	 * itsValue variable contains the value of the level (doh).
+	 * In the majority of the cases, a level has only single value
+	 * and it's stored here.
+	 */
 	double itsValue;
-	int itsIndex;
+
+	/*
+	 * itsValue2 contains the _possible_ second value related to the
+	 * level. This is used for example for a level that's actually a
+	 * layer between two height values. In this case a common interpretation
+	 * is that 'itsValue' is the upper level value of the layer, and
+	 * 'itsValue2' is the lower level value of the layer.
+	 *
+	 * The variable is ambiguosly named on purpose, because:
+	 * - In almost all cases, we only have one level value which is not
+	 *   either high or low. In this case itsValue2 is missing value.
+	 * - In some cases it could be that the two values are not high and
+	 *   low but something else. Currently all layers between two levels
+	 *   are defined with top/bottom, but that might not be the case in
+	 *   the future.
+	 */
+
+	double itsValue2;
+	int itsIndex;  // Level index, ie. the number of level in a file for example
 	std::string itsName;
 };
 

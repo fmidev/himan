@@ -12,9 +12,6 @@
 #include <cub/cub.cuh>
 #include <grib_api.h>
 
-#define BitTest(n, i) !!((n)&BitMask1(i))
-#define BitMask1(i) (1u << i)
-
 using namespace himan;
 
 long get_binary_scale_fact(double max, double min, long bpval)

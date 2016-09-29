@@ -45,6 +45,7 @@ class point_list : public grid
 	bool operator==(const point_list& other) const;
 	bool operator!=(const point_list& other) const;
 
+	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const;
 
 	const std::vector<station>& Stations() const;

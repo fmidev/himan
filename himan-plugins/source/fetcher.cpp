@@ -78,10 +78,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		optsStr += requestedParams[i].Name() + ",";
 	}
 
-	optsStr = optsStr.substr(0, optsStr.size() - 1);
-
-	optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " +
-	           boost::lexical_cast<string>(requestedLevel.Value());
+	optsStr = optsStr.substr(0, optsStr.size() - 1) + " level: " + static_cast<std::string>(requestedLevel);
 
 	if (static_cast<int>(requestedType.Type()) > 2)
 	{
@@ -113,9 +110,10 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		producer sourceProd(config->SourceProducer(prodNum));
 
-		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure))
+		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure &&
+		                            requestedLevel.Type() != kHeightLayer))
 		{
-			newLevel = LevelTransform(sourceProd, requestedParam, requestedLevel);
+			newLevel = LevelTransform(config, sourceProd, requestedParam, requestedLevel);
 
 			if (newLevel != requestedLevel)
 			{
@@ -160,8 +158,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
 			           boost::lexical_cast<string>(requestedTime.Step());
 			optsStr += " param: " + requestedParam.Name();
-			optsStr += " level: " + string(himan::HPLevelTypeToString.at(requestedLevel.Type())) + " " +
-			           boost::lexical_cast<string>(requestedLevel.Value());
+			optsStr += " level: " + static_cast<string>(requestedLevel);
 
 			if (static_cast<int>(requestedType.Type()) > 2)
 			{
@@ -334,42 +331,78 @@ vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search
 	return infos;
 }
 
-himan::level fetcher::LevelTransform(const producer& sourceProducer, const param& targetParam,
-                                     const level& targetLevel) const
+himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration>& conf, const producer& sourceProducer,
+                                     const param& targetParam, const level& targetLevel) const
 {
-	level sourceLevel = targetLevel;
+	level ret = targetLevel;
 
-	if (sourceProducer.TableVersion() != kHPMissingInt)
+	HPDatabaseType dbtype = conf->DatabaseType();
+
+	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 	{
 		auto n = GET_PLUGIN(neons);
 
 		string lvlName =
 		    n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
 
-		if (lvlName.empty())
+		if (!lvlName.empty())
 		{
-			itsLogger->Trace("No level transformation found for param " + targetParam.Name() + " level " +
-			                 HPLevelTypeToString.at(targetLevel.Type()));
-			return targetLevel;
+			double lvlValue = targetLevel.Value();
+
+			HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
+
+			if (lvlType == kGround)
+			{
+				lvlValue = 0;
+			}
+
+			ret = level(lvlType, lvlValue, lvlName);
 		}
-
-		double lvlValue = targetLevel.Value();
-
-		HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
-
-		if (lvlType == kGround)
-		{
-			lvlValue = 0;
-		}
-
-		sourceLevel = level(lvlType, lvlValue, lvlName);
 	}
-	else
+
+	if (ret == targetLevel && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 	{
-		sourceLevel = targetLevel;
+		auto r = GET_PLUGIN(radon);
+
+		auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(sourceProducer.Id(), targetParam.Name());
+
+		if (paramInfo.empty())
+		{
+			itsLogger->Trace("Level transform failed: no parameter information for param " + targetParam.Name());
+			return ret;
+		}
+
+		auto levelInfo =
+		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(targetLevel.Type())));
+
+		if (levelInfo.empty()) return ret;
+
+		auto levelXrefInfo =
+		    r->RadonDB().GetLevelTransform(sourceProducer.Id(), boost::lexical_cast<int>(paramInfo["id"]),
+		                                   boost::lexical_cast<int>(levelInfo["id"]), targetLevel.Value());
+
+		if (!levelXrefInfo.empty())
+		{
+			double lvlValue = targetLevel.Value();
+
+			HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(levelXrefInfo["name"]));
+
+			if (lvlType == kGround)
+			{
+				lvlValue = 0;
+			}
+
+			ret = level(lvlType, lvlValue);
+		}
 	}
 
-	return sourceLevel;
+	if (ret == targetLevel)
+	{
+		itsLogger->Trace("No level transformation found for param " + targetParam.Name() + " level " +
+		                 static_cast<string>(targetLevel));
+	}
+
+	return ret;
 }
 
 void fetcher::DoLevelTransform(bool theDoLevelTransform) { itsDoLevelTransform = theDoLevelTransform; }
@@ -406,12 +439,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		}
 	}
 
-	/*
-	 *  2. Fetch data from auxiliary files specified at command line
-	 *
-	 *  Even if file_wait_timeout is specified, auxiliary files is searched
-	 *  only once.
-	 */
+	/* 2. Fetch data from auxiliary files specified at command line */
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
@@ -497,8 +525,8 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		const string ref_prod = opts.prod.Name();
 		const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
 		const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
-		itsLogger->Warning("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
-		                   ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
+		itsLogger->Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
+		                 ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
 	}
 
 	return ret;
