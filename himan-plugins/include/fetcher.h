@@ -138,7 +138,7 @@ class fetcher : public auxiliary_plugin
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, search_options& options,
+	std::vector<std::shared_ptr<info>> FromFile(const std::set<std::string>& files, search_options& options,
 	                                            bool readContents = true, bool readPackedData = false,
 	                                            bool forceCaching = false);
 
@@ -158,6 +158,23 @@ class fetcher : public auxiliary_plugin
 	std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options,
 	                                            bool readContents = true, bool readPackedData = false,
 	                                            bool forceCaching = false);
+
+        /**
+         * @brief Return selected data from a grib index file, overcoat for himan::plugin::grib::FromIndexFile().
+         * @see himan::plugin::grib::FromIndexFile()
+         *
+         * @param inputFile Input file name
+         * @param options Search options (param, level, time, prod, config)
+         * @param readContents Specify if data should also be read (and not only metadata)
+         * @param readPackedData Whether to read packed data. Caller must do unpacking.
+         * @param forceCaching Force caching of data even if it does not match searched data
+         *
+         * @return A vector of shared_ptr'd infos.
+         */
+
+        std::vector<std::shared_ptr<info>> FromGribIndex(const std::string& inputFile, search_options& options,
+                                                         bool readContents = true, bool readPackedData = false,
+                                                         bool forceCaching = false);
 
 	/**
 	 * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().

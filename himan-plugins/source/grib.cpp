@@ -323,19 +323,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options,
                                                bool readContents, bool readPackedData, bool forceCaching) const
 {
-	shared_ptr<neons> n;
-	shared_ptr<radon> r;
-
-	if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
-	{
-		n = GET_PLUGIN(neons);
-	}
-
-	if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
-	{
-		r = GET_PLUGIN(radon);
-	}
-
 	vector<shared_ptr<himan::info>> infos;
 
 	if (!itsGrib->Open(theInputFile))
@@ -359,667 +346,17 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	while (itsGrib->NextMessage())
 	{
 		foundMessageNo++;
-		bool dataIsValid = true;
+                shared_ptr<info> newInfo(new info());
 
-		/*
-		 * One grib file may contain many grib messages. Loop though all messages
-		 * and get all that match our search options.
-		 *
-		 */
-
-		//<!todo Should we actually return all matching messages or only the first one
-
-		long centre = itsGrib->Message().Centre();
-		long process = itsGrib->Message().Process();
-
-		if (options.prod.Process() != process || options.prod.Centre() != centre)
+		if(CreateInfoFromGrib(options, readContents, readPackedData, forceCaching, newInfo))
 		{
-			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string>(options.prod.Process()) +
-			                 " vs " + boost::lexical_cast<string>(process));
-			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string>(options.prod.Centre()) +
-			                 " vs " + boost::lexical_cast<string>(centre));
-			// continue;
+			infos.push_back(newInfo);
+			newInfo->First();
+
+			aTimer->Stop();
+
+			break;  // We found what we were looking for
 		}
-
-		param p;
-
-		long number = itsGrib->Message().ParameterNumber();
-
-		if (itsGrib->Message().Edition() == 1)
-		{
-			long no_vers = itsGrib->Message().Table2Version();
-
-			long timeRangeIndicator = itsGrib->Message().TimeRangeIndicator();
-
-			string parmName = "";
-
-			if (options.configuration->DatabaseType() == kNeons ||
-			    options.configuration->DatabaseType() == kNeonsAndRadon)
-			{
-				parmName =
-				    n->GribParameterName(number, no_vers, timeRangeIndicator, static_cast<long>(options.level.Type()));
-			}
-
-			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
-			                         options.configuration->DatabaseType() == kNeonsAndRadon))
-			{
-				auto parminfo = r->RadonDB().GetParameterFromGrib1(
-				    options.prod.Id(), no_vers, number, timeRangeIndicator, itsGrib->Message().NormalizedLevelType(),
-				    itsGrib->Message().LevelValue());
-
-				if (parminfo.size())
-				{
-					parmName = parminfo["name"];
-				}
-			}
-
-			if (parmName.empty())
-			{
-				itsLogger->Warning("Parameter name not found from Neons for no_vers: " +
-				                   boost::lexical_cast<string>(no_vers) + ", number: " +
-				                   boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
-				                   boost::lexical_cast<string>(timeRangeIndicator));
-			}
-			else
-			{
-				p.Name(parmName);
-			}
-
-			p.GribParameter(number);
-			p.GribTableVersion(no_vers);
-
-			// Determine aggregation
-
-			aggregation a;
-			a.TimeResolution(kHourResolution);
-
-			switch (timeRangeIndicator)
-			{
-				case 0:  // forecast
-				case 1:  // analysis
-					break;
-
-				case 3:  // average
-					a.Type(kAverage);
-					a.TimeResolutionValue(itsGrib->Message().P2() - itsGrib->Message().P1());
-					break;
-			}
-
-			if (a.TimeResolutionValue() != kHPMissingInt)
-			{
-				p.Aggregation(a);
-			}
-		}
-		else
-		{
-			long category = itsGrib->Message().ParameterCategory();
-			long discipline = itsGrib->Message().ParameterDiscipline();
-			long process = options.prod.Process();
-
-			string parmName = "";
-
-			if (options.configuration->DatabaseType() == kNeons ||
-			    options.configuration->DatabaseType() == kNeonsAndRadon)
-			{
-				parmName = n->GribParameterName(number, category, discipline, process,
-				                                static_cast<long>(options.level.Type()));
-			}
-
-			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
-			                         options.configuration->DatabaseType() == kNeonsAndRadon))
-			{
-				auto parminfo = r->RadonDB().GetParameterFromGrib2(options.prod.Id(), discipline, category, number,
-				                                                   itsGrib->Message().NormalizedLevelType(),
-				                                                   itsGrib->Message().LevelValue());
-
-				if (parminfo.size())
-				{
-					parmName = parminfo["name"];
-				}
-			}
-
-			if (parmName.empty())
-			{
-				itsLogger->Warning("Parameter name not found from database for discipline: " +
-				                   boost::lexical_cast<string>(discipline) + ", category: " +
-				                   boost::lexical_cast<string>(category) + ", number: " +
-				                   boost::lexical_cast<string>(number));
-			}
-			else
-			{
-				p.Name(parmName);
-			}
-
-			p.GribParameter(number);
-			p.GribDiscipline(discipline);
-			p.GribCategory(category);
-
-			if (p.Name() == "T-C" && options.prod.Centre() == 7)
-			{
-				// Fixed in radon
-				p.Name("T-K");
-			}
-
-			aggregation a;
-			a.TimeResolution(kHourResolution);
-			switch (itsGrib->Message().TypeOfStatisticalProcessing())
-			{
-				case 0:  // Average
-					a.Type(kAverage);
-					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
-					break;
-
-				case 1:  // Accumulation
-					a.Type(kAccumulation);
-					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
-					break;
-
-				case 2:  // Maximum
-					a.Type(kMaximum);
-					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
-					break;
-
-				case 3:  // Minimum
-					a.Type(kMinimum);
-					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
-					break;
-			}
-
-			if (a.TimeResolutionValue() != kHPMissingInt)
-			{
-				p.Aggregation(a);
-			}
-		}
-
-		string unit = itsGrib->Message().ParameterUnit();
-
-		if (unit == "K")
-		{
-			p.Unit(kK);
-		}
-		else if (unit == "Pa s-1" || unit == "Pa s**-1")
-		{
-			p.Unit(kPas);
-		}
-		else if (unit == "%")
-		{
-			p.Unit(kPrcnt);
-		}
-		else if (unit == "m s**-1" || unit == "m s-1")
-		{
-			p.Unit(kMs);
-		}
-		else if (unit == "m" || unit == "m of water equivalent")
-		{
-			p.Unit(kM);
-		}
-		else if (unit == "mm")
-		{
-			p.Unit(kMm);
-		}
-		else if (unit == "Pa")
-		{
-			p.Unit(kPa);
-		}
-		else if (unit == "m**2 s**-2")
-		{
-			p.Unit(kGph);
-		}
-		else if (unit == "kg kg**-1")
-		{
-			p.Unit(kKgkg);
-		}
-		else if (unit == "J m**-2")
-		{
-			p.Unit(kJm2);
-		}
-		else if (unit == "kg m**-2")
-		{
-			p.Unit(kKgm2);
-		}
-		else if (unit == "hPa")
-		{
-			p.Unit(kHPa);
-		}
-		else
-		{
-			itsLogger->Trace("Unable to determine himan parameter unit for grib unit " +
-			                 itsGrib->Message().ParameterUnit());
-		}
-
-		if (p != options.param)
-		{
-			itsLogger->Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
-			                 " (found)");
-
-			if (forceCaching)
-			{
-				dataIsValid = false;
-			}
-			else
-			{
-				continue;
-			}
-		}
-
-		string dataDate = boost::lexical_cast<string>(itsGrib->Message().DataDate());
-
-		/*
-		 * dataTime is HH24MM in long datatype.
-		 *
-		 * So, for example analysistime 00 is 0, and 06 is 600.
-		 *
-		 */
-
-		long dt = itsGrib->Message().DataTime();
-
-		string dataTime = boost::lexical_cast<string>(dt);
-
-		if (dt < 1000)
-		{
-			dataTime = "0" + dataTime;
-		}
-
-		long step = itsGrib->Message().NormalizedStep(true, true);
-
-		string originDateTimeStr = dataDate + dataTime;
-
-		raw_time originDateTime(originDateTimeStr, "%Y%m%d%H%M");
-
-		forecast_time t(originDateTime, originDateTime);
-
-		long unitOfTimeRange = itsGrib->Message().NormalizedUnitOfTimeRange();
-
-		HPTimeResolution timeResolution = kUnknownTimeResolution;
-
-		switch (unitOfTimeRange)
-		{
-			case 1:
-			case 10:
-			case 11:
-			case 12:
-				timeResolution = kHourResolution;
-				break;
-
-			case 0:
-			case 13:
-			case 14:
-				timeResolution = kMinuteResolution;
-				break;
-
-			default:
-				itsLogger->Warning("Unsupported unit of time range: " + boost::lexical_cast<string>(timeResolution));
-				break;
-		}
-
-		t.StepResolution(timeResolution);
-
-		t.ValidDateTime().Adjust(timeResolution, static_cast<int>(step));
-
-		if (t != options.time)
-		{
-			forecast_time optsTime(options.time);
-
-			itsLogger->Trace("Times do not match");
-
-			if (optsTime.OriginDateTime() != t.OriginDateTime())
-			{
-				itsLogger->Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
-				                 t.OriginDateTime().String() + " (found)");
-			}
-
-			if (optsTime.ValidDateTime() != t.ValidDateTime())
-			{
-				itsLogger->Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
-				                 t.ValidDateTime().String() + " (found)");
-			}
-
-			if (optsTime.StepResolution() != t.StepResolution())
-			{
-				itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) +
-				                 " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) +
-				                 " (found)");
-			}
-
-			if (forceCaching)
-			{
-				dataIsValid = false;
-			}
-			else
-			{
-				continue;
-			}
-		}
-
-		long gribLevel = itsGrib->Message().NormalizedLevelType();
-
-		himan::HPLevelType levelType;
-
-		switch (gribLevel)
-		{
-			case 1:
-				levelType = himan::kGround;
-				break;
-
-			case 8:
-				levelType = himan::kTopOfAtmosphere;
-				break;
-
-			case 100:
-				levelType = himan::kPressure;
-				break;
-
-			case 102:
-				levelType = himan::kMeanSea;
-				break;
-
-			case 105:
-				levelType = himan::kHeight;
-				break;
-
-			case 106:
-				levelType = himan::kHeightLayer;
-				break;
-
-			case 109:
-				levelType = himan::kHybrid;
-				break;
-
-			case 112:
-				levelType = himan::kGndLayer;
-				break;
-
-			case 246:
-				levelType = himan::kMaximumThetaE;
-				break;
-
-			default:
-				itsLogger->Error(ClassName() + ": Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
-				continue;
-				break;
-		}
-
-		level l;
-
-		switch (levelType)
-		{
-			case kHeightLayer:
-				l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
-				break;
-
-			default:
-				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
-				break;
-		}
-
-		if (l != options.level)
-		{
-			itsLogger->Trace("Level does not match");
-
-			if (options.level.Type() != l.Type())
-			{
-				itsLogger->Trace("Type: " + string(HPLevelTypeToString.at(options.level.Type())) + " (requested) vs " +
-				                 string(HPLevelTypeToString.at(l.Type())) + " (found)");
-			}
-
-			if (options.level.Value() != l.Value())
-			{
-				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
-				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
-			}
-
-			if (options.level.Value2() != l.Value2())
-			{
-				itsLogger->Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
-				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
-			}
-
-			if (forceCaching)
-			{
-				dataIsValid = false;
-			}
-			else
-			{
-				continue;
-			}
-		}
-
-		forecast_type ty(static_cast<HPForecastType>(itsGrib->Message().ForecastType()),
-		                 itsGrib->Message().ForecastTypeValue());
-
-		if (options.ftype.Type() != ty.Type() || options.ftype.Value() != ty.Value())
-		{
-			itsLogger->Trace("Forecast type does not match");
-
-			if (options.ftype.Type() != ty.Type())
-			{
-				itsLogger->Trace("Type: " + string(HPForecastTypeToString.at(options.ftype.Type())) +
-				                 " (requested) vs " + string(HPForecastTypeToString.at(ty.Type())) + " (found)");
-			}
-
-			if (options.ftype.Value() != ty.Value())
-			{
-				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.ftype.Value())) +
-				                 " (requested) vs " + string(boost::lexical_cast<string>(ty.Value())) + " (found)");
-			}
-
-			if (forceCaching)
-			{
-				dataIsValid = false;
-			}
-			else
-			{
-				continue;
-			}
-		}
-
-		// END VALIDATION OF SEARCH PARAMETERS
-
-		shared_ptr<info> newInfo(new info());
-
-		producer prod(centre, process);
-
-		if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
-		{
-			// No easy way to get fmi producer id from from Neons based on centre/ident.
-			// Use given producer id instead.
-
-			prod.Id(options.prod.Id());
-		}
-
-		if (prod.Id() == kHPMissingInt && (options.configuration->DatabaseType() == kRadon ||
-		                                   options.configuration->DatabaseType() == kNeonsAndRadon))
-		{
-			// Do a double check and fetch the fmi producer id from database.
-
-			long typeId = 1;  // deterministic forecast, default
-			long msgType = itsGrib->Message().ForecastType();
-
-			if (msgType == 2)
-			{
-				typeId = 2;  // ANALYSIS
-			}
-			else if (msgType == 3 || msgType == 4)
-			{
-				typeId = 3;  // ENSEMBLE
-			}
-
-			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process, typeId);
-
-			if (!prodInfo.empty())
-			{
-				prod.Id(boost::lexical_cast<int>(prodInfo["id"]));
-			}
-		}
-
-		newInfo->Producer(prod);
-
-		vector<param> theParams;
-
-		theParams.push_back(p);
-
-		newInfo->Params(theParams);
-
-		vector<forecast_time> theTimes;
-
-		theTimes.push_back(t);
-
-		newInfo->Times(theTimes);
-
-		vector<level> theLevels;
-
-		theLevels.push_back(l);
-
-		newInfo->Levels(theLevels);
-
-		vector<forecast_type> theForecastTypes;
-
-		theForecastTypes.push_back(ty);
-
-		newInfo->ForecastTypes(theForecastTypes);
-
-		/*
-		 * Get area information from grib.
-		 */
-
-		unique_ptr<grid> newGrid = ReadAreaAndGrid();
-
-		assert(newGrid);
-
-		std::vector<double> ab;
-
-		if (levelType == himan::kHybrid)
-		{
-			long nv = itsGrib->Message().NV();
-			long lev = itsGrib->Message().LevelValue();
-
-			if (nv > 0)
-			{
-				ab = itsGrib->Message().PV(static_cast<size_t>(nv), static_cast<size_t>(lev));
-			}
-		}
-
-		newGrid->AB(ab);
-
-		newInfo->Create(newGrid.get());
-
-		// Set descriptors
-
-		newInfo->Param(p);
-		newInfo->Time(t);
-		newInfo->Level(l);
-		newInfo->ForecastType(ty);
-
-		/*
-		 * Read data from grib *
-		 */
-
-		auto& dm = newInfo->Grid()->Data();
-
-#if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
-
-		if (readPackedData && itsGrib->Message().PackingType() == "grid_simple")
-		{
-			// Get coefficient information
-
-			double bsf = itsGrib->Message().BinaryScaleFactor();
-			double dsf = itsGrib->Message().DecimalScaleFactor();
-			double rv = itsGrib->Message().ReferenceValue();
-			long bpv = itsGrib->Message().BitsPerValue();
-
-			auto packed =
-			    unique_ptr<simple_packed>(new simple_packed(bpv, util::ToPower(bsf, 2), util::ToPower(-dsf, 10), rv));
-
-			// Get packed values from grib
-
-			size_t len = itsGrib->Message().PackedValuesLength();
-			unsigned char* data = 0;
-			int* unpackedBitmap = 0;
-
-			if (len > 0)
-			{
-				CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&data), len * sizeof(unsigned char)));
-
-				itsGrib->Message().PackedValues(data);
-
-				itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len) + " bytes of packed data from grib");
-			}
-			else
-			{
-				itsLogger->Warning("Grid is constant or empty");
-			}
-
-			if (itsGrib->Message().Bitmap())
-			{
-				size_t bitmap_len = itsGrib->Message().BytesLength("bitmap");
-				size_t bitmap_size = static_cast<size_t>(ceil(static_cast<double>(bitmap_len) / 8));
-
-				itsLogger->Trace("Grib has bitmap, length " + boost::lexical_cast<string>(bitmap_len) + " size " +
-				                 boost::lexical_cast<string>(bitmap_size) + " bytes");
-
-				CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&unpackedBitmap), bitmap_len * sizeof(int)));
-
-				unsigned char* bitmap = new unsigned char[bitmap_size];
-
-				itsGrib->Message().Bytes("bitmap", bitmap);
-
-				UnpackBitmap(bitmap, unpackedBitmap, bitmap_size, bitmap_len);
-
-				packed->Bitmap(unpackedBitmap, bitmap_len);
-
-				delete[] bitmap;
-			}
-
-			packed->Set(data, len, static_cast<size_t>(itsGrib->Message().SizeX() * itsGrib->Message().SizeY()));
-
-			newInfo->Grid()->PackedData(move(packed));
-		}
-		else
-#endif
-		    if (readContents)
-		{
-			size_t len = itsGrib->Message().ValuesLength();
-
-			double* d = itsGrib->Message().Values();
-
-			dm.Set(d, len);
-
-			free(d);
-
-			itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len * 8) + " bytes of unpacked data from grib");
-		}
-
-		newInfo->Grid()->Data(dm);
-
-		if (!dataIsValid && forceCaching)
-		{
-			// Put this data to cache now if the data has regular grid and the grid is equal
-			// to wanted grid. This is a requirement since can't interpolate area here.
-
-			if (options.configuration->UseCache() &&
-			    dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid()->Class() ==
-			        kRegularGrid &&
-			    dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid()->Class() ==
-			        newInfo->Grid()->Class() &&
-			    *dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid() ==
-			        *newInfo->Grid())
-			{
-				itsLogger->Trace("Force cache insert");
-
-				auto c = GET_PLUGIN(cache);
-
-				c->Insert(*newInfo);
-			}
-
-			continue;
-		}
-
-		infos.push_back(newInfo);
-		newInfo->First();
-
-		aTimer->Stop();
-
-		break;  // We found what we were looking for
 	}
 
 	long duration = aTimer->GetTime();
@@ -1030,6 +367,48 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	itsLogger->Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
 
 	return infos;
+}
+
+vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
+                                               bool readContents, bool readPackedData, bool forceCaching) const
+{
+        vector<shared_ptr<himan::info>> infos;
+
+        if (!itsGrib->Open(theInputFile))
+        {
+                itsLogger->Error("Opening file '" + theInputFile + "' failed");
+                return infos;
+        }
+
+        if (options.prod.Centre() == kHPMissingInt)
+        {
+                itsLogger->Error("Process and centre information for producer " +
+                                 boost::lexical_cast<string>(options.prod.Id()) + " are undefined");
+                return infos;
+        }
+
+        auto aTimer = timer_factory::Instance()->GetTimer();
+        aTimer->Start();
+
+        if(itsGrib->Message(OptionsToKeys(options)))
+        {
+                shared_ptr<info> newInfo(new info());
+                if(CreateInfoFromGrib(options, readContents, readPackedData, forceCaching, newInfo))
+                {
+                        infos.push_back(newInfo);
+                        newInfo->First();
+
+                        aTimer->Stop();
+                }
+	}
+	long duration = aTimer->GetTime();
+        long bytes = boost::filesystem::file_size(theInputFile);
+
+        double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
+
+        itsLogger->Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
+
+        return infos;
 }
 
 #define BitMask1(i) (1u << i)
@@ -1767,4 +1146,710 @@ void grib::WriteParameter(info& anInfo)
 			itsGrib->Message().TypeOfStatisticalProcessing(type);
 		}
 	}
+}
+
+bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, bool readPackedData, bool forceCaching, shared_ptr<info> newInfo) const
+{
+        shared_ptr<neons> n;
+        shared_ptr<radon> r;
+
+        if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+        {
+                n = GET_PLUGIN(neons);
+        }
+
+        if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
+        {
+                r = GET_PLUGIN(radon);
+        }
+
+		bool dataIsValid = true;
+
+		/*
+		 * One grib file may contain many grib messages. Loop though all messages
+		 * and get all that match our search options.
+		 *
+		 */
+
+		//<!todo Should we actually return all matching messages or only the first one
+
+		long centre = itsGrib->Message().Centre();
+		long process = itsGrib->Message().Process();
+
+		if (options.prod.Process() != process || options.prod.Centre() != centre)
+		{
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string>(options.prod.Process()) +
+			                 " vs " + boost::lexical_cast<string>(process));
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string>(options.prod.Centre()) +
+			                 " vs " + boost::lexical_cast<string>(centre));
+			// continue;
+		}
+
+		param p;
+
+		long number = itsGrib->Message().ParameterNumber();
+
+		if (itsGrib->Message().Edition() == 1)
+		{
+			long no_vers = itsGrib->Message().Table2Version();
+
+			long timeRangeIndicator = itsGrib->Message().TimeRangeIndicator();
+
+			string parmName = "";
+
+			if (options.configuration->DatabaseType() == kNeons ||
+			    options.configuration->DatabaseType() == kNeonsAndRadon)
+			{
+				parmName =
+				    n->GribParameterName(number, no_vers, timeRangeIndicator, static_cast<long>(options.level.Type()));
+			}
+
+			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
+			                         options.configuration->DatabaseType() == kNeonsAndRadon))
+			{
+				auto parminfo = r->RadonDB().GetParameterFromGrib1(
+				    options.prod.Id(), no_vers, number, timeRangeIndicator, itsGrib->Message().NormalizedLevelType(),
+				    itsGrib->Message().LevelValue());
+
+				if (parminfo.size())
+				{
+					parmName = parminfo["name"];
+				}
+			}
+
+			if (parmName.empty())
+			{
+				itsLogger->Warning("Parameter name not found from Neons for no_vers: " +
+				                   boost::lexical_cast<string>(no_vers) + ", number: " +
+				                   boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
+				                   boost::lexical_cast<string>(timeRangeIndicator));
+			}
+			else
+			{
+				p.Name(parmName);
+			}
+
+			p.GribParameter(number);
+			p.GribTableVersion(no_vers);
+
+			// Determine aggregation
+
+			aggregation a;
+			a.TimeResolution(kHourResolution);
+
+			switch (timeRangeIndicator)
+			{
+				case 0:  // forecast
+				case 1:  // analysis
+					break;
+
+				case 3:  // average
+					a.Type(kAverage);
+					a.TimeResolutionValue(itsGrib->Message().P2() - itsGrib->Message().P1());
+					break;
+			}
+
+			if (a.TimeResolutionValue() != kHPMissingInt)
+			{
+				p.Aggregation(a);
+			}
+		}
+		else
+		{
+			long category = itsGrib->Message().ParameterCategory();
+			long discipline = itsGrib->Message().ParameterDiscipline();
+			long process = options.prod.Process();
+
+			string parmName = "";
+
+			if (options.configuration->DatabaseType() == kNeons ||
+			    options.configuration->DatabaseType() == kNeonsAndRadon)
+			{
+				parmName = n->GribParameterName(number, category, discipline, process,
+				                                static_cast<long>(options.level.Type()));
+			}
+
+			if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
+			                         options.configuration->DatabaseType() == kNeonsAndRadon))
+			{
+				auto parminfo = r->RadonDB().GetParameterFromGrib2(options.prod.Id(), discipline, category, number,
+				                                                   itsGrib->Message().NormalizedLevelType(),
+				                                                   itsGrib->Message().LevelValue());
+
+				if (parminfo.size())
+				{
+					parmName = parminfo["name"];
+				}
+			}
+
+			if (parmName.empty())
+			{
+				itsLogger->Warning("Parameter name not found from database for discipline: " +
+				                   boost::lexical_cast<string>(discipline) + ", category: " +
+				                   boost::lexical_cast<string>(category) + ", number: " +
+				                   boost::lexical_cast<string>(number));
+			}
+			else
+			{
+				p.Name(parmName);
+			}
+
+			p.GribParameter(number);
+			p.GribDiscipline(discipline);
+			p.GribCategory(category);
+
+			if (p.Name() == "T-C" && options.prod.Centre() == 7)
+			{
+				// Fixed in radon
+				p.Name("T-K");
+			}
+
+			aggregation a;
+			a.TimeResolution(kHourResolution);
+			switch (itsGrib->Message().TypeOfStatisticalProcessing())
+			{
+				case 0:  // Average
+					a.Type(kAverage);
+					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+					break;
+
+				case 1:  // Accumulation
+					a.Type(kAccumulation);
+					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+					break;
+
+				case 2:  // Maximum
+					a.Type(kMaximum);
+					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+					break;
+
+				case 3:  // Minimum
+					a.Type(kMinimum);
+					a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+					break;
+			}
+
+			if (a.TimeResolutionValue() != kHPMissingInt)
+			{
+				p.Aggregation(a);
+			}
+		}
+
+		string unit = itsGrib->Message().ParameterUnit();
+
+		if (unit == "K")
+		{
+			p.Unit(kK);
+		}
+		else if (unit == "Pa s-1" || unit == "Pa s**-1")
+		{
+			p.Unit(kPas);
+		}
+		else if (unit == "%")
+		{
+			p.Unit(kPrcnt);
+		}
+		else if (unit == "m s**-1" || unit == "m s-1")
+		{
+			p.Unit(kMs);
+		}
+		else if (unit == "m" || unit == "m of water equivalent")
+		{
+			p.Unit(kM);
+		}
+		else if (unit == "mm")
+		{
+			p.Unit(kMm);
+		}
+		else if (unit == "Pa")
+		{
+			p.Unit(kPa);
+		}
+		else if (unit == "m**2 s**-2")
+		{
+			p.Unit(kGph);
+		}
+		else if (unit == "kg kg**-1")
+		{
+			p.Unit(kKgkg);
+		}
+		else if (unit == "J m**-2")
+		{
+			p.Unit(kJm2);
+		}
+		else if (unit == "kg m**-2")
+		{
+			p.Unit(kKgm2);
+		}
+		else if (unit == "hPa")
+		{
+			p.Unit(kHPa);
+		}
+		else
+		{
+			itsLogger->Trace("Unable to determine himan parameter unit for grib unit " +
+			                 itsGrib->Message().ParameterUnit());
+		}
+
+		if (p != options.param)
+		{
+			itsLogger->Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
+			                 " (found)");
+
+			if (forceCaching)
+			{
+				dataIsValid = false;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		string dataDate = boost::lexical_cast<string>(itsGrib->Message().DataDate());
+
+		/*
+		 * dataTime is HH24MM in long datatype.
+		 *
+		 * So, for example analysistime 00 is 0, and 06 is 600.
+		 *
+		 */
+
+		long dt = itsGrib->Message().DataTime();
+
+		string dataTime = boost::lexical_cast<string>(dt);
+
+		if (dt < 1000)
+		{
+			dataTime = "0" + dataTime;
+		}
+
+		long step = itsGrib->Message().NormalizedStep(true, true);
+
+		string originDateTimeStr = dataDate + dataTime;
+
+		raw_time originDateTime(originDateTimeStr, "%Y%m%d%H%M");
+
+		forecast_time t(originDateTime, originDateTime);
+
+		long unitOfTimeRange = itsGrib->Message().NormalizedUnitOfTimeRange();
+
+		HPTimeResolution timeResolution = kUnknownTimeResolution;
+
+		switch (unitOfTimeRange)
+		{
+			case 1:
+			case 10:
+			case 11:
+			case 12:
+				timeResolution = kHourResolution;
+				break;
+
+			case 0:
+			case 13:
+			case 14:
+				timeResolution = kMinuteResolution;
+				break;
+
+			default:
+				itsLogger->Warning("Unsupported unit of time range: " + boost::lexical_cast<string>(timeResolution));
+				break;
+		}
+
+		t.StepResolution(timeResolution);
+
+		t.ValidDateTime().Adjust(timeResolution, static_cast<int>(step));
+
+		if (t != options.time)
+		{
+			forecast_time optsTime(options.time);
+
+			itsLogger->Trace("Times do not match");
+
+			if (optsTime.OriginDateTime() != t.OriginDateTime())
+			{
+				itsLogger->Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
+				                 t.OriginDateTime().String() + " (found)");
+			}
+
+			if (optsTime.ValidDateTime() != t.ValidDateTime())
+			{
+				itsLogger->Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
+				                 t.ValidDateTime().String() + " (found)");
+			}
+
+			if (optsTime.StepResolution() != t.StepResolution())
+			{
+				itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) +
+				                 " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) +
+				                 " (found)");
+			}
+
+			if (forceCaching)
+			{
+				dataIsValid = false;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		long gribLevel = itsGrib->Message().NormalizedLevelType();
+
+		himan::HPLevelType levelType;
+
+		switch (gribLevel)
+		{
+			case 1:
+				levelType = himan::kGround;
+				break;
+
+			case 8:
+				levelType = himan::kTopOfAtmosphere;
+				break;
+
+			case 100:
+				levelType = himan::kPressure;
+				break;
+
+			case 102:
+				levelType = himan::kMeanSea;
+				break;
+
+			case 105:
+				levelType = himan::kHeight;
+				break;
+
+			case 106:
+				levelType = himan::kHeightLayer;
+				break;
+
+			case 109:
+				levelType = himan::kHybrid;
+				break;
+
+			case 112:
+				levelType = himan::kGndLayer;
+				break;
+
+			case 246:
+				levelType = himan::kMaximumThetaE;
+				break;
+
+			default:
+				itsLogger->Error(ClassName() + ": Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
+				return false;
+				break;
+		}
+
+		level l;
+
+		switch (levelType)
+		{
+			case kHeightLayer:
+				l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
+				break;
+
+			default:
+				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+				break;
+		}
+
+		if (l != options.level)
+		{
+			itsLogger->Trace("Level does not match");
+
+			if (options.level.Type() != l.Type())
+			{
+				itsLogger->Trace("Type: " + string(HPLevelTypeToString.at(options.level.Type())) + " (requested) vs " +
+				                 string(HPLevelTypeToString.at(l.Type())) + " (found)");
+			}
+
+			if (options.level.Value() != l.Value())
+			{
+				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
+				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
+			}
+
+			if (options.level.Value2() != l.Value2())
+			{
+				itsLogger->Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
+				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
+			}
+
+			if (forceCaching)
+			{
+				dataIsValid = false;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		forecast_type ty(static_cast<HPForecastType>(itsGrib->Message().ForecastType()),
+		                 itsGrib->Message().ForecastTypeValue());
+
+		if (options.ftype.Type() != ty.Type() || options.ftype.Value() != ty.Value())
+		{
+			itsLogger->Trace("Forecast type does not match");
+
+			if (options.ftype.Type() != ty.Type())
+			{
+				itsLogger->Trace("Type: " + string(HPForecastTypeToString.at(options.ftype.Type())) +
+				                 " (requested) vs " + string(HPForecastTypeToString.at(ty.Type())) + " (found)");
+			}
+
+			if (options.ftype.Value() != ty.Value())
+			{
+				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.ftype.Value())) +
+				                 " (requested) vs " + string(boost::lexical_cast<string>(ty.Value())) + " (found)");
+			}
+
+			if (forceCaching)
+			{
+				dataIsValid = false;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		// END VALIDATION OF SEARCH PARAMETERS
+
+		producer prod(centre, process);
+
+		if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+		{
+			// No easy way to get fmi producer id from from Neons based on centre/ident.
+			// Use given producer id instead.
+
+			prod.Id(options.prod.Id());
+		}
+
+		if (prod.Id() == kHPMissingInt && (options.configuration->DatabaseType() == kRadon ||
+		                                   options.configuration->DatabaseType() == kNeonsAndRadon))
+		{
+			// Do a double check and fetch the fmi producer id from database.
+
+			long typeId = 1;  // deterministic forecast, default
+			long msgType = itsGrib->Message().ForecastType();
+
+			if (msgType == 2)
+			{
+				typeId = 2;  // ANALYSIS
+			}
+			else if (msgType == 3 || msgType == 4)
+			{
+				typeId = 3;  // ENSEMBLE
+			}
+
+			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process, typeId);
+
+			if (!prodInfo.empty())
+			{
+				prod.Id(boost::lexical_cast<int>(prodInfo["id"]));
+			}
+		}
+
+		newInfo->Producer(prod);
+
+		vector<param> theParams;
+
+		theParams.push_back(p);
+
+		newInfo->Params(theParams);
+
+		vector<forecast_time> theTimes;
+
+		theTimes.push_back(t);
+
+		newInfo->Times(theTimes);
+
+		vector<level> theLevels;
+
+		theLevels.push_back(l);
+
+		newInfo->Levels(theLevels);
+
+		vector<forecast_type> theForecastTypes;
+
+		theForecastTypes.push_back(ty);
+
+		newInfo->ForecastTypes(theForecastTypes);
+
+		/*
+		 * Get area information from grib.
+		 */
+
+		unique_ptr<grid> newGrid = ReadAreaAndGrid();
+
+		assert(newGrid);
+
+		std::vector<double> ab;
+
+		if (levelType == himan::kHybrid)
+		{
+			long nv = itsGrib->Message().NV();
+			long lev = itsGrib->Message().LevelValue();
+
+			if (nv > 0)
+			{
+				ab = itsGrib->Message().PV(static_cast<size_t>(nv), static_cast<size_t>(lev));
+			}
+		}
+
+		newGrid->AB(ab);
+
+		newInfo->Create(newGrid.get());
+
+		// Set descriptors
+
+		newInfo->Param(p);
+		newInfo->Time(t);
+		newInfo->Level(l);
+		newInfo->ForecastType(ty);
+
+		/*
+		 * Read data from grib *
+		 */
+
+		auto& dm = newInfo->Grid()->Data();
+
+#if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
+
+		if (readPackedData && itsGrib->Message().PackingType() == "grid_simple")
+		{
+			// Get coefficient information
+
+			double bsf = itsGrib->Message().BinaryScaleFactor();
+			double dsf = itsGrib->Message().DecimalScaleFactor();
+			double rv = itsGrib->Message().ReferenceValue();
+			long bpv = itsGrib->Message().BitsPerValue();
+
+			auto packed =
+			    unique_ptr<simple_packed>(new simple_packed(bpv, util::ToPower(bsf, 2), util::ToPower(-dsf, 10), rv));
+
+			// Get packed values from grib
+
+			size_t len = itsGrib->Message().PackedValuesLength();
+			unsigned char* data = 0;
+			int* unpackedBitmap = 0;
+
+			if (len > 0)
+			{
+				CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&data), len * sizeof(unsigned char)));
+
+				itsGrib->Message().PackedValues(data);
+
+				itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len) + " bytes of packed data from grib");
+			}
+			else
+			{
+				itsLogger->Warning("Grid is constant or empty");
+			}
+
+			if (itsGrib->Message().Bitmap())
+			{
+				size_t bitmap_len = itsGrib->Message().BytesLength("bitmap");
+				size_t bitmap_size = static_cast<size_t>(ceil(static_cast<double>(bitmap_len) / 8));
+
+				itsLogger->Trace("Grib has bitmap, length " + boost::lexical_cast<string>(bitmap_len) + " size " +
+				                 boost::lexical_cast<string>(bitmap_size) + " bytes");
+
+				CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&unpackedBitmap), bitmap_len * sizeof(int)));
+
+				unsigned char* bitmap = new unsigned char[bitmap_size];
+
+				itsGrib->Message().Bytes("bitmap", bitmap);
+
+				UnpackBitmap(bitmap, unpackedBitmap, bitmap_size, bitmap_len);
+
+				packed->Bitmap(unpackedBitmap, bitmap_len);
+
+				delete[] bitmap;
+			}
+
+			packed->Set(data, len, static_cast<size_t>(itsGrib->Message().SizeX() * itsGrib->Message().SizeY()));
+
+			newInfo->Grid()->PackedData(move(packed));
+		}
+		else
+#endif
+		    if (readContents)
+		{
+			size_t len = itsGrib->Message().ValuesLength();
+
+			double* d = itsGrib->Message().Values();
+
+			dm.Set(d, len);
+
+			free(d);
+
+			itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len * 8) + " bytes of unpacked data from grib");
+		}
+
+		newInfo->Grid()->Data(dm);
+
+		if (!dataIsValid && forceCaching)
+		{
+			// Put this data to cache now if the data has regular grid and the grid is equal
+			// to wanted grid. This is a requirement since can't interpolate area here.
+
+			if (options.configuration->UseCache() &&
+			    dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid()->Class() ==
+			        kRegularGrid &&
+			    dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid()->Class() ==
+			        newInfo->Grid()->Class() &&
+			    *dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid() ==
+			        *newInfo->Grid())
+			{
+				itsLogger->Trace("Force cache insert");
+
+				auto c = GET_PLUGIN(cache);
+
+				c->Insert(*newInfo);
+			}
+
+			return false;
+		}
+
+		newInfo->First();
+		return true;
+}
+
+std::map<string,long> grib::OptionsToKeys(const search_options &options) const
+{
+
+	
+	// indicator of Parameter is not necessarily provided in search_options param
+	// look this information up from database instead
+	//========================================================================================================================================================================================
+        shared_ptr<radon> r;
+
+        if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
+        {
+                r = GET_PLUGIN(radon);
+        }
+
+        string query = "SELECT number FROM param_grib1 WHERE producer_id = " + boost::lexical_cast<string>(options.prod.Id())
+			+ " AND param_id = (SELECT id FROM param WHERE name = '" + options.param.Name() + "') AND table_version = " + boost::lexical_cast<string>(options.prod.TableVersion());
+        r->RadonDB().Query(query);
+        vector<string> indicatorOfParameter = r->RadonDB().FetchRow();
+	//========================================================================================================================================================================================
+
+	std::map<string,long> theMap;
+
+	theMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
+	theMap["level"] = static_cast<long>(options.level.Value());
+	theMap["indicatorOfParameter"] = stol(indicatorOfParameter[0]);
+	theMap["step"] = static_cast<long>(options.time.Step());
+	theMap["centre"] = static_cast<long>(options.prod.Centre());
+	theMap["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
+        theMap["dataDate"] = options.time.OriginDate();
+	theMap["dataTime"] = options.time.OriginTime();
+
+	return theMap;
 }

@@ -105,3 +105,13 @@ void forecast_time::ValidDateTime(const std::string& theValidDateTime, const std
 
 HPTimeResolution forecast_time::StepResolution() const { return itsStepResolution; }
 void forecast_time::StepResolution(HPTimeResolution theStepResolution) { itsStepResolution = theStepResolution; }
+
+long forecast_time::OriginDate() const
+{
+	return stol(itsOriginDateTime.String("%Y%m%d"));
+}
+
+long forecast_time::OriginTime() const
+{
+	return stol(itsOriginDateTime.String("%H%M%S"));
+}

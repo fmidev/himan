@@ -56,6 +56,9 @@ class forecast_time
 	HPTimeResolution StepResolution() const;
 	void StepResolution(HPTimeResolution theStepResolution);
 
+        long OriginDate() const;
+	long OriginTime() const;
+
    private:
 	raw_time itsOriginDateTime;
 	raw_time itsValidDateTime;

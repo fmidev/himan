@@ -54,12 +54,18 @@ class grib : public io_plugin
 	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options,
 	                                            bool readContents, bool readPackedData, bool forceCaching) const;
 
+
+        std::vector<std::shared_ptr<info>> FromIndexFile(const std::string& inputFile, const search_options& options,
+                                                    bool readContents, bool readPackedData, bool forceCaching) const;
+
 	bool ToFile(info& anInfo, std::string& outputFile, bool appendToFile = false);
 
    private:
 	void WriteAreaAndGrid(info& anInfo);
 	void WriteTime(info& anInfo);
 	void WriteParameter(info& anInfo);
+	bool CreateInfoFromGrib(const search_options& options, bool readContents, bool readPackedData, bool forceCaching, std::shared_ptr<info> newInfo) const;
+	std::map<std::string,long> OptionsToKeys(const search_options &options) const;
 
 	std::unique_ptr<grid> ReadAreaAndGrid() const;
 
