@@ -231,12 +231,14 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	return theInfos[0];
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromFile(const set<string>& files, search_options& options,
+vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, search_options& options,
                                                   bool readContents, bool readPackedData, bool readIfNotMatching)
 {
 	vector<shared_ptr<himan::info>> allInfos;
 
-	for (string inputFile : files)
+	set<string> fileset(files.begin(), files.end());
+
+	for (const string& inputFile : fileset)
 	{
 		if (!boost::filesystem::exists(inputFile))
 		{
@@ -256,10 +258,10 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const set<string>& files, sear
 				break;
 			}
 			case kGRIBIndex:
-                        {
-                                curInfos = FromGribIndex(inputFile, options, readContents, readPackedData, readIfNotMatching);
-                                break;
-                        }
+			{
+				curInfos = FromGribIndex(inputFile, options, readContents, readPackedData, readIfNotMatching);
+				break;
+			}
 
 			case kQueryData:
 			{
@@ -308,16 +310,15 @@ vector<shared_ptr<himan::info>> fetcher::FromGrib(const string& inputFile, searc
 	return infos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromGribIndex(const string& inputFile, search_options& options, bool readContents,
-                                                       bool readPackedData, bool forceCaching)
+vector<shared_ptr<himan::info>> fetcher::FromGribIndex(const string& inputFile, search_options& options,
+                                                       bool readContents, bool readPackedData, bool forceCaching)
 {
-        auto g = GET_PLUGIN(grib);
+	auto g = GET_PLUGIN(grib);
 
-        vector<shared_ptr<info>> infos = g->FromIndexFile(inputFile, options, readContents, readPackedData, forceCaching);
+	vector<shared_ptr<info>> infos = g->FromIndexFile(inputFile, options, readContents, readPackedData, forceCaching);
 
-        return infos;
+	return infos;
 }
-
 
 vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, search_options& options,
                                                        bool readContents)
@@ -457,14 +458,11 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
-		set<string> files;
-		for (auto file : opts.configuration->AuxiliaryFiles())
-		{
-			files.insert(file);
-		}
+		vector<string> files;
 
-		ret = FromFile(files, opts, true, readPackedData,
-		               !itsApplyLandSeaMask && !readPackedData);
+		files = opts.configuration->AuxiliaryFiles();
+
+		ret = FromFile(files, opts, true, readPackedData, !itsApplyLandSeaMask && !readPackedData);
 
 		if (!ret.empty())
 		{
@@ -487,7 +485,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 	// 3. Fetch data from Neons or Radon
 
-	set<string> files;
+	vector<string> files;
 
 	if (opts.configuration->ReadDataFromDatabase())
 	{
@@ -500,10 +498,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 			itsLogger->Trace("Accessing Neons database");
 
-			for (auto file : n->Files(opts))
-			{
-				files.insert(file);
-			}
+			files = n->Files(opts);
 
 			if (!files.empty())
 			{
@@ -528,10 +523,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 			itsLogger->Trace("Accessing Radon database");
 
-			for (auto file : r->Files(opts))
-			{
-				files.insert(file);
-			}
+			files = r->Files(opts);
 
 			if (!files.empty())
 			{
