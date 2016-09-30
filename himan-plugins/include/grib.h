@@ -54,6 +54,20 @@ class grib : public io_plugin
 	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options,
 	                                            bool readContents, bool readPackedData, bool forceCaching) const;
 
+        /**
+         * @brief Return selected data from a grib index file.
+         *
+         * This function reads a grib index file and returns the metadata+data (if specified) in a one or
+         * more info class instance(s).
+         *
+         * @param file Input file name
+         * @param options Search options (param, level, time)
+         * @param readContents Specify if data should also be read (and not only metadata)
+         * @param readPackedData Whether to read packed data (from grib). Caller must do unpacking.
+         * @param forceCaching Force caching of data even if it does not match searched data
+         *
+         * @return A vector of shared_ptr'd infos.
+         */
 
         std::vector<std::shared_ptr<info>> FromIndexFile(const std::string& inputFile, const search_options& options,
                                                     bool readContents, bool readPackedData, bool forceCaching) const;
@@ -65,6 +79,14 @@ class grib : public io_plugin
 	void WriteTime(info& anInfo);
 	void WriteParameter(info& anInfo);
 	bool CreateInfoFromGrib(const search_options& options, bool readContents, bool readPackedData, bool forceCaching, std::shared_ptr<info> newInfo) const;
+
+        /**
+         * @brief UnpackBitmap
+         *
+	 * Converts the search options strunct into a map of key-value pairs than are used to select a grib message from a grib index file
+	 * @param options Search options (param, level, time)
+	 */
+
 	std::map<std::string,long> OptionsToKeys(const search_options &options) const;
 
 	std::unique_ptr<grid> ReadAreaAndGrid() const;

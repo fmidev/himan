@@ -1822,8 +1822,6 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 std::map<string,long> grib::OptionsToKeys(const search_options &options) const
 {
-
-	
 	// indicator of Parameter is not necessarily provided in search_options param
 	// look this information up from database instead
 	//========================================================================================================================================================================================
@@ -1848,8 +1846,8 @@ std::map<string,long> grib::OptionsToKeys(const search_options &options) const
 	theMap["step"] = static_cast<long>(options.time.Step());
 	theMap["centre"] = static_cast<long>(options.prod.Centre());
 	theMap["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
-        theMap["dataDate"] = options.time.OriginDate();
-	theMap["dataTime"] = options.time.OriginTime();
+        theMap["date"] = options.time.OriginDate();
+	theMap["time"] = options.time.OriginTime();
 
 	return theMap;
 }
