@@ -1835,20 +1835,20 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 
 	auto time = options.time;
 
-	std::map<string, long> theMap;
+	std::map<string, long> theKeyValueMap;
 
-	theMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
-	theMap["level"] = static_cast<long>(options.level.Value());
-	theMap["indicatorOfParameter"] = stol(param["grib1_number"]);
-	theMap["step"] = static_cast<long>(options.time.Step());
-	theMap["centre"] = static_cast<long>(options.prod.Centre());
-	theMap["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
-	theMap["date"] = stol(time.OriginDateTime().String("%Y%m%d"));
-	theMap["time"] = stol(time.OriginDateTime().String("%H%M%S"));
+	theKeyValueMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
+	theKeyValueMap["level"] = static_cast<long>(options.level.Value());
+	theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
+	theKeyValueMap["step"] = static_cast<long>(options.time.Step());
+	theKeyValueMap["centre"] = static_cast<long>(options.prod.Centre());
+	theKeyValueMap["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
+	theKeyValueMap["date"] = stol(time.OriginDateTime().String("%Y%m%d"));
+	theKeyValueMap["time"] = stol(time.OriginDateTime().String("%H%M%S"));
 
 	if (param["version"] == "1")
 	{
-	        theMap["indicatorOfParameter"] = stol(param["grib1_number"]);
+	        theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
 	}
 	else if (param["version"] == "2")
 	{
