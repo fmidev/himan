@@ -599,22 +599,24 @@ double VisibilityInMist(double strat, double strat15, double strat300, double lo
 		    Humidity_upper_coeff < 1 && Wind_upper_coeff < 1)
 		{
 			visMist = 8000 - (RH - humidity_min) * 900;
-		}
 
-		// Lisähuononnus näkyvyyteen muiden parametrien kautta (tuuli, pilvisyys, auringonsäteily, suhteellinen
-		// kosteus alailmakehässä)
-		// parametri saa maksimissaan arvon 1.8 = 80% huononnus näkyvyyteen
+			// Lisähuononnus näkyvyyteen muiden parametrien kautta (tuuli, pilvisyys, auringonsäteily, suhteellinen
+			// kosteus alailmakehässä)
+			// parametri saa maksimissaan arvon 1.8 = 80% huononnus näkyvyyteen
 
-		const double extra = 1.8 - (Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff + 0.1) / 3;
+			const double extra = 1.8 - (Humidity_upper_coeff + Cloud_coeff + Wind_coeff + Wind_upper_coeff + 0.1) / 3;
 
-		if (extra < 3 && extra > 0.01)
-		{
-			visMist = visMist / extra;
+			if (extra < 3 && extra > 0.01)
+			{
+				visMist = visMist / extra;
+			}
+
+			// Säteilysumun perusteella laskettu VisMist voi mennä negatiiviseksi ainakin kovilla pakkasilla vuoristossa
+			// joten annetaan minimiarvoksi 150m joka vastaa hyvin pienimpiä päättelysssä havaittuja näkyvyyksiä
+
+			visMist = fmax(150., visMist);
 		}
 	}
 
-	// Säteilysumun perusteella laskettu VisMist voi mennä negatiiviseksi ainakin kovilla pakkasilla vuoristossa
-	// joten annetaan minimiarvoksi 150m joka vastaa hyvin pienimpiä päättelysssä havaittuja näkyvyyksiä
-
-	return fmax(150., visMist);
+	return visMist;
 }
