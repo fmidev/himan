@@ -390,6 +390,7 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
 
+	// TODO need to check what happens when multiple idx files or idx + grib files are provided as input. 
 	if (itsGrib->Message(OptionsToKeys(options)))
 	{
 		auto newInfo=make_shared<info>();
@@ -1837,9 +1838,7 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 
 	std::map<string, long> theKeyValueMap;
 
-	theKeyValueMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
 	theKeyValueMap["level"] = static_cast<long>(options.level.Value());
-	theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
 	theKeyValueMap["step"] = static_cast<long>(options.time.Step());
 	theKeyValueMap["centre"] = static_cast<long>(options.prod.Centre());
 	theKeyValueMap["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
@@ -1848,13 +1847,16 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 
 	if (param["version"] == "1")
 	{
+	        theKeyValueMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
 	        theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
 	}
 	else if (param["version"] == "2")
 	{
+		// TODO check if this is giving correct type number (Grib2 != Grib1)
+	        theKeyValueMap["typeOfFirstFixedSurface"] = static_cast<long>(options.level.Type());
                 theKeyValueMap["discipline"] = stol(param["grib2_discipline"]);
 		theKeyValueMap["parameterCategory"] = stol(param["grib2_category"]);
                 theKeyValueMap["parameterNumber"] = stol(param["grib2_number"]);
 	}
-	return theMap;
+	return theKeyValueMap;
 }
