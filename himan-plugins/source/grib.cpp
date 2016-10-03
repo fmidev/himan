@@ -346,7 +346,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	while (itsGrib->NextMessage())
 	{
 		foundMessageNo++;
-		shared_ptr<info> newInfo(new info());
+                auto newInfo=make_shared<info>();
 
 		if (CreateInfoFromGrib(options, readContents, readPackedData, forceCaching, newInfo))
 		{
@@ -392,7 +392,7 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 
 	if (itsGrib->Message(OptionsToKeys(options)))
 	{
-		shared_ptr<info> newInfo(new info());
+		auto newInfo=make_shared<info>();
 		if (CreateInfoFromGrib(options, readContents, readPackedData, forceCaching, newInfo))
 		{
 			infos.push_back(newInfo);
@@ -1846,5 +1846,15 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 	theMap["date"] = stol(time.OriginDateTime().String("%Y%m%d"));
 	theMap["time"] = stol(time.OriginDateTime().String("%H%M%S"));
 
+	if (param["version"] == "1")
+	{
+	        theMap["indicatorOfParameter"] = stol(param["grib1_number"]);
+	}
+	else if (param["version"] == "2")
+	{
+                theKeyValueMap["discipline"] = stol(param["grib2_discipline"]);
+		theKeyValueMap["parameterCategory"] = stol(param["grib2_category"]);
+                theKeyValueMap["parameterNumber"] = stol(param["grib2_number"]);
+	}
 	return theMap;
 }

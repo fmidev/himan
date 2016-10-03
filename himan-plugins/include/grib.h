@@ -84,10 +84,10 @@ class grib : public io_plugin
 	/**
 	 * @brief OptionsToKeys
 	 *
- * Converts the search options struct into a map of key-value pairs that are used to select a grib message from a grib
- * index file
- * @param options Search options (param, level, time)
- */
+	 * Converts the search options struct into a map of key-value pairs that are used to select a grib message from a grib
+	 * index file
+	 * @param options Search options (param, level, time)
+	 */
 
 	std::map<std::string, long> OptionsToKeys(const search_options& options) const;
 
