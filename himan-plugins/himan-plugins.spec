@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.9.29
+Version: 16.10.4
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -37,6 +37,7 @@ BuildRequires: libsmartmet-newbase-devel >= 16.9.20
 BuildRequires: grib_api-devel >= 1.15.0
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
+BuildRequires: cusp >= 0.5.1
 
 %description
 FMI himan-plugins -- hila manipulaatio -- plugin library
@@ -106,6 +107,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Oct  4 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.4-1.fmi
+- Visibility v1.2.1
+- Unstagger cuda version
 * Thu Sep 29 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.9.29-1.fmi
 - Visibility v1.2
 - Harmonie mixing ratios in correct name and unit (kg/kg)
