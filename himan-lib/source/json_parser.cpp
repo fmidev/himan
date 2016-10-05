@@ -761,6 +761,11 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 		int stop = pt.get<int>("stop_hour");
 		int step = pt.get<int>("step");
 
+		if (step <= 0)
+		{
+			throw runtime_error("step size must be > 0");
+		}
+
 		conf->itsForecastStep = step;
 
 		HPTimeResolution stepResolution = kHourResolution;
