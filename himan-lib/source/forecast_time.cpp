@@ -105,3 +105,4 @@ void forecast_time::ValidDateTime(const std::string& theValidDateTime, const std
 
 HPTimeResolution forecast_time::StepResolution() const { return itsStepResolution; }
 void forecast_time::StepResolution(HPTimeResolution theStepResolution) { itsStepResolution = theStepResolution; }
+

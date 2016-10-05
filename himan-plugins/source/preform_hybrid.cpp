@@ -437,7 +437,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan
 
-				if (nZeroLevel != MISS AND rhAvg != MISS AND rhMelt != MISS AND nZeroLevel == 1 AND rhAvg < rhMelt)
+				if (nZeroLevel != MISS AND rhAvg != MISS AND rhMelt != MISS AND nZeroLevel ==
+				    1 AND rhAvg < rhMelt AND plusArea < 4000)
 				{
 					PreForm = kSleet;
 				}

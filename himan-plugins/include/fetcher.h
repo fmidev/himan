@@ -160,6 +160,23 @@ class fetcher : public auxiliary_plugin
 	                                            bool forceCaching = false);
 
 	/**
+	 * @brief Return selected data from a grib index file, overcoat for himan::plugin::grib::FromIndexFile().
+	 * @see himan::plugin::grib::FromIndexFile()
+	 *
+	 * @param inputFile Input file name
+	 * @param options Search options (param, level, time, prod, config)
+	 * @param readContents Specify if data should also be read (and not only metadata)
+	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
+	 * @param forceCaching Force caching of data even if it does not match searched data
+	 *
+	 * @return A vector of shared_ptr'd infos.
+	 */
+
+	std::vector<std::shared_ptr<info>> FromGribIndex(const std::string& inputFile, search_options& options,
+	                                                 bool readContents = true, bool readPackedData = false,
+	                                                 bool forceCaching = false);
+
+	/**
 	 * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
 	 * @see himan::plugin::querydata::FromFile()
 	 *
@@ -198,7 +215,8 @@ class fetcher : public auxiliary_plugin
 	 * @return New level. If mapping is not found, new level == targetLevel.
 	 */
 
-	level LevelTransform(const std::shared_ptr<const plugin_configuration> &conf, const producer& sourceProducer, const param& targetParam, const level& targetLevel) const;
+	level LevelTransform(const std::shared_ptr<const plugin_configuration>& conf, const producer& sourceProducer,
+	                     const param& targetParam, const level& targetLevel) const;
 
 	/**
 	 * @brief Try to fetch data from a single producer

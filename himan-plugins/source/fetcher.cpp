@@ -236,10 +236,10 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 {
 	vector<shared_ptr<himan::info>> allInfos;
 
-	for (size_t i = 0; i < files.size(); i++)
-	{
-		string inputFile = files[i];
+	set<string> fileset(files.begin(), files.end());
 
+	for (const string& inputFile : fileset)
+	{
 		if (!boost::filesystem::exists(inputFile))
 		{
 			itsLogger->Error("Input file '" + inputFile + "' does not exist");
@@ -255,6 +255,11 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 			case kGRIB2:
 			{
 				curInfos = FromGrib(inputFile, options, readContents, readPackedData, readIfNotMatching);
+				break;
+			}
+			case kGRIBIndex:
+			{
+				curInfos = FromGribIndex(inputFile, options, readContents, readPackedData, readIfNotMatching);
 				break;
 			}
 
@@ -301,6 +306,16 @@ vector<shared_ptr<himan::info>> fetcher::FromGrib(const string& inputFile, searc
 	auto g = GET_PLUGIN(grib);
 
 	vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents, readPackedData, forceCaching);
+
+	return infos;
+}
+
+vector<shared_ptr<himan::info>> fetcher::FromGribIndex(const string& inputFile, search_options& options,
+                                                       bool readContents, bool readPackedData, bool forceCaching)
+{
+	auto g = GET_PLUGIN(grib);
+
+	vector<shared_ptr<info>> infos = g->FromIndexFile(inputFile, options, readContents, readPackedData, forceCaching);
 
 	return infos;
 }
@@ -443,8 +458,11 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
-		ret = FromFile(opts.configuration->AuxiliaryFiles(), opts, true, readPackedData,
-		               !itsApplyLandSeaMask && !readPackedData);
+		vector<string> files;
+
+		files = opts.configuration->AuxiliaryFiles();
+
+		ret = FromFile(files, opts, true, readPackedData, !itsApplyLandSeaMask && !readPackedData);
 
 		if (!ret.empty())
 		{

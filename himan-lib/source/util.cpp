@@ -114,6 +114,10 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		return kGRIB;
 	}
+	else if (ext == ".idx")
+	{
+		return kGRIBIndex;
+	}
 	else if (ext == ".grib2" || ext == ".grib2.gz" || ext == ".grib2.bz2")
 	{
 		return kGRIB2;
