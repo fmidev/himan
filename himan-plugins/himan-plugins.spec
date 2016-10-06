@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.10.4
+Version: 16.10.6
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -107,6 +107,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Oct  6 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.6-1.fmi
+- Bugfix for visibility
+* Wed Oct  5 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.5-1.fmi
+- Preform hybrid v2.7.2
+- Support grib index reading
 * Tue Oct  4 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.4-1.fmi
 - Visibility v1.2.1
 - Unstagger cuda version

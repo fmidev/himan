@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 16.8.23
+Version: 16.10.6
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -13,13 +13,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 16.8.23
+Requires: himan-lib >= 16.10.5
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
 Requires: boost-iostreams
 Requires: boost-thread
-Requires: libsmartmet-newbase >= 16.2.4
 Requires: jasper
 Requires: grib_api >= 1.15.0
 Requires: oracle-instantclient-basic
@@ -58,6 +57,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Thu Oct  6 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.6-1.fmi
+- New release
 * Tue Aug 23 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.8.23-1.fmi
 - New release
 * Mon Jun  6 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.6.6-1.fmi
@@ -135,7 +136,7 @@ rm -rf $RPM_BUILD_ROOT
 * Mon Aug 11 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.11-1.fmi
 - Add overall timings on himan execution
 - Add cuda functionality since plugin pcuda is removed
-* Fri Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
+* Wed Jun 18 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.18-1.fmi
 - Initial build with Cuda6 (HIMAN-57)
 * Thu Jun  5 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.6.5-1.fmi
 - Changes in himan-lib
