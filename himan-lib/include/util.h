@@ -218,6 +218,14 @@ std::string Expand(const std::string& in);
 
 void DumpVector(const std::vector<double>& arr, const std::string& name = "");
 
+/**
+   @brief Get the value of the specified environment variable.
+   Throws when the supplied key is not found.
+
+   @return value of the supplied key
+ */
+std::string GetEnv(const std::string& key);
+
 }  // namespace util
 }  // namespace himan
 
