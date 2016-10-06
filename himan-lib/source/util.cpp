@@ -729,6 +729,16 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 	}
 }
 
+string util::GetEnv(const string& key)
+{
+	const char* var = getenv(key.c_str());
+	if (!var)
+	{
+		throw runtime_error("Environment variable '" + string(key) + "' not found");
+	}
+	return string(var);
+}
+
 #ifdef HAVE_CUDA
 void util::Unpack(initializer_list<grid*> grids)
 {

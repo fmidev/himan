@@ -35,7 +35,6 @@ const double stLimit = 55;
 
 // Required source parameters
 
-// const himan::param PFParam("PRECFORM-N");
 const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
 const himan::param RHParam("RH-PRCNT");
 const himan::param CFParam("CL-FT");
@@ -195,7 +194,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double T125 = temp125[i];
 		double FFBLH = ffblh[i];
 
-		if (IsMissingValue({CF, T, FF, RH, RR, HUM25, HUM50, HUM75, HUM100, HUM125, T25, FFBLH}))
+		if (IsMissingValue({T, FF, RH, RR, HUM25, HUM50, HUM75, HUM100, HUM125, T25, FFBLH}))
 		{
 			myTargetInfo->Value(vis);
 			continue;
@@ -268,15 +267,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		// Lopuksi valitaan sade- ja sumu/utunakyvyyksista huonompi
 
 		vis = fmin(visMist, visPre);
-
-		if (visMist < visPre)
-		{
-			vis = visMist;
-		}
-		else
-		{
-			vis = visPre;
-		}
 
 		myTargetInfo->Value(vis);
 	}
@@ -359,7 +349,7 @@ double VisibilityInRain(double PF, double RH, double RR, double CF, double strat
 
 	double stHpre = 1;
 
-	if (CF <= 500)
+	if (CF != kFloatMissing && CF <= 500)
 	{
 		stHpre = pow((CF / 500), 0.15);
 	}
@@ -430,7 +420,7 @@ double VisibilityInMist(double strat, double strat15, double strat300, double lo
 	// Nakyvyyden utuisuuskerroin udussa/sumussa sumupilvikorkeuden perusteella [ 0,47...1, kun par500 = 50...999ft]
 	double stHmist = 1;
 
-	if (CF < 1000)
+	if (CF != kFloatMissing && CF < 1000)
 	{
 		stHmist = pow((CF / 999), 0.25);
 	}
