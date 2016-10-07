@@ -398,16 +398,13 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 		{
 			infos.push_back(newInfo);
 			newInfo->First();
-
-			aTimer->Stop();
 		}
 	}
+	aTimer->Stop();
+
 	long duration = aTimer->GetTime();
-	long bytes = boost::filesystem::file_size(theInputFile);
 
-	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
-
-	itsLogger->Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
+	itsLogger->Debug("Read message using grib index file '" + theInputFile + "' in " + boost::lexical_cast<std::string> (duration) + " ms");
 
 	return infos;
 }
