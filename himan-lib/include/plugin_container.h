@@ -1,8 +1,6 @@
 /*
  * plugin_container.h
  *
- *  Created on: Nov 20, 2012
- *      Author: partio
  */
 
 #ifndef PLUGIN_CONTAINER_H
@@ -16,7 +14,7 @@ namespace himan
 {
 class plugin_container
 {
-   public:
+public:
 	plugin_container();
 	plugin_container(void* theLibraryHandle, std::shared_ptr<plugin::himan_plugin> thePlugin);
 
@@ -30,7 +28,7 @@ class plugin_container
 
 	void* Library();
 
-   private:
+private:
 	std::shared_ptr<plugin::himan_plugin> itsPlugin;
 	void* itsLibraryHandle;
 };

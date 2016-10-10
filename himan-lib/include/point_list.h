@@ -1,8 +1,6 @@
 /**
  * @file point_list.h
  *
- * @date Jan 23, 2013
- * @author partio
  */
 
 #ifndef POINT_LIST_H
@@ -14,10 +12,12 @@
 
 namespace himan
 {
+
 class logger;
+
 class point_list : public grid
 {
-   public:
+public:
 	point_list();
 	explicit point_list(const std::vector<station>& theStations);
 
@@ -58,13 +58,14 @@ class point_list : public grid
 
 	point_list* Clone() const override;
 
-   private:
+private:
 	bool EqualsTo(const point_list& other) const;
 
 	std::vector<station> itsStations;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const point_list& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* POINT_LIST_H */

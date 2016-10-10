@@ -1,6 +1,5 @@
 /**
  * @file modifier.cpp
- * @author partio
  */
 
 #include "modifier.h"
@@ -41,6 +40,7 @@ void DumpVector(const std::vector<double>& vec)
 	std::cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing
 	          << std::endl;
 }
+
 void DumpVector(const std::vector<bool>& vec)
 {
 	size_t count = 0, trueval = 0;
@@ -96,7 +96,11 @@ bool modifier::CalculationFinished() const
 	return false;
 }
 
-void modifier::Clear(double fillValue) { std::fill(itsResult.begin(), itsResult.end(), fillValue); }
+void modifier::Clear(double fillValue)
+{
+	std::fill(itsResult.begin(), itsResult.end(), fillValue);
+}
+
 void modifier::FindValue(const std::vector<double>& theFindValue)
 {
 	itsFindValue = theFindValue;
@@ -161,7 +165,9 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 }
 
 size_t modifier::FindNth() const { return itsFindNthValue; }
+
 void modifier::FindNth(size_t theNth) { itsFindNthValue = theNth; }
+
 double modifier::Value() const
 {
 	assert(itsIndex < itsResult.size());
@@ -280,8 +286,11 @@ size_t modifier::HeightsCrossed() const
 }
 
 HPModifierType modifier::Type() const { return itsModifierType; }
+
 bool modifier::HeightInMeters() const { return itsHeightInMeters; }
+
 void modifier::HeightInMeters(bool theHeightInMeters) { itsHeightInMeters = theHeightInMeters; }
+
 void modifier::InitializeHeights()
 {
 	// Absurd default limits if user has not specified any limits

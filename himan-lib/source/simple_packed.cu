@@ -1,8 +1,6 @@
 /**
  * @file simple_packed.cu
  *
- * @date Aug 27, 2013
- * @author partio
  */
 
 #include "simple_packed.h"

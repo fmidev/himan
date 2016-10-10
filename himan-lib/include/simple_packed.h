@@ -1,8 +1,6 @@
 /**
  * @file simple_packed.h
- * @author partio
  *
- * @date August 30, 2013, 08:28 AM
  *
  * @brief Container to hold GRIB simple packed data.
  *
@@ -18,6 +16,7 @@
 
 namespace himan
 {
+
 typedef packing_coefficients simple_packed_coefficients;
 
 struct simple_packed : packed_data

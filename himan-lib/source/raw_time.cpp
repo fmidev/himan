@@ -1,8 +1,6 @@
 /**
  * @file raw_time.cpp
  *
- * @date Dec 9, 2012
- * @author partio
  */
 
 #include "raw_time.h"
@@ -26,6 +24,7 @@ raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMas
 }
 
 raw_time::raw_time(const raw_time& other) : itsDateTime(other.itsDateTime) {}
+
 raw_time& raw_time::operator=(const raw_time& other)
 {
 	itsDateTime = other.itsDateTime;
@@ -44,8 +43,11 @@ bool raw_time::operator==(const raw_time& other) const
 }
 
 bool raw_time::operator!=(const raw_time& other) const { return !(*this == other); }
+
 raw_time::operator std::string() const { return String("%Y%m%d%H%M"); }
+
 std::string raw_time::String(const std::string& theTimeMask) const { return FormatTime(itsDateTime, theTimeMask); }
+
 std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, const std::string& theTimeMask) const
 {
 	if (theFormattedDateTime == boost::date_time::not_a_date_time)
@@ -107,6 +109,7 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 }
 
 bool raw_time::Empty() const { return (itsDateTime == boost::posix_time::not_a_date_time); }
+
 std::ostream& raw_time::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;

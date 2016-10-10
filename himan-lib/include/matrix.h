@@ -1,9 +1,6 @@
 /**
  * @file matrix.h
  *
- * @date Dec 14, 2012
- * @author partio
- *
  * @brief 2-3d matrix to store data. Does not have any mathematical implications of matrices.
  *
  */
@@ -21,7 +18,7 @@ class grid;
 template <class T>
 class matrix
 {
-   public:
+public:
 	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0) {}
 	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue)
 	    : itsData(theWidth * theHeight * theDepth),
@@ -396,7 +393,7 @@ class matrix
 	}
 
 	size_t Index(size_t x, size_t y, size_t z) const { return z * itsWidth * itsHeight + y * itsWidth + x; }
-   private:
+private:
 	std::vector<T> itsData;
 
 	size_t itsWidth, itsHeight, itsDepth;

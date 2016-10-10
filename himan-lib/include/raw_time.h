@@ -1,8 +1,6 @@
 /**
  * @file raw_time.h
  *
- * @date Dec 9, 2012
- * @author partio
  *
  * @brief Wrapper for boost::posix_time.
  *
@@ -16,10 +14,12 @@
 
 namespace himan
 {
+
 class logger;
+
 class raw_time
 {
-   public:
+public:
 	friend class forecast_time;
 
 	raw_time() : itsDateTime(boost::posix_time::not_a_date_time) {}
@@ -42,13 +42,14 @@ class raw_time
 
 	bool Empty() const;
 
-   private:
+private:
 	std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
 
 	boost::posix_time::ptime itsDateTime;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const raw_time& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* RAW_TIME_H */

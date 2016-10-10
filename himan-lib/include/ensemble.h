@@ -1,8 +1,6 @@
 //
 // @file ensemble.h
 //
-// @date June 2, 2016
-// @author vanhatam
 //
 
 #ifndef ENSEMBLE_H
@@ -16,13 +14,14 @@
 
 namespace himan
 {
+
 // ensemble is a thin layer on top of the usual himan data utilities.
 // It is used to make working with ensemble forecasts a bit nicer and
 // feel more like working with deterministic forecasts
 
 class ensemble
 {
-   public:
+public:
 	ensemble(const param& parameter, size_t ensembleSize);
 
 	ensemble();
@@ -62,7 +61,7 @@ class ensemble
 
 	param Param() const;
 
-   private:
+private:
 	/// @brief The parameter of the ensemble
 	param itsParam;
 
@@ -77,9 +76,13 @@ class ensemble
 };
 
 inline size_t ensemble::Size() const { return itsEnsembleSize; }
+
 inline double ensemble::Value(size_t forecastIndex) const { return itsForecasts[forecastIndex]->Value(); }
+
 inline std::string ensemble::ClassName() const { return "himan::ensemble"; }
+
 inline param ensemble::Param() const { return itsParam; }
+
 }  // namespace himan
 
 // ENSEMBLE_H

@@ -1,8 +1,6 @@
 /**
  * @file producer.h
  *
- * @date Dec 28, 2012
- * @author: partio
  *
  * @brief Class to hold the necessary producer information: neons id, grib process
  * and grib centre (and name)
@@ -17,13 +15,14 @@ namespace himan
 {
 class producer
 {
-   public:
+public:
 	producer();
 	explicit producer(long theFmiProducerId);
 	producer(long theCentre, long theProcess);
 	producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName);
 
 	~producer() {}
+	
 	std::string ClassName() const { return "himan::producer"; }
 	std::ostream& Write(std::ostream& file) const;
 
@@ -45,7 +44,7 @@ class producer
 	bool operator==(const producer& other);
 	bool operator!=(const producer& other);
 
-   private:
+private:
 	long itsFmiProducerId;
 	long itsProcess;
 	long itsCentre;
@@ -55,6 +54,7 @@ class producer
 };
 
 inline std::ostream& operator<<(std::ostream& file, const producer& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* PRODUCER_H */

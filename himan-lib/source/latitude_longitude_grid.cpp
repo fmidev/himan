@@ -66,9 +66,13 @@ size_t latitude_longitude_grid::Size() const
 }
 
 point latitude_longitude_grid::TopRight() const { return itsTopRight; }
+
 point latitude_longitude_grid::BottomLeft() const { return itsBottomLeft; }
+
 point latitude_longitude_grid::TopLeft() const { return itsTopLeft; }
+
 point latitude_longitude_grid::BottomRight() const { return itsBottomRight; }
+
 void latitude_longitude_grid::TopRight(const point& theTopRight)
 {
 	itsTopRight = theTopRight;
@@ -221,11 +225,17 @@ bool latitude_longitude_grid::Swap(HPScanningMode newScanningMode)
 }
 
 void latitude_longitude_grid::Ni(size_t theNi) { itsNi = theNi; }
+
 void latitude_longitude_grid::Nj(size_t theNj) { itsNj = theNj; }
+
 size_t latitude_longitude_grid::Ni() const { return itsNi; }
+
 size_t latitude_longitude_grid::Nj() const { return itsNj; }
+
 void latitude_longitude_grid::Di(double theDi) { itsDi = theDi; }
+
 void latitude_longitude_grid::Dj(double theDj) { itsDj = theDj; }
+
 double latitude_longitude_grid::Di() const
 {
 	if (itsDi == kHPMissingValue && FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
@@ -320,6 +330,7 @@ void latitude_longitude_grid::UpdateCoordinates() const
 }
 
 bool latitude_longitude_grid::operator!=(const grid& other) const { return !(other == *this); }
+
 bool latitude_longitude_grid::operator==(const grid& other) const
 {
 	const latitude_longitude_grid* g = dynamic_cast<const latitude_longitude_grid*>(&other);
@@ -391,6 +402,7 @@ bool latitude_longitude_grid::EqualsTo(const latitude_longitude_grid& other) con
 }
 
 latitude_longitude_grid* latitude_longitude_grid::Clone() const { return new latitude_longitude_grid(*this); }
+
 ostream& latitude_longitude_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -432,6 +444,7 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(const rotated_l
 }
 
 bool rotated_latitude_longitude_grid::operator!=(const grid& other) const { return !(other == *this); }
+
 bool rotated_latitude_longitude_grid::operator==(const grid& other) const
 {
 	const rotated_latitude_longitude_grid* g = dynamic_cast<const rotated_latitude_longitude_grid*>(&other);
@@ -477,8 +490,11 @@ rotated_latitude_longitude_grid* rotated_latitude_longitude_grid::Clone() const
 }
 
 point rotated_latitude_longitude_grid::SouthPole() const { return itsSouthPole; }
+
 void rotated_latitude_longitude_grid::SouthPole(const point& theSouthPole) { itsSouthPole = theSouthPole; }
+
 bool rotated_latitude_longitude_grid::UVRelativeToGrid() const { return itsUVRelativeToGrid; }
+
 void rotated_latitude_longitude_grid::UVRelativeToGrid(bool theUVRelativeToGrid)
 {
 	itsUVRelativeToGrid = theUVRelativeToGrid;

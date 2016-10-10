@@ -24,6 +24,7 @@ namespace himan
 {
 namespace interpolate
 {
+
 bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
 	auto q = GET_PLUGIN(querydata);

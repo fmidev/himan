@@ -1,8 +1,5 @@
 /**
  * @file aggregation.h
- * @author partio
- *
- * @date May 16, 2013, 2:12 PM
  *
  * @brief simple class to describe parameter aggregation metadata
  */
@@ -14,9 +11,10 @@
 
 namespace himan
 {
+
 class aggregation
 {
-   public:
+public:
 	aggregation();
 	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theResolutionValue);
 	~aggregation() {}
@@ -38,13 +36,14 @@ class aggregation
 
 	std::ostream& Write(std::ostream& file) const;
 
-   private:
+private:
 	HPAggregationType itsType;
 	HPTimeResolution itsTimeResolution;
 	int itsTimeResolutionValue;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const aggregation& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* AGGREGATION_H */

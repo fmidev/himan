@@ -1,8 +1,6 @@
 /*
  * File:   latitude_longitude_grid.h
- * Author: partio
  *
- * Created on July 7, 2016, 4:37 PM
  */
 
 #ifndef LATITUDE_LONGITUDE_GRID_H
@@ -20,7 +18,7 @@ namespace himan
 {
 class latitude_longitude_grid : public grid
 {
-   public:
+public:
 	latitude_longitude_grid();
 	latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight);
 
@@ -106,7 +104,7 @@ class latitude_longitude_grid : public grid
 
 	latitude_longitude_grid* Clone() const override;
 
-   protected:
+protected:
 	void UpdateCoordinates() const;
 	bool EqualsTo(const latitude_longitude_grid& other) const;
 
@@ -126,9 +124,10 @@ class latitude_longitude_grid : public grid
 };
 
 inline std::ostream& operator<<(std::ostream& file, const latitude_longitude_grid& ob) { return ob.Write(file); }
+
 class rotated_latitude_longitude_grid : public latitude_longitude_grid
 {
-   public:
+public:
 	rotated_latitude_longitude_grid();
 	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
 	                                point theSouthPole, bool initiallyRotated = true);
@@ -159,7 +158,7 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
-   private:
+private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;
 	mutable std::unique_ptr<NFmiRotatedLatLonArea> itsRotLatLonArea;
 

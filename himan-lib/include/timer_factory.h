@@ -1,8 +1,6 @@
 /*
  * timer_factory.h
  *
- *  Created on: Dec 17, 2012
- *      Author: partio
  */
 
 #ifndef TIMER_FACTORY_H
@@ -15,7 +13,7 @@ namespace himan
 {
 class timer_factory
 {
-   public:
+public:
 	static timer_factory* Instance();
 
 	timer_factory(const timer_factory& other) = delete;

@@ -1,8 +1,6 @@
 /*
  * level.cpp
  *
- *  Created on: Nov 27, 2012
- *      Author: partio
  */
 
 #include "level.h"
@@ -16,6 +14,7 @@ level::level()
     : itsType(kUnknownLevel), itsValue(kHPMissingValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName()
 {
 }
+
 level::level(HPLevelType theType, double theValue)
     : itsType(theType), itsValue(theValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName()
 {
@@ -37,6 +36,7 @@ level::level(const NFmiLevel& theLevel)
       itsIndex(kHPMissingInt)
 {
 }
+
 bool level::operator==(const level& other) const
 {
 	if (this == &other)
@@ -48,6 +48,7 @@ bool level::operator==(const level& other) const
 }
 
 bool level::operator!=(const level& other) const { return !(*this == other); }
+
 level::operator std::string() const
 {
 	std::string out = HPLevelTypeToString.at(itsType) + "/" + boost::lexical_cast<std::string>(itsValue);
@@ -61,15 +62,25 @@ level::operator std::string() const
 }
 
 void level::Value(double theValue) { itsValue = theValue; }
+
 double level::Value() const { return itsValue; }
+
 void level::Value2(double theValue2) { itsValue2 = theValue2; }
+
 double level::Value2() const { return itsValue2; }
+
 int level::Index() const { return itsIndex; }
+
 void level::Index(int theIndex) { itsIndex = theIndex; }
+
 HPLevelType level::Type() const { return itsType; }
+
 void level::Type(HPLevelType theLevelType) { itsType = theLevelType; }
+
 std::string level::Name() const { return itsName; }
+
 void level::Name(const std::string& theName) { itsName = theName; }
+
 std::ostream& level::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;

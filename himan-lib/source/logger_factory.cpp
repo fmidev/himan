@@ -1,8 +1,6 @@
 /**
  * @file logger_factory.cpp
  *
- * @date Dec 17, 2012
- * @author partio
  */
 
 #include "logger_factory.h"
@@ -12,6 +10,7 @@ using namespace himan;
 std::unique_ptr<logger_factory> logger_factory::itsInstance;
 
 logger_factory::logger_factory() : itsDebugStateMain(kInfoMsg) {}
+
 logger_factory* logger_factory::Instance()
 {
 	if (!itsInstance)
@@ -28,4 +27,5 @@ std::unique_ptr<logger> logger_factory::GetLog(const std::string& theUserName)
 }
 
 void logger_factory::DebugState(HPDebugState theDebugState) { itsDebugStateMain = theDebugState; }
+
 HPDebugState logger_factory::DebugState() { return itsDebugStateMain; }

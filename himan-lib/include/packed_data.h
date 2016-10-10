@@ -1,8 +1,5 @@
 /**
  * @file packed_data.h
- * @author partio
- *
- * @date April 5, 2013, 10:36 PM
  *
  * @brief Container to hold packed data.
  *
@@ -21,10 +18,12 @@
 // Define shells so that compilation succeeds
 namespace himan
 {
+
 struct packed_data
 {
 	bool HasData() const { return false; }
 };
+
 }
 
 #else
@@ -126,7 +125,9 @@ inline CUDA_HOST CUDA_DEVICE packed_data::~packed_data()
 }
 
 inline CUDA_HOST bool packed_data::HasData() const { return (unpackedLength > 0); }
+
 inline CUDA_HOST CUDA_DEVICE bool packed_data::HasBitmap() const { return (bitmapLength > 0); }
+
 }  // namespace himan
 
 #endif /* HAVE_CUDA */

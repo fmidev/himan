@@ -1,8 +1,6 @@
 /**
  * @file logger_factory.h
  *
- * @date Dec 17, 2012
- * @author partio
  */
 
 #ifndef LOGGER_FACTORY_H
@@ -16,13 +14,14 @@
 namespace himan
 {
 class logger;
+
 class logger_factory
 {
-   public:
+public:
 	static logger_factory* Instance();
 
-	~logger_factory() = default;
 	logger_factory(const logger_factory& other) = delete;
+	~logger_factory() = default;
 	logger_factory& operator=(const logger_factory& other) = delete;
 
 	std::unique_ptr<logger> GetLog(const std::string& theUserName);
@@ -30,7 +29,7 @@ class logger_factory
 	void DebugState(HPDebugState theDebugState);
 	HPDebugState DebugState();
 
-   private:
+private:
 	logger_factory();
 
 	HPDebugState itsDebugStateMain;

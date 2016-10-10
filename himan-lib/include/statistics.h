@@ -1,8 +1,6 @@
 /**
  * @file statistics.h
  *
- * @date Feb 8, 2013
- * @author partio
  */
 
 #ifndef STATISTICS_H
@@ -19,9 +17,10 @@
 
 namespace himan
 {
+
 class statistics
 {
-   public:
+public:
 	friend class plugin_configuration;
 
 	statistics();
@@ -53,7 +52,7 @@ class statistics
 
 	size_t FetchingTime() const;
 
-   private:
+private:
 	void Init();
 	bool StoreToDatabase();
 	bool StoreToFile();

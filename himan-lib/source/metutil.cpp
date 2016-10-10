@@ -3,8 +3,6 @@
  *
  * @brief Different utility functions in a namespace
  *
- * @date Apr 29, 2014
- * @author partio
  */
 
 #include "metutil.h"

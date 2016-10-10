@@ -1,8 +1,6 @@
 /*
  * timer_factory.cpp
  *
- *  Created on: Dec 17, 2012
- *      Author: partio
  */
 
 #include "timer_factory.h"

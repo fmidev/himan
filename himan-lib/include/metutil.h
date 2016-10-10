@@ -1,9 +1,6 @@
 /**
  * @file metutil.h
  *
- * @date Apr 29, 2014
- * @author partio
- *
  * @brief Meteorological functions' namespace.
  *
  * Namespace tries to combine both CPU and GPU implementations for the same
