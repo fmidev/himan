@@ -1,8 +1,5 @@
 /**
  * @file transformer.cpp
- *
- * @date May, 2014
- * @author Tack
  */
 
 #include "transformer.h"

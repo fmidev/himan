@@ -3,8 +3,6 @@
  *
  * Template for calculation of surface roughness from HIRLAM data.
  *
- * @date Mar 27, 2014
- * @author Tack
  */
 
 #include "roughness.h"

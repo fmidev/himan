@@ -1,8 +1,6 @@
 /**
  * @file grib.cpp
  *
- * @date Nov 20, 2012
- * @author partio
  */
 
 #include "grib.h"
@@ -36,6 +34,7 @@ grib::grib()
 }
 
 shared_ptr<NFmiGrib> grib::Reader() { return itsGrib; }
+
 bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
 	// Write only that data which is currently set at descriptors

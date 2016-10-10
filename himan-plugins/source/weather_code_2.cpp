@@ -1,8 +1,6 @@
 /**
  * @file weather_code_2.cpp
  *
- *  @date: May, 2014
- *  @author Andreas Tack
  */
 
 #include "weather_code_2.h"

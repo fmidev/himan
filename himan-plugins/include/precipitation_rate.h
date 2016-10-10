@@ -1,8 +1,6 @@
 /*
  * precipitation_rate.h
  *
- *  Created on: Mar 14, 2014
- *      Author: Tack
  */
 
 #ifndef PRECIPITATION_RATE_H

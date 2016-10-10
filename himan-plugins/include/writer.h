@@ -1,10 +1,6 @@
 /*
  * writer.h
  *
- *  Created on: Nov 26, 2012
- *	  Author: partio
- *
- *
  */
 
 #ifndef WRITER_H
@@ -20,7 +16,7 @@ namespace plugin
 {
 class writer : public auxiliary_plugin
 {
-   public:
+public:
 	writer();
 
 	virtual ~writer() {}
@@ -35,7 +31,7 @@ class writer : public auxiliary_plugin
 	write_options WriteOptions() const;
 	void WriteOptions(const write_options& theWriteOptions);
 
-   private:
+private:
 	write_options itsWriteOptions;
 };
 
@@ -44,6 +40,7 @@ class writer : public auxiliary_plugin
 // the class factories
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<writer>(); }
+
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

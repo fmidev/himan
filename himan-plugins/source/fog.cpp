@@ -1,8 +1,6 @@
 /**
  * @file fog.cpp
  *
- * @date Jul 3, 2013
- * @author peramaki
  */
 
 #include "fog.h"

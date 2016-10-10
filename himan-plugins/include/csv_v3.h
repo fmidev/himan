@@ -93,7 +93,7 @@ struct line_length_limit_exceeded : base, with_file_name, with_file_line
 
 class LineReader
 {
-   private:
+private:
 	static const int block_len = 1 << 24;
 #ifndef CSV_IO_NO_THREAD
 	std::future<int> bytes_read;
@@ -154,7 +154,7 @@ class LineReader
 #endif
 	}
 
-   public:
+public:
 	LineReader() = delete;
 	LineReader(const LineReader &) = delete;
 	LineReader &operator=(const LineReader &) = delete;
@@ -933,7 +933,7 @@ template <unsigned column_count, class trim_policy = trim_chars<' ', '\t'>, clas
           class overflow_policy = throw_on_overflow, class comment_policy = no_comment>
 class CSVReader
 {
-   private:
+private:
 	LineReader in;
 
 	char *(row[column_count]);
@@ -949,7 +949,7 @@ class CSVReader
 	}
 
 	void set_column_names() {}
-   public:
+public:
 	CSVReader() = delete;
 	CSVReader(const CSVReader &) = delete;
 	CSVReader &operator=(const CSVReader &);
@@ -1027,7 +1027,7 @@ class CSVReader
 	const char *get_truncated_file_name() const { return in.get_truncated_file_name(); }
 	void set_file_line(unsigned file_line) { in.set_file_line(file_line); }
 	unsigned get_file_line() const { return in.get_file_line(); }
-   private:
+private:
 	void parse_helper(std::size_t r) {}
 	template <class T, class... ColType>
 	void parse_helper(std::size_t r, T &t, ColType &... cols)
@@ -1056,7 +1056,7 @@ class CSVReader
 		parse_helper(r + 1, cols...);
 	}
 
-   public:
+public:
 	template <class... ColType>
 	bool read_row(ColType &... cols)
 	{

@@ -1,8 +1,6 @@
 /*
  * search_options.h
  *
- *  Created on: Dec 20, 2012
- *      Author: partio
  *
  * Simple struct to hold metadata that's needed to search data from
  * files (or cache).
@@ -21,6 +19,7 @@ namespace himan
 {
 namespace plugin
 {
+
 struct search_options
 {
 	himan::forecast_time time;

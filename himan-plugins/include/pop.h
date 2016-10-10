@@ -1,8 +1,6 @@
 /**
  * @file pop.h
  *
- * @date May 26, 2016
- * @author partio
  */
 
 #ifndef POP_H
@@ -17,7 +15,7 @@ namespace plugin
 {
 class pop : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	pop();
 
 	inline virtual ~pop() {}
@@ -29,7 +27,7 @@ class pop : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::pop"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
 	std::string itsECEPSGeom;

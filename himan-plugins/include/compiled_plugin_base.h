@@ -1,8 +1,6 @@
 /**
  * @file compiled_plugin_base.h
  *
- * @date Jan 15, 2013
- * @author partio
  */
 
 #ifndef COMPILED_PLUGIN_BASE_H
@@ -105,7 +103,7 @@ namespace plugin
 {
 class compiled_plugin_base
 {
-   public:
+public:
 	compiled_plugin_base();
 	inline virtual ~compiled_plugin_base() {}
 	compiled_plugin_base(const compiled_plugin_base& other) = delete;
@@ -122,7 +120,7 @@ class compiled_plugin_base
 
 	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options());
 
-   protected:
+protected:
 	virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
 	/**
 	 * @brief Set primary dimension
@@ -358,14 +356,14 @@ class compiled_plugin_base
 	virtual void AllocateMemory(info myTargetInfo);
 	virtual void DeallocateMemory(info myTargetInfo);
 
-   protected:
+protected:
 	info_t itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	std::unique_ptr<timer> itsTimer;
 	short itsThreadCount;
 	bool itsDimensionsRemaining;
 
-   private:
+private:
 	std::unique_ptr<logger> itsBaseLogger;
 	bool itsPluginIsInitialized;
 	HPDimensionType itsPrimaryDimension;

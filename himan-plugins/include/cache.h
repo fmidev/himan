@@ -1,8 +1,6 @@
 /**
  * @file cache.h
  *
- * @date Nov 20, 2012
- * @author perämäki
  */
 
 #ifndef CACHE_H
@@ -15,6 +13,7 @@ namespace himan
 {
 namespace plugin
 {
+
 struct cache_item
 {
 	std::shared_ptr<himan::info> info;
@@ -26,7 +25,7 @@ struct cache_item
 
 class cache : public auxiliary_plugin
 {
-   public:
+public:
 	cache();
 	~cache() {}
 	cache(const cache& other) = delete;
@@ -49,7 +48,7 @@ class cache : public auxiliary_plugin
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 2); }
 	size_t Size() const;
 
-   private:
+private:
 	void SplitToPool(info& anInfo, bool pin);
 	std::string UniqueName(const info& anInfo);
 	std::string UniqueNameFromOptions(search_options& options);
@@ -57,7 +56,7 @@ class cache : public auxiliary_plugin
 
 class cache_pool : public auxiliary_plugin
 {
-   public:
+public:
 	~cache_pool() { delete itsInstance; }
 	cache_pool(const cache_pool& other) = delete;
 	cache_pool& operator=(const cache_pool& other) = delete;
@@ -80,7 +79,7 @@ class cache_pool : public auxiliary_plugin
 
 	size_t Size() const;
 
-   private:
+private:
 	cache_pool();
 
 	std::map<std::string, cache_item> itsCache;

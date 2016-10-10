@@ -1,8 +1,6 @@
 /**
  * @file   si_cuda.h
- * @author partio
  *
- * @date March 14, 2013, 2:17 PM
  */
 
 #pragma once
@@ -24,6 +22,7 @@
 
 namespace CAPE
 {
+
 const double kFloatMissing = 32700.;
 
 CUDA_DEVICE

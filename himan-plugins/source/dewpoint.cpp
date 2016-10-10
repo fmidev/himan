@@ -1,8 +1,6 @@
 /**
  * @file dewpoint.cpp
  *
- * @date Jan 21, 2012
- * @author partio
  */
 
 #include "dewpoint.h"

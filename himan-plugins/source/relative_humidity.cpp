@@ -1,8 +1,6 @@
 /**
  * @file relative_humidity.cpp
  *
- * @date Jan 21, 2012
- * @author partio
  */
 
 #include "relative_humidity.h"

@@ -1,8 +1,6 @@
 /**
  * @file csv.cpp
  *
- * @date Nov 27, 2012
- * @author: partio
  */
 
 #include "csv.h"
@@ -57,6 +55,7 @@ bool GetLine(csv_reader& in, record& line)
 }
 
 csv::csv() { itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("csv")); }
+
 bool csv::ToFile(info& theInfo, string& theOutputFile)
 {
 	if (theInfo.Grid()->Class() != kIrregularGrid)

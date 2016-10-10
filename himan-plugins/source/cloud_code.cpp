@@ -1,8 +1,6 @@
 /**
  * @file cloud_code.cpp
  *
- * @date Jun 13, 2013
- * @author peramaki
  */
 
 #include "cloud_code.h"

@@ -1,9 +1,6 @@
 /**
  * @file tke.cpp
  *
- *
- * @date Jun 15, 2015
- * @author Tack
  */
 
 #include <boost/lexical_cast.hpp>

@@ -1,8 +1,6 @@
 /**
  * @file tpot.h
  *
- * @date Nov 20, 2012
- * @author partio
  */
 
 #ifndef TPOT_H
@@ -18,7 +16,7 @@ namespace plugin
 {
 class tpot : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	tpot();
 
 	inline virtual ~tpot() {}
@@ -30,7 +28,7 @@ class tpot : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::tpot"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
-   private:
+private:
 	/**
 	 * @brief Calculating pseudo-adiabatic theta (ie thetaw).
 	 *

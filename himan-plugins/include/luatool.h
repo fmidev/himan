@@ -1,8 +1,6 @@
 /**
  * @file luatool.h
  *
- * @date 2014-12-01
- * @author partio
  *
 */
 
@@ -21,14 +19,18 @@ namespace luabind
 {
 namespace detail
 {
+
 namespace has_get_pointer_
 {
+
 template <class T>
 T* get_pointer(std::shared_ptr<T> const& p)
 {
 	return p.get();
 }
+
 }
+
 }
 }
 
@@ -38,9 +40,10 @@ namespace himan
 {
 namespace plugin
 {
+
 class luatool : public compiled_plugin, public compiled_plugin_base
 {
-   public:
+public:
 	luatool();
 	virtual ~luatool();
 
@@ -60,7 +63,7 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
 	void WriteToFile(const info_t& targetInfo);
 
-   protected:
+protected:
 	/* These functions exists because we need to stop himan
 	 * from writing data to disk when calculation finished.
 	 *
@@ -71,7 +74,7 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	void Finish() const;
 	void Run(info_t myTargetInfo, unsigned short threadIndex);
 
-   private:
+private:
 	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	void InitLua(info_t myTargetInfo);
 	bool ReadFile(const std::string& luaFile);
@@ -80,6 +83,7 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 };
 
 extern "C" std::shared_ptr<luatool> create() { return std::make_shared<luatool>(); }
+
 }  // namespace plugin
 }  // namespace himan
 

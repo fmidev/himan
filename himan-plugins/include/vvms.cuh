@@ -1,8 +1,5 @@
 /**
  * File:   vvms_cuda.h
- * Author: partio
- *
- * Created on February 17, 2013, 3:32 PMi
  *
  * List of extern functions compiled by nvcc for plugins (compiled by gcc)
  */
@@ -19,6 +16,7 @@ namespace plugin
 {
 namespace vvms_cuda
 {
+
 struct options
 {
 	info_simple* t;

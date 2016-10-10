@@ -1,8 +1,5 @@
 /**
  * @file   windvector_cuda.h
- * @author partio
- *
- * @date March 14, 2013, 2:17 PM
  */
 
 #ifndef WINDVECTOR_CUDA_H

@@ -1,8 +1,6 @@
 /**
  * @file icing.cpp
  *
- *  Created on: Jan 03, 2013
- *  @author aaltom
  */
 
 #include "icing.h"

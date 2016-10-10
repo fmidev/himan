@@ -1,8 +1,5 @@
 /**
  * @file turbulence.cpp
- *
- * @date Jan 7, 2015
- * @author Tack
  */
 
 #include <boost/lexical_cast.hpp>
@@ -90,20 +87,6 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                        static_cast<string>(forecastLevel));
-
-	/*bool firstLevel = false;
-
-	if (myTargetInfo->Level().Value() == itsTopLevel)
-	{
-	    firstLevel = true;
-	}
-
-	if (firstLevel)
-	{
-	    myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string> (forecastTime.Step()) + ", first hybrid
-	level " + static_cast<string> (forecastLevel));
-	    return;
-	}*/
 
 	info_t UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo;
 

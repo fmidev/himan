@@ -1,8 +1,5 @@
 /**
  * File:   transformer_cuda.h
- * Author: Tack
- *
- * Created on May 07, 2014
  *
  * List of extern functions compiled by nvcc for plugins (compiled by gcc)
  */
@@ -20,6 +17,7 @@ namespace plugin
 {
 namespace transformer_cuda
 {
+
 struct options
 {
 	size_t N;

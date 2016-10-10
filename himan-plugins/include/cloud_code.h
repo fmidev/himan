@@ -1,8 +1,6 @@
 /*
  * cloud_code.h
  *
- *  Created on: Jun 13, 2012
- *      Author: perämäki
  */
 
 #ifndef CLOUD_CODE_H
@@ -15,9 +13,10 @@ namespace himan
 {
 namespace plugin
 {
+
 class cloud_code : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	cloud_code();
 
 	inline virtual ~cloud_code() {}
@@ -29,13 +28,14 @@ class cloud_code : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::cloud_code"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<cloud_code>(new cloud_code()); }
+
 }  // namespace plugin
 }  // namespace himan
 

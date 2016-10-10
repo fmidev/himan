@@ -1,8 +1,6 @@
 /**
  * @file querydata.cpp
  *
- * @date Nov 27, 2012
- * @author: partio
  */
 
 #include "querydata.h"

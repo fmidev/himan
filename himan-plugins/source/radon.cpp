@@ -1,8 +1,6 @@
 /**
  * @file radon.cpp
  *
- * @date Oct 28, 2012
- * @author tack
  */
 
 #include "radon.h"
@@ -31,6 +29,7 @@ radon::radon() : itsInit(false), itsRadonDB()
 }
 
 void radon::PoolMaxWorkers(int maxWorkers) { NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers); }
+
 vector<string> radon::Files(search_options& options)
 {
 	Init();

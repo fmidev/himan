@@ -1,8 +1,6 @@
 /*
  * writer.cpp
  *
- *  Created on: Nov 26, 2012
- *	  Author: partio
  */
 
 #include "writer.h"
@@ -183,4 +181,5 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 }
 
 write_options writer::WriteOptions() const { return itsWriteOptions; }
+
 void writer::WriteOptions(const write_options& theWriteOptions) { itsWriteOptions = theWriteOptions; }

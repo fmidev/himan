@@ -3,8 +3,6 @@
  *
  * Claculates the inverse of the Monin-Obukhov length.
  *
- * @date Aug 8, 2014
- * @author Tack
  */
 
 #include <boost/lexical_cast.hpp>

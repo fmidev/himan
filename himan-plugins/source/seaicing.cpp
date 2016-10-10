@@ -1,8 +1,6 @@
 /**
  * @file seaicing.cpp
  *
- *  Created on: Jan 03, 2013
- *  @author aaltom
  */
 
 #include "seaicing.h"

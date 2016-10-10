@@ -2,8 +2,6 @@
 //
 // @file probability.h
 //
-// @date May 17, 2016
-// @author vanhatam
 //
 
 #ifndef PROBABILITY_PLUGIN_H
@@ -35,7 +33,7 @@ struct param_configuration
 
 class probability : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	probability();
 
 	virtual ~probability();
@@ -51,7 +49,7 @@ class probability : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::probability"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-   private:
+private:
 	virtual void Calculate(uint16_t threadIndex, const param_configuration& pc);
 
 	int itsEnsembleSize;
@@ -60,6 +58,7 @@ class probability : public compiled_plugin, private compiled_plugin_base
 };
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<probability>(); }
+
 }  // plugin
 }  // himan
 

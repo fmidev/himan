@@ -1,8 +1,5 @@
 /**
  * @file   dewpoint_cuda.h
- * @author partio
- *
- * @date February 17, 2013, 3:32 PM
  */
 
 #ifndef DEWPOINT_CUDA_H

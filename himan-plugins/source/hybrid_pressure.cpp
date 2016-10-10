@@ -1,8 +1,6 @@
 /**
  * @file hybrid_pressure.cpp
  *
- *  @date: Mar 23, 2013
- *  @author aaltom
  */
 
 #include "hybrid_pressure.h"

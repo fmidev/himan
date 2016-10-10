@@ -1,9 +1,6 @@
 /**
  * @file weather_code_1
  *
- *
- * @date Apr 10, 2013
- * @author partio, peramaki, aalto
  */
 
 #include "weather_code_1.h"

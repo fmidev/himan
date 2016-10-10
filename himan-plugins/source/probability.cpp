@@ -1,15 +1,6 @@
 // vim: set ai shiftwidth=4 softtabstop=4 tabstop=4
 #include "probability.h"
 
-#include <algorithm>
-#include <exception>
-#include <iostream>
-
-#include <math.h>
-
-#include <boost/lexical_cast.hpp>
-#include <boost/thread.hpp>
-
 #include "logger_factory.h"
 #include "plugin_factory.h"
 
@@ -19,16 +10,27 @@
 #include "ensemble.h"
 #include "util.h"
 
+#include <boost/lexical_cast.hpp>
+#include <boost/thread.hpp>
+
+#include <algorithm>
+#include <exception>
+#include <iostream>
+
+#include <math.h>
+
 namespace himan
 {
 namespace plugin
 {
+
 static std::mutex singleFileWriteMutex;
 
 static const std::string kClassName = "himan::plugin::probability";
 
 /// @brief Used for calculating wind vector magnitude
 static inline double Magnitude(double u, double v) { return sqrt(u * u + v * v); }
+
 probability::probability()
 {
 	itsClearTextFormula = "???";
@@ -40,7 +42,8 @@ probability::probability()
 }
 
 probability::~probability() {}
-/// @brief Gnarrrly configuration reading
+
+/// @brief Configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
 static param GetConfigurationParameter(const std::string& name, const std::shared_ptr<const plugin_configuration> conf,

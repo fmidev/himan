@@ -1,8 +1,6 @@
 /**
  * @file cape.h
  *
- * @date Feb 13, 2014
- * @author partio
  */
 
 #ifndef CAPE_H
@@ -17,7 +15,7 @@ namespace plugin
 {
 class cape : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	cape();
 
 	inline virtual ~cape() {}
@@ -29,7 +27,7 @@ class cape : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::cape"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex);
 
 	std::pair<std::vector<double>, std::vector<double>> GetLCL(std::shared_ptr<info> myTargetInfo,
@@ -73,6 +71,7 @@ class cape : public compiled_plugin, private compiled_plugin_base
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<cape>(); }
+
 }  // namespace plugin
 }  // namespace himan
 

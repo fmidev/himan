@@ -2,9 +2,6 @@
  * @file gust.cpp
  *
  * Computes wind gusts
- *
- * @date Feb 15, 2016
- * @author Tack
  */
 
 #include <boost/lexical_cast.hpp>
@@ -86,6 +83,7 @@ void IntT(intT& iT, const deltaT& dT, size_t gridSize);
 void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
 
 gust::gust() { itsLogger = logger_factory::Instance()->GetLog("gust"); }
+
 void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);

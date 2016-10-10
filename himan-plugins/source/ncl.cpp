@@ -1,8 +1,6 @@
 /**
  * @file ncl.cpp
  *
- * @date Apr 10, 2013
- * @author peramaki
  */
 
 #include "ncl.h"

@@ -1,8 +1,6 @@
 /**
  * @file vvms.h
  *
- * @date Dec 21, 2012
- * @author partio
  */
 
 #ifndef VVMS_H
@@ -25,7 +23,7 @@ namespace plugin
 
 class vvms : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	vvms();
 
 	inline virtual ~vvms() {}
@@ -37,7 +35,7 @@ class vvms : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::vvms"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 #ifdef HAVE_CUDA
 	std::unique_ptr<vvms_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo,
@@ -49,6 +47,7 @@ class vvms : public compiled_plugin, private compiled_plugin_base
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<vvms>(new vvms()); }
+
 }  // namespace plugin
 }  // namespace himan
 
