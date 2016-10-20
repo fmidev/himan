@@ -123,7 +123,7 @@ libraries.append('clntsh')
 libraries.append('lua')
 libraries.append('luabind')
 libraries.append('odbc')
-libraries.append('grib_api')
+libraries.append('eccodes')
 
 env.Append(LIBS = libraries)
 

@@ -111,7 +111,7 @@ libraries.append('pqxx')
 libraries.append('z')
 libraries.append('bz2')
 libraries.append('boost_iostreams')
-libraries.append('grib_api')
+libraries.append('eccodes')
 
 env.Append(LIBS = libraries)
 
