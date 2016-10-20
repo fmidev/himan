@@ -198,8 +198,8 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	boost::thread_group g;
 	auto paramConfigurations = itsParamConfigurations;
 
-	// I only get 3 threads even if I specify -j [6,12]?
-	// itsThreadCount = 6;
+	// Set iterators at this stage to avoid invalid indexing when loading from auxiliary files
+	itsInfo->First();
 
 	while (!paramConfigurations.empty())
 	{
@@ -234,7 +234,7 @@ static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex
 
 void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
-	auto myTargetInfo = *itsInfo;
+	info myTargetInfo = *itsInfo;
 
 	auto threadedLogger =
 	    logger_factory::Instance()->GetLog("probabilityThread # " + boost::lexical_cast<std::string>(threadIndex));
@@ -256,7 +256,6 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		ens2 = ensemble(pc.parameter2, ensembleSize);
 	}
 
-	myTargetInfo.ResetTime();
 	myTargetInfo.First();
 
 	// NOTE we only loop through the time steps here
