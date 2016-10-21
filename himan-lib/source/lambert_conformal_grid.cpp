@@ -75,7 +75,7 @@ lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& oth
 
 size_t lambert_conformal_grid::Size() const
 {
-	if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
 	{
 		return kHPMissingInt;
 	}
@@ -85,7 +85,7 @@ size_t lambert_conformal_grid::Size() const
 
 point lambert_conformal_grid::TopRight() const
 {
-	if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
 	{
 		return point();
 	}
@@ -110,7 +110,7 @@ point lambert_conformal_grid::BottomLeft() const
 		case kBottomLeft:
 			return itsBottomLeft;
 		case kTopLeft:
-			if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+			if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
 			{
 				return point();
 			}
@@ -125,7 +125,7 @@ point lambert_conformal_grid::BottomLeft() const
 
 point lambert_conformal_grid::TopLeft() const
 {
-	if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
 	{
 		return point();
 	}
@@ -133,7 +133,7 @@ point lambert_conformal_grid::TopLeft() const
 	switch (itsScanningMode)
 	{
 		case kBottomLeft:
-			if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+			if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
 			{
 				return point();
 			}
@@ -150,7 +150,7 @@ point lambert_conformal_grid::TopLeft() const
 
 point lambert_conformal_grid::BottomRight() const
 {
-	if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
 	{
 		return point();
 	}

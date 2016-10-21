@@ -91,7 +91,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			}
 		}
 
-		if (param1.Name() == "XX-X" || param1.UnivId() == kHPMissingInt)
+		if (param1.Name() == "XX-X" || param1.UnivId() == static_cast<long> (kHPMissingInt))
 		{
 			throw std::runtime_error("probability : configuration error:: input parameter not specified for '" + name +
 			                         "'");
@@ -99,7 +99,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		outParamConfig->parameter = param1;
 
 		// NOTE param2 is used only with wind calculation at the moment
-		if (param2.Name() != "XX-X" && param2.UnivId() != kHPMissingInt)
+		if (param2.Name() != "XX-X" && param2.UnivId() != static_cast<long> (kHPMissingInt))
 		{
 			outParamConfig->parameter2 = param2;
 		}

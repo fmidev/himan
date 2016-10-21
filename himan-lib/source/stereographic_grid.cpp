@@ -49,7 +49,7 @@ stereographic_grid::stereographic_grid(const stereographic_grid& other)
 
 size_t stereographic_grid::Size() const
 {
-	if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
 	{
 		return kHPMissingInt;
 	}

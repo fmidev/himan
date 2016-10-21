@@ -21,7 +21,7 @@ public:
 	point_list();
 	explicit point_list(const std::vector<station>& theStations);
 
-	virtual ~point_list() = default;
+	virtual ~point_list() {};
 
 	point_list(const point_list& other);
 	point_list& operator=(const point_list& other) = delete;

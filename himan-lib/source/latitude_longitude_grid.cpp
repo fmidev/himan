@@ -57,7 +57,7 @@ latitude_longitude_grid::latitude_longitude_grid(const latitude_longitude_grid& 
 
 size_t latitude_longitude_grid::Size() const
 {
-	if (itsNi == kHPMissingInt || itsNj == kHPMissingInt)
+	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
 	{
 		return kHPMissingInt;
 	}
