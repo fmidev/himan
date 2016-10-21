@@ -4,15 +4,17 @@
 //
 
 #include "ensemble.h"
-#include "fetcher.h"
 #include "plugin_factory.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
+#define HIMAN_AUXILIARY_INCLUDE
+#include "fetcher.h"
+#undef HIMAN_AUXILIARY_INCLUDE
+
 namespace himan
 {
-
 ensemble::ensemble(const param& parameter, size_t ensembleSize)
     : itsParam(parameter),
       itsEnsembleSize(ensembleSize)  // ensembleSize includes the control forecast
@@ -29,9 +31,7 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
 }
 
 ensemble::ensemble() {}
-
 ensemble::~ensemble() {}
-
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsEnsembleSize(other.itsEnsembleSize),
@@ -126,7 +126,7 @@ std::vector<double> ensemble::SortedValues() const
 double ensemble::Mean() const
 {
 	std::vector<double> v = Values();
-	return std::accumulate(v.begin(),v.end(),0.0)/static_cast<double>(v.size());
+	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
 }
 
 }  // namespace himan
