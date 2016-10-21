@@ -15,6 +15,8 @@
 #include "plugin_factory.h"
 
 #include "ensemble.h"
+#include "time_ensemble.h"
+
 #include "fetcher.h"
 #include "json_parser.h"
 #include "radon.h"
@@ -23,8 +25,7 @@ namespace himan
 {
 namespace plugin
 {
-
-fractile::fractile() : itsEnsembleSize(0)
+fractile::fractile() : itsEnsembleSize(0), itsEnsembleType(kPerturbedEnsemble)
 {
 	itsClearTextFormula = "%";
 	itsCudaEnabledCalculation = false;
@@ -32,7 +33,6 @@ fractile::fractile() : itsEnsembleSize(0)
 }
 
 fractile::~fractile() {}
-
 void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -40,6 +40,31 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	if (!itsConfiguration->GetValue("param").empty())
 	{
 		itsParamName = itsConfiguration->GetValue("param");
+	}
+	else
+	{
+		itsLogger->Error("Param not specified");
+		return;
+	}
+
+	if (!itsConfiguration->GetValue("ensemble_type").empty())
+	{
+		auto ensType = itsConfiguration->GetValue("ensemble_type");
+		assert(ensType == "time_ensemble");
+
+		auto ensSize = itsConfiguration->GetValue("ensemble_size");
+
+		if (!ensSize.empty())
+		{
+			itsEnsembleSize = boost::lexical_cast<int>(ensSize);
+		}
+		else
+		{
+			itsLogger->Error("Time ensemble size not specified");
+			return;
+		}
+
+		itsEnsembleType = kTimeEnsemble;
 	}
 	else
 	{
@@ -56,16 +81,20 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	auto r = GET_PLUGIN(radon);
-	std::string ensembleSizeStr =
-	    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
 
-	if (ensembleSizeStr.empty())
+	if (itsEnsembleType == kPerturbedEnsemble)
 	{
-		itsLogger->Error("Unable to find ensemble size from database");
-		return;
-	}
+		std::string ensembleSizeStr =
+		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
 
-	itsEnsembleSize = boost::lexical_cast<int>(ensembleSizeStr);
+		if (ensembleSizeStr.empty())
+		{
+			itsLogger->Error("Unable to find ensemble size from database");
+			return;
+		}
+
+		itsEnsembleSize = boost::lexical_cast<int>(ensembleSizeStr);
+	}
 
 	SetParams(calculatedParams);
 
@@ -87,11 +116,22 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	threadedLogger->Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) + " level " +
 	                     static_cast<std::string>(forecastLevel));
 
-	ensemble ens(param(itsParamName), itsEnsembleSize);
+	std::unique_ptr<ensemble> ens;
+
+	switch (itsEnsembleType)
+	{
+		default:
+		case kPerturbedEnsemble:
+			ens = std::unique_ptr<ensemble>(new ensemble(param(itsParamName), itsEnsembleSize));
+			break;
+		case kTimeEnsemble:
+			ens = std::unique_ptr<time_ensemble>(new time_ensemble(param(itsParamName), itsEnsembleSize));
+			break;
+	}
 
 	try
 	{
-		ens.Fetch(itsConfiguration, forecastTime, forecastLevel);
+		ens->Fetch(itsConfiguration, forecastTime, forecastLevel);
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -102,11 +142,11 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	}
 
 	myTargetInfo->ResetLocation();
-	ens.ResetLocation();
+	ens->ResetLocation();
 
-	while (myTargetInfo->NextLocation() && ens.NextLocation())
+	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
-		auto sortedValues = ens.SortedValues();
+		auto sortedValues = ens->SortedValues();
 
 		size_t targetInfoIndex = 0;
 		for (auto i : fractile)
@@ -117,7 +157,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		}
 		// write mean value to last target info index
 		myTargetInfo->ParamIndex(targetInfoIndex);
-		myTargetInfo->Value(ens.Mean());
+		myTargetInfo->Value(ens->Mean());
 	}
 
 	threadedLogger->Info("[" + deviceType + "] Missing values: " +

@@ -15,9 +15,17 @@ namespace himan
 {
 namespace plugin
 {
+enum HPEnsembleType
+{
+	kUnknownEnsembleType = 0,
+	kPerturbedEnsemble,
+	kTimeEnsemble,
+	kLevelEnsemble
+};
+
 class fractile : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	fractile();
 
 	virtual ~fractile();
@@ -30,10 +38,11 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::fractile"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex);
 	std::string itsParamName;
 	int itsEnsembleSize;
+	HPEnsembleType itsEnsembleType;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<fractile>(); }
