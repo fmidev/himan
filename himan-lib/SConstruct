@@ -10,7 +10,7 @@ OS_VERSION = float('.'.join(platform.linux_distribution()[1].split('.')[:2]))
 IS_RHEL = False
 IS_SLES = False
 
-if OS_NAME == "Red Hat Enterprise Linux Server" or OS_NAME == "CentOS":
+if OS_NAME == "Red Hat Enterprise Linux Server" or OS_NAME == "CentOS Linux":
 	IS_RHEL=True
 elif OS_NAME == "SUSE Linux Enterprise Server ":
 	IS_SLES=True
