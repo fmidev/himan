@@ -21,6 +21,10 @@
 #ifndef NEONS_H
 #define NEONS_H
 
+#if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ <= 6)) && defined override
+#undef override
+#endif
+
 #include "NFmiNeonsDB.h"
 #include "auxiliary_plugin.h"
 #include "search_options.h"
