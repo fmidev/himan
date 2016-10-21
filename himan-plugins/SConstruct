@@ -8,9 +8,12 @@ OS_NAME = platform.linux_distribution()[0]
 OS_VERSION = float('.'.join(platform.linux_distribution()[1].split('.')[:2]))
 
 IS_RHEL = False
+IS_SLES = False
 
 if OS_NAME == "Red Hat Enterprise Linux Server" or OS_NAME == "CentOS":
 	IS_RHEL=True
+elif OS_NAME == "SUSE Linux Enterprise Server ":
+        IS_SLES=True
 
 AddOption(
     '--debug-build',
@@ -85,6 +88,9 @@ else:
 if have_cuda:
 	includes.append(cuda_toolkit_path + '/include')
 
+if not IS_RHEL:
+	includes.append('/opt/gdal/1.11.2/include/')
+
 env.Append(CPPPATH = includes)
 
 # Library paths
@@ -123,7 +129,11 @@ libraries.append('clntsh')
 libraries.append('lua')
 libraries.append('luabind')
 libraries.append('odbc')
-libraries.append('eccodes')
+
+if IS_RHEL:
+	libraries.append('eccodes')
+else:
+	libraries.append('grib_api')
 
 env.Append(LIBS = libraries)
 
@@ -169,7 +179,7 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 cflags = []
 cflags.append('-fPIC')
 
-if not IS_RHEL or (IS_RHEL and OS_VERSION >= 7.0):
+if IS_RHEL and OS_VERSION >= 7.0:
 	cflags.append('-std=c++11')
 else:
 	cflags.append('-std=c++0x')

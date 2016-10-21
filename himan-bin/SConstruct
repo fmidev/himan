@@ -8,9 +8,12 @@ OS_NAME = platform.linux_distribution()[0]
 OS_VERSION = float('.'.join(platform.linux_distribution()[1].split('.')[:2]))
 
 IS_RHEL = False
+IS_SLES = False
 
 if OS_NAME == "Red Hat Enterprise Linux Server" or OS_NAME == "CentOS":
 	IS_RHEL=True
+elif OS_NAME == "SUSE Linux Enterprise Server ":
+	IS_SLES=True
 
 AddOption(
     '--debug-build',
@@ -99,6 +102,11 @@ env.Append(LIBPATH = librarypaths)
 
 # Libraries
 
+boost_mt = ""
+
+if IS_SLES:
+	boost_mt = "-mt"
+
 libraries = []
 
 libraries.append('himan')
@@ -108,8 +116,8 @@ libraries.append('nnz11')
 libraries.append('jasper')
 libraries.append('odbc')
 libraries.append('pqxx')
-libraries.append('boost_program_options')
-libraries.append('boost_system')
+libraries.append('boost_program_options' + boost_mt)
+libraries.append('boost_system' + boost_mt)
 
 env.Append(LIBS = libraries)
 
@@ -159,7 +167,7 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 
 cflags = []
 
-if not IS_RHEL or (IS_RHEL and OS_VERSION >= 7.0):
+if IS_RHEL and OS_VERSION >= 7.0:
 	cflags.append('-std=c++11')
 else:
 	cflags.append('-std=c++0x')
