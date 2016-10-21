@@ -20,6 +20,10 @@
 #pragma GCC diagnostic ignored "-Wsign-promo"
 #endif
 
+#if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ <= 6))
+#define override // override specifier not support until 4.8
+#endif
+
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
 #include <memory>
