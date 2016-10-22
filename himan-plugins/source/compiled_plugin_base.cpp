@@ -402,9 +402,9 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 				if (parm_id == -1)
 				{
-					itsBaseLogger->Warning("Grib1 parameter definitions not found from Neons");
-					itsBaseLogger->Warning("table2Version is " + boost::lexical_cast<string>(table2Version) +
-					                       ", parm_name is " + params[i].Name());
+					string msg = "Grib1 parameter definition not found from Neons for table version " + boost::lexical_cast<string> (table2Version) + ", parameter name " + params[i].Name();
+
+					itsBaseLogger->Warning(msg);
 					continue;
 				}
 
@@ -430,9 +430,9 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 				if (paraminfo.empty() || paraminfo["grib1_number"].empty() || paraminfo["grib1_table_version"].empty())
 				{
-					itsBaseLogger->Warning("Grib1 parameter definition not found from Radon");
-					itsBaseLogger->Warning("Producer id is " + boost::lexical_cast<string>(itsInfo->Producer().Id()) +
-					                       ", parm_name is " + params[i].Name());
+					string msg = "Grib1 parameter definition not found from Radon for producer " + boost::lexical_cast<string> (boost::lexical_cast<string>(itsInfo->Producer().Id()) + ", parameter name " + params[i].Name());
+
+					itsBaseLogger->Warning(msg);
 					continue;
 				}
 

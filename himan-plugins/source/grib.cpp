@@ -1061,8 +1061,7 @@ void grib::WriteParameter(info& anInfo)
 					if (prodinfo.empty())
 					{
 						itsLogger->Warning("Producer information not found from neons for producer " +
-						                   boost::lexical_cast<string>(anInfo.Producer().Id()));
-						itsLogger->Warning("Setting table2version to 203");
+						                   boost::lexical_cast<string>(anInfo.Producer().Id()) + ", setting table2version to 203");
 						tableVersion = 203;
 					}
 					else
@@ -1099,8 +1098,7 @@ void grib::WriteParameter(info& anInfo)
 				if (paramInfo.empty())
 				{
 					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
-					                   boost::lexical_cast<string>(anInfo.Producer().Id()) + " in radon");
-					itsLogger->Warning("Setting table2version to 203");
+					                   boost::lexical_cast<string>(anInfo.Producer().Id()) + " in radon, setting table2version to 203");
 					itsGrib->Message().Table2Version(203);
 				}
 				else
