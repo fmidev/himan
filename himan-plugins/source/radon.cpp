@@ -29,7 +29,6 @@ radon::radon() : itsInit(false), itsRadonDB()
 }
 
 void radon::PoolMaxWorkers(int maxWorkers) { NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers); }
-
 vector<string> radon::Files(search_options& options)
 {
 	Init();
@@ -199,6 +198,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	}
 
 	string geom_id = geominfo["id"];
+	auto analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	query.str("");
 
@@ -206,7 +206,8 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	      << "id, table_name "
 	      << "FROM as_grid "
 	      << "WHERE geometry_id = '" << geom_id << "'"
-	      << " AND analysis_time = '" << resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "'"
+	      << " AND min_analysis_time <= '" << analysisTime << "'"
+	      << " AND max_analysis_time > '" << analysisTime << "'"
 	      << " AND producer_id = " << resultInfo.Producer().Id();
 
 	itsRadonDB->Query(query.str());
@@ -256,8 +257,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	{
 		forecastTypeValue = static_cast<int>(resultInfo.ForecastType().Value());
 	}
-
-	string analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	query << "INSERT INTO data." << table_name
 	      << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, forecast_period, "
