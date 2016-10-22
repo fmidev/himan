@@ -60,6 +60,8 @@ class ensemble
 
 	param Param() const;
 
+	HPEnsembleType EnsembleType() const;
+
    protected:
 	/// @brief The parameter of the ensemble
 	param itsParam;
@@ -72,6 +74,8 @@ class ensemble
 
 	/// @brief Forecasts acquired with Fetch(), each call of Fetch() will overwrite the previous results
 	std::vector<info_t> itsForecasts;
+
+	HPEnsembleType itsEnsembleType;
 
 	std::unique_ptr<logger> itsLogger;
 };
