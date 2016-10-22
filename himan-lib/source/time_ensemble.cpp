@@ -14,6 +14,7 @@ time_ensemble::time_ensemble(const param& parameter) : itsTimeSpan(kYearResoluti
 {
 	itsParam = parameter;
 	itsEnsembleSize = 0;
+	itsEnsembleType = kTimeEnsemble;
 
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 }
@@ -23,6 +24,7 @@ time_ensemble::time_ensemble(const param& parameter, size_t ensembleSize, HPTime
 {
 	itsParam = parameter;
 	itsEnsembleSize = ensembleSize;
+	itsEnsembleType = kTimeEnsemble;
 
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 }
@@ -58,6 +60,11 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 			if (itsEnsembleSize > 0 && itsForecasts.size() != itsEnsembleSize)
 			{
 				// NOTE let the plugin decide what to do with missing data
+				throw;
+			}
+			else if (itsForecasts.size() == 0)
+			{
+				// no forecasts found
 				throw;
 			}
 			else

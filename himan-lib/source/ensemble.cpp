@@ -21,7 +21,8 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
       itsEnsembleSize(ensembleSize)  // ensembleSize includes the control forecast
       ,
       itsPerturbations(std::vector<forecast_type>(ensembleSize - 1)),
-      itsForecasts(std::vector<info_t>(ensembleSize))
+      itsForecasts(std::vector<info_t>(ensembleSize)),
+      itsEnsembleType(kPerturbedEnsemble)
 {
 	int perturbationNumber = 1;
 	for (auto& p : itsPerturbations)
@@ -33,13 +34,17 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 }
 
-ensemble::ensemble() { itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble")); }
+ensemble::ensemble() : itsEnsembleType(kPerturbedEnsemble)
+{
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
+}
 ensemble::~ensemble() {}
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsEnsembleSize(other.itsEnsembleSize),
       itsPerturbations(other.itsPerturbations),
-      itsForecasts(other.itsForecasts)
+      itsForecasts(other.itsForecasts),
+      itsEnsembleType(other.itsEnsembleType)
 {
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 }
@@ -50,6 +55,8 @@ ensemble& ensemble::operator=(const ensemble& other)
 	itsEnsembleSize = other.itsEnsembleSize;
 	itsPerturbations = other.itsPerturbations;
 	itsForecasts = other.itsForecasts;
+	itsEnsembleType = other.itsEnsembleType;
+
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 
 	return *this;
@@ -136,4 +143,5 @@ double ensemble::Mean() const
 	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
 }
 
+HPEnsembleType ensemble::EnsembleType() const { return itsEnsembleType; }
 }  // namespace himan
