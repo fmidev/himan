@@ -157,8 +157,8 @@ point latitude_longitude_grid::XY(const himan::point& latlon) const
 
 point latitude_longitude_grid::LatLon(size_t locationIndex) const
 {
-	assert(itsNi != kHPMissingInt);
-	assert(itsNj != kHPMissingInt);
+	assert(itsNi != static_cast<size_t> (kHPMissingInt));
+	assert(itsNj != static_cast<size_t> (kHPMissingInt));
 	assert(Di() != kHPMissingValue);
 	assert(Dj() != kHPMissingValue);
 	assert(locationIndex < itsNi * itsNj);
@@ -166,7 +166,7 @@ point latitude_longitude_grid::LatLon(size_t locationIndex) const
 	point firstPoint = FirstPoint();
 
 	double j = floor(static_cast<double>(locationIndex / itsNi));
-	double i = fmod(static_cast<double>(locationIndex), itsNi);
+	double i = fmod(static_cast<double>(locationIndex), static_cast<double> (itsNi));
 
 	point ret(firstPoint.X() + i * Di(), kHPMissingInt);
 
