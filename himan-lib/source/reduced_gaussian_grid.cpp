@@ -239,7 +239,7 @@ double reduced_gaussian_grid::Dj() const
 {
 	if (itsDj == kHPMissingValue)
 	{
-		assert(itsNj != kHPMissingInt);
+		assert(itsNj != static_cast<size_t> (kHPMissingInt));
 		itsDj = (TopLeft().Y() - BottomRight().Y()) / (static_cast<double>(itsNj) - 1.);
 	}
 

@@ -250,8 +250,8 @@ point lambert_conformal_grid::XY(const point& latlon) const
 
 point lambert_conformal_grid::LatLon(size_t locationIndex) const
 {
-	assert(itsNi != kHPMissingInt);
-	assert(itsNj != kHPMissingInt);
+	assert(itsNi != static_cast<size_t> (kHPMissingInt));
+	assert(itsNj != static_cast<size_t> (kHPMissingInt));
 	assert(Di() != kHPMissingValue);
 	assert(Dj() != kHPMissingValue);
 	assert(locationIndex < itsNi * itsNj);
