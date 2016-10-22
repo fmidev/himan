@@ -489,6 +489,28 @@ const boost::unordered_map<std::string, HPForecastType> HPStringToForecastType =
 	("eps control", kEpsControl)
 	("eps perturbation", kEpsPerturbation);
 
+enum HPEnsembleType
+{
+	kUnknownEnsembleType = 0,
+	kPerturbedEnsemble,
+	kTimeEnsemble,
+	kLevelEnsemble
+};
+
+const boost::unordered_map<HPEnsembleType, std::string> HPEnsembleTypeToString =
+    ba::map_list_of
+	(kUnknownEnsembleType, "unknown")
+	(kPerturbedEnsemble, "perturbed ensemble")
+	(kTimeEnsemble, "time ensemble")
+	(kLevelEnsemble, "level ensemble");
+
+const boost::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType =
+    ba::map_list_of
+	("unknown", kUnknownEnsembleType)
+	("perturbed ensemble", kPerturbedEnsemble)
+	("time ensemble", kTimeEnsemble)
+	("level ensemble", kLevelEnsemble);
+
 /**
  * @struct HPVersionNumber
  *

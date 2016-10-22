@@ -15,13 +15,6 @@ namespace himan
 {
 namespace plugin
 {
-enum HPEnsembleType
-{
-	kUnknownEnsembleType = 0,
-	kPerturbedEnsemble,
-	kTimeEnsemble,
-	kLevelEnsemble
-};
 
 class fractile : public compiled_plugin, private compiled_plugin_base
 {
