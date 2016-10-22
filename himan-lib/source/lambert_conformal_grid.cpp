@@ -75,7 +75,7 @@ lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& oth
 
 size_t lambert_conformal_grid::Size() const
 {
-	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
+	if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
 	{
 		return kHPMissingInt;
 	}
@@ -85,7 +85,7 @@ size_t lambert_conformal_grid::Size() const
 
 point lambert_conformal_grid::TopRight() const
 {
-	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
+	if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
 	{
 		return point();
 	}
@@ -110,7 +110,7 @@ point lambert_conformal_grid::BottomLeft() const
 		case kBottomLeft:
 			return itsBottomLeft;
 		case kTopLeft:
-			if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
+			if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
 			{
 				return point();
 			}
@@ -125,7 +125,7 @@ point lambert_conformal_grid::BottomLeft() const
 
 point lambert_conformal_grid::TopLeft() const
 {
-	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
+	if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
 	{
 		return point();
 	}
@@ -133,7 +133,7 @@ point lambert_conformal_grid::TopLeft() const
 	switch (itsScanningMode)
 	{
 		case kBottomLeft:
-			if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
+			if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
 			{
 				return point();
 			}
@@ -150,7 +150,7 @@ point lambert_conformal_grid::TopLeft() const
 
 point lambert_conformal_grid::BottomRight() const
 {
-	if (itsNi == static_cast<size_t> (kHPMissingInt) || itsNj == static_cast<size_t> (kHPMissingInt))
+	if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
 	{
 		return point();
 	}
@@ -250,8 +250,8 @@ point lambert_conformal_grid::XY(const point& latlon) const
 
 point lambert_conformal_grid::LatLon(size_t locationIndex) const
 {
-	assert(itsNi != static_cast<size_t> (kHPMissingInt));
-	assert(itsNj != static_cast<size_t> (kHPMissingInt));
+	assert(itsNi != static_cast<size_t>(kHPMissingInt));
+	assert(itsNj != static_cast<size_t>(kHPMissingInt));
 	assert(Di() != kHPMissingValue);
 	assert(Dj() != kHPMissingValue);
 	assert(locationIndex < itsNi * itsNj);
@@ -325,31 +325,18 @@ bool lambert_conformal_grid::Swap(HPScanningMode newScanningMode)
 }
 
 void lambert_conformal_grid::SouthPole(const point& theSouthPole) { itsSouthPole = theSouthPole; }
-
 point lambert_conformal_grid::SouthPole() const { return itsSouthPole; }
-
 void lambert_conformal_grid::Ni(size_t theNi) { itsNi = theNi; }
-
 void lambert_conformal_grid::Nj(size_t theNj) { itsNj = theNj; }
-
 size_t lambert_conformal_grid::Ni() const { return itsNi; }
-
 size_t lambert_conformal_grid::Nj() const { return itsNj; }
-
 void lambert_conformal_grid::Di(double theDi) { itsDi = theDi; }
-
 void lambert_conformal_grid::Dj(double theDj) { itsDj = theDj; }
-
 void lambert_conformal_grid::Orientation(double theOrientation) { itsOrientation = theOrientation; }
-
 double lambert_conformal_grid::Orientation() const { return itsOrientation; }
-
 double lambert_conformal_grid::Di() const { return itsDi; }
-
 double lambert_conformal_grid::Dj() const { return itsDj; }
-
 bool lambert_conformal_grid::operator!=(const grid& other) const { return !(other == *this); }
-
 bool lambert_conformal_grid::operator==(const grid& other) const
 {
 	const lambert_conformal_grid* g = dynamic_cast<const lambert_conformal_grid*>(&other);
@@ -444,7 +431,6 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 }
 
 lambert_conformal_grid* lambert_conformal_grid::Clone() const { return new lambert_conformal_grid(*this); }
-
 ostream& lambert_conformal_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -466,14 +452,12 @@ void lambert_conformal_grid::StandardParallel1(double theStandardParallel1)
 }
 
 double lambert_conformal_grid::StandardParallel1() const { return itsStandardParallel1; }
-
 void lambert_conformal_grid::StandardParallel2(double theStandardParallel2)
 {
 	itsStandardParallel2 = theStandardParallel2;
 }
 
 double lambert_conformal_grid::StandardParallel2() const { return itsStandardParallel2; }
-
 bool lambert_conformal_grid::SetCoordinates() const
 {
 	itsSpatialReference = unique_ptr<OGRSpatialReference>(new OGRSpatialReference);
@@ -567,9 +551,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 }
 
 bool lambert_conformal_grid::UVRelativeToGrid() const { return itsUVRelativeToGrid; }
-
 void lambert_conformal_grid::UVRelativeToGrid(bool theUVRelativeToGrid) { itsUVRelativeToGrid = theUVRelativeToGrid; }
-
 OGRSpatialReference lambert_conformal_grid::SpatialReference() const
 {
 	return OGRSpatialReference(*itsSpatialReference);
