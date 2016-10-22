@@ -5,6 +5,7 @@
 
 #include "ensemble.h"
 #include "plugin_factory.h"
+#include "logger_factory.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -28,9 +29,14 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
 		p = forecast_type(kEpsPerturbation, static_cast<double>(perturbationNumber));
 		perturbationNumber++;
 	}
+
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("time_ensemble"));
 }
 
-ensemble::ensemble() {}
+ensemble::ensemble() 
+{
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("time_ensemble"));
+}
 ensemble::~ensemble() {}
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
@@ -38,6 +44,7 @@ ensemble::ensemble(const ensemble& other)
       itsPerturbations(other.itsPerturbations),
       itsForecasts(other.itsForecasts)
 {
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("time_ensemble"));
 }
 
 ensemble& ensemble::operator=(const ensemble& other)
@@ -46,6 +53,8 @@ ensemble& ensemble::operator=(const ensemble& other)
 	itsEnsembleSize = other.itsEnsembleSize;
 	itsPerturbations = other.itsPerturbations;
 	itsForecasts = other.itsForecasts;
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("time_ensemble"));
+
 	return *this;
 }
 
@@ -70,7 +79,8 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw std::runtime_error("Ensemble: unable to proceed");
+			itsLogger->Fatal("Unable to proceed");
+			exit(1);
 		}
 		else
 		{

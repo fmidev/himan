@@ -72,6 +72,8 @@ class ensemble
 
 	/// @brief Forecasts acquired with Fetch(), each call of Fetch() will overwrite the previous results
 	std::vector<info_t> itsForecasts;
+
+	std::unique_ptr<logger> itsLogger;
 };
 
 inline size_t ensemble::Size() const { return itsEnsembleSize; }
