@@ -1,6 +1,7 @@
 #include "time_ensemble.h"
 
 #include "plugin_factory.h"
+#include "logger_factory.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 #include "fetcher.h"
@@ -9,9 +10,22 @@
 using namespace himan;
 using namespace himan::plugin;
 
-time_ensemble::time_ensemble(const param& parameter, size_t ensembleSize, HPTimeResolution theTimeSpan)
-    : ensemble(parameter, (ensembleSize)), itsTimeSpan(theTimeSpan)
+time_ensemble::time_ensemble(const param& parameter)
+    : itsTimeSpan(kYearResolution)
 {
+	itsParam = parameter;
+	itsEnsembleSize = 0;
+
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("time_ensemble"));
+}
+
+time_ensemble::time_ensemble(const param& parameter, size_t ensembleSize, HPTimeResolution theTimeSpan)
+    : itsTimeSpan(theTimeSpan)
+{
+	itsParam = parameter;
+	itsEnsembleSize = ensembleSize;
+
+	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("time_ensemble"));
 }
 
 void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
@@ -23,9 +37,16 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 	{
 		forecast_time ftime(time);
 
-		for (size_t i = 0; i < itsPerturbations.size() + 1; i++)
+		while (true)
 		{
-			itsForecasts[i] = f->Fetch(config, ftime, forecastLevel, itsParam);
+			if (itsEnsembleSize > 0 && itsForecasts.size() >= itsEnsembleSize)
+			{
+				break;
+			}
+
+			auto info = f->Fetch(config, ftime, forecastLevel, itsParam);
+
+			itsForecasts.push_back(info);
 
 			ftime.OriginDateTime().Adjust(itsTimeSpan, -1);
 			ftime.ValidDateTime().Adjust(itsTimeSpan, -1);
@@ -33,14 +54,22 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 	}
 	catch (HPExceptionType& e)
 	{
-		if (e != kFileDataNotFound)
+		if (e == kFileDataNotFound)
 		{
-			throw std::runtime_error("Ensemble: unable to proceed");
-		}
-		else
-		{
-			// NOTE let the plugin decide what to do with missing data
-			throw;
+			if (itsEnsembleSize > 0 && itsForecasts.size() != itsEnsembleSize)
+			{
+				// NOTE let the plugin decide what to do with missing data
+				throw;
+			}
+			else
+			{
+				itsEnsembleSize = itsForecasts.size();
+			}
 		}
 	}
+
+	assert(itsEnsembleSize == itsForecasts.size());
+
+	itsLogger->Info("Read " + boost::lexical_cast<std::string> (itsForecasts.size()) + " different times to ensemble");
+
 }

@@ -47,29 +47,21 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		return;
 	}
 
-	if (!itsConfiguration->GetValue("ensemble_type").empty())
-	{
-		auto ensType = itsConfiguration->GetValue("ensemble_type");
-		assert(ensType == "time_ensemble");
+	auto ensType = itsConfiguration->GetValue("ensemble_type");
 
+	if (!ensType.empty())
+	{
+		itsEnsembleType = HPStringToEnsembleType.at(ensType);
+	}
+
+	if (itsEnsembleType == kTimeEnsemble)
+	{
 		auto ensSize = itsConfiguration->GetValue("ensemble_size");
 
 		if (!ensSize.empty())
 		{
 			itsEnsembleSize = boost::lexical_cast<int>(ensSize);
 		}
-		else
-		{
-			itsLogger->Error("Time ensemble size not specified");
-			return;
-		}
-
-		itsEnsembleType = kTimeEnsemble;
-	}
-	else
-	{
-		itsLogger->Error("Param not specified");
-		return;
 	}
 
 	params calculatedParams;
