@@ -34,7 +34,6 @@ grib::grib()
 }
 
 shared_ptr<NFmiGrib> grib::Reader() { return itsGrib; }
-
 bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
 	// Write only that data which is currently set at descriptors
@@ -345,7 +344,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	while (itsGrib->NextMessage())
 	{
 		foundMessageNo++;
-                auto newInfo=make_shared<info>();
+		auto newInfo = make_shared<info>();
 
 		if (CreateInfoFromGrib(options, readContents, readPackedData, forceCaching, newInfo))
 		{
@@ -389,10 +388,10 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 	auto aTimer = timer_factory::Instance()->GetTimer();
 	aTimer->Start();
 
-	// TODO need to check what happens when multiple idx files or idx + grib files are provided as input. 
+	// TODO need to check what happens when multiple idx files or idx + grib files are provided as input.
 	if (itsGrib->Message(OptionsToKeys(options)))
 	{
-		auto newInfo=make_shared<info>();
+		auto newInfo = make_shared<info>();
 		if (CreateInfoFromGrib(options, readContents, readPackedData, forceCaching, newInfo))
 		{
 			infos.push_back(newInfo);
@@ -403,7 +402,8 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 
 	long duration = aTimer->GetTime();
 
-	itsLogger->Debug("Read message using grib index file '" + theInputFile + "' in " + boost::lexical_cast<std::string> (duration) + " ms");
+	itsLogger->Debug("Read message using grib index file '" + theInputFile + "' in " +
+	                 boost::lexical_cast<std::string>(duration) + " ms");
 
 	return infos;
 }
@@ -1061,7 +1061,8 @@ void grib::WriteParameter(info& anInfo)
 					if (prodinfo.empty())
 					{
 						itsLogger->Warning("Producer information not found from neons for producer " +
-						                   boost::lexical_cast<string>(anInfo.Producer().Id()) + ", setting table2version to 203");
+						                   boost::lexical_cast<string>(anInfo.Producer().Id()) +
+						                   ", setting table2version to 203");
 						tableVersion = 203;
 					}
 					else
@@ -1098,7 +1099,8 @@ void grib::WriteParameter(info& anInfo)
 				if (paramInfo.empty())
 				{
 					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
-					                   boost::lexical_cast<string>(anInfo.Producer().Id()) + " in radon, setting table2version to 203");
+					                   boost::lexical_cast<string>(anInfo.Producer().Id()) +
+					                   " in radon, setting table2version to 203");
 					itsGrib->Message().Table2Version(203);
 				}
 				else
@@ -1841,16 +1843,16 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 
 	if (param["version"] == "1")
 	{
-	        theKeyValueMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
-	        theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
+		theKeyValueMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
+		theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
 	}
 	else if (param["version"] == "2")
 	{
 		// TODO check if this is giving correct type number (Grib2 != Grib1)
-	        theKeyValueMap["typeOfFirstFixedSurface"] = static_cast<long>(options.level.Type());
-                theKeyValueMap["discipline"] = stol(param["grib2_discipline"]);
+		theKeyValueMap["typeOfFirstFixedSurface"] = static_cast<long>(options.level.Type());
+		theKeyValueMap["discipline"] = stol(param["grib2_discipline"]);
 		theKeyValueMap["parameterCategory"] = stol(param["grib2_category"]);
-                theKeyValueMap["parameterNumber"] = stol(param["grib2_number"]);
+		theKeyValueMap["parameterNumber"] = stol(param["grib2_number"]);
 	}
 	return theKeyValueMap;
 }

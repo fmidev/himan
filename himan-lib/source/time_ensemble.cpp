@@ -1,7 +1,7 @@
 #include "time_ensemble.h"
 
-#include "plugin_factory.h"
 #include "logger_factory.h"
+#include "plugin_factory.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 #include "fetcher.h"
@@ -10,13 +10,12 @@
 using namespace himan;
 using namespace himan::plugin;
 
-time_ensemble::time_ensemble(const param& parameter)
-    : itsTimeSpan(kYearResolution)
+time_ensemble::time_ensemble(const param& parameter) : itsTimeSpan(kYearResolution)
 {
 	itsParam = parameter;
 	itsEnsembleSize = 0;
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("time_ensemble"));
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 }
 
 time_ensemble::time_ensemble(const param& parameter, size_t ensembleSize, HPTimeResolution theTimeSpan)
@@ -25,7 +24,7 @@ time_ensemble::time_ensemble(const param& parameter, size_t ensembleSize, HPTime
 	itsParam = parameter;
 	itsEnsembleSize = ensembleSize;
 
-	itsLogger = std::unique_ptr<logger> (logger_factory::Instance()->GetLog("time_ensemble"));
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 }
 
 void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
@@ -70,6 +69,5 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 
 	assert(itsEnsembleSize == itsForecasts.size());
 
-	itsLogger->Info("Read " + boost::lexical_cast<std::string> (itsForecasts.size()) + " different times to ensemble");
-
+	itsLogger->Info("Read " + boost::lexical_cast<std::string>(itsForecasts.size()) + " different times to ensemble");
 }
