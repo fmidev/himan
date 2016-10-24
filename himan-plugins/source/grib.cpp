@@ -1839,7 +1839,7 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 	theKeyValueMap["centre"] = static_cast<long>(options.prod.Centre());
 	theKeyValueMap["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
 	theKeyValueMap["date"] = stol(time.OriginDateTime().String("%Y%m%d"));
-	theKeyValueMap["time"] = stol(time.OriginDateTime().String("%H%M%S"));
+	theKeyValueMap["time"] = stol(time.OriginDateTime().String("%H%M"));
 
 	if (param["version"] == "1")
 	{
