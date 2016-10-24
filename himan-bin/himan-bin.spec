@@ -20,7 +20,6 @@ Requires: boost-regex
 Requires: boost-iostreams
 Requires: boost-thread
 Requires: jasper
-Requires: grib_api >= 1.15.0
 Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
 Requires: bzip2-libs
