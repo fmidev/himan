@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 16.10.24
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -107,6 +107,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct 24 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.24-2.fmi
+- Update to visibility/Harmonie
 * Mon Oct 24 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.24-1.fmi
 - SLES compatibility fixes
 - General code cleanup
