@@ -100,7 +100,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	double RHScale = 1;
 
-	if (itsConfiguration->SourceProducer().Id() == 1)
+	if (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199)
 	{
 		RHScale = 100;
 	}
@@ -237,6 +237,30 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		highC *= 100;
 
 		RH *= RHScale;
+		/*
+		        cout << "T " << T << endl
+		            << "T25 " << T25 << endl
+		            << "T50 " << T50 << endl
+		            << "T75 " << T75 << endl
+		            << "T100 " << T100 << endl
+		            << "T125 " << T125 << endl
+		            << "HUM25 " << HUM25 << endl
+		            << "HUM50 " << HUM50 << endl
+		            << "HUM75 " << HUM75 << endl
+		            << "HUM100 " << HUM100 << endl
+		            << "HUM125 " << HUM125 << endl
+		            << "RH " << RH << endl
+		            << "strat " << strat << endl
+		            << "stratavg " << stratavg << endl
+		            << "strat15 " << strat15 << endl
+		            << "strat45 " << strat45 << endl
+		            << "strat30 " << strat30 << endl
+		            << "strat300 " << strat300 << endl
+		            << "lowc " << lowC << endl
+		            << "highc " << highC << endl
+		            << "RR " << RR << endl
+		            << "FFBLH " << FFBLH << endl;
+		*/
 
 		assert(RH < 102.);
 
