@@ -1,8 +1,6 @@
 /**
  * @file relative_humidity.h
  *
- * @date Jan Oct 7, 2013
- * @author: partio
  */
 
 #ifndef RELATIVE_HUMIDITY_H
@@ -11,6 +9,7 @@
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
 #include "relative_humidity.cuh"
+
 namespace himan
 {
 namespace plugin
@@ -22,7 +21,7 @@ namespace plugin
 
 class relative_humidity : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	relative_humidity();
 
 	inline virtual ~relative_humidity() {}
@@ -34,7 +33,7 @@ class relative_humidity : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::relative_humidity"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
 #ifdef HAVE_CUDA

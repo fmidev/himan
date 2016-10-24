@@ -1,8 +1,6 @@
 /**
  * @file pop.cpp
  *
- * @date May 26, 2016
- * @author partio
  */
 
 #include <boost/lexical_cast.hpp>

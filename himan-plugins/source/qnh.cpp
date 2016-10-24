@@ -3,8 +3,6 @@
  *
  * Template for future plugins.
  *
- * @date Dec 8, 2014
- * @author junila
  */
 
 #include <boost/lexical_cast.hpp>

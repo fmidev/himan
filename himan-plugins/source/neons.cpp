@@ -1,8 +1,6 @@
 /**
  * @file neons.cpp
  *
- * @date Nov 20, 2012
- * @author partio
  */
 
 #include "neons.h"
@@ -32,6 +30,7 @@ neons::neons() : itsInit(false), itsNeonsDB()
 }
 
 void neons::PoolMaxWorkers(int maxWorkers) { NFmiNeonsDBPool::Instance()->MaxWorkers(maxWorkers); }
+
 vector<string> neons::Files(search_options& options)
 {
 	Init();

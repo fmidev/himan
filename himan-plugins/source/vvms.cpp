@@ -1,8 +1,6 @@
 /**
  * @file vvms.cpp
  *
- * @date Nov 20, 2012
- * @author partio
  */
 
 #include <boost/lexical_cast.hpp>

@@ -1,9 +1,6 @@
 /**
  * @file param.h
  *
- *  Created on: Nov 27, 2012
- *	  Author: partio
- *
  * This class holds all necessary parameter information, basically referring to
  * those parameters defined in Neons.
  * (In routine operations we always need to have parameter support in Neons since
@@ -23,10 +20,12 @@
 
 namespace himan
 {
+
 class logger;
+
 class param
 {
-   public:
+public:
 	param();
 	explicit param(const std::string& theName);
 	param(const std::string& theName, unsigned long theUnivId);
@@ -120,7 +119,7 @@ class param
 
 	std::ostream& Write(std::ostream& file) const;
 
-   private:
+private:
 	long itsId;           //<! neons id
 	std::string itsName;  //!< neons name
 	double itsScale;
@@ -143,6 +142,7 @@ class param
 };
 
 inline std::ostream& operator<<(std::ostream& file, const param& ob) { return ob.Write(file); }
+
 typedef std::vector<himan::param> params;
 
 }  // namespace himan

@@ -1,8 +1,6 @@
 /**
  * @file hybrid_height.cpp
  *
- * @date Apr 5, 2013
- * @author peramaki
  */
 
 #include "hybrid_height.h"
@@ -34,6 +32,7 @@ hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotenti
 }
 
 hybrid_height::~hybrid_height() {}
+
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);

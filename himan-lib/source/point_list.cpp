@@ -1,8 +1,6 @@
 /**
  * @file point_list.cpp
  *
- * @date Jan 23, 2013
- * @author partio
  */
 
 #include "point_list.h"
@@ -36,6 +34,7 @@ point_list::point_list(const point_list& other) : grid(other), itsStations(other
 }
 
 size_t point_list::Size() const { return itsData.Size(); }
+
 bool point_list::EqualsTo(const point_list& other) const
 {
 	if (grid::EqualsTo(other))
@@ -80,13 +79,16 @@ ostream& point_list::Write(std::ostream& file) const
 }
 
 station point_list::Station(size_t theLocationIndex) const { return itsStations[theLocationIndex]; }
+
 point point_list::LatLon(size_t theLocationIndex) const { return itsStations[theLocationIndex]; }
+
 void point_list::Station(size_t theLocationIndex, const station& theStation)
 {
 	itsStations[theLocationIndex] = theStation;
 }
 
 const vector<station>& point_list::Stations() const { return itsStations; }
+
 void point_list::Stations(const vector<station>& theStations)
 {
 	itsStations = theStations;
@@ -160,10 +162,15 @@ bool point_list::Swap(HPScanningMode newScanningMode)
 }
 
 double point_list::Di() const { return kHPMissingValue; }
+
 double point_list::Dj() const { return kHPMissingValue; }
+
 size_t point_list::Ni() const { return itsData.Size(); }
+
 size_t point_list::Nj() const { return 1; }
+
 bool point_list::operator!=(const point_list& other) const { return !(other == *this); }
+
 bool point_list::operator==(const point_list& other) const
 {
 	const point_list* g = dynamic_cast<const point_list*>(&other);
@@ -177,6 +184,7 @@ bool point_list::operator==(const point_list& other) const
 }
 
 point_list* point_list::Clone() const { return new point_list(*this); }
+
 point point_list::XY(const point& latlon) const
 {
 	// Linear search

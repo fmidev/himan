@@ -1,9 +1,6 @@
 /**
  * @file preform_hybrid.h
  *
- * @date Sep 26, 2013
- * @author: partio
- *
  * @brief Precipitation form algorithm based on hybrid fields, Korpela-Koistinen version
  *
  * Formula implementation in smarttool language by Simo Neiglick.
@@ -30,9 +27,10 @@ namespace himan
 {
 namespace plugin
 {
+
 class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	preform_hybrid();
 
 	inline virtual ~preform_hybrid() {}
@@ -44,10 +42,10 @@ class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::preform_hybrid"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
-   protected:
+protected:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
-   private:
+private:
 	/**
 	 * @brief Calculate properties of a stratus cloud
 	 * @return info containing multiple parameters describing stratus

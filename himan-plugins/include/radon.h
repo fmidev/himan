@@ -3,8 +3,6 @@
  *
  * @date Oct 28, 2014
  *
- * @author: tack
- *
  * @class radon
  *
  * @brief Access to radon database.
@@ -33,9 +31,10 @@ namespace himan
 {
 namespace plugin
 {
+
 class radon : public auxiliary_plugin
 {
-   public:
+public:
 	radon();
 
 	inline virtual ~radon()
@@ -132,6 +131,7 @@ inline NFmiRadonDB& radon::RadonDB()
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<radon>(new radon()); }
+
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 }  // namespace plugin

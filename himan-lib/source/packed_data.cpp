@@ -1,8 +1,6 @@
 /**
  * @file packed_data.cpp
  *
- * @date Apr 11, 2013
- * @author partio
  */
 
 #include "packed_data.h"

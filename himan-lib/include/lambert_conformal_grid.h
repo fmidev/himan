@@ -1,8 +1,6 @@
 /**
  * @file   lambert_conformal_grid.h
- * @author partio
  *
- * @date Sep 16, 2016
  */
 
 #ifndef LAMBERT_CONFORMAL_GRID_H
@@ -18,9 +16,10 @@
 
 namespace himan
 {
+
 class lambert_conformal_grid : public grid
 {
-   public:
+public:
 	lambert_conformal_grid();
 	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirsPoint);
 
@@ -109,7 +108,7 @@ class lambert_conformal_grid : public grid
 	point SouthPole() const;
 	void SouthPole(const point& theSouthPole);
 
-   private:
+private:
 	bool EqualsTo(const lambert_conformal_grid& other) const;
 	bool SetCoordinates() const;
 
@@ -135,6 +134,7 @@ class lambert_conformal_grid : public grid
 };
 
 inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* LAMBERT_CONFORMAL_GRID_H */

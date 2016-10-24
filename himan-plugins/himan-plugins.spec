@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: jasper-libs
-Requires: grib_api >= 1.15.0
+Requires: eccodes
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
 Requires: himan-lib >= 16.8.23
 Requires: himan-bin >= 16.6.6
@@ -34,7 +34,7 @@ BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: lua-devel >= 5.1.4
 BuildRequires: scons
 BuildRequires: libsmartmet-newbase-devel >= 16.9.20
-BuildRequires: grib_api-devel >= 1.15.0
+BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 BuildRequires: cusp >= 0.5.1

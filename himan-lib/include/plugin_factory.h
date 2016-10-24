@@ -1,8 +1,6 @@
 /**
  * @file plugin_factory.h
  *
- * @date Nov 20, 2012
- * @author partio
  */
 
 #ifndef PLUGIN_FACTORY_H
@@ -19,7 +17,9 @@ namespace himan
 {
 class plugin_factory
 {
-   public:
+public:
+	~plugin_factory() {}
+	
 	static plugin_factory* Instance();
 
 	std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins(HPPluginClass = kUnknownPlugin);  // Kinda ugly
@@ -31,8 +31,7 @@ class plugin_factory
 
 	std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName);
 
-	~plugin_factory() {}
-   private:
+private:
 	// Hide constructor
 	plugin_factory();
 

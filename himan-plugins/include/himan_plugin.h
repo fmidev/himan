@@ -3,9 +3,6 @@
  *
  * @brief Top level class for all plugins. (not for core-lib).
  *
- * @date Nov 20, 2012
- * @author partio
- *
  */
 
 #ifndef HIMAN_PLUGIN_H
@@ -44,7 +41,7 @@ namespace plugin
 
 class himan_plugin
 {
-   public:
+public:
 	inline himan_plugin(){};
 
 	inline virtual ~himan_plugin(){};
@@ -55,7 +52,7 @@ class himan_plugin
 
 	virtual HPVersionNumber Version() const = 0;
 
-   protected:
+protected:
 	std::unique_ptr<logger> itsLogger;
 };
 

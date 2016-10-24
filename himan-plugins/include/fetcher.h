@@ -1,9 +1,6 @@
 /**
  * @file fetcher.h
  *
- * @date Nov 21, 2012
- * @author partio
- *
  * Class purpose is to server as an intermediator between a
  * compiled plugin asking for data and the different plugins
  * serving the different aspects of the data.
@@ -33,7 +30,7 @@ namespace plugin
 {
 class fetcher : public auxiliary_plugin
 {
-   public:
+public:
 	fetcher();
 
 	virtual ~fetcher() {}
@@ -102,7 +99,7 @@ class fetcher : public auxiliary_plugin
 	void LandSeaMaskThreshold(double theLandSeaMaskThreshold);
 	double LandSeaMaskThreshold() const;
 
-   private:
+private:
 	/**
 	 * @brief Apply land-sea mask to requested data.
 	 *

@@ -1,8 +1,6 @@
 /*
  * auxiliary_plugin.h
  *
- *  Created on: Nov 19, 2012
- *      Author: partio
  *
  * Auxiliary plugins are used to help the calculation of parameters.
  * They do not calculate parameters themselves.
@@ -32,7 +30,7 @@ namespace plugin
 {
 class auxiliary_plugin : public himan_plugin
 {
-   public:
+public:
 	auxiliary_plugin(){};
 
 	virtual ~auxiliary_plugin(){};
@@ -40,12 +38,12 @@ class auxiliary_plugin : public himan_plugin
 
 class io_plugin : public auxiliary_plugin
 {
-   public:
+public:
 	io_plugin() {}
 	virtual ~io_plugin() {}
 	virtual write_options WriteOptions() const { return itsWriteOptions; }
 	virtual void WriteOptions(const write_options& theWriteOptions) { itsWriteOptions = theWriteOptions; }
-   protected:
+protected:
 	write_options itsWriteOptions;
 };
 

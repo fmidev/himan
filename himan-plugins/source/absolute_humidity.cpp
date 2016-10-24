@@ -3,8 +3,6 @@
  *
  * Plug-in to calculate total humidity
  *
- * @date Mar 27, 2014
- * @author Tack
  */
 
 #include "absolute_humidity.h"

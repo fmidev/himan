@@ -1,9 +1,6 @@
 /**
  * @file forecast_time.h
  *
- * @date Dec 1, 2012
- * @author partio
- *
  */
 
 #ifndef FORECAST_TIME_H
@@ -13,6 +10,7 @@
 
 namespace himan
 {
+
 /**
  * @class forecast_time
  *
@@ -20,6 +18,7 @@ namespace himan
  */
 
 class logger;
+
 class forecast_time
 {
    public:
@@ -64,6 +63,7 @@ class forecast_time
 };
 
 inline std::ostream& operator<<(std::ostream& file, const forecast_time& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* FORECAST_TIME_H */

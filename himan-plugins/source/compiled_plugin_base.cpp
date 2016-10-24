@@ -2,8 +2,6 @@
  *
  * @file compiled_plugin_base.cpp
  *
- * @date Jan 15, 2013
- * @author partio
  */
 
 #include "compiled_plugin_base.h"
@@ -653,6 +651,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 }
 
 HPDimensionType compiled_plugin_base::PrimaryDimension() const { return itsPrimaryDimension; }
+
 void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 {
 	if (itsInfo->SizeParams() > 0)

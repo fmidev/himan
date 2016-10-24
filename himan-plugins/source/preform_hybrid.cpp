@@ -1,8 +1,6 @@
 /**
  * @file preform_hybrid.cpp
  *
- * @date Sep 5, 2013
- * @author partio
  */
 
 #define AND &&

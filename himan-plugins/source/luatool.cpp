@@ -51,6 +51,7 @@ luatool::luatool() : itsWriteOptions()
 }
 
 luatool::~luatool() {}
+
 void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -197,51 +198,88 @@ void BindEnum(lua_State* L)
 {
 	module(L)
 	    [class_<HPLevelType>("HPLevelType")
-	         .enum_("constants")[value("kUnknownLevel", kUnknownLevel), value("kGround", kGround),
-	                             value("kTopOfAtmosphere", kTopOfAtmosphere), value("kPressure", kPressure),
-	                             value("kMeanSea", kMeanSea), value("kAltitude", kAltitude), value("kHeight", kHeight),
-	                             value("kHybrid", kHybrid), value("kGndLayer", kGndLayer), value("kDepth", kDepth),
-	                             value("kEntireAtmosphere", kEntireAtmosphere), value("kEntireOcean", kEntireOcean),
-	                             value("kMaximumThetaE", kMaximumThetaE), value("kHeightLayer", kHeightLayer)],
+	         .enum_("constants")[
+				 value("kUnknownLevel", kUnknownLevel),
+				 value("kGround", kGround),
+				 value("kTopOfAtmosphere", kTopOfAtmosphere),
+				 value("kPressure", kPressure),
+				 value("kMeanSea", kMeanSea),
+				 value("kAltitude", kAltitude),
+				 value("kHeight", kHeight),
+				 value("kHybrid", kHybrid),
+				 value("kGndLayer", kGndLayer),
+				 value("kDepth", kDepth),
+				 value("kEntireAtmosphere", kEntireAtmosphere),
+				 value("kEntireOcean", kEntireOcean),
+				 value("kMaximumThetaE", kMaximumThetaE),
+				 value("kHeightLayer", kHeightLayer)],
 	     class_<HPTimeResolution>("HPTimeResolution")
 	         .enum_(
-	             "constants")[value("kUnknownTimeResolution", kUnknownTimeResolution),
-	                          value("kHourResolution", kHourResolution), value("kMinuteResolution", kMinuteResolution)],
+	             "constants")[
+					 value("kUnknownTimeResolution", kUnknownTimeResolution),
+					 value("kHourResolution", kHourResolution),
+					 value("kMinuteResolution", kMinuteResolution)],
 	     class_<HPFileType>("HPFileType")
-	         .enum_("constants")[value("kUnknownFile", kUnknownFile), value("kGRIB1", kGRIB1), value("kGRIB2", kGRIB2),
-	                             value("kGRIB", kGRIB), value("kQueryData", kQueryData), value("kNetCDF", kNetCDF)],
+	         .enum_("constants")[
+				 value("kUnknownFile", kUnknownFile),
+				 value("kGRIB1", kGRIB1),
+				 value("kGRIB2", kGRIB2),
+				 value("kGRIB", kGRIB),
+				 value("kQueryData", kQueryData),
+				 value("kNetCDF", kNetCDF)],
 	     class_<HPScanningMode>("HPScanningMode")
-	         .enum_("constants")[value("kUnknownScanningMode", kUnknownScanningMode),
-	                             value("kTopLeft", himan::kTopLeft), value("kTopRight", himan::kTopRight),
-	                             value("kBottomLeft", himan::kBottomLeft), value("kBottomRight", himan::kBottomRight)],
+	         .enum_("constants")[
+				 value("kUnknownScanningMode", kUnknownScanningMode),
+				 value("kTopLeft", himan::kTopLeft),
+				 value("kTopRight", himan::kTopRight),
+				 value("kBottomLeft", himan::kBottomLeft),
+				 value("kBottomRight", himan::kBottomRight)],
 	     class_<HPAggregationType>("HPAggregationType")
-	         .enum_("constants")[value("kUnknownAggregationType", kUnknownAggregationType), value("kAverage", kAverage),
-	                             value("kAccumulation", kAccumulation), value("kMaximum", kMaximum),
-	                             value("kMinimum", kMinimum), value("kDifference", kDifference)],
+	         .enum_("constants")[
+				 value("kUnknownAggregationType", kUnknownAggregationType),
+				 value("kAverage", kAverage),
+				 value("kAccumulation", kAccumulation),
+				 value("kMaximum", kMaximum),
+				 value("kMinimum", kMinimum),
+				 value("kDifference", kDifference)],
 	     class_<HPModifierType>("HPModifierType")
 	         .enum_("constants")
-	             [value("kUnknownModifierType", kUnknownModifierType), value("kAverageModifier", kAverageModifier),
-	              value("kAccumulationModifier", kAccumulationModifier), value("kMaximumModifier", kMaximumModifier),
-	              value("kMinimumModifier", kMinimumModifier), value("kDifferenceModifier", kDifferenceModifier),
-	              value("kMaximumMinimumModifier", kMaximumMinimumModifier), value("kCountModifier", kCountModifier),
-	              value("kFindHeightModifier", kFindHeightModifier), value("kFindValueModifier", kFindValueModifier),
+	             [value("kUnknownModifierType", kUnknownModifierType),
+				  value("kAverageModifier", kAverageModifier),
+	              value("kAccumulationModifier", kAccumulationModifier),
+				  value("kMaximumModifier", kMaximumModifier),
+	              value("kMinimumModifier", kMinimumModifier),
+				  value("kDifferenceModifier", kDifferenceModifier),
+	              value("kMaximumMinimumModifier", kMaximumMinimumModifier),
+				  value("kCountModifier", kCountModifier),
+	              value("kFindHeightModifier", kFindHeightModifier),
+				  value("kFindValueModifier", kFindValueModifier),
 	              value("kIntegralModifier", kIntegralModifier),
 	              value("kPlusMinusAreaModifier", kPlusMinusAreaModifier)],
 	     class_<HPGridClass>("HPGridClass")
-	         .enum_("constants")[value("kUnknownGridClass", kUnknownGridClass), value("kRegularGrid", kRegularGrid),
-	                             value("kIrregularGrid", kIrregularGrid)],
+	         .enum_("constants")[
+				 value("kUnknownGridClass", kUnknownGridClass),
+				 value("kRegularGrid", kRegularGrid),
+				 value("kIrregularGrid", kIrregularGrid)],
 	     class_<HPGridType>("HPGridType")
 	         .enum_(
 	             "constants")[value("kUnknownGridType", kUnknownGridType),
-	                          value("kLatitudeLongitude", kLatitudeLongitude), value("kStereographic", kStereographic),
+	                          value("kLatitudeLongitude", kLatitudeLongitude),
+							  value("kStereographic", kStereographic),
 	                          value("kAzimuthalEquidistant", kAzimuthalEquidistant),
 	                          value("kRotatedLatitudeLongitude", kRotatedLatitudeLongitude),
-	                          value("kReducedGaussian", kReducedGaussian), value("kPointList", kPointList)],
-	     class_<HPParameterUnit>("HPParameterUnit").enum_("constants")[value("kM", kM), value("kHPa", kHPa)],
+	                          value("kReducedGaussian", kReducedGaussian),
+							  value("kPointList", kPointList)],
+	     class_<HPParameterUnit>("HPParameterUnit").enum_("constants")[
+			 value("kM", kM),
+			 value("kHPa", kHPa)],
 	     class_<HPForecastType>("HPForecastType")
-	         .enum_("constants")[value("kUnknownType", kUnknownType), value("kDeterministic", kDeterministic),
-	                             value("kAnalysis", kAnalysis), value("kEpsControl", kEpsControl),
-	                             value("kEpsPerturbation", kEpsPerturbation)]];
+	         .enum_("constants")[
+				 value("kUnknownType", kUnknownType),
+				 value("kDeterministic", kDeterministic),
+				 value("kAnalysis", kAnalysis),
+				 value("kEpsControl", kEpsControl),
+				 value("kEpsPerturbation", kEpsPerturbation)]];
 }
 
 namespace info_wrapper
@@ -249,15 +287,25 @@ namespace info_wrapper
 // These are convenience functions for accessing info class contents
 
 bool SetValue(std::shared_ptr<info>& anInfo, int index, double value) { return anInfo->Grid()->Value(--index, value); }
+
 double GetValue(std::shared_ptr<info>& anInfo, int index) { return anInfo->Grid()->Value(--index); }
+
 size_t GetLocationIndex(std::shared_ptr<info> anInfo) { return anInfo->LocationIndex() + 1; }
+
 size_t GetTimeIndex(std::shared_ptr<info> anInfo) { return anInfo->TimeIndex() + 1; }
+
 size_t GetParamIndex(std::shared_ptr<info> anInfo) { return anInfo->ParamIndex() + 1; }
+
 size_t GetLevelIndex(std::shared_ptr<info> anInfo) { return anInfo->LevelIndex() + 1; }
+
 void SetLocationIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->LocationIndex(--theIndex); }
+
 void SetTimeIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->TimeIndex(--theIndex); }
+
 void SetParamIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->ParamIndex(--theIndex); }
+
 void SetLevelIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->LevelIndex(--theIndex); }
+
 void SetValues(info_t& anInfo, const object& table)
 {
 	std::vector<double> vals = TableToVector(table);
@@ -274,9 +322,13 @@ void SetValues(info_t& anInfo, const object& table)
 }
 
 object GetValues(info_t& anInfo) { return VectorToTable(VEC(anInfo)); }
+
 point GetLatLon(info_t& anInfo, size_t theIndex) { return anInfo->Grid()->LatLon(--theIndex); }
+
 double GetMissingValue(info_t& anInfo) { return anInfo->Data().MissingValue(); }
+
 void SetMissingValue(info_t& anInfo, double missingValue) { anInfo->Data().MissingValue(missingValue); }
+
 }  // namespace info_wrapper
 
 namespace hitool_wrapper
@@ -575,24 +627,31 @@ object VerticalPlusMinusArea(std::shared_ptr<hitool> h, const param& theParams, 
 }
 
 void Time(std::shared_ptr<hitool> h, const forecast_time& theTime) { h->Time(theTime); }
+
 void SetHeightUnit(std::shared_ptr<hitool> h, HPParameterUnit theHeightUnit) { h->HeightUnit(theHeightUnit); }
+
 HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h) { return h->HeightUnit(); }
+
 }  // namespace hitool_wrapper
 
 namespace neons_wrapper
 {
+
 std::string GetProducerMetaData(std::shared_ptr<neons> n, const producer& prod, const std::string& attName)
 {
 	return n->ProducerMetaData(prod.Id(), attName);
 }
+
 }  // namespace neons_wrapper
 
 namespace radon_wrapper
 {
+
 std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, const std::string& attName)
 {
 	return r->RadonDB().GetProducerMetaData(prod.Id(), attName);
 }
+
 }  // namespace radon_wrapper
 
 void BindLib(lua_State* L)
@@ -691,25 +750,8 @@ void BindLib(lua_State* L)
 	              .def("SetTopRight", LUA_MEMFN(void, reduced_gaussian_grid, BottomLeft, const point&))
 	              .def("GetFirstPoint", LUA_CMEMFN(point, reduced_gaussian_grid, FirstPoint, void))
 	              .def("GetLastPoint", LUA_CMEMFN(point, reduced_gaussian_grid, LastPoint, void))
-	          //	.def("GetNumberOfPointsAlongParallels", LUA_CMEMFN(double, reduced_gaussian_grid,
-	          // NumberOfPointsAlongParallels, void))
-	          //.def("SetNumberOfPointsAlongParallels", LUA_MEMFN(void, reduced_gaussian_grid,
-	          // NumberOfPointsAlongParallels, std::vector<int>))
 	          ,
 	          class_<matrix<double>>("matrix").def(constructor<size_t, size_t, size_t, double>())
-	          /*.def("Size", &matrix<double>::Size)
-	          .def("ClassName", &matrix<double>::ClassName)
-	          .def("Resize", LUA_MEMFN(void, matrix<double>, Resize, size_t, size_t, size_t))
-	          .def("GetValue", LUA_CMEMFN(double, matrix<double>, At, size_t))
-	          .def("GetValues", &matrix<double>::Values)
-	          .def("SetValue", LUA_MEMFN(bool, matrix<double>, Set, size_t, double))
-	          .def("SetValues", LUA_MEMFN(bool, matrix<double>, Set, const std::vector<double>&))
-	          .def("Fill", &matrix<double>::Fill)
-	          .def("GetMissingValue", LUA_CMEMFN(double, matrix<double>, MissingValue, void))
-	          .def("SetMissingValue", LUA_MEMFN(void, matrix<double>, MissingValue, double))
-	          .def("Clear", &matrix<double>::Clear)
-	          .def("IsMissing", LUA_CMEMFN(bool, matrix<double>, IsMissing, size_t))
-	          .def("MissingCount", &matrix<double>::MissingCount)*/
 	          ,
 	          class_<param>("param")
 	              .def(constructor<const std::string&>())
@@ -978,4 +1020,5 @@ void luatool::WriteToFile(const info& targetInfo, write_options writeOptions)
 }
 
 void luatool::WriteToFile(const info_t& targetInfo) { compiled_plugin_base::WriteToFile(*targetInfo, itsWriteOptions); }
+
 #endif  // __clang_analyzer__

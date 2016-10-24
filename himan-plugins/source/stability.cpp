@@ -1,8 +1,6 @@
 /**
  * @file stability.cpp
  *
- *  @date: Jan 23, 2013
- *  @author aaltom, revised by partio
  */
 
 #include "stability.h"
@@ -524,44 +522,10 @@ bool stability::GetWindShearSourceData(const shared_ptr<info>& myTargetInfo, vec
 vector<double> Shear(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, const param& wantedParam,
                      double lowerHeight, double upperHeight)
 {
-	// auto f = dynamic_pointer_cast <fetcher> (plugin_factory::Instance()->Plugin("fetcher"));
 	auto h = dynamic_pointer_cast<hitool>(plugin_factory::Instance()->Plugin("hitool"));
-	/*
-	    auto height = f->Fetch(conf, ftime, level(kHeight, 0), param("Z-M2S2"), false);
 
-	    h->Configuration(conf);
-	    h->Time(ftime);
-
-	    vector<double> lowerHeights (height->Data().Size(), lowerHeight);
-	    vector<double> upperHeights (height->Data().Size(), upperHeight);
-
-	    size_t i;
-
-	    for (i = 0, height->ResetLocation(); height->NextLocation(); i++)
-	    {
-
-	        if (height->Value() == kFloatMissing)
-	        {
-	            lowerHeights[i] = kFloatMissing;
-	            upperHeights[i] = kFloatMissing;
-	            continue;
-	        }
-
-	        lowerHeights[i] = fmax(0, height->Value() * constants::kIg);
-	        upperHeights[i] += lowerHeights[i];
-
-	#ifdef DEBUG
-	        assert(lowerHeights[i] != kFloatMissing);
-	        assert(upperHeights[i] != kFloatMissing);
-	#endif
-
-	    }
-	*/
 	auto lowerValues = h->VerticalValue(wantedParam, lowerHeight);
 	auto upperValues = h->VerticalValue(wantedParam, upperHeight);
-
-	//	auto lowerValues = h->VerticalValue(wantedParam, lowerHeights);
-	//	auto upperValues = h->VerticalValue(wantedParam, upperHeights);
 
 	vector<double> ret(lowerValues.size(), kFloatMissing);
 

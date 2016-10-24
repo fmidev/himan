@@ -1,8 +1,6 @@
 /**
  * @file   stability_cuda.h
- * @author partio
  *
- * @date March 14, 2013, 2:17 PM
  */
 
 #ifndef STABILITY_CUDA_H

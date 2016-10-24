@@ -1,8 +1,6 @@
 /*
  * File:   stereographic_grid.h
- * Author: partio
  *
- * Created on July 7, 2016, 4:43 PM
  */
 
 #ifndef STEREOGRAPHIC_GRID_H
@@ -16,9 +14,10 @@
 
 namespace himan
 {
+
 class stereographic_grid : public grid
 {
-   public:
+public:
 	stereographic_grid();
 	stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
 	                   double theOrientation = kHPMissingValue);
@@ -79,7 +78,7 @@ class stereographic_grid : public grid
 
 	stereographic_grid* Clone() const override;
 
-   private:
+private:
 	bool SetCoordinates();
 	void CreateAreaAndGrid() const;
 
@@ -102,6 +101,7 @@ class stereographic_grid : public grid
 };
 
 inline std::ostream& operator<<(std::ostream& file, const stereographic_grid& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* STEREOGRAPHIC_GRID_H */

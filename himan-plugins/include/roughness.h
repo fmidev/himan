@@ -1,8 +1,6 @@
 /*
  * roughness.h
  *
- *  Created on: Mar 25, 2014
- *      Author: Tack
  */
 
 #ifndef ROUGHNESS_H
@@ -25,7 +23,7 @@ namespace plugin
 
 class roughness : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	roughness();
 
 	inline virtual ~roughness() {}
@@ -37,13 +35,14 @@ class roughness : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::roughness"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<roughness>(new roughness()); }
+
 }  // namespace plugin
 }  // namespace himan
 

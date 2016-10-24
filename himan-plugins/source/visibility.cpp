@@ -1,9 +1,5 @@
 /**
  * @file visibility
- *
- *
- * @date Mar 10, 2016
- * @author aalto
  */
 
 #include "visibility.h"

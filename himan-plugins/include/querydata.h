@@ -1,8 +1,6 @@
 /**
  * @file querydata.h
  *
- * @date Nov 27, 2012
- * @author partio
  */
 
 #ifndef QUERYDATA_H
@@ -34,7 +32,7 @@ namespace plugin
 {
 class querydata : public io_plugin
 {
-   public:
+public:
 	querydata();
 
 	virtual ~querydata() {}
@@ -100,7 +98,7 @@ class querydata : public io_plugin
 	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
 	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
 
-   private:
+private:
 	/**
 	 * @brief Copy data from info to querydata
 	 *
@@ -119,6 +117,7 @@ class querydata : public io_plugin
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<querydata>(); }
+
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 }  // namespace plugin

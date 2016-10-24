@@ -1,8 +1,6 @@
 //
 // @file ensemble.cpp
 //
-// @date June 2, 2016
-// @author vanhatam
 //
 
 #include "ensemble.h"
@@ -14,6 +12,7 @@
 
 namespace himan
 {
+
 ensemble::ensemble(const param& parameter, size_t ensembleSize)
     : itsParam(parameter),
       itsEnsembleSize(ensembleSize)  // ensembleSize includes the control forecast
@@ -30,7 +29,9 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
 }
 
 ensemble::ensemble() {}
+
 ensemble::~ensemble() {}
+
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsEnsembleSize(other.itsEnsembleSize),

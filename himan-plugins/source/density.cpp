@@ -3,8 +3,6 @@
  *
  * Computes density for dry air from pressure and temperature using the ideal gas law.
  *
- * @date Mar 11, 2014
- * @author Tack
  */
 
 #include "density.h"

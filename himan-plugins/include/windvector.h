@@ -1,8 +1,6 @@
 /**
  * @file windvector.h
  *
- * @date Jan 21, 2013
- * @author aalto
  */
 
 #ifndef WINDVECTOR_H
@@ -21,7 +19,7 @@ namespace plugin
 {
 class windvector : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	windvector();
 
 	inline virtual ~windvector() {}
@@ -33,7 +31,7 @@ class windvector : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::windvector"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	std::unique_ptr<NFmiArea> ToNewbaseArea(std::shared_ptr<info> myTargetInfo) const;
 #ifdef HAVE_CUDA

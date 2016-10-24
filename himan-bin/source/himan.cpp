@@ -3,8 +3,6 @@
  *
  * @brief himan main program
  *
- * @author partio
- *
  */
 
 #include "auxiliary_plugin.h"
@@ -342,21 +340,24 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	int logLevel = 0;
 	short int threadCount = -1;
 
-	desc.add_options()("help,h", "print out help message")("type,t", po::value(&outfileType),
-	                                                       "output file type, one of: grib, grib2, netcdf, querydata")(
-	    "compression,c", po::value(&outfileCompression), "output file compression, one of: gz, bzip2")(
-	    "version,v", "display version number")("configuration-file,f", po::value(&confFile), "configuration file")(
-	    "auxiliary-files,a", po::value<vector<string>>(&auxFiles), "auxiliary (helper) file(s)")(
-	    "threads,j", po::value(&threadCount), "number of started threads")("list-plugins,l",
-	                                                                       "list all defined plugins")(
-	    "debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")(
-	    "statistics,s", po::value(&statisticsLabel), "record statistics information")(
-	    "radon,R", "use only radon database")("neons,N", "use only neons database")(
-	    "cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")(
-	    "cuda-properties", "print cuda device properties of platform (if any)")(
-	    "no-cuda", "disable all cuda extensions")("no-cuda-packing", "disable cuda packing of grib data")(
-	    "no-cuda-unpacking", "disable cuda unpacking of grib data")("no-cuda-interpolation",
-	                                                                "disable cuda grid interpolation");
+	desc.add_options()
+		("help,h", "print out help message")
+		("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
+		("compression,c", po::value(&outfileCompression), "output file compression, one of: gz, bzip2")
+		("version,v", "display version number")
+		("configuration-file,f", po::value(&confFile), "configuration file")
+		("auxiliary-files,a", po::value<vector<string>>(&auxFiles), "auxiliary (helper) file(s)")
+		("threads,j", po::value(&threadCount), "number of started threads")
+		("list-plugins,l", "list all defined plugins")
+		("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
+		("statistics,s", po::value(&statisticsLabel), "record statistics information")
+		("radon,R", "use only radon database")
+		("neons,N", "use only neons database")
+		("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
+		("cuda-properties", "print cuda device properties of platform (if any)")
+		("no-cuda", "disable all cuda extensions")("no-cuda-packing", "disable cuda packing of grib data")
+		("no-cuda-unpacking", "disable cuda unpacking of grib data")
+		("no-cuda-interpolation", "disable cuda grid interpolation");
 
 	po::positional_options_description p;
 	p.add("auxiliary-files", -1);

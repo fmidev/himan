@@ -1,8 +1,6 @@
 /**
  * @file reduced_gaussian_grid.cpp
  *
- *  Created on: Jun 18, 2016
- *  @author partio
  */
 
 #include "reduced_gaussian_grid.h"
@@ -40,7 +38,9 @@ reduced_gaussian_grid::reduced_gaussian_grid(const reduced_gaussian_grid& other)
 }
 
 int reduced_gaussian_grid::N() const { return itsN; }
+
 void reduced_gaussian_grid::N(int theN) { itsN = theN; }
+
 size_t reduced_gaussian_grid::Size() const
 {
 	assert(itsNumberOfPointsAlongParallels.size() == 2 * static_cast<size_t>(itsN));
@@ -49,6 +49,7 @@ size_t reduced_gaussian_grid::Size() const
 }
 
 std::vector<int> reduced_gaussian_grid::NumberOfPointsAlongParallels() const { return itsNumberOfPointsAlongParallels; }
+
 void reduced_gaussian_grid::NumberOfPointsAlongParallels(std::vector<int> theNumberOfPointsAlongParallels)
 {
 	assert((itsN == kHPMissingInt && itsNumberOfPointsAlongParallels.size() == 0) ||
@@ -231,7 +232,9 @@ bool reduced_gaussian_grid::Swap(HPScanningMode newScanningMode)
 }
 
 reduced_gaussian_grid* reduced_gaussian_grid::Clone() const { return new reduced_gaussian_grid(*this); }
+
 double reduced_gaussian_grid::Di() const { return kHPMissingValue; }
+
 double reduced_gaussian_grid::Dj() const
 {
 	if (itsDj == kHPMissingValue)
@@ -250,9 +253,13 @@ size_t reduced_gaussian_grid::Ni() const
 }
 
 void reduced_gaussian_grid::Nj(size_t theNj) { itsNj = theNj; }
+
 size_t reduced_gaussian_grid::Nj() const { return itsNj; }
+
 point reduced_gaussian_grid::BottomLeft() const { return itsBottomLeft; }
+
 point reduced_gaussian_grid::TopRight() const { return itsTopRight; }
+
 void reduced_gaussian_grid::BottomLeft(const point& theBottomLeft)
 {
 	itsBottomLeft = theBottomLeft;
@@ -266,7 +273,9 @@ void reduced_gaussian_grid::TopRight(const point& theTopRight)
 }
 
 point reduced_gaussian_grid::BottomRight() const { return itsBottomRight; }
+
 point reduced_gaussian_grid::TopLeft() const { return itsTopLeft; }
+
 void reduced_gaussian_grid::BottomRight(const point& theBottomRight)
 {
 	itsBottomRight = theBottomRight;
@@ -297,6 +306,7 @@ void reduced_gaussian_grid::UpdateCoordinates() const
 }
 
 bool reduced_gaussian_grid::operator!=(const grid& other) const { return !(other == *this); }
+
 bool reduced_gaussian_grid::operator==(const grid& other) const
 {
 	const reduced_gaussian_grid* g = dynamic_cast<const reduced_gaussian_grid*>(&other);

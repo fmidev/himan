@@ -1,8 +1,5 @@
 /**
  * @file windvector.cpp
- *
- *  Created on: Jan 21, 2013
- *  @author aaltom
  */
 
 #include "windvector.h"
@@ -14,7 +11,6 @@
 #include <boost/lexical_cast.hpp>
 #include <iostream>
 #include <math.h>
-//#include "NFmiArea.h"
 #include "NFmiRotatedLatLonArea.h"
 #include "NFmiStereographicArea.h"
 #include "latitude_longitude_grid.h"
@@ -28,8 +24,6 @@ using namespace himan::plugin;
 #include "cuda_helper.h"
 
 typedef tuple<double, double, double, double> coefficients;
-
-// std::thread_local is implemented only in g++ 4.8 !
 
 boost::thread_specific_ptr<map<size_t, coefficients>> myCoefficientCache;
 
@@ -206,15 +200,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		SetAB(myTargetInfo, UInfo);
 	}
 
-	// if source producer is Hirlam, we must de-stagger U and V grid
-	// edit: Nope, do not de-stagger but interpolate
-
-	/*if (conf->SourceProducer().Id() == 1 && sourceLevel.Type() != kHeight)
-	{
-	    UInfo->Grid()->Stagger(-0.5, 0);
-	    VInfo->Grid()->Stagger(0, -0.5);
-	}*/
-
 	assert(UInfo->Grid()->Type() == VInfo->Grid()->Type());
 
 	string deviceType;
@@ -233,9 +218,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 #endif
 	{
 		deviceType = "CPU";
-
-		// UGrid->InterpolationMethod(kNearestPoint);
-		// VGrid->InterpolationMethod(kNearestPoint);
 
 		unique_ptr<NFmiArea> sourceArea = ToNewbaseArea(UInfo);
 		unique_ptr<NFmiArea> targetArea = ToNewbaseArea(myTargetInfo);

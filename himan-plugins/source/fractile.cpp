@@ -1,8 +1,6 @@
 /**
  * @file fractile.cpp
  *
- * @date June, 2016
- * @author Tack
  **/
 
 #include "fractile.h"
@@ -25,6 +23,7 @@ namespace himan
 {
 namespace plugin
 {
+
 fractile::fractile() : itsEnsembleSize(0)
 {
 	itsClearTextFormula = "%";
@@ -33,6 +32,7 @@ fractile::fractile() : itsEnsembleSize(0)
 }
 
 fractile::~fractile() {}
+
 void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);

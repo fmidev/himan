@@ -1,8 +1,5 @@
 /**
  * @File:   reduced_gaussian_grid.h
- * @Author: partio
- *
- * @date June 19, 2016, 3:23 PM
  */
 
 #ifndef REDUCED_GAUSSIAN_GRID_H
@@ -12,9 +9,10 @@
 
 namespace himan
 {
+
 class reduced_gaussian_grid : public grid
 {
-   public:
+public:
 	reduced_gaussian_grid();
 	virtual ~reduced_gaussian_grid() {}
 	reduced_gaussian_grid(const reduced_gaussian_grid& other);
@@ -66,7 +64,7 @@ class reduced_gaussian_grid : public grid
 
 	double Value(size_t x, size_t y) const;
 
-   private:
+private:
 	bool EqualsTo(const reduced_gaussian_grid& other) const;
 	point LatLon(size_t x, size_t y) const;
 	void UpdateCoordinates() const;
@@ -85,6 +83,7 @@ class reduced_gaussian_grid : public grid
 };
 
 inline std::ostream& operator<<(std::ostream& file, const reduced_gaussian_grid& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* REDUCED_GAUSSIAN_GRID_H */

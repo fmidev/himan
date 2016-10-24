@@ -1,8 +1,6 @@
 /**
  * @file cape.cpp
  *
- * @date Feb 13, 2014
- * @author partio
  */
 
 #include "cape.h"

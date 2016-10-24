@@ -1,8 +1,6 @@
 /**
  * @file fetcher.cpp
  *
- * @date Nov 21, 2012
- * @author partio
  */
 
 #include "fetcher.h"
@@ -421,11 +419,17 @@ himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration
 }
 
 void fetcher::DoLevelTransform(bool theDoLevelTransform) { itsDoLevelTransform = theDoLevelTransform; }
+
 bool fetcher::DoLevelTransform() const { return itsDoLevelTransform; }
+
 void fetcher::DoInterpolation(bool theDoInterpolation) { itsDoInterpolation = theDoInterpolation; }
+
 bool fetcher::DoInterpolation() const { return itsDoInterpolation; }
+
 void fetcher::UseCache(bool theUseCache) { itsUseCache = theUseCache; }
+
 bool fetcher::UseCache() const { return itsUseCache; }
+
 vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData)
 {
 	vector<shared_ptr<info>> ret;
@@ -608,8 +612,11 @@ bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, in
 }
 
 bool fetcher::ApplyLandSeaMask() const { return itsApplyLandSeaMask; }
+
 void fetcher::ApplyLandSeaMask(bool theApplyLandSeaMask) { itsApplyLandSeaMask = theApplyLandSeaMask; }
+
 double fetcher::LandSeaMaskThreshold() const { return itsLandSeaMaskThreshold; }
+
 void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 {
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)

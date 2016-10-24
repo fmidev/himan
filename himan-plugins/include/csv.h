@@ -1,8 +1,6 @@
 /**
  * @file csv.h
  *
- * @date Nov 27, 2012
- * @author partio
  */
 
 #ifndef CSV_H
@@ -17,7 +15,7 @@ namespace plugin
 {
 class csv : public io_plugin
 {
-   public:
+public:
 	csv();
 
 	virtual ~csv() {}
@@ -53,8 +51,6 @@ class csv : public io_plugin
 	 */
 
 	bool ToFile(info& theInfo, std::string& outputFile);
-
-   private:
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
@@ -62,6 +58,7 @@ class csv : public io_plugin
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<csv>(); }
+
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 }  // namespace plugin

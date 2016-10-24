@@ -1,8 +1,6 @@
 /**
  * @file plugin_configuration.cpp
  *
- * @date Feb 11, 2013
- * @author partio
  */
 
 #include "plugin_configuration.h"
@@ -47,8 +45,11 @@ plugin_configuration::plugin_configuration(const string& theName, const map<stri
 }
 
 void plugin_configuration::AddOption(const string& key, const string& value) { itsOptions[key].push_back(value); }
+
 void plugin_configuration::Name(const string& theName) { itsName = theName; }
+
 string plugin_configuration::Name() const { return itsName; }
+
 bool plugin_configuration::Exists(const string& key) const
 {
 	map<string, vector<string>>::const_iterator iter = itsOptions.find(key);
@@ -74,6 +75,7 @@ string plugin_configuration::GetValue(const string& key) const
 }
 
 const vector<string>& plugin_configuration::GetValueList(const string& key) const { return itsOptions.at(key); }
+
 void plugin_configuration::AddParameter(const string& paramName, const vector<pair<string, string>>& opts)
 {
 	if (!itsPreconfiguredParams[paramName].empty())
@@ -119,10 +121,15 @@ const vector<pair<string, string>>& plugin_configuration::GetParameterOptions(co
 }
 
 shared_ptr<info> plugin_configuration::Info() const { return itsInfo; }
+
 void plugin_configuration::Info(shared_ptr<info> theInfo) { itsInfo = theInfo; }
+
 shared_ptr<statistics> plugin_configuration::Statistics() const { return itsStatistics; }
+
 bool plugin_configuration::StatisticsEnabled() const { return !(itsStatisticsLabel.empty()); }
+
 void plugin_configuration::StartStatistics() { itsStatistics->Start(); }
+
 void plugin_configuration::WriteStatistics()
 {
 	itsStatistics->itsTimer->Stop();

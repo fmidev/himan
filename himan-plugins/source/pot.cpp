@@ -1,9 +1,6 @@
 /**
  * @file pot.cpp
  *
- *
- * @date May 25, 2015
- * @author Tack
  */
 
 #include <boost/lexical_cast.hpp>

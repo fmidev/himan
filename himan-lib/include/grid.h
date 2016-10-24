@@ -1,8 +1,6 @@
 /**
  * @file grid.h
  *
- * @date Jan 23, 2013
- * @author partio
  */
 
 #ifndef GRID_H
@@ -24,9 +22,10 @@
 
 namespace himan
 {
+
 class grid
 {
-   public:
+public:
 	grid();
 	grid(HPGridClass theGridClass, HPGridType theGridType);
 	grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theScanningMode);
@@ -110,7 +109,7 @@ class grid
 	virtual double Di() const = 0;
 	virtual double Dj() const = 0;
 
-   protected:
+protected:
 	bool EqualsTo(const grid& other) const;
 
 	matrix<double> itsData;  //<! Variable to hold unpacked data
@@ -127,6 +126,7 @@ class grid
 };
 
 inline std::ostream& operator<<(std::ostream& file, const grid& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* GRID_H */

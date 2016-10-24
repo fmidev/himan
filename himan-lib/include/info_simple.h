@@ -1,8 +1,6 @@
 /**
  * @file info_simple.h
- * @author partio
  *
- * @date January 27, 2014, 7:22 AM
  */
 
 #ifndef INFO_SIMPLE_H
@@ -14,6 +12,7 @@
 
 namespace himan
 {
+
 /**
  * @brief Dumbed-down version of info-class
  *
@@ -99,6 +98,7 @@ struct info_simple
 	{
 	}
 };
+
 }
 
 #endif  // /* HAVE_CUDA */

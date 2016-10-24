@@ -1,8 +1,5 @@
 /**
  * @file   relative_humidity_cuda.h
- * @author Tack
- *
- * @date April 22, 2014
  */
 
 #ifndef RELATIVE_HUMIDITY_CUDA_H
@@ -16,6 +13,7 @@ namespace himan
 {
 namespace plugin
 {
+
 namespace relative_humidity_cuda
 {
 struct options
@@ -50,6 +48,7 @@ __global__ void CalculateTQ(cdarr_t d_T, cdarr_t d_Q, darr_t d_RH, options opts)
 #endif
 
 }  // namespace relative_humidity_cuda
+
 }  // namespace plugin
 }  // namespace himan
 

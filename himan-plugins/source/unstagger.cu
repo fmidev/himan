@@ -3,8 +3,6 @@
  *
  * Calculate the co-located velocity field for U and V
  *
- * @date Oct 16, 2014
- * @author Tack
 
   Description:
 

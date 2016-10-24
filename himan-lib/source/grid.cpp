@@ -1,8 +1,6 @@
 /**
  * @file grid.cpp
  *
- * @date Jan 23, 2013
- * @author partio
  */
 
 #include "grid.h"
@@ -42,6 +40,7 @@ grid::grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theS
 }
 
 grid::~grid() {}
+
 grid::grid(const grid& other)
     : itsData(other.itsData),
       itsGridClass(other.itsGridClass),
@@ -94,12 +93,19 @@ packed_data& grid::PackedData()
 }
 
 void grid::PackedData(unique_ptr<packed_data> thePackedData) { itsPackedData = move(thePackedData); }
+
 HPGridType grid::Type() const { return itsGridType; }
+
 void grid::Type(HPGridType theGridType) { itsGridType = theGridType; }
+
 HPGridClass grid::Class() const { return itsGridClass; }
+
 void grid::Class(HPGridClass theGridClass) { itsGridClass = theGridClass; }
+
 HPScanningMode grid::ScanningMode() const { return itsScanningMode; }
+
 void grid::ScanningMode(HPScanningMode theScanningMode) { itsScanningMode = theScanningMode; }
+
 bool grid::IsPackedData() const
 {
 	if (itsPackedData && itsPackedData->HasData())
@@ -111,7 +117,9 @@ bool grid::IsPackedData() const
 }
 
 matrix<double>& grid::Data() { return itsData; }
+
 void grid::Data(const matrix<double>& theData) { itsData = theData; }
+
 ostream& grid::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
@@ -134,11 +142,19 @@ ostream& grid::Write(std::ostream& file) const
 }
 
 size_t grid::Size() const { throw runtime_error("grid::Size() called"); }
+
 bool grid::Value(size_t theLocationIndex, double theValue) { return itsData.Set(theLocationIndex, theValue); }
+
 double grid::Value(size_t theLocationIndex) const { return double(itsData.At(theLocationIndex)); }
+
 grid* grid::Clone() const { throw runtime_error("grid::Clone() called"); }
+
 vector<double> grid::AB() const { return itsAB; }
+
 void grid::AB(const vector<double>& theAB) { itsAB = theAB; }
+
 point grid::LatLon(size_t theLocationIndex) const { throw runtime_error("grid::LatLon() called"); }
+
 bool grid::operator!=(const grid& other) const { return !(other == *this); }
+
 bool grid::operator==(const grid& other) const { return EqualsTo(other); }

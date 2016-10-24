@@ -1,8 +1,6 @@
 /**
  * @file timer.h
  *
- * @date Dec 17, 2012
- * @author partio
  *
  * @brief Simple timer functionality
  */
@@ -16,7 +14,7 @@ namespace himan
 {
 class timer
 {
-   public:
+public:
 	timer() {}
 	~timer() {}
 	inline void Start() { clock_gettime(CLOCK_REALTIME, &start_ts); }
@@ -33,7 +31,7 @@ class timer
 		return (stop - start) / 1000 / 1000;  // ms
 	}
 
-   private:
+private:
 	timespec start_ts;
 	timespec stop_ts;
 };

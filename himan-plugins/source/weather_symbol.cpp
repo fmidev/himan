@@ -1,8 +1,6 @@
 /**
  * @file weather_symbol.cpp
  *
- *  @date: Jan 23, 2013
- *  @author aaltom
  */
 
 #include "weather_symbol.h"

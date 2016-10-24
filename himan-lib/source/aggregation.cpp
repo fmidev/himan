@@ -1,8 +1,6 @@
 /**
  * @file aggregation.cpp
- * @author partio
  *
- * @date May 16, 2013, 2:12 PM
  */
 
 #include "aggregation.h"
@@ -61,12 +59,19 @@ bool aggregation::operator==(const aggregation& other) const
 }
 
 bool aggregation::operator!=(const aggregation& other) const { return !(*this == other); }
+
 HPAggregationType aggregation::Type() const { return itsType; }
+
 void aggregation::Type(HPAggregationType theType) { itsType = theType; }
+
 HPTimeResolution aggregation::TimeResolution() const { return itsTimeResolution; }
+
 void aggregation::TimeResolution(HPTimeResolution theTimeResolution) { itsTimeResolution = theTimeResolution; }
+
 int aggregation::TimeResolutionValue() const { return itsTimeResolutionValue; }
+
 void aggregation::TimeResolutionValue(int theTimeResolutionValue) { itsTimeResolutionValue = theTimeResolutionValue; }
+
 std::ostream& aggregation::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;

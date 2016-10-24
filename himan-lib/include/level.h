@@ -1,9 +1,6 @@
 /**
  * @file level.h
  *
- * @date Nov 30, 2012
- * @author partio
- *
  * @brief Level metadata for himan.
  */
 
@@ -16,10 +13,12 @@ class NFmiLevel;
 
 namespace himan
 {
+
 class logger;
+
 class level
 {
-   public:
+public:
 	level();
 	explicit level(const NFmiLevel& theLevel);
 	level(HPLevelType theType, double theValue);
@@ -51,7 +50,7 @@ class level
 
 	std::ostream& Write(std::ostream& file) const;
 
-   private:
+private:
 	HPLevelType itsType;
 
 	/*
@@ -83,6 +82,7 @@ class level
 };
 
 inline std::ostream& operator<<(std::ostream& file, const level& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* LEVEL_H */

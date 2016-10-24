@@ -1,15 +1,6 @@
 // vim: set ai shiftwidth=4 softtabstop=4 tabstop=4
 #include "probability.h"
 
-#include <algorithm>
-#include <exception>
-#include <iostream>
-
-#include <math.h>
-
-#include <boost/lexical_cast.hpp>
-#include <boost/thread.hpp>
-
 #include "logger_factory.h"
 #include "plugin_factory.h"
 
@@ -19,16 +10,27 @@
 #include "ensemble.h"
 #include "util.h"
 
+#include <boost/lexical_cast.hpp>
+#include <boost/thread.hpp>
+
+#include <algorithm>
+#include <exception>
+#include <iostream>
+
+#include <math.h>
+
 namespace himan
 {
 namespace plugin
 {
+
 static std::mutex singleFileWriteMutex;
 
 static const std::string kClassName = "himan::plugin::probability";
 
 /// @brief Used for calculating wind vector magnitude
 static inline double Magnitude(double u, double v) { return sqrt(u * u + v * v); }
+
 probability::probability()
 {
 	itsClearTextFormula = "???";
@@ -40,7 +42,8 @@ probability::probability()
 }
 
 probability::~probability() {}
-/// @brief Gnarrrly configuration reading
+
+/// @brief Configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
 static param GetConfigurationParameter(const std::string& name, const std::shared_ptr<const plugin_configuration> conf,
@@ -88,7 +91,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			}
 		}
 
-		if (param1.Name() == "XX-X" || param1.UnivId() == kHPMissingInt)
+		if (param1.Name() == "XX-X" || param1.UnivId() == static_cast<long> (kHPMissingInt))
 		{
 			throw std::runtime_error("probability : configuration error:: input parameter not specified for '" + name +
 			                         "'");
@@ -96,7 +99,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		outParamConfig->parameter = param1;
 
 		// NOTE param2 is used only with wind calculation at the moment
-		if (param2.Name() != "XX-X" && param2.UnivId() != kHPMissingInt)
+		if (param2.Name() != "XX-X" && param2.UnivId() != static_cast<long> (kHPMissingInt))
 		{
 			outParamConfig->parameter2 = param2;
 		}
@@ -195,8 +198,8 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	boost::thread_group g;
 	auto paramConfigurations = itsParamConfigurations;
 
-	// I only get 3 threads even if I specify -j [6,12]?
-	// itsThreadCount = 6;
+	// Set iterators at this stage to avoid invalid indexing when loading from auxiliary files
+	itsInfo->First();
 
 	while (!paramConfigurations.empty())
 	{
@@ -231,7 +234,7 @@ static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex
 
 void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
-	auto myTargetInfo = *itsInfo;
+	info myTargetInfo = *itsInfo;
 
 	auto threadedLogger =
 	    logger_factory::Instance()->GetLog("probabilityThread # " + boost::lexical_cast<std::string>(threadIndex));
@@ -253,7 +256,6 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		ens2 = ensemble(pc.parameter2, ensembleSize);
 	}
 
-	myTargetInfo.ResetTime();
 	myTargetInfo.First();
 
 	// NOTE we only loop through the time steps here

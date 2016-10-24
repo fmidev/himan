@@ -3,9 +3,6 @@
  *
  * @brief Plugin to calculate potential temperature, pseudo-adiabatic
  * potential temperature or equivalent potential temperature.
- *
- * Created on: Nov 20, 2012
- * @author partio
  */
 
 #include "tpot.h"

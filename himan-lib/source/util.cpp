@@ -2,9 +2,6 @@
  * @file util.cpp
  *
  * @brief Different utility functions and classes in a namespace
- *
- * @date Dec 1, 2012
- * @author partio
  */
 
 #include "util.h"

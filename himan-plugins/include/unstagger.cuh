@@ -1,8 +1,5 @@
 /**
  * File:   unstagger.cuh
- * Author: tack
- *
- * Created on July 19, 2016
  *
  * List of extern functions compiled by nvcc for plugins (compiled by gcc)
  */

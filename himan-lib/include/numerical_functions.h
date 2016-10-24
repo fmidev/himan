@@ -1,8 +1,6 @@
 /**
  * @file numerical_functions.h
- * @author tack
  *
- * @date July 2, 2015
  */
 
 #ifndef NUMERICAL_FUNCTIONS_H
@@ -25,7 +23,7 @@ namespace numerical_functions
 
 class integral
 {
-   public:
+public:
 	integral();
 	~integral() {}
 	// virtual std::string ClassName() const { return "himan::numerical_functions::integral"; }
@@ -57,7 +55,7 @@ class integral
 	void Evaluate();
 	bool Complete();
 
-   private:
+private:
 	bool itsHeightInMeters;
 	int itsLowestLevel;
 	int itsHighestLevel;

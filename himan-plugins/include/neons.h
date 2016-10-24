@@ -1,10 +1,6 @@
 /**
  * @file neons.h
  *
- * @date Nov 17, 2012
- *
- * @author: partio
- *
  * @class neons
  *
  * @brief Access to neons database.
@@ -25,6 +21,10 @@
 #ifndef NEONS_H
 #define NEONS_H
 
+#if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ <= 6)) && defined override
+#undef override
+#endif
+
 #include "NFmiNeonsDB.h"
 #include "auxiliary_plugin.h"
 #include "search_options.h"
@@ -33,9 +33,10 @@ namespace himan
 {
 namespace plugin
 {
+
 class neons : public auxiliary_plugin
 {
-   public:
+public:
 	neons();
 
 	inline virtual ~neons()
@@ -86,7 +87,7 @@ class neons : public auxiliary_plugin
 
 	void PoolMaxWorkers(int maxWorkers);
 
-   private:
+private:
 	/**
 	 * @brief Connect to database
 	 *
@@ -129,6 +130,7 @@ inline NFmiNeonsDB& neons::NeonsDB()
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<neons>(new neons()); }
+
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 }  // namespace plugin

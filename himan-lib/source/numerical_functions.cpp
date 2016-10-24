@@ -1,6 +1,5 @@
 /**
  * @file numerical_functions.cpp
- * @author tack
  */
 
 #include "numerical_functions.h"
@@ -21,7 +20,9 @@ using namespace himan;
 using namespace numerical_functions;
 
 integral::integral() : itsComplete(8, true) {}
+
 void integral::Params(std::vector<param> theParams) { itsParams = theParams; }
+
 void integral::Function(std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> theFunction)
 {
 	itsFunction = theFunction;

@@ -1,9 +1,6 @@
 /**
  * @file hitool.h
  *
- * @date Sep 3, 2013
- * @author partio
- *
  * @brief Contains smarttool functions converted to himan
  */
 
@@ -21,6 +18,7 @@ namespace himan
 {
 namespace plugin
 {
+
 typedef std::pair<std::shared_ptr<info>, std::shared_ptr<info>> valueheight;
 
 class hitool : public auxiliary_plugin
@@ -526,6 +524,7 @@ class hitool : public auxiliary_plugin
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<hitool>(); }
+
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

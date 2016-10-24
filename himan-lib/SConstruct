@@ -8,9 +8,26 @@ OS_NAME = platform.linux_distribution()[0]
 OS_VERSION = float('.'.join(platform.linux_distribution()[1].split('.')[:2]))
 
 IS_RHEL = False
+IS_SLES = False
 
-if OS_NAME == "Red Hat Enterprise Linux Server" or OS_NAME == "CentOS":
+if OS_NAME == "Red Hat Enterprise Linux Server" or OS_NAME == "CentOS Linux":
 	IS_RHEL=True
+elif OS_NAME == "SUSE Linux Enterprise Server ":
+	IS_SLES=True
+
+# Should also get compiler version here but it seems to be rather
+# complicated with python subprocess -module
+
+env = Environment()
+
+env['CC'] = 'gcc'
+env['CXX'] = 'g++'
+
+if os.environ.get('CC') != None:
+        env['CC'] = os.environ.get('CC')
+
+if os.environ.get('CXX') != None:
+        env['CXX'] = os.environ.get('CXX')
 
 AddOption(
     '--debug-build',
@@ -25,8 +42,6 @@ AddOption(
     action='store_true',
     help='no cuda build',
     default=False)
-
-env = Environment()
 
 # Check build
 
@@ -55,15 +70,6 @@ have_cuda = False
 if not NOCUDA and os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
         have_cuda = True
 
-env['CC'] = 'gcc'
-env['CXX'] = 'g++'
-
-if os.environ.get('CC') != None:
-        env['CC'] = os.environ.get('CC')
-
-if os.environ.get('CXX') != None:
-        env['CXX'] = os.environ.get('CXX')
-
 # Required for scan-build
 env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
@@ -84,6 +90,9 @@ else:
 if have_cuda:
         includes.append(cuda_toolkit_path + '/include')
 
+if not IS_RHEL:
+	includes.append('/opt/gdal/1.11.2/include/')
+
 env.Append(CPPPATH = includes)
 
 # Library paths
@@ -103,6 +112,11 @@ env.Append(LIBPATH = librarypaths)
 
 libraries = []
 
+boost_mt = ""
+
+if IS_SLES:
+	boost_mt = "-mt"
+
 libraries.append('fmidb')
 libraries.append('smartmet_newbase')
 libraries.append('dl')
@@ -110,8 +124,13 @@ libraries.append('clntsh')
 libraries.append('pqxx')
 libraries.append('z')
 libraries.append('bz2')
-libraries.append('boost_iostreams')
-libraries.append('grib_api')
+libraries.append('boost_iostreams' + boost_mt)
+
+if IS_RHEL:
+	libraries.append('eccodes')
+else:
+	libraries.append('grib_api')
+	libraries.append('boost_iostreams' + boost_mt)
 
 env.Append(LIBS = libraries)
 
@@ -159,7 +178,11 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 
 cflags = []
 
-cflags.append('-std=c++11')
+if IS_RHEL and OS_VERSION >= 7.0:
+	cflags.append('-std=c++11')
+else:
+	cflags.append('-std=c++0x')
+
 cflags.append('-fPIC')
 
 env.Append(CCFLAGS = cflags)

@@ -21,7 +21,7 @@ namespace plugin
 {
 class compiled_plugin : public himan_plugin
 {
-   public:
+public:
 	compiled_plugin() : itsCudaEnabledCalculation(false) {}
 	virtual ~compiled_plugin() {}
 	virtual void Process(std::shared_ptr<const plugin_configuration> configuration) = 0;
@@ -29,7 +29,7 @@ class compiled_plugin : public himan_plugin
 	virtual std::string Formula() { return itsClearTextFormula; }
 	virtual void Formula(std::string theClearTextFormula) { itsClearTextFormula = theClearTextFormula; }
 	bool CudaEnabledCalculation() const { return itsCudaEnabledCalculation; }
-   protected:
+protected:
 	std::string itsClearTextFormula;
 	bool itsCudaEnabledCalculation;
 };

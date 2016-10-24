@@ -1,8 +1,6 @@
 /**
  * @file point.h
  *
- * @date Jan 16, 2013
- * @author partio
  */
 
 #ifndef POINT_H
@@ -25,7 +23,7 @@ const double kCoordinateEpsilon = 0.00001;
 
 class point
 {
-   public:
+public:
 	CUDA_HOST CUDA_DEVICE point();
 	CUDA_HOST CUDA_DEVICE point(double itsX, double itsY);
 	CUDA_HOST CUDA_DEVICE ~point() {}
@@ -52,17 +50,20 @@ class point
 		return file;
 	}
 
-   private:
+private:
 	double itsX;
 	double itsY;
 };
 
 CUDA_HOST CUDA_DEVICE
 inline point::point() : itsX(kHPMissingValue), itsY(kHPMissingValue) {}
+
 CUDA_HOST CUDA_DEVICE
 inline point::point(double theX, double theY) : itsX(theX), itsY(theY) {}
+
 CUDA_HOST CUDA_DEVICE
 inline point::point(const point& other) : itsX(other.X()), itsY(other.Y()) {}
+
 CUDA_HOST CUDA_DEVICE
 inline point& point::operator=(const point& other)
 {
@@ -83,18 +84,24 @@ inline bool point::operator==(const point& other) const
 
 CUDA_HOST CUDA_DEVICE
 inline bool point::operator!=(const point& thePoint) const { return !(*this == thePoint); }
+
 CUDA_HOST CUDA_DEVICE
 inline double point::X() const { return itsX; }
+
 CUDA_HOST CUDA_DEVICE
 inline double point::Y() const { return itsY; }
+
 CUDA_HOST CUDA_DEVICE
 inline void point::X(double theX) { itsX = theX; }
+
 CUDA_HOST CUDA_DEVICE
 inline void point::Y(double theY) { itsY = theY; }
+
 inline std::ostream& operator<<(std::ostream& file, const point& ob) { return ob.Write(file); }
+
 class station : public point
 {
-   public:
+public:
 	station();
 	station(int theId, const std::string& theName, double lon, double lat);
 
@@ -104,21 +111,26 @@ class station : public point
 	std::string Name() const;
 	void Name(const std::string& theName);
 
-   private:
+private:
 	int itsId;  // FMISID
 	std::string itsName;
 };
 
 inline station::station() : point(), itsId(kHPMissingInt), itsName("Himan default station") {}
+
 inline station::station(int theId, const std::string& theName, double lon, double lat)
     : point(lon, lat), itsId(theId), itsName(theName)
 {
 }
 
 inline int station::Id() const { return itsId; }
+
 inline void station::Id(int theId) { itsId = theId; }
+
 inline std::string station::Name() const { return itsName; }
+
 inline void station::Name(const std::string& theName) { itsName = theName; }
+
 }  // namespace himan
 
 #endif /* POINT_H */

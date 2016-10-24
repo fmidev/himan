@@ -3,8 +3,6 @@
  *
  * Template for future plugins.
  *
- * @date Mar 14, 2014
- * @author Tack
  */
 
 #include "precipitation_rate.h"

@@ -1,8 +1,6 @@
 /*
  * absolute_humidity.h
  *
- *  Created on: Mar 27, 2014
- *      Author: Tack
  */
 
 #ifndef absolute_humidity_H
@@ -16,6 +14,7 @@ namespace himan
 {
 namespace plugin
 {
+
 /**
  * @class instant_precipitation
  *
@@ -29,7 +28,7 @@ namespace plugin
 
 class absolute_humidity : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	absolute_humidity();
 
 	inline virtual ~absolute_humidity() {}
@@ -41,7 +40,7 @@ class absolute_humidity : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::absolute_humidity"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 

@@ -1,8 +1,6 @@
 /**
  * @file split_sum.cpp
  *
- * @date Jan 28, 2012
- * @author partio
  */
 
 #include "split_sum.h"

@@ -1,8 +1,6 @@
 /*
  * unstagger.h
  *
- *  Created on: Oct 16, 2014
- *      Author: Tack
  */
 
 #ifndef UNSTAGGER_H
@@ -24,7 +22,7 @@ namespace plugin
 
 class unstagger : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	unstagger();
 
 	inline virtual ~unstagger() {}
@@ -36,13 +34,14 @@ class unstagger : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::unstagger"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-   private:
+private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<unstagger>(new unstagger()); }
+
 }  // namespace plugin
 }  // namespace himan
 

@@ -1,8 +1,6 @@
 /**
  * @file hitool.cpp
  *
- * @date Sep 3, 2013
- * @author partio
  */
 
 #include "hitool.h"
@@ -21,9 +19,6 @@
 using namespace std;
 using namespace himan;
 using namespace himan::plugin;
-
-// I tried to use std::min_element and friends but it was just
-// too hard when we have to support missing values
 
 double min(const vector<double>& vec)
 {
@@ -1078,7 +1073,9 @@ vector<double> hitool::PlusMinusArea(const param& wantedParam, const vector<doub
 }
 
 void hitool::Time(const forecast_time& theTime) { itsTime = theTime; }
+
 void hitool::ForecastType(const forecast_type& theForecastType) { itsForecastType = theForecastType; }
+
 void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 {
 	itsConfiguration = make_shared<plugin_configuration>(
@@ -1087,6 +1084,7 @@ void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 }
 
 HPParameterUnit hitool::HeightUnit() const { return itsHeightUnit; }
+
 void hitool::HeightUnit(HPParameterUnit theHeightUnit)
 {
 	if (theHeightUnit != kM && theHeightUnit != kHPa)

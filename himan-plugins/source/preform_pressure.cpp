@@ -1,9 +1,5 @@
 /**
  * @file preform_pressure.cpp
- *
- * @date Sep 5, 2013
- * @author partio
- *
  */
 
 #define AND &&

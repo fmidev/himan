@@ -1,8 +1,6 @@
 /**
  * @file plugin_configuration.h
  *
- * @date Feb 11, 2013
- * @author partio
  */
 
 #ifndef PLUGIN_CONFIGURATION_H
@@ -16,9 +14,10 @@
 
 namespace himan
 {
+
 class plugin_configuration : public configuration
 {
-   public:
+public:
 	plugin_configuration();
 	plugin_configuration(const plugin_configuration& other);
 	plugin_configuration& operator=(const plugin_configuration& other) = delete;
@@ -110,7 +109,7 @@ class plugin_configuration : public configuration
 	void StartStatistics();
 	void WriteStatistics();
 
-   private:
+private:
 	std::string itsName;
 	std::map<std::string, std::vector<std::string>> itsOptions;
 	std::map<std::string, std::vector<std::pair<std::string, std::string>>> itsPreconfiguredParams;
@@ -119,6 +118,7 @@ class plugin_configuration : public configuration
 };
 
 inline std::ostream& operator<<(std::ostream& file, const plugin_configuration& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* PLUGIN_CONFIGURATION_H */

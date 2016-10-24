@@ -1,8 +1,6 @@
 /*
  * @file stability.h
  *
- * @date Jan 23, 2012
- * @author: Aalto, revised by partio
  */
 
 #ifndef STABILITY_H
@@ -25,7 +23,7 @@ namespace plugin
 
 class stability : public compiled_plugin, private compiled_plugin_base
 {
-   public:
+public:
 	stability();
 
 	inline virtual ~stability() {}
@@ -37,7 +35,7 @@ class stability : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::stability"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(2, 0); }
-   private:
+private:
 	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
 	bool GetSourceData(std::shared_ptr<info>& T850Info, std::shared_ptr<info>& T700Info,
@@ -60,6 +58,7 @@ class stability : public compiled_plugin, private compiled_plugin_base
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<stability>(new stability()); }
+
 }  // namespace plugin
 }  // namespace himan
 

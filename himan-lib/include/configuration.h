@@ -6,9 +6,6 @@
  * Class will read metadata from configuration file and create an info instance
  * from it.
  *
- * @author Mikko Partio, FMI
- * @date Nov 26, 2012
- *
  */
 
 #ifndef CONFIGURATION_H
@@ -18,10 +15,12 @@
 
 namespace himan
 {
+
 class logger;
+
 class configuration
 {
-   public:
+public:
 	friend class json_parser;
 
 	configuration();
@@ -248,7 +247,7 @@ class configuration
 	bool UseDynamicMemoryAllocation() const;
 	void UseDynamicMemoryAllocation(bool theUseDynamicMemoryAllocation);
 
-   protected:
+protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
 	HPFileType itsOutputFileType;
@@ -284,6 +283,7 @@ class configuration
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob) { return ob.Write(file); }
+
 }  // namespace himan
 
 #endif /* CONFIGURATION_H */

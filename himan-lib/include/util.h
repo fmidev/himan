@@ -1,8 +1,6 @@
 /**
  * @file util.h
  *
- * @date Dec 28, 2012
- * @author partio
  *
  * @brief Utility namespace for general helper functions and classes
  */

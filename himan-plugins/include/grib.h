@@ -2,9 +2,6 @@
  * @file grib.h
  *
  * @brief Class to implement grib writing and reading. Actual grib opening and reading is done by fmigrib library.
- *
- * @date Nov 20, 2012
- * @author partio
  */
 
 #ifndef GRIB_H
@@ -19,7 +16,7 @@ namespace plugin
 {
 class grib : public io_plugin
 {
-   public:
+public:
 	grib();
 
 	virtual ~grib() {}
@@ -74,7 +71,7 @@ class grib : public io_plugin
 
 	bool ToFile(info& anInfo, std::string& outputFile, bool appendToFile = false);
 
-   private:
+private:
 	void WriteAreaAndGrid(info& anInfo);
 	void WriteTime(info& anInfo);
 	void WriteParameter(info& anInfo);

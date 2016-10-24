@@ -1,8 +1,6 @@
 /**
  * @file json_parser.cpp
  *
- * @date Nov 19, 2012
- * @author partio, revised aalto
  */
 
 #include "json_parser.h"
@@ -76,6 +74,7 @@ json_parser* json_parser::Instance()
 }
 
 json_parser::json_parser() { itsLogger = logger_factory::Instance()->GetLog("json_parser"); }
+
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
 	if (conf->ConfigurationFile().empty())

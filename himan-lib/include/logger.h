@@ -1,8 +1,6 @@
 /**
  * @file logger.h
  *
- * @date Nov 20, 2012
- * @author partio
  */
 
 #ifndef LOGGER_H
@@ -16,11 +14,12 @@ namespace himan
 {
 class logger
 {
-   public:
+public:
 	logger();
-	logger(const std::string& theUserName, HPDebugState theDebugState);
-
 	~logger() {}
+	
+	logger(const std::string& theUserName, HPDebugState theDebugState);
+	
 	void Trace(const std::string& msg)
 	{
 		if (itsDebugState <= kTraceMsg)
@@ -62,7 +61,7 @@ class logger
 	};
 
 	void Fatal(const std::string& msg) { printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str()); };
-   private:
+private:
 	HPDebugState itsDebugState;
 	std::string itsUserName;
 };
