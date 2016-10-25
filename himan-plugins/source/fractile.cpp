@@ -2,7 +2,6 @@
  * @file fractile.cpp
  *
  **/
-
 #include "fractile.h"
 
 #include <algorithm>
@@ -136,10 +135,11 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	myTargetInfo->ResetLocation();
 	ens->ResetLocation();
 
+	itsEnsembleSize = ens->Size(); // With time_ensemble, itsEnsembleSize might not be set
+
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
 		auto sortedValues = ens->SortedValues();
-
 		size_t targetInfoIndex = 0;
 		for (auto i : fractile)
 		{
@@ -147,6 +147,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			myTargetInfo->Value(sortedValues[i * (itsEnsembleSize - 1) / 100]);
 			++targetInfoIndex;
 		}
+
 		// write mean value to last target info index
 		myTargetInfo->ParamIndex(targetInfoIndex);
 		myTargetInfo->Value(ens->Mean());
