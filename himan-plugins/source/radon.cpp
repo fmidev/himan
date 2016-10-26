@@ -264,8 +264,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 		forecastTypeValue = static_cast<int>(resultInfo.ForecastType().Value());
 	}
 
-	string analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
-
 	double levelValue2 = (resultInfo.Level().Value2() == kHPMissingValue) ? -1 : resultInfo.Level().Value2();
 
 	query
