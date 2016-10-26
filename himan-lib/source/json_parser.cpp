@@ -1552,13 +1552,33 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 {
 	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
 
-	vector<string> levelsStr = util::Split(levelValues, ",", true);
-
 	vector<level> levels;
 
-	for (size_t i = 0; i < levelsStr.size(); i++)
+	const vector<string> levelsStr = util::Split(levelValues, ",", false);
+
+	if (theLevelType == kHeightLayer || theLevelType == kDepthLayer)
 	{
-		levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelsStr[i]), levelType));
+		for (size_t i = 0; i < levelsStr.size(); i++)
+		{
+			const vector<string> levelIntervals = util::Split(levelsStr[i], "_", false);
+
+			if (levelIntervals.size() != 2)
+			{
+				throw runtime_error(
+				    "heightlayer and depthlayer require two level values per definition (lx1_ly1, lx2_ly2, ..., "
+				    "lxN_lyN)");
+			}
+
+			levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelIntervals[0]),
+			                       boost::lexical_cast<float>(levelIntervals[1])));
+		}
+	}
+	else
+	{
+		for (size_t i = 0; i < levelsStr.size(); i++)
+		{
+			levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelsStr[i]), levelType));
+		}
 	}
 
 	assert(!levels.empty());
