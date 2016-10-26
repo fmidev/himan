@@ -31,12 +31,12 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
 		perturbationNumber++;
 	}
 
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 
 ensemble::ensemble() : itsEnsembleType(kPerturbedEnsemble)
 {
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 ensemble::~ensemble() {}
 ensemble::ensemble(const ensemble& other)
@@ -46,7 +46,7 @@ ensemble::ensemble(const ensemble& other)
       itsForecasts(other.itsForecasts),
       itsEnsembleType(other.itsEnsembleType)
 {
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 
 ensemble& ensemble::operator=(const ensemble& other)
@@ -57,7 +57,7 @@ ensemble& ensemble::operator=(const ensemble& other)
 	itsForecasts = other.itsForecasts;
 	itsEnsembleType = other.itsEnsembleType;
 
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 
 	return *this;
 }
