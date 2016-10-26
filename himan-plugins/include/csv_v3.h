@@ -960,8 +960,8 @@ public:
 #if __GNUC__ >= 4 && __GNUC__MINOR__ >= 6
 		std::fill(row, row + column_count, nullptr);
 #else
-		char *nullchar = '\0';
-		std::fill(row, row + column_count, nullchar);
+		const char* nullchar = "\0";
+		std::fill(row, row + column_count, const_cast<char*> (nullchar));
 #endif
 		col_order.resize(column_count);
 		for (unsigned i = 0; i < column_count; ++i) col_order[i] = i;

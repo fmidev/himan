@@ -137,7 +137,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	myTargetInfo->ResetLocation();
 	ens->ResetLocation();
 
-	itsEnsembleSize = ens->Size();  // With time_ensemble, itsEnsembleSize might not be set
+	itsEnsembleSize = static_cast<int>(ens->Size());  // With time_ensemble, itsEnsembleSize might not be set
 
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
