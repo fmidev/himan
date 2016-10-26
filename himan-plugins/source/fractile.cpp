@@ -55,6 +55,8 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsEnsembleType == kTimeEnsemble)
 	{
+		// For time ensemble the size will increase every year, allow user
+		// to limit the size (default: get all that's in database)
 		auto ensSize = itsConfiguration->GetValue("ensemble_size");
 
 		if (!ensSize.empty())
@@ -62,19 +64,11 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 			itsEnsembleSize = boost::lexical_cast<int>(ensSize);
 		}
 	}
-
-	params calculatedParams;
-	std::vector<std::string> fractiles = {"F0-", "F10-", "F25-", "F50-", "F75-", "F90-", "F100-", ""};
-
-	for (const std::string& fractile : fractiles)
+	else if (itsEnsembleType == kPerturbedEnsemble)
 	{
-		calculatedParams.push_back(param(fractile + itsParamName));
-	}
+		// Regular ensemble size is static, get it from database
+		auto r = GET_PLUGIN(radon);
 
-	auto r = GET_PLUGIN(radon);
-
-	if (itsEnsembleType == kPerturbedEnsemble)
-	{
 		std::string ensembleSizeStr =
 		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
 
@@ -85,6 +79,14 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		}
 
 		itsEnsembleSize = boost::lexical_cast<int>(ensembleSizeStr);
+	}
+
+	params calculatedParams;
+	std::vector<std::string> fractiles = {"F0-", "F10-", "F25-", "F50-", "F75-", "F90-", "F100-", ""};
+
+	for (const std::string& fractile : fractiles)
+	{
+		calculatedParams.push_back(param(fractile + itsParamName));
 	}
 
 	SetParams(calculatedParams);
@@ -111,13 +113,15 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 
 	switch (itsEnsembleType)
 	{
-		default:
 		case kPerturbedEnsemble:
 			ens = std::unique_ptr<ensemble>(new ensemble(param(itsParamName), itsEnsembleSize));
 			break;
 		case kTimeEnsemble:
 			ens = std::unique_ptr<time_ensemble>(new time_ensemble(param(itsParamName), itsEnsembleSize));
 			break;
+		default:
+			itsLogger->Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
+			exit(1);
 	}
 
 	try
