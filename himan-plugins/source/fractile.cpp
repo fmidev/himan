@@ -53,20 +53,18 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		itsEnsembleType = HPStringToEnsembleType.at(ensType);
 	}
 
-	if (itsEnsembleType == kTimeEnsemble)
-	{
-		// For time ensemble the size will increase every year, allow user
-		// to limit the size (default: get all that's in database)
-		auto ensSize = itsConfiguration->GetValue("ensemble_size");
+	auto ensSize = itsConfiguration->GetValue("ensemble_size");
 
-		if (!ensSize.empty())
-		{
-			itsEnsembleSize = boost::lexical_cast<int>(ensSize);
-		}
-	}
-	else if (itsEnsembleType == kPerturbedEnsemble)
+	if (!ensSize.empty())
 	{
-		// Regular ensemble size is static, get it from database
+		itsEnsembleSize = boost::lexical_cast<int>(ensSize);
+	}
+
+	if (itsEnsembleSize == 0 && itsEnsembleType == kPerturbedEnsemble)
+	{
+		// Regular ensemble size is static, get it from database if user
+		// hasn't specified any size
+
 		auto r = GET_PLUGIN(radon);
 
 		std::string ensembleSizeStr =
@@ -139,7 +137,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	myTargetInfo->ResetLocation();
 	ens->ResetLocation();
 
-	itsEnsembleSize = ens->Size(); // With time_ensemble, itsEnsembleSize might not be set
+	itsEnsembleSize = ens->Size();  // With time_ensemble, itsEnsembleSize might not be set
 
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
