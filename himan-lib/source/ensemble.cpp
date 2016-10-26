@@ -4,21 +4,25 @@
 //
 
 #include "ensemble.h"
-#include "fetcher.h"
+#include "logger_factory.h"
 #include "plugin_factory.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
+#define HIMAN_AUXILIARY_INCLUDE
+#include "fetcher.h"
+#undef HIMAN_AUXILIARY_INCLUDE
+
 namespace himan
 {
-
 ensemble::ensemble(const param& parameter, size_t ensembleSize)
     : itsParam(parameter),
       itsEnsembleSize(ensembleSize)  // ensembleSize includes the control forecast
       ,
       itsPerturbations(std::vector<forecast_type>(ensembleSize - 1)),
-      itsForecasts(std::vector<info_t>(ensembleSize))
+      itsForecasts(std::vector<info_t>(ensembleSize)),
+      itsEnsembleType(kPerturbedEnsemble)
 {
 	int perturbationNumber = 1;
 	for (auto& p : itsPerturbations)
@@ -26,18 +30,23 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
 		p = forecast_type(kEpsPerturbation, static_cast<double>(perturbationNumber));
 		perturbationNumber++;
 	}
+
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 
-ensemble::ensemble() {}
-
+ensemble::ensemble() : itsEnsembleType(kPerturbedEnsemble)
+{
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
+}
 ensemble::~ensemble() {}
-
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsEnsembleSize(other.itsEnsembleSize),
       itsPerturbations(other.itsPerturbations),
-      itsForecasts(other.itsForecasts)
+      itsForecasts(other.itsForecasts),
+      itsEnsembleType(other.itsEnsembleType)
 {
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 
 ensemble& ensemble::operator=(const ensemble& other)
@@ -46,6 +55,10 @@ ensemble& ensemble::operator=(const ensemble& other)
 	itsEnsembleSize = other.itsEnsembleSize;
 	itsPerturbations = other.itsPerturbations;
 	itsForecasts = other.itsForecasts;
+	itsEnsembleType = other.itsEnsembleType;
+
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
+
 	return *this;
 }
 
@@ -70,7 +83,8 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw std::runtime_error("Ensemble: unable to proceed");
+			itsLogger->Fatal("Unable to proceed");
+			exit(1);
 		}
 		else
 		{
@@ -126,7 +140,8 @@ std::vector<double> ensemble::SortedValues() const
 double ensemble::Mean() const
 {
 	std::vector<double> v = Values();
-	return std::accumulate(v.begin(),v.end(),0.0)/static_cast<double>(v.size());
+	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
 }
 
+HPEnsembleType ensemble::EnsembleType() const { return itsEnsembleType; }
 }  // namespace himan

@@ -204,6 +204,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	}
 
 	string geom_id = geominfo["id"];
+	auto analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	query.str("");
 
@@ -211,7 +212,8 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	      << "id, table_name "
 	      << "FROM as_grid "
 	      << "WHERE geometry_id = '" << geom_id << "'"
-	      << " AND analysis_time = '" << resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00") << "'"
+	      << " AND min_analysis_time <= '" << analysisTime << "'"
+	      << " AND max_analysis_time > '" << analysisTime << "'"
 	      << " AND producer_id = " << resultInfo.Producer().Id();
 
 	itsRadonDB->Query(query.str());

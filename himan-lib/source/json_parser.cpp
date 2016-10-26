@@ -74,7 +74,6 @@ json_parser* json_parser::Instance()
 }
 
 json_parser::json_parser() { itsLogger = logger_factory::Instance()->GetLog("json_parser"); }
-
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
 	if (conf->ConfigurationFile().empty())
@@ -1501,9 +1500,14 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 
 		if (!prodInfo.empty())
 		{
+			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
+			{
+				itsLogger->Fatal("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+				exit(1);
+			}
+
 			prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
 			prod.Name(prodInfo["ref_prod"]);
-			// prod.TableVersion(boost::lexical_cast<long> (prodInfo["no_vers"]));
 			prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
 		}
 		else
