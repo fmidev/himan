@@ -2,7 +2,6 @@
  * @file fractile.cpp
  *
  **/
-
 #include "fractile.h"
 
 #include <algorithm>
@@ -15,6 +14,8 @@
 #include "plugin_factory.h"
 
 #include "ensemble.h"
+#include "time_ensemble.h"
+
 #include "fetcher.h"
 #include "json_parser.h"
 #include "radon.h"
@@ -23,8 +24,7 @@ namespace himan
 {
 namespace plugin
 {
-
-fractile::fractile() : itsEnsembleSize(0)
+fractile::fractile() : itsEnsembleSize(0), itsEnsembleType(kPerturbedEnsemble)
 {
 	itsClearTextFormula = "%";
 	itsCudaEnabledCalculation = false;
@@ -32,7 +32,6 @@ fractile::fractile() : itsEnsembleSize(0)
 }
 
 fractile::~fractile() {}
-
 void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -47,6 +46,39 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		return;
 	}
 
+	auto ensType = itsConfiguration->GetValue("ensemble_type");
+
+	if (!ensType.empty())
+	{
+		itsEnsembleType = HPStringToEnsembleType.at(ensType);
+	}
+
+	auto ensSize = itsConfiguration->GetValue("ensemble_size");
+
+	if (!ensSize.empty())
+	{
+		itsEnsembleSize = boost::lexical_cast<int>(ensSize);
+	}
+
+	if (itsEnsembleSize == 0 && itsEnsembleType == kPerturbedEnsemble)
+	{
+		// Regular ensemble size is static, get it from database if user
+		// hasn't specified any size
+
+		auto r = GET_PLUGIN(radon);
+
+		std::string ensembleSizeStr =
+		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
+
+		if (ensembleSizeStr.empty())
+		{
+			itsLogger->Error("Unable to find ensemble size from database");
+			return;
+		}
+
+		itsEnsembleSize = boost::lexical_cast<int>(ensembleSizeStr);
+	}
+
 	params calculatedParams;
 	std::vector<std::string> fractiles = {"F0-", "F10-", "F25-", "F50-", "F75-", "F90-", "F100-", ""};
 
@@ -54,18 +86,6 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	{
 		calculatedParams.push_back(param(fractile + itsParamName));
 	}
-
-	auto r = GET_PLUGIN(radon);
-	std::string ensembleSizeStr =
-	    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
-
-	if (ensembleSizeStr.empty())
-	{
-		itsLogger->Error("Unable to find ensemble size from database");
-		return;
-	}
-
-	itsEnsembleSize = boost::lexical_cast<int>(ensembleSizeStr);
 
 	SetParams(calculatedParams);
 
@@ -87,11 +107,24 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	threadedLogger->Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) + " level " +
 	                     static_cast<std::string>(forecastLevel));
 
-	ensemble ens(param(itsParamName), itsEnsembleSize);
+	std::unique_ptr<ensemble> ens;
+
+	switch (itsEnsembleType)
+	{
+		case kPerturbedEnsemble:
+			ens = std::unique_ptr<ensemble>(new ensemble(param(itsParamName), itsEnsembleSize));
+			break;
+		case kTimeEnsemble:
+			ens = std::unique_ptr<time_ensemble>(new time_ensemble(param(itsParamName), itsEnsembleSize));
+			break;
+		default:
+			itsLogger->Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
+			exit(1);
+	}
 
 	try
 	{
-		ens.Fetch(itsConfiguration, forecastTime, forecastLevel);
+		ens->Fetch(itsConfiguration, forecastTime, forecastLevel);
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -102,12 +135,13 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	}
 
 	myTargetInfo->ResetLocation();
-	ens.ResetLocation();
+	ens->ResetLocation();
 
-	while (myTargetInfo->NextLocation() && ens.NextLocation())
+	itsEnsembleSize = ens->Size();  // With time_ensemble, itsEnsembleSize might not be set
+
+	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
-		auto sortedValues = ens.SortedValues();
-
+		auto sortedValues = ens->SortedValues();
 		size_t targetInfoIndex = 0;
 		for (auto i : fractile)
 		{
@@ -115,9 +149,10 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			myTargetInfo->Value(sortedValues[i * (itsEnsembleSize - 1) / 100]);
 			++targetInfoIndex;
 		}
+
 		// write mean value to last target info index
 		myTargetInfo->ParamIndex(targetInfoIndex);
-		myTargetInfo->Value(ens.Mean());
+		myTargetInfo->Value(ens->Mean());
 	}
 
 	threadedLogger->Info("[" + deviceType + "] Missing values: " +
