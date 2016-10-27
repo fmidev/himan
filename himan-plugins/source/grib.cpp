@@ -1524,8 +1524,9 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 			levelType = himan::kHybrid;
 			break;
 
+			// NOTE this was originally kGndLayer
 		case 112:
-			levelType = himan::kGndLayer;
+			levelType = himan::kDepthLayer;
 			break;
 
 		case 246:
@@ -1544,6 +1545,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 	{
 		case kHeightLayer:
 			l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
+			break;
+
+		case kDepthLayer:
+			l = level(levelType, itsGrib->Message().LevelValue(), itsGrib->Message().LevelValue2());
 			break;
 
 		default:
