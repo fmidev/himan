@@ -885,7 +885,9 @@ void BindPlugins(lua_State* L)
 	              .def(constructor<>())
 	              .def("ClassName", &luatool::ClassName)
 	              .def("FetchInfo", &luatool::FetchInfo)
-	              .def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&)),
+	              .def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&))
+	              .def("FetchWithType", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
+	                                               const param&, const forecast_type&)),
 	          class_<hitool, std::shared_ptr<hitool>>("hitool")
 	              .def(constructor<>())
 	              .def("ClassName", &hitool::ClassName)
