@@ -1558,7 +1558,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 
 	vector<level> levels;
 
-	const vector<string> levelsStr = util::Split(levelValues, ",", false);
+	const vector<string> levelsStr = util::Split(levelValues, ",", true);
 
 	if (theLevelType == kHeightLayer || theLevelType == kDepthLayer)
 	{
