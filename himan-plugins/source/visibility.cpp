@@ -109,7 +109,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	vector<double> stratusavg;
 	vector<double> stratus15;
 	vector<double> stratus45;
-	vector<double> stratus30;
 	vector<double> stratus300;
 	vector<double> lowclouds;
 	vector<double> highclouds;
@@ -127,7 +126,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	// 15-45m sumupilven määrä
 	VertMax(myTargetInfo, stratus45, NParam, 15, 45);
 
-	VertMax(myTargetInfo, stratus30, NParam, 0, 30);
 	VertMax(myTargetInfo, stratus300, NParam, 15, 300);
 	VertMax(myTargetInfo, lowclouds, NParam, 60, 6000);
 	VertMax(myTargetInfo, highclouds, NParam, 6001, 12000);
@@ -174,7 +172,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double stratavg = stratusavg[i];
 		double strat15 = stratus15[i];
 		double strat45 = stratus45[i];
-		double strat30 = stratus30[i];
 		double strat300 = stratus300[i];
 		double lowC = lowclouds[i];
 		double highC = highclouds[i];
@@ -207,7 +204,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		assert(stratavg <= 1.0);
 		assert(strat15 <= 1.0);
 		assert(strat45 <= 1.0);
-		assert(strat30 <= 1.0);
 		assert(strat300 <= 1.0);
 
 		assert(lowC <= 1.0);
@@ -231,7 +227,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		stratavg *= 100;
 		strat15 *= 100;
 		strat45 *= 100;
-		strat30 *= 100;
 		strat300 *= 100;
 		lowC *= 100;
 		highC *= 100;
@@ -254,7 +249,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		            << "stratavg " << stratavg << endl
 		            << "strat15 " << strat15 << endl
 		            << "strat45 " << strat45 << endl
-		            << "strat30 " << strat30 << endl
 		            << "strat300 " << strat300 << endl
 		            << "lowc " << lowC << endl
 		            << "highc " << highC << endl

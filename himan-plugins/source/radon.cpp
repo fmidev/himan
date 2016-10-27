@@ -212,8 +212,8 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	      << "id, table_name "
 	      << "FROM as_grid "
 	      << "WHERE geometry_id = '" << geom_id << "'"
-	      << " AND min_analysis_time <= '" << analysisTime << "'"
-	      << " AND max_analysis_time > '" << analysisTime << "'"
+	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime << "'"
+	      << ", '" << analysisTime << "')"
 	      << " AND producer_id = " << resultInfo.Producer().Id();
 
 	itsRadonDB->Query(query.str());
