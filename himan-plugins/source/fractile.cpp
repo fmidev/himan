@@ -94,7 +94,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex)
 {
-	std::vector<int> fractile = {0, 10, 25, 50, 75, 90, 100};
+	std::vector<double> fractile = {0, 10, 25, 50, 75, 90, 100};
 
 	const std::string deviceType = "CPU";
 
@@ -143,10 +143,32 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	{
 		auto sortedValues = ens->SortedValues();
 		size_t targetInfoIndex = 0;
-		for (auto i : fractile)
+		for (auto P : fractile)
 		{
+			// use the linear interpolation between closest ranks method recommended by NIST
+			// http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
+			double x;
+
+			// check lower corner case p E [0,1/(N+1)]
+			if (P / 100.0 <= 1.0 / static_cast<double>(itsEnsembleSize + 1))
+			{
+				x = 1;
+			}
+			// check upper corner case p E [N/(N+1),1]
+			else if (P / 100.0 >= static_cast<double>(itsEnsembleSize) / static_cast<double>(itsEnsembleSize + 1))
+			{
+				x = static_cast<double>(itsEnsembleSize);
+			}
+			// everything that happens on the interval between
+			else
+			{
+				x = P / 100.0 * static_cast<double>(itsEnsembleSize + 1);
+			}
+			// floor x explicitly before casting to int
+			int i = static_cast<int>(std::floor(x));
+
 			myTargetInfo->ParamIndex(targetInfoIndex);
-			myTargetInfo->Value(sortedValues[i * (itsEnsembleSize - 1) / 100]);
+			myTargetInfo->Value(sortedValues[i - 1] + std::remainder(x, 1.0) * (sortedValues[i] - sortedValues[i - 1]));
 			++targetInfoIndex;
 		}
 
