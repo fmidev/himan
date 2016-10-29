@@ -23,13 +23,13 @@ namespace himan
 
 class modifier
 {
-public:
+   public:
 	modifier();
 	virtual ~modifier() {}
 	// Compiler will create cctor and =, nothing but PODs here
 
 	virtual std::string ClassName() const { return "himan::modifier"; }
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing) = 0;
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight) = 0;
 	virtual void Clear(double fillValue = kFloatMissing);
 
 	virtual bool IsMissingValue(double theValue) const __attribute__((always_inline));
@@ -55,7 +55,7 @@ public:
 	bool HeightInMeters() const;
 	void HeightInMeters(bool theHeightInMeters);
 
-protected:
+   protected:
 	explicit modifier(HPModifierType theModifierType);
 	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
@@ -63,7 +63,7 @@ protected:
 	 * @brief Function checks that data is not missing and falls within the given height range.
 	 */
 
-	virtual bool Evaluate(double theValue, double theHeight);
+	virtual bool Evaluate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight);
 	virtual double Value() const;
 	virtual void Value(double theValue);
 
@@ -78,6 +78,10 @@ protected:
 	std::vector<double> itsLowerHeight;
 	std::vector<double> itsUpperHeight;
 	std::vector<double> itsFindValue;
+
+	std::vector<double> itsPreviousValue;
+	std::vector<double> itsPreviousHeight;
+
 	size_t itsFindNthValue;
 
 	mutable std::vector<double> itsResult;  // variable is modified in some Result() const functions
@@ -99,7 +103,6 @@ protected:
 };
 
 inline std::ostream& operator<<(std::ostream& file, const modifier& ob) { return ob.Write(file); }
-
 inline bool modifier::IsMissingValue(double theValue) const
 {
 	if (theValue == kFloatMissing)
@@ -116,12 +119,13 @@ inline bool modifier::IsMissingValue(double theValue) const
 
 class modifier_max : public modifier
 {
-public:
+   public:
 	modifier_max() : modifier(kMaximumModifier) {}
 	virtual ~modifier_max() {}
 	virtual std::string ClassName() const { return "himan::modifier_max"; }
 	// virtual double MaximumValue() const;
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
+	                       double thePreviousHeight) override;
 };
 
 /**
@@ -130,11 +134,12 @@ public:
 
 class modifier_min : public modifier
 {
-public:
+   public:
 	modifier_min() : modifier(kMinimumModifier) {}
 	virtual ~modifier_min() {}
 	virtual std::string ClassName() const { return "himan::modifier_min"; }
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
+	                       double thePreviousHeight) override;
 };
 
 /**
@@ -143,22 +148,18 @@ public:
 
 class modifier_maxmin : public modifier
 {
-public:
+   public:
 	modifier_maxmin() : modifier(kMaximumMinimumModifier) {}
 	virtual ~modifier_maxmin() {}
 	virtual std::string ClassName() const { return "himan::modifier_maxmin"; }
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
+	                       double thePreviousHeight) override;
+	virtual const std::vector<double>& Result() const override;
 
-	virtual const std::vector<double>& Result() const;
-
-	// virtual double Value() const;
-
-	// virtual double MinimumValue() const;
-	// virtual double MaximumValue() const;
-
-protected:
+   protected:
 	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
+   private:
 	std::vector<double> itsMaximumResult;
 };
 
@@ -168,11 +169,12 @@ protected:
 
 class modifier_sum : public modifier
 {
-public:
+   public:
 	modifier_sum() : modifier(kAccumulationModifier) {}
 	virtual ~modifier_sum() {}
 	virtual std::string ClassName() const { return "himan::modifier_sum"; }
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
+	                       double thePreviousHeight) override;
 };
 
 /**
@@ -182,21 +184,17 @@ public:
 
 class modifier_integral : public modifier
 {
-public:
+   public:
 	modifier_integral() : modifier(kIntegralModifier) {}
 	virtual ~modifier_integral() {}
 	virtual std::string ClassName() const { return "himan::::modifier_integral"; }
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
+	                       double thePreviousHeight) override;
 
 	virtual bool CalculationFinished() const;
 
-protected:
+   protected:
 	explicit modifier_integral(HPModifierType theModifierType) : modifier(theModifierType) {}
-	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
-	virtual bool Evaluate(double theValue, double theHeight);
-
-	std::vector<double> itsPreviousValue;
-	std::vector<double> itsPreviousHeight;
 };
 
 /**
@@ -205,19 +203,19 @@ protected:
 
 class modifier_mean : public modifier_integral
 {
-public:
+   public:
 	modifier_mean() : modifier_integral(kAverageModifier) {}
 	virtual ~modifier_mean() {}
 	virtual std::string ClassName() const { return "himan::modifier_mean"; }
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
+	                       double thePreviousHeight) override;
 
-	virtual const std::vector<double>& Result() const;
+	virtual const std::vector<double>& Result() const override;
 
-	virtual bool CalculationFinished() const;
+	virtual bool CalculationFinished() const override;
 
-protected:
-	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
-	virtual bool Evaluate(double theValue, double theHeight);
+   protected:
+	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights) override;
 
 	std::vector<double> itsRange;
 };
@@ -228,18 +226,14 @@ protected:
 
 class modifier_count : public modifier
 {
-public:
+   public:
 	modifier_count() : modifier(kCountModifier) {}
 	virtual ~modifier_count() {}
 	virtual std::string ClassName() const { return "himan::modifier_count"; }
-	// virtual double Height() const;
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight);
 
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
-
-protected:
-	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
-
-	std::vector<double> itsPreviousValue;
+   protected:
+	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights) override;
 };
 
 /**
@@ -255,21 +249,19 @@ protected:
 
 class modifier_findheight : public modifier
 {
-public:
+   public:
 	modifier_findheight() : modifier(kFindHeightModifier), itsValuesFound(0) {}
 	virtual ~modifier_findheight() {}
 	virtual std::string ClassName() const { return "himan::modifier_findheight"; }
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight);
 
 	virtual bool CalculationFinished() const;
 
 	virtual void Clear(double fillValue = kFloatMissing);
 
-protected:
+   protected:
 	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
-	std::vector<double> itsPreviousValue;
-	std::vector<double> itsPreviousHeight;
 	std::vector<size_t> itsFoundNValues;
 
 	size_t itsValuesFound;
@@ -281,21 +273,18 @@ protected:
 
 class modifier_findvalue : public modifier
 {
-public:
+   public:
 	modifier_findvalue() : modifier(kFindValueModifier), itsValuesFound(0) {}
 	virtual ~modifier_findvalue() {}
 	virtual std::string ClassName() const { return "himan::modifier_findvalue"; }
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight);
 
 	virtual bool CalculationFinished() const;
 
 	virtual void Clear(double fillValue = kFloatMissing);
 
-private:
+   private:
 	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
-
-	std::vector<double> itsPreviousValue;
-	std::vector<double> itsPreviousHeight;
 
 	size_t itsValuesFound;
 };
@@ -306,26 +295,20 @@ private:
 
 class modifier_plusminusarea : public modifier
 {
-public:
+   public:
 	modifier_plusminusarea() : modifier(kPlusMinusAreaModifier), itsValuesFound(0) {}
 	virtual ~modifier_plusminusarea() {}
 	virtual std::string ClassName() const { return "himan::modifier_plusminusarea"; }
-	virtual void Process(const std::vector<double>& theData, const std::vector<double>& theHeights);
+	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
+	                       double thePreviousHeight) override;
 
-	virtual void Calculate(double theValue, double theHeight = kFloatMissing);
+	virtual const std::vector<double>& Result() const override;
 
-	virtual const std::vector<double>& Result() const;
+	virtual bool CalculationFinished() const override;
 
-	virtual bool CalculationFinished() const;
+   private:
+	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights) override;
 
-	virtual void InitializeHeights();
-
-private:
-	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights);
-	virtual bool Evaluate(double theValue, double theHeight);
-
-	std::vector<double> itsPreviousValue;
-	std::vector<double> itsPreviousHeight;
 	mutable std::vector<double> itsPlusArea;
 	std::vector<double> itsMinusArea;
 
