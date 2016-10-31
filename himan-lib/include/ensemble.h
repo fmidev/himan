@@ -20,7 +20,7 @@ namespace himan
 
 class ensemble
 {
-   public:
+public:
 	ensemble(const param& parameter, size_t ensembleSize);
 
 	ensemble();
@@ -62,7 +62,11 @@ class ensemble
 
 	HPEnsembleType EnsembleType() const;
 
-   protected:
+	int MaxMissing() const;
+
+	void MaxMissing(int max);
+
+protected:
 	/// @brief The parameter of the ensemble
 	param itsParam;
 
@@ -78,12 +82,16 @@ class ensemble
 	HPEnsembleType itsEnsembleType;
 
 	std::unique_ptr<logger> itsLogger;
+
+	/// @brief When Fetching(), this is the maximum number of missing forecasts we can tolerate.
+	int itsMaxMissing;
 };
 
-inline size_t ensemble::Size() const { return itsEnsembleSize; }
 inline double ensemble::Value(size_t forecastIndex) const { return itsForecasts[forecastIndex]->Value(); }
 inline std::string ensemble::ClassName() const { return "himan::ensemble"; }
 inline param ensemble::Param() const { return itsParam; }
+inline int ensemble::MaxMissing() const { return itsMaxMissing; }
+inline void ensemble::MaxMissing(int max) { itsMaxMissing = max; }
 }  // namespace himan
 
 // ENSEMBLE_H
