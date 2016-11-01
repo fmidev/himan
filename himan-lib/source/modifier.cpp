@@ -55,7 +55,14 @@ bool modifier::CalculationFinished() const
 	return false;
 }
 
-void modifier::Clear(double fillValue) { std::fill(itsResult.begin(), itsResult.end(), fillValue); }
+void modifier::Clear(double fillValue)
+{
+	std::fill(itsResult.begin(), itsResult.end(), fillValue);
+	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), fillValue);
+	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), fillValue);
+	std::fill(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), false);
+}
+
 void modifier::FindValue(const std::vector<double>& theFindValue)
 {
 	itsFindValue = theFindValue;
@@ -163,8 +170,8 @@ bool modifier::Evaluate(double theValue, double theHeight, double thePreviousVal
 		return false;
 	}
 
-	double lowerLimit = itsLowerHeight[itsIndex];
-	double upperLimit = itsUpperHeight[itsIndex];
+	const double lowerLimit = itsLowerHeight[itsIndex];
+	const double upperLimit = itsUpperHeight[itsIndex];
 
 	assert((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit));
 
@@ -174,12 +181,12 @@ bool modifier::Evaluate(double theValue, double theHeight, double thePreviousVal
 	}
 	if (itsHeightInMeters)
 	{
-		if (theHeight < itsLowerHeight[itsIndex])
+		if (theHeight < lowerLimit)
 		{
 			// height is below given height range, do not cancel calculation yet
 			return false;
 		}
-		else if (theHeight > itsUpperHeight[itsIndex] && thePreviousHeight > itsUpperHeight[itsIndex])
+		else if (theHeight > upperLimit && thePreviousHeight > upperLimit)
 		{
 			// Safely above upper limit
 			itsOutOfBoundHeights[itsIndex] = true;
@@ -188,14 +195,12 @@ bool modifier::Evaluate(double theValue, double theHeight, double thePreviousVal
 	}
 	else
 	{
-		if (theHeight > itsLowerHeight[itsIndex])
+		if (theHeight > lowerLimit)
 		{
-			// height is below given height range, do not cancel calculation yet
 			return false;
 		}
-		else if (theHeight < itsUpperHeight[itsIndex] && thePreviousHeight < itsUpperHeight[itsIndex])
+		else if (theHeight < upperLimit && thePreviousHeight < upperLimit)
 		{
-			// Safely above upper limit
 			itsOutOfBoundHeights[itsIndex] = true;
 			return false;
 		}
@@ -634,11 +639,8 @@ void modifier_count::Calculate(double theValue, double theHeight, double thePrev
 
 void modifier_findheight::Clear(double fillValue)
 {
-	std::fill(itsResult.begin(), itsResult.end(), fillValue);
-	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), fillValue);
-	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), fillValue);
+	modifier::Clear(fillValue);
 	std::fill(itsFoundNValues.begin(), itsFoundNValues.end(), 0);
-	std::fill(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), false);
 	itsValuesFound = 0;
 }
 
@@ -721,13 +723,87 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 
 /* ----------------- */
 
-void modifier_findvalue::Clear(double fillValue)
+void modifier_findheight_gt::Calculate(double theValue, double theHeight, double thePreviousValue,
+                                       double thePreviousHeight)
 {
-	std::fill(itsResult.begin(), itsResult.end(), fillValue);
-	std::fill(itsPreviousValue.begin(), itsPreviousValue.end(), fillValue);
-	std::fill(itsPreviousHeight.begin(), itsPreviousHeight.end(), fillValue);
-	std::fill(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), false);
+	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+	const double findValue = itsFindValue[itsIndex];
+
+	if (itsFindNthValue > 0 && kFloatMissing != Value())
+	{
+		return;
+	}
+
+	if (theValue > findValue)
+	{
+		if (IsMissingValue(thePreviousValue))
+		{
+			if (itsFindNthValue != 0)
+			{
+				itsFoundNValues[itsIndex] += 1;
+
+				if (itsFindNthValue == itsFoundNValues[itsIndex])
+				{
+					Value(theHeight);
+					itsValuesFound++;
+					itsOutOfBoundHeights[itsIndex] = true;
+				}
+			}
+			else
+			{
+				// Search for the last value
+				Value(theHeight);
+			}
+
+			return;
+		}
+	}
+
+	return modifier_findheight::Calculate(theValue, theHeight, thePreviousValue, thePreviousHeight);
 }
+
+/* ----------------- */
+
+void modifier_findheight_lt::Calculate(double theValue, double theHeight, double thePreviousValue,
+                                       double thePreviousHeight)
+{
+	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+	const double findValue = itsFindValue[itsIndex];
+
+	if (itsFindNthValue > 0 && kFloatMissing != Value())
+	{
+		return;
+	}
+
+	if (theValue < findValue)
+	{
+		if (IsMissingValue(thePreviousValue))
+		{
+			if (itsFindNthValue != 0)
+			{
+				itsFoundNValues[itsIndex] += 1;
+
+				if (itsFindNthValue == itsFoundNValues[itsIndex])
+				{
+					Value(theHeight);
+					itsValuesFound++;
+					itsOutOfBoundHeights[itsIndex] = true;
+				}
+			}
+			else
+			{
+				// Search for the last value
+				Value(theHeight);
+			}
+
+			return;
+		}
+	}
+
+	return modifier_findheight::Calculate(theValue, theHeight, thePreviousValue, thePreviousHeight);
+}
+
+/* ----------------- */
 
 void modifier_findvalue::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
 {
