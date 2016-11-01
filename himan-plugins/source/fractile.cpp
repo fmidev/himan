@@ -8,7 +8,7 @@
 #include <iostream>
 #include <string>
 
-#include <boost/thread.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "logger_factory.h"
 #include "plugin_factory.h"
@@ -20,11 +20,14 @@
 #include "json_parser.h"
 #include "radon.h"
 
+#include "util.h"
+
 namespace himan
 {
 namespace plugin
 {
-fractile::fractile() : itsEnsembleSize(0), itsEnsembleType(kPerturbedEnsemble)
+fractile::fractile()
+    : itsEnsembleSize(0), itsEnsembleType(kPerturbedEnsemble), itsFractiles({0., 10., 25., 50., 75., 90., 100.})
 {
 	itsClearTextFormula = "%";
 	itsCudaEnabledCalculation = false;
@@ -79,13 +82,38 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		itsEnsembleSize = boost::lexical_cast<int>(ensembleSizeStr);
 	}
 
-	params calculatedParams;
-	std::vector<std::string> fractiles = {"F0-", "F10-", "F25-", "F50-", "F75-", "F90-", "F100-", ""};
+	auto fractiles = itsConfiguration->GetValue("fractiles");
 
-	for (const std::string& fractile : fractiles)
+	if (!fractiles.empty())
 	{
-		calculatedParams.push_back(param(fractile + itsParamName));
+		itsFractiles.clear();
+
+		auto list = util::Split(fractiles, ",", false);
+
+		for (std::string& val : list)
+		{
+			boost::trim(val);
+			try
+			{
+				itsFractiles.push_back(boost::lexical_cast<double>(val));
+			}
+			catch (const boost::bad_lexical_cast& e)
+			{
+				itsLogger->Fatal("Invalid fractile value: '" + val + "'");
+				exit(1);
+			}
+		}
 	}
+
+	params calculatedParams;
+
+	for (double fractile : itsFractiles)
+	{
+		auto name = "F" + boost::lexical_cast<std::string>(fractile) + "-" + itsParamName;
+		calculatedParams.push_back(param(name));
+	}
+
+	calculatedParams.push_back(param(itsParamName));  // mean
 
 	SetParams(calculatedParams);
 
@@ -94,8 +122,6 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex)
 {
-	std::vector<double> fractile = {0, 10, 25, 50, 75, 90, 100};
-
 	const std::string deviceType = "CPU";
 
 	auto threadedLogger =
@@ -143,7 +169,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	{
 		auto sortedValues = ens->SortedValues();
 		size_t targetInfoIndex = 0;
-		for (auto P : fractile)
+		for (auto P : itsFractiles)
 		{
 			// use the linear interpolation between closest ranks method recommended by NIST
 			// http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
