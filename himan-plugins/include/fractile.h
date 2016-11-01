@@ -35,6 +35,7 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 	std::string itsParamName;
 	int itsEnsembleSize;
 	HPEnsembleType itsEnsembleType;
+	std::vector<double> itsFractiles;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<fractile>(); }

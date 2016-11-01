@@ -1290,6 +1290,9 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 	if (ig)
 	{
+		// Disable cuda interpolation (too inefficienct for single points)
+		itsLogger->Trace("Disabling cuda interpolation for single point data");
+		conf->UseCudaForInterpolation(false);
 		return ig;
 	}
 

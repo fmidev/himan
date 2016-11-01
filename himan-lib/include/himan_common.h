@@ -371,7 +371,9 @@ enum HPModifierType
 	kFindHeightModifier,
 	kFindValueModifier,
 	kIntegralModifier,
-	kPlusMinusAreaModifier
+	kPlusMinusAreaModifier,
+	kFindHeightGreaterThanModifier,
+	kFindHeightLessThanModifier,
 };
 
 const boost::unordered_map<HPModifierType, std::string> HPModifierTypeToString =
@@ -387,7 +389,10 @@ const boost::unordered_map<HPModifierType, std::string> HPModifierTypeToString =
 	(kFindHeightModifier, "find height modifier")
 	(kFindValueModifier, "find value modifier")
 	(kIntegralModifier, "integral modifier")
-	(kPlusMinusAreaModifier, "plus minus area modifier");
+	(kPlusMinusAreaModifier, "plus minus area modifier")
+	(kFindHeightGreaterThanModifier, "find height greater than modifier")
+	(kFindHeightLessThanModifier, "find height less than modifier")
+;
 
 /// Precipitation forms as agreed by FMI
 
