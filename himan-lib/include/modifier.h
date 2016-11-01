@@ -194,8 +194,6 @@ class modifier_integral : public modifier
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 
-	virtual bool CalculationFinished() const;
-
    protected:
 	explicit modifier_integral(HPModifierType theModifierType) : modifier(theModifierType) {}
 };
@@ -214,8 +212,6 @@ class modifier_mean : public modifier_integral
 	                       double thePreviousHeight) override;
 
 	virtual const std::vector<double>& Result() const override;
-
-	virtual bool CalculationFinished() const override;
 
    protected:
 	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights) override;
@@ -336,8 +332,6 @@ class modifier_plusminusarea : public modifier
 	                       double thePreviousHeight) override;
 
 	virtual const std::vector<double>& Result() const override;
-
-	virtual bool CalculationFinished() const override;
 
    private:
 	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights) override;

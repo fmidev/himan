@@ -575,35 +575,6 @@ const std::vector<double>& modifier_mean::Result() const
 	return itsResult;
 }
 
-bool modifier_mean::CalculationFinished() const
-{
-	if (itsResult.size() == 0)
-	{
-		return false;
-	}
-
-	if (itsResult.size() > 0 &&
-	    static_cast<size_t>(count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size())
-	{
-		return true;
-	}
-
-	if (itsUpperHeight.empty())
-	{
-		return false;
-	}
-
-	for (size_t i = 0; i < itsPreviousHeight.size(); ++i)
-	{
-		if (itsUpperHeight[i] > itsPreviousHeight[i])
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
 /* ----------------- */
 
 void modifier_count::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
@@ -988,22 +959,6 @@ void modifier_integral::Calculate(double theValue, double theHeight, double theP
 	}
 }
 
-bool modifier_integral::CalculationFinished() const
-{
-	if (itsResult.size() > 0 &&
-	    static_cast<size_t>(count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) == itsResult.size())
-	{
-		return true;
-	}
-
-	if (itsPreviousHeight > itsUpperHeight)
-	{
-		return true;
-	}
-
-	return false;
-}
-
 /* ----------------- */
 
 void modifier_plusminusarea::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
@@ -1128,36 +1083,6 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight, double
 			itsPlusArea[itsIndex] += (thePreviousValue + theValue) / 2 * (theHeight - thePreviousHeight);
 		}
 	}
-}
-
-bool modifier_plusminusarea::CalculationFinished() const
-{
-	if (itsMinusArea.empty() || itsPlusArea.empty())
-	{
-		return false;
-	}
-
-	if (!itsMinusArea.empty() > 0 &&
-	    static_cast<size_t>(count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true)) ==
-	        itsMinusArea.size())
-	{
-		return true;
-	}
-
-	if (itsUpperHeight.empty())
-	{
-		return false;
-	}
-
-	for (size_t i = 0; i < itsPreviousHeight.size(); ++i)
-	{
-		if (itsUpperHeight[i] > itsPreviousHeight[i])
-		{
-			return false;
-		}
-	}
-
-	return true;
 }
 
 const std::vector<double>& modifier_plusminusarea::Result() const
