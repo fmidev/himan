@@ -73,6 +73,10 @@ class modifier
 
 	virtual void InitializeHeights();
 
+	bool EnteringHeightZone(double theHeight, double thePreviousHeight, double lowerLimit) const;
+	bool LeavingHeightZone(double theHeight, double thePreviousHeight, double upperLimit) const;
+	bool BetweenLevels(double theHeight, double thePreviousHeight, double lowerLimit, double upperLimit) const;
+
 	bool itsMissingValuesAllowed;
 
 	std::vector<double> itsLowerHeight;

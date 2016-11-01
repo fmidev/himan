@@ -15,6 +15,28 @@ using namespace himan;
 const double DEFAULT_MAXIMUM = 1e38;
 const double DEFAULT_MINIMUM = -1e38;
 
+double ExactLowerEdgeValue(double theHeight, double theValue, double previousHeight, double thePreviousValue,
+                           double lowerLimit)
+{
+	if (thePreviousValue == kFloatMissing || previousHeight == kFloatMissing)
+	{
+		return theValue;
+	}
+
+	return NFmiInterpolation::Linear(lowerLimit, previousHeight, theHeight, thePreviousValue, theValue);
+}
+
+double ExactUpperEdgeValue(double theHeight, double theValue, double previousHeight, double thePreviousValue,
+                           double upperLimit)
+{
+	if (thePreviousValue == kFloatMissing || previousHeight == kFloatMissing)
+	{
+		return theValue;
+	}
+
+	return NFmiInterpolation::Linear(upperLimit, previousHeight, theHeight, thePreviousValue, theValue);
+}
+
 modifier::modifier()
     : itsMissingValuesAllowed(false),
       itsFindNthValue(1)  // first
@@ -179,6 +201,11 @@ bool modifier::Evaluate(double theValue, double theHeight, double thePreviousVal
 	{
 		return false;
 	}
+
+	// Iff the branching caused by all the conditions where height type is checked
+	// is deteriorating performance (this should be verified!), we could create a new
+	// height class/interface and just use inheritance for meter/pascal variants.
+
 	if (itsHeightInMeters)
 	{
 		if (theHeight < lowerLimit)
@@ -289,43 +316,44 @@ std::ostream& modifier::Write(std::ostream& file) const
 	return file;
 }
 
-bool EnteringHeightZone(double theHeight, double thePreviousHeight, double lowerLimit)
+bool modifier::EnteringHeightZone(double theHeight, double thePreviousHeight, double lowerLimit) const
 {
-	return (thePreviousHeight != kFloatMissing && lowerLimit != DEFAULT_MINIMUM && theHeight >= lowerLimit &&
-	        thePreviousHeight < lowerLimit);
-}
-
-bool LeavingHeightZone(double theHeight, double thePreviousHeight, double upperLimit)
-{
-	return (upperLimit != DEFAULT_MAXIMUM && theHeight >= upperLimit && thePreviousHeight < upperLimit);
-}
-
-bool BetweenLevels(double theHeight, double thePreviousHeight, double lowerLimit, double upperLimit)
-{
-	return (thePreviousHeight <= lowerLimit && theHeight >= lowerLimit && thePreviousHeight <= upperLimit &&
-	        theHeight >= upperLimit);
-}
-
-double ExactLowerEdgeValue(double theHeight, double theValue, double previousHeight, double thePreviousValue,
-                           double lowerLimit)
-{
-	if (thePreviousValue == kFloatMissing || previousHeight == kFloatMissing)
+	if (itsHeightInMeters)
 	{
-		return theValue;
+		return (thePreviousHeight != kFloatMissing && lowerLimit != DEFAULT_MINIMUM && theHeight >= lowerLimit &&
+		        thePreviousHeight < lowerLimit);
 	}
-
-	return NFmiInterpolation::Linear(lowerLimit, previousHeight, theHeight, thePreviousValue, theValue);
+	else
+	{
+		return (thePreviousHeight != kFloatMissing && lowerLimit != DEFAULT_MAXIMUM && theHeight <= lowerLimit &&
+		        thePreviousHeight > lowerLimit);
+	}
 }
 
-double ExactUpperEdgeValue(double theHeight, double theValue, double previousHeight, double thePreviousValue,
-                           double upperLimit)
+bool modifier::LeavingHeightZone(double theHeight, double thePreviousHeight, double upperLimit) const
 {
-	if (thePreviousValue == kFloatMissing || previousHeight == kFloatMissing)
+	if (itsHeightInMeters)
 	{
-		return theValue;
+		return (upperLimit != DEFAULT_MAXIMUM && theHeight >= upperLimit && thePreviousHeight < upperLimit);
 	}
+	else
+	{
+		return (upperLimit != DEFAULT_MINIMUM && theHeight <= upperLimit && thePreviousHeight > upperLimit);
+	}
+}
 
-	return NFmiInterpolation::Linear(upperLimit, previousHeight, theHeight, thePreviousValue, theValue);
+bool modifier::BetweenLevels(double theHeight, double thePreviousHeight, double lowerLimit, double upperLimit) const
+{
+	if (itsHeightInMeters)
+	{
+		return (thePreviousHeight <= lowerLimit && theHeight >= lowerLimit && thePreviousHeight <= upperLimit &&
+		        theHeight >= upperLimit);
+	}
+	else
+	{
+		return (thePreviousHeight >= lowerLimit && theHeight <= lowerLimit && thePreviousHeight >= upperLimit &&
+		        theHeight <= upperLimit);
+	}
 }
 
 /* ----------------- */
