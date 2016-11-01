@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.10.27
+Version: 16.11.1
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -23,6 +23,7 @@ Requires: unixODBC
 Requires: libfmigrib >= 16.9.8
 Requires: libfmidb >= 16.9.8
 Requires: libsmartmet-newbase >= 16.9.20
+Requires: pqxx
 
 BuildRequires: gdal-devel
 BuildRequires: boost-devel >= 1.55
@@ -107,6 +108,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Nov  1 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.1-1.fmi
+- Custom fractiles
 * Thu Oct 27 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.27-1.fmi
 - Hotfix for radon query problem
 * Wed Oct 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.26-1.fmi
