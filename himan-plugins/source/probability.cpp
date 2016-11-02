@@ -376,6 +376,11 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const
 
 	const size_t ensembleSize = ens1.Size();
 
+	if (ensembleSize != ens2.Size())
+	{
+		throw std::runtime_error(kClassName + "::CalculateWind(): U and V ensembles are of different size, aborting");
+	}
+
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
