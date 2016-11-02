@@ -38,7 +38,7 @@ probability::probability()
 	itsLogger = logger_factory::Instance()->GetLog("probability");
 
 	itsEnsembleSize = 0;
-	itsMaxMissing = 0;
+	itsMaximumMissingForecasts = 0;
 	itsUseNormalizedResult = false;
 }
 
@@ -160,14 +160,15 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	}
 
 	// Maximum number of missing forecasts for an ensemble
-	if (itsConfiguration->Exists("max_missing"))
+	if (itsConfiguration->Exists("max_missing_forecasts"))
 	{
-		const int maxMissing = boost::lexical_cast<int>(itsConfiguration->GetValue("max_missing"));
-		if (maxMissing < 0)
+		const int maxMissingForecasts = boost::lexical_cast<int>(itsConfiguration->GetValue("max_missing_forecasts"));
+		if (maxMissingForecasts < 0)
 		{
-			throw std::runtime_error(ClassName() + " invalid max_missing value specified in plugin configuration");
+			throw std::runtime_error(ClassName() +
+			                         " invalid max_missing_forecasts value specified in plugin configuration");
 		}
-		itsMaxMissing = maxMissing;
+		itsMaximumMissingForecasts = maxMissingForecasts;
 	}
 
 	//
@@ -259,7 +260,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 	// used with all calculations
 	ensemble ens1(pc.parameter, ensembleSize);
-	ens1.MaxMissing(itsMaxMissing);
+	ens1.MaximumMissingForecasts(itsMaximumMissingForecasts);
 
 	// used with wind calculation
 	ensemble ens2;
@@ -268,7 +269,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	{
 		// Wind
 		ens2 = ensemble(pc.parameter2, ensembleSize);
-		ens2.MaxMissing(itsMaxMissing);
+		ens2.MaximumMissingForecasts(itsMaximumMissingForecasts);
 	}
 
 	myTargetInfo.First();

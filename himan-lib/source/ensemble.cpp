@@ -16,14 +16,14 @@
 
 namespace himan
 {
-ensemble::ensemble(const param& parameter, size_t ensembleSize)
+ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize)
     : itsParam(parameter),
-      itsEnsembleSize(ensembleSize)  // ensembleSize includes the control forecast
+      itsExpectedEnsembleSize(expectedEnsembleSize)  // ensembleSize includes the control forecast
       ,
-      itsPerturbations(std::vector<forecast_type>(ensembleSize - 1)),
-      itsForecasts(std::vector<info_t>(ensembleSize)),
+      itsPerturbations(std::vector<forecast_type>(expectedEnsembleSize - 1)),
+      itsForecasts(std::vector<info_t>(expectedEnsembleSize)),
       itsEnsembleType(kPerturbedEnsemble),
-      itsMaxMissing(0)
+      itsMaximumMissingForecasts(0)
 {
 	int perturbationNumber = 1;
 	for (auto& p : itsPerturbations)
@@ -35,7 +35,7 @@ ensemble::ensemble(const param& parameter, size_t ensembleSize)
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 
-ensemble::ensemble() : itsEnsembleType(kPerturbedEnsemble), itsMaxMissing(0)
+ensemble::ensemble() : itsEnsembleType(kPerturbedEnsemble), itsMaximumMissingForecasts(0)
 {
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
@@ -43,11 +43,11 @@ ensemble::ensemble() : itsEnsembleType(kPerturbedEnsemble), itsMaxMissing(0)
 ensemble::~ensemble() {}
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
-      itsEnsembleSize(other.itsEnsembleSize),
+      itsExpectedEnsembleSize(other.itsExpectedEnsembleSize),
       itsPerturbations(other.itsPerturbations),
       itsForecasts(other.itsForecasts),
       itsEnsembleType(other.itsEnsembleType),
-      itsMaxMissing(other.itsMaxMissing)
+      itsMaximumMissingForecasts(other.itsMaximumMissingForecasts)
 {
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
@@ -55,11 +55,11 @@ ensemble::ensemble(const ensemble& other)
 ensemble& ensemble::operator=(const ensemble& other)
 {
 	itsParam = other.itsParam;
-	itsEnsembleSize = other.itsEnsembleSize;
+	itsExpectedEnsembleSize = other.itsExpectedEnsembleSize;
 	itsPerturbations = other.itsPerturbations;
 	itsForecasts = other.itsForecasts;
 	itsEnsembleType = other.itsEnsembleType;
-	itsMaxMissing = other.itsMaxMissing;
+	itsMaximumMissingForecasts = other.itsMaximumMissingForecasts;
 
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 
@@ -77,12 +77,12 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 	// This means that itsForecasts[2] isn't necessarily the perturbation with forecast_type_value 2.
 	itsForecasts.resize(0);
 
-	int numMissing = 0;
+	int numMissingForecasts = 0;
 
 	// First get the control forecast
 	try
 	{
-		auto info  = f->Fetch(config, time, forecastLevel, itsParam, forecast_type(kEpsControl, 0), false);
+		auto info = f->Fetch(config, time, forecastLevel, itsParam, forecast_type(kEpsControl, 0), false);
 		itsForecasts.push_back(info);
 	}
 	catch (HPExceptionType& e)
@@ -94,7 +94,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 		}
 		else
 		{
-			numMissing++;
+			numMissingForecasts++;
 		}
 	}
 
@@ -115,17 +115,17 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 			}
 			else
 			{
-				numMissing++;
+				numMissingForecasts++;
 			}
 		}
 	}
 
 	// This is for data that might not have all the fields for every timestep
-	if (itsMaxMissing > 0)
+	if (itsMaximumMissingForecasts > 0)
 	{
-		if (numMissing >= itsMaxMissing)
+		if (numMissingForecasts >= itsMaximumMissingForecasts)
 		{
-			itsLogger->Fatal("maximum number of missing fields (" + std::to_string(itsMaxMissing) +
+			itsLogger->Fatal("maximum number of missing fields (" + std::to_string(itsMaximumMissingForecasts) +
 			                 ") reached, aborting");
 			exit(1);
 		}
@@ -134,15 +134,16 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 	// we've already catched the exceptions
 	else
 	{
-		if (numMissing > 0)
+		if (numMissingForecasts > 0)
 		{
-			itsLogger->Fatal("missing " + std::to_string(numMissing) + " of " + std::to_string(itsMaxMissing) +
-			                 " fields of data");
+			itsLogger->Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
+			                 std::to_string(itsMaximumMissingForecasts) + " fields of data");
 			exit(1);
 		}
 	}
 
-	itsLogger->Trace("succesfully loaded " + std::to_string(itsForecasts.size()) + "/" + std::to_string(itsEnsembleSize) + " fields");
+	itsLogger->Info("succesfully loaded " + std::to_string(itsForecasts.size()) + "/" +
+	                std::to_string(itsExpectedEnsembleSize) + " fields");
 }
 
 void ensemble::ResetLocation()
@@ -191,7 +192,6 @@ double ensemble::Mean() const
 }
 
 HPEnsembleType ensemble::EnsembleType() const { return itsEnsembleType; }
-
 size_t ensemble::Size() const { return itsForecasts.size(); }
-
+size_t ensemble::ExpectedSize() const { return itsExpectedEnsembleSize; }
 }  // namespace himan

@@ -21,7 +21,7 @@ namespace himan
 class ensemble
 {
 public:
-	ensemble(const param& parameter, size_t ensembleSize);
+	ensemble(const param& parameter, size_t expectedEnsembleSize);
 
 	ensemble();
 
@@ -56,22 +56,26 @@ public:
 
 	std::string ClassName() const;
 
+	/// @brief Returns the size of the currently fetched ensemble
 	size_t Size() const;
+
+	/// @brief Returns the expected size of the ensemble. NOTE: this can
+	/// differ from the actual size of the ensemble!
+	size_t ExpectedSize() const;
 
 	param Param() const;
 
 	HPEnsembleType EnsembleType() const;
 
-	int MaxMissing() const;
+	int MaximumMissingForecasts() const;
 
-	void MaxMissing(int max);
+	void MaximumMissingForecasts(int maximumMissing);
 
 protected:
 	/// @brief The parameter of the ensemble
 	param itsParam;
 
-	/// @brief The number of forecasts in this ensemble
-	size_t itsEnsembleSize;
+	size_t itsExpectedEnsembleSize;
 
 	/// @brief Initialized perturbations forecast_types used by Fetch()
 	std::vector<forecast_type> itsPerturbations;
@@ -84,14 +88,14 @@ protected:
 	std::unique_ptr<logger> itsLogger;
 
 	/// @brief When Fetching(), this is the maximum number of missing forecasts we can tolerate.
-	int itsMaxMissing;
+	int itsMaximumMissingForecasts;
 };
 
 inline double ensemble::Value(size_t forecastIndex) const { return itsForecasts[forecastIndex]->Value(); }
 inline std::string ensemble::ClassName() const { return "himan::ensemble"; }
 inline param ensemble::Param() const { return itsParam; }
-inline int ensemble::MaxMissing() const { return itsMaxMissing; }
-inline void ensemble::MaxMissing(int max) { itsMaxMissing = max; }
+inline int ensemble::MaximumMissingForecasts() const { return itsMaximumMissingForecasts; }
+inline void ensemble::MaximumMissingForecasts(int maximumMissing) { itsMaximumMissingForecasts = maximumMissing; }
 }  // namespace himan
 
 // ENSEMBLE_H
