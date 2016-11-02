@@ -141,6 +141,8 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 			exit(1);
 		}
 	}
+
+	itsLogger->Trace("succesfully loaded " + std::to_string(itsForecasts.size()) + "/" + std::to_string(itsEnsembleSize) + " fields");
 }
 
 void ensemble::ResetLocation()
