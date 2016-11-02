@@ -21,7 +21,12 @@ namespace himan
 class ensemble
 {
 public:
+	/// @brief Constructs an ensemble with one control forecast and expectedEnsembleSize - 1 perturbations
 	ensemble(const param& parameter, size_t expectedEnsembleSize);
+
+	/// @brief Constructs an ensemble with control forecasts taken from `controlForecasts` and
+	/// expectedEnsembleSize - controlForecasts.size() perturbations
+	ensemble(const param& parameter, size_t expectedEnsembleSize, const std::vector<forecast_type>& controlForecasts);
 
 	ensemble();
 
@@ -77,8 +82,8 @@ protected:
 
 	size_t itsExpectedEnsembleSize;
 
-	/// @brief Initialized perturbations forecast_types used by Fetch()
-	std::vector<forecast_type> itsPerturbations;
+	/// @brief Initialized forecast_types used by Fetch()
+	std::vector<forecast_type> itsDesiredForecasts;
 
 	/// @brief Forecasts acquired with Fetch(), each call of Fetch() will overwrite the previous results
 	std::vector<info_t> itsForecasts;

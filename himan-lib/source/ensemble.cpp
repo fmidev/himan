@@ -18,24 +18,48 @@ namespace himan
 {
 ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize)
     : itsParam(parameter),
-      itsExpectedEnsembleSize(expectedEnsembleSize)  // ensembleSize includes the control forecast
-      ,
-      itsPerturbations(std::vector<forecast_type>(expectedEnsembleSize - 1)),
-      itsForecasts(std::vector<info_t>(expectedEnsembleSize)),
+      itsExpectedEnsembleSize(expectedEnsembleSize),
+      itsForecasts(),
       itsEnsembleType(kPerturbedEnsemble),
       itsMaximumMissingForecasts(0)
 {
-	int perturbationNumber = 1;
-	for (auto& p : itsPerturbations)
+	itsDesiredForecasts.reserve(expectedEnsembleSize);
+	itsDesiredForecasts.push_back(forecast_type(kEpsControl, 0));
+
+	for (size_t i = 1; i < itsDesiredForecasts.capacity(); i++)
 	{
-		p = forecast_type(kEpsPerturbation, static_cast<double>(perturbationNumber));
-		perturbationNumber++;
+		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<double>(i)));
 	}
 
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 
-ensemble::ensemble() : itsEnsembleType(kPerturbedEnsemble), itsMaximumMissingForecasts(0)
+ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
+                   const std::vector<forecast_type>& controlForecasts)
+    : itsParam(parameter),
+      itsExpectedEnsembleSize(expectedEnsembleSize),
+      itsForecasts(),
+      itsEnsembleType(kPerturbedEnsemble),
+      itsMaximumMissingForecasts(0)
+{
+	assert(controlForecasts.size() < expectedEnsembleSize);
+
+	itsDesiredForecasts.reserve(expectedEnsembleSize);
+
+	for (const auto& c : controlForecasts)
+	{
+		itsDesiredForecasts.push_back(c);
+	}
+
+	for (size_t i = controlForecasts.size(); i < itsDesiredForecasts.capacity(); i++)
+	{
+		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<double>(i)));
+	}
+
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
+}
+
+ensemble::ensemble() : itsExpectedEnsembleSize(0), itsEnsembleType(kPerturbedEnsemble), itsMaximumMissingForecasts(0)
 {
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
@@ -44,7 +68,7 @@ ensemble::~ensemble() {}
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsExpectedEnsembleSize(other.itsExpectedEnsembleSize),
-      itsPerturbations(other.itsPerturbations),
+      itsDesiredForecasts(other.itsDesiredForecasts),
       itsForecasts(other.itsForecasts),
       itsEnsembleType(other.itsEnsembleType),
       itsMaximumMissingForecasts(other.itsMaximumMissingForecasts)
@@ -56,7 +80,7 @@ ensemble& ensemble::operator=(const ensemble& other)
 {
 	itsParam = other.itsParam;
 	itsExpectedEnsembleSize = other.itsExpectedEnsembleSize;
-	itsPerturbations = other.itsPerturbations;
+	itsDesiredForecasts = other.itsDesiredForecasts;
 	itsForecasts = other.itsForecasts;
 	itsEnsembleType = other.itsEnsembleType;
 	itsMaximumMissingForecasts = other.itsMaximumMissingForecasts;
@@ -71,39 +95,18 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 {
 	auto f = GET_PLUGIN(fetcher);
 
-	// The vector needs to be resized so that we can still
-	// a) push_back new forecasts 'densely'
-	// b) loop through the forecasts with a range-based for without checking for 'missing forecasts'
-	// This means that itsForecasts[2] isn't necessarily the perturbation with forecast_type_value 2.
-	itsForecasts.resize(0);
+	// We need to clear the forecasts vector every time we fetch to support ensembles
+	// with a rotating member scheme (GLAMEPS). This means that the index of the forecast
+	// doesn't reflect its position in the ensemble.
+	itsForecasts.clear();
 
 	int numMissingForecasts = 0;
 
-	// First get the control forecast
-	try
-	{
-		auto info = f->Fetch(config, time, forecastLevel, itsParam, forecast_type(kEpsControl, 0), false);
-		itsForecasts.push_back(info);
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			itsLogger->Fatal("Unable to proceed");
-			exit(1);
-		}
-		else
-		{
-			numMissingForecasts++;
-		}
-	}
-
-	// Then get the perturbations
-	for (const auto& perturbation : itsPerturbations)
+	for (const auto& desired : itsDesiredForecasts)
 	{
 		try
 		{
-			auto info = f->Fetch(config, time, forecastLevel, itsParam, perturbation, false);
+			auto info = f->Fetch(config, time, forecastLevel, itsParam, desired, false);
 			itsForecasts.push_back(info);
 		}
 		catch (HPExceptionType& e)
@@ -137,13 +140,13 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 		if (numMissingForecasts > 0)
 		{
 			itsLogger->Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
-			                 std::to_string(itsMaximumMissingForecasts) + " fields of data");
+			                 std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
 			exit(1);
 		}
 	}
 
 	itsLogger->Info("succesfully loaded " + std::to_string(itsForecasts.size()) + "/" +
-	                std::to_string(itsExpectedEnsembleSize) + " fields");
+	                std::to_string(itsDesiredForecasts.size()) + " fields");
 }
 
 void ensemble::ResetLocation()
@@ -194,4 +197,5 @@ double ensemble::Mean() const
 HPEnsembleType ensemble::EnsembleType() const { return itsEnsembleType; }
 size_t ensemble::Size() const { return itsForecasts.size(); }
 size_t ensemble::ExpectedSize() const { return itsExpectedEnsembleSize; }
+
 }  // namespace himan
