@@ -121,6 +121,18 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().Process(anInfo.Producer().Process());
 	}
 
+	// Forecast type
+
+	// Note: forecast type is also checked in WriteParameter(), because
+	// it might affect productDefinitionTemplateNumber (grib2)
+
+	itsGrib->Message().ForecastType(anInfo.ForecastType().Type());
+
+	if (static_cast<int>(anInfo.ForecastType().Type()) > 2)
+	{
+		itsGrib->Message().ForecastTypeValue(static_cast<long>(anInfo.ForecastType().Value()));
+	}
+
 	// Parameter
 
 	WriteParameter(anInfo);
@@ -167,15 +179,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		default:
 			itsGrib->Message().LevelValue(static_cast<long>(levelValue));
 			break;
-	}
-
-	// Forecast type
-
-	itsGrib->Message().ForecastType(anInfo.ForecastType().Type());
-
-	if (static_cast<int>(anInfo.ForecastType().Type()) > 2)
-	{
-		itsGrib->Message().ForecastTypeValue(static_cast<long>(anInfo.ForecastType().Value()));
 	}
 
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
@@ -841,7 +844,14 @@ void grib::WriteAreaAndGrid(info& anInfo)
 				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
 			}
 
-			itsGrib->Message().SetLongKey("earthIsOblate", 0);
+			if (edition == 1)
+			{
+				itsGrib->Message().SetLongKey("earthIsOblate", 0);
+			}
+			else
+			{
+				itsGrib->Message().SetLongKey("shapeOfTheEarth", 0);
+			}
 
 			scmode = lccg->ScanningMode();
 
@@ -1119,7 +1129,17 @@ void grib::WriteParameter(info& anInfo)
 
 		if (anInfo.Param().Aggregation().Type() != kUnknownAggregationType)
 		{
-			itsGrib->Message().ProductDefinitionTemplateNumber(8);
+			long templateNumber = 8;  // Average, accumulation, extreme values or other statistically processed values
+			                          // at a horizontal level or in a horizontal layer in a continuous or
+			                          // non-continuous time interval
+
+			if (anInfo.ForecastType().Type() == kEpsPerturbation || anInfo.ForecastType().Type() == kEpsControl)
+			{
+				templateNumber = 11;  // Individual ensemble forecast, control and perturbed, at a horizontal level or
+				                      // in a horizontal layer, in a continuous or non-continuous time interval.
+			}
+
+			itsGrib->Message().ProductDefinitionTemplateNumber(templateNumber);
 
 			long type;
 
