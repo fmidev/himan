@@ -1123,6 +1123,37 @@ void grib::WriteParameter(info& anInfo)
 	}
 	else if (itsGrib->Message().Edition() == 2)
 	{
+		if (anInfo.Param().GribParameter() == kHPMissingInt)
+		{
+			auto r = GET_PLUGIN(radon);
+
+			auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name());
+
+			if (paramInfo.empty())
+			{
+				itsLogger->Warning("Parameter information not found from radon for producer " +
+				                   boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
+				                   anInfo.Param().Name());
+			}
+			else
+			{
+				try
+				{
+					auto newParam = anInfo.Param();
+					newParam.GribParameter(boost::lexical_cast<int>(paramInfo["grib2_number"]));
+					newParam.GribCategory(boost::lexical_cast<int>(paramInfo["grib2_category"]));
+					newParam.GribDiscipline(boost::lexical_cast<int>(paramInfo["grib2_discipline"]));
+					anInfo.SetParam(newParam);
+				}
+				catch (const boost::bad_lexical_cast& e)
+				{
+					itsLogger->Warning("Grib2 parameter information not found from radon for producer " +
+					                   boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
+					                   anInfo.Param().Name());
+				}
+			}
+		}
+
 		itsGrib->Message().ParameterNumber(anInfo.Param().GribParameter());
 		itsGrib->Message().ParameterCategory(anInfo.Param().GribCategory());
 		itsGrib->Message().ParameterDiscipline(anInfo.Param().GribDiscipline());
