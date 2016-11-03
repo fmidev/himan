@@ -38,6 +38,7 @@ probability::probability()
 	itsLogger = logger_factory::Instance()->GetLog("probability");
 
 	itsEnsembleSize = 0;
+	itsMaximumMissingForecasts = 0;
 	itsUseNormalizedResult = false;
 }
 
@@ -91,7 +92,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			}
 		}
 
-		if (param1.Name() == "XX-X" || param1.UnivId() == static_cast<long> (kHPMissingInt))
+		if (param1.Name() == "XX-X" || param1.UnivId() == static_cast<long>(kHPMissingInt))
 		{
 			throw std::runtime_error("probability : configuration error:: input parameter not specified for '" + name +
 			                         "'");
@@ -99,7 +100,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		outParamConfig->parameter = param1;
 
 		// NOTE param2 is used only with wind calculation at the moment
-		if (param2.Name() != "XX-X" && param2.UnivId() != static_cast<long> (kHPMissingInt))
+		if (param2.Name() != "XX-X" && param2.UnivId() != static_cast<long>(kHPMissingInt))
 		{
 			outParamConfig->parameter2 = param2;
 		}
@@ -129,24 +130,24 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	// If the configuration is invalid we will bail out asap!
 
 	// Get the number of forecasts this ensemble has from plugin configuration
-	if (itsConfiguration->Exists("ensembleSize"))
+	if (itsConfiguration->Exists("ensemble_size"))
 	{
-		const int ensembleSize = boost::lexical_cast<int>(itsConfiguration->GetValue("ensembleSize"));
+		const int ensembleSize = boost::lexical_cast<int>(itsConfiguration->GetValue("ensemble_size"));
 		if (ensembleSize <= 0)
 		{
-			throw std::runtime_error(ClassName() + " invalid ensembleSize in plugin configuration");
+			throw std::runtime_error(ClassName() + " invalid ensemble_size in plugin configuration");
 		}
 		itsEnsembleSize = ensembleSize;
 	}
 	else
 	{
-		throw std::runtime_error(ClassName() + " ensembleSize not specified in plugin configuration");
+		throw std::runtime_error(ClassName() + " ensemble_size not specified in plugin configuration");
 	}
 
 	// Find out whether we want probabilities in [0,1] range or [0,100] range
-	if (itsConfiguration->Exists("normalizedResults"))
+	if (itsConfiguration->Exists("normalized_results"))
 	{
-		const std::string useNormalized = itsConfiguration->GetValue("normalizedResults");
+		const std::string useNormalized = itsConfiguration->GetValue("normalized_results");
 
 		itsUseNormalizedResult = (useNormalized == "true") ? true : false;
 	}
@@ -154,7 +155,20 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	{
 		// default to [0,100] for compatibility
 		itsUseNormalizedResult = false;
-		itsLogger->Info("'useNormalized' not found from the configuration, results will be written in [0,100] range");
+		itsLogger->Info(
+		    "'normalized_results' not found from the configuration, results will be written in [0,100] range");
+	}
+
+	// Maximum number of missing forecasts for an ensemble
+	if (itsConfiguration->Exists("max_missing_forecasts"))
+	{
+		const int maxMissingForecasts = boost::lexical_cast<int>(itsConfiguration->GetValue("max_missing_forecasts"));
+		if (maxMissingForecasts < 0)
+		{
+			throw std::runtime_error(ClassName() +
+			                         " invalid max_missing_forecasts value specified in plugin configuration");
+		}
+		itsMaximumMissingForecasts = maxMissingForecasts;
 	}
 
 	//
@@ -223,14 +237,13 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 }
 
 static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                            const int infoIndex, const int ensembleSize, const bool normalized, ensemble& ens);
+                            const int infoIndex, const bool normalized, ensemble& ens);
 
 static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                              const int infoIndex, const int ensembleSize, const bool normalized, ensemble& ens);
+                              const int infoIndex, const bool normalized, ensemble& ens);
 
 static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                          const int infoIndex, const int ensembleSize, const bool normalized, ensemble& ens1,
-                          ensemble& ens2);
+                          const int infoIndex, const bool normalized, ensemble& ens1, ensemble& ens2);
 
 void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
@@ -247,6 +260,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 	// used with all calculations
 	ensemble ens1(pc.parameter, ensembleSize);
+	ens1.MaximumMissingForecasts(itsMaximumMissingForecasts);
+
 	// used with wind calculation
 	ensemble ens2;
 
@@ -254,6 +269,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	{
 		// Wind
 		ens2 = ensemble(pc.parameter2, ensembleSize);
+		ens2.MaximumMissingForecasts(itsMaximumMissingForecasts);
 	}
 
 	myTargetInfo.First();
@@ -290,19 +306,18 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		//
 		if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 		{
-			CalculateWind(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, ensembleSize,
-			              normalized, ens1, ens2);
+			CalculateWind(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, normalized, ens1,
+			              ens2);
 		}
 		else if (pc.output.Name() == "PROB-TC-0" || pc.output.Name() == "PROB-TC-1" ||
 		         pc.output.Name() == "PROB-TC-2" || pc.output.Name() == "PROB-TC-3" || pc.output.Name() == "PROB-TC-4")
 		{
-			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, ensembleSize,
-			                  normalized, ens1);
+			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, normalized,
+			                  ens1);
 		}
 		else
 		{
-			CalculateNormal(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, ensembleSize,
-			                normalized, ens1);
+			CalculateNormal(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, normalized, ens1);
 		}
 
 		if (itsConfiguration->StatisticsEnabled())
@@ -315,6 +330,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		WriteToFile(myTargetInfo, pc.targetInfoIndex);
 
 	} while (myTargetInfo.NextTime());
+
 	threadedLogger->Info("[" + deviceType + "] Missing values: " +
 	                     boost::lexical_cast<std::string>(myTargetInfo.Data().MissingCount()) + "/" +
 	                     boost::lexical_cast<std::string>(myTargetInfo.Data().Size()));
@@ -352,12 +368,19 @@ void probability::WriteToFile(const info& targetInfo, const size_t targetInfoInd
 }
 
 void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold, const int infoIndex,
-                   const int ensembleSize, const bool normalized, ensemble& ens1, ensemble& ens2)
+                   const bool normalized, ensemble& ens1, ensemble& ens2)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
 	ens1.ResetLocation();
 	ens2.ResetLocation();
+
+	const size_t ensembleSize = ens1.Size();
+
+	if (ensembleSize != ens2.Size())
+	{
+		throw std::runtime_error(kClassName + "::CalculateWind(): U and V ensembles are of different size, aborting");
+	}
 
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
@@ -378,11 +401,13 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const
 }
 
 void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                       const int infoIndex, const int ensembleSize, const bool normalized, ensemble& ens)
+                       const int infoIndex, const bool normalized, ensemble& ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
 	ens.ResetLocation();
+
+	const size_t ensembleSize = ens.Size();
 
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
@@ -403,11 +428,13 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 }
 
 void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                     const int infoIndex, const int ensembleSize, const bool normalized, ensemble& ens)
+                     const int infoIndex, const bool normalized, ensemble& ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
 	ens.ResetLocation();
+
+	const size_t ensembleSize = ens.Size();
 
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
