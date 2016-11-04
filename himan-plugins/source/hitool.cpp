@@ -160,6 +160,11 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 			producerId = 210;
 			break;
 
+		case 4:
+		case 260:
+			producerId = 260;
+			break;
+
 		default:
 			itsLogger->Error("Unsupported producer for hitool::LevelForHeight(): " + lexical_cast<string>(prod.Id()));
 			break;
@@ -312,10 +317,18 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 	{
 		auto r = GET_PLUGIN(radon);
 
-		highestHybridLevel =
-		    boost::lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
-		lowestHybridLevel =
-		    boost::lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+		try
+		{
+			highestHybridLevel =
+			    boost::lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
+			lowestHybridLevel =
+			    boost::lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+		}
+		catch (const boost::bad_lexical_cast& e)
+		{
+			itsLogger->Error("Unable to get hybrid level information from database");
+			throw;
+		}
 	}
 
 	// Karkeaa haarukointia
@@ -1073,9 +1086,7 @@ vector<double> hitool::PlusMinusArea(const param& wantedParam, const vector<doub
 }
 
 void hitool::Time(const forecast_time& theTime) { itsTime = theTime; }
-
 void hitool::ForecastType(const forecast_type& theForecastType) { itsForecastType = theForecastType; }
-
 void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 {
 	itsConfiguration = make_shared<plugin_configuration>(
@@ -1084,7 +1095,6 @@ void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 }
 
 HPParameterUnit hitool::HeightUnit() const { return itsHeightUnit; }
-
 void hitool::HeightUnit(HPParameterUnit theHeightUnit)
 {
 	if (theHeightUnit != kM && theHeightUnit != kHPa)
