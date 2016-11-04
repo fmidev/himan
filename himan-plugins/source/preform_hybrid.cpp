@@ -126,6 +126,71 @@ const param rhAvgUpperParam("RHAVG-UPPER-PRCNT");
 const param rhMeltParam("RHMELT-PRCNT");
 const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
+void ChangeValuesToConformToGrib2Standard(std::shared_ptr<info> myTargetInfo)
+{
+	/*
+	 * GRIB2 precipitation type <> FMI precipitation form
+	 *
+	 * FMI:
+	 * 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
+	 *
+	 * GRIB2:
+	 * 0 = Reserved, 1 = Rain, 2 = Thunderstorm, 3 = Freezing Rain, 4 = Mixed/Ice, 5 = Snow
+	 *
+	 */
+
+	const int missing = static_cast<int>(kFloatMissing);
+
+	function<int(int)> remap = [](int PR) {
+		switch (PR)
+		{
+			case 0:         // drizzle
+				return 11;  // reserved for local use
+			case 1:         // rain
+				return 1;   // rain
+			case 2:         // sleet
+				return 7;   // mixture of rain and snow
+			case 3:         // snow
+				return 5;   // snow
+			case 4:         // freezing drizzle
+				return 12;  // reserved for local use
+			case 5:         // freezing rain
+				return 3;   // freezing rain
+			case missing:
+				return missing;
+			default:
+				throw runtime_error("Unknown precipitation type value");
+		}
+
+	};
+
+	myTargetInfo->ParamIndex(0);
+	auto& preForm = VEC(myTargetInfo);
+
+	if (myTargetInfo->SizeParams() == 1)
+	{
+		for (auto&& tup : zip_range(preForm))
+		{
+			double& PF = tup.get<0>();
+
+			PF = remap(static_cast<int>(PF));
+		}
+	}
+	else
+	{
+		myTargetInfo->ParamIndex(1);
+		auto& potPreForm = VEC(myTargetInfo);
+		for (auto&& tup : zip_range(preForm, potPreForm))
+		{
+			double& PF = tup.get<0>();
+			double& potPF = tup.get<0>();
+
+			PF = remap(static_cast<int>(PF));
+			potPF = remap(static_cast<int>(potPF));
+		}
+	}
+}
+
 preform_hybrid::preform_hybrid()
 {
 	itsClearTextFormula = "<algorithm>";
@@ -139,33 +204,12 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	Init(conf);
 
-	/*
-	 * !!! HUOM !!!
-	 *
-	 * GRIB2 precipitation type <> FMI precipitation form
-	 *
-	 * FMI:
-	 * 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
-	 *
-	 * GRIB2:
-	 * 0 = Reserved, 1 = Rain, 2 = Thunderstorm, 3 = Freezing Rain, 4 = Mixed/Ice, 5 = Snow
-	 *
-	 */
-
-	if (itsConfiguration->OutputFileType() == kGRIB2)
-	{
-		itsLogger->Error(
-		    "GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not "
-		    "lossless");
-		return;
-	}
-
-	vector<param> params({param("PRECFORM2-N", 1206)});
+	vector<param> params({param("PRECFORM2-N", 1206, 0, 1, 19)});
 
 	if (itsConfiguration->Exists("potential_precipitation_form") &&
 	    itsConfiguration->GetValue("potential_precipitation_form") == "true")
 	{
-		params.push_back(param("POTPRECF-N", 1226));
+		params.push_back(param("POTPRECF-N", 1226, 0, 1, 254));
 	}
 
 	SetParams(params);
@@ -195,18 +239,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	auto myThreadedLogger =
 	    logger_factory::Instance()->GetLog("preformHybridThread #" + boost::lexical_cast<string>(threadIndex));
 
-	auto h = GET_PLUGIN(hitool);
-
-	h->Configuration(itsConfiguration);
-
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                       static_cast<string>(forecastLevel));
-
-	h->Time(forecastTime);
 
 	// Source infos
 
@@ -231,10 +269,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	 * and stores them *by value*.
 	 */
 
-	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, myTargetInfo->Time(),
+	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, forecastTime, forecastType,
 	                boost::ref(freezingArea), myTargetInfo->Grid());
 
-	Stratus(itsConfiguration, myTargetInfo->Time(), stratus, myTargetInfo->Grid());
+	Stratus(itsConfiguration, forecastTime, forecastType, stratus, myTargetInfo->Grid());
 
 	t.join();
 
@@ -502,18 +540,24 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		}
 	}
 
+	if (itsConfiguration->OutputFileType() == kGRIB2)
+	{
+		ChangeValuesToConformToGrib2Standard(myTargetInfo);
+	}
+
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
 	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
 	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-                                  shared_ptr<info>& result, const grid* baseGrid)
+                                  const forecast_type& ftype, shared_ptr<info>& result, const grid* baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
 	h->Time(ftime);
+	h->ForecastType(ftype);
 
 	vector<param> params = {minusAreaParam, plusAreaParam,   plusAreaSfcParam, numZeroLevelsParam,
 	                        rhAvgParam,     rhAvgUpperParam, rhMeltParam,      rhMeltUpperParam};
@@ -834,12 +878,13 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 }
 
 void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-                             shared_ptr<info>& result, const grid* baseGrid)
+                             const forecast_type& ftype, shared_ptr<info>& result, const grid* baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
 	h->Time(ftime);
+	h->ForecastType(ftype);
 
 	// Kerroksen paksuus pinnasta [m], josta etsitään stratusta (min. BaseLimit+FZstLimit)
 	const double layer = 2000.;
