@@ -139,33 +139,12 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	Init(conf);
 
-	/*
-	 * !!! HUOM !!!
-	 *
-	 * GRIB2 precipitation type <> FMI precipitation form
-	 *
-	 * FMI:
-	 * 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
-	 *
-	 * GRIB2:
-	 * 0 = Reserved, 1 = Rain, 2 = Thunderstorm, 3 = Freezing Rain, 4 = Mixed/Ice, 5 = Snow
-	 *
-	 */
-
-	if (itsConfiguration->OutputFileType() == kGRIB2)
-	{
-		itsLogger->Error(
-		    "GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not "
-		    "lossless");
-		return;
-	}
-
-	vector<param> params({param("PRECFORM2-N", 1206)});
+	vector<param> params({param("PRECFORM2-N", 1206, 0, 1, 19)});
 
 	if (itsConfiguration->Exists("potential_precipitation_form") &&
 	    itsConfiguration->GetValue("potential_precipitation_form") == "true")
 	{
-		params.push_back(param("POTPRECF-N", 1226));
+		params.push_back(param("POTPRECF-N", 1226, 0, 1, 254));
 	}
 
 	SetParams(params);
@@ -195,18 +174,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	auto myThreadedLogger =
 	    logger_factory::Instance()->GetLog("preformHybridThread #" + boost::lexical_cast<string>(threadIndex));
 
-	auto h = GET_PLUGIN(hitool);
-
-	h->Configuration(itsConfiguration);
-
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                       static_cast<string>(forecastLevel));
-
-	h->Time(forecastTime);
 
 	// Source infos
 
@@ -231,10 +204,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	 * and stores them *by value*.
 	 */
 
-	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, myTargetInfo->Time(),
+	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, forecastTime, forecastType,
 	                boost::ref(freezingArea), myTargetInfo->Grid());
 
-	Stratus(itsConfiguration, myTargetInfo->Time(), stratus, myTargetInfo->Grid());
+	Stratus(itsConfiguration, forecastTime, forecastType, stratus, myTargetInfo->Grid());
 
 	t.join();
 
@@ -265,6 +238,22 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	myTargetInfo->FirstParam();
 
 	bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
+
+	int DRIZZLE = 0;
+	int RAIN = 1;
+	int SLEET = 2;
+	int SNOW = 3;
+	int FREEZING_DRIZZLE = 4;
+	int FREEZING_RAIN = 5;
+
+	if (itsConfiguration->OutputFileType() == kGRIB2)
+	{
+		DRIZZLE = 11;  // reserved for local use
+		SLEET = 7;     // mixture of rain and snow
+		SNOW = 5;
+		FREEZING_DRIZZLE = 12;  // reserved for local use
+		FREEZING_RAIN = 3;
+	}
 
 	LOCKSTEP(myTargetInfo, stratus, freezingArea, TInfo, RRInfo)
 	{
@@ -395,7 +384,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		            base<baseLimit AND(top - base) >= fzStLimit AND wAvg<wMax AND wAvg >= 0 AND Navg> Nlimit AND Ttop>
 		                stTlimit AND stTavg > stTlimit AND T > sfcMin AND T <= sfcMax AND upperLayerN < dryNlim)
 		{
-			PreForm = kFreezingDrizzle;
+			PreForm = FREEZING_DRIZZLE;
 		}
 
 		// 2. jäätävää vesisadetta? (tai jääjyväsiä (ice pellets), jos pakkaskerros hyvin paksu, ja/tai sulamiskerros
@@ -409,7 +398,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		        fzraPA AND minusArea<fzraMA AND T <= 0 AND(upperLayerN == MISS OR upperLayerN > dryNlim) AND rhAvgUpper>
 		            rhMeltUpper)
 		{
-			PreForm = kFreezingRain;
+			PreForm = FREEZING_RAIN;
 		}
 
 		// 3. Lunta, räntää, tihkua vai vettä? PK:n koodia mukaillen
@@ -426,11 +415,11 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				if (base != MISS && top != MISS && Navg != MISS && upperLayerN != MISS && RR <= dzLim &&
 				    base < baseLimit && (top - base) > stLimit && Navg > Nlimit && upperLayerN < dryNlim)
 				{
-					PreForm = kDrizzle;
+					PreForm = DRIZZLE;
 				}
 				else
 				{
-					PreForm = kRain;
+					PreForm = RAIN;
 				}
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan
@@ -438,7 +427,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				if (nZeroLevel != MISS AND rhAvg != MISS AND rhMelt != MISS AND nZeroLevel ==
 				    1 AND rhAvg < rhMelt AND plusArea < 4000)
 				{
-					PreForm = kSleet;
+					PreForm = SLEET;
 				}
 
 				// Lisäys, jolla korjataan vesi/tihku lumeksi, jos pintakerros pakkasella (mutta jäätävän sateen/tihkun
@@ -446,7 +435,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// esim. paksu plussakerros pakkas-st/sc:n yllä)
 				if (minusArea != MISS OR(plusAreaSfc != MISS AND plusAreaSfc < snowArea))
 				{
-					PreForm = kSnow;
+					PreForm = SNOW;
 				}
 			}
 
@@ -454,20 +443,20 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			if (plusArea != MISS AND plusArea >= snowArea AND plusArea <= waterArea)
 			{
-				PreForm = kSleet;
+				PreForm = SLEET;
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi lumi rännän sijaan
 
 				if (nZeroLevel != MISS AND rhAvg != MISS AND rhMelt != MISS AND nZeroLevel == 1 AND rhAvg < rhMelt)
 				{
-					PreForm = kSnow;
+					PreForm = SNOW;
 				}
 
 				// lisäys, jolla korjataan räntä lumeksi, kun pintakerros pakkasella tai vain ohuelti plussalla
 
 				if (minusArea != MISS OR(plusAreaSfc != MISS AND plusAreaSfc < snowArea))
 				{
-					PreForm = kSnow;
+					PreForm = SNOW;
 				}
 			}
 
@@ -475,7 +464,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			if (plusArea == MISS OR plusArea < snowArea)
 			{
-				PreForm = kSnow;
+				PreForm = SNOW;
 			}
 		}
 
@@ -502,18 +491,24 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		}
 	}
 
+	if (itsConfiguration->OutputFileType() == kGRIB2)
+	{
+		ChangeValuesToConformToGrib2Standard(myTargetInfo);
+	}
+
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
 	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
 	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-                                  shared_ptr<info>& result, const grid* baseGrid)
+                                  const forecast_type& ftype, shared_ptr<info>& result, const grid* baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
 	h->Time(ftime);
+	h->ForecastType(ftype);
 
 	vector<param> params = {minusAreaParam, plusAreaParam,   plusAreaSfcParam, numZeroLevelsParam,
 	                        rhAvgParam,     rhAvgUpperParam, rhMeltParam,      rhMeltUpperParam};
@@ -834,12 +829,13 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 }
 
 void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-                             shared_ptr<info>& result, const grid* baseGrid)
+                             const forecast_type& ftype, shared_ptr<info>& result, const grid* baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
 	h->Time(ftime);
+	h->ForecastType(ftype);
 
 	// Kerroksen paksuus pinnasta [m], josta etsitään stratusta (min. BaseLimit+FZstLimit)
 	const double layer = 2000.;
