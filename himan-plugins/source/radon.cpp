@@ -188,6 +188,9 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 			gribVersion = 2;
 			gridType = 110;
 			break;
+		case kLambertConformalConic:
+			gridType = 3;
+			break;
 		default:
 			throw runtime_error("Unsupported projection: " + boost::lexical_cast<string>(resultInfo.Grid()->Type()) +
 			                    " " + HPGridTypeToString.at(resultInfo.Grid()->Type()));
@@ -242,7 +245,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 		return false;
 	}
 
-	auto levelinfo = itsRadonDB->GetLevelFromGrib(resultInfo.Producer().Id(), resultInfo.Level().Type(), 1);
+	auto levelinfo = itsRadonDB->GetLevelFromDatabaseName(HPLevelTypeToString.at(resultInfo.Level().Type()));
 
 	if (levelinfo.empty())
 	{
