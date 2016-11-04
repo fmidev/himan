@@ -60,12 +60,14 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
 	}
 
-	// Using separate writer threads is only efficient when we are calculating with iteration (ECMWF)
-	// and if we are using external packing like gzip. In those condition it should give according to initial
-	// tests a ~30% increase in total calculation speed.
-
-	if (itsConfiguration->Info()->Producer().Id() == 240)
+	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 260)
 	{
+		itsUseGeopotential = false;
+
+		// Using separate writer threads is only efficient when we are calculating with iteration (ECMWF)
+		// and if we are using external packing like gzip. In those condition it should give according to initial
+		// tests a ~30% increase in total calculation speed.
+
 		PrimaryDimension(kTimeDimension);
 
 		if (itsConfiguration->FileCompression() != kNoCompression &&
@@ -93,11 +95,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	myThreadedLogger->Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
 	                       static_cast<string>(myTargetInfo->Level()));
 
-	// Use geopotential if it's available since it's a lot faster
-
-	auto GPInfo = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(), false);
-
-	if (GPInfo)
+	if (itsUseGeopotential)
 	{
 		bool ret = WithGeopotential(myTargetInfo);
 
@@ -161,9 +159,6 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 
 bool hybrid_height::WithIteration(info_t& myTargetInfo)
 {
-	const himan::level LNSP(himan::kHybrid, 1, "LNSP");
-	const himan::level initial(himan::kHybrid, 137, "GROUND");
-
 	const auto forecastTime = myTargetInfo->Time();
 	const auto forecastType = myTargetInfo->ForecastType();
 
@@ -175,8 +170,23 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	if (myTargetInfo->Level().Value() == itsBottomLevel)
 	{
 		firstLevel = true;
-		prevPInfo = Fetch(forecastTime, LNSP, GPParam, forecastType, false);
-		prevTInfo = Fetch(forecastTime, initial, TParam, forecastType, false);
+		if (myTargetInfo->Producer().Id() == 240)
+		{
+			prevPInfo = Fetch(forecastTime, level(himan::kHybrid, 1), GPParam, forecastType, false);
+			prevTInfo = Fetch(forecastTime, level(himan::kHybrid, 137), TParam, forecastType, false);
+
+			// LNSP to regular pressure
+			for (double& val : prevPInfo->Data().Values())
+			{
+				val = exp(val);
+			}
+		}
+		else
+		{
+			prevPInfo = Fetch(forecastTime, level(himan::kHeight, 0), GPParam, forecastType, false);
+			prevTInfo = Fetch(forecastTime, level(himan::kHeight, 2), TParam, forecastType,
+			                  false);  // t2 is better than ground temperature here?
+		}
 	}
 	else
 	{
@@ -210,15 +220,6 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 	if (firstLevel)
 	{
-		if (itsConfiguration->SourceProducer().Id() == 131)
-		{
-			// LNSP to regular pressure
-			for (double& val : prevPInfo->Data().Values())
-			{
-				val = exp(val);
-			}
-		}
-
 		scale = 0.01;
 
 		prevHV.resize(myTargetInfo->Data().Size(), 0);
@@ -250,6 +251,8 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 		double deltaZ = 14.628 * (prevT + T) * log(prevP / P);
 		double totalHeight = prevH + deltaZ;
+
+		assert(isfinite(totalHeight));
 
 		result = totalHeight;
 	}
