@@ -1698,6 +1698,12 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		{
 			prod.Id(boost::lexical_cast<int>(prodInfo["id"]));
 		}
+		else
+		{
+			itsLogger->Warning("Producer information not found from database for centre " +
+			                   boost::lexical_cast<string>(centre) + ", process " +
+			                   boost::lexical_cast<string>(process) + " type " + boost::lexical_cast<string>(typeId));
+		}
 	}
 
 	newInfo->Producer(prod);
