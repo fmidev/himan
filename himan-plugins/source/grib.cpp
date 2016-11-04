@@ -1745,11 +1745,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 	if (levelType == himan::kHybrid)
 	{
 		long nv = itsGrib->Message().NV();
-		long lev = itsGrib->Message().LevelValue();
 
 		if (nv > 0)
 		{
-			ab = itsGrib->Message().PV(static_cast<size_t>(nv), static_cast<size_t>(lev));
+			ab = itsGrib->Message().PV();
 		}
 	}
 
