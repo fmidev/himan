@@ -126,71 +126,6 @@ const param rhAvgUpperParam("RHAVG-UPPER-PRCNT");
 const param rhMeltParam("RHMELT-PRCNT");
 const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
-void ChangeValuesToConformToGrib2Standard(std::shared_ptr<info> myTargetInfo)
-{
-	/*
-	 * GRIB2 precipitation type <> FMI precipitation form
-	 *
-	 * FMI:
-	 * 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
-	 *
-	 * GRIB2:
-	 * 0 = Reserved, 1 = Rain, 2 = Thunderstorm, 3 = Freezing Rain, 4 = Mixed/Ice, 5 = Snow
-	 *
-	 */
-
-	const int missing = static_cast<int>(kFloatMissing);
-
-	function<int(int)> remap = [](int PR) {
-		switch (PR)
-		{
-			case 0:         // drizzle
-				return 11;  // reserved for local use
-			case 1:         // rain
-				return 1;   // rain
-			case 2:         // sleet
-				return 7;   // mixture of rain and snow
-			case 3:         // snow
-				return 5;   // snow
-			case 4:         // freezing drizzle
-				return 12;  // reserved for local use
-			case 5:         // freezing rain
-				return 3;   // freezing rain
-			case missing:
-				return missing;
-			default:
-				throw runtime_error("Unknown precipitation type value");
-		}
-
-	};
-
-	myTargetInfo->ParamIndex(0);
-	auto& preForm = VEC(myTargetInfo);
-
-	if (myTargetInfo->SizeParams() == 1)
-	{
-		for (auto&& tup : zip_range(preForm))
-		{
-			double& PF = tup.get<0>();
-
-			PF = remap(static_cast<int>(PF));
-		}
-	}
-	else
-	{
-		myTargetInfo->ParamIndex(1);
-		auto& potPreForm = VEC(myTargetInfo);
-		for (auto&& tup : zip_range(preForm, potPreForm))
-		{
-			double& PF = tup.get<0>();
-			double& potPF = tup.get<0>();
-
-			PF = remap(static_cast<int>(PF));
-			potPF = remap(static_cast<int>(potPF));
-		}
-	}
-}
-
 preform_hybrid::preform_hybrid()
 {
 	itsClearTextFormula = "<algorithm>";
@@ -303,6 +238,22 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	myTargetInfo->FirstParam();
 
 	bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
+
+	int DRIZZLE = 0;
+	int RAIN = 1;
+	int SLEET = 2;
+	int SNOW = 3;
+	int FREEZING_DRIZZLE = 4;
+	int FREEZING_RAIN = 5;
+
+	if (itsConfiguration->OutputFileType() == kGRIB2)
+	{
+		DRIZZLE = 11;  // reserved for local use
+		SLEET = 7;     // mixture of rain and snow
+		SNOW = 5;
+		FREEZING_DRIZZLE = 12;  // reserved for local use
+		FREEZING_RAIN = 3;
+	}
 
 	LOCKSTEP(myTargetInfo, stratus, freezingArea, TInfo, RRInfo)
 	{
@@ -433,7 +384,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		            base<baseLimit AND(top - base) >= fzStLimit AND wAvg<wMax AND wAvg >= 0 AND Navg> Nlimit AND Ttop>
 		                stTlimit AND stTavg > stTlimit AND T > sfcMin AND T <= sfcMax AND upperLayerN < dryNlim)
 		{
-			PreForm = kFreezingDrizzle;
+			PreForm = FREEZING_DRIZZLE;
 		}
 
 		// 2. jäätävää vesisadetta? (tai jääjyväsiä (ice pellets), jos pakkaskerros hyvin paksu, ja/tai sulamiskerros
@@ -447,7 +398,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		        fzraPA AND minusArea<fzraMA AND T <= 0 AND(upperLayerN == MISS OR upperLayerN > dryNlim) AND rhAvgUpper>
 		            rhMeltUpper)
 		{
-			PreForm = kFreezingRain;
+			PreForm = FREEZING_RAIN;
 		}
 
 		// 3. Lunta, räntää, tihkua vai vettä? PK:n koodia mukaillen
@@ -464,11 +415,11 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				if (base != MISS && top != MISS && Navg != MISS && upperLayerN != MISS && RR <= dzLim &&
 				    base < baseLimit && (top - base) > stLimit && Navg > Nlimit && upperLayerN < dryNlim)
 				{
-					PreForm = kDrizzle;
+					PreForm = DRIZZLE;
 				}
 				else
 				{
-					PreForm = kRain;
+					PreForm = RAIN;
 				}
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan
@@ -476,7 +427,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				if (nZeroLevel != MISS AND rhAvg != MISS AND rhMelt != MISS AND nZeroLevel ==
 				    1 AND rhAvg < rhMelt AND plusArea < 4000)
 				{
-					PreForm = kSleet;
+					PreForm = SLEET;
 				}
 
 				// Lisäys, jolla korjataan vesi/tihku lumeksi, jos pintakerros pakkasella (mutta jäätävän sateen/tihkun
@@ -484,7 +435,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// esim. paksu plussakerros pakkas-st/sc:n yllä)
 				if (minusArea != MISS OR(plusAreaSfc != MISS AND plusAreaSfc < snowArea))
 				{
-					PreForm = kSnow;
+					PreForm = SNOW;
 				}
 			}
 
@@ -492,20 +443,20 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			if (plusArea != MISS AND plusArea >= snowArea AND plusArea <= waterArea)
 			{
-				PreForm = kSleet;
+				PreForm = SLEET;
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi lumi rännän sijaan
 
 				if (nZeroLevel != MISS AND rhAvg != MISS AND rhMelt != MISS AND nZeroLevel == 1 AND rhAvg < rhMelt)
 				{
-					PreForm = kSnow;
+					PreForm = SNOW;
 				}
 
 				// lisäys, jolla korjataan räntä lumeksi, kun pintakerros pakkasella tai vain ohuelti plussalla
 
 				if (minusArea != MISS OR(plusAreaSfc != MISS AND plusAreaSfc < snowArea))
 				{
-					PreForm = kSnow;
+					PreForm = SNOW;
 				}
 			}
 
@@ -513,7 +464,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			if (plusArea == MISS OR plusArea < snowArea)
 			{
-				PreForm = kSnow;
+				PreForm = SNOW;
 			}
 		}
 
