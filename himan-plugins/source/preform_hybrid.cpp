@@ -491,11 +491,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		}
 	}
 
-	if (itsConfiguration->OutputFileType() == kGRIB2)
-	{
-		ChangeValuesToConformToGrib2Standard(myTargetInfo);
-	}
-
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
 	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
 	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
