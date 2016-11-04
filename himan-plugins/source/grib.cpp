@@ -64,7 +64,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	double levelValue = anInfo.Level().Value();
 	HPForecastType forecastType = anInfo.ForecastType().Type();
 
-	if (edition == 1 && ((anInfo.Level().Type() == kHybrid && levelValue > 127) ||
+	if (edition == 1 && (anInfo.Grid()->AB().size() > 255 ||
 	                     (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
 		itsLogger->Debug("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
