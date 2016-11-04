@@ -137,7 +137,14 @@ bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourc
 {
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{
-		myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
+		const size_t paramIndex = myTargetInfo->ParamIndex();
+
+		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
+		{
+			myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
+		}
+
+		myTargetInfo->ParamIndex(paramIndex);
 	}
 
 	return true;
