@@ -1433,6 +1433,8 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 						prod.Centre(boost::lexical_cast<long>(radonProdInfo["ident_id"]));
 						prod.Name(radonProdInfo["ref_prod"]);
 						prod.Process(boost::lexical_cast<long>(radonProdInfo["model_id"]));
+						itsLogger->Info("Forcing database type to radon");
+						conf->DatabaseType(kRadon);
 					}
 					else
 					{
