@@ -100,7 +100,8 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	double RHScale = 1;
 
-	if (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199)
+	if (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199 ||
+	    itsConfiguration->SourceProducer().Id() == 4)
 	{
 		RHScale = 100;
 	}
