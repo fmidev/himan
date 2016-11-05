@@ -32,7 +32,7 @@ const double stLimit = 55;
 // Required source parameters
 
 const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
-const himan::param RHParam("RH-PRCNT");
+const himan::params RHParam({himan::param("RH-PRCNT"), himan::param("RH-0TO1")});
 const himan::param CFParam("CL-FT");
 const himan::param TParam("T-K");
 const himan::param FFParam("FF-MS");
@@ -296,6 +296,7 @@ void visibility::VertMax(shared_ptr<info> myTargetInfo, vector<double>& result, 
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	result = h->VerticalMaximum(p, low, high);
 }
@@ -307,6 +308,7 @@ void visibility::VertMax(shared_ptr<info> myTargetInfo, vector<double>& result, 
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	result = h->VerticalMaximum(p, low, high);
 }
@@ -318,6 +320,7 @@ void visibility::VertAvg(shared_ptr<info> myTargetInfo, vector<double>& result, 
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	result = h->VerticalAverage(p, low, high);
 }
@@ -328,6 +331,7 @@ void visibility::VertTMin(shared_ptr<info> myTargetInfo, vector<double>& result,
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	result = h->VerticalMinimum(param("T-K"), low, high);
 }
@@ -338,6 +342,7 @@ void visibility::VertFFValue(shared_ptr<info> myTargetInfo, vector<double>& resu
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	result = h->VerticalValue(himan::param("FF-MS"), value);
 }
