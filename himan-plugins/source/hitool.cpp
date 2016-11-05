@@ -523,6 +523,7 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam, 
 	assert(values);
 	assert(heights);
 	assert(values->Grid()->Size() == heights->Grid()->Size());
+	assert(heights->Data().MissingCount() != heights->Data().Size());
 
 	// No Merge() here since that will mess up cache
 
