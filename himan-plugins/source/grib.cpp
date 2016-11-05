@@ -1799,7 +1799,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		}
 		else
 		{
-			itsLogger->Warning("Grid is constant or empty");
+			itsLogger->Trace("Grid is constant or empty");
 		}
 
 		if (itsGrib->Message().Bitmap())
