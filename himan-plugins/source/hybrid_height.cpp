@@ -36,12 +36,6 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * For hybrid height we must go through the levels backwards.
-	 */
-
-	itsInfo->LevelOrder(kBottomToTop);
-
 	HPDatabaseType dbtype = conf->DatabaseType();
 
 	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
@@ -74,6 +68,20 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		    (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles))
 		{
 			itsUseWriterThreads = true;
+		}
+
+		/*
+		 * With iteration method, we must start from the lowest level.
+		 */
+
+		if (itsInfo->SizeLevels() > 1)
+		{
+			auto first = itsInfo->PeekLevel(0), second = itsInfo->PeekLevel(1);
+
+			if (first.Value() < second.Value())
+			{
+				itsInfo->LevelOrder(kBottomToTop);
+			}
 		}
 	}
 
