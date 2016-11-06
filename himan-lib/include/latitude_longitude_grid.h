@@ -18,7 +18,7 @@ namespace himan
 {
 class latitude_longitude_grid : public grid
 {
-public:
+   public:
 	latitude_longitude_grid();
 	latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight);
 
@@ -104,7 +104,7 @@ public:
 
 	latitude_longitude_grid* Clone() const override;
 
-protected:
+   protected:
 	void UpdateCoordinates() const;
 	bool EqualsTo(const latitude_longitude_grid& other) const;
 
@@ -124,10 +124,9 @@ protected:
 };
 
 inline std::ostream& operator<<(std::ostream& file, const latitude_longitude_grid& ob) { return ob.Write(file); }
-
 class rotated_latitude_longitude_grid : public latitude_longitude_grid
 {
-public:
+   public:
 	rotated_latitude_longitude_grid();
 	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
 	                                point theSouthPole, bool initiallyRotated = true);
@@ -157,8 +156,9 @@ public:
 
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
+	point RotatedLatLon(size_t locationIndex) const;
 
-private:
+   private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;
 	mutable std::unique_ptr<NFmiRotatedLatLonArea> itsRotLatLonArea;
 

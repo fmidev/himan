@@ -522,6 +522,11 @@ point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 	return point(regpoint.X(), regpoint.Y());
 }
 
+point rotated_latitude_longitude_grid::RotatedLatLon(size_t locationIndex) const
+{
+	return latitude_longitude_grid::LatLon(locationIndex);
+}
+
 ostream& rotated_latitude_longitude_grid::Write(std::ostream& file) const
 {
 	latitude_longitude_grid::Write(file);
