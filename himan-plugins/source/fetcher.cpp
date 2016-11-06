@@ -185,6 +185,15 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (itsDoInterpolation)
 	{
+		if ((theInfos[0]->Grid()->Type() == kRotatedLatitudeLongitude ||
+		     theInfos[0]->Grid()->Type() == kStereographic || theInfos[0]->Grid()->Type() == kLambertConformalConic) &&
+		    (baseInfo->Grid()->Type() != theInfos[0]->Grid()->Type()) &&
+		    (theInfos[0]->Param().Name() == "U-MS" || theInfos[0]->Param().Name() == "V-MS"))
+		{
+			itsLogger->Error("Vectors should not be directly interpolated to/from a projected area");
+			throw;
+		}
+
 		if (!interpolate::Interpolate(*baseInfo, theInfos, config->UseCudaForInterpolation()))
 		{
 			// interpolation failed
@@ -419,17 +428,11 @@ himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration
 }
 
 void fetcher::DoLevelTransform(bool theDoLevelTransform) { itsDoLevelTransform = theDoLevelTransform; }
-
 bool fetcher::DoLevelTransform() const { return itsDoLevelTransform; }
-
 void fetcher::DoInterpolation(bool theDoInterpolation) { itsDoInterpolation = theDoInterpolation; }
-
 bool fetcher::DoInterpolation() const { return itsDoInterpolation; }
-
 void fetcher::UseCache(bool theUseCache) { itsUseCache = theUseCache; }
-
 bool fetcher::UseCache() const { return itsUseCache; }
-
 vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData)
 {
 	vector<shared_ptr<info>> ret;
@@ -612,11 +615,8 @@ bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, in
 }
 
 bool fetcher::ApplyLandSeaMask() const { return itsApplyLandSeaMask; }
-
 void fetcher::ApplyLandSeaMask(bool theApplyLandSeaMask) { itsApplyLandSeaMask = theApplyLandSeaMask; }
-
 double fetcher::LandSeaMaskThreshold() const { return itsLandSeaMaskThreshold; }
-
 void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 {
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
