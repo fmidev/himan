@@ -22,8 +22,8 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(cdarr_t d_T,
 
 		if (d_T[idx] != kFloatMissing && d_TD[idx] != kFloatMissing)
 		{
-			double td = d_TD[idx] + opts.TDBase;
-			double t = d_T[idx] + opts.TBase;
+			double td = d_TD[idx] + opts.TDBase - constants::kKelvin;
+			double t = d_T[idx] + opts.TBase - constants::kKelvin;
 
 			d_RH[idx] = exp(d + b * (td / (td + c))) / exp(d + b * (t / (t + c)));
 			d_RH[idx] = fmax(fmin(1.0, d_RH[idx]), 0.0) * 100.0;
