@@ -183,10 +183,13 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 			prevPInfo = Fetch(forecastTime, level(himan::kHybrid, 1), GPParam, forecastType, false);
 			prevTInfo = Fetch(forecastTime, level(himan::kHybrid, 137), TParam, forecastType, false);
 
-			// LNSP to regular pressure
-			for (double& val : prevPInfo->Data().Values())
+			if (prevPInfo)
 			{
-				val = exp(val);
+				// LNSP to regular pressure
+				for (double& val : prevPInfo->Data().Values())
+				{
+					val = exp(val);
+				}
 			}
 		}
 		else
