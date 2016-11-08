@@ -1106,7 +1106,7 @@ void grib::WriteParameter(info& anInfo)
 				auto paramInfo =
 				    r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name());
 
-				if (paramInfo.empty())
+				if (paramInfo.empty() || paramInfo.find("grib1_number") == paramInfo.end() || paramInfo["grib1_number"].empty())
 				{
 					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
 					                   boost::lexical_cast<string>(anInfo.Producer().Id()) +
