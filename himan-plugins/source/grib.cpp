@@ -64,7 +64,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	double levelValue = anInfo.Level().Value();
 	HPForecastType forecastType = anInfo.ForecastType().Type();
 
-	if (edition == 1 && ((anInfo.Level().Type() == kHybrid && levelValue > 127) ||
+	if (edition == 1 && (anInfo.Grid()->AB().size() > 255 ||
 	                     (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
 		itsLogger->Debug("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
@@ -121,6 +121,18 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().Process(anInfo.Producer().Process());
 	}
 
+	// Forecast type
+
+	// Note: forecast type is also checked in WriteParameter(), because
+	// it might affect productDefinitionTemplateNumber (grib2)
+
+	itsGrib->Message().ForecastType(anInfo.ForecastType().Type());
+
+	if (static_cast<int>(anInfo.ForecastType().Type()) > 2)
+	{
+		itsGrib->Message().ForecastTypeValue(static_cast<long>(anInfo.ForecastType().Value()));
+	}
+
 	// Parameter
 
 	WriteParameter(anInfo);
@@ -167,15 +179,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		default:
 			itsGrib->Message().LevelValue(static_cast<long>(levelValue));
 			break;
-	}
-
-	// Forecast type
-
-	itsGrib->Message().ForecastType(anInfo.ForecastType().Type());
-
-	if (static_cast<int>(anInfo.ForecastType().Type()) > 2)
-	{
-		itsGrib->Message().ForecastTypeValue(static_cast<long>(anInfo.ForecastType().Value()));
 	}
 
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
@@ -841,7 +844,14 @@ void grib::WriteAreaAndGrid(info& anInfo)
 				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
 			}
 
-			itsGrib->Message().SetLongKey("earthIsOblate", 0);
+			if (edition == 1)
+			{
+				itsGrib->Message().SetLongKey("earthIsOblate", 0);
+			}
+			else
+			{
+				itsGrib->Message().SetLongKey("shapeOfTheEarth", 0);
+			}
 
 			scmode = lccg->ScanningMode();
 
@@ -1113,13 +1123,54 @@ void grib::WriteParameter(info& anInfo)
 	}
 	else if (itsGrib->Message().Edition() == 2)
 	{
+		if (anInfo.Param().GribParameter() == kHPMissingInt)
+		{
+			auto r = GET_PLUGIN(radon);
+
+			auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name());
+
+			if (paramInfo.empty())
+			{
+				itsLogger->Warning("Parameter information not found from radon for producer " +
+				                   boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
+				                   anInfo.Param().Name());
+			}
+			else
+			{
+				try
+				{
+					auto newParam = anInfo.Param();
+					newParam.GribParameter(boost::lexical_cast<int>(paramInfo["grib2_number"]));
+					newParam.GribCategory(boost::lexical_cast<int>(paramInfo["grib2_category"]));
+					newParam.GribDiscipline(boost::lexical_cast<int>(paramInfo["grib2_discipline"]));
+					anInfo.SetParam(newParam);
+				}
+				catch (const boost::bad_lexical_cast& e)
+				{
+					itsLogger->Warning("Grib2 parameter information not found from radon for producer " +
+					                   boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
+					                   anInfo.Param().Name());
+				}
+			}
+		}
+
 		itsGrib->Message().ParameterNumber(anInfo.Param().GribParameter());
 		itsGrib->Message().ParameterCategory(anInfo.Param().GribCategory());
 		itsGrib->Message().ParameterDiscipline(anInfo.Param().GribDiscipline());
 
 		if (anInfo.Param().Aggregation().Type() != kUnknownAggregationType)
 		{
-			itsGrib->Message().ProductDefinitionTemplateNumber(8);
+			long templateNumber = 8;  // Average, accumulation, extreme values or other statistically processed values
+			                          // at a horizontal level or in a horizontal layer in a continuous or
+			                          // non-continuous time interval
+
+			if (anInfo.ForecastType().Type() == kEpsPerturbation || anInfo.ForecastType().Type() == kEpsControl)
+			{
+				templateNumber = 11;  // Individual ensemble forecast, control and perturbed, at a horizontal level or
+				                      // in a horizontal layer, in a continuous or non-continuous time interval.
+			}
+
+			itsGrib->Message().ProductDefinitionTemplateNumber(templateNumber);
 
 			long type;
 
@@ -1647,6 +1698,12 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		{
 			prod.Id(boost::lexical_cast<int>(prodInfo["id"]));
 		}
+		else
+		{
+			itsLogger->Warning("Producer information not found from database for centre " +
+			                   boost::lexical_cast<string>(centre) + ", process " +
+			                   boost::lexical_cast<string>(process) + " type " + boost::lexical_cast<string>(typeId));
+		}
 	}
 
 	newInfo->Producer(prod);
@@ -1688,11 +1745,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 	if (levelType == himan::kHybrid)
 	{
 		long nv = itsGrib->Message().NV();
-		long lev = itsGrib->Message().LevelValue();
 
 		if (nv > 0)
 		{
-			ab = itsGrib->Message().PV(static_cast<size_t>(nv), static_cast<size_t>(lev));
+			ab = itsGrib->Message().PV();
 		}
 	}
 
@@ -1743,7 +1799,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		}
 		else
 		{
-			itsLogger->Warning("Grid is constant or empty");
+			itsLogger->Trace("Grid is constant or empty");
 		}
 
 		if (itsGrib->Message().Bitmap())

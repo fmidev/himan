@@ -394,33 +394,6 @@ const boost::unordered_map<HPModifierType, std::string> HPModifierTypeToString =
 	(kFindHeightLessThanModifier, "find height less than modifier")
 ;
 
-/// Precipitation forms as agreed by FMI
-
-enum HPPrecipitationForm
-{
-	kDrizzle = 0,
-	kRain,
-	kSleet,
-	kSnow,
-	kFreezingDrizzle,
-	kFreezingRain,
-	kGraupel,
-	kHail,
-	kUnknownPrecipitationForm = 10
-};
-
-const boost::unordered_map<HPPrecipitationForm, const char*> HPPrecipitationFormToString =
-	ba::map_list_of
-	(kDrizzle, "drizzle")
-	(kRain, "rain")
-	(kSleet, "sleet")
-	(kSnow, "snow")
-	(kFreezingDrizzle, "freezing drizzle")
-	(kFreezingRain, "freezing rain")
-	(kGraupel, "graupel")
-	(kHail, "hail")
-	(kUnknownPrecipitationForm, "unknown");
-
 enum HPGridClass
 {
 	kUnknownGridClass = 0,

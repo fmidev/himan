@@ -137,7 +137,14 @@ bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourc
 {
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{
-		myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
+		const size_t paramIndex = myTargetInfo->ParamIndex();
+
+		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
+		{
+			myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
+		}
+
+		myTargetInfo->ParamIndex(paramIndex);
 	}
 
 	return true;
@@ -513,7 +520,7 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 	{
 		info_t tempInfo = *it;
 
-		if (tempInfo->Grid()->PackedData().packedLength == 0)
+		if (!tempInfo->Grid()->IsPackedData() || tempInfo->Grid()->PackedData().packedLength == 0)
 		{
 			// Safeguard: This particular info does not have packed data
 			continue;

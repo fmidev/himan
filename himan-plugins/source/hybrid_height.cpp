@@ -32,16 +32,9 @@ hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotenti
 }
 
 hybrid_height::~hybrid_height() {}
-
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
-
-	/*
-	 * For hybrid height we must go through the levels backwards.
-	 */
-
-	itsInfo->LevelOrder(kBottomToTop);
 
 	HPDatabaseType dbtype = conf->DatabaseType();
 
@@ -61,21 +54,35 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
 	}
 
-	itsUseGeopotential =
-	    (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199);
-
-	// Using separate writer threads is only efficient when we are calculating with iteration (ECMWF)
-	// and if we are using external packing like gzip. In those condition it should give according to initial
-	// tests a ~30% increase in total calculation speed.
-
-	itsUseWriterThreads =
-	    (itsConfiguration->FileCompression() != kNoCompression &&
-	     (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles) &&
-	     !itsUseGeopotential);
-
-	if (!itsUseGeopotential)
+	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 260)
 	{
+		itsUseGeopotential = false;
+
+		// Using separate writer threads is only efficient when we are calculating with iteration (ECMWF)
+		// and if we are using external packing like gzip. In those condition it should give according to initial
+		// tests a ~30% increase in total calculation speed.
+
 		PrimaryDimension(kTimeDimension);
+
+		if (itsConfiguration->FileCompression() != kNoCompression &&
+		    (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles))
+		{
+			itsUseWriterThreads = true;
+		}
+
+		/*
+		 * With iteration method, we must start from the lowest level.
+		 */
+
+		if (itsInfo->SizeLevels() > 1)
+		{
+			auto first = itsInfo->PeekLevel(0), second = itsInfo->PeekLevel(1);
+
+			if (first.Value() < second.Value())
+			{
+				itsInfo->LevelOrder(kBottomToTop);
+			}
+		}
 	}
 
 	SetParams({param("HL-M", 3, 0, 3, 6)});
@@ -87,12 +94,6 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		itsWriterGroup.join_all();
 	}
 }
-
-/*
- * Calculate()
- *
- * This function does the actual calculation.
- */
 
 void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
@@ -134,13 +135,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 {
-	himan::level H0(himan::kHeight, 0);
-
-	if (itsConfiguration->SourceProducer().Id() == 131)
-	{
-		H0 = level(himan::kHybrid, 1, "LNSP");
-	}
-
+	const himan::level H0(himan::kHeight, 0);
 	auto GPInfo = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(), false);
 	auto zeroGPInfo = Fetch(myTargetInfo->Time(), H0, ZParam, myTargetInfo->ForecastType(), false);
 
@@ -172,25 +167,34 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 
 bool hybrid_height::WithIteration(info_t& myTargetInfo)
 {
-	himan::level H0(himan::kHeight, 0);
-	himan::level H2(himan::kHeight, 2);
-
-	if (itsConfiguration->SourceProducer().Id() == 131)
-	{
-		H2 = level(himan::kHybrid, 137, "GROUND");
-		H0 = level(himan::kHybrid, 1, "LNSP");
-	}
-
 	const auto forecastTime = myTargetInfo->Time();
 	const auto forecastType = myTargetInfo->ForecastType();
 
 	level prevLevel;
+	info_t prevTInfo, prevPInfo, prevHInfo;
 
 	bool firstLevel = false;
 
 	if (myTargetInfo->Level().Value() == itsBottomLevel)
 	{
 		firstLevel = true;
+		if (myTargetInfo->Producer().Id() == 240)
+		{
+			prevPInfo = Fetch(forecastTime, level(himan::kHybrid, 1), GPParam, forecastType, false);
+			prevTInfo = Fetch(forecastTime, level(himan::kHybrid, 137), TParam, forecastType, false);
+
+			// LNSP to regular pressure
+			for (double& val : prevPInfo->Data().Values())
+			{
+				val = exp(val);
+			}
+		}
+		else
+		{
+			prevPInfo = Fetch(forecastTime, level(himan::kHeight, 0), GPParam, forecastType, false);
+			prevTInfo = Fetch(forecastTime, level(himan::kHeight, 2), TParam, forecastType,
+			                  false);  // t2 is better than ground temperature here?
+		}
 	}
 	else
 	{
@@ -198,28 +202,10 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		prevLevel.Value(myTargetInfo->Level().Value() + 1);
 
 		prevLevel.Index(prevLevel.Index() + 1);
-	}
 
-	info_t prevTInfo, prevPInfo, prevHInfo;
-
-	if (!firstLevel)
-	{
 		prevTInfo = Fetch(forecastTime, prevLevel, TParam, forecastType, false);
 		prevPInfo = Fetch(forecastTime, prevLevel, PParam, forecastType, false);
 		prevHInfo = Fetch(forecastTime, prevLevel, param("HL-M"), forecastType, false);
-	}
-	else
-	{
-		if (itsConfiguration->SourceProducer().Id() == 131)
-		{
-			prevPInfo = Fetch(forecastTime, H0, GPParam, forecastType, false);
-			prevTInfo = Fetch(forecastTime, H2, TParam, forecastType, false);
-		}
-		else
-		{
-			prevPInfo = Fetch(forecastTime, H0, GPParam, forecastType, false);
-			prevTInfo = Fetch(forecastTime, H2, TGParam, forecastType, false);
-		}
 	}
 
 	auto PInfo = Fetch(forecastTime, myTargetInfo->Level(), PParam, forecastType, false);
@@ -234,39 +220,21 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 	SetAB(myTargetInfo, TInfo);
 
-	if (!firstLevel)
-	{
-		prevHInfo->ResetLocation();
-		assert(prevLevel.Value() > myTargetInfo->Level().Value());
-	}
-
-	double scale = 1.;
-
 	// First level for ECMWF is LNSP which needs to be converted
 	// to regular pressure
 
-	if (firstLevel)
-	{
-		if (itsConfiguration->SourceProducer().Id() == 131)
-		{
-			// LNSP to regular pressure
-			for (double& val : prevPInfo->Data().Values())
-			{
-				val = exp(val);
-			}
-		}
-
-		scale = 0.01;
-	}
-
+	double scale = 1.;
 	vector<double> prevHV;
 
 	if (firstLevel)
 	{
+		scale = 0.01;
+
 		prevHV.resize(myTargetInfo->Data().Size(), 0);
 	}
 	else
 	{
+		assert(prevLevel.Value() > myTargetInfo->Level().Value());
 		prevHV = VEC(prevHInfo);
 	}
 
@@ -291,6 +259,8 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 		double deltaZ = 14.628 * (prevT + T) * log(prevP / P);
 		double totalHeight = prevH + deltaZ;
+
+		assert(isfinite(totalHeight));
 
 		result = totalHeight;
 	}

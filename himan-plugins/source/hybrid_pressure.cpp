@@ -138,8 +138,24 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	std::vector<double> ab = TInfo->Grid()->AB();
 
-	double A = ab[0];
-	double B = ab[1];
+	double A = kFloatMissing, B = kFloatMissing;
+
+	if (ab.size() == 2)
+	{
+		A = ab[0];
+		B = ab[1];
+	}
+	else
+	{
+		const size_t levelValue = static_cast<size_t>(forecastLevel.Value());
+		assert(levelValue <= ab.size());
+
+		A = (ab[levelValue - 1] + ab[levelValue]) * 0.5;
+
+		const size_t halfsize = static_cast<size_t>(static_cast<double>(ab.size()) * 0.5);
+
+		B = (ab[halfsize + levelValue - 1] + ab[halfsize + levelValue]) * 0.5;
+	}
 
 	auto& target = VEC(myTargetInfo);
 

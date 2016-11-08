@@ -4,17 +4,17 @@
 
 #include "windvector.h"
 #include "forecast_time.h"
+#include "lambert_conformal_grid.h"
+#include "latitude_longitude_grid.h"
 #include "level.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
+#include "stereographic_grid.h"
 #include "util.h"
 #include <boost/lexical_cast.hpp>
+#include <boost/thread.hpp>
 #include <iostream>
 #include <math.h>
-#include "NFmiRotatedLatLonArea.h"
-#include "NFmiStereographicArea.h"
-#include "latitude_longitude_grid.h"
-#include <boost/thread.hpp>
 
 #include "querydata.h"
 
@@ -206,188 +206,164 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda() &&
-	    (UInfo->Grid()->Type() == kLatitudeLongitude || UInfo->Grid()->Type() == kRotatedLatitudeLongitude))
+	    (UInfo->Grid()->Type() == kLatitudeLongitude || UInfo->Grid()->Type() == kRotatedLatitudeLongitude ||
+	     UInfo->Grid()->Type() == kLambertConformalConic))
 	{
 		deviceType = "GPU";
 
 		auto opts = CudaPrepare(myTargetInfo, UInfo, VInfo);
 
 		windvector_cuda::Process(*opts);
+
+		delete[] opts->lon;
+		delete[] opts->lat;
 	}
 	else
 #endif
 	{
 		deviceType = "CPU";
 
-		unique_ptr<NFmiArea> sourceArea = ToNewbaseArea(UInfo);
-		unique_ptr<NFmiArea> targetArea = ToNewbaseArea(myTargetInfo);
+		Unpack({UInfo, VInfo});
 
-		LOCKSTEP(myTargetInfo, UInfo, VInfo)
+		// Rotate to earth normal if projected
+
+		auto& UVec = VEC(UInfo);
+		auto& VVec = VEC(VInfo);
+
+		switch (UInfo->Grid()->Type())
 		{
-			double U = UInfo->Value();
-			double V = VInfo->Value();
+			case kRotatedLatitudeLongitude:
+			{
+				const rotated_latitude_longitude_grid* rotArea =
+				    dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid());
+				const point southPole = dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())->SouthPole();
+
+				for (UInfo->ResetLocation(); UInfo->NextLocation();)
+				{
+					size_t i = UInfo->LocationIndex();
+
+					double& U = UVec[i];
+					double& V = VVec[i];
+
+					if (U == kFloatMissing || V == kFloatMissing)
+					{
+						continue;
+					}
+
+					const point rotPoint = rotArea->RotatedLatLon(i);
+					const point regPoint = rotArea->LatLon(i);
+
+					auto coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, southPole);
+
+					double newU = get<0>(coeffs) * U + get<1>(coeffs) * V;
+					double newV = get<2>(coeffs) * U + get<3>(coeffs) * V;
+					U = newU;
+					V = newV;
+				}
+			}
+			break;
+
+			case kLambertConformalConic:
+			{
+				const lambert_conformal_grid* lcc = dynamic_cast<lambert_conformal_grid*>(UInfo->Grid());
+				const double latin1 = lcc->StandardParallel1();
+				const double latin2 = lcc->StandardParallel2();
+
+				double cone;
+				if (latin1 == latin2)
+				{
+					cone = sin(latin1 * constants::kDeg);
+				}
+				else
+				{
+					cone = (log(cos(latin1 * constants::kDeg)) - log(cos(latin2 * constants::kDeg))) /
+					       (log(tan((90 - fabs(latin1)) * constants::kDeg * 0.5)) -
+					        log(tan(90 - fabs(latin2)) * constants::kDeg * 0.5));
+				}
+
+				const double orientation = lcc->Orientation();
+
+				for (UInfo->ResetLocation(); UInfo->NextLocation();)
+				{
+					size_t i = UInfo->LocationIndex();
+
+					double U = UVec[i];
+					double V = VVec[i];
+
+					// http://www.mcs.anl.gov/~emconsta/wind_conversion.txt
+
+					double londiff = UInfo->LatLon().X() - orientation;
+					assert(londiff >= -180 && londiff <= 180);
+					assert(UInfo->LatLon().Y() >= 0);
+
+					const double angle = cone * londiff * constants::kDeg;
+					double sinx, cosx;
+					sincos(angle, &sinx, &cosx);
+
+					// This output is 1:1 with python basemaplib, but is different
+					// than the results received using algorithm from meteorological software.
+					// (below)
+
+					// double newU = cosx * U - sinx * V;
+					// double newV = sinx * U + cosx * V;
+
+					UVec[i] = -1 * cosx * U + sinx * V;
+					VVec[i] = -1 * -sinx * U + cosx * V;
+				}
+			}
+			break;
+
+			case kStereographic:
+			{
+				// The same as lambert but with cone = 1
+
+				const stereographic_grid* sc = dynamic_cast<stereographic_grid*>(UInfo->Grid());
+				const double orientation = sc->Orientation();
+
+				for (UInfo->ResetLocation(); UInfo->NextLocation();)
+				{
+					size_t i = UInfo->LocationIndex();
+
+					double U = UVec[i];
+					double V = VVec[i];
+
+					const double angle = (UInfo->LatLon().X() - orientation) * constants::kDeg;
+					double sinx, cosx;
+
+					sincos(angle, &sinx, &cosx);
+
+					UVec[i] = -1 * cosx * U + sinx * V;
+					VVec[i] = -1 * -sinx * U + cosx * V;
+				}
+			}
+			break;
+			default:
+				break;
+		}
+
+		myTargetInfo->ParamIndex(0);
+
+		auto& FFVec = VEC(myTargetInfo);
+		vector<double> DDVec(FFVec.size(), kFloatMissing);
+
+		for (auto&& tup : zip_range(FFVec, DDVec, UVec, VVec))
+		{
+			double& speed = tup.get<0>();
+			double& dir = tup.get<1>();
+			double U = tup.get<2>();
+			double V = tup.get<3>();
 
 			if (U == kFloatMissing || V == kFloatMissing)
 			{
 				continue;
 			}
 
-			/*
-			 * Speed can be calculated with rotated U and V components
-			 */
-
-			double speed = sqrt(U * U + V * V);
-
-			/*
-			 * The order of parameters in infos is and must be always:
-			 * index 0 : speed parameter
-			 * index 1 : direction parameter (not available for gust)
-			 * index 2 : vector parameter (optional)
-			 */
-
-			myTargetInfo->ParamIndex(0);
-			myTargetInfo->Value(speed);
+			speed = sqrt(U * U + V * V);
 
 			if (itsCalculationTarget == kGust)
 			{
 				continue;
 			}
-
-			if (UInfo->Grid()->Type() == kRotatedLatitudeLongitude)
-			{
-				const point regPoint = myTargetInfo->LatLon();
-
-				const NFmiPoint rp = reinterpret_cast<NFmiRotatedLatLonArea*>((sourceArea.get()))
-				                         ->ToRotLatLon(NFmiPoint(regPoint.X(), regPoint.Y()));
-				const point rotPoint(rp.X(), rp.Y());
-
-				// We use UGrid area to do to the rotation even though UGrid area might be
-				// different from VGrid area (ie. Hirlam), but that does not matter
-
-				double newU = kFloatMissing, newV = kFloatMissing;
-
-				if (myTargetInfo->Grid()->Type() == kRotatedLatitudeLongitude ||
-				    myTargetInfo->Grid()->Type() == kLatitudeLongitude)
-				{
-					/*
-					* 1. Get coordinates of current grid point in earth-relative form
-					* 2. Get coordinates of current grid point in grid-relative form
-					* 3. Call function UVToEarthRelative() that transforms U and V from grid-relative
-					*    to earth-relative
-					*/
-
-					coefficients coeffs;
-
-					if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
-					{
-						coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
-					}
-					else
-					{
-						coeffs = util::EarthRelativeUVCoefficients(
-						    regPoint, rotPoint, dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())
-						                            ->SouthPole());  // inefficient cast
-						(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
-					}
-
-					newU = get<0>(coeffs) * U + get<1>(coeffs) * V;
-					newV = get<2>(coeffs) * U + get<3>(coeffs) * V;
-				}
-				else if (myTargetInfo->Grid()->Type() == kStereographic)
-				{
-					/*
-					 * This modification of the PA,PB,PC,PD coefficients has been
-					 * copied from INTROT.F.
-					 */
-
-					double cosL, sinL;
-
-					double ang = reinterpret_cast<NFmiStereographicArea*>(targetArea.get())->CentralLongitude();
-					double cLon = regPoint.X();
-
-					sincos((ang - cLon) * himan::constants::kDeg, &sinL, &cosL);
-
-					coefficients coeffs;
-
-					if (myCoefficientCache->count(myTargetInfo->LocationIndex()))
-					{
-						coeffs = (*myCoefficientCache)[myTargetInfo->LocationIndex()];
-					}
-					else
-					{
-						coeffs = util::EarthRelativeUVCoefficients(
-						    regPoint, rotPoint,
-						    dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())->SouthPole());
-						(*myCoefficientCache)[myTargetInfo->LocationIndex()] = coeffs;
-					}
-
-					double PA = get<0>(coeffs) * cosL - get<1>(coeffs) * sinL;
-					double PB = get<0>(coeffs) * sinL + get<1>(coeffs) * cosL;
-					double PC = get<2>(coeffs) * cosL - get<3>(coeffs) * sinL;
-					double PD = get<2>(coeffs) * sinL + get<3>(coeffs) * cosL;
-
-					newU = PA * U + PB * V;
-					newV = PC * U + PD * V;
-				}
-				else
-				{
-					myThreadedLogger->Error("Invalid target projection: " +
-					                        string(HPGridTypeToString.at(myTargetInfo->Grid()->Type())));
-					return;
-				}
-
-				// Wind speed should the same with both forms of U and V
-
-				assert(fabs(sqrt(U * U + V * V) - sqrt(newU * newU + newV * newV)) < 0.01);
-
-				U = newU;
-				V = newV;
-			}
-			else if (UInfo->Grid()->Type() == kStereographic)
-			{
-				// const point regPoint = myTargetInfo->LatLon();
-				throw runtime_error("Rotation of stereographic UV coordinates not confirmed yet");
-#if 0
-				double j;
-
-				if (myTargetInfo->Grid()->ScanningMode() == kBottomLeft) //opts.j_scans_positive)
-				{
-					j = floor(static_cast<double> (myTargetInfo->LocationIndex() / myTargetInfo->Data().SizeX()));
-				}
-				else if (myTargetInfo->Grid()->ScanningMode() == kTopLeft)
-				{
-					j = static_cast<double> (myTargetInfo->Grid()->Nj()) - floor(static_cast<double> (myTargetInfo->LocationIndex()) / static_cast<double> (myTargetInfo->Data().SizeX()));
-				}
-				else
-				{
-					throw runtime_error("Unsupported projection: " + string(HPScanningModeToString.at(myTargetInfo->Grid()->ScanningMode())));
-				}
-
-				double i = static_cast<double> (myTargetInfo->LocationIndex()) - j * static_cast<double> (myTargetInfo->Grid()->Ni());
-
-				i /= static_cast<double> (myTargetInfo->Data().SizeX());
-				j /= static_cast<double> (myTargetInfo->Data().SizeY());
-
-				NFmiPoint ll = reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->ToLatLon(NFmiPoint(i,j));
-				point regPoint(ll.X(), ll.Y());
-				
-				double angle = 180. + reinterpret_cast<NFmiStereographicArea*> (targetArea.get())->CentralLongitude();
-				double lon = regPoint.X();
-
-				lon = lon - (angle - 180.);
-
-				point regUV = util::UVToGeographical(lon, point(U,V));
-
-				// Wind speed should the same with both forms of U and V
-
-				assert(fabs(sqrt(U*U+V*V) - sqrt(regUV.X()*regUV.X() + regUV.Y() * regUV.Y())) < 0.001);
-					
-				U = regUV.X();
-				V = regUV.Y();
-#endif
-			}
-
-			double dir = 0;
 
 			if (speed > 0)
 			{
@@ -397,41 +373,20 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				dir = fmod(dir, 360);
 
 				// force it to be the positive remainder, so that 0 <= dir < 360
-				dir = fmod((dir + 360), 360);
+				dir = round(fmod((dir + 360), 360));
 			}
+		}
 
-#ifdef HIL_PP_DD_COMPATIBILITY_MODE
-
-			double windVector = round(dir / 10) + 100 * round(speed);
-			dir = 10 * (static_cast<int>(round(windVector)) % 100);
-
-#endif
+		if (myTargetInfo->SizeParams() > 1)
+		{
 			myTargetInfo->ParamIndex(1);
-			myTargetInfo->Value(round(dir));
-
-			if (itsVectorCalculation)
-			{
-#ifndef HIL_PP_DD_COMPATIBILITY_MODE
-				double windVector = round(dir / 10) + 100 * round(speed);
-#endif
-
-				myTargetInfo->ParamIndex(2);
-
-				myTargetInfo->Value(windVector);
-			}
+			myTargetInfo->Data().Set(DDVec);
 		}
 	}
 
-	size_t missing = 0, total = 0;
-
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
-	{
-		missing += myTargetInfo->Data().MissingCount();
-		total += myTargetInfo->Data().Size();
-	}
-
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + boost::lexical_cast<string>(missing) + "/" +
-	                       boost::lexical_cast<string>(total));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 #ifdef HAVE_CUDA
@@ -441,13 +396,26 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 {
 	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
 
-	opts->vector_calculation = itsVectorCalculation;
-
 	opts->need_grid_rotation = false;
+	opts->N = UInfo->Grid()->Size();
 
 	if (UInfo->Grid()->Type() == kRotatedLatitudeLongitude)
 	{
 		opts->need_grid_rotation = dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())->UVRelativeToGrid();
+	}
+	else if (UInfo->Grid()->Type() == kLambertConformalConic)
+	{
+		opts->need_grid_rotation = dynamic_cast<lambert_conformal_grid*>(UInfo->Grid())->UVRelativeToGrid();
+
+		opts->lon = new double[opts->N];
+		opts->lat = new double[opts->N];
+
+		for (UInfo->ResetLocation(); UInfo->NextLocation();)
+		{
+			auto ll = UInfo->LatLon();
+			opts->lon[UInfo->LocationIndex()] = ll.X();
+			opts->lat[UInfo->LocationIndex()] = ll.Y();
+		}
 	}
 
 	opts->target_type = itsCalculationTarget;
@@ -464,28 +432,7 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 		opts->dir = myTargetInfo->ToSimple();
 	}
 
-	if (opts->vector_calculation)
-	{
-		myTargetInfo->ParamIndex(2);
-		opts->vector = myTargetInfo->ToSimple();
-	}
-
-	opts->N = opts->speed->size_x * opts->speed->size_y;
-
 	return opts;
 }
 
 #endif
-
-unique_ptr<NFmiArea> windvector::ToNewbaseArea(shared_ptr<info> myTargetInfo) const
-{
-	auto q = GET_PLUGIN(querydata);
-
-	auto hdesc = q->CreateHPlaceDescriptor(*myTargetInfo, true);
-
-	unique_ptr<NFmiArea> theArea = unique_ptr<NFmiArea>(hdesc.Area()->Clone());
-
-	assert(theArea);
-
-	return theArea;
-}

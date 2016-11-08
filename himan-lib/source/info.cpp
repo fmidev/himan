@@ -7,6 +7,7 @@
 
 #include "info.h"
 #include "grid.h"
+#include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger_factory.h"
 #include "point_list.h"
@@ -31,7 +32,6 @@ info::info()
 }
 
 info::~info() {}
-
 info::info(const info& other)
     // Iterators are COPIED
     : itsLevelOrder(other.itsLevelOrder),
@@ -258,54 +258,32 @@ void info::Merge(vector<shared_ptr<info>>& otherInfos)
 }
 
 const producer& info::Producer() const { return itsProducer; }
-
 void info::Producer(long theFmiProducerId) { itsProducer = producer(theFmiProducerId); }
-
 void info::Producer(const producer& theProducer) { itsProducer = theProducer; }
-
 void info::ParamIterator(const param_iter& theParamIterator) { itsParamIterator = theParamIterator; }
-
 void info::Params(const vector<param>& theParams) { itsParamIterator = param_iter(theParams); }
-
 void info::LevelIterator(const level_iter& theLevelIterator) { itsLevelIterator = theLevelIterator; }
-
 void info::Levels(const vector<level>& theLevels) { itsLevelIterator = level_iter(theLevels); }
-
 void info::TimeIterator(const time_iter& theTimeIterator) { itsTimeIterator = theTimeIterator; }
-
 void info::Times(const vector<forecast_time>& theTimes) { itsTimeIterator = time_iter(theTimes); }
-
 raw_time info::OriginDateTime() const { return itsOriginDateTime; }
-
 void info::OriginDateTime(const string& theOriginDateTime, const string& theTimeMask)
 {
 	itsOriginDateTime = raw_time(theOriginDateTime, theTimeMask);
 }
 
 bool info::Param(const param& theRequestedParam) { return itsParamIterator.Set(theRequestedParam); }
-
 bool info::NextParam() { return itsParamIterator.Next(); }
-
 void info::ResetParam() { itsParamIterator.Reset(); }
-
 bool info::FirstParam() { return itsParamIterator.First(); }
-
 size_t info::ParamIndex() const { return itsParamIterator.Index(); }
-
 void info::ParamIndex(size_t theParamIndex) { itsParamIterator.Set(theParamIndex); }
-
 param info::Param() const { return itsParamIterator.At(); }
-
 size_t info::SizeParams() const { return itsParamIterator.Size(); }
-
 const param& info::PeekParam(size_t theIndex) const { return itsParamIterator.At(theIndex); }
-
 void info::SetParam(const param& theParam) { itsParamIterator.Replace(theParam); }
-
 HPLevelOrder info::LevelOrder() const { return itsLevelOrder; }
-
 void info::LevelOrder(HPLevelOrder levelOrder) { itsLevelOrder = levelOrder; }
-
 bool info::NextLevel()
 {
 	if (itsLevelOrder == kBottomToTop)
@@ -374,51 +352,28 @@ bool info::FirstLevel()
 }
 
 size_t info::LevelIndex() const { return itsLevelIterator.Index(); }
-
 void info::LevelIndex(size_t theLevelIndex) { itsLevelIterator.Set(theLevelIndex); }
-
 bool info::Level(const level& theLevel) { return itsLevelIterator.Set(theLevel); }
-
 level info::Level() const { return itsLevelIterator.At(); }
-
 size_t info::SizeLevels() const { return itsLevelIterator.Size(); }
-
 const level& info::PeekLevel(size_t theIndex) const { return itsLevelIterator.At(theIndex); }
-
 void info::SetLevel(const level& theLevel) { itsLevelIterator.Replace(theLevel); }
-
 bool info::NextTime() { return itsTimeIterator.Next(); }
-
 bool info::PreviousTime() { return itsTimeIterator.Previous(); }
-
 bool info::LastTime() { return itsTimeIterator.Last(); }
-
 void info::ResetTime() { itsTimeIterator.Reset(); }
-
 bool info::FirstTime() { return itsTimeIterator.First(); }
-
 size_t info::TimeIndex() const { return itsTimeIterator.Index(); }
-
 void info::TimeIndex(size_t theTimeIndex) { itsTimeIterator.Set(theTimeIndex); }
-
 bool info::Time(const forecast_time& theTime) { return itsTimeIterator.Set(theTime); }
-
 forecast_time info::Time() const { return itsTimeIterator.At(); }
-
 size_t info::SizeTimes() const { return itsTimeIterator.Size(); }
-
 const forecast_time& info::PeekTime(size_t theIndex) const { return itsTimeIterator.At(theIndex); }
-
 void info::SetTime(const forecast_time& theTime) { itsTimeIterator.Replace(theTime); }
-
 bool info::NextForecastType() { return itsForecastTypeIterator.Next(); }
-
 size_t info::SizeForecastTypes() const { return itsForecastTypeIterator.Size(); }
-
 void info::ResetForecastType() { itsForecastTypeIterator.Reset(); }
-
 size_t info::ForecastTypeIndex() const { return itsForecastTypeIterator.Index(); }
-
 bool info::NextLocation()
 {
 	if (itsLocationIndex == kIteratorResetValue)
@@ -474,7 +429,6 @@ bool info::LastLocation()
 }
 
 void info::ResetLocation() { itsLocationIndex = kIteratorResetValue; }
-
 bool info::FirstLocation()
 {
 	ResetLocation();
@@ -483,13 +437,9 @@ bool info::FirstLocation()
 }
 
 size_t info::LocationIndex() const { return itsLocationIndex; }
-
 void info::LocationIndex(size_t theLocationIndex) { itsLocationIndex = theLocationIndex; }
-
 size_t info::LocationIndex() { return itsLocationIndex; }
-
 size_t info::SizeLocations() const { return Grid()->Data().Size(); }
-
 grid* info::Grid() const
 {
 	assert(itsDimensions.size());
@@ -515,11 +465,8 @@ void info::Grid(shared_ptr<grid> d)
 }
 
 bool info::Value(double theValue) { return Grid()->Data().Set(itsLocationIndex, theValue); }
-
 double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
-
 size_t info::DimensionSize() const { return itsDimensions.size(); }
-
 #ifdef HAVE_CUDA
 
 info_simple* info::ToSimple() const
@@ -540,15 +487,15 @@ info_simple* info::ToSimple() const
 		ret->south_pole_lat = dynamic_cast<rotated_latitude_longitude_grid*>(Grid())->SouthPole().Y();
 		ret->south_pole_lon = dynamic_cast<rotated_latitude_longitude_grid*>(Grid())->SouthPole().X();
 	}
-	else
-	{
-		ret->south_pole_lat = kHPMissingValue;
-		ret->south_pole_lon = kHPMissingValue;
-	}
-
-	if (Grid()->Type() == kStereographic)
+	else if (Grid()->Type() == kStereographic)
 	{
 		ret->orientation = dynamic_cast<stereographic_grid*>(Grid())->Orientation();
+	}
+	else if (Grid()->Type() == kLambertConformalConic)
+	{
+		ret->orientation = dynamic_cast<lambert_conformal_grid*>(Grid())->Orientation();
+		ret->latin1 = dynamic_cast<lambert_conformal_grid*>(Grid())->StandardParallel1();
+		ret->latin2 = dynamic_cast<lambert_conformal_grid*>(Grid())->StandardParallel2();
 	}
 
 	ret->interpolation = Param().InterpolationMethod();
@@ -586,7 +533,6 @@ info_simple* info::ToSimple() const
 #endif
 
 const vector<shared_ptr<grid>>& info::Dimensions() const { return itsDimensions; }
-
 void info::ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize)
 {
 	vector<shared_ptr<grid>> theDimensions(SizeForecastTypes() * SizeTimes() * SizeLevels() * SizeParams());
@@ -650,9 +596,7 @@ void info::ForecastTypeIterator(const forecast_type_iter& theForecastTypeIterato
 }
 
 forecast_type info::ForecastType() const { return itsForecastTypeIterator.At(); }
-
 bool info::ForecastType(const forecast_type& theRequestedType) { return itsForecastTypeIterator.Set(theRequestedType); }
-
 bool info::FirstForecastType()
 {
 	ResetForecastType();

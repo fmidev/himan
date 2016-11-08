@@ -13,17 +13,17 @@ using namespace himan::plugin;
 time_ensemble::time_ensemble(const param& parameter) : itsTimeSpan(kYearResolution)
 {
 	itsParam = parameter;
-	itsEnsembleSize = 0;
+	itsExpectedEnsembleSize = 0;
 	itsEnsembleType = kTimeEnsemble;
 
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 }
 
-time_ensemble::time_ensemble(const param& parameter, size_t ensembleSize, HPTimeResolution theTimeSpan)
+time_ensemble::time_ensemble(const param& parameter, size_t expectedEnsembleSize, HPTimeResolution theTimeSpan)
     : itsTimeSpan(theTimeSpan)
 {
 	itsParam = parameter;
-	itsEnsembleSize = ensembleSize;
+	itsExpectedEnsembleSize = expectedEnsembleSize;
 	itsEnsembleType = kTimeEnsemble;
 
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
@@ -40,7 +40,7 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 
 		while (true)
 		{
-			if (itsEnsembleSize > 0 && itsForecasts.size() >= itsEnsembleSize)
+			if (itsExpectedEnsembleSize > 0 && itsForecasts.size() >= itsExpectedEnsembleSize)
 			{
 				break;
 			}
@@ -57,7 +57,7 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 	{
 		if (e == kFileDataNotFound)
 		{
-			if (itsEnsembleSize > 0 && itsForecasts.size() != itsEnsembleSize)
+			if (itsExpectedEnsembleSize > 0 && itsForecasts.size() != itsExpectedEnsembleSize)
 			{
 				// NOTE let the plugin decide what to do with missing data
 				throw;
@@ -69,12 +69,12 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 			}
 			else
 			{
-				itsEnsembleSize = itsForecasts.size();
+				itsExpectedEnsembleSize = itsForecasts.size();
 			}
 		}
 	}
 
-	assert(itsEnsembleSize == itsForecasts.size());
+	assert(itsExpectedEnsembleSize == itsForecasts.size());
 
 	itsLogger->Info("Read " + boost::lexical_cast<std::string>(itsForecasts.size()) + " different times to ensemble");
 }

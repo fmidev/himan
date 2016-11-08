@@ -20,8 +20,13 @@ namespace himan
 
 class ensemble
 {
-   public:
-	ensemble(const param& parameter, size_t ensembleSize);
+public:
+	/// @brief Constructs an ensemble with one control forecast and expectedEnsembleSize - 1 perturbations
+	ensemble(const param& parameter, size_t expectedEnsembleSize);
+
+	/// @brief Constructs an ensemble with control forecasts taken from `controlForecasts` and
+	/// expectedEnsembleSize - controlForecasts.size() perturbations
+	ensemble(const param& parameter, size_t expectedEnsembleSize, const std::vector<forecast_type>& controlForecasts);
 
 	ensemble();
 
@@ -56,21 +61,29 @@ class ensemble
 
 	std::string ClassName() const;
 
+	/// @brief Returns the size of the currently fetched ensemble
 	size_t Size() const;
+
+	/// @brief Returns the expected size of the ensemble. NOTE: this can
+	/// differ from the actual size of the ensemble!
+	size_t ExpectedSize() const;
 
 	param Param() const;
 
 	HPEnsembleType EnsembleType() const;
 
-   protected:
+	int MaximumMissingForecasts() const;
+
+	void MaximumMissingForecasts(int maximumMissing);
+
+protected:
 	/// @brief The parameter of the ensemble
 	param itsParam;
 
-	/// @brief The number of forecasts in this ensemble
-	size_t itsEnsembleSize;
+	size_t itsExpectedEnsembleSize;
 
-	/// @brief Initialized perturbations forecast_types used by Fetch()
-	std::vector<forecast_type> itsPerturbations;
+	/// @brief Initialized forecast_types used by Fetch()
+	std::vector<forecast_type> itsDesiredForecasts;
 
 	/// @brief Forecasts acquired with Fetch(), each call of Fetch() will overwrite the previous results
 	std::vector<info_t> itsForecasts;
@@ -78,12 +91,16 @@ class ensemble
 	HPEnsembleType itsEnsembleType;
 
 	std::unique_ptr<logger> itsLogger;
+
+	/// @brief When Fetching(), this is the maximum number of missing forecasts we can tolerate.
+	int itsMaximumMissingForecasts;
 };
 
-inline size_t ensemble::Size() const { return itsEnsembleSize; }
 inline double ensemble::Value(size_t forecastIndex) const { return itsForecasts[forecastIndex]->Value(); }
 inline std::string ensemble::ClassName() const { return "himan::ensemble"; }
 inline param ensemble::Param() const { return itsParam; }
+inline int ensemble::MaximumMissingForecasts() const { return itsMaximumMissingForecasts; }
+inline void ensemble::MaximumMissingForecasts(int maximumMissing) { itsMaximumMissingForecasts = maximumMissing; }
 }  // namespace himan
 
 // ENSEMBLE_H

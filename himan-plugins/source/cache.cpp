@@ -16,9 +16,9 @@ using namespace himan::plugin;
 typedef lock_guard<mutex> Lock;
 
 cache::cache() { itsLogger = logger_factory::Instance()->GetLog("cache"); }
-
 string cache::UniqueName(const info& info)
 {
+	assert(info.Producer().Id() != kHPMissingInt);
 	string producer_id = boost::lexical_cast<string>(info.Producer().Id());
 	string forecast_time = info.Time().OriginDateTime().String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = info.Time().ValidDateTime().String("%Y-%m-%d_%H:%M:%S");
@@ -46,7 +46,6 @@ string cache::UniqueNameFromOptions(search_options& options)
 }
 
 void cache::Insert(info& anInfo, bool pin) { SplitToPool(anInfo, pin); }
-
 void cache::SplitToPool(info& anInfo, bool pin)
 {
 	// Cached data is never replaced by another data that has
@@ -113,9 +112,7 @@ vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options)
 }
 
 void cache::Clean() { cache_pool::Instance()->Clean(); }
-
 size_t cache::Size() const { return cache_pool::Instance()->Size(); }
-
 cache_pool* cache_pool::itsInstance = NULL;
 
 cache_pool::cache_pool() : itsCacheLimit(-1)
@@ -134,7 +131,6 @@ cache_pool* cache_pool::Instance()
 }
 
 void cache_pool::CacheLimit(int theCacheLimit) { itsCacheLimit = theCacheLimit; }
-
 bool cache_pool::Find(const string& uniqueName)
 {
 	for (const auto& kv : itsCache)
@@ -167,7 +163,6 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 }
 
 void cache_pool::UpdateTime(const std::string& uniqueName) { itsCache[uniqueName].access_time = time(nullptr); }
-
 void cache_pool::Clean()
 {
 	Lock lock(itsDeleteMutex);

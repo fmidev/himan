@@ -32,37 +32,31 @@ struct options
 	info_simple* v;
 	info_simple* speed;
 	info_simple* dir;
-	info_simple* vector;
 
 	HPWindVectorTargetType target_type;
-	bool vector_calculation;
 	bool need_grid_rotation;
 	size_t missing;
 	size_t N;
+
+	double* lon;
+	double* lat;
 
 	options()
 	    : u(0),
 	      v(0),
 	      speed(0),
 	      dir(0),
-	      vector(0),
 	      target_type(kUnknownElement),
-	      vector_calculation(false),
 	      need_grid_rotation(false),
 	      missing(0),
-	      N(0)
+	      N(0),
+	      lon(0),
+	      lat(0)
 	{
 	}
 };
 
 void Process(options& opts);
-
-#ifdef __CUDACC__
-__global__ void Calculate(const double* __restrict__ d_u, const double* __restrict__ d_v, double* __restrict__ d_speed,
-                          double* __restrict__ d_dir, double* __restrict__ d_vector, options opts);
-__global__ void Rotate(double* __restrict__ dU, double* __restrict__ dV, info_simple opts);
-
-#endif
 
 }  // namespace windvector_cuda
 

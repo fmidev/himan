@@ -12,7 +12,6 @@
 
 namespace himan
 {
-
 /**
  * @brief Dumbed-down version of info-class
  *
@@ -61,8 +60,12 @@ struct info_simple
 	double south_pole_lat;
 	double south_pole_lon;
 
-	// only stereographic projection
+	// only stereographic projection and lambert
 	double orientation;
+
+	// only lambert
+	double latin1;
+	double latin2;
 
 	// distance between two grid points, degrees or meters (stereographic))
 	double di;
@@ -87,6 +90,8 @@ struct info_simple
 	      south_pole_lat(kFloatMissing),
 	      south_pole_lon(kFloatMissing),
 	      orientation(kFloatMissing),
+	      latin1(kFloatMissing),
+	      latin2(kFloatMissing),
 	      di(kFloatMissing),
 	      dj(kFloatMissing),
 	      j_scans_positive(true),
@@ -98,7 +103,6 @@ struct info_simple
 	{
 	}
 };
-
 }
 
 #endif  // /* HAVE_CUDA */

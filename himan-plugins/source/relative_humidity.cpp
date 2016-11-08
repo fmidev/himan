@@ -112,14 +112,14 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	SetAB(myTargetInfo, TInfo);
 
-	if (TInfo->Param().Unit() == kK)
+	if (TInfo->Param().Unit() == kC)
 	{
-		TBase = -constants::kKelvin;
+		TBase = constants::kKelvin;
 	}
 
-	if (TDInfo && TDInfo->Param().Unit() == kK)
+	if (TDInfo && TDInfo->Param().Unit() == kC)
 	{
-		TDBase = -constants::kKelvin;
+		TDBase = constants::kKelvin;
 	}
 
 	if (!calculateWithTD && !isPressureLevel && PInfo->Param().Name() == "P-PA")
@@ -192,7 +192,7 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 		double T = tup.get<1>() + TBase;
 		double Q = tup.get<2>();
 
-		double es = himan::metutil::Es_(T + himan::constants::kKelvin) * 0.01;
+		double es = himan::metutil::Es_(T) * 0.01;
 
 		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 
@@ -212,7 +212,7 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 		double Q = tup.get<2>();
 		double P = tup.get<3>() * PScale;
 
-		double es = himan::metutil::Es_(T + himan::constants::kKelvin) * 0.01;
+		double es = himan::metutil::Es_(T) * 0.01;
 
 		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 
@@ -229,8 +229,8 @@ void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInf
 	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(TInfo), VEC(TDInfo)))
 	{
 		double& result = tup.get<0>();
-		double T = tup.get<1>() + TBase;
-		double TD = tup.get<2>() + TDBase;
+		double T = tup.get<1>() + TBase - himan::constants::kKelvin;
+		double TD = tup.get<2>() + TDBase - himan::constants::kKelvin;
 
 		result = exp(d + b * (TD / (TD + c))) / exp(d + b * (T / (T + c)));
 

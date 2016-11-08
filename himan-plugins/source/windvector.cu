@@ -12,17 +12,17 @@
  * Calculate results. At this point it as assumed that U and V are in correct form.
  */
 
-__global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir,
-                                                          darr_t d_vector, options opts)
+__global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir,
+                          himan::plugin::windvector_cuda::options opts)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	using himan::kFloatMissing;
 
 	if (idx < opts.N)
 	{
 		double U = d_u[idx], V = d_v[idx];
 		d_speed[idx] = kFloatMissing;
 		if (d_dir) d_dir[idx] = kFloatMissing;
-		if (d_vector) d_vector[idx] = kFloatMissing;
 
 		if (U != kFloatMissing && V != kFloatMissing)
 		{
@@ -30,15 +30,13 @@ __global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d
 
 			d_speed[idx] = speed;
 
-			double dir = 0;  // Direction is double although we round the result so that it *could* be int as well.
-			                 // This is because if we use int the windvector calculation will have a small bias due
-			                 // to int decimal value truncation.
+			double dir = 0;
 
-			if (opts.target_type != kGust)
+			if (opts.target_type != himan::plugin::kGust)
 			{
 				int offset = 180;
 
-				if (opts.target_type == kSea || opts.target_type == kIce)
+				if (opts.target_type == himan::plugin::kSea || opts.target_type == himan::plugin::kIce)
 				{
 					offset = 0;
 				}
@@ -73,26 +71,42 @@ __global__ void himan::plugin::windvector_cuda::Calculate(cdarr_t d_u, cdarr_t d
 
 				d_dir[idx] = round(dir);
 			}
-
-			if (opts.vector_calculation)
-			{
-				d_vector[idx] = round(dir / 10) + 100 * round(speed);
-			}
 		}
 	}
 }
 
 /*
  * Rotate U and V vectors that are grid-relative (U is pointing to grid north, V to grid east) to earth
- * relative form (U points to earth or map north etc). This requires that we first get the regular coordinates
- * of the rotated coordinates.
- *
- * NOTE! This function implicitly assumes that projection is rotated lat lon!
- *
+ * relative form (U points to earth or map north etc).
  */
 
-__global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u, double* __restrict__ d_v,
-                                                       info_simple opts)
+__global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v, const double* __restrict__ d_lon,
+                              const double* __restrict__ d_lat, double cone, double orientation,
+                              himan::info_simple opts)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < opts.size_x * opts.size_y)
+	{
+		double U = d_u[idx];
+		double V = d_v[idx];
+
+		if (U != himan::kFloatMissing && V != himan::kFloatMissing)
+		{
+			int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));  // idx - j * opts.size_x;
+			int j = floor(static_cast<double>(idx / opts.size_x));
+
+			double londiff = d_lon[idx] - orientation;
+			const double angle = cone * londiff * himan::constants::kDeg;
+			double sinx, cosx;
+			sincos(angle, &sinx, &cosx);
+			d_u[idx] = -1 * cosx * U + sinx * V;
+			d_v[idx] = -1 * -sinx * U + cosx * V;
+		}
+	}
+}
+
+__global__ void Rotate(double* __restrict__ d_u, double* __restrict__ d_v, himan::info_simple opts)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -108,7 +122,7 @@ __global__ void himan::plugin::windvector_cuda::Rotate(double* __restrict__ d_u,
 
 			double lon = opts.first_lon + i * opts.di;
 
-			double lat = kFloatMissing;
+			double lat = himan::kFloatMissing;
 
 			if (opts.j_scans_positive)
 			{
@@ -184,7 +198,8 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	double* d_v = 0;
 	double* d_speed = 0;
 	double* d_dir = 0;
-	double* d_vector = 0;
+	double* d_lon = 0;
+	double* d_lat = 0;
 
 	// Allocate memory on device
 
@@ -201,12 +216,6 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 		PrepareInfo(opts.dir);
 	}
 
-	if (opts.vector_calculation)
-	{
-		CUDA_CHECK(cudaMalloc((void**)&d_vector, memsize));
-		PrepareInfo(opts.vector);
-	}
-
 	// Copy data to device
 
 	PrepareInfo(opts.u, d_u, stream);
@@ -218,12 +227,6 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	const int blockSize = 256;
 	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
 
-	if (opts.u->south_pole_lat > 0)
-	{
-		opts.u->south_pole_lat = -opts.u->south_pole_lat;
-		opts.u->south_pole_lon = 0;
-	}
-
 	/*
 	 *  If calculating gust, do not ever rotate grid since we don't calculate
 	 * direction for it.
@@ -233,10 +236,45 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 
 	if (opts.target_type != kGust && opts.need_grid_rotation)
 	{
-		Rotate<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, *opts.u);
+		if (opts.u->projection == kRotatedLatitudeLongitude)
+		{
+			if (opts.u->south_pole_lat > 0)
+			{
+				opts.u->south_pole_lat = -opts.u->south_pole_lat;
+				opts.u->south_pole_lon = 0;
+			}
+
+			Rotate<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, *opts.u);
+		}
+		else if (opts.u->projection == kLambertConformalConic)
+		{
+			const double latin1 = opts.u->latin1;
+			const double latin2 = opts.u->latin2;
+			assert(latin1 != kFloatMissing);
+			double cone;
+			if (latin1 == latin2 && latin2 != kFloatMissing)
+			{
+				cone = sin(latin1 * constants::kDeg);
+			}
+			else
+			{
+				cone = (log(cos(latin1 * constants::kDeg)) - log(cos(latin2 * constants::kDeg))) /
+				       (log(tan((90 - fabs(latin1)) * constants::kDeg * 0.5)) -
+				        log(tan(90 - fabs(latin2)) * constants::kDeg * 0.5));
+			}
+
+			CUDA_CHECK(cudaMalloc((void**)&d_lon, memsize));
+			CUDA_CHECK(cudaMalloc((void**)&d_lat, memsize));
+
+			CUDA_CHECK(cudaMemcpyAsync(d_lon, opts.lon, memsize, cudaMemcpyHostToDevice, stream));
+			CUDA_CHECK(cudaMemcpyAsync(d_lat, opts.lat, memsize, cudaMemcpyHostToDevice, stream));
+
+			RotateLambert<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_lon, d_lat, cone, opts.u->orientation,
+			                                                  *opts.u);
+		}
 	}
 
-	Calculate<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_speed, d_dir, d_vector, opts);
+	Calculate<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_speed, d_dir, opts);
 
 	// block until the stream has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -254,11 +292,6 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 		ReleaseInfo(opts.dir, d_dir, stream);
 	}
 
-	if (opts.vector_calculation)
-	{
-		ReleaseInfo(opts.vector, d_vector, stream);
-	}
-
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// Free device memory
@@ -270,11 +303,6 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	if (d_dir)
 	{
 		CUDA_CHECK(cudaFree(d_dir));
-	}
-
-	if (d_vector)
-	{
-		CUDA_CHECK(cudaFree(d_vector));
 	}
 
 	CUDA_CHECK(cudaStreamDestroy(stream));

@@ -53,6 +53,7 @@ private:
 	virtual void Calculate(uint16_t threadIndex, const param_configuration& pc);
 
 	int itsEnsembleSize;
+	int itsMaximumMissingForecasts;
 	bool itsUseNormalizedResult;
 	std::vector<param_configuration> itsParamConfigurations;
 };

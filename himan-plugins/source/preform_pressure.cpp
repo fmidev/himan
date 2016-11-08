@@ -186,6 +186,22 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		RHScale = 1;
 	}
 
+	int DRIZZLE = 0;
+	int RAIN = 1;
+	int SLEET = 2;
+	int SNOW = 3;
+	int FREEZING_DRIZZLE = 4;
+	int FREEZING_RAIN = 5;
+
+	if (itsConfiguration->OutputFileType() == kGRIB2)
+	{
+		DRIZZLE = 11;  // reserved for local use
+		SLEET = 7;     // mixture of rain and snow
+		SNOW = 5;
+		FREEZING_DRIZZLE = 12;  // reserved for local use
+		FREEZING_RAIN = 3;
+	}
+
 	LOCKSTEP(myTargetInfo, TInfo, T700Info, T850Info, T925Info, RHInfo, RH700Info, RH850Info, RH925Info, W925Info,
 	         W850Info, RRInfo, PInfo, SNRInfo)
 	{
@@ -275,7 +291,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 			if (P > (925 + stH)AND RH925 > rhLim AND T925<0 AND T925> stTlimit AND W925 > 0 AND W925 < wMax)
 			{
-				PreForm = kFreezingDrizzle;
+				PreForm = FREEZING_DRIZZLE;
 			}
 
 			// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
@@ -284,7 +300,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			if ((P <= 925 + stH)AND(P > 850 + stH) AND(RH850 > rhLim) AND(T850 < 0) AND(T850 > stTlimit) AND(W850 > 0)
 			        AND(W850 < wMax))
 			{
-				PreForm = kFreezingDrizzle;
+				PreForm = FREEZING_DRIZZLE;
 			}
 		}
 
@@ -297,7 +313,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 			if (P > (925 + stH)AND((T925 > 0 AND RH925 >= rhLim)OR(T850 > 0 AND RH850 >= rhLim)))
 			{
-				PreForm = kFreezingRain;
+				PreForm = FREEZING_RAIN;
 			}
 
 			// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
@@ -305,7 +321,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 			if (P <= (925 + stH)AND P > (850 + stH)AND T850 > 0 AND RH850 >= rhLim)
 			{
-				PreForm = kFreezingRain;
+				PreForm = FREEZING_RAIN;
 			}
 
 			// ollaanko ~1500-3000m merenpinnasta (850<pintapaine<700)?
@@ -313,7 +329,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 			if (P <= 850 + stH AND P > 700 + stH AND T700 > 0 AND RH700 >= rhLim)
 			{
-				PreForm = kFreezingRain;
+				PreForm = FREEZING_RAIN;
 			}
 		}
 
@@ -329,13 +345,13 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		if (PreForm == MISS AND(SNR_RR >= snowLim OR T <= 0))
 		{
-			PreForm = kSnow;
+			PreForm = SNOW;
 		}
 
 		// räntää: snowfall 15...80% kokonaissateesta
 		if ((PreForm == MISS)AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
 		{
-			PreForm = kSleet;
+			PreForm = SLEET;
 		}
 
 		// tihkua tai vesisadetta: Rain>=85% kokonaissateesta
@@ -350,7 +366,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 				if ((P > 925)AND(RH925 > rhLim))
 				{
-					PreForm = kDrizzle;
+					PreForm = DRIZZLE;
 				}
 
 				// ollaanko ~750-1500m merenpinnasta (925<pintapaine<850)?
@@ -358,14 +374,14 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 				if ((P <= 925)AND(P > 850) AND(RH850 > rhLim))
 				{
-					PreForm = kDrizzle;
+					PreForm = DRIZZLE;
 				}
 			}
 
 			// muuten vesisadetta:
 			if (PreForm == MISS)
 			{
-				PreForm = kRain;
+				PreForm = RAIN;
 			}
 		}
 

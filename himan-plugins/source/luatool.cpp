@@ -51,7 +51,6 @@ luatool::luatool() : itsWriteOptions()
 }
 
 luatool::~luatool() {}
-
 void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -134,6 +133,7 @@ void luatool::InitLua(info_t myTargetInfo)
 
 	h->Configuration(itsConfiguration);
 	h->Time(forecast_time(myTargetInfo->Time()));
+	h->ForecastType(forecast_type(myTargetInfo->ForecastType()));
 
 	auto n = GET_PLUGIN(neons);
 	auto r = GET_PLUGIN(radon);
@@ -193,6 +193,8 @@ int BindErrorHandler(lua_State* L)
 	// return unmodified error object
 	return 1;
 }
+
+// clang-format off
 
 void BindEnum(lua_State* L)
 {
@@ -283,30 +285,22 @@ void BindEnum(lua_State* L)
 				 value("kEpsPerturbation", kEpsPerturbation)]];
 }
 
+// clang-format on
+
 namespace info_wrapper
 {
 // These are convenience functions for accessing info class contents
 
 bool SetValue(std::shared_ptr<info>& anInfo, int index, double value) { return anInfo->Grid()->Value(--index, value); }
-
 double GetValue(std::shared_ptr<info>& anInfo, int index) { return anInfo->Grid()->Value(--index); }
-
 size_t GetLocationIndex(std::shared_ptr<info> anInfo) { return anInfo->LocationIndex() + 1; }
-
 size_t GetTimeIndex(std::shared_ptr<info> anInfo) { return anInfo->TimeIndex() + 1; }
-
 size_t GetParamIndex(std::shared_ptr<info> anInfo) { return anInfo->ParamIndex() + 1; }
-
 size_t GetLevelIndex(std::shared_ptr<info> anInfo) { return anInfo->LevelIndex() + 1; }
-
 void SetLocationIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->LocationIndex(--theIndex); }
-
 void SetTimeIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->TimeIndex(--theIndex); }
-
 void SetParamIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->ParamIndex(--theIndex); }
-
 void SetLevelIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->LevelIndex(--theIndex); }
-
 void SetValues(info_t& anInfo, const object& table)
 {
 	std::vector<double> vals = TableToVector(table);
@@ -323,13 +317,9 @@ void SetValues(info_t& anInfo, const object& table)
 }
 
 object GetValues(info_t& anInfo) { return VectorToTable(VEC(anInfo)); }
-
 point GetLatLon(info_t& anInfo, size_t theIndex) { return anInfo->Grid()->LatLon(--theIndex); }
-
 double GetMissingValue(info_t& anInfo) { return anInfo->Data().MissingValue(); }
-
 void SetMissingValue(info_t& anInfo, double missingValue) { anInfo->Data().MissingValue(missingValue); }
-
 }  // namespace info_wrapper
 
 namespace hitool_wrapper
@@ -628,16 +618,12 @@ object VerticalPlusMinusArea(std::shared_ptr<hitool> h, const param& theParams, 
 }
 
 void Time(std::shared_ptr<hitool> h, const forecast_time& theTime) { h->Time(theTime); }
-
 void SetHeightUnit(std::shared_ptr<hitool> h, HPParameterUnit theHeightUnit) { h->HeightUnit(theHeightUnit); }
-
 HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h) { return h->HeightUnit(); }
-
 }  // namespace hitool_wrapper
 
 namespace neons_wrapper
 {
-
 std::string GetProducerMetaData(std::shared_ptr<neons> n, const producer& prod, const std::string& attName)
 {
 	return n->ProducerMetaData(prod.Id(), attName);
@@ -647,13 +633,14 @@ std::string GetProducerMetaData(std::shared_ptr<neons> n, const producer& prod, 
 
 namespace radon_wrapper
 {
-
 std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, const std::string& attName)
 {
 	return r->RadonDB().GetProducerMetaData(prod.Id(), attName);
 }
 
 }  // namespace radon_wrapper
+
+// clang-format off
 
 void BindLib(lua_State* L)
 {
@@ -919,6 +906,8 @@ void BindPlugins(lua_State* L)
 	              .def("GetProducerMetaData", &radon_wrapper::GetProducerMetaData)];
 }
 
+// clang-format on
+
 void luatool::Run(info_t myTargetInfo, unsigned short threadIndex)
 {
 	while (Next(*myTargetInfo))
@@ -1023,5 +1012,4 @@ void luatool::WriteToFile(const info& targetInfo, write_options writeOptions)
 }
 
 void luatool::WriteToFile(const info_t& targetInfo) { compiled_plugin_base::WriteToFile(*targetInfo, itsWriteOptions); }
-
 #endif  // __clang_analyzer__
