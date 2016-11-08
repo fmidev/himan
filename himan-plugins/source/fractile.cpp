@@ -27,7 +27,10 @@ namespace himan
 namespace plugin
 {
 fractile::fractile()
-    : itsEnsembleSize(0), itsEnsembleType(kPerturbedEnsemble), itsFractiles({0., 10., 25., 50., 75., 90., 100.})
+    : itsEnsembleSize(0),
+      itsEnsembleType(kPerturbedEnsemble),
+      itsFractiles({0., 10., 25., 50., 75., 90., 100.}),
+      itsMaximumMissingForecasts(0)
 {
 	itsClearTextFormula = "%";
 	itsCudaEnabledCalculation = false;
@@ -61,6 +64,13 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	if (!ensSize.empty())
 	{
 		itsEnsembleSize = boost::lexical_cast<int>(ensSize);
+	}
+
+	auto maximumMissing = itsConfiguration->GetValue("max_missing_forecasts");
+
+	if (!maximumMissing.empty())
+	{
+		itsMaximumMissingForecasts = boost::lexical_cast<int>(maximumMissing);
 	}
 
 	if (itsEnsembleSize == 0 && itsEnsembleType == kPerturbedEnsemble)
@@ -147,6 +157,8 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			itsLogger->Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
 			exit(1);
 	}
+
+	ens->MaximumMissingForecasts(itsMaximumMissingForecasts);
 
 	try
 	{

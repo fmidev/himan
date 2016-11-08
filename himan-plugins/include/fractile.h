@@ -36,6 +36,7 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 	int itsEnsembleSize;
 	HPEnsembleType itsEnsembleType;
 	std::vector<double> itsFractiles;
+	int itsMaximumMissingForecasts;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<fractile>(); }
