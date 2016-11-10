@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.11.8
+Version: 16.11.10
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -108,6 +108,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Nov 10 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.10-1.fmi
+- Fractile bugfix
+* Tue Nov  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.8-2.fmi
+- hybrid_height bugfix
 * Tue Nov  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.8-1.fmi
 - MEPS compatibility
 * Tue Nov  1 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.1-1.fmi
