@@ -180,6 +180,9 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
 		auto sortedValues = ens->SortedValues();
+
+		assert(!itsFractiles.empty());
+
 		size_t targetInfoIndex = 0;
 		for (auto P : itsFractiles)
 		{
@@ -206,7 +209,8 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			int i = static_cast<int>(std::floor(x));
 
 			myTargetInfo->ParamIndex(targetInfoIndex);
-			myTargetInfo->Value(sortedValues[i - 1] + std::remainder(x, 1.0) * (sortedValues[i] - sortedValues[i - 1]));
+
+			myTargetInfo->Value(sortedValues[i - 1] + std::fmod(x, 1.0) * (sortedValues[i] - sortedValues[i - 1]));
 			++targetInfoIndex;
 		}
 
