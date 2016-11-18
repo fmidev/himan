@@ -305,5 +305,11 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 		CUDA_CHECK(cudaFree(d_dir));
 	}
 
+	if (d_lon)
+	{
+		CUDA_CHECK(cudaFree(d_lon));
+		CUDA_CHECK(cudaFree(d_lat));
+	}
+
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }
