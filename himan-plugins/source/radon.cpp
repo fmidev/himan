@@ -24,7 +24,7 @@ radon::radon() : itsInit(false), itsRadonDB()
 		PoolMaxWorkers(MAX_WORKERS);
 
 		NFmiRadonDBPool::Instance()->Username("wetodb");
-		NFmiRadonDBPool::Instance()->Password("3loHRgdio");
+		NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
 	});
 }
 

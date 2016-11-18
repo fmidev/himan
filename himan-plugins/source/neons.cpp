@@ -25,7 +25,7 @@ neons::neons() : itsInit(false), itsNeonsDB()
 
 		NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
 		NFmiNeonsDBPool::Instance()->Username("wetodb");
-		NFmiNeonsDBPool::Instance()->Password("3loHRgdio");
+		NFmiNeonsDBPool::Instance()->Password(util::GetEnv("NEONS_WETODB_PASSWORD"));
 	});
 }
 
