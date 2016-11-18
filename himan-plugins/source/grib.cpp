@@ -1267,7 +1267,23 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 		if (parmName.empty())
 		{
-			itsLogger->Warning("Parameter name not found from Neons for no_vers: " +
+			auto dbType = options.configuration->DatabaseType();
+			string db = "";
+
+			if (dbType == kNeonsAndRadon)
+			{
+				db = " Neons or Radon ";
+			}
+			else if (dbType == kRadon )
+			{
+				db = " Radon ";
+			}
+			else
+			{
+				db = " Neons ";
+			}
+
+			itsLogger->Warning("Parameter name not found from" + db + "for no_vers: " +
 			                   boost::lexical_cast<string>(no_vers) + ", number: " +
 			                   boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
 			                   boost::lexical_cast<string>(timeRangeIndicator));
