@@ -1786,14 +1786,16 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		// Get packed values from grib
 
 		size_t len = itsGrib->Message().PackedValuesLength();
-		unsigned char* data = 0;
 		int* unpackedBitmap = 0;
 
 		if (len > 0)
 		{
-			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&data), len * sizeof(unsigned char)));
+			assert(packed->data == 0);
+			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&packed->data), len * sizeof(unsigned char)));
 
-			itsGrib->Message().PackedValues(data);
+			itsGrib->Message().PackedValues(packed->data);
+			packed->packedLength = len;
+			packed->unpackedLength = itsGrib->Message().SizeX() * itsGrib->Message().SizeY();
 
 			itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len) + " bytes of packed data from grib");
 		}
@@ -1822,8 +1824,6 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 			delete[] bitmap;
 		}
-
-		packed->Set(data, len, static_cast<size_t>(itsGrib->Message().SizeX() * itsGrib->Message().SizeY()));
 
 		newInfo->Grid()->PackedData(move(packed));
 	}
