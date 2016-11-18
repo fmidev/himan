@@ -168,6 +168,11 @@ int main(int argc, char** argv)
 		}
 
 		plugins.erase(plugins.begin());  // remove configuration and resize container
+
+#if defined DEBUG and defined HAVE_CUDE
+		// For 'cuda-memcheck --leak-check full'
+		CUDA_CHECK(cudaDeviceReset());
+#endif
 	}
 
 	if (!conf->StatisticsLabel().empty())
@@ -340,6 +345,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	int logLevel = 0;
 	short int threadCount = -1;
 
+// clang-format off
+
 	desc.add_options()
 		("help,h", "print out help message")
 		("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
@@ -355,9 +362,12 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("neons,N", "use only neons database")
 		("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
 		("cuda-properties", "print cuda device properties of platform (if any)")
-		("no-cuda", "disable all cuda extensions")("no-cuda-packing", "disable cuda packing of grib data")
+		("no-cuda", "disable all cuda extensions")
+		("no-cuda-packing", "disable cuda packing of grib data")
 		("no-cuda-unpacking", "disable cuda unpacking of grib data")
 		("no-cuda-interpolation", "disable cuda grid interpolation");
+
+// clang-format on
 
 	po::positional_options_description p;
 	p.add("auxiliary-files", -1);
