@@ -54,7 +54,7 @@ struct packed_data
 	{
 	}
 
-	CUDA_HOST CUDA_DEVICE virtual ~packed_data();
+	CUDA_HOST virtual ~packed_data();
 
 	/**
 	 * @brief Copy constructor for packed data
@@ -117,11 +117,9 @@ inline CUDA_HOST CUDA_DEVICE double himan::packed_data_util::GetGribPower(long s
 	return divisor;
 }
 
-inline CUDA_HOST CUDA_DEVICE packed_data::~packed_data()
+inline CUDA_HOST packed_data::~packed_data()
 {
-#ifndef __CUDACC__
 	Clear();
-#endif
 }
 
 inline CUDA_HOST bool packed_data::HasData() const { return (unpackedLength > 0); }
