@@ -15,6 +15,8 @@ using namespace himan::plugin;
 
 typedef lock_guard<mutex> Lock;
 
+std::mutex itsCheckMutex;
+
 cache::cache() { itsLogger = logger_factory::Instance()->GetLog("cache"); }
 string cache::UniqueName(const info& info)
 {
@@ -62,6 +64,24 @@ void cache::SplitToPool(info& anInfo, bool pin)
 		return;
 	}
 
+	// New item, but only one thread should insert it (prevent race condition)
+
+        Lock lock(itsCheckMutex);
+
+	// Double check if some other thread already inserted it while we were
+	// behind mutex.
+
+	if (cache_pool::Instance()->Find(uniqueName))
+	{
+		itsLogger->Trace("Data with key " + uniqueName + " already exists at cache");
+
+		// Update timestamp of this cache item
+		cache_pool::Instance()->UpdateTime(uniqueName);
+		return;
+	}
+
+	// Insert to pool
+
 #ifdef HAVE_CUDA
 	if (anInfo.Grid()->IsPackedData())
 	{
@@ -92,7 +112,6 @@ void cache::SplitToPool(info& anInfo, bool pin)
 
 	assert(uniqueName == UniqueName(*newInfo));
 
-	// Race condition?
 	cache_pool::Instance()->Insert(uniqueName, newInfo, pin);
 }
 
