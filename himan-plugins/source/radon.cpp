@@ -284,12 +284,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	try
 	{
 		itsRadonDB->Execute(query.str());
-		query.str("");
-
-		query << "UPDATE as_grid SET record_count = record_count+1 WHERE producer_id = " << resultInfo.Producer().Id()
-		      << " AND geometry_id = " << geom_id << " AND analysis_time = '" << analysisTime << "'";
-
-		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
 	}
 	catch (const pqxx::unique_violation& e)
