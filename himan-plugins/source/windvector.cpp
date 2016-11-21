@@ -223,8 +223,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	{
 		deviceType = "CPU";
 
+#ifdef HAVE_CUDA
 		Unpack({UInfo, VInfo});
-
+#endif
 		// Rotate to earth normal if projected
 
 		auto& UVec = VEC(UInfo);
