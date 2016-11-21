@@ -19,8 +19,6 @@
 
 #include <math.h>
 
-#include <stdio.h>
-
 namespace himan
 {
 namespace plugin
