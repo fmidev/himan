@@ -19,6 +19,8 @@
 
 #include <math.h>
 
+#include <stdio.h>
+
 namespace himan
 {
 namespace plugin
@@ -375,23 +377,26 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const
 	ens1.ResetLocation();
 	ens2.ResetLocation();
 
-	const size_t ensembleSize = ens1.Size();
-
-	if (ensembleSize != ens2.Size())
-	{
-		throw std::runtime_error(kClassName + "::CalculateWind(): U and V ensembles are of different size, aborting");
-	}
-
-	const double invN =
-	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
-
 	while (targetInfo->NextLocation() && ens1.NextLocation() && ens2.NextLocation())
 	{
+		const auto ensembleValuesU = ens1.Values();
+		const auto ensembleValuesV = ens2.Values();
+
+		const size_t ensembleSize = ensembleValuesU.size();
+		if (ensembleSize != ensembleValuesV.size())
+		{
+			throw std::runtime_error(kClassName +
+			                         "::CalculateWind(): U and V ensembles are of different size, aborting");
+		}
+
+		const double invN =
+		    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
+
 		double probability = 0.0;
 
-		for (size_t i = 0; i < ens1.Size(); i++)
+		for (const auto&& uv : zip_range(ensembleValuesU, ensembleValuesV))
 		{
-			if (Magnitude(ens1.Value(i), ens2.Value(i)) >= threshold)
+			if (Magnitude(uv.get<0>(), uv.get<1>()) >= threshold)
 			{
 				probability += invN;
 			}
@@ -407,18 +412,18 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 	targetInfo->ResetLocation();
 	ens.ResetLocation();
 
-	const size_t ensembleSize = ens.Size();
-
-	const double invN =
-	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
-
 	while (targetInfo->NextLocation() && ens.NextLocation())
 	{
+		const auto ensembleValues = ens.Values();
+		const size_t ensembleSize = ensembleValues.size();
+		const double invN =
+		    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
+
 		double probability = 0.0;
 
-		for (size_t i = 0; i < ens.Size(); i++)
+		for (const auto& x : ensembleValues)
 		{
-			if (ens.Value(i) <= threshold)
+			if (x <= threshold)
 			{
 				probability += invN;
 			}
@@ -434,18 +439,18 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, con
 	targetInfo->ResetLocation();
 	ens.ResetLocation();
 
-	const size_t ensembleSize = ens.Size();
-
-	const double invN =
-	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
-
 	while (targetInfo->NextLocation() && ens.NextLocation())
 	{
+		const auto ensembleValues = ens.Values();
+		const size_t ensembleSize = ensembleValues.size();
+		const double invN =
+		    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
+
 		double probability = 0.0;
 
-		for (size_t i = 0; i < ens.Size(); i++)
+		for (const auto& x : ensembleValues)
 		{
-			if (ens.Value(i) >= threshold)
+			if (x >= threshold)
 			{
 				probability += invN;
 			}

@@ -43,8 +43,14 @@ public:
 	/// @brief Reset the location of all the ensembles
 	void ResetLocation();
 
-	/// @brief Increment the location of all the ensembles,
-	/// if any of these fails, then all fail
+	/// @brief Set the location of all the ensembles to the first location.
+	/// Returns true if all locations are set to first succesfully,
+	/// otherwise returns false.
+	bool FirstLocation();
+
+	/// @brief Increment the location of all the ensembles.
+	/// Returns true if all the locations are incremented,
+	/// otherwise returns false.
 	bool NextLocation();
 
 	/// @brief Returns the current value of the specified forecast of the ensemble
