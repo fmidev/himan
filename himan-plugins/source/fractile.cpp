@@ -182,6 +182,12 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		auto sortedValues = ens->SortedValues();
 		const size_t ensembleSize = sortedValues.size();
 
+		// Skip this step if we didn't get any valid fields
+		if (sortedValues.empty())
+		{
+			continue;
+		}
+
 		assert(!itsFractiles.empty());
 
 		size_t targetInfoIndex = 0;
