@@ -192,9 +192,7 @@ std::vector<double> ensemble::Values() const
 	}
 
 	// Clients of ensemble shouldn't worry about missing values
-	ret.erase(std::remove_if(ret.begin(), ret.end(),
-		[](double x) { return x == kFloatMissing; }),
-		ret.end());
+	ret.erase(std::remove_if(ret.begin(), ret.end(), kFloatMissing), ret.end());
 
 	return ret;
 }
