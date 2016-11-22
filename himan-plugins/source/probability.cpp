@@ -376,7 +376,6 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const
 	ens2.ResetLocation();
 
 	const size_t ensembleSize = ens1.Size();
-
 	if (ensembleSize != ens2.Size())
 	{
 		throw std::runtime_error(kClassName + "::CalculateWind(): U and V ensembles are of different size, aborting");
@@ -389,9 +388,17 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const
 	{
 		double probability = 0.0;
 
-		for (size_t i = 0; i < ens1.Size(); i++)
+		for (size_t i = 0; i < ensembleSize; i++)
 		{
-			if (Magnitude(ens1.Value(i), ens2.Value(i)) >= threshold)
+			const auto u = ens1.Value(i);
+			const auto v = ens2.Value(i);
+
+			if ((u == kFloatMissing) || (v == kFloatMissing))
+			{
+				continue;
+			}
+
+			if (Magnitude(u, v) >= threshold)
 			{
 				probability += invN;
 			}
@@ -408,7 +415,6 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 	ens.ResetLocation();
 
 	const size_t ensembleSize = ens.Size();
-
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
@@ -416,9 +422,10 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 	{
 		double probability = 0.0;
 
-		for (size_t i = 0; i < ens.Size(); i++)
+		for (size_t i = 0; i < ensembleSize; i++)
 		{
-			if (ens.Value(i) <= threshold)
+			const auto x = ens.Value(i);
+			if ((x != kFloatMissing) && (x <= threshold))
 			{
 				probability += invN;
 			}
@@ -435,7 +442,6 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, con
 	ens.ResetLocation();
 
 	const size_t ensembleSize = ens.Size();
-
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
@@ -443,9 +449,10 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, con
 	{
 		double probability = 0.0;
 
-		for (size_t i = 0; i < ens.Size(); i++)
+		for (size_t i = 0; i < ensembleSize; i++)
 		{
-			if (ens.Value(i) >= threshold)
+			const auto x = ens.Value(i);
+			if ((x != kFloatMissing) && (x >= threshold))
 			{
 				probability += invN;
 			}

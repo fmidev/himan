@@ -30,7 +30,7 @@ struct simple_packed : packed_data
 	CUDA_HOST
 	simple_packed(const simple_packed& other);
 
-	CUDA_HOST CUDA_DEVICE virtual ~simple_packed() {}
+	CUDA_HOST virtual ~simple_packed() {}
 	virtual std::string ClassName() const { return "simple_packed"; }
 	/**
 	 * @brief Function will unpack binary array (unsigned char) to double array.

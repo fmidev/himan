@@ -1267,7 +1267,23 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 		if (parmName.empty())
 		{
-			itsLogger->Warning("Parameter name not found from Neons for no_vers: " +
+			auto dbType = options.configuration->DatabaseType();
+			string db = "";
+
+			if (dbType == kNeonsAndRadon)
+			{
+				db = " Neons or Radon ";
+			}
+			else if (dbType == kRadon )
+			{
+				db = " Radon ";
+			}
+			else
+			{
+				db = " Neons ";
+			}
+
+			itsLogger->Warning("Parameter name not found from" + db + "for no_vers: " +
 			                   boost::lexical_cast<string>(no_vers) + ", number: " +
 			                   boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
 			                   boost::lexical_cast<string>(timeRangeIndicator));
@@ -1786,14 +1802,16 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		// Get packed values from grib
 
 		size_t len = itsGrib->Message().PackedValuesLength();
-		unsigned char* data = 0;
 		int* unpackedBitmap = 0;
 
 		if (len > 0)
 		{
-			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&data), len * sizeof(unsigned char)));
+			assert(packed->data == 0);
+			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&packed->data), len * sizeof(unsigned char)));
 
-			itsGrib->Message().PackedValues(data);
+			itsGrib->Message().PackedValues(packed->data);
+			packed->packedLength = len;
+			packed->unpackedLength = itsGrib->Message().SizeX() * itsGrib->Message().SizeY();
 
 			itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len) + " bytes of packed data from grib");
 		}
@@ -1822,8 +1840,6 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 			delete[] bitmap;
 		}
-
-		packed->Set(data, len, static_cast<size_t>(itsGrib->Message().SizeX() * itsGrib->Message().SizeY()));
 
 		newInfo->Grid()->PackedData(move(packed));
 	}

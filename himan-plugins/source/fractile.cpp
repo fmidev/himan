@@ -180,6 +180,13 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
 		auto sortedValues = ens->SortedValues();
+		const size_t ensembleSize = sortedValues.size();
+
+		// Skip this step if we didn't get any valid fields
+		if (sortedValues.empty())
+		{
+			continue;
+		}
 
 		assert(!itsFractiles.empty());
 
@@ -191,19 +198,19 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			double x;
 
 			// check lower corner case p E [0,1/(N+1)]
-			if (P / 100.0 <= 1.0 / static_cast<double>(itsEnsembleSize + 1))
+			if (P / 100.0 <= 1.0 / static_cast<double>(ensembleSize + 1))
 			{
 				x = 1;
 			}
 			// check upper corner case p E [N/(N+1),1]
-			else if (P / 100.0 >= static_cast<double>(itsEnsembleSize) / static_cast<double>(itsEnsembleSize + 1))
+			else if (P / 100.0 >= static_cast<double>(ensembleSize) / static_cast<double>(ensembleSize + 1))
 			{
-				x = static_cast<double>(itsEnsembleSize);
+				x = static_cast<double>(ensembleSize);
 			}
 			// everything that happens on the interval between
 			else
 			{
-				x = P / 100.0 * static_cast<double>(itsEnsembleSize + 1);
+				x = P / 100.0 * static_cast<double>(ensembleSize + 1);
 			}
 			// floor x explicitly before casting to int
 			int i = static_cast<int>(std::floor(x));

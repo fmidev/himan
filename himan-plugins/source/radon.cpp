@@ -24,7 +24,7 @@ radon::radon() : itsInit(false), itsRadonDB()
 		PoolMaxWorkers(MAX_WORKERS);
 
 		NFmiRadonDBPool::Instance()->Username("wetodb");
-		NFmiRadonDBPool::Instance()->Password("3loHRgdio");
+		NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
 	});
 }
 
@@ -283,12 +283,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 
 	try
 	{
-		itsRadonDB->Execute(query.str());
-		query.str("");
-
-		query << "UPDATE as_grid SET record_count = record_count+1 WHERE producer_id = " << resultInfo.Producer().Id()
-		      << " AND geometry_id = " << geom_id << " AND analysis_time = '" << analysisTime << "'";
-
 		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
 	}

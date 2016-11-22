@@ -521,7 +521,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 
 	ss << " +x_0=" << (-falseEasting) << " +y_0=" << (-falseNorthing);
 
-	itsLogger->Trace("PROJ4: " + ss.str());
+	// itsLogger->Trace("PROJ4: " + ss.str());
 
 	err = itsSpatialReference->importFromProj4(ss.str().c_str());
 

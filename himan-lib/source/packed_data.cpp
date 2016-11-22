@@ -77,12 +77,14 @@ void packed_data::Clear()
 {
 	if (packedLength)
 	{
+		assert(data);
 		CUDA_CHECK(cudaFreeHost(data));
 		packedLength = 0;
 	}
 
 	if (bitmapLength)
 	{
+		assert(bitmap);
 		CUDA_CHECK(cudaFreeHost(bitmap));
 		bitmapLength = 0;
 	}

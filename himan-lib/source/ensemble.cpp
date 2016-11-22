@@ -157,6 +157,18 @@ void ensemble::ResetLocation()
 	}
 }
 
+bool ensemble::FirstLocation()
+{
+	for (auto& f : itsForecasts)
+	{
+		if (!f->FirstLocation())
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 bool ensemble::NextLocation()
 {
 	for (auto& f : itsForecasts)
@@ -171,13 +183,17 @@ bool ensemble::NextLocation()
 
 std::vector<double> ensemble::Values() const
 {
-	std::vector<double> ret(itsForecasts.size());
-	size_t i = 0;
+	std::vector<double> ret;
+	ret.reserve(Size());
+
 	for (auto& f : itsForecasts)
 	{
-		ret[i] = f->Value();
-		i++;
+		ret.push_back(f->Value());
 	}
+
+	// Clients of ensemble shouldn't worry about missing values
+	ret.erase(std::remove(ret.begin(), ret.end(), kFloatMissing), ret.end());
+
 	return ret;
 }
 
