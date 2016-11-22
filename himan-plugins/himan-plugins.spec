@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.11.10
+Version: 16.11.22
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -108,7 +108,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Tue Nov 10 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.10-1.fmi
+* Tue Nov 22 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.22-1.fmi
+- fractile and probability mising value changes
+- fixing non-cuda build for windvector
+* Thu Nov 10 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.10-1.fmi
 - Fractile bugfix
 * Tue Nov  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.8-2.fmi
 - hybrid_height bugfix
