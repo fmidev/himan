@@ -1256,7 +1256,16 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
 		                         options.configuration->DatabaseType() == kNeonsAndRadon))
 		{
-			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process, itsGrib->Message().ForecastType());
+			int producerType = 1;  // deterministic
+
+			int forecastType = itsGrib->Message().ForecastType();
+
+			if (forecastType == 4 || forecastType == 3)
+			{
+				producerType = 3;  // ensemble
+			}
+
+			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process, producerType);
 
 			if (!prodInfo.empty())
 			{
