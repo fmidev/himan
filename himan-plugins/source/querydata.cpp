@@ -11,6 +11,9 @@
 #include "stereographic_grid.h"
 #include <fstream>
 
+#include "plugin_factory.h"
+#include "radon.h"
+
 #ifdef __clang__
 
 #pragma clang diagnostic push
@@ -267,7 +270,19 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 	if (theActiveOnly)
 	{
-		assert(info.Param().UnivId());
+		if (info.Param().UnivId() == static_cast<long> (kHPMissingInt))
+		{
+			auto r = GET_PLUGIN(radon);
+			auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name());
+
+			if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
+			{
+				param p = info.Param();
+				p.UnivId(boost::lexical_cast<long> (parmInfo["univ_id"]));
+				info.SetParam(p);
+			}
+		}
+
 
 		pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
 	}
@@ -277,7 +292,18 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 		while (info.NextParam())
 		{
-			assert(info.Param().UnivId());
+			if (info.Param().UnivId() == static_cast<long> (kHPMissingInt))
+			{
+				auto r = GET_PLUGIN(radon);
+				auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name());
+
+				if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
+				{
+					param p = info.Param();
+					p.UnivId(boost::lexical_cast<long> (parmInfo["univ_id"]));
+					info.SetParam(p);
+				}
+			}
 
 			pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
 		}
