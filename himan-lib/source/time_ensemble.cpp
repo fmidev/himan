@@ -34,17 +34,15 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 {
 	auto f = GET_PLUGIN(fetcher);
 
-	try
+	forecast_time ftime(time);
+
+	itsForecasts.clear();
+	int numMissingForecasts = 0;
+
+	for (size_t i = 0; i < itsExpectedEnsembleSize; i++)
 	{
-		forecast_time ftime(time);
-
-		while (true)
+		try
 		{
-			if (itsExpectedEnsembleSize > 0 && itsForecasts.size() >= itsExpectedEnsembleSize)
-			{
-				break;
-			}
-
 			auto info = f->Fetch(config, ftime, forecastLevel, itsParam);
 
 			itsForecasts.push_back(info);
@@ -52,29 +50,43 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 			ftime.OriginDateTime().Adjust(itsTimeSpan, -1);
 			ftime.ValidDateTime().Adjust(itsTimeSpan, -1);
 		}
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e == kFileDataNotFound)
+		catch (HPExceptionType& e)
 		{
-			if (itsExpectedEnsembleSize > 0 && itsForecasts.size() != itsExpectedEnsembleSize)
+			if (e != kFileDataNotFound)
 			{
-				// NOTE let the plugin decide what to do with missing data
-				throw;
-			}
-			else if (itsForecasts.size() == 0)
-			{
-				// no forecasts found
-				throw;
+				itsLogger->Fatal("Unable to proceed");
+				exit(1);
 			}
 			else
 			{
-				itsExpectedEnsembleSize = itsForecasts.size();
+				numMissingForecasts++;
+				ftime.OriginDateTime().Adjust(itsTimeSpan, -1);
+				ftime.ValidDateTime().Adjust(itsTimeSpan, -1);
+
 			}
 		}
 	}
 
-	assert(itsExpectedEnsembleSize == itsForecasts.size());
+	if (itsMaximumMissingForecasts > 0)
+	{
+		if (numMissingForecasts > itsMaximumMissingForecasts)
+		{
+			itsLogger->Fatal("Maximum number of missing fields (" + std::to_string(itsMaximumMissingForecasts) +
+			                 ") reached, aborting");
+			exit(1);
+		}
+	}
+	else
+	{
+		if (numMissingForecasts > 0)
+		{
+			itsLogger->Fatal("Missing " + std::to_string(numMissingForecasts) + " of " +
+			                 std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
+			exit(1);
+		}
+	}
 
-	itsLogger->Info("Read " + boost::lexical_cast<std::string>(itsForecasts.size()) + " different times to ensemble");
+	itsLogger->Info("Succesfully loaded " + std::to_string(itsForecasts.size()) + "/" +
+	                std::to_string(itsExpectedEnsembleSize) + " fields");
+
 }
