@@ -228,8 +228,8 @@ void latitude_longitude_grid::Di(double theDi) { itsDi = theDi; }
 void latitude_longitude_grid::Dj(double theDj) { itsDj = theDj; }
 double latitude_longitude_grid::Di() const
 {
-	if (itsDi == kHPMissingValue && itsNi != kHPMissingInt && FirstPoint().X() != kHPMissingValue &&
-	    LastPoint().X() != kHPMissingValue)
+	if (itsDi == kHPMissingValue && itsNi != static_cast<size_t> (kHPMissingInt) &&
+	    FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
 	{
 		double fx = FirstPoint().X();
 		double lx = LastPoint().X();
@@ -243,8 +243,8 @@ double latitude_longitude_grid::Di() const
 
 double latitude_longitude_grid::Dj() const
 {
-	if (itsDj == kHPMissingValue && itsNj != kHPMissingInt && FirstPoint().X() != kHPMissingValue &&
-	    LastPoint().X() != kHPMissingValue)
+	if (itsDj == kHPMissingValue && itsNj != static_cast<size_t> (kHPMissingInt) &&
+	    FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
 	{
 		itsDj = fabs((FirstPoint().Y() - LastPoint().Y()) / (static_cast<double>(itsNj) - 1.));
 	}

@@ -146,7 +146,9 @@ cflags_normal.append('-Wall')
 cflags_normal.append('-W')
 cflags_normal.append('-Wno-unused-parameter')
 cflags_normal.append('-Werror')
-cflags_normal.append('-Wno-narrowing')
+
+if not IS_SLES:
+	cflags_normal.append('-Wno-narrowing')
 
 # Extra flags
 
