@@ -207,6 +207,11 @@ ostream& stereographic_grid::Write(std::ostream& file) const
 
 	file << itsBottomLeft;
 	file << itsTopRight;
+	file << "__itsNi__ " << itsNi << endl;
+	file << "__itsNj__ " << itsNj << endl;
+	file << "__itsDi__ " << itsDi << endl;
+	file << "__itsDj__ " << itsDj << endl;
+
 	file << "__itsOrientation__ " << itsOrientation << endl;
 
 	return file;
