@@ -273,7 +273,8 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 		if (info.Param().UnivId() == static_cast<long> (kHPMissingInt))
 		{
 			auto r = GET_PLUGIN(radon);
-			auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name());
+			auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
+			                                                          info.Level().Type(), info.Level().Value());
 
 			if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
 			{
@@ -295,7 +296,8 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 			if (info.Param().UnivId() == static_cast<long> (kHPMissingInt))
 			{
 				auto r = GET_PLUGIN(radon);
-				auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name());
+				auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
+				                                                          info.Level().Type(), info.Level().Value());
 
 				if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
 				{

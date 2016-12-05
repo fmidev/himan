@@ -386,7 +386,8 @@ himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration
 	{
 		auto r = GET_PLUGIN(radon);
 
-		auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(sourceProducer.Id(), targetParam.Name());
+		auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(sourceProducer.Id(), targetParam.Name(),
+		                                                           targetLevel.Type(), targetLevel.Value());
 
 		if (paramInfo.empty())
 		{

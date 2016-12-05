@@ -236,7 +236,8 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	char host[255];
 	gethostname(host, 255);
 
-	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name());
+	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name(),
+	                                                          resultInfo.Level().Type(), resultInfo.Level().Value());
 
 	if (paraminfo.empty())
 	{

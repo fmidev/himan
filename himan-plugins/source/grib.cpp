@@ -1104,7 +1104,8 @@ void grib::WriteParameter(info& anInfo)
 				auto r = GET_PLUGIN(radon);
 
 				auto paramInfo =
-				    r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name());
+				    r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name(),
+				                                              anInfo.Level().Type(), anInfo.Level().Value());
 
 				if (paramInfo.empty() || paramInfo.find("grib1_number") == paramInfo.end() ||
 				    paramInfo["grib1_number"].empty())
@@ -1128,7 +1129,8 @@ void grib::WriteParameter(info& anInfo)
 		{
 			auto r = GET_PLUGIN(radon);
 
-			auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name());
+			auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name(),
+			                                                           anInfo.Level().Type(), anInfo.Level().Value());
 
 			if (paramInfo.empty())
 			{
@@ -1906,16 +1908,15 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 {
 	// indicator of Parameter is not necessarily provided in search_options param
 	// look this information up from database instead
-	//========================================================================================================================================================================================
-	shared_ptr<radon> r;
+
+	map<string,string> param;
 
 	if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
 	{
-		r = GET_PLUGIN(radon);
+		auto r = GET_PLUGIN(radon);
+		param = r->RadonDB().GetParameterFromDatabaseName(options.prod.Id(), options.param.Name(),
+		                                                  options.level.Type(), options.level.Value());
 	}
-
-	auto param = r->RadonDB().GetParameterFromDatabaseName(options.prod.Id(), options.param.Name());
-	//========================================================================================================================================================================================
 
 	auto time = options.time;
 
@@ -1928,11 +1929,12 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 	theKeyValueMap["date"] = stol(time.OriginDateTime().String("%Y%m%d"));
 	theKeyValueMap["time"] = stol(time.OriginDateTime().String("%H%M"));
 
-	if (param["version"] == "1")
+//	if (param["version"] == "1")
 	{
 		theKeyValueMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
 		theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
 	}
+/*
 	else if (param["version"] == "2")
 	{
 		// TODO check if this is giving correct type number (Grib2 != Grib1)
@@ -1941,5 +1943,6 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 		theKeyValueMap["parameterCategory"] = stol(param["grib2_category"]);
 		theKeyValueMap["parameterNumber"] = stol(param["grib2_number"]);
 	}
+*/
 	return theKeyValueMap;
 }

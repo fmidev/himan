@@ -434,7 +434,8 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 				}
 
 				map<string, string> paraminfo =
-				    r->RadonDB().GetParameterFromDatabaseName(itsInfo->Producer().Id(), params[i].Name());
+				    r->RadonDB().GetParameterFromDatabaseName(itsInfo->Producer().Id(), params[i].Name(),
+				                                              itsInfo->Level().Type(), itsInfo->Level().Value());
 
 				if (paraminfo.empty() || paraminfo["grib1_number"].empty() || paraminfo["grib1_table_version"].empty())
 				{
