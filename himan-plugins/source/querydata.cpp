@@ -260,6 +260,33 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 	return NFmiTimeDescriptor(originTime, tlist);
 }
 
+void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
+{
+	using namespace himan;
+	if (info.Param().UnivId() == static_cast<long> (kHPMissingInt))
+	{
+		auto r = GET_PLUGIN(radon);
+
+		auto levelInfo =
+		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(info.Level().Type())));
+
+		assert(levelInfo.size());
+		auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
+		                                                          stoi(levelInfo["id"]), info.Level().Value());
+
+		if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
+		{
+			param p = info.Param();
+			p.UnivId(boost::lexical_cast<long> (parmInfo["univ_id"]));
+			info.SetParam(p);
+		}
+	}
+
+
+	pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
+
+}
+
 NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveOnly)
 {
 	/*
@@ -270,22 +297,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 	if (theActiveOnly)
 	{
-		if (info.Param().UnivId() == static_cast<long> (kHPMissingInt))
-		{
-			auto r = GET_PLUGIN(radon);
-			auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
-			                                                          info.Level().Type(), info.Level().Value());
-
-			if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
-			{
-				param p = info.Param();
-				p.UnivId(boost::lexical_cast<long> (parmInfo["univ_id"]));
-				info.SetParam(p);
-			}
-		}
-
-
-		pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
+		AddToParamBag(info, pbag);
 	}
 	else
 	{
@@ -293,21 +305,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 		while (info.NextParam())
 		{
-			if (info.Param().UnivId() == static_cast<long> (kHPMissingInt))
-			{
-				auto r = GET_PLUGIN(radon);
-				auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
-				                                                          info.Level().Type(), info.Level().Value());
-
-				if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
-				{
-					param p = info.Param();
-					p.UnivId(boost::lexical_cast<long> (parmInfo["univ_id"]));
-					info.SetParam(p);
-				}
-			}
-
-			pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
+			AddToParamBag(info, pbag);
 		}
 	}
 

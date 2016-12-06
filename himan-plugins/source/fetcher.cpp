@@ -386,8 +386,17 @@ himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration
 	{
 		auto r = GET_PLUGIN(radon);
 
+		auto levelInfo =
+		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(targetLevel.Type())));
+
+		if (levelInfo.empty())
+		{
+			itsLogger->Warning("Level type '" + HPLevelTypeToString.at(targetLevel.Type()) + "' not found from radon");
+			return ret;
+		}
+
 		auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(sourceProducer.Id(), targetParam.Name(),
-		                                                           targetLevel.Type(), targetLevel.Value());
+		                                                           stoi(levelInfo["id"]), targetLevel.Value());
 
 		if (paramInfo.empty())
 		{
@@ -395,10 +404,6 @@ himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration
 			return ret;
 		}
 
-		auto levelInfo =
-		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(targetLevel.Type())));
-
-		if (levelInfo.empty()) return ret;
 
 		auto levelXrefInfo =
 		    r->RadonDB().GetLevelTransform(sourceProducer.Id(), boost::lexical_cast<int>(paramInfo["id"]),

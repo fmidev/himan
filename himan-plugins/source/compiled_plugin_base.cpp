@@ -433,6 +433,16 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 					continue;
 				}
 
+				auto levelInfo =
+				    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(itsInfo->Level().Type())));
+
+				if (levelInfo.empty())
+				{
+					itsBaseLogger->Warning("Level type '" + HPLevelTypeToString.at(itsInfo->Level().Type()) +
+					                       "' not found from radon");
+					continue;
+				}
+
 				map<string, string> paraminfo =
 				    r->RadonDB().GetParameterFromDatabaseName(itsInfo->Producer().Id(), params[i].Name(),
 				                                              itsInfo->Level().Type(), itsInfo->Level().Value());

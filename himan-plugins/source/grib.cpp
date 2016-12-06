@@ -1103,9 +1103,13 @@ void grib::WriteParameter(info& anInfo)
 			{
 				auto r = GET_PLUGIN(radon);
 
+				auto levelInfo =
+				    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
+
+				assert(levelInfo.size());
 				auto paramInfo =
 				    r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name(),
-				                                              anInfo.Level().Type(), anInfo.Level().Value());
+				                                              stoi(levelInfo["id"]), anInfo.Level().Value());
 
 				if (paramInfo.empty() || paramInfo.find("grib1_number") == paramInfo.end() ||
 				    paramInfo["grib1_number"].empty())
@@ -1129,8 +1133,12 @@ void grib::WriteParameter(info& anInfo)
 		{
 			auto r = GET_PLUGIN(radon);
 
+			auto levelInfo =
+			    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
+
+			assert(levelInfo.size());
 			auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name(),
-			                                                           anInfo.Level().Type(), anInfo.Level().Value());
+			                                                           stoi(levelInfo["id"]), anInfo.Level().Value());
 
 			if (paramInfo.empty())
 			{
@@ -1914,8 +1922,12 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 	if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
 	{
 		auto r = GET_PLUGIN(radon);
+		auto levelInfo =
+		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(options.level.Type())));
+
+		assert(levelInfo.size());
 		param = r->RadonDB().GetParameterFromDatabaseName(options.prod.Id(), options.param.Name(),
-		                                                  options.level.Type(), options.level.Value());
+		                                                  stoi(levelInfo["id"]), options.level.Value());
 	}
 
 	auto time = options.time;

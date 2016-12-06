@@ -236,16 +236,6 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	char host[255];
 	gethostname(host, 255);
 
-	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name(),
-	                                                          resultInfo.Level().Type(), resultInfo.Level().Value());
-
-	if (paraminfo.empty())
-	{
-		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
-		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
-		return false;
-	}
-
 	auto levelinfo = itsRadonDB->GetLevelFromDatabaseName(HPLevelTypeToString.at(resultInfo.Level().Type()));
 
 	if (levelinfo.empty())
@@ -253,6 +243,16 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 		itsLogger->Error("Level information not found from radon for level " +
 		                 HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
 		                 boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		return false;
+	}
+
+	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name(),
+	                                                          stoi(levelinfo["id"]), resultInfo.Level().Value());
+
+	if (paraminfo.empty())
+	{
+		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
+		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
 		return false;
 	}
 
