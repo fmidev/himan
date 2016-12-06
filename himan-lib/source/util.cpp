@@ -93,11 +93,12 @@ himan::HPFileType util::FileType(const string& theFile)
 
 	boost::filesystem::path p(theFile);
 
-	string ext;  // = p.extension().string();
-	for (; !p.extension().empty(); p = p.stem())
+	if (p.extension().string() == ".gz" || p.extension().string() == ".bz2")
 	{
-		ext.insert(0, p.extension().string());
+		p = p.stem();
 	}
+
+	string ext = p.extension().string();
 
 	if (ext == ".csv")
 	{
@@ -107,7 +108,7 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		return kQueryData;
 	}
-	else if (ext == ".grib" || ext == ".grib.gz" || ext == ".grib.bz2")
+	else if (ext == ".grib")
 	{
 		return kGRIB;
 	}
@@ -115,7 +116,7 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		return kGRIBIndex;
 	}
-	else if (ext == ".grib2" || ext == ".grib2.gz" || ext == ".grib2.bz2")
+	else if (ext == ".grib2")
 	{
 		return kGRIB2;
 	}
