@@ -51,9 +51,9 @@ RELEASE = (not DEBUG)
 
 # Workspace
 
-#workspace = os.getcwd() + "/../"
+workspace = os.getcwd() + "/../"
 # rpm builds:
-workspace = "/home/dev/weto/partio/himan"
+#workspace = "/home/dev/weto/partio/himan"
 
 # cuda toolkit path
 
