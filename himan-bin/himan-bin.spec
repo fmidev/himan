@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 16.11.22
+Version: 16.12.7
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -27,7 +27,7 @@ Requires: zlib
 BuildRequires: redhat-rpm-config
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-7-5
+BuildRequires: cuda-8-0
 BuildRequires: scons
 Provides: himan
 
@@ -56,11 +56,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi
+- Cuda 8
 * Tue Nov 22 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.22-1.fmi
 - New release
 * Tue Nov  1 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.1-1.fmi
 - New release
-* Wed Oct 27 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.27-1.fmi
+* Thu Oct 27 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.27-1.fmi
 - New release
 * Wed Oct 26 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.10.26-1.fmi
 - New release

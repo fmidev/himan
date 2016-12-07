@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 16.12.7
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -28,7 +28,7 @@ Requires: libpqxx
 BuildRequires: gdal-devel
 BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-7-5
+BuildRequires: cuda-8-0
 BuildRequires: libfmidb-devel >= 16.9.8
 BuildRequires: libfmigrib-devel >= 16.9.8
 BuildRequires: libluabind >= 0.9.3-3
@@ -108,7 +108,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Thu Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi
+* Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-2.fmi
+- Cuda 8
+* Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi
 - ensemble in luatool
 * Tue Nov 22 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.22-1.fmi
 - fractile and probability mising value changes

@@ -39,14 +39,14 @@ RELEASE = (not DEBUG)
 
 # Workspace
 
-workspace = os.getcwd() + "/../"
+#workspace = os.getcwd() + "/../"
 # rpm builds:
-#workspace = "/home/dev/weto/workspace/himan"
+workspace = "/home/dev/weto/partio/himan"
 
 # cuda toolkit path
 
 if not NOCUDA:
-	cuda_toolkit_path = '/usr/local/cuda-7.5'
+	cuda_toolkit_path = '/usr/local/cuda-8.0'
 
 	if os.environ.get('CUDA_TOOLKIT_PATH') is None:
         	print "Environment variable CUDA_TOOLKIT_PATH not set, assuming " + cuda_toolkit_path

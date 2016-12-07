@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.11.22
+Version: 16.12.7
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -25,7 +25,7 @@ BuildRequires: cub
 BuildRequires: libfmidb-devel >= 16.9.8
 BuildRequires: libfmigrib-devel >= 16.9.8
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-7-5
+BuildRequires: cuda-8-0
 BuildRequires: libsmartmet-newbase-devel >= 16.9.20
 BuildRequires: scons
 BuildRequires: gdal-devel
@@ -54,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi
+- Cuda 8
 * Tue Nov 22 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.22-8.fmi
 - ensemble works with missing values
 * Tue Nov  8 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.8-1.fmi
