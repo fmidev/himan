@@ -64,8 +64,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	double levelValue = anInfo.Level().Value();
 	HPForecastType forecastType = anInfo.ForecastType().Type();
 
-	if (edition == 1 && (anInfo.Grid()->AB().size() > 255 ||
-	                     (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
+	if (edition == 1 &&
+	    (anInfo.Grid()->AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
 		itsLogger->Debug("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
 		                 ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
@@ -1106,7 +1106,8 @@ void grib::WriteParameter(info& anInfo)
 				auto paramInfo =
 				    r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name());
 
-				if (paramInfo.empty() || paramInfo.find("grib1_number") == paramInfo.end() || paramInfo["grib1_number"].empty())
+				if (paramInfo.empty() || paramInfo.find("grib1_number") == paramInfo.end() ||
+				    paramInfo["grib1_number"].empty())
 				{
 					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
 					                   boost::lexical_cast<string>(anInfo.Producer().Id()) +
@@ -1255,13 +1256,27 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
 		                         options.configuration->DatabaseType() == kNeonsAndRadon))
 		{
-			auto parminfo = r->RadonDB().GetParameterFromGrib1(options.prod.Id(), no_vers, number, timeRangeIndicator,
-			                                                   itsGrib->Message().NormalizedLevelType(),
-			                                                   itsGrib->Message().LevelValue());
+			int producerType = 1;  // deterministic
 
-			if (parminfo.size())
+			int forecastType = itsGrib->Message().ForecastType();
+
+			if (forecastType == 4 || forecastType == 3)
 			{
-				parmName = parminfo["name"];
+				producerType = 3;  // ensemble
+			}
+
+			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process, producerType);
+
+			if (!prodInfo.empty())
+			{
+				auto parminfo = r->RadonDB().GetParameterFromGrib1(
+				    boost::lexical_cast<int>(prodInfo["id"]), no_vers, number, timeRangeIndicator,
+				    itsGrib->Message().NormalizedLevelType(), itsGrib->Message().LevelValue());
+
+				if (!parminfo.empty())
+				{
+					parmName = parminfo["name"];
+				}
 			}
 		}
 
@@ -1274,7 +1289,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 			{
 				db = " Neons or Radon ";
 			}
-			else if (dbType == kRadon )
+			else if (dbType == kRadon)
 			{
 				db = " Radon ";
 			}

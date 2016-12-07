@@ -1,19 +1,19 @@
 #include "luatool.h"
+#include "ensemble.h"
 #include "forecast_time.h"
+#include "hitool.h"
 #include "latitude_longitude_grid.h"
 #include "logger_factory.h"
 #include "metutil.h"
+#include "neons.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
+#include "radon.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
-
-#include "hitool.h"
-#include "neons.h"
-#include "radon.h"
 
 #ifndef __clang_analyzer__
 
@@ -640,6 +640,11 @@ std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, 
 
 }  // namespace radon_wrapper
 
+namespace ensemble_wrapper
+{
+object Values(const ensemble& ens) { return VectorToTable(ens.Values()); }
+}  // ensemble_wrapper
+
 // clang-format off
 
 void BindLib(lua_State* L)
@@ -855,6 +860,14 @@ void BindLib(lua_State* L)
 	          class_<write_options>("write_options")
 	              .def(constructor<>())
 	              .def_readwrite("use_bitmap", &write_options::use_bitmap),
+		  class_<ensemble>("ensemble")
+		      .def(constructor<param, int>())
+		      .def("ClassName", &ensemble::ClassName)
+		      .def("Fetch", &ensemble::Fetch)
+		      .def("Values", &ensemble_wrapper::Values)
+		      .def("ResetLocation", &ensemble::ResetLocation)
+		      .def("NextLocation", &ensemble::NextLocation)
+		      .def("Size", &ensemble::Size),
 	          // numerical_functions namespace
 	          def("Filter2D", &numerical_functions::Filter2D),
 	          // metutil namespace
