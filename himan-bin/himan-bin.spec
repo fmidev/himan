@@ -14,20 +14,27 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: himan-lib >= 16.10.5
+Requires: libsmartmet-newbase >= 16.2.4
+Requires: jasper
+Requires: oracle-instantclient-basic
+Requires: gdal >= 1.11.0
+Requires: zlib
+BuildRequires: boost-devel >= 1.53
+
+%if %{defined suse_version}
+
+%else
+BuildRequires: redhat-rpm-config
+BuildRequires: gcc-c++ >= 4.8.2
+BuildRequires: cuda-8-0
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
 Requires: boost-iostreams
 Requires: boost-thread
-Requires: jasper
-Requires: oracle-instantclient-basic
-Requires: gdal >= 1.11.0
 Requires: bzip2-libs
-Requires: zlib
-BuildRequires: redhat-rpm-config
-BuildRequires: boost-devel >= 1.55
-BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-8-0
+
+%endif
 BuildRequires: scons
 Provides: himan
 

@@ -13,8 +13,6 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: jasper-libs
-Requires: eccodes
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
 Requires: himan-lib >= 16.8.23
 Requires: himan-bin >= 16.6.6
@@ -25,20 +23,27 @@ Requires: libfmidb >= 16.9.8
 Requires: libsmartmet-newbase >= 16.9.20
 Requires: libpqxx
 
+%if %{defined suse_version}
+Requires: libjasper
+Requires: grib_api
+%else
 BuildRequires: gdal-devel
-BuildRequires: boost-devel >= 1.55
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-8-0
-BuildRequires: libfmidb-devel >= 16.9.8
-BuildRequires: libfmigrib-devel >= 16.9.8
-BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: lua-devel >= 5.1.4
-BuildRequires: scons
-BuildRequires: libsmartmet-newbase-devel >= 16.9.20
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 BuildRequires: cusp >= 0.5.1
+Requires: jasper-libs
+Requires: eccodes
+%endif
+BuildRequires: libfmidb-devel >= 16.6.9
+BuildRequires: libfmigrib-devel >= 16.6.13
+BuildRequires: libsmartmet-newbase-devel >= 16.9.20
+BuildRequires: scons
+BuildRequires: libluabind >= 0.9.3-3
+BuildRequires: boost-devel >= 1.53
+BuildRequires: scons
+BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
 %description
 FMI himan-plugins -- hila manipulaatio -- plugin library

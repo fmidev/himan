@@ -16,19 +16,26 @@ Requires: libstdc++
 Requires: libfmidb >= 16.9.8
 Requires: libfmigrib >= 16.9.8
 Requires: libfmidb >= 16.6.6
-Requires: eccodes
-BuildRequires: zlib-devel
+Requires: gdal
+
+%if %{defined suse_version}
+BuildRequires: bzip2
+Requires: grib_api
+%else
 BuildRequires: bzip2-devel
-BuildRequires: boost-devel >= 1.55
 BuildRequires: redhat-rpm-config
 BuildRequires: cub
+BuildRequires: cuda-8-0
+BuildRequires: gcc-c++ >= 4.8.2
+Requires: eccodes
+%endif
 BuildRequires: libfmidb-devel >= 16.9.8
 BuildRequires: libfmigrib-devel >= 16.9.8
-BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-8-0
-BuildRequires: libsmartmet-newbase-devel >= 16.9.20
+BuildRequires: zlib-devel
+BuildRequires: boost-devel >= 1.53
+BuildRequires: libsmartmet-newbase-devel >= 16.5.4
 BuildRequires: scons
-BuildRequires: gdal-devel
+
 Provides: libhiman.so
 
 %description
