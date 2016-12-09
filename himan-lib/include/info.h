@@ -418,14 +418,6 @@ public:
 	void Producer(const producer& theProducer);
 	const producer& Producer() const;
 
-	/**
-	 * @brief Return info-wide origin time if it exists
-	 * @return Origin time
-	 */
-
-	raw_time OriginDateTime() const;
-	void OriginDateTime(const std::string& theOriginDateTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
-
 	void First();
 
 	/**
@@ -716,8 +708,6 @@ private:
 	std::unique_ptr<logger> itsLogger;
 
 	producer itsProducer;
-
-	raw_time itsOriginDateTime;
 
 	size_t itsLocationIndex;
 };

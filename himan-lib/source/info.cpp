@@ -41,7 +41,6 @@ info::info(const info& other)
       itsForecastTypeIterator(other.itsForecastTypeIterator),
       itsDimensions(other.itsDimensions),
       itsProducer(other.itsProducer),
-      itsOriginDateTime(other.itsOriginDateTime),
       itsLocationIndex(other.itsLocationIndex)
 {
 	if (other.itsBaseGrid)
@@ -266,12 +265,6 @@ void info::LevelIterator(const level_iter& theLevelIterator) { itsLevelIterator 
 void info::Levels(const vector<level>& theLevels) { itsLevelIterator = level_iter(theLevels); }
 void info::TimeIterator(const time_iter& theTimeIterator) { itsTimeIterator = theTimeIterator; }
 void info::Times(const vector<forecast_time>& theTimes) { itsTimeIterator = time_iter(theTimes); }
-raw_time info::OriginDateTime() const { return itsOriginDateTime; }
-void info::OriginDateTime(const string& theOriginDateTime, const string& theTimeMask)
-{
-	itsOriginDateTime = raw_time(theOriginDateTime, theTimeMask);
-}
-
 bool info::Param(const param& theRequestedParam) { return itsParamIterator.Set(theRequestedParam); }
 bool info::NextParam() { return itsParamIterator.Next(); }
 void info::ResetParam() { itsParamIterator.Reset(); }

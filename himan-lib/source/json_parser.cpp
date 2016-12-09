@@ -354,6 +354,15 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
+			ParseTime(conf, anInfo, element.second);
+		}
+		catch (...)
+		{
+			// do nothing
+		}
+
+		try
+		{
 			auto g = ParseAreaAndGrid(conf, element.second);
 
 			anInfo->itsBaseGrid = move(g);
@@ -591,102 +600,115 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	return pluginContainer;
 }
 
+raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const string& latest)
+{
+	using namespace himan;
+
+	auto strlist = util::Split(latest, "-", false);
+
+	int offset = 0;
+
+	if (strlist.size() == 2)
+	{
+		// will throw if origintime is not in the form "latest-X", where X : integer >= 0
+		offset = boost::lexical_cast<unsigned int>(strlist[1]);
+	}
+
+	HPDatabaseType dbtype = conf->DatabaseType();
+	producer sourceProducer = conf->SourceProducer();
+
+	map<string, string> prod;
+
+	raw_time latestOriginDateTime;
+
+	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+	{
+		auto n = GET_PLUGIN(neons);
+
+		prod = n->NeonsDB().GetProducerDefinition(static_cast<unsigned long>(sourceProducer.Id()));
+
+		if (!prod.empty())
+		{
+			auto latestFromDatabase = n->NeonsDB().GetLatestTime(prod["ref_prod"], "", offset);
+
+			if (!latestFromDatabase.empty())
+			{
+				latestOriginDateTime = raw_time(latestFromDatabase, "%Y%m%d%H%M");
+			}
+		}
+	}
+	if (latestOriginDateTime.Empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	{
+		auto r = GET_PLUGIN(radon);
+
+		prod = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(sourceProducer.Id()));
+
+		if (!prod.empty())
+		{
+			auto latestFromDatabase = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
+
+			if (!latestFromDatabase.empty())
+			{
+				latestOriginDateTime = raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:00");
+			}
+		}
+	}
+
+	if (latestOriginDateTime.Empty())
+	{
+		throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) +
+		                    " for producer " + boost::lexical_cast<string>(sourceProducer.Id()));
+	}
+
+	return latestOriginDateTime; 
+}
+
 void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info> anInfo,
                             const boost::property_tree::ptree& pt)
 {
 	/* Check origin time */
+	const string mask = "%Y-%m-%d %H:%M:%S";
 
-	string originDateTime;
-	string mask;
-
-	const producer sourceProducer = conf->SourceProducer();
+	std::vector<raw_time> originDateTimes;
 
 	try
 	{
-		originDateTime = pt.get<string>("origintime");
-
-		mask = "%Y-%m-%d %H:%M:%S";
+		auto originDateTime = pt.get<string>("origintime");
 
 		boost::algorithm::to_lower(originDateTime);
 
 		if (boost::regex_search(originDateTime, boost::regex("latest")))
 		{
-			auto strlist = util::Split(originDateTime, "-", false);
-
-			int offset = 0;
-
-			if (strlist.size() == 2)
-			{
-				// will throw if origintime is not in the form "latest-X", where X : integer >= 0
-				offset = boost::lexical_cast<unsigned int>(strlist[1]);
-			}
-
-			HPDatabaseType dbtype = conf->DatabaseType();
-
-			map<string, string> prod;
-
-			string realOriginDateTime = "";
-
-			if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-			{
-				auto n = GET_PLUGIN(neons);
-
-				prod = n->NeonsDB().GetProducerDefinition(static_cast<unsigned long>(sourceProducer.Id()));
-
-				if (!prod.empty())
-				{
-					realOriginDateTime = n->NeonsDB().GetLatestTime(prod["ref_prod"], "", offset);
-
-					if (!realOriginDateTime.empty())
-					{
-						mask = "%Y%m%d%H%M";
-						anInfo->OriginDateTime(realOriginDateTime, mask);
-					}
-				}
-			}
-
-			if (realOriginDateTime.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
-			{
-				auto r = GET_PLUGIN(radon);
-
-				prod = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(sourceProducer.Id()));
-
-				if (!prod.empty())
-				{
-					realOriginDateTime = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
-
-					if (!realOriginDateTime.empty())
-					{
-						mask = "%Y-%m-%d %H:%M:00";
-						anInfo->OriginDateTime(realOriginDateTime, mask);
-					}
-				}
-			}
-
-			if (realOriginDateTime.empty())
-			{
-				throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) +
-				                    " for producer " + boost::lexical_cast<string>(sourceProducer.Id()));
-			}
-
-			originDateTime = realOriginDateTime;
+			originDateTimes.push_back(GetLatestOriginDateTime(conf, originDateTime));
 		}
 		else
 		{
-			anInfo->OriginDateTime(originDateTime, mask);
+			originDateTimes.push_back(raw_time(originDateTime, mask));
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		if (anInfo->OriginDateTime().Empty())
+		try
 		{
-			throw runtime_error(ClassName() + ": origintime not found");
+			auto datesList = util::Split(pt.get<string>("origintimes"), ",", false);
+
+			for (const auto& dateString : datesList)
+			{
+				originDateTimes.push_back(raw_time(dateString, mask));
+			}
 		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			throw runtime_error("Origin datetime not found with keys 'origintime' or 'origindatetimes'");
+		}
+
 	}
 	catch (exception& e)
 	{
 		throw runtime_error(ClassName() + ": " + string("Error parsing origin time information: ") + e.what());
 	}
+
+	assert(!originDateTimes.empty());
 
 	/* Check time steps */
 
@@ -713,15 +735,19 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		vector<forecast_time> theTimes;
 
-		for (size_t i = 0; i < times.size(); i++)
+		// Create forecast_time with both times origintime, then adjust the validtime
+
+		for (const auto& originDateTime : originDateTimes)
 		{
-			// Create forecast_time with both times origintime, then adjust the validtime
+			for (int hour : times)
+			{
 
-			forecast_time theTime(originDateTime, originDateTime, mask);
+				forecast_time theTime(originDateTime, originDateTime);
 
-			theTime.ValidDateTime().Adjust(kHourResolution, times[i]);
+				theTime.ValidDateTime().Adjust(kHourResolution, hour);
 
-			theTimes.push_back(theTime);
+				theTimes.push_back(theTime);
+			}
 		}
 
 		anInfo->Times(theTimes);
@@ -733,7 +759,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information from 'times': ") + e.what());
 	}
 
 	// hours was not specified
@@ -768,23 +794,26 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		HPTimeResolution stepResolution = kHourResolution;
 
-		int curtime = start;
-
 		vector<forecast_time> theTimes;
 
-		do
+		for (const auto& originDateTime : originDateTimes)
 		{
-			forecast_time theTime(originDateTime, originDateTime, mask);
+			int curtime = start;
 
-			theTime.ValidDateTime().Adjust(stepResolution, curtime);
+			do
+			{
+				forecast_time theTime(originDateTime, originDateTime);
 
-			theTime.StepResolution(stepResolution);
+				theTime.ValidDateTime().Adjust(stepResolution, curtime);
 
-			theTimes.push_back(theTime);
+				theTime.StepResolution(stepResolution);
 
-			curtime += step;
+				theTimes.push_back(theTime);
 
-		} while (curtime <= stop);
+				curtime += step;
+
+			} while (curtime <= stop);
+		}
 
 		anInfo->Times(theTimes);
 
@@ -795,7 +824,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information from 'start_hour': ") + e.what());
 	}
 
 	try
@@ -814,19 +843,22 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		vector<forecast_time> theTimes;
 
-		do
+		for (const auto& originDateTime : originDateTimes)
 		{
-			forecast_time theTime(originDateTime, originDateTime, mask);
+			do
+			{
+				forecast_time theTime(originDateTime, originDateTime);
 
-			theTime.ValidDateTime().Adjust(stepResolution, curtime);
+				theTime.ValidDateTime().Adjust(stepResolution, curtime);
 
-			theTime.StepResolution(stepResolution);
+				theTime.StepResolution(stepResolution);
 
-			theTimes.push_back(theTime);
+				theTimes.push_back(theTime);
 
-			curtime += step;
+				curtime += step;
 
-		} while (curtime <= stop);
+			} while (curtime <= stop);
+		}
 
 		anInfo->Times(theTimes);
 	}

@@ -143,8 +143,6 @@ void plugin_configuration::WriteStatistics()
 	cout << "Use cuda unpacking:\t" << (itsUseCudaForUnpacking ? "true" : "false") << endl;
 	cout << "Use cuda interpolation:\t" << (itsUseCudaForInterpolation ? "true" : "false") << endl;
 
-	cout << "Origin time:\t\t" << itsInfo->OriginDateTime().String() << endl;
-
 	cout << "Target geom_name:\t" << itsTargetGeomName << endl;
 	cout << "Source geom_name:\t" << util::Join(itsSourceGeomNames, ",") << endl;
 
