@@ -433,19 +433,23 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 					continue;
 				}
 
-				auto levelInfo =
-				    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(itsInfo->Level().Type())));
+				// We'll fetch the parameter informatio using the type of
+				// the first level in the info. This will obviously not work
+				// correctly if multiple level types are within one info.
+
+				auto firstLevel = itsInfo->PeekLevel(0);
+				auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(
+				    boost::to_upper_copy(HPLevelTypeToString.at(firstLevel.Type())));
 
 				if (levelInfo.empty())
 				{
-					itsBaseLogger->Warning("Level type '" + HPLevelTypeToString.at(itsInfo->Level().Type()) +
+					itsBaseLogger->Warning("Level type '" + HPLevelTypeToString.at(firstLevel.Type()) +
 					                       "' not found from radon");
 					continue;
 				}
 
-				map<string, string> paraminfo =
-				    r->RadonDB().GetParameterFromDatabaseName(itsInfo->Producer().Id(), params[i].Name(),
-				                                              itsInfo->Level().Type(), itsInfo->Level().Value());
+				map<string, string> paraminfo = r->RadonDB().GetParameterFromDatabaseName(
+				    itsInfo->Producer().Id(), params[i].Name(), firstLevel.Type(), firstLevel.Value());
 
 				if (paraminfo.empty() || paraminfo["grib1_number"].empty() || paraminfo["grib1_table_version"].empty())
 				{
