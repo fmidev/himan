@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.12.7
+Version: 16.12.9
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 16.9.8
+Requires: libfmidb >= 16.12.9
 Requires: libfmigrib >= 16.9.8
 Requires: libfmidb >= 16.6.6
 Requires: gdal
@@ -29,7 +29,7 @@ BuildRequires: cuda-8-0
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 16.9.8
+BuildRequires: libfmidb-devel >= 16.12.9
 BuildRequires: libfmigrib-devel >= 16.9.8
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.53
@@ -61,6 +61,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Dec  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.9-1.fmi
+- SLES accomodations
+- New key origintimes for configuration files
+- fmidb API change
 * Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi
 - Cuda 8
 * Tue Nov 22 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.22-8.fmi
