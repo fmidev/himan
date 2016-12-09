@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.12.7
-Release: 2.el7.fmi
+Version: 16.12.9
+Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -19,7 +19,7 @@ Requires: himan-bin >= 16.6.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 16.9.8
-Requires: libfmidb >= 16.9.8
+Requires: libfmidb >= 16.12.9
 Requires: libsmartmet-newbase >= 16.9.20
 Requires: libpqxx
 
@@ -36,7 +36,7 @@ BuildRequires: cusp >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 16.6.9
+BuildRequires: libfmidb-devel >= 16.12.9
 BuildRequires: libfmigrib-devel >= 16.6.13
 BuildRequires: libsmartmet-newbase-devel >= 16.9.20
 BuildRequires: scons
@@ -113,6 +113,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Dec  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.9-1.fmi
+- SLES accomodations
+- fmidb API change
 * Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-2.fmi
 - Cuda 8
 * Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi
