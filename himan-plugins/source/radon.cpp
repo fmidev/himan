@@ -207,7 +207,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 	}
 
 	string geom_id = geominfo["id"];
-	auto analysisTime = resultInfo.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
+	auto analysisTime = resultInfo.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	query.str("");
 

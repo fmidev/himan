@@ -225,7 +225,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 	      << "model_type = '" << model_type << "'"
 	      << " AND geom_name = '" << geom_name << "'"
 	      << " AND dset_name = 'AF'"
-	      << " AND base_date = '" << resultInfo.OriginDateTime().String("%Y%m%d%H%M") << "'";
+	      << " AND base_date = '" << resultInfo.Time().OriginDateTime().String("%Y%m%d%H%M") << "'";
 
 	itsNeonsDB->Query(query.str());
 
