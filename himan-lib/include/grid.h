@@ -22,10 +22,9 @@
 
 namespace himan
 {
-
 class grid
 {
-public:
+   public:
 	grid();
 	grid(HPGridClass theGridClass, HPGridType theGridType);
 	grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theScanningMode);
@@ -109,7 +108,10 @@ public:
 	virtual double Di() const = 0;
 	virtual double Dj() const = 0;
 
-protected:
+	bool UVRelativeToGrid() const;
+	void UVRelativeToGrid(bool theUVRelativeToGrid);
+
+   protected:
 	bool EqualsTo(const grid& other) const;
 
 	matrix<double> itsData;  //<! Variable to hold unpacked data
@@ -123,10 +125,18 @@ protected:
 
 	HPScanningMode itsScanningMode;
 	std::unique_ptr<packed_data> itsPackedData;  //<! Variable to hold packed data
+
+	/**
+	 * True if parameter UV components are grid relative, false if they are earth-relative.
+	 * This has  no meaning for:
+	 * - parameters what are not vector components
+	 * - non-projected data
+	 */
+
+	bool itsUVRelativeToGrid;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const grid& ob) { return ob.Write(file); }
-
 }  // namespace himan
 
 #endif /* GRID_H */

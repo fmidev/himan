@@ -131,14 +131,6 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
 	                                point theSouthPole, bool initiallyRotated = true);
 
-	/**
-	 * @return True if parameter UV components are grid relative, false if they are earth-relative.
-	 * On parameters with no UV components this has no meaning.
-	 */
-
-	virtual bool UVRelativeToGrid() const;
-	virtual void UVRelativeToGrid(bool theUVRelativeToGrid);
-
 	virtual ~rotated_latitude_longitude_grid() {}
 	rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other);
 	rotated_latitude_longitude_grid& operator=(const rotated_latitude_longitude_grid& other) = delete;
@@ -161,8 +153,6 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;
 	mutable std::unique_ptr<NFmiRotatedLatLonArea> itsRotLatLonArea;
-
-	bool itsUVRelativeToGrid;
 
 	point itsSouthPole;
 };

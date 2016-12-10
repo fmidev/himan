@@ -4,8 +4,14 @@
 #include "numerical_functions.h"
 #include <thrust/sort.h>
 
+#include "stereographic_grid.h"
+
+// these functions are defined in lambert_conformal_grid.cpp
+extern double GetStandardParallel(himan::grid* g, int parallelno);
+extern double GetOrientation(himan::grid* g);
+
 const double kEpsilon = 1e-6;
-using himan::kFloatMissing;
+// using himan::kFloatMissing;
 
 struct point
 {
@@ -41,7 +47,6 @@ __global__ void Swap(double* __restrict__ arr, size_t ni, size_t nj)
 	}
 }
 
-__global__ void Print(double* __restrict__ arr, int i) { printf("%d %f\n", i, arr[i]); }
 void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, ::point* grid)
 {
 	targetInfo.ResetLocation();
@@ -418,7 +423,7 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 	}
 }
 
-bool InterpolateCuda(himan::info& source, himan::info& base, himan::matrix<double>& targetData)
+bool InterpolateAreaGPU(himan::info& base, himan::info& source, himan::matrix<double>& targetData)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -437,21 +442,18 @@ bool InterpolateCuda(himan::info& source, himan::info& base, himan::matrix<doubl
 		base.SetParam(newParam);
 	}
 
-#ifdef DEBUG
-	std::cout << "Debug::interpolate_cuda Interpolation method: " << (base.Param().InterpolationMethod()) << std::endl;
-#endif
-
 	// Determine all grid point coordinates that need to be interpolated.
 	const size_t N = base.SizeLocations();
 
-	::point* grid = new point[N];
-
-	CreateGrid(source, base, grid);
-
+	point* grid_ = 0;
 	point* d_grid = 0;
 
+	CUDA_CHECK(cudaMallocHost((void**)&grid_, N * sizeof(::point)));
+
+	CreateGrid(source, base, grid_);
+
 	CUDA_CHECK(cudaMalloc((void**)&d_grid, sizeof(::point) * N));
-	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid, sizeof(::point) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid_, sizeof(::point) * N, cudaMemcpyHostToDevice, stream));
 
 	double* d_source = 0;
 	double* d_target = 0;
@@ -463,23 +465,21 @@ bool InterpolateCuda(himan::info& source, himan::info& base, himan::matrix<doubl
 	auto targetInfo = base.ToSimple();
 	targetInfo->values = targetData.ValuesAsPOD();
 
+	assert(targetInfo->values);
+
 	PrepareInfo(sourceInfo, d_source, stream);
 	PrepareInfo(targetInfo);
-
-#ifdef DEBUG
-	memset(targetInfo->values, 0, N * sizeof(double));
-#endif
 
 	const int bs = 256;
 	const int gs = N / bs + (N % bs == 0 ? 0 : 1);
 
 	InterpolateCudaKernel<<<gs, bs, 0, stream>>>(d_source, d_target, d_grid, *sourceInfo, *targetInfo);
 
-	delete[] grid;
-
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
+	CUDA_CHECK(cudaFreeHost(grid_));
 	himan::ReleaseInfo(sourceInfo);
+
 	himan::ReleaseInfo(targetInfo, d_target, stream);
 
 	CUDA_CHECK(cudaFree(d_source));
@@ -489,4 +489,231 @@ bool InterpolateCuda(himan::info& source, himan::info& base, himan::matrix<doubl
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
 	return true;
+}
+
+__global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v, const double* __restrict__ d_lon,
+                              double cone, double orientation, himan::info_simple opts)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < opts.size_x * opts.size_y)
+	{
+		double U = d_u[idx];
+		double V = d_v[idx];
+
+		if (U != himan::kFloatMissing && V != himan::kFloatMissing)
+		{
+			int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));
+			int j = floor(static_cast<double>(idx / opts.size_x));
+
+			double londiff = d_lon[idx] - orientation;
+			const double angle = cone * londiff * himan::constants::kDeg;
+			double sinx, cosx;
+			sincos(angle, &sinx, &cosx);
+			d_u[idx] = -1 * cosx * U + sinx * V;
+			d_v[idx] = -1 * -sinx * U + cosx * V;
+		}
+	}
+}
+
+__global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double* __restrict__ d_v,
+                                               himan::info_simple opts)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < opts.size_x * opts.size_y)
+	{
+		double U = d_u[idx];
+		double V = d_v[idx];
+
+		if (U != himan::kFloatMissing && V != himan::kFloatMissing)
+		{
+			// Rotated to regular coordinates
+
+			int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));  // idx - j * opts.size_x;
+			int j = floor(static_cast<double>(idx / opts.size_x));
+
+			double lon = opts.first_lon + i * opts.di;
+
+			double lat = himan::kFloatMissing;
+
+			if (opts.j_scans_positive)
+			{
+				lat = opts.first_lat + j * opts.dj;
+			}
+			else
+			{
+				lat = opts.first_lat - j * opts.dj;
+			}
+
+			double SinYPole = sin((opts.south_pole_lat + 90.) * himan::constants::kDeg);
+			double CosYPole = cos((opts.south_pole_lat + 90.) * himan::constants::kDeg);
+
+			double SinXRot, CosXRot, SinYRot, CosYRot;
+
+			sincos(lon * himan::constants::kDeg, &SinXRot, &CosXRot);
+			sincos(lat * himan::constants::kDeg, &SinYRot, &CosYRot);
+
+			double SinYReg = CosYPole * SinYRot + SinYPole * CosYRot * CosXRot;
+
+			SinYReg = fmin(fmax(SinYReg, -1.), 1.);
+
+			double YReg = asin(SinYReg) * himan::constants::kRad;
+
+			double CosYReg = cos(YReg * himan::constants::kDeg);
+
+			double CosXReg = (CosYPole * CosYRot * CosXRot - SinYPole * SinYRot) / CosYReg;
+
+			CosXReg = fmin(fmax(CosXReg, -1.), 1.);
+			double SinXReg = CosYRot * SinXRot / CosYReg;
+
+			double XReg = acos(CosXReg) * himan::constants::kRad;
+
+			if (SinXReg < 0.)
+			{
+				XReg = -XReg;
+			}
+			XReg += opts.south_pole_lon;
+
+			// UV to earth relative
+
+			double zxmxc = himan::constants::kDeg * (XReg - opts.south_pole_lon);
+
+			double sinxmxc, cosxmxc;
+
+			sincos(zxmxc, &sinxmxc, &cosxmxc);
+
+			double PA = cosxmxc * CosXRot + CosYPole * sinxmxc * SinXRot;
+			double PB =
+			    CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
+			double PC = (-SinYPole) * SinXRot / CosYReg;
+			double PD = (CosYPole * CosYRot - SinYPole * CosXRot * SinYRot) / CosYReg;
+
+			double newU = PA * U + PB * V;
+			double newV = PC * U + PD * V;
+
+			d_u[idx] = newU;
+			d_v[idx] = newV;
+		}
+	}
+}
+
+void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
+{
+	const size_t N = UInfo.SizeLocations();
+	const int bs = 256;
+	const int gs = N / bs + (N % bs == 0 ? 0 : 1);
+
+	cudaStream_t stream;
+	CUDA_CHECK(cudaStreamCreate(&stream));
+
+	double* d_u = 0;
+	double* d_v = 0;
+	double* d_lon = 0;
+
+	CUDA_CHECK(cudaMalloc((void**)&d_u, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((void**)&d_v, N * sizeof(double)));
+
+	auto USimple = UInfo.ToSimple();
+	auto VSimple = VInfo.ToSimple();
+
+	PrepareInfo(USimple, d_u, stream);
+	PrepareInfo(VSimple, d_v, stream);
+
+	switch (UInfo.Grid()->Type())
+	{
+		case himan::kRotatedLatitudeLongitude:
+			RotateRotatedLatitudeLongitude<<<gs, bs, 0, stream>>>(d_u, d_v, *USimple);
+			break;
+
+		case himan::kLambertConformalConic:
+		{
+			CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
+
+			double* lon = 0;
+
+			CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
+
+			for (UInfo.ResetLocation(); UInfo.NextLocation();)
+			{
+				lon[UInfo.LocationIndex()] = UInfo.LatLon().X();
+			}
+
+			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
+
+			const double latin1 = GetStandardParallel(UInfo.Grid(), 1);
+			const double latin2 = GetStandardParallel(UInfo.Grid(), 2);
+			const double orientation = GetOrientation(UInfo.Grid());
+
+			assert(latin1 != himan::kHPMissingValue && orientation != himan::kHPMissingValue);
+			double cone;
+
+			using himan::constants::kDeg;
+
+			if (latin1 == latin2 && latin2 != kFloatMissing)
+			{
+				cone = sin(latin1 * kDeg);
+			}
+			else
+			{
+				cone = (log(cos(latin1 * kDeg)) - log(cos(latin2 * kDeg))) /
+				       (log(tan((90 - fabs(latin1)) * kDeg * 0.5)) - log(tan(90 - fabs(latin2)) * kDeg * 0.5));
+			}
+
+			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, cone, orientation, *USimple);
+
+			CUDA_CHECK(cudaStreamSynchronize(stream));
+			CUDA_CHECK(cudaFreeHost(lon));
+		}
+		break;
+
+		case himan::kStereographic:
+		{
+			const double orientation = dynamic_cast<himan::stereographic_grid*>(UInfo.Grid())->Orientation();
+			CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
+
+			double* lon = 0;
+
+			CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
+
+			for (UInfo.ResetLocation(); UInfo.NextLocation();)
+			{
+				lon[UInfo.LocationIndex()] = UInfo.LatLon().X();
+			}
+
+			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
+
+			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, *USimple);
+
+			CUDA_CHECK(cudaStreamSynchronize(stream));
+			CUDA_CHECK(cudaFreeHost(lon));
+		}
+		break;
+
+		default:
+			break;
+	}
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	himan::ReleaseInfo(USimple, d_u, stream);
+	himan::ReleaseInfo(VSimple, d_v, stream);
+
+	CUDA_CHECK(cudaFree(d_u));
+	CUDA_CHECK(cudaFree(d_v));
+
+	if (d_lon)
+	{
+		CUDA_CHECK(cudaFree(d_lon));
+	}
+
+	CUDA_CHECK(cudaStreamDestroy(stream));
+
+	if (UInfo.Grid()->IsPackedData())
+	{
+		UInfo.Grid()->PackedData().Clear();
+	}
+	if (VInfo.Grid()->IsPackedData())
+	{
+		VInfo.Grid()->PackedData().Clear();
+	}
 }

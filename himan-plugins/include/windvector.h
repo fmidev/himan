@@ -19,7 +19,7 @@ namespace plugin
 {
 class windvector : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	windvector();
 
 	inline virtual ~windvector() {}
@@ -31,7 +31,12 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::windvector"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
-private:
+   protected:
+	virtual std::shared_ptr<info> Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
+	                                    const forecast_type& theType = forecast_type(kDeterministic),
+	                                    bool returnPacked = false) const override;
+
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	std::unique_ptr<NFmiArea> ToNewbaseArea(std::shared_ptr<info> myTargetInfo) const;
 #ifdef HAVE_CUDA

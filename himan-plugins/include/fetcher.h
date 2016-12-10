@@ -30,7 +30,7 @@ namespace plugin
 {
 class fetcher : public auxiliary_plugin
 {
-public:
+   public:
 	fetcher();
 
 	virtual ~fetcher() {}
@@ -99,7 +99,13 @@ public:
 	void LandSeaMaskThreshold(double theLandSeaMaskThreshold);
 	double LandSeaMaskThreshold() const;
 
-private:
+	void DoVectorComponentRotation(bool theDoVectorComponentRotation);
+	bool DoVectorComponentRotation() const;
+
+   private:
+	void RotateVectorComponents(info_t component, info_t target, std::shared_ptr<const configuration> conf,
+	                            const producer& sourceProd);
+
 	/**
 	 * @brief Apply land-sea mask to requested data.
 	 *
@@ -226,8 +232,9 @@ private:
 	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData);
 
 	HPFileType FileType(const std::string& theInputFile);
-	bool itsDoLevelTransform;  //<! Default true
-	bool itsDoInterpolation;   //<! Default true
+	bool itsDoLevelTransform;           //<! Default true
+	bool itsDoInterpolation;            //<! Default true
+	bool itsDoVectorComponentRotation;  //<! Default false
 	bool itsUseCache;
 	bool itsApplyLandSeaMask;
 	double itsLandSeaMaskThreshold;
