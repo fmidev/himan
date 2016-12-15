@@ -23,7 +23,7 @@ namespace numerical_functions
 
 class integral
 {
-public:
+   public:
 	integral();
 	~integral() {}
 	// virtual std::string ClassName() const { return "himan::numerical_functions::integral"; }
@@ -55,7 +55,7 @@ public:
 	void Evaluate();
 	bool Complete();
 
-private:
+   private:
 	bool itsHeightInMeters;
 	int itsLowestLevel;
 	int itsHighestLevel;
@@ -114,6 +114,20 @@ himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matr
  */
 
 himan::matrix<double> Max2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
+
+/**
+ * @brief Compute the minimum value in matrix A from the area specified by matrix B
+ *
+ * Matrix B acts also as a weight; a default boxed minimum search would have all matrix B
+ * elements set to 1, but if for example origin needs to be excluded, that value
+ * can be set to 0.
+ *
+ * @param A Data
+ * @param B Kernel
+ * @return Maximum data
+ */
+
+himan::matrix<double> Min2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
 
 /*
  * CUDA version of Filter2D

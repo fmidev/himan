@@ -320,6 +320,7 @@ object GetValues(info_t& anInfo) { return VectorToTable(VEC(anInfo)); }
 point GetLatLon(info_t& anInfo, size_t theIndex) { return anInfo->Grid()->LatLon(--theIndex); }
 double GetMissingValue(info_t& anInfo) { return anInfo->Data().MissingValue(); }
 void SetMissingValue(info_t& anInfo, double missingValue) { anInfo->Data().MissingValue(missingValue); }
+matrix<double> GetData(info_t& anInfo) { return anInfo->Data(); }
 }  // namespace info_wrapper
 
 namespace hitool_wrapper
@@ -645,6 +646,12 @@ namespace ensemble_wrapper
 object Values(const ensemble& ens) { return VectorToTable(ens.Values()); }
 }  // ensemble_wrapper
 
+namespace matrix_wrapper
+{
+void SetValues(matrix<double>& mat, const object& values) { mat.Set(TableToVector(values)); }
+object GetValues(matrix<double>& mat) { return VectorToTable(std::vector<double>(mat.Values())); }
+}  // matrix_wrapper
+
 // clang-format off
 
 void BindLib(lua_State* L)
@@ -686,7 +693,8 @@ void BindLib(lua_State* L)
 	              .def("GetValues", &info_wrapper::GetValues)
 	              .def("GetLatLon", &info_wrapper::GetLatLon)
 	              .def("GetMissingValue", &info_wrapper::GetMissingValue)
-	              .def("SetMissingValue", &info_wrapper::SetMissingValue),
+	              .def("SetMissingValue", &info_wrapper::SetMissingValue)
+	              .def("GetData", &info_wrapper::GetData),
 	          class_<grid, std::shared_ptr<grid>>("grid")
 	              .def("ClassName", &grid::ClassName)
 	              .def("GetScanningMode", LUA_CMEMFN(HPScanningMode, grid, ScanningMode, void))
@@ -744,7 +752,10 @@ void BindLib(lua_State* L)
 	              .def("GetFirstPoint", LUA_CMEMFN(point, reduced_gaussian_grid, FirstPoint, void))
 	              .def("GetLastPoint", LUA_CMEMFN(point, reduced_gaussian_grid, LastPoint, void))
 	          ,
-	          class_<matrix<double>>("matrix").def(constructor<size_t, size_t, size_t, double>())
+	          class_<matrix<double>>("matrix")
+	              .def(constructor<size_t, size_t, size_t, double>())
+	              .def("SetValues", &matrix_wrapper::SetValues)
+	              .def("GetValues", &matrix_wrapper::GetValues)
 	          ,
 	          class_<param>("param")
 	              .def(constructor<const std::string&>())
@@ -870,6 +881,8 @@ void BindLib(lua_State* L)
 		      .def("Size", &ensemble::Size),
 	          // numerical_functions namespace
 	          def("Filter2D", &numerical_functions::Filter2D),
+	          def("Max2D", &numerical_functions::Max2D),
+	          def("Min2D", &numerical_functions::Min2D),
 	          // metutil namespace
 	          def("LCL_", &metutil::LCL_), def("Es_", &metutil::Es_), def("Gammas_", &metutil::Gammas_),
 	          def("Gammaw_", &metutil::Gammaw_), def("MixingRatio_", &metutil::MixingRatio_),
