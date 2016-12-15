@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 16.12.9
+Version: 16.12.15
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -61,6 +61,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Dec 15 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.15-1.fmi
+- Min2D implementation
 * Fri Dec  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.9-1.fmi
 - SLES accomodations
 - New key origintimes for configuration files
