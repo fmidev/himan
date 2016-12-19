@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.12.15
+Version: 16.12.19
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -113,6 +113,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Dec 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.19-1.fmi
+- Three hour snow accumulation (split_sum)
 * Thu Dec 15 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.15-1.fmi
 - Min2D exposure to luatool
 * Fri Dec  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.9-1.fmi
