@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 16.12.19
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -113,6 +113,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Dec 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.19-2.fmi
+- Map grib1 level 103 to mean sea
 * Mon Dec 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.19-1.fmi
 - Three hour snow accumulation (split_sum)
 * Thu Dec 15 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.15-1.fmi
