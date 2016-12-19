@@ -1601,6 +1601,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 			break;
 
 		case 102:
+		case 103:
 			levelType = himan::kMeanSea;
 			break;
 
