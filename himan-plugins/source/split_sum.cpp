@@ -72,6 +72,7 @@ split_sum::split_sum()
 	sourceParameters["RRRL-KGM2"] = {param("RRL-KGM2")};
 
 	// Snow
+	sourceParameters["SN-3-MM"]  = {param("SNACC-KGM2")};
 	sourceParameters["SN-6-MM"]  = {param("SNACC-KGM2")};
 	sourceParameters["SN-24-MM"] = {param("SNACC-KGM2")};
 
@@ -156,9 +157,19 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
+	if (itsConfiguration->Exists("sn3h") && itsConfiguration->GetValue("sn3h") == "true")
+	{
+		param parm("SN-3-MM");
+		parm.Unit(kMm);
+
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3));
+
+		params.push_back(parm);
+	}
+
 	if (itsConfiguration->Exists("sn6h") && itsConfiguration->GetValue("sn6h") == "true")
 	{
-		param parm("SN-6-MM", 764, 0, 1, 8);
+		param parm("SN-6-MM");
 		parm.Unit(kMm);
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
