@@ -263,28 +263,32 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 {
 	using namespace himan;
-	if (info.Param().UnivId() == static_cast<long> (kHPMissingInt))
+	if (info.Param().UnivId() == static_cast<long>(kHPMissingInt))
 	{
 		auto r = GET_PLUGIN(radon);
 
 		auto levelInfo =
 		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(info.Level().Type())));
 
-		assert(levelInfo.size());
-		auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
-		                                                          stoi(levelInfo["id"]), info.Level().Value());
+		long univId = 0;
 
-		if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
+		if (!levelInfo.empty() && !levelInfo["id"].empty())
 		{
-			param p = info.Param();
-			p.UnivId(boost::lexical_cast<long> (parmInfo["univ_id"]));
-			info.SetParam(p);
+			auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
+			                                                          stoi(levelInfo["id"]), info.Level().Value());
+
+			if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
+			{
+				univId = stol(parmInfo["univ_id"]);
+			}
 		}
+
+		param p = info.Param();
+		p.UnivId(univId);
+		info.SetParam(p);
 	}
 
-
 	pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
-
 }
 
 NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveOnly)
@@ -384,8 +388,9 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			   << " PRIMEM[\"Greenwich\",0],"
 			   << " UNIT[\"degree\",0.0174532925199433]]";
 
-			theArea = new NFmiGdalArea(ss.str(), g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
-			                 g->Dj() * (static_cast<double>(g->Nj()) - 1));
+			theArea =
+			    new NFmiGdalArea(ss.str(), g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
+			                     g->Dj() * (static_cast<double>(g->Nj()) - 1));
 			break;
 		}
 
