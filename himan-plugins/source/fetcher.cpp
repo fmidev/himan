@@ -109,7 +109,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 {
 	level newLevel = opts.level;
 
-	if (itsDoLevelTransform &&
+	if (itsDoLevelTransform && opts.configuration->DatabaseType() != kNoDatabase &&
 	    (opts.level.Type() != kHybrid && opts.level.Type() != kPressure && opts.level.Type() != kHeightLayer))
 	{
 		newLevel = LevelTransform(opts.configuration, opts.prod, opts.param, opts.level);
@@ -643,7 +643,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 {
 	vector<info_t> ret;
 
-	if (opts.configuration->ReadDataFromDatabase())
+	if (opts.configuration->ReadDataFromDatabase() && !opts.configuration->DatabaseType() == kNoDatabase)
 	{
 		HPDatabaseType dbtype = opts.configuration->DatabaseType();
 

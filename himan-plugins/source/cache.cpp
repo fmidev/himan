@@ -20,7 +20,6 @@ std::mutex itsCheckMutex;
 cache::cache() { itsLogger = logger_factory::Instance()->GetLog("cache"); }
 string cache::UniqueName(const info& info)
 {
-	assert(info.Producer().Id() != kHPMissingInt);
 	string producer_id = boost::lexical_cast<string>(info.Producer().Id());
 	string forecast_time = info.Time().OriginDateTime().String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = info.Time().ValidDateTime().String("%Y-%m-%d_%H:%M:%S");
@@ -35,6 +34,7 @@ string cache::UniqueName(const info& info)
 
 string cache::UniqueNameFromOptions(search_options& options)
 {
+	assert(options.configuration->DatabaseType() == kNoDatabase || options.prod.Id() != kHPMissingInt);
 	string producer_id = boost::lexical_cast<string>(options.prod.Id());
 	string forecast_time = options.time.OriginDateTime().String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = options.time.ValidDateTime().String("%Y-%m-%d_%H:%M:%S");

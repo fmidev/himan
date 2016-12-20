@@ -249,6 +249,9 @@ class configuration
 	bool ReadAllAuxiliaryFilesToCache() const;
 	void ReadAllAuxiliaryFilesToCache(bool theReadAllAuxiliaryFilesToCache);
 
+	std::string ParamFile() const;
+	void ParamFile(const std::string& theParamFile);
+
    protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
@@ -283,6 +286,7 @@ class configuration
 	int itsForecastStep;
 
 	int itsCacheLimit;
+	std::string itsParamFile;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob) { return ob.Write(file); }

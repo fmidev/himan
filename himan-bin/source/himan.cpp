@@ -333,10 +333,10 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	// Can't use required() since it doesn't allow us to use --list-plugins
 
-	string outfileType = "";
-	string outfileCompression = "";
-	string confFile = "";
-	string statisticsLabel = "";
+	string outfileType;
+	string outfileCompression;
+	string confFile, paramFile;
+	string statisticsLabel;
 	vector<string> auxFiles;
 	short int cudaDeviceId = 0;
 
@@ -360,6 +360,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("statistics,s", po::value(&statisticsLabel), "record statistics information")
 		("radon,R", "use only radon database")
 		("neons,N", "use only neons database")
+		("no-database", "disable database access")
+		("param-file", po::value(&paramFile), "parameter definition file for no-database mode (syntax: shortName,paramName)")
 		("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
 		("cuda-properties", "print cuda device properties of platform (if any)")
 		("no-cuda", "disable all cuda extensions")
@@ -606,6 +608,16 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		cerr << "Both radon and neons options cannot be selected" << endl;
 		exit(1);
 	}
+	else if (opt.count("no-database"))
+	{
+		conf->DatabaseType(kNoDatabase);
+		if (opt.count("param-file") == 0)
+		{
+			cerr << "param-file options missing" << endl;
+			exit(1);
+		}
+	}
+
 	if (!confFile.empty())
 	{
 		conf->ConfigurationFile(confFile);
@@ -614,6 +626,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	{
 		cerr << "himan: Configuration file not defined" << endl << desc;
 		exit(1);
+	}
+
+	if (!paramFile.empty())
+	{
+		conf->ParamFile(paramFile);
 	}
 
 	if (!statisticsLabel.empty())
