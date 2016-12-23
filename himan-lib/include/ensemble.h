@@ -74,6 +74,8 @@ class ensemble
 	/// @brief Returns the size of the currently fetched ensemble
 	size_t Size() const;
 
+	std::string ClassName() const;
+
 	/// @brief Returns the expected size of the ensemble. NOTE: this can
 	/// differ from the actual size of the ensemble!
 	size_t ExpectedSize() const;
@@ -87,6 +89,10 @@ class ensemble
 	void MaximumMissingForecasts(int maximumMissing);
 
    protected:
+	/// @brief Verifies that we have the required number of valid forecasts, else abort execution.
+	/// Outputs diagnostics.
+	virtual void VerifyValidForecastCount(int numMissingForecasts);
+
 	/// @brief The parameter of the ensemble
 	param itsParam;
 

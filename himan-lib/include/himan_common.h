@@ -478,7 +478,8 @@ enum HPEnsembleType
 	kUnknownEnsembleType = 0,
 	kPerturbedEnsemble,
 	kTimeEnsemble,
-	kLevelEnsemble
+	kLevelEnsemble,
+	kLaggedEnsemble
 };
 
 const boost::unordered_map<HPEnsembleType, std::string> HPEnsembleTypeToString =
