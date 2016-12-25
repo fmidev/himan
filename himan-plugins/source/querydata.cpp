@@ -176,6 +176,8 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
+	double scale = theInfo.Param().Scale(), base = theInfo.Param().Base();
+
 	if (theInfo.Grid()->Class() == kRegularGrid && theInfo.Grid()->ScanningMode() != kBottomLeft)
 	{
 		assert(theInfo.Grid()->ScanningMode() == kTopLeft);
@@ -192,7 +194,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 			do
 			{
 				qinfo.NextLocation();
-				qinfo.FloatValue(static_cast<float>(theInfo.Data().At(x, y)));
+				qinfo.FloatValue(static_cast<float>(theInfo.Data().At(x, y) * scale + base));
 				x++;
 			} while (x < ni);
 
@@ -204,7 +206,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
 		// Grid is irregular OR source & dest are both kBottomLeft
 		while (theInfo.NextLocation() && qinfo.NextLocation())
 		{
-			qinfo.FloatValue(static_cast<float>(theInfo.Value()));
+			qinfo.FloatValue(static_cast<float>(theInfo.Value() * scale + base));
 		}
 	}
 
@@ -270,7 +272,7 @@ void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 		auto levelInfo =
 		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(info.Level().Type())));
 
-		long univId = 0;
+		param p = info.Param();
 
 		if (!levelInfo.empty() && !levelInfo["id"].empty())
 		{
@@ -279,16 +281,22 @@ void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 
 			if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
 			{
-				univId = stol(parmInfo["univ_id"]);
+				param p = info.Param();
+				p.UnivId(stol(parmInfo["univ_id"]));
+				p.Scale(stod(parmInfo["scale"]));
+				p.Base(stod(parmInfo["base"]));
+				p.InterpolationMethod(kBiLinear);
 			}
 		}
 
-		param p = info.Param();
-		p.UnivId(univId);
 		info.SetParam(p);
 	}
 
-	pbag.Add(NFmiDataIdent(NFmiParam(info.Param().UnivId(), info.Param().Name())));
+	NFmiParam nbParam(info.Param().UnivId(), info.Param().Name(), ::kFloatMissing, ::kFloatMissing,
+	             info.Param().Scale(), info.Param().Base(), "%.1f", ::kLinearly);
+
+	pbag.Add(NFmiDataIdent(nbParam));
+
 }
 
 NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveOnly)
