@@ -655,17 +655,13 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 
 			const point southPole = rll->SouthPole();
 
-			for (UInfo.ResetLocation(); UInfo.NextLocation();)
+			for (size_t i = 0; i < UInfo->SizeLocations(); i++)
 			{
-				size_t i = UInfo.LocationIndex();
-
 				double U = UVec[i];
 				double V = VVec[i];
 
 				if (U == kFloatMissing || V == kFloatMissing)
 				{
-					U = kFloatMissing;
-					V = kFloatMissing;
 					continue;
 				}
 
