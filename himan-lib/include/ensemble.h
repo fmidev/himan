@@ -20,7 +20,7 @@ namespace himan
 
 class ensemble
 {
-public:
+   public:
 	/// @brief Constructs an ensemble with one control forecast and expectedEnsembleSize - 1 perturbations
 	ensemble(const param& parameter, size_t expectedEnsembleSize);
 
@@ -65,6 +65,12 @@ public:
 	/// @brief Returns the mean value of the ensemble
 	double Mean() const;
 
+	/// @brief Returns the variance of the ensemble
+	double Variance() const;
+
+	/// @brief Returns Nth central moment of the ensemble
+	double CentralMoment(const int N) const;
+
 	std::string ClassName() const;
 
 	/// @brief Returns the size of the currently fetched ensemble
@@ -82,7 +88,7 @@ public:
 
 	void MaximumMissingForecasts(int maximumMissing);
 
-protected:
+   protected:
 	/// @brief The parameter of the ensemble
 	param itsParam;
 
