@@ -213,7 +213,7 @@ double ensemble::Mean() const
 double ensemble::Variance() const
 {
 	std::vector<double> v = Values();
-	for (auto& d : v) d *= d;
+	std::for_each(v.begin(), v.end(), [](double& d) { d *= d; });
 	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size()) - std::pow(Mean(), 2.0);
 }
 

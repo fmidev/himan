@@ -71,8 +71,6 @@ class ensemble
 	/// @brief Returns Nth central moment of the ensemble
 	double CentralMoment(int N) const;
 
-	std::string ClassName() const;
-
 	/// @brief Returns the size of the currently fetched ensemble
 	size_t Size() const;
 
