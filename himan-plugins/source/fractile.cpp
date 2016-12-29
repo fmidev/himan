@@ -123,10 +123,9 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		calculatedParams.push_back(param(name));
 	}
 
-	calculatedParams.push_back(param(itsParamName));  // mean
-
 	auto name = util::Split(itsParamName, "-", false);
-	calculatedParams.push_back(param(name[0] + "DEV-" + name[1]));  // standard deviation
+	calculatedParams.push_back(param(name[0] + "-MEAN-" + name[1]));    // mean
+	calculatedParams.push_back(param(name[0] + "-STDDEV-" + name[1]));  // standard deviation
 
 	SetParams(calculatedParams);
 

@@ -872,21 +872,23 @@ void BindLib(lua_State* L)
 	          class_<write_options>("write_options")
 	              .def(constructor<>())
 	              .def_readwrite("use_bitmap", &write_options::use_bitmap),
-			  class_<himan::ensemble, std::shared_ptr<himan::ensemble>>("ensemble")
+		  class_<himan::ensemble, std::shared_ptr<himan::ensemble>>("ensemble")
 		      .def(constructor<param, int>())
 		      .def("ClassName", &ensemble::ClassName)
 		      .def("Fetch", &ensemble::Fetch)
 		      .def("Values", &ensemble_wrapper::Values)
-			  .def("SortedValues", &ensemble_wrapper::SortedValues)
+	  	      .def("SortedValues", &ensemble_wrapper::SortedValues)
 		      .def("ResetLocation", &ensemble::ResetLocation)
-			  .def("FirstLocation", &ensemble::FirstLocation)
+		      .def("FirstLocation", &ensemble::FirstLocation)
 		      .def("NextLocation", &ensemble::NextLocation)
-			  .def("Value", &ensemble::Value)
-			  .def("Mean", &ensemble::Mean)
-			  .def("Size", &ensemble::Size)
-			  .def("ExpectedSize", &ensemble::ExpectedSize)
-			  .def("SetMaximumMissingForecasts", LUA_MEMFN(void, ensemble, MaximumMissingForecasts, int))
-			  .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, ensemble, MaximumMissingForecasts, void)),
+		      .def("Value", &ensemble::Value)
+		      .def("Mean", &ensemble::Mean)
+		      .def("Variance", &ensemble::Variance)
+		      .def("CentralMoment", LUA_CMEMFN(double,ensemble,CentralMoment, int))
+		      .def("Size", &ensemble::Size)
+		      .def("ExpectedSize", &ensemble::ExpectedSize)
+		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, ensemble, MaximumMissingForecasts, int))
+		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, ensemble, MaximumMissingForecasts, void)),
 	          // numerical_functions namespace
 	          def("Filter2D", &numerical_functions::Filter2D),
 	          def("Max2D", &numerical_functions::Max2D),

@@ -69,7 +69,7 @@ class ensemble
 	double Variance() const;
 
 	/// @brief Returns Nth central moment of the ensemble
-	double CentralMoment(const int N) const;
+	double CentralMoment(int N) const;
 
 	std::string ClassName() const;
 
