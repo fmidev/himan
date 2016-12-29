@@ -16,7 +16,8 @@
 #include <iostream>
 #include <math.h>
 
-#include "querydata.h"
+#include "cache.h"
+#include "fetcher.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -214,9 +215,6 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		auto opts = CudaPrepare(myTargetInfo, UInfo, VInfo);
 
 		windvector_cuda::Process(*opts);
-
-		delete[] opts->lon;
-		delete[] opts->lat;
 	}
 	else
 #endif
@@ -226,128 +224,12 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 #ifdef HAVE_CUDA
 		Unpack({UInfo, VInfo});
 #endif
-		// Rotate to earth normal if projected
-
-		auto& UVec = VEC(UInfo);
-		auto& VVec = VEC(VInfo);
-
-		switch (UInfo->Grid()->Type())
-		{
-			case kRotatedLatitudeLongitude:
-			{
-				const rotated_latitude_longitude_grid* rotArea =
-				    dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid());
-				const point southPole = dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())->SouthPole();
-
-				for (UInfo->ResetLocation(); UInfo->NextLocation();)
-				{
-					size_t i = UInfo->LocationIndex();
-
-					double& U = UVec[i];
-					double& V = VVec[i];
-
-					if (U == kFloatMissing || V == kFloatMissing)
-					{
-						continue;
-					}
-
-					const point rotPoint = rotArea->RotatedLatLon(i);
-					const point regPoint = rotArea->LatLon(i);
-
-					auto coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, southPole);
-
-					double newU = get<0>(coeffs) * U + get<1>(coeffs) * V;
-					double newV = get<2>(coeffs) * U + get<3>(coeffs) * V;
-					U = newU;
-					V = newV;
-				}
-			}
-			break;
-
-			case kLambertConformalConic:
-			{
-				const lambert_conformal_grid* lcc = dynamic_cast<lambert_conformal_grid*>(UInfo->Grid());
-				const double latin1 = lcc->StandardParallel1();
-				const double latin2 = lcc->StandardParallel2();
-
-				double cone;
-				if (latin1 == latin2)
-				{
-					cone = sin(latin1 * constants::kDeg);
-				}
-				else
-				{
-					cone = (log(cos(latin1 * constants::kDeg)) - log(cos(latin2 * constants::kDeg))) /
-					       (log(tan((90 - fabs(latin1)) * constants::kDeg * 0.5)) -
-					        log(tan(90 - fabs(latin2)) * constants::kDeg * 0.5));
-				}
-
-				const double orientation = lcc->Orientation();
-
-				for (UInfo->ResetLocation(); UInfo->NextLocation();)
-				{
-					size_t i = UInfo->LocationIndex();
-
-					double U = UVec[i];
-					double V = VVec[i];
-
-					// http://www.mcs.anl.gov/~emconsta/wind_conversion.txt
-
-					double londiff = UInfo->LatLon().X() - orientation;
-					assert(londiff >= -180 && londiff <= 180);
-					assert(UInfo->LatLon().Y() >= 0);
-
-					const double angle = cone * londiff * constants::kDeg;
-					double sinx, cosx;
-					sincos(angle, &sinx, &cosx);
-
-					// This output is 1:1 with python basemaplib, but is different
-					// than the results received using algorithm from meteorological software.
-					// (below)
-
-					// double newU = cosx * U - sinx * V;
-					// double newV = sinx * U + cosx * V;
-
-					UVec[i] = -1 * cosx * U + sinx * V;
-					VVec[i] = -1 * -sinx * U + cosx * V;
-				}
-			}
-			break;
-
-			case kStereographic:
-			{
-				// The same as lambert but with cone = 1
-
-				const stereographic_grid* sc = dynamic_cast<stereographic_grid*>(UInfo->Grid());
-				const double orientation = sc->Orientation();
-
-				for (UInfo->ResetLocation(); UInfo->NextLocation();)
-				{
-					size_t i = UInfo->LocationIndex();
-
-					double U = UVec[i];
-					double V = VVec[i];
-
-					const double angle = (UInfo->LatLon().X() - orientation) * constants::kDeg;
-					double sinx, cosx;
-
-					sincos(angle, &sinx, &cosx);
-
-					UVec[i] = -1 * cosx * U + sinx * V;
-					VVec[i] = -1 * -sinx * U + cosx * V;
-				}
-			}
-			break;
-			default:
-				break;
-		}
-
 		myTargetInfo->ParamIndex(0);
 
 		auto& FFVec = VEC(myTargetInfo);
 		vector<double> DDVec(FFVec.size(), kFloatMissing);
 
-		for (auto&& tup : zip_range(FFVec, DDVec, UVec, VVec))
+		for (auto&& tup : zip_range(FFVec, DDVec, VEC(UInfo), VEC(VInfo)))
 		{
 			double& speed = tup.get<0>();
 			double& dir = tup.get<1>();
@@ -390,6 +272,42 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
+shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
+                                          const forecast_type& theType, bool returnPacked) const
+{
+	auto f = GET_PLUGIN(fetcher);
+	f->DoVectorComponentRotation(true);
+
+	info_t ret;
+
+	try
+	{
+		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, theType, itsConfiguration->UseCudaForPacking());
+
+#ifdef HAVE_CUDA
+		if (!returnPacked && ret->Grid()->IsPackedData())
+		{
+			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
+
+			util::Unpack({ret->Grid()});
+
+			auto c = GET_PLUGIN(cache);
+
+			c->Insert(*ret);
+		}
+#endif
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error(ClassName() + ": Unable to proceed");
+		}
+	}
+
+	return ret;
+}
+
 #ifdef HAVE_CUDA
 
 unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> UInfo,
@@ -397,27 +315,7 @@ unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> my
 {
 	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
 
-	opts->need_grid_rotation = false;
 	opts->N = UInfo->Grid()->Size();
-
-	if (UInfo->Grid()->Type() == kRotatedLatitudeLongitude)
-	{
-		opts->need_grid_rotation = dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())->UVRelativeToGrid();
-	}
-	else if (UInfo->Grid()->Type() == kLambertConformalConic)
-	{
-		opts->need_grid_rotation = dynamic_cast<lambert_conformal_grid*>(UInfo->Grid())->UVRelativeToGrid();
-
-		opts->lon = new double[opts->N];
-		opts->lat = new double[opts->N];
-
-		for (UInfo->ResetLocation(); UInfo->NextLocation();)
-		{
-			auto ll = UInfo->LatLon();
-			opts->lon[UInfo->LocationIndex()] = ll.X();
-			opts->lat[UInfo->LocationIndex()] = ll.Y();
-		}
-	}
 
 	opts->target_type = itsCalculationTarget;
 

@@ -2,12 +2,49 @@
 #include "info.h"
 #include "logger_factory.h"
 
-#ifdef HAVE_CUDA
-#include "simple_packed.h"
-#endif
-
 using namespace himan;
 using namespace std;
+
+#ifdef HAVE_CUDA
+#include "simple_packed.h"
+
+// The following two functions are used for convenience in GPU specific code:
+// in grid rotation we need the standard parallels and orientation, but in order
+// to get those we need to include this file and ogr_spatialref.h, which is a lot
+// of unnecessary code to be added to already slow compilation.
+
+double GetStandardParallel(himan::grid* g, int parallelno)
+{
+	lambert_conformal_grid* lg = dynamic_cast<lambert_conformal_grid*>(g);
+
+	if (lg)
+	{
+		if (parallelno == 1)
+		{
+			return lg->StandardParallel1();
+		}
+		else if (parallelno == 2)
+		{
+			return lg->StandardParallel2();
+		}
+	}
+
+	return himan::kHPMissingValue;
+}
+
+double GetOrientation(himan::grid* g)
+{
+	lambert_conformal_grid* lg = dynamic_cast<lambert_conformal_grid*>(g);
+
+	if (lg)
+	{
+		return lg->Orientation();
+	}
+
+	return kHPMissingValue;
+}
+
+#endif
 
 lambert_conformal_grid::lambert_conformal_grid()
     : grid(kRegularGrid, kLambertConformalConic),
@@ -20,8 +57,7 @@ lambert_conformal_grid::lambert_conformal_grid()
       itsOrientation(kHPMissingValue),
       itsStandardParallel1(kHPMissingValue),
       itsStandardParallel2(kHPMissingValue),
-      itsSouthPole(0, -90),
-      itsUVRelativeToGrid(true)
+      itsSouthPole(0, -90)
 {
 	itsLogger = logger_factory::Instance()->GetLog("lambert_conformal_grid");
 }
@@ -37,8 +73,7 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, p
       itsOrientation(kHPMissingValue),
       itsStandardParallel1(kHPMissingValue),
       itsStandardParallel2(kHPMissingValue),
-      itsSouthPole(0, -90),
-      itsUVRelativeToGrid(true)
+      itsSouthPole(0, -90)
 {
 	itsLogger = logger_factory::Instance()->GetLog("lambert_conformal_grid");
 
@@ -66,8 +101,7 @@ lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& oth
       itsOrientation(other.itsOrientation),
       itsStandardParallel1(other.itsStandardParallel1),
       itsStandardParallel2(other.itsStandardParallel2),
-      itsSouthPole(other.itsSouthPole),
-      itsUVRelativeToGrid(other.itsUVRelativeToGrid)
+      itsSouthPole(other.itsSouthPole)
 {
 	itsLogger = logger_factory::Instance()->GetLog("lambert_conformal_grid");
 	SetCoordinates();  // Create transformer
@@ -441,8 +475,8 @@ ostream& lambert_conformal_grid::Write(std::ostream& file) const
 	     << "__itsDj__ " << Dj() << endl
 	     << "__itsOrientation__ " << itsOrientation << endl
 	     << "__itsStandardParallel1__ " << itsStandardParallel1 << endl
-	     << "__itsStandardParallel2__ " << itsStandardParallel2 << endl
-	     << "__itsUVRelativeToGrid__" << itsUVRelativeToGrid << endl;
+	     << "__itsStandardParallel2__ " << itsStandardParallel2 << endl;
+
 	return file;
 }
 
@@ -550,8 +584,6 @@ bool lambert_conformal_grid::SetCoordinates() const
 	return true;
 }
 
-bool lambert_conformal_grid::UVRelativeToGrid() const { return itsUVRelativeToGrid; }
-void lambert_conformal_grid::UVRelativeToGrid(bool theUVRelativeToGrid) { itsUVRelativeToGrid = theUVRelativeToGrid; }
 OGRSpatialReference lambert_conformal_grid::SpatialReference() const
 {
 	return OGRSpatialReference(*itsSpatialReference);

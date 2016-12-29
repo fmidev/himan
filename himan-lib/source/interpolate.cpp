@@ -1,4 +1,5 @@
 #include "interpolate.h"
+#include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "numerical_functions.h"
 #include "point_list.h"
@@ -15,7 +16,8 @@
 #undef HIMAN_AUXILIARY_INCLUDE
 
 #ifdef HAVE_CUDA
-extern bool InterpolateCuda(himan::info& baseInfo, himan::info& targetInfo, himan::matrix<double>& targetData);
+extern bool InterpolateAreaGPU(himan::info& targetInfo, himan::info& baseInfo, himan::matrix<double>& targetData);
+extern void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo);
 #endif
 
 using namespace himan;
@@ -24,7 +26,6 @@ namespace himan
 {
 namespace interpolate
 {
-
 bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
 	auto q = GET_PLUGIN(querydata);
@@ -332,11 +333,6 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 	int method = InterpolationMethod(param, base.Param().InterpolationMethod());
 	sourceInfo.Param().GetParam()->InterpolationMethod(static_cast<FmiInterpolationMethod>(method));
 
-#ifdef DEBUG
-	std::cout << "Debug::interpolate Interpolation method: " << (sourceInfo.Param().GetParam()->InterpolationMethod())
-	          << std::endl;
-#endif
-
 	size_t i = 0;
 
 	if (base.Grid()->Class() == kIrregularGrid)
@@ -387,15 +383,6 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 	}
 
 	return true;
-}
-
-bool InterpolateAreaGPU(info& base, info& source, matrix<double>& targetData)
-{
-#ifdef HAVE_CUDA
-	return InterpolateCuda(source, base, targetData);
-#else
-	return false;
-#endif
 }
 
 bool InterpolateArea(info& target, std::vector<info_t> sources, bool useCudaForInterpolation)
@@ -465,16 +452,10 @@ bool InterpolateArea(info& target, std::vector<info_t> sources, bool useCudaForI
 		}
 
 		auto interpGrid = std::shared_ptr<grid>(target.Grid()->Clone());
-
-		if (targetType == kRotatedLatitudeLongitude && sourceType == kRotatedLatitudeLongitude)
-		{
-			dynamic_cast<rotated_latitude_longitude_grid*>(interpGrid.get())
-			    ->UVRelativeToGrid(dynamic_cast<rotated_latitude_longitude_grid*>(source->Grid())
-			                           ->UVRelativeToGrid());  // copy from source
-		}
+		interpGrid->AB(source->Grid()->AB());
+		interpGrid->UVRelativeToGrid(source->Grid()->UVRelativeToGrid());
 
 		interpGrid->Data(targetData);
-		interpGrid->AB(source->Grid()->AB());
 
 		source->Grid(interpGrid);
 	}
@@ -561,11 +542,11 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 		{
 			needInterpolation = true;
 		}
+
+		// == operator does not test scanning mode !
+
 		else if (base.Grid()->ScanningMode() != infos[0]->Grid()->ScanningMode())
 		{
-// == operator does not test scanning mode !
-// itsLogger->Trace("Swapping area from " + HPScanningModeToString.at(target->ScanningMode()) + " to " +
-// HPScanningModeToString.at(base->ScanningMode()));
 #ifdef HAVE_CUDA
 			if (infos[0]->Grid()->IsPackedData())
 			{
@@ -611,21 +592,25 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 
 	if (needInterpolation)
 	{
-		// itsLogger->Trace("Interpolating area with method: " +
-		// HPInterpolationMethodToString.at(baseInfo.Param().InterpolationMethod()));
 		return InterpolateArea(base, infos, useCudaForInterpolation);
 	}
 	else if (needPointReordering)
 	{
-		// itsLogger->Trace("Reordering points to match");
 		return ReorderPoints(base, infos);
-	}
-	else
-	{
-		// itsLogger->Trace("Grids are natively equal");
 	}
 
 	return true;
+}
+
+bool IsVectorComponent(const std::string& paramName)
+{
+	if (paramName == "U-MS" || paramName == "V-MS" || paramName == "WGU-MS" || paramName == "WGV-MS" ||
+	    paramName == "IVELU-MS" || paramName == "IVELV-MS")
+	{
+		return true;
+	}
+
+	return false;
 }
 
 HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod)
@@ -634,8 +619,7 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 	if (interpolationMethod == kBiLinear &&
 	    (
 	        // vector parameters
-	        paramName == "U-MS" || paramName == "V-MS" || paramName == "DD-D" || paramName == "FF-MS" ||
-	        paramName == "WGU-MS" || paramName == "WGV-MS" || paramName == "IVELU-MS" || paramName == "IVELV-MS" ||
+	        IsVectorComponent(paramName) || paramName == "DD-D" || paramName == "FF-MS" ||
 	        // precipitation
 	        paramName == "RR-KGM2" || paramName == "SNR-KGM2" || paramName == "GRI-KGM2" || paramName == "RRR-KGM2" ||
 	        paramName == "RRRC-KGM2" || paramName == "RRRL-KGM2" || paramName == "SNRC-KGM2" ||
@@ -653,6 +637,154 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 	}
 
 	return interpolationMethod;
+}
+
+void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
+{
+	assert(UInfo.Grid()->Type() == VInfo.Grid()->Type());
+
+	auto& UVec = UInfo.Data().Values();
+	auto& VVec = VInfo.Data().Values();
+
+	assert(UInfo.Grid()->Type() != kLatitudeLongitude);
+	switch (UInfo.Grid()->Type())
+	{
+		case kRotatedLatitudeLongitude:
+		{
+			rotated_latitude_longitude_grid* const rll = dynamic_cast<rotated_latitude_longitude_grid*>(UInfo.Grid());
+
+			const point southPole = rll->SouthPole();
+
+			for (size_t i = 0; i < UInfo->SizeLocations(); i++)
+			{
+				double U = UVec[i];
+				double V = VVec[i];
+
+				if (U == kFloatMissing || V == kFloatMissing)
+				{
+					continue;
+				}
+
+				const point rotPoint = rll->RotatedLatLon(i);
+				const point regPoint = rll->LatLon(i);
+				const auto coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, southPole);
+
+				double newU = std::get<0>(coeffs) * U + std::get<1>(coeffs) * V;
+				double newV = std::get<2>(coeffs) * U + std::get<3>(coeffs) * V;
+
+				UVec[i] = newU;
+				VVec[i] = newV;
+			}
+		}
+		break;
+
+		case kLambertConformalConic:
+		{
+			lambert_conformal_grid* const lcc = dynamic_cast<lambert_conformal_grid*>(UInfo.Grid());
+
+			if (!lcc->UVRelativeToGrid())
+			{
+				return;
+			}
+
+			const double latin1 = lcc->StandardParallel1();
+			const double latin2 = lcc->StandardParallel2();
+
+			double cone;
+			if (latin1 == latin2)
+			{
+				cone = sin(latin1 * constants::kDeg);
+			}
+			else
+			{
+				cone = (log(cos(latin1 * constants::kDeg)) - log(cos(latin2 * constants::kDeg))) /
+				       (log(tan((90 - fabs(latin1)) * constants::kDeg * 0.5)) -
+				        log(tan(90 - fabs(latin2)) * constants::kDeg * 0.5));
+			}
+
+			const double orientation = lcc->Orientation();
+
+			for (UInfo.ResetLocation(); UInfo.NextLocation();)
+			{
+				size_t i = UInfo.LocationIndex();
+
+				double U = UVec[i];
+				double V = VVec[i];
+
+				// http://www.mcs.anl.gov/~emconsta/wind_conversion.txt
+
+				double londiff = UInfo.LatLon().X() - orientation;
+				assert(londiff >= -180 && londiff <= 180);
+				assert(UInfo.LatLon().Y() >= 0);
+
+				const double angle = cone * londiff * constants::kDeg;
+				double sinx, cosx;
+				sincos(angle, &sinx, &cosx);
+
+				// This output is 1:1 with python basemaplib, but is different
+				// than the results received using algorithm from meteorological software.
+				// (below)
+
+				// double newU = cosx * U - sinx * V;
+				// double newV = sinx * U + cosx * V;
+
+				UVec[i] = -1 * cosx * U + sinx * V;
+				VVec[i] = -1 * -sinx * U + cosx * V;
+			}
+		}
+		break;
+
+		case kStereographic:
+		{
+			// The same as lambert but with cone = 1
+
+			const stereographic_grid* sc = dynamic_cast<stereographic_grid*>(UInfo.Grid());
+			const double orientation = sc->Orientation();
+
+			for (UInfo.ResetLocation(); UInfo.NextLocation();)
+			{
+				size_t i = UInfo.LocationIndex();
+
+				double U = UVec[i];
+				double V = VVec[i];
+
+				const double angle = (UInfo.LatLon().X() - orientation) * constants::kDeg;
+				double sinx, cosx;
+
+				sincos(angle, &sinx, &cosx);
+
+				UVec[i] = -1 * cosx * U + sinx * V;
+				VVec[i] = -1 * -sinx * U + cosx * V;
+			}
+		}
+		break;
+		default:
+			break;
+	}
+}
+
+void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda)
+{
+	assert(UInfo.Grid()->UVRelativeToGrid() == VInfo.Grid()->UVRelativeToGrid());
+
+	if (!UInfo.Grid()->UVRelativeToGrid())
+	{
+		return;
+	}
+
+#ifdef HAVE_CUDA
+	if (useCuda)
+	{
+		RotateVectorComponentsGPU(UInfo, VInfo);
+	}
+	else
+#endif
+	{
+		RotateVectorComponentsCPU(UInfo, VInfo);
+	}
+
+	UInfo.Grid()->UVRelativeToGrid(false);
+	VInfo.Grid()->UVRelativeToGrid(false);
 }
 
 }  // namespace interpolate

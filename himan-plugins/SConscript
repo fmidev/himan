@@ -49,11 +49,6 @@ else:
 for p in auxiliary_plugins:
 
 	file = 'source/' + p + '.cpp'
-
-	if p == "fetcher" and have_cuda:
-		interp = 'source/interpolate_cuda.cu'
-		file = [file, interp]
-
 	env.SharedLibrary(target = p, source = [file])
 
 for p in compiled_plugins:

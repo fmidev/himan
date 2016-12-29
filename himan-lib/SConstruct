@@ -212,6 +212,7 @@ env.Append(NVCCFLAGS = ['-std=c++11'])
 
 env.Append(NVCCPATH = ['./include'])
 env.Append(NVCCPATH = [workspace + '/himan-plugins/include']) # cuda-helper
+env.Append(NVCCPATH = ['/usr/include/smartmet/newbase'])
 
 # Other
 

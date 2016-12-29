@@ -228,7 +228,7 @@ void latitude_longitude_grid::Di(double theDi) { itsDi = theDi; }
 void latitude_longitude_grid::Dj(double theDj) { itsDj = theDj; }
 double latitude_longitude_grid::Di() const
 {
-	if (itsDi == kHPMissingValue && itsNi != static_cast<size_t> (kHPMissingInt) &&
+	if (itsDi == kHPMissingValue && itsNi != static_cast<size_t>(kHPMissingInt) &&
 	    FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
 	{
 		double fx = FirstPoint().X();
@@ -243,7 +243,7 @@ double latitude_longitude_grid::Di() const
 
 double latitude_longitude_grid::Dj() const
 {
-	if (itsDj == kHPMissingValue && itsNj != static_cast<size_t> (kHPMissingInt) &&
+	if (itsDj == kHPMissingValue && itsNj != static_cast<size_t>(kHPMissingInt) &&
 	    FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
 	{
 		itsDj = fabs((FirstPoint().Y() - LastPoint().Y()) / (static_cast<double>(itsNj) - 1.));
@@ -405,8 +405,7 @@ ostream& latitude_longitude_grid::Write(std::ostream& file) const
 	return file;
 }
 
-rotated_latitude_longitude_grid::rotated_latitude_longitude_grid()
-    : latitude_longitude_grid(), itsUVRelativeToGrid(false), itsSouthPole()
+rotated_latitude_longitude_grid::rotated_latitude_longitude_grid() : latitude_longitude_grid(), itsSouthPole()
 {
 	itsGridType = kRotatedLatitudeLongitude;
 	itsLogger = logger_factory::Instance()->GetLog("rotated_latitude_longitude_grid");
@@ -415,9 +414,7 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid()
 rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft,
                                                                  point theTopRight, point theSouthPole,
                                                                  bool initiallyRotated)
-    : latitude_longitude_grid(theScanningMode, theBottomLeft, theTopRight),
-      itsUVRelativeToGrid(false),
-      itsSouthPole(theSouthPole)
+    : latitude_longitude_grid(theScanningMode, theBottomLeft, theTopRight), itsSouthPole(theSouthPole)
 {
 	if (!initiallyRotated)
 		throw std::runtime_error("Unable to create rotated_latitude_longitude_grid with unrotated coordinates, yet");
@@ -427,7 +424,7 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode 
 }
 
 rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other)
-    : latitude_longitude_grid(other), itsUVRelativeToGrid(other.itsUVRelativeToGrid), itsSouthPole(other.itsSouthPole)
+    : latitude_longitude_grid(other), itsSouthPole(other.itsSouthPole)
 {
 	itsLogger = logger_factory::Instance()->GetLog("rotated_latitude_longitude_grid");
 }
@@ -479,12 +476,6 @@ rotated_latitude_longitude_grid* rotated_latitude_longitude_grid::Clone() const
 
 point rotated_latitude_longitude_grid::SouthPole() const { return itsSouthPole; }
 void rotated_latitude_longitude_grid::SouthPole(const point& theSouthPole) { itsSouthPole = theSouthPole; }
-bool rotated_latitude_longitude_grid::UVRelativeToGrid() const { return itsUVRelativeToGrid; }
-void rotated_latitude_longitude_grid::UVRelativeToGrid(bool theUVRelativeToGrid)
-{
-	itsUVRelativeToGrid = theUVRelativeToGrid;
-}
-
 point rotated_latitude_longitude_grid::XY(const point& latlon) const
 {
 	if (!itsRotLatLonArea)
@@ -532,7 +523,6 @@ ostream& rotated_latitude_longitude_grid::Write(std::ostream& file) const
 	latitude_longitude_grid::Write(file);
 
 	file << itsSouthPole;
-	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << endl;
 
 	return file;
 }
