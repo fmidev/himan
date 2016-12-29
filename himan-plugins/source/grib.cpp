@@ -1031,8 +1031,21 @@ void grib::WriteTime(info& anInfo)
 				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitOfTimeRange);
 				itsGrib->Message().ForecastTime(
 				    static_cast<long>((anInfo.Time().Step() - period) / divisor));  // start step
-				itsGrib->Message().LengthOfTimeRange(
-				    static_cast<long>(itsWriteOptions.configuration->ForecastStep() / divisor));  // step length
+
+				if (anInfo.Param().Aggregation().TimeResolution() == kUnknownTimeResolution)
+				{
+					// Although parameter is an accumulation, the period is unknown
+					// eg. RRR
+					itsGrib->Message().LengthOfTimeRange(
+					    static_cast<long>(itsWriteOptions.configuration->ForecastStep() / divisor));  // step length
+				}
+				else
+				{
+					// Accumulation period is known
+					// eg. RR-1-MM
+					itsGrib->Message().LengthOfTimeRange(
+					    static_cast<long>(anInfo.Param().Aggregation().TimeResolutionValue()));
+				}
 				break;
 		}
 	}
