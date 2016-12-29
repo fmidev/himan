@@ -655,7 +655,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 
 			const point southPole = rll->SouthPole();
 
-			for (size_t i = 0; i < UInfo->SizeLocations(); i++)
+			for (size_t i = 0; i < UInfo.SizeLocations(); i++)
 			{
 				double U = UVec[i];
 				double V = VVec[i];
