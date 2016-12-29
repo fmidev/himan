@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.12.20
+Version: 16.12.29
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -113,6 +113,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Dec 29 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.29-1.fmi
+- Reworked vector component rotation
 * Tue Dec 20 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.20-1.fmi
 - Hotfix for querydata plugin crashhh
 * Mon Dec 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.19-2.fmi
