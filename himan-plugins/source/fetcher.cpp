@@ -653,6 +653,11 @@ string GetOtherVectorComponentName(const string& name)
 		return "IVELV-MS";
 	else if (name == "IVELV-MS")
 		return "IVELU-MS";
+	// sea
+	else if (name == "WVELU-MS")
+		return "WVELV-MS";
+	else if (name == "WVELV-MS")
+		return "WVELU-MS";
 
 	throw runtime_error("Unable to find component pair for " + name);
 }

@@ -607,7 +607,7 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 bool IsVectorComponent(const std::string& paramName)
 {
 	if (paramName == "U-MS" || paramName == "V-MS" || paramName == "WGU-MS" || paramName == "WGV-MS" ||
-	    paramName == "IVELU-MS" || paramName == "IVELV-MS")
+	    paramName == "IVELU-MS" || paramName == "IVELV-MS" || paramName == "WVELU-MS" || paramName == "WVELV-MS")
 	{
 		return true;
 	}
