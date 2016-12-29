@@ -103,7 +103,7 @@ namespace plugin
 {
 class compiled_plugin_base
 {
-public:
+   public:
 	compiled_plugin_base();
 	inline virtual ~compiled_plugin_base() {}
 	compiled_plugin_base(const compiled_plugin_base& other) = delete;
@@ -120,7 +120,7 @@ public:
 
 	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options());
 
-protected:
+   protected:
 	virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
 	/**
 	 * @brief Set primary dimension
@@ -274,8 +274,8 @@ protected:
 	 * @return shared_ptr<info> on success, null-pointer if data not found
 	 */
 
-	info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams,
-	             const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
+	virtual info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams,
+	                     const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
 
 	/**
 	 * @brief Fetch source data with given requirements
@@ -321,8 +321,8 @@ protected:
 	 * @return shared_ptr<info> on success, un-initialized shared_ptr if data not found
 	 */
 
-	info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
-	             const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
+	virtual info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
+	                     const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
 
 	/**
 	 * @brief Initialize compiled_plugin_base and set internal state.
@@ -356,14 +356,14 @@ protected:
 	virtual void AllocateMemory(info myTargetInfo);
 	virtual void DeallocateMemory(info myTargetInfo);
 
-protected:
+   protected:
 	info_t itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	std::unique_ptr<timer> itsTimer;
 	short itsThreadCount;
 	bool itsDimensionsRemaining;
 
-private:
+   private:
 	std::unique_ptr<logger> itsBaseLogger;
 	bool itsPluginIsInitialized;
 	HPDimensionType itsPrimaryDimension;

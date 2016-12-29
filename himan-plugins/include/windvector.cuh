@@ -34,12 +34,8 @@ struct options
 	info_simple* dir;
 
 	HPWindVectorTargetType target_type;
-	bool need_grid_rotation;
 	size_t missing;
 	size_t N;
-
-	double* lon;
-	double* lat;
 
 	options()
 	    : u(0),
@@ -47,11 +43,8 @@ struct options
 	      speed(0),
 	      dir(0),
 	      target_type(kUnknownElement),
-	      need_grid_rotation(false),
 	      missing(0),
-	      N(0),
-	      lon(0),
-	      lat(0)
+	      N(0)
 	{
 	}
 };

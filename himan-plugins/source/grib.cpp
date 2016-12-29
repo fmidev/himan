@@ -1103,13 +1103,12 @@ void grib::WriteParameter(info& anInfo)
 			{
 				auto r = GET_PLUGIN(radon);
 
-				auto levelInfo =
-				    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
+				auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(
+				    boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
 
 				assert(levelInfo.size());
-				auto paramInfo =
-				    r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name(),
-				                                              stoi(levelInfo["id"]), anInfo.Level().Value());
+				auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(
+				    anInfo.Producer().Id(), anInfo.Param().Name(), stoi(levelInfo["id"]), anInfo.Level().Value());
 
 				if (paramInfo.empty() || paramInfo.find("grib1_number") == paramInfo.end() ||
 				    paramInfo["grib1_number"].empty())
@@ -1133,8 +1132,8 @@ void grib::WriteParameter(info& anInfo)
 		{
 			auto r = GET_PLUGIN(radon);
 
-			auto levelInfo =
-			    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
+			auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(
+			    boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
 
 			assert(levelInfo.size());
 			auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name(),
@@ -1899,11 +1898,11 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		    *dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid() ==
 		        *newInfo->Grid())
 		{
-			itsLogger->Trace("Force cache insert");
+			// itsLogger->Trace("Force cache insert");
 
-			auto c = GET_PLUGIN(cache);
+			// auto c = GET_PLUGIN(cache);
 
-			c->Insert(*newInfo);
+			// c->Insert(*newInfo);
 		}
 
 		return false;
@@ -1918,7 +1917,7 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 	// indicator of Parameter is not necessarily provided in search_options param
 	// look this information up from database instead
 
-	map<string,string> param;
+	map<string, string> param;
 
 	if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
 	{
@@ -1942,20 +1941,20 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 	theKeyValueMap["date"] = stol(time.OriginDateTime().String("%Y%m%d"));
 	theKeyValueMap["time"] = stol(time.OriginDateTime().String("%H%M"));
 
-//	if (param["version"] == "1")
+	//	if (param["version"] == "1")
 	{
 		theKeyValueMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
 		theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
 	}
-/*
-	else if (param["version"] == "2")
-	{
-		// TODO check if this is giving correct type number (Grib2 != Grib1)
-		theKeyValueMap["typeOfFirstFixedSurface"] = static_cast<long>(options.level.Type());
-		theKeyValueMap["discipline"] = stol(param["grib2_discipline"]);
-		theKeyValueMap["parameterCategory"] = stol(param["grib2_category"]);
-		theKeyValueMap["parameterNumber"] = stol(param["grib2_number"]);
-	}
-*/
+	/*
+	    else if (param["version"] == "2")
+	    {
+	        // TODO check if this is giving correct type number (Grib2 != Grib1)
+	        theKeyValueMap["typeOfFirstFixedSurface"] = static_cast<long>(options.level.Type());
+	        theKeyValueMap["discipline"] = stol(param["grib2_discipline"]);
+	        theKeyValueMap["parameterCategory"] = stol(param["grib2_category"]);
+	        theKeyValueMap["parameterNumber"] = stol(param["grib2_number"]);
+	    }
+	*/
 	return theKeyValueMap;
 }

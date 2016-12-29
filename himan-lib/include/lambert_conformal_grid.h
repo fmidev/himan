@@ -16,10 +16,9 @@
 
 namespace himan
 {
-
 class lambert_conformal_grid : public grid
 {
-public:
+   public:
 	lambert_conformal_grid();
 	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirsPoint);
 
@@ -100,15 +99,12 @@ public:
 	void StandardParallel2(double theStandardParallel2);
 	double StandardParallel2() const;
 
-	bool UVRelativeToGrid() const;
-	void UVRelativeToGrid(bool theUVRelativeToGrid);
-
 	OGRSpatialReference SpatialReference() const;
 
 	point SouthPole() const;
 	void SouthPole(const point& theSouthPole);
 
-private:
+   private:
 	bool EqualsTo(const lambert_conformal_grid& other) const;
 	bool SetCoordinates() const;
 
@@ -126,7 +122,6 @@ private:
 	mutable double itsStandardParallel2;
 
 	point itsSouthPole;
-	bool itsUVRelativeToGrid;
 
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsXYToLatLonTransformer;
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsLatLonToXYTransformer;
@@ -134,7 +129,6 @@ private:
 };
 
 inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid& ob) { return ob.Write(file); }
-
 }  // namespace himan
 
 #endif /* LAMBERT_CONFORMAL_GRID_H */

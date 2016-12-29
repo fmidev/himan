@@ -27,6 +27,7 @@ using namespace std;
 fetcher::fetcher()
     : itsDoLevelTransform(true),
       itsDoInterpolation(true),
+      itsDoVectorComponentRotation(false),
       itsUseCache(true),
       itsApplyLandSeaMask(false),
       itsLandSeaMaskThreshold(0.5)
@@ -104,9 +105,11 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	level newLevel = requestedLevel;
 
+	producer sourceProd;
+
 	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers() && theInfos.empty(); prodNum++)
 	{
-		producer sourceProd(config->SourceProducer(prodNum));
+		sourceProd = producer(config->SourceProducer(prodNum));
 
 		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure &&
 		                            requestedLevel.Type() != kHeightLayer))
@@ -183,17 +186,10 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	baseInfo->First();
 
+	RotateVectorComponents(theInfos[0], baseInfo, config, sourceProd);
+
 	if (itsDoInterpolation)
 	{
-		if ((theInfos[0]->Grid()->Type() == kRotatedLatitudeLongitude ||
-		     theInfos[0]->Grid()->Type() == kStereographic || theInfos[0]->Grid()->Type() == kLambertConformalConic) &&
-		    (baseInfo->Grid()->Type() != theInfos[0]->Grid()->Type()) &&
-		    (theInfos[0]->Param().Name() == "U-MS" || theInfos[0]->Param().Name() == "V-MS"))
-		{
-			itsLogger->Error("Vectors should not be directly interpolated to/from a projected area");
-			throw;
-		}
-
 		if (!interpolate::Interpolate(*baseInfo, theInfos, config->UseCudaForInterpolation()))
 		{
 			// interpolation failed
@@ -403,7 +399,6 @@ himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration
 			itsLogger->Trace("Level transform failed: no parameter information for param " + targetParam.Name());
 			return ret;
 		}
-
 
 		auto levelXrefInfo =
 		    r->RadonDB().GetLevelTransform(sourceProducer.Id(), boost::lexical_cast<int>(paramInfo["id"]),
@@ -633,4 +628,99 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 	}
 
 	itsLandSeaMaskThreshold = theLandSeaMaskThreshold;
+}
+
+bool fetcher::DoVectorComponentRotation() const { return itsDoVectorComponentRotation; }
+void fetcher::DoVectorComponentRotation(bool theDoVectorComponentRotation)
+{
+	itsDoVectorComponentRotation = theDoVectorComponentRotation;
+}
+
+string GetOtherVectorComponentName(const string& name)
+{
+	// wind
+	if (name == "U-MS")
+		return "V-MS";
+	else if (name == "V-MS")
+		return "U-MS";
+	// wind gust
+	else if (name == "WGU-MS")
+		return "WGV-MS";
+	else if (name == "WGV-MS")
+		return "WGU-MS";
+	// ice
+	else if (name == "IVELU-MS")
+		return "IVELV-MS";
+	else if (name == "IVELV-MS")
+		return "IVELU-MS";
+	// sea
+	else if (name == "WVELU-MS")
+		return "WVELV-MS";
+	else if (name == "WVELV-MS")
+		return "WVELU-MS";
+
+	throw runtime_error("Unable to find component pair for " + name);
+}
+
+void fetcher::RotateVectorComponents(info_t component, info_t target, shared_ptr<const configuration> config,
+                                     const producer& sourceProd)
+{
+	HPGridType from = component->Grid()->Type();
+	HPGridType to = target->Grid()->Type();
+	const auto name = component->Param().Name();
+
+	if (interpolate::IsVectorComponent(name) &&
+	    ((itsDoVectorComponentRotation) ||
+	     ((from == kRotatedLatitudeLongitude || from == kStereographic || from == kLambertConformalConic) &&
+	      to != from)))
+	{
+		if (!itsDoVectorComponentRotation &&
+		    (to == kRotatedLatitudeLongitude || to == kStereographic || to == kLambertConformalConic))
+		{
+			throw runtime_error("Rotating vector components to projected area is not supported (yet)");
+		}
+
+		auto otherName = GetOtherVectorComponentName(name);
+
+		search_options opts(component->Time(), param(otherName), component->Level(), sourceProd,
+		                    component->ForecastType(), config);
+
+		itsLogger->Trace("Fetching " + otherName + " for U/V rotation");
+
+		auto otherVec = FetchFromProducer(opts, component->Grid()->IsPackedData());
+
+		assert(!otherVec.empty());
+
+		info_t u, v, other = otherVec[0];
+
+		if (name.find("U-MS") != std::string::npos)
+		{
+			u = component;
+			v = other;
+		}
+		else if (name.find("V-MS") != std::string::npos)
+		{
+			u = other;
+			v = component;
+		}
+		else
+		{
+			throw runtime_error("Unrecognized vector component parameter: " + name);
+		}
+
+		interpolate::RotateVectorComponents(*u, *v, config->UseCudaForInterpolation());
+
+		// Most likely both U&V are requested, so interpolate the other one now
+		// and put it to cache.
+
+		std::vector<info_t> list({other});
+		if (interpolate::Interpolate(*target, list, config->UseCudaForInterpolation()))
+		{
+			if (itsUseCache && config->UseCache() && !other->Grid()->IsPackedData())
+			{
+				auto c = GET_PLUGIN(cache);
+				c->Insert(*other);
+			}
+		}
+	}
 }

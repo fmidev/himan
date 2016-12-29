@@ -644,6 +644,7 @@ std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, 
 namespace ensemble_wrapper
 {
 object Values(const ensemble& ens) { return VectorToTable(ens.Values()); }
+object SortedValues(const ensemble& ens) { return VectorToTable(ens.SortedValues()); }
 }  // ensemble_wrapper
 
 namespace matrix_wrapper
@@ -871,14 +872,21 @@ void BindLib(lua_State* L)
 	          class_<write_options>("write_options")
 	              .def(constructor<>())
 	              .def_readwrite("use_bitmap", &write_options::use_bitmap),
-		  class_<ensemble>("ensemble")
+			  class_<himan::ensemble, std::shared_ptr<himan::ensemble>>("ensemble")
 		      .def(constructor<param, int>())
 		      .def("ClassName", &ensemble::ClassName)
 		      .def("Fetch", &ensemble::Fetch)
 		      .def("Values", &ensemble_wrapper::Values)
+			  .def("SortedValues", &ensemble_wrapper::SortedValues)
 		      .def("ResetLocation", &ensemble::ResetLocation)
+			  .def("FirstLocation", &ensemble::FirstLocation)
 		      .def("NextLocation", &ensemble::NextLocation)
-		      .def("Size", &ensemble::Size),
+			  .def("Value", &ensemble::Value)
+			  .def("Mean", &ensemble::Mean)
+			  .def("Size", &ensemble::Size)
+			  .def("ExpectedSize", &ensemble::ExpectedSize)
+			  .def("SetMaximumMissingForecasts", LUA_MEMFN(void, ensemble, MaximumMissingForecasts, int))
+			  .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, ensemble, MaximumMissingForecasts, void)),
 	          // numerical_functions namespace
 	          def("Filter2D", &numerical_functions::Filter2D),
 	          def("Max2D", &numerical_functions::Max2D),
