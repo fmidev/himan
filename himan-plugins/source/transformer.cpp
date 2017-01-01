@@ -105,7 +105,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		throw runtime_error("Transformer_plugin: source_level_type not specified.");
+		itsLogger->Warning("Source_level not specified, source_level set to target level");
 	}
 
 	if (!itsConfiguration->GetValue("source_levels").empty())
@@ -114,7 +114,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		throw runtime_error("Transformer_plugin: source_level_type not specified.");
+		itsLogger->Warning("Source_levels not specified, source_levels set to target levels");
 	}
 
 	// Check apply land sea mask parameter
@@ -135,8 +135,21 @@ void transformer::SetAdditionalParameters()
 		itsInterpolationMethod = HPStringToInterpolationMethod.at(itsConfiguration->GetValue("interpolation"));
 	}
 
-	// looks useful to use this function to create source_levels
-	itsSourceLevels = LevelsFromString(itsSourceLevelType, SourceLevels);
+	if (!SourceLevels.empty())
+	{
+		// looks useful to use this function to create source_levels
+
+		itsSourceLevels = LevelsFromString(itsSourceLevelType, SourceLevels);
+	}
+	else
+	{
+		// copy levels from target
+		auto x = make_shared<info> (*itsInfo);
+		for (x->ResetLevel(); x->NextLevel();)
+		{
+			itsSourceLevels.push_back(x->Level());
+		}
+	}
 }
 
 void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -169,12 +182,6 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 			requestedParam.GribDiscipline(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_discipline")));
 			requestedParam.GribCategory(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_category")));
 			requestedParam.GribParameter(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_parameter")));
-		}
-		else
-		{
-			throw runtime_error(
-			    "Transformer_plugin: Grib2 output requested but Grib2 parameter specifiers for output parameter not "
-			    "given in json file.");
 		}
 	}
 
