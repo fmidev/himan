@@ -210,8 +210,22 @@ double ensemble::Mean() const
 	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
 }
 
+double ensemble::Variance() const
+{
+	std::vector<double> v = Values();
+	for (auto& d : v) d *= d;
+	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size()) - std::pow(Mean(), 2.0);
+}
+
+double ensemble::CentralMoment(int N) const
+{
+	std::vector<double> v = Values();
+	double mu = Mean();
+	std::for_each(v.begin(), v.end(), [=](double& d) { d = std::pow(d - mu, N); });
+	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
+}
+
 HPEnsembleType ensemble::EnsembleType() const { return itsEnsembleType; }
 size_t ensemble::Size() const { return itsForecasts.size(); }
 size_t ensemble::ExpectedSize() const { return itsExpectedEnsembleSize; }
-
 }  // namespace himan

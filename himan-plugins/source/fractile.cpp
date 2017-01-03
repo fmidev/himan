@@ -123,7 +123,9 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		calculatedParams.push_back(param(name));
 	}
 
-	calculatedParams.push_back(param(itsParamName));  // mean
+	auto name = util::Split(itsParamName, "-", false);
+	calculatedParams.push_back(param(name[0] + "-MEAN-" + name[1]));    // mean
+	calculatedParams.push_back(param(name[0] + "-STDDEV-" + name[1]));  // standard deviation
 
 	SetParams(calculatedParams);
 
@@ -219,9 +221,13 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			++targetInfoIndex;
 		}
 
-		// write mean value to last target info index
+		// write mean value and stddev to last target info indices
 		myTargetInfo->ParamIndex(targetInfoIndex);
 		myTargetInfo->Value(ens->Mean());
+
+		++targetInfoIndex;
+		myTargetInfo->ParamIndex(targetInfoIndex);
+		myTargetInfo->Value(std::sqrt(ens->Variance()));
 	}
 
 	threadedLogger->Info("[" + deviceType + "] Missing values: " +
