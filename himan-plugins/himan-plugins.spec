@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.12.29
+Version: 17.1.3
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -113,6 +113,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jan  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.3-1.fmi
+- Standard deviation for fractile plugin
 * Thu Dec 29 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.29-1.fmi
 - Reworked vector component rotation
 * Tue Dec 20 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.20-1.fmi
