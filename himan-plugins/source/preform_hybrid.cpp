@@ -613,19 +613,30 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		util::DumpVector(Tavg23, "tavg 23");
 #endif
 
-		logger->Trace("Searching for fourth zero level height");
-		zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
+		try
+		{
+
+			logger->Trace("Searching for fourth zero level height");
+			zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
 
 #ifdef DEBUG
-		util::DumpVector(zeroLevel4, "zero level 4");
+			util::DumpVector(zeroLevel4, "zero level 4");
 #endif
 
-		logger->Trace("Searching for average temperature between third and fourth zero level");
-		Tavg34 = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
+			logger->Trace("Searching for average temperature between third and fourth zero level");
+			Tavg34 = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
 
 #ifdef DEBUG
-		util::DumpVector(Tavg34, "tavg 34");
+			util::DumpVector(Tavg34, "tavg 34");
 #endif
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				logger->Debug("No 4th zero level found from entire data");
+			}
+		}
 
 		wantedParam = param("RH-PRCNT");
 
