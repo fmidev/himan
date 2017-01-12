@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 17.1.12
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -113,6 +113,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jan 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.12-2.fmi
+- Another bugfix 
 * Thu Jan 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.12-1.fmi
 - Bugfix for preform_hybrid (STU-4906)
 * Tue Jan  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.3-1.fmi
