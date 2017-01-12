@@ -184,7 +184,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	// Source infos
 
 	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, forecastType, false);
-	info_t TInfo = Fetch(forecastTime, surface0mLevel, TParam, forecastType, false);
+	info_t TInfo = Fetch(forecastTime, surface2mLevel, TParam, forecastType, false);
 
 	if (!RRInfo || !TInfo)
 	{
@@ -601,6 +601,8 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		try
 		{
+			wantedParam = param("T-K");
+
 			logger->Trace("Searching for second zero level height");
 			zeroLevel2 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
 
@@ -646,6 +648,8 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			logger->Trace("Searching for average humidity between first and second zero level");
 
 			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
+			wantedParam = param("RH-PRCNT");
+
 			rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 
 #ifdef DEBUG
