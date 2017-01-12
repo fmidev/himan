@@ -184,7 +184,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	// Source infos
 
 	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, forecastType, false);
-	info_t TInfo = Fetch(forecastTime, surface0mLevel, TParam, forecastType, false);
+	info_t TInfo = Fetch(forecastTime, surface2mLevel, TParam, forecastType, false);
 
 	if (!RRInfo || !TInfo)
 	{
@@ -339,39 +339,39 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		assert(T >= -80 && T < 80);
 		assert(!noPotentialPrecipitationForm || RR > 0);
 		assert(Navg == MISS || (Navg >= 0 && Navg <= 100));
-
 		/*
-		        cout	<< "base\t\t" << base << endl
-		                << "top\t\t" << top << endl
-		                << "Navg\t\t" << Navg << endl
-		                << "upperLayerN\t" << upperLayerN << endl
-		                << "RR\t\t" << RR << endl
-		                << "stTavg\t\t" << stTavg << endl
-		                << "T\t\t" << T << endl
-		                << "plusArea\t" << plusArea << endl
-		                << "plusAreaSfc\t" << plusAreaSfc << endl
-		                << "minusArea\t" << minusArea << endl
-		                << "nZeroLevel\t" << nZeroLevel << endl
-		                << "rhAvg\t\t" << rhAvg << endl
-		                << "rhAvgUpper\t" << rhAvgUpper << endl
-		                << "rhMelt\t\t" << rhMelt << endl
-		                << "rhMeltUpper\t" << rhMeltUpper << endl
-		                << "wAvg\t\t" << wAvg << endl
-		                << "baseLimit\t" << baseLimit << endl
-		                << "topLimit\t" << stLimit << endl
-		                << "Nlimit\t\t" << Nlimit << endl
-		                << "dryNlim\t\t" << dryNlim << endl
-		                << "waterArea\t" << waterArea << endl
-		                << "snowArea\t" << snowArea << endl
-		                << "wMax\t\t" << wMax << endl
-		                << "sfcMin\t\t" << sfcMin << endl
-		                << "sfcMax\t\t" << sfcMax << endl
-		                << "fzdzLim\t\t" << fzdzLim << endl
-		                << "fzStLimit\t" << fzStLimit << endl
-		                << "fzraPA\t\t" << fzraPA << endl
-		                << "fzraMA\t\t" << fzraMA << endl;
+		            cout	<< "base\t\t" << base << endl
+		                    << "top\t\t" << top << endl
+		                    << "Navg\t\t" << Navg << endl
+		                    << "upperLayerN\t" << upperLayerN << endl
+		                    << "RR\t\t" << RR << endl
+		                    << "stTavg\t\t" << stTavg << endl
+		                    << "T\t\t" << T << endl
+		                    << "Ttop\t\t" << Ttop << endl
+		                    << "plusArea\t" << plusArea << endl
+		                    << "plusAreaSfc\t" << plusAreaSfc << endl
+		                    << "minusArea\t" << minusArea << endl
+		                    << "nZeroLevel\t" << nZeroLevel << endl
+		                    << "rhAvg\t\t" << rhAvg << endl
+		                    << "rhAvgUpper\t" << rhAvgUpper << endl
+		                    << "rhMelt\t\t" << rhMelt << endl
+		                    << "rhMeltUpper\t" << rhMeltUpper << endl
+		                    << "wAvg\t\t" << wAvg << endl
+		                    << "baseLimit\t" << baseLimit << endl
+		                    << "stLimit\t\t" << stLimit << endl
+		                    << "stTlimit\t" << stTlimit << endl
+		                    << "Nlimit\t\t" << Nlimit << endl
+		                    << "dryNlim\t\t" << dryNlim << endl
+		                    << "waterArea\t" << waterArea << endl
+		                    << "snowArea\t" << snowArea << endl
+		                    << "wMax\t\t" << wMax << endl
+		                    << "sfcMin\t\t" << sfcMin << endl
+		                    << "sfcMax\t\t" << sfcMax << endl
+		                    << "fzdzLim\t\t" << fzdzLim << endl
+		                    << "fzStLimit\t" << fzStLimit << endl
+		                    << "fzraPA\t\t" << fzraPA << endl
+		                    << "fzraMA\t\t" << fzraMA << endl;
 		*/
-
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
@@ -585,48 +585,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		util::DumpVector(Tavg01, "tavg 01");
 #endif
 
-		logger->Trace("Searching for second zero level height");
-		zeroLevel2 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
-
-#ifdef DEBUG
-		util::DumpVector(zeroLevel2, "zero level 2");
-#endif
-
-		logger->Trace("Searching for average temperature between first and second zero level");
-		Tavg12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
-
-#ifdef DEBUG
-		util::DumpVector(Tavg12, "tavg 12");
-#endif
-
-		logger->Trace("Searching for third zero level height");
-		zeroLevel3 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
-
-#ifdef DEBUG
-		util::DumpVector(zeroLevel3, "zero level 3");
-#endif
-
-		logger->Trace("Searching for average temperature between second and third zero level");
-		Tavg23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
-
-#ifdef DEBUG
-		util::DumpVector(Tavg23, "tavg 23");
-#endif
-
-		logger->Trace("Searching for fourth zero level height");
-		zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
-
-#ifdef DEBUG
-		util::DumpVector(zeroLevel4, "zero level 4");
-#endif
-
-		logger->Trace("Searching for average temperature between third and fourth zero level");
-		Tavg34 = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
-
-#ifdef DEBUG
-		util::DumpVector(Tavg34, "tavg 34");
-#endif
-
 		wantedParam = param("RH-PRCNT");
 
 		logger->Trace("Searching for average humidity between ground and first zero level");
@@ -637,23 +595,83 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		util::DumpVector(rhAvg01, "rh avg 01");
 #endif
 
-		logger->Trace("Searching for average humidity between first and second zero level");
 
-		// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
-		rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
+		// Only the first zero layer with at least one non-missing element is required 
+		// to be present. All other zero layers (2,3,4) are optional.
 
-#ifdef DEBUG
-		util::DumpVector(rhAvgUpper12, "rh avg upper 12");
-#endif
+		try
+		{
+			wantedParam = param("T-K");
 
-		logger->Trace("Searching for average humidity between second and third zero level");
-
-		// Keskimääräinen RH ylemmässä plussakerroksessa
-		rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
+			logger->Trace("Searching for second zero level height");
+			zeroLevel2 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
 
 #ifdef DEBUG
-		util::DumpVector(rhAvgUpper23, "rh avg upper 23");
+			util::DumpVector(zeroLevel2, "zero level 2");
 #endif
+
+			logger->Trace("Searching for average temperature between first and second zero level");
+			Tavg12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
+
+#ifdef DEBUG
+			util::DumpVector(Tavg12, "tavg 12");
+#endif
+
+			logger->Trace("Searching for third zero level height");
+			zeroLevel3 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
+
+#ifdef DEBUG
+			util::DumpVector(zeroLevel3, "zero level 3");
+#endif
+
+			logger->Trace("Searching for average temperature between second and third zero level");
+			Tavg23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
+
+#ifdef DEBUG
+			util::DumpVector(Tavg23, "tavg 23");
+#endif
+
+			logger->Trace("Searching for fourth zero level height");
+			zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
+
+#ifdef DEBUG
+			util::DumpVector(zeroLevel4, "zero level 4");
+#endif
+
+			logger->Trace("Searching for average temperature between third and fourth zero level");
+			Tavg34 = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
+
+#ifdef DEBUG
+			util::DumpVector(Tavg34, "tavg 34");
+#endif
+
+			logger->Trace("Searching for average humidity between first and second zero level");
+
+			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
+			wantedParam = param("RH-PRCNT");
+
+			rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
+
+#ifdef DEBUG
+			util::DumpVector(rhAvgUpper12, "rh avg upper 12");
+#endif
+
+			logger->Trace("Searching for average humidity between second and third zero level");
+
+			// Keskimääräinen RH ylemmässä plussakerroksessa
+			rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
+
+#ifdef DEBUG
+			util::DumpVector(rhAvgUpper23, "rh avg upper 23");
+#endif
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				logger->Debug("Some zero level not found from entire data");
+			}
+		}
 	}
 	catch (const HPExceptionType& e)
 	{

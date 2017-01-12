@@ -424,27 +424,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 	{
 		level currentLevel(kHybrid, levelValue, "HYBRID");
 
-		valueheight data;
-
-		try
-		{
-			data = GetData(currentLevel, wantedParam, itsTime, itsForecastType);
-		}
-		catch (const HPExceptionType& e)
-		{
-			switch (e)
-			{
-				case kFileDataNotFound:
-					itsLogger->Error("data not found for param " + wantedParam.Name() + " level " +
-					                 static_cast<string>(currentLevel));
-					throw;
-					// continue;
-					break;
-				default:
-					throw;
-					break;
-			}
-		}
+		valueheight data = GetData(currentLevel, wantedParam, itsTime, itsForecastType);
 
 		auto values = data.first;
 		auto heights = data.second;
