@@ -1660,7 +1660,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 			else
 			{
 				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
-				          static_cast<float>(itsGrib->Message().LevelValue()));
+				          static_cast<float>(itsGrib->Message().LevelValue2()));
 			}
 		}
 		break;
