@@ -55,6 +55,9 @@ private:
 	int itsEnsembleSize;
 	int itsMaximumMissingForecasts;
 	bool itsUseNormalizedResult;
+	bool itsUseLaggedEnsemble;
+	int itsLag;
+	int itsLaggedSteps;
 	std::vector<param_configuration> itsParamConfigurations;
 };
 
