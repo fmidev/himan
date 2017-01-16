@@ -25,6 +25,8 @@ radon::radon() : itsInit(false), itsRadonDB()
 
 		NFmiRadonDBPool::Instance()->Username("wetodb");
 		NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
+		NFmiRadonDBPool::Instance()->Database("radon");
+		NFmiRadonDBPool::Instance()->Hostname("vorlon");
 	});
 }
 
