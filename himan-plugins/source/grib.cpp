@@ -917,7 +917,7 @@ void grib::WriteTime(info& anInfo)
 
 		if (step % 3 == 0 && step / 3 < 255)
 		{
-			unitOfTimeRange = 13;  // 3 hours
+			unitOfTimeRange = 10;  // 3 hours
 			divisor = 3;
 		}
 		else if (step % 6 == 0 && step / 6 < 255)
@@ -1017,13 +1017,12 @@ void grib::WriteTime(info& anInfo)
 		}
 
 		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
-
 		// Statistical processing is set in WriteParameter()
 		switch (anInfo.Param().Aggregation().Type())
 		{
 			default:
 			case kUnknownAggregationType:
-				itsGrib->Message().ForecastTime(anInfo.Time().Step());
+				itsGrib->Message().ForecastTime(anInfo.Time().Step() / divisor);
 				break;
 			case kAverage:
 			case kAccumulation:
