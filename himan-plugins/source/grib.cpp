@@ -1651,6 +1651,20 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 			l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
 			break;
 
+		case kGndLayer:
+		{
+			if (options.level.Value2() == kHPMissingValue)
+			{
+				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+			}
+			else
+			{
+				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
+				          static_cast<float>(itsGrib->Message().LevelValue2()));
+			}
+		}
+		break;
+
 		default:
 			l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
 			break;

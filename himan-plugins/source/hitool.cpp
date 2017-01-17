@@ -123,6 +123,14 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 			mod = make_shared<modifier_plusminusarea>();
 			break;
 
+		case kFindHeightGreaterThanModifier:
+			mod = make_shared<modifier_findheight_gt>();
+			break;
+
+		case kFindHeightLessThanModifier:
+			mod = make_shared<modifier_findheight_lt>();
+			break;
+
 		default:
 			itsLogger->Fatal("Unknown modifier type: " + boost::lexical_cast<string>(modifierType));
 			exit(1);
@@ -598,6 +606,189 @@ vector<double> hitool::VerticalHeight(const param& wantedParam, const vector<dou
                                       size_t findNth) const
 {
 	auto modifier = CreateModifier(kFindHeightModifier);
+	modifier->FindNth(findNth);
+
+	return VerticalExtremeValue(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
+}
+
+vector<double> hitool::VerticalHeightGreaterThan(const param& wantedParam, double lowerHeight, double upperHeight,
+                                                 double findValue, size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+
+	return VerticalHeightGreaterThan(wantedParam, firstLevelValue, lastLevelValue, findValueVector, findNth);
+}
+
+vector<double> hitool::VerticalHeightGreaterThan(const params& wantedParamList, double lowerHeight, double upperHeight,
+                                                 double findValue, size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+
+	return VerticalHeightGreaterThan(wantedParamList, firstLevelValue, lastLevelValue, findValueVector, findNth);
+}
+
+vector<double> hitool::VerticalHeightGreaterThan(const param& wantedParam, double lowerHeight, double upperHeight,
+                                                 const vector<double>& findValue, size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalHeightGreaterThan(wantedParam, firstLevelValue, lastLevelValue, findValue, findNth);
+}
+
+vector<double> hitool::VerticalHeightGreaterThan(const vector<param>& wantedParamList, double lowerHeight,
+                                                 double upperHeight, const vector<double>& findValue,
+                                                 size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalHeightGreaterThan(wantedParamList, firstLevelValue, lastLevelValue, findValue, findNth);
+}
+
+vector<double> hitool::VerticalHeightGreaterThan(const vector<param>& wantedParamList,
+                                                 const vector<double>& firstLevelValue,
+                                                 const vector<double>& lastLevelValue, const vector<double>& findValue,
+                                                 size_t findNth) const
+{
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalHeightGreaterThan(foundParam, firstLevelValue, lastLevelValue, findValue, findNth);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " +
+					                 wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
+			{
+				throw;
+			}
+		}
+	}
+
+	throw runtime_error("Data not found");
+}
+
+vector<double> hitool::VerticalHeightGreaterThan(const param& wantedParam, const vector<double>& firstLevelValue,
+                                                 const vector<double>& lastLevelValue, const vector<double>& findValue,
+                                                 size_t findNth) const
+{
+	auto modifier = CreateModifier(kFindHeightGreaterThanModifier);
+	modifier->FindNth(findNth);
+
+	return VerticalExtremeValue(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
+}
+
+vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, double lowerHeight, double upperHeight,
+                                              double findValue, size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+
+	return VerticalHeightLessThan(wantedParam, firstLevelValue, lastLevelValue, findValueVector, findNth);
+}
+
+vector<double> hitool::VerticalHeightLessThan(const params& wantedParamList, double lowerHeight, double upperHeight,
+                                              double findValue, size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+
+	return VerticalHeightLessThan(wantedParamList, firstLevelValue, lastLevelValue, findValueVector, findNth);
+}
+
+vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, double lowerHeight, double upperHeight,
+                                              const vector<double>& findValue, size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalHeightLessThan(wantedParam, firstLevelValue, lastLevelValue, findValue, findNth);
+}
+
+vector<double> hitool::VerticalHeightLessThan(const vector<param>& wantedParamList, double lowerHeight,
+                                              double upperHeight, const vector<double>& findValue, size_t findNth) const
+{
+	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+
+	return VerticalHeightLessThan(wantedParamList, firstLevelValue, lastLevelValue, findValue, findNth);
+}
+
+vector<double> hitool::VerticalHeightLessThan(const vector<param>& wantedParamList,
+                                              const vector<double>& firstLevelValue,
+                                              const vector<double>& lastLevelValue, const vector<double>& findValue,
+                                              size_t findNth) const
+{
+	assert(!wantedParamList.empty());
+
+	size_t p_i = 0;
+
+	param foundParam = wantedParamList[p_i];
+
+	for (size_t i = 0; i < wantedParamList.size(); i++)
+	{
+		try
+		{
+			return VerticalHeightLessThan(foundParam, firstLevelValue, lastLevelValue, findValue, findNth);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				if (++p_i < wantedParamList.size())
+				{
+					itsLogger->Debug("Switching parameter from " + foundParam.Name() + " to " +
+					                 wantedParamList[p_i].Name());
+					foundParam = wantedParamList[p_i];
+				}
+				else
+				{
+					itsLogger->Warning("No more valid parameters left");
+					throw;
+				}
+			}
+			else
+			{
+				throw;
+			}
+		}
+	}
+
+	throw runtime_error("Data not found");
+}
+
+vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, const vector<double>& firstLevelValue,
+                                              const vector<double>& lastLevelValue, const vector<double>& findValue,
+                                              size_t findNth) const
+{
+	auto modifier = CreateModifier(kFindHeightLessThanModifier);
 	modifier->FindNth(findNth);
 
 	return VerticalExtremeValue(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);

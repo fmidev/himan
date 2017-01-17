@@ -247,18 +247,21 @@ void BindEnum(lua_State* L)
 				 value("kDifference", kDifference)],
 	     class_<HPModifierType>("HPModifierType")
 	         .enum_("constants")
-	             [value("kUnknownModifierType", kUnknownModifierType),
-				  value("kAverageModifier", kAverageModifier),
-	              value("kAccumulationModifier", kAccumulationModifier),
-				  value("kMaximumModifier", kMaximumModifier),
-	              value("kMinimumModifier", kMinimumModifier),
-				  value("kDifferenceModifier", kDifferenceModifier),
-	              value("kMaximumMinimumModifier", kMaximumMinimumModifier),
-				  value("kCountModifier", kCountModifier),
-	              value("kFindHeightModifier", kFindHeightModifier),
-				  value("kFindValueModifier", kFindValueModifier),
-	              value("kIntegralModifier", kIntegralModifier),
-	              value("kPlusMinusAreaModifier", kPlusMinusAreaModifier)],
+	             [
+		value("kUnknownModifierType", kUnknownModifierType),
+				 value("kAverageModifier", kAverageModifier),
+				 value("kAccumulationModifier", kAccumulationModifier),
+				 value("kMaximumModifier", kMaximumModifier),
+				 value("kMinimumModifier", kMinimumModifier),
+				 value("kDifferenceModifier", kDifferenceModifier),
+				 value("kMaximumMinimumModifier", kMaximumMinimumModifier),
+				 value("kCountModifier", kCountModifier),
+				 value("kFindHeightModifier", kFindHeightModifier),
+				 value("kFindValueModifier", kFindValueModifier),
+				 value("kIntegralModifier", kIntegralModifier),
+				 value("kPlusMinusAreaModifier", kPlusMinusAreaModifier),
+				 value("kFindHeightGreaterThanModifier", kFindHeightGreaterThanModifier),
+				 value("kFindHeightLessThanModifier", kFindHeightLessThanModifier)],
 	     class_<HPGridClass>("HPGridClass")
 	         .enum_("constants")[
 				 value("kUnknownGridClass", kUnknownGridClass),
@@ -535,6 +538,83 @@ object VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double 
 	try
 	{
 		return VectorToTable(h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw;
+		}
+	}
+
+	return object();
+}
+
+object VerticalHeightGreaterThanGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
+                                     const object& lastLevelValue, const object& findValue, size_t findNth)
+{
+	try
+	{
+		return VectorToTable(h->VerticalHeightGreaterThan(theParam, TableToVector(firstLevelValue),
+		                                                  TableToVector(lastLevelValue), TableToVector(findValue),
+		                                                  findNth));
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw;
+		}
+	}
+
+	return object();
+}
+
+object VerticalHeightGreaterThan(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue,
+                                 double lastLevelValue, double findValue, size_t findNth)
+{
+	try
+	{
+		return VectorToTable(
+		    h->VerticalHeightGreaterThan(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw;
+		}
+	}
+
+	return object();
+}
+
+object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
+                                  const object& lastLevelValue, const object& findValue, size_t findNth)
+{
+	try
+	{
+		return VectorToTable(h->VerticalHeightLessThan(theParam, TableToVector(firstLevelValue),
+		                                               TableToVector(lastLevelValue), TableToVector(findValue),
+		                                               findNth));
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw;
+		}
+	}
+
+	return object();
+}
+
+object VerticalHeightLessThan(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue,
+                              double lastLevelValue, double findValue, size_t findNth)
+{
+	try
+	{
+		return VectorToTable(h->VerticalHeightLessThan(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -927,6 +1007,10 @@ void BindPlugins(lua_State* L)
 	              .def("VerticalCount", &hitool_wrapper::VerticalCount)
 	              .def("VerticalHeightGrid", &hitool_wrapper::VerticalHeightGrid)
 	              .def("VerticalHeight", &hitool_wrapper::VerticalHeight)
+	              .def("VerticalHeightGreaterThanGrid", &hitool_wrapper::VerticalHeightGreaterThanGrid)
+	              .def("VerticalHeightGreaterThan", &hitool_wrapper::VerticalHeightGreaterThan)
+	              .def("VerticalHeightLessThanGrid", &hitool_wrapper::VerticalHeightLessThanGrid)
+	              .def("VerticalHeightLessThan", &hitool_wrapper::VerticalHeightLessThan)
 	              .def("VerticalValueGrid", &hitool_wrapper::VerticalValueGrid)
 	              .def("VerticalValue", &hitool_wrapper::VerticalValue)
 	              .def("VerticalPlusMinusAreaGrid", &hitool_wrapper::VerticalPlusMinusAreaGrid)

@@ -18,7 +18,6 @@ namespace himan
 {
 namespace plugin
 {
-
 typedef std::pair<std::shared_ptr<info>, std::shared_ptr<info>> valueheight;
 
 class hitool : public auxiliary_plugin
@@ -300,6 +299,56 @@ class hitool : public auxiliary_plugin
 	                                   size_t findNth = 1) const;
 
 	/**
+	 * @brief VerticalHeightGreaterThan() is similar to VerticalHeight(), but when searching
+	 * for a value it also considers the situation where a search is started and the value
+	 * is encountered in the very first height.
+	 *
+	 * For example when searching for a height where cloudiness is > 50%, regular VerticalHeight()
+	 * does not understand the situation where the first value read is already above the threshold
+	 * (stratus cloud).
+	 */
+
+	std::vector<double> VerticalHeightGreaterThan(const param& wantedParam, double firstLevelValue,
+	                                              double lastLevelValue, const std::vector<double>& findValue,
+	                                              size_t findNth = 1) const;
+	std::vector<double> VerticalHeightGreaterThan(const param& wantedParam, double firstLevelValue,
+	                                              double lastLevelValue, double findValue, size_t findNth = 1) const;
+	std::vector<double> VerticalHeightGreaterThan(const params& wantedParam, double firstLevelValue,
+	                                              double lastLevelValue, double findValue, size_t findNth = 1) const;
+	std::vector<double> VerticalHeightGreaterThan(const std::vector<param>& wantedParamList,
+	                                              const std::vector<double>& firstLevelValue,
+	                                              const std::vector<double>& lastLevelValue,
+	                                              const std::vector<double>& findValue, size_t findNth = 1) const;
+	std::vector<double> VerticalHeightGreaterThan(const std::vector<param>& wantedParamList, double firstLevelValue,
+	                                              double lastLevelValue, const std::vector<double>& findValue,
+	                                              size_t findNth = 1) const;
+	std::vector<double> VerticalHeightGreaterThan(const param& wantedParam, const std::vector<double>& firstLevelValue,
+	                                              const std::vector<double>& lastLevelValue,
+	                                              const std::vector<double>& findValue, size_t findNth = 1) const;
+
+	/**
+	 * @brief For description, look at VerticalHeightGreaterThan()
+	 */
+
+	std::vector<double> VerticalHeightLessThan(const param& wantedParam, double firstLevelValue, double lastLevelValue,
+	                                           const std::vector<double>& findValue, size_t findNth = 1) const;
+	std::vector<double> VerticalHeightLessThan(const param& wantedParam, double firstLevelValue, double lastLevelValue,
+	                                           double findValue, size_t findNth = 1) const;
+	std::vector<double> VerticalHeightLessThan(const params& wantedParam, double firstLevelValue, double lastLevelValue,
+	                                           double findValue, size_t findNth = 1) const;
+	std::vector<double> VerticalHeightLessThan(const std::vector<param>& wantedParamList,
+	                                           const std::vector<double>& firstLevelValue,
+	                                           const std::vector<double>& lastLevelValue,
+	                                           const std::vector<double>& findValue, size_t findNth = 1) const;
+	std::vector<double> VerticalHeightLessThan(const std::vector<param>& wantedParamList, double firstLevelValue,
+	                                           double lastLevelValue, const std::vector<double>& findValue,
+	                                           size_t findNth = 1) const;
+
+	std::vector<double> VerticalHeightLessThan(const param& wantedParam, const std::vector<double>& firstLevelValue,
+	                                           const std::vector<double>& lastLevelValue,
+	                                           const std::vector<double>& findValue, size_t findNth = 1) const;
+
+	/**
 	 * @brief Return value of parameter from given height for the first parameter found.
 	 *
 	 * Overcoat for VerticalValue(params, double, double)
@@ -524,7 +573,6 @@ class hitool : public auxiliary_plugin
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<hitool>(); }
-
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

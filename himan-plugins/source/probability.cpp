@@ -10,7 +10,6 @@
 #include "ensemble.h"
 #include "util.h"
 
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
 #include <algorithm>
@@ -40,6 +39,9 @@ probability::probability()
 	itsEnsembleSize = 0;
 	itsMaximumMissingForecasts = 0;
 	itsUseNormalizedResult = false;
+	itsUseLaggedEnsemble = false;
+	itsLag = 0;
+	itsLaggedSteps = 0;
 }
 
 probability::~probability() {}
@@ -64,11 +66,11 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		{
 			if (p.first == "univ_id")
 			{
-				univId = boost::lexical_cast<long>(p.second);
+				univId = std::stol(p.second);
 			}
 			else if (p.first == "threshold")
 			{
-				outParamConfig->threshold = boost::lexical_cast<double>(p.second);
+				outParamConfig->threshold = std::stod(p.second);
 			}
 			else if (p.first == "input_param1")
 			{
@@ -80,11 +82,11 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			}
 			else if (p.first == "input_id1")
 			{
-				param1.UnivId(boost::lexical_cast<long>(p.second));
+				param1.UnivId(std::stol(p.second));
 			}
 			else if (p.first == "input_id2")
 			{
-				param2.UnivId(boost::lexical_cast<long>(p.second));
+				param2.UnivId(std::stol(p.second));
 			}
 			else
 			{
@@ -132,7 +134,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	// Get the number of forecasts this ensemble has from plugin configuration
 	if (itsConfiguration->Exists("ensemble_size"))
 	{
-		const int ensembleSize = boost::lexical_cast<int>(itsConfiguration->GetValue("ensemble_size"));
+		const int ensembleSize = std::stoi(itsConfiguration->GetValue("ensemble_size"));
 		if (ensembleSize <= 0)
 		{
 			throw std::runtime_error(ClassName() + " invalid ensemble_size in plugin configuration");
@@ -162,13 +164,54 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	// Maximum number of missing forecasts for an ensemble
 	if (itsConfiguration->Exists("max_missing_forecasts"))
 	{
-		const int maxMissingForecasts = boost::lexical_cast<int>(itsConfiguration->GetValue("max_missing_forecasts"));
+		const int maxMissingForecasts = std::stoi(itsConfiguration->GetValue("max_missing_forecasts"));
 		if (maxMissingForecasts < 0)
 		{
 			throw std::runtime_error(ClassName() +
 			                         " invalid max_missing_forecasts value specified in plugin configuration");
 		}
 		itsMaximumMissingForecasts = maxMissingForecasts;
+	}
+
+	// Are we using lagged ensemble?
+	// NOTE 'lag' needs to be specified first
+	if (itsConfiguration->Exists("lag"))
+	{
+		int lag = std::stoi(itsConfiguration->GetValue("lag"));
+		if (lag == 0)
+		{
+			throw std::runtime_error(ClassName() + ": specify lag > 0");
+		}
+		else if (lag > 0)
+		{
+			itsLogger->Warning("converting negating lag value " + std::to_string(-lag));
+			lag = -lag;
+		}
+
+		itsLag = lag;
+		itsUseLaggedEnsemble = true;
+	}
+	else
+	{
+		itsUseLaggedEnsemble = false;
+	}
+
+	// How many lagged steps to include in the calculation
+	if (itsUseLaggedEnsemble)
+	{
+		if (itsConfiguration->Exists("lagged_steps"))
+		{
+			const int steps = std::stoi(itsConfiguration->GetValue("lagged_steps"));
+			if (steps <= 0)
+			{
+				throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0.");
+			}
+			itsLaggedSteps = steps;
+		}
+		else
+		{
+			throw std::runtime_error(ClassName() + ": specify lagged_steps when using time lagging ('lag')");
+		}
 	}
 
 	//
@@ -250,7 +293,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	info myTargetInfo = *itsInfo;
 
 	auto threadedLogger =
-	    logger_factory::Instance()->GetLog("probabilityThread # " + boost::lexical_cast<std::string>(threadIndex));
+	    logger_factory::Instance()->GetLog("probabilityThread # " + std::to_string(threadIndex));
 	const std::string deviceType = "CPU";
 
 	const double threshold = pc.threshold;
@@ -279,9 +322,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	{
 		threadedLogger->Info("Calculating " + pc.output.Name() + " time " +
 		                     static_cast<std::string>(myTargetInfo.Time().ValidDateTime()) + " threshold '" +
-		                     boost::lexical_cast<std::string>(threshold) + "' infoIndex " +
-		                     boost::lexical_cast<std::string>(infoIndex));
-
+		                     std::to_string(threshold) + "' infoIndex " +
+		                     std::to_string(infoIndex));
 		//
 		// Setup input data, data fetching
 		//
@@ -332,8 +374,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	} while (myTargetInfo.NextTime());
 
 	threadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                     boost::lexical_cast<std::string>(myTargetInfo.Data().MissingCount()) + "/" +
-	                     boost::lexical_cast<std::string>(myTargetInfo.Data().Size()));
+	                     std::to_string(myTargetInfo.Data().MissingCount()) + "/" +
+	                     std::to_string(myTargetInfo.Data().Size()));
 }
 
 // Usually himan writes all the parameters out on a call to WriteToFile, but probability calculates
