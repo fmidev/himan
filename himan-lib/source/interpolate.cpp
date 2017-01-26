@@ -695,7 +695,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 			double cone;
 			if (latin1 == latin2)
 			{
-				cone = sin(latin1 * constants::kDeg);
+				cone = sin(fabs(latin1) * constants::kDeg);
 			}
 			else
 			{
@@ -723,15 +723,8 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 				double sinx, cosx;
 				sincos(angle, &sinx, &cosx);
 
-				// This output is 1:1 with python basemaplib, but is different
-				// than the results received using algorithm from meteorological software.
-				// (below)
-
-				// double newU = cosx * U - sinx * V;
-				// double newV = sinx * U + cosx * V;
-
-				UVec[i] = -1 * cosx * U + sinx * V;
-				VVec[i] = -1 * -sinx * U + cosx * V;
+				UVec[i] = cosx * U + sinx * V;
+				VVec[i] = -1 * sinx * U + cosx * V;
 			}
 		}
 		break;
