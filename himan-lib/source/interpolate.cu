@@ -510,8 +510,8 @@ __global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v
 			const double angle = cone * londiff * himan::constants::kDeg;
 			double sinx, cosx;
 			sincos(angle, &sinx, &cosx);
-			d_u[idx] = -1 * cosx * U + sinx * V;
-			d_v[idx] = -1 * -sinx * U + cosx * V;
+			d_u[idx] = cosx * U + sinx * V;
+			d_v[idx] = -1 * sinx * U + cosx * V;
 		}
 	}
 }
@@ -652,7 +652,7 @@ void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
 
 			if (latin1 == latin2 && latin2 != kFloatMissing)
 			{
-				cone = sin(latin1 * kDeg);
+				cone = sin(fabs(latin1) * kDeg);
 			}
 			else
 			{
