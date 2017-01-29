@@ -339,39 +339,39 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		assert(T >= -80 && T < 80);
 		assert(!noPotentialPrecipitationForm || RR > 0);
 		assert(Navg == MISS || (Navg >= 0 && Navg <= 100));
-		/*
-		            cout	<< "base\t\t" << base << endl
-		                    << "top\t\t" << top << endl
-		                    << "Navg\t\t" << Navg << endl
-		                    << "upperLayerN\t" << upperLayerN << endl
-		                    << "RR\t\t" << RR << endl
-		                    << "stTavg\t\t" << stTavg << endl
-		                    << "T\t\t" << T << endl
-		                    << "Ttop\t\t" << Ttop << endl
-		                    << "plusArea\t" << plusArea << endl
-		                    << "plusAreaSfc\t" << plusAreaSfc << endl
-		                    << "minusArea\t" << minusArea << endl
-		                    << "nZeroLevel\t" << nZeroLevel << endl
-		                    << "rhAvg\t\t" << rhAvg << endl
-		                    << "rhAvgUpper\t" << rhAvgUpper << endl
-		                    << "rhMelt\t\t" << rhMelt << endl
-		                    << "rhMeltUpper\t" << rhMeltUpper << endl
-		                    << "wAvg\t\t" << wAvg << endl
-		                    << "baseLimit\t" << baseLimit << endl
-		                    << "stLimit\t\t" << stLimit << endl
-		                    << "stTlimit\t" << stTlimit << endl
-		                    << "Nlimit\t\t" << Nlimit << endl
-		                    << "dryNlim\t\t" << dryNlim << endl
-		                    << "waterArea\t" << waterArea << endl
-		                    << "snowArea\t" << snowArea << endl
-		                    << "wMax\t\t" << wMax << endl
-		                    << "sfcMin\t\t" << sfcMin << endl
-		                    << "sfcMax\t\t" << sfcMax << endl
-		                    << "fzdzLim\t\t" << fzdzLim << endl
-		                    << "fzStLimit\t" << fzStLimit << endl
-		                    << "fzraPA\t\t" << fzraPA << endl
-		                    << "fzraMA\t\t" << fzraMA << endl;
-		*/
+/*
+		cout << "base\t\t" << base << endl
+		     << "top\t\t" << top << endl
+		     << "Navg\t\t" << Navg << endl
+		     << "upperLayerN\t" << upperLayerN << endl
+		     << "RR\t\t" << RR << endl
+		     << "stTavg\t\t" << stTavg << endl
+		     << "T\t\t" << T << endl
+		     << "Ttop\t\t" << Ttop << endl
+		     << "plusArea\t" << plusArea << endl
+		     << "plusAreaSfc\t" << plusAreaSfc << endl
+		     << "minusArea\t" << minusArea << endl
+		     << "nZeroLevel\t" << nZeroLevel << endl
+		     << "rhAvg\t\t" << rhAvg << endl
+		     << "rhAvgUpper\t" << rhAvgUpper << endl
+		     << "rhMelt\t\t" << rhMelt << endl
+		     << "rhMeltUpper\t" << rhMeltUpper << endl
+		     << "wAvg\t\t" << wAvg << endl
+		     << "baseLimit\t" << baseLimit << endl
+		     << "stLimit\t\t" << stLimit << endl
+		     << "stTlimit\t" << stTlimit << endl
+		     << "Nlimit\t\t" << Nlimit << endl
+		     << "dryNlim\t\t" << dryNlim << endl
+		     << "waterArea\t" << waterArea << endl
+		     << "snowArea\t" << snowArea << endl
+		     << "wMax\t\t" << wMax << endl
+		     << "sfcMin\t\t" << sfcMin << endl
+		     << "sfcMax\t\t" << sfcMax << endl
+		     << "fzdzLim\t\t" << fzdzLim << endl
+		     << "fzStLimit\t" << fzStLimit << endl
+		     << "fzraPA\t\t" << fzraPA << endl
+		     << "fzraMA\t\t" << fzraMA << endl;
+*/
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
@@ -489,6 +489,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				myTargetInfo->Value(PreForm);
 			}
 		}
+/*
+		cout << "PreForm\t" << PreForm << std::endl;
+*/
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
@@ -598,12 +601,12 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		util::DumpVector(rhAvg01, "rh avg 01");
 #endif
 
-
-		// Only the first zero layer with at least one non-missing element is required 
+		// Only the first zero layer with at least one non-missing element is required
 		// to be present. All other zero layers (2,3,4) are optional.
 
 		try
 		{
+			// Values between zero levels 1 <--> 2
 			wantedParam = param("T-K");
 
 			logger->Trace("Searching for second zero level height");
@@ -620,6 +623,20 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			util::DumpVector(Tavg12, "tavg 12");
 #endif
 
+			logger->Trace("Searching for average humidity between first and second zero level");
+
+			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
+			wantedParam = param("RH-PRCNT");
+
+			rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
+
+#ifdef DEBUG
+			util::DumpVector(rhAvgUpper12, "rh avg upper 12");
+#endif
+
+			// 2 <--> 3
+			wantedParam = param("T-K");
+
 			logger->Trace("Searching for third zero level height");
 			zeroLevel3 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
 
@@ -634,6 +651,20 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			util::DumpVector(Tavg23, "tavg 23");
 #endif
 
+			wantedParam = param("RH-PRCNT");
+
+			logger->Trace("Searching for average humidity between second and third zero level");
+
+			// Keskimääräinen RH ylemmässä plussakerroksessa
+			rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
+
+#ifdef DEBUG
+			util::DumpVector(rhAvgUpper23, "rh avg upper 23");
+#endif
+
+			// 3 <--> 4
+			wantedParam = param("T-K");
+
 			logger->Trace("Searching for fourth zero level height");
 			zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
 
@@ -646,26 +677,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 #ifdef DEBUG
 			util::DumpVector(Tavg34, "tavg 34");
-#endif
-
-			logger->Trace("Searching for average humidity between first and second zero level");
-
-			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
-			wantedParam = param("RH-PRCNT");
-
-			rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
-
-#ifdef DEBUG
-			util::DumpVector(rhAvgUpper12, "rh avg upper 12");
-#endif
-
-			logger->Trace("Searching for average humidity between second and third zero level");
-
-			// Keskimääräinen RH ylemmässä plussakerroksessa
-			rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
-
-#ifdef DEBUG
-			util::DumpVector(rhAvgUpper23, "rh avg upper 23");
 #endif
 		}
 		catch (const HPExceptionType& e)
@@ -948,126 +959,136 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		util::DumpVector(stratusTop);
 #endif
 
-		logger->Info("Searching for cloudiness in layers above stratus top");
-
-		assert(constData1.size() == constData2.size() && constData1.size() == stratusTop.size());
-
-		for (size_t i = 0; i < constData1.size(); i++)
-		{
-			if (stratusTop[i] == MISS)
-			{
-				constData1[i] = MISS;
-				constData2[i] = MISS;
-			}
-			else
-			{
-				constData1[i] = stratusTop[i] + 100;
-				constData2[i] = stratusTop[i] + drydz;
-			}
-		}
-
-		auto upperLayerN = h->VerticalAverage(wantedParamList, constData1, constData2);
-
-		ret->Param(stratusUpperLayerNParam);
-		ret->Data().Set(upperLayerN);
-
-#ifdef DEBUG
-		util::DumpVector(upperLayerN);
-#endif
-
-		logger->Info("Searching for stratus mean cloudiness");
-
-		// Stratuksen keskimääräinen N
-		auto stratusMeanN = h->VerticalAverage(wantedParamList, stratusBase, stratusTop);
-
-#ifdef DEBUG
-		util::DumpVector(stratusMeanN);
-#endif
-
-		ret->Param(stratusMeanCloudinessParam);
-		ret->Data().Set(stratusMeanN);
-
-		logger->Info("Searching for stratus top temperature");
-
-		param wantedParam("T-K");
-
-		// Stratuksen Topin lämpötila (jäätävä tihku)
-		auto stratusTopTemp = h->VerticalValue(wantedParam, stratusTop);
-
-#ifdef DEBUG
-		util::DumpVector(stratusTopTemp);
-#endif
-
-		ret->Param(stratusTopTempParam);
-		ret->Data().Set(stratusTopTemp);
-
-		logger->Info("Searching for stratus mean temperature");
-
-		for (size_t i = 0; i < constData1.size(); i++)
-		{
-			double lower = stratusBase[i];
-			double upper = stratusTop[i];
-
-			if (lower == MISS || upper == MISS)
-			{
-				constData1[i] = MISS;
-				constData2[i] = MISS;
-			}
-			else if (fabs(lower - upper) < 100)
-			{
-				constData1[i] = lower;
-				constData2[i] = upper;
-			}
-			else
-			{
-				constData1[i] = lower + 50;
-				constData2[i] = upper - 50;
-			}
-		}
-
-		// St:n keskimääräinen lämpötila (poissulkemaan kylmät <-10C stratukset, joiden toppi >-10C) (jäätävä tihku)
-		auto stratusMeanTemp = h->VerticalAverage(wantedParam, constData1, constData2);
-
-#ifdef DEBUG
-		util::DumpVector(stratusMeanTemp);
-#endif
-
-		ret->Param(stratusMeanTempParam);
-		ret->Data().Set(stratusMeanTemp);
-
-		logger->Info("Searching for mean vertical velocity in stratus");
-
-		wantedParam = param("VV-MMS");
-
-		vector<double> stratusVerticalVelocity;
-
 		try
 		{
-			// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
-			stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
+			logger->Info("Searching for cloudiness in layers above stratus top");
+
+			assert(constData1.size() == constData2.size() && constData1.size() == stratusTop.size());
+
+			for (size_t i = 0; i < constData1.size(); i++)
+			{
+				if (stratusTop[i] == MISS)
+				{
+					constData1[i] = MISS;
+					constData2[i] = MISS;
+				}
+				else
+				{
+					constData1[i] = stratusTop[i] + 100;
+					constData2[i] = stratusTop[i] + drydz;
+				}
+			}
+
+			auto upperLayerN = h->VerticalAverage(wantedParamList, constData1, constData2);
+
+			ret->Param(stratusUpperLayerNParam);
+			ret->Data().Set(upperLayerN);
+
+#ifdef DEBUG
+			util::DumpVector(upperLayerN);
+#endif
+
+			logger->Info("Searching for stratus mean cloudiness");
+
+			// Stratuksen keskimääräinen N
+			auto stratusMeanN = h->VerticalAverage(wantedParamList, stratusBase, stratusTop);
+
+#ifdef DEBUG
+			util::DumpVector(stratusMeanN);
+#endif
+
+			ret->Param(stratusMeanCloudinessParam);
+			ret->Data().Set(stratusMeanN);
+
+			logger->Info("Searching for stratus top temperature");
+
+			param wantedParam("T-K");
+
+			// Stratuksen Topin lämpötila (jäätävä tihku)
+			auto stratusTopTemp = h->VerticalValue(wantedParam, stratusTop);
+
+#ifdef DEBUG
+			util::DumpVector(stratusTopTemp);
+#endif
+
+			ret->Param(stratusTopTempParam);
+			ret->Data().Set(stratusTopTemp);
+
+			logger->Info("Searching for stratus mean temperature");
+
+			for (size_t i = 0; i < constData1.size(); i++)
+			{
+				double lower = stratusBase[i];
+				double upper = stratusTop[i];
+
+				if (lower == MISS || upper == MISS)
+				{
+					constData1[i] = MISS;
+					constData2[i] = MISS;
+				}
+				else if (fabs(lower - upper) < 100)
+				{
+					constData1[i] = lower;
+					constData2[i] = upper;
+				}
+				else
+				{
+					constData1[i] = lower + 50;
+					constData2[i] = upper - 50;
+				}
+			}
+
+			// St:n keskimääräinen lämpötila (poissulkemaan kylmät <-10C stratukset, joiden toppi >-10C) (jäätävä tihku)
+			auto stratusMeanTemp = h->VerticalAverage(wantedParam, constData1, constData2);
+
+#ifdef DEBUG
+			util::DumpVector(stratusMeanTemp);
+#endif
+
+			ret->Param(stratusMeanTempParam);
+			ret->Data().Set(stratusMeanTemp);
+
+			logger->Info("Searching for mean vertical velocity in stratus");
+
+			wantedParam = param("VV-MMS");
+
+			vector<double> stratusVerticalVelocity;
+
+			try
+			{
+				// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
+				stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
+			}
+			catch (const HPExceptionType& e)
+			{
+				if (e == kFileDataNotFound)
+				{
+					logger->Debug("Trying for param VV-MS");
+					wantedParam = param("VV-MS");
+
+					stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
+
+					BOOST_FOREACH (double& d, stratusVerticalVelocity)
+					{
+						if (d != kFloatMissing) d *= 1000;
+					}
+				}
+			}
+
+#ifdef DEBUG
+			util::DumpVector(stratusVerticalVelocity, "stratus vertical velocity");
+#endif
+
+			ret->Param(stratusVerticalVelocityParam);
+			ret->Data().Set(stratusVerticalVelocity);
 		}
 		catch (const HPExceptionType& e)
 		{
-			if (e == kFileDataNotFound)
+			if (e != kFileDataNotFound)
 			{
-				logger->Debug("Trying for param VV-MS");
-				wantedParam = param("VV-MS");
-
-				stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
-
-				BOOST_FOREACH (double& d, stratusVerticalVelocity)
-				{
-					if (d != kFloatMissing) d *= 1000;
-				}
+				throw runtime_error("Stratus() caught exception " + boost::lexical_cast<string>(e));
 			}
 		}
-
-#ifdef DEBUG
-		util::DumpVector(stratusVerticalVelocity, "stratus vertical velocity");
-#endif
-
-		ret->Param(stratusVerticalVelocityParam);
-		ret->Data().Set(stratusVerticalVelocity);
 	}
 	catch (const HPExceptionType& e)
 	{
