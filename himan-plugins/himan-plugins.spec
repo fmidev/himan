@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 16.12.7
-Release: 2.el7.fmi
+Version: 17.1.30
+Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -14,13 +14,13 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.8.23
+Requires: himan-lib >= 16.12.15
 Requires: himan-bin >= 16.6.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 16.9.8
-Requires: libfmidb >= 16.9.8
-Requires: libsmartmet-newbase >= 16.9.20
+Requires: libfmidb >= 16.12.9
+Requires: smartmet-library-newbase
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -36,9 +36,9 @@ BuildRequires: cusp >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 16.6.9
+BuildRequires: libfmidb-devel >= 16.12.9
 BuildRequires: libfmigrib-devel >= 16.6.13
-BuildRequires: libsmartmet-newbase-devel >= 16.9.20
+BuildRequires: smartmet-library-newbase-devel
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.53
@@ -113,6 +113,31 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.30-1.fmi
+- Dependency to open sourced Newbase
+* Tue Jan 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.17-1.fmi
+- VerticalHeightGreaterThan/LessThan added to hitool 
+  and luatool
+- Ground level type fixes for frost lua
+* Thu Jan 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.12-2.fmi
+- Another bugfix 
+* Thu Jan 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.12-1.fmi
+- Bugfix for preform_hybrid (STU-4906)
+* Tue Jan  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.3-1.fmi
+- Standard deviation for fractile plugin
+* Thu Dec 29 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.29-1.fmi
+- Reworked vector component rotation
+* Tue Dec 20 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.20-1.fmi
+- Hotfix for querydata plugin crashhh
+* Mon Dec 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.19-2.fmi
+- Map grib1 level 103 to mean sea
+* Mon Dec 19 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.19-1.fmi
+- Three hour snow accumulation (split_sum)
+* Thu Dec 15 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.15-1.fmi
+- Min2D exposure to luatool
+* Fri Dec  9 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.9-1.fmi
+- SLES accomodations
+- fmidb API change
 * Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-2.fmi
 - Cuda 8
 * Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi

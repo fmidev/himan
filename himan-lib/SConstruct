@@ -118,7 +118,7 @@ if IS_SLES:
 	boost_mt = "-mt"
 
 libraries.append('fmidb')
-libraries.append('smartmet_newbase')
+libraries.append('smartmet-newbase')
 libraries.append('dl')
 libraries.append('clntsh')
 libraries.append('pqxx')
