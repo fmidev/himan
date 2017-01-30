@@ -117,8 +117,6 @@ env.Append(LIBPATH = library_paths)
 
 libraries = []
 
-# libraries.append('smartmet_newbase')
-
 if have_cuda:
 	env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
 

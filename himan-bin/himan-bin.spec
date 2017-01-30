@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 16.12.7
+Version: 17.1.30
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -14,7 +14,6 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: himan-lib >= 16.10.5
-Requires: libsmartmet-newbase >= 16.2.4
 Requires: jasper
 Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
@@ -63,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Jan 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.30-1.fmi
+- Remove dependency to Newbase
 * Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi
 - Cuda 8
 * Tue Nov 22 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.11.22-1.fmi
