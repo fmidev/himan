@@ -15,12 +15,11 @@
 
 namespace himan
 {
-
 class logger;
 
 class configuration
 {
-public:
+   public:
 	friend class json_parser;
 
 	configuration();
@@ -247,7 +246,10 @@ public:
 	bool UseDynamicMemoryAllocation() const;
 	void UseDynamicMemoryAllocation(bool theUseDynamicMemoryAllocation);
 
-protected:
+	bool ReadAllAuxiliaryFilesToCache() const;
+	void ReadAllAuxiliaryFilesToCache(bool theReadAllAuxiliaryFilesToCache);
+
+   protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
 	HPFileType itsOutputFileType;
@@ -273,6 +275,7 @@ protected:
 	bool itsUseCudaForInterpolation;
 	bool itsUseCache;
 	bool itsUseDynamicMemoryAllocation;
+	bool itsReadAllAuxiliaryFilesToCache;
 
 	short itsCudaDeviceCount;
 	short itsCudaDeviceId;
@@ -283,7 +286,6 @@ protected:
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob) { return ob.Write(file); }
-
 }  // namespace himan
 
 #endif /* CONFIGURATION_H */

@@ -19,7 +19,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "cache.h"
 #include "neons.h"
 #include "radon.h"
 
@@ -322,7 +321,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 }
 
 vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options,
-                                               bool readContents, bool readPackedData, bool forceCaching) const
+                                               bool readContents, bool readPackedData, bool readIfNotMatching) const
 {
 	vector<shared_ptr<himan::info>> infos;
 
@@ -349,14 +348,14 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		foundMessageNo++;
 		auto newInfo = make_shared<info>();
 
-		if (CreateInfoFromGrib(options, readContents, readPackedData, forceCaching, newInfo))
+		if (CreateInfoFromGrib(options, readContents, readPackedData, readIfNotMatching, newInfo) || readIfNotMatching)
 		{
 			infos.push_back(newInfo);
 			newInfo->First();
 
 			aTimer->Stop();
 
-			break;  // We found what we were looking for
+			if (!readIfNotMatching) break;  // We found what we were looking for
 		}
 	}
 
@@ -371,7 +370,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 }
 
 vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                    bool readContents, bool readPackedData, bool forceCaching) const
+                                                    bool readContents, bool readPackedData,
+                                                    bool readIfNotMatching) const
 {
 	vector<shared_ptr<himan::info>> infos;
 
@@ -395,7 +395,7 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 	if (itsGrib->Message(OptionsToKeys(options)))
 	{
 		auto newInfo = make_shared<info>();
-		if (CreateInfoFromGrib(options, readContents, readPackedData, forceCaching, newInfo))
+		if (CreateInfoFromGrib(options, readContents, readPackedData, readIfNotMatching, newInfo))
 		{
 			infos.push_back(newInfo);
 			newInfo->First();
@@ -1218,8 +1218,8 @@ void grib::WriteParameter(info& anInfo)
 	}
 }
 
-bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, bool readPackedData, bool forceCaching,
-                              shared_ptr<info> newInfo) const
+bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, bool readPackedData,
+                              bool readIfNotMatching, shared_ptr<info> newInfo) const
 {
 	shared_ptr<neons> n;
 	shared_ptr<radon> r;
@@ -1249,11 +1249,13 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 	if (options.prod.Process() != process || options.prod.Centre() != centre)
 	{
-		itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string>(options.prod.Process()) +
-		                 " vs " + boost::lexical_cast<string>(process));
-		itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string>(options.prod.Centre()) + " vs " +
-		                 boost::lexical_cast<string>(centre));
-		// continue;
+		if (!readIfNotMatching)
+		{
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string>(options.prod.Process()) +
+			                 " vs " + boost::lexical_cast<string>(process));
+			itsLogger->Trace("centre/process do not match: " + boost::lexical_cast<string>(options.prod.Centre()) +
+			                 " vs " + boost::lexical_cast<string>(centre));
+		}
 	}
 
 	param p;
@@ -1492,15 +1494,15 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 	if (p != options.param)
 	{
-		itsLogger->Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
-		                 " (found)");
-
-		if (forceCaching)
+		if (readIfNotMatching)
 		{
 			dataIsValid = false;
 		}
 		else
 		{
+			itsLogger->Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
+			                 " (found)");
+
 			return false;
 		}
 	}
@@ -1561,34 +1563,35 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 	if (t != options.time)
 	{
-		forecast_time optsTime(options.time);
-
-		itsLogger->Trace("Times do not match");
-
-		if (optsTime.OriginDateTime() != t.OriginDateTime())
-		{
-			itsLogger->Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
-			                 t.OriginDateTime().String() + " (found)");
-		}
-
-		if (optsTime.ValidDateTime() != t.ValidDateTime())
-		{
-			itsLogger->Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
-			                 t.ValidDateTime().String() + " (found)");
-		}
-
-		if (optsTime.StepResolution() != t.StepResolution())
-		{
-			itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) +
-			                 " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) + " (found)");
-		}
-
-		if (forceCaching)
+		if (readIfNotMatching)
 		{
 			dataIsValid = false;
 		}
 		else
 		{
+			forecast_time optsTime(options.time);
+
+			itsLogger->Trace("Times do not match");
+
+			if (optsTime.OriginDateTime() != t.OriginDateTime())
+			{
+				itsLogger->Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
+				                 t.OriginDateTime().String() + " (found)");
+			}
+
+			if (optsTime.ValidDateTime() != t.ValidDateTime())
+			{
+				itsLogger->Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
+				                 t.ValidDateTime().String() + " (found)");
+			}
+
+			if (optsTime.StepResolution() != t.StepResolution())
+			{
+				itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) +
+				                 " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) +
+				                 " (found)");
+			}
+
 			return false;
 		}
 	}
@@ -1671,32 +1674,32 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 	if (l != options.level)
 	{
-		itsLogger->Trace("Level does not match");
-
-		if (options.level.Type() != l.Type())
-		{
-			itsLogger->Trace("Type: " + string(HPLevelTypeToString.at(options.level.Type())) + " (requested) vs " +
-			                 string(HPLevelTypeToString.at(l.Type())) + " (found)");
-		}
-
-		if (options.level.Value() != l.Value())
-		{
-			itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
-			                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
-		}
-
-		if (options.level.Value2() != l.Value2())
-		{
-			itsLogger->Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
-			                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
-		}
-
-		if (forceCaching)
+		if (readIfNotMatching)
 		{
 			dataIsValid = false;
 		}
 		else
 		{
+			itsLogger->Trace("Level does not match");
+
+			if (options.level.Type() != l.Type())
+			{
+				itsLogger->Trace("Type: " + string(HPLevelTypeToString.at(options.level.Type())) + " (requested) vs " +
+				                 string(HPLevelTypeToString.at(l.Type())) + " (found)");
+			}
+
+			if (options.level.Value() != l.Value())
+			{
+				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
+				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
+			}
+
+			if (options.level.Value2() != l.Value2())
+			{
+				itsLogger->Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
+				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
+			}
+
 			return false;
 		}
 	}
@@ -1706,26 +1709,26 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 	if (options.ftype.Type() != ty.Type() || options.ftype.Value() != ty.Value())
 	{
-		itsLogger->Trace("Forecast type does not match");
-
-		if (options.ftype.Type() != ty.Type())
-		{
-			itsLogger->Trace("Type: " + string(HPForecastTypeToString.at(options.ftype.Type())) + " (requested) vs " +
-			                 string(HPForecastTypeToString.at(ty.Type())) + " (found)");
-		}
-
-		if (options.ftype.Value() != ty.Value())
-		{
-			itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.ftype.Value())) +
-			                 " (requested) vs " + string(boost::lexical_cast<string>(ty.Value())) + " (found)");
-		}
-
-		if (forceCaching)
+		if (readIfNotMatching)
 		{
 			dataIsValid = false;
 		}
 		else
 		{
+			itsLogger->Trace("Forecast type does not match");
+
+			if (options.ftype.Type() != ty.Type())
+			{
+				itsLogger->Trace("Type: " + string(HPForecastTypeToString.at(options.ftype.Type())) +
+				                 " (requested) vs " + string(HPForecastTypeToString.at(ty.Type())) + " (found)");
+			}
+
+			if (options.ftype.Value() != ty.Value())
+			{
+				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.ftype.Value())) +
+				                 " (requested) vs " + string(boost::lexical_cast<string>(ty.Value())) + " (found)");
+			}
+
 			return false;
 		}
 	}
@@ -1734,7 +1737,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 	producer prod(centre, process);
 
-	if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+	if (options.configuration->DatabaseType() == kNeons)
 	{
 		// No easy way to get fmi producer id from from Neons based on centre/ident.
 		// Use given producer id instead.
@@ -1767,9 +1770,17 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 		}
 		else
 		{
-			itsLogger->Warning("Producer information not found from database for centre " +
-			                   boost::lexical_cast<string>(centre) + ", process " +
-			                   boost::lexical_cast<string>(process) + " type " + boost::lexical_cast<string>(typeId));
+			if (centre == 98 &&
+			    (process == 146 || process == 145 || process == 144 || process == 143 || process == 142))
+			{
+				// Older ECMWF forecast
+				prod.Id(131);
+			}
+			else
+			{
+				itsLogger->Warning("Producer information not found from database for centre " + to_string(centre) +
+				                   ", process " + to_string(process) + " type " + to_string(typeId));
+			}
 		}
 	}
 
@@ -1911,26 +1922,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readContents, 
 
 	newInfo->Grid()->Data(dm);
 
-	if (!dataIsValid && forceCaching)
+	if (!dataIsValid)
 	{
-		// Put this data to cache now if the data has regular grid and the grid is equal
-		// to wanted grid. This is a requirement since can't interpolate area here.
-
-		if (options.configuration->UseCache() &&
-		    dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid()->Class() ==
-		        kRegularGrid &&
-		    dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid()->Class() ==
-		        newInfo->Grid()->Class() &&
-		    *dynamic_pointer_cast<const plugin_configuration>(options.configuration)->Info()->Grid() ==
-		        *newInfo->Grid())
-		{
-			// itsLogger->Trace("Force cache insert");
-
-			// auto c = GET_PLUGIN(cache);
-
-			// c->Insert(*newInfo);
-		}
-
 		return false;
 	}
 
