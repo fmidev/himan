@@ -23,14 +23,12 @@ namespace himan
 {
 namespace plugin
 {
-
 static std::mutex singleFileWriteMutex;
 
 static const std::string kClassName = "himan::plugin::probability";
 
 /// @brief Used for calculating wind vector magnitude
 static inline double Magnitude(double u, double v) { return sqrt(u * u + v * v); }
-
 probability::probability()
 {
 	itsClearTextFormula = "???";
@@ -46,7 +44,6 @@ probability::probability()
 }
 
 probability::~probability() {}
-
 /// @brief Configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
@@ -280,22 +277,20 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	Finish();
 }
 
-static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                            const int infoIndex, const bool normalized, ensemble* ens);
+static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                            bool normalized, ensemble* ens);
 
-static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
+static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold,
                               const int infoIndex, const bool normalized, ensemble* ens);
 
-static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                          const int infoIndex, const bool normalized, ensemble* ens1,
-                          ensemble* ens2);
+static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                          bool normalized, ensemble* ens1, ensemble* ens2);
 
 void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
 	info myTargetInfo = *itsInfo;
 
-	auto threadedLogger =
-	    logger_factory::Instance()->GetLog("probabilityThread # " + std::to_string(threadIndex));
+	auto threadedLogger = logger_factory::Instance()->GetLog("probabilityThread # " + std::to_string(threadIndex));
 	const std::string deviceType = "CPU";
 
 	const double threshold = pc.threshold;
@@ -308,7 +303,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	// Can't use unique_ptr since std::move will transfer ownership to the helper functions, and those will destruct
 	// the object, and we need to store some state between timesteps in the case of lagged_ensemble.
 	ensemble* ens1 = nullptr;
-	ensemble* ens2 = nullptr; // used with wind calculation
+	ensemble* ens2 = nullptr;  // used with wind calculation
 
 	if (itsUseLaggedEnsemble)
 	{
@@ -320,7 +315,6 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		ens1 = new ensemble(pc.parameter, ensembleSize);
 	}
 	ens1->MaximumMissingForecasts(itsMaximumMissingForecasts);
-
 
 	if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 	{
@@ -342,9 +336,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	{
 		threadedLogger->Info("Calculating " + pc.output.Name() + " time " +
 		                     static_cast<std::string>(myTargetInfo.Time().ValidDateTime()) + " threshold '" +
-		                     std::to_string(threshold) + "' infoIndex " +
-		                     std::to_string(infoIndex));
-		
+		                     std::to_string(threshold) + "' infoIndex " + std::to_string(infoIndex));
+
 		//
 		// Setup input data, data fetching
 		//
@@ -396,25 +389,22 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 	if (ens1)
 	{
-		threadedLogger->Info("Deleting ensemble #1");
 		delete ens1;
 	}
 
 	if (ens2)
 	{
-		threadedLogger->Info("Deleting ensemble #2");
 		delete ens2;
 	}
 
-	threadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                     std::to_string(myTargetInfo.Data().MissingCount()) + "/" +
-	                     std::to_string(myTargetInfo.Data().Size()));
+	threadedLogger->Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo.Data().MissingCount()) +
+	                     "/" + std::to_string(myTargetInfo.Data().Size()));
 }
 
 // Usually himan writes all the parameters out on a call to WriteToFile, but probability calculates
 // each parameter separately in separate threads so this makes no sense (writing all out if we've only
 // calculated one parameter)
-void probability::WriteToFile(const info& targetInfo, const size_t targetInfoIndex, write_options opts)
+void probability::WriteToFile(const info& targetInfo, size_t targetInfoIndex, write_options opts)
 {
 	auto writer = GET_PLUGIN(writer);
 
@@ -442,8 +432,8 @@ void probability::WriteToFile(const info& targetInfo, const size_t targetInfoInd
 	}
 }
 
-void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold, const int infoIndex,
-                   const bool normalized, ensemble* ens1, ensemble* ens2)
+void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                   bool normalized, ensemble* ens1, ensemble* ens2)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
@@ -482,8 +472,8 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const
 	}
 }
 
-void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                       const int infoIndex, const bool normalized, ensemble* ens)
+void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                       bool normalized, ensemble* ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
@@ -509,8 +499,8 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 	}
 }
 
-void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                     const int infoIndex, const bool normalized, ensemble* ens)
+void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                     bool normalized, ensemble* ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();

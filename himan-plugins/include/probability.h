@@ -1,9 +1,3 @@
-// vim: set ai shiftwidth=4 softtabstop=4 tabstop=4 expandtab
-//
-// @file probability.h
-//
-//
-
 #ifndef PROBABILITY_PLUGIN_H
 #define PROBABILITY_PLUGIN_H
 
@@ -33,7 +27,7 @@ struct param_configuration
 
 class probability : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	probability();
 
 	virtual ~probability();
@@ -43,13 +37,12 @@ public:
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual void WriteToFile(const info& targetInfo, const size_t targetInfoIndex,
-	                         write_options opts = write_options());
+	virtual void WriteToFile(const info& targetInfo, size_t targetInfoIndex, write_options opts = write_options());
 
 	virtual std::string ClassName() const { return "himan::plugin::probability"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-private:
+   private:
 	virtual void Calculate(uint16_t threadIndex, const param_configuration& pc);
 
 	int itsEnsembleSize;
@@ -62,7 +55,6 @@ private:
 };
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<probability>(); }
-
 }  // plugin
 }  // himan
 
