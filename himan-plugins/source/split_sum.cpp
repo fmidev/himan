@@ -482,8 +482,8 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		return;
 	}
 
-	myThreadedLogger->Debug("Previous data step is " + boost::lexical_cast<string>(prevSumInfo->Time().Step()));
-	myThreadedLogger->Debug("Current/next data step is " + boost::lexical_cast<string>(curSumInfo->Time().Step()));
+	myThreadedLogger->Trace("Previous data step is " + boost::lexical_cast<string>(prevSumInfo->Time().Step()));
+	myThreadedLogger->Trace("Current/next data step is " + boost::lexical_cast<string>(curSumInfo->Time().Step()));
 
 	double scaleFactor = 1.;
 
