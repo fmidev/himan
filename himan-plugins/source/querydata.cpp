@@ -293,10 +293,10 @@ void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 	}
 
 	NFmiParam nbParam(info.Param().UnivId(), info.Param().Name(), ::kFloatMissing, ::kFloatMissing,
-	             info.Param().Scale(), info.Param().Base(), "%.1f", ::kLinearly);
+	                  static_cast<float>(info.Param().Scale()), static_cast<float>(info.Param().Base()), "%.1f",
+	                  ::kLinearly);
 
 	pbag.Add(NFmiDataIdent(nbParam));
-
 }
 
 NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveOnly)
