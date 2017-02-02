@@ -278,13 +278,13 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 }
 
 static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                            bool normalized, ensemble* ens);
+                            bool normalized, std::unique_ptr<ensemble>& ens);
 
 static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold,
-                              const int infoIndex, const bool normalized, ensemble* ens);
+                              const int infoIndex, const bool normalized, std::unique_ptr<ensemble>& ens);
 
 static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                          bool normalized, ensemble* ens1, ensemble* ens2);
+                          bool normalized, std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2);
 
 void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
@@ -300,19 +300,17 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 	myTargetInfo.First();
 
-	// Can't use unique_ptr since std::move will transfer ownership to the helper functions, and those will destruct
-	// the object, and we need to store some state between timesteps in the case of lagged_ensemble.
-	ensemble* ens1 = nullptr;
-	ensemble* ens2 = nullptr;  // used with wind calculation
+	std::unique_ptr<ensemble> ens1;
+	std::unique_ptr<ensemble> ens2;  // used with wind calculation
 
 	if (itsUseLaggedEnsemble)
 	{
 		threadedLogger->Info("Using lagged ensemble for ensemble #1");
-		ens1 = new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1);
+		ens1 = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 	}
 	else
 	{
-		ens1 = new ensemble(pc.parameter, ensembleSize);
+		ens1 = std::unique_ptr<ensemble>(new ensemble(pc.parameter, ensembleSize));
 	}
 	ens1->MaximumMissingForecasts(itsMaximumMissingForecasts);
 
@@ -322,11 +320,11 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		if (itsUseLaggedEnsemble)
 		{
 			threadedLogger->Info("Using lagged ensemble for ensemble #2");
-			ens2 = new lagged_ensemble(pc.parameter2, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1);
+			ens2 = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter2, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 		}
 		else
 		{
-			ens2 = new ensemble(pc.parameter2, ensembleSize);
+			ens2 = std::unique_ptr<ensemble>(new ensemble(pc.parameter2, ensembleSize));
 		}
 		ens2->MaximumMissingForecasts(itsMaximumMissingForecasts);
 	}
@@ -387,16 +385,6 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 	} while (myTargetInfo.NextTime());
 
-	if (ens1)
-	{
-		delete ens1;
-	}
-
-	if (ens2)
-	{
-		delete ens2;
-	}
-
 	threadedLogger->Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo.Data().MissingCount()) +
 	                     "/" + std::to_string(myTargetInfo.Data().Size()));
 }
@@ -433,7 +421,7 @@ void probability::WriteToFile(const info& targetInfo, size_t targetInfoIndex, wr
 }
 
 void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                   bool normalized, ensemble* ens1, ensemble* ens2)
+                   bool normalized, std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
@@ -473,7 +461,7 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, doubl
 }
 
 void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                       bool normalized, ensemble* ens)
+                       bool normalized, std::unique_ptr<ensemble>& ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
@@ -500,7 +488,7 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, d
 }
 
 void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                     bool normalized, ensemble* ens)
+                     bool normalized, std::unique_ptr<ensemble>& ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
