@@ -279,7 +279,7 @@ void reduced_gaussian_grid::TopLeft(const point& theTopLeft)
 
 void reduced_gaussian_grid::UpdateCoordinates() const
 {
-	const point missing;
+	const point missing = point();
 
 	if ((itsBottomLeft != missing && itsTopRight != missing) && (itsTopLeft == missing || itsBottomRight == missing))
 	{
