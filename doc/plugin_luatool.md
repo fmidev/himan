@@ -1,3 +1,5 @@
+# Summary
+
 luatool-plugin enables himan core functionality to be used through lua scripts. Lua is a dynamically typed scripting language, and is very useful when only very simple and computationally modest processing is needed. Luatool internally uses luabind-library to expose certain parts of the core functionality.
 
 Basic functionality:
@@ -99,7 +101,7 @@ aggregation is a parameter component, defining for example that it is a cumulati
 | number | GetTimeResolution | | Returns time resolution value |
 |   | SetTimeResolution | number  | Set time resolution value |
 
-## aggregation
+## forecast_time
 
 forecast_time contains both analysis time and valid time.
 
@@ -146,14 +148,244 @@ info-class combines all different pieces of metadata into one. This class instan
 | | SetParam | param | Sets (replaces) current parameter |
 | | SetLevel | level | Sets (replaces) current level |
 | | SetTime | forecast_time | Sets (replaces) current time |
-| point | GetLatLon | number | Returns latlon coordinates of given grid point id |
+| point | GetLatLon | number | Returns latlon coordinates of given grid point |
 | table | GetValues | | Returns grid data contents |
 | | SetValues | table | Sets grid data contents |
 | number | GetMissingValue | | Returns missing value |
 | | SetMissingValue | number | Sets missing value |
 
+## level
+
+level class instance consists of level type (HPLevelType), and level value (one or two).
+
+    local l = level(HPLevelType.kHeight, 2)
+
+Typically most levels only have a single value.
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| HPLevelType | GetType | | Return level type (enum HPLevelType) |
+| | SetTYpe | HPLevelType | Set level type |
+| number | GetValue | | Returns first level value |
+| | SetValue | number | Set first level value |
+| number | GetValue2 | | Returns second level value |
+| | SetValue2 | number | Set second level value |
+
+## logger
+
+A logger instance is automatically assigned for a lua script as a global variable. 
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| | Trace | string | Log something in trace level |
+| | Debug | string | Log something in debug level |
+| | Info | string | Log something in info level |
+| | Warning | string | Log something in warning level |
+| | Error | string | Log something in error level |
+| | Fatal | string | Log something in fatal level |
+
+## param
+
+A basic identifer for a param is its name. The name is always in the form of NAME-UNIT, for example T-K (temperature in Kelvins). 
+
+    local p = param("T-K")
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| string | GetName | | Return parameter name |
+| | SetName | string | Set parameter name |
+| number | GetGrib2Number | | Returns grib2 parameter number (if applicable) |
+| | SetGrib2Category | number | Set grib2 parameter number |
+| number | GetGrib2Category | | Returns grib2 parameter category (if applicable) |
+| | SetGrib2Category | number | Set grib2 parameter category |
+| number | GetGrib2Discipline | | Returns grib2 parameter discipline (if applicable) |
+| | SetGrib2Discipline | number | Set grib2 parameter discipline |
+| number | GetGrib1Parameter | | Returns grib1 parameter number (if applicable) |
+| | SetGrib1Number | number | Set grib1 parameter |
+| number | GetGrib1TableVersion | | Returns grib1 table version number (if applicable) |
+| | SetGrib1TableVersion | number | Set grib1 table version number |
+| number | GetUnivId | | Returns universal id number (fmi internal numbering, if applicable) |
+| | SetUnivId | number | Set universal id number |
+| aggregation | GetAggregation | | Return aggregation of parameter (if applicable) |
+| | SetAggregation | aggregation | Set aggregation for a parameter
+
+## point
+
+point represent an xy or latlon point.
+
+    local p = point(25, 60) -- x=25, y=60
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| number | GetX | Returns x or longitude value |
+| | SetX | number | Set x value |
+| number | GetY | Returns y or latitude value |
+| | SetY | number | Set y value |
+
+## plugin_configuration
+
+plugin_configuration class instance is automatically assigned to a lua script. It represents the configuration that launched the calculation.
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| string | GetValue | string | Return a per-plugin configuration value, if given in the plugin configuration file |
+| bool | Exists | string | Checks if some per-plugin configuration value is set in the plugin configuration file |
+| string | GetOutputFileType | | Returns the type of output file (grib, querydate, ...) |
+| producer | GetSourceProducer | number | Returns the configured source producer, indexing starts from 0 |
+| producer | GetTargetProducer | | Returns target producer |
+| number | GetForecastStep | | Returns the forecast step that's configured in the configuration file (if applicable) |
+
+## producer
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| string | GetName | | Return producer name |
+| | SetName | string | Sets producer name |
+| number | GetId | | Return producer database id |
+| | SetId | number | Sets producer database id |
+| number | GetProcess | | Returns producer grib id |
+| | SetProcess | | Sets producer grib id |
+| number | GetCentre | | Returns producer grib centre |
+| | SetCentre | number | Sets producer grib centre |
+
+## raw_time
+
+raw_time represents a timestamp and is a shallow wrapper over boost::posix_time::ptime.
+
+    local r = raw_time("2015-01-02 12:00:00")
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| string | String | string | Returns the time in user-given format (for format details see boost documentation) |
+| | Adjust | HPTimeResolution, number | Adjust time as needed |
+| bool | Empty | | Checks if time is valid |
+
+# Variables
+
+Several global variables have been introduced automatically to lua scripts.
+
+## hitool
+
+hitool instance can be used to examine the properties of the atmosphere. See hitool documentation for more details.
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| table | VerticalMaximum | param, number, number | Returns maximum value found within the height limits given (minimum height in meters, maximum height in meters), single height values for all grid points | 
+| table | VerticalMaximumGrid | param, table, table | Returns maximum value found within the height limits given (minimum height in meters, maximum in meters), individual height values for all grid points |
+| table | VerticalMinimum | param, number, number | Returns minimum value found within the height limits given (minimum height in meters, maximum height in meters), single height values for all grid points | 
+| table | VerticalMinimumGrid | param, table, table | Returns minimum value found within the height limits given (minimum height in meters, maximum in meters), individual height values for all grid points |
+| table | VerticalSum | param, number, number | Returns the sum of all values found within the height limits given (minimum height in meters, maximum height in meters), single height values for all grid points | 
+| table | VerticalSumGrid | param, table, table | Returns the sum of all values found within the height limits given (minimum height in meters, maximum in meters), individual height values for all grid points |
+| table | VerticalAverage | param, number, number | Returns the average value found within the height limits given (minimum height in meters, maximum height in meters), single height values for all grid points | 
+| table | VerticalAverageGrid | param, table, table | Returns the average value found within the height limits given (minimum height in meters, maximum in meters), individual height values for all grid points |
+| table | VerticalCount | param, number, number, number | Returns the number of values found within the height limits given (minimum height in meters, maximum height in meters), single height values for all grid points, single value to search for all grid points | 
+| table | VerticalCountGrid | param, table, table, table | Returns the number of values found within the height limits given (minimum height in meters, maximum in meters), individual height values for all grid points, individual value to search for all grid points |
+| table | VerticalHeight | param, number, number, number | Returns the height (in meters) of a given parameter value within the height limits given (minimum height in meters, maximum height in meters), single height values for all grid points | 
+| table | VerticalHeightGrid | param, table, table, table, number | Returns the height (in meters) value found within the height limits given (minimum height in meters, maximum in meters), individual value to search for all grid points, last parameter defines which height to return if multiple are encountered |
+| table | VerticalHeightGreaterThan | param, number, number, number | Same as VerticalHeight, but also considers the case when the value is encountered when entering wanted level zone | 
+| table | VerticalHeightGreaterThanGrid | param, table, table, table, number | Same as VerticalHeightGrid, but also considers the case when the value is encountered when entering wanted level zone |
+| table | VerticalHeightLessThan | param, number, number, number | Same as VerticalHeight, but also considers the case when the value is encountered when entering wanted level zone | 
+| table | VerticalHeightLessThanGrid | param, table, table, table, number | Same as VerticalHeightGrid, but also considers the case when the value is encountered when entering wanted level zone |
+| table | VerticalValue | param, number | Returns the value of a parameter from a given height, single value for all grid points | 
+| table | VerticalValueGrid | param, table | Returns the value of a parameter from a given height, individual value for all grid points |
+
+
+## luatool
+
+luatool variable represents the plugin itself. This variable is used to fetch and write data.
+
+    local grid = luatool:Fetch(current_time, current_level, par1)
+
+    luatool:WriteToFile(result)
+
+Note! The argument for WriteToFile MUST be 'result'!
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| table | Fetch | forecast_time, level, param | Fetch data with given search arguments |
+| | WriteToFile | table | Writes gived data to file |
+
+## kFloatMissing
+
+Variable kFloatMissing is used in Himan to represent a missing value. It's value is 32700. 
+
+## neons
+
+Variable neons is used to connect to Oracle-based database. DEPRECATED.
+
+## radon
+
+Variable radon is used to connect to PostgreSQL-based database.
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| string | GetProducerMetaData | producer, string | Return a piece of metadata from some producer. Table in database is producer_meta |
+
+## result
+
+Variable result represents the metadata for the calculation result. It is an info class instance.
+
+## write_options
+
+Variable write_options can be used to control the process of writing file to disk. So far the only option available is to define whether or not to use a bitmap for missing values. 
+
+    write_options.use_bitmap = false
+
+| Option | Description | Default value |
+|---|---|---|
+| use_bitmap | Control whether bitmap is used for missing values (grib) | true |
+
+
+# Other functions
+
+## Es_
+
+Calculate water vapor saturated pressure in Pa.
+
+```
+-- Es_(Temperature)
+-- Temperature in Kelvin
+-- If dewpoint temperature used instead of air temperature, 
+-- actual water vapour pressure is calculated.
+ 
+local T = 269.3
+ 
+local E = Es_(T)
+-- Returned value is (saturated) water vapour pressure in Pa
+```
+
+## LCL_
+
+Find LCL (lifted condensation level) properties.
+
+```
+-- LCL_(Pressure, Temperature, Dewpoint)
+-- Pressure in Pa, temperatures in Kelvin
+ 
+local P = 100100
+local T = 273.15
+local TD = 270
+ 
+local lcl = LCL_(P, T, TD)
+ 
+-- Returned data is in Pa, K and g/kg
+print("lcl pressure: " .. lcl.P .. " temperature: " .. lcl.T .. " specific humidity: " .. lcl.Q)
+```
 
 # Examples
+
+To launch a lua script, we'll need the lua script itself and a himan configuration in json format.
+
+The following json file can be used to launch a lua script.
 
 ## json
 
@@ -213,7 +445,7 @@ logger:Info("Writing results")
 luatool:WriteToFile(result)
 ```
 
-## Cloud baes
+## Cloud base
 
 Calculates cloud base height in feet.
 
