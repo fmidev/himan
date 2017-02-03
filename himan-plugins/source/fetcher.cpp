@@ -433,7 +433,7 @@ void fetcher::DoInterpolation(bool theDoInterpolation) { itsDoInterpolation = th
 bool fetcher::DoInterpolation() const { return itsDoInterpolation; }
 void fetcher::UseCache(bool theUseCache) { itsUseCache = theUseCache; }
 bool fetcher::UseCache() const { return itsUseCache; }
-void fetcher::AuxiliaryFilesRotateAndInterpolate(search_options& opts, vector<info_t>& infos)
+void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vector<info_t>& infos)
 {
 	vector<future<void>> futures;
 
@@ -457,8 +457,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(search_options& opts, vector<in
 			    {
 				    if (!interpolate::Interpolate(*baseInfo, vec, opts.configuration->UseCudaForInterpolation()))
 				    {
-					    // interpolation failed
-					    throw kFileDataNotFound;
+					    throw runtime_error("Interpolation failed");
 				    }
 			    }
 

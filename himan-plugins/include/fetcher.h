@@ -238,7 +238,7 @@ class fetcher : public auxiliary_plugin
 	 * Processing is threaded.
 	 */
 
-	void AuxiliaryFilesRotateAndInterpolate(search_options& opts, std::vector<info_t>& infos);
+	void AuxiliaryFilesRotateAndInterpolate(const search_options& opts, std::vector<info_t>& infos);
 
 	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform;           //<! Default true
