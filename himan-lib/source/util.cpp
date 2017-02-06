@@ -693,37 +693,40 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 
 	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
 
-	int binn = 10;
-
-	double binw = (max - min) / 10;
-
-	double binmin = min;
-	double binmax = binmin + binw;
-
-	cout << "distribution:" << endl;
-
-	for (int i = 1; i <= binn; i++)
+	if (min != max && count > 0)
 	{
-		if (i == binn) binmax += 0.001;
+		long binn = (count < 10) ? count : 10;
 
-		size_t count = 0;
+		double binw = (max - min) / static_cast<double> (binn);
 
-		for (const double& val : vec)
+		double binmin = min;
+		double binmax = binmin + binw;
+
+		cout << "distribution (bins=" << binn << "):" << endl;
+
+		for (int i = 1; i <= binn; i++)
 		{
-			if (val == himan::kFloatMissing) continue;
+			if (i == binn) binmax += 0.001;
 
-			if (val >= binmin && val < binmax)
+			size_t count = 0;
+
+			for (const double& val : vec)
 			{
-				count++;
+				if (val == himan::kFloatMissing) continue;
+
+				if (val >= binmin && val < binmax)
+				{
+					count++;
+				}
 			}
+
+			if (i == binn) binmax -= 0.001;
+
+			cout << binmin << ":" << binmax << " " << count << std::endl;
+
+			binmin += binw;
+			binmax += binw;
 		}
-
-		if (i == binn) binmax -= 0.001;
-
-		cout << binmin << ":" << binmax << " " << count << std::endl;
-
-		binmin += binw;
-		binmax += binw;
 	}
 }
 

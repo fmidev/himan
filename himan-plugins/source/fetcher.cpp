@@ -12,6 +12,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fstream>
+#include <future>
 
 #include "cache.h"
 #include "csv.h"
@@ -23,6 +24,8 @@
 
 using namespace himan::plugin;
 using namespace std;
+
+static once_flag oflag;
 
 fetcher::fetcher()
     : itsDoLevelTransform(true),
@@ -186,7 +189,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	baseInfo->First();
 
-	RotateVectorComponents(theInfos[0], baseInfo, config, sourceProd);
+	RotateVectorComponents(theInfos, baseInfo, config, sourceProd);
 
 	if (itsDoInterpolation)
 	{
@@ -304,23 +307,19 @@ vector<shared_ptr<himan::info>> fetcher::FromCache(search_options& options)
 }
 
 vector<shared_ptr<himan::info>> fetcher::FromGrib(const string& inputFile, search_options& options, bool readContents,
-                                                  bool readPackedData, bool forceCaching)
+                                                  bool readPackedData, bool readIfNotMatching)
 {
 	auto g = GET_PLUGIN(grib);
 
-	vector<shared_ptr<info>> infos = g->FromFile(inputFile, options, readContents, readPackedData, forceCaching);
-
-	return infos;
+	return g->FromFile(inputFile, options, readContents, readPackedData, readIfNotMatching);
 }
 
 vector<shared_ptr<himan::info>> fetcher::FromGribIndex(const string& inputFile, search_options& options,
-                                                       bool readContents, bool readPackedData, bool forceCaching)
+                                                       bool readContents, bool readPackedData, bool readIfNotMatching)
 {
 	auto g = GET_PLUGIN(grib);
 
-	vector<shared_ptr<info>> infos = g->FromIndexFile(inputFile, options, readContents, readPackedData, forceCaching);
-
-	return infos;
+	return g->FromIndexFile(inputFile, options, readContents, readPackedData, readIfNotMatching);
 }
 
 vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, search_options& options,
@@ -434,6 +433,61 @@ void fetcher::DoInterpolation(bool theDoInterpolation) { itsDoInterpolation = th
 bool fetcher::DoInterpolation() const { return itsDoInterpolation; }
 void fetcher::UseCache(bool theUseCache) { itsUseCache = theUseCache; }
 bool fetcher::UseCache() const { return itsUseCache; }
+void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vector<info_t>& infos)
+{
+	vector<future<void>> futures;
+
+	const int maxFutureSize = 8;  // arbitrary number of parallel interpolation threads
+
+	for (const auto& anInfo : infos)
+	{
+		vector<info_t> vec(1);
+		vec[0] = anInfo;
+
+		futures.push_back(async(
+		    launch::async,
+		    [&](vector<info_t> vec) {
+			    auto baseInfo =
+			        make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
+			    assert(baseInfo->Dimensions().size());
+
+			    baseInfo->First();
+
+			    if (itsDoInterpolation)
+			    {
+				    if (!interpolate::Interpolate(*baseInfo, vec, opts.configuration->UseCudaForInterpolation()))
+				    {
+					    throw runtime_error("Interpolation failed");
+				    }
+			    }
+
+			    baseInfo.reset();
+
+			},
+		    vec));
+
+		if (futures.size() == maxFutureSize)
+		{
+			for (auto& fut : futures)
+			{
+				fut.get();
+			}
+
+			futures.clear();
+
+			itsLogger->Trace("Processed " + to_string(maxFutureSize) + " infos");
+		}
+	}
+
+	// remainder of the loop
+	for (auto& fut : futures)
+	{
+		fut.get();
+	}
+
+	futures.clear();
+}
+
 vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData)
 {
 	vector<shared_ptr<info>> ret;
@@ -466,11 +520,54 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
-		vector<string> files;
+		auto files = opts.configuration->AuxiliaryFiles();
 
-		files = opts.configuration->AuxiliaryFiles();
+		if (itsUseCache && opts.configuration->UseCache() && opts.configuration->ReadAllAuxiliaryFilesToCache())
+		{
+			if (itsApplyLandSeaMask)
+			{
+				itsLogger->Fatal("Land sea mask cannot be applied when reading all auxiliary files to cache");
+				itsLogger->Fatal("Restart himan with command line option --no-auxiliary-file-full-cache-read");
+				exit(1);
+			}
 
-		ret = FromFile(files, opts, true, readPackedData, !itsApplyLandSeaMask && !readPackedData);
+			call_once(oflag, [&]() {
+
+				itsLogger->Debug("Start full auxiliary files read");
+
+				ret = FromFile(files, opts, true, readPackedData, true);
+
+				AuxiliaryFilesRotateAndInterpolate(opts, ret);
+
+				/*
+				 * Insert interpolated data to cache if
+				 * 1. Cache is not disabled locally (itsUseCache) AND
+				 * 2. Cache is not disabled globally (config->UseCache()) AND
+				 * 3. Data is not packed
+				 */
+
+				auto c = GET_PLUGIN(cache);
+
+				for (const auto& anInfo : ret)
+				{
+					if (anInfo->Grid()->IsPackedData())
+					{
+						util::Unpack({anInfo->Grid()});
+					}
+					c->Insert(*anInfo);
+				}
+
+				itsLogger->Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
+
+				assert(c->Size() > 0);
+			});
+
+			ret = FromCache(opts);
+		}
+		else
+		{
+			ret = FromFile(files, opts, true, readPackedData, false);
+		}
 
 		if (!ret.empty())
 		{
@@ -662,64 +759,67 @@ string GetOtherVectorComponentName(const string& name)
 	throw runtime_error("Unable to find component pair for " + name);
 }
 
-void fetcher::RotateVectorComponents(info_t component, info_t target, shared_ptr<const configuration> config,
+void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target, shared_ptr<const configuration> config,
                                      const producer& sourceProd)
 {
-	HPGridType from = component->Grid()->Type();
-	HPGridType to = target->Grid()->Type();
-	const auto name = component->Param().Name();
-
-	if (interpolate::IsVectorComponent(name) &&
-	    ((itsDoVectorComponentRotation) ||
-	     ((from == kRotatedLatitudeLongitude || from == kStereographic || from == kLambertConformalConic) &&
-	      to != from)))
+	for (auto& component : components)
 	{
-		if (!itsDoVectorComponentRotation &&
-		    (to == kRotatedLatitudeLongitude || to == kStereographic || to == kLambertConformalConic))
+		HPGridType from = component->Grid()->Type();
+		HPGridType to = target->Grid()->Type();
+		const auto name = component->Param().Name();
+
+		if (interpolate::IsVectorComponent(name) &&
+		    ((itsDoVectorComponentRotation) ||
+		     ((from == kRotatedLatitudeLongitude || from == kStereographic || from == kLambertConformalConic) &&
+		      to != from)))
 		{
-			throw runtime_error("Rotating vector components to projected area is not supported (yet)");
-		}
-
-		auto otherName = GetOtherVectorComponentName(name);
-
-		search_options opts(component->Time(), param(otherName), component->Level(), sourceProd,
-		                    component->ForecastType(), config);
-
-		itsLogger->Trace("Fetching " + otherName + " for U/V rotation");
-
-		auto otherVec = FetchFromProducer(opts, component->Grid()->IsPackedData());
-
-		assert(!otherVec.empty());
-
-		info_t u, v, other = otherVec[0];
-
-		if (name.find("U-MS") != std::string::npos)
-		{
-			u = component;
-			v = other;
-		}
-		else if (name.find("V-MS") != std::string::npos)
-		{
-			u = other;
-			v = component;
-		}
-		else
-		{
-			throw runtime_error("Unrecognized vector component parameter: " + name);
-		}
-
-		interpolate::RotateVectorComponents(*u, *v, config->UseCudaForInterpolation());
-
-		// Most likely both U&V are requested, so interpolate the other one now
-		// and put it to cache.
-
-		std::vector<info_t> list({other});
-		if (interpolate::Interpolate(*target, list, config->UseCudaForInterpolation()))
-		{
-			if (itsUseCache && config->UseCache() && !other->Grid()->IsPackedData())
+			if (!itsDoVectorComponentRotation &&
+			    (to == kRotatedLatitudeLongitude || to == kStereographic || to == kLambertConformalConic))
 			{
-				auto c = GET_PLUGIN(cache);
-				c->Insert(*other);
+				throw runtime_error("Rotating vector components to projected area is not supported (yet)");
+			}
+
+			auto otherName = GetOtherVectorComponentName(name);
+
+			search_options opts(component->Time(), param(otherName), component->Level(), sourceProd,
+			                    component->ForecastType(), config);
+
+			itsLogger->Trace("Fetching " + otherName + " for U/V rotation");
+
+			auto otherVec = FetchFromProducer(opts, component->Grid()->IsPackedData());
+
+			assert(!otherVec.empty());
+
+			info_t u, v, other = otherVec[0];
+
+			if (name.find("U-MS") != std::string::npos)
+			{
+				u = component;
+				v = other;
+			}
+			else if (name.find("V-MS") != std::string::npos)
+			{
+				u = other;
+				v = component;
+			}
+			else
+			{
+				throw runtime_error("Unrecognized vector component parameter: " + name);
+			}
+
+			interpolate::RotateVectorComponents(*u, *v, config->UseCudaForInterpolation());
+
+			// Most likely both U&V are requested, so interpolate the other one now
+			// and put it to cache.
+
+			std::vector<info_t> list({other});
+			if (interpolate::Interpolate(*target, list, config->UseCudaForInterpolation()))
+			{
+				if (itsUseCache && config->UseCache() && !other->Grid()->IsPackedData())
+				{
+					auto c = GET_PLUGIN(cache);
+					c->Insert(*other);
+				}
 			}
 		}
 	}

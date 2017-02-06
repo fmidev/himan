@@ -329,7 +329,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	namespace po = boost::program_options;
 
-	po::options_description desc("Allowed options");
+	po::options_description desc("Allowed options", 100);
 
 	// Can't use required() since it doesn't allow us to use --list-plugins
 
@@ -345,11 +345,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	int logLevel = 0;
 	short int threadCount = -1;
 
-// clang-format off
+	// clang-format off
 
 	desc.add_options()
 		("help,h", "print out help message")
-		("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, netcdf, querydata")
+		("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, csv, querydata")
 		("compression,c", po::value(&outfileCompression), "output file compression, one of: gz, bzip2")
 		("version,v", "display version number")
 		("configuration-file,f", po::value(&confFile), "configuration file")
@@ -365,9 +365,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("no-cuda", "disable all cuda extensions")
 		("no-cuda-packing", "disable cuda packing of grib data")
 		("no-cuda-unpacking", "disable cuda unpacking of grib data")
-		("no-cuda-interpolation", "disable cuda grid interpolation");
+		("no-cuda-interpolation", "disable cuda grid interpolation")
+		("no-auxiliary-file-full-cache-read", "disable the initial reading of all auxiliary files to cache")
+	;
 
-// clang-format on
+	// clang-format on
 
 	po::positional_options_description p;
 	p.add("auxiliary-files", -1);
@@ -610,7 +612,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	}
 	else
 	{
-		cerr << "himan: Configuration file not defined" << endl;
+		cerr << "himan: Configuration file not defined" << endl << desc;
 		exit(1);
 	}
 
@@ -619,5 +621,9 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->StatisticsLabel(statisticsLabel);
 	}
 
+	if (opt.count("no-auxiliary-file-full-cache-read"))
+	{
+		conf->ReadAllAuxiliaryFilesToCache(false);
+	}
 	return conf;
 }

@@ -103,8 +103,8 @@ class fetcher : public auxiliary_plugin
 	bool DoVectorComponentRotation() const;
 
    private:
-	void RotateVectorComponents(info_t component, info_t target, std::shared_ptr<const configuration> conf,
-	                            const producer& sourceProd);
+	void RotateVectorComponents(std::vector<info_t>& components, info_t target,
+	                            std::shared_ptr<const configuration> conf, const producer& sourceProd);
 
 	/**
 	 * @brief Apply land-sea mask to requested data.
@@ -230,6 +230,15 @@ class fetcher : public auxiliary_plugin
 	 */
 
 	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData);
+
+	/**
+	 * @brief Rotate and interpolate infos. Function is called when auxiliary files
+	 *        are "batch processed".
+	 *
+	 * Processing is threaded.
+	 */
+
+	void AuxiliaryFilesRotateAndInterpolate(const search_options& opts, std::vector<info_t>& infos);
 
 	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform;           //<! Default true

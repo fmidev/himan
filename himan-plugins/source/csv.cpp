@@ -245,6 +245,8 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		throw kFileDataNotFound;
 	}
 
+	ret->Producer(options.prod);
+
 	assert(times.size());
 	assert(params.size());
 	assert(levels.size());
