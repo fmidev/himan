@@ -69,15 +69,17 @@ std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, 
 
 bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 {
+	using namespace boost;
+
 	if (timeResolution == kHourResolution)
 	{
-		boost::posix_time::hours adjustment(theValue);
+		posix_time::hours adjustment(theValue);
 
 		itsDateTime = itsDateTime + adjustment;
 	}
 	else if (timeResolution == kMinuteResolution)
 	{
-		boost::posix_time::minutes adjustment(theValue);
+		posix_time::minutes adjustment(theValue);
 
 		itsDateTime = itsDateTime + adjustment;
 	}
@@ -85,17 +87,18 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 	{
 		boost::gregorian::years adjustment(theValue);
 
-		itsDateTime = itsDateTime + adjustment;
-	}
-	else if (timeResolution == kMonthResolution)
-	{
-		boost::gregorian::months adjustment(theValue);
+		itsDateTime += adjustment;
 
-		itsDateTime = itsDateTime + adjustment;
+		if (gregorian::gregorian_calendar::is_leap_year(itsDateTime.date().year()))
+		{
+			itsDateTime += gregorian::date_duration(-1);
+		}
+
+		return true;
 	}
 	else if (timeResolution == kDayResolution)
 	{
-		boost::gregorian::days adjustment(theValue);
+		gregorian::days adjustment(theValue);
 
 		itsDateTime = itsDateTime + adjustment;
 	}
