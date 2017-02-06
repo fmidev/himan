@@ -281,7 +281,6 @@ void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 
 			if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
 			{
-				param p = info.Param();
 				p.UnivId(stol(parmInfo["univ_id"]));
 				p.Scale(stod(parmInfo["scale"]));
 				p.Base(stod(parmInfo["base"]));

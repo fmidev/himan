@@ -437,7 +437,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 {
 	vector<future<void>> futures;
 
-	const int maxFutureSize = 8;  // arbitrary number of parallel interpolation threads
+	const unsigned int maxFutureSize = 8;  // arbitrary number of parallel interpolation threads
 
 	for (const auto& anInfo : infos)
 	{
