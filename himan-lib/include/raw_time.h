@@ -42,8 +42,6 @@ public:
 
 	bool Empty() const;
 
-	boost::posix_time::ptime PosixTime() { return itsDateTime; }
-
 private:
 	std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
 

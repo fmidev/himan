@@ -12,6 +12,7 @@
 #include "info.h"
 #include <mutex>
 #include <tuple>
+#include <boost/iterator/zip_iterator.hpp>
 
 namespace himan
 {
@@ -223,6 +224,15 @@ void DumpVector(const std::vector<double>& arr, const std::string& name = "");
    @return value of the supplied key
  */
 std::string GetEnv(const std::string& key);
+
+template <class... Conts>
+inline auto zip_range(Conts&... conts)
+    -> decltype(boost::make_iterator_range(boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
+                                           boost::make_zip_iterator(boost::make_tuple(conts.end()...))))
+{
+	return {boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
+	        boost::make_zip_iterator(boost::make_tuple(conts.end()...))};
+}
 
 }  // namespace util
 }  // namespace himan

@@ -2,6 +2,7 @@
 
 #include "logger_factory.h"
 #include "plugin_factory.h"
+#include "util.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 #include "fetcher.h"
@@ -9,28 +10,12 @@
 
 #include <math.h>
 
-#include <boost/date_time.hpp>
-#include <boost/iterator/zip_iterator.hpp>
-
 using namespace himan;
 using namespace himan::plugin;
+using namespace himan::util;
 
 namespace himan
 {
-// Cribbed from himan-plugins/include/compiled_plugin_base.h
-template <class... Conts>
-inline auto zip_range(Conts&... conts)
-    -> decltype(boost::make_iterator_range(boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
-                                           boost::make_zip_iterator(boost::make_tuple(conts.end()...))))
-{
-	return {boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
-	        boost::make_zip_iterator(boost::make_tuple(conts.end()...))};
-}
-
-static bool IsValidTime(forecast_time ftime)
-{
-	return ftime.ValidDateTime().PosixTime() != boost::posix_time::not_a_date_time;
-}
 
 // NOTE NOTE NOTE if we construct the object again always, we can't store any info about last fetch/previous fetch
 // this means we can't use std::unique_ptr in a loop and we can't std::move it to some helper function!
@@ -74,7 +59,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 	forecast_time ftime(time);
 
 	// Ordering: most recent forecast will be the last one in itsForecasts
-	if (!IsValidTime(itsLastFetchTime))
+	if (itsLastFetchTime.OriginDateTime().Empty())
 	{
 		itsLogger->Info("Fetching for the first timestep, lagged steps not included");
 		const size_t currentStep = 0;
@@ -108,7 +93,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 		// Start from the 'earliest' timestep
 		for (int currentStep = static_cast<int>(itsNumberOfSteps) - 1; currentStep >= 0; currentStep--)
 		{
-			ftime.ValidDateTime().Adjust(itsLagResolution, lag * static_cast<int>(currentStep));
+			ftime.OriginDateTime().Adjust(itsLagResolution, lag * currentStep);
 
 			for (const auto& desired : itsDesiredForecasts)
 			{

@@ -487,7 +487,8 @@ const boost::unordered_map<HPEnsembleType, std::string> HPEnsembleTypeToString =
 	(kUnknownEnsembleType, "unknown")
 	(kPerturbedEnsemble, "perturbed ensemble")
 	(kTimeEnsemble, "time ensemble")
-	(kLevelEnsemble, "level ensemble");
+	(kLevelEnsemble, "level ensemble")
+	(kLaggedEnsemble, "lagged ensemble");
 
 const boost::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType =
     ba::map_list_of
