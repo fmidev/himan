@@ -51,7 +51,7 @@ bool querydata::ToFile(info& theInfo, string& theOutputFile)
 		activeOnly = false;
 	}
 
-	auto qdata = CreateQueryData(theInfo, activeOnly);
+	auto qdata = CreateQueryData(theInfo, activeOnly, true);
 
 	if (!qdata)
 	{
@@ -65,7 +65,7 @@ bool querydata::ToFile(info& theInfo, string& theOutputFile)
 	return true;
 }
 
-shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, bool activeOnly)
+shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, bool activeOnly, bool applyScaleAndBase)
 {
 	auto localInfo(originalInfo);
 
@@ -125,7 +125,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 		qinfo.FirstLevel();
 		qinfo.FirstTime();
 
-		CopyData(localInfo, qinfo);
+		CopyData(localInfo, qinfo, applyScaleAndBase);
 	}
 	else
 	{
@@ -158,7 +158,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 						continue;
 					}
 
-					CopyData(localInfo, qinfo);
+					CopyData(localInfo, qinfo, applyScaleAndBase);
 				}
 			}
 		}
@@ -169,14 +169,20 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 	return qdata;
 }
 
-bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const
+bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const
 {
 	assert(theInfo.Data().Size() == qinfo.SizeLocations());
 
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
-	double scale = theInfo.Param().Scale(), base = theInfo.Param().Base();
+	double scale = 1, base = 0;
+
+	if (applyScaleAndBase)
+	{
+		scale = theInfo.Param().Scale();
+		base = theInfo.Param().Base();
+	}
 
 	if (theInfo.Grid()->Class() == kRegularGrid && theInfo.Grid()->ScanningMode() != kBottomLeft)
 	{
