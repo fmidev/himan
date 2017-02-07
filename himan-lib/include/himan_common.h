@@ -495,7 +495,8 @@ const boost::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType =
 	("unknown", kUnknownEnsembleType)
 	("perturbed ensemble", kPerturbedEnsemble)
 	("time ensemble", kTimeEnsemble)
-	("level ensemble", kLevelEnsemble);
+	("level ensemble", kLevelEnsemble)
+	("lagged ensemble", kLaggedEnsemble);
 
 /**
  * @struct HPVersionNumber
