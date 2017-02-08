@@ -32,7 +32,7 @@ namespace plugin
 {
 class querydata : public io_plugin
 {
-public:
+   public:
 	querydata();
 
 	virtual ~querydata() {}
@@ -80,10 +80,13 @@ public:
 	 *
 	 * @param theInfo source data
 	 * @param activeOnly If set only the active part (current iterator positions) are read
+	 * @param applyScaleAndBase If data is written to querydata, scale and base from database
+	 * are used.
 	 * @return shared pointer to querydata instance
 	 */
 
-	std::shared_ptr<NFmiQueryData> CreateQueryData(const info& theInfo, bool activeOnly);
+	std::shared_ptr<NFmiQueryData> CreateQueryData(const info& theInfo, bool activeOnly,
+	                                               bool applyScaleAndBase = false);
 
 	/**
 	 * @brief Create info from a given querydata
@@ -98,7 +101,7 @@ public:
 	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
 	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
 
-private:
+   private:
 	/**
 	 * @brief Copy data from info to querydata
 	 *
@@ -106,7 +109,7 @@ private:
 	 * @param theQueryData
 	 * @return
 	 */
-	bool CopyData(info& theInfo, NFmiFastQueryInfo& qinfo) const;
+	bool CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const;
 
 	NFmiHPlaceDescriptor CreateGrid(info& info) const;
 	NFmiHPlaceDescriptor CreatePoint(info& info) const;

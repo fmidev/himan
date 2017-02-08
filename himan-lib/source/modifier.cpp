@@ -367,16 +367,17 @@ void modifier_max::Calculate(double theValue, double theHeight, double thePrevio
 	{
 		auto exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 		auto exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
-
 		theValue = fmax(exactLower, exactUpper);
 	}
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
-		theValue = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		double exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		theValue = fmax(exactLower, theValue);
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
-		theValue = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		double exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		theValue = fmax(exactUpper, theValue);
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -397,16 +398,17 @@ void modifier_min::Calculate(double theValue, double theHeight, double thePrevio
 	{
 		auto exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 		auto exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
-
 		theValue = fmin(exactLower, exactUpper);
 	}
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
-		theValue = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		double exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		theValue = fmin(exactLower, theValue);
 	}
-	else if (LeavingHeightZone(theHeight, thePreviousHeight, lowerLimit))
+	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
-		theValue = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		double exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		theValue = fmin(exactUpper, theValue);
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -435,48 +437,43 @@ void modifier_maxmin::Calculate(double theValue, double theHeight, double thePre
 	double lowerLimit = itsLowerHeight[itsIndex];
 	double upperLimit = itsUpperHeight[itsIndex];
 
+	double bigger = theValue, smaller = theValue;
+
 	if (BetweenLevels(theHeight, thePreviousHeight, lowerLimit, upperLimit))
 	{
 		auto exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 		auto exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
-		double smaller = fmin(exactLower, exactUpper);
-		double bigger = fmax(exactLower, exactUpper);
-
-		if (kFloatMissing == Value())
-		{
-			// Set min == max
-			itsResult[itsIndex] = smaller;
-			itsMaximumResult[itsIndex] = bigger;
-		}
-		else
-		{
-			itsMaximumResult[itsIndex] = fmax(bigger, itsMaximumResult[itsIndex]);
-			itsResult[itsIndex] = fmin(smaller, itsResult[itsIndex]);
-		}
-
-		return;
+		smaller = fmin(exactLower, exactUpper);
+		bigger = fmax(exactLower, exactUpper);
 	}
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
-		theValue = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		double exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+
+		smaller = fmin(exactLower, theValue);
+		bigger = fmax(exactLower, theValue);
 	}
-	else if (LeavingHeightZone(theHeight, thePreviousHeight, lowerLimit))
+	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
-		theValue = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		double exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+
+		smaller = fmin(exactUpper, theValue);
+		bigger = fmax(exactUpper, theValue);
+
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
 	if (kFloatMissing == Value())
 	{
 		// Set min == max
-		itsResult[itsIndex] = theValue;
-		itsMaximumResult[itsIndex] = theValue;
+		itsResult[itsIndex] = smaller;
+		itsMaximumResult[itsIndex] = bigger;
 	}
 	else
 	{
-		itsMaximumResult[itsIndex] = fmax(theValue, itsMaximumResult[itsIndex]);
-		itsResult[itsIndex] = fmin(theValue, itsResult[itsIndex]);
+		itsMaximumResult[itsIndex] = fmax(bigger, itsMaximumResult[itsIndex]);
+		itsResult[itsIndex] = fmin(smaller, itsResult[itsIndex]);
 	}
 }
 
@@ -542,7 +539,7 @@ void modifier_mean::Calculate(double theValue, double theHeight, double thePrevi
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerLimit) + val);
 		itsRange[itsIndex] += theHeight - lowerLimit;
 	}
-	else if (LeavingHeightZone(theHeight, thePreviousHeight, lowerLimit))
+	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
 		double upperValue = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
@@ -589,42 +586,40 @@ void modifier_count::Init(const std::vector<double>& theData, const std::vector<
 void modifier_count::Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight)
 {
 	assert(itsFindValue.size());
-
 	double findValue = itsFindValue[itsIndex];
-
-	if (kFloatMissing == findValue)
-	{
-		itsOutOfBoundHeights[itsIndex] = true;
-		return;
-	}
 
 	// First level
 
-	if (IsMissingValue(thePreviousValue))
+	if (kFloatMissing == thePreviousValue)
 	{
 		return;
 	}
 
-	/**
-	 *
-	 * If lower value is found and current value is above wanted value, wanted value
-	 * is found.
-	 *
-	 * Input data set:
-	 *
-	 * Value
-	 *
-	 * 10
-	 * --- Value 11 is found between these levels" --
-	 * 12
-	 *  9
-	 *  9
-	 * --- Value 11 is found between these levels! --
-	 * 16
-	 * 17
-	 *
-	 * The answer is: two times (as far as we know).
-	 */
+	double lowerLimit = itsLowerHeight[itsIndex];
+	double upperLimit = itsUpperHeight[itsIndex];
+
+	if (BetweenLevels(theHeight, thePreviousHeight, lowerLimit, upperLimit))
+	{
+		auto exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		auto exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+
+		if ((exactLower <= findValue && exactUpper >= findValue) ||
+		    (exactLower >= findValue && exactUpper <= findValue))
+		{
+			Value(Value() + 1);
+		}
+
+		return;
+	}
+	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
+	{
+		theValue = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+	}
+	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
+	{
+		theValue = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		itsOutOfBoundHeights[itsIndex] = true;
+	}
 
 	if ((thePreviousValue <= findValue && theValue >= findValue)      // upward trend
 	    || (thePreviousValue >= findValue && theValue <= findValue))  // downward trend
