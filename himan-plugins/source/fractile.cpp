@@ -31,8 +31,8 @@ fractile::fractile()
     : itsEnsembleSize(0),
       itsEnsembleType(kPerturbedEnsemble),
       itsFractiles({0., 10., 25., 50., 75., 90., 100.}),
-	  itsLag(0),
-	  itsLaggedSteps(0),
+      itsLag(0),
+      itsLaggedSteps(0),
       itsMaximumMissingForecasts(0)
 {
 	itsClearTextFormula = "%";
