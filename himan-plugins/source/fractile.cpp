@@ -14,6 +14,7 @@
 #include "plugin_factory.h"
 
 #include "ensemble.h"
+#include "lagged_ensemble.h"
 #include "time_ensemble.h"
 
 #include "fetcher.h"
@@ -30,6 +31,8 @@ fractile::fractile()
     : itsEnsembleSize(0),
       itsEnsembleType(kPerturbedEnsemble),
       itsFractiles({0., 10., 25., 50., 75., 90., 100.}),
+	  itsLag(0),
+	  itsLaggedSteps(0),
       itsMaximumMissingForecasts(0)
 {
 	itsClearTextFormula = "%";
@@ -73,7 +76,45 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		itsMaximumMissingForecasts = boost::lexical_cast<int>(maximumMissing);
 	}
 
-	if (itsEnsembleSize == 0 && itsEnsembleType == kPerturbedEnsemble)
+	if (itsEnsembleType == kLaggedEnsemble)
+	{
+		if (itsConfiguration->Exists("lag"))
+		{
+			int lag = std::stoi(itsConfiguration->GetValue("lag"));
+			if (lag == 0)
+			{
+				throw std::runtime_error(ClassName() + ": specify lag < 0");
+			}
+			else if (lag > 0)
+			{
+				itsLogger->Warning("negating lag value " + std::to_string(-lag));
+				lag = -lag;
+			}
+
+			itsLag = lag;
+		}
+		else
+		{
+			throw std::runtime_error(ClassName() + ": specify lag value for lagged_ensemble");
+		}
+
+		// How many lagged steps to include in the calculation
+		if (itsConfiguration->Exists("lagged_steps"))
+		{
+			const int steps = std::stoi(itsConfiguration->GetValue("lagged_steps"));
+			if (steps <= 0)
+			{
+				throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0");
+			}
+			itsLaggedSteps = steps + 1;
+		}
+		else
+		{
+			throw std::runtime_error(ClassName() + ": specify lagged_steps when using time lagging ('lag')");
+		}
+	}
+
+	if (itsEnsembleSize == 0 && (itsEnsembleType == kPerturbedEnsemble || itsEnsembleType == kLaggedEnsemble))
 	{
 		// Regular ensemble size is static, get it from database if user
 		// hasn't specified any size
@@ -155,6 +196,10 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		case kTimeEnsemble:
 			ens = std::unique_ptr<time_ensemble>(new time_ensemble(param(itsParamName), itsEnsembleSize));
 			break;
+		case kLaggedEnsemble:
+			ens = std::unique_ptr<lagged_ensemble>(
+			    new lagged_ensemble(param(itsParamName), itsEnsembleSize, kHourResolution, itsLag, itsLaggedSteps));
+			break;
 		default:
 			itsLogger->Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
 			exit(1);
@@ -180,6 +225,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
 		auto sortedValues = ens->SortedValues();
+
 		const size_t ensembleSize = sortedValues.size();
 
 		// Skip this step if we didn't get any valid fields
@@ -220,11 +266,9 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			myTargetInfo->Value(sortedValues[i - 1] + std::fmod(x, 1.0) * (sortedValues[i] - sortedValues[i - 1]));
 			++targetInfoIndex;
 		}
-
 		// write mean value and stddev to last target info indices
 		myTargetInfo->ParamIndex(targetInfoIndex);
 		myTargetInfo->Value(ens->Mean());
-
 		++targetInfoIndex;
 		myTargetInfo->ParamIndex(targetInfoIndex);
 		myTargetInfo->Value(std::sqrt(ens->Variance()));

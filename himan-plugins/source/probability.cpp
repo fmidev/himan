@@ -182,7 +182,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 		}
 		else if (lag > 0)
 		{
-			itsLogger->Warning("converting negating lag value " + std::to_string(-lag));
+			itsLogger->Warning("negating lag value " + std::to_string(-lag));
 			lag = -lag;
 		}
 
@@ -202,7 +202,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 			const int steps = std::stoi(itsConfiguration->GetValue("lagged_steps"));
 			if (steps <= 0)
 			{
-				throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0.");
+				throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0");
 			}
 			itsLaggedSteps = steps;
 		}

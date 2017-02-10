@@ -16,12 +16,9 @@ using namespace himan::util;
 
 namespace himan
 {
-
-// NOTE NOTE NOTE if we construct the object again always, we can't store any info about last fetch/previous fetch
-// this means we can't use std::unique_ptr in a loop and we can't std::move it to some helper function!
 lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsembleSize, HPTimeResolution lagResolution,
                                  int lag, size_t numberOfSteps)
-    : itsLagResolution(lagResolution), itsLag(lag), itsNumberOfSteps(numberOfSteps), itsLastFetchTime()
+    : itsLagResolution(lagResolution), itsLag(lag), itsNumberOfSteps(numberOfSteps)
 {
 	itsParam = parameter;
 	itsExpectedEnsembleSize = expectedEnsembleSize;
@@ -54,22 +51,27 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 	itsForecasts.clear();
 
 	const int lag = itsLag;
-	std::vector<int> missingForecasts(itsNumberOfSteps, 0);  // for each step
-	std::vector<int> loadedForecasts(itsNumberOfSteps, 0);   // for each step
-	forecast_time ftime(time);
+	int missing = 0;
+	int loaded = 0;
 
-	// Ordering: most recent forecast will be the last one in itsForecasts
-	if (itsLastFetchTime.OriginDateTime().Empty())
+	itsLogger->Info("Fetching for " + std::to_string(itsNumberOfSteps) + " timesteps with lag " + std::to_string(lag));
+
+	// Start from the 'earliest' origin time
+	for (int currentStep = static_cast<int>(itsNumberOfSteps) - 1; currentStep >= 0; currentStep--)
 	{
-		itsLogger->Info("Fetching for the first timestep, lagged steps not included");
-		const size_t currentStep = 0;
+		forecast_time ftime(time);
+
+		if (currentStep != 0) ftime.OriginDateTime().Adjust(itsLagResolution, lag * currentStep);
+
+		// Missing forecasts are only checked for the current origin time, not for lagged
 		for (const auto& desired : itsDesiredForecasts)
 		{
 			try
 			{
 				auto Info = f->Fetch(config, ftime, forecastLevel, itsParam, desired, false);
 				itsForecasts.push_back(Info);
-				loadedForecasts[currentStep]++;
+
+				if (currentStep == 0) loaded++;
 			}
 			catch (HPExceptionType& e)
 			{
@@ -80,50 +82,12 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 				}
 				else
 				{
-					missingForecasts[currentStep]++;
+					if (currentStep == 0) missing++;
 				}
 			}
 		}
-		itsLastFetchTime = ftime;
 	}
-	else
-	{
-		itsLogger->Info("Fetching for all timesteps");
-
-		// Start from the 'earliest' timestep
-		for (int currentStep = static_cast<int>(itsNumberOfSteps) - 1; currentStep >= 0; currentStep--)
-		{
-			ftime.OriginDateTime().Adjust(itsLagResolution, lag * currentStep);
-
-			for (const auto& desired : itsDesiredForecasts)
-			{
-				try
-				{
-					auto Info = f->Fetch(config, ftime, forecastLevel, itsParam, desired, false);
-					itsForecasts.push_back(Info);
-					loadedForecasts[currentStep]++;
-				}
-				catch (HPExceptionType& e)
-				{
-					if (e != kFileDataNotFound)
-					{
-						itsLogger->Fatal("Unable to proceed");
-						exit(1);
-					}
-					else
-					{
-						missingForecasts[currentStep]++;
-					}
-				}
-			}
-			itsLastFetchTime = ftime;
-		}
-	}
-
-	for (auto&& tupl : zip_range(loadedForecasts, missingForecasts))
-	{
-		VerifyValidForecastCount(tupl.get<0>(), tupl.get<1>());
-	}
+	VerifyValidForecastCount(loaded, missing);
 }
 
 void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMissingForecasts)
