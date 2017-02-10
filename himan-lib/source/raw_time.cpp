@@ -89,7 +89,7 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 
 		itsDateTime += adjustment;
 
-		if (gregorian::gregorian_calendar::is_leap_year(itsDateTime.date().year()))
+		if (gregorian::gregorian_calendar::is_leap_year(itsDateTime.date().year()) && String("%m%d") == "0229")
 		{
 			itsDateTime += gregorian::date_duration(-1);
 		}
