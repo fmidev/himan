@@ -14,8 +14,6 @@
 namespace himan
 {
 
-class lagged_ensemble;
-
 namespace plugin
 {
 class fractile : public compiled_plugin, private compiled_plugin_base
