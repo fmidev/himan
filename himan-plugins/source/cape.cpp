@@ -26,11 +26,6 @@ const unsigned char FCAPE3km = (1 << 0);
 using namespace std;
 using namespace himan::plugin;
 
-#ifdef POINTDEBUG
-const double epsilon = 0.07;
-himan::point debugPoint(25.417, 37.099);
-#endif
-
 #ifdef DEBUG
 #define DumpVector(A, B) himan::util::DumpVector(A, B)
 #else
@@ -108,6 +103,43 @@ std::string PrintMean(const vector<double>& vec)
 	return "min " + boost::lexical_cast<string>(static_cast<int>(min)) + " max " +
 	       boost::lexical_cast<string>(static_cast<int>(max)) + " mean " +
 	       boost::lexical_cast<string>(static_cast<int>(mean)) + " missing " + boost::lexical_cast<string>(missing);
+}
+
+void MoistLift(const double* Piter, const double* Titer, const double* Penv, double* Tparcel, int size)
+{
+	// Split MoistLift (intergration of a saturated air parcel upwards in atmosphere)
+	// to several threads since it is very CPU intensive
+
+	vector<future<void>> futures;
+
+	int workers = 4;
+
+	if (size % workers != 0)
+	{
+		workers = 3;
+		if (size % workers != 0)
+		{
+			workers = 1;
+		}
+	}
+
+	const int splitSize = floor(size / workers);
+
+	for (int num = 0; num < workers; num++)
+	{
+		const int start = num * splitSize;
+		futures.push_back(async(launch::async,
+		                        [&](int start) {
+			                        himan::metutil::MoistLift(&Piter[start], &Titer[start], &Penv[start],
+			                                                  &Tparcel[start], splitSize);
+			                    },
+		                        start));
+	}
+
+	for (auto& future : futures)
+	{
+		future.get();
+	}
 }
 
 cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt)
@@ -642,7 +674,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 		vector<double> TparcelVec(P.size(), kFloatMissing);
 
-		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		int i = -1;
 		for (auto&& tup : zip_range(VEC(PenvInfo), VEC(ZenvInfo), VEC(prevZenvInfo), VEC(prevTenvInfo),
@@ -671,17 +703,6 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			double prevTparcel = tup.get<7>();  // K
 			assert(prevTparcel > 100. || Tparcel == kFloatMissing);
 
-#ifdef POINTDEBUG
-			myTargetInfo->LocationIndex(i);
-			point currentPoint = myTargetInfo->LatLon();
-
-			if (fabs(currentPoint.X() - debugPoint.X()) < epsilon && fabs(currentPoint.Y() - debugPoint.Y()) < epsilon)
-			{
-				std::cout << "CAPE LatLon " << currentPoint.X() << "," << currentPoint.Y() << " Tparcel " << Tparcel
-				          << " Tenv " << Tenv << " startP " << P[i] << " Penv " << Penv << " CAPE " << CAPE[i]
-				          << " CAPE3km " << CAPE3km[i] << " CAPE1040 " << CAPE1040[i] << std::endl;
-			}
-#endif
 			if (found[i] & FCAPE)
 			{
 				continue;
@@ -907,7 +928,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		// (ie. we would be lowering the particle) missing value is returned.
 
 		vector<double> TparcelVec(P.size(), kFloatMissing);
-		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+
+		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		int i = -1;
 		for (auto&& tup :
@@ -930,17 +952,6 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			double& Tresult = tup.get<5>();
 			double& Presult = tup.get<6>();
 
-#ifdef POINTDEBUG
-			myTargetInfo->LocationIndex(i);
-			point currentPoint = myTargetInfo->LatLon();
-
-			if (fabs(currentPoint.X() - debugPoint.X()) < epsilon && fabs(currentPoint.Y() - debugPoint.Y()) < epsilon)
-			{
-				std::cout << "LFC LatLon " << currentPoint.X() << "," << currentPoint.Y() << " Tparcel " << Tparcel
-				          << " Tenv " << Tenv << " startP " << P[i] << " Penv " << Penv << " Tresult " << Tresult
-				          << " Presult " << Presult << std::endl;
-			}
-#endif
 			if (Tparcel == kFloatMissing || Penv > P[i])
 			{
 				continue;
@@ -1052,17 +1063,6 @@ pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo,
 		{
 			Presult = 0.01 * ((lcl.P > P) ? P : lcl.P);  // hPa
 		}
-
-#ifdef POINTDEBUG
-		myTargetInfo->LocationIndex(i);
-		point currentPoint = myTargetInfo->LatLon();
-
-		if (fabs(currentPoint.X() - debugPoint.X()) < epsilon && fabs(currentPoint.Y() - debugPoint.Y()) < epsilon)
-		{
-			std::cout << "LCL LatLon " << currentPoint.X() << "," << currentPoint.Y() << " T " << T << " TD " << TD
-			          << " P " << P << " TLCL " << Tresult << " PLCL " << Presult << std::endl;
-		}
-#endif
 	}
 
 	for (size_t i = 0; i < PLCL.size(); i++)
@@ -1352,25 +1352,6 @@ pair<vector<double>, vector<double>> cape::GetHighestThetaETAndTDCPU(shared_ptr<
 			double TD = metutil::DewPointFromRH_(T, RH);
 			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P * 100);
 
-#ifdef POINTDEBUG
-			myTargetInfo->LocationIndex(i);
-			point currentPoint = myTargetInfo->LatLon();
-
-			if (fabs(currentPoint.X() - debugPoint.X()) < epsilon && fabs(currentPoint.Y() - debugPoint.Y()) < epsilon)
-			{
-				std::cout << "MU LatLon " << currentPoint.X() << "," << currentPoint.Y() << " level "
-				          << curLevel.Value() << " T " << (T - 273.15) << " TD " << (TD - 273.15) << " RH " << RH
-				          << " P " << P << " ThetaE " << (ThetaE - 273.15) << " refThetaE " << (refThetaE - 273.15)
-				          << " Tresult " << (Tresult - 273.15) << " TDresult " << (TDresult - 273.15) << " \"Presult\" "
-				          << P;
-				if (ThetaE >= refThetaE)
-				{
-					std::cout << " new local maximum found";
-				}
-
-				std::cout << std::endl;
-			}
-#endif
 			assert(ThetaE >= 0);
 
 			if (ThetaE >= refThetaE)
