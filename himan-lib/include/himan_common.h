@@ -478,7 +478,8 @@ enum HPEnsembleType
 	kUnknownEnsembleType = 0,
 	kPerturbedEnsemble,
 	kTimeEnsemble,
-	kLevelEnsemble
+	kLevelEnsemble,
+	kLaggedEnsemble
 };
 
 const boost::unordered_map<HPEnsembleType, std::string> HPEnsembleTypeToString =
@@ -486,14 +487,16 @@ const boost::unordered_map<HPEnsembleType, std::string> HPEnsembleTypeToString =
 	(kUnknownEnsembleType, "unknown")
 	(kPerturbedEnsemble, "perturbed ensemble")
 	(kTimeEnsemble, "time ensemble")
-	(kLevelEnsemble, "level ensemble");
+	(kLevelEnsemble, "level ensemble")
+	(kLaggedEnsemble, "lagged ensemble");
 
 const boost::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType =
     ba::map_list_of
 	("unknown", kUnknownEnsembleType)
 	("perturbed ensemble", kPerturbedEnsemble)
 	("time ensemble", kTimeEnsemble)
-	("level ensemble", kLevelEnsemble);
+	("level ensemble", kLevelEnsemble)
+	("lagged ensemble", kLaggedEnsemble);
 
 /**
  * @struct HPVersionNumber

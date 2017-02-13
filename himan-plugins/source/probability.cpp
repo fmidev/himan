@@ -8,6 +8,7 @@
 #include "writer.h"
 
 #include "ensemble.h"
+#include "lagged_ensemble.h"
 #include "util.h"
 
 #include <boost/thread.hpp>
@@ -22,14 +23,12 @@ namespace himan
 {
 namespace plugin
 {
-
 static std::mutex singleFileWriteMutex;
 
 static const std::string kClassName = "himan::plugin::probability";
 
 /// @brief Used for calculating wind vector magnitude
 static inline double Magnitude(double u, double v) { return sqrt(u * u + v * v); }
-
 probability::probability()
 {
 	itsClearTextFormula = "???";
@@ -45,7 +44,6 @@ probability::probability()
 }
 
 probability::~probability() {}
-
 /// @brief Configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
@@ -180,11 +178,11 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 		int lag = std::stoi(itsConfiguration->GetValue("lag"));
 		if (lag == 0)
 		{
-			throw std::runtime_error(ClassName() + ": specify lag > 0");
+			throw std::runtime_error(ClassName() + ": specify lag < 0");
 		}
 		else if (lag > 0)
 		{
-			itsLogger->Warning("converting negating lag value " + std::to_string(-lag));
+			itsLogger->Warning("negating lag value " + std::to_string(-lag));
 			lag = -lag;
 		}
 
@@ -204,7 +202,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 			const int steps = std::stoi(itsConfiguration->GetValue("lagged_steps"));
 			if (steps <= 0)
 			{
-				throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0.");
+				throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0");
 			}
 			itsLaggedSteps = steps;
 		}
@@ -279,21 +277,20 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	Finish();
 }
 
-static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                            const int infoIndex, const bool normalized, ensemble& ens);
+static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                            bool normalized, std::unique_ptr<ensemble>& ens);
 
-static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                              const int infoIndex, const bool normalized, ensemble& ens);
+static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold,
+                              const int infoIndex, const bool normalized, std::unique_ptr<ensemble>& ens);
 
-static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                          const int infoIndex, const bool normalized, ensemble& ens1, ensemble& ens2);
+static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                          bool normalized, std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2);
 
 void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
 	info myTargetInfo = *itsInfo;
 
-	auto threadedLogger =
-	    logger_factory::Instance()->GetLog("probabilityThread # " + std::to_string(threadIndex));
+	auto threadedLogger = logger_factory::Instance()->GetLog("probabilityThread # " + std::to_string(threadIndex));
 	const std::string deviceType = "CPU";
 
 	const double threshold = pc.threshold;
@@ -301,37 +298,52 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	const int ensembleSize = itsEnsembleSize;
 	const bool normalized = itsUseNormalizedResult;
 
-	// used with all calculations
-	ensemble ens1(pc.parameter, ensembleSize);
-	ens1.MaximumMissingForecasts(itsMaximumMissingForecasts);
+	myTargetInfo.First();
 
-	// used with wind calculation
-	ensemble ens2;
+	std::unique_ptr<ensemble> ens1;
+	std::unique_ptr<ensemble> ens2;  // used with wind calculation
+
+	if (itsUseLaggedEnsemble)
+	{
+		threadedLogger->Info("Using lagged ensemble for ensemble #1");
+		ens1 = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+	}
+	else
+	{
+		ens1 = std::unique_ptr<ensemble>(new ensemble(pc.parameter, ensembleSize));
+	}
+	ens1->MaximumMissingForecasts(itsMaximumMissingForecasts);
 
 	if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 	{
 		// Wind
-		ens2 = ensemble(pc.parameter2, ensembleSize);
-		ens2.MaximumMissingForecasts(itsMaximumMissingForecasts);
+		if (itsUseLaggedEnsemble)
+		{
+			threadedLogger->Info("Using lagged ensemble for ensemble #2");
+			ens2 = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter2, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+		}
+		else
+		{
+			ens2 = std::unique_ptr<ensemble>(new ensemble(pc.parameter2, ensembleSize));
+		}
+		ens2->MaximumMissingForecasts(itsMaximumMissingForecasts);
 	}
-
-	myTargetInfo.First();
 
 	// NOTE we only loop through the time steps here
 	do
 	{
 		threadedLogger->Info("Calculating " + pc.output.Name() + " time " +
 		                     static_cast<std::string>(myTargetInfo.Time().ValidDateTime()) + " threshold '" +
-		                     std::to_string(threshold) + "' infoIndex " +
-		                     std::to_string(infoIndex));
+		                     std::to_string(threshold) + "' infoIndex " + std::to_string(infoIndex));
+
 		//
 		// Setup input data, data fetching
 		//
-		ens1.Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
+		ens1->Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
 
 		if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 		{
-			ens2.Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
+			ens2->Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
 		}
 
 		// Output memory
@@ -373,15 +385,14 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 	} while (myTargetInfo.NextTime());
 
-	threadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                     std::to_string(myTargetInfo.Data().MissingCount()) + "/" +
-	                     std::to_string(myTargetInfo.Data().Size()));
+	threadedLogger->Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo.Data().MissingCount()) +
+	                     "/" + std::to_string(myTargetInfo.Data().Size()));
 }
 
 // Usually himan writes all the parameters out on a call to WriteToFile, but probability calculates
 // each parameter separately in separate threads so this makes no sense (writing all out if we've only
 // calculated one parameter)
-void probability::WriteToFile(const info& targetInfo, const size_t targetInfoIndex, write_options opts)
+void probability::WriteToFile(const info& targetInfo, size_t targetInfoIndex, write_options opts)
 {
 	auto writer = GET_PLUGIN(writer);
 
@@ -409,16 +420,16 @@ void probability::WriteToFile(const info& targetInfo, const size_t targetInfoInd
 	}
 }
 
-void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold, const int infoIndex,
-                   const bool normalized, ensemble& ens1, ensemble& ens2)
+void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                   bool normalized, std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
-	ens1.ResetLocation();
-	ens2.ResetLocation();
+	ens1->ResetLocation();
+	ens2->ResetLocation();
 
-	const size_t ensembleSize = ens1.Size();
-	if (ensembleSize != ens2.Size())
+	const size_t ensembleSize = ens1->Size();
+	if (ensembleSize != ens2->Size())
 	{
 		throw std::runtime_error(kClassName + "::CalculateWind(): U and V ensembles are of different size, aborting");
 	}
@@ -426,14 +437,14 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
-	while (targetInfo->NextLocation() && ens1.NextLocation() && ens2.NextLocation())
+	while (targetInfo->NextLocation() && ens1->NextLocation() && ens2->NextLocation())
 	{
 		double probability = 0.0;
 
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
-			const auto u = ens1.Value(i);
-			const auto v = ens2.Value(i);
+			const auto u = ens1->Value(i);
+			const auto v = ens2->Value(i);
 
 			if ((u == kFloatMissing) || (v == kFloatMissing))
 			{
@@ -449,24 +460,24 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const
 	}
 }
 
-void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                       const int infoIndex, const bool normalized, ensemble& ens)
+void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                       bool normalized, std::unique_ptr<ensemble>& ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
-	ens.ResetLocation();
+	ens->ResetLocation();
 
-	const size_t ensembleSize = ens.Size();
+	const size_t ensembleSize = ens->Size();
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
-	while (targetInfo->NextLocation() && ens.NextLocation())
+	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
 		double probability = 0.0;
 
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
-			const auto x = ens.Value(i);
+			const auto x = ens->Value(i);
 			if ((x != kFloatMissing) && (x <= threshold))
 			{
 				probability += invN;
@@ -476,24 +487,24 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 	}
 }
 
-void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const double threshold,
-                     const int infoIndex, const bool normalized, ensemble& ens)
+void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
+                     bool normalized, std::unique_ptr<ensemble>& ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
-	ens.ResetLocation();
+	ens->ResetLocation();
 
-	const size_t ensembleSize = ens.Size();
+	const size_t ensembleSize = ens->Size();
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
-	while (targetInfo->NextLocation() && ens.NextLocation())
+	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
 		double probability = 0.0;
 
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
-			const auto x = ens.Value(i);
+			const auto x = ens->Value(i);
 			if ((x != kFloatMissing) && (x >= threshold))
 			{
 				probability += invN;

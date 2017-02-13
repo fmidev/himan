@@ -122,7 +122,11 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 			}
 		}
 	}
+	VerifyValidForecastCount(numMissingForecasts);
+}
 
+void ensemble::VerifyValidForecastCount(int numMissingForecasts)
+{
 	// This is for data that might not have all the fields for every timestep
 	if (itsMaximumMissingForecasts > 0)
 	{

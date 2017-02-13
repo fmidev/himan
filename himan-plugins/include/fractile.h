@@ -13,6 +13,7 @@
 
 namespace himan
 {
+
 namespace plugin
 {
 class fractile : public compiled_plugin, private compiled_plugin_base
@@ -36,6 +37,8 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 	int itsEnsembleSize;
 	HPEnsembleType itsEnsembleType;
 	std::vector<double> itsFractiles;
+	int itsLag;
+	int itsLaggedSteps;
 	int itsMaximumMissingForecasts;
 };
 
