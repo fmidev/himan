@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.1.30
+Version: 17.2.13
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -14,13 +14,13 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 16.12.15
-Requires: himan-bin >= 16.6.6
+Requires: himan-lib >= 17.2.13
+Requires: himan-bin >= 17.2.13
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 16.9.8
 Requires: libfmidb >= 16.12.9
-Requires: smartmet-library-newbase
+Requires: smartmet-library-newbase >= 17.2.13
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -38,7 +38,7 @@ Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 16.12.9
 BuildRequires: libfmigrib-devel >= 16.6.13
-BuildRequires: smartmet-library-newbase-devel
+BuildRequires: smartmet-library-newbase-devel >= 17.2.13
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.53
@@ -113,6 +113,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Feb 13 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.13-1.fmi
+- New newbase
+- time_lagged ensemble
+- Improved aux file read
+- Leap year fix for raw_time
+- CAPE MoistLift optimization
+- Apply scale+base when writing querydata
+- Added plugin documentation
 * Mon Jan 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.30-1.fmi
 - Dependency to open sourced Newbase
 * Tue Jan 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.17-1.fmi

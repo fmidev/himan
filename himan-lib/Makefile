@@ -1,6 +1,6 @@
 LIB = himan
 
-SCONS_FLAGS=-j 4
+SCONS_FLAGS=-j 6
 
 # How to install
 
