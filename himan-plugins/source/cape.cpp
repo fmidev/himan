@@ -110,6 +110,37 @@ std::string PrintMean(const vector<double>& vec)
 	       boost::lexical_cast<string>(static_cast<int>(mean)) + " missing " + boost::lexical_cast<string>(missing);
 }
 
+void MoistLift(const double* Piter, const double* Titer, const double* Penv, double* Tparcel, int size)
+{
+	// Split MoistLift (intergration of a saturated air parcel upwards in atmosphere)
+	// to several threads since it is very CPU intensive
+
+	vector<future<void>> futures;
+
+	const int workers = 4;
+	const int splitSize = floor(size / workers);
+
+	if (size % workers != 0) throw runtime_error(to_string(workers) + " doesn't cut it");
+
+	std::cout << "starting moist lift with " << workers << " workers\n";
+
+	for (int num = 0; num < workers; num++)
+	{
+		const int start = num * splitSize;
+		futures.push_back(async(launch::async,
+		                        [&](int start) {
+			                        himan::metutil::MoistLift(&Piter[start], &Titer[start], &Penv[start],
+			                                                  &Tparcel[start], splitSize);
+			                    },
+		                        start));
+	}
+
+	for (auto& future : futures)
+	{
+		future.get();
+	}
+}
+
 cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt)
 {
 	itsClearTextFormula = "<multiple algorithms>";
@@ -642,7 +673,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 		vector<double> TparcelVec(P.size(), kFloatMissing);
 
-		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		int i = -1;
 		for (auto&& tup : zip_range(VEC(PenvInfo), VEC(ZenvInfo), VEC(prevZenvInfo), VEC(prevTenvInfo),
@@ -907,7 +938,9 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		// (ie. we would be lowering the particle) missing value is returned.
 
 		vector<double> TparcelVec(P.size(), kFloatMissing);
-		metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+
+		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+		// metutil::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		int i = -1;
 		for (auto&& tup :
