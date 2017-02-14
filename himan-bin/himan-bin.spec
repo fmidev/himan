@@ -15,18 +15,18 @@ Requires: libgcc
 Requires: libstdc++
 Requires: himan-lib >= 17.2.13
 Requires: himan-plugins
-Requires: jasper
 Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
 Requires: zlib
 BuildRequires: boost-devel >= 1.53
 
 %if %{defined suse_version}
-
+Requires: libjasper
 %else
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-8-0
+Requires: jasper
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
