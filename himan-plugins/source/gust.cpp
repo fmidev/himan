@@ -369,29 +369,34 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			esto = iT.intT_100[i] + iT.intT_200[i];
 			esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i];
 		}
-		else if (z_boundaryl[i] >= 300)
+
+		if (z_boundaryl[i] >= 300)
 		{
 			esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i];
 			esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i];
 		}
-		else if (z_boundaryl[i] >= 400)
+
+		if (z_boundaryl[i] >= 400)
 		{
 			esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i] + iT.intT_400[i];
 			esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i] + iTot.intTot_400[i];
 		}
-		else if (z_boundaryl[i] >= 500)
+
+		if (z_boundaryl[i] >= 500)
 		{
 			esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i] + iT.intT_400[i] + iT.intT_500[i];
 			esto_tot =
 			    iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i] + iTot.intTot_400[i] + iTot.intTot_500[i];
 		}
-		else if (z_boundaryl[i] >= 600)
+
+		if (z_boundaryl[i] >= 600)
 		{
 			esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i] + iT.intT_400[i] + iT.intT_500[i] + iT.intT_600[i];
 			esto_tot = iTot.intTot_100[i] + iTot.intTot_200[i] + iTot.intTot_300[i] + iTot.intTot_400[i] +
 			           iTot.intTot_500[i] + iTot.intTot_600[i];
 		}
-		else if (z_boundaryl[i] == 700)
+
+		if (z_boundaryl[i] == 700)
 		{
 			esto = iT.intT_100[i] + iT.intT_200[i] + iT.intT_300[i] + iT.intT_400[i] + iT.intT_500[i] + iT.intT_600[i] +
 			       iT.intT_700[i];
@@ -549,11 +554,11 @@ void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize)
 	for (size_t i = 0; i < gridSize; ++i)
 	{
 		dTot.deltaTot_100[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (100 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100 / 1000)));
+		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100 / 1000))); // => -3.8*(0.010-(100/1000)) ???
 		dTot.deltaTot_200[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (200 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200 / 1000)));
+		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200 / 1000))); // => -3.8*(0.010-(200/1000))
 		dTot.deltaTot_300[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (300 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300 / 1000)));
+		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300 / 1000))); // ... etc.
 		dTot.deltaTot_400[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (400 / 1000))) -
 		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (400 / 1000)));
 		dTot.deltaTot_500[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (500 / 1000))) -
@@ -577,7 +582,7 @@ void IntT(intT& iT, const deltaT& dT, size_t gridSize)
 
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100;
+		iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100; // why 0.5 * here? Would make sense in case of (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is integration using trapezoidal rule
 		iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
 		iT.intT_300[i] = 0.5 * (dT.deltaT_300[i] + dT.deltaT_200[i]) * 100;
 		iT.intT_400[i] = 0.5 * (dT.deltaT_400[i] + dT.deltaT_300[i]) * 100;
@@ -599,7 +604,7 @@ void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize)
 
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		iTot.intTot_100[i] = 0.5 * dTot.deltaTot_100[i] * 100;
+		iTot.intTot_100[i] = 0.5 * dTot.deltaTot_100[i] * 100; // 0.5 * ???
 		iTot.intTot_200[i] = 0.5 * (dTot.deltaTot_200[i] + dTot.deltaTot_100[i]) * 100;
 		iTot.intTot_300[i] = 0.5 * (dTot.deltaTot_300[i] + dTot.deltaTot_200[i]) * 100;
 		iTot.intTot_400[i] = 0.5 * (dTot.deltaTot_400[i] + dTot.deltaTot_300[i]) * 100;
