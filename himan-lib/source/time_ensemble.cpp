@@ -26,6 +26,10 @@ time_ensemble::time_ensemble(const param& parameter, size_t expectedEnsembleSize
 	itsExpectedEnsembleSize = expectedEnsembleSize;
 	itsEnsembleType = kTimeEnsemble;
 
+	// itsDesiredForecasts is not used in time_ensemble directly,
+	// but ensemble uses it at least in VerifyValidForecastCount()
+	itsDesiredForecasts.resize(itsExpectedEnsembleSize);
+
 	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
 }
 
