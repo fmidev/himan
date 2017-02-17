@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.2.13
+Version: 17.2.17
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -61,6 +61,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Feb 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.17-1.fmi
+- raw_time and time_ensemble fixes
 * Mon Feb 13 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.13-1.fmi
 - New newbase
 - time_lagged ensemble
