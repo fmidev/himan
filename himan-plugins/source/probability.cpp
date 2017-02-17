@@ -1,4 +1,3 @@
-// vim: set ai shiftwidth=4 softtabstop=4 tabstop=4
 #include "probability.h"
 
 #include "logger_factory.h"
@@ -50,8 +49,6 @@ probability::~probability() {}
 static param GetConfigurationParameter(const std::string& name, const std::shared_ptr<const plugin_configuration> conf,
                                        param_configuration* outParamConfig)
 {
-	long univId = 0;
-
 	if (conf->ParameterExists(name))
 	{
 		const auto paramOpts = conf->GetParameterOptions(name);
@@ -62,11 +59,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		// NOTE These are plugin dependent
 		for (auto&& p : paramOpts)
 		{
-			if (p.first == "univ_id")
-			{
-				univId = std::stol(p.second);
-			}
-			else if (p.first == "threshold")
+			if (p.first == "threshold")
 			{
 				outParamConfig->threshold = std::stod(p.second);
 			}
@@ -78,21 +71,13 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			{
 				param2.Name(p.second);
 			}
-			else if (p.first == "input_id1")
-			{
-				param1.UnivId(std::stol(p.second));
-			}
-			else if (p.first == "input_id2")
-			{
-				param2.UnivId(std::stol(p.second));
-			}
 			else
 			{
 				std::cout << "?? " << p.first << " " << p.second << "\n";
 			}
 		}
 
-		if (param1.Name() == "XX-X" || param1.UnivId() == static_cast<long>(kHPMissingInt))
+		if (param1.Name() == "XX-X")
 		{
 			throw std::runtime_error("probability : configuration error:: input parameter not specified for '" + name +
 			                         "'");
@@ -100,7 +85,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		outParamConfig->parameter = param1;
 
 		// NOTE param2 is used only with wind calculation at the moment
-		if (param2.Name() != "XX-X" && param2.UnivId() != static_cast<long>(kHPMissingInt))
+		if (param2.Name() != "XX-X")
 		{
 			outParamConfig->parameter2 = param2;
 		}
@@ -112,9 +97,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		    "'");
 	}
 
-	assert(univId != 0);
-
-	return param(name, univId);
+	return param(name);
 }
 
 void probability::Process(const std::shared_ptr<const plugin_configuration> conf)
@@ -230,7 +213,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 		param p = GetConfigurationParameter(name, conf, &config);
 
-		if (p.Name() == "" || p.UnivId() == 0)
+		if (p.Name() == "")
 		{
 			throw std::runtime_error(ClassName() + "Misconfigured parameter definition in JSON");
 		}

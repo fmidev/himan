@@ -41,6 +41,7 @@ public:
 	bool Adjust(HPTimeResolution timeResolution, int theValue);
 
 	bool Empty() const;
+	bool IsLeapYear() const;
 
 private:
 	std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
