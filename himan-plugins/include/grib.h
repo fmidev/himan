@@ -16,7 +16,7 @@ namespace plugin
 {
 class grib : public io_plugin
 {
-public:
+   public:
 	grib();
 
 	virtual ~grib() {}
@@ -71,17 +71,18 @@ public:
 
 	bool ToFile(info& anInfo, std::string& outputFile, bool appendToFile = false);
 
-private:
+   private:
 	void WriteAreaAndGrid(info& anInfo);
 	void WriteTime(info& anInfo);
 	void WriteParameter(info& anInfo);
-	bool CreateInfoFromGrib(const search_options& options, bool readContents, bool readPackedData, bool forceCaching,
+	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
 	                        std::shared_ptr<info> newInfo) const;
 
 	/**
 	 * @brief OptionsToKeys
 	 *
-	 * Converts the search options struct into a map of key-value pairs that are used to select a grib message from a grib
+	 * Converts the search options struct into a map of key-value pairs that are used to select a grib message from a
+	 * grib
 	 * index file
 	 * @param options Search options (param, level, time)
 	 */
@@ -89,6 +90,11 @@ private:
 	std::map<std::string, long> OptionsToKeys(const search_options& options) const;
 
 	std::unique_ptr<grid> ReadAreaAndGrid() const;
+	himan::param ReadParam(const search_options& options, const producer& prod) const;
+	himan::forecast_time ReadTime() const;
+	himan::level ReadLevel(const search_options& options) const;
+	himan::producer ReadProducer(const search_options& options) const;
+	void ReadData(info_t newInfo, bool readPackedData) const;
 
 	/**
 	 * @brief UnpackBitmap
