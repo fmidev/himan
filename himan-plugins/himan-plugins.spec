@@ -95,7 +95,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libquerydata.so
 %{_libdir}/himan-plugins/libradon.so
 %{_libdir}/himan-plugins/librelative_humidity.so
-%{_libdir}/himan-plugins/libroughness.so
 %{_libdir}/himan-plugins/libseaicing.so
 %{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libstability.so
