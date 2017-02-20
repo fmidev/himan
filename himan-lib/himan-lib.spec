@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.1.30
+Version: 17.2.17
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -33,7 +33,7 @@ BuildRequires: libfmidb-devel >= 16.12.9
 BuildRequires: libfmigrib-devel >= 16.9.8
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.53
-BuildRequires: smartmet-library-newbase-devel
+BuildRequires: smartmet-library-newbase-devel >= 17.2.13
 BuildRequires: scons
 
 Provides: libhiman.so
@@ -61,6 +61,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Feb 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.17-1.fmi
+- raw_time and time_ensemble fixes
+* Mon Feb 13 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.13-1.fmi
+- New newbase
+- time_lagged ensemble
+- Improved aux file read
+- Leap year fix for raw_time
+- CAPE MoistLift optimization
+- Apply scale+base when writing querydata
 * Mon Jan 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.30-1.fmi
 - Dependency to open sourced Newbase
 - Fix for Lambert vector component rotation
