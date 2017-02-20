@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 17.1.30
+Version: 17.2.13
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -13,19 +13,20 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 16.10.5
-Requires: jasper
+Requires: himan-lib >= 17.2.13
+Requires: himan-plugins
 Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
 Requires: zlib
 BuildRequires: boost-devel >= 1.53
 
 %if %{defined suse_version}
-
+Requires: libjasper
 %else
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-8-0
+Requires: jasper
 Requires: boost-program-options
 Requires: boost-system
 Requires: boost-regex
@@ -62,6 +63,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Feb 13 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.13-1.fmi
+- New newbase
+- time_lagged ensemble
+- Improved aux file read
+- Leap year fix for raw_time
+- CAPE MoistLift optimization
+- Apply scale+base when writing querydata
 * Mon Jan 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.1.30-1.fmi
 - Remove dependency to Newbase
 * Wed Dec  7 2016 Mikko Partio <mikko.partio@fmi.fi> - 16.12.7-1.fmi

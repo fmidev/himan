@@ -10,6 +10,46 @@
 using namespace himan;
 using namespace himan::plugin;
 
+void AdjustTimes(forecast_time& ftime, HPTimeResolution timeSpan, int value)
+{
+	ftime.OriginDateTime().Adjust(timeSpan, value);
+	ftime.ValidDateTime().Adjust(timeSpan, value);
+
+	if (ftime.OriginDateTime().IsLeapYear() && timeSpan == kYearResolution)
+	{
+		// case:
+		// origin time: 2017-02-28 12
+		// valid time: 2017-03-01 00 (step: 12hrs)
+		//
+		// after adjustment of -1 years:
+		// origin time: 2016-02-28 12
+		// valid time: 2016-03-01 00 (step: 36hrs)
+		//
+		// fix by adjusting valid time -1 day
+		// valid time: 2016-02-29 00 (step: 12hrs)
+
+		ftime.ValidDateTime().Adjust(kDayResolution, -1);
+	}
+
+	if (ftime.Step() < 0)
+	{
+		// to recover from a leap year extra day subtraction,
+		// to continue from previous example:
+		// origin time: 2016-02-28 12
+		// valid time: 2016-02-29 00 (step: 12hrs)
+		//
+		// after adjustment of -1 years:
+		// origin time: 2015-02-28 12
+		// valid time: 2015-02-28 00 (step: -12hrs)
+		//
+		// fix by adjusting valid time +1 day
+
+		ftime.ValidDateTime().Adjust(kDayResolution, 1);
+	}
+
+	assert(ftime.Step() >= 0);
+}
+
 time_ensemble::time_ensemble(const param& parameter) : itsTimeSpan(kYearResolution)
 {
 	itsParam = parameter;
@@ -49,10 +89,9 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 		{
 			auto info = f->Fetch(config, ftime, forecastLevel, itsParam);
 
-			itsForecasts.push_back(info);
+			AdjustTimes(ftime, itsTimeSpan, -1);
 
-			ftime.OriginDateTime().Adjust(itsTimeSpan, -1);
-			ftime.ValidDateTime().Adjust(itsTimeSpan, -1);
+			itsForecasts.push_back(info);
 		}
 		catch (HPExceptionType& e)
 		{
@@ -64,9 +103,8 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 			else
 			{
 				numMissingForecasts++;
-				ftime.OriginDateTime().Adjust(itsTimeSpan, -1);
-				ftime.ValidDateTime().Adjust(itsTimeSpan, -1);
 
+				AdjustTimes(ftime, itsTimeSpan, -1);
 			}
 		}
 	}
