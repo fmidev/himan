@@ -125,7 +125,6 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param WSParam("FF-MS");            // wind speed
 	const param GustParam("FFG-MS");         // wind gust
 	const param TParam("T-K");               // temperature
-	const param T_LowestLevelParam("T-K");   // temperature at lowest level
 	const param TopoParam("Z-M2S2");         // geopotential height
 	const param LowCloudParam("NL-PRCNT");   // low cloud cover
 	const param MidCloudParam("NM-PRCNT");   // middle cloud cover
@@ -179,7 +178,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	GustInfo = Fetch(forecastTime, H10, GustParam, forecastType, false);
-	T_LowestLevelInfo = Fetch(forecastTime, lowestHybridLevel, T_LowestLevelParam, forecastType, false);
+	T_LowestLevelInfo = Fetch(forecastTime, lowestHybridLevel, TParam, forecastType, false);
 	BLHInfo = Fetch(forecastTime, H0, BLHParam, forecastType, false);
 	TopoInfo = Fetch(forecastTime, H0, TopoParam, forecastType, false);
 	LCloudInfo = Fetch(forecastTime, H0, LowCloudParam, forecastType, false);
@@ -666,7 +665,7 @@ void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, in
 			if (lowClouds->Data()[i] != himan::kFloatMissing)
 			{
 				if (middleClouds->Data()[i] != himan::kFloatMissing)
-					lowAndMiddleClouds[i] = max(lowClouds->Data()[i], middleClouds->Data()[i]) * 10;
+					lowAndMiddleClouds[i] = max(lowClouds->Data()[i], middleClouds->Data()[i]) * 100;
 				else
 					lowAndMiddleClouds[i] = lowClouds->Data()[i] * 100;
 			}
