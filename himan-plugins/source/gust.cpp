@@ -77,13 +77,14 @@ struct intTot
 };
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
-            size_t gridSize, deltaT& dT, bool& succeeded);
+            size_t gridSize, deltaT& dT);
 void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize);
 void IntT(intT& iT, const deltaT& dT, size_t gridSize);
 void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
+void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, info_t middleClouds, info_t highClouds,
+                        info_t totalClouds);
 
 gust::gust() { itsLogger = logger_factory::Instance()->GetLog("gust"); }
-
 void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -120,16 +121,18 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	 */
 	const size_t gridSize = myTargetInfo->Grid()->Size();
 
-	const param BLHParam("MIXHGT-M");       // boundary layer height
-	const param WSParam("FF-MS");           // wind speed
-	const param GustParam("FFG-MS");        // wind gust
-	const param TParam("T-K");              // temperature
-	const param T_LowestLevelParam("T-K");  // temperature at lowest level
-	const param TopoParam("Z-M2S2");        // geopotential height
-	const param LowCloudParam("NL-PRCNT");  // low cloud cover
-	const param MedCloudParam("NM-PRCNT");  // medium cloud cover
+	const param BLHParam("MIXHGT-M");        // boundary layer height
+	const param WSParam("FF-MS");            // wind speed
+	const param GustParam("FFG-MS");         // wind gust
+	const param TParam("T-K");               // temperature
+	const param T_LowestLevelParam("T-K");   // temperature at lowest level
+	const param TopoParam("Z-M2S2");         // geopotential height
+	const param LowCloudParam("NL-PRCNT");   // low cloud cover
+	const param MidCloudParam("NM-PRCNT");   // middle cloud cover
+	const param HighCloudParam("NH-PRCNT");  // high cloud cover
+	const param TotalCloudParam("N-PRCNT");  // total cloud cover
 
-	level H0, H10, Ground;
+	level H0, H10;
 
 	producer prod = itsConfiguration->SourceProducer(0);
 
@@ -160,22 +163,14 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		H0 = level(kGround, 0);
 		H10 = H0;
-		Ground = H0;
-	}
-	else if (myTargetInfo->Producer().Id() == 210)
-	{
-		H0 = level(kHeight, 0);
-		H10 = level(kHeight, 10);
-		Ground = H0;
 	}
 	else
 	{
-		Ground = level(kGround, 0);
 		H0 = level(kHeight, 0);
 		H10 = level(kHeight, 10);
 	}
 
-	info_t GustInfo, T_LowestLevelInfo, BLHInfo, TopoInfo, LCloudInfo, MCloudInfo;
+	info_t GustInfo, T_LowestLevelInfo, BLHInfo, TopoInfo, LCloudInfo, MCloudInfo, HCloudInfo, TCloudInfo;
 
 	// Current time and level
 
@@ -188,28 +183,37 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	BLHInfo = Fetch(forecastTime, H0, BLHParam, forecastType, false);
 	TopoInfo = Fetch(forecastTime, H0, TopoParam, forecastType, false);
 	LCloudInfo = Fetch(forecastTime, H0, LowCloudParam, forecastType, false);
-	MCloudInfo = Fetch(forecastTime, H0, MedCloudParam, forecastType, false);
+	MCloudInfo = Fetch(forecastTime, H0, MidCloudParam, forecastType, false);
+	HCloudInfo = Fetch(forecastTime, H0, HighCloudParam, forecastType, false);
+	TCloudInfo = Fetch(forecastTime, H0, TotalCloudParam, forecastType, false);
 
-	if (!GustInfo || !T_LowestLevelInfo || !LCloudInfo || !MCloudInfo)
+	if (!GustInfo || !T_LowestLevelInfo || !LCloudInfo || !MCloudInfo || !HCloudInfo || !TCloudInfo)
 	{
 		itsLogger->Error("Unable to find all source data");
 		return;
 	}
 
 	deltaT dT;
+	vector<double> lowAndMiddleClouds(gridSize, kFloatMissing);
 
-	bool succeeded = false;
-
-	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, gridSize, boost::ref(dT),
-	                boost::ref(succeeded));
+	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, gridSize, boost::ref(dT));
+	boost::thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
+	                 TCloudInfo);
 
 	// calc boundary layer height
-	vector<double> z_boundaryl(gridSize, 0);
-	vector<double> z_one_third_boundaryl(gridSize, 0);
-	vector<double> z_two_third_boundaryl(gridSize, 0);
+	vector<double> z_boundaryl(gridSize, kFloatMissing);
+	vector<double> z_one_third_boundaryl(gridSize, kFloatMissing);
+	vector<double> z_two_third_boundaryl(gridSize, kFloatMissing);
 	vector<double> z_zero(gridSize, 0);
 	for (size_t i = 0; i < gridSize; ++i)
 	{
+		if (BLHInfo->Data()[i] == kFloatMissing)
+		{
+			continue;
+		}
+
+		z_boundaryl[i] = BLHInfo->Data()[i];
+
 		if (BLHInfo->Data()[i] >= 200)
 		{
 			z_boundaryl[i] = 0.5 * BLHInfo->Data()[i] + 100;
@@ -218,10 +222,10 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			{
 				z_boundaryl[i] = 700;
 			}
-
-			z_one_third_boundaryl[i] = z_boundaryl[i] / 3;
-			z_two_third_boundaryl[i] = 2 * z_one_third_boundaryl[i];
 		}
+
+		z_one_third_boundaryl[i] = z_boundaryl[i] / 3;
+		z_two_third_boundaryl[i] = 2 * z_one_third_boundaryl[i];
 	}
 
 	// maybe need adjusting
@@ -246,6 +250,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			myThreadedLogger->Error("hitool was unable to find data");
 			t.join();
+			t2.join();
 			return;
 		}
 	}
@@ -266,6 +271,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			myThreadedLogger->Error("hitool was unable to find data");
 			t.join();
+			t2.join();
 			return;
 		}
 	}
@@ -286,6 +292,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			myThreadedLogger->Error("hitool was unable to find data");
 			t.join();
+			t2.join();
 			return;
 		}
 	}
@@ -310,6 +317,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			myThreadedLogger->Error("hitool was unable to find data");
 			t.join();
+			t2.join();
 			return;
 		}
 	}
@@ -330,11 +338,13 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			myThreadedLogger->Error("hitool was unable to find data");
 			t.join();
+			t2.join();
 			return;
 		}
 	}
 
 	t.join();
+	t2.join();
 
 	deltaTot dTot;
 	intT iT;
@@ -358,10 +368,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		double turb_kerroin = 0;
 		double pilvikerroin = 0;
 		double cloudCover = (LCloudInfo->Value() + MCloudInfo->Value()) * 100;
-
 		topo *= himan::constants::kIg;
 
 		NFmiLocation theLocation(myTargetInfo->LatLon().X(), myTargetInfo->LatLon().Y());
+		double elevationAngle = theLocation.ElevationAngle(theTime);
+
 		/* Calculations go here */
 
 		if (z_boundaryl[i] >= 200)
@@ -434,8 +445,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			gust = 1;
 		}
 
-		if (topo > 15 && topo < 400 && t_diff[i] > 0 && t_diff[i] <= 4 && BLbottom_ws[i] < 7 &&
-		    theLocation.ElevationAngle(theTime) < 15)
+		if (topo > 15 && topo < 400 && t_diff[i] > 0 && t_diff[i] <= 4 && BLbottom_ws[i] < 7 && elevationAngle < 15)
 		{
 			gust = ((1 - gust) / 4) * t_diff[i] + gust;
 		}
@@ -455,11 +465,11 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			pilvikerroin = 1;
 		}
 
-		if (theLocation.ElevationAngle(theTime) >= 20 && topo > 10 && z_boundaryl[i] >= 200 && esto < 0)
+		if (elevationAngle >= 20 && topo > 10 && z_boundaryl[i] >= 200 && esto < 0)
 		{
-			turb_lisa = 0.133333333 * theLocation.ElevationAngle(theTime) - 2.666666667;
+			turb_lisa = 0.133333333 * elevationAngle - 2.666666667;
 
-			if (theLocation.ElevationAngle(theTime) > 50)
+			if (elevationAngle > 50)
 			{
 				turb_lisa = 4;
 			}
@@ -497,7 +507,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 }
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
-            size_t gridSize, deltaT& dT, bool& succeeded)
+            size_t gridSize, deltaT& dT)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -519,16 +529,32 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 
 		for (size_t i = 0; i < gridSize; ++i)
 		{
-			dT.deltaT_100[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100 / 1000));
-			dT.deltaT_200[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200 / 1000));
-			dT.deltaT_300[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300 / 1000));
-			dT.deltaT_400[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (400 / 1000));
-			dT.deltaT_500[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (500 / 1000));
-			dT.deltaT_600[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (600 / 1000));
-			dT.deltaT_700[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (700 / 1000));
+			if (T_lowestLevel->Data()[i] == himan::kFloatMissing)
+			{
+				dT.deltaT_100[i] = himan::kFloatMissing;
+				dT.deltaT_200[i] = himan::kFloatMissing;
+				dT.deltaT_300[i] = himan::kFloatMissing;
+				dT.deltaT_400[i] = himan::kFloatMissing;
+				dT.deltaT_500[i] = himan::kFloatMissing;
+				dT.deltaT_600[i] = himan::kFloatMissing;
+				dT.deltaT_700[i] = himan::kFloatMissing;
+				continue;
+			}
+			if (dT.deltaT_100[i] != himan::kFloatMissing)
+				dT.deltaT_100[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100.0 / 1000.0));
+			if (dT.deltaT_200[i] != himan::kFloatMissing)
+				dT.deltaT_200[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200.0 / 1000.0));
+			if (dT.deltaT_300[i] != himan::kFloatMissing)
+				dT.deltaT_300[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300.0 / 1000.0));
+			if (dT.deltaT_400[i] != himan::kFloatMissing)
+				dT.deltaT_400[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (400.0 / 1000.0));
+			if (dT.deltaT_500[i] != himan::kFloatMissing)
+				dT.deltaT_500[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (500.0 / 1000.0));
+			if (dT.deltaT_600[i] != himan::kFloatMissing)
+				dT.deltaT_600[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (600.0 / 1000.0));
+			if (dT.deltaT_700[i] != himan::kFloatMissing)
+				dT.deltaT_700[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (700.0 / 1000.0));
 		}
-
-		succeeded = true;
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -536,8 +562,6 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 		{
 			throw runtime_error("DeltaT() caught exception " + boost::lexical_cast<string>(e));
 		}
-
-		succeeded = false;
 	}
 }
 
@@ -553,42 +577,53 @@ void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize)
 
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		dTot.deltaTot_100[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (100 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100 / 1000))); // => -3.8*(0.010-(100/1000)) ???
-		dTot.deltaTot_200[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (200 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200 / 1000))); // => -3.8*(0.010-(200/1000))
-		dTot.deltaTot_300[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (300 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300 / 1000))); // ... etc.
-		dTot.deltaTot_400[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (400 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (400 / 1000)));
-		dTot.deltaTot_500[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (500 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (500 / 1000)));
-		dTot.deltaTot_600[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (600 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (600 / 1000)));
-		dTot.deltaTot_700[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (700 / 1000))) -
-		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (700 / 1000)));
+		dTot.deltaTot_100[i] =
+		    (T_lowestLevel->Data()[i] + 6 * (0.010 - (100.0 / 1000.0))) -
+		    (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100.0 / 1000.0)));  // => -3.8*(0.010-(100/1000)) ???
+		dTot.deltaTot_200[i] =
+		    (T_lowestLevel->Data()[i] + 6 * (0.010 - (200.0 / 1000.0))) -
+		    (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200.0 / 1000.0)));  // => -3.8*(0.010-(200/1000))
+		dTot.deltaTot_300[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (300.0 / 1000.0))) -
+		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300.0 / 1000.0)));  // ... etc.
+		dTot.deltaTot_400[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (400.0 / 1000.0))) -
+		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (400.0 / 1000.0)));
+		dTot.deltaTot_500[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (500.0 / 1000.0))) -
+		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (500.0 / 1000.0)));
+		dTot.deltaTot_600[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (600.0 / 1000.0))) -
+		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (600.0 / 1000.0)));
+		dTot.deltaTot_700[i] = (T_lowestLevel->Data()[i] + 6 * (0.010 - (700.0 / 1000.0))) -
+		                       (T_lowestLevel->Data()[i] + 9.8 * (0.010 - (700.0 / 1000.0)));
 	}
 }
 
 void IntT(intT& iT, const deltaT& dT, size_t gridSize)
 {
-	iT.intT_100 = vector<double>(gridSize, 0);
-	iT.intT_200 = vector<double>(gridSize, 0);
-	iT.intT_300 = vector<double>(gridSize, 0);
-	iT.intT_400 = vector<double>(gridSize, 0);
-	iT.intT_500 = vector<double>(gridSize, 0);
-	iT.intT_600 = vector<double>(gridSize, 0);
-	iT.intT_700 = vector<double>(gridSize, 0);
+	iT.intT_100 = vector<double>(gridSize, himan::kFloatMissing);
+	iT.intT_200 = vector<double>(gridSize, himan::kFloatMissing);
+	iT.intT_300 = vector<double>(gridSize, himan::kFloatMissing);
+	iT.intT_400 = vector<double>(gridSize, himan::kFloatMissing);
+	iT.intT_500 = vector<double>(gridSize, himan::kFloatMissing);
+	iT.intT_600 = vector<double>(gridSize, himan::kFloatMissing);
+	iT.intT_700 = vector<double>(gridSize, himan::kFloatMissing);
 
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100; // why 0.5 * here? Would make sense in case of (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is integration using trapezoidal rule
-		iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
-		iT.intT_300[i] = 0.5 * (dT.deltaT_300[i] + dT.deltaT_200[i]) * 100;
-		iT.intT_400[i] = 0.5 * (dT.deltaT_400[i] + dT.deltaT_300[i]) * 100;
-		iT.intT_500[i] = 0.5 * (dT.deltaT_500[i] + dT.deltaT_400[i]) * 100;
-		iT.intT_600[i] = 0.5 * (dT.deltaT_600[i] + dT.deltaT_500[i]) * 100;
-		iT.intT_700[i] = 0.5 * (dT.deltaT_700[i] + dT.deltaT_600[i]) * 100;
+		if (dT.deltaT_100[i] != himan::kFloatMissing)
+			iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100;  // why 0.5 * here? Would make sense in case of
+			                                                // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
+			                                                // integration using trapezoidal rule
+		if (dT.deltaT_100[i] != himan::kFloatMissing && dT.deltaT_200[i] != himan::kFloatMissing)
+			iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
+		if (dT.deltaT_200[i] != himan::kFloatMissing && dT.deltaT_300[i] != himan::kFloatMissing)
+			iT.intT_300[i] = 0.5 * (dT.deltaT_300[i] + dT.deltaT_200[i]) * 100;
+		if (dT.deltaT_300[i] != himan::kFloatMissing && dT.deltaT_400[i] != himan::kFloatMissing)
+			iT.intT_400[i] = 0.5 * (dT.deltaT_400[i] + dT.deltaT_300[i]) * 100;
+		if (dT.deltaT_400[i] != himan::kFloatMissing && dT.deltaT_500[i] != himan::kFloatMissing)
+			iT.intT_500[i] = 0.5 * (dT.deltaT_500[i] + dT.deltaT_400[i]) * 100;
+		if (dT.deltaT_500[i] != himan::kFloatMissing && dT.deltaT_600[i] != himan::kFloatMissing)
+			iT.intT_600[i] = 0.5 * (dT.deltaT_600[i] + dT.deltaT_500[i]) * 100;
+		if (dT.deltaT_600[i] != himan::kFloatMissing && dT.deltaT_700[i] != himan::kFloatMissing)
+			iT.intT_700[i] = 0.5 * (dT.deltaT_700[i] + dT.deltaT_600[i]) * 100;
 	}
 }
 
@@ -604,12 +639,44 @@ void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize)
 
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		iTot.intTot_100[i] = 0.5 * dTot.deltaTot_100[i] * 100; // 0.5 * ???
+		iTot.intTot_100[i] = 0.5 * dTot.deltaTot_100[i] * 100;  // 0.5 * ???
 		iTot.intTot_200[i] = 0.5 * (dTot.deltaTot_200[i] + dTot.deltaTot_100[i]) * 100;
 		iTot.intTot_300[i] = 0.5 * (dTot.deltaTot_300[i] + dTot.deltaTot_200[i]) * 100;
 		iTot.intTot_400[i] = 0.5 * (dTot.deltaTot_400[i] + dTot.deltaTot_300[i]) * 100;
 		iTot.intTot_500[i] = 0.5 * (dTot.deltaTot_500[i] + dTot.deltaTot_400[i]) * 100;
 		iTot.intTot_600[i] = 0.5 * (dTot.deltaTot_600[i] + dTot.deltaTot_500[i]) * 100;
 		iTot.intTot_700[i] = 0.5 * (dTot.deltaTot_700[i] + dTot.deltaTot_600[i]) * 100;
+	}
+}
+
+void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, info_t middleClouds, info_t highClouds,
+                        info_t totalClouds)
+{
+	for (size_t i = 0; i < lowAndMiddleClouds.size(); ++i)
+	{
+		if (highClouds->Data()[i] == himan::kFloatMissing || highClouds->Data()[i] == 0.0)
+		{
+			if (totalClouds->Data()[i] == himan::kFloatMissing)
+				lowAndMiddleClouds[i] = himan::kFloatMissing;
+			else
+				lowAndMiddleClouds[i] = totalClouds->Data()[i] * 100;
+		}
+		else
+		{
+			if (lowClouds->Data()[i] != himan::kFloatMissing)
+			{
+				if (middleClouds->Data()[i] != himan::kFloatMissing)
+					lowAndMiddleClouds[i] = max(lowClouds->Data()[i], middleClouds->Data()[i]) * 10;
+				else
+					lowAndMiddleClouds[i] = lowClouds->Data()[i] * 100;
+			}
+			else
+			{
+				if (middleClouds->Data()[i] == himan::kFloatMissing)
+					lowAndMiddleClouds[i] = himan::kFloatMissing;
+				else
+					lowAndMiddleClouds[i] = middleClouds->Data()[i] * 100;
+			}
+		}
 	}
 }
