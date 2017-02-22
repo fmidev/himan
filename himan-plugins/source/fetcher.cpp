@@ -558,8 +558,6 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 				}
 
 				itsLogger->Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
-
-				assert(c->Size() > 0);
 			});
 
 			ret = FromCache(opts);
