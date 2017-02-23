@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.2.21
+Version: 17.2.23
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Feb 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.23-1.fmi
+- Revised gust
 * Tue Feb 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.21-1.fmi
 - grib plugin refactoring
 - Removed roughness plugin
