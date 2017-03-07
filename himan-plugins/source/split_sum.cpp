@@ -67,6 +67,8 @@ split_sum::split_sum()
 	sourceParameters["RR-12-MM"] = {param("RR-KGM2")};
 	sourceParameters["RR-24-MM"] = {param("RR-KGM2")};
 
+	sourceParameters["RRC-3-MM"] = {param("RRC-KGM2")};
+
 	sourceParameters["RRR-KGM2"] = {param("RR-KGM2")};  // So-called HHSade
 	sourceParameters["RRRC-KGM2"] = {param("RRC-KGM2")};
 	sourceParameters["RRRL-KGM2"] = {param("RRL-KGM2")};
@@ -184,6 +186,15 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24));
 
+		params.push_back(parm);
+	}
+
+	if (itsConfiguration->Exists("rrc3h") && itsConfiguration->GetValue("rrc3h") == "true")
+	{
+		param parm("RRC-3-MM", 1025, 0, 1, 8);
+		parm.Unit(kMm);
+
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3));
 		params.push_back(parm);
 	}
 
@@ -396,7 +407,8 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 	bool isRateCalculation = (isRadiationCalculation || myParamName == "RRR-KGM2" || myParamName == "RRRL-KGM2" ||
 	                          myParamName == "RRRC-KGM2" || myParamName == "SNR-KGM2" || myParamName == "SNRC-KGM2" ||
-	                          myParamName == "SNRL-KGM2" || myParamName == "GRR-MMH" || myParamName == "RRRS-KGM2");
+	                          myParamName == "SNRL-KGM2" || myParamName == "GRR-MMH" || myParamName == "RRRS-KGM2" ||
+	                          myParamName == "RRC-KGM2");
 
 	// Have to re-fetch infos each time since we might have to change element
 	// from liquid to snow to radiation so we need also different source parameters
