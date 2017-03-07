@@ -152,15 +152,7 @@ cache_pool* cache_pool::Instance()
 void cache_pool::CacheLimit(int theCacheLimit) { itsCacheLimit = theCacheLimit; }
 bool cache_pool::Find(const string& uniqueName)
 {
-	for (const auto& kv : itsCache)
-	{
-		if (kv.first == uniqueName)
-		{
-			return true;
-		}
-	}
-
-	return false;
+	return itsCache.count(uniqueName) > 0;
 }
 
 void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo, bool pin)
