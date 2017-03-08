@@ -79,11 +79,15 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	string deviceType = "CPU";
 
-	LOCKSTEP(myTargetInfo, TInfo, VvInfo, ClInfo)
+	auto& target = VEC(myTargetInfo);
+
+	// LOCKSTEP(myTargetInfo, TInfo, VvInfo, ClInfo)
+	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo)))
 	{
-		double T = TInfo->Value();
-		double Vv = VvInfo->Value();
-		double Cl = ClInfo->Value();
+		double& result = tup.get<0>();
+		double T = tup.get<1>();
+		double Vv = tup.get<2>();
+		double Cl = tup.get<3>();
 
 		if (T == kFloatMissing || Vv == kFloatMissing || Cl == kFloatMissing)
 		{
@@ -186,7 +190,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 			Icing = 0;
 		}
 
-		myTargetInfo->Value(Icing);
+		result = Icing;
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
