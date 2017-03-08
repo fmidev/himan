@@ -17,7 +17,6 @@
 #include "param.h"
 #include "producer.h"
 #include "raw_time.h"
-#include <boost/lexical_cast.hpp>
 #include <vector>
 
 #define VEC(I) I->Data().Values()
@@ -170,7 +169,7 @@ public:
 			return itsElements[itsIndex];
 		}
 
-		throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string>(itsIndex));
+		throw std::runtime_error(ClassName() + ": Invalid index value: " + std::to_string(itsIndex));
 	}
 
 	/**
@@ -184,7 +183,7 @@ public:
 			return itsElements[theIndex];
 		}
 
-		throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string>(theIndex));
+		throw std::runtime_error(ClassName() + ": Invalid index value: " + std::to_string(theIndex));
 	}
 
 	/**

@@ -12,7 +12,6 @@
 #include "logger_factory.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
-#include <boost/lexical_cast.hpp>
 #include <limits>  // for std::numeric_limits<size_t>::max();
 
 using namespace std;

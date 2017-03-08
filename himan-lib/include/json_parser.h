@@ -8,7 +8,6 @@
 
 #include "plugin_configuration.h"
 #include <boost/property_tree/ptree.hpp>
-#include <string>
 #include <vector>
 
 namespace himan
