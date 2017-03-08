@@ -728,6 +728,21 @@ inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, siz
 
 inline size_t himan::info::Index() const { return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex()); }
 
+inline grid* info::Grid() const
+{
+	assert(itsDimensions.size());
+	return itsDimensions[Index()].get();
+}
+
+inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+{
+	assert(itsDimensions.size());
+	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
+}
+
+inline bool info::Value(double theValue) { return Grid()->Data().Set(itsLocationIndex, theValue); }
+inline double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
+
 typedef std::shared_ptr<info> info_t;
 
 }  // namespace himan

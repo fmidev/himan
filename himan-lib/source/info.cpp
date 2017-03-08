@@ -433,17 +433,6 @@ size_t info::LocationIndex() const { return itsLocationIndex; }
 void info::LocationIndex(size_t theLocationIndex) { itsLocationIndex = theLocationIndex; }
 size_t info::LocationIndex() { return itsLocationIndex; }
 size_t info::SizeLocations() const { return Grid()->Data().Size(); }
-grid* info::Grid() const
-{
-	assert(itsDimensions.size());
-	return itsDimensions[Index()].get();
-}
-
-grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
-{
-	assert(itsDimensions.size());
-	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
-}
 
 matrix<double>& info::Data()
 {
@@ -457,8 +446,6 @@ void info::Grid(shared_ptr<grid> d)
 	itsDimensions[Index()] = d;
 }
 
-bool info::Value(double theValue) { return Grid()->Data().Set(itsLocationIndex, theValue); }
-double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
 size_t info::DimensionSize() const { return itsDimensions.size(); }
 #ifdef HAVE_CUDA
 
