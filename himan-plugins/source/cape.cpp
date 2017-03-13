@@ -100,9 +100,11 @@ std::string PrintMean(const vector<double>& vec)
 		mean = sum / static_cast<double>(count);
 	}
 
-	return "min " + boost::lexical_cast<string>(static_cast<int>(min)) + " max " +
-	       boost::lexical_cast<string>(static_cast<int>(max)) + " mean " +
-	       boost::lexical_cast<string>(static_cast<int>(mean)) + " missing " + boost::lexical_cast<string>(missing);
+	std::string minstr = (min == 1e38) ? "nan" : to_string(static_cast<int>(min));
+	std::string maxstr = (max == -1e38) ? "nan" : to_string(static_cast<int>(max));
+	std::string meanstr = (mean != mean) ? "nan" : to_string(static_cast<int>(mean));
+
+	return "min " + minstr + " max " + maxstr + " mean " + meanstr + " missing " + boost::lexical_cast<string>(missing);
 }
 
 void MoistLift(const double* Piter, const double* Titer, const double* Penv, double* Tparcel, int size)
