@@ -650,7 +650,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 		default:
 			itsLogger->Fatal("Invalid projection");
-			exit(1);
+			abort();
 	}
 
 	newGrid->ScanningMode(kBottomLeft);

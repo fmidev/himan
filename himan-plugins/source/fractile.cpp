@@ -151,7 +151,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 			catch (const boost::bad_lexical_cast& e)
 			{
 				itsLogger->Fatal("Invalid fractile value: '" + val + "'");
-				exit(1);
+				abort();
 			}
 		}
 	}
@@ -202,7 +202,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			break;
 		default:
 			itsLogger->Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
-			exit(1);
+			abort();
 	}
 
 	ens->MaximumMissingForecasts(itsMaximumMissingForecasts);

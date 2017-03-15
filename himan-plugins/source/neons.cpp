@@ -344,7 +344,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 				itsNeonsDB->Rollback();
 
-				exit(1);
+				abort();
 			}
 		}
 		else

@@ -1508,7 +1508,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		if (sourceProducers.size() == 0)
 		{
 			itsLogger->Fatal("Source producer information was not found from database");
-			exit(1);
+			abort();
 		}
 
 		conf->SourceProducers(sourceProducers);
@@ -1540,7 +1540,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
 			{
 				itsLogger->Fatal("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
-				exit(1);
+				abort();
 			}
 
 			prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
@@ -1558,12 +1558,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
 		itsLogger->Fatal("Producer definitions not found: " + string(e.what()));
-		exit(1);
+		abort();
 	}
 	catch (exception& e)
 	{
 		itsLogger->Fatal("Error parsing producer information: " + string(e.what()));
-		exit(1);
+		abort();
 	}
 }
 
@@ -1653,7 +1653,7 @@ bool ParseBoolean(string booleanValue)
 	else
 	{
 		itsLogger->Fatal("Invalid boolean value: " + booleanValue);
-		exit(1);
+		abort();
 	}
 
 	return ret;

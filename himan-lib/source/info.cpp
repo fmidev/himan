@@ -58,7 +58,7 @@ info::info(const info& other)
 		    else
 		    {
 		        itsLogger->Fatal("Invalid grid type for base grid");
-		        exit(1);
+		        abort();
 		    }
 	*/
 	}
@@ -192,7 +192,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 		if (!ForecastType(otherInfo->ForecastType()))
 		{
 			itsLogger->Fatal("Unable to set forecast type, merge failed");
-			exit(1);
+			abort();
 		}
 
 		otherInfo->ResetTime();
@@ -207,7 +207,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 			if (!Time(otherInfo->Time()))
 			{
 				itsLogger->Fatal("Unable to set time, merge failed");
-				exit(1);
+				abort();
 			}
 
 			otherInfo->ResetLevel();
@@ -222,7 +222,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 				if (!Level(otherInfo->Level()))
 				{
 					itsLogger->Fatal("Unable to set level, merge failed");
-					exit(1);
+					abort();
 				}
 
 				otherInfo->ResetParam();
@@ -237,7 +237,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 					if (!Param(otherInfo->Param()))
 					{
 						itsLogger->Fatal("Unable to set param, merge failed");
-						exit(1);
+						abort();
 					}
 
 					Grid(shared_ptr<grid>(otherInfo->Grid()->Clone()));

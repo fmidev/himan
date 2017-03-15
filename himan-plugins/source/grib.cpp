@@ -227,7 +227,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		default:
 			itsLogger->Fatal("Invalid projection while writing grib: " +
 			                 boost::lexical_cast<string>(anInfo.Grid()->Type()));
-			exit(1);
+			abort();
 	}
 
 	bool iNegative, jPositive;
@@ -299,7 +299,7 @@ void grib::WriteTime(info& anInfo)
 		else
 		{
 			itsLogger->Fatal("Step too large, unable to continue");
-			exit(1);
+			abort();
 		}
 	}
 
@@ -1441,7 +1441,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 
 		default:
 			itsLogger->Fatal("Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
-			exit(1);
+			abort();
 	}
 
 	himan::level l;

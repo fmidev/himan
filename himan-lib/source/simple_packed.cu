@@ -353,7 +353,7 @@ void simple_packed::Pack(double* d_arr, size_t N, cudaStream_t* stream)
 	if (HasBitmap())
 	{
 		std::cerr << "bitmap packing not supported yet" << std::endl;
-		exit(1);
+		abort();
 	}
 
 	// 3. Reduce

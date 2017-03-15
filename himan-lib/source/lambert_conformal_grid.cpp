@@ -523,7 +523,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 	if (err != OGRERR_NONE)
 	{
 		itsLogger->Fatal("Error in area definition");
-		exit(1);
+		abort();
 	}
 
 	// Area copy will be used for transform

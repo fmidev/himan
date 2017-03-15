@@ -528,7 +528,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 			{
 				itsLogger->Fatal("Land sea mask cannot be applied when reading all auxiliary files to cache");
 				itsLogger->Fatal("Restart himan with command line option --no-auxiliary-file-full-cache-read");
-				exit(1);
+				abort();
 			}
 
 			call_once(oflag, [&]() {
@@ -719,7 +719,7 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 	{
 		itsLogger->Fatal("Invalid value for land sea mask threshold: " +
 		                 boost::lexical_cast<string>(theLandSeaMaskThreshold));
-		exit(1);
+		abort();
 	}
 
 	itsLandSeaMaskThreshold = theLandSeaMaskThreshold;

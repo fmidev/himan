@@ -277,7 +277,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		                << "stTlimit\t" << stTlimit << endl
 		                << "SNR\t\t" << SNR << endl;
 
-		        exit(1);
+		        abort();
 		*/
 		// (0=tihku, 1=vesi, 2=räntä, 3=lumi, 4=jäätävä tihku, 5=jäätävä sade)
 

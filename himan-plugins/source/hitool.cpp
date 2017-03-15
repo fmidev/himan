@@ -133,7 +133,7 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 
 		default:
 			itsLogger->Fatal("Unknown modifier type: " + boost::lexical_cast<string>(modifierType));
-			exit(1);
+			abort();
 			break;
 	}
 	itsLogger->Trace("Creating " + string(HPModifierTypeToString.at(mod->Type())));

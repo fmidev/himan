@@ -49,7 +49,7 @@ inline void CheckCudaError(cudaError_t errarg, const char* file, const int line)
 	if (errarg)
 	{
 		std::cerr << "Error at " << file << "(" << line << "): " << cudaGetErrorString(errarg) << std::endl;
-		exit(1);
+		abort();
 	}
 }
 
@@ -62,7 +62,7 @@ inline void CheckCudaErrorString(const char* errstr, const char* file, const int
 		std::cerr << "Error: " << errstr << " " << file << " at (" << line << "): " << cudaGetErrorString(err)
 		          << std::endl;
 
-		exit(1);
+		abort();
 	}
 }
 
