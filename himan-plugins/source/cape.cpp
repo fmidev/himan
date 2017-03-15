@@ -100,9 +100,11 @@ std::string PrintMean(const vector<double>& vec)
 		mean = sum / static_cast<double>(count);
 	}
 
-	return "min " + boost::lexical_cast<string>(static_cast<int>(min)) + " max " +
-	       boost::lexical_cast<string>(static_cast<int>(max)) + " mean " +
-	       boost::lexical_cast<string>(static_cast<int>(mean)) + " missing " + boost::lexical_cast<string>(missing);
+	std::string minstr = (min == 1e38) ? "nan" : to_string(static_cast<int>(min));
+	std::string maxstr = (max == -1e38) ? "nan" : to_string(static_cast<int>(max));
+	std::string meanstr = (mean != mean) ? "nan" : to_string(static_cast<int>(mean));
+
+	return "min " + minstr + " max " + maxstr + " mean " + meanstr + " missing " + boost::lexical_cast<string>(missing);
 }
 
 void MoistLift(const double* Piter, const double* Titer, const double* Penv, double* Tparcel, int size)
@@ -260,20 +262,20 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	auto timer = timer_factory::Instance()->GetTimer();
 	timer->Start();
 
-	pair<vector<double>, vector<double>> TandTD;
+	cape_source sourceValues;
 
 	switch (sourceLevel.Type())
 	{
 		case kHeight:
-			TandTD = GetSurfaceTAndTD(myTargetInfo);
+			sourceValues = GetSurfaceValues(myTargetInfo);
 			break;
 
 		case kHeightLayer:
-			TandTD = Get500mMixingRatioTAndTD(myTargetInfo);
+			sourceValues = Get500mMixingRatioValues(myTargetInfo);
 			break;
 
 		case kMaximumThetaE:
-			TandTD = GetHighestThetaETAndTD(myTargetInfo);
+			sourceValues = GetHighestThetaEValues(myTargetInfo);
 			break;
 
 		default:
@@ -283,20 +285,21 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Level(sourceLevel);
 
-	if (TandTD.first.empty()) return;
+	if (get<0>(sourceValues).empty()) return;
 
 	timer->Stop();
 
 	mySubThreadedLogger->Info("Source data calculated in " + boost::lexical_cast<string>(timer->GetTime()) + " ms");
 
-	mySubThreadedLogger->Debug("Surface temperature: " + ::PrintMean(TandTD.first));
-	mySubThreadedLogger->Debug("Surface dewpoint: " + ::PrintMean(TandTD.second));
+	mySubThreadedLogger->Debug("Source temperature: " + ::PrintMean(get<0>(sourceValues)));
+	mySubThreadedLogger->Debug("Source dewpoint: " + ::PrintMean(get<1>(sourceValues)));
+	mySubThreadedLogger->Debug("Source pressure: " + ::PrintMean(get<2>(sourceValues)));
 
 	// 2.
 
 	timer->Start();
 
-	auto LCL = GetLCL(myTargetInfo, TandTD.first, TandTD.second);
+	auto LCL = GetLCL(myTargetInfo, sourceValues);
 
 	timer->Stop();
 
@@ -359,7 +362,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	                 CAPE1040Param, CAPE3kmParam);
 
 	auto cinInfo = make_shared<info>(*myTargetInfo);
-	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), TandTD.first, LCL.first, LCL.second, LFC.second,
+	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), get<0>(sourceValues), LCL.first, LCL.second, LFC.second,
 	                 CINParam);
 
 	t1.join();
@@ -886,7 +889,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	for (size_t i = 0; i < TenvLCL.size(); i++)
 	{
-		if (T[i] >= TenvLCL[i])
+		if (fabs(T[i] - TenvLCL[i]) < 0.001)
 		{
 			found[i] = true;
 			LFCT[i] = T[i];
@@ -952,7 +955,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			double& Tresult = tup.get<5>();
 			double& Presult = tup.get<6>();
 
-			if (Tparcel == kFloatMissing || Penv > P[i])
+			if (Tparcel == kFloatMissing || Penv > P[i] + 30)
 			{
 				continue;
 			}
@@ -1016,39 +1019,17 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 	return make_pair(LFCT, LFCP);
 }
 
-pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo, vector<double>& Tsurf,
-                                                  vector<double>& TDsurf)
+pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo, const cape_source& sourceValues)
 {
-	vector<double> TLCL(Tsurf.size(), kFloatMissing);
+	vector<double> TLCL(get<0>(sourceValues).size(), kFloatMissing);
 	vector<double> PLCL = TLCL;
 
 	// Need surface pressure
 
-	const params PParams({param("PGR-PA"), param("P-PA")});
+	double Pscale = 100.;  // P should be Pa
 
-	auto Psurf = Fetch(myTargetInfo->Time(), level(kHeight, 0), PParams, myTargetInfo->ForecastType(), false);
-
-	double Pscale = 1.;  // P should be Pa
-
-	if (!Psurf)
+	for (auto&& tup : zip_range(get<0>(sourceValues), get<1>(sourceValues), get<2>(sourceValues), TLCL, PLCL))
 	{
-		itsLogger->Warning("Surface pressure not found, trying lowest hybrid level pressure");
-		Psurf = Fetch(myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
-
-		if (!Psurf)
-		{
-			throw runtime_error("Pressure data not found");
-		}
-
-		Pscale = 100.;
-	}
-
-	assert(Tsurf.size() == VEC(Psurf).size());
-
-	int i = -1;
-	for (auto&& tup : zip_range(Tsurf, TDsurf, VEC(Psurf), TLCL, PLCL))
-	{
-		i++;
 		double T = tup.get<0>();
 		double TD = tup.get<1>();
 		double P = tup.get<2>() * Pscale;  // Pa
@@ -1065,15 +1046,15 @@ pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo,
 		}
 	}
 
-	for (size_t i = 0; i < PLCL.size(); i++)
+	for (auto& val : PLCL)
 	{
-		if (PLCL[i] < 250.) PLCL[i] = 250.;
+		val = fmax(val, 250.);
 	}
 
 	return make_pair(TLCL, PLCL);
 }
 
-pair<vector<double>, vector<double>> cape::GetSurfaceTAndTD(shared_ptr<info> myTargetInfo)
+cape_source cape::GetSurfaceValues(shared_ptr<info> myTargetInfo)
 {
 	/*
 	 * 1. Get temperature and relative humidity from lowest hybrid level.
@@ -1083,10 +1064,11 @@ pair<vector<double>, vector<double>> cape::GetSurfaceTAndTD(shared_ptr<info> myT
 
 	auto TInfo = Fetch(myTargetInfo->Time(), itsBottomLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 	auto RHInfo = Fetch(myTargetInfo->Time(), itsBottomLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
+	auto PInfo = Fetch(myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
-	if (!TInfo || !RHInfo)
+	if (!TInfo || !RHInfo || !PInfo)
 	{
-		return make_pair(vector<double>(), vector<double>());
+		return make_tuple(vector<double>(), vector<double>(), vector<double>());
 	}
 
 	auto T = VEC(TInfo);
@@ -1102,10 +1084,10 @@ pair<vector<double>, vector<double>> cape::GetSurfaceTAndTD(shared_ptr<info> myT
 		}
 	}
 
-	return make_pair(T, TD);
+	return make_tuple(T, TD, VEC(PInfo));
 }
 
-pair<vector<double>, vector<double>> cape::Get500mMixingRatioTAndTD(shared_ptr<info> myTargetInfo)
+cape_source cape::Get500mMixingRatioValues(shared_ptr<info> myTargetInfo)
 {
 /*
  * 1. Calculate potential temperature and mixing ratio for vertical profile
@@ -1119,16 +1101,16 @@ pair<vector<double>, vector<double>> cape::Get500mMixingRatioTAndTD(shared_ptr<i
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		return cape_cuda::Get500mMixingRatioTAndTDGPU(itsConfiguration, myTargetInfo);
+		return cape_cuda::Get500mMixingRatioValuesGPU(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
 	{
-		return Get500mMixingRatioTAndTDCPU(myTargetInfo);
+		return Get500mMixingRatioValuesCPU(myTargetInfo);
 	}
 }
 
-pair<vector<double>, vector<double>> cape::Get500mMixingRatioTAndTDCPU(shared_ptr<info> myTargetInfo)
+cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 {
 	modifier_mean tp, mr;
 	level curLevel = itsBottomLevel;
@@ -1145,7 +1127,7 @@ pair<vector<double>, vector<double>> cape::Get500mMixingRatioTAndTDCPU(shared_pt
 
 	if (!PInfo)
 	{
-		return make_pair(vector<double>(), vector<double>());
+		return make_tuple(vector<double>(), vector<double>(), vector<double>());
 	}
 	else
 	{
@@ -1159,7 +1141,7 @@ pair<vector<double>, vector<double>> cape::Get500mMixingRatioTAndTDCPU(shared_pt
 
 		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
 		{
-			return make_pair(vector<double>(), vector<double>());
+			return make_tuple(vector<double>(), vector<double>(), vector<double>());
 		}
 	}
 
@@ -1255,10 +1237,10 @@ pair<vector<double>, vector<double>> cape::Get500mMixingRatioTAndTDCPU(shared_pt
 		}
 	}
 
-	return make_pair(T, TD);
+	return make_tuple(T, TD, P);
 }
 
-pair<vector<double>, vector<double>> cape::GetHighestThetaETAndTD(shared_ptr<info> myTargetInfo)
+cape_source cape::GetHighestThetaEValues(shared_ptr<info> myTargetInfo)
 {
 /*
  * 1. Calculate equivalent potential temperature for all hybrid levels
@@ -1272,22 +1254,23 @@ pair<vector<double>, vector<double>> cape::GetHighestThetaETAndTD(shared_ptr<inf
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		return cape_cuda::GetHighestThetaETAndTDGPU(itsConfiguration, myTargetInfo);
+		return cape_cuda::GetHighestThetaEValuesGPU(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
 	{
-		return GetHighestThetaETAndTDCPU(myTargetInfo);
+		return GetHighestThetaEValuesCPU(myTargetInfo);
 	}
 }
 
-pair<vector<double>, vector<double>> cape::GetHighestThetaETAndTDCPU(shared_ptr<info> myTargetInfo)
+cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 {
 	vector<bool> found(myTargetInfo->Data().Size(), false);
 
 	vector<double> maxThetaE(myTargetInfo->Data().Size(), -1);
-	vector<double> Tsurf(myTargetInfo->Data().Size(), kFloatMissing);
-	auto TDsurf = Tsurf;
+	vector<double> Ttheta(myTargetInfo->Data().Size(), kFloatMissing);
+	auto TDtheta = Ttheta;
+	auto Ptheta = Ttheta;
 
 	level curLevel = itsBottomLevel;
 
@@ -1301,12 +1284,12 @@ pair<vector<double>, vector<double>> cape::GetHighestThetaETAndTDCPU(shared_ptr<
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
-			return make_pair(vector<double>(), vector<double>());
+			return make_tuple(vector<double>(), vector<double>(), vector<double>());
 		}
 
 		int i = -1;
 
-		for (auto&& tup : zip_range(VEC(TInfo), VEC(RHInfo), VEC(PInfo), maxThetaE, Tsurf, TDsurf))
+		for (auto&& tup : zip_range(VEC(TInfo), VEC(RHInfo), VEC(PInfo), maxThetaE, Ttheta, TDtheta, Ptheta))
 		{
 			i++;
 
@@ -1318,6 +1301,7 @@ pair<vector<double>, vector<double>> cape::GetHighestThetaETAndTDCPU(shared_ptr<
 			double& refThetaE = tup.get<3>();
 			double& Tresult = tup.get<4>();
 			double& TDresult = tup.get<5>();
+			double& Presult = tup.get<6>();
 
 			if (P == kFloatMissing)
 			{
@@ -1359,6 +1343,7 @@ pair<vector<double>, vector<double>> cape::GetHighestThetaETAndTDCPU(shared_ptr<
 				refThetaE = ThetaE;
 				Tresult = T;
 				TDresult = TD;
+				Presult = P;
 
 				assert(TDresult > 100);
 			}
@@ -1381,11 +1366,5 @@ pair<vector<double>, vector<double>> cape::GetHighestThetaETAndTDCPU(shared_ptr<
 		prevRHInfo = RHInfo;
 	}
 
-	for (size_t i = 0; i < Tsurf.size(); i++)
-	{
-		if (Tsurf[i] == 0.) Tsurf[i] = kFloatMissing;
-		if (TDsurf[i] == 0.) TDsurf[i] = kFloatMissing;
-	}
-
-	return make_pair(Tsurf, TDsurf);
+	return make_tuple(Ttheta, TDtheta, Ptheta);
 }
