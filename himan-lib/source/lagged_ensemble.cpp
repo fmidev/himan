@@ -78,7 +78,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 				if (e != kFileDataNotFound)
 				{
 					itsLogger->Fatal("Unable to proceed");
-					exit(1);
+					abort();
 				}
 				else
 				{
@@ -98,7 +98,7 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 		{
 			itsLogger->Fatal("maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
 			                 std::to_string(itsMaximumMissingForecasts) + " reached, aborting");
-			exit(1);
+			abort();
 		}
 	}
 	else
@@ -107,7 +107,7 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 		{
 			itsLogger->Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
 			                 std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
-			exit(1);
+			abort();
 		}
 	}
 	itsLogger->Info("succesfully loaded " + std::to_string(numLoadedForecasts) + "/" +

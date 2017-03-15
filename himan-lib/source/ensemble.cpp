@@ -114,7 +114,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 			if (e != kFileDataNotFound)
 			{
 				itsLogger->Fatal("Unable to proceed");
-				exit(1);
+				abort();
 			}
 			else
 			{
@@ -134,7 +134,7 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 		{
 			itsLogger->Fatal("maximum number of missing fields (" + std::to_string(itsMaximumMissingForecasts) +
 			                 ") reached, aborting");
-			exit(1);
+			abort();
 		}
 	}
 	// Normally, we don't except any of the fields to be missing, but at this point
@@ -145,7 +145,7 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 		{
 			itsLogger->Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
 			                 std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
-			exit(1);
+			abort();
 		}
 	}
 
