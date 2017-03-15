@@ -9,13 +9,16 @@
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
 
+// T, Td, P
+typedef std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> cape_source;
+
 namespace himan
 {
 namespace plugin
 {
 class cape : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	cape();
 
 	inline virtual ~cape() {}
@@ -27,11 +30,11 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::cape"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex);
 
 	std::pair<std::vector<double>, std::vector<double>> GetLCL(std::shared_ptr<info> myTargetInfo,
-	                                                           std::vector<double>& T, std::vector<double>& TD);
+	                                                           const cape_source& source);
 
 	std::pair<std::vector<double>, std::vector<double>> GetLFC(std::shared_ptr<info> myTargetInfo,
 	                                                           std::vector<double>& T, std::vector<double>& P);
@@ -41,14 +44,13 @@ private:
 
 	// Functions to fetch different kinds of source data
 
-	std::pair<std::vector<double>, std::vector<double>> GetSurfaceTAndTD(std::shared_ptr<info> myTargetInfo);
-	std::pair<std::vector<double>, std::vector<double>> Get500mTAndTD(std::shared_ptr<info> myTargetInfo);
+	cape_source GetSurfaceValues(std::shared_ptr<info> myTargetInfo);
 
-	std::pair<std::vector<double>, std::vector<double>> Get500mMixingRatioTAndTD(std::shared_ptr<info> myTargetInfo);
-	std::pair<std::vector<double>, std::vector<double>> Get500mMixingRatioTAndTDCPU(std::shared_ptr<info> myTargetInfo);
+	cape_source Get500mMixingRatioValues(std::shared_ptr<info> myTargetInfo);
+	cape_source Get500mMixingRatioValuesCPU(std::shared_ptr<info> myTargetInfo);
 
-	std::pair<std::vector<double>, std::vector<double>> GetHighestThetaETAndTD(std::shared_ptr<info> myTargetInfo);
-	std::pair<std::vector<double>, std::vector<double>> GetHighestThetaETAndTDCPU(std::shared_ptr<info> myTargetInfo);
+	cape_source GetHighestThetaEValues(std::shared_ptr<info> myTargetInfo);
+	cape_source GetHighestThetaEValuesCPU(std::shared_ptr<info> myTargetInfo);
 
 	void GetCAPE(std::shared_ptr<info> myTargetInfo, const std::pair<std::vector<double>, std::vector<double>>& LFC,
 	             himan::param ELTParam, himan::param ELPParam, himan::param ELZParam, himan::param CAPEParam,
@@ -71,7 +73,6 @@ private:
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<cape>(); }
-
 }  // namespace plugin
 }  // namespace himan
 

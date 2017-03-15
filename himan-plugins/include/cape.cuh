@@ -22,7 +22,6 @@
 
 namespace CAPE
 {
-
 const double kFloatMissing = 32700.;
 
 CUDA_DEVICE
@@ -594,20 +593,22 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 #include "info_simple.h"
 #include "plugin_configuration.h"
 
+typedef std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> cape_source;
+
 namespace himan
 {
 namespace plugin
 {
 namespace cape_cuda
 {
-std::pair<std::vector<double>, std::vector<double>> GetHighestThetaETAndTDGPU(
-    const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo);
+cape_source GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration> conf,
+                                      std::shared_ptr<info> myTargetInfo);
 std::pair<std::vector<double>, std::vector<double>> GetLFCGPU(const std::shared_ptr<const plugin_configuration> conf,
                                                               std::shared_ptr<info> myTargetInfo,
                                                               std::vector<double>& T, std::vector<double>& P,
                                                               std::vector<double>& TenvLCL);
-std::pair<std::vector<double>, std::vector<double>> Get500mMixingRatioTAndTDGPU(
-    std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo);
+cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration> conf,
+                                        std::shared_ptr<info> myTargetInfo);
 void GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
                const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL,
                const std::vector<double>& PLFC, param CINParam);
