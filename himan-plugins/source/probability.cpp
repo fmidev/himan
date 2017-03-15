@@ -417,7 +417,7 @@ void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInf
 	if (ensembleSize != ens2->Size())
 	{
 		log->Fatal(" CalculateWind(): U and V ensembles are of different size, aborting");
-		abort(1);
+		abort();
 	}
 
 	const double invN =
