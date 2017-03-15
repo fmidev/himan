@@ -765,7 +765,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	double T0 = Tint;
 
 	int i = 0;
-	const double Pstep = 200;                                   // Pa
+	const double Pstep = 100;                                   // Pa; do not increase this as quality of results is weakened
 	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
 	double value = kFloatMissing;
