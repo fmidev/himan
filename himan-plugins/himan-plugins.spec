@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.2.17
+Version: 17.3.15
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -112,6 +112,17 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Mar 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.15-1.fmi
+- General cleanup
+- MUCAPE starting value fix 
+* Tue Mar  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.7-1.fmi
+- Improved performance of cache read
+- Additions to split_sum
+* Thu Feb 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.23-1.fmi
+- Revised gust
+* Tue Feb 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.21-1.fmi
+- grib plugin refactoring
+- Removed roughness plugin
 * Fri Feb 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.17-1.fmi
 - raw_time changes in himan-lib
 * Mon Feb 13 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.13-1.fmi
