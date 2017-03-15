@@ -898,7 +898,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 
 	for (size_t i = 0; i < N; i++)
 	{
-		if (T[i] >= TenvLCL[i])
+		if (fabs(T[i] - TenvLCL[i]) < 0.001)
 		{
 			found[i] = 1;
 			LFCT[i] = T[i];
@@ -1059,6 +1059,11 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaMemcpyAsync(d_PLFC, &PLFC[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
 	std::vector<unsigned char> found(N, 0);
+
+	for (size_t i = 0; i < PLFC.size(); i++)
+	{
+		if (PLFC[i] == kFloatMissing) found[i] = true;
+	}
 
 	curLevel.Value(curLevel.Value() - 1);
 

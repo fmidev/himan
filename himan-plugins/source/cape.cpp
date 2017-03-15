@@ -889,7 +889,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	for (size_t i = 0; i < TenvLCL.size(); i++)
 	{
-		if (T[i] >= TenvLCL[i])
+		if (fabs(T[i] - TenvLCL[i]) < 0.001)
 		{
 			found[i] = true;
 			LFCT[i] = T[i];
@@ -955,7 +955,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			double& Tresult = tup.get<5>();
 			double& Presult = tup.get<6>();
 
-			if (Tparcel == kFloatMissing || Penv > P[i]+30)
+			if (Tparcel == kFloatMissing || Penv > P[i] + 30)
 			{
 				continue;
 			}
@@ -1028,10 +1028,8 @@ pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo,
 
 	double Pscale = 100.;  // P should be Pa
 
-	int i = -1;
 	for (auto&& tup : zip_range(get<0>(sourceValues), get<1>(sourceValues), get<2>(sourceValues), TLCL, PLCL))
 	{
-		i++;
 		double T = tup.get<0>();
 		double TD = tup.get<1>();
 		double P = tup.get<2>() * Pscale;  // Pa
@@ -1048,9 +1046,9 @@ pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo,
 		}
 	}
 
-	for (size_t i = 0; i < PLCL.size(); i++)
+	for (auto& val : PLCL)
 	{
-		if (PLCL[i] < 250.) PLCL[i] = 250.;
+		val = fmax(val, 250.);
 	}
 
 	return make_pair(TLCL, PLCL);
