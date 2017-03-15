@@ -196,12 +196,12 @@ vector<string> util::Split(const string& s, const std::string& delims, bool fill
 			if (first <= last)
 			{
 				// levels are 1-65
-				for (int i = first; i <= last; ++i) filled_elems.push_back(boost::lexical_cast<string>(i));
+				for (int i = first; i <= last; ++i) filled_elems.push_back(to_string(i));
 			}
 			else
 			{
 				// levels are 65-1
-				for (int i = first; i >= last; --i) filled_elems.push_back(boost::lexical_cast<string>(i));
+				for (int i = first; i >= last; --i) filled_elems.push_back(to_string(i));
 			}
 		}
 		else

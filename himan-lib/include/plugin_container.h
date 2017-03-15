@@ -8,7 +8,6 @@
 
 #include "himan_common.h"
 #include "himan_plugin.h"
-#include <string>
 
 namespace himan
 {

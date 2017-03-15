@@ -16,8 +16,6 @@
 #include "logger.h"
 #include "packed_data.h"
 #include "point.h"
-#include <string>
-
 #include "matrix.h"
 
 namespace himan

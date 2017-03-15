@@ -266,8 +266,9 @@ static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadInd
 static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold,
                               const int infoIndex, const bool normalized, std::unique_ptr<ensemble>& ens);
 
-static void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                          bool normalized, std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2);
+static void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInfo, uint16_t threadIndex,
+                          double threshold, int infoIndex, bool normalized, std::unique_ptr<ensemble>& ens1,
+                          std::unique_ptr<ensemble>& ens2);
 
 void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
@@ -343,8 +344,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		//
 		if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 		{
-			CalculateWind(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, normalized, ens1,
-			              ens2);
+			CalculateWind(threadedLogger, std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex,
+			              normalized, ens1, ens2);
 		}
 		else if (pc.output.Name() == "PROB-TC-0" || pc.output.Name() == "PROB-TC-1" ||
 		         pc.output.Name() == "PROB-TC-2" || pc.output.Name() == "PROB-TC-3" || pc.output.Name() == "PROB-TC-4")
@@ -403,8 +404,9 @@ void probability::WriteToFile(const info& targetInfo, size_t targetInfoIndex, wr
 	}
 }
 
-void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                   bool normalized, std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2)
+void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInfo, uint16_t threadIndex,
+                   double threshold, int infoIndex, bool normalized, std::unique_ptr<ensemble>& ens1,
+                   std::unique_ptr<ensemble>& ens2)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
@@ -414,7 +416,8 @@ void CalculateWind(std::shared_ptr<info> targetInfo, uint16_t threadIndex, doubl
 	const size_t ensembleSize = ens1->Size();
 	if (ensembleSize != ens2->Size())
 	{
-		throw std::runtime_error(kClassName + "::CalculateWind(): U and V ensembles are of different size, aborting");
+		log->Fatal(" CalculateWind(): U and V ensembles are of different size, aborting");
+		abort();
 	}
 
 	const double invN =

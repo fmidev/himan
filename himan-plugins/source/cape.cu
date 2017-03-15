@@ -436,7 +436,7 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 __global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simple d_prevT,
                              info_simple d_prevRH, info_simple d_prevP, double* __restrict__ d_maxThetaE,
                              double* __restrict__ d_Tresult, double* __restrict__ d_TDresult,
-                             unsigned char* __restrict__ d_found)
+                             double* __restrict__ d_Presult, unsigned char* __restrict__ d_found)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -480,6 +480,7 @@ __global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P,
 				refThetaE = ThetaE;
 				d_Tresult[idx] = T;
 				d_TDresult[idx] = TD;
+				d_Presult[idx] = P;
 			}
 		}
 	}
@@ -554,8 +555,8 @@ __global__ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __re
 	}
 }
 
-std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetHighestThetaETAndTDGPU(
-    const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration> conf,
+                                                 std::shared_ptr<info> myTargetInfo)
 {
 	himan::level curLevel = itsBottomLevel;
 
@@ -570,16 +571,19 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetHighestThetaET
 	double* d_maxThetaE = 0;
 	double* d_Tresult = 0;
 	double* d_TDresult = 0;
+	double* d_Presult = 0;
 	unsigned char* d_found = 0;
 
 	CUDA_CHECK(cudaMalloc((double**)&d_maxThetaE, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**)&d_Tresult, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**)&d_TDresult, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_Presult, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
 
 	InitializeArray<double>(d_maxThetaE, -1, N, stream);
 	InitializeArray<double>(d_Tresult, kFloatMissing, N, stream);
 	InitializeArray<double>(d_TDresult, kFloatMissing, N, stream);
+	InitializeArray<double>(d_Presult, kFloatMissing, N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
 	info_simple* h_prevT = 0;
@@ -594,7 +598,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetHighestThetaET
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
-			return std::make_pair(std::vector<double>(), std::vector<double>());
+			return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
 		}
 
 		auto h_T = PrepareInfo(TInfo, stream);
@@ -618,7 +622,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetHighestThetaET
 		}
 
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(*h_T, *h_RH, *h_P, *h_prevT, *h_prevRH, *h_prevP, d_maxThetaE,
-		                                                 d_Tresult, d_TDresult, d_found);
+		                                                 d_Tresult, d_TDresult, d_Presult, d_found);
 
 		std::vector<unsigned char> found(N, 0);
 		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
@@ -654,26 +658,29 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetHighestThetaET
 	delete h_prevT;
 	delete h_prevRH;
 
-	std::vector<double> Tsurf(myTargetInfo->Data().Size());
-	std::vector<double> TDsurf(myTargetInfo->Data().Size());
+	std::vector<double> Tthetae(myTargetInfo->Data().Size());
+	std::vector<double> TDthetae(myTargetInfo->Data().Size());
+	std::vector<double> Pthetae(myTargetInfo->Data().Size());
 
-	CUDA_CHECK(cudaMemcpyAsync(&Tsurf[0], d_Tresult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&TDsurf[0], d_TDresult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&Tthetae[0], d_Tresult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&TDthetae[0], d_TDresult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&Pthetae[0], d_Presult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	CUDA_CHECK(cudaFree(d_maxThetaE));
 	CUDA_CHECK(cudaFree(d_Tresult));
 	CUDA_CHECK(cudaFree(d_TDresult));
+	CUDA_CHECK(cudaFree(d_Presult));
 	CUDA_CHECK(cudaFree(d_found));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	return std::make_pair(Tsurf, TDsurf);
+	return std::make_tuple(Tthetae, TDthetae, Pthetae);
 }
 
-std::pair<std::vector<double>, std::vector<double>> cape_cuda::Get500mMixingRatioTAndTDGPU(
-    std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration> conf,
+                                                   std::shared_ptr<info> myTargetInfo)
 {
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
@@ -700,7 +707,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::Get500mMixingRati
 
 	if (!PInfo)
 	{
-		return std::make_pair(std::vector<double>(), std::vector<double>());
+		return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
 	}
 	else
 	{
@@ -714,7 +721,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::Get500mMixingRati
 
 		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
 		{
-			return std::make_pair(std::vector<double>(), std::vector<double>());
+			return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
 		}
 	}
 
@@ -818,7 +825,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::Get500mMixingRati
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	return std::make_pair(T, TD);
+	return std::make_tuple(T, TD, PVec);
 }
 
 std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
@@ -891,7 +898,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 
 	for (size_t i = 0; i < N; i++)
 	{
-		if (T[i] >= TenvLCL[i])
+		if (fabs(T[i] - TenvLCL[i]) < 0.001)
 		{
 			found[i] = 1;
 			LFCT[i] = T[i];
@@ -1052,6 +1059,11 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaMemcpyAsync(d_PLFC, &PLFC[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
 	std::vector<unsigned char> found(N, 0);
+
+	for (size_t i = 0; i < PLFC.size(); i++)
+	{
+		if (PLFC[i] == kFloatMissing) found[i] = true;
+	}
 
 	curLevel.Value(curLevel.Value() - 1);
 

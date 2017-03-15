@@ -9,6 +9,8 @@
 #include "auxiliary_plugin.h"
 #include "search_options.h"
 
+#include <mutex>
+
 namespace himan
 {
 namespace plugin

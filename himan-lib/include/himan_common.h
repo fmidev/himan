@@ -28,6 +28,7 @@
 #include <boost/unordered_map.hpp>
 #include <memory>
 #include <ostream>
+#include <string>
 
 namespace ba = boost::assign;
 

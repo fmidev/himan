@@ -9,7 +9,6 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -47,7 +46,7 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	const param GraupelParam("GRAUPMR-KGKG");  // Graupel mixing ratio in kg/kg
 
 	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
+	    logger_factory::Instance()->GetLog(itsName + "Thread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -63,7 +62,7 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	if (!RhoInfo || !RainInfo || !SnowInfo || !GraupelInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		myThreadedLogger->Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                          static_cast<string>(forecastLevel));
 		return;
 	}
@@ -73,12 +72,15 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	// Calculate on CPU
 	string deviceType = "CPU";
 
-	LOCKSTEP(myTargetInfo, RhoInfo, RainInfo, SnowInfo, GraupelInfo)
+	auto& target = VEC(myTargetInfo);
+
+	for (auto&& tup : zip_range(target, VEC(RhoInfo), VEC(RainInfo), VEC(SnowInfo), VEC(GraupelInfo)))
 	{
-		double Rho = RhoInfo->Value();
-		double Rain = RainInfo->Value();
-		double Snow = SnowInfo->Value();
-		double Graupel = GraupelInfo->Value();
+		double& result = tup.get<0>();
+		const double Rho = tup.get<1>();
+		const double Rain = tup.get<2>();
+		const double Snow = tup.get<3>();
+		const double Graupel = tup.get<4>();
 
 		// Check if mixing ratio for rain is not missing
 		if (Rho == kFloatMissing || Rain == kFloatMissing || Snow == kFloatMissing || Graupel == kFloatMissing)
@@ -90,10 +92,10 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		// instead.
 		double absolute_humidity = Rho * fmax((Rain + Snow + Graupel), 0.0);
 
-		myTargetInfo->Value(absolute_humidity);
+		result = absolute_humidity;
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	                       to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	                       to_string(myTargetInfo->Data().Size()));
 }

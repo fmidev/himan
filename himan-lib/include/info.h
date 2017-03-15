@@ -17,7 +17,6 @@
 #include "param.h"
 #include "producer.h"
 #include "raw_time.h"
-#include <boost/lexical_cast.hpp>
 #include <vector>
 
 #define VEC(I) I->Data().Values()
@@ -170,7 +169,7 @@ public:
 			return itsElements[itsIndex];
 		}
 
-		throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string>(itsIndex));
+		throw std::runtime_error(ClassName() + ": Invalid index value: " + std::to_string(itsIndex));
 	}
 
 	/**
@@ -184,7 +183,7 @@ public:
 			return itsElements[theIndex];
 		}
 
-		throw std::runtime_error(ClassName() + ": Invalid index value: " + boost::lexical_cast<std::string>(theIndex));
+		throw std::runtime_error(ClassName() + ": Invalid index value: " + std::to_string(theIndex));
 	}
 
 	/**
@@ -727,6 +726,21 @@ inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, siz
 }
 
 inline size_t himan::info::Index() const { return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex()); }
+
+inline grid* info::Grid() const
+{
+	assert(itsDimensions.size());
+	return itsDimensions[Index()].get();
+}
+
+inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+{
+	assert(itsDimensions.size());
+	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
+}
+
+inline bool info::Value(double theValue) { return Grid()->Data().Set(itsLocationIndex, theValue); }
+inline double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
 
 typedef std::shared_ptr<info> info_t;
 

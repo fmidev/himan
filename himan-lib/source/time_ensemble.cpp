@@ -98,7 +98,7 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 			if (e != kFileDataNotFound)
 			{
 				itsLogger->Fatal("Unable to proceed");
-				exit(1);
+				abort();
 			}
 			else
 			{
