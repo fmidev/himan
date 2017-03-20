@@ -27,6 +27,20 @@ using namespace std;
 
 static once_flag oflag;
 
+// Sticky param cache will store the producer that provided data.
+// With this information we can skip the regular producer loop cycle
+// (try prod 1, data not found, try prod 2) which will improve fetching
+// times when reading from database.
+
+static map<string, himan::producer> stickyParamCache;
+static mutex stickyMutex;
+
+void UpdateStickyCache(const std::string& name, const himan::producer& prod)
+{
+	lock_guard<mutex> lock(stickyMutex);
+	stickyParamCache[name] = prod;
+}
+
 fetcher::fetcher()
     : itsDoLevelTransform(true),
       itsDoInterpolation(true),
@@ -112,7 +126,12 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers() && theInfos.empty(); prodNum++)
 	{
-		sourceProd = producer(config->SourceProducer(prodNum));
+		sourceProd = stickyParamCache[requestedParam.Name()];
+
+		if (sourceProd.Id() == kHPMissingInt)
+		{
+			sourceProd = producer(config->SourceProducer(prodNum));
+		}
 
 		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure &&
 		                            requestedLevel.Type() != kHeightLayer))
@@ -494,8 +513,6 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 	itsLogger->Trace("Current producer: " + boost::lexical_cast<string>(opts.prod.Id()));
 
-	// itsLogger->Trace("Current producer: " + sourceProd.Name());
-
 	if (itsUseCache && opts.configuration->UseCache())
 	{
 		// 1. Fetch data from cache
@@ -614,6 +631,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 					    ->AddToCacheMissCount(1);
 				}
 
+				UpdateStickyCache(opts.param.Name(), opts.prod);
 				return ret;
 			}
 		}
