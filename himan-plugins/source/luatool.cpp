@@ -308,7 +308,12 @@ void SetValues(info_t& anInfo, const object& table)
 {
 	std::vector<double> vals = TableToVector(table);
 
-	if (vals.size() > 0 && vals.size() != anInfo->Data().Size())
+	if (vals.empty())
+	{
+		return;
+	}
+
+	if (vals.size() != anInfo->Data().Size())
 	{
 		std::cerr << "Error::luatool input table size is not the same as grid size: " << vals.size() << " vs "
 		          << anInfo->Data().Size() << std::endl;
@@ -1110,6 +1115,12 @@ std::vector<double> TableToVector(const object& table)
 	// table size!?
 
 	std::vector<double> ret;
+
+	if (type(table) == 0)
+	{
+		// Input argument is nil (lua.h)
+		return ret;
+	}
 
 	for (luabind::iterator iter(table), end; iter != end; ++iter)
 	{
