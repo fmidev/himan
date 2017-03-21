@@ -1,5 +1,6 @@
 #include "luatool.h"
 #include "ensemble.h"
+#include "lagged_ensemble.h"
 #include "forecast_time.h"
 #include "hitool.h"
 #include "latitude_longitude_grid.h"
@@ -962,7 +963,7 @@ void BindLib(lua_State* L)
 		      .def("ClassName", &ensemble::ClassName)
 		      .def("Fetch", &ensemble::Fetch)
 		      .def("Values", &ensemble_wrapper::Values)
-	  	      .def("SortedValues", &ensemble_wrapper::SortedValues)
+		      .def("SortedValues", &ensemble_wrapper::SortedValues)
 		      .def("ResetLocation", &ensemble::ResetLocation)
 		      .def("FirstLocation", &ensemble::FirstLocation)
 		      .def("NextLocation", &ensemble::NextLocation)
@@ -974,6 +975,24 @@ void BindLib(lua_State* L)
 		      .def("ExpectedSize", &ensemble::ExpectedSize)
 		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, ensemble, MaximumMissingForecasts, int))
 		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, ensemble, MaximumMissingForecasts, void)),
+		  class_<himan::lagged_ensemble, std::shared_ptr<himan::lagged_ensemble>>("lagged_ensemble")
+		      .def(constructor<param, size_t, HPTimeResolution, int, size_t>())
+		      .def("ClassName", &lagged_ensemble::ClassName)
+		      .def("Fetch", &lagged_ensemble::Fetch)
+		      .def("Value", &lagged_ensemble::Value)
+		      .def("Values", &ensemble_wrapper::Values)
+		      .def("SortedValues", &ensemble_wrapper::SortedValues)
+		      .def("ResetLocation", &lagged_ensemble::ResetLocation)
+		      .def("FirstLocation", &lagged_ensemble::FirstLocation)
+		      .def("NextLocation", &lagged_ensemble::NextLocation)
+		      .def("LagResolution", &lagged_ensemble::LagResolution)
+		      .def("Lag", &lagged_ensemble::Lag)
+		      .def("Size", &lagged_ensemble::Size)
+		      .def("ExpectedSize", &lagged_ensemble::ExpectedSize)
+		      .def("NumberOfSteps", &lagged_ensemble::NumberOfSteps)
+		      .def("VerifyValidForecastCount", &lagged_ensemble::VerifyValidForecastCount)
+		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, lagged_ensemble, MaximumMissingForecasts, int))
+		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, lagged_ensemble, MaximumMissingForecasts, void)),
 	          // numerical_functions namespace
 	          def("Filter2D", &numerical_functions::Filter2D),
 	          def("Max2D", &numerical_functions::Max2D),
