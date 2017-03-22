@@ -293,9 +293,11 @@ forecast.
 
 ## lagged_ensemble
 
+lagged_ensemble is an ensemble that is composed of ensembles from different analysis times.
+
 	local e = lagged_ensemble(param("T-K"), ensemble_size, HPTimeResolution.kHourResolution, lag, steps)
 
-lagged_ensemble is an ensemble that is composed of ensembles from different analysis times.
+
 | Return value | Name | Arguments | Description |
 |---|---|---|---|
 | string | ClassName | | Returns class name |
