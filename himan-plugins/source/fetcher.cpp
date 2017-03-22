@@ -126,7 +126,10 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers() && theInfos.empty(); prodNum++)
 	{
-		sourceProd = stickyParamCache[requestedParam.Name()];
+		{
+			lock_guard<mutex> lock(stickyMutex);
+			sourceProd = stickyParamCache[requestedParam.Name()];
+		}
 
 		if (sourceProd.Id() == kHPMissingInt)
 		{
