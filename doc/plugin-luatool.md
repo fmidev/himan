@@ -255,7 +255,7 @@ plugin_configuration class instance is automatically assigned to a lua script. I
 
 ## raw_time
 
-raw_time represents a timestamp and is a shallow wrapper over boost::posix_time::ptime.
+raw_time represents a timestamp and is a thin wrapper over boost::posix_time::ptime.
 
     local r = raw_time("2015-01-02 12:00:00")
 
@@ -265,6 +265,59 @@ raw_time represents a timestamp and is a shallow wrapper over boost::posix_time:
 | string | String | string | Returns the time in user-given format (for format details see boost documentation) |
 | | Adjust | HPTimeResolution, number | Adjust time as needed |
 | bool | Empty | | Checks if time is valid |
+
+## ensemble
+
+ensemble is a representation of an ensemble forecast as a unit. This enables processing that is done on the whole
+forecast.
+
+	local e = ensemble(param("T-K"), ensemble_size)
+
+| Return value | Name | Arguments | Description |
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| table | Fetch | plugin_configuration, forecast_time, forecast_level | Returns a fetched array of infos |
+| number | Value | integer | Returns the value of the ensemble member at the current location |
+| table | Values | | Returns an array of all the ensemble member values at the current location |
+| table | SortedValues | | Returns an array of all the ensemble member values at the current location, sorted in increasing order |
+| bool | ResetLocation | | Reset the location iterator to undefined state |
+| bool | FirstLocation | | Set the location iterator to the first position |
+| bool | NextLocation | | Advance the location iterator |
+| number | Mean | | Returns the mean of the ensemble member values at the current location |
+| number | Variance | | Returns the variance of the ensemble member values at the current location |
+| number | CentralMoment | integer | Returns the Nth central moment of the ensemble member values at the current location |
+| number | Size | | Returns the size of the currently fetched ensemble |
+| number | ExpectedSize | | Returns the expected size of the ensemble, which can be different from the current size of the ensemble |
+| | SetMaximumMissingForecasts | integer | Set the number of allowed missing forecasts in the ensemble |
+| number | GetMaximumMissingForecasts | | Get the number of allowed missing forecasts in the ensemble |
+
+## lagged_ensemble
+
+lagged_ensemble is an ensemble that is composed of ensembles from different analysis times.
+
+	local e = lagged_ensemble(param("T-K"), ensemble_size, HPTimeResolution.kHourResolution, lag, steps)
+
+
+| Return value | Name | Arguments | Description |
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| table | Fetch | plugin_configuration, forecast_time, forecast_level | Returns a fetched array of infos |
+| number | Value | integer | Returns the value of the ensemble member at the current location |
+| table | Values | | Returns an array of all the ensemble member values at the current location |
+| table | SortedValues | | Returns an array of all the ensemble member values at the current location, sorted in increasing order |
+| bool | ResetLocation | | Reset the location iterator to undefined state |
+| bool | FirstLocation | | Set the location iterator to the first position |
+| bool | NextLocation | | Advance the location iterator |
+| HPTimeResolution | LagResolution | | Returns the lag time resolution |
+| number | Lag | | Returns the lag of the ensemble |w
+| number | Mean | | Returns the mean of the ensemble member values at the current location |
+| number | Variance | | Returns the variance of the ensemble member values at the current location |
+| number | CentralMoment | integer | Returns the Nth central moment of the ensemble member values at the current location |
+| number | Size | | Returns the size of the currently fetched ensemble |
+| number | ExpectedSize | | Returns the expected size of the ensemble, which can be different from the current size of the ensemble |
+| number | NumberOfSteps | | Returns the number of lagged steps |
+| | SetMaximumMissingForecasts | integer | Set the number of allowed missing forecasts in the ensemble |
+| number | GetMaximumMissingForecasts | | Get the number of allowed missing forecasts in the ensemble |
 
 # Variables
 
