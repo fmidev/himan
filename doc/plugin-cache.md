@@ -4,6 +4,6 @@ cache plugin is one of the infrastructure plugins. It stores all read and writte
 
 The fields are stored as shared_ptr's, and each field will have a label associated which will be matched to incoming cache requests. When a field is returned from cache, it is copied to the caller so that cache contents are immutable.
 
-# Per-plugin configuration options
+# Configuration options
 
 cache can be turned off with configuration file option `use_cache`. Default value is true.
