@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.3.15
+Version: 17.3.27
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -112,6 +112,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Mar 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.27-1.fmi
+- Lagged ensemble support for luatool
+- Sticky param cache for fetcher
 * Wed Mar 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.15-1.fmi
 - General cleanup
 - MUCAPE starting value fix 
