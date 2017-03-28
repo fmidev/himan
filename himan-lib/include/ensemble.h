@@ -88,6 +88,9 @@ class ensemble
 
 	void MaximumMissingForecasts(int maximumMissing);
 
+	/// @brief Return all data for given ensemble member
+	info_t Forecast(size_t i);
+
    protected:
 	/// @brief Verifies that we have the required number of valid forecasts, else abort execution.
 	/// Outputs diagnostics.

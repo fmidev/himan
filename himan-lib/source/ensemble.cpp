@@ -232,4 +232,14 @@ double ensemble::CentralMoment(int N) const
 HPEnsembleType ensemble::EnsembleType() const { return itsEnsembleType; }
 size_t ensemble::Size() const { return itsForecasts.size(); }
 size_t ensemble::ExpectedSize() const { return itsExpectedEnsembleSize; }
+info_t ensemble::Forecast(size_t i)
+{
+	if (itsForecasts.size() <= i)
+	{
+		throw kFileDataNotFound;
+	}
+
+	return itsForecasts[i];
+}
+
 }  // namespace himan
