@@ -104,7 +104,7 @@ class fetcher : public auxiliary_plugin
 
    private:
 	void RotateVectorComponents(std::vector<info_t>& components, info_t target,
-	                            std::shared_ptr<const configuration> conf, const producer& sourceProd);
+	                            std::shared_ptr<const plugin_configuration> conf, const producer& sourceProd);
 
 	/**
 	 * @brief Apply land-sea mask to requested data.
@@ -218,7 +218,7 @@ class fetcher : public auxiliary_plugin
 	 * @return New level. If mapping is not found, new level == targetLevel.
 	 */
 
-	level LevelTransform(const std::shared_ptr<const plugin_configuration>& conf, const producer& sourceProducer,
+	level LevelTransform(const std::shared_ptr<const configuration>& conf, const producer& sourceProducer,
 	                     const param& targetParam, const level& targetLevel) const;
 
 	/**
@@ -229,7 +229,11 @@ class fetcher : public auxiliary_plugin
 	 * @return Vector of infos, zero sized if none found
 	 */
 
-	std::vector<std::shared_ptr<info>> FetchFromProducer(search_options& opts, bool readPackedData);
+	std::vector<std::shared_ptr<info>> FetchFromAllSources(search_options& opts, bool readPackedData);
+
+	std::vector<std::shared_ptr<info>> FetchFromCache(search_options& opts);
+	std::vector<std::shared_ptr<info>> FetchFromAuxiliaryFiles(search_options& opts, bool readPackedData);
+	std::vector<std::shared_ptr<info>> FetchFromDatabase(search_options& opts, bool readPackedData);
 
 	/**
 	 * @brief Rotate and interpolate infos. Function is called when auxiliary files
@@ -239,6 +243,8 @@ class fetcher : public auxiliary_plugin
 	 */
 
 	void AuxiliaryFilesRotateAndInterpolate(const search_options& opts, std::vector<info_t>& infos);
+
+	std::shared_ptr<himan::info> FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging);
 
 	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform;           //<! Default true

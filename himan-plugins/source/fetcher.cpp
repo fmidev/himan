@@ -32,14 +32,13 @@ static once_flag oflag;
 // (try prod 1, data not found, try prod 2) which will improve fetching
 // times when reading from database.
 
-static map<string, himan::producer> stickyParamCache;
-static mutex stickyMutex;
-
-void UpdateStickyCache(const std::string& name, const himan::producer& prod)
+std::string UniqueName(const himan::producer& prod, const himan::param& par, const himan::level& lev)
 {
-	lock_guard<mutex> lock(stickyMutex);
-	stickyParamCache[name] = prod;
+	return to_string(prod.Id()) + "_" + par.Name() + "_" + himan::HPLevelTypeToString.at(lev.Type());
 }
+
+static vector<string> stickyParamCache;
+static mutex stickyMutex;
 
 fetcher::fetcher()
     : itsDoLevelTransform(true),
@@ -62,9 +61,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	{
 		try
 		{
-			ret = Fetch(config, requestedTime, requestedLevel, requestedParams[i], requestedType, readPackedData, true);
-
-			return ret;
+			return Fetch(config, requestedTime, requestedLevel, requestedParams[i], requestedType, readPackedData,
+			             true);
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -107,115 +105,43 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	throw kFileDataNotFound;
 }
 
-shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
-                                       level requestedLevel, param requestedParam, forecast_type requestedType,
-                                       bool readPackedData, bool suppressLogging)
+shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
 {
-	unique_ptr<timer> t = unique_ptr<timer>(timer_factory::Instance()->GetTimer());
+	level newLevel = opts.level;
 
-	if (config->StatisticsEnabled())
+	if (itsDoLevelTransform &&
+	    (opts.level.Type() != kHybrid && opts.level.Type() != kPressure && opts.level.Type() != kHeightLayer))
 	{
-		t->Start();
+		newLevel = LevelTransform(opts.configuration, opts.prod, opts.param, opts.level);
+
+		if (newLevel != opts.level)
+		{
+			itsLogger->Trace("Transform level " + static_cast<string>(opts.level) + " to " +
+			                 static_cast<string>(newLevel) + " for producer " + to_string(opts.prod.Id()) +
+			                 ", parameter " + opts.param.Name());
+
+			opts.level = newLevel;
+		}
 	}
 
-	vector<shared_ptr<info>> theInfos;
+	auto theInfos = FetchFromAllSources(opts, readPackedData);
 
-	level newLevel = requestedLevel;
-
-	producer sourceProd;
-
-	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers() && theInfos.empty(); prodNum++)
+	if (theInfos.empty())
 	{
-		{
-			lock_guard<mutex> lock(stickyMutex);
-			sourceProd = stickyParamCache[requestedParam.Name()];
-		}
-
-		if (sourceProd.Id() == kHPMissingInt)
-		{
-			sourceProd = producer(config->SourceProducer(prodNum));
-		}
-
-		if (itsDoLevelTransform && (requestedLevel.Type() != kHybrid && requestedLevel.Type() != kPressure &&
-		                            requestedLevel.Type() != kHeightLayer))
-		{
-			newLevel = LevelTransform(config, sourceProd, requestedParam, requestedLevel);
-
-			if (newLevel != requestedLevel)
-			{
-				itsLogger->Trace("Transform level " + string(HPLevelTypeToString.at(requestedLevel.Type())) + "/" +
-				                 boost::lexical_cast<string>(requestedLevel.Value()) + " to " +
-				                 HPLevelTypeToString.at(newLevel.Type()) + "/" +
-				                 boost::lexical_cast<string>(newLevel.Value()) + " for producer " +
-				                 boost::lexical_cast<string>(sourceProd.Id()) + ", parameter " + requestedParam.Name());
-			}
-		}
-
-		search_options opts(requestedTime, requestedParam, newLevel, sourceProd, requestedType, config);
-
-		theInfos = FetchFromProducer(opts, readPackedData);
+		return shared_ptr<info>();
 	}
 
-	if (config->StatisticsEnabled())
-	{
-		t->Stop();
-
-		config->Statistics()->AddToFetchingTime(t->GetTime());
-	}
-
-	/*
-	 *  Safeguard; later in the code we do not check whether the data requested
-	 *  was actually what was requested.
-	 */
-
-	if (theInfos.size() == 0)
-	{
-		if (!suppressLogging)
-		{
-			string optsStr = "producer(s): ";
-
-			for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
-			{
-				optsStr += boost::lexical_cast<string>(config->SourceProducer(prodNum).Id()) + ",";
-			}
-
-			optsStr = optsStr.substr(0, optsStr.size() - 1);
-
-			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
-			           boost::lexical_cast<string>(requestedTime.Step());
-			optsStr += " param: " + requestedParam.Name();
-			optsStr += " level: " + static_cast<string>(requestedLevel);
-
-			if (static_cast<int>(requestedType.Type()) > 2)
-			{
-				optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" +
-				           boost::lexical_cast<string>(requestedType.Value());
-			}
-
-			itsLogger->Warning("No valid data found with given search options " + optsStr);
-		}
-
-		throw kFileDataNotFound;
-	}
-
-	// assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
-
-	assert((theInfos[0]->Level()) == newLevel);
-
-	assert((theInfos[0]->Time()) == requestedTime);
-
-	assert((theInfos[0]->Param()) == requestedParam);
-
-	auto baseInfo = make_shared<info>(*config->Info());
+	auto baseInfo = make_shared<info>(*opts.configuration->Info());
 	assert(baseInfo->Dimensions().size());
 
 	baseInfo->First();
 
-	RotateVectorComponents(theInfos, baseInfo, config, sourceProd);
+	RotateVectorComponents(theInfos, baseInfo, opts.configuration, opts.prod);
 
 	if (itsDoInterpolation)
 	{
-		if (!interpolate::Interpolate(*baseInfo, theInfos, config->UseCudaForInterpolation()))
+		if (!interpolate::Interpolate(*baseInfo, theInfos, opts.configuration->UseCudaForInterpolation()))
+
 		{
 			// interpolation failed
 			throw kFileDataNotFound;
@@ -233,7 +159,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		itsApplyLandSeaMask = false;
 
-		if (!ApplyLandSeaMask(config, *theInfos[0], requestedTime, requestedType))
+		if (!ApplyLandSeaMask(opts.configuration, *theInfos[0], opts.time, opts.ftype))
 		{
 			itsLogger->Warning("Land sea mask apply failed");
 		}
@@ -248,7 +174,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	 * 3. Data is not packed
 	 */
 
-	if (itsUseCache && config->UseCache() && !theInfos[0]->Grid()->IsPackedData())
+	if (itsUseCache && opts.configuration->UseCache() && !theInfos[0]->Grid()->IsPackedData())
 	{
 		auto c = GET_PLUGIN(cache);
 		c->Insert(*theInfos[0]);
@@ -256,7 +182,110 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	baseInfo.reset();
 
+	assert((theInfos[0]->Level()) == opts.level);
+
+	assert((theInfos[0]->Time()) == opts.time);
+
+	assert((theInfos[0]->Param()) == opts.param);
+
 	return theInfos[0];
+}
+
+shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
+                                       level requestedLevel, param requestedParam, forecast_type requestedType,
+                                       bool readPackedData, bool suppressLogging)
+{
+	unique_ptr<timer> t = unique_ptr<timer>(timer_factory::Instance()->GetTimer());
+
+	if (config->StatisticsEnabled())
+	{
+		t->Start();
+	}
+
+	// Check sticky param cache first
+
+	shared_ptr<info> ret;
+
+	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+	{
+		bool found = false;
+
+		{
+			lock_guard<mutex> lock(stickyMutex);
+
+			// Linear search, size of stickyParamCache should be relatively small
+			if (find(stickyParamCache.begin(), stickyParamCache.end(),
+			         UniqueName(config->SourceProducer(prodNum), requestedParam, requestedLevel)) !=
+			    stickyParamCache.end())
+			{
+				// oh,goody
+				found = true;
+			}
+		}
+
+		if (found)
+		{
+			search_options opts(requestedTime, requestedParam, requestedLevel, config->SourceProducer(prodNum),
+			                    requestedType, config);
+
+			ret = FetchFromProducer(opts, readPackedData, suppressLogging);
+			if (ret) break;
+		}
+	}
+
+	for (size_t prodNum = 0; (ret == nullptr) && prodNum < config->SizeSourceProducers(); prodNum++)
+	{
+		search_options opts(requestedTime, requestedParam, requestedLevel, config->SourceProducer(prodNum),
+		                    requestedType, config);
+
+		ret = FetchFromProducer(opts, readPackedData, suppressLogging);
+	}
+
+	if (config->StatisticsEnabled())
+	{
+		t->Stop();
+
+		config->Statistics()->AddToFetchingTime(t->GetTime());
+	}
+
+	/*
+	 *  Safeguard; later in the code we do not check whether the data requested
+	 *  was actually what was requested.
+	 */
+
+	if (!ret)
+	{
+		if (!suppressLogging)
+		{
+			string optsStr = "producer(s): ";
+
+			for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+			{
+				optsStr += to_string(config->SourceProducer(prodNum).Id()) + ",";
+			}
+
+			optsStr = optsStr.substr(0, optsStr.size() - 1);
+
+			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
+			           to_string(requestedTime.Step());
+			optsStr += " param: " + requestedParam.Name();
+			optsStr += " level: " + static_cast<string>(requestedLevel);
+
+			if (static_cast<int>(requestedType.Type()) > 2)
+			{
+				optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" +
+				           to_string(requestedType.Value());
+			}
+
+			itsLogger->Warning("No valid data found with given search options " + optsStr);
+		}
+
+		throw kFileDataNotFound;
+	}
+
+	// assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
+
+	return ret;
 }
 
 vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, search_options& options,
@@ -370,7 +399,7 @@ vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search
 	return infos;
 }
 
-himan::level fetcher::LevelTransform(const shared_ptr<const plugin_configuration>& conf, const producer& sourceProducer,
+himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf, const producer& sourceProducer,
                                      const param& targetParam, const level& targetLevel) const
 {
 	level ret = targetLevel;
@@ -510,11 +539,9 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 	futures.clear();
 }
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData)
+vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)
 {
 	vector<shared_ptr<info>> ret;
-
-	itsLogger->Trace("Current producer: " + boost::lexical_cast<string>(opts.prod.Id()));
 
 	if (itsUseCache && opts.configuration->UseCache())
 	{
@@ -531,12 +558,15 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 				    ->Statistics()
 				    ->AddToCacheHitCount(1);
 			}
-
-			return ret;
 		}
 	}
 
-	/* 2. Fetch data from auxiliary files specified at command line */
+	return ret;
+}
+
+vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options& opts, bool readPackedData)
+{
+	vector<info_t> ret;
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
@@ -606,13 +636,18 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 		}
 	}
 
-	// 3. Fetch data from Neons or Radon
+	return ret;
+}
 
-	vector<string> files;
+vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
+{
+	vector<info_t> ret;
 
 	if (opts.configuration->ReadDataFromDatabase())
 	{
 		HPDatabaseType dbtype = opts.configuration->DatabaseType();
+
+		vector<string> files;
 
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
@@ -622,24 +657,10 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 			itsLogger->Trace("Accessing Neons database");
 
 			files = n->Files(opts);
-
-			if (!files.empty())
-			{
-				ret = FromFile(files, opts, true, readPackedData);
-
-				if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
-				{
-					dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
-					    ->Statistics()
-					    ->AddToCacheMissCount(1);
-				}
-
-				UpdateStickyCache(opts.param.Name(), opts.prod);
-				return ret;
-			}
 		}
 
-		if (dbtype == kRadon || dbtype == kNeonsAndRadon)
+		if ((dbtype == kRadon ||
+		     dbtype == kNeonsAndRadon))  // TODO: following condition should be here: '&& files.empty())'
 		{
 			// try radon next
 
@@ -647,34 +668,63 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromProducer(search_options& opts,
 
 			itsLogger->Trace("Accessing Radon database");
 
-			files = r->Files(opts);
-
-			if (!files.empty())
-			{
-				ret = FromFile(files, opts, true, readPackedData);
-
-				if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
-				{
-					dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
-					    ->Statistics()
-					    ->AddToCacheMissCount(1);
-				}
-
-				return ret;
-			}
+			auto files = r->Files(opts);
 		}
 
-		const string ref_prod = opts.prod.Name();
-		const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
-		const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
-		itsLogger->Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
-		                 ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
+		if (files.empty())
+		{
+			const string ref_prod = opts.prod.Name();
+			const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
+			const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
+			itsLogger->Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
+			                 ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " +
+			                 opts.param.Name());
+		}
+		else
+		{
+			ret = FromFile(files, opts, true, readPackedData);
+
+			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
+			{
+				dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
+				    ->Statistics()
+				    ->AddToCacheMissCount(1);
+			}
+
+			lock_guard<mutex> lock(stickyMutex);
+			auto uName = UniqueName(opts.prod, opts.param, opts.level);
+			if (find(stickyParamCache.begin(), stickyParamCache.end(), uName) == stickyParamCache.end())
+			{
+				itsLogger->Trace("Updating sticky param cache: " + UniqueName(opts.prod, opts.param, opts.level));
+				stickyParamCache.push_back(uName);
+			}
+			return ret;
+		}
 	}
 
 	return ret;
 }
 
-bool fetcher::ApplyLandSeaMask(shared_ptr<const plugin_configuration> config, info& theInfo,
+vector<shared_ptr<himan::info>> fetcher::FetchFromAllSources(search_options& opts, bool readPackedData)
+{
+	auto ret = FetchFromCache(opts);
+
+	if (!ret.empty())
+	{
+		return ret;
+	}
+
+	ret = FetchFromAuxiliaryFiles(opts, readPackedData);
+
+	if (!ret.empty())
+	{
+		return ret;
+	}
+
+	return FetchFromDatabase(opts, readPackedData);
+}
+
+bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo,
                                forecast_time& requestedTime, forecast_type& requestedType)
 {
 	raw_time originTime = requestedTime.OriginDateTime();
@@ -778,8 +828,8 @@ string GetOtherVectorComponentName(const string& name)
 	throw runtime_error("Unable to find component pair for " + name);
 }
 
-void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target, shared_ptr<const configuration> config,
-                                     const producer& sourceProd)
+void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
+                                     shared_ptr<const plugin_configuration> config, const producer& sourceProd)
 {
 	for (auto& component : components)
 	{
@@ -805,7 +855,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target, 
 
 			itsLogger->Trace("Fetching " + otherName + " for U/V rotation");
 
-			auto otherVec = FetchFromProducer(opts, component->Grid()->IsPackedData());
+			auto otherVec = FetchFromAllSources(opts, component->Grid()->IsPackedData());
 
 			assert(!otherVec.empty());
 
