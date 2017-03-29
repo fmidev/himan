@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.3.27
+Version: 17.3.29
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 17.2.17
+Requires: himan-lib >= 17.3.29
 Requires: himan-bin >= 17.2.13
 Requires: lua >= 5.1.4
 Requires: unixODBC
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Mar 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.29-1.fmi
+- Hotfix for sticky param cache, code refactoring
 * Mon Mar 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.27-1.fmi
 - Lagged ensemble support for luatool
 - Sticky param cache for fetcher
