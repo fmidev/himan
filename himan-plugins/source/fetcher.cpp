@@ -668,7 +668,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 
 			itsLogger->Trace("Accessing Radon database");
 
-			auto files = r->Files(opts);
+			files = r->Files(opts);
 		}
 
 		if (files.empty())
