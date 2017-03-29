@@ -73,7 +73,6 @@ class integral
 	std::vector<bool> itsComplete;
 
 	std::valarray<double> itsResult;  // variable is modified in some Result() const functions
-	size_t itsIndex;
 
 	std::valarray<double> Interpolate(std::valarray<double>, std::valarray<double>, std::valarray<double>,
 	                                  std::valarray<double>, std::valarray<double>) const

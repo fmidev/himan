@@ -82,9 +82,6 @@ const double Nlimit = 70.;
 const double sfcMax = 0.;
 const double sfcMin = -10.;
 
-// Kynnysarvo vaaditulle stratuksen yläpuolisen kuivan kerroksen paksuudelle [m] (jäätävässä) tihkussa
-const double dryDz = 1500.;
-
 // Max. sallittu pilven (keskimääräinen) määrä (N) stratuksen yläpuolisessa kerroksessa [%] (jäätävässä) tihkussa
 // (käytetään myös jäätävässä sateessa vaadittuna pilven minimimääränä)
 const double dryNlim = 0.3;
@@ -105,9 +102,6 @@ const double snowArea = 50.;    // alkup. PK:n arvo oli 50
 
 // Max sallittu nousuliike st:ssa [mm/s]
 const double wMax = 50.;
-
-// Suht. kosteuden raja-arvo alapilvelle (925/850/700hPa) [%]
-const double rhLim = 90.;
 
 const param stratusBaseParam("STRATUS-BASE-M");
 const param stratusTopParam("STRATUS-TOP-M");

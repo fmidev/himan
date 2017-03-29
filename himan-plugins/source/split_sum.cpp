@@ -46,8 +46,6 @@ mutex mySingleFileWriteMutex;
 
 // Default behavior changed 27.12.2013 (HIMAN-26) // partio
 
-const bool CALCULATE_AVERAGE_RATE = false;
-
 const int SUB_THREAD_COUNT = 5;
 
 map<string, himan::params> sourceParameters;

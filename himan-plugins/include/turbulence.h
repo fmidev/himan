@@ -36,7 +36,6 @@ public:
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
 private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-	int itsTopLevel;
 };
 
 // the class factory
