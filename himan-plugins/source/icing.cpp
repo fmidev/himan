@@ -12,8 +12,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-const double kValueEpsilon = 0.00001;
-
 icing::icing()
 {
 	itsClearTextFormula = "Icing = round(log(CW) +6) + VVcor + Tcor";

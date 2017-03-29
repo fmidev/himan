@@ -21,6 +21,7 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize)
       itsExpectedEnsembleSize(expectedEnsembleSize),
       itsForecasts(),
       itsEnsembleType(kPerturbedEnsemble),
+      itsLogger(std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"))),
       itsMaximumMissingForecasts(0)
 {
 	itsDesiredForecasts.reserve(expectedEnsembleSize);
@@ -30,8 +31,6 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize)
 	{
 		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<double>(i)));
 	}
-
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 
 ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
@@ -40,6 +39,7 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
       itsExpectedEnsembleSize(expectedEnsembleSize),
       itsForecasts(),
       itsEnsembleType(kPerturbedEnsemble),
+      itsLogger(std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"))),
       itsMaximumMissingForecasts(0)
 {
 	assert(controlForecasts.size() < expectedEnsembleSize);
@@ -55,8 +55,6 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
 	{
 		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<double>(i)));
 	}
-
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("ensemble"));
 }
 
 ensemble::ensemble() : itsExpectedEnsembleSize(0), itsEnsembleType(kPerturbedEnsemble), itsMaximumMissingForecasts(0)

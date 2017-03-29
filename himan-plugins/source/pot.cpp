@@ -17,7 +17,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-pot::pot() : itsTopLevel()
+pot::pot()
 {
 	itsClearTextFormula = "complex formula";
 
