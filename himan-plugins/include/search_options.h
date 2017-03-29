@@ -19,7 +19,6 @@ namespace himan
 {
 namespace plugin
 {
-
 struct search_options
 {
 	himan::forecast_time time;
@@ -27,10 +26,10 @@ struct search_options
 	himan::level level;
 	himan::producer prod;
 	himan::forecast_type ftype;
-	const std::shared_ptr<const himan::configuration> configuration;
+	const std::shared_ptr<const himan::plugin_configuration> configuration;
 
 	search_options(const himan::forecast_time& theTime, const himan::param& theParam, const himan::level& theLevel,
-	               const himan::producer& theProducer, std::shared_ptr<const himan::configuration> theConf)
+	               const himan::producer& theProducer, std::shared_ptr<const himan::plugin_configuration> theConf)
 	    : time(theTime),
 	      param(theParam),
 	      level(theLevel),
@@ -42,7 +41,7 @@ struct search_options
 
 	search_options(const himan::forecast_time& theTime, const himan::param& theParam, const himan::level& theLevel,
 	               const himan::producer& theProducer, const himan::forecast_type& theForecastType,
-	               std::shared_ptr<const himan::configuration> theConf)
+	               std::shared_ptr<const himan::plugin_configuration> theConf)
 	    : time(theTime),
 	      param(theParam),
 	      level(theLevel),
