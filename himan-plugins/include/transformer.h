@@ -8,10 +8,8 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "level.h"
 #include "transformer.cuh"
 #include <boost/property_tree/ptree.hpp>
-#include <string>
 #include <vector>
 
 namespace himan
