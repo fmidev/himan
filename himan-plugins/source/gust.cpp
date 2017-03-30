@@ -129,7 +129,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param LowCloudParam("NL-PRCNT");   // low cloud cover
 	const param MidCloudParam("NM-PRCNT");   // middle cloud cover
 	const param HighCloudParam("NH-PRCNT");  // high cloud cover
-	const param TotalCloudParam("N-PRCNT");  // total cloud cover
+	const params TotalCloudParam = {param("N-PRCNT"),param("N-0TO1")};  // total cloud cover
 
 	level H0, H10;
 
