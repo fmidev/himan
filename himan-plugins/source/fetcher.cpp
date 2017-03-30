@@ -660,7 +660,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 		}
 
 		if ((dbtype == kRadon ||
-		     dbtype == kNeonsAndRadon))  // TODO: following condition should be here: '&& files.empty())'
+		     dbtype == kNeonsAndRadon) && files.empty())
 		{
 			// try radon next
 
@@ -830,7 +830,7 @@ string GetOtherVectorComponentName(const string& name)
 
 void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
                                      shared_ptr<const plugin_configuration> config, const producer& sourceProd)
-{
+{ 
 	for (auto& component : components)
 	{
 		HPGridType from = component->Grid()->Type();

@@ -10,7 +10,6 @@
 
 #include "himan_common.h"
 #include "logger.h"
-#include <string>
 
 #if defined __clang__
 
