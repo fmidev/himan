@@ -434,6 +434,9 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 	Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv * 100);
 	Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv * 100);
 
+	prevTenv = himan::metutil::VirtualTemperature_(prevTenv, prevPenv * 100);
+	prevTparcel = himan::metutil::VirtualTemperature_(prevTparcel, prevPenv * 100);
+
 	double coldColderLimit = 233.15;
 	double coldWarmerLimit = 263.15;
 
@@ -494,6 +497,9 @@ inline double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double p
 
 	Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv * 100);
 	Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv * 100);
+
+	prevTenv = himan::metutil::VirtualTemperature_(prevTenv, prevPenv * 100);
+	prevTparcel = himan::metutil::VirtualTemperature_(prevTparcel, prevPenv * 100);
 
 	if (Tparcel > Tenv)
 	{
@@ -567,6 +573,9 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 
 	Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv * 100);
 	Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv * 100);
+
+	prevTenv = himan::metutil::VirtualTemperature_(prevTenv, prevPenv * 100);
+	prevTparcel = himan::metutil::VirtualTemperature_(prevTparcel, prevPenv * 100);
 
 	if (Tparcel >= Tenv && prevTparcel >= Tenv)
 	{
