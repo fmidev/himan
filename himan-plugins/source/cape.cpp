@@ -109,19 +109,23 @@ std::string PrintMean(const vector<double>& vec)
 
 void MoistLift(const double* Piter, const double* Titer, const double* Penv, double* Tparcel, int size)
 {
-	// Split MoistLift (intergration of a saturated air parcel upwards in atmosphere)
+	// Split MoistLift (integration of a saturated air parcel upwards in atmosphere)
 	// to several threads since it is very CPU intensive
 
 	vector<future<void>> futures;
 
-	int workers = 4;
+	int workers = 6;
 
 	if (size % workers != 0)
 	{
-		workers = 3;
+		workers = 4;
 		if (size % workers != 0)
 		{
-			workers = 1;
+			workers = 3;
+			if (size % workers != 0)
+			{
+				workers = 1;
+			}
 		}
 	}
 
@@ -154,14 +158,6 @@ cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt)
 void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	compiled_plugin_base::Init(conf);
-
-	/*
-	 * Set target parameters:
-	 * - name
-	 * - univ_id
-	 * - grib2 descriptor 0'00'000
-	 *
-	 */
 
 	auto theNeons = GET_PLUGIN(neons);
 
@@ -371,6 +367,24 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	timer->Stop();
 
 	mySubThreadedLogger->Info("CAPE and CIN calculated in " + boost::lexical_cast<string>(timer->GetTime()) + " ms");
+
+#ifdef DEBUG
+	capeInfo->Param(LFCZParam);
+	auto lfcz_ = VEC(capeInfo);
+	capeInfo->Param(ELZParam);
+	auto elz_ = VEC(capeInfo);
+	capeInfo->Param(CAPEParam);
+	auto cape_ = VEC(capeInfo);
+
+	assert(lfcz_.size() == elz_.size());
+	assert(cape_.size() == elz_.size());
+
+	for (size_t i = 0; i < lfcz_.size(); i++)
+	{
+		assert((lfcz_[i] == kFloatMissing && elz_[i] == kFloatMissing) ||
+		       ((lfcz_[i] != kFloatMissing && elz_[i] != kFloatMissing) && (lfcz_[i] < elz_[i])));
+	}
+#endif
 
 	// Do smoothening for CAPE & CIN parameters
 	// Calculate average of nearest 4 points + the point in question
@@ -711,13 +725,34 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 				continue;
 			}
 			else if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing ||
-			         prevZenv == kFloatMissing || Tparcel == kFloatMissing || prevTparcel == kFloatMissing ||
-			         Penv > P[i])
+			         prevZenv == kFloatMissing || Tparcel == kFloatMissing || Penv > P[i])
 			{
 				// Missing data or current grid point is below LFC
 				continue;
 			}
-			else if (curLevel.Value() < 85 && (Tenv - Tparcel) > 25.)
+
+			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
+			// (and EL!) values can be determined.
+
+			if (prevTparcel == kFloatMissing && Tparcel != kFloatMissing)
+			{
+				prevTenv = himan::numerical_functions::interpolation::Linear(P[i], prevPenv, Penv, prevTenv, Tenv);
+				prevZenv = himan::numerical_functions::interpolation::Linear(P[i], prevPenv, Penv, prevZenv, Zenv);
+				prevPenv = P[i];     // LFC pressure
+				prevTparcel = T[i];  // LFC temperature
+
+				// If LFC was found close to lower hybrid level, the linear interpolation and moist lift will result
+				// to same values. In this case CAPE integration fails as there is no area formed between environment
+				// and parcel temperature. The result for this is that LFC is found but EL is not found. To prevent
+				// this, warm the parcel value just slightly so that a miniscule CAPE area is formed and EL is found.
+
+				if (fabs(prevTparcel - prevTenv) < 0.0001)
+				{
+					prevTparcel += 0.0001;
+				}
+			}
+
+			if (curLevel.Value() < 85 && (Tenv - Tparcel) > 25.)
 			{
 				// Temperature gap between environment and parcel too large --> abort search.
 				// Only for values higher in the atmosphere, to avoid the effects of inversion
@@ -833,10 +868,7 @@ pair<vector<double>, vector<double>> cape::GetLFC(shared_ptr<info> myTargetInfo,
 	h->Time(myTargetInfo->Time());
 	h->HeightUnit(kHPa);
 
-	// The arguments given to this function are LCL temperature and pressure
-	// Often LFC height is the same as LCL height, check that now
-
-	itsLogger->Trace("Searching environment temperature for LCL");
+	itsLogger->Trace("Searching environment temperature for starting pressure");
 
 	vector<double> TenvLCL;
 
@@ -889,7 +921,12 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	for (size_t i = 0; i < TenvLCL.size(); i++)
 	{
-		if (fabs(T[i] - TenvLCL[i]) < 0.001)
+		// Require dry lifted parcel to be just a fraction higher
+		// than environment to be accepted as LFC level.
+		// This requirement is important later when CAPE integration
+		// starts.
+
+		if ((T[i] - TenvLCL[i]) > 0.001)
 		{
 			found[i] = true;
 			LFCT[i] = T[i];
@@ -915,6 +952,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
+	vector<double> prevTparcelVec(P.size(), kFloatMissing);
 
 	while (curLevel.Value() > hPa150.first.Value() && foundCount != found.size())
 	{
@@ -934,9 +972,12 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
+		double scale = 1;
+		if (prevPenvInfo->Param().Name() == "P-PA") scale = 0.01;
+
 		int i = -1;
-		for (auto&& tup :
-		     zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(prevPenvInfo), VEC(prevTenvInfo), TparcelVec, LFCT, LFCP))
+		for (auto&& tup : zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(prevPenvInfo), VEC(prevTenvInfo), TparcelVec,
+		                            prevTparcelVec, LFCT, LFCP))
 		{
 			i++;
 
@@ -949,42 +990,42 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			assert(Penv < 1200.);
 			assert(P[i] < 1200.);
 
+			double prevPenv = tup.get<2>() * scale;
+			assert(prevPenv < 1200.);
+
+			double prevTenv = tup.get<3>();  // K
+			assert(prevTenv > 100.);
+
 			double Tparcel = tup.get<4>();  // K
 			assert(Tparcel > 100.);
 
-			double& Tresult = tup.get<5>();
-			double& Presult = tup.get<6>();
+			double prevTparcel = tup.get<5>();  // K
+			assert(Tparcel > 100.);
+
+			double& Tresult = tup.get<6>();
+			double& Presult = tup.get<7>();
 
 			if (Tparcel == kFloatMissing || Penv > P[i] + 30)
 			{
 				continue;
 			}
 
-			if (Tparcel >= Tenv)
+			if (Tparcel > Tenv)
 			{
 				// Parcel is now warmer than environment, we have found LFC and entering CAPE zone
 
 				found[i] = true;
 
-				// We have no specific information on the precise height where the temperature has crossed
-				// Or we could if we'd integrate it but it makes the calculation more complex. So maybe in the
-				// future. For now just take an average of upper and lower level values.
+				if (prevTparcel == kFloatMissing)
+				{
+					prevTparcel = T[i];  // previous is LCL
+				}
 
-				double prevTenv = tup.get<3>();  // K
-				assert(prevTenv > 100.);
+				auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv),
+				                                                 point(Tparcel, Penv), point(prevTparcel, prevPenv));
 
-				Tresult = (Tenv + prevTenv) * 0.5;
-
-				double prevPenv = tup.get<2>();
-				if (prevPenvInfo->Param().Name() == "P-PA") prevPenv *= 0.01;
-
-				// Never allow LFC pressure to be bigger than LCL pressure; bound lower level (with larger pressure
-				// value)
-				// to LCL level if it below LCL
-
-				prevPenv = min(prevPenv, P[i]);
-
-				Presult = (Penv + prevPenv) * 0.5;
+				Tresult = intersection.X();
+				Presult = intersection.Y();
 			}
 			else if (curLevel.Value() < hPa450.first.Value() && (Tenv - Tparcel) > 30.)
 			{
@@ -1014,6 +1055,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			}
 			if (found[i]) Titer[i] = kFloatMissing;  // by setting this we prevent MoistLift to integrate particle
 		}
+
+		prevTparcelVec = TparcelVec;
 	}
 
 	return make_pair(LFCT, LFCP);
