@@ -819,7 +819,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	return value;
 }
 
-double Wobf(double T)
+inline double Wobf(double T)
 {
 	// "Wobus function" is a polynomial approximation of moist lift
 	// process. It is called from MoistLiftA_().
