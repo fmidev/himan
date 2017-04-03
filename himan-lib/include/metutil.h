@@ -824,9 +824,9 @@ double Wobf(double T)
 	// "Wobus function" is a polynomial approximation of moist lift
 	// process. It is called from MoistLiftA_().
 
-	double ret = kFloatMissing;
+	double ret = himan::kFloatMissing;
 
-	if (T == kFloatMissing) return ret;
+	if (T == himan::kFloatMissing) return ret;
 
 	T -= 20;
 

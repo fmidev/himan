@@ -599,6 +599,8 @@ const double kIg = 0.10197;
 
 /**
  * @brief R / Cp, where R = Rd. Unitless quantity.
+ * Sometimes referred to as Poisson constant for dry air,
+ * kappa_d.
  */
 
 const double kRd_div_Cp = kRd / kCp;
