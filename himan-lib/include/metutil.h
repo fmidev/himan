@@ -284,6 +284,30 @@ CUDA_DEVICE
 double MoistLift_(double P, double T, double targetP);
 
 /**
+ * @brief Approximate the moist adiabatic lift of an parcel to wanted pressure.
+ *
+ * Initial temperature is assumed to be saturated.
+ * Method used is the (in)famous Wobus function.
+ *
+ * More information about it can be googled with term 'Wobus function', for example:
+ * http://www.caps.ou.edu/ARPS/arpsbrowser/arps5.2.4browser/html_code/adas/mthermo.f90.html
+ *
+ * Method is faster than the iterative approach but slightly inaccurate
+ * (errors up to ~1K, see docs for cape-plugin for more information).
+ *
+ * @param P Pressure of LCL in Pascals
+ * @param T Temperature of LCL in K
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+CUDA_KERNEL
+void MoistLiftA(cdarr_t P, cdarr_t T, cdarr_t targetP, darr_t result, size_t N);
+
+CUDA_DEVICE
+double MoistLiftA_(double P, double T, double targetP);
+
+/**
  * @brief Lift a parcel of air dry adiabatically to wanted pressure
  *
  * Poissons equation is used
@@ -765,7 +789,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	double T0 = Tint;
 
 	int i = 0;
-	const double Pstep = 100;                                   // Pa; do not increase this as quality of results is weakened
+	const double Pstep = 100;  // Pa; do not increase this as quality of results is weakened
 	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
 	double value = kFloatMissing;
@@ -793,6 +817,79 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	}
 
 	return value;
+}
+
+inline double Wobf(double T)
+{
+	// "Wobus function" is a polynomial approximation of moist lift
+	// process. It is called from MoistLiftA_().
+
+	double ret = himan::kFloatMissing;
+
+	if (T == himan::kFloatMissing) return ret;
+
+	T -= 20;
+
+	if (T <= 0)
+	{
+		ret = 1 +
+		      T * (-8.841660499999999e-3 +
+		           T * (1.4714143e-4 + T * (-9.671989000000001e-7 + T * (-3.2607217e-8 + T * (-3.8598073e-10)))));
+		ret = 15.130 / pow(ret, 4);
+	}
+	else
+	{
+		ret = 1 +
+		      T * (3.6182989e-03 +
+		           T * (-1.3603273e-05 +
+		                T * (4.9618922e-07 +
+		                     T * (-6.1059365e-09 + T * (3.9401551e-11 + T * (-1.2588129e-13 + T * (1.6688280e-16)))))));
+		ret = (29.930 / pow(ret, 4)) + (0.96 * T) - 14.8;
+	}
+
+	return ret;
+}
+
+CUDA_DEVICE
+inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
+{
+	if (P == kFloatMissing || T == kFloatMissing || targetP == kFloatMissing)
+	{
+		return kFloatMissing;
+	}
+
+	using namespace himan::constants;
+
+	const double theta = Theta_(T, P) - kKelvin;  // pot temp, C
+	T -= kKelvin;
+
+	const double thetaw = theta - Wobf(theta) + Wobf(T);  // moist pot temp, C
+
+	double remains = 9999;  // try to minimise this
+	double ratio = 1;
+
+	const double pwrp = pow(targetP / 100000, kRd_div_Cp);  // exner
+
+	double t1 = (thetaw + kKelvin) * pwrp - kKelvin;
+	double e1 = Wobf(t1) - Wobf(thetaw);
+	double t2 = t1 - (e1 * ratio);                 // improved estimate of return value (saturated lifted temperature)
+	double pot = (t2 + kKelvin) / pwrp - kKelvin;  // pot temperature of t2 at pressure p
+	double e2 = pot + Wobf(t2) - Wobf(pot) - thetaw;
+
+	while (fabs(remains) - 0.1 > 0)
+	{
+		ratio = (t2 - t1) / (e2 - e1);
+
+		t1 = t2;
+		e1 = e2;
+		t2 = t1 - e1 * ratio;
+		pot = (t2 + kKelvin) / pwrp - kKelvin;
+		e2 = pot + Wobf(t2) - Wobf(pot) - thetaw;
+
+		remains = e2 * ratio;
+	}
+
+	return t2 - remains + kKelvin;
 }
 
 CUDA_DEVICE
@@ -1141,13 +1238,14 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 
 	using namespace himan::constants;
 
-	const double P0 = 100000;
-	const double lambda = 1 / kRd_div_Cp;
 	const double a = 17.67;
 	const double b = 243.5;  // K
+	const double P0 = 100000;
+	const double lambda = 1 / kRd_div_Cp;
 	const double C = kKelvin;
 	const double pi = pow(P / P0, kRd_div_Cp);  // Nondimensional pressure, exner function
-	const double Te = thetaE * pi;              // Equivalent temperature
+
+	const double Te = thetaE * pi;  // Equivalent temperature
 	const double ratio = pow((C / Te), lambda);
 
 	// Quadratic regression curves for thetaW
@@ -1155,27 +1253,32 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	const double k1 = -38.5 * pi * pi + 137.81 * pi - 53.737;
 	const double k2 = -4.392 * pi * pi + 56.831 * pi - 0.384;
 
-	// Regression line for transition points of different Tw formulas
-
-	const double dpi = 1 / (0.1859 * (P / P0) + 0.6512);
-
 	const double p0 = P0 * 0.01;
 	const double p = P * 0.01;
 
+	// Regression line for transition points of different Tw formulas
+
+	const double Dp = 1 / (0.1859 * p / p0 + 0.6512);
+
 	double Tw = kFloatMissing;
 
-	if (ratio > dpi)
+	if (ratio > Dp)
 	{
-		const double r = MixingRatio_(Te, P) * 0.001;
-
 		const double A = 2675;  // K
 
-		Tw = Te - C - (A * r) / (1 + A * r * (a * b / pow((Te - C + b), 2)));
+		// e & r as Davies-Jones implemented them
+		const double e = 6.112 * exp((a * (Te - C)) / (Te - C + b));
+		const double r = kEp * e / (p0 * pow(pi, lambda) - e);
+
+		const double nomin = A * r;
+		const double denom = 1 + A * r * ((a * b) / pow((Te - C + b), 2));
+
+		Tw = Te - C - nomin / denom;
 	}
 	else
 	{
-		const double hot = (thetaE > 355.15) ? 1 : 0;
-		const double cold = (ratio >= 1 && ratio <= dpi) ? 0 : 1;
+		const double hot = (Te > 355.15) ? 1 : 0;
+		const double cold = (ratio >= 1 && ratio <= Dp) ? 0 : 1;
 
 		Tw = k1 - 1.21 * cold - 1.45 * hot - (k2 - 1.21 * cold) * ratio + (0.58 / ratio) * hot;
 	}
@@ -1185,38 +1288,44 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	// Improve accuracy with Newton-Raphson
 	// Current Tw is used as initial guess
 
-	for (int i = 0; i < 1; i++)
+	double remains = 1e38;
+	const int maxiter = 5;
+	int iter = 0;
+
+	while (remains > 0.01 && iter < maxiter)
 	{
 		const double newRatio = pow((C / Tw), lambda);
-		const double r = MixingRatio_(Tw, P) * 0.001;
-		const double e = Es_(Tw) * 0.01;
 
-		// e & r as Davies-Jones implemented them
-		// const double e = 6.112 * exp((a * (Tw - C)) / (Tw - C + b));
-		// const double r = (kEp * e) / (p0 * pow(pi, lambda) - e);
+		const double e = 6.112 * exp((a * (Tw - C)) / (Tw - C + b));
+		const double r = kEp * e / (p0 * pow(pi, lambda) - e);
 
 		// Evaluate f(x)
 
-		const double A = newRatio * (1 - e / (p0 * pow(pi, lambda)));
+		const double A = 1 - e / (p0 * pow(pi, lambda));
 		const double B = (3036 / Tw - 1.78) * (r + 0.448 * r * r);
 
-		const double TwNew = A * exp(-lambda * B);
+		const double fTw = newRatio * pow(A, kRd_div_Cp * lambda) * exp(-lambda * B);
 
-		// Partial derivative des/dTw
-		const double desTw = e * (a * b) / pow((Tw - C + b), 2);
+		// Partial derivative de/dTw
+		const double deTw = e * (a * b) / pow((Tw - C + b), 2);
 
-		// Partial derivative drs/dTw
-		const double drsTw = desTw * (kEp * p) / pow((p - e), 2);
+		// Partial derivative dr/dTw
+		const double drTw = ((kEp * p) / pow((p - e), 2)) * deTw;
 
 		// Evaluate f'(x)
 
-		const double A_ = (1 / Tw) + (kRd_div_Cp / (p - e)) * desTw;
+		const double A_ = (1 / Tw) + (kRd_div_Cp / (p - e)) * deTw;
+
 		const double B_ = -3036 * (r + 0.448 * r * r) / (Tw * Tw);
-		const double C_ = (3036 / Tw - 1.78) * (1 + 2 * (0.448 * r)) * drsTw;
+		const double C_ = (3036 / Tw - 1.78) * (1 + 2 * (0.448 * r)) * drTw;
 
-		const double dTw = -lambda * (A_ + B_ * C_);
+		const double dTw = -lambda * (A_ + B_ + C_);
 
-		Tw = Tw - (TwNew - ratio) / dTw;
+		double newTw = Tw - (fTw - ratio) / dTw;
+
+		iter++;
+		remains = fabs(newTw - Tw);
+		Tw = newTw;
 	}
 
 	return Tw;
@@ -1245,8 +1354,8 @@ inline double himan::metutil::ThetaW_(double thetaE, double P)
 		const double b3 = -0.6899655;
 		const double b4 = -0.5929340;
 
-		double A = a0 + a1 * X + a2 * X * X + a3 * pow(X, 3.) + a4 * pow(X, 4.);
-		double B = 1 + b1 * X + b2 * X * X + b3 * pow(X, 3.) + b4 * pow(X, 4.);
+		const double A = a0 + a1 * X + a2 * X * X + a3 * pow(X, 3.) + a4 * pow(X, 4.);
+		const double B = 1 + b1 * X + b2 * X * X + b3 * pow(X, 3.) + b4 * pow(X, 4.);
 
 		thetaW = thetaW - exp(A / B);
 	}

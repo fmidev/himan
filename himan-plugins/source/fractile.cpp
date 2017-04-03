@@ -224,16 +224,19 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
-		auto sortedValues = ens->SortedValues();
-
-		const size_t ensembleSize = sortedValues.size();
+		const size_t ensembleSize = ens->Size();
 
 		// Skip this step if we didn't get any valid fields
-		if (sortedValues.empty())
+		if (ensembleSize == 0)
 		{
 			continue;
 		}
 
+		// Allocate sortedValues with one size larger than ensemble to prevent out or range memory access
+		std::vector<double> sortedValues(ensembleSize + 1, kFloatMissing);
+		std::copy_n(ens->SortedValues().begin(), ensembleSize, sortedValues.begin());
+
+		assert(sortedValues.size() == ensembleSize + 1);
 		assert(!itsFractiles.empty());
 
 		size_t targetInfoIndex = 0;

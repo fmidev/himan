@@ -42,6 +42,14 @@ void metutil::MoistLift(cdarr_t P, cdarr_t T, cdarr_t targetP, darr_t result, si
 	}
 }
 
+void metutil::MoistLiftA(cdarr_t P, cdarr_t T, cdarr_t targetP, darr_t result, size_t N)
+{
+	for (size_t i = 0; i < N; i++)
+	{
+		result[i] = MoistLiftA_(P[i], T[i], targetP[i]);
+	}
+}
+
 void metutil::Lift(cdarr_t P, cdarr_t T, cdarr_t TD, cdarr_t targetP, darr_t result, size_t N)
 {
 	for (size_t i = 0; i < N; i++)

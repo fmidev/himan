@@ -274,7 +274,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			if (static_cast<int>(requestedType.Type()) > 2)
 			{
 				optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" +
-				           to_string(requestedType.Value());
+				           to_string(static_cast<int> (requestedType.Value()));
 			}
 
 			itsLogger->Warning("No valid data found with given search options " + optsStr);
