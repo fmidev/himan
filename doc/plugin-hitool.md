@@ -101,7 +101,7 @@ Example: Find the wind speed at boundary layer height.
 
 ## Height
 
-Return the height where some parameter value was found. By default the first occurence will be returned, but that can adjusted with argument Nth.
+Return the height where some parameters' value crosses the user given threshold was found. By default the last occurence will be returned, but that can adjusted with argument Nth.
 
     VerticalHeight(vector<param>, double lowerHeight, double upperHeight, vector<double> searchValue, int Nth)
     VerticalHeight(vector<param>, vector<double> lowerHeight, vector<double> upperHeight, vector<double> searchValue, int Nth)
@@ -119,7 +119,7 @@ Example: Find the height of first and second 0 degree isotherms.
 
 ## Height greater than
 
-Return the height where some parameter value was found. This function will also consider the case where the value as found very close to the starting height. For example when searching for the height where total cloudiness > 80%, in the case where a stratus cloud is found the regular height-search does not find the value (because the the cloudiness value did not cross 80% threshold). Otherwise there are no differences between _height_ and _height greater than_. 
+Return the height where some parameter value was higher than given limit value. This function will also consider the case where the value as found very close to the starting height, or where the value is consistently higher than limit value. For example when searching for the height where total cloudiness > 80%, in the case where a stratus cloud is found the regular height-search does not find the value (because the the cloudiness value did not cross 80% threshold). Argument Nth can have values 0 (= search for the last height where parameter value was encountered) or 1 (= search for the last height where parameter value was encountered).
 
     VerticalHeightGreaterThan(vector<param>, double lowerHeight, double upperHeight, vector<double> searchValue, int Nth)
     VerticalHeightGreaterThan(vector<param>, vector<double> lowerHeight, vector<double> upperHeight, vector<double> searchValue, int Nth)
@@ -136,7 +136,7 @@ Example: Find the first height where total cloudiness >= 80%, limit search to lo
 
 ## Height less than
 
-Return the height where some parameter value was found. Like _height greater than_,  this function will also consider the case where the value as found very close to the starting height. 
+Return the height where some parameter value was lower than given value. Argument Nth can have values 0 (= search for the last height where parameter value was encountered) or 1 (= search for the last height where parameter value was encountered).
 
     VerticalHeightLessThan(vector<param>, double lowerHeight, double upperHeight, vector<double> searchValue, int Nth)
     VerticalHeightLessThan(vector<param>, vector<double> lowerHeight, vector<double> upperHeight, vector<double> searchValue, int Nth)
@@ -145,11 +145,11 @@ Return the height where some parameter value was found. Like _height greater tha
     VerticalHeightLessThan(param, double lowerHeight, double upperHeight, vector<double> searchValue, int Nth)
     VerticalHeightLessThan(param, vector<double> lowerHeight, vector<double> upperHeight, vector<double> searchValue, int Nth)
 
-Example: Find the first height where wind speed <= 5 m/s , limit search to lowest 100 meters.
+Example: Find the last height where wind speed <= 5 m/s , limit search to lowest 100 meters.
 
     // Get and initialize hitool, etc
     
-    auto height = h->VerticalHeightLessThan(param("FF-MS"), 0, 100, 5, 1);
+    auto height = h->VerticalHeightLessThan(param("FF-MS"), 0, 100, 5, 0);
 
 # Per-plugin configuration options
 
