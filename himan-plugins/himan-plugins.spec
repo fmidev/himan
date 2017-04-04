@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.4.3
+Version: 17.4.4
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Apr  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.4-1.fmi
+- fractile another NaN fix
 * Mon Apr  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.3-1.fmi
 - gust Hirlam support
 - cape fix EL level search
