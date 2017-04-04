@@ -224,19 +224,21 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
-		const size_t ensembleSize = ens->Size();
+		auto sortedValues = ens->SortedValues();
+		const size_t ensembleSize = sortedValues.size();
 
 		// Skip this step if we didn't get any valid fields
 		if (ensembleSize == 0)
 		{
 			continue;
 		}
+		// sortedValues needs to have one element at the back for correct array indexing
+		// NOTE: `ensembleSize` stays the same
+		else
+		{
+			sortedValues.push_back(kFloatMissing);
+		}
 
-		// Allocate sortedValues with one size larger than ensemble to prevent out or range memory access
-		std::vector<double> sortedValues(ensembleSize + 1, kFloatMissing);
-		std::copy_n(ens->SortedValues().begin(), ensembleSize, sortedValues.begin());
-
-		assert(sortedValues.size() == ensembleSize + 1);
 		assert(!itsFractiles.empty());
 
 		size_t targetInfoIndex = 0;
@@ -269,12 +271,24 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			myTargetInfo->Value(sortedValues[i - 1] + std::fmod(x, 1.0) * (sortedValues[i] - sortedValues[i - 1]));
 			++targetInfoIndex;
 		}
-		// write mean value and stddev to last target info indices
+
+		double mean = ens->Mean();
+		if (!std::isfinite(mean))
+		{
+			mean = kFloatMissing;
+		}
+
+		double var = std::sqrt(ens->Variance());
+		if (!std::isfinite(var))
+		{
+			var = kFloatMissing;
+		}
+
 		myTargetInfo->ParamIndex(targetInfoIndex);
-		myTargetInfo->Value(ens->Mean());
+		myTargetInfo->Value(mean);
 		++targetInfoIndex;
 		myTargetInfo->ParamIndex(targetInfoIndex);
-		myTargetInfo->Value(std::sqrt(ens->Variance()));
+		myTargetInfo->Value(var);
 	}
 
 	threadedLogger->Info("[" + deviceType + "] Missing values: " +
