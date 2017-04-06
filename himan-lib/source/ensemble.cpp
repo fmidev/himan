@@ -209,14 +209,32 @@ std::vector<double> ensemble::SortedValues() const
 double ensemble::Mean() const
 {
 	std::vector<double> v = Values();
+	if (v.size() == 0)
+	{
+		return kFloatMissing;
+	}
+
 	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
 }
 
 double ensemble::Variance() const
 {
-	std::vector<double> v = Values();
-	for (auto& d : v) d *= d;
-	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size()) - std::pow(Mean(), 2.0);
+	std::vector<double> values = Values();
+	if (values.size() == 0)
+	{
+		return kFloatMissing;
+	}
+
+	const double mean = std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());
+
+	double sum = 0.0;
+	for (const auto& x : values)
+	{
+		const double t = x - mean;
+		sum += t * t;
+	}
+
+	return sum / static_cast<double>(values.size());
 }
 
 double ensemble::CentralMoment(int N) const
