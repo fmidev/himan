@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.4.4
+Version: 17.4.6
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -14,13 +14,12 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 17.3.29
-Requires: himan-bin >= 17.2.13
+Requires: himan-lib >= 17.4.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 16.9.8
-Requires: libfmidb >= 16.12.9
-Requires: smartmet-library-newbase >= 17.2.13
+Requires: libfmigrib >= 17.4.6
+Requires: libfmidb >= 17.4.6
+Requires: smartmet-library-newbase >= 17.4.4
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -36,9 +35,9 @@ BuildRequires: cusp >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 16.12.9
-BuildRequires: libfmigrib-devel >= 16.6.13
-BuildRequires: smartmet-library-newbase-devel >= 17.2.13
+BuildRequires: libfmidb-devel >= 17.4.6
+BuildRequires: libfmigrib-devel >= 17.4.6
+BuildRequires: smartmet-library-newbase-devel >= 17.4.4
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.53
@@ -112,6 +111,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Apr  6 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.6-1.fmi
+- Further safeguards for fractile & NaNs 
+- Add nodatabase mode
+- New newbase
+- New fmigrib
+- New fmidb
+- New eccodes
 * Tue Apr  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.4-1.fmi
 - fractile another NaN fix
 * Mon Apr  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.3-1.fmi
