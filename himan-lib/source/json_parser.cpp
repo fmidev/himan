@@ -207,7 +207,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		string theReadDataFromDatabase = pt.get<string>("read_data_from_database");
 
-		if (!ParseBoolean(theReadDataFromDatabase))
+		if (!ParseBoolean(theReadDataFromDatabase) || conf->DatabaseType() == kNoDatabase)
 		{
 			conf->ReadDataFromDatabase(false);
 		}
@@ -656,11 +656,11 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	if (latestOriginDateTime.Empty())
 	{
-		throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) +
-		                    " for producer " + boost::lexical_cast<string>(sourceProducer.Id()));
+		throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) + " for producer " +
+		                    boost::lexical_cast<string>(sourceProducer.Id()));
 	}
 
-	return latestOriginDateTime; 
+	return latestOriginDateTime;
 }
 
 void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info> anInfo,
@@ -679,6 +679,10 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		if (boost::regex_search(originDateTime, boost::regex("latest")))
 		{
+			if (conf->DatabaseType() == kNoDatabase)
+			{
+				throw std::invalid_argument("Unable to get latest time from database when no database mode is enabled");
+			}
 			originDateTimes.push_back(GetLatestOriginDateTime(conf, originDateTime));
 		}
 		else
@@ -701,7 +705,6 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 		{
 			throw runtime_error("Origin datetime not found with keys 'origintime' or 'origindatetimes'");
 		}
-
 	}
 	catch (exception& e)
 	{
@@ -741,7 +744,6 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 		{
 			for (int hour : times)
 			{
-
 				forecast_time theTime(originDateTime, originDateTime);
 
 				theTime.ValidDateTime().Adjust(kHourResolution, hour);
@@ -824,7 +826,8 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information from 'start_hour': ") + e.what());
+		throw runtime_error(ClassName() + ": " + string("Error parsing time information from 'start_hour': ") +
+		                    e.what());
 	}
 
 	try
@@ -1482,9 +1485,9 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		{
 			auto r = GET_PLUGIN(radon);
 
-			for (size_t i = 0; i < sourceProducersStr.size(); i++)
+			for (const auto& prodstr : sourceProducersStr)
 			{
-				long pid = boost::lexical_cast<long>(sourceProducersStr[i]);
+				long pid = stol(prodstr);
 
 				producer prod(pid);
 
@@ -1498,17 +1501,23 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 				}
 				else
 				{
-					itsLogger->Warning("Unknown source producer: " + sourceProducersStr[i]);
+					itsLogger->Warning("Unknown source producer: " + prodstr);
 				}
 
 				sourceProducers.push_back(prod);
 			}
 		}
-
-		if (sourceProducers.size() == 0)
+		else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
 		{
 			itsLogger->Fatal("Source producer information was not found from database");
 			abort();
+		}
+		else if (dbtype == kNoDatabase)
+		{
+			for (const auto& prodstr : sourceProducersStr)
+			{
+				sourceProducers.push_back(producer(stoi(prodstr)));
+			}
 		}
 
 		conf->SourceProducers(sourceProducers);
@@ -1547,7 +1556,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 			prod.Name(prodInfo["ref_prod"]);
 			prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
 		}
-		else
+		else if (dbtype != kNoDatabase)
 		{
 			itsLogger->Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 		}
