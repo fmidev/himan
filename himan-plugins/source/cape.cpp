@@ -338,6 +338,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	mySubThreadedLogger->Debug("LFC temperature: " + ::PrintMean(LFC.first));
 	mySubThreadedLogger->Debug("LFC pressure: " + ::PrintMean(LFC.second));
 
+
 	myTargetInfo->Param(LFCTParam);
 	myTargetInfo->Data().Set(LFC.first);
 
@@ -666,7 +667,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 	auto prevTenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 	auto prevPenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
-	curLevel.Value(curLevel.Value() - 1);
+	curLevel.Value(curLevel.Value());
 
 	auto Piter = P, Titer = T;  // integration variables
 	auto prevTparcelVec = Titer;
@@ -730,6 +731,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 				// Missing data or current grid point is below LFC
 				continue;
 			}
+
 
 			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
 			// (and EL!) values can be determined.
@@ -1021,11 +1023,22 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					prevTparcel = T[i];  // previous is LCL
 				}
 
-				auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv),
-				                                                 point(Tparcel, Penv), point(prevTparcel, prevPenv));
+				if (fabs(prevTparcel - prevTenv) < 0.0001)
+				{
+					Tresult = Tparcel;
+					Presult = Penv;
+				}
+				else
+				{
+					auto intersection =
+					    CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv), point(Tparcel, Penv),
+					                                 point(prevTparcel, prevPenv));
 
-				Tresult = intersection.X();
-				Presult = intersection.Y();
+					Tresult = intersection.X();
+					Presult = intersection.Y();
+				}
+				assert(Tresult != kFloatMissing);
+				assert(Presult != kFloatMissing);
 			}
 			else if (curLevel.Value() < hPa450.first.Value() && (Tenv - Tparcel) > 30.)
 			{
