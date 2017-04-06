@@ -643,10 +643,10 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 {
 	vector<info_t> ret;
 
-	if (opts.configuration->ReadDataFromDatabase() && !opts.configuration->DatabaseType() == kNoDatabase)
-	{
-		HPDatabaseType dbtype = opts.configuration->DatabaseType();
+	HPDatabaseType dbtype = opts.configuration->DatabaseType();
 
+	if (opts.configuration->ReadDataFromDatabase() && dbtype != kNoDatabase)
+	{
 		vector<string> files;
 
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
