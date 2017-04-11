@@ -101,6 +101,9 @@ class querydata : public io_plugin
 	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
 	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
 
+	void UseDatabase(bool theUseDatabase);
+	bool UseDatabase() const;
+
    private:
 	/**
 	 * @brief Copy data from info to querydata
@@ -113,6 +116,8 @@ class querydata : public io_plugin
 
 	NFmiHPlaceDescriptor CreateGrid(info& info) const;
 	NFmiHPlaceDescriptor CreatePoint(info& info) const;
+
+	bool itsUseDatabase;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

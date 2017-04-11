@@ -320,6 +320,7 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 
 	auto q = GET_PLUGIN(querydata);
 
+	q->UseDatabase(false);
 	std::shared_ptr<NFmiQueryData> baseData = q->CreateQueryData(base, true);
 	std::shared_ptr<NFmiQueryData> sourceData = q->CreateQueryData(source, true);
 
