@@ -16,17 +16,38 @@ using namespace himan::plugin;
 const int MAX_WORKERS = 16;
 static std::once_flag oflag;
 
+void neons::Init()
+{
+	if (!itsInit)
+	{
+		try
+		{
+			call_once(oflag, [&]() {
+					NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+					NFmiNeonsDBPool::Instance()->Username("wetodb");
+					NFmiNeonsDBPool::Instance()->Password(util::GetEnv("NEONS_WETODB_PASSWORD"));
+
+					if (NFmiNeonsDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
+					{
+						NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
+					}
+				});
+
+			itsNeonsDB = std::unique_ptr<NFmiNeonsDB>(NFmiNeonsDBPool::Instance()->GetConnection());
+		}
+		catch (int e)
+		{
+			itsLogger->Fatal("Failed to get connection");
+			abort();
+		}
+
+		itsInit = true;
+	}
+}
+
 neons::neons() : itsInit(false), itsNeonsDB()
 {
 	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("neons"));
-
-	call_once(oflag, [&]() {
-		PoolMaxWorkers(MAX_WORKERS);
-
-		NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
-		NFmiNeonsDBPool::Instance()->Username("wetodb");
-		NFmiNeonsDBPool::Instance()->Password(util::GetEnv("NEONS_WETODB_PASSWORD"));
-	});
 }
 
 void neons::PoolMaxWorkers(int maxWorkers) { NFmiNeonsDBPool::Instance()->MaxWorkers(maxWorkers); }

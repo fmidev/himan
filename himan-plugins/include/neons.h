@@ -95,29 +95,11 @@ private:
 	 * to use another function for that.
 	 */
 
-	inline void Init();
+	void Init();
 
 	bool itsInit;                             //!< Holds the initialization status of the database connection
 	std::unique_ptr<NFmiNeonsDB> itsNeonsDB;  //<! The actual database class instance
 };
-
-inline void neons::Init()
-{
-	if (!itsInit)
-	{
-		try
-		{
-			itsNeonsDB = std::unique_ptr<NFmiNeonsDB>(NFmiNeonsDBPool::Instance()->GetConnection());
-		}
-		catch (int e)
-		{
-			itsLogger->Fatal("Failed to get connection");
-			exit(1);
-		}
-
-		itsInit = true;
-	}
-}
 
 inline NFmiNeonsDB& neons::NeonsDB()
 {
