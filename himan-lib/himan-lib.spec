@@ -5,7 +5,7 @@ Summary: himan core library
 Name: %{LIBNAME}
 Version: 17.4.11
 Release: 1.el7.fmi
-License: FMI
+License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
 Source0: %{name}.tar.gz
