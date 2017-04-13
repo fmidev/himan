@@ -501,6 +501,28 @@ const boost::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType =
 	("level ensemble", kLevelEnsemble)
 	("lagged ensemble", kLaggedEnsemble);
 
+enum HPProducerClass
+{
+	kUnknownProducerClass = 0,
+	kGridClass = 1,
+	kPreviClass = 3
+};
+
+const boost::unordered_map<HPProducerClass, std::string> HPProducerClassToString =
+    ba::map_list_of
+	(kUnknownProducerClass, "unknown")
+	(kGridClass, "grid")
+	(kPreviClass, "previ")
+	;
+
+const boost::unordered_map<std::string, HPProducerClass> HPStringToProducerClass =
+    ba::map_list_of
+	("unknown", kUnknownProducerClass)
+	("grid", kGridClass)
+	("previ", kPreviClass)
+	;
+
+
 /**
  * @struct HPVersionNumber
  *
