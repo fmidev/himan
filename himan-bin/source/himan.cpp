@@ -338,7 +338,9 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	string confFile = "";
 	string statisticsLabel = "";
 	vector<string> auxFiles;
+#ifdef HAVE_CUDA
 	short int cudaDeviceId = 0;
+#endif
 
 	himan::HPDebugState debugState = himan::kDebugMsg;
 
@@ -360,12 +362,14 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("statistics,s", po::value(&statisticsLabel), "record statistics information")
 		("radon,R", "use only radon database")
 		("neons,N", "use only neons database")
+#ifdef HAVE_CUDA
 		("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
 		("cuda-properties", "print cuda device properties of platform (if any)")
 		("no-cuda", "disable all cuda extensions")
 		("no-cuda-packing", "disable cuda packing of grib data")
 		("no-cuda-unpacking", "disable cuda unpacking of grib data")
 		("no-cuda-interpolation", "disable cuda grid interpolation")
+#endif
 		("no-auxiliary-file-full-cache-read", "disable the initial reading of all auxiliary files to cache")
 	;
 
@@ -423,25 +427,12 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	}
 
 #ifndef HAVE_CUDA
-	if (opt.count("cuda-properties"))
-	{
-		cout << "CUDA support turned off at compile time" << endl;
-		exit(1);
-	}
-
 	conf->UseCuda(false);
 	conf->UseCudaForPacking(false);
 	conf->UseCudaForUnpacking(false);
 	conf->UseCudaForInterpolation(false);
 	conf->CudaDeviceCount(0);
-
-	if (opt.count("cuda-device-id"))
-	{
-		cerr << "CUDA support turned off at compile time" << endl;
-	}
-
 #else
-
 	if (opt.count("cuda-properties"))
 	{
 		CudaCapabilities();
