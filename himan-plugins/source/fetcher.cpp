@@ -335,7 +335,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 
 			case kCSV:
 			{
-				curInfos = FromCSV(inputFile, options);
+				curInfos = FromCSV(inputFile, options, readIfNotMatching);
 				break;
 			}
 
@@ -390,11 +390,11 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 	return theInfos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search_options& options)
+vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search_options& options, bool readIfNotMatching)
 {
 	auto c = GET_PLUGIN(csv);
 
-	auto info = c->FromFile(inputFile, options);
+	auto info = c->FromFile(inputFile, options, readIfNotMatching);
 
 	vector<info_t> infos;
 	infos.push_back(info);
