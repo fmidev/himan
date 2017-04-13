@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.3.15
+Version: 17.4.3
 Release: 1.el7.fmi
 License: FMI
 Group: Development/Tools
@@ -61,6 +61,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Apr  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.3-1.fmi
+- metutil: Add moist lift approximation function 
+* Wed Mar 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.29-1.fmi
+- Add functionality to ensemble
 * Wed Mar 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.15-1.fmi
 - Increased air parcel lift accuracy
 * Fri Feb 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.17-1.fmi

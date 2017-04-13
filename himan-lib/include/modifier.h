@@ -43,7 +43,7 @@ class modifier
 	virtual bool CalculationFinished() const;
 
 	size_t FindNth() const;
-	void FindNth(size_t theNth);
+	virtual void FindNth(size_t theNth);
 
 	virtual void Process(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
@@ -76,8 +76,6 @@ class modifier
 	bool EnteringHeightZone(double theHeight, double thePreviousHeight, double lowerLimit) const;
 	bool LeavingHeightZone(double theHeight, double thePreviousHeight, double upperLimit) const;
 	bool BetweenLevels(double theHeight, double thePreviousHeight, double lowerLimit, double upperLimit) const;
-
-	bool itsMissingValuesAllowed;
 
 	std::vector<double> itsLowerHeight;
 	std::vector<double> itsUpperHeight;
@@ -281,6 +279,7 @@ class modifier_findheight_gt : public modifier_findheight
 	virtual std::string ClassName() const override { return "himan::modifier_findheight_gt"; }
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
+	virtual void FindNth(size_t theNth) override;
 };
 
 /**
@@ -295,6 +294,7 @@ class modifier_findheight_lt : public modifier_findheight
 	virtual std::string ClassName() const override { return "himan::modifier_findheight_lt"; }
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
+	virtual void FindNth(size_t theNth) override;
 };
 
 /**

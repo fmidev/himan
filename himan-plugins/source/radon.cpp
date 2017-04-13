@@ -16,21 +16,47 @@ using namespace himan::plugin;
 const int MAX_WORKERS = 32;
 static once_flag oflag;
 
+void radon::Init()
+{
+	if (!itsInit)
+	{
+		try
+		{
+			call_once(oflag, [&]() {
+					NFmiRadonDBPool::Instance()->Username("wetodb");
+					NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
+					NFmiRadonDBPool::Instance()->Database("radon");
+					NFmiRadonDBPool::Instance()->Hostname("vorlon");
+
+					if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
+					{
+						NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
+					}
+				});
+
+			itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
+		}
+		catch (int e)
+		{
+			itsLogger->Fatal("Failed to get connection");
+			abort();
+		}
+
+		itsInit = true;
+	}
+}
+
 radon::radon() : itsInit(false), itsRadonDB()
 {
 	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("radon"));
-
-	call_once(oflag, [&]() {
-		PoolMaxWorkers(MAX_WORKERS);
-
-		NFmiRadonDBPool::Instance()->Username("wetodb");
-		NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
-		NFmiRadonDBPool::Instance()->Database("radon");
-		NFmiRadonDBPool::Instance()->Hostname("vorlon");
-	});
 }
 
-void radon::PoolMaxWorkers(int maxWorkers) { NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers); }
+void radon::PoolMaxWorkers(int maxWorkers)
+{
+	itsLogger->Warning("Switching worker pool size to " + std::to_string(maxWorkers));
+	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
+}
+
 vector<string> radon::Files(search_options& options)
 {
 	Init();

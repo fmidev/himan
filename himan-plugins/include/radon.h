@@ -81,44 +81,17 @@ public:
 
    private:
 	/**
-	 * @brief Initialize connection pool
-	 *
-	 * This function will be called just once even in a threaded environment
-	 * and it will set the maximum size of the connection pool.
-	 */
-
-	void InitPool();
-
-	/**
 	 * @brief Connect to database
 	 *
 	 * We cannot connect to database directly in the constructor, but we need
 	 * to use another function for that.
 	 */
 
-	inline void Init();
+	void Init();
 
 	bool itsInit;                             //!< Holds the initialization status of the database connection
 	std::unique_ptr<NFmiRadonDB> itsRadonDB;  //<! The actual database class instance
 };
-
-inline void radon::Init()
-{
-	if (!itsInit)
-	{
-		try
-		{
-			itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
-		}
-		catch (int e)
-		{
-			itsLogger->Fatal("Failed to get connection");
-			exit(1);
-		}
-
-		itsInit = true;
-	}
-}
 
 inline NFmiRadonDB& radon::RadonDB()
 {

@@ -28,6 +28,8 @@ using namespace himan::plugin;
 #define BitMask1(i) (1u << i)
 #define BitTest(n, i) !!((n)&BitMask1(i))
 
+std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
+
 grib::grib()
 {
 	itsLogger = logger_factory::Instance()->GetLog("grib");
@@ -229,6 +231,14 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			                 boost::lexical_cast<string>(anInfo.Grid()->Type()));
 			abort();
 	}
+	/*
+	    if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
+	    {
+
+	    }
+	*/
+	itsGrib->Message().Centre(anInfo.Producer().Centre() == kHPMissingInt ? 86 : anInfo.Producer().Centre());
+	itsGrib->Message().Process(anInfo.Producer().Process() == kHPMissingInt ? 255 : anInfo.Producer().Process());
 
 	bool iNegative, jPositive;
 
@@ -646,23 +656,33 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	if (anInfo.Producer().Centre() == kHPMissingInt)
 	{
-		auto n = GET_PLUGIN(neons);
-
-		map<string, string> producermap =
-		    n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long>(anInfo.Producer().Id()));
-
-		if (!producermap["ident_id"].empty() && !producermap["model_id"].empty())
+		if (itsWriteOptions.configuration->DatabaseType() == kNeons ||
+		    itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon)
 		{
-			itsGrib->Message().Centre(boost::lexical_cast<long>(producermap["ident_id"]));
-			itsGrib->Message().Process(boost::lexical_cast<long>(producermap["model_id"]));
+			auto n = GET_PLUGIN(neons);
+
+			map<string, string> producermap =
+			    n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long>(anInfo.Producer().Id()));
+
+			if (!producermap["ident_id"].empty() && !producermap["model_id"].empty())
+			{
+				itsGrib->Message().Centre(boost::lexical_cast<long>(producermap["ident_id"]));
+				itsGrib->Message().Process(boost::lexical_cast<long>(producermap["model_id"]));
+			}
+			else
+			{
+				string producerId = boost::lexical_cast<string>(anInfo.Producer().Id());
+				itsLogger->Warning("Unable to get process and centre information from Neons for producer " +
+				                   producerId);
+				itsLogger->Warning("Setting process to " + producerId + " and centre to 86");
+				itsGrib->Message().Centre(86);
+				itsGrib->Message().Process(anInfo.Producer().Id());
+			}
 		}
 		else
 		{
-			string producerId = boost::lexical_cast<string>(anInfo.Producer().Id());
-			itsLogger->Warning("Unable to get process and centre information from Neons for producer " + producerId);
-			itsLogger->Warning("Setting process to " + producerId + " and centre to 86");
 			itsGrib->Message().Centre(86);
-			itsGrib->Message().Process(anInfo.Producer().Id());
+			itsGrib->Message().Process(255);
 		}
 	}
 	else
@@ -854,6 +874,22 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger->Warning("Unable to append to a compressed file");
 		appendToFile = false;
+	}
+
+	if (itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon || itsWriteOptions.configuration->DatabaseType() == kRadon)
+	{
+		auto r = GET_PLUGIN(radon);
+		auto precisionInfo = r->RadonDB().GetParameterPrecision(anInfo.Param().Name());
+		if (precisionInfo.empty() || precisionInfo.find("precision") == precisionInfo.end() || precisionInfo["precision"].empty())
+		{
+			itsLogger->Trace("Precision not found for parameter " + anInfo.Param().Name() + " defaulting to 24 bits");
+		}
+		else
+		{
+			int decimals = std::stoi(precisionInfo["precision"]);
+			itsLogger->Trace("Using " + std::to_string(decimals) + " decimals for " + anInfo.Param().Name() + "'s precision");
+			itsGrib->Message().ChangeDecimalPrecision(decimals);
+		}
 	}
 
 	itsGrib->Message().Write(outputFile, appendToFile);
@@ -1108,6 +1144,8 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 	shared_ptr<neons> n;
 	shared_ptr<radon> r;
 
+	auto dbtype = options.configuration->DatabaseType();
+
 	if (itsGrib->Message().Edition() == 1)
 	{
 		long no_vers = itsGrib->Message().Table2Version();
@@ -1116,7 +1154,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		string parmName = "";
 
-		if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
 			n = GET_PLUGIN(neons);
 
@@ -1124,8 +1162,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 			    n->GribParameterName(number, no_vers, timeRangeIndicator, static_cast<long>(options.level.Type()));
 		}
 
-		if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
-		                         options.configuration->DatabaseType() == kNeonsAndRadon))
+		if (parmName.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 		{
 			r = GET_PLUGIN(radon);
 
@@ -1139,25 +1176,15 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 			}
 		}
 
+		if (parmName.empty() && dbtype == kNoDatabase)
+		{
+			parmName = GetParamNameFromGribShortName(options.configuration->ParamFile(),
+			                                         itsGrib->Message().GetStringKey("shortName"));
+		}
+
 		if (parmName.empty())
 		{
-			auto dbType = options.configuration->DatabaseType();
-			string db = "";
-
-			if (dbType == kNeonsAndRadon)
-			{
-				db = " Neons or Radon ";
-			}
-			else if (dbType == kRadon)
-			{
-				db = " Radon ";
-			}
-			else
-			{
-				db = " Neons ";
-			}
-
-			itsLogger->Warning("Parameter name not found from" + db + "for no_vers: " +
+			itsLogger->Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) + " for no_vers: " +
 			                   boost::lexical_cast<string>(no_vers) + ", number: " +
 			                   boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
 			                   boost::lexical_cast<string>(timeRangeIndicator));
@@ -1200,7 +1227,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		string parmName = "";
 
-		if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
+		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
 			auto n = GET_PLUGIN(neons);
 
@@ -1208,8 +1235,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 			    n->GribParameterName(number, category, discipline, process, static_cast<long>(options.level.Type()));
 		}
 
-		if (parmName.empty() && (options.configuration->DatabaseType() == kRadon ||
-		                         options.configuration->DatabaseType() == kNeonsAndRadon))
+		if (parmName.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
 		{
 			auto r = GET_PLUGIN(radon);
 
@@ -1221,6 +1247,12 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 			{
 				parmName = parminfo["name"];
 			}
+		}
+
+		if (parmName.empty() && dbtype == kNoDatabase)
+		{
+			parmName = GetParamNameFromGribShortName(options.configuration->ParamFile(),
+			                                         itsGrib->Message().GetStringKey("shortName"));
 		}
 
 		if (parmName.empty())
@@ -1849,7 +1881,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	int foundMessageNo = 0;
 
-	if (options.prod.Centre() == kHPMissingInt)
+	if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
 	{
 		itsLogger->Error("Process and centre information for producer " +
 		                 boost::lexical_cast<string>(options.prod.Id()) + " are undefined");
@@ -2002,4 +2034,41 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 	    }
 	*/
 	return theKeyValueMap;
+}
+
+std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName)
+{
+	ifstream paramFile;
+	paramFile.open(paramFileName, ios::in);
+
+	if (!paramFile.is_open())
+	{
+		throw runtime_error("Unable to open file '" + paramFileName + "'");
+	}
+
+	string line, ret;
+
+	while (getline(paramFile, line))
+	{
+		auto elems = himan::util::Split(line, ",", false);
+
+		if (elems.size() == 2)
+		{
+			if (elems[0] == shortName)
+			{
+				ret = elems[1];
+				break;
+			}
+		}
+#ifdef DEBUG
+		else
+		{
+			cout << "paramFile invalid line: '" << line << "'\n";
+		}
+#endif
+	}
+
+	paramFile.close();
+
+	return ret;
 }

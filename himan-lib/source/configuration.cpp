@@ -33,7 +33,8 @@ configuration::configuration()
       itsCudaDeviceCount(-1),
       itsCudaDeviceId(0),
       itsForecastStep(kHPMissingInt),
-      itsCacheLimit(-1)
+      itsCacheLimit(-1),
+      itsParamFile()
 {
 }
 
@@ -62,7 +63,8 @@ configuration::configuration(const configuration& other)
       itsCudaDeviceCount(other.itsCudaDeviceCount),
       itsCudaDeviceId(other.itsCudaDeviceId),
       itsForecastStep(other.itsForecastStep),
-      itsCacheLimit(other.itsCacheLimit)
+      itsCacheLimit(other.itsCacheLimit),
+      itsParamFile(other.itsParamFile)
 
 {
 	assert(itsSourceProducerIterator);
@@ -109,6 +111,8 @@ std::ostream& configuration::Write(std::ostream& file) const
 	{
 		file << "__itsAuxiliaryFiles__ " << i << " " << itsAuxiliaryFiles[i] << std::endl;
 	}
+
+	file << "__itsParamFile__ " << itsParamFile << std::endl;
 	return file;
 }
 
@@ -210,4 +214,9 @@ bool configuration::ReadAllAuxiliaryFilesToCache() const { return itsReadAllAuxi
 void configuration::ReadAllAuxiliaryFilesToCache(bool theReadAllAuxiliaryFilesToCache)
 {
 	itsReadAllAuxiliaryFilesToCache = theReadAllAuxiliaryFilesToCache;
+}
+std::string configuration::ParamFile() const { return itsParamFile; }
+void configuration::ParamFile(const std::string& theParamFile)
+{
+	itsParamFile = theParamFile;
 }

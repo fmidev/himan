@@ -4,6 +4,7 @@
 
 #include "modifier.h"
 #include "NFmiInterpolation.h"
+#include "numerical_functions.h"
 
 using namespace himan;
 
@@ -11,36 +12,24 @@ using namespace himan;
 #include "util.h"
 #include <iostream>
 #endif
+#include <iostream>
 
 const double DEFAULT_MAXIMUM = 1e38;
 const double DEFAULT_MINIMUM = -1e38;
 
-double ExactLowerEdgeValue(double theHeight, double theValue, double previousHeight, double thePreviousValue,
-                           double lowerLimit)
+double ExactEdgeValue(double theHeight, double theValue, double thePreviousHeight, double thePreviousValue,
+                      double theLimit)
 {
-	if (thePreviousValue == kFloatMissing || previousHeight == kFloatMissing)
+	if (thePreviousValue == kFloatMissing || thePreviousHeight == kFloatMissing)
 	{
 		return theValue;
 	}
 
-	return NFmiInterpolation::Linear(lowerLimit, previousHeight, theHeight, thePreviousValue, theValue);
-}
-
-double ExactUpperEdgeValue(double theHeight, double theValue, double previousHeight, double thePreviousValue,
-                           double upperLimit)
-{
-	if (thePreviousValue == kFloatMissing || previousHeight == kFloatMissing)
-	{
-		return theValue;
-	}
-
-	return NFmiInterpolation::Linear(upperLimit, previousHeight, theHeight, thePreviousValue, theValue);
+	return NFmiInterpolation::Linear(theLimit, thePreviousHeight, theHeight, thePreviousValue, theValue);
 }
 
 modifier::modifier()
-    : itsMissingValuesAllowed(false),
-      itsFindNthValue(1)  // first
-      ,
+    : itsFindNthValue(1),
       itsIndex(0),
       itsModifierType(kUnknownModifierType),
       itsHeightInMeters(true),
@@ -49,13 +38,7 @@ modifier::modifier()
 }
 
 modifier::modifier(HPModifierType theModifierType)
-    : itsMissingValuesAllowed(false),
-      itsFindNthValue(1)  // first
-      ,
-      itsIndex(0),
-      itsModifierType(theModifierType),
-      itsHeightInMeters(true),
-      itsGridsProcessed(0)
+    : itsFindNthValue(1), itsIndex(0), itsModifierType(theModifierType), itsHeightInMeters(true), itsGridsProcessed(0)
 {
 }
 
@@ -304,7 +287,6 @@ std::ostream& modifier::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
-	file << "__itsMissingValuesAllowed__ " << itsMissingValuesAllowed << std::endl;
 	file << "__itsFindNthValue__ " << itsFindNthValue << std::endl;
 	file << "__itsIndex__ " << itsIndex << std::endl;
 	file << "__itsResult__ size " << itsResult.size() << std::endl;
@@ -365,18 +347,18 @@ void modifier_max::Calculate(double theValue, double theHeight, double thePrevio
 
 	if (BetweenLevels(theHeight, thePreviousHeight, lowerLimit, upperLimit))
 	{
-		auto exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		auto exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		auto exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		auto exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 		theValue = fmax(exactLower, exactUpper);
 	}
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
-		double exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 		theValue = fmax(exactLower, theValue);
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
-		double exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 		theValue = fmax(exactUpper, theValue);
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
@@ -396,18 +378,18 @@ void modifier_min::Calculate(double theValue, double theHeight, double thePrevio
 
 	if (BetweenLevels(theHeight, thePreviousHeight, lowerLimit, upperLimit))
 	{
-		auto exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		auto exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		auto exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		auto exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 		theValue = fmin(exactLower, exactUpper);
 	}
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
-		double exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 		theValue = fmin(exactLower, theValue);
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
-		double exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 		theValue = fmin(exactUpper, theValue);
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
@@ -441,22 +423,22 @@ void modifier_maxmin::Calculate(double theValue, double theHeight, double thePre
 
 	if (BetweenLevels(theHeight, thePreviousHeight, lowerLimit, upperLimit))
 	{
-		auto exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		auto exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		auto exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		auto exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
 		smaller = fmin(exactLower, exactUpper);
 		bigger = fmax(exactLower, exactUpper);
 	}
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
-		double exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 
 		smaller = fmin(exactLower, theValue);
 		bigger = fmax(exactLower, theValue);
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
-		double exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
 		smaller = fmin(exactUpper, theValue);
 		bigger = fmax(exactUpper, theValue);
@@ -524,8 +506,8 @@ void modifier_mean::Calculate(double theValue, double theHeight, double thePrevi
 
 	if (BetweenLevels(theHeight, thePreviousHeight, lowerLimit, upperLimit))
 	{
-		auto lowerValue = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		auto upperValue = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		auto lowerValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		auto upperValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
 		Value((upperValue + lowerValue) / 2 * (upperLimit - lowerLimit));
 		itsRange[itsIndex] += upperLimit - lowerLimit;
@@ -535,13 +517,13 @@ void modifier_mean::Calculate(double theValue, double theHeight, double thePrevi
 	}
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
-		double lowerValue = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		double lowerValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerLimit) + val);
 		itsRange[itsIndex] += theHeight - lowerLimit;
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
-		double upperValue = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		double upperValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
 		Value((upperValue + thePreviousValue) / 2 * (upperLimit - thePreviousHeight) + val);
 		itsRange[itsIndex] += upperLimit - thePreviousHeight;
@@ -600,8 +582,8 @@ void modifier_count::Calculate(double theValue, double theHeight, double thePrev
 
 	if (BetweenLevels(theHeight, thePreviousHeight, lowerLimit, upperLimit))
 	{
-		auto exactLower = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		auto exactUpper = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		auto exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		auto exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
 		if ((exactLower <= findValue && exactUpper >= findValue) ||
 		    (exactLower >= findValue && exactUpper <= findValue))
@@ -613,11 +595,11 @@ void modifier_count::Calculate(double theValue, double theHeight, double thePrev
 	}
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
-		theValue = ExactLowerEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		theValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
-		theValue = ExactUpperEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		theValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -687,6 +669,22 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 		return;
 	}
 
+	const double lowerLimit = itsLowerHeight[itsIndex];
+	const double upperLimit = itsUpperHeight[itsIndex];
+
+	if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
+	{
+		thePreviousValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		thePreviousHeight = lowerLimit;
+	}
+	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
+	{
+		theValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		theHeight = upperLimit;
+
+		itsOutOfBoundHeights[itsIndex] = true;
+	}
+
 	if ((thePreviousValue <= findValue && theValue >= findValue) ||
 	    (thePreviousValue > findValue && theValue <= findValue))
 	{
@@ -695,6 +693,9 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 
 		if (actualHeight != kFloatMissing)
 		{
+			assert(!itsHeightInMeters || (actualHeight >= lowerLimit && actualHeight <= upperLimit));
+			assert(itsHeightInMeters || (actualHeight <= lowerLimit && actualHeight >= upperLimit));
+
 			if (itsFindNthValue != 0)
 			{
 				itsFoundNValues[itsIndex] += 1;
@@ -717,6 +718,16 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 
 /* ----------------- */
 
+void modifier_findheight_gt::FindNth(size_t theNth)
+{
+	if (theNth > 1)
+	{
+		throw std::runtime_error("modifier_findheight_gt: For Nth values only 0 or 1 are accepted");
+	}
+
+	itsFindNthValue = theNth;
+}
+
 void modifier_findheight_gt::Calculate(double theValue, double theHeight, double thePreviousValue,
                                        double thePreviousHeight)
 {
@@ -728,35 +739,110 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 		return;
 	}
 
-	if (theValue > findValue)
-	{
-		if (IsMissingValue(thePreviousValue))
-		{
-			if (itsFindNthValue != 0)
-			{
-				itsFoundNValues[itsIndex] += 1;
+	const double lowerLimit = itsLowerHeight[itsIndex];
+	const double upperLimit = itsUpperHeight[itsIndex];
 
-				if (itsFindNthValue == itsFoundNValues[itsIndex])
-				{
-					Value(theHeight);
-					itsValuesFound++;
-					itsOutOfBoundHeights[itsIndex] = true;
-				}
+	// Check if we have just entered or just leaving a height zone
+	if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
+	{
+		thePreviousValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		thePreviousHeight = lowerLimit;
+
+		// Lower edge might be valid, check it before moving to check current height
+
+		if (thePreviousValue > findValue)
+		{
+			itsFoundNValues[itsIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[itsIndex])
+			{
+				Value(thePreviousHeight);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
 			}
 			else
 			{
-				// Search for the last value
-				Value(theHeight);
+				Value(thePreviousHeight);
 			}
-
-			return;
 		}
 	}
+	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
+	{
+		theValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		theHeight = upperLimit;
+		itsOutOfBoundHeights[itsIndex] = true;
+	}
 
-	return modifier_findheight::Calculate(theValue, theHeight, thePreviousValue, thePreviousHeight);
+	// Entering area
+	if (theValue > findValue && (thePreviousValue < findValue || thePreviousValue == kFloatMissing))
+	{
+		// if last value is searched, pick actual level value
+		if (itsFindNthValue == 0)
+		{
+			Value(theHeight);
+		}
+		// else we need to interpolate earlier value
+		else
+		{
+			if (thePreviousValue != kFloatMissing && thePreviousHeight != kFloatMissing)
+			{
+				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
+				                                                              thePreviousHeight, theHeight);
+			}
+
+			itsFoundNValues[itsIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[itsIndex])
+			{
+				Value(theHeight);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
+			}
+		}
+	}
+	// In area
+	else if (theValue > findValue && thePreviousValue > findValue && itsFindNthValue == 0)
+	{
+		Value(theHeight);
+	}
+	// Leaving area
+	else if (theValue < findValue && (thePreviousValue != kFloatMissing && thePreviousValue > findValue))
+	{
+		if (itsFindNthValue == 0)
+		{
+			Value(theHeight);
+		}
+		else
+		{
+			if (thePreviousHeight != kFloatMissing)
+			{
+				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
+				                                                              thePreviousHeight, theHeight);
+			}
+
+			itsFoundNValues[itsIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[itsIndex])
+			{
+				Value(theHeight);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
+			}
+		}
+	}
 }
 
 /* ----------------- */
+
+void modifier_findheight_lt::FindNth(size_t theNth)
+{
+	if (theNth != 0 && theNth != 1)
+	{
+		throw std::runtime_error("modifier_findheight_lt: For Nth values only 0 or 1 are accepted");
+	}
+
+	itsFindNthValue = theNth;
+}
 
 void modifier_findheight_lt::Calculate(double theValue, double theHeight, double thePreviousValue,
                                        double thePreviousHeight)
@@ -769,32 +855,96 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 		return;
 	}
 
-	if (theValue < findValue)
-	{
-		if (IsMissingValue(thePreviousValue))
-		{
-			if (itsFindNthValue != 0)
-			{
-				itsFoundNValues[itsIndex] += 1;
+	const double lowerLimit = itsLowerHeight[itsIndex];
+	const double upperLimit = itsUpperHeight[itsIndex];
 
-				if (itsFindNthValue == itsFoundNValues[itsIndex])
-				{
-					Value(theHeight);
-					itsValuesFound++;
-					itsOutOfBoundHeights[itsIndex] = true;
-				}
+	if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
+	{
+		thePreviousValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
+		thePreviousHeight = lowerLimit;
+
+		// Lower edge might be valid, check it before moving to check current height
+
+		if (thePreviousValue < findValue)
+		{
+			itsFoundNValues[itsIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[itsIndex])
+			{
+				Value(thePreviousHeight);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
 			}
 			else
 			{
-				// Search for the last value
-				Value(theHeight);
+				Value(thePreviousHeight);
 			}
-
-			return;
 		}
 	}
+	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
+	{
+		theValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
+		theHeight = upperLimit;
+		itsOutOfBoundHeights[itsIndex] = true;
+	}
 
-	return modifier_findheight::Calculate(theValue, theHeight, thePreviousValue, thePreviousHeight);
+	// Entering area
+	if (theValue < findValue && thePreviousValue > findValue)
+	{
+		// if last value is searched, pick actual level value
+		if (itsFindNthValue == 0)
+		{
+			Value(theHeight);
+		}
+		// else we need to interpolate earlier value
+		else
+		{
+			if (thePreviousValue != kFloatMissing && thePreviousHeight != kFloatMissing)
+			{
+				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
+				                                                              thePreviousHeight, theHeight);
+			}
+
+			itsFoundNValues[itsIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[itsIndex])
+			{
+				Value(theHeight);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
+			}
+		}
+	}
+	// In area
+	else if (theValue < findValue && thePreviousValue < findValue && itsFindNthValue == 0)
+	{
+		Value(theHeight);
+	}
+	// Leaving area
+	else if (theValue > findValue && thePreviousValue < findValue)
+	{
+		if (itsFindNthValue == 0)
+		{
+			Value(theHeight);
+		}
+		else
+		{
+			if (thePreviousValue != kFloatMissing && thePreviousHeight != kFloatMissing)
+			{
+				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
+				                                                              thePreviousHeight, theHeight);
+			}
+
+			itsFoundNValues[itsIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[itsIndex])
+			{
+				Value(theHeight);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
+			}
+		}
+	}
 }
 
 /* ----------------- */

@@ -333,10 +333,10 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	// Can't use required() since it doesn't allow us to use --list-plugins
 
-	string outfileType = "";
-	string outfileCompression = "";
-	string confFile = "";
-	string statisticsLabel = "";
+	string outfileType;
+	string outfileCompression;
+	string confFile, paramFile;
+	string statisticsLabel;
 	vector<string> auxFiles;
 #ifdef HAVE_CUDA
 	short int cudaDeviceId = 0;
@@ -370,6 +370,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("no-cuda-unpacking", "disable cuda unpacking of grib data")
 		("no-cuda-interpolation", "disable cuda grid interpolation")
 #endif
+		("no-database", "disable database access")
+		("param-file", po::value(&paramFile), "parameter definition file for no-database mode (syntax: shortName,paramName)")
 		("no-auxiliary-file-full-cache-read", "disable the initial reading of all auxiliary files to cache")
 	;
 
@@ -597,6 +599,16 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		cerr << "Both radon and neons options cannot be selected" << endl;
 		exit(1);
 	}
+	else if (opt.count("no-database"))
+	{
+		conf->DatabaseType(kNoDatabase);
+		if (opt.count("param-file") == 0)
+		{
+			cerr << "param-file options missing" << endl;
+			exit(1);
+		}
+	}
+
 	if (!confFile.empty())
 	{
 		conf->ConfigurationFile(confFile);
@@ -605,6 +617,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	{
 		cerr << "himan: Configuration file not defined" << endl << desc;
 		exit(1);
+	}
+
+	if (!paramFile.empty())
+	{
+		conf->ParamFile(paramFile);
 	}
 
 	if (!statisticsLabel.empty())

@@ -39,7 +39,10 @@
 using namespace std;
 using namespace himan::plugin;
 
-querydata::querydata() { itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("querydata")); }
+querydata::querydata() : itsUseDatabase(true)
+{
+	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("querydata"));
+}
 bool querydata::ToFile(info& theInfo, string& theOutputFile)
 {
 	ofstream out(theOutputFile.c_str());
@@ -268,10 +271,11 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 	return NFmiTimeDescriptor(originTime, tlist);
 }
 
-void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
+void AddToParamBag(himan::info& info, NFmiParamBag& pbag, bool readParamInfoFromDatabase)
 {
 	using namespace himan;
-	if (info.Param().UnivId() == static_cast<long>(kHPMissingInt))
+
+	if (info.Param().UnivId() == static_cast<long>(kHPMissingInt) && readParamInfoFromDatabase)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -314,7 +318,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 	if (theActiveOnly)
 	{
-		AddToParamBag(info, pbag);
+		AddToParamBag(info, pbag, itsUseDatabase);
 	}
 	else
 	{
@@ -322,7 +326,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 		while (info.NextParam())
 		{
-			AddToParamBag(info, pbag);
+			AddToParamBag(info, pbag, itsUseDatabase);
 		}
 	}
 
@@ -691,3 +695,6 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	return newInfo;
 }
+
+bool querydata::UseDatabase() const { return itsUseDatabase; }
+void querydata::UseDatabase(bool theUseDatabase) { itsUseDatabase = theUseDatabase; }
