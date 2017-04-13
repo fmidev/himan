@@ -12,13 +12,9 @@ forecast_type::forecast_type(HPForecastType theType, double theValue)
 }
 
 HPForecastType forecast_type::Type() const { return itsForecastType; }
-
 void forecast_type::Type(HPForecastType theForecastType) { itsForecastType = theForecastType; }
-
 double forecast_type::Value() const { return itsForecastTypeValue; }
-
 void forecast_type::Value(double theValue) { itsForecastTypeValue = theValue; }
-
 std::ostream& forecast_type::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
@@ -39,3 +35,7 @@ bool forecast_type::operator==(const forecast_type& other) const
 }
 
 bool forecast_type::operator!=(const forecast_type& other) const { return !(*this == other); }
+forecast_type::operator std::string() const
+{
+	return HPForecastTypeToString.at(itsForecastType) + "/" + std::to_string(static_cast<int>(itsForecastTypeValue));
+}
