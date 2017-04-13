@@ -39,7 +39,7 @@ public:
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options) const;
+	std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options, bool readifNotMatching = false) const;
 
 	/**
 	 * @brief Write info contents to a csv file
