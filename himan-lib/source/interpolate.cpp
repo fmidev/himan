@@ -534,7 +534,7 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 	 * 1. from regular to regular (basic area&grid interpolation)
 	 * 2. from regular to irregular (area to point)
 	 * 3. from irregular to irregular (limited functionality, basically just point reordering)
-	 * 4. from irregular to regular, not supported
+	 * 4. from irregular to regular, not supported, except if source is gaussian
 	 */
 
 	// 1.
