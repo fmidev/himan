@@ -10,9 +10,9 @@
 
 #include "himan_common.h"
 #include "info.h"
+#include <boost/iterator/zip_iterator.hpp>
 #include <mutex>
 #include <tuple>
-#include <boost/iterator/zip_iterator.hpp>
 
 namespace himan
 {
@@ -224,6 +224,20 @@ void DumpVector(const std::vector<double>& arr, const std::string& name = "");
    @return value of the supplied key
  */
 std::string GetEnv(const std::string& key);
+
+/**
+ * @brief Parse csv line(s) to an info
+ *
+ * CSV format needs to be:
+ *
+ * station_id,origintime,validtime,levelname,levelvalue,levelvalue2,forecasttypeid,forecasttypevalue,paramname,value
+ *
+ * For example
+ *
+ * 134254,2017-04-13 00:00:00,2017-04-13 03:00:00,HEIGHT,0,-1,1,-1,T-K,5.3
+ */
+
+info_t CSVToInfo(const std::vector<std::string>& csv);
 
 template <class... Conts>
 inline auto zip_range(Conts&... conts)

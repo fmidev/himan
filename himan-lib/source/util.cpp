@@ -9,6 +9,7 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "param.h"
+#include "point_list.h"
 #include <NFmiStereographicArea.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
@@ -697,7 +698,7 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 	{
 		long binn = (count < 10) ? count : 10;
 
-		double binw = (max - min) / static_cast<double> (binn);
+		double binw = (max - min) / static_cast<double>(binn);
 
 		double binmin = min;
 		double binmax = binmin + binw;
@@ -738,6 +739,140 @@ string util::GetEnv(const string& key)
 		throw runtime_error("Environment variable '" + string(key) + "' not found");
 	}
 	return string(var);
+}
+
+info_t util::CSVToInfo(const vector<string>& csv)
+{
+	info_t ret;
+
+	vector<forecast_time> times;
+	vector<param> params;
+	vector<level> levels;
+	vector<station> stats;
+	vector<forecast_type> ftypes;
+
+	for (auto line : csv)
+	{
+		auto elems = util::Split(line, ",", false);
+		// 0 station_id
+		// 1 origin time
+		// 2 forecast time
+		// 3 level_name
+		// 4 level_value
+		// 5 forecast_type_id
+		// 6 forecast_type_value
+		// 7 parameter_name
+		// 8 value
+
+		assert(elems.size() == 9);
+
+		// forecast_time
+		forecast_time f(elems[1], elems[2]);
+
+		// level
+		string level_name = elems[3];
+		boost::algorithm::to_lower(level_name);
+		level l(HPStringToLevelType.at(level_name), stod(elems[4]));
+
+		// param
+		param p(elems[7]);
+
+		// forecast_type
+		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[5])), stod(elems[6]));
+
+		// station
+		station s(stoi(elems[0]));
+
+		/* Prevent duplicates */
+
+		if (find(times.begin(), times.end(), f) == times.end())
+		{
+			times.push_back(f);
+		}
+
+		if (find(levels.begin(), levels.end(), l) == levels.end())
+		{
+			levels.push_back(l);
+		}
+
+		if (find(params.begin(), params.end(), p) == params.end())
+		{
+			params.push_back(p);
+		}
+
+		if (find(ftypes.begin(), ftypes.end(), ftype) == ftypes.end())
+		{
+			ftypes.push_back(ftype);
+		}
+
+		if (find(stats.begin(), stats.end(), s) == stats.end())
+		{
+			stats.push_back(s);
+		}
+	}
+
+	if (times.size() == 0 || params.size() == 0 || levels.size() == 0 || ftypes.size() == 0)
+	{
+		return ret;
+	}
+
+	ret = make_shared<info>();
+
+	//        ret->Producer(options.prod);
+
+	ret->Times(times);
+	ret->Params(params);
+	ret->Levels(levels);
+	ret->ForecastTypes(ftypes);
+
+	auto base = unique_ptr<grid>(new point_list());  // placeholder
+	ret->Create(base.get(), true);
+
+	ret->First();
+	ret->ResetParam();
+
+	while (ret->Next())
+	{
+		dynamic_cast<point_list*>(ret->Grid())->Stations(stats);
+	}
+
+	for (auto line : csv)
+	{
+		auto elems = util::Split(line, ",", false);
+
+		// forecast_time
+		forecast_time f(elems[1], elems[2]);
+
+		// level
+		string level_name = elems[3];
+		boost::algorithm::to_lower(level_name);
+		level l(HPStringToLevelType.at(level_name), stod(elems[4]));
+
+		// param
+		param p(elems[7]);
+
+		// forecast_type
+		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[5])), stod(elems[6]));
+
+		// station
+		station s(stoi(elems[0]));
+
+		if (!ret->Param(p)) continue;
+		if (!ret->Time(f)) continue;
+		if (!ret->Level(l)) continue;
+		if (!ret->ForecastType(ftype)) continue;
+
+		for (size_t i = 0; i < stats.size(); i++)
+		{
+			if (s == stats[i])
+			{
+				// Add the data point
+				ret->Grid()->Value(i, stod(elems[8]));
+			}
+		}
+	}
+
+	return ret;
 }
 
 #ifdef HAVE_CUDA
