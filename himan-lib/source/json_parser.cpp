@@ -1220,10 +1220,6 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 
 		g = unique_ptr<point_list>(new point_list);
 
-		// hard coded projection to latlon
-
-		g->Type(kLatitudeLongitude);
-
 		vector<station> theStations;
 
 		auto r = GET_PLUGIN(radon);
