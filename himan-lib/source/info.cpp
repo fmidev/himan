@@ -432,7 +432,6 @@ size_t info::LocationIndex() const { return itsLocationIndex; }
 void info::LocationIndex(size_t theLocationIndex) { itsLocationIndex = theLocationIndex; }
 size_t info::LocationIndex() { return itsLocationIndex; }
 size_t info::SizeLocations() const { return Grid()->Data().Size(); }
-
 matrix<double>& info::Data()
 {
 	assert(Grid());
@@ -590,4 +589,44 @@ void info::Clear()
 	itsLevelIterator.Clear();
 	itsTimeIterator.Clear();
 	itsForecastTypeIterator.Clear();
+}
+
+bool info::Next()
+{
+	// Innermost
+
+	if (NextParam())
+	{
+		return true;
+	}
+
+	// No more params at this forecast type/level/time combination; rewind param iterator
+
+	FirstParam();
+
+	if (NextLevel())
+	{
+		return true;
+	}
+
+	// No more levels at this forecast type/time combination; rewind level iterator
+
+	FirstLevel();
+
+	if (NextTime())
+	{
+		return true;
+	}
+
+	// No more times at this forecast type; rewind time iterator, level iterator is
+	// already at first place
+
+	FirstTime();
+
+	if (NextForecastType())
+	{
+		return true;
+	}
+
+	return false;
 }

@@ -426,6 +426,14 @@ public:
 	void Reset();
 
 	/**
+	 * @brief Advance dimension iterators in their natural order.
+	 *
+	 * Location iterator is not advanced
+	 */
+
+	bool Next();
+
+	/**
 	 * @see iterator#Reset
 	 */
 
