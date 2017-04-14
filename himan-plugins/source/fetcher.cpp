@@ -277,7 +277,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			if (static_cast<int>(requestedType.Type()) > 2)
 			{
 				optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" +
-				           to_string(static_cast<int> (requestedType.Value()));
+				           to_string(static_cast<int>(requestedType.Value()));
 			}
 
 			itsLogger->Warning("No valid data found with given search options " + optsStr);
@@ -390,7 +390,8 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 	return theInfos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search_options& options, bool readIfNotMatching)
+vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search_options& options,
+                                                 bool readIfNotMatching)
 {
 	auto c = GET_PLUGIN(csv);
 
@@ -648,7 +649,12 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 
 	HPDatabaseType dbtype = opts.configuration->DatabaseType();
 
-	if (opts.configuration->ReadDataFromDatabase() && dbtype != kNoDatabase)
+	if (!opts.configuration->ReadDataFromDatabase() || dbtype == kNoDatabase)
+	{
+		return ret;
+	}
+
+	if (opts.prod.Class() == kGridClass)
 	{
 		vector<string> files;
 
@@ -662,8 +668,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 			files = n->Files(opts);
 		}
 
-		if ((dbtype == kRadon ||
-		     dbtype == kNeonsAndRadon) && files.empty())
+		if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && files.empty())
 		{
 			// try radon next
 
@@ -703,6 +708,16 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 			}
 			return ret;
 		}
+	}
+	else if (opts.prod.Class() == kPreviClass)
+	{
+		auto r = GET_PLUGIN(radon);
+
+		itsLogger->Trace("Accessing Radon database for previ data");
+
+		auto csv_forecasts = r->CSV(opts);
+		auto _ret = util::CSVToInfo(csv_forecasts);
+		ret.push_back(_ret);
 	}
 
 	return ret;
@@ -833,7 +848,7 @@ string GetOtherVectorComponentName(const string& name)
 
 void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
                                      shared_ptr<const plugin_configuration> config, const producer& sourceProd)
-{ 
+{
 	for (auto& component : components)
 	{
 		HPGridType from = component->Grid()->Type();
