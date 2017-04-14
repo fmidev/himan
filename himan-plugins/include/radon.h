@@ -104,6 +104,8 @@ public:
 	 */
 
 	void Init();
+	bool SaveGrid(const info& resultInfo, const std::string& theFileName);
+	bool SavePrevi(const info& resultInfo);
 
 	bool itsInit;                             //!< Holds the initialization status of the database connection
 	std::unique_ptr<NFmiRadonDB> itsRadonDB;  //<! The actual database class instance

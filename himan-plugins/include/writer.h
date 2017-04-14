@@ -32,6 +32,8 @@ public:
 	void WriteOptions(const write_options& theWriteOptions);
 
 private:
+	bool CreateFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile);
+
 	write_options itsWriteOptions;
 };
 

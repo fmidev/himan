@@ -129,8 +129,7 @@ vector<std::string> radon::CSV(search_options& options)
 		}
 
 		csv.push_back(row[0] + "," + row[1] + "," + row[2] + "," + row[3] + "," + row[4] + "," + row[5] + "," + row[6] +
-		              "," + row[7] + "," + row[8]
-		              );
+		              "," + row[7] + "," + row[8]);
 	}
 
 	return csv;
@@ -261,11 +260,124 @@ bool radon::Save(const info& resultInfo, const string& theFileName)
 {
 	Init();
 
+	if (resultInfo.Producer().Class() == kGridClass)
+	{
+		return SaveGrid(resultInfo, theFileName);
+	}
+	else if (resultInfo.Producer().Class() == kPreviClass)
+	{
+		return SavePrevi(resultInfo);
+	}
+
+	return false;
+}
+
+bool radon::SavePrevi(const info& resultInfo)
+{
+	stringstream query;
+
+	auto analysisTime = resultInfo.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
+
+	query << "SELECT id,table_name FROM as_previ WHERE producer_id = " << resultInfo.Producer().Id()
+	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime << "', '" << analysisTime
+	      << "')";
+
+	itsRadonDB->Query(query.str());
+
+	auto row = itsRadonDB->FetchRow();
+
+	if (row.empty())
+	{
+		itsLogger->Warning("Data set definition not found from radon");
+		return false;
+	}
+
+	string table_name = row[1];
+
+	query.str("");
+
+	auto levelinfo = itsRadonDB->GetLevelFromDatabaseName(HPLevelTypeToString.at(resultInfo.Level().Type()));
+
+	if (levelinfo.empty())
+	{
+		itsLogger->Error("Level information not found from radon for level " +
+		                 HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+		                 boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		return false;
+	}
+
+	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name(),
+	                                                          stoi(levelinfo["id"]), resultInfo.Level().Value());
+
+	if (paraminfo.empty())
+	{
+		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
+		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		return false;
+	}
+
+	int forecastTypeValue = -1;  // default, deterministic/analysis
+
+	if (resultInfo.ForecastType().Type() > 2)
+	{
+		forecastTypeValue = static_cast<int>(resultInfo.ForecastType().Value());
+	}
+
+	double levelValue2 = (resultInfo.Level().Value2() == kHPMissingValue) ? -1 : resultInfo.Level().Value2();
+
+	auto localInfo = resultInfo;
+
+	for (localInfo.ResetLocation(); localInfo.NextLocation();)
+	{
+		query << "INSERT INTO data." << table_name << " (producer_id, station_id, analysis_time, param_id, level_id, "
+		                                              "level_value, level_value2, forecast_period, "
+		                                              "forecast_type_id, forecast_type_value, value) VALUES ("
+		      << localInfo.Producer().Id() << ", " << localInfo.Station().Id() << ", "
+		      << "'" << analysisTime << "', " << paraminfo["id"] << ", " << levelinfo["id"] << ", "
+		      << localInfo.Level().Value() << ", " << levelValue2 << ", "
+		      << "'" << util::MakeSQLInterval(localInfo.Time()) << "', "
+		      << static_cast<int>(localInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
+		      << localInfo.Value() << ")";
+
+		try
+		{
+			itsRadonDB->Execute(query.str());
+			itsRadonDB->Commit();
+		}
+		catch (const pqxx::unique_violation& e)
+		{
+			itsRadonDB->Rollback();
+
+			query.str("");
+			query << "UPDATE data." << table_name << " SET "
+			      << "value = '" << localInfo.Value() << " WHERE "
+			      << "producer_id = " << resultInfo.Producer().Id() << " AND "
+			      << "station_id = " << localInfo.Station().Id() << " AND "
+			      << "analysis_time = '" << analysisTime << "' AND "
+			      << "param_id = " << paraminfo["id"] << " AND "
+			      << "level_id = " << levelinfo["id"] << " AND "
+			      << "level_value = " << resultInfo.Level().Value() << " AND "
+			      << "level_value2 = " << levelValue2 << " AND "
+			      << "forecast_period = "
+			      << "'" << util::MakeSQLInterval(resultInfo.Time()) << "' AND "
+			      << "forecast_type_id = " << static_cast<int>(resultInfo.ForecastType().Type()) << " AND "
+			      << "forecast_type_value = " << forecastTypeValue;
+
+			itsRadonDB->Execute(query.str());
+			itsRadonDB->Commit();
+		}
+	}
+
+	return true;
+}
+
+bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
+{
 	stringstream query;
 
 	if (resultInfo.Grid()->Class() != kRegularGrid)
 	{
-		itsLogger->Error("Only grid data can be stored to radon for now");
+		itsLogger->Error("Only regular grid data can be stored to radon for now");
 		return false;
 	}
 
