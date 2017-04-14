@@ -1563,6 +1563,8 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 				prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
 			}
 			prod.Name(prodInfo["ref_prod"]);
+			prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+
 		}
 		else if (dbtype != kNoDatabase)
 		{
