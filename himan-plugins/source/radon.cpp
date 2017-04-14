@@ -23,16 +23,16 @@ void radon::Init()
 		try
 		{
 			call_once(oflag, [&]() {
-					NFmiRadonDBPool::Instance()->Username("wetodb");
-					NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
-					NFmiRadonDBPool::Instance()->Database("radon");
-					NFmiRadonDBPool::Instance()->Hostname("vorlon");
+				NFmiRadonDBPool::Instance()->Username("wetodb");
+				NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
+				NFmiRadonDBPool::Instance()->Database("radon");
+				NFmiRadonDBPool::Instance()->Hostname("vorlon");
 
-					if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
-					{
-						NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
-					}
-				});
+				if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
+				{
+					NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
+				}
+			});
 
 			itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
 		}
@@ -57,6 +57,85 @@ void radon::PoolMaxWorkers(int maxWorkers)
 	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
 }
 
+vector<std::string> radon::CSV(search_options& options)
+{
+	Init();
+
+	vector<string> csv;
+
+	if (options.prod.Class() != kPreviClass)
+	{
+		itsLogger->Error("Grid producer does not have csv based data");
+		return csv;
+	}
+
+	stringstream query;
+
+	const auto analtime = options.time.OriginDateTime().String();
+
+	query << "SELECT table_name FROM as_previ WHERE producer_id = " << options.prod.Id()
+	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analtime << "', '" << analtime << "')";
+
+	itsRadonDB->Query(query.str());
+
+	auto row = itsRadonDB->FetchRow();
+
+	if (row.empty())
+	{
+		itsLogger->Error("No tables found from as_previ for producer " + options.prod.Name());
+		return csv;
+	}
+
+	string levelValue2 = "-1";
+
+	if (options.level.Value2() != kHPMissingValue)
+	{
+		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
+	}
+
+	query.str("");
+
+	query << "SELECT "
+	      << "t.station_id,"
+	      << "t.analysis_time,"
+	      << "t.forecast_time,"
+	      << "t.level_name,"
+	      << "t.level_value,"
+	      << "t.forecast_type_id,"
+	      << "t.forecast_type_value,"
+	      << "t.param_name,"
+	      << "t.value "
+	      << "FROM " << row[0] << "_v t "
+	      << "WHERE "
+	      << "t.analysis_time = '" << analtime << "' "
+	      << "AND t.param_name = '" + options.param.Name() << "' "
+	      << "AND t.level_name = upper('" + HPLevelTypeToString.at(options.level.Type()) << "') "
+	      << "AND t.level_value = " << options.level.Value() << " "
+	      << "AND t.forecast_period = '" << util::MakeSQLInterval(options.time) << "' "
+	      << "AND t.forecast_type_id = " << options.ftype.Type() << " "
+	      << "AND t.forecast_type_value = " << options.ftype.Value();
+
+	// TODO: search_options does not have "stations" so we have to fetch ALL stations
+
+	itsRadonDB->Query(query.str());
+
+	while (true)
+	{
+		auto row = itsRadonDB->FetchRow();
+
+		if (row.empty())
+		{
+			break;
+		}
+
+		csv.push_back(row[0] + "," + row[1] + "," + row[2] + "," + row[3] + "," + row[4] + "," + row[5] + "," + row[6] +
+		              "," + row[7] + "," + row[8]
+		              );
+	}
+
+	return csv;
+}
+
 vector<string> radon::Files(search_options& options)
 {
 	Init();
@@ -74,6 +153,12 @@ vector<string> radon::Files(search_options& options)
 
 	string ref_prod = options.prod.Name();
 	// long no_vers = options.prod.TableVersion();
+
+	if (options.prod.Class() != kGridClass)
+	{
+		itsLogger->Error("Previ producer does not have file data");
+		return files;
+	}
 
 	string level_name = HPLevelTypeToString.at(options.level.Type());
 

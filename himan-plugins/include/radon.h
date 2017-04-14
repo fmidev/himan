@@ -52,7 +52,23 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::radon"; }
 	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+
+	/**
+	 * @brief Return filename of a field
+	 */
+
 	std::vector<std::string> Files(search_options& options);
+
+	/**
+	 * @brief Return previ data in CSV format
+	 */
+
+	std::vector<std::string> CSV(search_options& options);
+
+	/**
+	 * @brief Save either file metadata or previ information to database.
+	 */
+
 	bool Save(const info& resultInfo, const std::string& theFileName);
 
 	/// Gets grib parameter name based on number and code table
