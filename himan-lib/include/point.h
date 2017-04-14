@@ -103,6 +103,8 @@ class station : public point
 {
 public:
 	station();
+	station(int theId);
+	station(int theId, double lon, double lat);
 	station(int theId, const std::string& theName, double lon, double lat);
 
 	int Id() const;
@@ -117,6 +119,16 @@ private:
 };
 
 inline station::station() : point(), itsId(kHPMissingInt), itsName("Himan default station") {}
+
+inline station::station(int theId)
+    : itsId(theId)
+{
+}
+
+inline station::station(int theId, double lon, double lat)
+    : point(lon, lat), itsId(theId)
+{
+}
 
 inline station::station(int theId, const std::string& theName, double lon, double lat)
     : point(lon, lat), itsId(theId), itsName(theName)
