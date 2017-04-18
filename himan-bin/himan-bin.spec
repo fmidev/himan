@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 17.4.6
+Version: 17.4.18
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -63,6 +63,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Tue Apr 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.18-1.fmi
+- Remove cuda cmd line options if cuda libraries are not present
+  at build time
 * Thu Apr  6 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.6-1.fmi
 - Add nodatabase mode
 * Mon Feb 13 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.13-1.fmi
