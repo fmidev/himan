@@ -230,6 +230,9 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 			ret = FetchFromProducer(opts, readPackedData, suppressLogging);
 			if (ret) break;
+
+			itsLogger->Warning("Sticky cache failed, trying all producers just to be sure");
+
 		}
 	}
 

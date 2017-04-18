@@ -109,17 +109,14 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                        static_cast<string>(forecastLevel));
 
+	vector<double> PEPS, Hirlam, Harmonie, GFS, EC, ECprev, ECprob1, ECprob01, ECfract50, ECfract75;
+
 	/*
 	 * Required source parameters
 	 */
 
-	info_t EC, ECprev;
-
 	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
 	auto f = GET_PLUGIN(fetcher);
-
-	auto prevTime = forecastTime;
-	prevTime.OriginDateTime().Adjust(kHourResolution, -12);
 
 	try
 	{
@@ -127,10 +124,8 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		cnf->SourceGeomNames({itsECGeom});
 
 		// Current forecast
-		EC = f->Fetch(cnf, forecastTime, level(kHeight, 0), param("RRR-KGM2"), forecastType, false);
-
-		// Previous forecast
-		ECprev = f->Fetch(cnf, prevTime, level(kHeight, 0), param("RRR-KGM2"), forecastType, false);
+		auto ECInfo = f->Fetch(cnf, forecastTime, level(kHeight, 0), param("RRR-KGM2"), forecastType, false);
+		EC = VEC(ECInfo);
 	}
 	catch (HPExceptionType& e)
 	{
@@ -146,7 +141,29 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * Optional source parameters
 	 */
 
-	vector<double> PEPS, Hirlam, Harmonie, GFS, ECprob1, ECprob01, ECfract50, ECfract75;
+	auto prevTime = forecastTime;
+	prevTime.OriginDateTime().Adjust(kHourResolution, -12);
+
+	try
+	{
+		// ECMWF deterministic
+		cnf->SourceGeomNames({itsECGeom});
+
+		// Previous forecast
+		auto ECprevInfo = f->Fetch(cnf, prevTime, level(kHeight, 0), param("RRR-KGM2"), forecastType, false);
+		ECprev = VEC(ECprevInfo);
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			ECprev.resize(myTargetInfo->Data().Size(), kFloatMissing);
+		}
+		else
+		{
+			throw;
+		}
+	}
 
 	// ECMWF probabilities from EPS
 
@@ -305,23 +322,11 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	matrix<double> area(myTargetInfo->Data().SizeX(), myTargetInfo->Data().SizeY(), 1, kFloatMissing, 0);  // "A"
 	matrix<double> confidence(area.SizeX(), area.SizeY(), 1, kFloatMissing, kFloatMissing);                // "C"
 
-#ifdef POINTDEBUG
-	int i = -1;
-#endif
 	// 1. Calculate initial area and confidence of precipitation
 
-	for (auto&& tup : zip_range(confidence.Values(), area.Values(), ECfract50, ECfract75, VEC(EC), VEC(ECprev), PEPS,
-	                            Hirlam, Harmonie, GFS))
+	for (auto&& tup :
+	     zip_range(confidence.Values(), area.Values(), ECfract50, ECfract75, EC, ECprev, PEPS, Hirlam, Harmonie, GFS))
 	{
-#ifdef POINTDEBUG
-		bool print = false;
-		myTargetInfo->LocationIndex(++i);
-
-		if (fabs(myTargetInfo->LatLon().X() - 34.0) < 0.1 && fabs(myTargetInfo->LatLon().Y() - 68.81) < 0.1)
-		{
-			print = true;
-		}
-#endif
 		double& out_confidence = tup.get<0>();
 		double& out_area = tup.get<1>();
 		double rr_f50 = tup.get<2>();
@@ -333,65 +338,24 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double rr_harmonie = tup.get<8>();
 		double rr_gfs = tup.get<9>();
 
-#ifdef POINTDEBUG
-		if (print)
-		{
-			std::cout << myTargetInfo->LatLon().X() << "," << myTargetInfo->LatLon().Y() << std::endl
-			          << "rr_f50\t" << rr_f50 << std::endl
-			          << "rr_f75\t" << rr_f75 << std::endl
-			          << "rr_ec\t" << rr_ec << std::endl
-			          << "rr_ecprev\t" << rr_ecprev << std::endl
-			          << "rr_peps\t" << rr_peps << std::endl
-			          << "rr_hirlam\t" << rr_hirlam << std::endl
-			          << "rr_harm\t" << rr_harmonie << std::endl
-			          << "rr_gfs\t" << rr_gfs << std::endl;
-		}
-#endif
-
-		if (rr_ec == kFloatMissing || rr_ecprev == kFloatMissing)
+		if (rr_ec == kFloatMissing)
 		{
 			continue;
 		}
 
+		// Coefficients are duplicated because they are evaluated separately
+		// for each grid point.
+
 		double _K1 = K1;
 		double _K2 = K2;
+		double _K3 = K3;
 		double _K4 = K4;
 		double _K6 = K6;
 		double _K7 = K7;
 		double _K8 = K8;
 
-		if (rr_f50 == kFloatMissing)
-		{
-			_K1 = 0;
-		}
-
-		if (rr_f75 == kFloatMissing)
-		{
-			_K2 = 0;
-		}
-
-		if (rr_peps == kFloatMissing)
-		{
-			_K4 = 0;
-		}
-
-		if (rr_hirlam == kFloatMissing)
-		{
-			_K6 = 0;
-		}
-
-		if (rr_gfs == kFloatMissing)
-		{
-			_K7 = 0;
-		}
-
-		if (rr_harmonie == kFloatMissing)
-		{
-			_K8 = 0;
-		}
-
-		double f50 = 0;
-		double f75 = 0;
+		double ecf50 = 0;
+		double ecf75 = 0;
 		double ec = 0;
 		double ecprev = 0;
 		double peps = 0;
@@ -399,14 +363,67 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double harmonie = 0;
 		double gfs = 0;
 
-		if (rr_f50 > 0.1)
+		if (rr_f50 == kFloatMissing)
 		{
-			f50 = 1;
+			_K1 = 0;
+		}
+		else if (rr_f50 > 0.1)
+		{
+			ecf50 = 1;
 		}
 
-		if (rr_f75 > 0.1)
+		if (rr_f75 == kFloatMissing)
 		{
-			f75 = 1;
+			_K2 = 0;
+		}
+		else if (rr_f75 > 0.1)
+		{
+			ecf75 = 1;
+		}
+
+		if (rr_ecprev == kFloatMissing)
+		{
+			_K3 = 0;
+		}
+		else if (rr_ecprev > 0.1)
+		{
+			ecprev = 1;
+		}
+
+		if (rr_peps == kFloatMissing)
+		{
+			_K4 = 0;
+		}
+		else if (rr_peps > 30)
+		{
+			peps = 1;
+		}
+
+		if (rr_hirlam == kFloatMissing)
+		{
+			_K6 = 0;
+		}
+		else if (rr_hirlam > 0.05)
+		{
+			hirlam = 1;
+		}
+
+		if (rr_gfs == kFloatMissing)
+		{
+			_K7 = 0;
+		}
+		else if (rr_gfs > 0.05)
+		{
+			gfs = 1;
+		}
+
+		if (rr_harmonie == kFloatMissing)
+		{
+			_K8 = 0;
+		}
+		else if (rr_harmonie > 0.05)
+		{
+			harmonie = 1;
 		}
 
 		if (rr_ec > 0.05)
@@ -414,34 +431,9 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ec = 1;
 		}
 
-		if (rr_ecprev > 0.1)
-		{
-			ecprev = 1;
-		}
-
-		if (rr_peps > 30)
-		{
-			peps = 1;
-		}
-
-		if (rr_hirlam > 0.05)
-		{
-			hirlam = 1;
-		}
-
-		if (rr_harmonie > 0.05)
-		{
-			harmonie = 1;
-		}
-
-		if (rr_gfs > 0.05)
-		{
-			gfs = 1;
-		}
-
-		out_confidence =
-		    (_K1 * f50 + _K2 * f75 + K3 * ecprev + _K4 * peps + K5 * ec + _K6 * hirlam + _K7 * gfs + _K8 * harmonie) /
-		    (_K1 + _K2 + K3 + _K4 + K5 + _K6 + _K7 + _K8);
+		out_confidence = (_K1 * ecf50 + _K2 * ecf75 + _K3 * ecprev + _K4 * peps + K5 * ec + _K6 * hirlam + _K7 * gfs +
+		                  _K8 * harmonie) /
+		                 (_K1 + _K2 + _K3 + _K4 + K5 + _K6 + _K7 + _K8);
 
 		assert(out_confidence <= 1.01);
 
@@ -449,22 +441,6 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		{
 			out_area = 1.;
 		}
-
-#ifdef POINTDEBUG
-		if (print)
-		{
-			std::cout << "(" << _K1 << "*" << f50 << " + " << _K2 << "*" << f75 << "+" << K3 << "*" << ecprev << "+"
-			          << _K4 << "*" << peps << "+" << K5 << "*" << ec << "+" << _K6 << "*" << hirlam << "+" << _K7
-			          << "*" << gfs << " + " << _K8 << "*" << harmonie
-			          << ") = " << (_K1 * f50 + _K2 * f75 + K3 * ecprev + _K4 * peps + K5 * ec + _K6 * hirlam +
-			                        _K7 * gfs + _K8 * harmonie)
-			          << std::endl
-			          << "(" << _K1 << "+" << _K2 << "+" << K3 << "+" << _K4 << "+" << K5 << "+" << _K6 << "+" << _K7
-			          << "+" << _K8 << ")"
-			          << " = " << (_K1 + _K2 + K3 + _K4 + K5 + _K6 + _K7 + _K8) << std::endl
-			          << "confidence " << _confidence << " area " << _area << std::endl;
-		}
-#endif
 	}
 
 	// 2. Smoothen area coverage
@@ -496,21 +472,9 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// 2. Calculate the probability of precipitation
 
 	auto& result = VEC(myTargetInfo);
-#ifdef POINTDEBUG
-	i = -1;
-#endif
 
 	for (auto&& tup : zip_range(result, confidence.Values(), area.Values(), ECprob1, ECprob01))
 	{
-#ifdef POINTDEBUG
-		myTargetInfo->LocationIndex(++i);
-		bool print = false;
-		if (fabs(myTargetInfo->LatLon().X() - 34.0) < 0.1 && fabs(myTargetInfo->LatLon().Y() - 68.81) < 0.1)
-		{
-			print = true;
-		}
-#endif
-
 		double& out_result = tup.get<0>();
 		double out_confidence = tup.get<1>();
 		double out_area = tup.get<2>();
@@ -530,13 +494,6 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		if (rr_ecprob1 != kFloatMissing && rr_ecprob01 != kFloatMissing)
 		{
 			PoP = (3 * PoP + 0.5 * rr_ecprob1 + 0.5 * rr_ecprob01) * 0.25;
-#ifdef POINTDEBUG
-			if (print)
-			{
-				std::cout << "(3 * " << PoP << " + 0.5 * " << rr_ecprob1 << " + 0.5 * " << rr_ecprob01
-				          << ") * 0.25 = " << PoP << std::endl;
-			}
-#endif
 		}
 
 		assert(PoP <= 100.01);
