@@ -271,8 +271,6 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
 			// (and EL!) values can be determined.
 
-			if (idx == 255377) printf("first time, before interpolation: %f\n", Tparcel);
-
 			prevTenv = himan::numerical_functions::interpolation::Linear(LFCP, prevPenv, Penv, prevTenv, Tenv);
 			prevZenv = himan::numerical_functions::interpolation::Linear(LFCP, prevPenv, Penv, prevZenv, Zenv);
 			prevPenv = LFCP;     // LFC pressure
@@ -288,9 +286,6 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 				prevTparcel += 0.0001;
 			}
 		}
-
-		if (idx == 255377)
-			printf("CAPE ZONE:%f parcel %f %f env %f %f\n", (Tparcel > Tenv), Tparcel, prevTparcel, Tenv, prevTenv);
 
 		if (d_curLevel < d_breakLevel && (Tenv - Tparcel) > 25.)
 		{
