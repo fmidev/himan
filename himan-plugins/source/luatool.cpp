@@ -1000,7 +1000,8 @@ void BindLib(lua_State* L)
 	          // metutil namespace
 	          def("LCL_", &metutil::LCL_), def("Es_", &metutil::Es_), def("Gammas_", &metutil::Gammas_),
 	          def("Gammaw_", &metutil::Gammaw_), def("MixingRatio_", &metutil::MixingRatio_),
-	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_)];
+	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_),
+		  def("FlightLevel_", &metutil::FlightLevel_)];
 }
 
 void BindPlugins(lua_State* L)
