@@ -77,6 +77,17 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 
 	if (readIfNotMatching)
 	{
+		// CSV file does not have producer information attached.
+		// We just have to trust that it came from the producer that was requested.
+
+		all->First();
+		all->ResetParam();
+
+		while (all->Next())
+		{
+			all->Producer(options.prod);
+		}
+
 		return all;
 	}
 
