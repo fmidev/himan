@@ -376,7 +376,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 	// GRIB 1
 
-	if (itsConfiguration->OutputFileType() == kGRIB1)
+	if (itsConfiguration->OutputFileType() == kGRIB1 && itsInfo->Producer().Class() != kPreviClass)
 	{
 		HPDatabaseType dbtype = itsConfiguration->DatabaseType();
 
