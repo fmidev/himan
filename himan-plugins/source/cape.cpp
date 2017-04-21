@@ -129,7 +129,7 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 		}
 	}
 
-	const int splitSize = floor(size / workers);
+	const int splitSize = static_cast<int> (floor(size / workers));
 
 	for (int num = 0; num < workers; num++)
 	{
