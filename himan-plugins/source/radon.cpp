@@ -350,7 +350,7 @@ bool radon::SavePrevi(const info& resultInfo)
 
 			query.str("");
 			query << "UPDATE data." << table_name << " SET "
-			      << "value = '" << localInfo.Value() << " WHERE "
+			      << "value = " << localInfo.Value() << " WHERE "
 			      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 			      << "station_id = " << localInfo.Station().Id() << " AND "
 			      << "analysis_time = '" << analysisTime << "' AND "
