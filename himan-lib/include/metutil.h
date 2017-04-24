@@ -570,6 +570,15 @@ double ThetaW_(double thetaE, double P);
 CUDA_DEVICE
 double VirtualTemperature_(double T, double P);
 
+/**
+ *  @brief Calculate the flight level corresponding to given pressure
+ *
+ *  @param P Pressure in Pa
+ *  @return flight level in hecto feet
+ */
+
+double FlightLevel_(double P);
+
 #ifdef __CUDACC__
 
 // We have to declare cuda functions in the header or be ready to face the
