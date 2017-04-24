@@ -123,7 +123,7 @@ point latitude_longitude_grid::XY(const himan::point& latlon) const
 {
 	double x = (latlon.X() - itsBottomLeft.X()) / Di();
 
-	if (itsIsGlobal && (x < 0 || x > static_cast<double> (Ni()) - 1))
+	if (itsIsGlobal && (x < 0 || x > static_cast<double>(Ni()) - 1))
 	{
 		// wrap x if necessary
 		// this might happen f.ex. with EC where grid start at 0 meridian and
@@ -133,7 +133,7 @@ point latitude_longitude_grid::XY(const himan::point& latlon) const
 		{
 			x += static_cast<double>(Ni());
 		}
-		while (x > static_cast<double> (Ni()) - 1)
+		while (x > static_cast<double>(Ni()) - 1)
 		{
 			x -= static_cast<double>(Ni()) - 1.;
 		}

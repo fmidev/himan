@@ -16,14 +16,22 @@
 
 #ifndef HAVE_CUDA
 // Define shells so that compilation succeeds
+#include "serialization.h"
 namespace himan
 {
-
 struct packed_data
 {
 	bool HasData() const { return false; }
-};
+   private:
+#ifdef SERIALIZATION
+	friend class cereal::access;
 
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+	}
+#endif
+};
 }
 
 #else
@@ -116,15 +124,9 @@ inline CUDA_HOST CUDA_DEVICE double himan::packed_data_util::GetGribPower(long s
 	return divisor;
 }
 
-inline CUDA_HOST packed_data::~packed_data()
-{
-	Clear();
-}
-
+inline CUDA_HOST packed_data::~packed_data() { Clear(); }
 inline CUDA_HOST bool packed_data::HasData() const { return (unpackedLength > 0); }
-
 inline CUDA_HOST CUDA_DEVICE bool packed_data::HasBitmap() const { return (bitmapLength > 0); }
-
 }  // namespace himan
 
 #endif /* HAVE_CUDA */

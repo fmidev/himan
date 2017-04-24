@@ -6,6 +6,7 @@
 #define REDUCED_GAUSSIAN_GRID_H
 
 #include "grid.h"
+#include "serialization.h"
 
 #if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ <= 6))
 #define override  // override specifier not support until 4.8
@@ -13,10 +14,9 @@
 
 namespace himan
 {
-
 class reduced_gaussian_grid : public grid
 {
-public:
+   public:
 	reduced_gaussian_grid();
 	virtual ~reduced_gaussian_grid() {}
 	reduced_gaussian_grid(const reduced_gaussian_grid& other);
@@ -68,7 +68,7 @@ public:
 
 	double Value(size_t x, size_t y) const;
 
-private:
+   private:
 	bool EqualsTo(const reduced_gaussian_grid& other) const;
 	point LatLon(size_t x, size_t y) const;
 	void UpdateCoordinates() const;
@@ -84,10 +84,24 @@ private:
 	mutable point itsTopLeft;
 
 	mutable double itsDj;
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsN), CEREAL_NVP(itsNumberOfPointsAlongParallels),
+		   CEREAL_NVP(itsNj), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopRight), CEREAL_NVP(itsBottomRight),
+		   CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsDj));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const reduced_gaussian_grid& ob) { return ob.Write(file); }
-
 }  // namespace himan
+
+#ifdef SERIALIZATION
+CEREAL_REGISTER_TYPE(himan::reduced_gaussian_grid);
+#endif
 
 #endif /* REDUCED_GAUSSIAN_GRID_H */

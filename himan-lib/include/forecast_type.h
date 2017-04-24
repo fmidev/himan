@@ -17,13 +17,13 @@
 #define FORECAST_TYPE_H
 
 #include "himan_common.h"
+#include "serialization.h"
 
 namespace himan
 {
-
 class forecast_type
 {
-public:
+   public:
 	forecast_type() {}
 	explicit forecast_type(HPForecastType theType);
 	forecast_type(HPForecastType theType, double theValue);
@@ -41,13 +41,22 @@ public:
 
 	std::ostream& Write(std::ostream& file) const;
 
-private:
+   private:
 	HPForecastType itsForecastType;
 	double itsForecastTypeValue;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsForecastType), CEREAL_NVP(itsForecastTypeValue));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const forecast_type& ob) { return ob.Write(file); }
-
 }  // namespace himan
 
 #endif /* FORECAST_TYPE_H */

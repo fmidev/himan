@@ -14,9 +14,10 @@
 
 #include "himan_common.h"
 #include "logger.h"
+#include "matrix.h"
 #include "packed_data.h"
 #include "point.h"
-#include "matrix.h"
+#include "serialization.h"
 
 namespace himan
 {
@@ -132,6 +133,18 @@ class grid
 	 */
 
 	bool itsUVRelativeToGrid;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsData), CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsAB),
+		   CEREAL_NVP(itsLogger), CEREAL_NVP(itsScanningMode), CEREAL_NVP(itsPackedData),
+		   CEREAL_NVP(itsUVRelativeToGrid));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const grid& ob) { return ob.Write(file); }
