@@ -17,6 +17,7 @@
 #include "param.h"
 #include "producer.h"
 #include "raw_time.h"
+#include "station.h"
 #include <vector>
 
 #define VEC(I) I->Data().Values()
@@ -25,7 +26,6 @@ namespace himan
 {
 namespace plugin
 {
-
 class compiled_plugin_base;
 }
 
@@ -41,7 +41,7 @@ const size_t kIteratorResetValue = std::numeric_limits<size_t>::max();
 template <class T>
 class iterator
 {
-public:
+   public:
 	iterator<T>() : itsIndex(kIteratorResetValue) {}
 	explicit iterator<T>(const std::vector<T>& theElements) : itsElements(theElements) { Reset(); }
 	explicit iterator(const iterator& other) : itsElements(other.itsElements), itsIndex(other.itsIndex) {}
@@ -232,7 +232,6 @@ public:
 	 */
 
 	size_t Size() const { return itsElements.size(); }
-	
 	friend std::ostream& operator<<(std::ostream& file, const iterator<T>& ob) { return ob.Write(file); }
 	/**
 	 * @brief Add element to iterator
@@ -288,7 +287,7 @@ public:
 		return file;
 	}
 
-private:
+   private:
 	std::vector<T> itsElements;  //<! Vector to hold the elements
 	size_t itsIndex;             //<! Current index of iterator
 };
@@ -307,7 +306,7 @@ typedef iterator<forecast_type> forecast_type_iter;
 
 class info
 {
-public:
+   public:
 	friend class json_parser;
 	friend class himan::plugin::compiled_plugin_base;
 
@@ -662,10 +661,10 @@ public:
 
 	void Clear();
 
-protected:
+   protected:
 	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
 
-private:
+   private:
 	void Init();
 
 	/**
@@ -712,7 +711,6 @@ private:
 };
 
 inline std::ostream& operator<<(std::ostream& file, const info& ob) { return ob.Write(file); }
-
 inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
 	assert(forecastTypeIndex != kIteratorResetValue);
@@ -726,7 +724,6 @@ inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, siz
 }
 
 inline size_t himan::info::Index() const { return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex()); }
-
 inline grid* info::Grid() const
 {
 	assert(itsDimensions.size());
@@ -741,7 +738,6 @@ inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) 
 
 inline bool info::Value(double theValue) { return Grid()->Data().Set(itsLocationIndex, theValue); }
 inline double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
-
 typedef std::shared_ptr<info> info_t;
 
 }  // namespace himan
