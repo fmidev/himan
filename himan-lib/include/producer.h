@@ -41,8 +41,8 @@ public:
 	long TableVersion() const;
 	void TableVersion(long theTableVersion);
 
-	bool operator==(const producer& other);
-	bool operator!=(const producer& other);
+	bool operator==(const producer& other) const;
+	bool operator!=(const producer& other) const;
 
 private:
 	long itsFmiProducerId;

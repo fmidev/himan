@@ -78,7 +78,7 @@ std::ostream& producer::Write(std::ostream& file) const
 	return file;
 }
 
-bool producer::operator==(const producer& other)
+bool producer::operator==(const producer& other) const
 {
 	if (itsFmiProducerId != other.itsFmiProducerId)
 	{
@@ -108,4 +108,4 @@ bool producer::operator==(const producer& other)
 	return true;
 }
 
-bool producer::operator!=(const producer& other) { return !(*this == other); }
+bool producer::operator!=(const producer& other) const { return !(*this == other); }
