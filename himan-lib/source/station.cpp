@@ -12,11 +12,13 @@ std::ostream& station::Write(std::ostream& file) const
 }
 
 station::station() : point(), itsId(kHPMissingInt), itsName("Himan default station") {}
+station::station(int theId) : point(), itsId(theId), itsName("Himan default station") {}
 station::station(int theId, const std::string& theName, double lon, double lat)
     : point(lon, lat), itsId(theId), itsName(theName)
 {
 }
 
+station::station(int theId, double lon, double lat) : point(lon, lat), itsId(theId) {}
 bool station::operator==(const station& other) const
 {
 	bool yEquals = (fabs(itsY - other.Y()) < kCoordinateEpsilon);
