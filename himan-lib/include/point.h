@@ -1,10 +1,4 @@
-/**
- * @file point.h
- *
- */
-
-#ifndef POINT_H
-#define POINT_H
+#pragma once
 
 #include "cuda_helper.h"
 #include "himan_common.h"
@@ -41,16 +35,9 @@ public:
 	CUDA_HOST CUDA_DEVICE void X(double theX);
 	CUDA_HOST CUDA_DEVICE void Y(double theY);
 
-	std::ostream& Write(std::ostream& file) const
-	{
-		file << "<" << ClassName() << ">" << std::endl;
-		file << "__itsX__ " << itsX << std::endl;
-		file << "__itsY__ " << itsY << std::endl;
+	std::ostream& Write(std::ostream& file) const;
 
-		return file;
-	}
-
-private:
+protected:
 	double itsX;
 	double itsY;
 };
@@ -98,39 +85,4 @@ CUDA_HOST CUDA_DEVICE
 inline void point::Y(double theY) { itsY = theY; }
 
 inline std::ostream& operator<<(std::ostream& file, const point& ob) { return ob.Write(file); }
-
-class station : public point
-{
-public:
-	station();
-	station(int theId, const std::string& theName, double lon, double lat);
-
-	int Id() const;
-	void Id(int theId);
-
-	std::string Name() const;
-	void Name(const std::string& theName);
-
-private:
-	int itsId;  // FMISID
-	std::string itsName;
-};
-
-inline station::station() : point(), itsId(kHPMissingInt), itsName("Himan default station") {}
-
-inline station::station(int theId, const std::string& theName, double lon, double lat)
-    : point(lon, lat), itsId(theId), itsName(theName)
-{
-}
-
-inline int station::Id() const { return itsId; }
-
-inline void station::Id(int theId) { itsId = theId; }
-
-inline std::string station::Name() const { return itsName; }
-
-inline void station::Name(const std::string& theName) { itsName = theName; }
-
 }  // namespace himan
-
-#endif /* POINT_H */
