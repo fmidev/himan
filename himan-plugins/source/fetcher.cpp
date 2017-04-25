@@ -603,10 +603,12 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options&
 
 				for (const auto& anInfo : ret)
 				{
+#ifdef HAVE_CUDA
 					if (anInfo->Grid()->IsPackedData())
 					{
 						util::Unpack({anInfo->Grid()});
 					}
+#endif
 					c->Insert(*anInfo);
 				}
 
