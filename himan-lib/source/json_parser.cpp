@@ -1451,6 +1451,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 					prod.Name(prodInfo["ref_prod"]);
 					prod.TableVersion(boost::lexical_cast<long>(prodInfo["no_vers"]));
 					prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
+					prod.Class(kGridClass);
 				}
 				else
 				{
@@ -1562,9 +1563,17 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 				prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
 				prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
 			}
-			prod.Name(prodInfo["ref_prod"]);
-			prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
 
+			prod.Name(prodInfo["ref_prod"]);
+
+			if (prodInfo["producer_class"].empty())
+			{
+				prod.Class(kGridClass);
+			}
+			else
+			{
+				prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+			}
 		}
 		else if (dbtype != kNoDatabase)
 		{
