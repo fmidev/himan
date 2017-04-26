@@ -27,6 +27,11 @@ using namespace std;
 
 static once_flag oflag;
 
+// If multiple plugins are executed using auxiliary files, prevent
+// each plugin execution from re-reading the aux files to memory.
+
+static std::atomic<bool> auxiliaryFilesRead(false);
+
 // Sticky param cache will store the producer that provided data.
 // With this information we can skip the regular producer loop cycle
 // (try prod 1, data not found, try prod 2) which will improve fetching
@@ -610,11 +615,18 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options&
 						util::Unpack({anInfo->Grid()});
 					}
 #endif
-					c->Insert(*anInfo);
+					// Insert each grid of an info to cache. Usually one info
+					// has only one grid but in some cases this is not true.
+					for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
+					{
+						c->Insert(*anInfo);
+					}
 				}
 
 				itsLogger->Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
 			});
+
+			auxiliaryFilesRead = true;
 
 			ret = FromCache(opts);
 		}
@@ -734,7 +746,10 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAllSources(search_options& opt
 		return ret;
 	}
 
-	ret = FetchFromAuxiliaryFiles(opts, readPackedData);
+	if (!auxiliaryFilesRead)
+	{
+		ret = FetchFromAuxiliaryFiles(opts, readPackedData);
+	}
 
 	if (!ret.empty())
 	{
