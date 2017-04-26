@@ -25,7 +25,8 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 
 	assert(out.is_open());
 
-	out << "station_id,station_name,longitude,latitude,origintime,forecasttime,level_name,level_value,parameter_name,"
+	out << "station_id,origintime,forecasttime,level_name,level_value,level_value2,forecast_type_id,forecast_type_"
+	       "value,parameter_name,"
 	       "value"
 	    << endl;
 
@@ -41,7 +42,8 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 			out << s.Id() << ","  // << s.X() << "," << s.Y() << ","
 			    << originTime << "," << theInfo.Time().ValidDateTime().String() << ","
 			    << HPLevelTypeToString.at(theInfo.Level().Type()) << "," << theInfo.Level().Value() << ","
-			    << theInfo.Param().Name() << "," << theInfo.Value() << endl;
+			    << theInfo.Level().Value2() << "," << theInfo.ForecastType().Type() << ","
+			    << theInfo.ForecastType().Value() << "," << theInfo.Param().Name() << "," << theInfo.Value() << endl;
 		}
 
 		out.flush();

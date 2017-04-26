@@ -101,6 +101,7 @@ vector<std::string> radon::CSV(search_options& options)
 	      << "t.forecast_time,"
 	      << "t.level_name,"
 	      << "t.level_value,"
+	      << "t.level_value2,"
 	      << "t.forecast_type_id,"
 	      << "t.forecast_type_value,"
 	      << "t.param_name,"
@@ -111,6 +112,7 @@ vector<std::string> radon::CSV(search_options& options)
 	      << "AND t.param_name = '" + options.param.Name() << "' "
 	      << "AND t.level_name = upper('" + HPLevelTypeToString.at(options.level.Type()) << "') "
 	      << "AND t.level_value = " << options.level.Value() << " "
+	      << "AND (t.level_value2 = " << options.level.Value2() << " OR t.level_value2 = -1) "
 	      << "AND t.forecast_period = '" << util::MakeSQLInterval(options.time) << "' "
 	      << "AND t.forecast_type_id = " << options.ftype.Type() << " "
 	      << "AND t.forecast_type_value = " << options.ftype.Value();
