@@ -50,68 +50,61 @@ string cache::UniqueNameFromOptions(search_options& options)
 void cache::Insert(info& anInfo, bool pin) { SplitToPool(anInfo, pin); }
 void cache::SplitToPool(info& anInfo, bool pin)
 {
-
 	auto localInfo = anInfo;
 
-	localInfo.First();
-	localInfo.ResetParam(); // innermost
-	while (localInfo.Next())
+	// Cached data is never replaced by another data that has
+	// the same uniqueName
+
+	string uniqueName = UniqueName(localInfo);
+
 	{
-		// Cached data is never replaced by another data that has
-		// the same uniqueName
+		Lock lock(itsCheckMutex);
 
-		string uniqueName = UniqueName(localInfo);
-
-
+		if (cache_pool::Instance()->Find(uniqueName))
 		{
-			Lock lock(itsCheckMutex);
+			// New item, but only one thread should insert it (prevent race condition)
 
-			if (cache_pool::Instance()->Find(uniqueName))
-			{
-				// New item, but only one thread should insert it (prevent race condition)
+			itsLogger->Trace("Data with key " + uniqueName + " already exists at cache");
 
-				itsLogger->Trace("Data with key " + uniqueName + " already exists at cache");
-
-				// Update timestamp of this cache item
-				cache_pool::Instance()->UpdateTime(uniqueName);
-				return;
-			}
+			// Update timestamp of this cache item
+			cache_pool::Instance()->UpdateTime(uniqueName);
+			return;
 		}
+	}
 
 #ifdef HAVE_CUDA
-		if (localInfo.Grid()->IsPackedData())
-		{
-			itsLogger->Trace("Removing packed data from cached info");
-			localInfo.Grid()->PackedData().Clear();
-		}
+	if (localInfo.Grid()->IsPackedData())
+	{
+		itsLogger->Trace("Removing packed data from cached info");
+		localInfo.Grid()->PackedData().Clear();
+	}
 #endif
 
-		assert(!localInfo.Grid()->IsPackedData());
+	assert(!localInfo.Grid()->IsPackedData());
 
-		vector<param> params;
-		vector<level> levels;
-		vector<forecast_time> times;
-		vector<forecast_type> ftype;
+	vector<param> params;
+	vector<level> levels;
+	vector<forecast_time> times;
+	vector<forecast_type> ftype;
 
-		params.push_back(localInfo.Param());
-		levels.push_back(localInfo.Level());
-		times.push_back(localInfo.Time());
-		ftype.push_back(localInfo.ForecastType());
+	params.push_back(localInfo.Param());
+	levels.push_back(localInfo.Level());
+	times.push_back(localInfo.Time());
+	ftype.push_back(localInfo.ForecastType());
 
-		auto newInfo = make_shared<info>(localInfo);
+	auto newInfo = make_shared<info>(localInfo);
 
-		newInfo->Params(params);
-		newInfo->Levels(levels);
-		newInfo->Times(times);
-		newInfo->ForecastTypes(ftype);
-		newInfo->Create(localInfo.Grid());
+	newInfo->Params(params);
+	newInfo->Levels(levels);
+	newInfo->Times(times);
+	newInfo->ForecastTypes(ftype);
+	newInfo->Create(localInfo.Grid());
 
-		assert(uniqueName == UniqueName(*newInfo));
+	assert(uniqueName == UniqueName(*newInfo));
 
-		{
-			Lock lock(itsCheckMutex);
-			cache_pool::Instance()->Insert(uniqueName, newInfo, pin);
-		}
+	{
+		Lock lock(itsCheckMutex);
+		cache_pool::Instance()->Insert(uniqueName, newInfo, pin);
 	}
 }
 
