@@ -1452,13 +1452,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 					prod.TableVersion(boost::lexical_cast<long>(prodInfo["no_vers"]));
 					prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
 					prod.Class(kGridClass);
+					sourceProducers.push_back(prod);
 				}
 				else
 				{
 					itsLogger->Warning("Failed to find source producer from Neons: " + prodstr);
 				}
-
-				sourceProducers.push_back(prod);
 			}
 		}
 
