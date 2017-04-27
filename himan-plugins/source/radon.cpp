@@ -96,19 +96,24 @@ vector<std::string> radon::CSV(search_options& options)
 	query.str("");
 
 	query << "SELECT "
-	      << "t.station_id,"
+	      << "t.producer_id,"
 	      << "t.analysis_time,"
-	      << "t.forecast_time,"
+	      << "t.station_id,"
+	      << "s.name AS station_name,"
+	      << "st_x(s.position) AS longitude,"
+	      << "st_y(s.position) AS latitude,"
 	      << "t.level_name,"
 	      << "t.level_value,"
 	      << "t.level_value2,"
+	      << "t.forecast_period,"
 	      << "t.forecast_type_id,"
 	      << "t.forecast_type_value,"
 	      << "t.param_name,"
 	      << "t.value "
-	      << "FROM " << row[0] << "_v t "
+	      << "FROM " << row[0] << "_v t, station s "
 	      << "WHERE "
-	      << "t.analysis_time = '" << analtime << "' "
+	      << "t.station_id = s.id "
+	      << "AND t.analysis_time = '" << analtime << "' "
 	      << "AND t.param_name = '" + options.param.Name() << "' "
 	      << "AND t.level_name = upper('" + HPLevelTypeToString.at(options.level.Type()) << "') "
 	      << "AND t.level_value = " << options.level.Value() << " "
@@ -123,15 +128,21 @@ vector<std::string> radon::CSV(search_options& options)
 
 	while (true)
 	{
-		auto row = itsRadonDB->FetchRow();
+		row = itsRadonDB->FetchRow();
 
 		if (row.empty())
 		{
 			break;
 		}
 
-		csv.push_back(row[0] + "," + row[1] + "," + row[2] + "," + row[3] + "," + row[4] + "," + row[5] + "," + row[6] +
-		              "," + row[7] + "," + row[8]);
+		// producer_id,origintime,station_id,station_name,longitude,latitude,level_name,level_value,level_value2,forecast_period,forecast_type_id,forecast_type_value,param_name,value
+
+		query << row[0] << "," << row[1] << "," << row[2] << "," << row[3] << "," << row[4] << "," << row[5] << ","
+		      << row[6] << "," << row[7] << "," << row[8] << "," << row[9] << "," << row[10] << "," << row[11] << ","
+		      << row[12] << "," << row[13] <<  endl;
+
+		csv.push_back(query.str());
+		query.str("");
 	}
 
 	return csv;

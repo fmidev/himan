@@ -751,37 +751,61 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	vector<station> stats;
 	vector<forecast_type> ftypes;
 
+	producer prod;
+
 	for (auto line : csv)
 	{
 		auto elems = util::Split(line, ",", false);
-		// 0 station_id
+		// 0 producer_id
 		// 1 origin time
-		// 2 forecast time
-		// 3 level_name
-		// 4 level_value
-		// 5 forecast_type_id
-		// 6 forecast_type_value
-		// 7 parameter_name
-		// 8 value
+		// 2 station_id
+		// 3 station_name
+		// 4 longitude
+		// 5 latitude
+		// 6 level_id
+		// 7 level_value
+		// 8 level_value2
+		// 9 forecast period
+		// 10 forecast_type_id
+		// 11 forecast_type_value
+		// 12 param_name
+		// 13 value
 
-		assert(elems.size() == 9);
+		assert(elems.size() == 14);
+
+		if (elems[0] == "producer_id") continue;
+
+		// producer, only single is supported for now
+		prod.Id(stoi(elems[0]));
 
 		// forecast_time
-		forecast_time f(elems[1], elems[2]);
+		raw_time originTime(elems[1]), validTime(elems[1]);
+
+		// split HHH:MM:SS and extract hours and minutes
+		auto timeparts = Split(elems[9], ":", false);
+
+		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
+		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
+
+		forecast_time f(originTime, validTime);
 
 		// level
-		string level_name = elems[3];
-		boost::algorithm::to_lower(level_name);
-		level l(HPStringToLevelType.at(level_name), stod(elems[4]));
+		level l(static_cast<HPLevelType>(HPStringToLevelType.at(elems[6])), stod(elems[7]));
+
+		if (!elems[8].empty())
+		{
+			l.Value2(stod(elems[8]));
+		}
 
 		// param
-		param p(elems[7]);
+		param p(elems[12]);
 
 		// forecast_type
-		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[5])), stod(elems[6]));
+		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[10])), stod(elems[11]));
 
 		// station
-		station s(stoi(elems[0]));
+		int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
+		station s(stationId, elems[3], stod(elems[4]), stod(elems[5]));
 
 		/* Prevent duplicates */
 
@@ -818,8 +842,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 
 	ret = make_shared<info>();
 
-	//        ret->Producer(options.prod);
-
+	ret->Producer(prod);
 	ret->Times(times);
 	ret->Params(params);
 	ret->Levels(levels);
@@ -840,22 +863,34 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	{
 		auto elems = util::Split(line, ",", false);
 
+		if (elems[0] == "producer_id") continue;
 		// forecast_time
-		forecast_time f(elems[1], elems[2]);
+		raw_time originTime(elems[1]), validTime(elems[1]);
+
+		auto timeparts = Split(elems[9], ":", false);
+
+		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
+		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
+
+		forecast_time f(originTime, validTime);
 
 		// level
-		string level_name = elems[3];
-		boost::algorithm::to_lower(level_name);
-		level l(HPStringToLevelType.at(level_name), stod(elems[4]));
+		level l(static_cast<HPLevelType>(HPStringToLevelType.at(elems[6])), stod(elems[7]));
+
+		if (!elems[8].empty())
+		{
+			l.Value2(stod(elems[8]));
+		}
 
 		// param
-		param p(elems[7]);
+		param p(elems[12]);
 
 		// forecast_type
-		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[5])), stod(elems[6]));
+		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[10])), stod(elems[11]));
 
 		// station
-		station s(stoi(elems[0]));
+		int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
+		station s(stationId, elems[3], stod(elems[4]), stod(elems[5]));
 
 		if (!ret->Param(p)) continue;
 		if (!ret->Time(f)) continue;
@@ -867,7 +902,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 			if (s == stats[i])
 			{
 				// Add the data point
-				ret->Grid()->Value(i, stod(elems[8]));
+				ret->Grid()->Value(i, stod(elems[13]));
 			}
 		}
 	}
