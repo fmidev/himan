@@ -129,7 +129,9 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 		}
 	}
 
-	auto theInfos = FetchFromAllSources(opts, readPackedData);
+	auto ret = FetchFromAllSources(opts, readPackedData);
+
+	auto theInfos = ret.second;
 
 	if (theInfos.empty())
 	{
@@ -179,7 +181,8 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	 * 3. Data is not packed
 	 */
 
-	if (itsUseCache && opts.configuration->UseCache() && !theInfos[0]->Grid()->IsPackedData())
+	if (ret.first != HPDataFoundFrom::kCache && itsUseCache && opts.configuration->UseCache() &&
+	    !theInfos[0]->Grid()->IsPackedData())
 	{
 		auto c = GET_PLUGIN(cache);
 		c->Insert(*theInfos[0]);
@@ -237,7 +240,6 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			if (ret) break;
 
 			itsLogger->Warning("Sticky cache failed, trying all producers just to be sure");
-
 		}
 	}
 
@@ -573,9 +575,11 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)
 	return ret;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options& opts, bool readPackedData)
+pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxiliaryFiles(search_options& opts,
+                                                                                        bool readPackedData)
 {
 	vector<info_t> ret;
+	HPDataFoundFrom source = HPDataFoundFrom::kAuxFile;
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
@@ -627,6 +631,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options&
 			});
 
 			auxiliaryFilesRead = true;
+			source = HPDataFoundFrom::kCache;
 
 			ret = FromCache(opts);
 		}
@@ -645,8 +650,6 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options&
 				    ->Statistics()
 				    ->AddToCacheMissCount(1);
 			}
-
-			return ret;
 		}
 		else
 		{
@@ -654,7 +657,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options&
 		}
 	}
 
-	return ret;
+	return make_pair(source, ret);
 }
 
 vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
@@ -737,30 +740,32 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 	return ret;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromAllSources(search_options& opts, bool readPackedData)
+pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAllSources(search_options& opts,
+                                                                                    bool readPackedData)
 {
 	auto ret = FetchFromCache(opts);
 
 	if (!ret.empty())
 	{
-		return ret;
+		return make_pair(HPDataFoundFrom::kCache, ret);
 	}
 
 	if (!auxiliaryFilesRead)
 	{
-		ret = FetchFromAuxiliaryFiles(opts, readPackedData);
+		// second ret, different from first
+		auto ret = FetchFromAuxiliaryFiles(opts, readPackedData);
+
+		if (!ret.second.empty())
+		{
+			return ret;
+		}
 	}
 
-	if (!ret.empty())
-	{
-		return ret;
-	}
-
-	return FetchFromDatabase(opts, readPackedData);
+	return make_pair(HPDataFoundFrom::kDatabase, FetchFromDatabase(opts, readPackedData));
 }
 
 bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo,
-                               forecast_time& requestedTime, forecast_type& requestedType)
+                               const forecast_time& requestedTime, const forecast_type& requestedType)
 {
 	raw_time originTime = requestedTime.OriginDateTime();
 	forecast_time firstTime(originTime, originTime);
@@ -890,8 +895,9 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 
 			itsLogger->Trace("Fetching " + otherName + " for U/V rotation");
 
-			auto otherVec = FetchFromAllSources(opts, component->Grid()->IsPackedData());
+			auto ret = FetchFromAllSources(opts, component->Grid()->IsPackedData());
 
+			auto otherVec = ret.second;
 			assert(!otherVec.empty());
 
 			info_t u, v, other = otherVec[0];
