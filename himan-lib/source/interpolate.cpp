@@ -419,6 +419,7 @@ bool InterpolateArea(info& target, std::vector<info_t> sources, bool useCudaForI
 					case kRotatedLatitudeLongitude:
 					case kStereographic:
 					case kLambertConformalConic:
+					case kPointList:
 #ifdef HAVE_CUDA
 						useCudaForInterpolation ? InterpolateAreaGPU(target, *source, targetData) :
 #endif
