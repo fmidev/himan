@@ -71,10 +71,6 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			{
 				param2.Name(p.second);
 			}
-			else
-			{
-				std::cout << "?? " << p.first << " " << p.second << "\n";
-			}
 		}
 
 		if (param1.Name() == "XX-X")
