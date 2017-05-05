@@ -1127,10 +1127,6 @@ void BindLib(lua_State* L)
 		      .def(constructor<>())
 		      .def("ClassName", &modifier_findvalue::ClassName)
 		      .def("Process", &modifier_wrapper::findheight_gt::Process),
-		  class_<modifier_findvalue, modifier>("modifier_min")
-		      .def(constructor<>())
-		      .def("ClassName", &modifier_findvalue::ClassName)
-		      .def("Process", &modifier_wrapper::min::Process),
 		  class_<modifier_max, modifier>("modifier_max")
 		      .def(constructor<>())
 		      .def("ClassName", &modifier_findvalue::ClassName)
