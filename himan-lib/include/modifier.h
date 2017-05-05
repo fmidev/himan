@@ -35,8 +35,11 @@ class modifier
 	virtual bool IsMissingValue(double theValue) const __attribute__((always_inline));
 
 	void FindValue(const std::vector<double>& theFindValue);
+	std::vector<double> FindValue() const;
 	void LowerHeight(const std::vector<double>& theLowerHeight);
+	std::vector<double> LowerHeight() const;
 	void UpperHeight(const std::vector<double>& theUpperHeight);
+	std::vector<double> UpperHeight() const;
 
 	virtual const std::vector<double>& Result() const;
 
