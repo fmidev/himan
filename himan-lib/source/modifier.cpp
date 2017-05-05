@@ -68,6 +68,9 @@ void modifier::Clear(double fillValue)
 	std::fill(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), false);
 }
 
+std::vector<double> modifier::FindValue() const { return itsFindValue; }
+std::vector<double> modifier::LowerHeight() const { return itsLowerHeight; }
+std::vector<double> modifier::UpperHeight() const { return itsUpperHeight; }
 void modifier::FindValue(const std::vector<double>& theFindValue)
 {
 	itsFindValue = theFindValue;
