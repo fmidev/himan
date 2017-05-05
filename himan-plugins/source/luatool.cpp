@@ -731,7 +731,7 @@ void SetFindValueGrid(modifier& mod, const object& findValue)
 {
 	mod.FindValue(TableToVector(findValue));
 }
-object GetFindValue(modifier& mod)
+object GetFindValueGrid(modifier& mod)
 {
 	return VectorToTable(mod.FindValue());
 }
