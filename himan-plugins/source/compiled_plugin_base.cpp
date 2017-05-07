@@ -386,6 +386,12 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 			for (unsigned int i = 0; i < params.size(); i++)
 			{
+				if (params[i].Name() == "DUMMY")
+				{
+					// special placeholder parameter which is replaced later
+					continue;
+				}
+
 				long table2Version = itsInfo->Producer().TableVersion();
 
 				if (table2Version == kHPMissingInt)
@@ -427,6 +433,12 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 			for (unsigned int i = 0; i < params.size(); i++)
 			{
+				if (params[i].Name() == "DUMMY")
+				{
+					// special placeholder parameter which is replaced later
+					continue;
+				}
+
 				if (params[i].GribIndicatorOfParameter() != kHPMissingInt &&
 				    params[i].GribTableVersion() != kHPMissingInt)
 				{
