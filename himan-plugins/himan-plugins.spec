@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.4.18
+Version: 17.5.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon May 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.15-1.fmi
+- Updated CSV reading and writing
+- Additions to luatool
 * Tue Apr 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.18-1.fmi
 - pop plugin: allow previous ECMWF forecast to be missing
 - Remove crash when listing plugins and database password was not set
