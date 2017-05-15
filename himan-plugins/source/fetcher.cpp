@@ -27,6 +27,11 @@ using namespace std;
 
 static once_flag oflag;
 
+// If multiple plugins are executed using auxiliary files, prevent
+// each plugin execution from re-reading the aux files to memory.
+
+static std::atomic<bool> auxiliaryFilesRead(false);
+
 // Sticky param cache will store the producer that provided data.
 // With this information we can skip the regular producer loop cycle
 // (try prod 1, data not found, try prod 2) which will improve fetching
@@ -124,7 +129,9 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 		}
 	}
 
-	auto theInfos = FetchFromAllSources(opts, readPackedData);
+	auto ret = FetchFromAllSources(opts, readPackedData);
+
+	auto theInfos = ret.second;
 
 	if (theInfos.empty())
 	{
@@ -174,7 +181,8 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	 * 3. Data is not packed
 	 */
 
-	if (itsUseCache && opts.configuration->UseCache() && !theInfos[0]->Grid()->IsPackedData())
+	if (ret.first != HPDataFoundFrom::kCache && itsUseCache && opts.configuration->UseCache() &&
+	    !theInfos[0]->Grid()->IsPackedData())
 	{
 		auto c = GET_PLUGIN(cache);
 		c->Insert(*theInfos[0]);
@@ -232,7 +240,6 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			if (ret) break;
 
 			itsLogger->Warning("Sticky cache failed, trying all producers just to be sure");
-
 		}
 	}
 
@@ -277,7 +284,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			if (static_cast<int>(requestedType.Type()) > 2)
 			{
 				optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" +
-				           to_string(static_cast<int> (requestedType.Value()));
+				           to_string(static_cast<int>(requestedType.Value()));
 			}
 
 			itsLogger->Warning("No valid data found with given search options " + optsStr);
@@ -335,7 +342,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 
 			case kCSV:
 			{
-				curInfos = FromCSV(inputFile, options);
+				curInfos = FromCSV(inputFile, options, readIfNotMatching);
 				break;
 			}
 
@@ -390,11 +397,12 @@ vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, 
 	return theInfos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search_options& options)
+vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search_options& options,
+                                                 bool readIfNotMatching)
 {
 	auto c = GET_PLUGIN(csv);
 
-	auto info = c->FromFile(inputFile, options);
+	auto info = c->FromFile(inputFile, options, readIfNotMatching);
 
 	vector<info_t> infos;
 	infos.push_back(info);
@@ -567,9 +575,11 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)
 	return ret;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options& opts, bool readPackedData)
+pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxiliaryFiles(search_options& opts,
+                                                                                        bool readPackedData)
 {
 	vector<info_t> ret;
+	HPDataFoundFrom source = HPDataFoundFrom::kAuxFile;
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
 	{
@@ -603,15 +613,25 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options&
 
 				for (const auto& anInfo : ret)
 				{
+#ifdef HAVE_CUDA
 					if (anInfo->Grid()->IsPackedData())
 					{
 						util::Unpack({anInfo->Grid()});
 					}
-					c->Insert(*anInfo);
+#endif
+					// Insert each grid of an info to cache. Usually one info
+					// has only one grid but in some cases this is not true.
+					for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
+					{
+						c->Insert(*anInfo);
+					}
 				}
 
 				itsLogger->Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
 			});
+
+			auxiliaryFilesRead = true;
+			source = HPDataFoundFrom::kCache;
 
 			ret = FromCache(opts);
 		}
@@ -630,8 +650,6 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options&
 				    ->Statistics()
 				    ->AddToCacheMissCount(1);
 			}
-
-			return ret;
 		}
 		else
 		{
@@ -639,7 +657,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromAuxiliaryFiles(search_options&
 		}
 	}
 
-	return ret;
+	return make_pair(source, ret);
 }
 
 vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
@@ -648,7 +666,12 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 
 	HPDatabaseType dbtype = opts.configuration->DatabaseType();
 
-	if (opts.configuration->ReadDataFromDatabase() && dbtype != kNoDatabase)
+	if (!opts.configuration->ReadDataFromDatabase() || dbtype == kNoDatabase)
+	{
+		return ret;
+	}
+
+	if (opts.prod.Class() == kGridClass)
 	{
 		vector<string> files;
 
@@ -662,8 +685,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 			files = n->Files(opts);
 		}
 
-		if ((dbtype == kRadon ||
-		     dbtype == kNeonsAndRadon) && files.empty())
+		if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && files.empty())
 		{
 			// try radon next
 
@@ -704,31 +726,46 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 			return ret;
 		}
 	}
+	else if (opts.prod.Class() == kPreviClass)
+	{
+		auto r = GET_PLUGIN(radon);
+
+		itsLogger->Trace("Accessing Radon database for previ data");
+
+		auto csv_forecasts = r->CSV(opts);
+		auto _ret = util::CSVToInfo(csv_forecasts);
+		ret.push_back(_ret);
+	}
 
 	return ret;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromAllSources(search_options& opts, bool readPackedData)
+pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAllSources(search_options& opts,
+                                                                                    bool readPackedData)
 {
 	auto ret = FetchFromCache(opts);
 
 	if (!ret.empty())
 	{
-		return ret;
+		return make_pair(HPDataFoundFrom::kCache, ret);
 	}
 
-	ret = FetchFromAuxiliaryFiles(opts, readPackedData);
-
-	if (!ret.empty())
+	if (!auxiliaryFilesRead)
 	{
-		return ret;
+		// second ret, different from first
+		auto ret = FetchFromAuxiliaryFiles(opts, readPackedData);
+
+		if (!ret.second.empty())
+		{
+			return ret;
+		}
 	}
 
-	return FetchFromDatabase(opts, readPackedData);
+	return make_pair(HPDataFoundFrom::kDatabase, FetchFromDatabase(opts, readPackedData));
 }
 
 bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo,
-                               forecast_time& requestedTime, forecast_type& requestedType)
+                               const forecast_time& requestedTime, const forecast_type& requestedType)
 {
 	raw_time originTime = requestedTime.OriginDateTime();
 	forecast_time firstTime(originTime, originTime);
@@ -833,7 +870,7 @@ string GetOtherVectorComponentName(const string& name)
 
 void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
                                      shared_ptr<const plugin_configuration> config, const producer& sourceProd)
-{ 
+{
 	for (auto& component : components)
 	{
 		HPGridType from = component->Grid()->Type();
@@ -858,8 +895,9 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 
 			itsLogger->Trace("Fetching " + otherName + " for U/V rotation");
 
-			auto otherVec = FetchFromAllSources(opts, component->Grid()->IsPackedData());
+			auto ret = FetchFromAllSources(opts, component->Grid()->IsPackedData());
 
+			auto otherVec = ret.second;
 			assert(!otherVec.empty());
 
 			info_t u, v, other = otherVec[0];

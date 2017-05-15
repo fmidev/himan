@@ -53,9 +53,13 @@ HPFileType
 
 HPProjectionType
     kUnknownProjection = 0
-    kLatLonProject = 1
-    kRotatedLatLonProjection = 2
-    kStereographicProjection = 3
+    kLatitudeLongitude
+    kStereographic
+    kAzimuthalEquidistant 
+    kRotatedLatitudeLongitude
+    kReducedGaussian
+    kPointList
+    kLambertConformalConic
 
 HPScanningMode
     kUnknownScanningMode = 0
@@ -184,6 +188,38 @@ A logger instance is automatically assigned for a lua script as a global variabl
 | | Warning | string | Log something in warning level |
 | | Error | string | Log something in error level |
 | | Fatal | string | Log something in fatal level |
+
+## modifier
+
+modifier class is used to process data and height. Different modifiers exist for calculating min, max, mean etc for grids with given heights. modifier is usually used through
+hitool-plugin, which will feed data to it.
+
+Available modifiers are:
+
+| Name | Description |
+|---|---|
+| max | Calculate maximum value for each gridpoint |
+| min | Calculate minimum value |
+| maxmin | Calculate maximum and minimum value |
+| count | Calculate number of parameter value occurrences |
+| mean | Calculate mean value |
+| findvalue | Find value for a parameter from a given height
+| findheight | Find the height of given parameter value |
+| findheight_lt | Find the first height where parameter value is less than given value |
+| findheight_gt | Find the first height where parameter value is more than given value |
+
+Example:
+
+```
+mean = modifier_mean()
+
+mean:SetLowerHeightGrid(lower)
+mean:SetUpperHeightGrid(upper)
+
+mean:Process(data, heights)
+```
+
+Note! In most cases hitool-plugin should be used to automate fetching of data!
 
 ## param
 

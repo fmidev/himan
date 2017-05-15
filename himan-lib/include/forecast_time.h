@@ -10,7 +10,6 @@
 
 namespace himan
 {
-
 /**
  * @class forecast_time
  *
@@ -39,10 +38,12 @@ class forecast_time
 
 	int Step() const;
 
+	const raw_time& OriginDateTime() const;
 	raw_time& OriginDateTime();
 	void OriginDateTime(const raw_time& theOriginDateTime);
 	void OriginDateTime(const std::string& theOriginDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
+	const raw_time& ValidDateTime() const;
 	raw_time& ValidDateTime();
 	void ValidDateTime(const raw_time& theValidDateTime);
 	void ValidDateTime(const std::string& theValidDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
@@ -63,7 +64,6 @@ class forecast_time
 };
 
 inline std::ostream& operator<<(std::ostream& file, const forecast_time& ob) { return ob.Write(file); }
-
 }  // namespace himan
 
 #endif /* FORECAST_TIME_H */

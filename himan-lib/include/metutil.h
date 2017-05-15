@@ -570,6 +570,15 @@ double ThetaW_(double thetaE, double P);
 CUDA_DEVICE
 double VirtualTemperature_(double T, double P);
 
+/**
+ *  @brief Calculate the flight level corresponding to given pressure
+ *
+ *  @param P Pressure in Pa
+ *  @return flight level in hecto feet
+ */
+
+double FlightLevel_(double P);
+
 #ifdef __CUDACC__
 
 // We have to declare cuda functions in the header or be ready to face the
@@ -826,8 +835,6 @@ inline double Wobf(double T)
 
 	double ret = himan::kFloatMissing;
 
-	if (T == himan::kFloatMissing) return ret;
-
 	T -= 20;
 
 	if (T <= 0)
@@ -835,7 +842,7 @@ inline double Wobf(double T)
 		ret = 1 +
 		      T * (-8.841660499999999e-3 +
 		           T * (1.4714143e-4 + T * (-9.671989000000001e-7 + T * (-3.2607217e-8 + T * (-3.8598073e-10)))));
-		ret = 15.130 / pow(ret, 4);
+		ret = 15.130 / (ret * ret * ret * ret);
 	}
 	else
 	{
@@ -844,7 +851,7 @@ inline double Wobf(double T)
 		           T * (-1.3603273e-05 +
 		                T * (4.9618922e-07 +
 		                     T * (-6.1059365e-09 + T * (3.9401551e-11 + T * (-1.2588129e-13 + T * (1.6688280e-16)))))));
-		ret = (29.930 / pow(ret, 4)) + (0.96 * T) - 14.8;
+		ret = (29.930 / (ret * ret * ret * ret)) + (0.96 * T) - 14.8;
 	}
 
 	return ret;
@@ -868,7 +875,7 @@ inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 	double remains = 9999;  // try to minimise this
 	double ratio = 1;
 
-	const double pwrp = pow(targetP / 100000, kRd_div_Cp);  // exner
+	const double pwrp = POW(targetP / 100000, kRd_div_Cp);  // exner
 
 	double t1 = (thetaw + kKelvin) * pwrp - kKelvin;
 	double e1 = Wobf(t1) - Wobf(thetaw);

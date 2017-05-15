@@ -7,7 +7,7 @@
 #define POINT_LIST_H
 
 #include "grid.h"
-#include "point.h"
+#include "station.h"
 #include <string>
 
 namespace himan

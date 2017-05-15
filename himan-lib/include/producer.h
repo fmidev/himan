@@ -15,14 +15,13 @@ namespace himan
 {
 class producer
 {
-public:
+   public:
 	producer();
 	explicit producer(long theFmiProducerId);
 	producer(long theCentre, long theProcess);
 	producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName);
 
 	~producer() {}
-	
 	std::string ClassName() const { return "himan::producer"; }
 	std::ostream& Write(std::ostream& file) const;
 
@@ -41,20 +40,23 @@ public:
 	long TableVersion() const;
 	void TableVersion(long theTableVersion);
 
-	bool operator==(const producer& other);
-	bool operator!=(const producer& other);
+	HPProducerClass Class() const;
+	void Class(HPProducerClass theClass);
 
-private:
+	bool operator==(const producer& other) const;
+	bool operator!=(const producer& other) const;
+
+   private:
 	long itsFmiProducerId;
 	long itsProcess;
 	long itsCentre;
 	long itsTableVersion;
+	HPProducerClass itsClass;
 
 	std::string itsNeonsName;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const producer& ob) { return ob.Write(file); }
-
 }  // namespace himan
 
 #endif /* PRODUCER_H */

@@ -157,9 +157,15 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			double w = itsScale * (287 * -VV * (T + TBase) / (himan::constants::kG * P * PScale));
 
-			assert(isfinite(w));  // Some erroneous values of T, P or VV produce infinite values
-
-			myTargetInfo->Value(w);
+			// Some erroneous values of T, P or VV produce infinite values
+			if (isfinite(w))
+			{
+				myTargetInfo->Value(w);
+			}
+			else
+			{
+				myTargetInfo->Value(kFloatMissing);
+			}
 		}
 	}
 

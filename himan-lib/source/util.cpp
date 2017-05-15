@@ -9,6 +9,7 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "param.h"
+#include "point_list.h"
 #include <NFmiStereographicArea.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
@@ -697,7 +698,7 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 	{
 		long binn = (count < 10) ? count : 10;
 
-		double binw = (max - min) / static_cast<double> (binn);
+		double binw = (max - min) / static_cast<double>(binn);
 
 		double binmin = min;
 		double binmax = binmin + binw;
@@ -738,6 +739,175 @@ string util::GetEnv(const string& key)
 		throw runtime_error("Environment variable '" + string(key) + "' not found");
 	}
 	return string(var);
+}
+
+info_t util::CSVToInfo(const vector<string>& csv)
+{
+	info_t ret;
+
+	vector<forecast_time> times;
+	vector<param> params;
+	vector<level> levels;
+	vector<station> stats;
+	vector<forecast_type> ftypes;
+
+	producer prod;
+
+	for (auto line : csv)
+	{
+		auto elems = util::Split(line, ",", false);
+		// 0 producer_id
+		// 1 origin time
+		// 2 station_id
+		// 3 station_name
+		// 4 longitude
+		// 5 latitude
+		// 6 level_id
+		// 7 level_value
+		// 8 level_value2
+		// 9 forecast period
+		// 10 forecast_type_id
+		// 11 forecast_type_value
+		// 12 param_name
+		// 13 value
+
+		assert(elems.size() == 14);
+
+		if (elems[0] == "producer_id") continue;
+
+		// producer, only single is supported for now
+		prod.Id(stoi(elems[0]));
+
+		// forecast_time
+		raw_time originTime(elems[1]), validTime(elems[1]);
+
+		// split HHH:MM:SS and extract hours and minutes
+		auto timeparts = Split(elems[9], ":", false);
+
+		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
+		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
+
+		forecast_time f(originTime, validTime);
+
+		// level
+		level l(static_cast<HPLevelType>(HPStringToLevelType.at(elems[6])), stod(elems[7]));
+
+		if (!elems[8].empty())
+		{
+			l.Value2(stod(elems[8]));
+		}
+
+		// param
+		param p(elems[12]);
+
+		// forecast_type
+		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[10])), stod(elems[11]));
+
+		// station
+		int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
+		station s(stationId, elems[3], stod(elems[4]), stod(elems[5]));
+
+		/* Prevent duplicates */
+
+		if (find(times.begin(), times.end(), f) == times.end())
+		{
+			times.push_back(f);
+		}
+
+		if (find(levels.begin(), levels.end(), l) == levels.end())
+		{
+			levels.push_back(l);
+		}
+
+		if (find(params.begin(), params.end(), p) == params.end())
+		{
+			params.push_back(p);
+		}
+
+		if (find(ftypes.begin(), ftypes.end(), ftype) == ftypes.end())
+		{
+			ftypes.push_back(ftype);
+		}
+
+		if (find(stats.begin(), stats.end(), s) == stats.end())
+		{
+			stats.push_back(s);
+		}
+	}
+
+	if (times.size() == 0 || params.size() == 0 || levels.size() == 0 || ftypes.size() == 0)
+	{
+		return ret;
+	}
+
+	ret = make_shared<info>();
+
+	ret->Producer(prod);
+	ret->Times(times);
+	ret->Params(params);
+	ret->Levels(levels);
+	ret->ForecastTypes(ftypes);
+
+	auto base = unique_ptr<grid>(new point_list());  // placeholder
+	ret->Create(base.get(), true);
+
+	ret->First();
+	ret->ResetParam();
+
+	while (ret->Next())
+	{
+		dynamic_cast<point_list*>(ret->Grid())->Stations(stats);
+	}
+
+	for (auto line : csv)
+	{
+		auto elems = util::Split(line, ",", false);
+
+		if (elems[0] == "producer_id") continue;
+		// forecast_time
+		raw_time originTime(elems[1]), validTime(elems[1]);
+
+		auto timeparts = Split(elems[9], ":", false);
+
+		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
+		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
+
+		forecast_time f(originTime, validTime);
+
+		// level
+		level l(static_cast<HPLevelType>(HPStringToLevelType.at(elems[6])), stod(elems[7]));
+
+		if (!elems[8].empty())
+		{
+			l.Value2(stod(elems[8]));
+		}
+
+		// param
+		param p(elems[12]);
+
+		// forecast_type
+		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[10])), stod(elems[11]));
+
+		// station
+		int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
+		station s(stationId, elems[3], stod(elems[4]), stod(elems[5]));
+
+		if (!ret->Param(p)) continue;
+		if (!ret->Time(f)) continue;
+		if (!ret->Level(l)) continue;
+		if (!ret->ForecastType(ftype)) continue;
+
+		for (size_t i = 0; i < stats.size(); i++)
+		{
+			if (s == stats[i])
+			{
+				// Add the data point
+				ret->Grid()->Value(i, stod(elems[13]));
+			}
+		}
+	}
+
+	return ret;
 }
 
 #ifdef HAVE_CUDA

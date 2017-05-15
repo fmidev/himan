@@ -192,7 +192,7 @@ point point_list::XY(const point& latlon) const
 	int x = 0;
 	for (const auto& p : itsStations)
 	{
-		if (p == latlon)
+		if (p == station(p.Id(), p.Name(), latlon.X(), latlon.Y()))
 		{
 			return point(x, 0);
 		}

@@ -30,6 +30,7 @@ public:
 
 	bool operator==(const forecast_type& theType) const;
 	bool operator!=(const forecast_type& theType) const;
+	operator std::string() const;
 
 	std::string ClassName() const { return "himan::forecast_type"; }
 	HPForecastType Type() const;

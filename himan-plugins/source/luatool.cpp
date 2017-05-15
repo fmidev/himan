@@ -709,6 +709,114 @@ void SetHeightUnit(std::shared_ptr<hitool> h, HPParameterUnit theHeightUnit) { h
 HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h) { return h->HeightUnit(); }
 }  // namespace hitool_wrapper
 
+namespace modifier_wrapper
+{
+void SetLowerHeightGrid(modifier& mod, const object& lowerHeight)
+{
+	mod.LowerHeight(TableToVector(lowerHeight));
+}
+object GetLowerHeightGrid(modifier& mod)
+{
+	return VectorToTable(mod.LowerHeight());
+}
+void SetUpperHeightGrid(modifier& mod, const object& upperHeight)
+{
+	mod.UpperHeight(TableToVector(upperHeight));
+}
+object GetUpperHeightGrid(modifier& mod)
+{
+	return VectorToTable(mod.UpperHeight());
+}
+void SetFindValueGrid(modifier& mod, const object& findValue)
+{
+	mod.FindValue(TableToVector(findValue));
+}
+object GetFindValueGrid(modifier& mod)
+{
+	return VectorToTable(mod.FindValue());
+}
+object Result(modifier& mod)
+{
+	return VectorToTable(mod.Result());
+}
+namespace findvalue
+{
+void Process(modifier_findvalue& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace findvalue
+
+namespace findheight
+{
+void Process(modifier_findheight& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace findheight
+
+namespace findheight_gt
+{
+void Process(modifier_findheight_gt& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace findheight_gt
+
+namespace findheight_lt
+{
+void Process(modifier_findheight_lt& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace findheight_lt
+
+namespace max
+{
+void Process(modifier_max& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace max
+
+namespace min
+{
+void Process(modifier_min& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace min
+
+namespace maxmin
+{
+void Process(modifier_maxmin& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace maxmin
+
+namespace count
+{
+void Process(modifier_count& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace count
+
+namespace mean
+{
+object Result(modifier_mean& mod)
+{
+	return VectorToTable(mod.Result());
+}
+void Process(modifier_mean& mod, const object& data, const object& height)
+{
+	mod.Process(TableToVector(data), TableToVector(height));
+}
+} // namespace mean
+
+} // namespace modifier_wrapper
+
 namespace neons_wrapper
 {
 std::string GetProducerMetaData(std::shared_ptr<neons> n, const producer& prod, const std::string& attName)
@@ -942,7 +1050,6 @@ void BindLib(lua_State* L)
 	              .def("GetSourceProducer", LUA_CMEMFN(const producer&, configuration, SourceProducer, size_t))
 	              .def("GetTargetProducer", LUA_CMEMFN(const producer&, configuration, TargetProducer, void))
 	              .def("GetForecastStep", &configuration::ForecastStep)
-
 	              ,
 	          class_<plugin_configuration, configuration, std::shared_ptr<plugin_configuration>>("plugin_configuration")
 	              .def(constructor<>())
@@ -993,6 +1100,54 @@ void BindLib(lua_State* L)
 		      .def("VerifyValidForecastCount", &lagged_ensemble::VerifyValidForecastCount)
 		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, lagged_ensemble, MaximumMissingForecasts, int))
 		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, lagged_ensemble, MaximumMissingForecasts, void)),
+		  class_<modifier>("modifier")
+		      .def("Result", &modifier_wrapper::Result)
+		      .def("CalculationFinished", &modifier::CalculationFinished)
+		      .def("GetLowerHeightGrid", &modifier_wrapper::GetLowerHeightGrid)
+		      .def("SetLowerHeightGrid", &modifier_wrapper::SetLowerHeightGrid)
+		      .def("GetUpperHeightGrid", &modifier_wrapper::GetUpperHeightGrid)
+		      .def("SetUpperHeightGrid", &modifier_wrapper::SetUpperHeightGrid)
+		      .def("GetFindValue", &modifier_wrapper::GetFindValueGrid)
+		      .def("SetFindValue", &modifier_wrapper::SetFindValueGrid)
+		      .def("SetFindNth", LUA_MEMFN(void, modifier, FindNth, size_t))
+		      .def("GetFindNth", LUA_CMEMFN(size_t, modifier, FindNth, void)),
+		  class_<modifier_findvalue, modifier>("modifier_findvalue")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_findvalue::ClassName)
+		      .def("Process", &modifier_wrapper::findvalue::Process),
+		  class_<modifier_findheight, modifier>("modifier_findheight")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_findvalue::ClassName)
+		      .def("Process", &modifier_wrapper::findheight::Process),
+		  class_<modifier_findheight_lt, modifier>("modifier_findheight_lt")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_findvalue::ClassName)
+		      .def("Process", &modifier_wrapper::findheight_lt::Process),
+		  class_<modifier_findheight_gt, modifier>("modifier_findheight_gt")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_findvalue::ClassName)
+		      .def("Process", &modifier_wrapper::findheight_gt::Process),
+		  class_<modifier_max, modifier>("modifier_max")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_findvalue::ClassName)
+		      .def("Process", &modifier_wrapper::max::Process),
+		  class_<modifier_min, modifier>("modifier_min")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_findvalue::ClassName)
+		      .def("Process", &modifier_wrapper::min::Process),
+		  class_<modifier_maxmin, modifier>("modifier_maxmin")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_findvalue::ClassName)
+		      .def("Process", &modifier_wrapper::maxmin::Process),
+		  class_<modifier_count, modifier>("modifier_count")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_findvalue::ClassName)
+		      .def("Process", &modifier_wrapper::count::Process),
+		  class_<modifier_mean, modifier>("modifier_mean")
+		      .def(constructor<>())
+		      .def("ClassName", &modifier_mean::ClassName)
+		      .def("Process", &modifier_wrapper::mean::Process)
+		      .def("Result", &modifier_wrapper::mean::Result),
 	          // numerical_functions namespace
 	          def("Filter2D", &numerical_functions::Filter2D),
 	          def("Max2D", &numerical_functions::Max2D),
@@ -1000,7 +1155,8 @@ void BindLib(lua_State* L)
 	          // metutil namespace
 	          def("LCL_", &metutil::LCL_), def("Es_", &metutil::Es_), def("Gammas_", &metutil::Gammas_),
 	          def("Gammaw_", &metutil::Gammaw_), def("MixingRatio_", &metutil::MixingRatio_),
-	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_)];
+	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_),
+		  def("FlightLevel_", &metutil::FlightLevel_)];
 }
 
 void BindPlugins(lua_State* L)
@@ -1106,7 +1262,7 @@ object VectorToTable(const std::vector<double>& vec)
 	object ret = newtable(myL.get());
 
 	size_t i = 0;
-	BOOST_FOREACH (const double& val, vec)
+	for(const double& val : vec)
 	{
 		ret[++i] = val;
 
@@ -1130,26 +1286,27 @@ std::vector<double> TableToVector(const object& table)
 {
 	assert(table.is_valid());
 
-	// TODO: preallocate vector to correct size, but from where can I have
-	// table size!?
-
-	std::vector<double> ret;
-
 	if (type(table) == 0)
 	{
 		// Input argument is nil (lua.h)
-		return ret;
+		return std::vector<double>();
 	}
 
-	for (luabind::iterator iter(table), end; iter != end; ++iter)
+	luabind::iterator iter(table), end;
+
+	auto size =  std::distance(iter, end);
+	std::vector<double> ret(size, himan::kFloatMissing);
+
+	size_t i = 0;
+	for (; iter != end; ++iter, i++)
 	{
 		try
 		{
-			ret.push_back(object_cast<double>(*iter));
+			ret[i] = object_cast<double>(*iter);
 		}
 		catch (cast_failed& e)
 		{
-			ret.push_back(himan::kFloatMissing);
+			ret[i] = himan::kFloatMissing;
 		}
 	}
 

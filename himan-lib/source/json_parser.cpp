@@ -1167,10 +1167,6 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 
 		g = unique_ptr<point_list>(new point_list());
 
-		// hard coded projection to latlon
-
-		g->Type(kLatitudeLongitude);
-
 		vector<station> theStations;
 
 		int i = 1;
@@ -1219,10 +1215,6 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 		vector<string> stations = util::Split(pt.get<string>("stations"), ",", false);
 
 		g = unique_ptr<point_list>(new point_list);
-
-		// hard coded projection to latlon
-
-		g->Type(kLatitudeLongitude);
 
 		vector<station> theStations;
 
@@ -1441,9 +1433,9 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 			auto n = GET_PLUGIN(neons);
 			auto r = GET_PLUGIN(radon);
 
-			for (size_t i = 0; i < sourceProducersStr.size(); i++)
+			for (const auto& prodstr : sourceProducersStr)
 			{
-				long pid = boost::lexical_cast<long>(sourceProducersStr[i]);
+				long pid = stol(prodstr);
 
 				producer prod(pid);
 
@@ -1455,29 +1447,13 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 					prod.Name(prodInfo["ref_prod"]);
 					prod.TableVersion(boost::lexical_cast<long>(prodInfo["no_vers"]));
 					prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
+					prod.Class(kGridClass);
+					sourceProducers.push_back(prod);
 				}
 				else
 				{
-					itsLogger->Warning("Failed to find source producer from Neons: " + sourceProducersStr[i]);
-
-					map<string, string> radonProdInfo =
-					    r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
-
-					if (!radonProdInfo.empty())
-					{
-						prod.Centre(boost::lexical_cast<long>(radonProdInfo["ident_id"]));
-						prod.Name(radonProdInfo["ref_prod"]);
-						prod.Process(boost::lexical_cast<long>(radonProdInfo["model_id"]));
-						itsLogger->Info("Forcing database type to radon");
-						conf->DatabaseType(kRadon);
-					}
-					else
-					{
-						itsLogger->Warning("Failed to find source producer from Radon: " + sourceProducersStr[i]);
-					}
+					itsLogger->Warning("Failed to find source producer from Neons: " + prodstr);
 				}
-
-				sourceProducers.push_back(prod);
 			}
 		}
 
@@ -1495,16 +1471,27 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 
 				if (!prodInfo.empty())
 				{
-					prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
 					prod.Name(prodInfo["ref_prod"]);
-					prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
+
+					if (!prodInfo["ident_id"].empty())
+					{
+						prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
+						prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
+					}
+
+					prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+
+					if (dbtype == kNeonsAndRadon)
+					{
+						itsLogger->Info("Forcing database type to radon");
+						conf->DatabaseType(kRadon);
+					}
+					sourceProducers.push_back(prod);
 				}
 				else
 				{
-					itsLogger->Warning("Unknown source producer: " + prodstr);
+					itsLogger->Warning("Failed to find source producer from Radon: " + prodstr);
 				}
-
-				sourceProducers.push_back(prod);
 			}
 		}
 		else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
@@ -1521,11 +1508,27 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		}
 
 		conf->SourceProducers(sourceProducers);
+	}
 
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		itsLogger->Fatal("Source producer definitions not found: " + string(e.what()));
+		abort();
+	}
+	catch (exception& e)
+	{
+		itsLogger->Fatal("Error parsing source producer information: " + string(e.what()));
+		abort();
+	}
+
+	try
+	{
 		/*
 		 * Target producer is also set to target info; source infos (and producers) are created
 		 * as data is fetched from files.
 		 */
+
+		HPDatabaseType dbtype = conf->DatabaseType();
 
 		long pid = boost::lexical_cast<long>(pt.get<string>("target_producer"));
 		producer prod(pid);
@@ -1548,13 +1551,24 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		{
 			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
 			{
-				itsLogger->Fatal("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
-				abort();
+				itsLogger->Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+			}
+			else
+			{
+				prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
+				prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
 			}
 
-			prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
 			prod.Name(prodInfo["ref_prod"]);
-			prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
+
+			if (prodInfo["producer_class"].empty())
+			{
+				prod.Class(kGridClass);
+			}
+			else
+			{
+				prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+			}
 		}
 		else if (dbtype != kNoDatabase)
 		{
@@ -1566,12 +1580,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		itsLogger->Fatal("Producer definitions not found: " + string(e.what()));
+		itsLogger->Fatal("Target producer definitions not found: " + string(e.what()));
 		abort();
 	}
 	catch (exception& e)
 	{
-		itsLogger->Fatal("Error parsing producer information: " + string(e.what()));
+		itsLogger->Fatal("Error parsing target producer information: " + string(e.what()));
 		abort();
 	}
 }

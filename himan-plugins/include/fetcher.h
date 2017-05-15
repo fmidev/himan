@@ -28,6 +28,13 @@ namespace himan
 {
 namespace plugin
 {
+enum class HPDataFoundFrom : int
+{
+	kCache = 0,
+	kAuxFile,
+	kDatabase
+};
+
 class fetcher : public auxiliary_plugin
 {
    public:
@@ -119,7 +126,7 @@ class fetcher : public auxiliary_plugin
 	 */
 
 	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo,
-	                      forecast_time& requestedTime, forecast_type& requestedType);
+	                      const forecast_time& requestedTime, const forecast_type& requestedType);
 
 	std::vector<std::shared_ptr<info>> FromCache(search_options& options);
 
@@ -199,11 +206,13 @@ class fetcher : public auxiliary_plugin
 	 *
 	 * @param inputFile Input file name
 	 * @param options Search options (param, level, time, prod, config)
+	 * @param readIfNotMatching If set true, all data is read to cache
 	 *
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromCSV(const std::string& inputFile, search_options& options);
+	std::vector<std::shared_ptr<info>> FromCSV(const std::string& inputFile, search_options& options,
+	                                           bool readIfNotMatching = false);
 
 	/**
 	 * @brief Map level definitions between models and our expected levels.
@@ -229,10 +238,12 @@ class fetcher : public auxiliary_plugin
 	 * @return Vector of infos, zero sized if none found
 	 */
 
-	std::vector<std::shared_ptr<info>> FetchFromAllSources(search_options& opts, bool readPackedData);
+	std::pair<HPDataFoundFrom, std::vector<std::shared_ptr<info>>> FetchFromAllSources(search_options& opts,
+	                                                                                   bool readPackedData);
 
 	std::vector<std::shared_ptr<info>> FetchFromCache(search_options& opts);
-	std::vector<std::shared_ptr<info>> FetchFromAuxiliaryFiles(search_options& opts, bool readPackedData);
+	std::pair<HPDataFoundFrom, std::vector<std::shared_ptr<info>>> FetchFromAuxiliaryFiles(search_options& opts,
+	                                                                                       bool readPackedData);
 	std::vector<std::shared_ptr<info>> FetchFromDatabase(search_options& opts, bool readPackedData);
 
 	/**
