@@ -32,7 +32,7 @@ void DumpVector(const vector<double>& vec);
 // Required source and target parameters and levels
 
 const param TParam("T-K");
-const param TDParam("TD-C");
+const param TDParam("TD-K");
 const param HParam("Z-M2S2");
 const params PParam({param("P-HPA"), param("P-PA")});
 const param KIParam("KINDEX-N", 80, 0, 7, 2);
@@ -379,7 +379,7 @@ void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_ti
 	h->Configuration(conf);
 	h->Time(ftime);
 
-	result = h->VerticalAverage(param("TD-C"), 0, 500);
+	result = h->VerticalAverage(param("TD-K"), 0, 500);
 }
 #if 0
 inline
