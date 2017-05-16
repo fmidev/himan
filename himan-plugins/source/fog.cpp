@@ -44,7 +44,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	//"platform" temperature
 
 	const params groundParam = {param("T-K"), param("TG-K")};
-	const param dewParam("TD-C");
+	const param dewParam("TD-K");
 	const param windParam("FF-MS");
 
 	level ground;

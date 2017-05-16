@@ -30,7 +30,7 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 	 *
 	 */
 
-	param requestedParam("TD-C", 10, 0, 0, 6);
+	param requestedParam("TD-K", 10, 0, 0, 6);
 	requestedParam.Unit(kK);
 
 	SetParams({requestedParam});

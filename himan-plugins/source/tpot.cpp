@@ -103,7 +103,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	const param TParam("T-K");
 	const params PParam = {param("P-PA"), param("P-HPA")};
-	const params TDParam = {param("TD-C"), param("TD-K")};
+	const param TDParam("TD-K");
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
