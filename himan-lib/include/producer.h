@@ -63,7 +63,7 @@ class producer
 	void serialize(Archive& ar)
 	{
 		ar(CEREAL_NVP(itsFmiProducerId), CEREAL_NVP(itsProcess), CEREAL_NVP(itsCentre), CEREAL_NVP(itsTableVersion),
-		   CEREAL_NVP(itsNeonsName));
+		   CEREAL_NVP(itsNeonsName), CEREAL_NVP(itsClass));
 	}
 #endif
 };
