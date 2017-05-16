@@ -136,7 +136,6 @@ class param
 	HPInterpolationMethod itsInterpolationMethod;
 
 	HPParameterUnit itsUnit;  //!< Unit of the parameter
-	double itsMissingValue;   //!< Missing value
 
 	aggregation itsAggregation;
 

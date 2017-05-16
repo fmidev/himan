@@ -24,7 +24,6 @@ param::param()
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -43,7 +42,6 @@ param::param(const string& theName, unsigned long theUnivId)
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -62,7 +60,6 @@ param::param(const string& theName, unsigned long theUnivId, HPParameterUnit the
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(theUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -81,7 +78,6 @@ param::param(const string& theName)
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -101,7 +97,6 @@ param::param(const string& theName, unsigned long theUnivId, double theScale, do
       itsVersion(1),
       itsInterpolationMethod(theInterpolationMethod),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -121,7 +116,6 @@ param::param(const string& theName, unsigned long theUnivId, long theGribDiscipl
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -140,7 +134,6 @@ param::param(const param& other)
       itsVersion(other.itsVersion),
       itsInterpolationMethod(other.itsInterpolationMethod),
       itsUnit(other.itsUnit),
-      itsMissingValue(other.itsMissingValue),
       itsAggregation(other.itsAggregation)
 {
 }
@@ -160,7 +153,6 @@ param& param::operator=(const param& other)
 	itsVersion = other.itsVersion;
 	itsInterpolationMethod = other.itsInterpolationMethod;
 	itsUnit = other.itsUnit;
-	itsMissingValue = other.itsMissingValue;
 	itsAggregation = other.itsAggregation;
 
 	return *this;
