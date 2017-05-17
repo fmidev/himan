@@ -7,18 +7,18 @@
 #define LOGGER_H
 
 #include "himan_common.h"
+#include "serialization.h"
 #include <stdio.h>
 
 namespace himan
 {
 class logger
 {
-public:
+   public:
 	logger();
 	~logger() {}
-	
 	logger(const std::string& theUserName, HPDebugState theDebugState);
-	
+
 	void Trace(const std::string& msg)
 	{
 		if (itsDebugState <= kTraceMsg)
@@ -60,9 +60,19 @@ public:
 	};
 
 	void Fatal(const std::string& msg) { printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str()); };
-private:
+   private:
 	HPDebugState itsDebugState;
 	std::string itsUserName;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsDebugState), CEREAL_NVP(itsUserName));
+	}
+#endif
 };
 
 }  // namespace himan

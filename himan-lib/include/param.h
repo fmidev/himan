@@ -15,17 +15,17 @@
 #ifndef PARAM_H
 #define PARAM_H
 
+#include "serialization.h"
 #include "aggregation.h"
 #include "himan_common.h"
 
 namespace himan
 {
-
 class logger;
 
 class param
 {
-public:
+   public:
 	param();
 	explicit param(const std::string& theName);
 	param(const std::string& theName, unsigned long theUnivId);
@@ -119,7 +119,7 @@ public:
 
 	std::ostream& Write(std::ostream& file) const;
 
-private:
+   private:
 	long itsId;           //<! neons id
 	std::string itsName;  //!< neons name
 	double itsScale;
@@ -136,13 +136,24 @@ private:
 	HPInterpolationMethod itsInterpolationMethod;
 
 	HPParameterUnit itsUnit;  //!< Unit of the parameter
-	double itsMissingValue;   //!< Missing value
 
 	aggregation itsAggregation;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsId), CEREAL_NVP(itsName), CEREAL_NVP(itsScale), CEREAL_NVP(itsBase), CEREAL_NVP(itsUnivId),
+		   CEREAL_NVP(itsGribParameter), CEREAL_NVP(itsGribCategory), CEREAL_NVP(itsGribDiscipline),
+		   CEREAL_NVP(itsGribTableVersion), CEREAL_NVP(itsGribIndicatorOfParameter), CEREAL_NVP(itsUnit),
+		   CEREAL_NVP(itsVersion), CEREAL_NVP(itsInterpolationMethod), CEREAL_NVP(itsAggregation));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const param& ob) { return ob.Write(file); }
-
 typedef std::vector<himan::param> params;
 
 }  // namespace himan

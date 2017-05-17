@@ -7,6 +7,7 @@
 #define FORECAST_TIME_H
 
 #include "raw_time.h"
+#include "serialization.h"
 
 namespace himan
 {
@@ -61,6 +62,16 @@ class forecast_time
 	raw_time itsValidDateTime;
 
 	HPTimeResolution itsStepResolution;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsOriginDateTime), CEREAL_NVP(itsValidDateTime), CEREAL_NVP(itsStepResolution));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const forecast_time& ob) { return ob.Write(file); }

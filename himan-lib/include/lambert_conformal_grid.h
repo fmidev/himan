@@ -9,6 +9,7 @@
 #include "grid.h"
 #include "logger.h"
 #include "point.h"
+#include "serialization.h"
 #include <ogr_spatialref.h>
 #include <string>
 
@@ -126,9 +127,24 @@ class lambert_conformal_grid : public grid
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsXYToLatLonTransformer;
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsLatLonToXYTransformer;
 	mutable std::unique_ptr<OGRSpatialReference> itsSpatialReference;
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsDi),
+		   CEREAL_NVP(itsDj), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj), CEREAL_NVP(itsOrientation),
+		   CEREAL_NVP(itsStandardParallel1), CEREAL_NVP(itsStandardParallel2), CEREAL_NVP(itsSouthPole));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid& ob) { return ob.Write(file); }
 }  // namespace himan
+
+#ifdef SERIALIZATION
+CEREAL_REGISTER_TYPE(himan::lambert_conformal_grid);
+#endif
 
 #endif /* LAMBERT_CONFORMAL_GRID_H */

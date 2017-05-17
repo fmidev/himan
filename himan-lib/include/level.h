@@ -8,17 +8,17 @@
 #define LEVEL_H
 
 #include "himan_common.h"
+#include "serialization.h"
 
 class NFmiLevel;
 
 namespace himan
 {
-
 class logger;
 
 class level
 {
-public:
+   public:
 	level();
 	explicit level(const NFmiLevel& theLevel);
 	level(HPLevelType theType, double theValue);
@@ -50,7 +50,7 @@ public:
 
 	std::ostream& Write(std::ostream& file) const;
 
-private:
+   private:
 	HPLevelType itsType;
 
 	/*
@@ -79,10 +79,19 @@ private:
 	double itsValue2;
 	int itsIndex;  // Level index, ie. the number of level in a file for example
 	std::string itsName;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsValue), CEREAL_NVP(itsValue2), CEREAL_NVP(itsIndex), CEREAL_NVP(itsName));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const level& ob) { return ob.Write(file); }
-
 }  // namespace himan
 
 #endif /* LEVEL_H */

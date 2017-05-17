@@ -8,11 +8,11 @@
 
 #include "grid.h"
 #include "logger.h"
+#include "packed_data.h"
 #include "point.h"
+#include "serialization.h"
 #include <NFmiRotatedLatLonArea.h>
 #include <string>
-
-#include "packed_data.h"
 
 namespace himan
 {
@@ -121,6 +121,18 @@ class latitude_longitude_grid : public grid
 
    private:
 	mutable bool itsIsGlobal;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsBottomRight),
+		   CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsTopRight), CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsNi),
+		   CEREAL_NVP(itsNj), CEREAL_NVP(itsIsGlobal));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const latitude_longitude_grid& ob) { return ob.Write(file); }
@@ -155,13 +167,26 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	mutable std::unique_ptr<NFmiRotatedLatLonArea> itsRotLatLonArea;
 
 	point itsSouthPole;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<latitude_longitude_grid>(this), CEREAL_NVP(itsSouthPole));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const rotated_latitude_longitude_grid& ob)
 {
 	return ob.Write(file);
 }
-
 }  // namespace himan
 
+#ifdef SERIALIZATION
+CEREAL_REGISTER_TYPE(himan::latitude_longitude_grid);
+CEREAL_REGISTER_TYPE(himan::rotated_latitude_longitude_grid);
+#endif
 #endif /* LATITUDE_LONGITUDE_GRID_H */

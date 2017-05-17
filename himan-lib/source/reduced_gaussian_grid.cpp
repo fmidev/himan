@@ -6,6 +6,7 @@
 #include "reduced_gaussian_grid.h"
 #include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
+#include <numeric>
 
 using namespace himan;
 

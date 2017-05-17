@@ -10,6 +10,7 @@
 #define PRODUCER_H
 
 #include "himan_common.h"
+#include "serialization.h"
 
 namespace himan
 {
@@ -54,6 +55,17 @@ class producer
 	HPProducerClass itsClass;
 
 	std::string itsNeonsName;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsFmiProducerId), CEREAL_NVP(itsProcess), CEREAL_NVP(itsCentre), CEREAL_NVP(itsTableVersion),
+		   CEREAL_NVP(itsNeonsName), CEREAL_NVP(itsClass));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const producer& ob) { return ob.Write(file); }

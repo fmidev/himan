@@ -97,7 +97,6 @@ void forecast_time::OriginDateTime(const std::string& theOriginDateTime, const s
 
 raw_time& forecast_time::ValidDateTime() { return itsValidDateTime; }
 const raw_time& forecast_time::ValidDateTime() const { return itsValidDateTime; }
-void forecast_time::ValidDateTime(const raw_time& theValidDateTime) { itsValidDateTime = theValidDateTime; }
 void forecast_time::ValidDateTime(const std::string& theValidDateTime, const std::string& theDateMask)
 {
 	itsValidDateTime = raw_time(theValidDateTime, theDateMask);

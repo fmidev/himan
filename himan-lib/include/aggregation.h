@@ -8,13 +8,13 @@
 #define AGGREGATION_H
 
 #include "himan_common.h"
+#include "serialization.h"
 
 namespace himan
 {
-
 class aggregation
 {
-public:
+   public:
 	aggregation();
 	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theResolutionValue);
 	~aggregation() {}
@@ -36,14 +36,23 @@ public:
 
 	std::ostream& Write(std::ostream& file) const;
 
-private:
+   private:
 	HPAggregationType itsType;
 	HPTimeResolution itsTimeResolution;
 	int itsTimeResolutionValue;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsTimeResolution), CEREAL_NVP(itsTimeResolutionValue));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const aggregation& ob) { return ob.Write(file); }
-
 }  // namespace himan
 
 #endif /* AGGREGATION_H */

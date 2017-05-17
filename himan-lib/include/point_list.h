@@ -7,21 +7,21 @@
 #define POINT_LIST_H
 
 #include "grid.h"
+#include "serialization.h"
 #include "station.h"
 #include <string>
 
 namespace himan
 {
-
 class logger;
 
 class point_list : public grid
 {
-public:
+   public:
 	point_list();
 	explicit point_list(const std::vector<station>& theStations);
 
-	virtual ~point_list() {};
+	virtual ~point_list(){};
 
 	point_list(const point_list& other);
 	point_list& operator=(const point_list& other) = delete;
@@ -58,14 +58,26 @@ public:
 
 	point_list* Clone() const override;
 
-private:
+   private:
 	bool EqualsTo(const point_list& other) const;
 
 	std::vector<station> itsStations;
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsStations));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const point_list& ob) { return ob.Write(file); }
-
 }  // namespace himan
+
+#ifdef SERIALIZATION
+CEREAL_REGISTER_TYPE(himan::point_list);
+#endif
 
 #endif /* POINT_LIST_H */

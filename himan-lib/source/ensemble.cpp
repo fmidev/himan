@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <numeric>
 
 #define HIMAN_AUXILIARY_INCLUDE
 #include "fetcher.h"

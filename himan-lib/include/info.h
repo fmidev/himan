@@ -17,9 +17,10 @@
 #include "param.h"
 #include "producer.h"
 #include "raw_time.h"
+#include "serialization.h"
+#include "station.h"
 #include "station.h"
 #include <vector>
-
 #define VEC(I) I->Data().Values()
 
 namespace himan
@@ -290,6 +291,16 @@ class iterator
    private:
 	std::vector<T> itsElements;  //<! Vector to hold the elements
 	size_t itsIndex;             //<! Current index of iterator
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsElements), CEREAL_NVP(itsIndex));
+	}
+#endif
 };
 
 class forecast_time;
@@ -716,6 +727,18 @@ class info
 	producer itsProducer;
 
 	size_t itsLocationIndex;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsLevelOrder), CEREAL_NVP(itsLevelIterator), CEREAL_NVP(itsTimeIterator),
+		   CEREAL_NVP(itsParamIterator), CEREAL_NVP(itsForecastTypeIterator), CEREAL_NVP(itsDimensions),
+		   CEREAL_NVP(itsBaseGrid), CEREAL_NVP(itsLogger), CEREAL_NVP(itsProducer), CEREAL_NVP(itsLocationIndex));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const info& ob) { return ob.Write(file); }
