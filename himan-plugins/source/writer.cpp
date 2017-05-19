@@ -69,9 +69,9 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 			}
 
 			theGribWriter->WriteOptions(itsWriteOptions);
-			return
-			    theGribWriter->ToFile(theInfo, theOutputFile,
-			                          (itsWriteOptions.configuration->FileWriteOption() == kSingleFile) ? true : false);
+			return theGribWriter->ToFile(
+			    theInfo, theOutputFile,
+			    (itsWriteOptions.configuration->FileWriteOption() == kSingleFile) ? true : false);
 
 			break;
 		}
@@ -115,7 +115,8 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 	return false;
 }
 
-bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, const std::string& theOriginalOutputFile)
+bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf,
+                    const std::string& theOriginalOutputFile)
 {
 	std::unique_ptr<himan::timer> t = std::unique_ptr<himan::timer>(timer_factory::Instance()->GetTimer());
 
@@ -125,11 +126,10 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 	}
 
 	bool ret = true;
-	std::string theOutputFile = theOriginalOutputFile; // This is modified
+	std::string theOutputFile = theOriginalOutputFile;  // This is modified
 
 	if (conf->FileWriteOption() != kCacheOnly)
 	{
-
 		// When writing previ to database, no file is needed. In all other cases we have to create
 		// a file.
 
@@ -185,7 +185,9 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 	{
 		std::shared_ptr<cache> c = GET_PLUGIN(cache);
 
-		c->Insert(theInfo);
+		// Pin those items that are not written to file at all
+		// so they can't be removed from cache if cache size is limited
+		c->Insert(theInfo, (conf->FileWriteOption() == kCacheOnly));
 	}
 
 	if (conf->StatisticsEnabled())
