@@ -157,8 +157,6 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		assert(RH < 102.);
 
-		// cout << "RH " << RH << " stratN " << stratN << " stratH " << stratH << " RR " << RR << " PF " << PF << endl;
-
 		double visPre = defaultVis;
 
 		if (RR > 0)
