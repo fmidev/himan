@@ -14,7 +14,8 @@ namespace plugin
 struct param_configuration
 {
 	int targetInfoIndex;
-	double threshold;
+	double gridThreshold; // for grids
+	std::map<int, double> stationThreshold;
 
 	param output;
 

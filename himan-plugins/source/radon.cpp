@@ -102,13 +102,13 @@ vector<std::string> radon::CSV(search_options& options)
 	      << "s.name AS station_name,"
 	      << "st_x(s.position) AS longitude,"
 	      << "st_y(s.position) AS latitude,"
+	      << "t.param_name,"
 	      << "t.level_name,"
 	      << "t.level_value,"
-	      << "t.level_value2,"
+	      << "CASE t.level_value2 WHEN -1 THEN -999 ELSE t.level_value2 END AS level_value2,"
 	      << "t.forecast_period,"
 	      << "t.forecast_type_id,"
-	      << "t.forecast_type_value,"
-	      << "t.param_name,"
+	      << "CASE t.forecast_type_value WHEN -1 THEN -999 ELSE t.forecast_type_value END AS forecast_type_value,"
 	      << "t.value "
 	      << "FROM " << row[0] << "_v t, station s "
 	      << "WHERE "
@@ -128,6 +128,8 @@ vector<std::string> radon::CSV(search_options& options)
 
 	while (true)
 	{
+		query.str("");
+
 		row = itsRadonDB->FetchRow();
 
 		if (row.empty())
@@ -135,14 +137,13 @@ vector<std::string> radon::CSV(search_options& options)
 			break;
 		}
 
-		// producer_id,origintime,station_id,station_name,longitude,latitude,level_name,level_value,level_value2,forecast_period,forecast_type_id,forecast_type_value,param_name,value
+		// producer_id,origintime,station_id,station_name,longitude,latitude,param_name,level_name,level_value,level_value2,forecast_period,forecast_type_id,forecast_type_value,value
 
 		query << row[0] << "," << row[1] << "," << row[2] << "," << row[3] << "," << row[4] << "," << row[5] << ","
 		      << row[6] << "," << row[7] << "," << row[8] << "," << row[9] << "," << row[10] << "," << row[11] << ","
-		      << row[12] << "," << row[13] <<  endl;
+		      << row[12] << "," << row[13] << endl;
 
 		csv.push_back(query.str());
-		query.str("");
 	}
 
 	return csv;
@@ -307,8 +308,6 @@ bool radon::SavePrevi(const info& resultInfo)
 
 	string table_name = row[1];
 
-	query.str("");
-
 	auto levelinfo = itsRadonDB->GetLevelFromDatabaseName(HPLevelTypeToString.at(resultInfo.Level().Type()));
 
 	if (levelinfo.empty())
@@ -342,6 +341,8 @@ bool radon::SavePrevi(const info& resultInfo)
 
 	for (localInfo.ResetLocation(); localInfo.NextLocation();)
 	{
+		query.str("");
+
 		query << "INSERT INTO data." << table_name << " (producer_id, station_id, analysis_time, param_id, level_id, "
 		                                              "level_value, level_value2, forecast_period, "
 		                                              "forecast_type_id, forecast_type_value, value) VALUES ("
