@@ -10,7 +10,6 @@ using namespace himan;
 using namespace std;
 
 param::~param() {}
-
 param::param()
     : itsId(kHPMissingInt),
       itsName("XX-X"),
@@ -25,7 +24,6 @@ param::param()
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -44,7 +42,6 @@ param::param(const string& theName, unsigned long theUnivId)
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -63,7 +60,6 @@ param::param(const string& theName, unsigned long theUnivId, HPParameterUnit the
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(theUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -82,7 +78,6 @@ param::param(const string& theName)
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -102,7 +97,6 @@ param::param(const string& theName, unsigned long theUnivId, double theScale, do
       itsVersion(1),
       itsInterpolationMethod(theInterpolationMethod),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -122,7 +116,6 @@ param::param(const string& theName, unsigned long theUnivId, long theGribDiscipl
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsMissingValue(kHPMissingValue),
       itsAggregation()
 {
 }
@@ -141,7 +134,6 @@ param::param(const param& other)
       itsVersion(other.itsVersion),
       itsInterpolationMethod(other.itsInterpolationMethod),
       itsUnit(other.itsUnit),
-      itsMissingValue(other.itsMissingValue),
       itsAggregation(other.itsAggregation)
 {
 }
@@ -161,7 +153,6 @@ param& param::operator=(const param& other)
 	itsVersion = other.itsVersion;
 	itsInterpolationMethod = other.itsInterpolationMethod;
 	itsUnit = other.itsUnit;
-	itsMissingValue = other.itsMissingValue;
 	itsAggregation = other.itsAggregation;
 
 	return *this;
@@ -239,60 +230,35 @@ bool param::operator==(const param& other) const
 }
 
 bool param::operator!=(const param& other) const { return !(*this == other); }
-
 void param::GribParameter(long theGribParameter) { itsGribParameter = theGribParameter; }
-
 long param::GribParameter() const { return itsGribParameter; }
-
 void param::GribDiscipline(long theGribDiscipline) { itsGribDiscipline = theGribDiscipline; }
-
 long param::GribDiscipline() const { return itsGribDiscipline; }
-
 void param::GribCategory(long theGribCategory) { itsGribCategory = theGribCategory; }
-
 long param::GribCategory() const { return itsGribCategory; }
-
 void param::GribIndicatorOfParameter(long theGribIndicatorOfParameter)
 {
 	itsGribIndicatorOfParameter = theGribIndicatorOfParameter;
 }
 
 long param::GribIndicatorOfParameter() const { return itsGribIndicatorOfParameter; }
-
 unsigned long param::UnivId() const { return itsUnivId; }
-
 void param::UnivId(unsigned long theUnivId) { itsUnivId = theUnivId; }
-
 string param::Name() const { return itsName; }
-
 void param::Name(const string& theName) { itsName = theName; }
-
 HPParameterUnit param::Unit() const { return itsUnit; }
-
 void param::Unit(HPParameterUnit theUnit) { itsUnit = theUnit; }
-
 void param::GribTableVersion(long theVersion) { itsGribTableVersion = theVersion; }
-
 long param::GribTableVersion() const { return itsGribTableVersion; }
-
 const aggregation& param::Aggregation() const { return itsAggregation; }
-
 void param::Aggregation(const aggregation& theAggregation) { itsAggregation = theAggregation; }
-
 double param::Base() const { return itsBase; }
-
 void param::Base(double theBase) { itsBase = theBase; }
-
 double param::Scale() const { return itsScale; }
-
 void param::Scale(double theScale) { itsScale = theScale; }
-
 long param::Id() const { return itsId; }
-
 void param::Id(long theId) { itsId = theId; }
-
 HPInterpolationMethod param::InterpolationMethod() const { return itsInterpolationMethod; }
-
 void param::InterpolationMethod(HPInterpolationMethod theInterpolationMethod)
 {
 	itsInterpolationMethod = theInterpolationMethod;

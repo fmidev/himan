@@ -572,12 +572,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 						for (boost::property_tree::ptree::value_type& listval : kv.second)
 						{
 							// pc->AddOption(key, value);
-							pc->AddOption(key, util::Expand(listval.second.get<string>("")));
+							pc->AddOption(key, himan::util::Expand(listval.second.get<string>("")));
 						}
 					}
 					else
 					{
-						pc->AddOption(key, util::Expand(value));
+						pc->AddOption(key, himan::util::Expand(value));
 					}
 				}
 			}
@@ -604,7 +604,7 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 {
 	using namespace himan;
 
-	auto strlist = util::Split(latest, "-", false);
+	auto strlist = himan::util::Split(latest, "-", false);
 
 	int offset = 0;
 
@@ -694,7 +694,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 	{
 		try
 		{
-			auto datesList = util::Split(pt.get<string>("origintimes"), ",", false);
+			auto datesList = himan::util::Split(pt.get<string>("origintimes"), ",", false);
 
 			for (const auto& dateString : datesList)
 			{
@@ -725,7 +725,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 	try
 	{
 		string hours = pt.get<string>("hours");
-		vector<string> timesStr = util::Split(hours, ",", true);
+		vector<string> timesStr = himan::util::Split(hours, ",", true);
 
 		vector<int> times;
 
@@ -1040,8 +1040,8 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
 			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
 
-			const auto coordinates =
-			    util::CoordinatesFromFirstGridPoint(point(X0, Y0), sg->Orientation(), sg->Ni(), sg->Nj(), di, dj);
+			const auto coordinates = himan::util::CoordinatesFromFirstGridPoint(point(X0, Y0), sg->Orientation(),
+			                                                                    sg->Ni(), sg->Nj(), di, dj);
 
 			sg->BottomLeft(coordinates.first);
 			sg->TopRight(coordinates.second);
@@ -1054,7 +1054,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			gg->N(boost::lexical_cast<int>(geominfo["n"]));
 			gg->Nj(boost::lexical_cast<int>(geominfo["nj"]));
 
-			auto strlongitudes = util::Split(geominfo["longitudes_along_parallels"], ",", false);
+			auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",", false);
 			vector<int> longitudes;
 
 			for (auto& l : strlongitudes)
@@ -1163,7 +1163,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 
 	try
 	{
-		vector<string> stations = util::Split(pt.get<string>("points"), ",", false);
+		vector<string> stations = himan::util::Split(pt.get<string>("points"), ",", false);
 
 		g = unique_ptr<point_list>(new point_list());
 
@@ -1173,7 +1173,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 
 		for (const string& line : stations)
 		{
-			vector<string> point = util::Split(line, " ", false);
+			vector<string> point = himan::util::Split(line, " ", false);
 
 			if (point.size() != 2)
 			{
@@ -1212,7 +1212,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 
 	try
 	{
-		vector<string> stations = util::Split(pt.get<string>("stations"), ",", false);
+		vector<string> stations = himan::util::Split(pt.get<string>("stations"), ",", false);
 
 		g = unique_ptr<point_list>(new point_list);
 
@@ -1291,7 +1291,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 	try
 	{
-		conf->SourceGeomNames(util::Split(pt.get<string>("source_geom_name"), ",", false));
+		conf->SourceGeomNames(himan::util::Split(pt.get<string>("source_geom_name"), ",", false));
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -1329,7 +1329,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 	try
 	{
-		vector<string> coordinates = util::Split(pt.get<string>("bbox"), ",", false);
+		vector<string> coordinates = himan::util::Split(pt.get<string>("bbox"), ",", false);
 
 		rg = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
 
@@ -1424,7 +1424,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 	try
 	{
 		std::vector<producer> sourceProducers;
-		vector<string> sourceProducersStr = util::Split(pt.get<string>("source_producer"), ",", false);
+		vector<string> sourceProducersStr = himan::util::Split(pt.get<string>("source_producer"), ",", false);
 
 		HPDatabaseType dbtype = conf->DatabaseType();
 
@@ -1618,13 +1618,13 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 
 	vector<level> levels;
 
-	const vector<string> levelsStr = util::Split(levelValues, ",", true);
+	const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 
 	if (theLevelType == kHeightLayer || theLevelType == kDepthLayer)
 	{
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
-			const vector<string> levelIntervals = util::Split(levelsStr[i], "_", false);
+			const vector<string> levelIntervals = himan::util::Split(levelsStr[i], "_", false);
 
 			if (levelIntervals.size() != 2)
 			{
@@ -1688,7 +1688,7 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 
 	try
 	{
-		vector<string> types = util::Split(pt.get<string>("forecast_type"), ",", false);
+		vector<string> types = himan::util::Split(pt.get<string>("forecast_type"), ",", false);
 
 		for (string& type : types)
 		{
@@ -1701,7 +1701,7 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 				string list = "";
 				for (size_t i = 2; i < type.size(); i++) list += type[i];
 
-				vector<string> range = util::Split(list, "-", false);
+				vector<string> range = himan::util::Split(list, "-", false);
 
 				if (range.size() == 1)
 				{

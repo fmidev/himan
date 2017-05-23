@@ -25,6 +25,15 @@ class station : public point
    private:
 	int itsId;  // FMISID
 	std::string itsName;
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<point>(this), CEREAL_NVP(itsId), CEREAL_NVP(itsName));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const station& ob) { return ob.Write(file); }

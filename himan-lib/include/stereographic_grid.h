@@ -8,6 +8,7 @@
 
 #include "grid.h"
 #include "logger.h"
+#include "serialization.h"
 #include <string>
 
 #include <NFmiGrid.h>
@@ -18,10 +19,9 @@
 
 namespace himan
 {
-
 class stereographic_grid : public grid
 {
-public:
+   public:
 	stereographic_grid();
 	stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
 	                   double theOrientation = kHPMissingValue);
@@ -82,7 +82,7 @@ public:
 
 	stereographic_grid* Clone() const override;
 
-private:
+   private:
 	bool SetCoordinates();
 	void CreateAreaAndGrid() const;
 
@@ -102,10 +102,23 @@ private:
 
 	size_t itsNi;
 	size_t itsNj;
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopRight),
+		   CEREAL_NVP(itsOrientation), CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const stereographic_grid& ob) { return ob.Write(file); }
-
 }  // namespace himan
+
+#ifdef SERIALIZATION
+CEREAL_REGISTER_TYPE(himan::stereographic_grid);
+#endif
 
 #endif /* STEREOGRAPHIC_GRID_H */

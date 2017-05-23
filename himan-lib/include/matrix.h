@@ -9,6 +9,7 @@
 #define MATRIX_H
 
 #include "himan_common.h"
+#include "serialization.h"
 #include <mutex>
 
 namespace himan
@@ -18,7 +19,7 @@ class grid;
 template <class T>
 class matrix
 {
-public:
+   public:
 	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0) {}
 	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue)
 	    : itsData(theWidth * theHeight * theDepth),
@@ -393,7 +394,7 @@ public:
 	}
 
 	size_t Index(size_t x, size_t y, size_t z) const { return z * itsWidth * itsHeight + y * itsWidth + x; }
-private:
+   private:
 	std::vector<T> itsData;
 
 	size_t itsWidth, itsHeight, itsDepth;
@@ -401,6 +402,17 @@ private:
 	T itsMissingValue;
 
 	std::mutex itsValueMutex;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsData), CEREAL_NVP(itsWidth), CEREAL_NVP(itsHeight), CEREAL_NVP(itsDepth),
+		   CEREAL_NVP(itsMissingValue));
+	}
+#endif
 };
 
 typedef matrix<double> d_matrix_t;
