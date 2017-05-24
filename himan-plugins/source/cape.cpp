@@ -129,15 +129,15 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 		}
 	}
 
-	const int splitSize = static_cast<int> (floor(size / workers));
+	const int splitSize = static_cast<int>(floor(size / workers));
 
 	for (int num = 0; num < workers; num++)
 	{
 		const int start = num * splitSize;
 		futures.push_back(async(launch::async,
 		                        [&](int start) {
-			                        himan::metutil::MoistLift(&Piter[start], &Titer[start], &Penv[start],
-			                                                  &Tparcel[start], splitSize);
+			                        himan::metutil::MoistLiftA(&Piter[start], &Titer[start], &Penv[start],
+			                                                   &Tparcel[start], splitSize);
 			                    },
 		                        start));
 	}
@@ -338,7 +338,6 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	mySubThreadedLogger->Debug("LFC temperature: " + ::PrintMean(LFC.first));
 	mySubThreadedLogger->Debug("LFC pressure: " + ::PrintMean(LFC.second));
 
-
 	myTargetInfo->Param(LFCTParam);
 	myTargetInfo->Data().Set(LFC.first);
 
@@ -359,8 +358,8 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	                 CAPE1040Param, CAPE3kmParam);
 
 	auto cinInfo = make_shared<info>(*myTargetInfo);
-	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), get<0>(sourceValues), LCL.first, LCL.second, LFC.second,
-	                 CINParam);
+	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), get<0>(sourceValues), get<2>(sourceValues), LCL.first,
+	                 LCL.second, LFC.second, CINParam);
 
 	t1.join();
 	t2.join();
@@ -382,8 +381,8 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
-		assert((lfcz_[i] == kFloatMissing && elz_[i] == kFloatMissing) ||
-		       ((lfcz_[i] != kFloatMissing && elz_[i] != kFloatMissing) && (lfcz_[i] < elz_[i])));
+		//		assert((lfcz_[i] == kFloatMissing && elz_[i] == kFloatMissing) ||
+		//		       ((lfcz_[i] != kFloatMissing && elz_[i] != kFloatMissing) && (lfcz_[i] < elz_[i])));
 	}
 #endif
 
@@ -421,30 +420,38 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	mySubThreadedLogger->Debug("CIN: " + ::PrintMean(VEC(cinInfo)));
 }
 
-void cape::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL,
-                  const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
+void cape::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsource, const vector<double>& Psource,
+                  const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsurf, TLCL, PLCL, PLFC, CINParam);
+		cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, TLCL, PLCL, PLFC, CINParam);
 	}
 	else
 #endif
 	{
-		GetCINCPU(myTargetInfo, Tsurf, TLCL, PLCL, PLFC, CINParam);
+		GetCINCPU(myTargetInfo, Tsource, Psource, TLCL, PLCL, PLFC, CINParam);
 	}
 }
 
-void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf, const vector<double>& TLCL,
-                     const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
+void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsource, const vector<double>& Psource,
+                     const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
 {
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
 	h->HeightUnit(kHPa);
 
-	vector<bool> found(Tsurf.size(), false);
+	vector<bool> found(Tsource.size(), false);
+
+	for (size_t i = 0; i < found.size(); i++)
+	{
+		if (PLFC[i] == kFloatMissing)
+		{
+			found[i] = true;
+		}
+	}
 
 	forecast_time ftime = myTargetInfo->Time();
 	forecast_type ftype = myTargetInfo->ForecastType();
@@ -452,7 +459,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf,
 	/*
 	 * Modus operandi:
 	 *
-	 * 1. Integrate from ground to LCL dry adiabatically
+	 * 1. Integrate from source level to LCL dry adiabatically
 	 *
 	 * This can be done always since LCL is known at all grid points
 	 * (that have source data values defined).
@@ -480,14 +487,15 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf,
 
 	size_t foundCount = count(found.begin(), found.end(), true);
 
-	auto Piter = basePenvInfo->Data().Values();
+	auto Piter = Psource;
+	//auto Piter = basePenvInfo->Data().Values();
 	::MultiplyWith(Piter, 100);
 
 	auto PLCLPa = PLCL;
 	::MultiplyWith(PLCLPa, 100);
 
-	auto Titer = Tsurf;
-	auto prevTparcelVec = Tsurf;
+	auto Titer = Tsource;
+	auto prevTparcelVec = Tsource;
 
 	curLevel.Value(curLevel.Value() - 1);
 
@@ -529,9 +537,9 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf,
 
 			assert(PLFC[i] < 1200. || PLFC[i] == kFloatMissing);
 
-			if (PLFC[i] == kFloatMissing)
+			if (Penv > Psource[i])
 			{
-				found[i] = true;
+				// Have not reached source level yet
 				continue;
 			}
 			else if (Penv <= PLFC[i])
@@ -555,7 +563,6 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsurf,
 			if (Tparcel <= Tenv)
 			{
 				cinh[i] += constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-
 				assert(cinh[i] <= 0);
 			}
 			else if (cinh[i] != 0)
@@ -731,7 +738,6 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 				// Missing data or current grid point is below LFC
 				continue;
 			}
-
 
 			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
 			// (and EL!) values can be determined.
@@ -1020,7 +1026,9 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 				if (prevTparcel == kFloatMissing)
 				{
-					prevTparcel = T[i];  // previous is LCL
+					// Previous value is unknown: perhaps LFC is found very close to ground?
+					// Use LCL for previous value.
+					prevTparcel = T[i];
 				}
 
 				if (fabs(prevTparcel - prevTenv) < 0.0001)
@@ -1033,10 +1041,18 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					auto intersection =
 					    CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv), point(Tparcel, Penv),
 					                                 point(prevTparcel, prevPenv));
-
 					Tresult = intersection.X();
 					Presult = intersection.Y();
+
+					if (Tresult == kFloatMissing)
+					{
+						// Intersection not found, use exact level value
+						Tresult = Tenv;
+						Presult = Penv;
+					}
+
 				}
+
 				assert(Tresult != kFloatMissing);
 				assert(Presult != kFloatMissing);
 			}

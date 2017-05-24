@@ -619,8 +619,8 @@ std::pair<std::vector<double>, std::vector<double>> GetLFCGPU(const std::shared_
 cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration> conf,
                                         std::shared_ptr<info> myTargetInfo);
 void GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-               const std::vector<double>& Tsurf, const std::vector<double>& TLCL, const std::vector<double>& PLCL,
-               const std::vector<double>& PLFC, param CINParam);
+               const std::vector<double>& Tsource, const std::vector<double>& Psource, const std::vector<double>& TLCL,
+               const std::vector<double>& PLCL, const std::vector<double>& PLFC, param CINParam);
 void GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
                 const std::vector<double>& T, const std::vector<double>& P, himan::param ELTParam,
                 himan::param ELPParam, himan::param CAPEParam, himan::param CAPE1040Param, himan::param CAPE3kmParam);

@@ -1018,8 +1018,9 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 }
 
 void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                          const std::vector<double>& Tsurf, const std::vector<double>& TLCL,
-                          const std::vector<double>& PLCL, const std::vector<double>& PLFC, param CINParam)
+                          const std::vector<double>& Tsource, const std::vector<double>& Psource,
+                          const std::vector<double>& TLCL, const std::vector<double>& PLCL,
+                          const std::vector<double>& PLFC, param CINParam)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
@@ -1091,7 +1092,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	InitializeArray<double>(d_Tparcel, kFloatMissing, N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
-	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &Tsurf[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &Tsource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Piter, h_basePenv->values, sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_PLCL, &PLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_PLFC, &PLFC[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
