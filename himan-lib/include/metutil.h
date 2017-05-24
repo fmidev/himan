@@ -765,9 +765,14 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 		return DryLift_(P, T, targetP);
 	}
 
-	// Wanted height is above LCL.
-	// First lift dry adiabatically to LCL height
+	// Wanted height is above LCL
+	if (P < LCLP)
+	{
+		// Current level is above LCL, only moist lift is required
+		return MoistLift_(P, T, targetP);
+	}
 
+	// First lift dry adiabatically to LCL height
 	double LCLT = DryLift_(P, T, LCLP);
 
 	// Lift from LCL to wanted pressure
