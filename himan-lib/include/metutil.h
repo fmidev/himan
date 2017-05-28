@@ -865,7 +865,7 @@ inline double Wobf(double T)
 CUDA_DEVICE
 inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 {
-	if (P == kFloatMissing || T == kFloatMissing || targetP == kFloatMissing)
+	if (P == kFloatMissing || T == kFloatMissing || targetP == kFloatMissing || P < targetP)
 	{
 		return kFloatMissing;
 	}
