@@ -387,12 +387,9 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 #endif
 
 	// Do smoothening for CAPE & CIN parameters
-	// Calculate average of nearest 4 points + the point in question
 	mySubThreadedLogger->Trace("Smoothening");
 
-	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing);
-	// C was row-major... right?
-	filter_kernel.Set({0, 0.2, 0, 0.2, 0.2, 0.2, 0, 0.2, 0});
+	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1./9.);
 
 	capeInfo->Param(CAPEParam);
 	himan::matrix<double> filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
@@ -478,7 +475,6 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 	level curLevel = itsBottomLevel;
 
-	auto basePenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
 	auto prevZenvInfo = Fetch(ftime, curLevel, param("HL-M"), ftype, false);
 	auto prevTenvInfo = Fetch(ftime, curLevel, param("T-K"), ftype, false);
 	auto prevPenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
@@ -488,7 +484,6 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 	size_t foundCount = count(found.begin(), found.end(), true);
 
 	auto Piter = Psource;
-	//auto Piter = basePenvInfo->Data().Values();
 	::MultiplyWith(Piter, 100);
 
 	auto PLCLPa = PLCL;
@@ -587,7 +582,6 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 		for (size_t i = 0; i < Titer.size(); i++)
 		{
-			// preserve starting position for those grid points that have value
 			if (TparcelVec[i] != kFloatMissing && PenvVec[i] != kFloatMissing)
 			{
 				Titer[i] = TparcelVec[i];
@@ -822,16 +816,6 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 		prevTenvInfo = TenvInfo;
 		prevPenvInfo = PenvInfo;
 		prevTparcelVec = TparcelVec;
-
-		for (size_t i = 0; i < Titer.size(); i++)
-		{
-			// preserve starting position for those grid points that have value
-			if (TparcelVec[i] != kFloatMissing && PenvVec[i] != kFloatMissing)
-			{
-				Titer[i] = TparcelVec[i];
-				Piter[i] = PenvVec[i];
-			}
-		}
 	}
 
 	// If the CAPE area is continued all the way to level 60 and beyond, we don't have an EL for that
@@ -1050,7 +1034,6 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 						Tresult = Tenv;
 						Presult = Penv;
 					}
-
 				}
 
 				assert(Tresult != kFloatMissing);
@@ -1076,12 +1059,6 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 		for (size_t i = 0; i < Titer.size(); i++)
 		{
-			// preserve starting position for those grid points that have value
-			if (TparcelVec[i] != kFloatMissing && PenvVec[i] != kFloatMissing)
-			{
-				Titer[i] = TparcelVec[i];
-				Piter[i] = PenvVec[i];
-			}
 			if (found[i]) Titer[i] = kFloatMissing;  // by setting this we prevent MoistLift to integrate particle
 		}
 
@@ -1407,7 +1384,6 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 
 			double TD = metutil::DewPointFromRH_(T, RH);
 			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P * 100);
-
 			assert(ThetaE >= 0);
 
 			if (ThetaE >= refThetaE)
