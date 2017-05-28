@@ -833,6 +833,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	return value;
 }
 
+CUDA_DEVICE
 inline double Wobf(double T)
 {
 	// "Wobus function" is a polynomial approximation of moist lift
