@@ -210,7 +210,7 @@ __global__ void MoistLiftKernel(const double* __restrict__ d_T, const double* __
 		assert(d_T[idx] > 100);
 		assert(d_T[idx] < 350 || d_T[idx] == kFloatMissing);
 
-		double T = metutil::MoistLift_(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
+		double T = metutil::MoistLiftA_(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
 
 		assert(T > 100);
 		assert(T < 350 || T == kFloatMissing);
@@ -338,7 +338,8 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 __global__ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict__ d_Titer,
                           const double* __restrict__ d_Piter, info_simple d_Zenv, info_simple d_prevZenv,
                           const double* __restrict__ d_Tparcel, const double* __restrict__ d_PLCL,
-                          const double* __restrict__ d_PLFC, double* __restrict__ d_cinh,
+                          const double* __restrict__ d_PLFC, const double* __restrict__ d_Psource,
+                          double* __restrict__ d_cinh,
                           unsigned char* __restrict__ d_found)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -369,7 +370,8 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* 
 		{
 			d_found[idx] = 1;
 		}
-		else
+		// Make sure we have passed the starting level
+		else if (Penv <= d_Psource[idx])
 		{
 			if (Penv < PLCL)
 			{
@@ -453,6 +455,13 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 
 				d_LFCT[idx] = intersection.X();
 				d_LFCP[idx] = intersection.Y();
+
+				if (d_LFCT[idx] == kFloatMissing)
+				{
+					// Intersection not found, use exact level value
+					d_LFCT[idx] = Tenv;
+					d_LFCP[idx] = Penv;
+				}
 			}
 
 			assert(d_LFCT[idx] > 100);
@@ -982,10 +991,6 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 
 		if (static_cast<size_t>(std::count(found.begin(), found.end(), 1)) == found.size()) break;
 
-		// preserve starting position for those grid points that have value
-
-		CopyLFCIteratorValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Tparcel, d_Piter, *h_Penv);
-
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 		curLevel.Value(curLevel.Value() - 1);
 	}
@@ -1054,7 +1059,6 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	level curLevel = itsBottomLevel;
 
-	auto basePenvInfo = Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
 	auto prevZenvInfo = Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
 	auto prevTenvInfo = Fetch(conf, ftime, curLevel, param("T-K"), ftype);
 	auto prevPenvInfo = Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
@@ -1067,11 +1071,11 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	auto h_basePenv = PrepareInfo(basePenvInfo, stream);
 	auto h_prevZenv = PrepareInfo(prevZenvInfo, stream);
 	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
 	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
 
+	double* d_Psource = 0;
 	double* d_Tparcel = 0;
 	double* d_Piter = 0;
 	double* d_Titer = 0;
@@ -1080,6 +1084,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	double* d_cinh = 0;
 	unsigned char* d_found = 0;
 
+	CUDA_CHECK(cudaMalloc((double**)&d_Psource, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_Piter, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_Titer, N * sizeof(double)));
@@ -1092,8 +1097,9 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	InitializeArray<double>(d_Tparcel, kFloatMissing, N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
+	CUDA_CHECK(cudaMemcpyAsync(d_Psource, &Psource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &Tsource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Piter, h_basePenv->values, sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &Psource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_PLCL, &PLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_PLFC, &PLFC[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
@@ -1106,9 +1112,9 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	curLevel.Value(curLevel.Value() - 1);
 
-	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
 
-	while (curLevel.Value() > hPa150.first.Value())
+	while (curLevel.Value() > hPa100.first.Value())
 	{
 		auto ZenvInfo = Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
 		auto TenvInfo = Fetch(conf, ftime, curLevel, param("T-K"), ftype);
@@ -1121,7 +1127,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Piter, d_Titer, d_PLCL, *h_Penv, d_Tparcel);
 
 		CINKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, d_Titer, d_Piter, *h_Zenv, *h_prevZenv,
-		                                              d_Tparcel, d_PLCL, d_PLFC, d_cinh, d_found);
+		                                              d_Tparcel, d_PLCL, d_PLFC, d_Psource, d_cinh, d_found);
 
 		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
 
@@ -1163,6 +1169,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	CUDA_CHECK(cudaFree(d_cinh));
+	CUDA_CHECK(cudaFree(d_Psource));
 	CUDA_CHECK(cudaFree(d_Tparcel));
 	CUDA_CHECK(cudaFree(d_Piter));
 	CUDA_CHECK(cudaFree(d_Titer));
@@ -1302,8 +1309,6 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		h_prevZenv = h_Zenv;
 		h_prevTenv = h_Tenv;
 		h_prevPenv = h_Penv;
-
-		CopyLFCIteratorValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Tparcel, d_Piter, *h_Penv);
 
 		curLevel.Value(curLevel.Value() - 1);
 	}
