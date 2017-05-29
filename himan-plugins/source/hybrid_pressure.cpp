@@ -53,8 +53,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	const param TParam("T-K");
 	level PLevel(himan::kHeight, 0, "HEIGHT");
 
-	bool isECMWF =
-	    (itsConfiguration->SourceProducer().Id() == 131);  // Note! This only checks the *current* source producer
+	bool isECMWF = (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134);
 
 	auto myThreadedLogger =
 	    logger_factory::Instance()->GetLog("hybrid_pressureThread #" + boost::lexical_cast<string>(theThreadIndex));

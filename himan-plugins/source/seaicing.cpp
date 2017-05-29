@@ -59,10 +59,9 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		saltinessIndex = 1.5;
 	}
 
-	// this will come back to us
-	if (itsConfiguration->SourceProducer().Id() == 131)
+	if (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134)
 	{
-		ground = level(himan::kGndLayer, 0, "GNDLAYER");
+		ground = level(himan::kGndLayer, 0);
 	}
 	else
 	{
