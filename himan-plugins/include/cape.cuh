@@ -48,12 +48,12 @@ inline himan::point GetPointOfIntersection(const himan::point& a1, const himan::
 	double x = (pre * (x3 - x4) - (x1 - x2) * post) / d;
 	double y = (pre * (y3 - y4) - (y1 - y2) * post) / d;
 
-	if (x < fmin(x1, x2) || x > fmax(x1, x2) || x < fmin(x3, x4) || x > fmax(x3, x4))
+	if (x < fmin(x1, x2) - 1e5 || x > fmax(x1, x2) + 1e5 || x < fmin(x3, x4) - 1e5 || x > fmax(x3, x4) + 1e5)
 	{
 		return null;
 	}
 
-	if (y < fmin(y1, y2) || y > fmax(y1, y2) || y < fmin(y3, y4) || y > fmax(y3, y4))
+	if (y < fmin(y1, y2) - 1e5 || y > fmax(y1, y2) + 1e5 || y < fmin(y3, y4) - 1e5 || y > fmax(y3, y4) + 1e5)
 	{
 		return null;
 	}
