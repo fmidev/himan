@@ -105,10 +105,10 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	auto stN = h->VerticalMaximum(NParam, 0, stMaxH);
 
 	// Stratus <15m (~0-50ft)
-	auto st15 = h->VerticalMaximum(NParam, 0, 15);
+	auto st15 = h->VerticalAverage(NParam, 0, 15);
 
 	// Stratus 15-45m (~50-150ft)
-	auto st45 = h->VerticalMaximum(NParam, 15, 45);
+	auto st45 = h->VerticalAverage(NParam, 15, 45);
 
 	// Sumupilven korkeus [m]
 	auto stH = h->VerticalHeightGreaterThan(NParam, 0, stMaxH, stLimit);
