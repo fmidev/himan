@@ -100,13 +100,10 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	level groundLevel(kHeight, 0);
 
-	// this will come back to us
-	if (itsConfiguration->SourceProducer().Id() == 131)  // EC
+	if (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134)  // EC
 	{
-		groundLevel = level(himan::kGround, 0, "GNDLAYER");
+		groundLevel = level(himan::kGround, 0);
 	}
-
-	// ----
 
 	auto myThreadedLogger =
 	    logger_factory::Instance()->GetLog("qnhThread #" + boost::lexical_cast<string>(threadIndex));

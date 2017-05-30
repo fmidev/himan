@@ -72,8 +72,8 @@ split_sum::split_sum()
 	sourceParameters["RRRL-KGM2"] = {param("RRL-KGM2")};
 
 	// Snow
-	sourceParameters["SN-3-MM"]  = {param("SNACC-KGM2")};
-	sourceParameters["SN-6-MM"]  = {param("SNACC-KGM2")};
+	sourceParameters["SN-3-MM"] = {param("SNACC-KGM2")};
+	sourceParameters["SN-6-MM"] = {param("SNACC-KGM2")};
 	sourceParameters["SN-24-MM"] = {param("SNACC-KGM2")};
 
 	sourceParameters["SNR-KGM2"] = {param("SNACC-KGM2")};
@@ -500,7 +500,8 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	// EC gives precipitation in meters, we are calculating millimeters
 
 	if (curSumInfo->Param().Unit() == kM ||
-	    (myTargetInfo->Producer().Id() == 240 && !isRadiationCalculation))  // HIMAN-98
+	    ((myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 242) &&
+	     !isRadiationCalculation))  // HIMAN-98
 	{
 		scaleFactor = 1000.;
 	}
@@ -598,8 +599,8 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 		if (myTargetInfo->Producer().Id() == 210)
 		{
 			step = 60;  // Forecast step is 15 (Harmonie), but it has been agreed
-			// with AKS that we'll use one hour since editor displays
-			// only hourly data.
+			            // with AKS that we'll use one hour since editor displays
+			            // only hourly data.
 		}
 
 		forecast_time wantedTimeStep(myTargetInfo->Time());

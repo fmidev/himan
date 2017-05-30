@@ -59,11 +59,12 @@ class cape : public compiled_plugin, private compiled_plugin_base
 	                himan::param ELTParam, himan::param ELPParam, himan::param CAPEParam, himan::param CAPE1040Param,
 	                himan::param CAPE3kmParam);
 
-	void GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf, const std::vector<double>& TLCL,
-	            const std::vector<double>& PLCL, const std::vector<double>& PLFC, himan::param CINParam);
-	void GetCINCPU(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsurf,
-	               const std::vector<double>& TLCL, const std::vector<double>& PLCL, const std::vector<double>& PLFC,
-	               himan::param CINParam);
+	void GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsource,
+	            const std::vector<double>& Psource, const std::vector<double>& TLCL, const std::vector<double>& PLCL,
+	            const std::vector<double>& PLFC, himan::param CINParam);
+	void GetCINCPU(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsource,
+	               const std::vector<double>& Psource, const std::vector<double>& TLCL, const std::vector<double>& PLCL,
+	               const std::vector<double>& PLFC, himan::param CINParam);
 
 	level itsBottomLevel;
 

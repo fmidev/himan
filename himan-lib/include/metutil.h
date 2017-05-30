@@ -765,9 +765,14 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 		return DryLift_(P, T, targetP);
 	}
 
-	// Wanted height is above LCL.
-	// First lift dry adiabatically to LCL height
+	// Wanted height is above LCL
+	if (P < LCLP)
+	{
+		// Current level is above LCL, only moist lift is required
+		return MoistLift_(P, T, targetP);
+	}
 
+	// First lift dry adiabatically to LCL height
 	double LCLT = DryLift_(P, T, LCLP);
 
 	// Lift from LCL to wanted pressure
@@ -828,6 +833,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	return value;
 }
 
+CUDA_DEVICE
 inline double Wobf(double T)
 {
 	// "Wobus function" is a polynomial approximation of moist lift
@@ -860,7 +866,7 @@ inline double Wobf(double T)
 CUDA_DEVICE
 inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 {
-	if (P == kFloatMissing || T == kFloatMissing || targetP == kFloatMissing)
+	if (P == kFloatMissing || T == kFloatMissing || targetP == kFloatMissing || P < targetP)
 	{
 		return kFloatMissing;
 	}
