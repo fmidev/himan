@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.5.23
+Version: 17.5.30
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue May 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.30-1.fmi
+- Tweak to visibility
+- Support for ENS per-member calculations
+- Fix for MUCIN
 * Tue May 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.23-1.fmi
 - Update to visibility
 * Tue May 16 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.16-1.fmi

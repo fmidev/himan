@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.5.23
+Version: 17.5.30
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -60,7 +60,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
-* Tue May 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.1231.fmi
+* Tue May 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.30-1.fmi
+- Tweaks to Wobf code
+* Tue May 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.23-1.fmi
 - Support for info serialization
 * Mon May 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.15-1.fmi
 - Updates to previ / station data handling
