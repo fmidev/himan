@@ -862,7 +862,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	return std::make_tuple(T, TD, PVec);
+	return std::make_tuple(T, TD, VEC(Psurf));
 }
 
 std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
