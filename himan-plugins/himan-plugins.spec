@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.5.30
+Version: 17.5.31
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed May 31 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.31-1.fmi
+- Fix for CAPE500m starting values
 * Tue May 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.30-1.fmi
 - Tweak to visibility
 - Support for ENS per-member calculations
