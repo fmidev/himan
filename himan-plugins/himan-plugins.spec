@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.5.31
+Version: 17.6.1
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -18,7 +18,7 @@ Requires: himan-lib >= 17.4.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.4.6
-Requires: libfmidb >= 17.4.6
+Requires: libfmidb >= 17.5.26
 Requires: smartmet-library-newbase >= 17.4.4
 Requires: libpqxx
 
@@ -35,7 +35,7 @@ BuildRequires: cusp >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.4.6
+BuildRequires: libfmidb-devel >= 17.5.26
 BuildRequires: libfmigrib-devel >= 17.4.6
 BuildRequires: smartmet-library-newbase-devel >= 17.4.4
 BuildRequires: scons
@@ -111,6 +111,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jun  1 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.1-1.fmi
+- Per-station limits for probability
+- hybrid_pressure fix for ENS data
 * Wed May 31 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.31-1.fmi
 - Fix for CAPE500m starting values
 * Tue May 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.30-1.fmi
