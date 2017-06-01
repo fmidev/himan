@@ -19,7 +19,7 @@ using namespace std;
 using namespace himan::plugin;
 
 mutex lnspMutex, mySingleFileWriteMutex;
-map<int, himan::info_t> lnspInfos;
+map<string, himan::info_t> lnspInfos;
 
 hybrid_pressure::hybrid_pressure()
 {
@@ -79,11 +79,13 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 		// Double-check pattern
 
-		if (lnspInfos.find(forecastTime.Step()) == lnspInfos.end())
+		const auto key = static_cast<string> (forecastType) + "_" + to_string(forecastTime.Step());
+
+		if (lnspInfos.find(key) == lnspInfos.end())
 		{
 			lock_guard<mutex> lock(lnspMutex);
 
-			if (lnspInfos.find(forecastTime.Step()) == lnspInfos.end())
+			if (lnspInfos.find(key) == lnspInfos.end())
 			{
 				PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
 
@@ -106,7 +108,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 				auto c = GET_PLUGIN(cache);
 				c->Insert(*PInfo, true);
 
-				lnspInfos[forecastTime.Step()] = PInfo;
+				lnspInfos[key] = PInfo;
 			}
 		}
 
