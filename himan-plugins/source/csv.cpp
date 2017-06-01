@@ -25,8 +25,9 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 
 	assert(out.is_open());
 
-	out << "producer_id,origintime,station_id,station_name,longitude,latitude,level_name,level_value,level_value2,"
-	       "forecast_period,forecast_type_id,forecast_type_value,param_name,value"
+	out << "#producer_id,origintime,station_id,station_name,longitude,latitude,param_name,level_name,level_value,level_"
+	       "value2,"
+	       "forecast_period,forecast_type_id,forecast_type_value,value"
 	    << endl;
 
 	theInfo.First();
@@ -48,10 +49,10 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 			const string lat = (s.Y() == kHPMissingValue) ? "" : boost::lexical_cast<string>(s.Y());
 
 			out << theInfo.Producer().Id() << "," << originTime << "," << stationId << "," << stationName << "," << lon
-			    << "," << lat << "," << HPLevelTypeToString.at(theInfo.Level().Type()) << "," << theInfo.Level().Value() << ","
-			    << theInfo.Level().Value2() << "," << util::MakeSQLInterval(theInfo.Time()) << ","
-			    << theInfo.ForecastType().Type() << "," << theInfo.ForecastType().Value() << ","
-			    << theInfo.Param().Name() << "," << theInfo.Value() << endl;
+			    << "," << lat << "," << theInfo.Param().Name() << "," << HPLevelTypeToString.at(theInfo.Level().Type())
+			    << "," << theInfo.Level().Value() << "," << theInfo.Level().Value2() << ","
+			    << util::MakeSQLInterval(theInfo.Time()) << "," << theInfo.ForecastType().Type() << ","
+			    << theInfo.ForecastType().Value() << "," << theInfo.Value() << endl;
 		}
 
 		out.flush();

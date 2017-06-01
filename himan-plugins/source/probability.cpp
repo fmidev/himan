@@ -17,6 +17,7 @@
 #include <iostream>
 
 #include <math.h>
+#include "radon.h"
 
 namespace himan
 {
@@ -61,7 +62,7 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		{
 			if (p.first == "threshold")
 			{
-				outParamConfig->threshold = std::stod(p.second);
+				outParamConfig->gridThreshold = std::stod(p.second);
 			}
 			else if (p.first == "input_param1")
 			{
@@ -70,6 +71,14 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			else if (p.first == "input_param2")
 			{
 				param2.Name(p.second);
+			}
+			else
+			{
+				auto elems = util::Split(p.first, "_", false);
+				if (elems.size() == 2 && elems[0] == "threshold")
+				{
+					outParamConfig->stationThreshold[std::stoi(elems[1])] = std::stod(p.second);
+				}
 			}
 		}
 
@@ -221,6 +230,39 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 	SetParams(calculatedParams);
 
+	// Make sure that limit exists for all stations (if source data is stations)
+	auto tempInfo = std::make_shared<himan::info>(*conf->Info());
+	tempInfo->First();
+
+	if (tempInfo->Grid()->Type() == kPointList)
+	{
+		auto r = GET_PLUGIN(radon);
+		for (tempInfo->ResetLocation(); tempInfo->NextLocation();)
+		{
+			const auto st = tempInfo->Station();
+
+			for (auto& pc : itsParamConfigurations)
+			{
+				auto it = pc.stationThreshold.find(st.Id());
+
+				if (it == pc.stationThreshold.end())
+				{
+					itsLogger->Trace("Fetching threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) + " from radon");
+					double limit = r->RadonDB().GetProbabilityLimitForStation(st.Id(), pc.output.Name());
+
+					if (limit == kFloatMissing)
+					{
+						itsLogger->Fatal("Threshold not found for param " + pc.output.Name() + ", station " + std::to_string(st.Id()));
+						abort();
+					}
+
+					pc.stationThreshold[st.Id()] = limit;
+				}
+			}
+		}
+
+	}
+
 	// NOTE
 	// NOTE We circumvent the usual Himan Start => Run => RunAll / RunTimeDimension - control flow structure
 	// NOTE
@@ -247,7 +289,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 			const auto& pc = paramConfigurations.back();
 			paramConfigurations.pop_back();
 
-			g.add_thread(new boost::thread(&himan::plugin::probability::Calculate, this, threadIdx, pc));
+			g.add_thread(new boost::thread(&himan::plugin::probability::Calculate, this, threadIdx, boost::ref(pc)));
 		}
 
 		g.join_all();
@@ -256,15 +298,17 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	Finish();
 }
 
-static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                            bool normalized, std::unique_ptr<ensemble>& ens);
+static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex,
+                            const param_configuration& paramConf, int infoIndex, bool normalized,
+                            std::unique_ptr<ensemble>& ens);
 
-static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold,
-                              const int infoIndex, const bool normalized, std::unique_ptr<ensemble>& ens);
+static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex,
+                              const param_configuration& paramConf, const int infoIndex, const bool normalized,
+                              std::unique_ptr<ensemble>& ens);
 
 static void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInfo, uint16_t threadIndex,
-                          double threshold, int infoIndex, bool normalized, std::unique_ptr<ensemble>& ens1,
-                          std::unique_ptr<ensemble>& ens2);
+                          const param_configuration& paramConf, int infoIndex, bool normalized,
+                          std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2);
 
 void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
@@ -273,7 +317,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	auto threadedLogger = logger_factory::Instance()->GetLog("probabilityThread # " + std::to_string(threadIndex));
 	const std::string deviceType = "CPU";
 
-	const double threshold = pc.threshold;
+	const double threshold = pc.gridThreshold;
 	const int infoIndex = pc.targetInfoIndex;
 	const int ensembleSize = itsEnsembleSize;
 	const bool normalized = itsUseNormalizedResult;
@@ -286,7 +330,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	if (itsUseLaggedEnsemble)
 	{
 		threadedLogger->Info("Using lagged ensemble for ensemble #1");
-		ens1 = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+		ens1 = std::unique_ptr<ensemble>(
+		    new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 	}
 	else
 	{
@@ -300,7 +345,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		if (itsUseLaggedEnsemble)
 		{
 			threadedLogger->Info("Using lagged ensemble for ensemble #2");
-			ens2 = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter2, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+			ens2 = std::unique_ptr<ensemble>(
+			    new lagged_ensemble(pc.parameter2, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 		}
 		else
 		{
@@ -340,18 +386,19 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		//
 		if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 		{
-			CalculateWind(threadedLogger, std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex,
+			CalculateWind(threadedLogger, std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex,
 			              normalized, ens1, ens2);
 		}
 		else if (pc.output.Name() == "PROB-TC-0" || pc.output.Name() == "PROB-TC-1" ||
-		         pc.output.Name() == "PROB-TC-2" || pc.output.Name() == "PROB-TC-3" || pc.output.Name() == "PROB-TC-4")
+		         pc.output.Name() == "PROB-TC-2" || pc.output.Name() == "PROB-TC-3" ||
+		         pc.output.Name() == "PROB-TC-4" || pc.output.Name() == "PROB-WATLEV-LOW-1")
 		{
-			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, normalized,
+			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized,
 			                  ens1);
 		}
 		else
 		{
-			CalculateNormal(std::make_shared<info>(myTargetInfo), threadIndex, threshold, infoIndex, normalized, ens1);
+			CalculateNormal(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized, ens1);
 		}
 
 		if (itsConfiguration->StatisticsEnabled())
@@ -400,9 +447,29 @@ void probability::WriteToFile(const info& targetInfo, size_t targetInfoIndex, wr
 	}
 }
 
+double GetThreshold(std::shared_ptr<info>& targetInfo, const param_configuration& paramConf, bool isGrid)
+{
+	if (isGrid)
+	{
+		return paramConf.gridThreshold;
+	}
+	else
+	{
+		const int stationId = targetInfo->Station().Id();
+		const auto iter = paramConf.stationThreshold.find(stationId);
+
+		if (iter == paramConf.stationThreshold.end())
+		{
+			throw std::runtime_error("Threshold for station " + std::to_string(stationId) + " not found");
+		}
+
+		return iter->second;
+	}
+}
+
 void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInfo, uint16_t threadIndex,
-                   double threshold, int infoIndex, bool normalized, std::unique_ptr<ensemble>& ens1,
-                   std::unique_ptr<ensemble>& ens2)
+                   const param_configuration& paramConf, int infoIndex, bool normalized,
+                   std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
@@ -419,9 +486,12 @@ void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInf
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
+	const bool isGrid = (targetInfo->Grid()->Type() != kPointList);
+
 	while (targetInfo->NextLocation() && ens1->NextLocation() && ens2->NextLocation())
 	{
 		double probability = 0.0;
+		const double threshold = GetThreshold(targetInfo, paramConf, isGrid);
 
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
@@ -442,8 +512,8 @@ void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInf
 	}
 }
 
-void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                       bool normalized, std::unique_ptr<ensemble>& ens)
+void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const param_configuration& paramConf,
+                       int infoIndex, bool normalized, std::unique_ptr<ensemble>& ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
@@ -453,9 +523,12 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, d
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
+	const bool isGrid = (targetInfo->Grid()->Type() != kPointList);
+
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
 		double probability = 0.0;
+		const double threshold = GetThreshold(targetInfo, paramConf, isGrid);
 
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
@@ -469,8 +542,8 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, d
 	}
 }
 
-void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, double threshold, int infoIndex,
-                     bool normalized, std::unique_ptr<ensemble>& ens)
+void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, const param_configuration& paramConf,
+                     int infoIndex, bool normalized, std::unique_ptr<ensemble>& ens)
 {
 	targetInfo->ParamIndex(infoIndex);
 	targetInfo->ResetLocation();
@@ -480,9 +553,12 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, dou
 	const double invN =
 	    normalized ? 1.0 / static_cast<double>(ensembleSize) : 100.0 / static_cast<double>(ensembleSize);
 
+	const bool isGrid = (targetInfo->Grid()->Type() != kPointList);
+
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
 		double probability = 0.0;
+		const double threshold = GetThreshold(targetInfo, paramConf, isGrid);
 
 		for (size_t i = 0; i < ensembleSize; i++)
 		{

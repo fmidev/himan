@@ -756,33 +756,38 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	for (auto line : csv)
 	{
 		auto elems = util::Split(line, ",", false);
+
+		if (elems.size() != 14)
+		{
+			std::cerr << "Ignoring line '" << line << "'" << std::endl;
+			continue;
+		}
+
 		// 0 producer_id
 		// 1 origin time
 		// 2 station_id
 		// 3 station_name
 		// 4 longitude
 		// 5 latitude
-		// 6 level_id
-		// 7 level_value
-		// 8 level_value2
-		// 9 forecast period
-		// 10 forecast_type_id
-		// 11 forecast_type_value
-		// 12 param_name
+		// 6 param_name
+		// 7 level_name
+		// 8 level_value
+		// 9 level_value2
+		// 10 forecast period
+		// 11 forecast_type_id
+		// 12 forecast_type_value
 		// 13 value
 
-		assert(elems.size() == 14);
+		if (elems[0][0] == '#') continue;
 
-		if (elems[0] == "producer_id") continue;
-
-		// producer, only single is supported for now
+		// producer, only single producer per file is supported for now
 		prod.Id(stoi(elems[0]));
 
 		// forecast_time
 		raw_time originTime(elems[1]), validTime(elems[1]);
 
 		// split HHH:MM:SS and extract hours and minutes
-		auto timeparts = Split(elems[9], ":", false);
+		auto timeparts = Split(elems[10], ":", false);
 
 		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
 		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
@@ -790,22 +795,36 @@ info_t util::CSVToInfo(const vector<string>& csv)
 		forecast_time f(originTime, validTime);
 
 		// level
-		level l(static_cast<HPLevelType>(HPStringToLevelType.at(elems[6])), stod(elems[7]));
+		level l;
 
-		if (!elems[8].empty())
+		try
 		{
-			l.Value2(stod(elems[8]));
+			l = level(static_cast<HPLevelType>(HPStringToLevelType.at(boost::algorithm::to_lower_copy(elems[7]))),
+			          stod(elems[8]));
+		}
+		catch (std::out_of_range& e)
+		{
+			std::cerr << "Level type " << elems[7] << " is not recognized" << std::endl;
+			abort();
+		}
+
+		if (!elems[9].empty())
+		{
+			l.Value2(stod(elems[9]));
 		}
 
 		// param
-		param p(elems[12]);
+		const param p(boost::algorithm::to_upper_copy(elems[6]));
 
 		// forecast_type
-		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[10])), stod(elems[11]));
+		const forecast_type ftype(static_cast<HPForecastType>(stoi(elems[11])), stod(elems[12]));
 
 		// station
-		int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
-		station s(stationId, elems[3], stod(elems[4]), stod(elems[5]));
+		const int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
+		const double longitude = (elems[4].empty()) ? kHPMissingValue : stod(elems[4]);
+		const double latitude = (elems[5].empty()) ? kHPMissingValue : stod(elems[5]);
+
+		const station s(stationId, elems[3], longitude, latitude);
 
 		/* Prevent duplicates */
 
@@ -863,34 +882,60 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	{
 		auto elems = util::Split(line, ",", false);
 
-		if (elems[0] == "producer_id") continue;
+		if (elems.size() != 14)
+		{
+			std::cerr << "Ignoring line '" << line << "'" << std::endl;
+			continue;
+		}
+
+		// 0 producer_id
+		// 1 origin time
+		// 2 station_id
+		// 3 station_name
+		// 4 longitude
+		// 5 latitude
+		// 6 param_name
+		// 7 level_name
+		// 8 level_value
+		// 9 level_value2
+		// 10 forecast period
+		// 11 forecast_type_id
+		// 12 forecast_type_value
+		// 13 value
+
+		if (elems[0][0] == '#') continue;
+
 		// forecast_time
 		raw_time originTime(elems[1]), validTime(elems[1]);
 
-		auto timeparts = Split(elems[9], ":", false);
+		auto timeparts = Split(elems[10], ":", false);
 
 		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
 		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
 
-		forecast_time f(originTime, validTime);
+		const forecast_time f(originTime, validTime);
 
 		// level
-		level l(static_cast<HPLevelType>(HPStringToLevelType.at(elems[6])), stod(elems[7]));
+		level l(static_cast<HPLevelType>(HPStringToLevelType.at(boost::algorithm::to_lower_copy(elems[7]))),
+		        stod(elems[8]));
 
-		if (!elems[8].empty())
+		if (!elems[9].empty())
 		{
-			l.Value2(stod(elems[8]));
+			l.Value2(stod(elems[9]));
 		}
 
 		// param
-		param p(elems[12]);
+		const param p(elems[6]);
 
 		// forecast_type
-		forecast_type ftype(static_cast<HPForecastType>(stoi(elems[10])), stod(elems[11]));
+		const forecast_type ftype(static_cast<HPForecastType>(stoi(elems[11])), stod(elems[12]));
 
 		// station
-		int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
-		station s(stationId, elems[3], stod(elems[4]), stod(elems[5]));
+		const int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
+		const double longitude = (elems[4].empty()) ? kHPMissingValue : stod(elems[4]);
+		const double latitude = (elems[5].empty()) ? kHPMissingValue : stod(elems[5]);
+
+		const station s(stationId, elems[3], longitude, latitude);
 
 		if (!ret->Param(p)) continue;
 		if (!ret->Time(f)) continue;
