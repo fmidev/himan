@@ -16,8 +16,8 @@
 #include <exception>
 #include <iostream>
 
-#include <math.h>
 #include "radon.h"
+#include <math.h>
 
 namespace himan
 {
@@ -247,12 +247,14 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 				if (it == pc.stationThreshold.end())
 				{
-					itsLogger->Trace("Fetching threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) + " from radon");
+					itsLogger->Trace("Fetching threshold for param " + pc.output.Name() + ", station " +
+					                 std::to_string(st.Id()) + " from radon");
 					double limit = r->RadonDB().GetProbabilityLimitForStation(st.Id(), pc.output.Name());
 
 					if (limit == kFloatMissing)
 					{
-						itsLogger->Fatal("Threshold not found for param " + pc.output.Name() + ", station " + std::to_string(st.Id()));
+						itsLogger->Fatal("Threshold not found for param " + pc.output.Name() + ", station " +
+						                 std::to_string(st.Id()));
 						abort();
 					}
 
@@ -260,7 +262,6 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 				}
 			}
 		}
-
 	}
 
 	// NOTE
@@ -277,23 +278,22 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	// Set iterators at this stage to avoid invalid indexing when loading from auxiliary files
 	itsInfo->First();
 
-	while (!paramConfigurations.empty())
+	int threadIdx = 0;
+
+	for (const auto& pc : paramConfigurations)
 	{
-		for (int threadIdx = 0; threadIdx < itsThreadCount; threadIdx++)
+		g.add_thread(new boost::thread(&himan::plugin::probability::Calculate, this, threadIdx, boost::ref(pc)));
+
+		if (threadIdx == itsThreadCount)
 		{
-			if (paramConfigurations.empty())
-			{
-				break;
-			}
-
-			const auto& pc = paramConfigurations.back();
-			paramConfigurations.pop_back();
-
-			g.add_thread(new boost::thread(&himan::plugin::probability::Calculate, this, threadIdx, boost::ref(pc)));
+			g.join_all();
+			threadIdx = 0;
 		}
 
-		g.join_all();
+		threadIdx++;
 	}
+
+	g.join_all();
 
 	Finish();
 }
@@ -386,15 +386,14 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		//
 		if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 		{
-			CalculateWind(threadedLogger, std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex,
-			              normalized, ens1, ens2);
+			CalculateWind(threadedLogger, std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized,
+			              ens1, ens2);
 		}
 		else if (pc.output.Name() == "PROB-TC-0" || pc.output.Name() == "PROB-TC-1" ||
 		         pc.output.Name() == "PROB-TC-2" || pc.output.Name() == "PROB-TC-3" ||
 		         pc.output.Name() == "PROB-TC-4" || pc.output.Name() == "PROB-WATLEV-LOW-1")
 		{
-			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized,
-			                  ens1);
+			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized, ens1);
 		}
 		else
 		{
