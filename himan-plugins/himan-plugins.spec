@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.6.1
+Version: 17.6.2
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Jun  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.2-1.fmi
+- Fine-tuning visibility
 * Thu Jun  1 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.1-1.fmi
 - Per-station limits for probability
 - hybrid_pressure fix for ENS data
