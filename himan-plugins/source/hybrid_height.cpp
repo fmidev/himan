@@ -181,8 +181,9 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		firstLevel = true;
 		if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 242)
 		{
+			// LNSP is always at level 1 for ECMWF
 			prevPInfo = Fetch(forecastTime, level(himan::kHybrid, 1), GPParam, forecastType, false);
-			prevTInfo = Fetch(forecastTime, level(himan::kHybrid, 137), TParam, forecastType, false);
+			prevTInfo = Fetch(forecastTime, level(himan::kHybrid, itsBottomLevel), TParam, forecastType, false);
 
 			if (prevPInfo)
 			{
