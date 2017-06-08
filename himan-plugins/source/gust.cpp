@@ -77,7 +77,7 @@ struct intTot
 };
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
-            size_t gridSize, deltaT& dT);
+            const forecast_type& ftype, size_t gridSize, deltaT& dT);
 void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize);
 void IntT(intT& iT, const deltaT& dT, size_t gridSize);
 void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
@@ -195,7 +195,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	deltaT dT;
 	vector<double> lowAndMiddleClouds(gridSize, kFloatMissing);
 
-	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, gridSize, boost::ref(dT));
+	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
 	boost::thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
 	                 TCloudInfo);
 
@@ -232,6 +232,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	h->Configuration(itsConfiguration);
 	h->Time(forecastTime);
+	h->ForecastType(forecastType);
 
 	vector<double> maxEstimate;
 	try
@@ -506,12 +507,13 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 }
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
-            size_t gridSize, deltaT& dT)
+            const forecast_type& ftype, size_t gridSize, deltaT& dT)
 {
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
 	h->Time(ftime);
+	h->ForecastType(ftype);
 
 	const param TParam("T-K");
 
