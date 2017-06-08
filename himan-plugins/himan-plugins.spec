@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.6.2
+Version: 17.6.8
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jun  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.8-1.fmi
+- More fine-tuning of visibility
+- Fix for gust/meps
+- Write radon metadata firectly to table partition
 * Fri Jun  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.2-1.fmi
 - Fine-tuning visibility
 * Thu Jun  1 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.1-1.fmi
