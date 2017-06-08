@@ -115,7 +115,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	// Jos sumupilveä ohut kerros (vain) ~alimmalla mallipinnalla, jätetään alin kerros huomioimatta
 	// (ehkä mieluummin ylempää keskiarvo, jottei tällöin mahdollinen ylempi st-kerros huononna näkyvyyttä liikaa?)
-	auto stHup = h->VerticalHeightGreaterThan(NParam, 15, stMaxH, stLimit);
+	auto stHup = h->VerticalHeightGreaterThan(NParam, 25, stMaxH, stLimit);
 	auto stNup = h->VerticalAverage(NParam, 15, stMaxH);
 
 	assert(stH.size() == stHup.size());

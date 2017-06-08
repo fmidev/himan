@@ -451,7 +451,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	query.str("");
 
 	query << "SELECT "
-	      << "id, table_name "
+	      << "id, schema_name, partition_name "
 	      << "FROM as_grid "
 	      << "WHERE geometry_id = '" << geom_id << "'"
 	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime << "'"
@@ -468,7 +468,8 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 		return false;
 	}
 
-	string table_name = row[1];
+	const string schema_name = row[1];
+	const string table_name = row[2];
 
 	query.str("");
 
@@ -510,7 +511,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	double levelValue2 = (resultInfo.Level().Value2() == kHPMissingValue) ? -1 : resultInfo.Level().Value2();
 
 	query
-	    << "INSERT INTO data." << table_name
+	    << "INSERT INTO " << schema_name << "." << table_name
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
 	       "forecast_type_id, forecast_type_value, file_location, file_server) VALUES ("
 	    << resultInfo.Producer().Id() << ", "
@@ -531,7 +532,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 		itsRadonDB->Rollback();
 
 		query.str("");
-		query << "UPDATE data." << table_name << " SET "
+		query << "UPDATE " << schema_name << "." << table_name << " SET "
 		      << "file_location = '" << theFileName << "', "
 		      << "file_server = '" << host << "' WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "

@@ -77,7 +77,7 @@ struct intTot
 };
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
-            size_t gridSize, deltaT& dT);
+            const forecast_type& ftype, size_t gridSize, deltaT& dT);
 void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize);
 void IntT(intT& iT, const deltaT& dT, size_t gridSize);
 void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
@@ -121,15 +121,15 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	 */
 	const size_t gridSize = myTargetInfo->Grid()->Size();
 
-	const param BLHParam("MIXHGT-M");        // boundary layer height
-	const param WSParam("FF-MS");            // wind speed
-	const param GustParam("FFG-MS");         // wind gust
-	const param TParam("T-K");               // temperature
-	const param TopoParam("Z-M2S2");         // geopotential height
-	const param LowCloudParam("NL-PRCNT");   // low cloud cover
-	const param MidCloudParam("NM-PRCNT");   // middle cloud cover
-	const param HighCloudParam("NH-PRCNT");  // high cloud cover
-	const params TotalCloudParam = {param("N-PRCNT"),param("N-0TO1")};  // total cloud cover
+	const param BLHParam("MIXHGT-M");                                     // boundary layer height
+	const param WSParam("FF-MS");                                         // wind speed
+	const param GustParam("FFG-MS");                                      // wind gust
+	const param TParam("T-K");                                            // temperature
+	const param TopoParam("Z-M2S2");                                      // geopotential height
+	const params LowCloudParam = {param("NL-PRCNT"), param("NL-0TO1")};   // low cloud cover
+	const params MidCloudParam = {param("NM-PRCNT"), param("NM-0TO1")};   // middle cloud cover
+	const params HighCloudParam = {param("NH-PRCNT"), param("NH-0TO1")};  // high cloud cover
+	const params TotalCloudParam = {param("N-PRCNT"), param("N-0TO1")};   // total cloud cover
 
 	level H0, H10;
 
@@ -195,7 +195,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	deltaT dT;
 	vector<double> lowAndMiddleClouds(gridSize, kFloatMissing);
 
-	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, gridSize, boost::ref(dT));
+	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
 	boost::thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
 	                 TCloudInfo);
 
@@ -232,6 +232,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	h->Configuration(itsConfiguration);
 	h->Time(forecastTime);
+	h->ForecastType(forecastType);
 
 	vector<double> maxEstimate;
 	try
@@ -506,12 +507,13 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 }
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
-            size_t gridSize, deltaT& dT)
+            const forecast_type& ftype, size_t gridSize, deltaT& dT)
 {
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
 	h->Time(ftime);
+	h->ForecastType(ftype);
 
 	const param TParam("T-K");
 
@@ -609,8 +611,8 @@ void IntT(intT& iT, const deltaT& dT, size_t gridSize)
 	{
 		if (dT.deltaT_100[i] != himan::kFloatMissing)
 			iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100;  // why 0.5 * here? Would make sense in case of
-			                                                // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
-			                                                // integration using trapezoidal rule
+		                                                    // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
+		                                                    // integration using trapezoidal rule
 		if (dT.deltaT_100[i] != himan::kFloatMissing && dT.deltaT_200[i] != himan::kFloatMissing)
 			iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
 		if (dT.deltaT_200[i] != himan::kFloatMissing && dT.deltaT_300[i] != himan::kFloatMissing)
