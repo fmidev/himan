@@ -180,7 +180,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	// In Hirlam parameter name is RH-PRCNT but data is still 0 .. 1
 	double RHScale = 100;
 
-	if (RHInfo->Producer().Process() == 240 || RHInfo->Producer().Process() == 242)
+	if (RHInfo->Producer().Process() == 240 || RHInfo->Producer().Process() == 243)
 	{
 		// himan-calculated RH has values 0 .. 100
 		RHScale = 1;

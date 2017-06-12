@@ -54,7 +54,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
 	}
 
-	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 242 ||
+	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 243 ||
 	    itsConfiguration->Info()->Producer().Id() == 260)
 	{
 		itsUseGeopotential = false;
@@ -179,7 +179,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	if (myTargetInfo->Level().Value() == itsBottomLevel)
 	{
 		firstLevel = true;
-		if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 242)
+		if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 243)
 		{
 			// LNSP is always at level 1 for ECMWF
 			prevPInfo = Fetch(forecastTime, level(himan::kHybrid, 1), GPParam, forecastType, false);
