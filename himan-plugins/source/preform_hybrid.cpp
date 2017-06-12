@@ -240,15 +240,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	int FREEZING_DRIZZLE = 4;
 	int FREEZING_RAIN = 5;
 
-	if (itsConfiguration->OutputFileType() == kGRIB2)
-	{
-		DRIZZLE = 11;  // reserved for local use
-		SLEET = 7;     // mixture of rain and snow
-		SNOW = 5;
-		FREEZING_DRIZZLE = 12;  // reserved for local use
-		FREEZING_RAIN = 3;
-	}
-
 	LOCKSTEP(myTargetInfo, stratus, freezingArea, TInfo, RRInfo)
 	{
 		stratus->Param(stratusBaseParam);
@@ -333,39 +324,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		assert(T >= -80 && T < 80);
 		assert(!noPotentialPrecipitationForm || RR > 0);
 		assert(Navg == MISS || (Navg >= 0 && Navg <= 100));
-/*
-		cout << "base\t\t" << base << endl
-		     << "top\t\t" << top << endl
-		     << "Navg\t\t" << Navg << endl
-		     << "upperLayerN\t" << upperLayerN << endl
-		     << "RR\t\t" << RR << endl
-		     << "stTavg\t\t" << stTavg << endl
-		     << "T\t\t" << T << endl
-		     << "Ttop\t\t" << Ttop << endl
-		     << "plusArea\t" << plusArea << endl
-		     << "plusAreaSfc\t" << plusAreaSfc << endl
-		     << "minusArea\t" << minusArea << endl
-		     << "nZeroLevel\t" << nZeroLevel << endl
-		     << "rhAvg\t\t" << rhAvg << endl
-		     << "rhAvgUpper\t" << rhAvgUpper << endl
-		     << "rhMelt\t\t" << rhMelt << endl
-		     << "rhMeltUpper\t" << rhMeltUpper << endl
-		     << "wAvg\t\t" << wAvg << endl
-		     << "baseLimit\t" << baseLimit << endl
-		     << "stLimit\t\t" << stLimit << endl
-		     << "stTlimit\t" << stTlimit << endl
-		     << "Nlimit\t\t" << Nlimit << endl
-		     << "dryNlim\t\t" << dryNlim << endl
-		     << "waterArea\t" << waterArea << endl
-		     << "snowArea\t" << snowArea << endl
-		     << "wMax\t\t" << wMax << endl
-		     << "sfcMin\t\t" << sfcMin << endl
-		     << "sfcMax\t\t" << sfcMax << endl
-		     << "fzdzLim\t\t" << fzdzLim << endl
-		     << "fzStLimit\t" << fzStLimit << endl
-		     << "fzraPA\t\t" << fzraPA << endl
-		     << "fzraMA\t\t" << fzraMA << endl;
-*/
+
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
@@ -483,9 +442,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				myTargetInfo->Value(PreForm);
 			}
 		}
-/*
-		cout << "PreForm\t" << PreForm << std::endl;
-*/
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +

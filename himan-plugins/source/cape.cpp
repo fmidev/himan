@@ -368,28 +368,57 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	mySubThreadedLogger->Info("CAPE and CIN calculated in " + boost::lexical_cast<string>(timer->GetTime()) + " ms");
 
-#ifdef DEBUG
+	// Sometimes CAPE area is infinitely small -- so that CAPE is zero but LFC is found. In this case set all derivative
+	// parameters missing.
+
 	capeInfo->Param(LFCZParam);
-	auto lfcz_ = VEC(capeInfo);
+	auto& lfcz_ = VEC(capeInfo);
+	capeInfo->Param(LFCPParam);
+	auto& lfcp_ = VEC(capeInfo);
+	capeInfo->Param(LFCTParam);
+	auto& lfct_ = VEC(capeInfo);
+	cinInfo->Param(CINParam);
+	auto& cin_ = VEC(cinInfo);
 	capeInfo->Param(ELZParam);
 	auto elz_ = VEC(capeInfo);
 	capeInfo->Param(CAPEParam);
 	auto cape_ = VEC(capeInfo);
 
+	for (size_t i = 0; i < lfcz_.size(); i++)
+	{
+		if (cape_[i] == 0 && elz_[i] == kFloatMissing && lfcz_[i] != kFloatMissing)
+		{
+			cin_[i] = 0;
+			lfcz_[i] = kFloatMissing;
+			lfcp_[i] = kFloatMissing;
+			lfct_[i] = kFloatMissing;
+		}
+	}
+
+#ifdef DEBUG
 	assert(lfcz_.size() == elz_.size());
 	assert(cape_.size() == elz_.size());
+	assert(cin_.size() == elz_.size());
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
-		//		assert((lfcz_[i] == kFloatMissing && elz_[i] == kFloatMissing) ||
-		//		       ((lfcz_[i] != kFloatMissing && elz_[i] != kFloatMissing) && (lfcz_[i] < elz_[i])));
+		// Check:
+		// * If LFC is missing, EL is missing
+		// * If LFC is present, EL is present
+		// * If both are present, LFC must be below EL
+		// * CAPE must be zero or positive real value
+		// * CIN must be zero or negative real value
+		assert((lfcz_[i] == kFloatMissing && elz_[i] == kFloatMissing) ||
+		       ((lfcz_[i] != kFloatMissing && elz_[i] != kFloatMissing) && (lfcz_[i] < elz_[i])));
+		assert(cape_[i] >= 0);
+		assert(cin_[i] <= 0);
 	}
 #endif
 
 	// Do smoothening for CAPE & CIN parameters
 	mySubThreadedLogger->Trace("Smoothening");
 
-	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1./9.);
+	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1. / 9.);
 
 	capeInfo->Param(CAPEParam);
 	himan::matrix<double> filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
@@ -512,27 +541,38 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 		int i = -1;
 
-		for (auto&& tup : zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(ZenvInfo), VEC(prevZenvInfo), Titer))
+		auto& cinhref = cinh;
+
+		for (auto&& tup : zip_range(cinhref, VEC(TenvInfo), VEC(prevTenvInfo), VEC(PenvInfo), VEC(prevPenvInfo),
+		                            VEC(ZenvInfo), VEC(prevZenvInfo), TparcelVec, prevTparcelVec, Psource))
 		{
 			i++;
 
 			if (found[i]) continue;
 
-			double Tenv = tup.get<0>();  // K
+			double& cin = tup.get<0>();
+
+			double Tenv = tup.get<1>();  // K
 			assert(Tenv >= 100.);
 
-			double Penv = tup.get<1>();  // hPa
+			double prevTenv = tup.get<2>();
+
+			double Penv = tup.get<3>();  // hPa
 			assert(Penv < 1200.);
 
-			double Zenv = tup.get<2>();      // m
-			double prevZenv = tup.get<3>();  // m
+			double prevPenv = tup.get<4>();
 
-			double Tparcel = tup.get<4>();  // K
+			double Zenv = tup.get<5>();      // m
+			double prevZenv = tup.get<6>();  // m
+
+			double Tparcel = tup.get<7>();  // K
 			assert(Tparcel >= 100.);
 
-			assert(PLFC[i] < 1200. || PLFC[i] == kFloatMissing);
+			double prevTparcel = tup.get<8>();  // K
 
-			if (Penv > Psource[i])
+			double Psrc = tup.get<9>();
+
+			if (Penv > Psrc)
 			{
 				// Have not reached source level yet
 				continue;
@@ -540,32 +580,44 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 			else if (Penv <= PLFC[i])
 			{
 				// reached max height
-				// TODO: final piece integration
+
 				found[i] = true;
+
+				if (prevTparcel == kFloatMissing || prevPenv == kFloatMissing || prevTenv == kFloatMissing)
+				{
+					continue;
+				}
+
+				// Integrate the final piece from previous level to LFC level
+
+				// First get LFC height in meters
+				Zenv = himan::numerical_functions::interpolation::Linear(PLFC[i], prevPenv, Penv, prevZenv, Zenv);
+
+				// LFC environment temperature value
+				Tenv = himan::numerical_functions::interpolation::Linear(PLFC[i], prevPenv, Penv, prevTenv, Tenv);
+
+				// LFC T parcel value
+				Tparcel =
+				    himan::numerical_functions::interpolation::Linear(PLFC[i], prevPenv, Penv, prevTparcel, Tparcel);
+
+				Penv = PLFC[i];
+				assert(Zenv > prevZenv);
+			}
+
+			if (Tparcel == kFloatMissing)
+			{
 				continue;
 			}
 
 			if (Penv < PLCL[i])
 			{
 				// Above LCL, switch to virtual temperature
-
-				if (Tparcel == kFloatMissing) continue;
-
 				Tparcel = metutil::VirtualTemperature_(Tparcel, Penv * 100);
 				Tenv = metutil::VirtualTemperature_(Tenv, Penv * 100);
 			}
 
-			if (Tparcel <= Tenv)
-			{
-				cinh[i] += constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-				assert(cinh[i] <= 0);
-			}
-			else if (cinh[i] != 0)
-			{
-				// Parcel buoyant --> cape layer, no more CIN. We stop integration here.
-				// TODO: final piece integration
-				found[i] = true;
-			}
+			cin += CAPE::CalcCIN(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
+			assert(cin <= 0);
 		}
 
 		foundCount = count(found.begin(), found.end(), true);
