@@ -500,7 +500,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	// EC gives precipitation in meters, we are calculating millimeters
 
 	if (curSumInfo->Param().Unit() == kM ||
-	    ((myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 242) &&
+	    ((myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 243) &&
 	     !isRadiationCalculation))  // HIMAN-98
 	{
 		scaleFactor = 1000.;

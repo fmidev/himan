@@ -164,8 +164,8 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 			break;
 
 		case 134:
-		case 242:
-			producerId = 242;
+		case 243:
+			producerId = 243;
 			break;
 
 		case 199:
