@@ -66,7 +66,7 @@ inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparc
                                       double prevZenv)
 {
 	/*
-	 *  We just entered CAPE zone.
+	 *  We just entered CAPE or CIN zone.
 	 *
 	 *                                             Hybrid level n == Zenv
 	 *                        This point is Tenv --> ======== <-- this point is Tparcel
@@ -98,22 +98,21 @@ inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparc
 
 	prevZenv = intersection.Y();
 
-	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-	CAPE = fmin(CAPE, 150.);
+	double value = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+	value = fmin(150, fmax(-150., value));
 
-	assert(CAPE >= 0);
-	assert(CAPE <= 150);
+	assert(!isnan(value) && !isinf(value));
 
-	return CAPE;
+	return value;
 }
 
 CUDA_DEVICE
 inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv,
-                                   double prevPenv, double Zenv, double prevZenv, double& out_CAPE, double& out_ELT,
+                                   double prevPenv, double Zenv, double prevZenv, double& out_value, double& out_ELT,
                                    double& out_ELP)
 {
 	/*
-	 *  We just left CAPE zone.
+	 *  We just left CAPE or CIN zone.
 	 *
 	 *                                             Hybrid level n == Zenv
 	 *                                               ========
@@ -135,7 +134,7 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 	 *  2. Calculate integral using dz = ZenvNew - prevZenv, for temperatures use the values from Hybrid level n+1.
 	 */
 
-	out_CAPE = 0;
+	out_value = 0;
 	out_ELT = CAPE::kFloatMissing;
 	out_ELP = CAPE::kFloatMissing;
 
@@ -159,13 +158,12 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 
 	Zenv = intersectionZ.Y();
 	assert(fabs(intersectionZ.X() - intersectionP.X()) < 1.);
-	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
-	CAPE = fmin(CAPE, 150.);
+	double value = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
+	value = fmin(150, fmax(-150., value));
 
-	assert(CAPE >= 0);
-	assert(CAPE <= 150);
+	assert(!isnan(value) && !isinf(value));
 
-	out_CAPE = CAPE;
+	out_value = value;
 	out_ELT = intersectionP.X();
 	out_ELP = intersectionP.Y();
 }
@@ -593,6 +591,36 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 	}
 
 	assert(out_CAPE >= 0);
+}
+
+CUDA_DEVICE
+inline double CalcCIN(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv,
+                      double Zenv, double prevZenv)
+{
+	if (Tparcel >= Tenv && prevTparcel >= prevTenv)
+	{
+		// No CIN
+		return 0;
+	}
+
+	double cin = 0;
+
+	if (Tparcel < Tenv && prevTparcel < Tenv)
+	{
+		// We are fully in a CIN zone
+		cin = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+	}
+	else if (Tparcel < Tenv && prevTparcel >= prevTenv)
+	{
+		cin = CAPE::IntegrateEnteringParcel(Tenv, prevTenv, Tparcel, prevTparcel, Zenv, prevZenv);
+	}
+	else if (Tparcel >= Tenv && prevTparcel < prevTenv)
+	{
+		double cin, a, b;
+		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, cin, a, b);
+	}
+
+	return cin;
 }
 
 }  // namespace CAPE
