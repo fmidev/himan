@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.6.8
+Version: 17.6.12
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.12-1.fmi
+- cape-plugin fixes
+- preform grib2 numbering encode/decode moved to grib-plugin
 * Thu Jun  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.8-1.fmi
 - More fine-tuning of visibility
 - Fix for gust/meps
