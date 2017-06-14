@@ -3,9 +3,9 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.4.3
-Release: 1.el7.fmi
-License: FMI
+Version: 17.6.12
+Release: 2.el7.fmi
+License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
 Source0: %{name}.tar.gz
@@ -14,13 +14,12 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 17.3.29
-Requires: himan-bin >= 17.2.13
+Requires: himan-lib >= 17.4.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 16.9.8
-Requires: libfmidb >= 16.12.9
-Requires: smartmet-library-newbase >= 17.2.13
+Requires: libfmigrib >= 17.4.6
+Requires: libfmidb >= 17.5.26
+Requires: smartmet-library-newbase >= 17.4.4
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -36,9 +35,9 @@ BuildRequires: cusp >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 16.12.9
-BuildRequires: libfmigrib-devel >= 16.6.13
-BuildRequires: smartmet-library-newbase-devel >= 17.2.13
+BuildRequires: libfmidb-devel >= 17.5.26
+BuildRequires: libfmigrib-devel >= 17.4.6
+BuildRequires: smartmet-library-newbase-devel >= 17.4.4
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.53
@@ -112,6 +111,49 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jun 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.12-2.fmi
+- New producer 243 for per-member post-processed ECMWF ENS
+* Mon Jun 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.12-1.fmi
+- cape-plugin fixes
+- preform grib2 numbering encode/decode moved to grib-plugin
+* Thu Jun  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.8-1.fmi
+- More fine-tuning of visibility
+- Fix for gust/meps
+- Write radon metadata firectly to table partition
+* Fri Jun  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.2-1.fmi
+- Fine-tuning visibility
+* Thu Jun  1 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.1-1.fmi
+- Per-station limits for probability
+- hybrid_pressure fix for ENS data
+* Wed May 31 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.31-1.fmi
+- Fix for CAPE500m starting values
+* Tue May 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.30-1.fmi
+- Tweak to visibility
+- Support for ENS per-member calculations
+- Fix for MUCIN
+* Tue May 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.23-1.fmi
+- Update to visibility
+* Tue May 16 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.16-1.fmi
+- dewpoint produces now TD-K
+* Mon May 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.15-1.fmi
+- Updated CSV reading and writing
+- Additions to luatool
+* Tue Apr 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.18-1.fmi
+- pop plugin: allow previous ECMWF forecast to be missing
+- Remove crash when listing plugins and database password was not set
+* Tue Apr 11 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.11-1.fmi
+- Cape plugin fix for GPU code bug
+* Thu Apr  6 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.6-2.fmi
+- Hotfix for database fetch issue
+* Thu Apr  6 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.6-1.fmi
+- Further safeguards for fractile & NaNs 
+- Add nodatabase mode
+- New newbase
+- New fmigrib
+- New fmidb
+- New eccodes
+* Tue Apr  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.4-1.fmi
+- fractile another NaN fix
 * Mon Apr  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.3-1.fmi
 - gust Hirlam support
 - cape fix EL level search

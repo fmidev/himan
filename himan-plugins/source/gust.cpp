@@ -158,7 +158,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	level lowestHybridLevel(kHybrid, lowestHybridLevelNumber);
 
-	if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 242)
+	if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 243)
 	{
 		H0 = level(kGround, 0);
 		H10 = H0;

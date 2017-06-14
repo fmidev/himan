@@ -29,6 +29,8 @@ using namespace himan::plugin;
 #define BitTest(n, i) !!((n)&BitMask1(i))
 
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
+void EncodePrecipitationFormToGrib2(vector<double>& arr);
+void DecodePrecipitationFormFromGrib2(vector<double>& arr);
 
 grib::grib()
 {
@@ -757,8 +759,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().Bitmap(true);
 	}
 
-// itsGrib->Message().BitsPerValue(16);
-
 #if defined GRIB_WRITE_PACKED_DATA and defined HAVE_CUDA
 
 	if (anInfo.Grid()->IsPackedData() && anInfo.Grid()->PackedData().ClassName() == "simple_packed")
@@ -804,6 +804,11 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 		assert(!foundNanValue);
 #endif
+		const auto paramName = anInfo.Param().Name();
+		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
+		{
+			EncodePrecipitationFormToGrib2(anInfo.Data().Values());
+		}
 
 		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
 	}
@@ -1574,7 +1579,15 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 
 #if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
 
-	if (readPackedData && itsGrib->Message().PackingType() == "grid_simple")
+	const auto paramName = newInfo->Param().Name();
+	bool decodePrecipitationForm = false;
+
+	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
+	{
+		decodePrecipitationForm = true;
+	}
+
+	if (readPackedData && decodePrecipitationForm == false && itsGrib->Message().PackingType() == "grid_simple")
 	{
 		// Get coefficient information
 
@@ -1641,10 +1654,13 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 
 		free(d);
 
+		if (decodePrecipitationForm)
+		{
+			DecodePrecipitationFormFromGrib2(dm.Values());
+		}
+
 		itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len * 8) + " bytes of unpacked data from grib");
 	}
-
-	//	newInfo->Grid()->Data(dm);
 }
 
 bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
@@ -2074,4 +2090,80 @@ std::string GetParamNameFromGribShortName(const std::string& paramFileName, cons
 	paramFile.close();
 
 	return ret;
+}
+
+void EncodePrecipitationFormToGrib2(vector<double>& arr)
+{
+	const int MISS = static_cast<int>(kFloatMissing);
+
+	for (auto& val : arr)
+	{
+		switch (static_cast<int>(val))
+		{
+			case MISS:
+			// rain
+			case 1:
+				break;
+			// drizzle
+			case 0:
+				val = 11;
+				break;
+			// sleet
+			case 2:
+				val = 7;
+				break;
+			// snow
+			case 3:
+				val = 5;
+				break;
+			// freezing drizzle
+			case 4:
+				val = 12;
+				break;
+			// freezing rain
+			case 5:
+				val = 3;
+				break;
+			default:
+				throw runtime_error("Unknown precipitation form: " + to_string(val));
+		}
+	}
+}
+
+void DecodePrecipitationFormFromGrib2(vector<double>& arr)
+{
+	const int MISS = static_cast<int>(kFloatMissing);
+
+	for (auto& val : arr)
+	{
+		switch (static_cast<int>(val))
+		{
+			case MISS:
+			// rain
+			case 1:
+				break;
+			// drizzle
+			case 11:
+				val = 0.;
+				break;
+			// sleet
+			case 7:
+				val = 2.;
+				break;
+			// snow
+			case 5:
+				val = 3.;
+				break;
+			// freezing drizzle
+			case 12:
+				val = 4.;
+				break;
+			// freezing rain
+			case 3:
+				val = 5.;
+				break;
+			default:
+				throw runtime_error("Unknown precipitation form: " + to_string(val));
+		}
+	}
 }

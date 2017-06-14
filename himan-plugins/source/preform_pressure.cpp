@@ -180,7 +180,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	// In Hirlam parameter name is RH-PRCNT but data is still 0 .. 1
 	double RHScale = 100;
 
-	if (RHInfo->Producer().Process() == 240 || RHInfo->Producer().Process() == 242)
+	if (RHInfo->Producer().Process() == 240 || RHInfo->Producer().Process() == 243)
 	{
 		// himan-calculated RH has values 0 .. 100
 		RHScale = 1;
@@ -192,15 +192,6 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	int SNOW = 3;
 	int FREEZING_DRIZZLE = 4;
 	int FREEZING_RAIN = 5;
-
-	if (itsConfiguration->OutputFileType() == kGRIB2)
-	{
-		DRIZZLE = 11;  // reserved for local use
-		SLEET = 7;     // mixture of rain and snow
-		SNOW = 5;
-		FREEZING_DRIZZLE = 12;  // reserved for local use
-		FREEZING_RAIN = 3;
-	}
 
 	LOCKSTEP(myTargetInfo, TInfo, T700Info, T850Info, T925Info, RHInfo, RH700Info, RH850Info, RH925Info, W925Info,
 	         W850Info, RRInfo, PInfo, SNRInfo)

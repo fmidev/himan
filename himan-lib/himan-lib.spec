@@ -3,9 +3,9 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.4.3
+Version: 17.6.1
 Release: 1.el7.fmi
-License: FMI
+License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
 Source0: %{name}.tar.gz
@@ -13,9 +13,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 16.12.9
-Requires: libfmigrib >= 16.9.8
-Requires: libfmidb >= 16.6.6
+Requires: libfmidb >= 17.4.6
+Requires: libfmigrib >= 17.4.6
 Requires: gdal
 
 %if %{defined suse_version}
@@ -29,11 +28,11 @@ BuildRequires: cuda-8-0
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 16.12.9
-BuildRequires: libfmigrib-devel >= 16.9.8
+BuildRequires: libfmidb-devel >= 17.4.6
+BuildRequires: libfmigrib-devel >= 17.4.6
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.53
-BuildRequires: smartmet-library-newbase-devel >= 17.2.13
+BuildRequires: smartmet-library-newbase-devel >= 17.4.4
 BuildRequires: scons
 
 Provides: libhiman.so
@@ -61,6 +60,25 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Jun  1 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.1-1.fmi
+- Tweak to csv reading
+* Tue May 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.30-1.fmi
+- Tweaks to Wobf code
+* Tue May 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.23-1.fmi
+- Support for info serialization
+* Mon May 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.15-1.fmi
+- Updates to previ / station data handling
+* Tue Apr 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.18-1.fmi
+- Changes to database plugin headers
+* Tue Apr 11 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.11-1.fmi
+- Disable database access when doing newbase interpolation
+* Thu Apr  6 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.6-1.fmi
+- New fmigrib
+- New fmidb
+- New newbase
+- New eccodes
+- Add nodatabase mode 
+- Improved findheight_gt/lt modifiers
 * Mon Apr  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.4.3-1.fmi
 - metutil: Add moist lift approximation function 
 * Wed Mar 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.29-1.fmi

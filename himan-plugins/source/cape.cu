@@ -335,12 +335,11 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 	}
 }
 
-__global__ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* __restrict__ d_Titer,
-                          const double* __restrict__ d_Piter, info_simple d_Zenv, info_simple d_prevZenv,
-                          const double* __restrict__ d_Tparcel, const double* __restrict__ d_PLCL,
+__global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simple d_Penv, info_simple d_prevPenv,
+                          info_simple d_Zenv, info_simple d_prevZenv, const double* __restrict__ d_Tparcel,
+                          const double* __restrict__ d_prevTparcel, const double* __restrict__ d_PLCL,
                           const double* __restrict__ d_PLFC, const double* __restrict__ d_Psource,
-                          double* __restrict__ d_cinh,
-                          unsigned char* __restrict__ d_found)
+                          double* __restrict__ d_cinh, unsigned char* __restrict__ d_found)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -349,11 +348,17 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* 
 		double Tenv = d_Tenv.values[idx];  // K
 		assert(Tenv >= 150.);
 
+		const double prevTenv = d_prevTenv.values[idx];
+
 		double Penv = d_Penv.values[idx];  // hPa
 		assert(Penv < 1200. || Penv == kFloatMissing);
 
-		double Tparcel = d_Titer[idx];  // K
+		const double prevPenv = d_prevPenv.values[idx];
+
+		double Tparcel = d_Tparcel[idx];  // K
 		assert(Tparcel >= 150. || Tparcel == kFloatMissing);
+
+		const double prevTparcel = d_prevTparcel[idx];
 
 		double PLFC = d_PLFC[idx];  // hPa
 		assert(PLFC < 1200. || PLFC == kFloatMissing);
@@ -364,16 +369,38 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* 
 		double Zenv = d_Zenv.values[idx];          // m
 		double prevZenv = d_prevZenv.values[idx];  // m
 
-		if (PLFC == kFloatMissing ||  // No LFC
-		    Penv <= PLFC              // reached max height; TODO: final piece integration
-		    )
-		{
-			d_found[idx] = 1;
-		}
 		// Make sure we have passed the starting level
-		else if (Penv <= d_Psource[idx])
+		if (Penv <= d_Psource[idx])
 		{
-			if (Penv < PLCL)
+			if (Penv <= PLFC)
+			{
+				// reached max height
+				d_found[idx] = 1;
+
+				// Integrate the final piece from previous level to LFC level
+
+				if (prevTparcel == kFloatMissing || prevPenv == kFloatMissing || prevTenv == kFloatMissing)
+				{
+					Tparcel = kFloatMissing;  // unable to proceed with CIN integration
+				}
+				else
+				{
+					// First get LFC height in meters
+					Zenv = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevZenv, Zenv);
+
+					// LFC environment temperature value
+					Tenv = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevTenv, Tenv);
+
+					// LFC T parcel value
+					Tparcel = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevTparcel, Tparcel);
+
+					Penv = PLFC;
+
+					assert(Zenv > prevZenv);
+				}
+			}
+
+			if (Penv < PLCL && Tparcel != kFloatMissing)
 			{
 				// Above LCL, switch to virtual temperature
 
@@ -381,16 +408,10 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_Penv, const double* 
 				Tenv = metutil::VirtualTemperature_(Tenv, Penv * 100);
 			}
 
-			if (Tparcel != kFloatMissing && Tparcel <= Tenv)
+			if (Tparcel != kFloatMissing)
 			{
-				d_cinh[idx] += constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+				d_cinh[idx] += CAPE::CalcCIN(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 				assert(d_cinh[idx] <= 0);
-			}
-			else if (d_cinh[idx] != 0)
-			{
-				// Parcel buoyant --> cape layer, no more CIN. We stop integration here.
-				// TODO: final piece integration
-				d_found[idx] = 1;
 			}
 		}
 	}
@@ -1077,8 +1098,11 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	double* d_Psource = 0;
 	double* d_Tparcel = 0;
+	double* d_prevTparcel = 0;
 	double* d_Piter = 0;
+	double* d_prevPiter = 0;
 	double* d_Titer = 0;
+	double* d_prevTiter = 0;
 	double* d_PLCL = 0;
 	double* d_PLFC = 0;
 	double* d_cinh = 0;
@@ -1086,6 +1110,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	CUDA_CHECK(cudaMalloc((double**)&d_Psource, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((double**)&d_prevTparcel, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_Piter, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_Titer, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_PLCL, N * sizeof(double)));
@@ -1095,8 +1120,8 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	InitializeArray<double>(d_cinh, 0., N, stream);
 	InitializeArray<double>(d_Tparcel, kFloatMissing, N, stream);
-	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
+	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, &Tsource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Psource, &Psource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &Tsource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &Psource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
@@ -1109,6 +1134,8 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	{
 		if (PLFC[i] == kFloatMissing) found[i] = true;
 	}
+
+	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
 
 	curLevel.Value(curLevel.Value() - 1);
 
@@ -1126,10 +1153,12 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Piter, d_Titer, d_PLCL, *h_Penv, d_Tparcel);
 
-		CINKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, d_Titer, d_Piter, *h_Zenv, *h_prevZenv,
-		                                              d_Tparcel, d_PLCL, d_PLFC, d_Psource, d_cinh, d_found);
+		CINKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_prevTenv, *h_Penv, *h_prevPenv, *h_Zenv, *h_prevZenv,
+		                                              d_Tparcel, d_prevTparcel, d_PLCL, d_PLFC, d_Psource, d_cinh,
+		                                              d_found);
 
 		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 
 		CUDA_CHECK(cudaFree(h_prevPenv->values));
 		CUDA_CHECK(cudaFree(h_prevTenv->values));
@@ -1167,12 +1196,14 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaMemcpyAsync(&cinh[0], d_cinh, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-
 	CUDA_CHECK(cudaFree(d_cinh));
 	CUDA_CHECK(cudaFree(d_Psource));
 	CUDA_CHECK(cudaFree(d_Tparcel));
+	CUDA_CHECK(cudaFree(d_prevTparcel));
 	CUDA_CHECK(cudaFree(d_Piter));
+	CUDA_CHECK(cudaFree(d_prevPiter));
 	CUDA_CHECK(cudaFree(d_Titer));
+	CUDA_CHECK(cudaFree(d_prevTiter));
 	CUDA_CHECK(cudaFree(d_PLCL));
 	CUDA_CHECK(cudaFree(d_PLFC));
 	CUDA_CHECK(cudaFree(d_found));
