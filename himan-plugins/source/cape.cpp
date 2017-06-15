@@ -15,8 +15,7 @@
 
 #include "fetcher.h"
 #include "hitool.h"
-#include "neons.h"
-#include "querydata.h"
+#include "radon.h"
 
 #include "cape.cuh"
 
@@ -58,10 +57,10 @@ double Max(const vector<double>& vec)
 
 	for (const double& val : vec)
 	{
-		if (val != kFloatMissing && val > ret) ret = val;
+		if (val != himan::kFloatMissing && val > ret) ret = val;
 	}
 
-	if (ret == -1e38) ret = kFloatMissing;
+	if (ret == -1e38) ret = himan::kFloatMissing;
 
 	return ret;
 }
@@ -70,11 +69,11 @@ void MultiplyWith(vector<double>& vec, double multiplier)
 {
 	for (double& val : vec)
 	{
-		if (val != kFloatMissing) val *= multiplier;
+		if (val != himan::kFloatMissing) val *= multiplier;
 	}
 }
 
-std::string PrintMean(const vector<double>& vec)
+string PrintMean(const vector<double>& vec)
 {
 	double min = 1e38, max = -1e38, sum = 0;
 	size_t count = 0, missing = 0;
@@ -100,11 +99,11 @@ std::string PrintMean(const vector<double>& vec)
 		mean = sum / static_cast<double>(count);
 	}
 
-	std::string minstr = (min == 1e38) ? "nan" : to_string(static_cast<int>(min));
-	std::string maxstr = (max == -1e38) ? "nan" : to_string(static_cast<int>(max));
-	std::string meanstr = (mean != mean) ? "nan" : to_string(static_cast<int>(mean));
+	string minstr = (min == 1e38) ? "nan" : to_string(static_cast<int>(min));
+	string maxstr = (max == -1e38) ? "nan" : to_string(static_cast<int>(max));
+	string meanstr = (mean != mean) ? "nan" : to_string(static_cast<int>(mean));
 
-	return "min " + minstr + " max " + maxstr + " mean " + meanstr + " missing " + boost::lexical_cast<string>(missing);
+	return "min " + minstr + " max " + maxstr + " mean " + meanstr + " missing " + to_string(missing);
 }
 
 void MoistLift(const double* Piter, const double* Titer, const double* Penv, double* Tparcel, int size)
@@ -159,10 +158,10 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	compiled_plugin_base::Init(conf);
 
-	auto theNeons = GET_PLUGIN(neons);
+	auto r = GET_PLUGIN(radon);
 
-	itsBottomLevel = level(kHybrid, boost::lexical_cast<int>(theNeons->ProducerMetaData(
-	                                    itsConfiguration->SourceProducer().Id(), "last hybrid level number")));
+	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(),
+	                                                                      "last hybrid level number")));
 
 #ifdef HAVE_CUDA
 	cape_cuda::itsBottomLevel = itsBottomLevel;
@@ -313,6 +312,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	auto height = h->VerticalValue(param("HL-M"), LCL.second);
@@ -467,6 +467,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	vector<bool> found(Tsource.size(), false);
@@ -667,6 +668,7 @@ void cape::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>, vec
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	myTargetInfo->Param(ELPParam);
@@ -685,6 +687,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	// Found count determines if we have calculated all three CAPE variation for a single grid point
@@ -910,6 +913,7 @@ pair<vector<double>, vector<double>> cape::GetLFC(shared_ptr<info> myTargetInfo,
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	itsLogger->Trace("Searching environment temperature for starting pressure");
@@ -951,6 +955,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	auto Piter = P, Titer = T;  // integration variables
@@ -1220,6 +1225,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);

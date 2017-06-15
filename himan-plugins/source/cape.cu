@@ -754,6 +754,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	h->Configuration(conf);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	modifier_mean tp, mr;
 
@@ -893,6 +894,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(conf);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	const size_t N = myTargetInfo->Data().Size();
@@ -1053,6 +1055,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(conf);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	forecast_time ftime = myTargetInfo->Time();
@@ -1224,6 +1227,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	h->Configuration(conf);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
 	// Found count determines if we have calculated all three CAPE variation for a single grid point
