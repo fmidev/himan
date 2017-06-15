@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.6.12
-Release: 2.el7.fmi
+Version: 17.6.15
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -111,6 +111,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jun 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.15-1.fmi
+- More accurate MOL
+- Cape plugin support for meps
 * Mon Jun 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.12-2.fmi
 - New producer 243 for per-member post-processed ECMWF ENS
 * Mon Jun 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.12-1.fmi
