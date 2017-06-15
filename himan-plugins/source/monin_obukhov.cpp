@@ -10,6 +10,7 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger_factory.h"
+#include "metutil.h"
 #include "monin_obukhov.h"
 
 using namespace std;
@@ -141,7 +142,11 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			double cp = 1.0056e3 + 0.017766 * T_C + 4.0501e-4 * pow(T_C, 2) - 1.017e-6 * pow(T_C, 3) +
 			            1.4715e-8 * pow(T_C, 4) - 7.4022e-11 * pow(T_C, 5) +
 			            1.2521e-13 * pow(T_C, 6);  // Calculate specific heat capacity
-			mol = -constants::kG * constants::kK * (SHF + 0.07 * LHF) / (rho * cp * U_S * U_S * U_S * T);
+			double L = 2500800.0 - 2360.0 * T_C + 1.6 * pow(T_C, 2) -
+			           0.06 * pow(T_C, 3);  // Calculate specific latent heat of condensation of water
+
+			mol = -constants::kG * constants::kK * (SHF + 0.61 * cp * T / L * LHF) /
+			      (rho * cp * U_S * U_S * U_S * himan::metutil::VirtualTemperature_(T, P));
 		}
 		myTargetInfo->Value(mol);
 	}
