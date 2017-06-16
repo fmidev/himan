@@ -42,7 +42,7 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	// Required source parameters
 
 	const param TParam("T-K");
-	const param RHParam("RH-PRCNT");
+	const params RHParam = {param("RH-0TO1"), param("RH-PRCNT")};
 	const params NParams = {param("N-0TO1"), param("N-PRCNT")};
 	const param KParam("KINDEX-N");
 
@@ -79,11 +79,18 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	string deviceType = "CPU";
 
-	int percentMultiplier = 1;
+	double percentMultiplier = 1.0;
 
+	if (RH500Info->Param().Unit() != kPrcnt)
+	{
+		itsLogger->Info("RH parameter unit not kPrcnt, assuming 0 .. 1");
+		percentMultiplier = 100.0;
+	}
+
+	// Special case for hirlam
 	if (myTargetInfo->Producer().Name() == "HL2MTA")
 	{
-		percentMultiplier = 100;
+		percentMultiplier = 100.0;
 	}
 
 	LOCKSTEP(myTargetInfo, T0mInfo, NInfo, KInfo, T850Info, RH850Info, RH700Info, RH500Info)
