@@ -2094,13 +2094,12 @@ std::string GetParamNameFromGribShortName(const std::string& paramFileName, cons
 
 void EncodePrecipitationFormToGrib2(vector<double>& arr)
 {
-	const int MISS = static_cast<int>(kFloatMissing);
-
 	for (auto& val : arr)
 	{
 		switch (static_cast<int>(val))
 		{
-			case MISS:
+			// kFloatMissing - this is done to satisfy static analysis tools
+			case 32700:
 			// rain
 			case 1:
 				break;
@@ -2132,13 +2131,12 @@ void EncodePrecipitationFormToGrib2(vector<double>& arr)
 
 void DecodePrecipitationFormFromGrib2(vector<double>& arr)
 {
-	const int MISS = static_cast<int>(kFloatMissing);
-
 	for (auto& val : arr)
 	{
 		switch (static_cast<int>(val))
 		{
-			case MISS:
+			// kFloatMissing - this is done to satisfy static analysis tools
+			case 32700:
 			// rain
 			case 1:
 				break;

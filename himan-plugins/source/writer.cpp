@@ -72,8 +72,6 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 			return theGribWriter->ToFile(
 			    theInfo, theOutputFile,
 			    (itsWriteOptions.configuration->FileWriteOption() == kSingleFile) ? true : false);
-
-			break;
 		}
 		case kQueryData:
 		{
@@ -89,8 +87,6 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 			theOutputFile += ".fqd";
 
 			return theWriter->ToFile(theInfo, theOutputFile);
-
-			break;
 		}
 		case kNetCDF:
 			break;
@@ -103,7 +99,6 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 			theOutputFile += ".csv";
 
 			return theWriter->ToFile(theInfo, theOutputFile);
-			break;
 		}
 		// Must have this or compiler complains
 		default:
