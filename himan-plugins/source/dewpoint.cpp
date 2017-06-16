@@ -47,7 +47,7 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
 void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
 	const param TParam("T-K");
-	const param RHParam("RH-PRCNT");
+	const params RHParam = {param("RH-PRCNT"), param("RH-0TO1")};
 
 	auto myThreadedLogger =
 	    logger_factory::Instance()->GetLog("dewpointThread #" + boost::lexical_cast<string>(threadIndex));
@@ -76,7 +76,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 	SetAB(myTargetInfo, TInfo);
 
-	// Special case for harmonie
+	// Special case for harmonie & MEPS
 	if (RHInfo->Param().Unit() != kPrcnt || itsConfiguration->SourceProducer().Id() == 199)
 	{
 		itsLogger->Warning("Unable to determine RH unit, assuming 0 .. 1");
