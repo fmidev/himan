@@ -89,7 +89,7 @@ class configuration
 	 * @return True if not at last source producer
 	 */
 
-	bool NextSourceProducer() const;  // THIS SHOULD NOT BE CONST ??
+	bool NextSourceProducer();
 
 	/**
 	 * @brief Goto first source producer
@@ -100,7 +100,7 @@ class configuration
 	 * @return True if iterator has at least one source producer
 	 */
 
-	bool FirstSourceProducer() const;  // THIS SHOULD NOT BE CONST ??
+	bool FirstSourceProducer();
 
 	/**
 	 * @brief Reset source producer iterator
@@ -110,7 +110,7 @@ class configuration
 	 *
 	 */
 
-	void ResetSourceProducer() const;
+	void ResetSourceProducer();
 
 	/**
 	 * @brief Return number of source producers
