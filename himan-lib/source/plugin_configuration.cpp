@@ -80,7 +80,7 @@ void plugin_configuration::AddParameter(const string& paramName, const vector<pa
 {
 	if (!itsPreconfiguredParams[paramName].empty())
 	{
-		throw runtime_error(ClassName() + ": duplicate parameter options definition:: '" + paramName + "'");
+		throw runtime_error(ClassName() + ": duplicate parameter options definition: '" + paramName + "'");
 	}
 
 	for (const auto& p : opts)

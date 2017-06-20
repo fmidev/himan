@@ -613,6 +613,8 @@ class info
 
 	grid* Grid() const;
 
+	std::shared_ptr<grid> SharedGrid() const;
+
 	/**
 	 * @brief Return data matrix from the given time/level/param indexes
 	 *
@@ -766,6 +768,13 @@ inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) 
 }
 
 inline void info::Value(double theValue) { Grid()->Data().Set(itsLocationIndex, theValue); }
+
+inline std::shared_ptr<grid> info::SharedGrid() const
+{
+	assert(itsDimensions.size());
+	return itsDimensions[Index()];
+}
+
 inline double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
 typedef std::shared_ptr<info> info_t;
 

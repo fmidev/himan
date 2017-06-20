@@ -100,6 +100,7 @@ public:
 
 	const std::vector<std::pair<std::string, std::string>>& GetParameterOptions(const std::string& paramName) const;
 
+
 	void Info(std::shared_ptr<info> theInfo);
 	std::shared_ptr<info> Info() const;
 

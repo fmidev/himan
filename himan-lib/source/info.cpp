@@ -73,7 +73,7 @@ std::ostream& info::Write(std::ostream& file) const
 void info::ReGrid()
 {
 	auto newDimensions =
-	    vector<shared_ptr<grid>>(itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
+	    vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
 
 	Reset();
 
