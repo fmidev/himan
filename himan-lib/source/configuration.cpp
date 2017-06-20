@@ -154,9 +154,9 @@ bool configuration::SourceProducer(const producer& theSourceProducer)
 	return itsSourceProducerIterator->Set(theSourceProducer);
 }
 
-bool configuration::NextSourceProducer() const { return itsSourceProducerIterator->Next(); }
-bool configuration::FirstSourceProducer() const { return itsSourceProducerIterator->First(); }
-void configuration::ResetSourceProducer() const { itsSourceProducerIterator->Reset(); }
+bool configuration::NextSourceProducer() { return itsSourceProducerIterator->Next(); }
+bool configuration::FirstSourceProducer() { return itsSourceProducerIterator->First(); }
+void configuration::ResetSourceProducer() { itsSourceProducerIterator->Reset(); }
 const producer& configuration::SourceProducer(size_t theIndexNumber) const
 {
 	if (theIndexNumber != static_cast<size_t>(kHPMissingInt))
