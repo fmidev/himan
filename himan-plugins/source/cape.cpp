@@ -106,14 +106,14 @@ string PrintMean(const vector<double>& vec)
 	return "min " + minstr + " max " + maxstr + " mean " + meanstr + " missing " + to_string(missing);
 }
 
-void MoistLift(const double* Piter, const double* Titer, const double* Penv, double* Tparcel, int size)
+void MoistLift(const double* Piter, const double* Titer, const double* Penv, double* Tparcel, size_t size)
 {
 	// Split MoistLift (integration of a saturated air parcel upwards in atmosphere)
 	// to several threads since it is very CPU intensive
 
 	vector<future<void>> futures;
 
-	int workers = 6;
+	size_t workers = 6;
 
 	if (size % workers != 0)
 	{
@@ -128,13 +128,13 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 		}
 	}
 
-	const int splitSize = static_cast<int>(floor(size / workers));
+	const size_t splitSize = static_cast<size_t>(floor(size / workers));
 
-	for (int num = 0; num < workers; num++)
+	for (size_t num = 0; num < workers; num++)
 	{
-		const int start = num * splitSize;
+		const size_t start = num * splitSize;
 		futures.push_back(async(launch::async,
-		                        [&](int start) {
+		                        [&](size_t start) {
 			                        himan::metutil::MoistLiftA(&Piter[start], &Titer[start], &Penv[start],
 			                                                   &Tparcel[start], splitSize);
 			                    },
@@ -1019,7 +1019,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 		vector<double> TparcelVec(P.size(), kFloatMissing);
 
-		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+			::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		double scale = 1;
 		if (prevPenvInfo->Param().Name() == "P-PA") scale = 0.01;
