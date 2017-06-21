@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.6.15
+Version: 17.6.21
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Jun 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.21-1.fmi
+- Previ data fetch optimizations
+- POT version 2.1
+- Fix probability so that missing data does not stop Himan execution
+- Correct thread count for hybrid_height/ensembles
 * Thu Jun 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.15-1.fmi
 - More accurate MOL
 - Cape plugin support for meps
