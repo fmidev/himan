@@ -7,6 +7,7 @@
 #include <math.h>
 
 #include "forecast_time.h"
+#include "info.h"
 #include "level.h"
 #include "logger_factory.h"
 #include "matrix.h"
@@ -14,8 +15,161 @@
 #include "plugin_factory.h"
 #include "pot.h"
 
+#include "fetcher.h"
+
 using namespace std;
 using namespace himan::plugin;
+
+/*
+ *
+ * class definitions for time_series
+ *
+ * */
+
+time_series::time_series(param theParam, size_t expectedSize) : itsParam(theParam) { itsInfos.reserve(expectedSize); }
+void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time startTime,
+                        const HPTimeResolution& timeSpan, int stepSize, int numSteps, const level& forecastLevel,
+                        const forecast_type& requestedType = forecast_type(kDeterministic), bool readPackedData = false)
+{
+	auto f = GET_PLUGIN(fetcher);
+
+	itsInfos.clear();
+
+	for (int i = 0; i < numSteps; ++i)
+	{
+		try
+		{
+			auto info = f->Fetch(config, startTime, forecastLevel, itsParam);
+
+			startTime.ValidDateTime().Adjust(timeSpan, stepSize);
+
+			itsInfos.push_back(info);
+		}
+		catch (HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				abort();
+			}
+			else
+			{
+				startTime.ValidDateTime().Adjust(timeSpan, stepSize);
+			}
+		}
+	}
+
+	// get rid of kFloatMissings
+	for (auto& anInfo : itsInfos)
+	{
+		replace(anInfo->Data().Values().begin(), anInfo->Data().Values().end(), kFloatMissing,
+		        std::nan("kFloatMissing"));
+	}
+}
+
+void time_series::Param(param theParam) { itsParam = theParam; }
+/*
+ *
+ * function definitions for "modifier" functions
+ *
+ * These functions are contained in the POT plugin preliminarily until time_series/generator functionality
+ * is implemented to himan-lib. Thus these functions are now written in a more generic way then required
+ * for this particular case. Functions expect input_iterators as arguments with iterators pointing to the
+ * half-closed interval [begin, end), i.e. end is not included in the interval.
+ *
+ * */
+
+template <class InputIt>
+himan::info_t Max(InputIt begin, InputIt end)
+{
+	// Empty series
+	if (begin == end) return nullptr;
+
+	// Find first field that contains data
+	while (*begin == nullptr)
+	{
+		++begin;
+		if (begin == end) return nullptr;
+	}
+
+	// Set first field as first set of maximum values
+	auto maxInfo = *begin;
+	maxInfo->ReGrid();
+	++begin;
+
+	for (; begin != end; ++begin)
+	{
+		// Empty info instance, skip
+		if (*begin == nullptr) continue;
+
+		// An explicit way to write the zip_range, avoiding the tuples
+		auto input = VEC((*begin)).begin();
+		auto maximum = VEC(maxInfo).begin();
+
+		auto inputEnd = VEC((*begin)).end();
+		auto maximumEnd = VEC(maxInfo).end();
+
+		for (; input != inputEnd, maximum != maximumEnd; ++input, ++maximum)
+		{
+			*maximum = std::max(*input, *maximum);
+		}
+	}
+
+	return maxInfo;
+}
+
+template <class InputIt>
+himan::info_t Mean(InputIt begin, InputIt end)
+{
+	if (begin == end) return nullptr;
+
+	// Find first field that contains data
+	while (*begin == nullptr)
+	{
+		++begin;
+		if (begin == end) return nullptr;
+	}
+
+	// Set first field as first set of mean values
+	auto meanInfo = *begin;
+	meanInfo->ReGrid();
+	++begin;
+
+	size_t count = 1;
+
+	for (; begin != end; ++begin)
+	{
+		// Empty info instance, skip
+		if (*begin == nullptr) continue;
+
+		// An explicit way to write the zip_range, avoiding the tuples
+		auto input = VEC((*begin)).begin();
+		auto sum = VEC(meanInfo).begin();
+
+		auto inputEnd = VEC((*begin)).end();
+		auto sumEnd = VEC(meanInfo).end();
+
+		for (; input != inputEnd, sum != sumEnd; ++input, ++sum)
+		{
+			*sum += *input;
+		}
+		++count;
+	}
+
+	// Calculate actual mean values
+	double countInv = 1 / static_cast<double>(count);
+
+	for (auto&& val : VEC(meanInfo))
+	{
+		val *= countInv;
+	}
+
+	return meanInfo;
+}
+
+/*
+*  plug-in definitions
+*
+* */
 
 pot::pot()
 {
@@ -27,15 +181,6 @@ pot::pot()
 void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
-
-	/*
-	 * Set target parameter properties
-	 * - name PARM_NAME, this name is found from neons. For example: T-K
-	 * - univ_id UNIV_ID, newbase-id, ie code table 204
-	 * - grib1 id must be in database
-	 * - grib2 descriptor X'Y'Z, http://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_table4-2.shtml
-	 *
-	 */
 
 	// param theRequestedParam(PARM_NAME, UNIV_ID, GRIB2DISCIPLINE, GRIB2CATEGORY, GRIB2NUMBER);
 	param POT("POT-PRCNT", 12100, 0, 19, 2);
@@ -67,9 +212,6 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const level CapeLevelHiman(kMaximumThetaE, 0);
 	const param RainParam("RRR-KGM2");
 	// ----
-
-	// switch indicating which version of cape is used
-	bool cape1040 = true;
 
 	// Step from previous leadtime, taken from configuration file
 	int step = itsConfiguration->ForecastStep();
@@ -111,12 +253,9 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
 	forecast_time forecastTime = myTargetInfo->Time();
-	forecast_time forecastTimePrev = myTargetInfo->Time();
-	forecastTimePrev.ValidDateTime().Adjust(timeResolution, -step);
 	forecast_time forecastTimeNext = myTargetInfo->Time();
 	forecastTimeNext.ValidDateTime().Adjust(timeResolution, +step);
 	level forecastLevel = myTargetInfo->Level();
-	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	auto myThreadedLogger =
 	    logger_factory::Instance()->GetLog("pot_pluginThread #" + boost::lexical_cast<string>(threadIndex));
@@ -124,168 +263,83 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                        static_cast<string>(forecastLevel));
 
-	info_t CAPEInfo, RRInfo, RRPrevInfo, RRNextInfo;
+	time_series CAPEts(CapeParamHiman, 4), RRts(RainParam, 3);
 
-	CAPEInfo = Fetch(forecastTime, CapeLevelHiman, CapeParamHiman, forecastType, false);
-	if (!CAPEInfo)
+	forecast_time startTime = myTargetInfo->Time();
+	startTime.ValidDateTime().Adjust(kHourResolution, -2);
+
+	// create time series CAPE
+	CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, CapeLevelHiman);
+
+	if (CAPEts.Size() == 0)
 	{
-		CAPEInfo = Fetch(forecastTime, forecastLevel, CapeParamEC, forecastType, false);
-		cape1040 = false;
+		CAPEts.Param(CapeParamEC);
+		CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, forecastLevel);
 	}
-	RRInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);
-	RRPrevInfo = Fetch(forecastTimePrev, forecastLevel, RainParam, forecastType, false);
-	RRNextInfo = Fetch(forecastTimeNext, forecastLevel, RainParam, forecastType, false);
-	if (!(CAPEInfo && RRInfo))
+
+	// find max
+	info_t CAPEMaxInfo;
+	CAPEMaxInfo = Max(CAPEts.begin(), CAPEts.end());
+
+	// create time series RR
+	startTime.ValidDateTime().Adjust(kHourResolution, 1);
+	RRts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 3, forecastLevel);
+
+	// fnd mean
+	info_t RRMeanInfo;
+	RRMeanInfo = Mean(RRts.begin(), RRts.end());
+
+	if (!CAPEMaxInfo || !RRMeanInfo)
 	{
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                       static_cast<string>(forecastLevel));
+		myThreadedLogger->Info("Missing source data. Skipping step " +
+		                       boost::lexical_cast<string>(forecastTime.Step()));
 		return;
 	}
 
-	// käytetään sadeparametrina mallin sateen alueellista keskiarvoa, jotta diskreettejä sadeolioita saadaan vähän
-	// levitettyä ympäristöön, tässä toimisi paremmin esim. 30 km säde.
-	// Filter RR
-	/* This will be requested back soon
-	himan::matrix<double> filter_kernel(3,3,1,kFloatMissing);
-	filter_kernel.Fill(1.0/9.0);
-	himan::matrix<double> filtered_RR = numerical_functions::Filter2D(RRInfo->Data(), filter_kernel);
-	RRInfo->Grid()->Data(filtered_RR);
-	*/
+	// filter CAPE
+	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1.0 / 9.0);
+	himan::matrix<double> filtered_CAPE = numerical_functions::Filter2D(CAPEMaxInfo->Data(), filter_kernel);
 
-	himan::matrix<double> filter_kernel(5, 5, 1, kFloatMissing);
-	filter_kernel.Fill(1.0 / 25.0);
-	himan::matrix<double> filtered_CAPE = numerical_functions::Filter2D(CAPEInfo->Data(), filter_kernel);
+	CAPEMaxInfo->Grid()->Data(filtered_CAPE);
 
-	CAPEInfo->Grid()->Data(filtered_CAPE);
+	// filter RR
+	himan::matrix<double> filtered_RR = numerical_functions::Filter2D(RRMeanInfo->Data(), filter_kernel);
 
-	if (!CAPEInfo || !RRInfo)
-	{
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                       static_cast<string>(forecastLevel));
-		return;
-	}
+	RRMeanInfo->Grid()->Data(filtered_RR);
 
 	string deviceType = "CPU";
 
-	if (RRPrevInfo)
+	// starting point of the algorithm POT v2.1
+	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(CAPEMaxInfo), VEC(RRMeanInfo)))
 	{
-		RRPrevInfo->ResetLocation();
-	}
+		double& POT = tup.get<0>();
+		double CAPE = tup.get<1>();
+		double RR = tup.get<2>();
 
-	if (RRNextInfo)
-	{
-		RRNextInfo->ResetLocation();
-	}
+		double PoLift = 0;       // Probability of Lift (-->initiation)
+		double PoThermoDyn = 0;  // Probability of ThermoDynamics
 
-	LOCKSTEP(myTargetInfo, CAPEInfo, RRInfo)
-	{
-		double RR = RRInfo->Value();
-		double RRPrev = RR;
-		double RRNext = RR;
+		double verticalVelocity = sqrt(2 * CAPE);
 
-		if (RRPrevInfo)
-		{
-			RRPrevInfo->NextLocation();
-			RRPrev = RRPrevInfo->Value();
-		}
-
-		if (RRNextInfo)
-		{
-			RRNextInfo->NextLocation();
-			RRNext = RRNextInfo->Value();
-		}
-
-		double POT;
-		double CAPE_ec = CAPEInfo->Value();
-
-		double LAT = myTargetInfo->LatLon().Y();
-
-		double PoLift_ec = 0;
-		double PoThermoDyn_ec = 0;
-
-		// Määritetään salamointi vs. CAPE riippuvuutta varten tarvitaan CAPEn ala- ja ylärajoille yhtälöt. Ala- ja
-		// ylärajat muuttuvat leveyspiirin funktiona.
-		double lat_abs = abs(LAT);
-		double cape_low0 = 50;
-		double cape_low1 = 400;
-		double cape_high0 = 600;
-		double cape_high1 = 1100;
-
-		double cape_low = kFloatMissing;
-		double cape_high = kFloatMissing;
-
-		if (!cape1040)
-		{
-			cape_low0 = 100;
-			cape_low1 = 800;
-			cape_high0 = 1200;
-			cape_high1 = 2200;
-		}
-
-		if (CAPE_ec == kFloatMissing || RRPrev == kFloatMissing || RR == kFloatMissing || RRNext == kFloatMissing)
-		{
-			continue;
-		}
-
-		// time average rain parameter over three timesteps
-		RR = (RRPrev + RR + RRNext) / 3.0;
-
-		// Kiinnitetään cape_low ja high levespiirien 25...45  ulkopuolella vakioarvoihin.
-		if (lat_abs > 30)
-		{
-			cape_low = cape_low0;
-			cape_high = cape_high0;
-		}
-
-		if (lat_abs < 10)
-		{
-			cape_low = cape_low1;
-			cape_high = cape_high1;
-		}
-
-		if (lat_abs <= 30 && lat_abs >= 10)
-		{
-			double lowk = (cape_low1 - cape_low0) / (10 - 30);
-			double highk = (cape_high1 - cape_high0) / (10 - 30);
-			cape_low = lowk * lat_abs + (cape_low0 - lowk * 30);
-			cape_high = highk * lat_abs + (cape_high0 - highk * 30);
-		}
-
-		// CAPE-arvot skaalataan arvoihin 1....10. Ala- ja ylärajat muuttuvat leveyspiirin funktiona.
-		double k = 9 / (cape_high - cape_low);
-		double scaled_cape = 1;
-
-		if (CAPE_ec >= cape_low) scaled_cape = k * CAPE_ec + (1 - k * cape_low);
-
-		assert(scaled_cape > 0);
-
-		// Leikataan skaalatun CAPEN arvot, jotka menevät yli 10
-		if (scaled_cape > 10) scaled_cape = 10;
-
-		// Ukkosta suosivan termodynamiikan todennäköisyys
-		PoThermoDyn_ec =
-		    0.4343 * log(scaled_cape);  // salamoinnin todennäköisyys kasvaa logaritmisesti CAPE-arvojen kasvaessa.
-
-		// Laukaisevan tekijän (Lift) todennäköisyys kasvaa ennustetun sateen intensiteetin funktiona.
-		// Perustelu: Konvektioparametrisointi (eli malli saa nollasta poikkeavaa sademäärää) malleissa käynnistyy
-		// useimmiten alueilla, missä mallissa on konvergenssia tai liftiä tarjolla
+		PoThermoDyn = 0.03333 * verticalVelocity -
+		              0.16667;  // Probability grows 0->1, if vertical velocity "sqrt(2*)" grows 5->35 m/s
+		PoThermoDyn = max(0.0, min(PoThermoDyn, 1.0));
 
 		if (RR >= 0.05 && RR <= 5)
 		{
-			PoLift_ec =
-			    0.217147241 * log(RR) + 0.650514998;  // Funktio kasvaa nopeasti logaritmisesti nollasta ykköseen
+			PoLift = 0.217147241 * log(RR) + 0.650514998;  // Function grows fast logarithmically from zero to one
 		}
-
-		if (RR > 5)
+		else if (RR > 5)
 		{
-			PoLift_ec = 1;
+			PoLift = 1;
 		}
 
-		// POT on ainesosiensa todennäköisyyksien tulo
-		POT = PoLift_ec * PoThermoDyn_ec * 100;
+		POT = PoLift * PoThermoDyn * 100;
 
-		// return result
-		myTargetInfo->Value(POT);
+		if (!isfinite(POT))
+		{
+			POT = kFloatMissing;  // Bring missing values back
+		}
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
