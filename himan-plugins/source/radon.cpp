@@ -15,6 +15,8 @@ using namespace himan::plugin;
 
 const int MAX_WORKERS = 32;
 static once_flag oflag;
+static map<string, string> tableNameCache;
+static mutex tableNameMutex;
 
 void radon::Init()
 {
@@ -72,18 +74,34 @@ vector<std::string> radon::CSV(search_options& options)
 	stringstream query;
 
 	const auto analtime = options.time.OriginDateTime().String();
+	const auto key = to_string(options.prod.Id()) + "_" + analtime;
+	string tableName;
 
-	query << "SELECT table_name FROM as_previ WHERE producer_id = " << options.prod.Id()
-	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analtime << "', '" << analtime << "')";
+	const auto mapValue = tableNameCache.find(key);
 
-	itsRadonDB->Query(query.str());
-
-	auto row = itsRadonDB->FetchRow();
-
-	if (row.empty())
+	if (mapValue == tableNameCache.end())
 	{
-		itsLogger->Error("No tables found from as_previ for producer " + options.prod.Name());
-		return csv;
+		query << "SELECT table_name FROM as_previ WHERE producer_id = " << options.prod.Id()
+		      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analtime << "', '" << analtime << "')";
+
+		itsRadonDB->Query(query.str());
+
+		const auto row = itsRadonDB->FetchRow();
+
+		if (row.empty())
+		{
+			itsLogger->Error("No tables found from as_previ for producer " + options.prod.Name());
+			return csv;
+		}
+
+		tableName = row[0];
+
+		lock_guard<mutex> lock(tableNameMutex);
+		tableNameCache[key] = tableName;
+	}
+	else
+	{
+		tableName = (*mapValue).second;
 	}
 
 	string levelValue2 = "-1";
@@ -93,24 +111,17 @@ vector<std::string> radon::CSV(search_options& options)
 		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
 	}
 
+	const string period = util::MakeSQLInterval(options.time);
+
 	query.str("");
 
 	query << "SELECT "
-	      << "t.producer_id,"
-	      << "t.analysis_time,"
 	      << "t.station_id,"
 	      << "s.name AS station_name,"
 	      << "st_x(s.position) AS longitude,"
 	      << "st_y(s.position) AS latitude,"
-	      << "t.param_name,"
-	      << "t.level_name,"
-	      << "t.level_value,"
-	      << "CASE t.level_value2 WHEN -1 THEN -999 ELSE t.level_value2 END AS level_value2,"
-	      << "t.forecast_period,"
-	      << "t.forecast_type_id,"
-	      << "CASE t.forecast_type_value WHEN -1 THEN -999 ELSE t.forecast_type_value END AS forecast_type_value,"
 	      << "t.value "
-	      << "FROM " << row[0] << "_v t, station s "
+	      << "FROM " << tableName << "_v t, station s "
 	      << "WHERE "
 	      << "t.station_id = s.id "
 	      << "AND t.analysis_time = '" << analtime << "' "
@@ -118,11 +129,21 @@ vector<std::string> radon::CSV(search_options& options)
 	      << "AND t.level_name = upper('" + HPLevelTypeToString.at(options.level.Type()) << "') "
 	      << "AND t.level_value = " << options.level.Value() << " "
 	      << "AND (t.level_value2 = " << options.level.Value2() << " OR t.level_value2 = -1) "
-	      << "AND t.forecast_period = '" << util::MakeSQLInterval(options.time) << "' "
+	      << "AND t.forecast_period = '" << period << "' "
 	      << "AND t.forecast_type_id = " << options.ftype.Type() << " "
-	      << "AND t.forecast_type_value = " << options.ftype.Value();
+	      << "AND t.forecast_type_value = " << options.ftype.Value() << " "
+	      << "AND t.station_id IN (";
 
-	// TODO: search_options does not have "stations" so we have to fetch ALL stations
+	auto localInfo = make_shared<info>(*options.configuration->Info());
+
+	for (localInfo->ResetLocation(); localInfo->NextLocation();)
+	{
+		const auto station = localInfo->Station();
+		query << station.Id() << ",";
+	}
+
+	query.seekp(-1, std::ios_base::end);
+	query << ")";
 
 	itsRadonDB->Query(query.str());
 
@@ -130,7 +151,7 @@ vector<std::string> radon::CSV(search_options& options)
 	{
 		query.str("");
 
-		row = itsRadonDB->FetchRow();
+		const auto row = itsRadonDB->FetchRow();
 
 		if (row.empty())
 		{
@@ -139,9 +160,10 @@ vector<std::string> radon::CSV(search_options& options)
 
 		// producer_id,origintime,station_id,station_name,longitude,latitude,param_name,level_name,level_value,level_value2,forecast_period,forecast_type_id,forecast_type_value,value
 
-		query << row[0] << "," << row[1] << "," << row[2] << "," << row[3] << "," << row[4] << "," << row[5] << ","
-		      << row[6] << "," << row[7] << "," << row[8] << "," << row[9] << "," << row[10] << "," << row[11] << ","
-		      << row[12] << "," << row[13] << endl;
+		query << options.prod.Id() << "," << analtime << "," << row[0] << "," << row[1] << "," << row[2] << ","
+		      << row[3] << "," << options.param.Name() << "," << HPLevelTypeToString.at(options.level.Type()) << ","
+		      << options.level.Value() << "," << options.level.Value2() << "," << period << "," << options.ftype.Type()
+		      << "," << options.ftype.Value() << "," << row[4] << endl;
 
 		csv.push_back(query.str());
 	}

@@ -515,7 +515,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 	if (itsPrimaryDimension == kTimeDimension)
 	{
-		dims = itsInfo->SizeTimes();
+		dims = itsInfo->SizeTimes() * itsInfo->SizeForecastTypes();
 	}
 
 	if (dims < static_cast<size_t>(itsThreadCount))

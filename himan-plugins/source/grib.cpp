@@ -1231,7 +1231,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 	{
 		long category = itsGrib->Message().ParameterCategory();
 		long discipline = itsGrib->Message().ParameterDiscipline();
-		long process = options.prod.Process();
+		long process = prod.Process();
 
 		string parmName = "";
 
@@ -1247,7 +1247,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		{
 			auto r = GET_PLUGIN(radon);
 
-			auto parminfo = r->RadonDB().GetParameterFromGrib2(options.prod.Id(), discipline, category, number,
+			auto parminfo = r->RadonDB().GetParameterFromGrib2(prod.Id(), discipline, category, number,
 			                                                   itsGrib->Message().NormalizedLevelType(),
 			                                                   itsGrib->Message().LevelValue());
 

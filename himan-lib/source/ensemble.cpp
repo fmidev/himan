@@ -144,7 +144,7 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 		{
 			itsLogger->Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
 			                 std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
-			abort();
+			throw kFileDataNotFound;
 		}
 	}
 

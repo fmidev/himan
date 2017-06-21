@@ -365,11 +365,27 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		//
 		// Setup input data, data fetching
 		//
-		ens1->Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
 
-		if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
+		try
 		{
-			ens2->Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
+			ens1->Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
+
+			if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
+			{
+				ens2->Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
+			}
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				continue;
+			}
+			else
+			{
+				itsLogger->Fatal("Received error code " + std::to_string(e));
+				abort();
+			}
 		}
 
 		// Output memory
