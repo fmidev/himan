@@ -215,7 +215,8 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	{
 		if (e == kFileDataNotFound)
 		{
-			throw std::runtime_error(ClassName() + " failed to find ensemble data");
+			itsLogger->Error("Failed to find ensemble data");
+			return;
 		}
 	}
 
