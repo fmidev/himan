@@ -734,7 +734,11 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 
 		auto csv_forecasts = r->CSV(opts);
 		auto _ret = util::CSVToInfo(csv_forecasts);
-		ret.push_back(_ret);
+
+		if (_ret)
+		{
+			ret.push_back(_ret);
+		}
 	}
 
 	return ret;
