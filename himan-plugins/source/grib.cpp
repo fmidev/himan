@@ -1231,7 +1231,6 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 	{
 		long category = itsGrib->Message().ParameterCategory();
 		long discipline = itsGrib->Message().ParameterDiscipline();
-		long process = prod.Process();
 
 		string parmName = "";
 
@@ -1239,8 +1238,8 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		{
 			auto n = GET_PLUGIN(neons);
 
-			parmName =
-			    n->GribParameterName(number, category, discipline, process, static_cast<long>(options.level.Type()));
+			parmName = n->GribParameterName(number, category, discipline, options.prod.Process(),
+			                                static_cast<long>(options.level.Type()));
 		}
 
 		if (parmName.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
@@ -1278,12 +1277,6 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		p.GribParameter(number);
 		p.GribDiscipline(discipline);
 		p.GribCategory(category);
-
-		if (p.Name() == "T-C" && options.prod.Centre() == 7)
-		{
-			// Fixed in radon
-			p.Name("T-K");
-		}
 
 		aggregation a;
 		a.TimeResolution(kHourResolution);
