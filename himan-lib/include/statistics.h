@@ -7,7 +7,7 @@
 #define STATISTICS_H
 
 #include "raw_time.h"
-#include "timer_factory.h"
+#include "timer.h"
 
 #if !defined __clang__ && defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
 #include <cstdatomic>
