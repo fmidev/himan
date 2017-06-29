@@ -359,7 +359,7 @@ class compiled_plugin_base
    protected:
 	info_t itsInfo;
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
-	std::unique_ptr<timer> itsTimer;
+	timer itsTimer;
 	short itsThreadCount;
 	bool itsDimensionsRemaining;
 

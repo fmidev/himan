@@ -254,8 +254,8 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	// 1.
 
-	auto timer = timer_factory::Instance()->GetTimer();
-	timer->Start();
+	timer aTimer;
+	aTimer.Start();
 
 	cape_source sourceValues;
 
@@ -282,9 +282,9 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (get<0>(sourceValues).empty()) return;
 
-	timer->Stop();
+	aTimer.Stop();
 
-	mySubThreadedLogger->Info("Source data calculated in " + boost::lexical_cast<string>(timer->GetTime()) + " ms");
+	mySubThreadedLogger->Info("Source data calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
 
 	mySubThreadedLogger->Debug("Source temperature: " + ::PrintMean(get<0>(sourceValues)));
 	mySubThreadedLogger->Debug("Source dewpoint: " + ::PrintMean(get<1>(sourceValues)));
@@ -292,13 +292,13 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	// 2.
 
-	timer->Start();
+	aTimer.Start();
 
 	auto LCL = GetLCL(myTargetInfo, sourceValues);
 
-	timer->Stop();
+	aTimer.Stop();
 
-	mySubThreadedLogger->Info("LCL calculated in " + boost::lexical_cast<string>(timer->GetTime()) + " ms");
+	mySubThreadedLogger->Info("LCL calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
 
 	mySubThreadedLogger->Debug("LCL temperature: " + ::PrintMean(LCL.first));
 	mySubThreadedLogger->Debug("LCL pressure: " + ::PrintMean(LCL.second));
@@ -322,13 +322,13 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	// 3.
 
-	timer->Start();
+	aTimer.Start();
 
 	auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
 
-	timer->Stop();
+	aTimer.Stop();
 
-	mySubThreadedLogger->Info("LFC calculated in " + boost::lexical_cast<string>(timer->GetTime()) + " ms");
+	mySubThreadedLogger->Info("LFC calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
 
 	if (LFC.first.empty())
 	{
@@ -351,7 +351,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	// 4. & 5.
 
-	timer->Start();
+	aTimer.Start();
 
 	auto capeInfo = make_shared<info>(*myTargetInfo);
 	boost::thread t1(&cape::GetCAPE, this, boost::ref(capeInfo), LFC, ELTParam, ELPParam, ELZParam, CAPEParam,
@@ -364,9 +364,9 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	t1.join();
 	t2.join();
 
-	timer->Stop();
+	aTimer.Stop();
 
-	mySubThreadedLogger->Info("CAPE and CIN calculated in " + boost::lexical_cast<string>(timer->GetTime()) + " ms");
+	mySubThreadedLogger->Info("CAPE and CIN calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
 
 	// Sometimes CAPE area is infinitely small -- so that CAPE is zero but LFC is found. In this case set all derivative
 	// parameters missing.

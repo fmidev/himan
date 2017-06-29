@@ -57,6 +57,8 @@ private:
 	bool StoreToDatabase();
 	bool StoreToFile();
 
+	timer itsTimer;
+
 	std::atomic<size_t> itsValueCount;
 	std::atomic<size_t> itsMissingValueCount;
 	std::atomic<size_t> itsFetchingTime;
@@ -66,7 +68,6 @@ private:
 	std::atomic<size_t> itsCacheMissCount;
 	std::atomic<size_t> itsCacheHitCount;
 
-	std::unique_ptr<timer> itsTimer;
 	short itsUsedThreadCount;
 	short itsUsedGPUCount;
 };

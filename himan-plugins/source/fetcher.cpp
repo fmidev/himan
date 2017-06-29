@@ -7,7 +7,6 @@
 #include "interpolate.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
-#include "timer_factory.h"
 #include "util.h"
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
@@ -203,11 +202,11 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
                                        level requestedLevel, param requestedParam, forecast_type requestedType,
                                        bool readPackedData, bool suppressLogging)
 {
-	unique_ptr<timer> t = unique_ptr<timer>(timer_factory::Instance()->GetTimer());
+	timer t;
 
 	if (config->StatisticsEnabled())
 	{
-		t->Start();
+		t.Start();
 	}
 
 	// Check sticky param cache first
@@ -253,9 +252,9 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (config->StatisticsEnabled())
 	{
-		t->Stop();
+		t.Stop();
 
-		config->Statistics()->AddToFetchingTime(t->GetTime());
+		config->Statistics()->AddToFetchingTime(t.GetTime());
 	}
 
 	/*

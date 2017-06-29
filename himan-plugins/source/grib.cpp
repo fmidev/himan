@@ -12,7 +12,6 @@
 #include "producer.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
-#include "timer_factory.h"
 #include "util.h"
 #include <boost/filesystem.hpp>
 
@@ -600,8 +599,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
 	// Write only that data which is currently set at descriptors
 
-	auto aTimer = timer_factory::Instance()->GetTimer();
-	aTimer->Start();
+	timer aTimer;
+	aTimer.Start();
 
 	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
 	{
@@ -902,8 +901,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	itsGrib->Message().Write(outputFile, appendToFile);
 
-	aTimer->Stop();
-	long duration = aTimer->GetTime();
+	aTimer.Stop();
+	long duration = aTimer.GetTime();
 
 	long bytes = boost::filesystem::file_size(outputFile);
 
@@ -1900,8 +1899,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		return infos;
 	}
 
-	auto aTimer = timer_factory::Instance()->GetTimer();
-	aTimer->Start();
+	timer aTimer;
+	aTimer.Start();
 
 	while (itsGrib->NextMessage())
 	{
@@ -1913,13 +1912,13 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 			infos.push_back(newInfo);
 			newInfo->First();
 
-			aTimer->Stop();
+			aTimer.Stop();
 
 			if (!readIfNotMatching) break;  // We found what we were looking for
 		}
 	}
 
-	long duration = aTimer->GetTime();
+	long duration = aTimer.GetTime();
 	long bytes = boost::filesystem::file_size(theInputFile);
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
@@ -1948,8 +1947,8 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 		return infos;
 	}
 
-	auto aTimer = timer_factory::Instance()->GetTimer();
-	aTimer->Start();
+	timer aTimer;
+	aTimer.Start();
 
 	// TODO need to check what happens when multiple idx files or idx + grib files are provided as input.
 	if (itsGrib->Message(OptionsToKeys(options)))
@@ -1961,9 +1960,9 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 			newInfo->First();
 		}
 	}
-	aTimer->Stop();
+	aTimer.Stop();
 
-	long duration = aTimer->GetTime();
+	long duration = aTimer.GetTime();
 
 	itsLogger->Debug("Read message using grib index file '" + theInputFile + "' in " +
 	                 boost::lexical_cast<std::string>(duration) + " ms");

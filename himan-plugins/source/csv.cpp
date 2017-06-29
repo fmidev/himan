@@ -18,8 +18,8 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 		return false;
 	}
 
-	auto aTimer = timer_factory::Instance()->GetTimer();
-	aTimer->Start();
+	timer aTimer;
+	aTimer.Start();
 
 	ofstream out(theOutputFile);
 
@@ -58,9 +58,9 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 		out.flush();
 	}
 
-	aTimer->Stop();
+	aTimer.Stop();
 
-	double duration = static_cast<double>(aTimer->GetTime());
+	double duration = static_cast<double>(aTimer.GetTime());
 	double bytes = static_cast<double>(boost::filesystem::file_size(theOutputFile));
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
