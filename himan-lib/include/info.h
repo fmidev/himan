@@ -701,7 +701,7 @@ class info
 	void ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize);
 
 	/**
-	 * @brief Return running index nuimber when given relative index for each
+	 * @brief Return running index number when given relative index for each
 	 * three dimension
 	 *
 	 * @param timeIndex x-dimension index
