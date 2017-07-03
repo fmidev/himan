@@ -192,11 +192,11 @@ bool configuration::UseCache() const { return itsUseCache; }
 void configuration::UseCache(bool theUseCache) { itsUseCache = theUseCache; }
 void configuration::SourceGeomNames(std::vector<std::string> theNames) { itsSourceGeomNames = theNames; }
 std::vector<std::string> configuration::SourceGeomNames() const { return itsSourceGeomNames; }
-void configuration::CudaDeviceCount(short theCudaDeviceCount) { itsCudaDeviceCount = theCudaDeviceCount; }
+void configuration::CudaDeviceCount(int theCudaDeviceCount) { itsCudaDeviceCount = theCudaDeviceCount; }
 bool configuration::HaveCuda() const { return (itsCudaDeviceCount > 0); }
-short configuration::CudaDeviceCount() const { return itsCudaDeviceCount; }
-short configuration::CudaDeviceId() const { return itsCudaDeviceId; }
-void configuration::CudaDeviceId(short theCudaDeviceId) { itsCudaDeviceId = theCudaDeviceId; }
+int configuration::CudaDeviceCount() const { return itsCudaDeviceCount; }
+int configuration::CudaDeviceId() const { return itsCudaDeviceId; }
+void configuration::CudaDeviceId(int theCudaDeviceId) { itsCudaDeviceId = theCudaDeviceId; }
 int configuration::ForecastStep() const { return itsForecastStep; }
 HPDatabaseType configuration::DatabaseType() const { return itsDatabaseType; }
 void configuration::DatabaseType(HPDatabaseType theDatabaseType) { itsDatabaseType = theDatabaseType; }
