@@ -13,7 +13,7 @@ namespace himan
 {
 class plugin_container
 {
-public:
+   public:
 	plugin_container();
 	plugin_container(void* theLibraryHandle, std::shared_ptr<plugin::himan_plugin> thePlugin);
 
@@ -27,7 +27,7 @@ public:
 
 	void* Library();
 
-private:
+   private:
 	std::shared_ptr<plugin::himan_plugin> itsPlugin;
 	void* itsLibraryHandle;
 };

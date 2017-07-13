@@ -23,7 +23,7 @@ namespace plugin
 
 class split_sum : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	split_sum();
 
 	inline virtual ~split_sum() {}
@@ -35,10 +35,10 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::split_sum"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 2); }
-protected:
+   protected:
 	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
 
-private:
+   private:
 	void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 	void DoParam(std::shared_ptr<info> myTargetInfo, std::string myParamName, std::string threadIndex) const;
 
@@ -72,7 +72,6 @@ private:
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<himan_plugin>(new split_sum()); }
-
 }  // namespace plugin
 }  // namespace himan
 

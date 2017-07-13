@@ -66,7 +66,7 @@ struct lcl_t
 	double Q;
 
 	CUDA_DEVICE
-	lcl_t() : T(himan::kFloatMissing), P(himan::kFloatMissing), Q(himan::kFloatMissing) {}
+	lcl_t() : T(himan::getkFloatMissing()), P(himan::getkFloatMissing()), Q(himan::getkFloatMissing()) {}
 	CUDA_DEVICE
 	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q) {}
 };
@@ -728,9 +728,9 @@ inline double himan::metutil::E_(double R, double P)
 CUDA_DEVICE
 inline double himan::metutil::DryLift_(double P, double T, double targetP)
 {
-	if (T == kFloatMissing || P == kFloatMissing || targetP == kFloatMissing || targetP >= P)
+	if (iskFloatMissing(T) || iskFloatMissing(P) || iskFloatMissing(targetP) || targetP >= P)
 	{
-		return kFloatMissing;
+		return getkFloatMissing();
 	}
 
 	// Sanity checks
@@ -782,9 +782,9 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 CUDA_DEVICE
 inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 {
-	if (T == kFloatMissing || P == kFloatMissing || targetP >= P)
+	if (iskFloatMissing(T) || iskFloatMissing(P) || targetP >= P)
 	{
-		return kFloatMissing;
+		return getkFloatMissing();
 	}
 
 	// Sanity checks
@@ -806,13 +806,13 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	const double Pstep = 100;  // Pa; do not increase this as quality of results is weakened
 	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
-	double value = kFloatMissing;
+	double value = getkFloatMissing();
 
 	while (++i < maxIter)
 	{
 		Tint = T0 - metutil::Gammaw_(Pint, Tint) * Pstep;
 
-		assert(Tint != kFloatMissing);
+		assert(Tint == Tint);
 
 		Pint -= Pstep;
 
@@ -839,7 +839,7 @@ inline double Wobf(double T)
 	// "Wobus function" is a polynomial approximation of moist lift
 	// process. It is called from MoistLiftA_().
 
-	double ret = himan::kFloatMissing;
+	double ret = himan::getkFloatMissing();
 
 	T -= 20;
 
@@ -866,9 +866,9 @@ inline double Wobf(double T)
 CUDA_DEVICE
 inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 {
-	if (P == kFloatMissing || T == kFloatMissing || targetP == kFloatMissing || P < targetP)
+	if (iskFloatMissing(T) || iskFloatMissing(P) || iskFloatMissing(targetP) || targetP >= P)
 	{
-		return kFloatMissing;
+		return getkFloatMissing();
 	}
 
 	using namespace himan::constants;
@@ -929,8 +929,8 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	double Q = constants::kEp * E0 / P;
 	double C = T / pow(E0, constants::kRd_div_Cp);
 
-	double TLCL = kFloatMissing;
-	double PLCL = kFloatMissing;
+	double TLCL = getkFloatMissing();
+	double PLCL = getkFloatMissing();
 
 	double Torig = T;
 	double Porig = P;
@@ -948,8 +948,10 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 			TLCL = T;
 			PLCL = pow((TLCL / Torig), (1 / constants::kRd_div_Cp)) * P;
 
-			ret.P = PLCL * 100;                                      // Pa
-			ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL;  // K
+			ret.P = PLCL * 100;  // Pa
+
+			ret.T = (iskFloatMissing(TLCL)) ? getkFloatMissing() : TLCL;  // K
+
 			ret.Q = Q;
 		}
 		else
@@ -961,7 +963,7 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 	// Fallback to slower method
 
-	if (ret.P == kFloatMissing)
+	if (!(ret.P == ret.P))
 	{
 		T = Torig;
 		Tstep = 0.1;
@@ -979,8 +981,10 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 				TLCL = T;
 				PLCL = pow(TLCL / Torig, (1 / constants::kRd_div_Cp)) * Porig;
 
-				ret.P = PLCL * 100;                                      // Pa
-				ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL;  // K
+				ret.P = PLCL * 100;  // Pa
+
+				ret.T = (iskFloatMissing(TLCL)) ? getkFloatMissing() : TLCL;  // K
+
 				ret.Q = Q;
 
 				break;
@@ -996,7 +1000,7 @@ inline lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 {
 	lcl_t ret;
 
-	if (P == kFloatMissing || T == kFloatMissing || TD == kFloatMissing)
+	if (iskFloatMissing(P) || iskFloatMissing(T) || iskFloatMissing(TD))
 	{
 		return ret;
 	}
@@ -1025,9 +1029,9 @@ inline double himan::metutil::Es_(double T)
 
 	double Es;
 
-	if (T == kFloatMissing)
+	if (iskFloatMissing(T))
 	{
-		return kFloatMissing;
+		return getkFloatMissing();
 	}
 
 	T -= himan::constants::kKelvin;
@@ -1051,9 +1055,9 @@ inline double himan::metutil::Gammas_(double P, double T)
 {
 	// Sanity checks
 
-	if (P == kFloatMissing || T == kFloatMissing)
+	if (iskFloatMissing(P) || iskFloatMissing(T))
 	{
-		return kFloatMissing;
+		return getkFloatMissing();
 	}
 
 	assert(P > 10000);
@@ -1077,9 +1081,9 @@ inline double himan::metutil::Gammaw_(double P, double T)
 {
 	// Sanity checks
 
-	if (P == kFloatMissing || T == kFloatMissing)
+	if (iskFloatMissing(P) || iskFloatMissing(T))
 	{
-		return kFloatMissing;
+		return getkFloatMissing();
 	}
 
 	assert(P > 1000);
@@ -1127,11 +1131,11 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 {
 	lcl_t LCL = LCL_(50000, T500m, TD500m);
 
-	double li = kFloatMissing;
+	double li = getkFloatMissing();
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (LCL.P == kFloatMissing)
+	if (!(LCL.P == LCL.P))
 	{
 		return li;
 	}
@@ -1143,7 +1147,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 		double dryT = DryLift_(P500m, T500m, TARGET_PRESSURE);
 
-		if (dryT != kFloatMissing)
+		if (dryT == dryT)
 		{
 			li = T500 - dryT;
 		}
@@ -1154,7 +1158,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 		double wetT = Lift_(P500m, T500m, TD500m, TARGET_PRESSURE);
 
-		if (wetT != kFloatMissing)
+		if (wetT == wetT)
 		{
 			li = T500 - wetT;
 		}
@@ -1168,11 +1172,11 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 {
 	lcl_t LCL = metutil::LCL_(85000, T850, TD850);
 
-	double si = kFloatMissing;
+	double si = getkFloatMissing();
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (LCL.P == kFloatMissing)
+	if (!(LCL.P == LCL.P))
 	{
 		return si;
 	}
@@ -1184,7 +1188,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 		double dryT = DryLift_(85000, T850, TARGET_PRESSURE);
 
-		if (dryT != kFloatMissing)
+		if (dryT == dryT)
 		{
 			si = T500 - dryT;
 		}
@@ -1195,7 +1199,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 		double wetT = Lift_(85000, T850, TD850, TARGET_PRESSURE);
 
-		if (wetT != kFloatMissing)
+		if (wetT == wetT)
 		{
 			si = T500 - wetT;
 		}
@@ -1247,7 +1251,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	assert(thetaE > 0);
 	assert(P > 1000);
 
-	if (thetaE == kFloatMissing) return kFloatMissing;
+	if (iskFloatMissing(thetaE)) return getkFloatMissing();
 
 	using namespace himan::constants;
 
@@ -1273,7 +1277,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 
 	const double Dp = 1 / (0.1859 * p / p0 + 0.6512);
 
-	double Tw = kFloatMissing;
+	double Tw = getkFloatMissing();
 
 	if (ratio > Dp)
 	{
@@ -1349,7 +1353,7 @@ inline double himan::metutil::ThetaW_(double thetaE, double P)
 {
 	assert(P > 1000);
 
-	if (thetaE == kFloatMissing) return kFloatMissing;
+	if (iskFloatMissing(thetaE)) return getkFloatMissing();
 
 	double thetaW = thetaE;
 

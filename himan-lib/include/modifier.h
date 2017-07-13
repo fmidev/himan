@@ -110,7 +110,7 @@ class modifier
 inline std::ostream& operator<<(std::ostream& file, const modifier& ob) { return ob.Write(file); }
 inline bool modifier::IsMissingValue(double theValue) const
 {
-	if (theValue == kFloatMissing)
+	if (iskFloatMissing(theValue))
 	{
 		return true;
 	}

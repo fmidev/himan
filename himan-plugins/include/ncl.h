@@ -22,7 +22,7 @@ namespace plugin
 
 class ncl : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	ncl();
 
 	inline virtual ~ncl() {}
@@ -34,7 +34,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::ncl"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	bool CountValues(const std::shared_ptr<himan::info> values);
 	int itsBottomLevel;
@@ -45,7 +45,6 @@ private:
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<ncl>(new ncl()); }
-
 }  // namespace plugin
 }  // namespace himan
 

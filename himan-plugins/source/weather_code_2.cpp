@@ -114,9 +114,7 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 		// output parameter
 		double weather_symbol;
 
-		if (cloud == kFloatMissing || totalPrec == kFloatMissing || totalCC == kFloatMissing ||
-		    lowCC == kFloatMissing || medCC == kFloatMissing || highCC == kFloatMissing || fog == kFloatMissing ||
-		    T0m == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing || cloud == kFloatMissing)
+		if (IsMissingValue({cloud, totalPrec, totalCC, lowCC, medCC, highCC, fog, T0m, kIndex, T850, cloud}))
 		{
 			continue;
 		}
@@ -298,10 +296,10 @@ double weather_code_2::thunder_prob(double kIndex, double cloud)
 	{
 		if (kIndex >= 37)
 			thunder_prob = 60;  // heavy thunder, set thunder probability to a value over 50% (to be replaced by a more
-			                    // scientific way to determine thunder probability in the future)
+		                        // scientific way to determine thunder probability in the future)
 		else if (kIndex >= 27)
 			thunder_prob = 40;  // thunder, set thunder probability to a value between 30% and 50% (to be replaced by a
-			                    // more scientific way to determine thunder probability in the future)
+		                        // more scientific way to determine thunder probability in the future)
 	}
 
 	return thunder_prob;

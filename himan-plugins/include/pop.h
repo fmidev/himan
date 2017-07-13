@@ -15,7 +15,7 @@ namespace plugin
 {
 class pop : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	pop();
 
 	inline virtual ~pop() {}
@@ -27,7 +27,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::pop"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
 	std::string itsECEPSGeom;

@@ -143,7 +143,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double stratN = tup.get<4>();
 		double stratH = tup.get<5>();
 
-		if (RR == kFloatMissing || RH == kFloatMissing)
+		if (iskFloatMissing(RR) || iskFloatMissing(RH))
 		{
 			continue;
 		}
@@ -194,9 +194,9 @@ double VisibilityInRain(double stN, double stH, double RR, double RH, int PF)
 	// Näkyvyyden utuisuuskerroin sateessa matalan sumupilvikorkeuden perusteella [0,68...1, kun stH=12...152m]
 	// Yli 152m (500ft) korkeudella oleva sumupilvi ei siis huononna näkyvyyttä sateessa
 
-	const double stHpre = (stH != kFloatMissing && stH < 152) ? pow((stH / 152), 0.15) : 1;
+	const double stHpre = (!iskFloatMissing(stH) && stH < 152) ? pow((stH / 152), 0.15) : 1;
 
-	assert(PF != kFloatMissing);
+	assert(!iskFloatMissing(PF));
 
 	switch (PF)
 	{
@@ -244,13 +244,13 @@ double VisibilityInMist(double stN, double stH, double RR, double RH)
 	const double stNmist = 75. / (stN + 10);
 
 	// Nakyvyyden utuisuuskerroin udussa/sumussa sumupilvikorkeuden perusteella [ 0,47...1, kun par500 = 50...999ft]
-	const double stHmist = (stH != kFloatMissing && stH < 305) ? pow((stH / 0.3048 / 1000), 0.25) : 1;
+	const double stHmist = (!iskFloatMissing(stH) && stH < 305) ? pow((stH / 0.3048 / 1000), 0.25) : 1;
 
 	// Nakyvyys udussa/sumussa, lasketaan myos heikossa sateessa (tarkoituksena tasoittaa suuria
 	// nakyvyysgradientteja sateen reunalla)
 	// (ehka syyta rajata vain tilanteisiin, jossa sateen perusteella saatu nakyvyys oli viela >8000?)
 
-	if ((RR < 0.5 || RR == kFloatMissing) && RH > 80)
+	if ((RR < 0.5 || iskFloatMissing(RR)) && RH > 80)
 	{
 		// Näkyvyys udussa/sumussa
 		// Yksinkertaistetty kaava, eli lasketaan samalla tavalla riippumatta siitä, onko pakkasta vai ei

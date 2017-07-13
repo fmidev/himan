@@ -15,9 +15,9 @@
 #ifndef PARAM_H
 #define PARAM_H
 
-#include "serialization.h"
 #include "aggregation.h"
 #include "himan_common.h"
+#include "serialization.h"
 
 namespace himan
 {

@@ -146,9 +146,9 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double cp = 1.0056e3 + 0.017766 * T_C;    // Calculate specific heat capacity, linear approximation
 		double rho = PG / (constants::kRd * TG);  // Calculate density
 
-		if (Z > MixHgt || Frvel == kFloatMissing || MoninObukhov == kFloatMissing || MixHgt == kFloatMissing ||
-		    SHF == kFloatMissing || LHF == kFloatMissing || Z == kFloatMissing || TG == kFloatMissing ||
-		    PG == kFloatMissing)
+		if (Z > MixHgt || iskFloatMissing(Frvel) || iskFloatMissing(MoninObukhov) || iskFloatMissing(MixHgt) ||
+		    iskFloatMissing(SHF) || iskFloatMissing(LHF) || iskFloatMissing(Z) || iskFloatMissing(TG) ||
+		    iskFloatMissing(PG))
 		{
 			TKE = kFloatMissing;
 		}

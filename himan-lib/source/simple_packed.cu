@@ -5,10 +5,11 @@
 
 #include "simple_packed.h"
 
-#include "cuda_helper.h"
 #include <NFmiGribPacking.h>
 #include <cub/cub.cuh>
 #include <grib_api.h>
+
+#include "cuda_helper.h"
 
 using namespace himan;
 
@@ -438,7 +439,7 @@ __device__ void simple_packed_util::UnpackFullBytes(unsigned char* __restrict__ 
 
 		if (bm == 0)
 		{
-			d_u[idx] = kFloatMissing;
+			d_u[idx] = getkFloatMissing();
 			value_found = 0;
 		}
 		else
@@ -491,7 +492,7 @@ __device__ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict_
 
 		if (bm == 0)
 		{
-			d_u[idx] = kFloatMissing;
+			d_u[idx] = getkFloatMissing();
 			value_found = 0;
 		}
 		else

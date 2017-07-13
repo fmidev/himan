@@ -17,7 +17,7 @@ class logger;
 
 class logger_factory
 {
-public:
+   public:
 	static logger_factory* Instance();
 
 	logger_factory(const logger_factory& other) = delete;
@@ -29,7 +29,7 @@ public:
 	void DebugState(HPDebugState theDebugState);
 	HPDebugState DebugState();
 
-private:
+   private:
 	logger_factory();
 
 	HPDebugState itsDebugStateMain;

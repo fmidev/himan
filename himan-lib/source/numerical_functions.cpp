@@ -19,6 +19,7 @@ using namespace himan;
 
 using namespace numerical_functions;
 
+#if 0
 integral::integral() : itsComplete(8, true) {}
 void integral::Params(std::vector<param> theParams) { itsParams = theParams; }
 void integral::Function(std::function<std::valarray<double>(const std::vector<std::valarray<double>>&)> theFunction)
@@ -88,7 +89,7 @@ void integral::Evaluate()
 		auto missingValueMaskFunction = std::valarray<bool>(false, heights->Data().Size());
 		for (unsigned int i = 0; i < paramsData.size(); i++)
 		{
-			missingValueMaskFunction = (paramsData[i] == kFloatMissing || missingValueMaskFunction);
+			missingValueMaskFunction = (iskFloatMissing(paramsData[i]) || missingValueMaskFunction);
 		}
 
 		// evaluate integration function
@@ -107,7 +108,7 @@ void integral::Evaluate()
 
 		// update mask of missing values in the result of the integral
 		missingValueMask =
-		    (currentLevelHeight == kFloatMissing || currentLevelValue == kFloatMissing || missingValueMask);
+		    (iskFloatMissing(currentLevelHeight) || isMissing(currentLevelValue) || missingValueMask);
 		// move data from current level to previous level
 
 		if (lvl == itsLowestLevel)
@@ -160,7 +161,7 @@ void integral::Evaluate()
 		                                    std::valarray<double>(currentLevelHeight[insideBoundsMask]));
 
 		// serial version of trapezoideal integration
-		/*
+		//
 		for (size_t i=0; i<paramInfos.back()->Data().Size(); ++i)
 		{
 
@@ -193,7 +194,7 @@ void integral::Evaluate()
 		currentLevelHeight[i]);
 		        }
 
-		}*/
+		}
 
 		// move data from current level to previous level at the end of the integration step
 		previousLevelHeight = std::move(currentLevelHeight);
@@ -238,7 +239,7 @@ void integral::SetLevelLimits()
 	double max_value = itsHeightInMeters ? itsUpperBound.max() : itsUpperBound.min();
 	double min_value = itsHeightInMeters ? itsLowerBound.min() : itsLowerBound.max();
 
-	if (max_value == kFloatMissing || min_value == kFloatMissing)
+	if (iskFloatMissing(max_value) || isMissing(min_value))
 	{
 		// itsLogger->Error("Min or max values of given heights are missing");
 		throw kFileDataNotFound;
@@ -415,6 +416,7 @@ std::pair<level, level> integral::LevelForHeight(const producer& prod, double he
 
 	return std::make_pair<level, level>(level(kHybrid, newlowest), level(kHybrid, newhighest));
 }
+#endif
 
 matrix<double> numerical_functions::Filter2D(const matrix<double>& A, const matrix<double>& B)
 {
@@ -686,7 +688,7 @@ himan::matrix<double> numerical_functions::Max2D(const himan::matrix<double>& A,
 					const double a = A.At(ii, jj, 0);
 					const double b = B.At(mm, nn, 0);
 
-					if (a != kFloatMissing && b != 0)
+					if (!iskFloatMissing(a) && b != 0)
 					{
 						max_value = fmax(a * b, max_value);
 					}
@@ -723,7 +725,7 @@ himan::matrix<double> numerical_functions::Max2D(const himan::matrix<double>& A,
 						const double a = A.At(ii, jj, 0);
 						const double b = B.At(mm, nn, 0);
 
-						if (a != kFloatMissing && b != 0)
+						if (!iskFloatMissing(a) && b != 0)
 						{
 							max_value = fmax(a * b, max_value);
 						}
@@ -760,7 +762,7 @@ himan::matrix<double> numerical_functions::Max2D(const himan::matrix<double>& A,
 						const double a = A.At(ii, jj, 0);
 						const double b = B.At(mm, nn, 0);
 
-						if (a != kFloatMissing && b != 0)
+						if (!iskFloatMissing(a) && b != 0)
 						{
 							max_value = fmax(a * b, max_value);
 						}
@@ -797,7 +799,7 @@ himan::matrix<double> numerical_functions::Max2D(const himan::matrix<double>& A,
 						const double a = A.At(ii, jj, 0);
 						const double b = B.At(mm, nn, 0);
 
-						if (a != kFloatMissing && b != 0)
+						if (!iskFloatMissing(a) && b != 0)
 						{
 							max_value = fmax(a * b, max_value);
 						}
@@ -833,7 +835,7 @@ himan::matrix<double> numerical_functions::Max2D(const himan::matrix<double>& A,
 						const double a = A.At(ii, jj, 0);
 						const double b = B.At(mm, nn, 0);
 
-						if (a != kFloatMissing && b != 0)
+						if (!iskFloatMissing(a) && b != 0)
 						{
 							max_value = fmax(a * b, max_value);
 						}
@@ -890,7 +892,7 @@ himan::matrix<double> numerical_functions::Min2D(const himan::matrix<double>& A,
 					const double a = A.At(ii, jj, 0);
 					const double b = B.At(mm, nn, 0);
 
-					if (a != kFloatMissing && b != 0)
+					if (!iskFloatMissing(a) && b != 0)
 					{
 						min_value = fmin(a * b, min_value);
 					}
@@ -927,7 +929,7 @@ himan::matrix<double> numerical_functions::Min2D(const himan::matrix<double>& A,
 						const double a = A.At(ii, jj, 0);
 						const double b = B.At(mm, nn, 0);
 
-						if (a != kFloatMissing && b != 0)
+						if (!iskFloatMissing(a) && b != 0)
 						{
 							min_value = fmin(a * b, min_value);
 						}
@@ -964,7 +966,7 @@ himan::matrix<double> numerical_functions::Min2D(const himan::matrix<double>& A,
 						const double a = A.At(ii, jj, 0);
 						const double b = B.At(mm, nn, 0);
 
-						if (a != kFloatMissing && b != 0)
+						if (!iskFloatMissing(a) && b != 0)
 						{
 							min_value = fmin(a * b, min_value);
 						}
@@ -1001,7 +1003,7 @@ himan::matrix<double> numerical_functions::Min2D(const himan::matrix<double>& A,
 						const double a = A.At(ii, jj, 0);
 						const double b = B.At(mm, nn, 0);
 
-						if (a != kFloatMissing && b != 0)
+						if (!iskFloatMissing(a) && b != 0)
 						{
 							min_value = fmin(a * b, min_value);
 						}
@@ -1037,7 +1039,7 @@ himan::matrix<double> numerical_functions::Min2D(const himan::matrix<double>& A,
 						const double a = A.At(ii, jj, 0);
 						const double b = B.At(mm, nn, 0);
 
-						if (a != kFloatMissing && b != 0)
+						if (!iskFloatMissing(a) && b != 0)
 						{
 							min_value = fmin(a * b, min_value);
 						}

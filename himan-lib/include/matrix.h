@@ -130,7 +130,7 @@ class matrix
 		{
 			double d = theValues[i];
 
-			if (d == kFloatMissing)
+			if (IsMissing(i))
 			{
 				missing++;
 				continue;
@@ -177,7 +177,7 @@ class matrix
 			{
 				double val = theValues[j];
 
-				if (val == itsMissingValue) continue;
+				if (IsMissing(j)) continue;
 
 				if (val >= binmin && val < binmax)
 				{
@@ -342,7 +342,14 @@ class matrix
 	void Fill(T fillValue) { std::fill(itsData.begin(), itsData.end(), fillValue); }
 	// Only used for calculating statistics in PrintFloatData()
 
-	void MissingValue(T theMissingValue) { itsMissingValue = theMissingValue; }
+	void MissingValue(T theMissingValue)
+	{
+		for (size_t i = 0; i < itsData.size(); i++)
+		{
+			itsData[i] = IsMissing(i) ? theMissingValue : itsData[i];
+		}
+		itsMissingValue = theMissingValue;
+	}
 	T MissingValue() const { return itsMissingValue; }
 	/**
 	 * @brief Clear contents of matrix (set size = 0)
@@ -360,7 +367,7 @@ class matrix
 	bool IsMissing(size_t theIndex) const
 	{
 		assert(itsData.size() > theIndex);
-		return (itsData[theIndex] == itsMissingValue);
+		return (iskFloatMissing(itsData[theIndex]) || itsData[theIndex] == itsMissingValue);
 	}
 
 	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const { return IsMissing(Index(theX, theY, theZ)); }

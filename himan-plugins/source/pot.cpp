@@ -57,13 +57,6 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 			}
 		}
 	}
-
-	// get rid of kFloatMissings
-	for (auto& anInfo : itsInfos)
-	{
-		replace(anInfo->Data().Values().begin(), anInfo->Data().Values().end(), kFloatMissing,
-		        std::nan("kFloatMissing"));
-	}
 }
 
 void time_series::Param(param theParam) { itsParam = theParam; }
@@ -335,11 +328,6 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 
 		POT = PoLift * PoThermoDyn * 100;
-
-		if (!isfinite(POT))
-		{
-			POT = kFloatMissing;  // Bring missing values back
-		}
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +

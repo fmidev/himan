@@ -254,8 +254,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 			double value = kFloatMissing;
 
-			if (T850 == kFloatMissing || T700 == kFloatMissing || T500 == kFloatMissing || TD850 == kFloatMissing ||
-			    TD700 == kFloatMissing)
+			if (iskFloatMissing(T850) || iskFloatMissing(T700) || iskFloatMissing(T500) || iskFloatMissing(TD850) ||
+			    iskFloatMissing(TD700))
 			{
 				continue;
 			}
@@ -284,11 +284,11 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				double TD500m = TD500mVector[locationIndex];
 				double P500m = P500mVector[locationIndex];
 
-				assert(T500m != kFloatMissing);
-				assert(TD500m != kFloatMissing);
-				assert(P500m != kFloatMissing);
+				assert(!iskFloatMissing(T500m));
+				assert(!iskFloatMissing(TD500m));
+				assert(!iskFloatMissing(P500m));
 
-				if (T500m != kFloatMissing && TD500m != kFloatMissing && P500m != kFloatMissing)
+				if (!iskFloatMissing(T500m) && !iskFloatMissing(TD500m) && iskFloatMissing(P500m))
 				{
 					value = metutil::LI_(T500, T500m, TD500m, P500m);
 
@@ -310,13 +310,13 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				double U06 = U06Vector[locationIndex];
 				double V06 = V06Vector[locationIndex];
 
-				assert(U01 != kFloatMissing);
-				assert(V01 != kFloatMissing);
+				assert(!iskFloatMissing(U01));
+				assert(!iskFloatMissing(V01));
 
-				assert(U06 != kFloatMissing);
-				assert(V06 != kFloatMissing);
+				assert(!iskFloatMissing(U06));
+				assert(!iskFloatMissing(V06));
 
-				if (U01 != kFloatMissing && V01 != kFloatMissing)
+				if (!iskFloatMissing(U01) && !iskFloatMissing(V01))
 				{
 					value = metutil::BulkShear_(U01, V01);
 
@@ -324,7 +324,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 					myTargetInfo->Value(value);
 				}
 
-				if (U06 != kFloatMissing && V01 != kFloatMissing)
+				if (!iskFloatMissing(U06) && !iskFloatMissing(V01))
 				{
 					value = metutil::BulkShear_(U06, V06);
 
@@ -340,10 +340,10 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				double Uid = UidVector[locationIndex];
 				double Vid = VidVector[locationIndex];
 
-				assert(Uid != kFloatMissing);
-				assert(Vid != kFloatMissing);
+				assert(!iskFloatMissing(Uid));
+				assert(!iskFloatMissing(Vid));
 
-				if (Uid != kFloatMissing && Vid != kFloatMissing)
+				if (!iskFloatMissing(Uid) && !iskFloatMissing(Vid))
 				{
 				}
 			}
@@ -367,7 +367,7 @@ void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_tim
 #ifdef DEBUG
 	for (size_t i = 0; i < result.size(); i++)
 	{
-		assert(result[i] != kFloatMissing);
+		assert(!iskFloatMissing(result[i]));
 	}
 #endif
 }
@@ -475,7 +475,7 @@ bool stability::GetLISourceData(const shared_ptr<info>& myTargetInfo, vector<dou
 
 	P500mVector = h->VerticalAverage(PParam, 0., 500.);
 
-	assert(P500mVector[0] != kFloatMissing);
+	assert(!iskFloatMissing(P500mVector[0]));
 
 	if (P500mVector[0] < 1500)
 	{
@@ -531,9 +531,9 @@ vector<double> Shear(shared_ptr<const plugin_configuration> conf, const forecast
 
 #ifdef YES_WE_HAVE_GCC_WHICH_SUPPORTS_LAMBDAS
 	transform(lowerValues.begin(), lowerValues.end(), upperValues.begin(), back_inserter(U),
-	          [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
+	          [](double l, double u) { return (iskFloatMissing(u) || iskFloatMissing(l)) ? kFloatMissing : u - l; });
 	transform(lowerValues.begin(), lowerValues.end(), upperValues.begin(), back_inserter(V),
-	          [](double l, double u) { return (u == kFloatMissing || l == kFloatMissing) ? kFloatMissing : u - l; });
+	          [](double l, double u) { return (iskFloatMissing(u) || iskFloatMissing(l)) ? kFloatMissing : u - l; });
 #else
 
 	for (size_t i = 0; i < lowerValues.size(); i++)
@@ -541,7 +541,7 @@ vector<double> Shear(shared_ptr<const plugin_configuration> conf, const forecast
 		double l = lowerValues[i];
 		double u = upperValues[i];
 
-		if (u == kFloatMissing || l == kFloatMissing)
+		if (iskFloatMissing(u) || iskFloatMissing(l))
 		{
 			continue;
 		}
@@ -617,7 +617,7 @@ bool stability::GetSRHSourceData(const shared_ptr<info>& myTargetInfo, vector<do
 		double u = Ushear[i];
 		double v = Vshear[i];
 
-		if (u == kFloatMissing || v == kFloatMissing)
+		if (iskFloatMissing(u) || iskFloatMissing(v))
 		{
 			continue;
 		}
@@ -640,7 +640,7 @@ void DumpVector(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		if (val == kFloatMissing)
+		if (iskFloatMissing(val))
 		{
 			missing++;
 			continue;

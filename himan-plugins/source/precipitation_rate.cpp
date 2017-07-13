@@ -98,7 +98,7 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 
 		// Calculate rain rate if mixing ratio is not missing. If mixing ratio is negative use 0.0 kg/kg instead.
 
-		if (Rho != kFloatMissing && Rain != kFloatMissing)
+		if (!iskFloatMissing(Rho) && !iskFloatMissing(Rain))
 		{
 			double rain_rate = pow(Rho * fmax(Rain, 0.0) * rain_rate_factor, rain_rate_exponent);
 
@@ -109,7 +109,7 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 
 		// Calculate solid precipitation rate if mixing ratios are not missing. If sum of mixing ratios is negative use
 		// 0.0 kg/kg instead.
-		if (Rho != kFloatMissing && Snow != kFloatMissing && Graupel != kFloatMissing)
+		if (!iskFloatMissing(Rho) && !iskFloatMissing(Snow) && !iskFloatMissing(Graupel))
 		{
 			double sprec_rate = pow(Rho * fmax((Snow + Graupel), 0.0) * snow_rate_factor, snow_rate_exponent);
 

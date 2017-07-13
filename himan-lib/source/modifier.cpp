@@ -20,7 +20,7 @@ const double DEFAULT_MINIMUM = -1e38;
 double ExactEdgeValue(double theHeight, double theValue, double thePreviousHeight, double thePreviousValue,
                       double theLimit)
 {
-	if (thePreviousValue == kFloatMissing || thePreviousHeight == kFloatMissing)
+	if (iskFloatMissing(thePreviousValue) || iskFloatMissing(thePreviousHeight))
 	{
 		return theValue;
 	}
@@ -81,7 +81,7 @@ void modifier::FindValue(const std::vector<double>& theFindValue)
 
 	for (size_t i = 0; i < itsFindValue.size(); i++)
 	{
-		if (itsFindValue[i] == kFloatMissing)
+		if (iskFloatMissing(itsFindValue[i]))
 		{
 			itsOutOfBoundHeights[i] = true;
 		}
@@ -101,7 +101,7 @@ void modifier::LowerHeight(const std::vector<double>& theLowerHeight)
 
 	for (size_t i = 0; i < itsLowerHeight.size(); i++)
 	{
-		if (itsLowerHeight[i] == kFloatMissing)
+		if (iskFloatMissing(itsLowerHeight[i]))
 		{
 			itsOutOfBoundHeights[i] = true;
 		}
@@ -121,7 +121,7 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 
 	for (size_t i = 0; i < itsUpperHeight.size(); i++)
 	{
-		if (itsUpperHeight[i] == kFloatMissing)
+		if (iskFloatMissing(itsUpperHeight[i]))
 		{
 			itsOutOfBoundHeights[i] = true;
 		}
@@ -183,7 +183,7 @@ bool modifier::Evaluate(double theValue, double theHeight, double thePreviousVal
 
 	assert((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit));
 
-	if (kFloatMissing == theHeight || kFloatMissing == theValue)
+	if (iskFloatMissing(theHeight) || iskFloatMissing(theValue))
 	{
 		return false;
 	}
@@ -236,7 +236,7 @@ void modifier::Process(const std::vector<double>& theData, const std::vector<dou
 		double thePreviousValue = itsPreviousValue[itsIndex];
 		double thePreviousHeight = itsPreviousHeight[itsIndex];
 
-		if (theValue != kFloatMissing && theHeight != kFloatMissing)
+		if (!iskFloatMissing(theValue) && !iskFloatMissing(theHeight))
 		{
 			// If vertical profile has gaps (missing values or heights)
 			// those should not be included as previous values because
@@ -305,12 +305,12 @@ bool modifier::EnteringHeightZone(double theHeight, double thePreviousHeight, do
 {
 	if (itsHeightInMeters)
 	{
-		return (thePreviousHeight != kFloatMissing && lowerLimit != DEFAULT_MINIMUM && theHeight >= lowerLimit &&
+		return (!iskFloatMissing(thePreviousHeight) && lowerLimit != DEFAULT_MINIMUM && theHeight >= lowerLimit &&
 		        thePreviousHeight < lowerLimit);
 	}
 	else
 	{
-		return (thePreviousHeight != kFloatMissing && lowerLimit != DEFAULT_MAXIMUM && theHeight <= lowerLimit &&
+		return (!iskFloatMissing(thePreviousHeight) && lowerLimit != DEFAULT_MAXIMUM && theHeight <= lowerLimit &&
 		        thePreviousHeight > lowerLimit);
 	}
 }
@@ -366,10 +366,7 @@ void modifier_max::Calculate(double theValue, double theHeight, double thePrevio
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
-	if (kFloatMissing == Value() || theValue > Value())
-	{
-		Value(theValue);
-	}
+	Value(iskFloatMissing(Value()) ? theValue : std::max(theValue, Value()));
 }
 
 /* ----------------- */
@@ -397,10 +394,7 @@ void modifier_min::Calculate(double theValue, double theHeight, double thePrevio
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
-	if (kFloatMissing == Value() || theValue < Value())
-	{
-		Value(theValue);
-	}
+	Value(iskFloatMissing(Value()) ? theValue : std::min(theValue, Value()));
 }
 
 /* ----------------- */
@@ -449,7 +443,7 @@ void modifier_maxmin::Calculate(double theValue, double theHeight, double thePre
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
-	if (kFloatMissing == Value())
+	if (iskFloatMissing(Value()))
 	{
 		// Set min == max
 		itsResult[itsIndex] = smaller;
@@ -466,7 +460,7 @@ void modifier_maxmin::Calculate(double theValue, double theHeight, double thePre
 
 void modifier_sum::Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight)
 {
-	if (kFloatMissing == Value())  // First value
+	if (iskFloatMissing(Value()))  // First value
 	{
 		Value(theValue);
 	}
@@ -490,7 +484,7 @@ void modifier_mean::Init(const std::vector<double>& theData, const std::vector<d
 
 void modifier_mean::Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight)
 {
-	if (kFloatMissing == Value())  // First value
+	if (iskFloatMissing(Value()))  // First value
 	{
 		Value(0);
 	}
@@ -531,7 +525,7 @@ void modifier_mean::Calculate(double theValue, double theHeight, double thePrevi
 		Value((upperValue + thePreviousValue) / 2 * (upperLimit - thePreviousHeight) + val);
 		itsRange[itsIndex] += upperLimit - thePreviousHeight;
 	}
-	else if (thePreviousHeight != kFloatMissing && thePreviousValue != kFloatMissing)
+	else if (!iskFloatMissing(thePreviousHeight) && !iskFloatMissing(thePreviousValue))
 	{
 		Value((thePreviousValue + theValue) / 2 * (theHeight - thePreviousHeight) + val);
 		itsRange[itsIndex] += theHeight - thePreviousHeight;
@@ -544,11 +538,11 @@ const std::vector<double>& modifier_mean::Result() const
 	{
 		double val = itsResult[i];
 
-		if (itsRange[i] == kFloatMissing)
+		if (iskFloatMissing(itsRange[i]))
 		{
 			itsResult[i] = kFloatMissing;
 		}
-		else if (!IsMissingValue(val) && fabs(itsRange[i]) > 0.0)
+		else if (!iskFloatMissing(val) && fabs(itsRange[i]) > 0.0)
 		{
 			itsResult[i] = val / itsRange[i];
 		}
@@ -575,7 +569,7 @@ void modifier_count::Calculate(double theValue, double theHeight, double thePrev
 
 	// First level
 
-	if (kFloatMissing == thePreviousValue)
+	if (iskFloatMissing(thePreviousValue))
 	{
 		return;
 	}
@@ -645,7 +639,7 @@ void modifier_findheight::Init(const std::vector<double>& theData, const std::ve
 
 		for (size_t i = 0; i < itsFindValue.size(); i++)
 		{
-			if (itsFindValue[i] == kFloatMissing)
+			if (iskFloatMissing(itsFindValue[i]))
 			{
 				itsOutOfBoundHeights[i] = true;
 			}
@@ -662,7 +656,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 
 	double findValue = itsFindValue[itsIndex];
 
-	if (itsFindNthValue > 0 && kFloatMissing != Value())
+	if (itsFindNthValue > 0 && !iskFloatMissing(Value()))
 	{
 		return;
 	}
@@ -694,7 +688,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 		double actualHeight =
 		    NFmiInterpolation::Linear(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
 
-		if (actualHeight != kFloatMissing)
+		if (!iskFloatMissing(actualHeight))
 		{
 			assert(!itsHeightInMeters || (actualHeight >= lowerLimit && actualHeight <= upperLimit));
 			assert(itsHeightInMeters || (actualHeight <= lowerLimit && actualHeight >= upperLimit));
@@ -737,7 +731,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
 	const double findValue = itsFindValue[itsIndex];
 
-	if (itsFindNthValue > 0 && kFloatMissing != Value())
+	if (itsFindNthValue > 0 && !iskFloatMissing(Value()))
 	{
 		return;
 	}
@@ -777,7 +771,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 	}
 
 	// Entering area
-	if (theValue > findValue && (thePreviousValue < findValue || thePreviousValue == kFloatMissing))
+	if (theValue > findValue && (thePreviousValue < findValue || iskFloatMissing(thePreviousValue)))
 	{
 		// if last value is searched, pick actual level value
 		if (itsFindNthValue == 0)
@@ -787,7 +781,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 		// else we need to interpolate earlier value
 		else
 		{
-			if (thePreviousValue != kFloatMissing && thePreviousHeight != kFloatMissing)
+			if (!iskFloatMissing(thePreviousValue) && !iskFloatMissing(thePreviousHeight))
 			{
 				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
 				                                                              thePreviousHeight, theHeight);
@@ -809,7 +803,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 		Value(theHeight);
 	}
 	// Leaving area
-	else if (theValue < findValue && (thePreviousValue != kFloatMissing && thePreviousValue > findValue))
+	else if (theValue < findValue && (!iskFloatMissing(thePreviousValue) && thePreviousValue > findValue))
 	{
 		if (itsFindNthValue == 0)
 		{
@@ -817,7 +811,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 		}
 		else
 		{
-			if (thePreviousHeight != kFloatMissing)
+			if (!iskFloatMissing(thePreviousHeight))
 			{
 				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
 				                                                              thePreviousHeight, theHeight);
@@ -853,7 +847,7 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
 	const double findValue = itsFindValue[itsIndex];
 
-	if (itsFindNthValue > 0 && kFloatMissing != Value())
+	if (itsFindNthValue > 0 && !iskFloatMissing(Value()))
 	{
 		return;
 	}
@@ -902,7 +896,7 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 		// else we need to interpolate earlier value
 		else
 		{
-			if (thePreviousValue != kFloatMissing && thePreviousHeight != kFloatMissing)
+			if (!iskFloatMissing(thePreviousValue) && !iskFloatMissing(thePreviousHeight))
 			{
 				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
 				                                                              thePreviousHeight, theHeight);
@@ -932,7 +926,7 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 		}
 		else
 		{
-			if (thePreviousValue != kFloatMissing && thePreviousHeight != kFloatMissing)
+			if (!iskFloatMissing(thePreviousValue) && !iskFloatMissing(thePreviousHeight))
 			{
 				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
 				                                                              thePreviousHeight, theHeight);
@@ -969,7 +963,7 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 		{
 			double h = itsFindValue[i];
 
-			if (h == kFloatMissing)
+			if (iskFloatMissing(h))
 			{
 				itsOutOfBoundHeights[i] = true;
 				continue;
@@ -1061,7 +1055,7 @@ void modifier_findvalue::Calculate(double theValue, double theHeight, double the
 		double actualValue =
 		    NFmiInterpolation::Linear(findHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
 
-		if (actualValue != kFloatMissing)
+		if (!iskFloatMissing(actualValue))
 		{
 			Value(actualValue);
 			itsValuesFound++;
@@ -1100,7 +1094,7 @@ void modifier_integral::Calculate(double theValue, double theHeight, double theP
 		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
 	}
-	else if (!(previousHeight == kFloatMissing) && previousHeight >= lowerHeight && theHeight <= upperHeight)
+	else if (!iskFloatMissing(previousHeight) && previousHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		double val = Value();
 		Value((previousValue + theValue) / 2 * (theHeight - previousHeight) + val);
@@ -1202,7 +1196,7 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight, double
 		// integral in following iterations
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
-	else if (thePreviousHeight != kFloatMissing && thePreviousHeight >= lowerHeight && theHeight <= upperHeight)
+	else if (!iskFloatMissing(thePreviousHeight) && thePreviousHeight >= lowerHeight && theHeight <= upperHeight)
 	{
 		// zero is crossed from negative to positive
 		if (thePreviousValue < 0 && theValue > 0)

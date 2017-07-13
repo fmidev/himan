@@ -16,7 +16,7 @@ namespace plugin
 {
 class writer : public auxiliary_plugin
 {
-public:
+   public:
 	writer();
 
 	virtual ~writer() {}
@@ -31,7 +31,7 @@ public:
 	write_options WriteOptions() const;
 	void WriteOptions(const write_options& theWriteOptions);
 
-private:
+   private:
 	bool CreateFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile);
 
 	write_options itsWriteOptions;
@@ -42,7 +42,6 @@ private:
 // the class factories
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<writer>(); }
-
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

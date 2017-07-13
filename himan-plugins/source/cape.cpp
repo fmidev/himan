@@ -24,6 +24,7 @@ const unsigned char FCAPE3km = (1 << 0);
 
 using namespace std;
 using namespace himan::plugin;
+using himan::iskFloatMissing;
 
 #ifdef DEBUG
 #define DumpVector(A, B) himan::util::DumpVector(A, B)
@@ -57,7 +58,7 @@ double Max(const vector<double>& vec)
 
 	for (const double& val : vec)
 	{
-		if (val != himan::kFloatMissing && val > ret) ret = val;
+		if (!iskFloatMissing(val) && val > ret) ret = val;
 	}
 
 	if (ret == -1e38) ret = himan::kFloatMissing;
@@ -69,7 +70,7 @@ void MultiplyWith(vector<double>& vec, double multiplier)
 {
 	for (double& val : vec)
 	{
-		if (val != himan::kFloatMissing) val *= multiplier;
+		if (!iskFloatMissing(val)) val *= multiplier;
 	}
 }
 
@@ -80,7 +81,7 @@ string PrintMean(const vector<double>& vec)
 
 	for (const double& val : vec)
 	{
-		if (val == himan::kFloatMissing)
+		if (iskFloatMissing(val))
 		{
 			missing++;
 			continue;
@@ -386,7 +387,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
-		if (cape_[i] == 0 && elz_[i] == kFloatMissing && lfcz_[i] != kFloatMissing)
+		if (cape_[i] == 0 && iskFloatMissing(elz_[i]) && !iskFloatMissing(lfcz_[i]))
 		{
 			cin_[i] = 0;
 			lfcz_[i] = kFloatMissing;
@@ -408,8 +409,8 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		// * If both are present, LFC must be below EL
 		// * CAPE must be zero or positive real value
 		// * CIN must be zero or negative real value
-		assert((lfcz_[i] == kFloatMissing && elz_[i] == kFloatMissing) ||
-		       ((lfcz_[i] != kFloatMissing && elz_[i] != kFloatMissing) && (lfcz_[i] < elz_[i])));
+		assert((iskFloatMissing(lfcz_[i]) && iskFloatMissing(elz_[i])) ||
+		       (!iskFloatMissing(lfcz_[i]) && !iskFloatMissing(elz_[i]) && (lfcz_[i] < elz_[i])));
 		assert(cape_[i] >= 0);
 		assert(cin_[i] <= 0);
 	}
@@ -474,7 +475,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 	for (size_t i = 0; i < found.size(); i++)
 	{
-		if (PLFC[i] == kFloatMissing)
+		if (iskFloatMissing(PLFC[i]))
 		{
 			found[i] = true;
 		}
@@ -567,7 +568,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 			double prevZenv = tup.get<6>();  // m
 
 			double Tparcel = tup.get<7>();  // K
-			assert(Tparcel >= 100.);
+			assert(Tparcel >= 100. || iskFloatMissing(Tparcel));
 
 			double prevTparcel = tup.get<8>();  // K
 
@@ -584,7 +585,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 				found[i] = true;
 
-				if (prevTparcel == kFloatMissing || prevPenv == kFloatMissing || prevTenv == kFloatMissing)
+				if (iskFloatMissing(prevTparcel) || iskFloatMissing(prevPenv) || iskFloatMissing(prevTenv))
 				{
 					continue;
 				}
@@ -605,7 +606,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 				assert(Zenv > prevZenv);
 			}
 
-			if (Tparcel == kFloatMissing)
+			if (iskFloatMissing(Tparcel))
 			{
 				continue;
 			}
@@ -635,7 +636,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 		for (size_t i = 0; i < Titer.size(); i++)
 		{
-			if (TparcelVec[i] != kFloatMissing && PenvVec[i] != kFloatMissing)
+			if (!iskFloatMissing(TparcelVec[i]) && !iskFloatMissing(PenvVec[i]))
 			{
 				Titer[i] = TparcelVec[i];
 				Piter[i] = PenvVec[i];
@@ -705,7 +706,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 	for (size_t i = 0; i < P.size(); i++)
 	{
-		if (P[i] == kFloatMissing)
+		if (iskFloatMissing(P[i]))
 		{
 			found[i] |= FCAPE;
 			foundCount++;
@@ -772,17 +773,17 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			double prevZenv = tup.get<2>();  // m
 
 			double Tparcel = tup.get<6>();  // K
-			assert(Tparcel > 100. || Tparcel == kFloatMissing);
+			assert(Tparcel > 100.);
 
 			double prevTparcel = tup.get<7>();  // K
-			assert(prevTparcel > 100. || Tparcel == kFloatMissing);
+			assert(prevTparcel > 100.);
 
 			if (found[i] & FCAPE)
 			{
 				continue;
 			}
-			else if (Penv == kFloatMissing || Tenv == kFloatMissing || Zenv == kFloatMissing ||
-			         prevZenv == kFloatMissing || Tparcel == kFloatMissing || Penv > P[i])
+			else if (iskFloatMissing(Penv) || iskFloatMissing(Tenv) || iskFloatMissing(Zenv) ||
+			         iskFloatMissing(prevZenv) || iskFloatMissing(Tparcel) || Penv > P[i])
 			{
 				// Missing data or current grid point is below LFC
 				continue;
@@ -791,7 +792,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
 			// (and EL!) values can be determined.
 
-			if (prevTparcel == kFloatMissing && Tparcel != kFloatMissing)
+			if (iskFloatMissing(prevTparcel) && !iskFloatMissing(Tparcel))
 			{
 				prevTenv = himan::numerical_functions::interpolation::Linear(P[i], prevPenv, Penv, prevTenv, Tenv);
 				prevZenv = himan::numerical_functions::interpolation::Linear(P[i], prevPenv, Penv, prevZenv, Zenv);
@@ -850,7 +851,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			assert(CAPEval >= 0.);
 			assert(CAPE[i] < 8000);
 
-			if (ELTval != kFloatMissing)
+			if (!iskFloatMissing(ELTval))
 			{
 				ELT[i] = ELTval;
 				ELP[i] = ELPval;
@@ -879,7 +880,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 	for (size_t i = 0; i < CAPE.size(); i++)
 	{
-		if (CAPE[i] > 0 && ELT[i] == kFloatMissing)
+		if (CAPE[i] > 0 && iskFloatMissing(ELT[i]))
 		{
 			TenvInfo->LocationIndex(i);
 			PenvInfo->LocationIndex(i);
@@ -1019,7 +1020,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 		vector<double> TparcelVec(P.size(), kFloatMissing);
 
-			::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		double scale = 1;
 		if (prevPenvInfo->Param().Name() == "P-PA") scale = 0.01;
@@ -1046,15 +1047,15 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			assert(prevTenv > 100.);
 
 			double Tparcel = tup.get<4>();  // K
-			assert(Tparcel > 100.);
+			assert(Tparcel > 100. || iskFloatMissing(Tparcel));
 
 			double prevTparcel = tup.get<5>();  // K
-			assert(Tparcel > 100.);
+			assert(Tparcel > 100. || iskFloatMissing(Tparcel));
 
 			double& Tresult = tup.get<6>();
 			double& Presult = tup.get<7>();
 
-			if (Tparcel == kFloatMissing || Penv > P[i] + 30)
+			if (iskFloatMissing(Tparcel) || Penv > P[i] + 30)
 			{
 				continue;
 			}
@@ -1065,7 +1066,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 				found[i] = true;
 
-				if (prevTparcel == kFloatMissing)
+				if (iskFloatMissing(prevTparcel))
 				{
 					// Previous value is unknown: perhaps LFC is found very close to ground?
 					// Use LCL for previous value.
@@ -1085,7 +1086,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					Tresult = intersection.X();
 					Presult = intersection.Y();
 
-					if (Tresult == kFloatMissing)
+					if (iskFloatMissing(Tresult))
 					{
 						// Intersection not found, use exact level value
 						Tresult = Tenv;
@@ -1093,8 +1094,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					}
 				}
 
-				assert(Tresult != kFloatMissing);
-				assert(Presult != kFloatMissing);
+				assert(!iskFloatMissing(Tresult));
+				assert(!iskFloatMissing(Presult));
 			}
 			else if (curLevel.Value() < hPa450.first.Value() && (Tenv - Tparcel) > 30.)
 			{
@@ -1146,7 +1147,7 @@ pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo,
 
 		Tresult = lcl.T;  // K
 
-		if (lcl.P != kFloatMissing)
+		if (!iskFloatMissing(lcl.P))
 		{
 			Presult = 0.01 * ((lcl.P > P) ? P : lcl.P);  // hPa
 		}
@@ -1184,7 +1185,7 @@ cape_source cape::GetSurfaceValues(shared_ptr<info> myTargetInfo)
 
 	for (size_t i = 0; i < TD.size(); i++)
 	{
-		if (T[i] != kFloatMissing && RH[i] != kFloatMissing)
+		if (!iskFloatMissing(T[i]) && !iskFloatMissing(RH[i]))
 		{
 			TD[i] = metutil::DewPointFromRH_(T[i], RH[i]);
 		}
@@ -1243,7 +1244,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 		size_t miss = 0;
 		for (auto& val : VEC(PInfo))
 		{
-			if (val == kFloatMissing) miss++;
+			if (iskFloatMissing(val)) miss++;
 		}
 
 		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
@@ -1278,7 +1279,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 		for (size_t i = 0; i < T.size(); i++)
 		{
 			if (found[i]) continue;
-			if (T[i] == kFloatMissing || P[i] == kFloatMissing || RH[i] == kFloatMissing) continue;
+			if (iskFloatMissing(T[i]) || iskFloatMissing(P[i]) || iskFloatMissing(RH[i])) continue;
 
 			assert(T[i] > 150 && T[i] < 350);
 			assert(P[i] > 100 && P[i] < 1500);
@@ -1300,13 +1301,13 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 		for (size_t i = 0; i < found.size(); i++)
 		{
-			assert((P[i] > 100 && P[i] < 1500) || P[i] == kFloatMissing);
+			assert((P[i] > 100 && P[i] < 1500) || iskFloatMissing(P[i]));
 
 			if (found[i])
 			{
 				P[i] = kFloatMissing;  // disable processing of this
 			}
-			else if (P[i] != kFloatMissing)
+			else if (!iskFloatMissing(P[i]))
 			{
 				P[i] -= 2.0;
 			}
@@ -1323,8 +1324,8 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 	for (size_t i = 0; i < Tpot.size(); i++)
 	{
-		assert((P[i] > 100 && P[i] < 1500) || P[i] == kFloatMissing);
-		if (Tpot[i] != kFloatMissing && P[i] != kFloatMissing)
+		assert((P[i] > 100 && P[i] < 1500) || iskFloatMissing(P[i]));
+		if (!iskFloatMissing(Tpot[i]) && !iskFloatMissing(P[i]))
 		{
 			T[i] = Tpot[i] * pow((P[i] / 1000.), 0.2854);
 		}
@@ -1334,7 +1335,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 	for (size_t i = 0; i < MR.size(); i++)
 	{
-		if (T[i] != kFloatMissing && MR[i] != kFloatMissing && P[i] != kFloatMissing)
+		if (!iskFloatMissing(T[i]) && !iskFloatMissing(MR[i]) && !iskFloatMissing(P[i]))
 		{
 			double Es = metutil::Es_(T[i]);  // Saturated water vapor pressure
 			double E = metutil::E_(MR[i], 100 * P[i]);
@@ -1410,7 +1411,7 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 			double& TDresult = tup.get<5>();
 			double& Presult = tup.get<6>();
 
-			if (P == kFloatMissing)
+			if (iskFloatMissing(P))
 			{
 				found[i] = true;
 				continue;

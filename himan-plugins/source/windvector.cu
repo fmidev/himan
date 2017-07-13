@@ -16,15 +16,14 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
                           himan::plugin::windvector_cuda::options opts)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	using himan::kFloatMissing;
 
 	if (idx < opts.N)
 	{
 		double U = d_u[idx], V = d_v[idx];
-		d_speed[idx] = kFloatMissing;
-		if (d_dir) d_dir[idx] = kFloatMissing;
+		d_speed[idx] = himan::getkFloatMissing();
+		if (d_dir) d_dir[idx] = himan::getkFloatMissing();
 
-		if (U != kFloatMissing && V != kFloatMissing)
+		if (U == U && V == V)
 		{
 			double speed = sqrt(U * U + V * V);
 

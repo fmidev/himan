@@ -338,7 +338,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double rr_harmonie = tup.get<8>();
 		double rr_gfs = tup.get<9>();
 
-		if (rr_ec == kFloatMissing)
+		if (iskFloatMissing(rr_ec))
 		{
 			continue;
 		}
@@ -363,7 +363,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double harmonie = 0;
 		double gfs = 0;
 
-		if (rr_f50 == kFloatMissing)
+		if (iskFloatMissing(rr_f50))
 		{
 			_K1 = 0;
 		}
@@ -372,7 +372,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecf50 = 1;
 		}
 
-		if (rr_f75 == kFloatMissing)
+		if (iskFloatMissing(rr_f75))
 		{
 			_K2 = 0;
 		}
@@ -381,7 +381,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecf75 = 1;
 		}
 
-		if (rr_ecprev == kFloatMissing)
+		if (iskFloatMissing(rr_ecprev))
 		{
 			_K3 = 0;
 		}
@@ -390,7 +390,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecprev = 1;
 		}
 
-		if (rr_peps == kFloatMissing)
+		if (iskFloatMissing(rr_peps))
 		{
 			_K4 = 0;
 		}
@@ -399,7 +399,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			peps = 1;
 		}
 
-		if (rr_hirlam == kFloatMissing)
+		if (iskFloatMissing(rr_hirlam))
 		{
 			_K6 = 0;
 		}
@@ -408,7 +408,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			hirlam = 1;
 		}
 
-		if (rr_gfs == kFloatMissing)
+		if (iskFloatMissing(rr_gfs))
 		{
 			_K7 = 0;
 		}
@@ -417,7 +417,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			gfs = 1;
 		}
 
-		if (rr_harmonie == kFloatMissing)
+		if (iskFloatMissing(rr_harmonie))
 		{
 			_K8 = 0;
 		}
@@ -481,7 +481,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double rr_ecprob1 = tup.get<3>();
 		double rr_ecprob01 = tup.get<4>();
 
-		if (out_confidence == kFloatMissing || out_area == kFloatMissing)
+		if (iskFloatMissing(out_confidence) || iskFloatMissing(out_area))
 		{
 			continue;
 		}
@@ -491,7 +491,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		double PoP = out_confidence * out_area * 100;
 
-		if (rr_ecprob1 != kFloatMissing && rr_ecprob01 != kFloatMissing)
+		if (!iskFloatMissing(rr_ecprob1) && !iskFloatMissing(rr_ecprob01))
 		{
 			PoP = (3 * PoP + 0.5 * rr_ecprob1 + 0.5 * rr_ecprob01) * 0.25;
 		}
@@ -544,7 +544,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double& out_result = tup.get<0>();
 		double _max_result = tup.get<1>();
 
-		if (out_result == kFloatMissing || _max_result == kFloatMissing)
+		if (iskFloatMissing(out_result) || iskFloatMissing(_max_result))
 		{
 			continue;
 		}

@@ -236,7 +236,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			double U = tup.get<2>();
 			double V = tup.get<3>();
 
-			if (U == kFloatMissing || V == kFloatMissing)
+			if (iskFloatMissing(U) || iskFloatMissing(V))
 			{
 				continue;
 			}

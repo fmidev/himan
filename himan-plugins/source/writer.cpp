@@ -3,10 +3,10 @@
  *
  */
 
+#include "writer.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include "writer.h"
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fstream>

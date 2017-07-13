@@ -7,9 +7,9 @@
 #include "logger_factory.h"
 #include "plugin_factory.h"
 
+#include <numeric>
 #include <stddef.h>
 #include <stdint.h>
-#include <numeric>
 
 #define HIMAN_AUXILIARY_INCLUDE
 #include "fetcher.h"

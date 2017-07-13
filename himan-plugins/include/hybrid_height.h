@@ -14,10 +14,9 @@ namespace himan
 {
 namespace plugin
 {
-
 class hybrid_height : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	hybrid_height();
 
 	virtual ~hybrid_height();
@@ -32,7 +31,7 @@ public:
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 2); }
 	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
 
-private:
+   private:
 	void Write(himan::info targetInfo);
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 	bool WithIteration(info_t& myTargetInfo);
@@ -47,7 +46,6 @@ private:
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<hybrid_height>(); }
-
 }  // namespace plugin
 }  // namespace himan
 

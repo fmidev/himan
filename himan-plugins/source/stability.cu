@@ -25,25 +25,25 @@ __global__ void himan::plugin::stability_cuda::Calculate(
 		double TD850 = d_td850[idx];
 		double TD700 = d_td700[idx];
 
-		d_ki[idx] = kFloatMissing;
-		d_cti[idx] = kFloatMissing;
-		d_vti[idx] = kFloatMissing;
-		d_tti[idx] = kFloatMissing;
+		d_ki[idx] = getkFloatMissing();
+		d_cti[idx] = getkFloatMissing();
+		d_vti[idx] = getkFloatMissing();
+		d_tti[idx] = getkFloatMissing();
 
 		if (opts.li)
 		{
-			d_li[idx] = kFloatMissing;
-			d_si[idx] = kFloatMissing;
+			d_li[idx] = getkFloatMissing();
+			d_si[idx] = getkFloatMissing();
 		}
 
 		if (opts.bs01)
 		{
-			d_bs01[idx] = kFloatMissing;
-			d_bs06[idx] = kFloatMissing;
+			d_bs01[idx] = getkFloatMissing();
+			d_bs06[idx] = getkFloatMissing();
 		}
 
-		if (T850 != kFloatMissing && T700 != kFloatMissing && T500 != kFloatMissing && TD850 != kFloatMissing &&
-		    TD700 != kFloatMissing)
+		if (!iskFloatMissing(T850) && !iskFloatMissing(T700) && !iskFloatMissing(T500) && !iskFloatMissing(TD850) &&
+		    !iskFloatMissing(TD700))
 		{
 			d_ki[idx] = himan::metutil::KI_(T850, T700, T500, TD850, TD700);
 			d_cti[idx] = himan::metutil::CTI_(T500, TD850);
@@ -64,7 +64,7 @@ __global__ void himan::plugin::stability_cuda::Calculate(
 			double u06 = d_u06[idx];
 			double v06 = d_v06[idx];
 
-			if (u01 != kFloatMissing && v01 != kFloatMissing && u06 != kFloatMissing && v06 != kFloatMissing)
+			if (!iskFloatMissing(u01) && !iskFloatMissing(v01) && !iskFloatMissing(u06) && !iskFloatMissing(v06))
 			{
 				d_bs01[idx] = himan::metutil::BulkShear_(u01, v01);
 				d_bs06[idx] = himan::metutil::BulkShear_(u06, v06);

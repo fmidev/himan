@@ -155,7 +155,7 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 		double GP = tup.get<1>();
 		double zeroGP = tup.get<2>();
 
-		if (GP == kFloatMissing || zeroGP == kFloatMissing)
+		if (iskFloatMissing(GP) || iskFloatMissing(zeroGP))
 		{
 			continue;
 		}
@@ -254,8 +254,8 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		double prevT = tup.get<4>();
 		double prevH = tup.get<5>();
 
-		if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing ||
-		    prevH == kFloatMissing)
+		if (iskFloatMissing(prevT) || iskFloatMissing(prevP) || iskFloatMissing(T) || iskFloatMissing(P) ||
+		    iskFloatMissing(prevH))
 		{
 			continue;
 		}

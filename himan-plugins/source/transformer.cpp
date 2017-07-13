@@ -144,7 +144,7 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		// copy levels from target
-		auto x = make_shared<info> (*itsInfo);
+		auto x = make_shared<info>(*itsInfo);
 		for (x->ResetLevel(); x->NextLevel();)
 		{
 			itsSourceLevels.push_back(x->Level());
@@ -266,7 +266,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		{
 			double value = sourceInfo->Value();
 
-			if (value == kFloatMissing)
+			if (iskFloatMissing(value))
 			{
 				continue;
 			}

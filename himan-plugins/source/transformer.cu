@@ -11,9 +11,9 @@ __global__ void himan::plugin::transformer_cuda::Calculate(cdarr_t d_source, dar
 
 	if (idx < opts.N)
 	{
-		d_dest[idx] = kFloatMissing;
+		d_dest[idx] = getkFloatMissing();
 
-		if (d_source[idx] != himan::kFloatMissing)
+		if (d_source[idx] != getkFloatMissing())
 		{
 			d_dest[idx] = __fma_rn(d_source[idx], opts.scale, opts.base);
 		}

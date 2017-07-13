@@ -13,6 +13,7 @@
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
 #include "util.h"
+#include <algorithm>
 #include <boost/filesystem.hpp>
 
 using namespace std;
@@ -597,6 +598,9 @@ void grib::WriteParameter(info& anInfo)
 
 bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
+	// grib expects non-nan values
+	anInfo.Data().MissingValue(32700.);
+
 	// Write only that data which is currently set at descriptors
 
 	timer aTimer;
@@ -783,7 +787,19 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger->Trace("Writing unpacked data");
 
+/*                int replacedMissValue = 0;
+                for (size_t i = 0; i < anInfo.Data().Values().size(); i++)
+                {
+            if (iskFloatMissing(anInfo.Data().Values()[i]))
+            {
+                anInfo.Data().Values()[i] = 9999.;
+                replacedMissValue++;
+            }
+        }
+        cout << "replaced: " << replacedMissValue << " missing Values" << endl;
+*/
 #ifdef DEBUG
+
 		// Check that data is not NaN, otherwise grib_api will go to
 		// an eternal loop
 
@@ -1642,7 +1658,11 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 
 		double* d = itsGrib->Message().Values();
 
+		dm.MissingValue(itsGrib->Message().MissingValue());
+
 		dm.Set(d, len);
+
+		dm.MissingValue(kFloatMissing);
 
 		free(d);
 

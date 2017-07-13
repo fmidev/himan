@@ -26,7 +26,7 @@ double min(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		if (val != kFloatMissing && val < ret) ret = val;
+		if (!iskFloatMissing(val) && val < ret) ret = val;
 	}
 
 	if (ret == 1e38) ret = kFloatMissing;
@@ -40,7 +40,7 @@ double max(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		if (val != kFloatMissing && val > ret) ret = val;
+		if (!iskFloatMissing(val) && val > ret) ret = val;
 	}
 
 	if (ret == -1e38) ret = kFloatMissing;
@@ -54,11 +54,11 @@ pair<double, double> minmax(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		if (val != kFloatMissing)
-		{
-			if (val < min) min = val;
-			if (val > max) max = val;
-		}
+		// if (!iskFloatMissing(val))
+		//{
+		if (val < min) min = val;
+		if (val > max) max = val;
+		//}
 	}
 
 	if (min == 1e38)
@@ -373,7 +373,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			double max_value = ::max(upperHeight);
 			double min_value = ::min(lowerHeight);
 
-			if (max_value == kFloatMissing || min_value == kFloatMissing)
+			if (iskFloatMissing(max_value) || iskFloatMissing(min_value))
 			{
 				itsLogger->Error("Min or max values of given heights are missing");
 				throw kFileDataNotFound;

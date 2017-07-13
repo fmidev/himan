@@ -197,7 +197,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			                                                             // interpolation is not allowed, even for small
 			                                                             // amounts of delta y)
 
-			if (gg_y < 0 || gg_y > static_cast<double> (gg->Nj()) - 1)
+			if (gg_y < 0 || gg_y > static_cast<double>(gg->Nj()) - 1)
 			{
 				// lat outside gg grid
 				targetData.Set(i, kFloatMissing);
@@ -664,7 +664,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 				double U = UVec[i];
 				double V = VVec[i];
 
-				if (U == kFloatMissing || V == kFloatMissing)
+				if (iskFloatMissing(U) || iskFloatMissing(V))
 				{
 					continue;
 				}

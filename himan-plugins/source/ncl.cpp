@@ -156,8 +156,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				prevTemp = prevTInfo->Value();
 			}
 
-			if (height == kFloatMissing || temp == kFloatMissing ||
-			    (!firstLevel && (prevHeight == kFloatMissing || prevTemp == kFloatMissing)))
+			if (iskFloatMissing(height) || iskFloatMissing(temp) ||
+			    (!firstLevel && (iskFloatMissing(prevHeight) || iskFloatMissing(prevTemp))))
 			{
 				continue;
 			}

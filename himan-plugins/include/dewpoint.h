@@ -24,7 +24,7 @@ namespace plugin
 
 class dewpoint : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	dewpoint();
 
 	inline virtual ~dewpoint() {}
@@ -36,7 +36,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::dewpoint"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 #ifdef HAVE_CUDA
 	std::unique_ptr<dewpoint_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo,

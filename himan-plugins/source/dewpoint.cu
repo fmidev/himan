@@ -12,9 +12,9 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_r
 
 	if (idx < opts.N)
 	{
-		d_td[idx] = kFloatMissing;
+		d_td[idx] = getkFloatMissing();
 
-		if (d_t[idx] != kFloatMissing && d_rh[idx] != kFloatMissing)
+		if ((d_t[idx] == d_t[idx]) && (d_rh[idx] == d_rh[idx]))
 		{
 			double RH = d_rh[idx] * opts.rh_scale;
 

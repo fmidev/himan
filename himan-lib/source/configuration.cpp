@@ -216,7 +216,4 @@ void configuration::ReadAllAuxiliaryFilesToCache(bool theReadAllAuxiliaryFilesTo
 	itsReadAllAuxiliaryFilesToCache = theReadAllAuxiliaryFilesToCache;
 }
 std::string configuration::ParamFile() const { return itsParamFile; }
-void configuration::ParamFile(const std::string& theParamFile)
-{
-	itsParamFile = theParamFile;
-}
+void configuration::ParamFile(const std::string& theParamFile) { itsParamFile = theParamFile; }

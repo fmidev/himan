@@ -30,7 +30,7 @@ namespace plugin
 {
 class auxiliary_plugin : public himan_plugin
 {
-public:
+   public:
 	auxiliary_plugin(){};
 
 	virtual ~auxiliary_plugin(){};
@@ -38,12 +38,12 @@ public:
 
 class io_plugin : public auxiliary_plugin
 {
-public:
+   public:
 	io_plugin() {}
 	virtual ~io_plugin() {}
 	virtual write_options WriteOptions() const { return itsWriteOptions; }
 	virtual void WriteOptions(const write_options& theWriteOptions) { itsWriteOptions = theWriteOptions; }
-protected:
+   protected:
 	write_options itsWriteOptions;
 };
 

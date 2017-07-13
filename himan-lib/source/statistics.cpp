@@ -8,7 +8,6 @@ using namespace std;
 using namespace himan;
 
 statistics::statistics() : itsTimer() { Init(); }
-
 statistics::statistics(const statistics& other)
     : itsTimer(), itsUsedThreadCount(other.itsUsedThreadCount), itsUsedGPUCount(other.itsUsedGPUCount)
 
@@ -30,21 +29,13 @@ bool statistics::Start()
 }
 
 void statistics::AddToMissingCount(size_t theMissingCount) { itsMissingValueCount += theMissingCount; }
-
 void statistics::AddToValueCount(size_t theValueCount) { itsValueCount += theValueCount; }
-
 void statistics::AddToFetchingTime(size_t theFetchingTime) { itsFetchingTime += theFetchingTime; }
-
 void statistics::AddToProcessingTime(size_t theProcessingTime) { itsProcessingTime += theProcessingTime; }
-
 void statistics::AddToWritingTime(size_t theWritingTime) { itsWritingTime += theWritingTime; }
-
 void statistics::AddToInitTime(size_t theInitTime) { itsInitTime += theInitTime; }
-
 void statistics::AddToCacheMissCount(size_t theCacheMissCount) { itsCacheMissCount += theCacheMissCount; }
-
 void statistics::AddToCacheHitCount(size_t theCacheHitCount) { itsCacheHitCount += theCacheHitCount; }
-
 void statistics::Init()
 {
 	itsMissingValueCount = 0;
@@ -60,7 +51,5 @@ void statistics::Init()
 }
 
 void statistics::UsedThreadCount(short theUsedThreadCount) { itsUsedThreadCount = theUsedThreadCount; }
-
 void statistics::UsedGPUCount(short theUsedGPUCount) { itsUsedGPUCount = theUsedGPUCount; }
-
 size_t statistics::FetchingTime() const { return itsFetchingTime; }

@@ -20,7 +20,7 @@ namespace numerical_functions
  * An object of type integral that can perform vertical integration in the atmosphere from a lower bound to an upper
  * bound height. It can either be used to integrate a single variable (i.e. /int{x(h) dh} or a function /int{f(x(h)) dh}
  */
-
+#if 0
 class integral
 {
    public:
@@ -90,6 +90,7 @@ inline std::valarray<double> integral::Interpolate(std::valarray<double> current
 	        (currentLevelValue - previousLevelValue) * (itsBound - previousLevelHeight) /
 	            (currentLevelHeight - previousLevelHeight));
 }
+#endif
 
 /**
  * @brief Compute convolution of matrix A by matrix B
@@ -216,7 +217,7 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 		}
 		else
 		{
-			CudaMatrixSet(C, i, j, 0, M, N, kFloatMissing);
+			CudaMatrixSet(C, i, j, 0, M, N, getkFloatMissing());
 		}
 	}
 }

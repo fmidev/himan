@@ -45,8 +45,7 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	const param SnowParam("SNOWMR-KGKG");      // Snow mixing ratio in kg/kg
 	const param GraupelParam("GRAUPMR-KGKG");  // Graupel mixing ratio in kg/kg
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog(itsName + "Thread #" + to_string(threadIndex));
+	auto myThreadedLogger = logger_factory::Instance()->GetLog(itsName + "Thread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -83,7 +82,7 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		const double Graupel = tup.get<4>();
 
 		// Check if mixing ratio for rain is not missing
-		if (Rho == kFloatMissing || Rain == kFloatMissing || Snow == kFloatMissing || Graupel == kFloatMissing)
+		if (iskFloatMissing(Rho) || iskFloatMissing(Rain) || iskFloatMissing(Snow) || iskFloatMissing(Graupel))
 		{
 			continue;
 		}
@@ -95,7 +94,6 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		result = absolute_humidity;
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       to_string(myTargetInfo->Data().MissingCount()) + "/" +
-	                       to_string(myTargetInfo->Data().Size()));
+	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                       "/" + to_string(myTargetInfo->Data().Size()));
 }

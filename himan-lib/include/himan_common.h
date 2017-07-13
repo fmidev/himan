@@ -24,8 +24,11 @@
 #define override  // override specifier not support until 4.8
 #endif
 
+#include "cuda_helper.h"
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
+#include <cmath>
+#include <math.h>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -36,11 +39,40 @@ namespace ba = boost::assign;
 
 namespace himan
 {
-// Define some constants
+// Define some missing value utilities
+//__attribute__((always_inline))
+//inline CUDA_HOST CUDA_DEVICE double getkHPMissingValue() {return nan("-999");}
+
+__attribute__((always_inline))
+inline CUDA_HOST CUDA_DEVICE double getkFloatMissing() {return nan("32700");}
 
 const int kHPMissingInt = 999999;
-const double kHPMissingValue = -999.;
-const double kFloatMissing = 32700.;  // From newbase
+const double kHPMissingValue = -999.;//getkHPMissingValue();
+const double kFloatMissing = getkFloatMissing();
+
+__attribute__((always_inline))
+inline CUDA_HOST CUDA_DEVICE bool iskFloatMissing(const double& value)
+{
+        double missingValue = nan("32700");
+        const uint64_t* _value = reinterpret_cast<const uint64_t*>(&value);
+        const uint64_t* _missingValue = reinterpret_cast<const uint64_t*>(&missingValue);
+
+        return (*_value == *_missingValue);
+}
+inline bool isMissing(double value) {return iskFloatMissing(value);}
+
+inline bool iskFloatValid(const double& value) {return !iskFloatMissing(value);}
+inline bool isValid(double value) {return iskFloatValid(value);}
+
+__attribute__((always_inline))
+inline CUDA_HOST CUDA_DEVICE bool iskHPMissingValue(const double& x)
+{
+        double missingValue = nan("-999");
+        const uint64_t* _x = reinterpret_cast<const uint64_t*>(&x);
+        const uint64_t* _missingValue = reinterpret_cast<const uint64_t*>(&missingValue);
+
+        return (*_x == *_missingValue);
+}
 
 // Define different plugin types
 

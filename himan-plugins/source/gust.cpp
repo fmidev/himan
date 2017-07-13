@@ -193,20 +193,20 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	}
 
 	deltaT dT;
-	vector<double> lowAndMiddleClouds(gridSize, kFloatMissing);
+	vector<double> lowAndMiddleClouds(gridSize, himan::kFloatMissing);
 
 	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
 	boost::thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
 	                 TCloudInfo);
 
 	// calc boundary layer height
-	vector<double> z_boundaryl(gridSize, kFloatMissing);
-	vector<double> z_one_third_boundaryl(gridSize, kFloatMissing);
-	vector<double> z_two_third_boundaryl(gridSize, kFloatMissing);
+	vector<double> z_boundaryl(gridSize, himan::kFloatMissing);
+	vector<double> z_one_third_boundaryl(gridSize, himan::kFloatMissing);
+	vector<double> z_two_third_boundaryl(gridSize, himan::kFloatMissing);
 	vector<double> z_zero(gridSize, 0);
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		if (BLHInfo->Data()[i] == kFloatMissing)
+		if (iskFloatMissing(BLHInfo->Data()[i]))
 		{
 			continue;
 		}
@@ -361,9 +361,9 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		size_t i = myTargetInfo->LocationIndex();
 
 		double topo = TopoInfo->Value();
-		double esto = kFloatMissing;
-		double esto_tot = kFloatMissing;
-		double gust = kFloatMissing;
+		double esto = himan::kFloatMissing;
+		double esto_tot = himan::kFloatMissing;
+		double gust = himan::kFloatMissing;
 		double turb_lisa = 0;
 		double turb_kerroin = 0;
 		double pilvikerroin = 0;
@@ -440,7 +440,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			gust = meanWind[i];
 		}
 
-		if (gust == kFloatMissing || gust < 1)
+		if (iskFloatMissing(gust) || gust < 1)
 		{
 			gust = 1;
 		}
@@ -487,7 +487,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		gust = gust + turb_lisa * turb_kerroin * pilvikerroin;
 
-		if (topo > 400 || T_LowestLevelInfo->Value() == kFloatMissing || BLHInfo->Value() == kFloatMissing)
+		if (topo > 400 || iskFloatMissing(T_LowestLevelInfo->Value()) || iskFloatMissing(BLHInfo->Value()))
 		{
 			gust = GustInfo->Value() * 0.95;
 		}
@@ -495,7 +495,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Value(gust);
 	}
 
-	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing);
+	himan::matrix<double> filter_kernel(3, 3, 1, himan::kFloatMissing);
 	filter_kernel.Fill(1.0 / 9.0);
 	himan::matrix<double> gust_filtered = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
@@ -530,7 +530,7 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 
 		for (size_t i = 0; i < gridSize; ++i)
 		{
-			if (T_lowestLevel->Data()[i] == himan::kFloatMissing)
+			if (iskFloatMissing(T_lowestLevel->Data()[i]))
 			{
 				dT.deltaT_100[i] = himan::kFloatMissing;
 				dT.deltaT_200[i] = himan::kFloatMissing;
@@ -541,19 +541,19 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 				dT.deltaT_700[i] = himan::kFloatMissing;
 				continue;
 			}
-			if (dT.deltaT_100[i] != himan::kFloatMissing)
+			if (!iskFloatMissing(dT.deltaT_100[i]))
 				dT.deltaT_100[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100.0 / 1000.0));
-			if (dT.deltaT_200[i] != himan::kFloatMissing)
+			if (!iskFloatMissing(dT.deltaT_200[i]))
 				dT.deltaT_200[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200.0 / 1000.0));
-			if (dT.deltaT_300[i] != himan::kFloatMissing)
+			if (!iskFloatMissing(dT.deltaT_300[i]))
 				dT.deltaT_300[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300.0 / 1000.0));
-			if (dT.deltaT_400[i] != himan::kFloatMissing)
+			if (!iskFloatMissing(dT.deltaT_400[i]))
 				dT.deltaT_400[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (400.0 / 1000.0));
-			if (dT.deltaT_500[i] != himan::kFloatMissing)
+			if (!iskFloatMissing(dT.deltaT_500[i]))
 				dT.deltaT_500[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (500.0 / 1000.0));
-			if (dT.deltaT_600[i] != himan::kFloatMissing)
+			if (!iskFloatMissing(dT.deltaT_600[i]))
 				dT.deltaT_600[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (600.0 / 1000.0));
-			if (dT.deltaT_700[i] != himan::kFloatMissing)
+			if (!iskFloatMissing(dT.deltaT_700[i]))
 				dT.deltaT_700[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (700.0 / 1000.0));
 		}
 	}
@@ -609,21 +609,21 @@ void IntT(intT& iT, const deltaT& dT, size_t gridSize)
 
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		if (dT.deltaT_100[i] != himan::kFloatMissing)
+		if (!iskFloatMissing(dT.deltaT_100[i]))
 			iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100;  // why 0.5 * here? Would make sense in case of
 		                                                    // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
 		                                                    // integration using trapezoidal rule
-		if (dT.deltaT_100[i] != himan::kFloatMissing && dT.deltaT_200[i] != himan::kFloatMissing)
+		if (!iskFloatMissing(dT.deltaT_100[i]) && !iskFloatMissing(dT.deltaT_200[i]))
 			iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
-		if (dT.deltaT_200[i] != himan::kFloatMissing && dT.deltaT_300[i] != himan::kFloatMissing)
+		if (!iskFloatMissing(dT.deltaT_200[i]) && !iskFloatMissing(dT.deltaT_300[i]))
 			iT.intT_300[i] = 0.5 * (dT.deltaT_300[i] + dT.deltaT_200[i]) * 100;
-		if (dT.deltaT_300[i] != himan::kFloatMissing && dT.deltaT_400[i] != himan::kFloatMissing)
+		if (!iskFloatMissing(dT.deltaT_300[i]) && !iskFloatMissing(dT.deltaT_400[i]))
 			iT.intT_400[i] = 0.5 * (dT.deltaT_400[i] + dT.deltaT_300[i]) * 100;
-		if (dT.deltaT_400[i] != himan::kFloatMissing && dT.deltaT_500[i] != himan::kFloatMissing)
+		if (!iskFloatMissing(dT.deltaT_400[i]) && !iskFloatMissing(dT.deltaT_500[i]))
 			iT.intT_500[i] = 0.5 * (dT.deltaT_500[i] + dT.deltaT_400[i]) * 100;
-		if (dT.deltaT_500[i] != himan::kFloatMissing && dT.deltaT_600[i] != himan::kFloatMissing)
+		if (!iskFloatMissing(dT.deltaT_500[i]) && !iskFloatMissing(dT.deltaT_600[i]))
 			iT.intT_600[i] = 0.5 * (dT.deltaT_600[i] + dT.deltaT_500[i]) * 100;
-		if (dT.deltaT_600[i] != himan::kFloatMissing && dT.deltaT_700[i] != himan::kFloatMissing)
+		if (!iskFloatMissing(dT.deltaT_600[i]) && !iskFloatMissing(dT.deltaT_700[i]))
 			iT.intT_700[i] = 0.5 * (dT.deltaT_700[i] + dT.deltaT_600[i]) * 100;
 	}
 }
@@ -655,25 +655,25 @@ void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, in
 {
 	for (size_t i = 0; i < lowAndMiddleClouds.size(); ++i)
 	{
-		if (highClouds->Data()[i] == himan::kFloatMissing || highClouds->Data()[i] == 0.0)
+		if (iskFloatMissing(highClouds->Data()[i]) || highClouds->Data()[i] == 0.0)
 		{
-			if (totalClouds->Data()[i] == himan::kFloatMissing)
+			if (iskFloatMissing(totalClouds->Data()[i]))
 				lowAndMiddleClouds[i] = himan::kFloatMissing;
 			else
 				lowAndMiddleClouds[i] = totalClouds->Data()[i] * 100;
 		}
 		else
 		{
-			if (lowClouds->Data()[i] != himan::kFloatMissing)
+			if (!iskFloatMissing(lowClouds->Data()[i]))
 			{
-				if (middleClouds->Data()[i] != himan::kFloatMissing)
+				if (!iskFloatMissing(middleClouds->Data()[i]))
 					lowAndMiddleClouds[i] = max(lowClouds->Data()[i], middleClouds->Data()[i]) * 100;
 				else
 					lowAndMiddleClouds[i] = lowClouds->Data()[i] * 100;
 			}
 			else
 			{
-				if (middleClouds->Data()[i] == himan::kFloatMissing)
+				if (iskFloatMissing(middleClouds->Data()[i]))
 					lowAndMiddleClouds[i] = himan::kFloatMissing;
 				else
 					lowAndMiddleClouds[i] = middleClouds->Data()[i] * 100;

@@ -79,7 +79,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 		// Double-check pattern
 
-		const auto key = static_cast<string> (forecastType) + "_" + to_string(forecastTime.Step());
+		const auto key = static_cast<string>(forecastType) + "_" + to_string(forecastTime.Step());
 
 		if (lnspInfos.find(key) == lnspInfos.end())
 		{

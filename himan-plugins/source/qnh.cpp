@@ -140,7 +140,7 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		double topo = topoInfo->Value();
 		double pressure = pressureInfo->Value();
 
-		if (topo == kFloatMissing || pressure == kFloatMissing)
+		if (iskFloatMissing(topo) || iskFloatMissing(pressure))
 		{
 			continue;
 		}
