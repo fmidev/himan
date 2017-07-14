@@ -103,7 +103,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 			P = PInfo->Value();
 		}
 
-		if (iskFloatMissing(P) || iskFloatMissing(T))
+		if (IsKFloatMissing(P) || IsKFloatMissing(T))
 		{
 			continue;
 		}

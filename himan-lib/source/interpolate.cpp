@@ -664,7 +664,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 				double U = UVec[i];
 				double V = VVec[i];
 
-				if (iskFloatMissing(U) || iskFloatMissing(V))
+				if (IsKFloatMissing(U) || IsKFloatMissing(V))
 				{
 					continue;
 				}

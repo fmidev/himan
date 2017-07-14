@@ -82,7 +82,7 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		const double Graupel = tup.get<4>();
 
 		// Check if mixing ratio for rain is not missing
-		if (iskFloatMissing(Rho) || iskFloatMissing(Rain) || iskFloatMissing(Snow) || iskFloatMissing(Graupel))
+		if (IsKFloatMissing(Rho) || IsKFloatMissing(Rain) || IsKFloatMissing(Snow) || IsKFloatMissing(Graupel))
 		{
 			continue;
 		}

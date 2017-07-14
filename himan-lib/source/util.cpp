@@ -461,8 +461,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 		{
 			for (int i = 1; i < ASizeX - 1; ++i)  // columns
 			{
-				if (!(iskFloatMissing(A.At(i + 1, j, 0)) || iskFloatMissing(A.At(i - 1, j, 0)) ||
-				      iskFloatMissing(A.At(i, j + 1, 0)) || iskFloatMissing(A.At(i, j - 1, 0))))
+				if (!(IsKFloatMissing(A.At(i + 1, j, 0)) || IsKFloatMissing(A.At(i - 1, j, 0)) ||
+				      IsKFloatMissing(A.At(i, j + 1, 0)) || IsKFloatMissing(A.At(i, j - 1, 0))))
 				{
 					dA_dx.Set(i, j, 0, (A.At(i + 1, j, 0) - A.At(i - 1, j, 0)) /
 					                       (2 * dx[j]));  // central difference in x-direction
@@ -480,8 +480,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 		// treat boundaries separately
 		for (int i = 1; i < ASizeX - 1; ++i)  // rows
 		{
-			if (!(iskFloatMissing(A.At(i + 1, 0, 0)) || iskFloatMissing(A.At(i - 1, 0, 0)) ||
-			      iskFloatMissing(A.At(i, 0, 0)) || iskFloatMissing(A.At(i, 1, 0))))
+			if (!(IsKFloatMissing(A.At(i + 1, 0, 0)) || IsKFloatMissing(A.At(i - 1, 0, 0)) ||
+			      IsKFloatMissing(A.At(i, 0, 0)) || IsKFloatMissing(A.At(i, 1, 0))))
 			{
 				// calculate for upper boundary
 				dA_dx.Set(i, 0, 0,
@@ -494,8 +494,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 				dA_dy.Set(i, 0, 0, kFloatMissing);
 			}
 
-			if (!(iskFloatMissing(A.At(i + 1, ASizeY - 1, 0)) || iskFloatMissing(A.At(i - 1, ASizeY - 1, 0)) ||
-			      iskFloatMissing(A.At(i, ASizeY - 1, 0)) || iskFloatMissing(A.At(i, ASizeY - 2, 0))))
+			if (!(IsKFloatMissing(A.At(i + 1, ASizeY - 1, 0)) || IsKFloatMissing(A.At(i - 1, ASizeY - 1, 0)) ||
+			      IsKFloatMissing(A.At(i, ASizeY - 1, 0)) || IsKFloatMissing(A.At(i, ASizeY - 2, 0))))
 			{
 				// calculate for lower boundary
 				dA_dx.Set(i, ASizeY - 1, 0, (A.At(i + 1, ASizeY - 1, 0) - A.At(i - 1, ASizeY - 1, 0)) /
@@ -512,8 +512,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 
 		for (int j = 1; j < ASizeY - 1; ++j)  // columns
 		{
-			if (!(iskFloatMissing(A.At(0, j, 0)) || iskFloatMissing(A.At(1, j, 0)) ||
-			      iskFloatMissing(A.At(0, j - 1, 0)) || iskFloatMissing(A.At(0, j + 1, 0))))
+			if (!(IsKFloatMissing(A.At(0, j, 0)) || IsKFloatMissing(A.At(1, j, 0)) ||
+			      IsKFloatMissing(A.At(0, j - 1, 0)) || IsKFloatMissing(A.At(0, j + 1, 0))))
 			{
 				// calculate for left boundary
 				dA_dx.Set(0, j, 0, (A.At(1, j, 0) - A.At(0, j, 0)) / dx[j]);  // foreward difference in x-direction
@@ -526,8 +526,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 				dA_dx.Set(0, j, 0, kFloatMissing);
 			}
 
-			if (!(iskFloatMissing(A.At(0, j, 0)) || iskFloatMissing(A.At(1, j, 0)) ||
-			      iskFloatMissing(A.At(0, j - 1, 0)) || iskFloatMissing(A.At(0, j + 1, 0))))
+			if (!(IsKFloatMissing(A.At(0, j, 0)) || IsKFloatMissing(A.At(1, j, 0)) ||
+			      IsKFloatMissing(A.At(0, j - 1, 0)) || IsKFloatMissing(A.At(0, j + 1, 0))))
 			{
 				// calculate for right boundary
 				dA_dx.Set(ASizeX - 1, j, 0, (A.At(ASizeX - 1, j, 0) - A.At(ASizeX - 2, j, 0)) /
@@ -544,7 +544,7 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 
 		// corner values last
 		// top left
-		if (!(iskFloatMissing(A.At(0, 0, 0)) || iskFloatMissing(A.At(1, 0, 0)) || iskFloatMissing(A.At(0, 1, 0))))
+		if (!(IsKFloatMissing(A.At(0, 0, 0)) || IsKFloatMissing(A.At(1, 0, 0)) || IsKFloatMissing(A.At(0, 1, 0))))
 		{
 			dA_dx.Set(0, 0, 0, (A.At(1, 0, 0) - A.At(0, 0, 0)) / dx[0]);  // foreward difference in x-direction
 			dA_dy.Set(0, 0, 0, (A.At(0, 1, 0) - A.At(0, 0, 0)) / dy[0]);  // foreward difference in y-direction
@@ -556,8 +556,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 		}
 
 		// top right
-		if (!(iskFloatMissing(A.At(ASizeX - 1, 0, 0)) || iskFloatMissing(A.At(ASizeX - 2, 0, 0)) ||
-		      iskFloatMissing(A.At(ASizeX - 1, 1, 0))))
+		if (!(IsKFloatMissing(A.At(ASizeX - 1, 0, 0)) || IsKFloatMissing(A.At(ASizeX - 2, 0, 0)) ||
+		      IsKFloatMissing(A.At(ASizeX - 1, 1, 0))))
 		{
 			dA_dx.Set(ASizeX - 1, 0, 0,
 			          (A.At(ASizeX - 1, 0, 0) - A.At(ASizeX - 2, 0, 0)) / dx[0]);  // foreward difference in x-direction
@@ -571,8 +571,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 		}
 
 		// bottom left
-		if (!(iskFloatMissing(A.At(0, ASizeY - 1, 0)) || iskFloatMissing(A.At(0, ASizeY - 2, 0)) ||
-		      iskFloatMissing(A.At(1, ASizeY - 1, 0))))
+		if (!(IsKFloatMissing(A.At(0, ASizeY - 1, 0)) || IsKFloatMissing(A.At(0, ASizeY - 2, 0)) ||
+		      IsKFloatMissing(A.At(1, ASizeY - 1, 0))))
 		{
 			dA_dx.Set(0, ASizeY - 1, 0, (A.At(1, ASizeY - 1, 0) - A.At(0, ASizeY - 1, 0)) /
 			                                dx[ASizeY - 1]);  // foreward difference in x-direction
@@ -586,8 +586,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 		}
 
 		// bottom right
-		if (!(iskFloatMissing(A.At(ASizeX - 1, ASizeY - 1, 0)) || iskFloatMissing(A.At(ASizeX - 1, ASizeY - 2, 0)) ||
-		      iskFloatMissing(A.At(ASizeX - 2, ASizeY - 1, 0))))
+		if (!(IsKFloatMissing(A.At(ASizeX - 1, ASizeY - 1, 0)) || IsKFloatMissing(A.At(ASizeX - 1, ASizeY - 2, 0)) ||
+		      IsKFloatMissing(A.At(ASizeX - 2, ASizeY - 1, 0))))
 		{
 			dA_dx.Set(ASizeX - 1, ASizeY - 1, 0, (A.At(ASizeX - 1, ASizeY - 1, 0) - A.At(ASizeX - 2, ASizeY - 1, 0)) /
 			                                         dx[ASizeY - 1]);  // backward difference in x-direction
@@ -668,7 +668,7 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 
 	for (const double& val : vec)
 	{
-		if (iskFloatMissing(val))
+		if (IsKFloatMissing(val))
 		{
 			missing++;
 			continue;
@@ -713,7 +713,7 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 
 			for (const double& val : vec)
 			{
-				if (iskFloatMissing(val)) continue;
+				if (IsKFloatMissing(val)) continue;
 
 				if (val >= binmin && val < binmax)
 				{

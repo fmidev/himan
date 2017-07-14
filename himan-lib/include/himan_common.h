@@ -44,14 +44,14 @@ namespace himan
 //inline CUDA_HOST CUDA_DEVICE double getkHPMissingValue() {return nan("-999");}
 
 __attribute__((always_inline))
-inline CUDA_HOST CUDA_DEVICE double getkFloatMissing() {return nan("32700");}
+inline CUDA_HOST CUDA_DEVICE double GetKFloatMissing() {return nan("32700");}
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = -999.;//getkHPMissingValue();
-const double kFloatMissing = getkFloatMissing();
+const double kFloatMissing = GetKFloatMissing();
 
 __attribute__((always_inline))
-inline CUDA_HOST CUDA_DEVICE bool iskFloatMissing(const double& value)
+inline CUDA_HOST CUDA_DEVICE bool IsKFloatMissing(const double& value)
 {
         double missingValue = nan("32700");
         const uint64_t* _value = reinterpret_cast<const uint64_t*>(&value);
@@ -59,13 +59,13 @@ inline CUDA_HOST CUDA_DEVICE bool iskFloatMissing(const double& value)
 
         return (*_value == *_missingValue);
 }
-inline bool isMissing(double value) {return iskFloatMissing(value);}
+inline bool IsMissing(double value) {return IsKFloatMissing(value);}
 
-inline bool iskFloatValid(const double& value) {return !iskFloatMissing(value);}
-inline bool isValid(double value) {return iskFloatValid(value);}
+inline bool IsKFloatValid(const double& value) {return !IsKFloatMissing(value);}
+inline bool IsValid(double value) {return IsKFloatValid(value);}
 
 __attribute__((always_inline))
-inline CUDA_HOST CUDA_DEVICE bool iskHPMissingValue(const double& x)
+inline CUDA_HOST CUDA_DEVICE bool IsKHPMissingValue(const double& x)
 {
         double missingValue = nan("-999");
         const uint64_t* _x = reinterpret_cast<const uint64_t*>(&x);

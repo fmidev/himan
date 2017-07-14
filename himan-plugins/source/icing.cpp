@@ -87,7 +87,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		double Vv = tup.get<2>();
 		double Cl = tup.get<3>();
 
-		if (iskFloatMissing(T) || iskFloatMissing(Vv) || iskFloatMissing(Cl))
+		if (IsKFloatMissing(T) || IsKFloatMissing(Vv) || IsKFloatMissing(Cl))
 		{
 			continue;
 		}

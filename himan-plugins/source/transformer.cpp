@@ -266,7 +266,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		{
 			double value = sourceInfo->Value();
 
-			if (iskFloatMissing(value))
+			if (IsKFloatMissing(value))
 			{
 				continue;
 			}

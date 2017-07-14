@@ -112,7 +112,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			double T = TInfo->Value();
 			double RH = RHInfo->Value();
 
-			if (iskFloatMissing(T) || iskFloatMissing(RH))
+			if (IsKFloatMissing(T) || IsKFloatMissing(RH))
 			{
 				continue;
 			}

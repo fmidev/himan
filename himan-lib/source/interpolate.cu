@@ -11,7 +11,7 @@ extern double GetStandardParallel(himan::grid* g, int parallelno);
 extern double GetOrientation(himan::grid* g);
 
 const double kEpsilon = 1e-6;
-using himan::iskFloatMissing;
+using himan::IsKFloatMissing;
 
 struct point
 {
@@ -222,54 +222,54 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 
 	// All values present, regular bilinear interpolation
 
-	else if (!iskFloatMissing(av) && !iskFloatMissing(bv) && !iskFloatMissing(cv) && !iskFloatMissing(dv))
+	else if (!IsKFloatMissing(av) && !IsKFloatMissing(bv) && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
 	{
 		ret = BiLinear(dist.x, dist.y, av, bv, cv, dv);
 	}
 
 	// x or y is at grid edge
 
-	else if (fabs(dist.y) < kEpsilon && !iskFloatMissing(cv) && !iskFloatMissing(dv))
+	else if (fabs(dist.y) < kEpsilon && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
 	{
 		ret = Linear(dist.x, cv, dv);
 	}
 
-	else if (fabs(dist.y - 1) < kEpsilon && !iskFloatMissing(av) && !iskFloatMissing(bv))
+	else if (fabs(dist.y - 1) < kEpsilon && !IsKFloatMissing(av) && !IsKFloatMissing(bv))
 	{
 		ret = Linear(dist.x, av, bv);
 	}
 
-	else if (fabs(dist.x) < kEpsilon && !iskFloatMissing(cv) && !iskFloatMissing(av))
+	else if (fabs(dist.x) < kEpsilon && !IsKFloatMissing(cv) && !IsKFloatMissing(av))
 	{
 		ret = Linear(dist.y, cv, av);
 	}
 
-	else if (fabs(dist.x - 1) < kEpsilon && !iskFloatMissing(av) && !iskFloatMissing(bv))
+	else if (fabs(dist.x - 1) < kEpsilon && !IsKFloatMissing(av) && !IsKFloatMissing(bv))
 	{
 		ret = Linear(dist.y, dv, bv);
 	}
 
 	// One point missing; these "triangulation" methods have been copied from NFmiInterpolation.cpp
 
-	else if (iskFloatMissing(av) && !iskFloatMissing(bv) && !iskFloatMissing(cv) && !iskFloatMissing(dv))
+	else if (IsKFloatMissing(av) && !IsKFloatMissing(bv) && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
 	{
 		double wsum = (dist.x * dist.y + (1 - dist.x) * (1 - dist.y) + dist.x * (1 - dist.y));
 
 		ret = ((1 - dist.x) * (1 - dist.y) * cv + dist.x * (1 - dist.y) * dv + dist.x * dist.y * bv) / wsum;
 	}
-	else if (!iskFloatMissing(av) && iskFloatMissing(bv) && !iskFloatMissing(cv) && !iskFloatMissing(dv))
+	else if (!IsKFloatMissing(av) && IsKFloatMissing(bv) && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
 	{
 		double wsum = ((1 - dist.x) * dist.y + (1 - dist.x) * (1 - dist.y) + dist.x * (1 - dist.y));
 
 		ret = ((1 - dist.x) * (1 - dist.y) * cv + dist.x * (1 - dist.y) * dv + (1 - dist.x) * dist.y * av) / wsum;
 	}
-	else if (!iskFloatMissing(av) && !iskFloatMissing(bv) && iskFloatMissing(cv) && !iskFloatMissing(dv))
+	else if (!IsKFloatMissing(av) && !IsKFloatMissing(bv) && IsKFloatMissing(cv) && !IsKFloatMissing(dv))
 	{
 		double wsum = ((1 - dist.x) * dist.y + dist.x * dist.y + dist.x * (1 - dist.y));
 
 		ret = (dist.x * (1 - dist.y) * dv + (1 - dist.x) * dist.y * av + dist.x * dist.y * bv) / wsum;
 	}
-	else if (!iskFloatMissing(av) && !iskFloatMissing(bv) && !iskFloatMissing(cv) && !iskFloatMissing(dv))
+	else if (!IsKFloatMissing(av) && !IsKFloatMissing(bv) && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
 	{
 		double wsum = ((1 - dist.x) * (1 - dist.y) + (1 - dist.x) * dist.y + dist.x * dist.y);
 
@@ -332,7 +332,7 @@ __device__ double NearestPointValueInterpolation(const double* __restrict__ d_so
 	double arr[4] = {av, bv, cv, dv};
 	double mode = Mode(arr);
 
-	if (!iskFloatMissing(mode))
+	if (!IsKFloatMissing(mode))
 	{
 		return mode;
 	}
@@ -346,7 +346,7 @@ __device__ double NearestPointValueInterpolation(const double* __restrict__ d_so
 
 	mode = Mode(arr);
 
-	if (!iskFloatMissing(mode))
+	if (!IsKFloatMissing(mode))
 	{
 		double min = fmin(arr[0], fmin(arr[1], fmin(arr[2], arr[3])));
 
@@ -501,7 +501,7 @@ __global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v
 		double U = d_u[idx];
 		double V = d_v[idx];
 
-		if (!iskFloatMissing(U) && !iskFloatMissing(V))
+		if (!IsKFloatMissing(U) && !IsKFloatMissing(V))
 		{
 			int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));
 			int j = floor(static_cast<double>(idx / opts.size_x));
@@ -526,7 +526,7 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 		double U = d_u[idx];
 		double V = d_v[idx];
 
-		if (!iskFloatMissing(U) && !iskFloatMissing(V))
+		if (!IsKFloatMissing(U) && !IsKFloatMissing(V))
 		{
 			// Rotated to regular coordinates
 
@@ -650,7 +650,7 @@ void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
 
 			using himan::constants::kDeg;
 
-			if (latin1 == latin2 && !iskFloatMissing(latin2))
+			if (latin1 == latin2 && !IsKFloatMissing(latin2))
 			{
 				cone = sin(fabs(latin1) * kDeg);
 			}

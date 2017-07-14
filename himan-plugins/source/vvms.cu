@@ -12,10 +12,10 @@ __global__ void himan::plugin::vvms_cuda::Calculate(cdarr_t d_t, cdarr_t d_vv, c
 
 	if (idx < opts.N)
 	{
-		d_vv_ms[idx] = getkFloatMissing();
+		d_vv_ms[idx] = GetKFloatMissing();
 		double P = (opts.is_constant_pressure) ? opts.p_const : d_p[idx];
 
-		if (!iskFloatMissing(d_t[idx]) && !iskFloatMissing(d_vv[idx]) && !iskFloatMissing(P))
+		if (!IsKFloatMissing(d_t[idx]) && !IsKFloatMissing(d_vv[idx]) && !IsKFloatMissing(P))
 		{
 			const double w = opts.vv_ms_scale *
 			                 (287 * -d_vv[idx] * (opts.t_base + d_t[idx]) / (himan::constants::kG * P * opts.p_scale));
@@ -27,7 +27,7 @@ __global__ void himan::plugin::vvms_cuda::Calculate(cdarr_t d_t, cdarr_t d_vv, c
 			}
 			else
 			{
-				d_vv_ms[idx] = getkFloatMissing();
+				d_vv_ms[idx] = GetKFloatMissing();
 			}
 		}
 	}

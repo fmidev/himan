@@ -209,8 +209,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				TD = TDInfo->Value() + TDBase;  // to Kelvin
 			}
 
-			if (iskFloatMissing(T) || iskFloatMissing(P) ||
-			    ((itsThetaECalculation || itsThetaWCalculation) && iskFloatMissing(TD)))
+			if (IsKFloatMissing(T) || IsKFloatMissing(P) ||
+			    ((itsThetaECalculation || itsThetaWCalculation) && IsKFloatMissing(TD)))
 			{
 				continue;
 			}
@@ -255,7 +255,7 @@ double tpot::ThetaW(double P, double T, double TD)
 {
 	double thetae = metutil::ThetaE_(T, TD, P);
 
-	if (iskFloatMissing(thetae))
+	if (IsKFloatMissing(thetae))
 	{
 		return kFloatMissing;
 	}

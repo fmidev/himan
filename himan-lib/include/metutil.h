@@ -66,7 +66,7 @@ struct lcl_t
 	double Q;
 
 	CUDA_DEVICE
-	lcl_t() : T(himan::getkFloatMissing()), P(himan::getkFloatMissing()), Q(himan::getkFloatMissing()) {}
+	lcl_t() : T(himan::GetKFloatMissing()), P(himan::GetKFloatMissing()), Q(himan::GetKFloatMissing()) {}
 	CUDA_DEVICE
 	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q) {}
 };
@@ -728,9 +728,9 @@ inline double himan::metutil::E_(double R, double P)
 CUDA_DEVICE
 inline double himan::metutil::DryLift_(double P, double T, double targetP)
 {
-	if (iskFloatMissing(T) || iskFloatMissing(P) || iskFloatMissing(targetP) || targetP >= P)
+	if (IsKFloatMissing(T) || IsKFloatMissing(P) || IsKFloatMissing(targetP) || targetP >= P)
 	{
-		return getkFloatMissing();
+		return GetKFloatMissing();
 	}
 
 	// Sanity checks
@@ -782,9 +782,9 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 CUDA_DEVICE
 inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 {
-	if (iskFloatMissing(T) || iskFloatMissing(P) || targetP >= P)
+	if (IsKFloatMissing(T) || IsKFloatMissing(P) || targetP >= P)
 	{
-		return getkFloatMissing();
+		return GetKFloatMissing();
 	}
 
 	// Sanity checks
@@ -806,7 +806,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	const double Pstep = 100;  // Pa; do not increase this as quality of results is weakened
 	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
-	double value = getkFloatMissing();
+	double value = GetKFloatMissing();
 
 	while (++i < maxIter)
 	{
@@ -839,7 +839,7 @@ inline double Wobf(double T)
 	// "Wobus function" is a polynomial approximation of moist lift
 	// process. It is called from MoistLiftA_().
 
-	double ret = himan::getkFloatMissing();
+	double ret = himan::GetKFloatMissing();
 
 	T -= 20;
 
@@ -866,9 +866,9 @@ inline double Wobf(double T)
 CUDA_DEVICE
 inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 {
-	if (iskFloatMissing(T) || iskFloatMissing(P) || iskFloatMissing(targetP) || targetP >= P)
+	if (IsKFloatMissing(T) || IsKFloatMissing(P) || IsKFloatMissing(targetP) || targetP >= P)
 	{
-		return getkFloatMissing();
+		return GetKFloatMissing();
 	}
 
 	using namespace himan::constants;
@@ -929,8 +929,8 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	double Q = constants::kEp * E0 / P;
 	double C = T / pow(E0, constants::kRd_div_Cp);
 
-	double TLCL = getkFloatMissing();
-	double PLCL = getkFloatMissing();
+	double TLCL = GetKFloatMissing();
+	double PLCL = GetKFloatMissing();
 
 	double Torig = T;
 	double Porig = P;
@@ -950,7 +950,7 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 			ret.P = PLCL * 100;  // Pa
 
-			ret.T = (iskFloatMissing(TLCL)) ? getkFloatMissing() : TLCL;  // K
+			ret.T = (IsKFloatMissing(TLCL)) ? GetKFloatMissing() : TLCL;  // K
 
 			ret.Q = Q;
 		}
@@ -983,7 +983,7 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 				ret.P = PLCL * 100;  // Pa
 
-				ret.T = (iskFloatMissing(TLCL)) ? getkFloatMissing() : TLCL;  // K
+				ret.T = (IsKFloatMissing(TLCL)) ? GetKFloatMissing() : TLCL;  // K
 
 				ret.Q = Q;
 
@@ -1000,7 +1000,7 @@ inline lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 {
 	lcl_t ret;
 
-	if (iskFloatMissing(P) || iskFloatMissing(T) || iskFloatMissing(TD))
+	if (IsKFloatMissing(P) || IsKFloatMissing(T) || IsKFloatMissing(TD))
 	{
 		return ret;
 	}
@@ -1029,9 +1029,9 @@ inline double himan::metutil::Es_(double T)
 
 	double Es;
 
-	if (iskFloatMissing(T))
+	if (IsKFloatMissing(T))
 	{
-		return getkFloatMissing();
+		return GetKFloatMissing();
 	}
 
 	T -= himan::constants::kKelvin;
@@ -1055,9 +1055,9 @@ inline double himan::metutil::Gammas_(double P, double T)
 {
 	// Sanity checks
 
-	if (iskFloatMissing(P) || iskFloatMissing(T))
+	if (IsKFloatMissing(P) || IsKFloatMissing(T))
 	{
-		return getkFloatMissing();
+		return GetKFloatMissing();
 	}
 
 	assert(P > 10000);
@@ -1081,9 +1081,9 @@ inline double himan::metutil::Gammaw_(double P, double T)
 {
 	// Sanity checks
 
-	if (iskFloatMissing(P) || iskFloatMissing(T))
+	if (IsKFloatMissing(P) || IsKFloatMissing(T))
 	{
-		return getkFloatMissing();
+		return GetKFloatMissing();
 	}
 
 	assert(P > 1000);
@@ -1131,7 +1131,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 {
 	lcl_t LCL = LCL_(50000, T500m, TD500m);
 
-	double li = getkFloatMissing();
+	double li = GetKFloatMissing();
 
 	const double TARGET_PRESSURE = 50000;
 
@@ -1172,7 +1172,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 {
 	lcl_t LCL = metutil::LCL_(85000, T850, TD850);
 
-	double si = getkFloatMissing();
+	double si = GetKFloatMissing();
 
 	const double TARGET_PRESSURE = 50000;
 
@@ -1251,7 +1251,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	assert(thetaE > 0);
 	assert(P > 1000);
 
-	if (iskFloatMissing(thetaE)) return getkFloatMissing();
+	if (IsKFloatMissing(thetaE)) return GetKFloatMissing();
 
 	using namespace himan::constants;
 
@@ -1277,7 +1277,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 
 	const double Dp = 1 / (0.1859 * p / p0 + 0.6512);
 
-	double Tw = getkFloatMissing();
+	double Tw = GetKFloatMissing();
 
 	if (ratio > Dp)
 	{
@@ -1353,7 +1353,7 @@ inline double himan::metutil::ThetaW_(double thetaE, double P)
 {
 	assert(P > 1000);
 
-	if (iskFloatMissing(thetaE)) return getkFloatMissing();
+	if (IsKFloatMissing(thetaE)) return GetKFloatMissing();
 
 	double thetaW = thetaE;
 

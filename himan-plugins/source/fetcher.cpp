@@ -804,7 +804,7 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 		{
 			double lsm = lsmInfo->Value();
 
-			if (iskFloatMissing(theInfo.Value()) || iskFloatMissing(lsm))
+			if (IsKFloatMissing(theInfo.Value()) || IsKFloatMissing(lsm))
 			{
 				continue;
 			}

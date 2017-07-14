@@ -103,8 +103,8 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double RH700 = RH700Info->Value();
 		double RH500 = RH500Info->Value();
 
-		if (iskFloatMissing(T0m) || iskFloatMissing(N) || iskFloatMissing(kIndex) || iskFloatMissing(T850) ||
-		    iskFloatMissing(RH850) || iskFloatMissing(RH700) || iskFloatMissing(RH500))
+		if (IsKFloatMissing(T0m) || IsKFloatMissing(N) || IsKFloatMissing(kIndex) || IsKFloatMissing(T850) ||
+		    IsKFloatMissing(RH850) || IsKFloatMissing(RH700) || IsKFloatMissing(RH500))
 		{
 			continue;
 		}

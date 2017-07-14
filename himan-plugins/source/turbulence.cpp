@@ -155,9 +155,9 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double nextV = nextVInfo->Value();
 		double nextH = nextHInfo->Value();
 
-		if (iskFloatMissing(U) || iskFloatMissing(V) || iskFloatMissing(H) || iskFloatMissing(prevU) ||
-		    iskFloatMissing(prevV) || iskFloatMissing(prevH) || iskFloatMissing(nextU) || iskFloatMissing(nextV) ||
-		    iskFloatMissing(nextH))
+		if (IsKFloatMissing(U) || IsKFloatMissing(V) || IsKFloatMissing(H) || IsKFloatMissing(prevU) ||
+		    IsKFloatMissing(prevV) || IsKFloatMissing(prevH) || IsKFloatMissing(nextU) || IsKFloatMissing(nextV) ||
+		    IsKFloatMissing(nextH))
 		{
 			continue;
 		}

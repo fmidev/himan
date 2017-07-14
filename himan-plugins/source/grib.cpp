@@ -787,17 +787,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger->Trace("Writing unpacked data");
 
-/*                int replacedMissValue = 0;
-                for (size_t i = 0; i < anInfo.Data().Values().size(); i++)
-                {
-            if (iskFloatMissing(anInfo.Data().Values()[i]))
-            {
-                anInfo.Data().Values()[i] = 9999.;
-                replacedMissValue++;
-            }
-        }
-        cout << "replaced: " << replacedMissValue << " missing Values" << endl;
-*/
 #ifdef DEBUG
 
 		// Check that data is not NaN, otherwise grib_api will go to

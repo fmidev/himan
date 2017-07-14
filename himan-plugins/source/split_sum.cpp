@@ -558,7 +558,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		double currentSum = tup.get<1>();
 		double previousSum = tup.get<2>();
 
-		if (iskFloatMissing(currentSum) || iskFloatMissing(previousSum))
+		if (IsKFloatMissing(currentSum) || IsKFloatMissing(previousSum))
 		{
 			continue;
 		}

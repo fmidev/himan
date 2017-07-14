@@ -297,7 +297,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// jäätävää vesisadetta: "pinnassa pakkasta ja sulamiskerros pinnan lähellä"
 
-		if (iskFloatMissing(PreForm) AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
+		if (IsKFloatMissing(PreForm) AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
 		{
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925), tai kun Psfc ei löydy?
 			// (riittävän paksu) sulamiskerros ja pilveä 925/850hPa:ssa?
@@ -326,7 +326,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		double SNR_RR = 0;  // oletuksena kaikki sade vetta
 
-		if (!iskFloatMissing(SNR))
+		if (!IsKFloatMissing(SNR))
 		{
 			// lasketaan oikea suhde vain jos lumidataa on (kesalla ei ole)
 			SNR_RR = SNR / RR;
@@ -334,19 +334,19 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// lumisadetta: snowfall >=80% kokonaissateesta
 
-		if (iskFloatMissing(PreForm) AND(SNR_RR >= snowLim OR T <= 0))
+		if (IsKFloatMissing(PreForm) AND(SNR_RR >= snowLim OR T <= 0))
 		{
 			PreForm = SNOW;
 		}
 
 		// räntää: snowfall 15...80% kokonaissateesta
-		if (iskFloatMissing(PreForm) AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
+		if (IsKFloatMissing(PreForm) AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
 		{
 			PreForm = SLEET;
 		}
 
 		// tihkua tai vesisadetta: Rain>=85% kokonaissateesta
-		if (iskFloatMissing(PreForm) AND(SNR_RR) <= waterLim)
+		if (IsKFloatMissing(PreForm) AND(SNR_RR) <= waterLim)
 		{
 			// tihkua: "ei (satavaa) keskipilveä, pinnan lähellä kosteaa (stratus), sade heikkoa"
 			if ((RH700 < 80)AND(RH > 90) AND(RR <= dzLim))
@@ -370,7 +370,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			}
 
 			// muuten vesisadetta:
-			if (iskFloatMissing(PreForm))
+			if (IsKFloatMissing(PreForm))
 			{
 				PreForm = RAIN;
 			}

@@ -124,8 +124,8 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		double T_C = T - constants::kKelvin;  // Convert Temperature to Celvins
 		double mol(kFloatMissing);
 
-		if (iskFloatMissing(T) || iskFloatMissing(SHF) || iskFloatMissing(LHF) || iskFloatMissing(U_S) ||
-		    iskFloatMissing(P))
+		if (IsKFloatMissing(T) || IsKFloatMissing(SHF) || IsKFloatMissing(LHF) || IsKFloatMissing(U_S) ||
+		    IsKFloatMissing(P))
 		{
 			continue;
 		}

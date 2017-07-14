@@ -1134,8 +1134,8 @@ void BindLib(lua_State* L)
 	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_),
 		  def("FlightLevel_", &metutil::FlightLevel_),
 		  // himan namespace
-		  def("isMissing", &::isMissing),
-		  def("isValid", &::isValid)];
+		  def("IsMissing", &::IsMissing),
+		  def("IsValid", &::IsValid)];
 }
 
 void BindPlugins(lua_State* L)

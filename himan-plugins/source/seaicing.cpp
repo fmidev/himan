@@ -97,7 +97,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		double Tg = TgInfo->Value();
 		double Ff = FfInfo->Value();
 
-		if (iskFloatMissing(T) || iskFloatMissing(Tg) || iskFloatMissing(Ff))
+		if (IsKFloatMissing(T) || IsKFloatMissing(Tg) || IsKFloatMissing(Ff))
 		{
 			continue;
 		}

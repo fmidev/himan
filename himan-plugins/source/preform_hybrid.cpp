@@ -290,7 +290,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		double RR = RRInfo->Value();
 		double T = TInfo->Value();
 
-		if (iskFloatMissing(RR) || iskFloatMissing(T))
+		if (IsKFloatMissing(RR) || IsKFloatMissing(T))
 		{
 			continue;
 		}
@@ -306,32 +306,32 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		T -= himan::constants::kKelvin;  // K --> C
 
-		if (!iskFloatMissing(Ttop))
+		if (!IsKFloatMissing(Ttop))
 		{
 			Ttop -= himan::constants::kKelvin;
 		}
 
-		if (!iskFloatMissing(stTavg))
+		if (!IsKFloatMissing(stTavg))
 		{
 			stTavg -= himan::constants::kKelvin;
 		}
 
-		if (!iskFloatMissing(Navg))
+		if (!IsKFloatMissing(Navg))
 		{
 			Navg *= 100;  // --> %
 		}
 
 		assert(T >= -80 && T < 80);
 		assert(!noPotentialPrecipitationForm || RR > 0);
-		assert(iskFloatMissing(Navg) || (Navg >= 0 && Navg <= 100));
+		assert(IsKFloatMissing(Navg) || (Navg >= 0 && Navg <= 100));
 
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
 		// 1. jäätävää tihkua? (tai lumijyväsiä)
 
-		if (!iskFloatMissing(base) AND !iskFloatMissing(top) AND !iskFloatMissing(upperLayerN) AND !iskFloatMissing(
-		        wAvg) AND !iskFloatMissing(Navg) AND !iskFloatMissing(stTavg) AND !iskFloatMissing(Ttop) AND RR <=
+		if (!IsKFloatMissing(base) AND !IsKFloatMissing(top) AND !IsKFloatMissing(upperLayerN) AND !IsKFloatMissing(
+		        wAvg) AND !IsKFloatMissing(Navg) AND !IsKFloatMissing(stTavg) AND !IsKFloatMissing(Ttop) AND RR <=
 		    fzdzLim AND
 		        base<baseLimit AND(top - base) >= fzStLimit AND wAvg<wMax AND wAvg >= 0 AND Navg> Nlimit AND Ttop>
 		            stTlimit AND stTavg > stTlimit AND T > sfcMin AND T <= sfcMax AND upperLayerN < dryNlim)
@@ -345,10 +345,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		// kuivaa?
 		// (Huom. hyvin paksu pakkaskerros (tai ohut sulamiskerros) -> oikeasti jääjyväsiä/ice pellets fzra sijaan)
 
-		if (iskFloatMissing(PreForm) AND !iskFloatMissing(plusArea) AND !iskFloatMissing(minusArea)
-		        AND !iskFloatMissing(rhAvgUpper) AND !iskFloatMissing(rhMeltUpper) AND plusArea >
+		if (IsKFloatMissing(PreForm) AND !IsKFloatMissing(plusArea) AND !IsKFloatMissing(minusArea)
+		        AND !IsKFloatMissing(rhAvgUpper) AND !IsKFloatMissing(rhMeltUpper) AND plusArea >
 		    fzraPA AND
-		        minusArea<fzraMA AND T <= 0 AND(iskFloatMissing(upperLayerN) OR upperLayerN > dryNlim) AND rhAvgUpper>
+		        minusArea<fzraMA AND T <= 0 AND(IsKFloatMissing(upperLayerN) OR upperLayerN > dryNlim) AND rhAvgUpper>
 		            rhMeltUpper)
 		{
 			PreForm = FREEZING_RAIN;
@@ -356,17 +356,17 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		// 3. Lunta, räntää, tihkua vai vettä? PK:n koodia mukaillen
 
-		if (iskFloatMissing(PreForm))
+		if (IsKFloatMissing(PreForm))
 		{
 			// Tihkua tai vettä jos "riitävän paksu lämmin kerros pinnan yläpuolella"
 
-			if (!iskFloatMissing(plusArea) AND plusArea > waterArea)
+			if (!IsKFloatMissing(plusArea) AND plusArea > waterArea)
 			{
 				// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
 				// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään
 				// mukana)
-				if (!iskFloatMissing(base) && !iskFloatMissing(top) && !iskFloatMissing(Navg) &&
-				    !iskFloatMissing(upperLayerN) && RR <= dzLim && base < baseLimit && (top - base) > stLimit &&
+				if (!IsKFloatMissing(base) && !IsKFloatMissing(top) && !IsKFloatMissing(Navg) &&
+				    !IsKFloatMissing(upperLayerN) && RR <= dzLim && base < baseLimit && (top - base) > stLimit &&
 				    Navg > Nlimit && upperLayerN < dryNlim)
 				{
 					PreForm = DRIZZLE;
@@ -378,7 +378,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan
 
-				if (!iskFloatMissing(nZeroLevel) AND !iskFloatMissing(rhAvg) AND !iskFloatMissing(rhMelt)
+				if (!IsKFloatMissing(nZeroLevel) AND !IsKFloatMissing(rhAvg) AND !IsKFloatMissing(rhMelt)
 				        AND nZeroLevel == 1 AND rhAvg < rhMelt AND plusArea < 4000)
 				{
 					PreForm = SLEET;
@@ -387,7 +387,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// Lisäys, jolla korjataan vesi/tihku lumeksi, jos pintakerros pakkasella (mutta jäätävän sateen/tihkun
 				// kriteerit eivät toteudu,
 				// esim. paksu plussakerros pakkas-st/sc:n yllä)
-				if (!iskFloatMissing(minusArea) OR(!iskFloatMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
+				if (!IsKFloatMissing(minusArea) OR(!IsKFloatMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
 				{
 					PreForm = SNOW;
 				}
@@ -395,13 +395,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
 
-			if (!iskFloatMissing(plusArea) AND plusArea >= snowArea AND plusArea <= waterArea)
+			if (!IsKFloatMissing(plusArea) AND plusArea >= snowArea AND plusArea <= waterArea)
 			{
 				PreForm = SLEET;
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi lumi rännän sijaan
 
-				if (!iskFloatMissing(nZeroLevel) AND !iskFloatMissing(rhAvg) AND !iskFloatMissing(rhMelt)
+				if (!IsKFloatMissing(nZeroLevel) AND !IsKFloatMissing(rhAvg) AND !IsKFloatMissing(rhMelt)
 				        AND nZeroLevel == 1 AND rhAvg < rhMelt)
 				{
 					PreForm = SNOW;
@@ -409,7 +409,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// lisäys, jolla korjataan räntä lumeksi, kun pintakerros pakkasella tai vain ohuelti plussalla
 
-				if (!iskFloatMissing(minusArea) OR(!iskFloatMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
+				if (!IsKFloatMissing(minusArea) OR(!IsKFloatMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
 				{
 					PreForm = SNOW;
 				}
@@ -417,7 +417,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
 
-			if (iskFloatMissing(plusArea) OR plusArea < snowArea)
+			if (IsKFloatMissing(plusArea) OR plusArea < snowArea)
 			{
 				PreForm = SNOW;
 			}
@@ -502,7 +502,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 #ifdef DEBUG
 		for (size_t i = 0; i < numZeroLevels.size(); i++)
 		{
-			assert(!iskFloatMissing(numZeroLevels[i]));
+			assert(!IsKFloatMissing(numZeroLevels[i]));
 		}
 
 		util::DumpVector(numZeroLevels, "num zero levels");
@@ -680,7 +680,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			double paloft = MISS;
 
-			if (!iskFloatMissing(zl1) && !iskFloatMissing(zl2) && !iskFloatMissing(ta1) && !iskFloatMissing(ta2))
+			if (!IsKFloatMissing(zl1) && !IsKFloatMissing(zl2) && !IsKFloatMissing(ta1) && !IsKFloatMissing(ta2))
 			{
 				ta1 -= constants::kKelvin;
 				ta2 -= constants::kKelvin;
@@ -703,7 +703,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				double zl3 = zeroLevel3[i], zl4 = zeroLevel4[i];
 				ta2 = Tavg34[i];
 
-				if (!iskFloatMissing(zl3) && !iskFloatMissing(zl4) && !iskFloatMissing(ta2) && !iskFloatMissing(paloft))
+				if (!IsKFloatMissing(zl3) && !IsKFloatMissing(zl4) && !IsKFloatMissing(ta2) && !IsKFloatMissing(paloft))
 				{
 					paloft = paloft + (zl4 - zl3) * (ta2 - constants::kKelvin);
 				}
@@ -719,7 +719,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			double zl1 = zeroLevel1[i], ta1 = Tavg01[i];
 			double paloft = MISS;
 
-			if (!iskFloatMissing(zl1) && !iskFloatMissing(ta1))
+			if (!IsKFloatMissing(zl1) && !IsKFloatMissing(ta1))
 			{
 				ta1 -= constants::kKelvin;
 				pasfc = zl1 * ta1;
@@ -747,7 +747,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				double zl2 = zeroLevel2[i], zl3 = zeroLevel3[i];
 				double ta2 = Tavg23[i];
 
-				if (iskFloatMissing(zl2) && !iskFloatMissing(zl3) && !iskFloatMissing(ta2))
+				if (IsKFloatMissing(zl2) && !IsKFloatMissing(zl3) && !IsKFloatMissing(ta2))
 				{
 					ta2 -= constants::kKelvin;
 
@@ -759,9 +759,9 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 					// Keskimääräinen RH ylemmässä plussakerroksessa
 					rhAvgUpper[i] = rhAvgUpper23[i];
 
-					if (!iskFloatMissing(rhAvgUpper[i]) AND !iskFloatMissing(rhMeltUpper[i])
+					if (!IsKFloatMissing(rhAvgUpper[i]) AND !IsKFloatMissing(rhMeltUpper[i])
 					            AND rhAvgUpper[i] > rhMeltUpper[i] &&
-					    !iskFloatMissing(pasfc))
+					    !IsKFloatMissing(pasfc))
 					{
 						pa = pasfc + paloft;
 					}
@@ -856,7 +856,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		for (size_t i = 0; i < baseThreshold.size(); i++)
 		{
-			assert(!iskFloatMissing(baseThreshold[i]));
+			assert(!IsKFloatMissing(baseThreshold[i]));
 
 			if (baseThreshold[i] < stCover)
 			{
@@ -877,7 +877,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		for (size_t i = 0; i < topThreshold.size(); i++)
 		{
-			assert(!iskFloatMissing(topThreshold[i]));
+			assert(!IsKFloatMissing(topThreshold[i]));
 			if (topThreshold[i] < stCover)
 			{
 				topThreshold[i] = stCover;
@@ -920,7 +920,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 			for (size_t i = 0; i < constData1.size(); i++)
 			{
-				if (iskFloatMissing(stratusTop[i]))
+				if (IsKFloatMissing(stratusTop[i]))
 				{
 					constData1[i] = MISS;
 					constData2[i] = MISS;
@@ -974,7 +974,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 				double lower = stratusBase[i];
 				double upper = stratusTop[i];
 
-				if (iskFloatMissing(lower) || iskFloatMissing(upper))
+				if (IsKFloatMissing(lower) || IsKFloatMissing(upper))
 				{
 					constData1[i] = MISS;
 					constData2[i] = MISS;

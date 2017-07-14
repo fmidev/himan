@@ -91,7 +91,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		double wind10m = windInfo->Value();
 		double tGround = groundInfo->Value();
 
-		if (iskFloatMissing(tGround) || iskFloatMissing(dt2m) || iskFloatMissing(wind10m))
+		if (IsKFloatMissing(tGround) || IsKFloatMissing(dt2m) || IsKFloatMissing(wind10m))
 		{
 			continue;
 		}

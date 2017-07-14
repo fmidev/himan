@@ -439,7 +439,7 @@ __device__ void simple_packed_util::UnpackFullBytes(unsigned char* __restrict__ 
 
 		if (bm == 0)
 		{
-			d_u[idx] = getkFloatMissing();
+			d_u[idx] = GetKFloatMissing();
 			value_found = 0;
 		}
 		else
@@ -492,7 +492,7 @@ __device__ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict_
 
 		if (bm == 0)
 		{
-			d_u[idx] = getkFloatMissing();
+			d_u[idx] = GetKFloatMissing();
 			value_found = 0;
 		}
 		else
