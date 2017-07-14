@@ -8,17 +8,16 @@
 #ifndef INFO_H
 #define INFO_H
 
+#include "himan_common.h"
 #include "forecast_time.h"
 #include "forecast_type.h"
 #include "grid.h"
-#include "himan_common.h"
 #include "info_simple.h"
 #include "level.h"
 #include "param.h"
 #include "producer.h"
 #include "raw_time.h"
 #include "serialization.h"
-#include "station.h"
 #include "station.h"
 #include <vector>
 #define VEC(I) I->Data().Values()
