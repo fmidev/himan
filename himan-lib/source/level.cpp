@@ -52,7 +52,7 @@ level::operator std::string() const
 {
 	std::string out = HPLevelTypeToString.at(itsType) + "/" + boost::lexical_cast<std::string>(itsValue);
 
-	if (itsValue2 != kHPMissingValue)
+	if (!IsKHPMissingValue(itsValue2))
 	{
 		out += "/" + boost::lexical_cast<std::string>(itsValue2);
 	}

@@ -286,8 +286,8 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 {
 	assert(itsNi != static_cast<size_t>(kHPMissingInt));
 	assert(itsNj != static_cast<size_t>(kHPMissingInt));
-	assert(Di() != kHPMissingValue);
-	assert(Dj() != kHPMissingValue);
+	assert(!IsKHPMissingValue(Di()));
+	assert(!IsKHPMissingValue(Dj()));
 	assert(locationIndex < itsNi * itsNj);
 
 	if (!itsXYToLatLonTransformer)
@@ -499,7 +499,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 	// Build OGR presentation of LCC
 	std::stringstream ss;
 
-	if (itsStandardParallel1 == kHPMissingValue || itsOrientation == kHPMissingValue || FirstPoint() == point())
+	if (IsKHPMissingValue(itsStandardParallel1) || IsKHPMissingValue(itsOrientation) || FirstPoint() == point())
 	{
 		// itsLogger->Error("First standard latitude or orientation missing");
 		return false;
@@ -507,7 +507,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 
 	// If latin1==latin2, projection is effectively lccSP1
 
-	if (itsStandardParallel2 == kHPMissingValue)
+	if (IsKHPMissingValue(itsStandardParallel2))
 	{
 		itsStandardParallel2 = itsStandardParallel1;
 	}
@@ -542,7 +542,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 	double falseEasting = FirstPoint().X();
 	double falseNorthing = FirstPoint().Y();
 
-	assert(falseEasting != kHPMissingValue && falseNorthing != kHPMissingValue);
+	assert(!IsKHPMissingValue(falseEasting) && IsKHPMissingValue(falseNorthing));
 
 	if (!itsLatLonToXYTransformer->Transform(1, &falseEasting, &falseNorthing))
 	{

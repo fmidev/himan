@@ -57,7 +57,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 		fileName << base.str() << "/" << info.Param().Name() << "_" << HPLevelTypeToString.at(info.Level().Type())
 		         << "_" << info.Level().Value();
 
-		if (info.Level().Value2() != kHPMissingValue)
+		if (!IsKHPMissingValue(info.Level().Value2()))
 		{
 			fileName << "-" << info.Level().Value2();
 		}

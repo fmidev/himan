@@ -40,17 +40,13 @@ namespace ba = boost::assign;
 namespace himan
 {
 // Define some missing value utilities
-//__attribute__((always_inline))
-//inline CUDA_HOST CUDA_DEVICE double getkHPMissingValue() {return nan("-999");}
-
-__attribute__((always_inline))
+inline CUDA_HOST CUDA_DEVICE double GetKHPMissingValue() {return -999.;} // Doesn't work with nan because of comparsion operator definition in several classes.
 inline CUDA_HOST CUDA_DEVICE double GetKFloatMissing() {return nan("32700");}
 
 const int kHPMissingInt = 999999;
-const double kHPMissingValue = -999.;//getkHPMissingValue();
+const double kHPMissingValue = GetKHPMissingValue();
 const double kFloatMissing = GetKFloatMissing();
 
-__attribute__((always_inline))
 inline CUDA_HOST CUDA_DEVICE bool IsKFloatMissing(const double& value)
 {
         double missingValue = nan("32700");
@@ -59,20 +55,12 @@ inline CUDA_HOST CUDA_DEVICE bool IsKFloatMissing(const double& value)
 
         return (*_value == *_missingValue);
 }
-inline bool IsMissing(double value) {return IsKFloatMissing(value);}
-
 inline bool IsKFloatValid(const double& value) {return !IsKFloatMissing(value);}
+
+inline bool IsMissing(double value) {return IsKFloatMissing(value);}
 inline bool IsValid(double value) {return IsKFloatValid(value);}
 
-__attribute__((always_inline))
-inline CUDA_HOST CUDA_DEVICE bool IsKHPMissingValue(const double& x)
-{
-        double missingValue = nan("-999");
-        const uint64_t* _x = reinterpret_cast<const uint64_t*>(&x);
-        const uint64_t* _missingValue = reinterpret_cast<const uint64_t*>(&missingValue);
-
-        return (*_x == *_missingValue);
-}
+inline CUDA_HOST CUDA_DEVICE bool IsKHPMissingValue(const double& x) {return x == -999;}
 
 // Define different plugin types
 

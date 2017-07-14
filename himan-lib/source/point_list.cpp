@@ -120,9 +120,9 @@ point point_list::BottomLeft() const
 
 	for (const auto& p : itsStations)
 	{
-		if (ret.X() == kHPMissingValue || p.X() < ret.X())
+		if (IsKHPMissingValue(ret.X()) || p.X() < ret.X())
 		{
-			if (ret.Y() == kHPMissingValue || p.Y() > ret.Y())
+			if (IsKHPMissingValue(ret.Y()) || p.Y() > ret.Y())
 			{
 				ret = p;
 			}
@@ -138,9 +138,9 @@ point point_list::TopRight() const
 
 	for (const auto& p : itsStations)
 	{
-		if (ret.X() == kHPMissingValue || p.X() > ret.X())
+		if (IsKHPMissingValue(ret.X()) || p.X() > ret.X())
 		{
-			if (ret.Y() == kHPMissingValue || p.Y() < ret.Y())
+			if (IsKHPMissingValue(ret.Y()) || p.Y() < ret.Y())
 			{
 				ret = p;
 			}

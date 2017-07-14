@@ -209,7 +209,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().SetLongKey("Latin1InDegrees", static_cast<long>(lccg->StandardParallel1()));
 
-			if (lccg->StandardParallel2() != kHPMissingValue)
+			if (!IsKHPMissingValue(lccg->StandardParallel2()))
 			{
 				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
 			}
@@ -1491,7 +1491,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 
 		case himan::kGndLayer:
 		{
-			if (options.level.Value2() == himan::kHPMissingValue)
+			if (IsKHPMissingValue(options.level.Value2()))
 			{
 				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
 			}

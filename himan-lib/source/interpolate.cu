@@ -645,7 +645,7 @@ void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
 			const double latin2 = GetStandardParallel(UInfo.Grid(), 2);
 			const double orientation = GetOrientation(UInfo.Grid());
 
-			assert(latin1 != himan::kHPMissingValue && orientation != himan::kHPMissingValue);
+			assert(!himan::IsKHPMissingValue(latin1) && !himan::IsKHPMissingValue(orientation));
 			double cone;
 
 			using himan::constants::kDeg;
