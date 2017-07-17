@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.6.21
-Release: 3.el7.fmi
+Version: 17.7.17
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -111,6 +111,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jul 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.7.17-1.fmi
+- Removing timer_factory
+- Manual ANALYZE when first inserting to radon
 * Wed Jun 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.21-3.fmi
 - Fix for neons grib2 metadata
 * Wed Jun 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.21-2.fmi
