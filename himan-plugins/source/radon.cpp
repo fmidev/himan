@@ -467,15 +467,16 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 		return false;
 	}
 
-	string geom_id = geominfo["id"];
+	const string geom_id = geominfo["id"];
+	const string geom_name = geominfo["name"];
 	auto analysisTime = resultInfo.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	query.str("");
 
 	query << "SELECT "
-	      << "id, schema_name, partition_name "
-	      << "FROM as_grid "
-	      << "WHERE geometry_id = '" << geom_id << "'"
+	      << "id, schema_name, partition_name, record_count "
+	      << "FROM as_grid_v "
+	      << "WHERE geometry_name = '" << geom_name << "'"
 	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime << "'"
 	      << ", '" << analysisTime << "')"
 	      << " AND producer_id = " << resultInfo.Producer().Id();
@@ -492,6 +493,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	const string schema_name = row[1];
 	const string table_name = row[2];
+	const string record_count = row[3];
 
 	query.str("");
 
@@ -531,9 +533,10 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	}
 
 	double levelValue2 = (resultInfo.Level().Value2() == kHPMissingValue) ? -1 : resultInfo.Level().Value2();
+	const string fullTableName = schema_name + "." + table_name;
 
 	query
-	    << "INSERT INTO " << schema_name << "." << table_name
+	    << "INSERT INTO " << fullTableName
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
 	       "forecast_type_id, forecast_type_value, file_location, file_server) VALUES ("
 	    << resultInfo.Producer().Id() << ", "
@@ -548,13 +551,32 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	{
 		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
+
+		// After first insert we have to analyze table manually. Otherwise Himan might not be
+		// able to fetch this inserted data in subsequent plugin calls, because it checks the
+		// record_count column from as_grid_v which is only updated by database ANALYZE calls.
+		// The database DOES do this automatically, but only after a certain threshold has been
+		// passed (by default 50 changed rows).
+		//
+		// In some cases this implementation might lead to multiple ANALYZE calls being made, when
+		// the first fields are insterted from multiple parallel threads. This does not matter,
+		// ANALYZE on a near-empty table should be fast enough.
+
+		if (record_count == "0")
+		{
+			itsLogger->Trace("Analyzing table " + fullTableName + " due to first insert");
+
+			query.str("");
+			query << "ANALYZE " << fullTableName;
+			itsRadonDB->Execute(query.str());
+		}
 	}
 	catch (const pqxx::unique_violation& e)
 	{
 		itsRadonDB->Rollback();
 
 		query.str("");
-		query << "UPDATE " << schema_name << "." << table_name << " SET "
+		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << theFileName << "', "
 		      << "file_server = '" << host << "' WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
