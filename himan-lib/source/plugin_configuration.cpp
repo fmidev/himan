@@ -132,7 +132,7 @@ void plugin_configuration::StartStatistics() { itsStatistics->Start(); }
 
 void plugin_configuration::WriteStatistics()
 {
-	itsStatistics->itsTimer->Stop();
+	itsStatistics->itsTimer.Stop();
 
 	cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << endl;
 
@@ -173,7 +173,7 @@ void plugin_configuration::WriteStatistics()
 
 	// total elapsed time
 
-	size_t elapsedTime = static_cast<size_t>(itsStatistics->itsTimer->GetTime());
+	size_t elapsedTime = static_cast<size_t>(itsStatistics->itsTimer.GetTime());
 
 	int fetchingTimePercentage =
 	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsFetchingTime) /

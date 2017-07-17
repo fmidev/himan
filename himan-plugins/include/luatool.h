@@ -71,7 +71,7 @@ protected:
 	 * lua scripts!
 	 */
 
-	void Finish() const;
+	void Finish();
 	void Run(info_t myTargetInfo, unsigned short threadIndex);
 
 private:

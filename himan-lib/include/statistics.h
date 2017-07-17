@@ -7,7 +7,7 @@
 #define STATISTICS_H
 
 #include "raw_time.h"
-#include "timer_factory.h"
+#include "timer.h"
 
 #if !defined __clang__ && defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
 #include <cstdatomic>
@@ -57,6 +57,8 @@ private:
 	bool StoreToDatabase();
 	bool StoreToFile();
 
+	timer itsTimer;
+
 	std::atomic<size_t> itsValueCount;
 	std::atomic<size_t> itsMissingValueCount;
 	std::atomic<size_t> itsFetchingTime;
@@ -66,7 +68,6 @@ private:
 	std::atomic<size_t> itsCacheMissCount;
 	std::atomic<size_t> itsCacheHitCount;
 
-	std::unique_ptr<timer> itsTimer;
 	short itsUsedThreadCount;
 	short itsUsedGPUCount;
 };

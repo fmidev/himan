@@ -1222,12 +1222,12 @@ void luatool::Run(info_t myTargetInfo, unsigned short threadIndex)
 	}
 }
 
-void luatool::Finish() const
+void luatool::Finish()
 {
 	if (itsConfiguration->StatisticsEnabled())
 	{
-		itsTimer->Stop();
-		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer->GetTime());
+		itsTimer.Stop();
+		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer.GetTime());
 	}
 }
 

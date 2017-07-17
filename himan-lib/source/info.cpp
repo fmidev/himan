@@ -45,22 +45,6 @@ info::info(const info& other)
 	if (other.itsBaseGrid)
 	{
 		itsBaseGrid = unique_ptr<grid>(other.itsBaseGrid->Clone());
-		/*	if (other.itsBaseGrid->Class() == kRegularGrid)
-		    {
-		        itsBaseGrid = unique_ptr<regular_grid> (new regular_grid(*dynamic_cast<regular_grid*>
-		   (other.itsBaseGrid.get())));
-		    }
-		    else if (other.itsBaseGrid->Class() == kIrregularGrid)
-		    {
-		        itsBaseGrid = unique_ptr<point_list> (new point_list(*dynamic_cast<point_list*>
-		   (other.itsBaseGrid.get())));
-		    }
-		    else
-		    {
-		        itsLogger->Fatal("Invalid grid type for base grid");
-		        abort();
-		    }
-	*/
 	}
 
 	itsLogger = logger_factory::Instance()->GetLog("info");

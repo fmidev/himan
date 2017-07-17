@@ -3,11 +3,10 @@
  *
  */
 
-#include "writer.h"
 #include "logger_factory.h"
 #include "plugin_factory.h"
-#include "timer_factory.h"
 #include "util.h"
+#include "writer.h"
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fstream>
@@ -113,11 +112,11 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf,
                     const std::string& theOriginalOutputFile)
 {
-	std::unique_ptr<himan::timer> t = std::unique_ptr<himan::timer>(timer_factory::Instance()->GetTimer());
+	timer t;
 
 	if (conf->StatisticsEnabled())
 	{
-		t->Start();
+		t.Start();
 	}
 
 	bool ret = true;
@@ -187,9 +186,9 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 
 	if (conf->StatisticsEnabled())
 	{
-		t->Stop();
+		t.Stop();
 
-		conf->Statistics()->AddToWritingTime(t->GetTime());
+		conf->Statistics()->AddToWritingTime(t.GetTime());
 	}
 
 	return ret;

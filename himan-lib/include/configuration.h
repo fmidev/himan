@@ -204,7 +204,7 @@ class configuration
 	 * @brief Store number of CUDA devices found
 	 */
 
-	void CudaDeviceCount(short theCudaDeviceCount);
+	void CudaDeviceCount(int theCudaDeviceCount);
 
 	/**
 	 * @brief Check if we have any CUDA-enabled devices available
@@ -217,14 +217,14 @@ class configuration
 	 * @return Number of CUDA enabled devices found
 	 */
 
-	short CudaDeviceCount() const;
+	int CudaDeviceCount() const;
 
 	/**
 	 * @return Id of the selected CUDA device
 	 */
 
-	short CudaDeviceId() const;
-	void CudaDeviceId(short theCudaDeviceId);
+	int CudaDeviceId() const;
+	void CudaDeviceId(int theCudaDeviceId);
 
 	/**
 	 * @brief Return the value if key 'step'.
@@ -280,8 +280,8 @@ class configuration
 	bool itsUseDynamicMemoryAllocation;
 	bool itsReadAllAuxiliaryFilesToCache;
 
-	short itsCudaDeviceCount;
-	short itsCudaDeviceId;
+	int itsCudaDeviceCount;
+	int itsCudaDeviceId;
 
 	int itsForecastStep;
 

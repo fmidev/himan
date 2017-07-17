@@ -27,13 +27,13 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
 struct plugin_timing
 {
 	std::string plugin_name;
-	unsigned short order_number;  // plugin order number (if called more than once))
+	int order_number;  // plugin order number (if called more than once))
 	size_t time_elapsed;          // elapsed time in ms
 };
 
-unsigned short HighestOrderNumber(const vector<plugin_timing>& timingList, const std::string& pluginName)
+int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::string& pluginName)
 {
-	unsigned short highest = 1;
+	int highest = 1;
 
 	for (size_t i = 0; i < timingList.size(); i++)
 	{
@@ -41,7 +41,7 @@ unsigned short HighestOrderNumber(const vector<plugin_timing>& timingList, const
 		{
 			if (timingList[i].order_number >= highest)
 			{
-				highest = static_cast<unsigned short>(timingList[i].order_number + 1);
+				highest = timingList[i].order_number + 1;
 			}
 		}
 	}
@@ -64,13 +64,7 @@ int main(int argc, char** argv)
 	}
 
 	unique_ptr<logger> aLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("himan"));
-	unique_ptr<timer> aTimer;
-
-	if (!conf->StatisticsLabel().empty())
-	{
-		// This timer is used to measure time elapsed for each plugin call
-		aTimer = unique_ptr<timer>(timer_factory::Instance()->GetTimer());
-	}
+	timer aTimer;
 
 	/*
 	 * Initialize plugin factory before parsing configuration file. This prevents himan from
@@ -109,7 +103,7 @@ int main(int argc, char** argv)
 
 		if (pc->StatisticsEnabled())
 		{
-			aTimer->Start();
+			aTimer.Start();
 		}
 
 		if (pc->Name() == "cloud_type")
@@ -157,10 +151,10 @@ int main(int argc, char** argv)
 		{
 			pc->WriteStatistics();
 
-			aTimer->Stop();
+			aTimer.Stop();
 			plugin_timing t;
 			t.plugin_name = pc->Name();
-			t.time_elapsed = aTimer->GetTime();
+			t.time_elapsed = aTimer.GetTime();
 			t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
 
 			totalTime += t.time_elapsed;
@@ -481,7 +475,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCudaForUnpacking(false);
 	}
 
-	conf->CudaDeviceCount(static_cast<short>(devCount));
+	conf->CudaDeviceCount(devCount);
 
 	if (opt.count("cuda-device-id"))
 	{

@@ -24,7 +24,8 @@ using namespace himan::plugin;
 mutex dimensionMutex, singleFileWriteMutex;
 
 compiled_plugin_base::compiled_plugin_base()
-    : itsThreadCount(-1),
+    : itsTimer(),
+      itsThreadCount(-1),
       itsDimensionsRemaining(true),
       itsBaseLogger(logger_factory::Instance()->GetLog("compiled_plugin_base")),
       itsPluginIsInitialized(false),
@@ -228,8 +229,7 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 
 	if (itsConfiguration->StatisticsEnabled())
 	{
-		itsTimer = unique_ptr<timer>(timer_factory::Instance()->GetTimer());
-		itsTimer->Start();
+		itsTimer.Start();
 		itsConfiguration->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
 	}
 
@@ -338,8 +338,8 @@ void compiled_plugin_base::Finish()
 {
 	if (itsConfiguration->StatisticsEnabled())
 	{
-		itsTimer->Stop();
-		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer->GetTime());
+		itsTimer.Stop();
+		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer.GetTime());
 	}
 
 	// If no other info is holding access to grids in this info,
@@ -531,10 +531,10 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 	if (itsConfiguration->StatisticsEnabled())
 	{
 		itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
-		itsTimer->Stop();
-		itsConfiguration->Statistics()->AddToInitTime(itsTimer->GetTime());
+		itsTimer.Stop();
+		itsConfiguration->Statistics()->AddToInitTime(itsTimer.GetTime());
 		// Start process timing
-		itsTimer->Start();
+		itsTimer.Start();
 	}
 }
 

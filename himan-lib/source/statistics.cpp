@@ -7,10 +7,11 @@
 using namespace std;
 using namespace himan;
 
-statistics::statistics() : itsTimer(timer_factory::Instance()->GetTimer()) { Init(); }
+statistics::statistics() : itsTimer() { Init(); }
 
 statistics::statistics(const statistics& other)
-    : itsUsedThreadCount(other.itsUsedThreadCount), itsUsedGPUCount(other.itsUsedGPUCount)
+    : itsTimer(), itsUsedThreadCount(other.itsUsedThreadCount), itsUsedGPUCount(other.itsUsedGPUCount)
+
 {
 	itsValueCount.store(other.itsValueCount, std::memory_order_relaxed);
 	itsMissingValueCount.store(other.itsMissingValueCount, std::memory_order_relaxed);
@@ -20,13 +21,11 @@ statistics::statistics(const statistics& other)
 	itsInitTime.store(other.itsInitTime, std::memory_order_relaxed);
 	itsCacheMissCount.store(other.itsCacheMissCount, std::memory_order_relaxed);
 	itsCacheHitCount.store(other.itsCacheHitCount, std::memory_order_relaxed);
-
-	itsTimer = unique_ptr<timer>(timer_factory::Instance()->GetTimer());
 }
 
 bool statistics::Start()
 {
-	itsTimer->Start();
+	itsTimer.Start();
 	return true;
 }
 
