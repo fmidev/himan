@@ -6,7 +6,7 @@
 #include "seaicing.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include <boost/lexical_cast.hpp>
 
 using namespace std;
@@ -16,7 +16,7 @@ seaicing::seaicing() : global(false)
 {
 	itsClearTextFormula = "SeaIcing = FF * ( -sIndex -T2m ) / ( 1 + 0.3 * ( T0 + sIndex ))";
 
-	itsLogger = logger_factory::Instance()->GetLog("seaicing");
+	itsLogger = logger("seaicing");
 }
 
 void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -69,14 +69,14 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 	}
 
 	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("seaicingThread #" + boost::lexical_cast<string>(theThreadIndex));
+	    logger("seaicingThread #" + boost::lexical_cast<string>(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+						  static_cast<string>(forecastLevel));
 
 	info_t TInfo = Fetch(forecastTime, TLevel, TParam, forecastType, false);
 	info_t TgInfo = Fetch(forecastTime, ground, TParam, forecastType, false);
@@ -84,8 +84,8 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 	if (!TInfo || !TgInfo || !FfInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+								 static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -144,7 +144,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		myTargetInfo->Value(seaIcing);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

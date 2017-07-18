@@ -1,6 +1,5 @@
 #include "lambert_conformal_grid.h"
 #include "info.h"
-#include "logger_factory.h"
 
 using namespace himan;
 using namespace std;
@@ -59,7 +58,7 @@ lambert_conformal_grid::lambert_conformal_grid()
       itsStandardParallel2(kHPMissingValue),
       itsSouthPole(0, -90)
 {
-	itsLogger = logger_factory::Instance()->GetLog("lambert_conformal_grid");
+	itsLogger = logger("lambert_conformal_grid");
 }
 
 lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, point theFirstPoint)
@@ -75,7 +74,7 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, p
       itsStandardParallel2(kHPMissingValue),
       itsSouthPole(0, -90)
 {
-	itsLogger = logger_factory::Instance()->GetLog("lambert_conformal_grid");
+	itsLogger = logger("lambert_conformal_grid");
 
 	switch (theScanningMode)
 	{
@@ -103,7 +102,7 @@ lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& oth
       itsStandardParallel2(other.itsStandardParallel2),
       itsSouthPole(other.itsSouthPole)
 {
-	itsLogger = logger_factory::Instance()->GetLog("lambert_conformal_grid");
+	itsLogger = logger("lambert_conformal_grid");
 	SetCoordinates();  // Create transformer
 }
 
@@ -267,8 +266,8 @@ point lambert_conformal_grid::XY(const point& latlon) const
 
 	if (!itsLatLonToXYTransformer->Transform(1, &projX, &projY))
 	{
-		itsLogger->Error("Error determining xy value for latlon point " + boost::lexical_cast<std::string>(latlon.X()) +
-		                 "," + boost::lexical_cast<std::string>(latlon.Y()));
+		itsLogger.Error("Error determining xy value for latlon point " + boost::lexical_cast<std::string>(latlon.X()) +
+		                "," + boost::lexical_cast<std::string>(latlon.Y()));
 		return point();
 	}
 
@@ -312,8 +311,8 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 	assert(itsXYToLatLonTransformer);
 	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))
 	{
-		itsLogger->Error("Error determining latitude longitude value for xy point " +
-		                 boost::lexical_cast<std::string>(x) + "," + boost::lexical_cast<std::string>(y));
+		itsLogger.Error("Error determining latitude longitude value for xy point " +
+		                boost::lexical_cast<std::string>(x) + "," + boost::lexical_cast<std::string>(y));
 		return point();
 	}
 
@@ -348,8 +347,8 @@ bool lambert_conformal_grid::Swap(HPScanningMode newScanningMode)
 	}
 	else
 	{
-		itsLogger->Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
-		                 string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
+		itsLogger.Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
+		                string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
 		return false;
 	}
 
@@ -392,19 +391,19 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 
 	if (BottomLeft() != other.BottomLeft())
 	{
-		itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) +
-		                 " vs " + boost::lexical_cast<std::string>(other.BottomLeft().X()));
-		itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) +
-		                 " vs " + boost::lexical_cast<std::string>(other.BottomLeft().Y()));
+		itsLogger.Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) + " vs " +
+		                boost::lexical_cast<std::string>(other.BottomLeft().X()));
+		itsLogger.Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) + " vs " +
+		                boost::lexical_cast<std::string>(other.BottomLeft().Y()));
 		return false;
 	}
 
 	if (TopLeft() != other.TopLeft())
 	{
-		itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) +
-		                 " vs " + boost::lexical_cast<std::string>(other.BottomLeft().X()));
-		itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) +
-		                 " vs " + boost::lexical_cast<std::string>(other.BottomLeft().Y()));
+		itsLogger.Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) + " vs " +
+		                boost::lexical_cast<std::string>(other.BottomLeft().X()));
+		itsLogger.Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) + " vs " +
+		                boost::lexical_cast<std::string>(other.BottomLeft().Y()));
 		return false;
 	}
 
@@ -412,52 +411,52 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 
 	if (fabs(itsDi - other.itsDi) > kEpsilon)
 	{
-		itsLogger->Trace("Di does not match: " + boost::lexical_cast<std::string>(Di()) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Di()));
+		itsLogger.Trace("Di does not match: " + boost::lexical_cast<std::string>(Di()) + " vs " +
+		                boost::lexical_cast<std::string>(other.Di()));
 		return false;
 	}
 
 	if (fabs(itsDj - other.itsDj) > kEpsilon)
 	{
-		itsLogger->Trace("Dj does not match: " + boost::lexical_cast<std::string>(Dj()) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Dj()));
+		itsLogger.Trace("Dj does not match: " + boost::lexical_cast<std::string>(Dj()) + " vs " +
+		                boost::lexical_cast<std::string>(other.Dj()));
 		return false;
 	}
 
 	if (itsNi != other.Ni())
 	{
-		itsLogger->Trace("Ni does not match: " + boost::lexical_cast<std::string>(itsNi) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Ni()));
+		itsLogger.Trace("Ni does not match: " + boost::lexical_cast<std::string>(itsNi) + " vs " +
+		                boost::lexical_cast<std::string>(other.Ni()));
 		return false;
 	}
 
 	if (itsNj != other.Nj())
 	{
-		itsLogger->Trace("Nj does not match: " + boost::lexical_cast<std::string>(itsNj) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Nj()));
+		itsLogger.Trace("Nj does not match: " + boost::lexical_cast<std::string>(itsNj) + " vs " +
+		                boost::lexical_cast<std::string>(other.Nj()));
 		return false;
 	}
 
 	if (itsOrientation != other.itsOrientation)
 	{
-		itsLogger->Trace("Orientation does not match: " + boost::lexical_cast<std::string>(itsOrientation) + " vs " +
-		                 boost::lexical_cast<std::string>(other.itsOrientation));
+		itsLogger.Trace("Orientation does not match: " + boost::lexical_cast<std::string>(itsOrientation) + " vs " +
+		                boost::lexical_cast<std::string>(other.itsOrientation));
 		return false;
 	}
 
 	if (itsStandardParallel1 != other.itsStandardParallel1)
 	{
-		itsLogger->Trace("Standard latitude 1 does not match: " +
-		                 boost::lexical_cast<std::string>(itsStandardParallel1) + " vs " +
-		                 boost::lexical_cast<std::string>(other.itsStandardParallel1));
+		itsLogger.Trace(
+		    "Standard latitude 1 does not match: " + boost::lexical_cast<std::string>(itsStandardParallel1) + " vs " +
+		    boost::lexical_cast<std::string>(other.itsStandardParallel1));
 		return false;
 	}
 
 	if (itsStandardParallel2 != other.itsStandardParallel2)
 	{
-		itsLogger->Trace("Standard latitude 2 does not match: " +
-		                 boost::lexical_cast<std::string>(itsStandardParallel2) + " vs " +
-		                 boost::lexical_cast<std::string>(other.itsStandardParallel2));
+		itsLogger.Trace(
+		    "Standard latitude 2 does not match: " + boost::lexical_cast<std::string>(itsStandardParallel2) + " vs " +
+		    boost::lexical_cast<std::string>(other.itsStandardParallel2));
 		return false;
 	}
 
@@ -501,7 +500,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 
 	if (itsStandardParallel1 == kHPMissingValue || itsOrientation == kHPMissingValue || FirstPoint() == point())
 	{
-		// itsLogger->Error("First standard latitude or orientation missing");
+		// itsLogger.Error("First standard latitude or orientation missing");
 		return false;
 	}
 
@@ -522,7 +521,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 
 	if (err != OGRERR_NONE)
 	{
-		itsLogger->Fatal("Error in area definition");
+		itsLogger.Fatal("Error in area definition");
 		abort();
 	}
 
@@ -546,7 +545,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 
 	if (!itsLatLonToXYTransformer->Transform(1, &falseEasting, &falseNorthing))
 	{
-		itsLogger->Error("Error determining false easting and northing");
+		itsLogger.Error("Error determining false easting and northing");
 		return false;
 	}
 
@@ -555,13 +554,13 @@ bool lambert_conformal_grid::SetCoordinates() const
 
 	ss << " +x_0=" << (-falseEasting) << " +y_0=" << (-falseNorthing);
 
-	// itsLogger->Trace("PROJ4: " + ss.str());
+	// itsLogger.Trace("PROJ4: " + ss.str());
 
 	err = itsSpatialReference->importFromProj4(ss.str().c_str());
 
 	if (err != OGRERR_NONE)
 	{
-		itsLogger->Error("Error in area definition");
+		itsLogger.Error("Error in area definition");
 		return false;
 	}
 

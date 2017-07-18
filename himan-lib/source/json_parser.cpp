@@ -6,7 +6,6 @@
 #include "json_parser.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
-#include "logger_factory.h"
 #include "plugin_factory.h"
 #include "point.h"
 #include "point_list.h"
@@ -40,7 +39,7 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 bool ParseBoolean(string booleanValue);
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
-std::unique_ptr<logger> itsLogger;
+static logger itsLogger;
 
 /*
  * Parse()
@@ -73,7 +72,7 @@ json_parser* json_parser::Instance()
 	return itsInstance.get();
 }
 
-json_parser::json_parser() { itsLogger = logger_factory::Instance()->GetLog("json_parser"); }
+json_parser::json_parser() { itsLogger = logger("json_parser"); }
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
 	if (conf->ConfigurationFile().empty())
@@ -93,7 +92,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configura
 
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
-	itsLogger->Trace("Parsing configuration file '" + conf->ConfigurationFile() + "'");
+	itsLogger.Trace("Parsing configuration file '" + conf->ConfigurationFile() + "'");
 
 	boost::property_tree::ptree pt;
 
@@ -187,7 +186,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		if (conf->FileCompression() != kNoCompression && conf->FileWriteOption() == kSingleFile)
 		{
-			itsLogger->Warning(
+			itsLogger.Warning(
 			    "file_write_option value 'single' conflicts with file_compression, using 'multiple' instead");
 			conf->FileWriteOption(kMultipleFiles);
 		}
@@ -249,7 +248,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		if (theCacheLimit < 1)
 		{
-			itsLogger->Warning("cache_limit must be larger than 0");
+			itsLogger.Warning("cache_limit must be larger than 0");
 		}
 		else
 		{
@@ -774,7 +773,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		if (!stepUnit.empty())
 		{
-			itsLogger->Warning("Key 'step_unit' is deprecated");
+			itsLogger.Warning("Key 'step_unit' is deprecated");
 		}
 	}
 	catch (exception& e)
@@ -1318,7 +1317,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 	if (ig)
 	{
 		// Disable cuda interpolation (too inefficienct for single points)
-		itsLogger->Trace("Disabling cuda interpolation for single point data");
+		itsLogger.Trace("Disabling cuda interpolation for single point data");
 		conf->UseCudaForInterpolation(false);
 		return ig;
 	}
@@ -1452,7 +1451,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 				}
 				else
 				{
-					itsLogger->Warning("Failed to find source producer from Neons: " + prodstr);
+					itsLogger.Warning("Failed to find source producer from Neons: " + prodstr);
 				}
 			}
 		}
@@ -1483,20 +1482,20 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 
 					if (dbtype == kNeonsAndRadon)
 					{
-						itsLogger->Info("Forcing database type to radon");
+						itsLogger.Info("Forcing database type to radon");
 						conf->DatabaseType(kRadon);
 					}
 					sourceProducers.push_back(prod);
 				}
 				else
 				{
-					itsLogger->Warning("Failed to find source producer from Radon: " + prodstr);
+					itsLogger.Warning("Failed to find source producer from Radon: " + prodstr);
 				}
 			}
 		}
 		else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
 		{
-			itsLogger->Fatal("Source producer information was not found from database");
+			itsLogger.Fatal("Source producer information was not found from database");
 			abort();
 		}
 		else if (dbtype == kNoDatabase)
@@ -1512,12 +1511,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		itsLogger->Fatal("Source producer definitions not found: " + string(e.what()));
+		itsLogger.Fatal("Source producer definitions not found: " + string(e.what()));
 		abort();
 	}
 	catch (exception& e)
 	{
-		itsLogger->Fatal("Error parsing source producer information: " + string(e.what()));
+		itsLogger.Fatal("Error parsing source producer information: " + string(e.what()));
 		abort();
 	}
 
@@ -1551,7 +1550,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		{
 			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
 			{
-				itsLogger->Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+				itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
 			}
 			else
 			{
@@ -1572,7 +1571,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		}
 		else if (dbtype != kNoDatabase)
 		{
-			itsLogger->Warning("Unknown target producer: " + pt.get<string>("target_producer"));
+			itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 		}
 
 		conf->TargetProducer(prod);
@@ -1580,12 +1579,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		itsLogger->Fatal("Target producer definitions not found: " + string(e.what()));
+		itsLogger.Fatal("Target producer definitions not found: " + string(e.what()));
 		abort();
 	}
 	catch (exception& e)
 	{
-		itsLogger->Fatal("Error parsing target producer information: " + string(e.what()));
+		itsLogger.Fatal("Error parsing target producer information: " + string(e.what()));
 		abort();
 	}
 }
@@ -1675,7 +1674,7 @@ bool ParseBoolean(string booleanValue)
 
 	else
 	{
-		itsLogger->Fatal("Invalid boolean value: " + booleanValue);
+		itsLogger.Fatal("Invalid boolean value: " + booleanValue);
 		abort();
 	}
 

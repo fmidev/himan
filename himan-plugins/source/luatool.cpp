@@ -4,7 +4,7 @@
 #include "forecast_time.h"
 #include "hitool.h"
 #include "latitude_longitude_grid.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "metutil.h"
 #include "neons.h"
 #include "numerical_functions.h"
@@ -47,7 +47,7 @@ boost::thread_specific_ptr<lua_State> myL;
 luatool::luatool() : itsWriteOptions()
 {
 	itsClearTextFormula = "<interpreted>";
-	itsLogger = logger_factory::Instance()->GetLog("luatool");
+	itsLogger = logger("luatool");
 	myL.reset();
 }
 
@@ -63,16 +63,15 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("luatoolThread #" + boost::lexical_cast<std::string>(threadIndex));
+	auto myThreadedLogger = logger("luatoolThread #" + boost::lexical_cast<std::string>(threadIndex));
 
 	InitLua(myTargetInfo);
 
 	assert(myL.get());
-	myThreadedLogger->Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
-	                       " level " + static_cast<std::string>(myTargetInfo->Level()));
+	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
+						  " level " + static_cast<std::string>(myTargetInfo->Level()));
 
-	globals(myL.get())["logger"] = myThreadedLogger.get();
+	globals(myL.get())["logger"] = myThreadedLogger;
 
 	BOOST_FOREACH (const std::string& luaFile, itsConfiguration->GetValueList("luafile"))
 	{
@@ -81,7 +80,7 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 			continue;
 		}
 
-		myThreadedLogger->Info("Starting script " + luaFile);
+		myThreadedLogger.Info("Starting script " + luaFile);
 
 		ReadFile(luaFile);
 	}
@@ -144,7 +143,7 @@ void luatool::InitLua(info_t myTargetInfo)
 	globals(L)["neons"] = n;
 	globals(L)["radon"] = r;
 
-	itsLogger->Trace("luabind finished");
+	itsLogger.Trace("luabind finished");
 	myL.reset(L);
 }
 
@@ -161,7 +160,7 @@ bool luatool::ReadFile(const std::string& luaFile)
 		assert(myL.get());
 		if (luaL_dofile(myL.get(), luaFile.c_str()))
 		{
-			itsLogger->Error(lua_tostring(myL.get(), -1));
+			itsLogger.Error(lua_tostring(myL.get(), -1));
 			return false;
 		}
 	}
@@ -171,7 +170,7 @@ bool luatool::ReadFile(const std::string& luaFile)
 	}
 	catch (const std::exception& e)
 	{
-		itsLogger->Error(e.what());
+		itsLogger.Error(e.what());
 		return false;
 	}
 

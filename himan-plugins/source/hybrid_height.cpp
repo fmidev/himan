@@ -4,7 +4,7 @@
  */
 
 #include "hybrid_height.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
@@ -28,7 +28,7 @@ const himan::param TGParam("TG-K");
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotential(true), itsUseWriterThreads(false)
 {
 	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
-	itsLogger = logger_factory::Instance()->GetLog(itsName);
+	itsLogger = logger(itsName);
 }
 
 hybrid_height::~hybrid_height() {}
@@ -98,11 +98,10 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
-	                       static_cast<string>(myTargetInfo->Level()));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
+						  static_cast<string>(myTargetInfo->Level()));
 
 	if (itsUseGeopotential)
 	{
@@ -110,8 +109,8 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 		if (!ret)
 		{
-			myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) +
-			                          ", level " + static_cast<string>(myTargetInfo->Level()));
+			myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) +
+									 ", level " + static_cast<string>(myTargetInfo->Level()));
 			return;
 		}
 	}
@@ -121,17 +120,17 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 		if (!ret)
 		{
-			myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) +
-			                          ", level " + static_cast<string>(myTargetInfo->Level()));
+			myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) +
+									 ", level " + static_cast<string>(myTargetInfo->Level()));
 			return;
 		}
 	}
 
 	string deviceType = "CPU";
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
@@ -218,8 +217,8 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 	if (!prevTInfo || !prevPInfo || (!prevHInfo && !firstLevel) || !PInfo || !TInfo)
 	{
-		itsLogger->Error("Source data missing for level " + boost::lexical_cast<string>(myTargetInfo->Level().Value()) +
-		                 " step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
+		itsLogger.Error("Source data missing for level " + boost::lexical_cast<string>(myTargetInfo->Level().Value()) +
+						" step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
 		return false;
 	}
 
@@ -275,8 +274,8 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 	if (myTargetInfo->Data().Size() == myTargetInfo->Data().MissingCount())
 	{
-		itsLogger->Error("All data missing for level " + boost::lexical_cast<string>(myTargetInfo->Level().Value()) +
-		                 " step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
+		itsLogger.Error("All data missing for level " + boost::lexical_cast<string>(myTargetInfo->Level().Value()) +
+						" step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
 		return false;
 	}
 
@@ -299,7 +298,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		// Write to disk asynchronously
 		boost::thread* t = new boost::thread(&hybrid_height::Write, this, boost::ref(*myTargetInfo));
 		itsWriterGroup.add_thread(t);
-		itsLogger->Trace("Writer thread started");
+		itsLogger.Trace("Writer thread started");
 	}
 
 	return true;

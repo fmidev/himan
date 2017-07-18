@@ -6,7 +6,7 @@
 
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "turbulence.h"
 #include "util.h"
@@ -18,7 +18,7 @@ turbulence::turbulence()
 {
 	itsClearTextFormula = "complex formula";
 
-	itsLogger = logger_factory::Instance()->GetLog("turbulence");
+	itsLogger = logger("turbulence");
 }
 
 void turbulence::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -82,11 +82,10 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	nextLevel.Value(myTargetInfo->Level().Value() + 1);
 	nextLevel.Index(nextLevel.Index() + 1);
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("turbulence_pluginThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("turbulence_pluginThread #" + boost::lexical_cast<string>(threadIndex));
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                        static_cast<string>(forecastLevel));
+	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	info_t UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo;
 
@@ -104,8 +103,8 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	if (!(prevHInfo && prevUInfo && prevVInfo && nextHInfo && nextUInfo && nextVInfo && HInfo && UInfo && VInfo))
 	{
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                       static_cast<string>(forecastLevel));
+		myThreadedLogger.Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                      static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -198,7 +197,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Value(TI2);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

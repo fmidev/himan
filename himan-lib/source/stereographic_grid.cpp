@@ -1,5 +1,4 @@
 #include "stereographic_grid.h"
-#include "logger_factory.h"
 #include <NFmiStereographicArea.h>
 #include <boost/lexical_cast.hpp>
 
@@ -16,7 +15,7 @@ stereographic_grid::stereographic_grid()
       itsNi(kHPMissingInt),
       itsNj(kHPMissingInt)
 {
-	itsLogger = logger_factory::Instance()->GetLog("stereographic_grid");
+	itsLogger = logger("stereographic_grid");
 }
 
 stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
@@ -31,7 +30,7 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point the
 		throw runtime_error("Only bottom left is supported for stereographic grids");
 	}
 
-	itsLogger = logger_factory::Instance()->GetLog("stereographic_grid");
+	itsLogger = logger("stereographic_grid");
 }
 
 stereographic_grid::stereographic_grid(const stereographic_grid& other)
@@ -44,7 +43,7 @@ stereographic_grid::stereographic_grid(const stereographic_grid& other)
       itsNi(other.itsNi),
       itsNj(other.itsNj)
 {
-	itsLogger = logger_factory::Instance()->GetLog("stereographic_grid");
+	itsLogger = logger("stereographic_grid");
 }
 
 size_t stereographic_grid::Size() const
@@ -174,8 +173,8 @@ bool stereographic_grid::Swap(HPScanningMode newScanningMode)
 	}
 	else
 	{
-		itsLogger->Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
-		                 string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
+		itsLogger.Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
+		                string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
 		return false;
 	}
 
@@ -223,54 +222,54 @@ bool stereographic_grid::EqualsTo(const stereographic_grid& other) const
 
 	if (itsBottomLeft != other.BottomLeft())
 	{
-		itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) +
-		                 " vs " + boost::lexical_cast<std::string>(other.BottomLeft().X()));
-		itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) +
-		                 " vs " + boost::lexical_cast<std::string>(other.BottomLeft().Y()));
+		itsLogger.Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) + " vs " +
+		                boost::lexical_cast<std::string>(other.BottomLeft().X()));
+		itsLogger.Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) + " vs " +
+		                boost::lexical_cast<std::string>(other.BottomLeft().Y()));
 		return false;
 	}
 
 	if (itsTopRight != other.TopRight())
 	{
-		itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<std::string>(itsTopRight.X()) + " vs " +
-		                 boost::lexical_cast<std::string>(other.TopRight().X()));
-		itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<std::string>(itsTopRight.Y()) + " vs " +
-		                 boost::lexical_cast<std::string>(other.TopRight().Y()));
+		itsLogger.Trace("TopRight does not match: X " + boost::lexical_cast<std::string>(itsTopRight.X()) + " vs " +
+		                boost::lexical_cast<std::string>(other.TopRight().X()));
+		itsLogger.Trace("TopRight does not match: Y " + boost::lexical_cast<std::string>(itsTopRight.Y()) + " vs " +
+		                boost::lexical_cast<std::string>(other.TopRight().Y()));
 		return false;
 	}
 
 	if (itsDi != other.Di())
 	{
-		itsLogger->Trace("Di does not match: " + boost::lexical_cast<std::string>(itsDi) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Di()));
+		itsLogger.Trace("Di does not match: " + boost::lexical_cast<std::string>(itsDi) + " vs " +
+		                boost::lexical_cast<std::string>(other.Di()));
 		return false;
 	}
 
 	if (itsDj != other.Dj())
 	{
-		itsLogger->Trace("Dj does not match: " + boost::lexical_cast<std::string>(itsDj) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Dj()));
+		itsLogger.Trace("Dj does not match: " + boost::lexical_cast<std::string>(itsDj) + " vs " +
+		                boost::lexical_cast<std::string>(other.Dj()));
 		return false;
 	}
 
 	if (itsNi != other.Ni())
 	{
-		itsLogger->Trace("Ni does not match: " + boost::lexical_cast<std::string>(itsNi) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Ni()));
+		itsLogger.Trace("Ni does not match: " + boost::lexical_cast<std::string>(itsNi) + " vs " +
+		                boost::lexical_cast<std::string>(other.Ni()));
 		return false;
 	}
 
 	if (itsNj != other.Nj())
 	{
-		itsLogger->Trace("Nj does not match: " + boost::lexical_cast<std::string>(itsNj) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Nj()));
+		itsLogger.Trace("Nj does not match: " + boost::lexical_cast<std::string>(itsNj) + " vs " +
+		                boost::lexical_cast<std::string>(other.Nj()));
 		return false;
 	}
 
 	if (itsOrientation != other.Orientation())
 	{
-		itsLogger->Trace("Orientation does not match: " + boost::lexical_cast<std::string>(itsOrientation) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Orientation()));
+		itsLogger.Trace("Orientation does not match: " + boost::lexical_cast<std::string>(itsOrientation) + " vs " +
+		                boost::lexical_cast<std::string>(other.Orientation()));
 		return false;
 	}
 

@@ -11,7 +11,7 @@
 #include "himan_common.h"
 #include "himan_plugin.h"
 #include "json_parser.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	unique_ptr<logger> aLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("himan"));
+	logger aLogger = logger("himan");
 	timer aTimer;
 
 	/*
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 	}
 	catch (std::runtime_error& e)
 	{
-		aLogger->Fatal(e.what());
+		aLogger.Fatal(e.what());
 		exit(1);
 	}
 
@@ -90,9 +90,9 @@ int main(int argc, char** argv)
 
 	vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
-	aLogger->Info("Found " + boost::lexical_cast<string>(thePlugins.size()) + " plugins");
+	aLogger.Info("Found " + boost::lexical_cast<string>(thePlugins.size()) + " plugins");
 
-	aLogger->Debug("Processqueue size: " + boost::lexical_cast<string>(plugins.size()));
+	aLogger.Debug("Processqueue size: " + boost::lexical_cast<string>(plugins.size()));
 
 	vector<plugin_timing> pluginTimes;
 	size_t totalTime = 0;
@@ -108,17 +108,17 @@ int main(int argc, char** argv)
 
 		if (pc->Name() == "cloud_type")
 		{
-			aLogger->Warning("Plugin 'cloud_type' is deprecated -- use 'cloud_code' instead'");
+			aLogger.Warning("Plugin 'cloud_type' is deprecated -- use 'cloud_code' instead'");
 			pc->Name("cloud_code");
 		}
 		else if (pc->Name() == "fmi_weather_symbol_1")
 		{
-			aLogger->Warning("Plugin 'fmi_weather_symbol_1' is deprecated -- use 'weather_code_2' instead'");
+			aLogger.Warning("Plugin 'fmi_weather_symbol_1' is deprecated -- use 'weather_code_2' instead'");
 			pc->Name("weather_code_2");
 		}
 		else if (pc->Name() == "rain_type")
 		{
-			aLogger->Warning("Plugin 'rain_type' is deprecated -- use 'weather_code_1' instead'");
+			aLogger.Warning("Plugin 'rain_type' is deprecated -- use 'weather_code_1' instead'");
 			pc->Name("weather_code_1");
 		}
 
@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 
 		if (!aPlugin)
 		{
-			aLogger->Error("Unable to declare plugin " + pc->Name());
+			aLogger.Error("Unable to declare plugin " + pc->Name());
 			continue;
 		}
 
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 			pc->StartStatistics();
 		}
 
-		aLogger->Info("Calculating " + pc->Name());
+		aLogger.Info("Calculating " + pc->Name());
 
 		try
 		{
@@ -143,7 +143,7 @@ int main(int argc, char** argv)
 		}
 		catch (const exception& e)
 		{
-			aLogger->Fatal(string("Caught exception: ") + e.what());
+			aLogger.Fatal(string("Caught exception: ") + e.what());
 			exit(1);
 		}
 
@@ -414,7 +414,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		}
 	}
 
-	logger_factory::Instance()->DebugState(debugState);
+	logger::MainDebugState = debugState;
 
 	if (opt.count("version"))
 	{

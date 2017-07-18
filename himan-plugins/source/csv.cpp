@@ -1,5 +1,5 @@
 #include "csv.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "point_list.h"
 #include "util.h"
 #include <algorithm>
@@ -9,12 +9,12 @@
 using namespace std;
 using namespace himan::plugin;
 
-csv::csv() { itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("csv")); }
+csv::csv() { itsLogger = logger("csv"); }
 bool csv::ToFile(info& theInfo, string& theOutputFile)
 {
 	if (theInfo.Grid()->Class() != kIrregularGrid)
 	{
-		itsLogger->Error("Only irregular grids can be written to CSV");
+		itsLogger.Error("Only irregular grids can be written to CSV");
 		return false;
 	}
 
@@ -64,7 +64,7 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 	double bytes = static_cast<double>(boost::filesystem::file_size(theOutputFile));
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
-	itsLogger->Info("Wrote file '" + theOutputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
+	itsLogger.Info("Wrote file '" + theOutputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
 
 	return true;
 }
@@ -118,8 +118,8 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	{
 		if (all->Param() != options.param)
 		{
-			itsLogger->Debug("Param does not match");
-			itsLogger->Debug(options.param.Name() + " vs " + all->Param().Name());
+			itsLogger.Debug("Param does not match");
+			itsLogger.Debug(options.param.Name() + " vs " + all->Param().Name());
 		}
 		else if (find(params.begin(), params.end(), all->Param()) == params.end())
 		{
@@ -128,8 +128,8 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 
 		if (all->Level() != options.level)
 		{
-			itsLogger->Debug("Level does not match");
-			itsLogger->Debug(static_cast<string>(options.level) + " vs " + static_cast<string>(all->Level()));
+			itsLogger.Debug("Level does not match");
+			itsLogger.Debug(static_cast<string>(options.level) + " vs " + static_cast<string>(all->Level()));
 		}
 		else if (find(levels.begin(), levels.end(), all->Level()) == levels.end())
 		{
@@ -138,11 +138,11 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 
 		if (all->Time() != options.time)
 		{
-			itsLogger->Debug("Time does not match");
-			itsLogger->Debug("Origin time " + static_cast<string>(optsTime.OriginDateTime()) + " vs " +
-			                 static_cast<string>(all->Time().OriginDateTime()));
-			itsLogger->Debug("Forecast time: " + static_cast<string>(optsTime.ValidDateTime()) + " vs " +
-			                 static_cast<string>(all->Time().ValidDateTime()));
+			itsLogger.Debug("Time does not match");
+			itsLogger.Debug("Origin time " + static_cast<string>(optsTime.OriginDateTime()) + " vs " +
+							static_cast<string>(all->Time().OriginDateTime()));
+			itsLogger.Debug("Forecast time: " + static_cast<string>(optsTime.ValidDateTime()) + " vs " +
+							static_cast<string>(all->Time().ValidDateTime()));
 		}
 		else if (find(times.begin(), times.end(), all->Time()) == times.end())
 		{
@@ -151,8 +151,8 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 
 		if (all->ForecastType() != options.ftype)
 		{
-			itsLogger->Debug("Forecast type does not match");
-			itsLogger->Debug(static_cast<string>(options.ftype) + " vs " + static_cast<string>(all->ForecastType()));
+			itsLogger.Debug("Forecast type does not match");
+			itsLogger.Debug(static_cast<string>(options.ftype) + " vs " + static_cast<string>(all->ForecastType()));
 		}
 		else if (find(ftypes.begin(), ftypes.end(), all->ForecastType()) == ftypes.end())
 		{
@@ -171,7 +171,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 
 	if (times.size() == 0 || params.size() == 0 || levels.size() == 0 || ftypes.size() == 0)
 	{
-		itsLogger->Error("Did not find valid data from file '" + inputFile + "'");
+		itsLogger.Error("Did not find valid data from file '" + inputFile + "'");
 		throw kFileDataNotFound;
 	}
 
@@ -194,10 +194,10 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		dynamic_cast<point_list*>(requested->Grid())->Stations(stations);
 	}
 
-	itsLogger->Debug("Read " + boost::lexical_cast<string>(times.size()) + " times, " +
-	                 boost::lexical_cast<string>(levels.size()) + " levels, " +
-	                 boost::lexical_cast<string>(ftypes.size()) + " forecast types and " +
-	                 boost::lexical_cast<string>(params.size()) + " params from file '" + inputFile + "'");
+	itsLogger.Debug("Read " + boost::lexical_cast<string>(times.size()) + " times, " +
+	                boost::lexical_cast<string>(levels.size()) + " levels, " +
+	                boost::lexical_cast<string>(ftypes.size()) + " forecast types and " +
+	                boost::lexical_cast<string>(params.size()) + " params from file '" + inputFile + "'");
 
 	requested->First();
 	requested->ResetParam();

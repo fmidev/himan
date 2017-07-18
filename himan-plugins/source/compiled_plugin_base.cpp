@@ -6,7 +6,7 @@
 
 #include "compiled_plugin_base.h"
 #include "cuda_helper.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
 #include <boost/thread.hpp>
@@ -27,7 +27,7 @@ compiled_plugin_base::compiled_plugin_base()
     : itsTimer(),
       itsThreadCount(-1),
       itsDimensionsRemaining(true),
-      itsBaseLogger(logger_factory::Instance()->GetLog("compiled_plugin_base")),
+      itsBaseLogger(logger("compiled_plugin_base")),
       itsPluginIsInitialized(false),
       itsPrimaryDimension(kUnknownDimension)
 {
@@ -66,7 +66,7 @@ bool compiled_plugin_base::AdjustDimension(info& myTargetInfo, HPDimensionType d
 	}
 	else
 	{
-		itsBaseLogger->Fatal("Invalid dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
+		itsBaseLogger.Fatal("Invalid dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
 		exit(1);
 	}
 
@@ -187,7 +187,7 @@ void compiled_plugin_base::Start()
 {
 	if (!itsPluginIsInitialized)
 	{
-		itsBaseLogger->Error("Start() called before Init()");
+		itsBaseLogger.Error("Start() called before Init()");
 		return;
 	}
 
@@ -329,7 +329,7 @@ void compiled_plugin_base::Run(unsigned short threadIndex)
 	}
 	else
 	{
-		itsBaseLogger->Fatal("Invalid primary dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
+		itsBaseLogger.Fatal("Invalid primary dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
 		exit(1);
 	}
 }
@@ -350,7 +350,7 @@ void compiled_plugin_base::Finish()
 
 void compiled_plugin_base::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
-	itsBaseLogger->Fatal("Top level calculate called");
+	itsBaseLogger.Fatal("Top level calculate called");
 	exit(1);
 }
 
@@ -370,7 +370,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 {
 	if (params.empty())
 	{
-		itsBaseLogger->Fatal("size of target parameter vector is zero");
+		itsBaseLogger.Fatal("size of target parameter vector is zero");
 		exit(1);
 	}
 
@@ -406,8 +406,8 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 				if (table2Version == kHPMissingInt)
 				{
-					itsBaseLogger->Warning("table2Version not found from Neons for producer " +
-					                       boost::lexical_cast<string>(itsInfo->Producer().Name()));
+					itsBaseLogger.Warning("table2Version not found from Neons for producer " +
+					                      boost::lexical_cast<string>(itsInfo->Producer().Name()));
 					continue;
 				}
 
@@ -418,7 +418,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 					string msg = "Grib1 parameter definition not found from Neons for table version " +
 					             boost::lexical_cast<string>(table2Version) + ", parameter name " + params[i].Name();
 
-					itsBaseLogger->Warning(msg);
+					itsBaseLogger.Warning(msg);
 					continue;
 				}
 
@@ -455,8 +455,8 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 				if (levelInfo.empty())
 				{
-					itsBaseLogger->Warning("Level type '" + HPLevelTypeToString.at(firstLevel.Type()) +
-					                       "' not found from radon");
+					itsBaseLogger.Warning("Level type '" + HPLevelTypeToString.at(firstLevel.Type()) +
+					                      "' not found from radon");
 					continue;
 				}
 
@@ -469,7 +469,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 					             boost::lexical_cast<string>(boost::lexical_cast<string>(itsInfo->Producer().Id()) +
 					                                         ", parameter name " + params[i].Name());
 
-					itsBaseLogger->Warning(msg);
+					itsBaseLogger.Warning(msg);
 					continue;
 				}
 
@@ -490,11 +490,11 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 	if (!itsConfiguration->UseDynamicMemoryAllocation())
 	{
-		itsBaseLogger->Trace("Using static memory allocation");
+		itsBaseLogger.Trace("Using static memory allocation");
 	}
 	else
 	{
-		itsBaseLogger->Trace("Using dynamic memory allocation");
+		itsBaseLogger.Trace("Using dynamic memory allocation");
 	}
 
 	itsInfo->Reset();
@@ -692,7 +692,7 @@ void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 {
 	if (itsInfo->SizeParams() > 0)
 	{
-		itsBaseLogger->Fatal("PrimaryDimension() must be called before plugin initialization is finished");
+		itsBaseLogger.Fatal("PrimaryDimension() must be called before plugin initialization is finished");
 		exit(1);
 	}
 

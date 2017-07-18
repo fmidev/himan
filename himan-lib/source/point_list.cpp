@@ -5,7 +5,7 @@
 
 #include "point_list.h"
 #include "info.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include <NFmiGrid.h>
 #include <NFmiLatLonArea.h>
 #include <NFmiRotatedLatLonArea.h>
@@ -16,12 +16,12 @@ using namespace std;
 
 point_list::point_list() : grid(kIrregularGrid, kPointList), itsStations()
 {
-	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("point_list"));
+	itsLogger = logger("point_list");
 }
 
 point_list::point_list(const vector<station>& theStations) : grid(kIrregularGrid, kPointList), itsStations(theStations)
 {
-	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("point_list"));
+	itsLogger = logger("point_list");
 
 	itsData.Resize(theStations.size(), 1, 1);
 
@@ -30,7 +30,7 @@ point_list::point_list(const vector<station>& theStations) : grid(kIrregularGrid
 
 point_list::point_list(const point_list& other) : grid(other), itsStations(other.itsStations)
 {
-	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("point_list"));
+	itsLogger = logger("point_list");
 }
 
 size_t point_list::Size() const { return itsData.Size(); }
@@ -41,14 +41,14 @@ bool point_list::EqualsTo(const point_list& other) const
 	{
 		if (itsGridType != other.itsGridType)
 		{
-			itsLogger->Trace("Projections do not match: " + string(HPGridTypeToString.at(itsGridType)) + " vs " +
+			itsLogger.Trace("Projections do not match: " + string(HPGridTypeToString.at(itsGridType)) + " vs " +
 			                 string(HPGridTypeToString.at(other.itsGridType)));
 			return false;
 		}
 
 		if (itsStations.size() != other.itsStations.size())
 		{
-			itsLogger->Trace("Station counts do not match: " + boost::lexical_cast<string>(itsStations.size()) +
+			itsLogger.Trace("Station counts do not match: " + boost::lexical_cast<string>(itsStations.size()) +
 			                 " vs " + boost::lexical_cast<string>(other.itsStations.size()));
 			return false;
 		}
@@ -57,7 +57,7 @@ bool point_list::EqualsTo(const point_list& other) const
 		{
 			if (itsStations[i] != other.itsStations[i])
 			{
-				itsLogger->Trace("Station " + boost::lexical_cast<string>(i) + " does not match");
+				itsLogger.Trace("Station " + boost::lexical_cast<string>(i) + " does not match");
 				return false;
 			}
 		}

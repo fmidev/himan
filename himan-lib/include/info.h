@@ -721,7 +721,7 @@ class info
 
 	std::vector<std::shared_ptr<grid>> itsDimensions;
 
-	std::unique_ptr<logger> itsLogger;
+	logger itsLogger;
 
 	producer itsProducer;
 

@@ -9,7 +9,7 @@
 #include "forecast_time.h"
 #include "info.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "matrix.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
@@ -175,7 +175,7 @@ pot::pot()
 {
 	itsClearTextFormula = "complex formula";
 
-	itsLogger = logger_factory::Instance()->GetLog("pot");
+	itsLogger = logger("pot");
 }
 
 void pot::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -257,11 +257,10 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	forecastTimeNext.ValidDateTime().Adjust(timeResolution, +step);
 	level forecastLevel = myTargetInfo->Level();
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("pot_pluginThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("pot_pluginThread #" + boost::lexical_cast<string>(threadIndex));
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                        static_cast<string>(forecastLevel));
+	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+						   static_cast<string>(forecastLevel));
 
 	time_series CAPEts(CapeParamHiman, 4), RRts(RainParam, 3);
 
@@ -291,8 +290,8 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	if (!CAPEMaxInfo || !RRMeanInfo)
 	{
-		myThreadedLogger->Info("Missing source data. Skipping step " +
-		                       boost::lexical_cast<string>(forecastTime.Step()));
+		myThreadedLogger.Info("Missing source data. Skipping step " +
+							  boost::lexical_cast<string>(forecastTime.Step()));
 		return;
 	}
 
@@ -342,7 +341,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

@@ -1,6 +1,5 @@
 #include "time_ensemble.h"
 
-#include "logger_factory.h"
 #include "plugin_factory.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
@@ -56,7 +55,7 @@ time_ensemble::time_ensemble(const param& parameter) : itsTimeSpan(kYearResoluti
 	itsExpectedEnsembleSize = 0;
 	itsEnsembleType = kTimeEnsemble;
 
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
+	itsLogger = logger("time_ensemble");
 }
 
 time_ensemble::time_ensemble(const param& parameter, size_t expectedEnsembleSize, HPTimeResolution theTimeSpan)
@@ -70,7 +69,7 @@ time_ensemble::time_ensemble(const param& parameter, size_t expectedEnsembleSize
 	// but ensemble uses it at least in VerifyValidForecastCount()
 	itsDesiredForecasts.resize(itsExpectedEnsembleSize);
 
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("time_ensemble"));
+	itsLogger = logger("time_ensemble");
 }
 
 void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
@@ -97,7 +96,7 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 		{
 			if (e != kFileDataNotFound)
 			{
-				itsLogger->Fatal("Unable to proceed");
+				itsLogger.Fatal("Unable to proceed");
 				abort();
 			}
 			else

@@ -109,7 +109,7 @@ class ensemble
 
 	HPEnsembleType itsEnsembleType;
 
-	std::unique_ptr<logger> itsLogger;
+	logger itsLogger;
 
 	/// @brief When Fetching(), this is the maximum number of missing forecasts we can tolerate.
 	int itsMaximumMissingForecasts;

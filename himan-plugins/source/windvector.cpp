@@ -7,7 +7,7 @@
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "stereographic_grid.h"
 #include "util.h"
@@ -35,7 +35,7 @@ windvector::windvector() : itsCalculationTarget(kUnknownElement), itsVectorCalcu
 	    "round(speed)";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = logger_factory::Instance()->GetLog("windvector");
+	itsLogger = logger("windvector");
 }
 
 void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
@@ -66,7 +66,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		if (itsVectorCalculation)
 		{
-			itsLogger->Warning("Unable to calculate vector for ice");
+			itsLogger.Warning("Unable to calculate vector for ice");
 		}
 	}
 	else if (itsConfiguration->Exists("for_sea") && itsConfiguration->GetValue("for_sea") == "true")
@@ -78,7 +78,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		if (itsVectorCalculation)
 		{
-			itsLogger->Warning("Unable to calculate vector for sea");
+			itsLogger.Warning("Unable to calculate vector for sea");
 		}
 	}
 	else if (itsConfiguration->Exists("for_gust") && itsConfiguration->GetValue("for_gust") == "true")
@@ -89,7 +89,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		if (itsVectorCalculation)
 		{
-			itsLogger->Warning("Unable to calculate vector for wind gust");
+			itsLogger.Warning("Unable to calculate vector for wind gust");
 		}
 	}
 	else
@@ -174,23 +174,22 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			break;
 	}
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("windvectorThread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
 	info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 	if (!UInfo || !VInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -267,9 +266,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,

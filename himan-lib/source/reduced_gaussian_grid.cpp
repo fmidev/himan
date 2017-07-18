@@ -4,7 +4,7 @@
  */
 
 #include "reduced_gaussian_grid.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include <boost/lexical_cast.hpp>
 #include <numeric>
 
@@ -21,7 +21,7 @@ reduced_gaussian_grid::reduced_gaussian_grid()
       itsTopLeft(),
       itsDj(kHPMissingValue)
 {
-	itsLogger = logger_factory::Instance()->GetLog("reduced_gaussian_grid");
+	itsLogger = logger("reduced_gaussian_grid");
 }
 
 reduced_gaussian_grid::reduced_gaussian_grid(const reduced_gaussian_grid& other)
@@ -35,7 +35,7 @@ reduced_gaussian_grid::reduced_gaussian_grid(const reduced_gaussian_grid& other)
       itsTopLeft(other.itsTopLeft),
       itsDj(kHPMissingValue)
 {
-	itsLogger = logger_factory::Instance()->GetLog("reduced_gaussian_grid");
+	itsLogger = logger("reduced_gaussian_grid");
 }
 
 int reduced_gaussian_grid::N() const { return itsN; }
@@ -317,41 +317,41 @@ bool reduced_gaussian_grid::EqualsTo(const reduced_gaussian_grid& other) const
 
 	if (itsBottomLeft != other.BottomLeft())
 	{
-		itsLogger->Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) +
-		                 " vs " + boost::lexical_cast<std::string>(other.BottomLeft().X()));
-		itsLogger->Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) +
-		                 " vs " + boost::lexical_cast<std::string>(other.BottomLeft().Y()));
+		itsLogger.Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) + " vs " +
+		                boost::lexical_cast<std::string>(other.BottomLeft().X()));
+		itsLogger.Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) + " vs " +
+		                boost::lexical_cast<std::string>(other.BottomLeft().Y()));
 		return false;
 	}
 
 	if (itsTopRight != other.TopRight())
 	{
-		itsLogger->Trace("TopRight does not match: X " + boost::lexical_cast<std::string>(itsTopRight.X()) + " vs " +
-		                 boost::lexical_cast<std::string>(other.TopRight().X()));
-		itsLogger->Trace("TopRight does not match: Y " + boost::lexical_cast<std::string>(itsTopRight.Y()) + " vs " +
-		                 boost::lexical_cast<std::string>(other.TopRight().Y()));
+		itsLogger.Trace("TopRight does not match: X " + boost::lexical_cast<std::string>(itsTopRight.X()) + " vs " +
+		                boost::lexical_cast<std::string>(other.TopRight().X()));
+		itsLogger.Trace("TopRight does not match: Y " + boost::lexical_cast<std::string>(itsTopRight.Y()) + " vs " +
+		                boost::lexical_cast<std::string>(other.TopRight().Y()));
 		return false;
 	}
 
 	if (itsN != other.N())
 	{
-		itsLogger->Trace("N does not match: " + boost::lexical_cast<std::string>(itsN) + " vs " +
-		                 boost::lexical_cast<std::string>(other.N()));
+		itsLogger.Trace("N does not match: " + boost::lexical_cast<std::string>(itsN) + " vs " +
+		                boost::lexical_cast<std::string>(other.N()));
 		return false;
 	}
 
 	if (itsNj != other.Nj())
 	{
-		itsLogger->Trace("Nj does not match: " + boost::lexical_cast<std::string>(itsNj) + " vs " +
-		                 boost::lexical_cast<std::string>(other.Nj()));
+		itsLogger.Trace("Nj does not match: " + boost::lexical_cast<std::string>(itsNj) + " vs " +
+		                boost::lexical_cast<std::string>(other.Nj()));
 		return false;
 	}
 
 	if (itsNumberOfPointsAlongParallels.size() != other.NumberOfPointsAlongParallels().size())
 	{
-		itsLogger->Trace("NumberOfPointsAlongParallels size does not match: " +
-		                 boost::lexical_cast<std::string>(itsNumberOfPointsAlongParallels.size()) + " vs " +
-		                 boost::lexical_cast<std::string>(other.NumberOfPointsAlongParallels().size()));
+		itsLogger.Trace("NumberOfPointsAlongParallels size does not match: " +
+		                boost::lexical_cast<std::string>(itsNumberOfPointsAlongParallels.size()) + " vs " +
+		                boost::lexical_cast<std::string>(other.NumberOfPointsAlongParallels().size()));
 		return false;
 	}
 	else
@@ -364,6 +364,5 @@ bool reduced_gaussian_grid::EqualsTo(const reduced_gaussian_grid& other) const
 			}
 		}
 	}
-
 	return true;
 }

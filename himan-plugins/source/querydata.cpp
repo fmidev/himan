@@ -6,7 +6,7 @@
 #include "querydata.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
 #include <fstream>
@@ -41,7 +41,7 @@ using namespace himan::plugin;
 
 querydata::querydata() : itsUseDatabase(true)
 {
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("querydata"));
+	itsLogger = logger("querydata");
 }
 bool querydata::ToFile(info& theInfo, string& theOutputFile)
 {
@@ -63,7 +63,7 @@ bool querydata::ToFile(info& theInfo, string& theOutputFile)
 
 	out << *qdata;
 
-	itsLogger->Info("Wrote file '" + theOutputFile + "'");
+	itsLogger.Info("Wrote file '" + theOutputFile + "'");
 
 	return true;
 }
@@ -90,22 +90,22 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 
 	if (pdesc.Size() == 0)
 	{
-		itsLogger->Error("No valid parameters found");
+		itsLogger.Error("No valid parameters found");
 		return qdata;
 	}
 	else if (tdesc.Size() == 0)
 	{
-		itsLogger->Error("No valid times found");
+		itsLogger.Error("No valid times found");
 		return qdata;
 	}
 	else if (hdesc.Size() == 0)
 	{
-		itsLogger->Error("No valid grids found");
+		itsLogger.Error("No valid grids found");
 		return qdata;
 	}
 	else if (vdesc.Size() == 0)
 	{
-		itsLogger->Error("No valid levels found");
+		itsLogger.Error("No valid levels found");
 		return qdata;
 	}
 
@@ -258,7 +258,7 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 			{
 				if (firstOriginTime != info.Time().OriginDateTime())
 				{
-					itsLogger->Error("Origintime is not the same for all grids in info");
+					itsLogger.Error("Origintime is not the same for all grids in info");
 					return NFmiTimeDescriptor();
 				}
 			}
@@ -412,7 +412,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 		}
 
 		default:
-			itsLogger->Error("No supported projection found");
+			itsLogger.Error("No supported projection found");
 			return NFmiHPlaceDescriptor();
 			break;
 	}
@@ -458,7 +458,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 
 					if (firstGrid->Type() != g->Type())
 					{
-						itsLogger->Error("All grids in info are not equal, unable to write querydata");
+						itsLogger.Error("All grids in info are not equal, unable to write querydata");
 						return NFmiHPlaceDescriptor();
 					}
 
@@ -466,7 +466,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 					{
 						if (*firstGrid != *g)
 						{
-							itsLogger->Error("All grids in info are not equal, unable to write querydata");
+							itsLogger.Error("All grids in info are not equal, unable to write querydata");
 							return NFmiHPlaceDescriptor();
 						}
 					}
@@ -477,7 +477,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 
 						if (*fg_ != *g_)
 						{
-							itsLogger->Error("All grids in info are not equal, unable to write querydata");
+							itsLogger.Error("All grids in info are not equal, unable to write querydata");
 							return NFmiHPlaceDescriptor();
 						}
 					}
@@ -653,7 +653,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 		break;
 
 		default:
-			itsLogger->Fatal("Invalid projection");
+			itsLogger.Fatal("Invalid projection");
 			abort();
 	}
 

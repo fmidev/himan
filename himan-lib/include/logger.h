@@ -16,10 +16,14 @@ class logger
 {
    public:
 	logger();
-	~logger() {}
+	explicit logger(const std::string& theUserName);
 	logger(const std::string& theUserName, HPDebugState theDebugState);
+	~logger() {}
 
-	void Trace(const std::string& msg)
+	logger(const logger& other) = default;
+	logger& operator=(const logger& other) = default;
+
+	void Trace(const std::string& msg) const
 	{
 		if (itsDebugState <= kTraceMsg)
 		{
@@ -27,7 +31,7 @@ class logger
 		}
 	};
 
-	void Debug(const std::string& msg)
+	void Debug(const std::string& msg) const
 	{
 		if (itsDebugState <= kDebugMsg)
 		{
@@ -35,7 +39,7 @@ class logger
 		}
 	};
 
-	void Info(const std::string& msg)
+	void Info(const std::string& msg) const
 	{
 		if (itsDebugState <= kInfoMsg)
 		{
@@ -43,7 +47,7 @@ class logger
 		}
 	};
 
-	void Warning(const std::string& msg)
+	void Warning(const std::string& msg) const
 	{
 		if (itsDebugState <= kWarningMsg)
 		{
@@ -51,7 +55,7 @@ class logger
 		}
 	};
 
-	void Error(const std::string& msg)
+	void Error(const std::string& msg) const
 	{
 		if (itsDebugState <= kErrorMsg)
 		{
@@ -59,7 +63,10 @@ class logger
 		}
 	};
 
-	void Fatal(const std::string& msg) { printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str()); };
+	void Fatal(const std::string& msg) const { printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str()); };
+
+	static HPDebugState MainDebugState;
+
    private:
 	HPDebugState itsDebugState;
 	std::string itsUserName;

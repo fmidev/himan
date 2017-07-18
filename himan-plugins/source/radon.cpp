@@ -4,7 +4,7 @@
  */
 
 #include "radon.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
 #include <sstream>
@@ -40,7 +40,7 @@ void radon::Init()
 		}
 		catch (int e)
 		{
-			itsLogger->Fatal("Failed to get connection");
+			itsLogger.Fatal("Failed to get connection");
 			abort();
 		}
 
@@ -50,12 +50,12 @@ void radon::Init()
 
 radon::radon() : itsInit(false), itsRadonDB()
 {
-	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("radon"));
+	itsLogger = logger("radon");
 }
 
 void radon::PoolMaxWorkers(int maxWorkers)
 {
-	itsLogger->Warning("Switching worker pool size to " + std::to_string(maxWorkers));
+	itsLogger.Warning("Switching worker pool size to " + std::to_string(maxWorkers));
 	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
 }
 
@@ -67,7 +67,7 @@ vector<std::string> radon::CSV(search_options& options)
 
 	if (options.prod.Class() != kPreviClass)
 	{
-		itsLogger->Error("Grid producer does not have csv based data");
+		itsLogger.Error("Grid producer does not have csv based data");
 		return csv;
 	}
 
@@ -90,7 +90,7 @@ vector<std::string> radon::CSV(search_options& options)
 
 		if (row.empty())
 		{
-			itsLogger->Error("No tables found from as_previ for producer " + options.prod.Name());
+			itsLogger.Error("No tables found from as_previ for producer " + options.prod.Name());
 			return csv;
 		}
 
@@ -191,7 +191,7 @@ vector<string> radon::Files(search_options& options)
 
 	if (options.prod.Class() != kGridClass)
 	{
-		itsLogger->Error("Previ producer does not have file data");
+		itsLogger.Error("Previ producer does not have file data");
 		return files;
 	}
 
@@ -282,7 +282,7 @@ vector<string> radon::Files(search_options& options)
 			continue;
 		}
 
-		itsLogger->Trace("Found data for parameter " + parm_name + " from radon geometry " + gridgeoms[i][3]);
+		itsLogger.Trace("Found data for parameter " + parm_name + " from radon geometry " + gridgeoms[i][3]);
 
 		files.push_back(values[4]);
 
@@ -324,7 +324,7 @@ bool radon::SavePrevi(const info& resultInfo)
 
 	if (row.empty())
 	{
-		itsLogger->Warning("Data set definition not found from radon");
+		itsLogger.Warning("Data set definition not found from radon");
 		return false;
 	}
 
@@ -334,9 +334,9 @@ bool radon::SavePrevi(const info& resultInfo)
 
 	if (levelinfo.empty())
 	{
-		itsLogger->Error("Level information not found from radon for level " +
-		                 HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
-		                 boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger.Error("Level information not found from radon for level " +
+						HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+						boost::lexical_cast<string>(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -345,8 +345,8 @@ bool radon::SavePrevi(const info& resultInfo)
 
 	if (paraminfo.empty())
 	{
-		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
-		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
+						", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -413,7 +413,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (resultInfo.Grid()->Class() != kRegularGrid)
 	{
-		itsLogger->Error("Only regular grid data can be stored to radon for now");
+		itsLogger.Error("Only regular grid data can be stored to radon for now");
 		return false;
 	}
 
@@ -463,7 +463,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (geominfo.empty())
 	{
-		itsLogger->Warning("Grid geometry not found from radon");
+		itsLogger.Warning("Grid geometry not found from radon");
 		return false;
 	}
 
@@ -487,7 +487,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (row.empty())
 	{
-		itsLogger->Warning("Data set definition not found from radon");
+		itsLogger.Warning("Data set definition not found from radon");
 		return false;
 	}
 
@@ -504,9 +504,9 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (levelinfo.empty())
 	{
-		itsLogger->Error("Level information not found from radon for level " +
-		                 HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
-		                 boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger.Error("Level information not found from radon for level " +
+						HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+						boost::lexical_cast<string>(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -515,8 +515,8 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (paraminfo.empty())
 	{
-		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
-		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
+						", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -564,7 +564,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 		if (record_count == "0")
 		{
-			itsLogger->Trace("Analyzing table " + fullTableName + " due to first insert");
+			itsLogger.Trace("Analyzing table " + fullTableName + " due to first insert");
 
 			query.str("");
 			query << "ANALYZE " << fullTableName;
@@ -595,7 +595,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 		itsRadonDB->Commit();
 	}
 
-	itsLogger->Trace("Saved information on file '" + theFileName + "' to radon");
+	itsLogger.Trace("Saved information on file '" + theFileName + "' to radon");
 
 	return true;
 }

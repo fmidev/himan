@@ -8,7 +8,7 @@
 
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "tke.h"
@@ -21,7 +21,7 @@ tke::tke() : itsTopLevel()
 {
 	itsClearTextFormula = "complex formula";
 
-	itsLogger = logger_factory::Instance()->GetLog("tke");
+	itsLogger = logger("tke");
 }
 
 void tke::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -85,11 +85,10 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	level groundLevel = level(himan::kHeight, 0, "HEIGHT");
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("tke_pluginThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("tke_pluginThread #" + boost::lexical_cast<string>(threadIndex));
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                        static_cast<string>(forecastLevel));
+	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	info_t FrvelInfo = Fetch(forecastTime, groundLevel, FrvelParam, forecastType, false);
 	info_t MoninObukhovInfo = Fetch(forecastTime, groundLevel, MoninObukhovParam, forecastType, false);
@@ -105,8 +104,8 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	if (!(FrvelInfo && MoninObukhovInfo && MixHgtInfo && TGInfo && PGInfo && SHFInfo && SHFPrevInfo && LHFInfo &&
 	      LHFPrevInfo && ZInfo))
 	{
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                       static_cast<string>(forecastLevel));
+		myThreadedLogger.Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                      static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -196,7 +195,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Value(TKE);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

@@ -74,8 +74,8 @@ bool grid::EqualsTo(const grid& other) const
 {
 	if (other.itsGridType != itsGridType)
 	{
-		itsLogger->Trace("Grid type does not match: " + HPGridTypeToString.at(itsGridType) + " vs " +
-		                 HPGridTypeToString.at(other.Type()));
+		itsLogger.Trace("Grid type does not match: " + HPGridTypeToString.at(itsGridType) + " vs " +
+		                HPGridTypeToString.at(other.Type()));
 		return false;
 	}
 
