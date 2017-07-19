@@ -1650,7 +1650,7 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 			DecodePrecipitationFormFromGrib2(dm.Values());
 		}
 
-		itsLogger.Trace("Retrieved " + boost::lexical_cast<string>(len * 8) + " bytes of unpacked data from grib");
+		itsLogger.Trace("Retrieved " + std::to_string(len * sizeof(double)) + " bytes of unpacked data from grib");
 	}
 }
 
