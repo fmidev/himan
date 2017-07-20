@@ -201,7 +201,8 @@ if RELEASE:
 
 if DEBUG:
 	env.Append(CPPDEFINES = ['DEBUG'])
-	env.Append(CCFLAGS = ['-O0', '-g'])
+	env.Append(CCFLAGS = ['-O0'])
+	env.Append(CCFLAGS = ['-ggdb', '-g3'])
 	env.Append(CCFLAGS = cflags_extra)
 #	env.Append(CCFLAGS = cflags_difficult)
 	build_dir = "build/debug"
