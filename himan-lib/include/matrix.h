@@ -31,8 +31,8 @@ inline bool Compare(const double& lhs, const double& rhs)
 
 inline bool Compare(const float& lhs, const float& rhs)
 {
-        const char32_t* lhs_ptr = reinterpret_cast<const char32_t*>(&lhs);
-        const char32_t* rhs_ptr = reinterpret_cast<const char32_t*>(&rhs);
+        const uint32_t* lhs_ptr = reinterpret_cast<const uint32_t*>(&lhs);
+        const uint32_t* rhs_ptr = reinterpret_cast<const uint32_t*>(&rhs);
 
         return *lhs_ptr == *rhs_ptr;
 }
@@ -378,7 +378,7 @@ class matrix
 		// Replace old missing values in data by new ones
 		for (size_t i = 0; i < itsData.size(); i++)
 		{
-			itsData[i] = IsMissing(i) ? theMissingValue : itsData[i];
+			itsData[i] = (IsMissing(i)) ? theMissingValue : itsData[i];
 		}
 
 		itsMissingValue = theMissingValue;

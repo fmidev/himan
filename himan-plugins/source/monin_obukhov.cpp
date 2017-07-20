@@ -124,12 +124,6 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		double T_C = T - constants::kKelvin;  // Convert Temperature to Celvins
 		double mol(kFloatMissing);
 
-		if (IsKFloatMissing(T) || IsKFloatMissing(SHF) || IsKFloatMissing(LHF) || IsKFloatMissing(U_S) ||
-		    IsKFloatMissing(P))
-		{
-			continue;
-		}
-
 		SHF /= forecastStepSize;  // divide by time step to obtain Watts/m2
 		LHF /= forecastStepSize;  // divide by time step to obtain Watts/m2
 

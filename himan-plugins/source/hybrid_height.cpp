@@ -155,11 +155,6 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 		double GP = tup.get<1>();
 		double zeroGP = tup.get<2>();
 
-		if (IsKFloatMissing(GP) || IsKFloatMissing(zeroGP))
-		{
-			continue;
-		}
-
 		result = (GP - zeroGP) * himan::constants::kIg;
 	}
 
@@ -254,18 +249,10 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		double prevT = tup.get<4>();
 		double prevH = tup.get<5>();
 
-		if (IsKFloatMissing(prevT) || IsKFloatMissing(prevP) || IsKFloatMissing(T) || IsKFloatMissing(P) ||
-		    IsKFloatMissing(prevH))
-		{
-			continue;
-		}
-
 		prevP *= scale;
 
 		double deltaZ = 14.628 * (prevT + T) * log(prevP / P);
 		double totalHeight = prevH + deltaZ;
-
-		assert(isfinite(totalHeight));
 
 		result = totalHeight;
 	}

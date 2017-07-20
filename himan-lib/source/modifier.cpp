@@ -688,7 +688,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 		double actualHeight =
 		    NFmiInterpolation::Linear(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
 
-		if (!IsKFloatMissing(actualHeight))
+		if (!IsKFloatMissing(actualHeight) && actualHeight != 32700.)
 		{
 			assert(!itsHeightInMeters || (actualHeight >= lowerLimit && actualHeight <= upperLimit));
 			assert(itsHeightInMeters || (actualHeight <= lowerLimit && actualHeight >= upperLimit));
@@ -1055,7 +1055,7 @@ void modifier_findvalue::Calculate(double theValue, double theHeight, double the
 		double actualValue =
 		    NFmiInterpolation::Linear(findHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
 
-		if (!IsKFloatMissing(actualValue))
+		if (!IsKFloatMissing(actualValue) && actualValue != 32700.)
 		{
 			Value(actualValue);
 			itsValuesFound++;
@@ -1133,7 +1133,7 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight, double
 	// TODO: add between levels case
 	if (EnteringHeightZone(theHeight, thePreviousHeight, lowerHeight))
 	{
-		double lowerValue =
+		double lowerValue = 
 		    NFmiInterpolation::Linear(lowerHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
 		// zero is crossed from negative to positive: Interpolate height where zero is crossed and integrate positive
 		// and negative area separately
@@ -1147,6 +1147,7 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight, double
 		else if (lowerValue > 0 && theValue < 0)
 		{
 			double zeroHeight = NFmiInterpolation::Linear(0.0, lowerValue, theValue, lowerHeight, theHeight);
+			
 			itsPlusArea[itsIndex] += lowerValue / 2 * (zeroHeight - lowerHeight);
 			itsMinusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
 		}

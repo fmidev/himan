@@ -237,7 +237,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		// NOTE: `ensembleSize` stays the same
 		else
 		{
-			sortedValues.push_back(kFloatMissing);
+			sortedValues.push_back(0.0);
 		}
 
 		assert(!itsFractiles.empty());

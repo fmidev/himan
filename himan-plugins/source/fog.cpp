@@ -90,20 +90,19 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		double dt2m = dewInfo->Value();
 		double wind10m = windInfo->Value();
 		double tGround = groundInfo->Value();
-
-		if (IsKFloatMissing(tGround) || IsKFloatMissing(dt2m) || IsKFloatMissing(wind10m))
+		if (IsMissingValue({tGround, dt2m, wind10m}))
 		{
 			continue;
 		}
 
-		double fog = 0;
-
 		if (dt2m - tGround > -0.3 && wind10m < 5)
 		{
-			fog = 607;
+			myTargetInfo->Value(607);
 		}
-
-		myTargetInfo->Value(fog);
+		else
+		{
+                        myTargetInfo->Value(0);
+		}
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +

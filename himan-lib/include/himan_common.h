@@ -58,7 +58,7 @@ inline CUDA_HOST CUDA_DEVICE bool IsKFloatMissing(const double& value)
 inline bool IsKFloatValid(const double& value) {return !IsKFloatMissing(value);}
 
 inline bool IsMissing(double value) {return IsKFloatMissing(value);}
-inline bool IsValid(double value) {return IsKFloatValid(value);}
+inline bool IsValid(double value) {return !IsKFloatMissing(value);}
 
 inline CUDA_HOST CUDA_DEVICE bool IsKHPMissingValue(const double& x) {return x == -999;}
 

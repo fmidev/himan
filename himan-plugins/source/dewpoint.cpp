@@ -112,11 +112,6 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			double T = TInfo->Value();
 			double RH = RHInfo->Value();
 
-			if (IsKFloatMissing(T) || IsKFloatMissing(RH))
-			{
-				continue;
-			}
-
 			T += TBase;
 			RH *= RHScale;
 

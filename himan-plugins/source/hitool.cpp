@@ -26,7 +26,7 @@ double min(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		if (!IsKFloatMissing(val) && val < ret) ret = val;
+		if (val < ret) ret = val;
 	}
 
 	if (ret == 1e38) ret = kFloatMissing;
@@ -40,7 +40,7 @@ double max(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		if (!IsKFloatMissing(val) && val > ret) ret = val;
+		if (val > ret) ret = val;
 	}
 
 	if (ret == -1e38) ret = kFloatMissing;
@@ -54,11 +54,8 @@ pair<double, double> minmax(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		// if (!IsKFloatMissing(val))
-		//{
 		if (val < min) min = val;
 		if (val > max) max = val;
-		//}
 	}
 
 	if (min == 1e38)

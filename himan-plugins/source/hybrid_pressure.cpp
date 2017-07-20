@@ -165,11 +165,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		double& result = tup.get<0>();
 		double P = tup.get<1>();
 
-		if (P == kFloatMissing)
-		{
-			continue;
-		}
-
 		result = 0.01 * (A + P * B);
 	}
 

@@ -639,9 +639,9 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
 
 	InitializeArray<double>(d_maxThetaE, -1, N, stream);
-	InitializeArray<double>(d_Tresult, kFloatMissing, N, stream);
-	InitializeArray<double>(d_TDresult, kFloatMissing, N, stream);
-	InitializeArray<double>(d_Presult, kFloatMissing, N, stream);
+	InitializeArray<double>(d_Tresult, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_TDresult, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_Presult, himan::GetKFloatMissing(), N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
 	info_simple* h_prevT = 0;
@@ -810,8 +810,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	CUDA_CHECK(cudaMalloc((double**)&d_P, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_TD, N * sizeof(double)));
 
-	InitializeArray<double>(d_Tpot, kFloatMissing, N, stream);
-	InitializeArray<double>(d_MR, kFloatMissing, N, stream);
+	InitializeArray<double>(d_Tpot, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_MR, himan::GetKFloatMissing(), N, stream);
 
 	while (true)
 	{
@@ -824,8 +824,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
 
-		std::vector<double> Tpot(N, kFloatMissing);
-		std::vector<double> MR(N, kFloatMissing);
+		std::vector<double> Tpot(N, himan::GetKFloatMissing());
+		std::vector<double> MR(N, himan::GetKFloatMissing());
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -863,11 +863,11 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	auto Psurf = Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
 	auto h_P = PrepareInfo(Psurf, stream);
 
-	InitializeArray<double>(d_T, kFloatMissing, N, stream);
-	InitializeArray<double>(d_TD, kFloatMissing, N, stream);
+	InitializeArray<double>(d_T, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_TD, himan::GetKFloatMissing(), N, stream);
 
-	std::vector<double> T(Tpot.size(), kFloatMissing);
-	std::vector<double> TD(T.size(), kFloatMissing);
+	std::vector<double> T(Tpot.size(), himan::GetKFloatMissing());
+	std::vector<double> TD(T.size(), himan::GetKFloatMissing());
 
 	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, *h_P, d_Tpot, d_MR, N);
 
@@ -935,9 +935,9 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	CUDA_CHECK(cudaMemcpyAsync(d_LCLT, d_Titer, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 
-	InitializeArray<double>(d_LFCT, kFloatMissing, N, stream);
-	InitializeArray<double>(d_LFCP, kFloatMissing, N, stream);
-	InitializeArray<double>(d_prevTparcel, kFloatMissing, N, stream);
+	InitializeArray<double>(d_LFCT, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_LFCP, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_prevTparcel, himan::GetKFloatMissing(), N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
@@ -959,8 +959,8 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	curLevel.Value(curLevel.Value() - 1);
 
 	std::vector<unsigned char> found(N, 0);
-	std::vector<double> LFCT(N, kFloatMissing);
-	std::vector<double> LFCP(N, kFloatMissing);
+	std::vector<double> LFCT(N, himan::GetKFloatMissing());
+	std::vector<double> LFCP(N, himan::GetKFloatMissing());
 
 	for (size_t i = 0; i < N; i++)
 	{
@@ -1122,7 +1122,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaMalloc((unsigned char**)&d_found, N * sizeof(unsigned char)));
 
 	InitializeArray<double>(d_cinh, 0., N, stream);
-	InitializeArray<double>(d_Tparcel, kFloatMissing, N, stream);
+	InitializeArray<double>(d_Tparcel, himan::GetKFloatMissing(), N, stream);
 
 	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, &Tsource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Psource, &Psource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
@@ -1293,8 +1293,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	InitializeArray<double>(d_CAPE1040, 0., N, stream);
 	InitializeArray<double>(d_CAPE3km, 0., N, stream);
 
-	InitializeArray<double>(d_ELP, kFloatMissing, N, stream);
-	InitializeArray<double>(d_ELT, kFloatMissing, N, stream);
+	InitializeArray<double>(d_ELP, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_ELT, himan::GetKFloatMissing(), N, stream);
 
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
@@ -1378,8 +1378,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	std::vector<double> CAPE(T.size(), 0);
 	std::vector<double> CAPE1040(T.size(), 0);
 	std::vector<double> CAPE3km(T.size(), 0);
-	std::vector<double> ELT(T.size(), kFloatMissing);
-	std::vector<double> ELP(T.size(), kFloatMissing);
+	std::vector<double> ELT(T.size(), himan::GetKFloatMissing());
+	std::vector<double> ELP(T.size(), himan::GetKFloatMissing());
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 

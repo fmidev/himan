@@ -20,55 +20,33 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 
 		if (opts.theta)
 		{
-			d_tp[idx] = GetKFloatMissing();
 			d_tp[idx] = Theta(opts.t_base + d_t[idx], P * opts.p_scale, opts);
 		}
 		if (opts.thetaw)
 		{
-			d_tpw[idx] = GetKFloatMissing();
 			d_tpw[idx] = ThetaW(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts);
 		}
 		if (opts.thetae)
 		{
-			d_tpe[idx] = GetKFloatMissing();
 			d_tpe[idx] = ThetaE(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts);
 		}
 	}
 }
 __device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options opts)
 {
-	double theta = GetKFloatMissing();
-
-	if (!IsKFloatMissing(T) && !IsKFloatMissing(P))
-	{
-		theta = metutil::Theta_(T, P);
-	}
-
-	return theta;
+	return metutil::Theta_(T, P);
 }
 
 __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD, options opts)
 {
 	double thetaE = ThetaE(T, P, TD, opts);
 
-	if (IsKFloatMissing(thetaE))
-	{
-		return GetKFloatMissing();
-	}
-
 	return metutil::ThetaW_(thetaE, P);
 }
 
 __device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD, options opts)
 {
-	double value = GetKFloatMissing();
-
-	if (!IsKFloatMissing(T) && !IsKFloatMissing(P) && !IsKFloatMissing(TD))
-	{
-		value = metutil::ThetaE_(T, TD, P);
-	}
-
-	return value;
+	return metutil::ThetaE_(T, TD, P);
 }
 
 void himan::plugin::tpot_cuda::Process(options& opts)

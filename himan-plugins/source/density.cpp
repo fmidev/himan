@@ -103,11 +103,6 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 			P = PInfo->Value();
 		}
 
-		if (IsKFloatMissing(P) || IsKFloatMissing(T))
-		{
-			continue;
-		}
-
 		// actual calculation of the density using the ideal gas law
 		double rho = P * PScale / (constants::kRd * T);
 

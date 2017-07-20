@@ -18,7 +18,7 @@ struct point
 	double x;
 	double y;
 
-	__host__ __device__ point() : x(kFloatMissing), y(kFloatMissing) {}
+	__host__ __device__ point() : x(himan::GetKFloatMissing()), y(himan::GetKFloatMissing()) {}
 	__host__ __device__ point(double _x, double _y) : x(_x), y(_y) {}
 };
 
@@ -68,7 +68,7 @@ __device__ double Mode(double* arr)
 	thrust::sort(thrust::seq, arr, arr + 4);
 
 	double num = arr[0];
-	double mode = kFloatMissing;
+	double mode = himan::GetKFloatMissing();
 
 	int count = 1;
 	int modeCount = 0;
@@ -103,7 +103,7 @@ __device__ double Mode(double* arr)
 		}
 	}
 
-	double ret = kFloatMissing;
+	double ret = himan::GetKFloatMissing();
 
 	if (!multiModal)
 	{
@@ -166,7 +166,7 @@ __device__ double NearestPointInterpolation(const double* __restrict__ d_source,
 __device__ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo,
                                         const point& gp)
 {
-	double ret = kFloatMissing;
+	double ret = himan::GetKFloatMissing();
 
 	// Find all four neighboring points
 
@@ -180,7 +180,7 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 	size_t size_x = sourceInfo.size_x;
 	size_t size_y = sourceInfo.size_y;
 
-	double av = kFloatMissing, bv = kFloatMissing, cv = kFloatMissing, dv = kFloatMissing;
+	double av = himan::GetKFloatMissing(), bv = himan::GetKFloatMissing(), cv = himan::GetKFloatMissing(), dv = himan::GetKFloatMissing();
 
 	if (IsInsideGrid(a, size_x, size_y))
 	{
@@ -269,7 +269,7 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 
 		ret = (dist.x * (1 - dist.y) * dv + (1 - dist.x) * dist.y * av + dist.x * dist.y * bv) / wsum;
 	}
-	else if (!IsKFloatMissing(av) && !IsKFloatMissing(bv) && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
+	else if (!IsKFloatMissing(av) && !IsKFloatMissing(bv) && !IsKFloatMissing(cv) && IsKFloatMissing(dv))
 	{
 		double wsum = ((1 - dist.x) * (1 - dist.y) + (1 - dist.x) * dist.y + dist.x * dist.y);
 
@@ -300,7 +300,7 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 __device__ double NearestPointValueInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo,
                                                  const point& gp)
 {
-	double ret = kFloatMissing;
+	double ret = himan::GetKFloatMissing();
 
 	// Find all four neighboring points
 
@@ -389,7 +389,7 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 
 		point gp = d_grid[Index(i, j, targetInfo.size_x)];
 
-		double interp = kFloatMissing;
+		double interp = himan::GetKFloatMissing();
 
 		if (IsInsideGrid(gp, sourceInfo.size_x, sourceInfo.size_y))
 		{
@@ -418,8 +418,8 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 #endif
 		d_target[idx] = interp;
 
-		assert(interp == interp);  // no NaN
-		assert(interp < 1e30);     // No crazy values
+		assert(interp == interp || IsKFloatMissing(interp));  // no NaN
+		assert(interp < 1e30 || IsKFloatMissing(interp));     // No crazy values
 	}
 }
 
@@ -535,7 +535,7 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 
 			double lon = opts.first_lon + i * opts.di;
 
-			double lat = kFloatMissing;
+			double lat = himan::GetKFloatMissing();
 
 			if (opts.j_scans_positive)
 			{

@@ -5,7 +5,6 @@
 
 #define AND &&
 #define OR ||
-#define MISS kFloatMissing
 
 #include "preform_hybrid.h"
 #include "forecast_time.h"
@@ -300,7 +299,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			continue;
 		}
 
-		double PreForm = MISS;
+		double PreForm = kFloatMissing;
 
 		// Unit conversions
 
@@ -445,7 +444,6 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			}
 		}
 	}
-
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
 	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
 	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
@@ -508,19 +506,19 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		util::DumpVector(numZeroLevels, "num zero levels");
 #endif
 
-		zeroLevel1.resize(numZeroLevels.size(), MISS);
-		zeroLevel2.resize(numZeroLevels.size(), MISS);
-		zeroLevel3.resize(numZeroLevels.size(), MISS);
-		zeroLevel4.resize(numZeroLevels.size(), MISS);
+		zeroLevel1.resize(numZeroLevels.size(), kFloatMissing);
+		zeroLevel2.resize(numZeroLevels.size(), kFloatMissing);
+		zeroLevel3.resize(numZeroLevels.size(), kFloatMissing);
+		zeroLevel4.resize(numZeroLevels.size(), kFloatMissing);
 
-		rhAvgUpper12.resize(numZeroLevels.size(), MISS);
-		rhAvgUpper23.resize(numZeroLevels.size(), MISS);
+		rhAvgUpper12.resize(numZeroLevels.size(), kFloatMissing);
+		rhAvgUpper23.resize(numZeroLevels.size(), kFloatMissing);
 
 		// Keskim. lämpötila 1. nollarajan alapuolella, 1/2. ja 2/3. nollarajojen välisissä kerroksissa [C]
-		Tavg01.resize(numZeroLevels.size(), MISS);
-		Tavg12.resize(numZeroLevels.size(), MISS);
-		Tavg23.resize(numZeroLevels.size(), MISS);
-		Tavg34.resize(numZeroLevels.size(), MISS);
+		Tavg01.resize(numZeroLevels.size(), kFloatMissing);
+		Tavg12.resize(numZeroLevels.size(), kFloatMissing);
+		Tavg23.resize(numZeroLevels.size(), kFloatMissing);
+		Tavg34.resize(numZeroLevels.size(), kFloatMissing);
 
 		// 1. nollarajan alapuolisen, 2/3. nollarajojen välisen, ja koko T>0 alueen koko [mC, "metriastetta"]
 		plusArea = zeroLevel1;
@@ -653,18 +651,18 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 	// Keskimääräinen rhMelt nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa
 	// plussakerroksessa
-	vector<double> rhMeltUpper(rhAvg01.size(), MISS);
-	vector<double> rhMelt(rhAvg01.size(), MISS);
+	vector<double> rhMeltUpper(rhAvg01.size(), kFloatMissing);
+	vector<double> rhMelt(rhAvg01.size(), kFloatMissing);
 
 	// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa plussakerroksessa
-	vector<double> rhAvgUpper(rhAvg01.size(), MISS);
-	vector<double> rhAvg(rhAvg01.size(), MISS);
+	vector<double> rhAvgUpper(rhAvg01.size(), kFloatMissing);
+	vector<double> rhAvg(rhAvg01.size(), kFloatMissing);
 
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
 		short numZeroLevel = static_cast<short>(numZeroLevels[i]);
 
-		double pa = MISS, ma = MISS, pasfc = MISS;
+		double pa = kFloatMissing, ma = kFloatMissing, pasfc = kFloatMissing;
 
 		// Kommentteja Simolta nollakohtien lukumäärään:
 		// * Nollakohtien löytymättömyys ei ole ongelma, sillä tällöin olomuoto on aina lumi tai jäätävä tihku
@@ -678,7 +676,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			double zl1 = zeroLevel1[i], zl2 = zeroLevel2[i];
 			double ta1 = Tavg01[i], ta2 = Tavg12[i];
 
-			double paloft = MISS;
+			double paloft = kFloatMissing;
 
 			if (!IsKFloatMissing(zl1) && !IsKFloatMissing(zl2) && !IsKFloatMissing(ta1) && !IsKFloatMissing(ta2))
 			{
@@ -717,7 +715,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		else if (numZeroLevel % 2 == 1)
 		{
 			double zl1 = zeroLevel1[i], ta1 = Tavg01[i];
-			double paloft = MISS;
+			double paloft = kFloatMissing;
 
 			if (!IsKFloatMissing(zl1) && !IsKFloatMissing(ta1))
 			{
@@ -747,7 +745,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				double zl2 = zeroLevel2[i], zl3 = zeroLevel3[i];
 				double ta2 = Tavg23[i];
 
-				if (IsKFloatMissing(zl2) && !IsKFloatMissing(zl3) && !IsKFloatMissing(ta2))
+				if (!IsKFloatMissing(zl2) && !IsKFloatMissing(zl3) && !IsKFloatMissing(ta2))
 				{
 					ta2 -= constants::kKelvin;
 
@@ -908,9 +906,9 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Param(stratusTopParam);
 		ret->Data().Set(stratusTop);
 
-#ifdef DEBUG
+//#ifdef DEBUG
 		util::DumpVector(stratusTop);
-#endif
+//#endif
 
 		try
 		{
@@ -922,8 +920,8 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			{
 				if (IsKFloatMissing(stratusTop[i]))
 				{
-					constData1[i] = MISS;
-					constData2[i] = MISS;
+					constData1[i] = kFloatMissing;
+					constData2[i] = kFloatMissing;
 				}
 				else
 				{
@@ -976,8 +974,8 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 				if (IsKFloatMissing(lower) || IsKFloatMissing(upper))
 				{
-					constData1[i] = MISS;
-					constData2[i] = MISS;
+					constData1[i] = kFloatMissing;
+					constData2[i] = kFloatMissing;
 				}
 				else if (fabs(lower - upper) < 100)
 				{

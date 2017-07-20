@@ -266,11 +266,6 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		{
 			double value = sourceInfo->Value();
 
-			if (IsKFloatMissing(value))
-			{
-				continue;
-			}
-
 			if (!levelOnly)
 			{
 				double newValue = value * itsScale + itsBase;

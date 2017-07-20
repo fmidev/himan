@@ -170,7 +170,7 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 			// Make an assumption: if grid is static and bitmap is defined, it is probably
 			// all missing.
 
-			fillValue = kFloatMissing;
+			fillValue = himan::GetKFloatMissing();
 		}
 
 		if (NFmiGribPacking::IsHostPointer(arr))

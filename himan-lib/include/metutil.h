@@ -728,11 +728,6 @@ inline double himan::metutil::E_(double R, double P)
 CUDA_DEVICE
 inline double himan::metutil::DryLift_(double P, double T, double targetP)
 {
-	if (IsKFloatMissing(T) || IsKFloatMissing(P) || IsKFloatMissing(targetP) || targetP >= P)
-	{
-		return GetKFloatMissing();
-	}
-
 	// Sanity checks
 	assert(P > 10000);
 	assert(T > 100 && T < 400);
@@ -823,6 +818,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 			value = fma(dx, Tint, fma(-dx, T0, T0));
 #else
 			value = NFmiInterpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
+			(value == 32700.) ? value = kFloatMissing : false;
 #endif
 			break;
 		}
@@ -866,11 +862,6 @@ inline double Wobf(double T)
 CUDA_DEVICE
 inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 {
-	if (IsKFloatMissing(T) || IsKFloatMissing(P) || IsKFloatMissing(targetP) || targetP >= P)
-	{
-		return GetKFloatMissing();
-	}
-
 	using namespace himan::constants;
 
 	const double theta = Theta_(T, P) - kKelvin;  // pot temp, C
@@ -878,7 +869,7 @@ inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 
 	const double thetaw = theta - Wobf(theta) + Wobf(T);  // moist pot temp, C
 
-	double remains = 9999;  // try to minimise this
+	double remains = 9999;  // try to minimize this
 	double ratio = 1;
 
 	const double pwrp = POW(targetP / 100000, kRd_div_Cp);  // exner
@@ -950,7 +941,7 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 			ret.P = PLCL * 100;  // Pa
 
-			ret.T = (IsKFloatMissing(TLCL)) ? GetKFloatMissing() : TLCL;  // K
+			ret.T = TLCL;  // K
 
 			ret.Q = Q;
 		}
@@ -983,7 +974,7 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 				ret.P = PLCL * 100;  // Pa
 
-				ret.T = (IsKFloatMissing(TLCL)) ? GetKFloatMissing() : TLCL;  // K
+				ret.T = TLCL;  // K
 
 				ret.Q = Q;
 
@@ -1000,16 +991,12 @@ inline lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 {
 	lcl_t ret;
 
-	if (IsKFloatMissing(P) || IsKFloatMissing(T) || IsKFloatMissing(TD))
-	{
-		return ret;
-	}
 	// Sanity checks
 
 	assert(P > 10000);
 	assert(T > 0);
 	assert(T < 500);
-	assert(TD > 0);
+	assert(TD > 0 && TD != 56);
 	assert(TD < 500);
 
 	double A = 1 / (TD - 56);
@@ -1028,11 +1015,6 @@ inline double himan::metutil::Es_(double T)
 	assert(T == T && T > 0 && T < 500);  // check also NaN
 
 	double Es;
-
-	if (IsKFloatMissing(T))
-	{
-		return GetKFloatMissing();
-	}
 
 	T -= himan::constants::kKelvin;
 
@@ -1055,11 +1037,6 @@ inline double himan::metutil::Gammas_(double P, double T)
 {
 	// Sanity checks
 
-	if (IsKFloatMissing(P) || IsKFloatMissing(T))
-	{
-		return GetKFloatMissing();
-	}
-
 	assert(P > 10000);
 	assert(T > 0 && T < 500);
 
@@ -1080,11 +1057,6 @@ CUDA_DEVICE
 inline double himan::metutil::Gammaw_(double P, double T)
 {
 	// Sanity checks
-
-	if (IsKFloatMissing(P) || IsKFloatMissing(T))
-	{
-		return GetKFloatMissing();
-	}
 
 	assert(P > 1000);
 	assert(T > 0 && T < 500);
@@ -1351,9 +1323,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 CUDA_DEVICE
 inline double himan::metutil::ThetaW_(double thetaE, double P)
 {
-	assert(P > 1000);
-
-	if (IsKFloatMissing(thetaE)) return GetKFloatMissing();
+	assert(P > 1000); // P not used anywhere?
 
 	double thetaW = thetaE;
 

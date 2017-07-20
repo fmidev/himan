@@ -81,17 +81,9 @@ void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		const double Snow = tup.get<3>();
 		const double Graupel = tup.get<4>();
 
-		// Check if mixing ratio for rain is not missing
-		if (IsKFloatMissing(Rho) || IsKFloatMissing(Rain) || IsKFloatMissing(Snow) || IsKFloatMissing(Graupel))
-		{
-			continue;
-		}
-
-		// Calculate absolute humidity if mixing ratio is not missing. If mixing ratio is negative use 0.0 kg/kg
+		// If mixing ratio is negative use 0.0 kg/kg
 		// instead.
-		double absolute_humidity = Rho * fmax((Rain + Snow + Graupel), 0.0);
-
-		result = absolute_humidity;
+		result = Rho * fmax((Rain + Snow + Graupel), 0.0);
 	}
 
 	myThreadedLogger->Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

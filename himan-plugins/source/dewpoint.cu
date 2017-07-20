@@ -12,14 +12,8 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_r
 
 	if (idx < opts.N)
 	{
-		d_td[idx] = GetKFloatMissing();
-
-		if ((d_t[idx] == d_t[idx]) && (d_rh[idx] == d_rh[idx]))
-		{
-			double RH = d_rh[idx] * opts.rh_scale;
-
-			d_td[idx] = metutil::DewPointFromRH_(d_t[idx] + opts.t_base, RH);
-		}
+		double RH = d_rh[idx] * opts.rh_scale;
+		d_td[idx] = metutil::DewPointFromRH_(d_t[idx] + opts.t_base, RH);
 	}
 }
 
