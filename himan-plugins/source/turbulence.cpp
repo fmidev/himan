@@ -155,7 +155,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double nextV = nextVInfo->Value();
 		double nextH = nextHInfo->Value();
 
-		if (IsMissingValue({U,V,H,prevU,prevV,prevH,nextU,nextV,nextH}))
+		if (IsMissingValue({U, V, H, prevU, prevV, prevH, nextU, nextV, nextH}))
 		{
 			continue;
 		}

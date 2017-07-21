@@ -547,7 +547,6 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 	}
 
 	futures.clear();
-
 }
 
 vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)

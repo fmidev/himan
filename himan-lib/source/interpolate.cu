@@ -180,7 +180,8 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 	size_t size_x = sourceInfo.size_x;
 	size_t size_y = sourceInfo.size_y;
 
-	double av = himan::MissingDouble(), bv = himan::MissingDouble(), cv = himan::MissingDouble(), dv = himan::MissingDouble();
+	double av = himan::MissingDouble(), bv = himan::MissingDouble(), cv = himan::MissingDouble(),
+	       dv = himan::MissingDouble();
 
 	if (IsInsideGrid(a, size_x, size_y))
 	{
@@ -579,8 +580,7 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 		sincos(zxmxc, &sinxmxc, &cosxmxc);
 
 		double PA = cosxmxc * CosXRot + CosYPole * sinxmxc * SinXRot;
-		double PB =
-		    CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
+		double PB = CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
 		double PC = (-SinYPole) * SinXRot / CosYReg;
 		double PD = (CosYPole * CosYRot - SinYPole * CosXRot * SinYRot) / CosYReg;
 

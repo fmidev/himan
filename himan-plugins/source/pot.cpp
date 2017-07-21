@@ -290,7 +290,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	// filter CAPE
-	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1.0 / 9.0);
+	himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1.0 / 9.0);
 	himan::matrix<double> filtered_CAPE = numerical_functions::Filter2D(CAPEMaxInfo->Data(), filter_kernel);
 
 	CAPEMaxInfo->Grid()->Data(filtered_CAPE);

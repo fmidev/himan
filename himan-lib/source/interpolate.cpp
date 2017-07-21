@@ -28,10 +28,8 @@ namespace interpolate
 {
 bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
-
-	// switch to old MissingDouble() for compatibility with QD stuff 
-        source.Grid()->Data().MissingValue(kFloatMissing);
-        targetData.MissingValue(kFloatMissing);
+	// switch to old MissingDouble() for compatibility with QD stuff
+	targetData.MissingValue(kFloatMissing);
 
 	auto q = GET_PLUGIN(querydata);
 
@@ -49,8 +47,7 @@ bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 	}
 
 	// back to himan
-	source.Grid()->Data().MissingValue(MissingDouble());
-        targetData.MissingValue(MissingDouble());
+	targetData.MissingValue(MissingDouble());
 
 	return true;
 }
@@ -326,9 +323,8 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 		util::Unpack({source.Grid()});
 	}
 #endif
-        // switch to old MissingDouble() for compatibility with QD stuff
-        source.Grid()->Data().MissingValue(kFloatMissing);
-        targetData.MissingValue(kFloatMissing);
+	// switch to old MissingDouble() for compatibility with QD stuff
+	targetData.MissingValue(kFloatMissing);
 
 	auto q = GET_PLUGIN(querydata);
 
@@ -397,7 +393,6 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 
 	// back to Himan
 	targetData.MissingValue(MissingDouble());
-        source.Grid()->Data().MissingValue(MissingDouble());
 
 	return true;
 }
@@ -478,7 +473,6 @@ bool InterpolateArea(info& target, std::vector<info_t> sources, bool useCudaForI
 		interpGrid->Data(targetData);
 
 		source->Grid(interpGrid);
-
 	}
 
 	return true;
@@ -584,7 +578,6 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 
 	else if (base.Grid()->Class() == kIrregularGrid && infos[0]->Grid()->Class() == kRegularGrid)
 	{
-
 		needInterpolation = true;
 	}
 
@@ -592,7 +585,6 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 
 	else if (base.Grid()->Class() == kIrregularGrid && infos[0]->Grid()->Class() == kIrregularGrid)
 	{
-
 		if (*base.Grid() != *infos[0]->Grid())
 		{
 			needPointReordering = true;
@@ -603,7 +595,6 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 
 	else if (base.Grid()->Class() == kRegularGrid && infos[0]->Grid()->Class() == kIrregularGrid)
 	{
-
 		if (infos[0]->Grid()->Type() == kReducedGaussian)
 		{
 			needInterpolation = true;

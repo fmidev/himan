@@ -24,22 +24,25 @@ class grid;
 inline bool Compare(const double& lhs, const double& rhs)
 {
 	const uint64_t* lhs_ptr = reinterpret_cast<const uint64_t*>(&lhs);
-        const uint64_t* rhs_ptr = reinterpret_cast<const uint64_t*>(&rhs);
+	const uint64_t* rhs_ptr = reinterpret_cast<const uint64_t*>(&rhs);
 
 	return *lhs_ptr == *rhs_ptr;
 }
 
 inline bool Compare(const float& lhs, const float& rhs)
 {
-        const uint32_t* lhs_ptr = reinterpret_cast<const uint32_t*>(&lhs);
-        const uint32_t* rhs_ptr = reinterpret_cast<const uint32_t*>(&rhs);
+	const uint32_t* lhs_ptr = reinterpret_cast<const uint32_t*>(&lhs);
+	const uint32_t* rhs_ptr = reinterpret_cast<const uint32_t*>(&rhs);
 
-        return *lhs_ptr == *rhs_ptr;
+	return *lhs_ptr == *rhs_ptr;
 }
 
 // For all types other than float/double use == operator
 template <typename T>
-inline bool Compare(const T& lhs, const T& rhs) {return lhs==rhs;}
+inline bool Compare(const T& lhs, const T& rhs)
+{
+	return lhs == rhs;
+}
 
 template <class T>
 class matrix
@@ -90,14 +93,14 @@ class matrix
 		assert(itsData.size() == other.itsData.size());
 
 		if (itsWidth != other.itsWidth || itsHeight != other.itsHeight || itsDepth != other.itsDepth ||
-		    !Compare(itsMissingValue,other.itsMissingValue))
+		    !Compare(itsMissingValue, other.itsMissingValue))
 		{
 			return false;
 		}
 
 		for (size_t i = 0; i < itsData.size(); i++)
 		{
-			if (!Compare(itsData[i],other.itsData[i]))
+			if (!Compare(itsData[i], other.itsData[i]))
 			{
 				return false;
 			}
@@ -157,7 +160,8 @@ class matrix
 
 			// Choosing the lesser evil between two options to compare
 			// 1. itsMissingValue that can be of any type
-			// 2. kFloatMissing which is of type double but can be different from itsMissingValue even for a double matrix
+			// 2. kFloatMissing which is of type double but can be different from itsMissingValue even for a double
+			// matrix
 			// ->this function should not be a member function of Matrix in this form
 			if (IsMissing(d))
 			{
@@ -385,7 +389,6 @@ class matrix
 	}
 
 	T MissingValue() const { return itsMissingValue; }
-
 	/**
 	 * @brief Clear contents of matrix (set size = 0)
 	 */
@@ -402,7 +405,7 @@ class matrix
 	bool IsMissing(size_t theIndex) const
 	{
 		assert(itsData.size() > theIndex);
-		return Compare(itsData[theIndex],itsMissingValue);
+		return Compare(itsData[theIndex], itsMissingValue);
 	}
 
 	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const { return IsMissing(Index(theX, theY, theZ)); }

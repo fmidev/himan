@@ -254,7 +254,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 			double value = MissingDouble();
 
-			if (IsMissingValue({T850,T700,T500,TD850,TD700}))
+			if (IsMissingValue({T850, T700, T500, TD850, TD700}))
 			{
 				continue;
 			}
@@ -287,7 +287,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				assert(!IsMissing(TD500m));
 				assert(!IsMissing(P500m));
 
-				if (!IsMissingValue({T500m,TD500m,P500m}))
+				if (!IsMissingValue({T500m, TD500m, P500m}))
 				{
 					value = metutil::LI_(T500, T500m, TD500m, P500m);
 

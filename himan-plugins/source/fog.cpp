@@ -101,7 +101,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-                        myTargetInfo->Value(0);
+			myTargetInfo->Value(0);
 		}
 	}
 

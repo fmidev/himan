@@ -27,6 +27,8 @@ extern "C" {
 #include <luabind/luabind.hpp>
 #include <luabind/operator.hpp>
 
+// void ScherlokHoms(info_t& myTargetInfo){std::cout<<myTargetInfo->Data().MissingValue() <<'\n';}
+
 using namespace himan;
 using namespace himan::plugin;
 using namespace luabind;
@@ -328,7 +330,7 @@ void SetValues(info_t& anInfo, const object& table)
 object GetValues(info_t& anInfo) { return VectorToTable(VEC(anInfo)); }
 point GetLatLon(info_t& anInfo, size_t theIndex) { return anInfo->Grid()->LatLon(--theIndex); }
 double GetMissingValue(info_t& anInfo) { return anInfo->Data().MissingValue(); }
-void SetMissingValue(info_t& anInfo, double missingValue) {anInfo->Data().MissingValue(missingValue);}
+void SetMissingValue(info_t& anInfo, double missingValue) { anInfo->Data().MissingValue(missingValue); }
 matrix<double> GetData(info_t& anInfo) { return anInfo->Data(); }
 }  // namespace info_wrapper
 
@@ -1288,7 +1290,6 @@ std::vector<double> TableToVector(const object& table)
 			ret[i] = himan::MissingDouble();
 		}
 	}
-std::cout << ret.size() << '\n';
 	return ret;
 }
 

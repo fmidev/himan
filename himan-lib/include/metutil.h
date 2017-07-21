@@ -13,6 +13,7 @@
 #include "assert.h"
 #include "cuda_helper.h"
 #include "himan_common.h"
+#include "numerical_functions.h"
 
 #if defined FAST_MATH and not defined __CUDACC__
 #include "fastmath.h"
@@ -55,8 +56,6 @@ inline double fastpow(double a, double b)
 #define LOG(V) log(V)
 #define POW(V, E) pow(V, E)
 #endif
-
-#include <NFmiInterpolation.h>
 
 // struct to store LCL level parameters
 struct lcl_t
@@ -727,6 +726,11 @@ inline double himan::metutil::E_(double R, double P)
 CUDA_DEVICE
 inline double himan::metutil::DryLift_(double P, double T, double targetP)
 {
+	if (IsMissingDouble(T) || IsMissingDouble(P) || IsMissingDouble(targetP) || targetP >= P)
+	{
+		return MissingDouble();
+	}
+
 	// Sanity checks
 	assert(P > 10000);
 	assert(T > 100 && T < 400);
@@ -812,13 +816,12 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 
 		if (Pint <= targetP)
 		{
-#ifdef __CUDACC__
-			double dx = (targetP - Pint) / (Pint + Pstep - Pint);
-			value = fma(dx, Tint, fma(-dx, T0, T0));
-#else
-			value = NFmiInterpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
-			(value == 32700.) ? value = kFloatMissing : false;
-#endif
+			/*#ifdef __CUDACC__
+			            double dx = (targetP - Pint) / (Pint + Pstep - Pint);
+			            value = fma(dx, Tint, fma(-dx, T0, T0));
+			#else*/
+			value = himan::numerical_functions::interpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
+			//#endif
 			break;
 		}
 
@@ -861,6 +864,11 @@ inline double Wobf(double T)
 CUDA_DEVICE
 inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 {
+	if (IsMissingDouble(T) || IsMissingDouble(P) || targetP >= P)
+	{
+		return MissingDouble();
+	}
+
 	using namespace himan::constants;
 
 	const double theta = Theta_(T, P) - kKelvin;  // pot temp, C
@@ -953,7 +961,7 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 	// Fallback to slower method
 
-	if (!(ret.P == ret.P))
+	if (IsMissingDouble(ret.P))
 	{
 		T = Torig;
 		Tstep = 0.1;
@@ -1129,7 +1137,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 		double wetT = Lift_(P500m, T500m, TD500m, TARGET_PRESSURE);
 
-		if (wetT == wetT)
+		if (!IsMissingDouble(wetT))
 		{
 			li = T500 - wetT;
 		}
@@ -1159,7 +1167,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 		double dryT = DryLift_(85000, T850, TARGET_PRESSURE);
 
-		if (dryT == dryT)
+		if (!IsMissingDouble(dryT))
 		{
 			si = T500 - dryT;
 		}
@@ -1170,7 +1178,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 		double wetT = Lift_(85000, T850, TD850, TARGET_PRESSURE);
 
-		if (wetT == wetT)
+		if (!IsMissingDouble(wetT))
 		{
 			si = T500 - wetT;
 		}
@@ -1222,7 +1230,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	assert(thetaE > 0);
 	assert(P > 1000);
 
-	if (IsMissingDouble(thetaE)) return MissingDouble();
+	if (IsMissingDouble(thetaE) || IsMissingDouble(P)) return MissingDouble();
 
 	using namespace himan::constants;
 

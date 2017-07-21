@@ -7,6 +7,7 @@
 #include "numerical_functions.h"
 
 using namespace himan;
+using namespace himan::numerical_functions;
 
 #ifdef DEBUG
 #include "util.h"
@@ -25,7 +26,7 @@ double ExactEdgeValue(double theHeight, double theValue, double thePreviousHeigh
 		return theValue;
 	}
 
-	double ret = NFmiInterpolation::Linear(theLimit, thePreviousHeight, theHeight, thePreviousValue, theValue);
+	double ret = interpolation::Linear(theLimit, thePreviousHeight, theHeight, thePreviousValue, theValue);
 	return ret;
 }
 
@@ -367,7 +368,10 @@ void modifier_max::Calculate(double theValue, double theHeight, double thePrevio
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
-	Value(IsMissing(Value()) ? theValue : std::max(theValue, Value()));
+	if (IsMissing(Value()) || theValue > Value())
+	{
+		Value(theValue);
+	}
 }
 
 /* ----------------- */
@@ -395,7 +399,10 @@ void modifier_min::Calculate(double theValue, double theHeight, double thePrevio
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
-	Value(IsMissing(Value()) ? theValue : std::min(theValue, Value()));
+	if (IsMissing(Value()) || theValue < Value())
+	{
+		Value(theValue);
+	}
 }
 
 /* ----------------- */
@@ -687,9 +694,9 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 	    (thePreviousValue > findValue && theValue <= findValue))
 	{
 		double actualHeight =
-		    NFmiInterpolation::Linear(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
+		    interpolation::Linear(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
 
-		if (!IsMissing(actualHeight) && actualHeight != 32700.)
+		if (!IsMissing(actualHeight))
 		{
 			assert(!itsHeightInMeters || (actualHeight >= lowerLimit && actualHeight <= upperLimit));
 			assert(itsHeightInMeters || (actualHeight <= lowerLimit && actualHeight >= upperLimit));
@@ -784,8 +791,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 		{
 			if (!IsMissing(thePreviousValue) && !IsMissing(thePreviousHeight))
 			{
-				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
-				                                                              thePreviousHeight, theHeight);
+				theHeight = interpolation::Linear(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
 			}
 
 			itsFoundNValues[itsIndex] += 1;
@@ -814,8 +820,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 		{
 			if (!IsMissing(thePreviousHeight))
 			{
-				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
-				                                                              thePreviousHeight, theHeight);
+				theHeight = interpolation::Linear(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
 			}
 
 			itsFoundNValues[itsIndex] += 1;
@@ -899,8 +904,7 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 		{
 			if (!IsMissing(thePreviousValue) && !IsMissing(thePreviousHeight))
 			{
-				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
-				                                                              thePreviousHeight, theHeight);
+				theHeight = interpolation::Linear(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
 			}
 
 			itsFoundNValues[itsIndex] += 1;
@@ -929,8 +933,7 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 		{
 			if (!IsMissing(thePreviousValue) && !IsMissing(thePreviousHeight))
 			{
-				theHeight = himan::numerical_functions::interpolation::Linear(findValue, thePreviousValue, theValue,
-				                                                              thePreviousHeight, theHeight);
+				theHeight = interpolation::Linear(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
 			}
 
 			itsFoundNValues[itsIndex] += 1;
@@ -1054,9 +1057,9 @@ void modifier_findvalue::Calculate(double theValue, double theHeight, double the
 	    || (thePreviousHeight >= findHeight && theHeight <= findHeight))  // downward trend
 	{
 		double actualValue =
-		    NFmiInterpolation::Linear(findHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
+		    interpolation::Linear(findHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
 
-		if (!IsMissing(actualValue) && actualValue != 32700.)
+		if (!IsMissing(actualValue))
 		{
 			Value(actualValue);
 			itsValuesFound++;
@@ -1086,13 +1089,13 @@ void modifier_integral::Calculate(double theValue, double theHeight, double theP
 	if (previousHeight < lowerHeight && theHeight > lowerHeight)
 	{
 		double val = Value();
-		double lowerValue = NFmiInterpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
+		double lowerValue = interpolation::Linear(lowerHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((lowerValue + theValue) / 2 * (theHeight - lowerHeight) + val);
 	}
 	else if (previousHeight < upperHeight && theHeight > upperHeight)
 	{
 		double val = Value();
-		double upperValue = NFmiInterpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
+		double upperValue = interpolation::Linear(upperHeight, previousHeight, theHeight, previousValue, theValue);
 		Value((upperValue + previousValue) / 2 * (upperHeight - previousHeight) + val);
 	}
 	else if (!IsMissing(previousHeight) && previousHeight >= lowerHeight && theHeight <= upperHeight)
@@ -1134,21 +1137,21 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight, double
 	// TODO: add between levels case
 	if (EnteringHeightZone(theHeight, thePreviousHeight, lowerHeight))
 	{
-		double lowerValue = 
-		    NFmiInterpolation::Linear(lowerHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
+		double lowerValue =
+		    interpolation::Linear(lowerHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
 		// zero is crossed from negative to positive: Interpolate height where zero is crossed and integrate positive
 		// and negative area separately
 		if (lowerValue < 0 && theValue > 0)
 		{
-			double zeroHeight = NFmiInterpolation::Linear(0.0, lowerValue, theValue, lowerHeight, theHeight);
+			double zeroHeight = interpolation::Linear(0.0, lowerValue, theValue, lowerHeight, theHeight);
 			itsMinusArea[itsIndex] += lowerValue / 2 * (zeroHeight - lowerHeight);
 			itsPlusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
 		}
 		// zero is crossed from positive to negative
 		else if (lowerValue > 0 && theValue < 0)
 		{
-			double zeroHeight = NFmiInterpolation::Linear(0.0, lowerValue, theValue, lowerHeight, theHeight);
-			
+			double zeroHeight = interpolation::Linear(0.0, lowerValue, theValue, lowerHeight, theHeight);
+
 			itsPlusArea[itsIndex] += lowerValue / 2 * (zeroHeight - lowerHeight);
 			itsMinusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
 		}
@@ -1167,12 +1170,12 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight, double
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperHeight))
 	{
 		double upperValue =
-		    NFmiInterpolation::Linear(upperHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
+		    interpolation::Linear(upperHeight, thePreviousHeight, theHeight, thePreviousValue, theValue);
 		// zero is crossed from negative to positive
 		if (thePreviousValue < 0 && upperValue > 0)
 		{
 			double zeroHeight =
-			    NFmiInterpolation::Linear(0.0, thePreviousValue, upperValue, thePreviousHeight, upperHeight);
+			    interpolation::Linear(0.0, thePreviousValue, upperValue, thePreviousHeight, upperHeight);
 			itsMinusArea[itsIndex] += thePreviousValue / 2 * (zeroHeight - thePreviousHeight);
 			itsPlusArea[itsIndex] += upperValue / 2 * (upperHeight - zeroHeight);
 		}
@@ -1180,7 +1183,7 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight, double
 		else if (thePreviousValue > 0 && upperValue < 0)
 		{
 			double zeroHeight =
-			    NFmiInterpolation::Linear(0.0, thePreviousValue, upperValue, thePreviousHeight, upperHeight);
+			    interpolation::Linear(0.0, thePreviousValue, upperValue, thePreviousHeight, upperHeight);
 			itsPlusArea[itsIndex] += thePreviousValue / 2 * (zeroHeight - thePreviousHeight);
 			itsMinusArea[itsIndex] += upperValue / 2 * (upperHeight - zeroHeight);
 		}
@@ -1203,16 +1206,14 @@ void modifier_plusminusarea::Calculate(double theValue, double theHeight, double
 		// zero is crossed from negative to positive
 		if (thePreviousValue < 0 && theValue > 0)
 		{
-			double zeroHeight =
-			    NFmiInterpolation::Linear(0.0, thePreviousValue, theValue, thePreviousHeight, theHeight);
+			double zeroHeight = interpolation::Linear(0.0, thePreviousValue, theValue, thePreviousHeight, theHeight);
 			itsMinusArea[itsIndex] += thePreviousValue / 2 * (zeroHeight - thePreviousHeight);
 			itsPlusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
 		}
 		// zero is crossed from positive to negative
 		else if (thePreviousValue > 0 && theValue < 0)
 		{
-			double zeroHeight =
-			    NFmiInterpolation::Linear(0.0, thePreviousValue, theValue, thePreviousHeight, theHeight);
+			double zeroHeight = interpolation::Linear(0.0, thePreviousValue, theValue, thePreviousHeight, theHeight);
 			itsPlusArea[itsIndex] += thePreviousValue / 2 * (zeroHeight - thePreviousHeight);
 			itsMinusArea[itsIndex] += theValue / 2 * (theHeight - zeroHeight);
 		}

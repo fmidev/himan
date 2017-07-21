@@ -329,8 +329,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		// 1. jäätävää tihkua? (tai lumijyväsiä)
 
-		if (!IsMissing(base) AND !IsMissing(top) AND !IsMissing(upperLayerN) AND !IsMissing(
-		        wAvg) AND !IsMissing(Navg) AND !IsMissing(stTavg) AND !IsMissing(Ttop) AND RR <=
+		if (!IsMissing(base) AND !IsMissing(top) AND !IsMissing(upperLayerN) AND !IsMissing(wAvg) AND !IsMissing(Navg)
+		        AND !IsMissing(stTavg) AND !IsMissing(Ttop) AND RR <=
 		    fzdzLim AND
 		        base<baseLimit AND(top - base) >= fzStLimit AND wAvg<wMax AND wAvg >= 0 AND Navg> Nlimit AND Ttop>
 		            stTlimit AND stTavg > stTlimit AND T > sfcMin AND T <= sfcMax AND upperLayerN < dryNlim)
@@ -344,11 +344,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		// kuivaa?
 		// (Huom. hyvin paksu pakkaskerros (tai ohut sulamiskerros) -> oikeasti jääjyväsiä/ice pellets fzra sijaan)
 
-		if (IsMissing(PreForm) AND !IsMissing(plusArea) AND !IsMissing(minusArea)
-		        AND !IsMissing(rhAvgUpper) AND !IsMissing(rhMeltUpper) AND plusArea >
-		    fzraPA AND
-		        minusArea<fzraMA AND T <= 0 AND(IsMissing(upperLayerN) OR upperLayerN > dryNlim) AND rhAvgUpper>
-		            rhMeltUpper)
+		if (IsMissing(PreForm) AND !IsMissing(plusArea) AND !IsMissing(minusArea) AND !IsMissing(rhAvgUpper)
+		        AND !IsMissing(rhMeltUpper) AND plusArea >
+		    fzraPA AND minusArea<fzraMA AND T <= 0 AND(IsMissing(upperLayerN) OR upperLayerN > dryNlim) AND rhAvgUpper>
+		        rhMeltUpper)
 		{
 			PreForm = FREEZING_RAIN;
 		}
@@ -364,9 +363,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
 				// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään
 				// mukana)
-				if (!IsMissing(base) && !IsMissing(top) && !IsMissing(Navg) &&
-				    !IsMissing(upperLayerN) && RR <= dzLim && base < baseLimit && (top - base) > stLimit &&
-				    Navg > Nlimit && upperLayerN < dryNlim)
+				if (!IsMissing(base) && !IsMissing(top) && !IsMissing(Navg) && !IsMissing(upperLayerN) && RR <= dzLim &&
+				    base < baseLimit && (top - base) > stLimit && Navg > Nlimit && upperLayerN < dryNlim)
 				{
 					PreForm = DRIZZLE;
 				}
@@ -757,8 +755,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 					// Keskimääräinen RH ylemmässä plussakerroksessa
 					rhAvgUpper[i] = rhAvgUpper23[i];
 
-					if (!IsMissing(rhAvgUpper[i]) AND !IsMissing(rhMeltUpper[i])
-					            AND rhAvgUpper[i] > rhMeltUpper[i] &&
+					if (!IsMissing(rhAvgUpper[i]) AND !IsMissing(rhMeltUpper[i]) AND rhAvgUpper[i] > rhMeltUpper[i] &&
 					    !IsMissing(pasfc))
 					{
 						pa = pasfc + paloft;
@@ -906,9 +903,9 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Param(stratusTopParam);
 		ret->Data().Set(stratusTop);
 
-//#ifdef DEBUG
+#ifdef DEBUG
 		util::DumpVector(stratusTop);
-//#endif
+#endif
 
 		try
 		{
@@ -1021,7 +1018,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 					BOOST_FOREACH (double& d, stratusVerticalVelocity)
 					{
-						if (d != MissingDouble()) d *= 1000;
+						if (!IsMissing(d)) d *= 1000;
 					}
 				}
 			}

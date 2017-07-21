@@ -403,9 +403,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 	for (int i = 1; i < ASizeX - 1; ++i)  // rows
 	{
 		// calculate for upper boundary
-		dA_dx.Set(i, 0, 0,
-		          (A.At(i + 1, 0, 0) - A.At(i - 1, 0, 0)) / (2 * dx[0]));  // central difference in x-direction
-		dA_dy.Set(i, 0, 0, (A.At(i, 1, 0) - A.At(i, 0, 0)) / dy[i]);       // foreward difference in y-direction
+		dA_dx.Set(i, 0, 0, (A.At(i + 1, 0, 0) - A.At(i - 1, 0, 0)) / (2 * dx[0]));  // central difference in x-direction
+		dA_dy.Set(i, 0, 0, (A.At(i, 1, 0) - A.At(i, 0, 0)) / dy[i]);  // foreward difference in y-direction
 
 		// calculate for lower boundary
 		dA_dx.Set(i, ASizeY - 1, 0, (A.At(i + 1, ASizeY - 1, 0) - A.At(i - 1, ASizeY - 1, 0)) /
@@ -418,8 +417,7 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 	{
 		// calculate for left boundary
 		dA_dx.Set(0, j, 0, (A.At(1, j, 0) - A.At(0, j, 0)) / dx[j]);  // foreward difference in x-direction
-		dA_dy.Set(0, j, 0,
-		          (A.At(0, j + 1, 0) - A.At(0, j - 1, 0)) / (2 * dy[0]));  // central difference in y-direction
+		dA_dy.Set(0, j, 0, (A.At(0, j + 1, 0) - A.At(0, j - 1, 0)) / (2 * dy[0]));  // central difference in y-direction
 
 		// calculate for right boundary
 		dA_dx.Set(ASizeX - 1, j, 0,
@@ -442,7 +440,8 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 	// bottom left
 	dA_dx.Set(0, ASizeY - 1, 0, (A.At(1, ASizeY - 1, 0) - A.At(0, ASizeY - 1, 0)) /
 	                                dx[ASizeY - 1]);  // foreward difference in x-direction
-	dA_dy.Set(0, ASizeY - 1, 0, (A.At(0, ASizeY - 1, 0) - A.At(0, ASizeY - 2, 0)) / dy[0]);  // backward difference in y-direction
+	dA_dy.Set(0, ASizeY - 1, 0,
+	          (A.At(0, ASizeY - 1, 0) - A.At(0, ASizeY - 2, 0)) / dy[0]);  // backward difference in y-direction
 
 	// bottom right
 	dA_dx.Set(ASizeX - 1, ASizeY - 1, 0, (A.At(ASizeX - 1, ASizeY - 1, 0) - A.At(ASizeX - 2, ASizeY - 1, 0)) /

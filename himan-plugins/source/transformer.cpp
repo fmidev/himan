@@ -263,9 +263,9 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		LOCKSTEP(myTargetInfo, sourceInfo)
 		{
 			double value = sourceInfo->Value();
-			if(IsMissing(value)) continue;
+			if (IsMissing(value)) continue;
 
-			myTargetInfo->Value(value*itsScale+itsBase);
+			myTargetInfo->Value(value * itsScale + itsBase);
 		}
 	}
 

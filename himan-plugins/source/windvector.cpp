@@ -236,14 +236,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			double U = tup.get<2>();
 			double V = tup.get<3>();
 
-			if(IsMissingValue({U,V}))
-                        {
-                                continue;
-                        }
+			if (IsMissingValue({U, V}))
+			{
+				continue;
+			}
 
-                        speed = sqrt(U * U + V * V);
+			speed = sqrt(U * U + V * V);
 
-			if(itsCalculationTarget == kGust)
+			if (itsCalculationTarget == kGust)
 			{
 				continue;
 			}

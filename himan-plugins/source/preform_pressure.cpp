@@ -58,7 +58,6 @@ const double rhLim = 90.;
 const int missingInt = numeric_limits<int>::min();
 
 bool IsMissingInt(int val) { return val == missingInt; }
-
 preform_pressure::preform_pressure()
 {
 	itsClearTextFormula = "<algorithm>";
@@ -379,7 +378,10 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 				PreForm = RAIN;
 			}
 		}
-		if(!IsMissingInt(PreForm)) {myTargetInfo->Value(PreForm);}
+		if (!IsMissingInt(PreForm))
+		{
+			myTargetInfo->Value(PreForm);
+		}
 	}
 
 	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +

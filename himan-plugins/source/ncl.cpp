@@ -156,8 +156,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				prevTemp = prevTInfo->Value();
 			}
 
-			if (IsMissingValue({height,temp}) ||
-			    (!firstLevel && (IsMissingValue({prevHeight,prevTemp}))))
+			if (IsMissingValue({height, temp}) || (!firstLevel && (IsMissingValue({prevHeight, prevTemp}))))
 			{
 				continue;
 			}

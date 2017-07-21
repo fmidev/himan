@@ -320,7 +320,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const string deviceType = "CPU";
 
 	matrix<double> area(myTargetInfo->Data().SizeX(), myTargetInfo->Data().SizeY(), 1, MissingDouble(), 0);  // "A"
-	matrix<double> confidence(area.SizeX(), area.SizeY(), 1, MissingDouble(), MissingDouble());                // "C"
+	matrix<double> confidence(area.SizeX(), area.SizeY(), 1, MissingDouble(), MissingDouble());              // "C"
 
 	// 1. Calculate initial area and confidence of precipitation
 

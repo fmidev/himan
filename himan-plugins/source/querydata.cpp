@@ -221,6 +221,9 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 		}
 	}
 
+	// return to original missing value
+	theInfo.Grid()->Data().MissingValue(MissingDouble());
+
 	return true;
 }
 
@@ -681,8 +684,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			{
 				assert(newInfo->ParamIndex() == qinfo.ParamIndex());
 
-				matrix<double> dm(ni, nj, 1, kFloatMissing);
-
+				matrix<double> dm(ni, nj, 1, static_cast<double>(32700.f));
 				size_t i;
 
 				for (qinfo.ResetLocation(), i = 0; qinfo.NextLocation() && i < ni * nj; i++)
