@@ -139,7 +139,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	std::vector<double> ab = TInfo->Grid()->AB();
 
-	double A = kFloatMissing, B = kFloatMissing;
+	double A = MissingDouble(), B = MissingDouble();
 
 	if (ab.size() == 2)
 	{

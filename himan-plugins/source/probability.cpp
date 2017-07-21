@@ -251,7 +251,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 					                 std::to_string(st.Id()) + " from radon");
 					double limit = r->RadonDB().GetProbabilityLimitForStation(st.Id(), pc.output.Name());
 
-					if (IsKFloatMissing(limit))
+					if (IsMissing(limit))
 					{
 						itsLogger->Fatal("Threshold not found for param " + pc.output.Name() + ", station " +
 						                 std::to_string(st.Id()));
@@ -513,7 +513,7 @@ void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInf
 			const auto u = ens1->Value(i);
 			const auto v = ens2->Value(i);
 
-			if (IsKFloatMissing(u) || IsKFloatMissing(v))
+			if (IsMissing(u) || IsMissing(v))
 			{
 				continue;
 			}
@@ -548,7 +548,7 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
 			const auto x = ens->Value(i);
-			if (!IsKFloatMissing(x) && (x <= threshold))
+			if (!IsMissing(x) && (x <= threshold))
 			{
 				probability += invN;
 			}
@@ -578,7 +578,7 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, con
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
 			const auto x = ens->Value(i);
-			if (!IsKFloatMissing(x) && (x >= threshold))
+			if (!IsMissing(x) && (x >= threshold))
 			{
 				probability += invN;
 			}

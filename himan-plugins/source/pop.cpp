@@ -157,7 +157,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			ECprev.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			ECprev.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -184,8 +184,8 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			ECprob1.resize(myTargetInfo->Data().Size(), kFloatMissing);
-			ECprob01.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			ECprob1.resize(myTargetInfo->Data().Size(), MissingDouble());
+			ECprob01.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -211,8 +211,8 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			ECfract50.resize(myTargetInfo->Data().Size(), kFloatMissing);
-			ECfract75.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			ECfract50.resize(myTargetInfo->Data().Size(), MissingDouble());
+			ECfract75.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -238,7 +238,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			PEPS.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			PEPS.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -261,7 +261,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			Hirlam.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			Hirlam.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -285,7 +285,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			Harmonie.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			Harmonie.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -309,7 +309,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			GFS.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			GFS.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -319,8 +319,8 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	const string deviceType = "CPU";
 
-	matrix<double> area(myTargetInfo->Data().SizeX(), myTargetInfo->Data().SizeY(), 1, kFloatMissing, 0);  // "A"
-	matrix<double> confidence(area.SizeX(), area.SizeY(), 1, kFloatMissing, kFloatMissing);                // "C"
+	matrix<double> area(myTargetInfo->Data().SizeX(), myTargetInfo->Data().SizeY(), 1, MissingDouble(), 0);  // "A"
+	matrix<double> confidence(area.SizeX(), area.SizeY(), 1, MissingDouble(), MissingDouble());                // "C"
 
 	// 1. Calculate initial area and confidence of precipitation
 
@@ -338,7 +338,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double rr_harmonie = tup.get<8>();
 		double rr_gfs = tup.get<9>();
 
-		if (IsKFloatMissing(rr_ec))
+		if (IsMissing(rr_ec))
 		{
 			continue;
 		}
@@ -363,7 +363,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double harmonie = 0;
 		double gfs = 0;
 
-		if (IsKFloatMissing(rr_f50))
+		if (IsMissing(rr_f50))
 		{
 			_K1 = 0;
 		}
@@ -372,7 +372,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecf50 = 1;
 		}
 
-		if (IsKFloatMissing(rr_f75))
+		if (IsMissing(rr_f75))
 		{
 			_K2 = 0;
 		}
@@ -381,7 +381,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecf75 = 1;
 		}
 
-		if (IsKFloatMissing(rr_ecprev))
+		if (IsMissing(rr_ecprev))
 		{
 			_K3 = 0;
 		}
@@ -390,7 +390,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecprev = 1;
 		}
 
-		if (IsKFloatMissing(rr_peps))
+		if (IsMissing(rr_peps))
 		{
 			_K4 = 0;
 		}
@@ -399,7 +399,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			peps = 1;
 		}
 
-		if (IsKFloatMissing(rr_hirlam))
+		if (IsMissing(rr_hirlam))
 		{
 			_K6 = 0;
 		}
@@ -408,7 +408,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			hirlam = 1;
 		}
 
-		if (IsKFloatMissing(rr_gfs))
+		if (IsMissing(rr_gfs))
 		{
 			_K7 = 0;
 		}
@@ -417,7 +417,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			gfs = 1;
 		}
 
-		if (IsKFloatMissing(rr_harmonie))
+		if (IsMissing(rr_harmonie))
 		{
 			_K8 = 0;
 		}
@@ -465,7 +465,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * x = grid point that is used in averaging
 	*/
 
-	himan::matrix<double> filter_kernel(9, 9, 1, kFloatMissing, 1 / 81.);
+	himan::matrix<double> filter_kernel(9, 9, 1, MissingDouble(), 1 / 81.);
 
 	area = numerical_functions::Filter2D(area, filter_kernel);
 
@@ -481,7 +481,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double rr_ecprob1 = tup.get<3>();
 		double rr_ecprob01 = tup.get<4>();
 
-		if (IsKFloatMissing(out_confidence) || IsKFloatMissing(out_area))
+		if (IsMissing(out_confidence) || IsMissing(out_area))
 		{
 			continue;
 		}
@@ -491,7 +491,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		double PoP = out_confidence * out_area * 100;
 
-		if (!IsKFloatMissing(rr_ecprob1) && !IsKFloatMissing(rr_ecprob01))
+		if (!IsMissing(rr_ecprob1) && !IsMissing(rr_ecprob01))
 		{
 			PoP = (3 * PoP + 0.5 * rr_ecprob1 + 0.5 * rr_ecprob01) * 0.25;
 		}
@@ -533,7 +533,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 *
 	*/
 
-	filter_kernel = himan::matrix<double>(7, 7, 1, kFloatMissing, 1);
+	filter_kernel = himan::matrix<double>(7, 7, 1, MissingDouble(), 1);
 
 	auto max_result = numerical_functions::Max2D(myTargetInfo->Data(), filter_kernel);
 
@@ -544,7 +544,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double& out_result = tup.get<0>();
 		double _max_result = tup.get<1>();
 
-		if (IsKFloatMissing(out_result) || IsKFloatMissing(_max_result))
+		if (IsMissing(out_result) || IsMissing(_max_result))
 		{
 			continue;
 		}
@@ -567,7 +567,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * We need to smooth a lot more to get similar look.
 	*/
 
-	filter_kernel = himan::matrix<double>(5, 5, 1, kFloatMissing, 1 / 25.);
+	filter_kernel = himan::matrix<double>(5, 5, 1, MissingDouble(), 1 / 25.);
 
 	auto smoothenedResult = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 

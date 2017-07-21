@@ -66,7 +66,7 @@ struct lcl_t
 	double Q;
 
 	CUDA_DEVICE
-	lcl_t() : T(himan::GetKFloatMissing()), P(himan::GetKFloatMissing()), Q(himan::GetKFloatMissing()) {}
+	lcl_t() : T(himan::MissingDouble()), P(himan::MissingDouble()), Q(himan::MissingDouble()) {}
 	CUDA_DEVICE
 	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q) {}
 };
@@ -548,12 +548,11 @@ double ThetaE_(double T, double TD, double P);
  * along Pseudoadiabats (2007)
  *
  * @param thetaE Equivalent potential temperature, Kelvin
- * @param P target pressure, Pa
  * @return Wet-bulb potential temperature ThetaW in Kelvins
  */
 
 CUDA_DEVICE
-double ThetaW_(double thetaE, double P);
+double ThetaW_(double thetaE);
 
 /**
  * @brief Calculate virtual temperature
@@ -777,9 +776,9 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 CUDA_DEVICE
 inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 {
-	if (IsKFloatMissing(T) || IsKFloatMissing(P) || targetP >= P)
+	if (IsMissingDouble(T) || IsMissingDouble(P) || targetP >= P)
 	{
-		return GetKFloatMissing();
+		return MissingDouble();
 	}
 
 	// Sanity checks
@@ -801,7 +800,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	const double Pstep = 100;  // Pa; do not increase this as quality of results is weakened
 	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
-	double value = GetKFloatMissing();
+	double value = MissingDouble();
 
 	while (++i < maxIter)
 	{
@@ -835,7 +834,7 @@ inline double Wobf(double T)
 	// "Wobus function" is a polynomial approximation of moist lift
 	// process. It is called from MoistLiftA_().
 
-	double ret = himan::GetKFloatMissing();
+	double ret = himan::MissingDouble();
 
 	T -= 20;
 
@@ -920,8 +919,8 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	double Q = constants::kEp * E0 / P;
 	double C = T / pow(E0, constants::kRd_div_Cp);
 
-	double TLCL = GetKFloatMissing();
-	double PLCL = GetKFloatMissing();
+	double TLCL = MissingDouble();
+	double PLCL = MissingDouble();
 
 	double Torig = T;
 	double Porig = P;
@@ -1103,7 +1102,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 {
 	lcl_t LCL = LCL_(50000, T500m, TD500m);
 
-	double li = GetKFloatMissing();
+	double li = MissingDouble();
 
 	const double TARGET_PRESSURE = 50000;
 
@@ -1144,7 +1143,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 {
 	lcl_t LCL = metutil::LCL_(85000, T850, TD850);
 
-	double si = GetKFloatMissing();
+	double si = MissingDouble();
 
 	const double TARGET_PRESSURE = 50000;
 
@@ -1223,7 +1222,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	assert(thetaE > 0);
 	assert(P > 1000);
 
-	if (IsKFloatMissing(thetaE)) return GetKFloatMissing();
+	if (IsMissingDouble(thetaE)) return MissingDouble();
 
 	using namespace himan::constants;
 
@@ -1249,7 +1248,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 
 	const double Dp = 1 / (0.1859 * p / p0 + 0.6512);
 
-	double Tw = GetKFloatMissing();
+	double Tw = MissingDouble();
 
 	if (ratio > Dp)
 	{
@@ -1321,10 +1320,8 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 }
 
 CUDA_DEVICE
-inline double himan::metutil::ThetaW_(double thetaE, double P)
+inline double himan::metutil::ThetaW_(double thetaE)
 {
-	assert(P > 1000); // P not used anywhere?
-
 	double thetaW = thetaE;
 
 	if (thetaE >= 173.15)

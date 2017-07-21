@@ -32,7 +32,7 @@ inline himan::point GetPointOfIntersection(const himan::point& a1, const himan::
 
 	double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
-	himan::point null(himan::GetKFloatMissing(), himan::GetKFloatMissing());
+	himan::point null(himan::MissingDouble(), himan::MissingDouble());
 
 	if (d == 0)
 	{
@@ -135,8 +135,8 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 
 	out_value = 0;
 
-	out_ELT = himan::GetKFloatMissing();
-	out_ELP = himan::GetKFloatMissing();
+	out_ELT = himan::MissingDouble();
+	out_ELP = himan::MissingDouble();
 
 	using himan::point;
 
@@ -559,8 +559,8 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 {
 	out_CAPE = 0.;
 
-	out_ELT = himan::GetKFloatMissing();
-	out_ELP = himan::GetKFloatMissing();
+	out_ELT = himan::MissingDouble();
+	out_ELP = himan::MissingDouble();
 
 	assert((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 

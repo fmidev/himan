@@ -126,7 +126,7 @@ void luatool::InitLua(info_t myTargetInfo)
 	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
 	globals(L)["current_level"] = level(myTargetInfo->Level());
 	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
-	globals(L)["kFloatMissing"] = kFloatMissing;
+	globals(L)["missing"] = MissingDouble();
 
 	globals(L)["kKelvin"] = constants::kKelvin;
 
@@ -328,7 +328,7 @@ void SetValues(info_t& anInfo, const object& table)
 object GetValues(info_t& anInfo) { return VectorToTable(VEC(anInfo)); }
 point GetLatLon(info_t& anInfo, size_t theIndex) { return anInfo->Grid()->LatLon(--theIndex); }
 double GetMissingValue(info_t& anInfo) { return anInfo->Data().MissingValue(); }
-void SetMissingValue(info_t& anInfo, double missingValue) { anInfo->Data().MissingValue(missingValue); }
+void SetMissingValue(info_t& anInfo, double missingValue) {anInfo->Data().MissingValue(missingValue);}
 matrix<double> GetData(info_t& anInfo) { return anInfo->Data(); }
 }  // namespace info_wrapper
 
@@ -1134,8 +1134,8 @@ void BindLib(lua_State* L)
 	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_),
 		  def("FlightLevel_", &metutil::FlightLevel_),
 		  // himan namespace
-		  def("IsMissing", &::IsMissing),
-		  def("IsValid", &::IsValid)];
+		  def("IsMissing", (bool(*)(double))&::IsMissing),
+		  def("IsValid", (bool(*)(double))&::IsValid)];
 }
 
 void BindPlugins(lua_State* L)
@@ -1248,7 +1248,7 @@ object VectorToTable(const std::vector<double>& vec)
 		/*		"Lua tables make no distinction between a table value being nil and the corresponding key not existing
 		   in
 		   the table"
-		        if (val == kFloatMissing)
+		        if (val == MissingDouble())
 		        {
 		            ret[++i] = nil;
 		        }
@@ -1274,7 +1274,7 @@ std::vector<double> TableToVector(const object& table)
 	luabind::iterator iter(table), end;
 
 	auto size = std::distance(iter, end);
-	std::vector<double> ret(size, himan::kFloatMissing);
+	std::vector<double> ret(size, himan::MissingDouble());
 
 	size_t i = 0;
 	for (; iter != end; ++iter, i++)
@@ -1285,10 +1285,10 @@ std::vector<double> TableToVector(const object& table)
 		}
 		catch (cast_failed& e)
 		{
-			ret[i] = himan::kFloatMissing;
+			ret[i] = himan::MissingDouble();
 		}
 	}
-
+std::cout << ret.size() << '\n';
 	return ret;
 }
 

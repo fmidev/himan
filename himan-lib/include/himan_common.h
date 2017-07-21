@@ -27,7 +27,6 @@
 #include "cuda_helper.h"
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
-#include <cmath>
 #include <math.h>
 #include <memory>
 #include <ostream>
@@ -41,24 +40,41 @@ namespace himan
 {
 // Define some missing value utilities
 inline CUDA_HOST CUDA_DEVICE double GetKHPMissingValue() {return -999.;} // Doesn't work with nan because of comparsion operator definition in several classes.
-inline CUDA_HOST CUDA_DEVICE double GetKFloatMissing() {return nan("32700");}
+inline CUDA_HOST CUDA_DEVICE double MissingDouble() {return nan("32700");}
+inline CUDA_HOST CUDA_DEVICE float MissingFloat() {return nanf("32700");}
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = GetKHPMissingValue();
-const double kFloatMissing = GetKFloatMissing();
+const double kFloatMissing = 32700.;
 
-inline CUDA_HOST CUDA_DEVICE bool IsKFloatMissing(const double& value)
+inline CUDA_HOST CUDA_DEVICE bool IsMissingDouble(const double& value)
 {
-        double missingValue = nan("32700");
+        double missingValue = MissingDouble();
         const uint64_t* _value = reinterpret_cast<const uint64_t*>(&value);
         const uint64_t* _missingValue = reinterpret_cast<const uint64_t*>(&missingValue);
 
         return (*_value == *_missingValue);
 }
-inline bool IsKFloatValid(const double& value) {return !IsKFloatMissing(value);}
 
-inline bool IsMissing(double value) {return IsKFloatMissing(value);}
-inline bool IsValid(double value) {return !IsKFloatMissing(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsMissingFloat(const float& value)
+{
+        double missingValue = MissingFloat();
+        const uint32_t* _value = reinterpret_cast<const uint32_t*>(&value);
+        const uint32_t* _missingValue = reinterpret_cast<const uint32_t*>(&missingValue);
+
+        return (*_value == *_missingValue);
+}
+
+inline bool IsMissing(double value) {return IsMissingDouble(value);}
+inline bool IsMissing(float value) {return IsMissingFloat(value);}
+
+inline bool IsValid(double value) { return !IsMissingDouble(value);}
+inline bool IsValid(float value) {return !IsMissingFloat(value);}
+
+template <typename T>
+inline bool IsMissing(T value) = delete; 
+template <typename T>
+inline bool IsValid(T value) = delete;
 
 inline CUDA_HOST CUDA_DEVICE bool IsKHPMissingValue(const double& x) {return x == -999;}
 

@@ -97,7 +97,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		double Tg = TgInfo->Value();
 		double Ff = FfInfo->Value();
 
-		double seaIcing = kFloatMissing;
+		double seaIcing = MissingDouble();
 		double TBase = 273.15;
 
 		T = T - TBase;

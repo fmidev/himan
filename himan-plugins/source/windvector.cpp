@@ -227,7 +227,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		myTargetInfo->ParamIndex(0);
 
 		auto& FFVec = VEC(myTargetInfo);
-		vector<double> DDVec(FFVec.size(), kFloatMissing);
+		vector<double> DDVec(FFVec.size(), MissingDouble());
 
 		for (auto&& tup : zip_range(FFVec, DDVec, VEC(UInfo), VEC(VInfo)))
 		{
@@ -236,9 +236,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			double U = tup.get<2>();
 			double V = tup.get<3>();
 
-			speed = sqrt(U * U + V * V);
+			if(IsMissingValue({U,V}))
+                        {
+                                continue;
+                        }
 
-			if (itsCalculationTarget == kGust)
+                        speed = sqrt(U * U + V * V);
+
+			if(itsCalculationTarget == kGust)
 			{
 				continue;
 			}

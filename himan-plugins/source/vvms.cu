@@ -12,7 +12,6 @@ __global__ void himan::plugin::vvms_cuda::Calculate(cdarr_t d_t, cdarr_t d_vv, c
 
 	if (idx < opts.N)
 	{
-		d_vv_ms[idx] = GetKFloatMissing();
 		double P = (opts.is_constant_pressure) ? opts.p_const : d_p[idx];
 
 		d_vv_ms[idx] = opts.vv_ms_scale *

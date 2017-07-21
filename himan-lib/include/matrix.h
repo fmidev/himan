@@ -159,7 +159,7 @@ class matrix
 			// 1. itsMissingValue that can be of any type
 			// 2. kFloatMissing which is of type double but can be different from itsMissingValue even for a double matrix
 			// ->this function should not be a member function of Matrix in this form
-			if (IsKFloatMissing(d))
+			if (IsMissing(d))
 			{
 				missing++;
 				continue;
@@ -206,7 +206,7 @@ class matrix
 			{
 				double val = theValues[j];
 				// same problem as above with other missing value case
-				if (IsKFloatMissing(val)) continue;
+				if (IsMissing(val)) continue;
 
 				if (val >= binmin && val < binmax)
 				{

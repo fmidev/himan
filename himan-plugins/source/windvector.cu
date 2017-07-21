@@ -20,10 +20,10 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 	if (idx < opts.N)
 	{
 		double U = d_u[idx], V = d_v[idx];
-		d_speed[idx] = himan::GetKFloatMissing();
-		if (d_dir) d_dir[idx] = himan::GetKFloatMissing();
+		d_speed[idx] = himan::MissingDouble();
+		if (d_dir) d_dir[idx] = himan::MissingDouble();
 
-		if (U == U && V == V)
+		if (!himan::IsMissingDouble(U) && !himan::IsMissingDouble(V))
 		{
 			double speed = sqrt(U * U + V * V);
 

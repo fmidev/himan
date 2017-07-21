@@ -11,14 +11,14 @@ extern double GetStandardParallel(himan::grid* g, int parallelno);
 extern double GetOrientation(himan::grid* g);
 
 const double kEpsilon = 1e-6;
-using himan::IsKFloatMissing;
+using himan::IsMissingDouble;
 
 struct point
 {
 	double x;
 	double y;
 
-	__host__ __device__ point() : x(himan::GetKFloatMissing()), y(himan::GetKFloatMissing()) {}
+	__host__ __device__ point() : x(himan::MissingDouble()), y(himan::MissingDouble()) {}
 	__host__ __device__ point(double _x, double _y) : x(_x), y(_y) {}
 };
 
@@ -68,7 +68,7 @@ __device__ double Mode(double* arr)
 	thrust::sort(thrust::seq, arr, arr + 4);
 
 	double num = arr[0];
-	double mode = himan::GetKFloatMissing();
+	double mode = himan::MissingDouble();
 
 	int count = 1;
 	int modeCount = 0;
@@ -103,7 +103,7 @@ __device__ double Mode(double* arr)
 		}
 	}
 
-	double ret = himan::GetKFloatMissing();
+	double ret = himan::MissingDouble();
 
 	if (!multiModal)
 	{
@@ -166,7 +166,7 @@ __device__ double NearestPointInterpolation(const double* __restrict__ d_source,
 __device__ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo,
                                         const point& gp)
 {
-	double ret = himan::GetKFloatMissing();
+	double ret = himan::MissingDouble();
 
 	// Find all four neighboring points
 
@@ -180,7 +180,7 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 	size_t size_x = sourceInfo.size_x;
 	size_t size_y = sourceInfo.size_y;
 
-	double av = himan::GetKFloatMissing(), bv = himan::GetKFloatMissing(), cv = himan::GetKFloatMissing(), dv = himan::GetKFloatMissing();
+	double av = himan::MissingDouble(), bv = himan::MissingDouble(), cv = himan::MissingDouble(), dv = himan::MissingDouble();
 
 	if (IsInsideGrid(a, size_x, size_y))
 	{
@@ -222,54 +222,54 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 
 	// All values present, regular bilinear interpolation
 
-	else if (!IsKFloatMissing(av) && !IsKFloatMissing(bv) && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
+	else if (!IsMissingDouble(av) && !IsMissingDouble(bv) && !IsMissingDouble(cv) && !IsMissingDouble(dv))
 	{
 		ret = BiLinear(dist.x, dist.y, av, bv, cv, dv);
 	}
 
 	// x or y is at grid edge
 
-	else if (fabs(dist.y) < kEpsilon && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
+	else if (fabs(dist.y) < kEpsilon && !IsMissingDouble(cv) && !IsMissingDouble(dv))
 	{
 		ret = Linear(dist.x, cv, dv);
 	}
 
-	else if (fabs(dist.y - 1) < kEpsilon && !IsKFloatMissing(av) && !IsKFloatMissing(bv))
+	else if (fabs(dist.y - 1) < kEpsilon && !IsMissingDouble(av) && !IsMissingDouble(bv))
 	{
 		ret = Linear(dist.x, av, bv);
 	}
 
-	else if (fabs(dist.x) < kEpsilon && !IsKFloatMissing(cv) && !IsKFloatMissing(av))
+	else if (fabs(dist.x) < kEpsilon && !IsMissingDouble(cv) && !IsMissingDouble(av))
 	{
 		ret = Linear(dist.y, cv, av);
 	}
 
-	else if (fabs(dist.x - 1) < kEpsilon && !IsKFloatMissing(av) && !IsKFloatMissing(bv))
+	else if (fabs(dist.x - 1) < kEpsilon && !IsMissingDouble(av) && !IsMissingDouble(bv))
 	{
 		ret = Linear(dist.y, dv, bv);
 	}
 
 	// One point missing; these "triangulation" methods have been copied from NFmiInterpolation.cpp
 
-	else if (IsKFloatMissing(av) && !IsKFloatMissing(bv) && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
+	else if (IsMissingDouble(av) && !IsMissingDouble(bv) && !IsMissingDouble(cv) && !IsMissingDouble(dv))
 	{
 		double wsum = (dist.x * dist.y + (1 - dist.x) * (1 - dist.y) + dist.x * (1 - dist.y));
 
 		ret = ((1 - dist.x) * (1 - dist.y) * cv + dist.x * (1 - dist.y) * dv + dist.x * dist.y * bv) / wsum;
 	}
-	else if (!IsKFloatMissing(av) && IsKFloatMissing(bv) && !IsKFloatMissing(cv) && !IsKFloatMissing(dv))
+	else if (!IsMissingDouble(av) && IsMissingDouble(bv) && !IsMissingDouble(cv) && !IsMissingDouble(dv))
 	{
 		double wsum = ((1 - dist.x) * dist.y + (1 - dist.x) * (1 - dist.y) + dist.x * (1 - dist.y));
 
 		ret = ((1 - dist.x) * (1 - dist.y) * cv + dist.x * (1 - dist.y) * dv + (1 - dist.x) * dist.y * av) / wsum;
 	}
-	else if (!IsKFloatMissing(av) && !IsKFloatMissing(bv) && IsKFloatMissing(cv) && !IsKFloatMissing(dv))
+	else if (!IsMissingDouble(av) && !IsMissingDouble(bv) && IsMissingDouble(cv) && !IsMissingDouble(dv))
 	{
 		double wsum = ((1 - dist.x) * dist.y + dist.x * dist.y + dist.x * (1 - dist.y));
 
 		ret = (dist.x * (1 - dist.y) * dv + (1 - dist.x) * dist.y * av + dist.x * dist.y * bv) / wsum;
 	}
-	else if (!IsKFloatMissing(av) && !IsKFloatMissing(bv) && !IsKFloatMissing(cv) && IsKFloatMissing(dv))
+	else if (!IsMissingDouble(av) && !IsMissingDouble(bv) && !IsMissingDouble(cv) && IsMissingDouble(dv))
 	{
 		double wsum = ((1 - dist.x) * (1 - dist.y) + (1 - dist.x) * dist.y + dist.x * dist.y);
 
@@ -300,7 +300,7 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 __device__ double NearestPointValueInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo,
                                                  const point& gp)
 {
-	double ret = himan::GetKFloatMissing();
+	double ret = himan::MissingDouble();
 
 	// Find all four neighboring points
 
@@ -332,7 +332,7 @@ __device__ double NearestPointValueInterpolation(const double* __restrict__ d_so
 	double arr[4] = {av, bv, cv, dv};
 	double mode = Mode(arr);
 
-	if (!IsKFloatMissing(mode))
+	if (!IsMissingDouble(mode))
 	{
 		return mode;
 	}
@@ -346,7 +346,7 @@ __device__ double NearestPointValueInterpolation(const double* __restrict__ d_so
 
 	mode = Mode(arr);
 
-	if (!IsKFloatMissing(mode))
+	if (!IsMissingDouble(mode))
 	{
 		double min = fmin(arr[0], fmin(arr[1], fmin(arr[2], arr[3])));
 
@@ -389,7 +389,7 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 
 		point gp = d_grid[Index(i, j, targetInfo.size_x)];
 
-		double interp = himan::GetKFloatMissing();
+		double interp = himan::MissingDouble();
 
 		if (IsInsideGrid(gp, sourceInfo.size_x, sourceInfo.size_y))
 		{
@@ -418,8 +418,8 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 #endif
 		d_target[idx] = interp;
 
-		assert(interp == interp || IsKFloatMissing(interp));  // no NaN
-		assert(interp < 1e30 || IsKFloatMissing(interp));     // No crazy values
+		assert(interp == interp || IsMissingDouble(interp));  // no NaN
+		assert(interp < 1e30 || IsMissingDouble(interp));     // No crazy values
 	}
 }
 
@@ -501,18 +501,15 @@ __global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v
 		double U = d_u[idx];
 		double V = d_v[idx];
 
-		if (!IsKFloatMissing(U) && !IsKFloatMissing(V))
-		{
-			int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));
-			int j = floor(static_cast<double>(idx / opts.size_x));
+		int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));
+		int j = floor(static_cast<double>(idx / opts.size_x));
 
-			double londiff = d_lon[idx] - orientation;
-			const double angle = cone * londiff * himan::constants::kDeg;
-			double sinx, cosx;
-			sincos(angle, &sinx, &cosx);
-			d_u[idx] = cosx * U + sinx * V;
-			d_v[idx] = -1 * sinx * U + cosx * V;
-		}
+		double londiff = d_lon[idx] - orientation;
+		const double angle = cone * londiff * himan::constants::kDeg;
+		double sinx, cosx;
+		sincos(angle, &sinx, &cosx);
+		d_u[idx] = cosx * U + sinx * V;
+		d_v[idx] = -1 * sinx * U + cosx * V;
 	}
 }
 
@@ -526,75 +523,72 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 		double U = d_u[idx];
 		double V = d_v[idx];
 
-		if (!IsKFloatMissing(U) && !IsKFloatMissing(V))
+		// Rotated to regular coordinates
+
+		int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));  // idx - j * opts.size_x;
+		int j = floor(static_cast<double>(idx / opts.size_x));
+
+		double lon = opts.first_lon + i * opts.di;
+
+		double lat = himan::MissingDouble();
+
+		if (opts.j_scans_positive)
 		{
-			// Rotated to regular coordinates
-
-			int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));  // idx - j * opts.size_x;
-			int j = floor(static_cast<double>(idx / opts.size_x));
-
-			double lon = opts.first_lon + i * opts.di;
-
-			double lat = himan::GetKFloatMissing();
-
-			if (opts.j_scans_positive)
-			{
-				lat = opts.first_lat + j * opts.dj;
-			}
-			else
-			{
-				lat = opts.first_lat - j * opts.dj;
-			}
-
-			double SinYPole = sin((opts.south_pole_lat + 90.) * himan::constants::kDeg);
-			double CosYPole = cos((opts.south_pole_lat + 90.) * himan::constants::kDeg);
-
-			double SinXRot, CosXRot, SinYRot, CosYRot;
-
-			sincos(lon * himan::constants::kDeg, &SinXRot, &CosXRot);
-			sincos(lat * himan::constants::kDeg, &SinYRot, &CosYRot);
-
-			double SinYReg = CosYPole * SinYRot + SinYPole * CosYRot * CosXRot;
-
-			SinYReg = fmin(fmax(SinYReg, -1.), 1.);
-
-			double YReg = asin(SinYReg) * himan::constants::kRad;
-
-			double CosYReg = cos(YReg * himan::constants::kDeg);
-
-			double CosXReg = (CosYPole * CosYRot * CosXRot - SinYPole * SinYRot) / CosYReg;
-
-			CosXReg = fmin(fmax(CosXReg, -1.), 1.);
-			double SinXReg = CosYRot * SinXRot / CosYReg;
-
-			double XReg = acos(CosXReg) * himan::constants::kRad;
-
-			if (SinXReg < 0.)
-			{
-				XReg = -XReg;
-			}
-			XReg += opts.south_pole_lon;
-
-			// UV to earth relative
-
-			double zxmxc = himan::constants::kDeg * (XReg - opts.south_pole_lon);
-
-			double sinxmxc, cosxmxc;
-
-			sincos(zxmxc, &sinxmxc, &cosxmxc);
-
-			double PA = cosxmxc * CosXRot + CosYPole * sinxmxc * SinXRot;
-			double PB =
-			    CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
-			double PC = (-SinYPole) * SinXRot / CosYReg;
-			double PD = (CosYPole * CosYRot - SinYPole * CosXRot * SinYRot) / CosYReg;
-
-			double newU = PA * U + PB * V;
-			double newV = PC * U + PD * V;
-
-			d_u[idx] = newU;
-			d_v[idx] = newV;
+			lat = opts.first_lat + j * opts.dj;
 		}
+		else
+		{
+			lat = opts.first_lat - j * opts.dj;
+		}
+
+		double SinYPole = sin((opts.south_pole_lat + 90.) * himan::constants::kDeg);
+		double CosYPole = cos((opts.south_pole_lat + 90.) * himan::constants::kDeg);
+
+		double SinXRot, CosXRot, SinYRot, CosYRot;
+
+		sincos(lon * himan::constants::kDeg, &SinXRot, &CosXRot);
+		sincos(lat * himan::constants::kDeg, &SinYRot, &CosYRot);
+
+		double SinYReg = CosYPole * SinYRot + SinYPole * CosYRot * CosXRot;
+
+		SinYReg = fmin(fmax(SinYReg, -1.), 1.);
+
+		double YReg = asin(SinYReg) * himan::constants::kRad;
+
+		double CosYReg = cos(YReg * himan::constants::kDeg);
+
+		double CosXReg = (CosYPole * CosYRot * CosXRot - SinYPole * SinYRot) / CosYReg;
+
+		CosXReg = fmin(fmax(CosXReg, -1.), 1.);
+		double SinXReg = CosYRot * SinXRot / CosYReg;
+
+		double XReg = acos(CosXReg) * himan::constants::kRad;
+
+		if (SinXReg < 0.)
+		{
+			XReg = -XReg;
+		}
+		XReg += opts.south_pole_lon;
+
+		// UV to earth relative
+
+		double zxmxc = himan::constants::kDeg * (XReg - opts.south_pole_lon);
+
+		double sinxmxc, cosxmxc;
+
+		sincos(zxmxc, &sinxmxc, &cosxmxc);
+
+		double PA = cosxmxc * CosXRot + CosYPole * sinxmxc * SinXRot;
+		double PB =
+		    CosYPole * sinxmxc * CosXRot * SinYRot + SinYPole * sinxmxc * CosYRot - cosxmxc * SinXRot * SinYRot;
+		double PC = (-SinYPole) * SinXRot / CosYReg;
+		double PD = (CosYPole * CosYRot - SinYPole * CosXRot * SinYRot) / CosYReg;
+
+		double newU = PA * U + PB * V;
+		double newV = PC * U + PD * V;
+
+		d_u[idx] = newU;
+		d_v[idx] = newV;
 	}
 }
 
@@ -650,7 +644,7 @@ void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
 
 			using himan::constants::kDeg;
 
-			if (latin1 == latin2 && !IsKFloatMissing(latin2))
+			if (latin1 == latin2)
 			{
 				cone = sin(fabs(latin1) * kDeg);
 			}

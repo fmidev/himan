@@ -558,11 +558,6 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		double currentSum = tup.get<1>();
 		double previousSum = tup.get<2>();
 
-		/*if (IsKFloatMissing(currentSum) || IsKFloatMissing(previousSum))
-		{
-			continue;
-		}*/
-
 		sum = currentSum - previousSum;
 
 		if (isRateCalculation && step != 1)

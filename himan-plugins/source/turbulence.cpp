@@ -126,8 +126,8 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	size_t Ni = myTargetInfo->Grid()->Ni();
 	size_t Nj = myTargetInfo->Grid()->Nj();
 
-	vector<double> dx(Nj, kFloatMissing);
-	vector<double> dy(Ni, kFloatMissing);
+	vector<double> dx(Nj, MissingDouble());
+	vector<double> dy(Ni, MissingDouble());
 
 	for (size_t i = 0; i < Ni; ++i)
 	{
@@ -155,9 +155,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double nextV = nextVInfo->Value();
 		double nextH = nextHInfo->Value();
 
-		if (IsKFloatMissing(U) || IsKFloatMissing(V) || IsKFloatMissing(H) || IsKFloatMissing(prevU) ||
-		    IsKFloatMissing(prevV) || IsKFloatMissing(prevH) || IsKFloatMissing(nextU) || IsKFloatMissing(nextV) ||
-		    IsKFloatMissing(nextH))
+		if (IsMissingValue({U,V,H,prevU,prevV,prevH,nextU,nextV,nextH}))
 		{
 			continue;
 		}
@@ -170,7 +168,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double CVG = -get<0>(gradU).At(index) - get<1>(gradV).At(index);
 
 		// Calculate scaling factor
-		double S = kFloatMissing;
+		double S = MissingDouble();
 		double ScaleMax = 40;
 		double ScaleMin = 10;
 		if (WS >= ScaleMax)

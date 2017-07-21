@@ -596,7 +596,7 @@ bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
 {
 	for (auto it = values.begin(); it != values.end(); ++it)
 	{
-		if (IsKFloatMissing(*it))
+		if (IsMissing(*it))
 		{
 			return true;
 		}

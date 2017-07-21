@@ -122,7 +122,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		double P = PInfo->Value();
 
 		double T_C = T - constants::kKelvin;  // Convert Temperature to Celvins
-		double mol(kFloatMissing);
+		double mol = MissingDouble();
 
 		SHF /= forecastStepSize;  // divide by time step to obtain Watts/m2
 		LHF /= forecastStepSize;  // divide by time step to obtain Watts/m2

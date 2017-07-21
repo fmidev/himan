@@ -57,7 +57,7 @@ inline void ReleaseInfo(info_simple* source, double* devptr, cudaStream_t& strea
 		bool pack = true;
 		for (size_t i = 0; i < source->size_x * source->size_y; i++)
 		{
-			if (IsKFloatMissing(source->values[0]))
+			if (IsMissing(source->values[0]))
 			{
 				pack = false;
 				break;

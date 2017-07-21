@@ -243,13 +243,11 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	SetAB(myTargetInfo, sourceInfo);
 
-	bool levelOnly = (itsScale == 1.0 && itsBase == 0.0);
-
 	string deviceType;
 
 #ifdef HAVE_CUDA
 
-	if (itsConfiguration->UseCuda() && !levelOnly)
+	if (itsConfiguration->UseCuda())
 	{
 		deviceType = "GPU";
 
@@ -265,17 +263,9 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		LOCKSTEP(myTargetInfo, sourceInfo)
 		{
 			double value = sourceInfo->Value();
+			if(IsMissing(value)) continue;
 
-			if (!levelOnly)
-			{
-				double newValue = value * itsScale + itsBase;
-
-				myTargetInfo->Value(newValue);
-			}
-			else
-			{
-				myTargetInfo->Value(value);
-			}
+			myTargetInfo->Value(value*itsScale+itsBase);
 		}
 	}
 

@@ -41,7 +41,7 @@ __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD
 {
 	double thetaE = ThetaE(T, P, TD, opts);
 
-	return metutil::ThetaW_(thetaE, P);
+	return metutil::ThetaW_(thetaE);
 }
 
 __device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD, options opts)

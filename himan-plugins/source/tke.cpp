@@ -148,7 +148,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		if (Z > MixHgt)
 		{
-			TKE = kFloatMissing;
+			TKE = MissingDouble();
 		}
 		else if (Z * MoninObukhov >= 0)
 		{

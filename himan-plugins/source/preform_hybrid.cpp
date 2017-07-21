@@ -289,7 +289,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		double RR = RRInfo->Value();
 		double T = TInfo->Value();
 
-		if (IsKFloatMissing(RR) || IsKFloatMissing(T))
+		if (IsMissing(RR) || IsMissing(T))
 		{
 			continue;
 		}
@@ -299,38 +299,38 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			continue;
 		}
 
-		double PreForm = kFloatMissing;
+		double PreForm = MissingDouble();
 
 		// Unit conversions
 
 		T -= himan::constants::kKelvin;  // K --> C
 
-		if (!IsKFloatMissing(Ttop))
+		if (!IsMissing(Ttop))
 		{
 			Ttop -= himan::constants::kKelvin;
 		}
 
-		if (!IsKFloatMissing(stTavg))
+		if (!IsMissing(stTavg))
 		{
 			stTavg -= himan::constants::kKelvin;
 		}
 
-		if (!IsKFloatMissing(Navg))
+		if (!IsMissing(Navg))
 		{
 			Navg *= 100;  // --> %
 		}
 
 		assert(T >= -80 && T < 80);
 		assert(!noPotentialPrecipitationForm || RR > 0);
-		assert(IsKFloatMissing(Navg) || (Navg >= 0 && Navg <= 100));
+		assert(IsMissing(Navg) || (Navg >= 0 && Navg <= 100));
 
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
 
 		// 1. jäätävää tihkua? (tai lumijyväsiä)
 
-		if (!IsKFloatMissing(base) AND !IsKFloatMissing(top) AND !IsKFloatMissing(upperLayerN) AND !IsKFloatMissing(
-		        wAvg) AND !IsKFloatMissing(Navg) AND !IsKFloatMissing(stTavg) AND !IsKFloatMissing(Ttop) AND RR <=
+		if (!IsMissing(base) AND !IsMissing(top) AND !IsMissing(upperLayerN) AND !IsMissing(
+		        wAvg) AND !IsMissing(Navg) AND !IsMissing(stTavg) AND !IsMissing(Ttop) AND RR <=
 		    fzdzLim AND
 		        base<baseLimit AND(top - base) >= fzStLimit AND wAvg<wMax AND wAvg >= 0 AND Navg> Nlimit AND Ttop>
 		            stTlimit AND stTavg > stTlimit AND T > sfcMin AND T <= sfcMax AND upperLayerN < dryNlim)
@@ -344,10 +344,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		// kuivaa?
 		// (Huom. hyvin paksu pakkaskerros (tai ohut sulamiskerros) -> oikeasti jääjyväsiä/ice pellets fzra sijaan)
 
-		if (IsKFloatMissing(PreForm) AND !IsKFloatMissing(plusArea) AND !IsKFloatMissing(minusArea)
-		        AND !IsKFloatMissing(rhAvgUpper) AND !IsKFloatMissing(rhMeltUpper) AND plusArea >
+		if (IsMissing(PreForm) AND !IsMissing(plusArea) AND !IsMissing(minusArea)
+		        AND !IsMissing(rhAvgUpper) AND !IsMissing(rhMeltUpper) AND plusArea >
 		    fzraPA AND
-		        minusArea<fzraMA AND T <= 0 AND(IsKFloatMissing(upperLayerN) OR upperLayerN > dryNlim) AND rhAvgUpper>
+		        minusArea<fzraMA AND T <= 0 AND(IsMissing(upperLayerN) OR upperLayerN > dryNlim) AND rhAvgUpper>
 		            rhMeltUpper)
 		{
 			PreForm = FREEZING_RAIN;
@@ -355,17 +355,17 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		// 3. Lunta, räntää, tihkua vai vettä? PK:n koodia mukaillen
 
-		if (IsKFloatMissing(PreForm))
+		if (IsMissing(PreForm))
 		{
 			// Tihkua tai vettä jos "riitävän paksu lämmin kerros pinnan yläpuolella"
 
-			if (!IsKFloatMissing(plusArea) AND plusArea > waterArea)
+			if (!IsMissing(plusArea) AND plusArea > waterArea)
 			{
 				// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
 				// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään
 				// mukana)
-				if (!IsKFloatMissing(base) && !IsKFloatMissing(top) && !IsKFloatMissing(Navg) &&
-				    !IsKFloatMissing(upperLayerN) && RR <= dzLim && base < baseLimit && (top - base) > stLimit &&
+				if (!IsMissing(base) && !IsMissing(top) && !IsMissing(Navg) &&
+				    !IsMissing(upperLayerN) && RR <= dzLim && base < baseLimit && (top - base) > stLimit &&
 				    Navg > Nlimit && upperLayerN < dryNlim)
 				{
 					PreForm = DRIZZLE;
@@ -377,7 +377,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan
 
-				if (!IsKFloatMissing(nZeroLevel) AND !IsKFloatMissing(rhAvg) AND !IsKFloatMissing(rhMelt)
+				if (!IsMissing(nZeroLevel) AND !IsMissing(rhAvg) AND !IsMissing(rhMelt)
 				        AND nZeroLevel == 1 AND rhAvg < rhMelt AND plusArea < 4000)
 				{
 					PreForm = SLEET;
@@ -386,7 +386,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// Lisäys, jolla korjataan vesi/tihku lumeksi, jos pintakerros pakkasella (mutta jäätävän sateen/tihkun
 				// kriteerit eivät toteudu,
 				// esim. paksu plussakerros pakkas-st/sc:n yllä)
-				if (!IsKFloatMissing(minusArea) OR(!IsKFloatMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
+				if (!IsMissing(minusArea) OR(!IsMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
 				{
 					PreForm = SNOW;
 				}
@@ -394,13 +394,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
 
-			if (!IsKFloatMissing(plusArea) AND plusArea >= snowArea AND plusArea <= waterArea)
+			if (!IsMissing(plusArea) AND plusArea >= snowArea AND plusArea <= waterArea)
 			{
 				PreForm = SLEET;
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi lumi rännän sijaan
 
-				if (!IsKFloatMissing(nZeroLevel) AND !IsKFloatMissing(rhAvg) AND !IsKFloatMissing(rhMelt)
+				if (!IsMissing(nZeroLevel) AND !IsMissing(rhAvg) AND !IsMissing(rhMelt)
 				        AND nZeroLevel == 1 AND rhAvg < rhMelt)
 				{
 					PreForm = SNOW;
@@ -408,7 +408,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// lisäys, jolla korjataan räntä lumeksi, kun pintakerros pakkasella tai vain ohuelti plussalla
 
-				if (!IsKFloatMissing(minusArea) OR(!IsKFloatMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
+				if (!IsMissing(minusArea) OR(!IsMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
 				{
 					PreForm = SNOW;
 				}
@@ -416,7 +416,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			// Muuten lunta (PlusArea<50: "korkeintaan ohut lämmin kerros pinnan yläpuolella")
 
-			if (IsKFloatMissing(plusArea) OR plusArea < snowArea)
+			if (IsMissing(plusArea) OR plusArea < snowArea)
 			{
 				PreForm = SNOW;
 			}
@@ -500,25 +500,25 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 #ifdef DEBUG
 		for (size_t i = 0; i < numZeroLevels.size(); i++)
 		{
-			assert(!IsKFloatMissing(numZeroLevels[i]));
+			assert(!IsMissing(numZeroLevels[i]));
 		}
 
 		util::DumpVector(numZeroLevels, "num zero levels");
 #endif
 
-		zeroLevel1.resize(numZeroLevels.size(), kFloatMissing);
-		zeroLevel2.resize(numZeroLevels.size(), kFloatMissing);
-		zeroLevel3.resize(numZeroLevels.size(), kFloatMissing);
-		zeroLevel4.resize(numZeroLevels.size(), kFloatMissing);
+		zeroLevel1.resize(numZeroLevels.size(), MissingDouble());
+		zeroLevel2.resize(numZeroLevels.size(), MissingDouble());
+		zeroLevel3.resize(numZeroLevels.size(), MissingDouble());
+		zeroLevel4.resize(numZeroLevels.size(), MissingDouble());
 
-		rhAvgUpper12.resize(numZeroLevels.size(), kFloatMissing);
-		rhAvgUpper23.resize(numZeroLevels.size(), kFloatMissing);
+		rhAvgUpper12.resize(numZeroLevels.size(), MissingDouble());
+		rhAvgUpper23.resize(numZeroLevels.size(), MissingDouble());
 
 		// Keskim. lämpötila 1. nollarajan alapuolella, 1/2. ja 2/3. nollarajojen välisissä kerroksissa [C]
-		Tavg01.resize(numZeroLevels.size(), kFloatMissing);
-		Tavg12.resize(numZeroLevels.size(), kFloatMissing);
-		Tavg23.resize(numZeroLevels.size(), kFloatMissing);
-		Tavg34.resize(numZeroLevels.size(), kFloatMissing);
+		Tavg01.resize(numZeroLevels.size(), MissingDouble());
+		Tavg12.resize(numZeroLevels.size(), MissingDouble());
+		Tavg23.resize(numZeroLevels.size(), MissingDouble());
+		Tavg34.resize(numZeroLevels.size(), MissingDouble());
 
 		// 1. nollarajan alapuolisen, 2/3. nollarajojen välisen, ja koko T>0 alueen koko [mC, "metriastetta"]
 		plusArea = zeroLevel1;
@@ -651,18 +651,18 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 	// Keskimääräinen rhMelt nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa
 	// plussakerroksessa
-	vector<double> rhMeltUpper(rhAvg01.size(), kFloatMissing);
-	vector<double> rhMelt(rhAvg01.size(), kFloatMissing);
+	vector<double> rhMeltUpper(rhAvg01.size(), MissingDouble());
+	vector<double> rhMelt(rhAvg01.size(), MissingDouble());
 
 	// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa plussakerroksessa
-	vector<double> rhAvgUpper(rhAvg01.size(), kFloatMissing);
-	vector<double> rhAvg(rhAvg01.size(), kFloatMissing);
+	vector<double> rhAvgUpper(rhAvg01.size(), MissingDouble());
+	vector<double> rhAvg(rhAvg01.size(), MissingDouble());
 
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
 		short numZeroLevel = static_cast<short>(numZeroLevels[i]);
 
-		double pa = kFloatMissing, ma = kFloatMissing, pasfc = kFloatMissing;
+		double pa = MissingDouble(), ma = MissingDouble(), pasfc = MissingDouble();
 
 		// Kommentteja Simolta nollakohtien lukumäärään:
 		// * Nollakohtien löytymättömyys ei ole ongelma, sillä tällöin olomuoto on aina lumi tai jäätävä tihku
@@ -676,9 +676,9 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			double zl1 = zeroLevel1[i], zl2 = zeroLevel2[i];
 			double ta1 = Tavg01[i], ta2 = Tavg12[i];
 
-			double paloft = kFloatMissing;
+			double paloft = MissingDouble();
 
-			if (!IsKFloatMissing(zl1) && !IsKFloatMissing(zl2) && !IsKFloatMissing(ta1) && !IsKFloatMissing(ta2))
+			if (!IsMissing(zl1) && !IsMissing(zl2) && !IsMissing(ta1) && !IsMissing(ta2))
 			{
 				ta1 -= constants::kKelvin;
 				ta2 -= constants::kKelvin;
@@ -701,7 +701,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				double zl3 = zeroLevel3[i], zl4 = zeroLevel4[i];
 				ta2 = Tavg34[i];
 
-				if (!IsKFloatMissing(zl3) && !IsKFloatMissing(zl4) && !IsKFloatMissing(ta2) && !IsKFloatMissing(paloft))
+				if (!IsMissing(zl3) && !IsMissing(zl4) && !IsMissing(ta2) && !IsMissing(paloft))
 				{
 					paloft = paloft + (zl4 - zl3) * (ta2 - constants::kKelvin);
 				}
@@ -715,9 +715,9 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		else if (numZeroLevel % 2 == 1)
 		{
 			double zl1 = zeroLevel1[i], ta1 = Tavg01[i];
-			double paloft = kFloatMissing;
+			double paloft = MissingDouble();
 
-			if (!IsKFloatMissing(zl1) && !IsKFloatMissing(ta1))
+			if (!IsMissing(zl1) && !IsMissing(ta1))
 			{
 				ta1 -= constants::kKelvin;
 				pasfc = zl1 * ta1;
@@ -745,7 +745,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				double zl2 = zeroLevel2[i], zl3 = zeroLevel3[i];
 				double ta2 = Tavg23[i];
 
-				if (!IsKFloatMissing(zl2) && !IsKFloatMissing(zl3) && !IsKFloatMissing(ta2))
+				if (!IsMissing(zl2) && !IsMissing(zl3) && !IsMissing(ta2))
 				{
 					ta2 -= constants::kKelvin;
 
@@ -757,9 +757,9 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 					// Keskimääräinen RH ylemmässä plussakerroksessa
 					rhAvgUpper[i] = rhAvgUpper23[i];
 
-					if (!IsKFloatMissing(rhAvgUpper[i]) AND !IsKFloatMissing(rhMeltUpper[i])
+					if (!IsMissing(rhAvgUpper[i]) AND !IsMissing(rhMeltUpper[i])
 					            AND rhAvgUpper[i] > rhMeltUpper[i] &&
-					    !IsKFloatMissing(pasfc))
+					    !IsMissing(pasfc))
 					{
 						pa = pasfc + paloft;
 					}
@@ -854,7 +854,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		for (size_t i = 0; i < baseThreshold.size(); i++)
 		{
-			assert(!IsKFloatMissing(baseThreshold[i]));
+			assert(!IsMissing(baseThreshold[i]));
 
 			if (baseThreshold[i] < stCover)
 			{
@@ -875,7 +875,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		for (size_t i = 0; i < topThreshold.size(); i++)
 		{
-			assert(!IsKFloatMissing(topThreshold[i]));
+			assert(!IsMissing(topThreshold[i]));
 			if (topThreshold[i] < stCover)
 			{
 				topThreshold[i] = stCover;
@@ -918,10 +918,10 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 			for (size_t i = 0; i < constData1.size(); i++)
 			{
-				if (IsKFloatMissing(stratusTop[i]))
+				if (IsMissing(stratusTop[i]))
 				{
-					constData1[i] = kFloatMissing;
-					constData2[i] = kFloatMissing;
+					constData1[i] = MissingDouble();
+					constData2[i] = MissingDouble();
 				}
 				else
 				{
@@ -972,10 +972,10 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 				double lower = stratusBase[i];
 				double upper = stratusTop[i];
 
-				if (IsKFloatMissing(lower) || IsKFloatMissing(upper))
+				if (IsMissing(lower) || IsMissing(upper))
 				{
-					constData1[i] = kFloatMissing;
-					constData2[i] = kFloatMissing;
+					constData1[i] = MissingDouble();
+					constData2[i] = MissingDouble();
 				}
 				else if (fabs(lower - upper) < 100)
 				{
@@ -1021,7 +1021,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 					BOOST_FOREACH (double& d, stratusVerticalVelocity)
 					{
-						if (d != kFloatMissing) d *= 1000;
+						if (d != MissingDouble()) d *= 1000;
 					}
 				}
 			}

@@ -195,7 +195,7 @@ std::vector<double> ensemble::Values() const
 	}
 
 	// Clients of ensemble shouldn't worry about missing values
-	ret.erase(std::remove_if(ret.begin(), ret.end(), [](double x){return IsKFloatMissing(x);}), ret.end());
+	ret.erase(std::remove_if(ret.begin(), ret.end(), [](double x){return IsMissing(x);}), ret.end());
 
 	return ret;
 }
@@ -212,7 +212,7 @@ double ensemble::Mean() const
 	std::vector<double> v = Values();
 	if (v.size() == 0)
 	{
-		return kFloatMissing;
+		return MissingDouble();
 	}
 
 	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
@@ -223,7 +223,7 @@ double ensemble::Variance() const
 	std::vector<double> values = Values();
 	if (values.size() == 0)
 	{
-		return kFloatMissing;
+		return MissingDouble();
 	}
 
 	const double mean = std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());

@@ -193,20 +193,20 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	}
 
 	deltaT dT;
-	vector<double> lowAndMiddleClouds(gridSize, himan::kFloatMissing);
+	vector<double> lowAndMiddleClouds(gridSize, himan::MissingDouble());
 
 	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
 	boost::thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
 	                 TCloudInfo);
 
 	// calc boundary layer height
-	vector<double> z_boundaryl(gridSize, himan::kFloatMissing);
-	vector<double> z_one_third_boundaryl(gridSize, himan::kFloatMissing);
-	vector<double> z_two_third_boundaryl(gridSize, himan::kFloatMissing);
+	vector<double> z_boundaryl(gridSize, himan::MissingDouble());
+	vector<double> z_one_third_boundaryl(gridSize, himan::MissingDouble());
+	vector<double> z_two_third_boundaryl(gridSize, himan::MissingDouble());
 	vector<double> z_zero(gridSize, 0);
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		if (IsKFloatMissing(BLHInfo->Data()[i]))
+		if (IsMissing(BLHInfo->Data()[i]))
 		{
 			continue;
 		}
@@ -361,9 +361,9 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		size_t i = myTargetInfo->LocationIndex();
 
 		double topo = TopoInfo->Value();
-		double esto = himan::kFloatMissing;
-		double esto_tot = himan::kFloatMissing;
-		double gust = himan::kFloatMissing;
+		double esto = himan::MissingDouble();
+		double esto_tot = himan::MissingDouble();
+		double gust = himan::MissingDouble();
 		double turb_lisa = 0;
 		double turb_kerroin = 0;
 		double pilvikerroin = 0;
@@ -440,7 +440,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			gust = meanWind[i];
 		}
 
-		if (IsKFloatMissing(gust) || gust < 1)
+		if (IsMissing(gust) || gust < 1)
 		{
 			gust = 1;
 		}
@@ -487,7 +487,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		gust = gust + turb_lisa * turb_kerroin * pilvikerroin;
 
-		if (topo > 400 || IsKFloatMissing(T_LowestLevelInfo->Value()) || IsKFloatMissing(BLHInfo->Value()))
+		if (topo > 400 || IsMissing(T_LowestLevelInfo->Value()) || IsMissing(BLHInfo->Value()))
 		{
 			gust = GustInfo->Value() * 0.95;
 		}
@@ -495,7 +495,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Value(gust);
 	}
 
-	himan::matrix<double> filter_kernel(3, 3, 1, himan::kFloatMissing);
+	himan::matrix<double> filter_kernel(3, 3, 1, himan::MissingDouble());
 	filter_kernel.Fill(1.0 / 9.0);
 	himan::matrix<double> gust_filtered = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
@@ -530,30 +530,30 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 
 		for (size_t i = 0; i < gridSize; ++i)
 		{
-			if (IsKFloatMissing(T_lowestLevel->Data()[i]))
+			if (IsMissing(T_lowestLevel->Data()[i]))
 			{
-				dT.deltaT_100[i] = himan::kFloatMissing;
-				dT.deltaT_200[i] = himan::kFloatMissing;
-				dT.deltaT_300[i] = himan::kFloatMissing;
-				dT.deltaT_400[i] = himan::kFloatMissing;
-				dT.deltaT_500[i] = himan::kFloatMissing;
-				dT.deltaT_600[i] = himan::kFloatMissing;
-				dT.deltaT_700[i] = himan::kFloatMissing;
+				dT.deltaT_100[i] = himan::MissingDouble();
+				dT.deltaT_200[i] = himan::MissingDouble();
+				dT.deltaT_300[i] = himan::MissingDouble();
+				dT.deltaT_400[i] = himan::MissingDouble();
+				dT.deltaT_500[i] = himan::MissingDouble();
+				dT.deltaT_600[i] = himan::MissingDouble();
+				dT.deltaT_700[i] = himan::MissingDouble();
 				continue;
 			}
-			if (!IsKFloatMissing(dT.deltaT_100[i]))
+			if (!IsMissing(dT.deltaT_100[i]))
 				dT.deltaT_100[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100.0 / 1000.0));
-			if (!IsKFloatMissing(dT.deltaT_200[i]))
+			if (!IsMissing(dT.deltaT_200[i]))
 				dT.deltaT_200[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200.0 / 1000.0));
-			if (!IsKFloatMissing(dT.deltaT_300[i]))
+			if (!IsMissing(dT.deltaT_300[i]))
 				dT.deltaT_300[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300.0 / 1000.0));
-			if (!IsKFloatMissing(dT.deltaT_400[i]))
+			if (!IsMissing(dT.deltaT_400[i]))
 				dT.deltaT_400[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (400.0 / 1000.0));
-			if (!IsKFloatMissing(dT.deltaT_500[i]))
+			if (!IsMissing(dT.deltaT_500[i]))
 				dT.deltaT_500[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (500.0 / 1000.0));
-			if (!IsKFloatMissing(dT.deltaT_600[i]))
+			if (!IsMissing(dT.deltaT_600[i]))
 				dT.deltaT_600[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (600.0 / 1000.0));
-			if (!IsKFloatMissing(dT.deltaT_700[i]))
+			if (!IsMissing(dT.deltaT_700[i]))
 				dT.deltaT_700[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (700.0 / 1000.0));
 		}
 	}
@@ -599,31 +599,31 @@ void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize)
 
 void IntT(intT& iT, const deltaT& dT, size_t gridSize)
 {
-	iT.intT_100 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_200 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_300 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_400 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_500 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_600 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_700 = vector<double>(gridSize, himan::kFloatMissing);
+	iT.intT_100 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_200 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_300 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_400 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_500 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_600 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_700 = vector<double>(gridSize, himan::MissingDouble());
 
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		if (!IsKFloatMissing(dT.deltaT_100[i]))
+		if (!IsMissing(dT.deltaT_100[i]))
 			iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100;  // why 0.5 * here? Would make sense in case of
 		                                                    // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
 		                                                    // integration using trapezoidal rule
-		if (!IsKFloatMissing(dT.deltaT_100[i]) && !IsKFloatMissing(dT.deltaT_200[i]))
+		if (!IsMissing(dT.deltaT_100[i]) && !IsMissing(dT.deltaT_200[i]))
 			iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
-		if (!IsKFloatMissing(dT.deltaT_200[i]) && !IsKFloatMissing(dT.deltaT_300[i]))
+		if (!IsMissing(dT.deltaT_200[i]) && !IsMissing(dT.deltaT_300[i]))
 			iT.intT_300[i] = 0.5 * (dT.deltaT_300[i] + dT.deltaT_200[i]) * 100;
-		if (!IsKFloatMissing(dT.deltaT_300[i]) && !IsKFloatMissing(dT.deltaT_400[i]))
+		if (!IsMissing(dT.deltaT_300[i]) && !IsMissing(dT.deltaT_400[i]))
 			iT.intT_400[i] = 0.5 * (dT.deltaT_400[i] + dT.deltaT_300[i]) * 100;
-		if (!IsKFloatMissing(dT.deltaT_400[i]) && !IsKFloatMissing(dT.deltaT_500[i]))
+		if (!IsMissing(dT.deltaT_400[i]) && !IsMissing(dT.deltaT_500[i]))
 			iT.intT_500[i] = 0.5 * (dT.deltaT_500[i] + dT.deltaT_400[i]) * 100;
-		if (!IsKFloatMissing(dT.deltaT_500[i]) && !IsKFloatMissing(dT.deltaT_600[i]))
+		if (!IsMissing(dT.deltaT_500[i]) && !IsMissing(dT.deltaT_600[i]))
 			iT.intT_600[i] = 0.5 * (dT.deltaT_600[i] + dT.deltaT_500[i]) * 100;
-		if (!IsKFloatMissing(dT.deltaT_600[i]) && !IsKFloatMissing(dT.deltaT_700[i]))
+		if (!IsMissing(dT.deltaT_600[i]) && !IsMissing(dT.deltaT_700[i]))
 			iT.intT_700[i] = 0.5 * (dT.deltaT_700[i] + dT.deltaT_600[i]) * 100;
 	}
 }
@@ -655,26 +655,26 @@ void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, in
 {
 	for (size_t i = 0; i < lowAndMiddleClouds.size(); ++i)
 	{
-		if (IsKFloatMissing(highClouds->Data()[i]) || highClouds->Data()[i] == 0.0)
+		if (IsMissing(highClouds->Data()[i]) || highClouds->Data()[i] == 0.0)
 		{
-			if (IsKFloatMissing(totalClouds->Data()[i]))
-				lowAndMiddleClouds[i] = himan::kFloatMissing;
+			if (IsMissing(totalClouds->Data()[i]))
+				lowAndMiddleClouds[i] = himan::MissingDouble();
 			else
 				lowAndMiddleClouds[i] = totalClouds->Data()[i] * 100;
 		}
 		else
 		{
-			if (!IsKFloatMissing(lowClouds->Data()[i]))
+			if (!IsMissing(lowClouds->Data()[i]))
 			{
-				if (!IsKFloatMissing(middleClouds->Data()[i]))
+				if (!IsMissing(middleClouds->Data()[i]))
 					lowAndMiddleClouds[i] = max(lowClouds->Data()[i], middleClouds->Data()[i]) * 100;
 				else
 					lowAndMiddleClouds[i] = lowClouds->Data()[i] * 100;
 			}
 			else
 			{
-				if (IsKFloatMissing(middleClouds->Data()[i]))
-					lowAndMiddleClouds[i] = himan::kFloatMissing;
+				if (IsMissing(middleClouds->Data()[i]))
+					lowAndMiddleClouds[i] = himan::MissingDouble();
 				else
 					lowAndMiddleClouds[i] = middleClouds->Data()[i] * 100;
 			}

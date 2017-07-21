@@ -217,7 +217,7 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 		}
 		else
 		{
-			CudaMatrixSet(C, i, j, 0, M, N, GetKFloatMissing());
+			CudaMatrixSet(C, i, j, 0, M, N, MissingDouble());
 		}
 	}
 }

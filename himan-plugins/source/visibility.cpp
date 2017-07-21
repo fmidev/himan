@@ -143,10 +143,10 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double stratN = tup.get<4>();
 		double stratH = tup.get<5>();
 
-		/*if (IsKFloatMissing(RR) || IsKFloatMissing(RH))
+		if (IsMissing(RR) || IsMissing(RH))
 		{
 			continue;
-		}*/
+		}
 
 		assert(stratN <= 1.0);
 		assert(RR < 50);
@@ -196,7 +196,7 @@ double VisibilityInRain(double stN, double stH, double RR, double RH, int PF)
 
 	const double stHpre = (stH < 152) ? pow((stH / 152), 0.15) : 1;
 
-	assert(!IsKFloatMissing(PF));
+	assert(!IsMissing(PF));
 
 	switch (PF)
 	{
@@ -250,7 +250,7 @@ double VisibilityInMist(double stN, double stH, double RR, double RH)
 	// nakyvyysgradientteja sateen reunalla)
 	// (ehka syyta rajata vain tilanteisiin, jossa sateen perusteella saatu nakyvyys oli viela >8000?)
 
-	if ((RR < 0.5 || IsKFloatMissing(RR)) && RH > 80)
+	if ((RR < 0.5 || IsMissing(RR)) && RH > 80)
 	{
 		// Näkyvyys udussa/sumussa
 		// Yksinkertaistetty kaava, eli lasketaan samalla tavalla riippumatta siitä, onko pakkasta vai ei

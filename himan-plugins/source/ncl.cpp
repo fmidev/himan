@@ -142,8 +142,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			double height = HInfo->Value();
 			double temp = TInfo->Value();
 
-			double prevHeight(kFloatMissing);
-			double prevTemp(kFloatMissing);
+			double prevHeight(MissingDouble());
+			double prevTemp(MissingDouble());
 
 			double targetHeight = myTargetInfo->Value();
 
@@ -156,8 +156,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				prevTemp = prevTInfo->Value();
 			}
 
-			if (IsKFloatMissing(height) || IsKFloatMissing(temp) ||
-			    (!firstLevel && (IsKFloatMissing(prevHeight) || IsKFloatMissing(prevTemp))))
+			if (IsMissingValue({height,temp}) ||
+			    (!firstLevel && (IsMissingValue({prevHeight,prevTemp}))))
 			{
 				continue;
 			}
@@ -165,7 +165,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			temp -= himan::constants::kKelvin;
 			prevTemp -= himan::constants::kKelvin;
 
-			if (targetHeight != -1)
+			if (targetHeight != -1 || IsMissing(targetHeight))
 			{
 				if (temp >= itsTargetTemperature)  // && levelNumber >= (itsBottomLevel - 5))
 				{
@@ -178,7 +178,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 					 * meters. When calculating height of zero level, we can take into
 					 * account this inversion so we test if the temperature at lowest level
 					 * is already below target temperature (0 or -20), and if that is the
-					 * situation we do not directly set height to kFloatMissing but
+					 * situation we do not directly set height to MissingDouble() but
 					 * move onwards and only if the temperature stays below target for
 					 * the first 5 levels (in Hirlam lowest hybrid levels are spaced ~30m
 					 * apart) we can say that surface inversion does not exist and the
@@ -214,7 +214,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				 * temperature, set height to to missing value.
 				 */
 
-				targetHeight = kFloatMissing;
+				targetHeight = MissingDouble();
 			}
 			else if (prevTemp > itsTargetTemperature && temp < itsTargetTemperature)
 			{
@@ -266,7 +266,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (myTargetInfo->Value() == -1.)
 		{
-			myTargetInfo->Value(kFloatMissing);
+			myTargetInfo->Value(MissingDouble());
 		}
 	}
 

@@ -284,7 +284,7 @@ class hitool : public auxiliary_plugin
 	 * Only for hybrid levels. A height between two levels is interpolated linearly.
 	 *
 	 * If findNth > 1 and value is not found (although lower count values are found),
-	 * value is set to kFloatMissing (unlike in smarttool).
+	 * value is set to Missing (unlike in smarttool).
 	 *
 	 * @param wantedParam Wanted parameter
 	 * @param firstLevelValue Lowest level value for each point, search will start here

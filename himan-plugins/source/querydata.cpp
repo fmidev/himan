@@ -176,6 +176,8 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 {
 	assert(theInfo.Data().Size() == qinfo.SizeLocations());
 
+	// convert missing value to kFloatMissing
+	theInfo.Grid()->Data().MissingValue(kFloatMissing);
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
@@ -688,6 +690,8 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 					dm.Set(i, static_cast<double>(qinfo.FloatValue()));
 				}
 
+				// convert kFloatMissing to nan
+				dm.MissingValue(MissingDouble());
 				newInfo->Grid()->Data(dm);
 			}
 		}

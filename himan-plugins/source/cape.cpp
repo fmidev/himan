@@ -24,7 +24,7 @@ const unsigned char FCAPE3km = (1 << 0);
 
 using namespace std;
 using namespace himan::plugin;
-using himan::IsKFloatMissing;
+using himan::IsMissingDouble;
 
 #ifdef DEBUG
 #define DumpVector(A, B) himan::util::DumpVector(A, B)
@@ -58,10 +58,10 @@ double Max(const vector<double>& vec)
 
 	for (const double& val : vec)
 	{
-		if (!IsKFloatMissing(val) && val > ret) ret = val;
+		if (!IsMissingDouble(val) && val > ret) ret = val;
 	}
 
-	if (ret == -1e38) ret = himan::kFloatMissing;
+	if (ret == -1e38) ret = himan::MissingDouble();
 
 	return ret;
 }
@@ -70,7 +70,7 @@ void MultiplyWith(vector<double>& vec, double multiplier)
 {
 	for (double& val : vec)
 	{
-		if (!IsKFloatMissing(val)) val *= multiplier;
+		if (!IsMissingDouble(val)) val *= multiplier;
 	}
 }
 
@@ -81,7 +81,7 @@ string PrintMean(const vector<double>& vec)
 
 	for (const double& val : vec)
 	{
-		if (IsKFloatMissing(val))
+		if (IsMissingDouble(val))
 		{
 			missing++;
 			continue;
@@ -387,12 +387,12 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
-		if (cape_[i] == 0 && IsKFloatMissing(elz_[i]) && !IsKFloatMissing(lfcz_[i]))
+		if (cape_[i] == 0 && IsMissingDouble(elz_[i]) && !IsMissingDouble(lfcz_[i]))
 		{
 			cin_[i] = 0;
-			lfcz_[i] = kFloatMissing;
-			lfcp_[i] = kFloatMissing;
-			lfct_[i] = kFloatMissing;
+			lfcz_[i] = MissingDouble();
+			lfcp_[i] = MissingDouble();
+			lfct_[i] = MissingDouble();
 		}
 	}
 
@@ -409,8 +409,8 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		// * If both are present, LFC must be below EL
 		// * CAPE must be zero or positive real value
 		// * CIN must be zero or negative real value
-		assert((IsKFloatMissing(lfcz_[i]) && IsKFloatMissing(elz_[i])) ||
-		       (!IsKFloatMissing(lfcz_[i]) && !IsKFloatMissing(elz_[i]) && (lfcz_[i] < elz_[i])));
+		assert((IsMissingDouble(lfcz_[i]) && IsMissingDouble(elz_[i])) ||
+		       (!IsMissingDouble(lfcz_[i]) && !IsMissingDouble(elz_[i]) && (lfcz_[i] < elz_[i])));
 		assert(cape_[i] >= 0);
 		assert(cin_[i] <= 0);
 	}
@@ -419,7 +419,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	// Do smoothening for CAPE & CIN parameters
 	mySubThreadedLogger->Trace("Smoothening");
 
-	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1. / 9.);
+	himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1. / 9.);
 
 	capeInfo->Param(CAPEParam);
 	himan::matrix<double> filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
@@ -475,7 +475,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 	for (size_t i = 0; i < found.size(); i++)
 	{
-		if (IsKFloatMissing(PLFC[i]))
+		if (IsMissingDouble(PLFC[i]))
 		{
 			found[i] = true;
 		}
@@ -533,7 +533,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 		auto TenvInfo = Fetch(ftime, curLevel, param("T-K"), ftype, false);
 		auto PenvInfo = Fetch(ftime, curLevel, param("P-HPA"), ftype, false);
 
-		vector<double> TparcelVec(Piter.size(), kFloatMissing);
+		vector<double> TparcelVec(Piter.size(), MissingDouble());
 
 		// Convert pressure to Pa since metutil-library expects that
 		auto PenvVec = PenvInfo->Data().Values();
@@ -568,7 +568,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 			double prevZenv = tup.get<6>();  // m
 
 			double Tparcel = tup.get<7>();  // K
-			assert(Tparcel >= 100. || IsKFloatMissing(Tparcel));
+			assert(Tparcel >= 100. || IsMissingDouble(Tparcel));
 
 			double prevTparcel = tup.get<8>();  // K
 
@@ -585,7 +585,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 				found[i] = true;
 
-				if (IsKFloatMissing(prevTparcel) || IsKFloatMissing(prevPenv) || IsKFloatMissing(prevTenv))
+				if (IsMissingDouble(prevTparcel) || IsMissingDouble(prevPenv) || IsMissingDouble(prevTenv))
 				{
 					continue;
 				}
@@ -606,7 +606,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 				assert(Zenv > prevZenv);
 			}
 
-			if (IsKFloatMissing(Tparcel))
+			if (IsMissingDouble(Tparcel))
 			{
 				continue;
 			}
@@ -636,13 +636,13 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 		for (size_t i = 0; i < Titer.size(); i++)
 		{
-			if (!IsKFloatMissing(TparcelVec[i]) && !IsKFloatMissing(PenvVec[i]))
+			if (!IsMissingDouble(TparcelVec[i]) && !IsMissingDouble(PenvVec[i]))
 			{
 				Titer[i] = TparcelVec[i];
 				Piter[i] = PenvVec[i];
 			}
 
-			if (found[i]) Titer[i] = kFloatMissing;  // by setting this we prevent MoistLift to integrate particle
+			if (found[i]) Titer[i] = MissingDouble();  // by setting this we prevent MoistLift to integrate particle
 		}
 	}
 
@@ -697,8 +697,8 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 	vector<double> CAPE(T.size(), 0);
 	vector<double> CAPE1040(T.size(), 0);
 	vector<double> CAPE3km(T.size(), 0);
-	vector<double> ELT(T.size(), kFloatMissing);
-	vector<double> ELP(T.size(), kFloatMissing);
+	vector<double> ELT(T.size(), MissingDouble());
+	vector<double> ELP(T.size(), MissingDouble());
 
 	// Unlike LCL, LFC is *not* found for all grid points
 
@@ -706,7 +706,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 	for (size_t i = 0; i < P.size(); i++)
 	{
-		if (IsKFloatMissing(P[i]))
+		if (IsMissingDouble(P[i]))
 		{
 			found[i] |= FCAPE;
 			foundCount++;
@@ -747,7 +747,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 		auto PenvVec = PenvInfo->Data().Values();
 		::MultiplyWith(PenvVec, 100);
 
-		vector<double> TparcelVec(P.size(), kFloatMissing);
+		vector<double> TparcelVec(P.size(), MissingDouble());
 
 		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
@@ -782,8 +782,8 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			{
 				continue;
 			}
-			else if (IsKFloatMissing(Penv) || IsKFloatMissing(Tenv) || IsKFloatMissing(Zenv) ||
-			         IsKFloatMissing(prevZenv) || IsKFloatMissing(Tparcel) || Penv > P[i])
+			else if (IsMissingDouble(Penv) || IsMissingDouble(Tenv) || IsMissingDouble(Zenv) ||
+			         IsMissingDouble(prevZenv) || IsMissingDouble(Tparcel) || Penv > P[i])
 			{
 				// Missing data or current grid point is below LFC
 				continue;
@@ -792,7 +792,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
 			// (and EL!) values can be determined.
 
-			if (IsKFloatMissing(prevTparcel) && !IsKFloatMissing(Tparcel))
+			if (IsMissingDouble(prevTparcel) && !IsMissingDouble(Tparcel))
 			{
 				prevTenv = himan::numerical_functions::interpolation::Linear(P[i], prevPenv, Penv, prevTenv, Tenv);
 				prevZenv = himan::numerical_functions::interpolation::Linear(P[i], prevPenv, Penv, prevZenv, Zenv);
@@ -851,7 +851,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			assert(CAPEval >= 0.);
 			assert(CAPE[i] < 8000);
 
-			if (!IsKFloatMissing(ELTval))
+			if (!IsMissingDouble(ELTval))
 			{
 				ELT[i] = ELTval;
 				ELP[i] = ELPval;
@@ -880,7 +880,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 	for (size_t i = 0; i < CAPE.size(); i++)
 	{
-		if (CAPE[i] > 0 && IsKFloatMissing(ELT[i]))
+		if (CAPE[i] > 0 && IsMissingDouble(ELT[i]))
 		{
 			TenvInfo->LocationIndex(i);
 			PenvInfo->LocationIndex(i);
@@ -966,8 +966,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	vector<bool> found(T.size(), false);
 
-	vector<double> LFCT(T.size(), kFloatMissing);
-	vector<double> LFCP(T.size(), kFloatMissing);
+	vector<double> LFCT(T.size(), MissingDouble());
+	vector<double> LFCP(T.size(), MissingDouble());
 
 	for (size_t i = 0; i < TenvLCL.size(); i++)
 	{
@@ -981,7 +981,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			found[i] = true;
 			LFCT[i] = T[i];
 			LFCP[i] = P[i];
-			Piter[i] = kFloatMissing;
+			Piter[i] = MissingDouble();
 		}
 	}
 
@@ -1002,7 +1002,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
-	vector<double> prevTparcelVec(P.size(), kFloatMissing);
+	vector<double> prevTparcelVec(P.size(), MissingDouble());
 
 	while (curLevel.Value() > hPa150.first.Value() && foundCount != found.size())
 	{
@@ -1018,7 +1018,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		// of this loop the starting level is LCL. If target level level is below current level
 		// (ie. we would be lowering the particle) missing value is returned.
 
-		vector<double> TparcelVec(P.size(), kFloatMissing);
+		vector<double> TparcelVec(P.size(), MissingDouble());
 
 		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
@@ -1047,15 +1047,15 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			assert(prevTenv > 100.);
 
 			double Tparcel = tup.get<4>();  // K
-			assert(Tparcel > 100. || IsKFloatMissing(Tparcel));
+			assert(Tparcel > 100. || IsMissingDouble(Tparcel));
 
 			double prevTparcel = tup.get<5>();  // K
-			assert(Tparcel > 100. || IsKFloatMissing(Tparcel));
+			assert(Tparcel > 100. || IsMissingDouble(Tparcel));
 
 			double& Tresult = tup.get<6>();
 			double& Presult = tup.get<7>();
 
-			if (IsKFloatMissing(Tparcel) || Penv > P[i] + 30)
+			if (IsMissingDouble(Tparcel) || Penv > P[i] + 30)
 			{
 				continue;
 			}
@@ -1066,7 +1066,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 				found[i] = true;
 
-				if (IsKFloatMissing(prevTparcel))
+				if (IsMissingDouble(prevTparcel))
 				{
 					// Previous value is unknown: perhaps LFC is found very close to ground?
 					// Use LCL for previous value.
@@ -1086,7 +1086,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					Tresult = intersection.X();
 					Presult = intersection.Y();
 
-					if (IsKFloatMissing(Tresult))
+					if (IsMissingDouble(Tresult))
 					{
 						// Intersection not found, use exact level value
 						Tresult = Tenv;
@@ -1094,8 +1094,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					}
 				}
 
-				assert(!IsKFloatMissing(Tresult));
-				assert(!IsKFloatMissing(Presult));
+				assert(!IsMissingDouble(Tresult));
+				assert(!IsMissingDouble(Presult));
 			}
 			else if (curLevel.Value() < hPa450.first.Value() && (Tenv - Tparcel) > 30.)
 			{
@@ -1117,7 +1117,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 		for (size_t i = 0; i < Titer.size(); i++)
 		{
-			if (found[i]) Titer[i] = kFloatMissing;  // by setting this we prevent MoistLift to integrate particle
+			if (found[i]) Titer[i] = MissingDouble();  // by setting this we prevent MoistLift to integrate particle
 		}
 
 		prevTparcelVec = TparcelVec;
@@ -1128,7 +1128,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo, const cape_source& sourceValues)
 {
-	vector<double> TLCL(get<0>(sourceValues).size(), kFloatMissing);
+	vector<double> TLCL(get<0>(sourceValues).size(), MissingDouble());
 	vector<double> PLCL = TLCL;
 
 	// Need surface pressure
@@ -1147,7 +1147,7 @@ pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo,
 
 		Tresult = lcl.T;  // K
 
-		if (!IsKFloatMissing(lcl.P))
+		if (!IsMissingDouble(lcl.P))
 		{
 			Presult = 0.01 * ((lcl.P > P) ? P : lcl.P);  // hPa
 		}
@@ -1181,11 +1181,11 @@ cape_source cape::GetSurfaceValues(shared_ptr<info> myTargetInfo)
 	auto T = VEC(TInfo);
 	auto RH = VEC(RHInfo);
 
-	vector<double> TD(T.size(), kFloatMissing);
+	vector<double> TD(T.size(), MissingDouble());
 
 	for (size_t i = 0; i < TD.size(); i++)
 	{
-		if (!IsKFloatMissing(T[i]) && !IsKFloatMissing(RH[i]))
+		if (!IsMissingDouble(T[i]) && !IsMissingDouble(RH[i]))
 		{
 			TD[i] = metutil::DewPointFromRH_(T[i], RH[i]);
 		}
@@ -1244,7 +1244,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 		size_t miss = 0;
 		for (auto& val : VEC(PInfo))
 		{
-			if (IsKFloatMissing(val)) miss++;
+			if (IsMissingDouble(val)) miss++;
 		}
 
 		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
@@ -1273,13 +1273,13 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 		auto T = h->VerticalValue(param("T-K"), P);
 		auto RH = h->VerticalValue(param("RH-PRCNT"), P);
 
-		vector<double> Tpot(T.size(), kFloatMissing);
-		vector<double> MR(T.size(), kFloatMissing);
+		vector<double> Tpot(T.size(), MissingDouble());
+		vector<double> MR(T.size(), MissingDouble());
 
 		for (size_t i = 0; i < T.size(); i++)
 		{
 			if (found[i]) continue;
-			if (IsKFloatMissing(T[i]) || IsKFloatMissing(P[i]) || IsKFloatMissing(RH[i])) continue;
+			if (IsMissingDouble(T[i]) || IsMissingDouble(P[i]) || IsMissingDouble(RH[i])) continue;
 
 			assert(T[i] > 150 && T[i] < 350);
 			assert(P[i] > 100 && P[i] < 1500);
@@ -1301,13 +1301,13 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 		for (size_t i = 0; i < found.size(); i++)
 		{
-			assert((P[i] > 100 && P[i] < 1500) || IsKFloatMissing(P[i]));
+			assert((P[i] > 100 && P[i] < 1500) || IsMissingDouble(P[i]));
 
 			if (found[i])
 			{
-				P[i] = kFloatMissing;  // disable processing of this
+				P[i] = MissingDouble();  // disable processing of this
 			}
-			else if (!IsKFloatMissing(P[i]))
+			else if (!IsMissingDouble(P[i]))
 			{
 				P[i] -= 2.0;
 			}
@@ -1320,22 +1320,22 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 	auto Psurf = Fetch(myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 	P = Psurf->Data().Values();
 
-	vector<double> T(Tpot.size(), kFloatMissing);
+	vector<double> T(Tpot.size(), MissingDouble());
 
 	for (size_t i = 0; i < Tpot.size(); i++)
 	{
-		assert((P[i] > 100 && P[i] < 1500) || IsKFloatMissing(P[i]));
-		if (!IsKFloatMissing(Tpot[i]) && !IsKFloatMissing(P[i]))
+		assert((P[i] > 100 && P[i] < 1500) || IsMissingDouble(P[i]));
+		if (!IsMissingDouble(Tpot[i]) && !IsMissingDouble(P[i]))
 		{
 			T[i] = Tpot[i] * pow((P[i] / 1000.), 0.2854);
 		}
 	}
 
-	vector<double> TD(T.size(), kFloatMissing);
+	vector<double> TD(T.size(), MissingDouble());
 
 	for (size_t i = 0; i < MR.size(); i++)
 	{
-		if (!IsKFloatMissing(T[i]) && !IsKFloatMissing(MR[i]) && !IsKFloatMissing(P[i]))
+		if (!IsMissingDouble(T[i]) && !IsMissingDouble(MR[i]) && !IsMissingDouble(P[i]))
 		{
 			double Es = metutil::Es_(T[i]);  // Saturated water vapor pressure
 			double E = metutil::E_(MR[i], 100 * P[i]);
@@ -1376,7 +1376,7 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 	vector<bool> found(myTargetInfo->Data().Size(), false);
 
 	vector<double> maxThetaE(myTargetInfo->Data().Size(), -1);
-	vector<double> Ttheta(myTargetInfo->Data().Size(), kFloatMissing);
+	vector<double> Ttheta(myTargetInfo->Data().Size(), MissingDouble());
 	auto TDtheta = Ttheta;
 	auto Ptheta = Ttheta;
 
@@ -1411,7 +1411,7 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 			double& TDresult = tup.get<5>();
 			double& Presult = tup.get<6>();
 
-			if (IsKFloatMissing(P))
+			if (IsMissingDouble(P))
 			{
 				found[i] = true;
 				continue;

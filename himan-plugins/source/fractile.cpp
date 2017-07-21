@@ -276,13 +276,13 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		double mean = ens->Mean();
 		if (!std::isfinite(mean))
 		{
-			mean = kFloatMissing;
+			mean = MissingDouble();
 		}
 
 		double var = std::sqrt(ens->Variance());
 		if (!std::isfinite(var))
 		{
-			var = kFloatMissing;
+			var = MissingDouble();
 		}
 
 		myTargetInfo->ParamIndex(targetInfoIndex);

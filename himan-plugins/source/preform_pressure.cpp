@@ -204,7 +204,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// No rain --> no rain type
 
-		if (RR == 0 || IsKFloatMissing(RR))
+		if (RR == 0 || IsMissing(RR))
 		{
 			continue;
 		}
@@ -330,7 +330,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		double SNR_RR = 0;  // oletuksena kaikki sade vetta
 
-		if (!IsKFloatMissing(SNR))
+		if (!IsMissing(SNR))
 		{
 			// lasketaan oikea suhde vain jos lumidataa on (kesalla ei ole)
 			SNR_RR = SNR / RR;

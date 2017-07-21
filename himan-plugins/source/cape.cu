@@ -158,7 +158,7 @@ __global__ void CopyLFCIteratorValuesKernel(double* __restrict__ d_Titer, const 
 
 	if (idx < d_Penv.size_x * d_Penv.size_y)
 	{
-		if (!IsKFloatMissing(d_Tparcel[idx]) && !IsKFloatMissing(d_Penv.values[idx]))
+		if (!IsMissingDouble(d_Tparcel[idx]) && !IsMissingDouble(d_Penv.values[idx]))
 		{
 			d_Titer[idx] = d_Tparcel[idx];
 			d_Piter[idx] = d_Penv.values[idx];
@@ -174,18 +174,18 @@ __global__ void LiftLCLKernel(const double* __restrict__ d_P, const double* __re
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
 		assert(d_P[idx] > 10);
-		assert(d_P[idx] < 1500 || IsKFloatMissing(d_P[idx]));
+		assert(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
 
 		assert(d_Ptarget.values[idx] > 10);
-		assert(d_Ptarget.values[idx] < 1500 || IsKFloatMissing(d_Ptarget.values[idx]));
+		assert(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
 
 		assert(d_T[idx] > 100);
-		assert(d_T[idx] < 350 || IsKFloatMissing(d_T[idx]));
+		assert(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
 
 		double T = metutil::LiftLCL_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
 
 		assert(T > 100);
-		assert(T < 350 || IsKFloatMissing(T));
+		assert(T < 350 || IsMissingDouble(T));
 
 		d_Tparcel[idx] = T;
 	}
@@ -202,18 +202,18 @@ __global__ void MoistLiftKernel(const double* __restrict__ d_T, const double* __
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
 		assert(d_P[idx] > 10);
-		assert(d_P[idx] < 1500 || IsKFloatMissing(d_P[idx]));
+		assert(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
 
 		assert(d_Ptarget.values[idx] > 10);
-		assert(d_Ptarget.values[idx] < 1500 || IsKFloatMissing(d_Ptarget.values[idx]));
+		assert(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
 
 		assert(d_T[idx] > 100);
-		assert(d_T[idx] < 350 || IsKFloatMissing(d_T[idx]));
+		assert(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
 
 		double T = metutil::MoistLiftA_(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
 
 		assert(T > 100);
-		assert(T < 350 || IsKFloatMissing(T));
+		assert(T < 350 || IsMissingDouble(T));
 
 		d_Tparcel[idx] = T;
 	}
@@ -248,10 +248,10 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 		double prevZenv = d_prevZenv.values[idx];  // m
 
 		double Tparcel = d_Tparcel[idx];  // K
-		assert(Tparcel > 100. || IsKFloatMissing(Tparcel));
+		assert(Tparcel > 100. || IsMissingDouble(Tparcel));
 
 		double prevTparcel = d_prevTparcel[idx];  // K
-		assert(prevTparcel > 100. || IsKFloatMissing(Tparcel));
+		assert(prevTparcel > 100. || IsMissingDouble(Tparcel));
 
 		double LFCP = d_LFCP[idx];  // hPa
 		assert(LFCP < 1200.);
@@ -259,14 +259,14 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 		double LFCT = d_LFCT[idx];  // K
 		assert(LFCT > 100.);
 
-		if (IsKFloatMissing(Penv) || IsKFloatMissing(Tenv) || IsKFloatMissing(Zenv) || IsKFloatMissing(prevZenv) ||
-		    IsKFloatMissing(Tparcel) || Penv > LFCP)
+		if (IsMissingDouble(Penv) || IsMissingDouble(Tenv) || IsMissingDouble(Zenv) || IsMissingDouble(prevZenv) ||
+		    IsMissingDouble(Tparcel) || Penv > LFCP)
 		{
 			// Missing data or current grid point is below LFC
 			return;
 		}
 
-		if (IsKFloatMissing(prevTparcel) && !IsKFloatMissing(Tparcel))
+		if (IsMissingDouble(prevTparcel) && !IsMissingDouble(Tparcel))
 		{
 			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
 			// (and EL!) values can be determined.
@@ -326,7 +326,7 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 			assert(CAPE >= 0.);
 			assert(d_CAPE[idx] < 8000);
 
-			if (!IsKFloatMissing(ELT))
+			if (!IsMissingDouble(ELT))
 			{
 				d_ELT[idx] = ELT;
 				d_ELP[idx] = ELP;
@@ -351,20 +351,20 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 		const double prevTenv = d_prevTenv.values[idx];
 
 		double Penv = d_Penv.values[idx];  // hPa
-		assert(Penv < 1200. || IsKFloatMissing(Penv));
+		assert(Penv < 1200. || IsMissingDouble(Penv));
 
 		const double prevPenv = d_prevPenv.values[idx];
 
 		double Tparcel = d_Tparcel[idx];  // K
-		assert(Tparcel >= 150. || IsKFloatMissing(Tparcel));
+		assert(Tparcel >= 150. || IsMissingDouble(Tparcel));
 
 		const double prevTparcel = d_prevTparcel[idx];
 
 		double PLFC = d_PLFC[idx];  // hPa
-		assert(PLFC < 1200. || IsKFloatMissing(PLFC));
+		assert(PLFC < 1200. || IsMissingDouble(PLFC));
 
 		double PLCL = d_PLCL[idx];  // hPa
-		assert(PLCL < 1200. || IsKFloatMissing(PLCL));
+		assert(PLCL < 1200. || IsMissingDouble(PLCL));
 
 		double Zenv = d_Zenv.values[idx];          // m
 		double prevZenv = d_prevZenv.values[idx];  // m
@@ -379,9 +379,9 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 
 				// Integrate the final piece from previous level to LFC level
 
-				if (IsKFloatMissing(prevTparcel) || IsKFloatMissing(prevPenv) || IsKFloatMissing(prevTenv))
+				if (IsMissingDouble(prevTparcel) || IsMissingDouble(prevPenv) || IsMissingDouble(prevTenv))
 				{
-					Tparcel = GetKFloatMissing();  // unable to proceed with CIN integration
+					Tparcel = MissingDouble();  // unable to proceed with CIN integration
 				}
 				else
 				{
@@ -400,7 +400,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 				}
 			}
 
-			if (Penv < PLCL && !IsKFloatMissing(Tparcel))
+			if (Penv < PLCL && !IsMissingDouble(Tparcel))
 			{
 				// Above LCL, switch to virtual temperature
 
@@ -408,7 +408,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 				Tenv = metutil::VirtualTemperature_(Tenv, Penv * 100);
 			}
 
-			if (!IsKFloatMissing(Tparcel))
+			if (!IsMissingDouble(Tparcel))
 			{
 				d_cinh[idx] += CAPE::CalcCIN(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 				assert(d_cinh[idx] <= 0);
@@ -446,7 +446,7 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 
 		double LCLP = d_LCLP[idx];
 
-		if (!IsKFloatMissing(Tparcel) && d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
+		if (!IsMissingDouble(Tparcel) && d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
 		{
 			// Temperature gap between environment and parcel too large --> abort search.
 			// Only for values higher in the atmosphere, to avoid the effects of inversion
@@ -454,14 +454,14 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 			d_found[idx] = 1;
 		}
 
-		if (!IsKFloatMissing(Tparcel) && Penv <= LCLP && Tparcel > Tenv && d_found[idx] == 0)
+		if (!IsMissingDouble(Tparcel) && Penv <= LCLP && Tparcel > Tenv && d_found[idx] == 0)
 		{
 			d_found[idx] = 1;
 
-			if (IsKFloatMissing(prevTparcel))
+			if (IsMissingDouble(prevTparcel))
 			{
 				prevTparcel = d_LCLT[idx];  // previous is LCL
-				assert(!IsKFloatMissing(d_LCLT[idx]));
+				assert(!IsMissingDouble(d_LCLT[idx]));
 			}
 
 			if (fabs(prevTparcel - prevTenv) < 0.0001)
@@ -477,7 +477,7 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 				d_LFCT[idx] = intersection.X();
 				d_LFCP[idx] = intersection.Y();
 
-				if (IsKFloatMissing(d_LFCT[idx]))
+				if (IsMissingDouble(d_LFCT[idx]))
 				{
 					// Intersection not found, use exact level value
 					d_LFCT[idx] = Tenv;
@@ -508,7 +508,7 @@ __global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P,
 		double P = d_P.values[idx];
 		double RH = d_RH.values[idx];
 
-		if (IsKFloatMissing(P) || IsKFloatMissing(T) || IsKFloatMissing(RH))
+		if (IsMissingDouble(P) || IsMissingDouble(T) || IsMissingDouble(RH))
 		{
 			d_found[idx] = 1;
 		}
@@ -560,13 +560,13 @@ __global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __rest
 		double P = d_P[idx];
 		double RH = d_RH[idx];
 
-		assert((T > 150 && T < 350) || IsKFloatMissing(T));
-		assert((P > 100 && P < 1500) || IsKFloatMissing(P));
-		assert((RH >= 0 && RH < 102) || IsKFloatMissing(RH));
+		assert((T > 150 && T < 350) || IsMissingDouble(T));
+		assert((P > 100 && P < 1500) || IsMissingDouble(P));
+		assert((RH >= 0 && RH < 102) || IsMissingDouble(RH));
 
-		if (IsKFloatMissing(T) || IsKFloatMissing(P) || IsKFloatMissing(RH))
+		if (IsMissingDouble(T) || IsMissingDouble(P) || IsMissingDouble(RH))
 		{
-			d_P[idx] = GetKFloatMissing();
+			d_P[idx] = MissingDouble();
 		}
 		else
 		{
@@ -593,16 +593,16 @@ __global__ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __re
 		double MR = d_MR[idx];
 		double Tpot = d_Tpot[idx];
 
-		assert((P > 100 && P < 1500) || IsKFloatMissing(P));
+		assert((P > 100 && P < 1500) || IsMissingDouble(P));
 
-		if (!IsKFloatMissing(Tpot) && !IsKFloatMissing(P))
+		if (!IsMissingDouble(Tpot) && !IsMissingDouble(P))
 		{
 			d_T[idx] = Tpot * pow((P / 1000.), 0.2854);
 		}
 
 		double T = d_T[idx];
 
-		if (!IsKFloatMissing(T) && !IsKFloatMissing(MR) && !IsKFloatMissing(P))
+		if (!IsMissingDouble(T) && !IsMissingDouble(MR) && !IsMissingDouble(P))
 		{
 			double Es = metutil::Es_(T);  // Saturated water vapor pressure
 			double E = metutil::E_(MR, 100 * P);
@@ -639,9 +639,9 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
 
 	InitializeArray<double>(d_maxThetaE, -1, N, stream);
-	InitializeArray<double>(d_Tresult, himan::GetKFloatMissing(), N, stream);
-	InitializeArray<double>(d_TDresult, himan::GetKFloatMissing(), N, stream);
-	InitializeArray<double>(d_Presult, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_Tresult, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_TDresult, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_Presult, himan::MissingDouble(), N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
 	info_simple* h_prevT = 0;
@@ -775,7 +775,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 		size_t miss = 0;
 		for (auto& val : VEC(PInfo))
 		{
-			if (IsKFloatMissing(val)) miss++;
+			if (IsMissingDouble(val)) miss++;
 		}
 
 		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
@@ -810,8 +810,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	CUDA_CHECK(cudaMalloc((double**)&d_P, N * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((double**)&d_TD, N * sizeof(double)));
 
-	InitializeArray<double>(d_Tpot, himan::GetKFloatMissing(), N, stream);
-	InitializeArray<double>(d_MR, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_Tpot, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_MR, himan::MissingDouble(), N, stream);
 
 	while (true)
 	{
@@ -824,8 +824,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
 
-		std::vector<double> Tpot(N, himan::GetKFloatMissing());
-		std::vector<double> MR(N, himan::GetKFloatMissing());
+		std::vector<double> Tpot(N, himan::MissingDouble());
+		std::vector<double> MR(N, himan::MissingDouble());
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -863,11 +863,11 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	auto Psurf = Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
 	auto h_P = PrepareInfo(Psurf, stream);
 
-	InitializeArray<double>(d_T, himan::GetKFloatMissing(), N, stream);
-	InitializeArray<double>(d_TD, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_T, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_TD, himan::MissingDouble(), N, stream);
 
-	std::vector<double> T(Tpot.size(), himan::GetKFloatMissing());
-	std::vector<double> TD(T.size(), himan::GetKFloatMissing());
+	std::vector<double> T(Tpot.size(), himan::MissingDouble());
+	std::vector<double> TD(T.size(), himan::MissingDouble());
 
 	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, *h_P, d_Tpot, d_MR, N);
 
@@ -935,9 +935,9 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	CUDA_CHECK(cudaMemcpyAsync(d_LCLT, d_Titer, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 
-	InitializeArray<double>(d_LFCT, himan::GetKFloatMissing(), N, stream);
-	InitializeArray<double>(d_LFCP, himan::GetKFloatMissing(), N, stream);
-	InitializeArray<double>(d_prevTparcel, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_LFCT, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_LFCP, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_prevTparcel, himan::MissingDouble(), N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
@@ -959,8 +959,8 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	curLevel.Value(curLevel.Value() - 1);
 
 	std::vector<unsigned char> found(N, 0);
-	std::vector<double> LFCT(N, himan::GetKFloatMissing());
-	std::vector<double> LFCP(N, himan::GetKFloatMissing());
+	std::vector<double> LFCT(N, himan::MissingDouble());
+	std::vector<double> LFCP(N, himan::MissingDouble());
 
 	for (size_t i = 0; i < N; i++)
 	{
@@ -1122,7 +1122,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaMalloc((unsigned char**)&d_found, N * sizeof(unsigned char)));
 
 	InitializeArray<double>(d_cinh, 0., N, stream);
-	InitializeArray<double>(d_Tparcel, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_Tparcel, himan::MissingDouble(), N, stream);
 
 	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, &Tsource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Psource, &Psource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
@@ -1135,7 +1135,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	for (size_t i = 0; i < PLFC.size(); i++)
 	{
-		if (IsKFloatMissing(PLFC[i])) found[i] = true;
+		if (IsMissingDouble(PLFC[i])) found[i] = true;
 	}
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
@@ -1237,7 +1237,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	for (size_t i = 0; i < P.size(); i++)
 	{
-		if (IsKFloatMissing(P[i]))
+		if (IsMissingDouble(P[i]))
 		{
 			found[i] |= FCAPE;
 		}
@@ -1293,8 +1293,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	InitializeArray<double>(d_CAPE1040, 0., N, stream);
 	InitializeArray<double>(d_CAPE3km, 0., N, stream);
 
-	InitializeArray<double>(d_ELP, himan::GetKFloatMissing(), N, stream);
-	InitializeArray<double>(d_ELT, himan::GetKFloatMissing(), N, stream);
+	InitializeArray<double>(d_ELP, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_ELT, himan::MissingDouble(), N, stream);
 
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
@@ -1364,7 +1364,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	
 	for (size_t i = 0; i < CAPE.size(); i++)
 	{
-		if (CAPE[i] > 0 && ELT[i] == GetKFloatMissing())
+		if (CAPE[i] > 0 && ELT[i] == MissingDouble())
 		{
 			TenvInfo->LocationIndex(i);
 			PenvInfo->LocationIndex(i);
@@ -1378,8 +1378,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	std::vector<double> CAPE(T.size(), 0);
 	std::vector<double> CAPE1040(T.size(), 0);
 	std::vector<double> CAPE3km(T.size(), 0);
-	std::vector<double> ELT(T.size(), himan::GetKFloatMissing());
-	std::vector<double> ELP(T.size(), himan::GetKFloatMissing());
+	std::vector<double> ELT(T.size(), himan::MissingDouble());
+	std::vector<double> ELP(T.size(), himan::MissingDouble());
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
