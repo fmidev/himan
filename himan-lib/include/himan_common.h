@@ -45,7 +45,7 @@ inline CUDA_HOST CUDA_DEVICE float MissingFloat() {return nanf("32700");}
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = GetKHPMissingValue();
-const double kFloatMissing = 32700.;
+//const double kFloatMissing = 32700.;
 
 inline CUDA_HOST CUDA_DEVICE bool IsMissingDouble(const double& value)
 {

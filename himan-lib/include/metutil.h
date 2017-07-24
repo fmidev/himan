@@ -726,7 +726,7 @@ inline double himan::metutil::E_(double R, double P)
 CUDA_DEVICE
 inline double himan::metutil::DryLift_(double P, double T, double targetP)
 {
-	if (IsMissingDouble(T) || IsMissingDouble(P) || IsMissingDouble(targetP) || targetP >= P)
+	if (targetP >= P)
 	{
 		return MissingDouble();
 	}
@@ -1114,7 +1114,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (!(LCL.P == LCL.P))
+	if (IsMissingDouble(LCL.P))
 	{
 		return li;
 	}
@@ -1126,10 +1126,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 		double dryT = DryLift_(P500m, T500m, TARGET_PRESSURE);
 
-		if (dryT == dryT)
-		{
-			li = T500 - dryT;
-		}
+		li = T500 - dryT;
 	}
 	else
 	{
@@ -1137,10 +1134,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 		double wetT = Lift_(P500m, T500m, TD500m, TARGET_PRESSURE);
 
-		if (!IsMissingDouble(wetT))
-		{
-			li = T500 - wetT;
-		}
+		li = T500 - wetT;
 	}
 
 	return li;
@@ -1155,7 +1149,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (!(LCL.P == LCL.P))
+	if (IsMissingDouble(LCL.P))
 	{
 		return si;
 	}
@@ -1167,10 +1161,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 		double dryT = DryLift_(85000, T850, TARGET_PRESSURE);
 
-		if (!IsMissingDouble(dryT))
-		{
-			si = T500 - dryT;
-		}
+		si = T500 - dryT;
 	}
 	else
 	{
@@ -1178,10 +1169,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 		double wetT = Lift_(85000, T850, TD850, TARGET_PRESSURE);
 
-		if (!IsMissingDouble(wetT))
-		{
-			si = T500 - wetT;
-		}
+		si = T500 - wetT;
 	}
 
 	return si;

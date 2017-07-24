@@ -26,7 +26,7 @@ double min(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		if (IsValid(val) && val < ret) ret = val;
+		if (val < ret) ret = val;
 	}
 
 	if (ret == 1e38) ret = MissingDouble();
@@ -40,17 +40,18 @@ double max(const vector<double>& vec)
 
 	BOOST_FOREACH (double val, vec)
 	{
-		if (IsValid(val) && val > ret) ret = val;
+		if (val > ret) ret = val;
 	}
 
 	if (ret == -1e38) ret = MissingDouble();
-
-	return ret;
+        
+        return ret;
 }
 
 pair<double, double> minmax(const vector<double>& vec)
 {
 	double min = 1e38, max = -1e38;
+
 
 	BOOST_FOREACH (double val, vec)
 	{

@@ -1122,7 +1122,6 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 		prevTparcelVec = TparcelVec;
 	}
-
 	return make_pair(LFCT, LFCP);
 }
 
