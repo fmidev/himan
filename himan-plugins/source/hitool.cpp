@@ -402,6 +402,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			double max_value = p.second;  // highest
 			double min_value = p.first;   // lowest
 
+                        if (IsMissing(max_value) || IsMissing(min_value))
+                        {
+                                itsLogger->Error("Min or max values of given heights are missing");
+                                throw kFileDataNotFound;
+                        }
+
 			if (itsHeightUnit == kHPa)
 			{
 				// larger value is closer to ground

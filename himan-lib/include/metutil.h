@@ -1114,11 +1114,11 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (IsMissingDouble(LCL.P))
+/*	if (IsMissingDouble(LCL.P))
 	{
 		return li;
 	}
-
+*/
 	if (LCL.P <= 85000)
 	{
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
@@ -1128,7 +1128,7 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 		li = T500 - dryT;
 	}
-	else
+	else if (LCL.P > 85000)
 	{
 		// Grid point is inside or above cloud
 
@@ -1149,11 +1149,11 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (IsMissingDouble(LCL.P))
+/*	if (IsMissingDouble(LCL.P))
 	{
 		return si;
 	}
-
+*/
 	if (LCL.P <= 85000)
 	{
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
@@ -1163,7 +1163,7 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 		si = T500 - dryT;
 	}
-	else
+	else if (LCL.P > 85000)
 	{
 		// Grid point is inside or above cloud
 

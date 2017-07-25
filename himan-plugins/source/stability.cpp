@@ -254,11 +254,6 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 			double value = MissingDouble();
 
-			if (IsMissingValue({T850, T700, T500, TD850, TD700}))
-			{
-				continue;
-			}
-
 			value = metutil::KI_(T850, T700, T500, TD850, TD700);
 			myTargetInfo->Param(KIParam);
 			myTargetInfo->Value(value);
@@ -287,13 +282,10 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				assert(!IsMissing(TD500m));
 				assert(!IsMissing(P500m));
 
-				if (!IsMissingValue({T500m, TD500m, P500m}))
-				{
-					value = metutil::LI_(T500, T500m, TD500m, P500m);
+				value = metutil::LI_(T500, T500m, TD500m, P500m);
 
-					myTargetInfo->Param(LIParam);
-					myTargetInfo->Value(value);
-				}
+				myTargetInfo->Param(LIParam);
+				myTargetInfo->Value(value);
 
 				value = metutil::SI_(T850, T500, TD850);
 				myTargetInfo->Param(SIParam);
@@ -314,21 +306,15 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				assert(!IsMissing(U06));
 				assert(!IsMissing(V06));
 
-				if (!IsMissing(U01) && !IsMissing(V01))
-				{
-					value = metutil::BulkShear_(U01, V01);
+				value = metutil::BulkShear_(U01, V01);
 
-					myTargetInfo->Param(BS01Param);
-					myTargetInfo->Value(value);
-				}
+				myTargetInfo->Param(BS01Param);
+				myTargetInfo->Value(value);
 
-				if (!IsMissing(U06) && !IsMissing(V01))
-				{
-					value = metutil::BulkShear_(U06, V06);
+				value = metutil::BulkShear_(U06, V06);
 
-					myTargetInfo->Param(BS06Param);
-					myTargetInfo->Value(value);
-				}
+				myTargetInfo->Param(BS06Param);
+				myTargetInfo->Value(value);
 			}
 #if 0
 			if (SRHCalculation)

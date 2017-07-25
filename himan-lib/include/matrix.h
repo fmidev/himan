@@ -11,6 +11,7 @@
 #include "himan_common.h"
 #include "serialization.h"
 #include <mutex>
+#include <algorithm>
 
 namespace himan
 {
@@ -382,9 +383,18 @@ class matrix
 		// Replace old missing values in data by new ones
 		for (size_t i = 0; i < itsData.size(); i++)
 		{
-			itsData[i] = (IsMissing(i)) ? theMissingValue : itsData[i];
+			if(IsMissing(i)) itsData[i] = theMissingValue;
 		}
+		/*struct Compare_val
+		{
+  			Compare_val(T x) : x(x) {}
+  			bool operator()(T y) const { return Compare(x,y); }
 
+			private:
+  			T x;
+		};
+		Compare_val Missing(itsMissingValue);
+		std::replace_if(itsData.begin(),itsData.end(),Missing,theMissingValue);*/
 		itsMissingValue = theMissingValue;
 	}
 

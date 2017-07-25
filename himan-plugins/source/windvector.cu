@@ -23,53 +23,47 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 		d_speed[idx] = himan::MissingDouble();
 		if (d_dir) d_dir[idx] = himan::MissingDouble();
 
-		if (!himan::IsMissingDouble(U) && !himan::IsMissingDouble(V))
+		double speed = sqrt(U * U + V * V);
+
+		d_speed[idx] = speed;
+
+		double dir = 0;
+
+		if (opts.target_type != himan::plugin::kGust)
 		{
-			double speed = sqrt(U * U + V * V);
+			int offset = 180;
 
-			d_speed[idx] = speed;
-
-			double dir = 0;
-
-			if (opts.target_type != himan::plugin::kGust)
+			if (opts.target_type == himan::plugin::kSea || opts.target_type == himan::plugin::kIce)
 			{
-				int offset = 180;
-
-				if (opts.target_type == himan::plugin::kSea || opts.target_type == himan::plugin::kIce)
-				{
-					offset = 0;
-				}
-
-				if (speed > 0)
-				{
-					dir = himan::constants::kRad * atan2(U, V) + offset;
-
-					// modulo operator is supposedly slow on cuda ?
-
-					/*
-					 * quote:
-					 *
-					 * Integer division and modulo operation are costly: tens of instructions on devices of
-					 * compute capability 1.x, below 20 instructions on devices of compute capability 2.x and
-					 * higher.
-					 */
-
-					// reduce the angle
-					while (dir > 360)
-					{
-						dir -= 360;
-					}
-
-					// force it to be the positive remainder, so that 0 <= dir < 360
-
-					while (dir < 0)
-					{
-						dir += 360;
-					}
-				}
-
-				d_dir[idx] = round(dir);
+				offset = 0;
 			}
+
+			dir = himan::constants::kRad * atan2(U, V) + offset;
+
+			// modulo operator is supposedly slow on cuda ?
+
+			/*
+			 * quote:
+			 *
+			 * Integer division and modulo operation are costly: tens of instructions on devices of
+			 * compute capability 1.x, below 20 instructions on devices of compute capability 2.x and
+			 * higher.
+			 */
+
+			// reduce the angle
+			while (dir > 360)
+			{
+				dir -= 360;
+			}
+
+			// force it to be the positive remainder, so that 0 <= dir < 360
+
+			while (dir < 0)
+			{
+				dir += 360;
+			}
+
+			d_dir[idx] = round(dir);
 		}
 	}
 }

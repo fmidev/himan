@@ -30,31 +30,15 @@ __global__ void himan::plugin::stability_cuda::Calculate(
 		d_vti[idx] = MissingDouble();
 		d_tti[idx] = MissingDouble();
 
+		d_ki[idx] = himan::metutil::KI_(T850, T700, T500, TD850, TD700);
+		d_cti[idx] = himan::metutil::CTI_(T500, TD850);
+		d_vti[idx] = himan::metutil::VTI_(T850, T500);
+		d_tti[idx] = himan::metutil::TTI_(T850, T500, TD850);  // CTI + VTI
+
 		if (opts.li)
 		{
-			d_li[idx] = MissingDouble();
-			d_si[idx] = MissingDouble();
-		}
-
-		if (opts.bs01)
-		{
-			d_bs01[idx] = MissingDouble();
-			d_bs06[idx] = MissingDouble();
-		}
-
-		if (!IsMissingDouble(T850) && !IsMissingDouble(T700) && !IsMissingDouble(T500) && !IsMissingDouble(TD850) &&
-		    !IsMissingDouble(TD700))
-		{
-			d_ki[idx] = himan::metutil::KI_(T850, T700, T500, TD850, TD700);
-			d_cti[idx] = himan::metutil::CTI_(T500, TD850);
-			d_vti[idx] = himan::metutil::VTI_(T850, T500);
-			d_tti[idx] = himan::metutil::TTI_(T850, T500, TD850);  // CTI + VTI
-
-			if (opts.li)
-			{
-				d_li[idx] = himan::metutil::LI_(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx]);
-				d_si[idx] = himan::metutil::SI_(T850, T500, TD850);
-			}
+			d_li[idx] = himan::metutil::LI_(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx]);
+			d_si[idx] = himan::metutil::SI_(T850, T500, TD850);
 		}
 
 		if (opts.bs01)
@@ -64,11 +48,8 @@ __global__ void himan::plugin::stability_cuda::Calculate(
 			double u06 = d_u06[idx];
 			double v06 = d_v06[idx];
 
-			if (!IsMissingDouble(u01) && !IsMissingDouble(v01) && !IsMissingDouble(u06) && !IsMissingDouble(v06))
-			{
-				d_bs01[idx] = himan::metutil::BulkShear_(u01, v01);
-				d_bs06[idx] = himan::metutil::BulkShear_(u06, v06);
-			}
+			d_bs01[idx] = himan::metutil::BulkShear_(u01, v01);
+			d_bs06[idx] = himan::metutil::BulkShear_(u06, v06);
 		}
 	}
 }

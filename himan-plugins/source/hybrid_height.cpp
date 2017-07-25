@@ -155,8 +155,6 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 		double GP = tup.get<1>();
 		double zeroGP = tup.get<2>();
 
-		if (IsMissingValue({GP, zeroGP})) continue;
-
 		result = (GP - zeroGP) * himan::constants::kIg;
 	}
 
