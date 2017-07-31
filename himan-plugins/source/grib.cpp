@@ -1638,12 +1638,7 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 #endif
 	{
 		size_t len = itsGrib->Message().ValuesLength();
-
-		double* d = itsGrib->Message().Values();
-
-		dm.Set(d, len);
-
-		free(d);
+		itsGrib->Message().GetValues(dm.ValuesAsPOD(), &len);
 
 		if (decodePrecipitationForm)
 		{
