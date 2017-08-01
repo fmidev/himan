@@ -236,24 +236,12 @@ class matrix
 	 *
 	 * @param arr Pointer to array of values
 	 * @param len Length of the array
-	 *
-	 * @return Always true
-	 * @todo Return void ?
 	 */
 
-	bool Set(T* arr, size_t len)
+	void Set(T* arr, size_t len)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
-
-		assert(itsData.size() == len);
-
-		if (itsData.size() != len)
-		{
-			return false;
-		}
-
 		itsData.assign(arr, arr + len);
-		return true;
 	}
 
 	/**
@@ -262,19 +250,11 @@ class matrix
 	 * The size of the new data must be equal to size of old data
 	 *
 	 * @param theData
-	 * @return
 	 */
-	bool Set(const std::vector<T>& theData)
+	void Set(const std::vector<T>& theData)
 	{
 		assert(itsData.size() == theData.size());
-
-		if (itsData.size() != theData.size())
-		{
-			return false;
-		}
 		itsData = theData;
-
-		return true;
 	}
 
 	/**
@@ -288,26 +268,14 @@ class matrix
 	 * @param y Y index
 	 * @param z Z index
 	 * @param theValue The value
-	 *
-	 * @return Always true
-	 * @todo Return void ?
 	 */
 
-	bool Set(size_t x, size_t y, size_t z, T theValue)
+	void Set(size_t x, size_t y, size_t z, T theValue)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
-
 		size_t index = Index(x, y, z);
 		assert(index < itsData.size());
-
-		if (index >= itsData.size())
-		{
-			return false;
-		}
-
 		itsData[index] = theValue;
-
-		return true;
 	}
 
 	/**
@@ -324,9 +292,7 @@ class matrix
 	void Set(size_t theIndex, T theValue)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
-
 		assert(theIndex < itsData.size());
-
 		itsData[theIndex] = theValue;
 	}
 
