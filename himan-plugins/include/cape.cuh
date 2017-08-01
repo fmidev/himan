@@ -15,11 +15,7 @@
  * that are called from CPU and GPU code.
  */
 
-#ifdef __CUDACC__
 #define LINEAR himan::numerical_functions::interpolation::Linear
-#else
-#define LINEAR NFmiInterpolation::Linear
-#endif
 
 namespace CAPE
 {

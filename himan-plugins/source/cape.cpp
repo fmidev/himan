@@ -4,7 +4,6 @@
  */
 
 #include "cape.h"
-#include "NFmiInterpolation.h"
 #include "logger_factory.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
@@ -24,6 +23,7 @@ const unsigned char FCAPE3km = (1 << 0);
 
 using namespace std;
 using namespace himan::plugin;
+using namespace himan::numerical_functions;
 using himan::IsMissingDouble;
 
 #ifdef DEBUG
@@ -1434,8 +1434,8 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 				// Linearly interpolate temperature and humidity values to 600hPa, to check
 				// if highest theta e is found there
 
-				T = NFmiInterpolation::Linear(600., P, prevPInfo->Value(), T, prevTInfo->Value());
-				RH = NFmiInterpolation::Linear(600., P, prevPInfo->Value(), RH, prevRHInfo->Value());
+				T = interpolation::Linear(600., P, prevPInfo->Value(), T, prevTInfo->Value());
+				RH = interpolation::Linear(600., P, prevPInfo->Value(), RH, prevRHInfo->Value());
 
 				P = 600.;
 			}
