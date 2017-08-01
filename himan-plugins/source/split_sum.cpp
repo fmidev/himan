@@ -6,7 +6,7 @@
 #include "split_sum.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
@@ -54,7 +54,7 @@ split_sum::split_sum()
 {
 	itsClearTextFormula = "Hourly_sum = SUM_cur - SUM_prev; Rate = (SUM_cur - SUM_prev) / step";
 
-	itsLogger = logger_factory::Instance()->GetLog("split_sum");
+	itsLogger = logger("split_sum");
 
 	// Define source parameters for each output parameter
 
@@ -325,7 +325,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (params.empty())
 	{
-		itsLogger->Trace("No parameter definition given, defaulting to rr6h");
+		itsLogger.Trace("No parameter definition given, defaulting to rr6h");
 
 		param parm("RR-6-MM", 355, 0, 1, 8);
 
@@ -393,11 +393,11 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("splitSumSubThread#" + subThreadIndex);
+	auto myThreadedLogger = logger("splitSumSubThread#" + subThreadIndex);
 
-	myThreadedLogger->Info("Calculating parameter " + myParamName + " time " +
-	                       static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating parameter " + myParamName + " time " +
+						  static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
+						  static_cast<string>(forecastLevel));
 
 	bool isRadiationCalculation =
 	    (myParamName == "RADGLO-WM2" || myParamName == "RADLW-WM2" || myParamName == "RTOPLW-WM2" ||
@@ -418,8 +418,8 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	{
 		// This is the first time step, calculation can not be done
 
-		myThreadedLogger->Info("This is the first time step -- not calculating " + myParamName + " for step " +
-		                       boost::lexical_cast<string>(forecastTime.Step()));
+		myThreadedLogger.Info("This is the first time step -- not calculating " + myParamName + " for step " +
+							  boost::lexical_cast<string>(forecastTime.Step()));
 		return;
 	}
 
@@ -487,13 +487,13 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	{
 		// Data was not found
 
-		myThreadedLogger->Warning("Data not found: not calculating " + myTargetInfo->Param().Name() + " for step " +
-		                          boost::lexical_cast<string>(myTargetInfo->Time().Step()));
+		myThreadedLogger.Warning("Data not found: not calculating " + myTargetInfo->Param().Name() + " for step " +
+								 boost::lexical_cast<string>(myTargetInfo->Time().Step()));
 		return;
 	}
 
-	myThreadedLogger->Trace("Previous data step is " + boost::lexical_cast<string>(prevSumInfo->Time().Step()));
-	myThreadedLogger->Trace("Current/next data step is " + boost::lexical_cast<string>(curSumInfo->Time().Step()));
+	myThreadedLogger.Trace("Previous data step is " + boost::lexical_cast<string>(prevSumInfo->Time().Step()));
+	myThreadedLogger.Trace("Current/next data step is " + boost::lexical_cast<string>(curSumInfo->Time().Step()));
 
 	double scaleFactor = 1.;
 
@@ -529,8 +529,8 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		}
 		else
 		{
-			myThreadedLogger->Error("Unknown time resolution: " +
-			                        string(HPTimeResolutionToString.at(myTargetInfo->Time().StepResolution())));
+			myThreadedLogger.Error("Unknown time resolution: " +
+								   string(HPTimeResolutionToString.at(myTargetInfo->Time().StepResolution())));
 			return;
 		}
 	}
@@ -578,9 +578,9 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		sum *= scaleFactor;
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " +
+						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataForRate(
@@ -613,21 +613,21 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 	}
 	else
 	{
-		itsLogger->Debug("Configuration file does not have key 'step': trying to guess correct step");
+		itsLogger.Debug("Configuration file does not have key 'step': trying to guess correct step");
 	}
 
 	curInfo = FetchSourceData(myTargetInfo, myTargetInfo->Time());
 
 	if (curInfo && prevInfo)
 	{
-		itsLogger->Debug("Found previous and current data");
+		itsLogger.Debug("Found previous and current data");
 		return make_pair(prevInfo, curInfo);
 	}
 
 	// 2. Data was not found on the requested steps. Now we have to scan the database
 	// for data which is slow.
 
-	itsLogger->Debug("Scanning database for source data");
+	itsLogger.Debug("Scanning database for source data");
 
 	int maxSteps = 6;  // by default look for 6 hours forward or backward
 	step = 1;          // by default the difference between time steps is one (ie. one hour))
@@ -642,11 +642,11 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 		                    HPTimeResolutionToString.at(timeResolution));
 	}
 
-	itsLogger->Trace("Target time is " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
+	itsLogger.Trace("Target time is " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
 
 	if (!prevInfo)
 	{
-		itsLogger->Debug("Searching for previous data");
+		itsLogger.Debug("Searching for previous data");
 
 		// start going backwards in time and search for the
 		// first data that exists
@@ -662,19 +662,19 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 				continue;
 			}
 
-			itsLogger->Debug("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
+			itsLogger.Debug("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
 			prevInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
 
 			if (prevInfo)
 			{
-				itsLogger->Trace("Found previous data");
+				itsLogger.Trace("Found previous data");
 			}
 		}
 	}
 
 	if (!curInfo)
 	{
-		itsLogger->Debug("Searching for next data");
+		itsLogger.Debug("Searching for next data");
 
 		// start going forwards in time and search for the
 		// first data that exists
@@ -685,12 +685,12 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 		{
 			wantedTimeStep.ValidDateTime().Adjust(timeResolution, step);
 
-			itsLogger->Debug("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
+			itsLogger.Debug("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
 			curInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
 
 			if (curInfo)
 			{
-				itsLogger->Trace("Found current data");
+				itsLogger.Trace("Found current data");
 			}
 		}
 	}

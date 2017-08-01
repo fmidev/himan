@@ -8,7 +8,7 @@
 #include "density.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
@@ -20,7 +20,7 @@ const string itsName("density");
 density::density()
 {
 	itsClearTextFormula = "rho = P / (Rd * T)";
-	itsLogger = logger_factory::Instance()->GetLog(itsName);
+	itsLogger = logger(itsName);
 }
 
 void density::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -45,15 +45,14 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 	const params PParam = {param("P-PA"), param("P-HPA"), param("PGR-PA")};
 	const param TParam("T-K");
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	double PScale = 1;
 
@@ -69,8 +68,8 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 
 	if (!TInfo || (!isPressureLevel && !PInfo))
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -114,7 +113,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 		myTargetInfo->Value(rho);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

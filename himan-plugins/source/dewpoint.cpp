@@ -6,7 +6,7 @@
 #include "dewpoint.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "metutil.h"
 #include <boost/lexical_cast.hpp>
 
@@ -18,7 +18,7 @@ dewpoint::dewpoint()
 	itsClearTextFormula = "Td = T / (1 - (T * ln(RH)*(Rw/L)))";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = logger_factory::Instance()->GetLog("dewpoint");
+	itsLogger = logger("dewpoint");
 }
 
 void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
@@ -49,15 +49,14 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 	const param TParam("T-K");
 	const params RHParam = {param("RH-PRCNT"), param("RH-0TO1")};
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("dewpointThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("dewpointThread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	double TBase = 0;
 	double RHScale = 1;
@@ -67,8 +66,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 	if (!TInfo || !RHInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -79,7 +78,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 	// Special case for harmonie & MEPS
 	if (RHInfo->Param().Unit() != kPrcnt || itsConfiguration->SourceProducer().Id() == 199)
 	{
-		itsLogger->Warning("Unable to determine RH unit, assuming 0 .. 1");
+		itsLogger.Warning("Unable to determine RH unit, assuming 0 .. 1");
 		RHScale = 100.0;
 	}
 
@@ -126,9 +125,9 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 #ifdef HAVE_CUDA

@@ -1,6 +1,5 @@
 #include "lagged_ensemble.h"
 
-#include "logger_factory.h"
 #include "plugin_factory.h"
 #include "util.h"
 
@@ -32,7 +31,7 @@ lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsemble
 		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<double>(i)));
 	}
 
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("lagged_ensemble"));
+	itsLogger = logger("lagged_ensemble");
 
 	itsForecasts.reserve(itsExpectedEnsembleSize * itsNumberOfSteps);
 }
@@ -54,7 +53,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 	int missing = 0;
 	int loaded = 0;
 
-	itsLogger->Info("Fetching for " + std::to_string(itsNumberOfSteps) + " timesteps with lag " + std::to_string(lag));
+	itsLogger.Info("Fetching for " + std::to_string(itsNumberOfSteps) + " timesteps with lag " + std::to_string(lag));
 
 	// Start from the 'earliest' origin time
 	for (int currentStep = static_cast<int>(itsNumberOfSteps) - 1; currentStep >= 0; currentStep--)
@@ -77,7 +76,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 			{
 				if (e != kFileDataNotFound)
 				{
-					itsLogger->Fatal("Unable to proceed");
+					itsLogger.Fatal("Unable to proceed");
 					abort();
 				}
 				else
@@ -96,8 +95,8 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 	{
 		if (numMissingForecasts >= itsMaximumMissingForecasts)
 		{
-			itsLogger->Fatal("maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
-			                 std::to_string(itsMaximumMissingForecasts) + " reached, aborting");
+			itsLogger.Fatal("maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
+			                std::to_string(itsMaximumMissingForecasts) + " reached, aborting");
 			abort();
 		}
 	}
@@ -105,13 +104,13 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 	{
 		if (numMissingForecasts > 0)
 		{
-			itsLogger->Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
-			                 std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
+			itsLogger.Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
+			                std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
 			abort();
 		}
 	}
-	itsLogger->Info("succesfully loaded " + std::to_string(numLoadedForecasts) + "/" +
-	                std::to_string(itsDesiredForecasts.size()) + " fields");
+	itsLogger.Info("succesfully loaded " + std::to_string(numLoadedForecasts) + "/" +
+	               std::to_string(itsDesiredForecasts.size()) + " fields");
 }
 
 HPTimeResolution lagged_ensemble::LagResolution() const { return itsLagResolution; }

@@ -120,7 +120,7 @@ class grid
 
 	std::vector<double> itsAB;
 
-	std::unique_ptr<logger> itsLogger;
+	logger itsLogger;
 
 	HPScanningMode itsScanningMode;
 	std::unique_ptr<packed_data> itsPackedData;  //<! Variable to hold packed data

@@ -7,7 +7,7 @@
 
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "pop.h"
@@ -26,7 +26,7 @@ pop::pop()
       itsHarmonieGeom("HARMONIE022"),
       itsGFSGeom("GFS0250")
 {
-	itsLogger = logger_factory::Instance()->GetLog("pop");
+	itsLogger = logger("pop");
 }
 
 void pop::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -103,11 +103,10 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	forecast_time forecastTime = myTargetInfo->Time();
 	const level forecastLevel = myTargetInfo->Level();
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("popThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("popThread #" + boost::lexical_cast<string>(threadIndex));
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                        static_cast<string>(forecastLevel));
+	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+						   static_cast<string>(forecastLevel));
 
 	vector<double> PEPS, Hirlam, Harmonie, GFS, EC, ECprev, ECprob1, ECprob01, ECfract50, ECfract75;
 
@@ -131,7 +130,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			myThreadedLogger->Error("ECMWF deterministic precipitation data not found");
+			myThreadedLogger.Error("ECMWF deterministic precipitation data not found");
 		}
 
 		return;
@@ -573,7 +572,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Grid()->Data(smoothenedResult);
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

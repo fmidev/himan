@@ -5,7 +5,7 @@
 
 #include "cache.h"
 #include "info.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <time.h>
@@ -17,7 +17,7 @@ typedef lock_guard<mutex> Lock;
 
 std::mutex itsCheckMutex;
 
-cache::cache() { itsLogger = logger_factory::Instance()->GetLog("cache"); }
+cache::cache() { itsLogger = logger("cache"); }
 string cache::UniqueName(const info& info)
 {
 	string producer_id = boost::lexical_cast<string>(info.Producer().Id());
@@ -64,7 +64,7 @@ void cache::SplitToPool(info& anInfo, bool pin)
 		{
 			// New item, but only one thread should insert it (prevent race condition)
 
-			itsLogger->Trace("Data with key " + uniqueName + " already exists at cache");
+			itsLogger.Trace("Data with key " + uniqueName + " already exists at cache");
 
 			// Update timestamp of this cache item
 			cache_pool::Instance()->UpdateTime(uniqueName);
@@ -75,7 +75,7 @@ void cache::SplitToPool(info& anInfo, bool pin)
 #ifdef HAVE_CUDA
 	if (localInfo.Grid()->IsPackedData())
 	{
-		itsLogger->Trace("Removing packed data from cached info");
+		itsLogger.Trace("Removing packed data from cached info");
 		localInfo.Grid()->PackedData().Clear();
 	}
 #endif
@@ -117,7 +117,7 @@ vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options)
 	if (cache_pool::Instance()->Find(uniqueName))
 	{
 		info.push_back(cache_pool::Instance()->GetInfo(uniqueName));
-		itsLogger->Trace("Found matching data for " + uniqueName);
+		itsLogger.Trace("Found matching data for " + uniqueName);
 	}
 
 	return info;
@@ -127,10 +127,7 @@ void cache::Clean() { cache_pool::Instance()->Clean(); }
 size_t cache::Size() const { return cache_pool::Instance()->Size(); }
 cache_pool* cache_pool::itsInstance = NULL;
 
-cache_pool::cache_pool() : itsCacheLimit(-1)
-{
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("cache_pool"));
-}
+cache_pool::cache_pool() : itsCacheLimit(-1) { itsLogger = logger("cache_pool"); }
 
 cache_pool* cache_pool::Instance()
 {
@@ -154,7 +151,7 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 	item.pinned = pin;
 
 	itsCache.insert(pair<string, cache_item>(uniqueName, item));
-	itsLogger->Trace("Data added to cache with name: " + uniqueName + ", pinned: " + boost::lexical_cast<string>(pin));
+	itsLogger.Trace("Data added to cache with name: " + uniqueName + ", pinned: " + boost::lexical_cast<string>(pin));
 
 	if (itsCacheLimit > -1 && itsCache.size() > static_cast<size_t>(itsCacheLimit))
 	{
@@ -188,9 +185,9 @@ void cache_pool::Clean()
 	assert(!oldestName.empty());
 
 	itsCache.erase(oldestName);
-	itsLogger->Trace("Data cleared from cache: " + oldestName + " with time: " +
-	                 boost::lexical_cast<string>(oldestTime));
-	itsLogger->Trace("Cache size: " + boost::lexical_cast<string>(itsCache.size()));
+	itsLogger.Trace("Data cleared from cache: " + oldestName +
+	                " with time: " + boost::lexical_cast<string>(oldestTime));
+	itsLogger.Trace("Cache size: " + boost::lexical_cast<string>(itsCache.size()));
 }
 
 shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)

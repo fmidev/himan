@@ -4,7 +4,7 @@
  */
 
 #include "plugin_factory.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "util.h"
 #include <boost/regex.hpp>
 #include <cstdlib>
@@ -30,7 +30,7 @@ plugin_factory* plugin_factory::Instance()
 }
 
 plugin_factory::plugin_factory()
-    : itsPluginSearchPath(), itsLogger(logger_factory::Instance()->GetLog("plugin_factory"))
+    : itsPluginSearchPath(), itsLogger(logger("plugin_factory"))
 {
 	const char* path = std::getenv("HIMAN_LIBRARY_PATH");
 
@@ -42,7 +42,7 @@ plugin_factory::plugin_factory()
 	}
 	else
 	{
-		itsLogger->Trace(
+		itsLogger.Trace(
 		    "Environment variable HIMAN_LIBRARY_PATH not set -- search plugins only from pre-defined locations");
 	}
 
@@ -95,7 +95,7 @@ void plugin_factory::ReadPlugins()
 
 	for (size_t i = 0; i < itsPluginSearchPath.size(); i++)
 	{
-		itsLogger->Trace("Search plugins from " + itsPluginSearchPath[i]);
+		itsLogger.Trace("Search plugins from " + itsPluginSearchPath[i]);
 
 		path p(itsPluginSearchPath[i]);
 
@@ -115,7 +115,7 @@ void plugin_factory::ReadPlugins()
 
 		catch (const filesystem_error& ex)
 		{
-			itsLogger->Error(ex.what());
+			itsLogger.Error(ex.what());
 		}
 	}
 }
@@ -142,7 +142,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
 	if (!theLibraryHandle)
 	{
-		itsLogger->Error("Unable to load plugin '" + thePluginFileName + "': " + std::string(dlerror()));
+		itsLogger.Error("Unable to load plugin '" + thePluginFileName + "': " + std::string(dlerror()));
 		return false;
 	}
 
@@ -152,7 +152,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
 	if (!create_plugin)
 	{
-		itsLogger->Error("Unable to load symbol: " + std::string(dlerror()));
+		itsLogger.Error("Unable to load symbol: " + std::string(dlerror()));
 		return false;
 	}
 
@@ -162,8 +162,8 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 	{
 		if (p->ClassName() == itsPluginFactory[i]->Plugin()->ClassName())
 		{
-			itsLogger->Trace("Plugin '" + p->ClassName() + "' found more than once, skipping one found from '" +
-			                 thePluginFileName + "'");
+			itsLogger.Trace("Plugin '" + p->ClassName() + "' found more than once, skipping one found from '" +
+							thePluginFileName + "'");
 			dlclose(theLibraryHandle);
 
 			return true;
@@ -174,7 +174,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
 	itsPluginFactory.push_back(mc);
 
-	itsLogger->Trace("Load " + thePluginFileName);
+	itsLogger.Trace("Load " + thePluginFileName);
 
 	return true;
 }

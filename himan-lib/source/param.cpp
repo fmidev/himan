@@ -4,7 +4,6 @@
  */
 
 #include "param.h"
-#include "logger_factory.h"
 
 using namespace himan;
 using namespace std;

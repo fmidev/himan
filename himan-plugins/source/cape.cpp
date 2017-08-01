@@ -5,7 +5,7 @@
 
 #include "cape.h"
 #include "NFmiInterpolation.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "util.h"
@@ -151,7 +151,7 @@ cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt)
 {
 	itsClearTextFormula = "<multiple algorithms>";
 
-	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("cape"));
+	itsLogger = logger("cape");
 }
 
 void cape::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -245,12 +245,11 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	auto sourceLevel = myTargetInfo->Level();
 
-	auto mySubThreadedLogger =
-	    logger_factory::Instance()->GetLog("siThread#" + boost::lexical_cast<string>(threadIndex) + "Version" +
-	                                       boost::lexical_cast<string>(static_cast<int>(sourceLevel.Type())));
+	auto mySubThreadedLogger = logger("siThread#" + boost::lexical_cast<string>(threadIndex) + "Version" +
+	                                  boost::lexical_cast<string>(static_cast<int>(sourceLevel.Type())));
 
-	mySubThreadedLogger->Info("Calculating source level type " + HPLevelTypeToString.at(sourceLevel.Type()) +
-	                          " for time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
+	mySubThreadedLogger.Info("Calculating source level type " + HPLevelTypeToString.at(sourceLevel.Type()) +
+	                         " for time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
 
 	// 1.
 
@@ -284,11 +283,11 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Stop();
 
-	mySubThreadedLogger->Info("Source data calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
+	mySubThreadedLogger.Info("Source data calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
 
-	mySubThreadedLogger->Debug("Source temperature: " + ::PrintMean(get<0>(sourceValues)));
-	mySubThreadedLogger->Debug("Source dewpoint: " + ::PrintMean(get<1>(sourceValues)));
-	mySubThreadedLogger->Debug("Source pressure: " + ::PrintMean(get<2>(sourceValues)));
+	mySubThreadedLogger.Debug("Source temperature: " + ::PrintMean(get<0>(sourceValues)));
+	mySubThreadedLogger.Debug("Source dewpoint: " + ::PrintMean(get<1>(sourceValues)));
+	mySubThreadedLogger.Debug("Source pressure: " + ::PrintMean(get<2>(sourceValues)));
 
 	// 2.
 
@@ -298,10 +297,10 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Stop();
 
-	mySubThreadedLogger->Info("LCL calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
+	mySubThreadedLogger.Info("LCL calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
 
-	mySubThreadedLogger->Debug("LCL temperature: " + ::PrintMean(LCL.first));
-	mySubThreadedLogger->Debug("LCL pressure: " + ::PrintMean(LCL.second));
+	mySubThreadedLogger.Debug("LCL temperature: " + ::PrintMean(LCL.first));
+	mySubThreadedLogger.Debug("LCL pressure: " + ::PrintMean(LCL.second));
 
 	myTargetInfo->Param(LCLTParam);
 	myTargetInfo->Data().Set(LCL.first);
@@ -328,15 +327,15 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Stop();
 
-	mySubThreadedLogger->Info("LFC calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
+	mySubThreadedLogger.Info("LFC calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
 
 	if (LFC.first.empty())
 	{
 		return;
 	}
 
-	mySubThreadedLogger->Debug("LFC temperature: " + ::PrintMean(LFC.first));
-	mySubThreadedLogger->Debug("LFC pressure: " + ::PrintMean(LFC.second));
+	mySubThreadedLogger.Debug("LFC temperature: " + ::PrintMean(LFC.first));
+	mySubThreadedLogger.Debug("LFC pressure: " + ::PrintMean(LFC.second));
 
 	myTargetInfo->Param(LFCTParam);
 	myTargetInfo->Data().Set(LFC.first);
@@ -366,7 +365,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Stop();
 
-	mySubThreadedLogger->Info("CAPE and CIN calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
+	mySubThreadedLogger.Info("CAPE and CIN calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
 
 	// Sometimes CAPE area is infinitely small -- so that CAPE is zero but LFC is found. In this case set all derivative
 	// parameters missing.
@@ -416,7 +415,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 #endif
 
 	// Do smoothening for CAPE & CIN parameters
-	mySubThreadedLogger->Trace("Smoothening");
+	mySubThreadedLogger.Trace("Smoothening");
 
 	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1. / 9.);
 
@@ -437,13 +436,13 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	capeInfo->Grid()->Data(filtered);
 
 	capeInfo->Param(CAPEParam);
-	mySubThreadedLogger->Debug("CAPE: " + ::PrintMean(VEC(capeInfo)));
+	mySubThreadedLogger.Debug("CAPE: " + ::PrintMean(VEC(capeInfo)));
 	capeInfo->Param(CAPE1040Param);
-	mySubThreadedLogger->Debug("CAPE1040: " + ::PrintMean(VEC(capeInfo)));
+	mySubThreadedLogger.Debug("CAPE1040: " + ::PrintMean(VEC(capeInfo)));
 	capeInfo->Param(CAPE3kmParam);
-	mySubThreadedLogger->Debug("CAPE3km: " + ::PrintMean(VEC(capeInfo)));
+	mySubThreadedLogger.Debug("CAPE3km: " + ::PrintMean(VEC(capeInfo)));
 	cinInfo->Param(CINParam);
-	mySubThreadedLogger->Debug("CIN: " + ::PrintMean(VEC(cinInfo)));
+	mySubThreadedLogger.Debug("CIN: " + ::PrintMean(VEC(cinInfo)));
 }
 
 void cape::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsource, const vector<double>& Psource,
@@ -623,8 +622,8 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 		foundCount = count(found.begin(), found.end(), true);
 
-		itsLogger->Trace("CIN read for " + boost::lexical_cast<string>(foundCount) + "/" +
-		                 boost::lexical_cast<string>(found.size()) + " gridpoints");
+		itsLogger.Trace("CIN read for " + boost::lexical_cast<string>(foundCount) + "/" +
+		                boost::lexical_cast<string>(found.size()) + " gridpoints");
 
 		curLevel.Value(curLevel.Value() - 1);
 
@@ -865,8 +864,8 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			if (val & FCAPE) foundCount++;
 		}
 
-		itsLogger->Trace("CAPE read for " + boost::lexical_cast<string>(foundCount) + "/" +
-		                 boost::lexical_cast<string>(found.size()) + " gridpoints");
+		itsLogger.Trace("CAPE read for " + boost::lexical_cast<string>(foundCount) + "/" +
+		                boost::lexical_cast<string>(found.size()) + " gridpoints");
 		prevZenvInfo = ZenvInfo;
 		prevTenvInfo = TenvInfo;
 		prevPenvInfo = PenvInfo;
@@ -916,7 +915,7 @@ pair<vector<double>, vector<double>> cape::GetLFC(shared_ptr<info> myTargetInfo,
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	itsLogger->Trace("Searching environment temperature for starting pressure");
+	itsLogger.Trace("Searching environment temperature for starting pressure");
 
 	vector<double> TenvLCL;
 
@@ -986,7 +985,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	size_t foundCount = count(found.begin(), found.end(), true);
 
-	itsLogger->Debug("Found " + boost::lexical_cast<string>(foundCount) + " gridpoints that have LCL=LFC");
+	itsLogger.Debug("Found " + boost::lexical_cast<string>(foundCount) + " gridpoints that have LCL=LFC");
 
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
 	// among all grid points; most commonly it's the lowest hybrid level
@@ -1108,8 +1107,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		curLevel.Value(curLevel.Value() - 1);
 
 		foundCount = count(found.begin(), found.end(), true);
-		itsLogger->Trace("LFC processed for " + boost::lexical_cast<string>(foundCount) + "/" +
-		                 boost::lexical_cast<string>(found.size()) + " grid points");
+		itsLogger.Trace("LFC processed for " + boost::lexical_cast<string>(foundCount) + "/" +
+		                boost::lexical_cast<string>(found.size()) + " grid points");
 
 		prevPenvInfo = PenvInfo;
 		prevTenvInfo = TenvInfo;
@@ -1295,8 +1294,8 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 		assert(tp.HeightsCrossed() == mr.HeightsCrossed());
 
-		itsLogger->Debug("Data read " + boost::lexical_cast<string>(foundCount) + "/" +
-		                 boost::lexical_cast<string>(found.size()) + " gridpoints");
+		itsLogger.Debug("Data read " + boost::lexical_cast<string>(foundCount) + "/" +
+		                boost::lexical_cast<string>(found.size()) + " gridpoints");
 
 		for (size_t i = 0; i < found.size(); i++)
 		{
@@ -1462,8 +1461,8 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 			break;
 		}
 
-		itsLogger->Trace("Max ThetaE processed for " + boost::lexical_cast<string>(foundCount) + "/" +
-		                 boost::lexical_cast<string>(found.size()) + " grid points");
+		itsLogger.Trace("Max ThetaE processed for " + boost::lexical_cast<string>(foundCount) + "/" +
+		                boost::lexical_cast<string>(found.size()) + " grid points");
 
 		curLevel.Value(curLevel.Value() - 1);
 

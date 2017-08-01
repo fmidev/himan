@@ -5,7 +5,7 @@
 #include "visibility.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
 #include <boost/lexical_cast.hpp>
@@ -46,7 +46,7 @@ double VisibilityInMist(double stN, double stH, double RR, double RH);
 visibility::visibility()
 {
 	itsClearTextFormula = "<algorithm>";
-	itsLogger = logger_factory::Instance()->GetLog("visibility");
+	itsLogger = logger("visibility");
 }
 
 void visibility::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -66,15 +66,14 @@ void visibility::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("visibilityThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("visibilityThread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	info_t RHInfo = Fetch(forecastTime, RHLevel, RHParam, forecastType, false);
 	info_t PFInfo = Fetch(forecastTime, NLevel, PFParams, forecastType, false);
@@ -82,8 +81,8 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	if (!RRInfo || !RHInfo || !PFInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -171,9 +170,9 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		result = fmin(visMist, visPre);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 double VisibilityInRain(double stN, double stH, double RR, double RH, int PF)

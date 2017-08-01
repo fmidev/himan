@@ -6,7 +6,7 @@
 #include "forecast_time.h"
 #include "json_parser.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
 #include <boost/lexical_cast.hpp>
@@ -29,7 +29,7 @@ transformer::transformer()
 	itsClearTextFormula = "target_param = source_param * itsScale + itsBase";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = logger_factory::Instance()->GetLog("transformer");
+	itsLogger = logger("transformer");
 }
 
 vector<himan::level> transformer::LevelsFromString(const string& levelType, const string& levelValues) const
@@ -59,7 +59,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger->Warning("Base not specified, using default value 0.0");
+		itsLogger.Warning("Base not specified, using default value 0.0");
 	}
 
 	if (!itsConfiguration->GetValue("scale").empty())
@@ -68,7 +68,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger->Warning("Scale not specified, using default value 1.0");
+		itsLogger.Warning("Scale not specified, using default value 1.0");
 	}
 
 	if (!itsConfiguration->GetValue("target_univ_id").empty())
@@ -77,7 +77,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger->Warning("Target_univ_id not specified, using default value 9999");
+		itsLogger.Warning("Target_univ_id not specified, using default value 9999");
 	}
 
 	if (!itsConfiguration->GetValue("target_param").empty())
@@ -96,7 +96,7 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		itsSourceParam = itsTargetParam;
-		itsLogger->Warning("Source_param not specified, source_param set to target_param");
+		itsLogger.Warning("Source_param not specified, source_param set to target_param");
 	}
 
 	if (!itsConfiguration->GetValue("source_level_type").empty())
@@ -105,7 +105,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger->Warning("Source_level not specified, source_level set to target level");
+		itsLogger.Warning("Source_level not specified, source_level set to target level");
 	}
 
 	if (!itsConfiguration->GetValue("source_levels").empty())
@@ -114,7 +114,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger->Warning("Source_levels not specified, source_levels set to target levels");
+		itsLogger.Warning("Source_levels not specified, source_levels set to target levels");
 	}
 
 	// Check apply land sea mask parameter
@@ -209,15 +209,14 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	param InputParam(itsSourceParam);
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("transformerThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("transformerThread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	auto f = GET_PLUGIN(fetcher);
 
@@ -236,8 +235,8 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	}
 	catch (HPExceptionType& e)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -284,9 +283,9 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 #ifdef HAVE_CUDA

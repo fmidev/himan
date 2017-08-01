@@ -6,7 +6,7 @@
 #include "cloud_code.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "metutil.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
@@ -19,7 +19,7 @@ const string itsName("cloud_code");
 cloud_code::cloud_code()
 {
 	itsClearTextFormula = "algorithm>";
-	itsLogger = logger_factory::Instance()->GetLog(itsName);
+	itsLogger = logger(itsName);
 }
 
 void cloud_code::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -53,14 +53,14 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	level RH500Level(himan::kPressure, 500, "PRESSURE");
 
 	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
+	    logger(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, forecastType, false);
 	info_t NInfo = Fetch(forecastTime, NKLevel, NParams, forecastType, false);
@@ -72,8 +72,8 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	if (!T0mInfo || !NInfo || !KInfo || !T850Info || !RH850Info || !RH700Info || !RH500Info)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -83,7 +83,7 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	if (RH500Info->Param().Unit() != kPrcnt)
 	{
-		itsLogger->Info("RH parameter unit not kPrcnt, assuming 0 .. 1");
+		itsLogger.Info("RH parameter unit not kPrcnt, assuming 0 .. 1");
 		percentMultiplier = 100.0;
 	}
 
@@ -328,7 +328,7 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		myTargetInfo->Value(cloudCode);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }

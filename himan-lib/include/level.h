@@ -14,7 +14,6 @@ class NFmiLevel;
 
 namespace himan
 {
-class logger;
 
 class level
 {

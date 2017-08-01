@@ -364,7 +364,7 @@ class compiled_plugin_base
 	bool itsDimensionsRemaining;
 
    private:
-	std::unique_ptr<logger> itsBaseLogger;
+	logger itsBaseLogger;
 	bool itsPluginIsInitialized;
 	HPDimensionType itsPrimaryDimension;
 };

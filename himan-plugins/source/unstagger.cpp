@@ -10,7 +10,7 @@
 #include "forecast_time.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "matrix.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
@@ -30,7 +30,7 @@ unstagger::unstagger()
 {
 	itsClearTextFormula = "U(i) = (U(i-0.5) + U(i+0.5)) / 2";
 
-	itsLogger = logger_factory::Instance()->GetLog("unstagger");
+	itsLogger = logger("unstagger");
 }
 
 void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -83,12 +83,11 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("unstagger Thread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("unstagger Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	if (myTargetInfo->Grid()->Class() != kRegularGrid)
 	{
-		itsLogger->Error("Unable to stagger irregular grids");
+		itsLogger.Error("Unable to stagger irregular grids");
 		return;
 	}
 
@@ -99,8 +98,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                        static_cast<string>(forecastLevel));
+	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	auto f = GET_PLUGIN(fetcher);
 
@@ -131,8 +130,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		{
 			throw runtime_error(ClassName() + ": Unable to proceed");
 		}
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                       static_cast<string>(forecastLevel));
+		myThreadedLogger.Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                      static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -224,7 +223,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	c->Insert(*UInfo);
 	c->Insert(*VInfo);
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) +
-	                       "/" + boost::lexical_cast<string>(UInfo->Data().Size() + VInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+	                      boost::lexical_cast<string>(UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(UInfo->Data().Size() + VInfo->Data().Size()));
 }
