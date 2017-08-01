@@ -136,7 +136,7 @@ ostream& grid::Write(std::ostream& file) const
 }
 
 size_t grid::Size() const { throw runtime_error("grid::Size() called"); }
-bool grid::Value(size_t theLocationIndex, double theValue) { return itsData.Set(theLocationIndex, theValue); }
+void grid::Value(size_t theLocationIndex, double theValue) { itsData.Set(theLocationIndex, theValue); }
 double grid::Value(size_t theLocationIndex) const { return double(itsData.At(theLocationIndex)); }
 grid* grid::Clone() const { throw runtime_error("grid::Clone() called"); }
 vector<double> grid::AB() const { return itsAB; }

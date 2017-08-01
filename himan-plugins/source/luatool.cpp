@@ -294,7 +294,7 @@ namespace info_wrapper
 {
 // These are convenience functions for accessing info class contents
 
-bool SetValue(std::shared_ptr<info>& anInfo, int index, double value) { return anInfo->Grid()->Value(--index, value); }
+void SetValue(std::shared_ptr<info>& anInfo, int index, double value) { anInfo->Grid()->Value(--index, value); }
 double GetValue(std::shared_ptr<info>& anInfo, int index) { return anInfo->Grid()->Value(--index); }
 size_t GetLocationIndex(std::shared_ptr<info> anInfo) { return anInfo->LocationIndex() + 1; }
 size_t GetTimeIndex(std::shared_ptr<info> anInfo) { return anInfo->TimeIndex() + 1; }

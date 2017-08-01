@@ -221,7 +221,7 @@ class matrix
 	T* ValuesAsPOD()
 	{
 		assert(itsData.size());
-		return &itsData[0];
+		return itsData.data();
 	}
 
 	std::vector<T>& Values() { return itsData; }
@@ -319,20 +319,15 @@ class matrix
 	 *
 	 * @param theIndex Combined index of the element
 	 * @param theValue The value
-	 *
-	 * @return Always true
-	 * @todo Return void ?
 	 */
 
-	bool Set(size_t theIndex, T theValue)
+	void Set(size_t theIndex, T theValue)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
 
 		assert(theIndex < itsData.size());
 
 		itsData[theIndex] = theValue;
-
-		return true;
 	}
 
 	/**
