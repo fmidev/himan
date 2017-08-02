@@ -473,6 +473,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCuda(false);
 		conf->UseCudaForPacking(false);
 		conf->UseCudaForUnpacking(false);
+		conf->UseCudaForInterpolation(false);
 	}
 
 	conf->CudaDeviceCount(devCount);
