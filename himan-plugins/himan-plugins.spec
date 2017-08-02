@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.6.12
-Release: 2.el7.fmi
+Version: 17.8.1
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -17,7 +17,7 @@ Requires: oracle-instantclient-basic >= 11.2.0.3.0
 Requires: himan-lib >= 17.4.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 17.4.6
+Requires: libfmigrib >= 17.7.31
 Requires: libfmidb >= 17.5.26
 Requires: smartmet-library-newbase >= 17.4.4
 Requires: libpqxx
@@ -36,7 +36,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.5.26
-BuildRequires: libfmigrib-devel >= 17.4.6
+BuildRequires: libfmigrib-devel >= 17.7.31
 BuildRequires: smartmet-library-newbase-devel >= 17.4.4
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -111,6 +111,24 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Aug  1 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.1-1.fmi
+- Removing logger_factory
+- One less memory allocation when reading grib
+* Mon Jul 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.7.17-1.fmi
+- Removing timer_factory
+- Manual ANALYZE when first inserting to radon
+* Wed Jun 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.21-3.fmi
+- Fix for neons grib2 metadata
+* Wed Jun 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.21-2.fmi
+- Fix fractile so that missing data does not stop Himan execution
+* Wed Jun 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.21-1.fmi
+- Previ data fetch optimizations
+- POT version 2.1
+- Fix probability so that missing data does not stop Himan execution
+- Correct thread count for hybrid_height/ensembles
+* Thu Jun 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.15-1.fmi
+- More accurate MOL
+- Cape plugin support for meps
 * Mon Jun 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.12-2.fmi
 - New producer 243 for per-member post-processed ECMWF ENS
 * Mon Jun 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.6.12-1.fmi

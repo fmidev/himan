@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 17.5.23
+Version: 17.8.1
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -63,7 +63,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
-* Mon May 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.23-1.fmi
+* Tue Aug  1 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.1-1.fmi
+- Removing logger_factory
+* Mon Jul 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.7.17-1.fmi
+- Removing timer_factory
+* Tue May 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.23-1.fmi
 - New release
 * Mon May 15 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.5.15-1.fmi
 - New release

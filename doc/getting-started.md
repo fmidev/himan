@@ -1,6 +1,6 @@
 # Getting started
 
-Himan can be either built from source, or installed using pre-built rpm packages (add link here). The latter is recommended for a quick start.
+Himan can be either built from source, or installed using pre-built rpm packages (https://download.fmi.fi/himan). Latter is recommended for a quick start. See also [using Docker images](#Using_Docker_images).
 
 In operative environments Himan relies heavily on a database that's providing all data and metadata. This database schema will be open sourced later this year. In the meanwhile, Himan can be tested using a "no database" mode.
 
@@ -109,3 +109,19 @@ min=0 max=3 size=22500
 ```
 
 Note that seaicing plugin does not separate land points from sea points: the index is mostly zero due to warm conditions on the baltic sea.
+
+<a name="Using_Docker_images"></a>
+
+# Using Docker images
+
+For a really quick start, the example case can be run using a Dockerfile. Note that as Himan is not an interactive program and not a daemon, docker is generally not very suitable for running Himan, but for quick testing it works ok.
+
+
+```
+$ docker build -t himan_test .
+$ docker run -v /tmp:/tmp himan_test
+$ grib_histogram /tmp/ICING-N_height_0_ll_150_150_0_003.grib
+min=0 max=3 size=22500
+ 0:0.3 0.3:0.6 0.6:0.9 0.9:1.2 1.2:1.5 1.5:1.8 1.8:2.1 2.1:2.4 2.4:2.7 2.7:3
+ 21606 0 0 883 0 0 10 0 0 1
+```
