@@ -48,11 +48,7 @@ void radon::Init()
 	}
 }
 
-radon::radon() : itsInit(false), itsRadonDB()
-{
-	itsLogger = logger("radon");
-}
-
+radon::radon() : itsInit(false), itsRadonDB() { itsLogger = logger("radon"); }
 void radon::PoolMaxWorkers(int maxWorkers)
 {
 	itsLogger.Warning("Switching worker pool size to " + std::to_string(maxWorkers));
@@ -273,9 +269,28 @@ vector<string> radon::Files(search_options& options)
 		    " "
 		    "ORDER BY forecast_period, level_id, level_value";
 
-		itsRadonDB->Query(query);
+		vector<string> values;
 
-		vector<string> values = itsRadonDB->FetchRow();
+		try
+		{
+			itsRadonDB->Query(query);
+			values = itsRadonDB->FetchRow();
+		}
+		catch (const pqxx::sql_error& e)
+		{
+			// Sometimes we get errors like:
+			// ERROR:  deadlock detected
+			// DETAIL:  Process 23465 waits for AccessShareLock on relation 35841462 of database 32027825; blocked by
+			// process 23477.
+			//
+			// This is caused when table partitions are dropped while himan is trying to query the table.
+			// As a workaround, re-execute the query.
+
+			itsLogger.Warning("Caught database error: " + string(e.what()));
+			sleep(1);
+			itsRadonDB->Query(query);
+			values = itsRadonDB->FetchRow();
+		}
 
 		if (values.empty())
 		{
@@ -335,8 +350,8 @@ bool radon::SavePrevi(const info& resultInfo)
 	if (levelinfo.empty())
 	{
 		itsLogger.Error("Level information not found from radon for level " +
-						HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
-						boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		                HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+		                to_string(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -346,7 +361,7 @@ bool radon::SavePrevi(const info& resultInfo)
 	if (paraminfo.empty())
 	{
 		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
-						", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		                ", producer " + to_string(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -453,7 +468,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 			gridType = 3;
 			break;
 		default:
-			throw runtime_error("Unsupported projection: " + boost::lexical_cast<string>(resultInfo.Grid()->Type()) +
+			throw runtime_error("Unsupported projection: " + to_string(resultInfo.Grid()->Type()) +
 			                    " " + HPGridTypeToString.at(resultInfo.Grid()->Type()));
 	}
 
@@ -505,8 +520,8 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	if (levelinfo.empty())
 	{
 		itsLogger.Error("Level information not found from radon for level " +
-						HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
-						boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		                HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+		                to_string(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -516,7 +531,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	if (paraminfo.empty())
 	{
 		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
-						", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		                ", producer " + to_string(resultInfo.Producer().Id()));
 		return false;
 	}
 
