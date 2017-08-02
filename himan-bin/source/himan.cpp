@@ -163,7 +163,7 @@ int main(int argc, char** argv)
 
 		plugins.erase(plugins.begin());  // remove configuration and resize container
 
-#if defined DEBUG and defined HAVE_CUDE
+#if defined DEBUG and defined HAVE_CUDA
 		// For 'cuda-memcheck --leak-check full'
 		CUDA_CHECK(cudaDeviceReset());
 #endif
