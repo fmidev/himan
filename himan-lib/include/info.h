@@ -646,10 +646,9 @@ class info
 
 	/**
 	 * @brief Set the data value pointed by the iterators with a new one
-	 * @return True if assignment was succesfull
 	 */
 
-	bool Value(double theValue);
+	void Value(double theValue);
 
 	/**
 	 * @return Data value pointed by the iterators
@@ -766,7 +765,7 @@ inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) 
 	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
 }
 
-inline bool info::Value(double theValue) { return Grid()->Data().Set(itsLocationIndex, theValue); }
+inline void info::Value(double theValue) { Grid()->Data().Set(itsLocationIndex, theValue); }
 inline double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
 typedef std::shared_ptr<info> info_t;
 
