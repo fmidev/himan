@@ -188,13 +188,14 @@ std::vector<double> ensemble::Values() const
 	std::vector<double> ret;
 	ret.reserve(Size());
 
-	for (auto& f : itsForecasts)
-	{
-		ret.push_back(f->Value());
-	}
-
 	// Clients of ensemble shouldn't worry about missing values
-	ret.erase(std::remove(ret.begin(), ret.end(), kFloatMissing), ret.end());
+	std::for_each(itsForecasts.begin(), itsForecasts.end(), [&](const info_t& Info) {
+		const double v = Info->Value();
+		if (v != kFloatMissing)
+		{
+			ret.push_back(v);
+		}
+	});
 
 	return ret;
 }

@@ -10,6 +10,7 @@ Himan is a weather parameter post processing tool.
 * Written in C++11
 * Partial support for GPU's through Cuda
 * Actively developed and supported by the Finnish Meteorological Institute
+* yum repository available for RHEL7
 * Licensed under MIT license
 
 # Parameter list
@@ -36,7 +37,7 @@ Himan is able to produce the following parameters, given required source data:
 * precipitation type (continuous, showers)
 * relative humidity
 * accumulated precipitation and radiation to rates and powers
-* potential temperarute
+* potential temperature
 * pseudo-adiabatic potential temperature
 * equivalent potential temperature
 * vertical velocity in meters per seconds
