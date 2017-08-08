@@ -27,8 +27,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
 struct plugin_timing
 {
 	std::string plugin_name;
-	int order_number;  // plugin order number (if called more than once))
-	size_t time_elapsed;          // elapsed time in ms
+	int order_number;     // plugin order number (if called more than once))
+	size_t time_elapsed;  // elapsed time in ms
 };
 
 int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::string& pluginName)
@@ -353,7 +353,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("threads,j", po::value(&threadCount), "number of started threads")
 		("list-plugins,l", "list all defined plugins")
 		("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
-		("statistics,s", po::value(&statisticsLabel), "record statistics information")
+		("statistics,s", po::value(&statisticsLabel)->implicit_value("Himan"), "record statistics information")
 		("radon,R", "use only radon database")
 		("neons,N", "use only neons database")
 #ifdef HAVE_CUDA
