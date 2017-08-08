@@ -13,7 +13,6 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <iostream>
@@ -1017,7 +1016,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 					stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
 
-					BOOST_FOREACH (double& d, stratusVerticalVelocity)
+					for (double& d : stratusVerticalVelocity)
 					{
 						if (d != kFloatMissing) d *= 1000;
 					}

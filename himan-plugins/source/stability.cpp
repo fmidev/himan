@@ -10,7 +10,6 @@
 #include "metutil.h"
 #include "plugin_factory.h"
 #include <algorithm>  // for std::transform
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <functional>  // for std::plus
@@ -637,7 +636,7 @@ void DumpVector(const vector<double>& vec)
 	double min = 1e38, max = -1e38, sum = 0;
 	size_t count = 0, missing = 0;
 
-	BOOST_FOREACH (double val, vec)
+	for (double val : vec)
 	{
 		if (val == kFloatMissing)
 		{
