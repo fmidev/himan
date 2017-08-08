@@ -54,8 +54,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
 	}
 
-	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 243 ||
-	    itsConfiguration->Info()->Producer().Id() == 260)
+	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 243)
 	{
 		itsUseGeopotential = false;
 
@@ -101,7 +100,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	auto myThreadedLogger = logger(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
-						  static_cast<string>(myTargetInfo->Level()));
+	                      static_cast<string>(myTargetInfo->Level()));
 
 	if (itsUseGeopotential)
 	{
@@ -110,7 +109,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		if (!ret)
 		{
 			myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) +
-									 ", level " + static_cast<string>(myTargetInfo->Level()));
+			                         ", level " + static_cast<string>(myTargetInfo->Level()));
 			return;
 		}
 	}
@@ -121,7 +120,7 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		if (!ret)
 		{
 			myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) +
-									 ", level " + static_cast<string>(myTargetInfo->Level()));
+			                         ", level " + static_cast<string>(myTargetInfo->Level()));
 			return;
 		}
 	}
@@ -129,8 +128,8 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	string deviceType = "CPU";
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	                      boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                      boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
@@ -218,7 +217,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	if (!prevTInfo || !prevPInfo || (!prevHInfo && !firstLevel) || !PInfo || !TInfo)
 	{
 		itsLogger.Error("Source data missing for level " + boost::lexical_cast<string>(myTargetInfo->Level().Value()) +
-						" step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
+		                " step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
 		return false;
 	}
 
@@ -275,7 +274,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	if (myTargetInfo->Data().Size() == myTargetInfo->Data().MissingCount())
 	{
 		itsLogger.Error("All data missing for level " + boost::lexical_cast<string>(myTargetInfo->Level().Value()) +
-						" step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
+		                " step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
 		return false;
 	}
 
