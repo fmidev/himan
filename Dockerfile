@@ -32,4 +32,4 @@ RUN wget \
 
 WORKDIR /tmp
 
-CMD himan -f ../seaicing.json --no-database --param-file ../param-file.txt ../seaicing.grib --no-cuda
+CMD himan -f ../seaicing.json --no-database --param-file ../param-file.txt ../seaicing.grib
