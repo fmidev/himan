@@ -13,7 +13,6 @@
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
 #include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
 #include <boost/thread.hpp>
 
 #ifndef __clang_analyzer__
@@ -73,7 +72,7 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 
 	globals(myL.get())["logger"] = myThreadedLogger;
 
-	BOOST_FOREACH (const std::string& luaFile, itsConfiguration->GetValueList("luafile"))
+	for (const std::string& luaFile : itsConfiguration->GetValueList("luafile"))
 	{
 		if (luaFile.empty())
 		{
