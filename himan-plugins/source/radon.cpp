@@ -652,23 +652,3 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	return true;
 }
-
-map<string, string> radon::Grib1ParameterName(long producer, long fmiParameterId, long codeTableVersion,
-                                              long timeRangeIndicator, long levelId, double level_value)
-{
-	Init();
-
-	map<string, string> paramName = itsRadonDB->GetParameterFromGrib1(producer, codeTableVersion, fmiParameterId,
-	                                                                  timeRangeIndicator, levelId, level_value);
-	return paramName;
-}
-
-map<string, string> radon::Grib2ParameterName(long fmiParameterId, long category, long discipline, long producer,
-                                              long levelId, double level_value)
-{
-	Init();
-
-	map<string, string> paramName =
-	    itsRadonDB->GetParameterFromGrib2(producer, discipline, category, fmiParameterId, levelId, level_value);
-	return paramName;
-}
