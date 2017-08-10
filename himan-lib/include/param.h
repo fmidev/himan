@@ -15,9 +15,9 @@
 #ifndef PARAM_H
 #define PARAM_H
 
-#include "serialization.h"
 #include "aggregation.h"
 #include "himan_common.h"
+#include "serialization.h"
 
 namespace himan
 {
@@ -117,6 +117,13 @@ class param
 	long Id() const;
 	void Id(long theId);
 
+	/**
+	 * @brief Parameter output precision, number of decimals
+	 */
+
+	int Precision() const;
+	void Precision(int thePrecision);
+
 	std::ostream& Write(std::ostream& file) const;
 
    private:
@@ -138,6 +145,7 @@ class param
 	HPParameterUnit itsUnit;  //!< Unit of the parameter
 
 	aggregation itsAggregation;
+	int itsPrecision;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -148,7 +156,8 @@ class param
 		ar(CEREAL_NVP(itsId), CEREAL_NVP(itsName), CEREAL_NVP(itsScale), CEREAL_NVP(itsBase), CEREAL_NVP(itsUnivId),
 		   CEREAL_NVP(itsGribParameter), CEREAL_NVP(itsGribCategory), CEREAL_NVP(itsGribDiscipline),
 		   CEREAL_NVP(itsGribTableVersion), CEREAL_NVP(itsGribIndicatorOfParameter), CEREAL_NVP(itsUnit),
-		   CEREAL_NVP(itsVersion), CEREAL_NVP(itsInterpolationMethod), CEREAL_NVP(itsAggregation));
+		   CEREAL_NVP(itsVersion), CEREAL_NVP(itsInterpolationMethod), CEREAL_NVP(itsAggregation),
+		   CEREAL_NVP(itsPrecision));
 	}
 #endif
 };
