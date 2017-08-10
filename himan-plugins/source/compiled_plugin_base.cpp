@@ -473,8 +473,13 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 					continue;
 				}
 
-				params[i].GribIndicatorOfParameter(boost::lexical_cast<int>(paraminfo["grib1_number"]));
-				params[i].GribTableVersion(boost::lexical_cast<int>(paraminfo["grib1_table_version"]));
+				params[i].GribIndicatorOfParameter(stoi(paraminfo["grib1_number"]));
+				params[i].GribTableVersion(stoi(paraminfo["grib1_table_version"]));
+
+				if (!paraminfo["precision"].empty())
+				{
+					params[i].Precision(stoi(paraminfo["precision"]));
+				}
 			}
 		}
 	}

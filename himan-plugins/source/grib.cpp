@@ -882,16 +882,27 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	if (itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon ||
 	    itsWriteOptions.configuration->DatabaseType() == kRadon)
 	{
-		auto r = GET_PLUGIN(radon);
-		auto precisionInfo = r->RadonDB().GetParameterPrecision(anInfo.Param().Name());
-		if (precisionInfo.empty() || precisionInfo.find("precision") == precisionInfo.end() ||
-		    precisionInfo["precision"].empty())
+		int decimals = anInfo.Param().Precision();
+
+		if (decimals == kHPMissingInt)
 		{
-			itsLogger.Trace("Precision not found for parameter " + anInfo.Param().Name() + " defaulting to 24 bits");
+			// When neons is removed, this piece of code can be removed
+
+			auto r = GET_PLUGIN(radon);
+			auto precisionInfo = r->RadonDB().GetParameterPrecision(anInfo.Param().Name());
+
+			if (precisionInfo.empty() || precisionInfo.find("precision") == precisionInfo.end() || precisionInfo["precision"].empty())
+			{
+				itsLogger.Trace("Precision not found for parameter " + anInfo.Param().Name() + " defaulting to 24 bits");
+			}
+			else
+			{
+				itsLogger.Trace("Using " + precisionInfo["precision"] + " decimals for " + anInfo.Param().Name()  + "'s precision");
+				itsGrib->Message().ChangeDecimalPrecision(stoi(precisionInfo["precision"]));
+			}
 		}
 		else
 		{
-			int decimals = std::stoi(precisionInfo["precision"]);
 			itsLogger.Trace("Using " + std::to_string(decimals) + " decimals for " + anInfo.Param().Name() +
 			                "'s precision");
 			itsGrib->Message().ChangeDecimalPrecision(decimals);
