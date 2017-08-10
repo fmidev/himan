@@ -466,8 +466,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 				if (paraminfo.empty() || paraminfo["grib1_number"].empty() || paraminfo["grib1_table_version"].empty())
 				{
 					string msg = "Grib1 parameter definition not found from Radon for producer " +
-					             boost::lexical_cast<string>(boost::lexical_cast<string>(itsInfo->Producer().Id()) +
-					                                         ", parameter name " + params[i].Name());
+					             to_string(itsInfo->Producer().Id()) + ", parameter name " + params[i].Name();
 
 					itsBaseLogger.Warning(msg);
 					continue;
