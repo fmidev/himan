@@ -640,16 +640,11 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	{
 		auto r = GET_PLUGIN(radon);
 
-		prod = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(sourceProducer.Id()));
+		auto latestFromDatabase = r->RadonDB().GetLatestTime(sourceProducer.Id(), "", offset);
 
-		if (!prod.empty())
+		if (!latestFromDatabase.empty())
 		{
-			auto latestFromDatabase = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
-
-			if (!latestFromDatabase.empty())
-			{
-				latestOriginDateTime = raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:00");
-			}
+			latestOriginDateTime = raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:00");
 		}
 	}
 
@@ -1430,7 +1425,6 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
 			auto n = GET_PLUGIN(neons);
-			auto r = GET_PLUGIN(radon);
 
 			for (const auto& prodstr : sourceProducersStr)
 			{
