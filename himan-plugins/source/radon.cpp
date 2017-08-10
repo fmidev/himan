@@ -167,34 +167,13 @@ vector<std::string> radon::CSV(search_options& options)
 	return csv;
 }
 
-vector<string> radon::Files(search_options& options)
+vector<vector<string>> GetGridGeoms(himan::plugin::search_options& options, unique_ptr<NFmiRadonDB>& itsRadonDB)
 {
-	Init();
-
-	vector<string> files;
-
-	string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
-	string levelValue = boost::lexical_cast<string>(options.level.Value());
-	string levelValue2 = "-1";
-
-	if (options.level.Value2() != kHPMissingValue)
-	{
-		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
-	}
-
-	string ref_prod = options.prod.Name();
-	// long no_vers = options.prod.TableVersion();
-
-	if (options.prod.Class() != kGridClass)
-	{
-		itsLogger.Error("Previ producer does not have file data");
-		return files;
-	}
-
-	string level_name = HPLevelTypeToString.at(options.level.Type());
-
 	vector<vector<string>> gridgeoms;
 	vector<string> sourceGeoms = options.configuration->SourceGeomNames();
+
+	const string ref_prod = options.prod.Name();
+	const string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	if (sourceGeoms.empty())
 	{
@@ -210,11 +189,26 @@ vector<string> radon::Files(search_options& options)
 		}
 	}
 
-	if (gridgeoms.empty())
+	return gridgeoms;
+}
+
+string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<vector<string>>& gridgeoms)
+{
+	const string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
+	string levelValue = boost::lexical_cast<string>(options.level.Value());
+	string levelValue2 = "-1";
+
+	if (options.level.Value2() != himan::kHPMissingValue)
 	{
-		// No geometries found, fetcher checks this
-		return files;
+		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
 	}
+
+	if (options.prod.Class() != himan::kGridClass)
+	{
+		throw runtime_error("Previ producer does not have file data");
+	}
+
+	const string level_name = himan::HPLevelTypeToString.at(options.level.Type());
 
 	string forecastTypeValue = "-1";  // default, deterministic/analysis
 
@@ -259,7 +253,7 @@ vector<string> radon::Files(search_options& options)
 		      << " AND param_name = '" << parm_name << "'"
 		      << " AND level_name = upper('" << level_name << "')"
 		      << " AND level_value = " << levelValue << " AND level_value2 = " << levelValue2
-		      << " AND forecast_period = '" << util::MakeSQLInterval(options.time) << "'"
+		      << " AND forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
 		      << "AND geometry_id IN (";
 
 		for (const auto& geom : gridgeoms)
@@ -286,20 +280,41 @@ vector<string> radon::Files(search_options& options)
 			      << " AND param_name = '" << parm_name << "'"
 			      << " AND level_name = upper('" << level_name << "') "
 			      << " AND level_value = " << levelValue << " AND level_value2 = " << levelValue2
-			      << " AND forecast_period = '" << util::MakeSQLInterval(options.time) << "'"
+			      << " AND forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
 			      << " AND geometry_id = " << geomid << " AND forecast_type_id IN (" << forecastTypeId << ")"
 			      << " AND forecast_type_value = " << forecastTypeValue << " UNION ALL";
 		}
 
-		query.seekp(-9, std::ios_base::end);
+		query.seekp(-9, ios_base::end);
 		query << " ORDER BY forecast_period, level_id, level_value";
 	}
 
-	vector<string> values;
+	return query.str();
+}
+
+vector<string> radon::Files(search_options& options)
+{
+	Init();
+
+	vector<string> files, values;
+
+	const auto gridgeoms = GetGridGeoms(options, itsRadonDB);
+
+	if (gridgeoms.empty())
+	{
+		return files;
+	}
+
+	const auto query = CreateFileSQLQuery(options, gridgeoms);
+
+	if (query.empty())
+	{
+		return files;
+	}
 
 	try
 	{
-		itsRadonDB->Query(query.str());
+		itsRadonDB->Query(query);
 		values = itsRadonDB->FetchRow();
 	}
 	catch (const pqxx::sql_error& e)
@@ -314,7 +329,7 @@ vector<string> radon::Files(search_options& options)
 
 		itsLogger.Warning("Caught database error: " + string(e.what()));
 		sleep(1);
-		itsRadonDB->Query(query.str());
+		itsRadonDB->Query(query);
 		values = itsRadonDB->FetchRow();
 	}
 
@@ -323,7 +338,7 @@ vector<string> radon::Files(search_options& options)
 		return files;
 	}
 
-	itsLogger.Trace("Found data for parameter " + parm_name + " from radon geometry " + values[1]);
+	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[1]);
 
 	files.push_back(values[0]);
 
