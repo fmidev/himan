@@ -805,10 +805,15 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		const auto paramName = anInfo.Param().Name();
 		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
 		{
-			EncodePrecipitationFormToGrib2(anInfo.Data().Values());
+			auto data = anInfo.Data().Values();
+			EncodePrecipitationFormToGrib2(data);
+			itsGrib->Message().Values(data.data(), static_cast<long>(data.size()));
+		}
+		else
+		{
+			itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
 		}
 
-		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
 	}
 
 	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
