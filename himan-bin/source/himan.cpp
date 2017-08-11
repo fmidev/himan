@@ -78,7 +78,8 @@ int main(int argc, char** argv)
 
 	try
 	{
-		plugins = json_parser::Instance()->Parse(conf);
+		json_parser parser;
+		plugins = parser.Parse(conf);
 	}
 	catch (std::runtime_error& e)
 	{

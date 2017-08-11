@@ -60,18 +60,6 @@ static logger itsLogger;
  *
  */
 
-unique_ptr<json_parser> json_parser::itsInstance;
-
-json_parser* json_parser::Instance()
-{
-	if (!itsInstance)
-	{
-		itsInstance = unique_ptr<json_parser>(new json_parser);
-	}
-
-	return itsInstance.get();
-}
-
 json_parser::json_parser() { itsLogger = logger("json_parser"); }
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {

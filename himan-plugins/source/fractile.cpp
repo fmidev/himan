@@ -18,7 +18,6 @@
 #include "time_ensemble.h"
 
 #include "fetcher.h"
-#include "json_parser.h"
 #include "radon.h"
 
 #include "util.h"
