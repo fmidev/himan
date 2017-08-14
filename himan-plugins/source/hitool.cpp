@@ -9,7 +9,6 @@
 #include "util.h"
 #include <NFmiInterpolation.h>
 #include <algorithm>
-#include <boost/foreach.hpp>
 #include <boost/format.hpp>
 
 #include "fetcher.h"
@@ -24,7 +23,7 @@ double min(const vector<double>& vec)
 {
 	double ret = 1e38;
 
-	BOOST_FOREACH (double val, vec)
+	for (double val : vec)
 	{
 		if (val != kFloatMissing && val < ret) ret = val;
 	}
@@ -38,7 +37,7 @@ double max(const vector<double>& vec)
 {
 	double ret = -1e38;
 
-	BOOST_FOREACH (double val, vec)
+	for (double val : vec)
 	{
 		if (val != kFloatMissing && val > ret) ret = val;
 	}
@@ -52,7 +51,7 @@ pair<double, double> minmax(const vector<double>& vec)
 {
 	double min = 1e38, max = -1e38;
 
-	BOOST_FOREACH (double val, vec)
+	for (double val : vec)
 	{
 		if (val != kFloatMissing)
 		{

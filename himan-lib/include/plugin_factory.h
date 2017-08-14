@@ -17,9 +17,8 @@ namespace himan
 {
 class plugin_factory
 {
-public:
+   public:
 	~plugin_factory() {}
-	
 	static plugin_factory* Instance();
 
 	std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins(HPPluginClass = kUnknownPlugin);  // Kinda ugly
@@ -31,7 +30,7 @@ public:
 
 	std::shared_ptr<plugin::himan_plugin> Plugin(const std::string& theClassName);
 
-private:
+   private:
 	// Hide constructor
 	plugin_factory();
 
@@ -39,7 +38,7 @@ private:
 
 	static std::unique_ptr<plugin_factory> itsInstance;
 
-	void ReadPlugins();
+	void ReadPlugins(const std::string& pluginName = "");
 
 	bool Load(const std::string& thePluginFileName);
 

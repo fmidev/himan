@@ -78,7 +78,8 @@ int main(int argc, char** argv)
 
 	try
 	{
-		plugins = json_parser::Instance()->Parse(conf);
+		json_parser parser;
+		plugins = parser.Parse(conf);
 	}
 	catch (std::runtime_error& e)
 	{
@@ -87,10 +88,6 @@ int main(int argc, char** argv)
 	}
 
 	banner();
-
-	vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
-
-	aLogger.Info("Found " + boost::lexical_cast<string>(thePlugins.size()) + " plugins");
 
 	aLogger.Debug("Processqueue size: " + boost::lexical_cast<string>(plugins.size()));
 

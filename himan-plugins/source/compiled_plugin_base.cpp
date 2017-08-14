@@ -466,15 +466,19 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 				if (paraminfo.empty() || paraminfo["grib1_number"].empty() || paraminfo["grib1_table_version"].empty())
 				{
 					string msg = "Grib1 parameter definition not found from Radon for producer " +
-					             boost::lexical_cast<string>(boost::lexical_cast<string>(itsInfo->Producer().Id()) +
-					                                         ", parameter name " + params[i].Name());
+					             to_string(itsInfo->Producer().Id()) + ", parameter name " + params[i].Name();
 
 					itsBaseLogger.Warning(msg);
 					continue;
 				}
 
-				params[i].GribIndicatorOfParameter(boost::lexical_cast<int>(paraminfo["grib1_number"]));
-				params[i].GribTableVersion(boost::lexical_cast<int>(paraminfo["grib1_table_version"]));
+				params[i].GribIndicatorOfParameter(stoi(paraminfo["grib1_number"]));
+				params[i].GribTableVersion(stoi(paraminfo["grib1_table_version"]));
+
+				if (!paraminfo["precision"].empty())
+				{
+					params[i].Precision(stoi(paraminfo["precision"]));
+				}
 			}
 		}
 	}

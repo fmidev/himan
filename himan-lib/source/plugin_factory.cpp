@@ -29,8 +29,7 @@ plugin_factory* plugin_factory::Instance()
 	return itsInstance.get();
 }
 
-plugin_factory::plugin_factory()
-    : itsPluginSearchPath(), itsLogger(logger("plugin_factory"))
+plugin_factory::plugin_factory() : itsPluginSearchPath(), itsLogger(logger("plugin_factory"))
 {
 	const char* path = std::getenv("HIMAN_LIBRARY_PATH");
 
@@ -48,12 +47,12 @@ plugin_factory::plugin_factory()
 
 	itsPluginSearchPath.push_back(".");
 	itsPluginSearchPath.push_back("/usr/lib64/himan-plugins");  // Default RPM location
-
-	ReadPlugins();
 }
 
 std::vector<std::shared_ptr<himan_plugin>> plugin_factory::Plugins(HPPluginClass pluginClass)
 {
+	ReadPlugins();
+
 	std::vector<std::shared_ptr<himan_plugin>> thePlugins(itsPluginFactory.size());
 
 	for (size_t i = 0; i < itsPluginFactory.size(); i++)
@@ -66,8 +65,6 @@ std::vector<std::shared_ptr<himan_plugin>> plugin_factory::Plugins(HPPluginClass
 
 std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClassName)
 {
-	std::lock_guard<std::mutex> lock(itsPluginMutex);
-
 	for (size_t i = 0; i < itsPluginFactory.size(); i++)
 	{
 		if ((itsPluginFactory[i]->Plugin()->ClassName() == theClassName) ||
@@ -76,6 +73,10 @@ std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClass
 			return itsPluginFactory[i]->Clone();
 		}
 	}
+
+	ReadPlugins(theClassName);
+
+	return Plugin(theClassName);
 
 	throw std::runtime_error("plugin_factory: Unknown plugin clone operation requested: " + theClassName);
 }
@@ -87,27 +88,30 @@ std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClass
  * that end with .so. Will not ascend to child directories (equals to "--max-depth 1").
  */
 
-void plugin_factory::ReadPlugins()
+void plugin_factory::ReadPlugins(const std::string& pluginName)
 {
+	std::lock_guard<std::mutex> lock(itsPluginMutex);
+
 	using namespace boost::filesystem;
 
 	directory_iterator end_iter;
 
 	for (size_t i = 0; i < itsPluginSearchPath.size(); i++)
 	{
-		itsLogger.Trace("Search plugins from " + itsPluginSearchPath[i]);
-
 		path p(itsPluginSearchPath[i]);
 
 		try
 		{
-			if (exists(p) && is_directory(p))  // is p a directory?
+			if (exists(p) && is_directory(p))
 			{
 				for (directory_iterator dir_iter(p); dir_iter != end_iter; ++dir_iter)
 				{
-					if (dir_iter->path().filename().extension().string() == ".so")
+					if (dir_iter->path().filename().extension().string() == ".so" &&
+					    ((dir_iter->path().stem().string() == "lib" + pluginName) || pluginName.empty()))
 					{
 						Load(dir_iter->path().string());
+
+						if (!pluginName.empty()) return;
 					}
 				}
 			}
@@ -163,7 +167,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 		if (p->ClassName() == itsPluginFactory[i]->Plugin()->ClassName())
 		{
 			itsLogger.Trace("Plugin '" + p->ClassName() + "' found more than once, skipping one found from '" +
-							thePluginFileName + "'");
+			                thePluginFileName + "'");
 			dlclose(theLibraryHandle);
 
 			return true;

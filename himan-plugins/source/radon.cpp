@@ -167,34 +167,13 @@ vector<std::string> radon::CSV(search_options& options)
 	return csv;
 }
 
-vector<string> radon::Files(search_options& options)
+vector<vector<string>> GetGridGeoms(himan::plugin::search_options& options, unique_ptr<NFmiRadonDB>& itsRadonDB)
 {
-	Init();
-
-	vector<string> files;
-
-	string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
-	string levelValue = boost::lexical_cast<string>(options.level.Value());
-	string levelValue2 = "-1";
-
-	if (options.level.Value2() != kHPMissingValue)
-	{
-		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
-	}
-
-	string ref_prod = options.prod.Name();
-	// long no_vers = options.prod.TableVersion();
-
-	if (options.prod.Class() != kGridClass)
-	{
-		itsLogger.Error("Previ producer does not have file data");
-		return files;
-	}
-
-	string level_name = HPLevelTypeToString.at(options.level.Type());
-
 	vector<vector<string>> gridgeoms;
 	vector<string> sourceGeoms = options.configuration->SourceGeomNames();
+
+	const string ref_prod = options.prod.Name();
+	const string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	if (sourceGeoms.empty())
 	{
@@ -210,11 +189,26 @@ vector<string> radon::Files(search_options& options)
 		}
 	}
 
-	if (gridgeoms.empty())
+	return gridgeoms;
+}
+
+string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<vector<string>>& gridgeoms)
+{
+	const string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
+	string levelValue = boost::lexical_cast<string>(options.level.Value());
+	string levelValue2 = "-1";
+
+	if (options.level.Value2() != himan::kHPMissingValue)
 	{
-		// No geometries found, fetcher checks this
-		return files;
+		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
 	}
+
+	if (options.prod.Class() != himan::kGridClass)
+	{
+		throw runtime_error("Previ producer does not have file data");
+	}
+
+	const string level_name = himan::HPLevelTypeToString.at(options.level.Type());
 
 	string forecastTypeValue = "-1";  // default, deterministic/analysis
 
@@ -231,78 +225,122 @@ vector<string> radon::Files(search_options& options)
 		forecastTypeId += ",2";
 	}
 
-	for (size_t i = 0; i < gridgeoms.size(); i++)
+	const string parm_name = options.param.Name();
+
+	// HIMAN-172: Reducing radon query count
+	// Coalesce multiple-geometry queries into one if all are
+	// using the same source table.
+	// If the source table is not the same, make a union query.
+
+	bool sameTableForAllGeometries = true;
+
+	const string firstTable = gridgeoms[0][1];
+
+	for (size_t i = 1; i < gridgeoms.size(); i++)
 	{
-		string tablename = gridgeoms[i][1];
-		string geomid = gridgeoms[i][0];
-
-		string parm_name = options.param.Name();
-
-		string query =
-		    "SELECT param_id, level_id, level_value, forecast_period, file_location, file_server "
-		    "FROM " +
-		    tablename +
-		    "_v "
-		    "WHERE analysis_time = '" +
-		    analtime +
-		    "' "
-		    "AND param_name = '" +
-		    parm_name +
-		    "' "
-		    "AND level_name = upper('" +
-		    level_name +
-		    "') "
-		    "AND level_value = " +
-		    levelValue + " AND level_value2 = " + levelValue2 +
-		    " "
-		    "AND forecast_period = '" +
-		    util::MakeSQLInterval(options.time) +
-		    "' "
-		    "AND geometry_id = " +
-		    geomid +
-		    " "
-		    "AND forecast_type_id IN (" +
-		    forecastTypeId +
-		    ") "
-		    "AND forecast_type_value = " +
-		    forecastTypeValue +
-		    " "
-		    "ORDER BY forecast_period, level_id, level_value";
-
-		vector<string> values;
-
-		try
+		if (firstTable != gridgeoms[i][1])
 		{
-			itsRadonDB->Query(query);
-			values = itsRadonDB->FetchRow();
+			sameTableForAllGeometries = false;
 		}
-		catch (const pqxx::sql_error& e)
-		{
-			// Sometimes we get errors like:
-			// ERROR:  deadlock detected
-			// DETAIL:  Process 23465 waits for AccessShareLock on relation 35841462 of database 32027825; blocked by
-			// process 23477.
-			//
-			// This is caused when table partitions are dropped while himan is trying to query the table.
-			// As a workaround, re-execute the query.
-
-			itsLogger.Warning("Caught database error: " + string(e.what()));
-			sleep(1);
-			itsRadonDB->Query(query);
-			values = itsRadonDB->FetchRow();
-		}
-
-		if (values.empty())
-		{
-			continue;
-		}
-
-		itsLogger.Trace("Found data for parameter " + parm_name + " from radon geometry " + gridgeoms[i][3]);
-
-		files.push_back(values[4]);
-
-		break;  // discontinue loop on first positive match
 	}
+
+	stringstream query;
+
+	if (sameTableForAllGeometries)
+	{
+		query << "SELECT file_location, geometry_id FROM " << firstTable << "_v "
+		      << "WHERE analysis_time = '" << analtime << "'"
+		      << " AND param_name = '" << parm_name << "'"
+		      << " AND level_name = upper('" << level_name << "')"
+		      << " AND level_value = " << levelValue << " AND level_value2 = " << levelValue2
+		      << " AND forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
+		      << "AND geometry_id IN (";
+
+		for (const auto& geom : gridgeoms)
+		{
+			query << geom[0] << ",";
+		}
+
+		query.seekp(-1, ios_base::end);
+
+		query << ") AND forecast_type_id IN (" << forecastTypeId << ")"
+		      << " AND forecast_type_value = " << forecastTypeValue
+		      << " ORDER BY forecast_period, level_id, level_value";
+	}
+	else
+	{
+		for (size_t i = 0; i < gridgeoms.size(); i++)
+		{
+			string tablename = gridgeoms[i][1];
+			string geomid = gridgeoms[i][0];
+
+			query << "SELECT file_location, geometry_id "
+			      << "FROM " << tablename << "_v "
+			      << "WHERE analysis_time = '" << analtime << "'"
+			      << " AND param_name = '" << parm_name << "'"
+			      << " AND level_name = upper('" << level_name << "') "
+			      << " AND level_value = " << levelValue << " AND level_value2 = " << levelValue2
+			      << " AND forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
+			      << " AND geometry_id = " << geomid << " AND forecast_type_id IN (" << forecastTypeId << ")"
+			      << " AND forecast_type_value = " << forecastTypeValue << " UNION ALL";
+		}
+
+		query.seekp(-9, ios_base::end);
+		query << " ORDER BY forecast_period, level_id, level_value";
+	}
+
+	return query.str();
+}
+
+vector<string> radon::Files(search_options& options)
+{
+	Init();
+
+	vector<string> files, values;
+
+	const auto gridgeoms = GetGridGeoms(options, itsRadonDB);
+
+	if (gridgeoms.empty())
+	{
+		return files;
+	}
+
+	const auto query = CreateFileSQLQuery(options, gridgeoms);
+
+	if (query.empty())
+	{
+		return files;
+	}
+
+	try
+	{
+		itsRadonDB->Query(query);
+		values = itsRadonDB->FetchRow();
+	}
+	catch (const pqxx::sql_error& e)
+	{
+		// Sometimes we get errors like:
+		// ERROR:  deadlock detected
+		// DETAIL:  Process 23465 waits for AccessShareLock on relation 35841462 of database 32027825; blocked by
+		// process 23477.
+		//
+		// This is caused when table partitions are dropped while himan is trying to query the table.
+		// As a workaround, re-execute the query.
+
+		itsLogger.Warning("Caught database error: " + string(e.what()));
+		sleep(1);
+		itsRadonDB->Query(query);
+		values = itsRadonDB->FetchRow();
+	}
+
+	if (values.empty())
+	{
+		return files;
+	}
+
+	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[1]);
+
+	files.push_back(values[0]);
 
 	return files;
 }
@@ -468,8 +506,8 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 			gridType = 3;
 			break;
 		default:
-			throw runtime_error("Unsupported projection: " + to_string(resultInfo.Grid()->Type()) +
-			                    " " + HPGridTypeToString.at(resultInfo.Grid()->Type()));
+			throw runtime_error("Unsupported projection: " + to_string(resultInfo.Grid()->Type()) + " " +
+			                    HPGridTypeToString.at(resultInfo.Grid()->Type()));
 	}
 
 	map<string, string> geominfo = itsRadonDB->GetGeometryDefinition(
@@ -613,24 +651,4 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	itsLogger.Trace("Saved information on file '" + theFileName + "' to radon");
 
 	return true;
-}
-
-map<string, string> radon::Grib1ParameterName(long producer, long fmiParameterId, long codeTableVersion,
-                                              long timeRangeIndicator, long levelId, double level_value)
-{
-	Init();
-
-	map<string, string> paramName = itsRadonDB->GetParameterFromGrib1(producer, codeTableVersion, fmiParameterId,
-	                                                                  timeRangeIndicator, levelId, level_value);
-	return paramName;
-}
-
-map<string, string> radon::Grib2ParameterName(long fmiParameterId, long category, long discipline, long producer,
-                                              long levelId, double level_value)
-{
-	Init();
-
-	map<string, string> paramName =
-	    itsRadonDB->GetParameterFromGrib2(producer, discipline, category, fmiParameterId, levelId, level_value);
-	return paramName;
 }

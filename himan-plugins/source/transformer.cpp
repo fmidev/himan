@@ -4,7 +4,6 @@
 
 #include "transformer.h"
 #include "forecast_time.h"
-#include "json_parser.h"
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
