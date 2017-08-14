@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.8.3
+Version: 17.8.14
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 17.4.6
+Requires: libfmidb >= 17.8.10
 Requires: libfmigrib >= 17.4.6
 Requires: gdal
 
@@ -28,7 +28,7 @@ BuildRequires: cuda-8-0
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.4.6
+BuildRequires: libfmidb-devel >= 17.8.10
 BuildRequires: libfmigrib-devel >= 17.4.6
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.53
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Aug 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.14-1.fmi
+- Database access optimization
 * Thu Aug  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.3-1.fmi
 - Minor changes to ensemble, matrix
 * Tue Aug  1 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.1-1.fmi

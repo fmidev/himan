@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.8.8
+Version: 17.8.14
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -14,11 +14,11 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 17.4.6
+Requires: himan-lib >= 17.8.14
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.7.31
-Requires: libfmidb >= 17.5.26
+Requires: libfmidb >= 17.8.10
 Requires: smartmet-library-newbase >= 17.4.4
 Requires: libpqxx
 
@@ -35,7 +35,7 @@ BuildRequires: cusp >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.5.26
+BuildRequires: libfmidb-devel >= 17.8.10
 BuildRequires: libfmigrib-devel >= 17.7.31
 BuildRequires: smartmet-library-newbase-devel >= 17.4.4
 BuildRequires: scons
@@ -111,6 +111,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Aug 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.14-1.fmi
+- Database access optimization
+- split_sum cleanup
+- visibility fix for inconsistent precipitation parameter access wrt preform_hybrid
 * Tue Aug  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.8-1.fmi
 - Calculate meps hybrid level height using geopotential
 * Thu Aug  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.3-1.fmi
