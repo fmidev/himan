@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 17.8.8
+Version: 17.8.14
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.4.6
+Requires: himan-lib >= 17.8.14
 Requires: himan-plugins
 Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
@@ -63,6 +63,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Aug 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.14-1.fmi
+* json_parser interface change
 * Tue Aug  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.8-1.fmi
 - Changing cmd line option -s argument optional
 * Thu Aug  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.3-1.fmi
