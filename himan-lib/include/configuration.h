@@ -252,6 +252,9 @@ class configuration
 	std::string ParamFile() const;
 	void ParamFile(const std::string& theParamFile);
 
+	bool AsyncExecution() const;
+	void AsyncExecution(bool theAsyncExecution);
+
    protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
@@ -287,6 +290,7 @@ class configuration
 
 	int itsCacheLimit;
 	std::string itsParamFile;
+	bool itsAsyncExecution;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob) { return ob.Write(file); }

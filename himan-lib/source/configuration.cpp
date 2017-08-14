@@ -34,7 +34,8 @@ configuration::configuration()
       itsCudaDeviceId(0),
       itsForecastStep(kHPMissingInt),
       itsCacheLimit(-1),
-      itsParamFile()
+      itsParamFile(),
+      itsAsyncExecution(false)
 {
 }
 
@@ -64,7 +65,8 @@ configuration::configuration(const configuration& other)
       itsCudaDeviceId(other.itsCudaDeviceId),
       itsForecastStep(other.itsForecastStep),
       itsCacheLimit(other.itsCacheLimit),
-      itsParamFile(other.itsParamFile)
+      itsParamFile(other.itsParamFile),
+      itsAsyncExecution(other.itsAsyncExecution)
 
 {
 	assert(itsSourceProducerIterator);
@@ -113,6 +115,8 @@ std::ostream& configuration::Write(std::ostream& file) const
 	}
 
 	file << "__itsParamFile__ " << itsParamFile << std::endl;
+	file << "__itsAsyncExecution__ " << itsAsyncExecution << std::endl;
+
 	return file;
 }
 
@@ -216,7 +220,6 @@ void configuration::ReadAllAuxiliaryFilesToCache(bool theReadAllAuxiliaryFilesTo
 	itsReadAllAuxiliaryFilesToCache = theReadAllAuxiliaryFilesToCache;
 }
 std::string configuration::ParamFile() const { return itsParamFile; }
-void configuration::ParamFile(const std::string& theParamFile)
-{
-	itsParamFile = theParamFile;
-}
+void configuration::ParamFile(const std::string& theParamFile) { itsParamFile = theParamFile; }
+bool configuration::AsyncExecution() const { return itsAsyncExecution; }
+void configuration::AsyncExecution(bool theAsyncExecution) { itsAsyncExecution = theAsyncExecution; }
