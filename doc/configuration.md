@@ -26,6 +26,7 @@ The json file can be divided into two parts: the global part, configuration appl
   * [Database access](#Database_access)
   * [Forecast types](#Forecast_types)
   * [Memory usage](#Memory_usage)
+  * [Asynchronous execution](#Asynchronous_execution)
 * [Full examples](#Full_examples)
 
 <a name="Target_area"/>
@@ -439,6 +440,24 @@ By default himan will allocate all necessary memory when it starts. In low-memor
     "dynamic_memory_allocation" : true | false,
 
 Default value is `false`.
+
+<a name="Asynchronous_execution"/>
+
+## Asynchronous execution
+
+By default Himan plugins are executed in a serialized fashion, mostly because many of the plugins are dependent on the output of others. Some plugins, however, lie necessary at the end of the execution line, and when those plugins are in the critical chain of execution they will (unnecessarily) slow down the the total execution of Himan. 
+
+This can be avoided by using the configuration file key 'async'. By default the value is false, confirming to the serialized execution. It can be set to true for any individual plugin or processqueue element scope.
+
+
+                {
+			"async" : true,
+                        "leveltype" : "...",
+                        "levels" : "...",
+                        "plugins" : [ { "name" : "...", "async" : false } ]
+                }
+
+Asynchronous execution should only be enabled for those plugins that have no other plugins as dependants!
 
 <a name="Full_examples"/>
 

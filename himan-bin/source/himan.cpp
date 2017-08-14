@@ -15,6 +15,7 @@
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
+#include <future>
 #include <iostream>
 #include <vector>
 
@@ -30,6 +31,8 @@ struct plugin_timing
 	int order_number;     // plugin order number (if called more than once))
 	size_t time_elapsed;  // elapsed time in ms
 };
+
+vector<plugin_timing> pluginTimes;
 
 int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::string& pluginName)
 {
@@ -49,6 +52,59 @@ int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::strin
 	return highest;
 }
 
+void ExecutePlugin(shared_ptr<plugin_configuration> pc)
+{
+	timer aTimer;
+	logger aLogger("himan");
+	if (pc->StatisticsEnabled())
+	{
+		aTimer.Start();
+	}
+
+	auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin>(plugin_factory::Instance()->Plugin(pc->Name()));
+
+	if (!aPlugin)
+	{
+		aLogger.Error("Unable to declare plugin " + pc->Name());
+		return;
+	}
+
+	if (pc->StatisticsEnabled())
+	{
+		pc->StartStatistics();
+	}
+
+	aLogger.Info("Calculating " + pc->Name());
+
+	try
+	{
+		aPlugin->Process(pc);
+	}
+	catch (const exception& e)
+	{
+		aLogger.Fatal(string("Caught exception: ") + e.what());
+		exit(1);
+	}
+
+	if (pc->StatisticsEnabled())
+	{
+		pc->WriteStatistics();
+
+		aTimer.Stop();
+		plugin_timing t;
+		t.plugin_name = pc->Name();
+		t.time_elapsed = aTimer.GetTime();
+		t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
+
+		pluginTimes.push_back(t);
+	}
+
+#if defined DEBUG and defined HAVE_CUDA
+	// For 'cuda-memcheck --leak-check full'
+	CUDA_CHECK(cudaDeviceReset());
+#endif
+}
+
 int main(int argc, char** argv)
 {
 	shared_ptr<configuration> conf;
@@ -64,7 +120,6 @@ int main(int argc, char** argv)
 	}
 
 	logger aLogger = logger("himan");
-	timer aTimer;
 
 	/*
 	 * Initialize plugin factory before parsing configuration file. This prevents himan from
@@ -91,63 +146,28 @@ int main(int argc, char** argv)
 
 	aLogger.Debug("Processqueue size: " + boost::lexical_cast<string>(plugins.size()));
 
-	vector<plugin_timing> pluginTimes;
-	size_t totalTime = 0;
+	vector<future<void>> asyncs;
 
 	while (plugins.size() > 0)
 	{
 		auto pc = plugins[0];
 
-		if (pc->StatisticsEnabled())
-		{
-			aTimer.Start();
-		}
+		plugins.erase(plugins.begin());
 
-		auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin>(plugin_factory::Instance()->Plugin(pc->Name()));
-
-		if (!aPlugin)
+		if (pc->AsyncExecution())
 		{
-			aLogger.Error("Unable to declare plugin " + pc->Name());
+			aLogger.Info("Asynchronous launch for " + pc->Name());
+			asyncs.push_back(async(launch::async, [](shared_ptr<plugin_configuration> pc) { ExecutePlugin(pc); }, pc));
+
 			continue;
 		}
 
-		if (pc->StatisticsEnabled())
-		{
-			pc->StartStatistics();
-		}
+		ExecutePlugin(pc);
+	}
 
-		aLogger.Info("Calculating " + pc->Name());
-
-		try
-		{
-			aPlugin->Process(pc);
-		}
-		catch (const exception& e)
-		{
-			aLogger.Fatal(string("Caught exception: ") + e.what());
-			exit(1);
-		}
-
-		if (pc->StatisticsEnabled())
-		{
-			pc->WriteStatistics();
-
-			aTimer.Stop();
-			plugin_timing t;
-			t.plugin_name = pc->Name();
-			t.time_elapsed = aTimer.GetTime();
-			t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
-
-			totalTime += t.time_elapsed;
-			pluginTimes.push_back(t);
-		}
-
-		plugins.erase(plugins.begin());  // remove configuration and resize container
-
-#if defined DEBUG and defined HAVE_CUDA
-		// For 'cuda-memcheck --leak-check full'
-		CUDA_CHECK(cudaDeviceReset());
-#endif
+	for (auto& fut : asyncs)
+	{
+		fut.wait();
 	}
 
 	if (!conf->StatisticsLabel().empty())
@@ -173,6 +193,13 @@ int main(int argc, char** argv)
 				}
 			}
 		} while (!passed);
+
+		size_t totalTime = 0;
+
+		for (const auto& time : pluginTimes)
+		{
+			totalTime += time.time_elapsed;
+		}
 
 		cout << endl << "*** TOTAL timings for himan ***" << endl;
 
