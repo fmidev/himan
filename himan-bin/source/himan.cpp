@@ -103,22 +103,6 @@ int main(int argc, char** argv)
 			aTimer.Start();
 		}
 
-		if (pc->Name() == "cloud_type")
-		{
-			aLogger.Warning("Plugin 'cloud_type' is deprecated -- use 'cloud_code' instead'");
-			pc->Name("cloud_code");
-		}
-		else if (pc->Name() == "fmi_weather_symbol_1")
-		{
-			aLogger.Warning("Plugin 'fmi_weather_symbol_1' is deprecated -- use 'weather_code_2' instead'");
-			pc->Name("weather_code_2");
-		}
-		else if (pc->Name() == "rain_type")
-		{
-			aLogger.Warning("Plugin 'rain_type' is deprecated -- use 'weather_code_1' instead'");
-			pc->Name("weather_code_1");
-		}
-
 		auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin>(plugin_factory::Instance()->Plugin(pc->Name()));
 
 		if (!aPlugin)
