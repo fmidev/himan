@@ -62,7 +62,7 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger = logger("luatoolThread #" + boost::lexical_cast<std::string>(threadIndex));
+	auto myThreadedLogger = logger("luatoolThread #" + std::to_string(threadIndex));
 
 	InitLua(myTargetInfo);
 

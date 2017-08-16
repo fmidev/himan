@@ -2,9 +2,6 @@
  * @file pop.cpp
  *
  */
-
-#include <boost/lexical_cast.hpp>
-
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
@@ -103,7 +100,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	forecast_time forecastTime = myTargetInfo->Time();
 	const level forecastLevel = myTargetInfo->Level();
 
-	auto myThreadedLogger = logger("popThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("popThread #" + to_string(threadIndex));
 
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 						   static_cast<string>(forecastLevel));
@@ -572,7 +569,6 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Grid()->Data(smoothenedResult);
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
