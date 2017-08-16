@@ -10,10 +10,12 @@
 #include "logger.h"
 #include "point.h"
 #include "serialization.h"
-#include <ogr_spatialref.h>
 #include <string>
 
 #include "packed_data.h"
+
+class OGRCoordinateTransformation;
+class OGRSpatialReference;
 
 namespace himan
 {
@@ -23,7 +25,7 @@ class lambert_conformal_grid : public grid
 	lambert_conformal_grid();
 	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirsPoint);
 
-	virtual ~lambert_conformal_grid() {}
+	virtual ~lambert_conformal_grid();
 	lambert_conformal_grid(const lambert_conformal_grid& other);
 	lambert_conformal_grid& operator=(const lambert_conformal_grid& other) = delete;
 

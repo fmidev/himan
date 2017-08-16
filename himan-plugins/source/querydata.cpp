@@ -9,6 +9,7 @@
 #include "logger.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
+#include "ogr_spatialref.h"
 #include <fstream>
 
 #include "plugin_factory.h"
