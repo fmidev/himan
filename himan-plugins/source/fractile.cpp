@@ -5,9 +5,6 @@
 #include "fractile.h"
 
 #include <algorithm>
-#include <iostream>
-#include <string>
-
 #include <boost/algorithm/string.hpp>
 
 #include "logger.h"

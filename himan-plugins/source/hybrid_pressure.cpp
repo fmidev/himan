@@ -7,7 +7,6 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include <boost/lexical_cast.hpp>
 
 #include "plugin_factory.h"
 #include "util.h"
@@ -55,7 +54,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	bool isECMWF = (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134);
 
-	auto myThreadedLogger = logger("hybrid_pressureThread #" + boost::lexical_cast<string>(theThreadIndex));
+	auto myThreadedLogger = logger("hybrid_pressureThread #" + to_string(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -90,8 +89,8 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 				if (!PInfo)
 				{
-					myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) +
-											 ", level " + static_cast<string>(forecastLevel));
+					myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+					                         static_cast<string>(forecastLevel));
 					return;
 				}
 
@@ -123,8 +122,8 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	if (!PInfo || !TInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-								 static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -172,8 +171,8 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		result = 0.01 * (A + P * B);
 	}
 
-	myThreadedLogger.Info("[CPU] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-						  "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[CPU] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	                      to_string(myTargetInfo->Data().Size()));
 }
 
 void hybrid_pressure::WriteToFile(const info& targetInfo, write_options writeOptions)
