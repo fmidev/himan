@@ -11,9 +11,9 @@
 #include "packed_data.h"
 #include "point.h"
 #include "serialization.h"
-#include <NFmiRotatedLatLonArea.h>
 #include <string>
 
+class NFmiRotatedLatLonArea;
 namespace himan
 {
 class latitude_longitude_grid : public grid
@@ -22,7 +22,7 @@ class latitude_longitude_grid : public grid
 	latitude_longitude_grid();
 	latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight);
 
-	virtual ~latitude_longitude_grid() {}
+	virtual ~latitude_longitude_grid() = default;
 	/**
 	 * @brief Copy constructor for latitude_longitude_grid
 	 *
@@ -143,7 +143,7 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
 	                                point theSouthPole, bool initiallyRotated = true);
 
-	virtual ~rotated_latitude_longitude_grid() {}
+	virtual ~rotated_latitude_longitude_grid();
 	rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other);
 	rotated_latitude_longitude_grid& operator=(const rotated_latitude_longitude_grid& other) = delete;
 

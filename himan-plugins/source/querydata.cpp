@@ -30,6 +30,7 @@
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
 #include <NFmiTimeList.h>
+#include "NFmiFastQueryInfo.h"
 
 #ifdef __clang__
 

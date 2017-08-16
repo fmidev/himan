@@ -10,8 +10,6 @@
 #include "himan_common.h"
 #include "serialization.h"
 
-class NFmiLevel;
-
 namespace himan
 {
 
@@ -19,7 +17,6 @@ class level
 {
    public:
 	level();
-	explicit level(const NFmiLevel& theLevel);
 	level(HPLevelType theType, double theValue);
 	level(HPLevelType theType, double theValue, const std::string& theName);
 	level(HPLevelType theType, double theValue, double theValue2);

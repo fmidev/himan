@@ -11,7 +11,7 @@ extern double GetStandardParallel(himan::grid* g, int parallelno);
 extern double GetOrientation(himan::grid* g);
 
 const double kEpsilon = 1e-6;
-// using himan::kFloatMissing;
+using himan::kFloatMissing;
 
 struct point
 {

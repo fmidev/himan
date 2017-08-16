@@ -1,5 +1,6 @@
 #include "latitude_longitude_grid.h"
 #include "info.h"
+#include <NFmiRotatedLatLonArea.h>
 
 #ifdef HAVE_CUDA
 #include "simple_packed.h"
@@ -433,6 +434,8 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(const rotated_l
 {
 	itsLogger = logger("rotated_latitude_longitude_grid");
 }
+
+rotated_latitude_longitude_grid::~rotated_latitude_longitude_grid() = default;
 
 bool rotated_latitude_longitude_grid::operator!=(const grid& other) const { return !(other == *this); }
 bool rotated_latitude_longitude_grid::operator==(const grid& other) const
