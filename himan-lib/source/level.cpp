@@ -4,7 +4,6 @@
  */
 
 #include "level.h"
-#include "NFmiLevel.h"
 #include <boost/lexical_cast.hpp>
 #include <ostream>
 
@@ -27,13 +26,6 @@ level::level(HPLevelType theType, double theValue, const std::string& theName)
 
 level::level(HPLevelType theType, double theValue, double theValue2)
     : itsType(theType), itsValue(theValue), itsValue2(theValue2), itsIndex(kHPMissingInt), itsName()
-{
-}
-
-level::level(const NFmiLevel& theLevel)
-    : itsType(static_cast<HPLevelType>(theLevel.LevelType())),
-      itsValue(static_cast<double>(theLevel.LevelValue())),
-      itsIndex(kHPMissingInt)
 {
 }
 

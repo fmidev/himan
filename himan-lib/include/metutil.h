@@ -13,6 +13,7 @@
 #include "assert.h"
 #include "cuda_helper.h"
 #include "himan_common.h"
+#include "numerical_functions.h"
 
 #if defined FAST_MATH and not defined __CUDACC__
 #include "fastmath.h"
@@ -55,8 +56,6 @@ inline double fastpow(double a, double b)
 #define LOG(V) log(V)
 #define POW(V, E) pow(V, E)
 #endif
-
-#include <NFmiInterpolation.h>
 
 // struct to store LCL level parameters
 struct lcl_t
@@ -822,7 +821,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 			double dx = (targetP - Pint) / (Pint + Pstep - Pint);
 			value = fma(dx, Tint, fma(-dx, T0, T0));
 #else
-			value = NFmiInterpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
+			value = himan::numerical_functions::interpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
 #endif
 			break;
 		}

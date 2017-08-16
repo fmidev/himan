@@ -7,7 +7,6 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <NFmiInterpolation.h>
 #include <algorithm>
 #include <boost/format.hpp>
 

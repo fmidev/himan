@@ -11,12 +11,11 @@
 #include "serialization.h"
 #include <string>
 
-#include <NFmiGrid.h>
-
 #if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ <= 6))
 #define override  // override specifier not support until 4.8
 #endif
 
+class NFmiGrid;
 namespace himan
 {
 class stereographic_grid : public grid
@@ -26,7 +25,7 @@ class stereographic_grid : public grid
 	stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
 	                   double theOrientation = kHPMissingValue);
 
-	virtual ~stereographic_grid() {}
+	virtual ~stereographic_grid();
 	/**
 	 * @brief Copy constructor for stereographic_grid
 	 *

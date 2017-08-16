@@ -15,6 +15,8 @@
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
+#include "NFmiFastQueryInfo.h"
+
 #ifdef HAVE_CUDA
 extern bool InterpolateAreaGPU(himan::info& targetInfo, himan::info& baseInfo, himan::matrix<double>& targetData);
 extern void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo);

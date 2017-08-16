@@ -1,4 +1,5 @@
 #include "stereographic_grid.h"
+#include <NFmiGrid.h>
 #include <NFmiStereographicArea.h>
 #include <boost/lexical_cast.hpp>
 
@@ -45,6 +46,8 @@ stereographic_grid::stereographic_grid(const stereographic_grid& other)
 {
 	itsLogger = logger("stereographic_grid");
 }
+
+stereographic_grid::~stereographic_grid() = default;
 
 size_t stereographic_grid::Size() const
 {
