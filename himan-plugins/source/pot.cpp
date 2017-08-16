@@ -2,8 +2,6 @@
  * @file pot.cpp
  *
  */
-
-#include <boost/lexical_cast.hpp>
 #include <math.h>
 
 #include "forecast_time.h"
@@ -257,7 +255,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	forecastTimeNext.ValidDateTime().Adjust(timeResolution, +step);
 	level forecastLevel = myTargetInfo->Level();
 
-	auto myThreadedLogger = logger("pot_pluginThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("pot_pluginThread #" + to_string(threadIndex));
 
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 						   static_cast<string>(forecastLevel));
@@ -290,8 +288,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	if (!CAPEMaxInfo || !RRMeanInfo)
 	{
-		myThreadedLogger.Info("Missing source data. Skipping step " +
-							  boost::lexical_cast<string>(forecastTime.Step()));
+		myThreadedLogger.Info("Missing source data. Skipping step " + to_string(forecastTime.Step()));
 		return;
 	}
 
@@ -341,7 +338,6 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
