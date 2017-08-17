@@ -6,7 +6,6 @@
 #include "plugin_factory.h"
 #include "logger.h"
 #include "util.h"
-#include <boost/regex.hpp>
 #include <cstdlib>
 #include <dlfcn.h>
 

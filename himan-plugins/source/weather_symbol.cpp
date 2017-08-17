@@ -7,7 +7,6 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include <boost/lexical_cast.hpp>
 #include <map>
 
 using namespace std;
@@ -75,7 +74,7 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 	level HLevel(himan::kHeight, 0, "HEIGHT");
 
-	auto myThreadedLogger = logger("weather_symbolThread #" + boost::lexical_cast<string>(theThreadIndex));
+	auto myThreadedLogger = logger("weather_symbolThread #" + to_string(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -89,8 +88,7 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 	if (!CInfo || !RTInfo)
 	{
-		itsLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                  boost::lexical_cast<string>(forecastLevel));
+		itsLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " + static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -173,9 +171,8 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 		myTargetInfo->Value(weather_symbol);
 	}
 
-	myThreadedLogger.Info("[" + deviceType +
-	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 double weather_symbol::rain_form(double rr)

@@ -10,7 +10,6 @@
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -98,7 +97,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger = logger("tpotThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("tpotThread #" + to_string(threadIndex));
 
 	const param TParam("T-K");
 	const params PParam = {param("P-PA"), param("P-HPA")};
@@ -139,7 +138,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (!TInfo || (!isPressureLevel && !PInfo) || ((itsThetaWCalculation || itsThetaECalculation) && !TDInfo))
 	{
-		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}
@@ -245,9 +244,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	myThreadedLogger.Info("[" + deviceType +
-	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 double tpot::ThetaW(double P, double T, double TD)

@@ -11,7 +11,6 @@
 #include "plugin_factory.h"
 #include "stereographic_grid.h"
 #include "util.h"
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <iostream>
 #include <math.h>
@@ -170,11 +169,11 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		default:
 			throw runtime_error("Invalid calculation target element: " +
-			                    boost::lexical_cast<string>(static_cast<int>(itsCalculationTarget)));
+			                    to_string(static_cast<int>(itsCalculationTarget)));
 			break;
 	}
 
-	auto myThreadedLogger = logger("windvectorThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("windvectorThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -188,7 +187,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 	if (!UInfo || !VInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}
@@ -266,9 +265,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		}
 	}
 
-	myThreadedLogger.Info("[" + deviceType +
-	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
