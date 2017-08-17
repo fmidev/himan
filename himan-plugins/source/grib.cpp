@@ -628,7 +628,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	if (edition == 1 &&
 	    (anInfo.Grid()->AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
-		itsLogger.Debug("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
+		itsLogger.Trace("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
 		                ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
 		edition = 2;
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
