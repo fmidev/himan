@@ -1,7 +1,3 @@
-// System includes
-#include <iostream>
-#include <string>
-
 #include "cuda_plugin_helper.h"
 
 #include "metutil.h"

@@ -8,7 +8,6 @@
 #include "level.h"
 #include "logger.h"
 #include "metutil.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -48,7 +47,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	const param QParam("Q-KGKG");
 	const param TDParam("TD-K");
 
-	auto myThreadedLogger = logger("relative_humidityThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("relative_humidityThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -68,8 +67,8 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 	if (!TInfo)
 	{
-		itsLogger.Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", level " +
-						  boost::lexical_cast<string>(myTargetInfo->Level().Value()));
+		itsLogger.Warning("Skipping step " + to_string(myTargetInfo->Time().Step()) + ", level " +
+		                  to_string(myTargetInfo->Level().Value()));
 		return;
 	}
 
@@ -99,8 +98,8 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 
 		if (!TDInfo)
 		{
-			myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-									 static_cast<string>(forecastLevel));
+			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+			                         static_cast<string>(forecastLevel));
 			return;
 		}
 	}
@@ -176,9 +175,8 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		}
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, double P, double TBase)

@@ -8,7 +8,6 @@
 #include "util.h"
 #include "writer.h"
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 #include <fstream>
 
 #include "cache.h"

@@ -105,7 +105,7 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		groundLevel = level(himan::kGround, 0);
 	}
 
-	auto myThreadedLogger = logger("qnhThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("qnhThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -123,8 +123,8 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (!topoInfo || !pressureInfo)
 	{
-		myThreadedLogger.Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-							  static_cast<string>(forecastLevel));
+		myThreadedLogger.Info("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                      static_cast<string>(forecastLevel));
 
 		return;
 	}
@@ -163,7 +163,6 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Value(qnh);
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }

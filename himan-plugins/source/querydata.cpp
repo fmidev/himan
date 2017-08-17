@@ -581,8 +581,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 				break;
 
 			default:
-				throw runtime_error("Unknown level type in querydata: " +
-				                    boost::lexical_cast<string>(qinfo.Level()->LevelType()));
+				throw runtime_error("Unknown level type in querydata: " + to_string(qinfo.Level()->LevelType()));
 				break;
 		}
 

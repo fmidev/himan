@@ -234,7 +234,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	}
 	catch (HPExceptionType& e)
 	{
-		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}
@@ -282,9 +282,8 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		}
 	}
 
-	myThreadedLogger.Info("[" + deviceType +
-	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 #ifdef HAVE_CUDA
