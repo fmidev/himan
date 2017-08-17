@@ -57,9 +57,12 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
 	}
 }
 
-ensemble::ensemble() : itsExpectedEnsembleSize(0), itsEnsembleType(kPerturbedEnsemble), itsMaximumMissingForecasts(0)
+ensemble::ensemble()
+    : itsExpectedEnsembleSize(0),
+      itsEnsembleType(kPerturbedEnsemble),
+      itsLogger(logger("ensemble")),
+      itsMaximumMissingForecasts(0)
 {
-	itsLogger = logger("ensemble");
 }
 
 ensemble::~ensemble() {}
@@ -69,9 +72,9 @@ ensemble::ensemble(const ensemble& other)
       itsDesiredForecasts(other.itsDesiredForecasts),
       itsForecasts(other.itsForecasts),
       itsEnsembleType(other.itsEnsembleType),
+      itsLogger(logger("ensemble")),
       itsMaximumMissingForecasts(other.itsMaximumMissingForecasts)
 {
-	itsLogger = logger("ensemble");
 }
 
 ensemble& ensemble::operator=(const ensemble& other)
