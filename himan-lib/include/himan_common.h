@@ -434,18 +434,14 @@ const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
 enum HPDatabaseType
 {
 	kUnknownDatabaseType = 0,
-	kNeons,
 	kRadon,
-	kNeonsAndRadon,
 	kNoDatabase
 };
 
 const boost::unordered_map<HPDatabaseType, std::string> HPDatabaseTypeToString =
 	ba::map_list_of
 	(kUnknownDatabaseType, "unknown")
-	(kNeons, "neons")
 	(kRadon, "radon")
-	(kNeonsAndRadon, "neons and radon")
 	(kNoDatabase, "no database");
 
 enum HPForecastType

@@ -11,7 +11,6 @@
 #include <boost/format.hpp>
 
 #include "fetcher.h"
-#include "neons.h"
 #include "radon.h"
 
 using namespace std;
@@ -68,11 +67,7 @@ pair<double, double> minmax(const vector<double>& vec)
 	return make_pair(min, max);
 }
 
-hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM)
-{
-	itsLogger = logger("hitool");
-}
-
+hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM) { itsLogger = logger("hitool"); }
 hitool::hitool(shared_ptr<plugin_configuration> conf) : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM)
 {
 	itsLogger = logger("hitool");
@@ -215,18 +210,7 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 	long absolutelowest = kHPMissingInt, absolutehighest = kHPMissingInt;
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-		n->NeonsDB().Query(query.str());
-
-		row = n->NeonsDB().FetchRow();
-
-		absolutelowest = lexical_cast<long>(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-		absolutehighest = lexical_cast<long>(n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-	}
-
-	if (row.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 		r->RadonDB().Query(query.str());
@@ -277,7 +261,8 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 	assert(newlowest >= newhighest);
 
-	return make_pair<level, level>(level(kHybrid, newlowest), level(kHybrid, newhighest));
+	return make_pair<level, level>(level(kHybrid, static_cast<double>(newlowest)),
+	                               level(kHybrid, static_cast<double>(newhighest)));
 }
 
 vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wantedLevelType,
@@ -316,15 +301,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 	long highestHybridLevel = kHPMissingInt, lowestHybridLevel = kHPMissingInt;
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		highestHybridLevel = boost::lexical_cast<long>(n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-		lowestHybridLevel = boost::lexical_cast<long>(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-	}
-
-	if (highestHybridLevel == kHPMissingInt && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -386,9 +363,9 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			assert(lowestHybridLevel >= highestHybridLevel);
 
 			itsLogger.Debug("Adjusting level range to " + boost::lexical_cast<string>(lowestHybridLevel) + " .. " +
-							boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
-							boost::str(boost::format("%.2f") % min_value) + " .. " +
-							boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
+			                boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
+			                boost::str(boost::format("%.2f") % min_value) + " .. " +
+			                boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
 		}
 		break;
 
@@ -420,9 +397,9 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			assert(lowestHybridLevel >= highestHybridLevel);
 
 			itsLogger.Debug("Adjusting level range to " + boost::lexical_cast<string>(lowestHybridLevel) + " .. " +
-							boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
-							boost::str(boost::format("%.2f") % min_value) + " .. " +
-							boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
+			                boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
+			                boost::str(boost::format("%.2f") % min_value) + " .. " +
+			                boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
 		}
 		break;
 
@@ -433,7 +410,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 	for (long levelValue = lowestHybridLevel; levelValue >= highestHybridLevel && !mod->CalculationFinished();
 	     levelValue--)
 	{
-		level currentLevel(kHybrid, levelValue, "HYBRID");
+		level currentLevel(kHybrid, static_cast<double>(levelValue), "HYBRID");
 
 		valueheight data = GetData(currentLevel, wantedParam, itsTime, itsForecastType);
 
@@ -556,7 +533,7 @@ vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList, cons
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -677,7 +654,7 @@ vector<double> hitool::VerticalHeightGreaterThan(const vector<param>& wantedPara
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -768,7 +745,7 @@ vector<double> hitool::VerticalHeightLessThan(const vector<param>& wantedParamLi
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -830,7 +807,7 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, con
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -898,7 +875,7 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, con
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -963,7 +940,7 @@ vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList, con
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -1020,7 +997,7 @@ vector<double> hitool::VerticalSum(const vector<param>& wantedParamList, const v
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -1085,7 +1062,7 @@ vector<double> hitool::VerticalCount(const vector<param>& wantedParamList, const
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -1162,7 +1139,7 @@ vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -1225,7 +1202,7 @@ vector<double> hitool::PlusMinusArea(const vector<param>& wantedParamList, const
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else

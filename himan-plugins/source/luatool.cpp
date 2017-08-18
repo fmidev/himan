@@ -1,12 +1,11 @@
 #include "luatool.h"
 #include "ensemble.h"
-#include "lagged_ensemble.h"
 #include "forecast_time.h"
 #include "hitool.h"
+#include "lagged_ensemble.h"
 #include "latitude_longitude_grid.h"
 #include "logger.h"
 #include "metutil.h"
-#include "neons.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "radon.h"
@@ -67,7 +66,7 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 
 	assert(myL.get());
 	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
-						  " level " + static_cast<std::string>(myTargetInfo->Level()));
+	                      " level " + static_cast<std::string>(myTargetInfo->Level()));
 
 	globals(myL.get())["logger"] = myThreadedLogger;
 
@@ -133,12 +132,10 @@ void luatool::InitLua(info_t myTargetInfo)
 	h->Time(forecast_time(myTargetInfo->Time()));
 	h->ForecastType(forecast_type(myTargetInfo->ForecastType()));
 
-	auto n = GET_PLUGIN(neons);
 	auto r = GET_PLUGIN(radon);
 
 	// Useful plugins
 	globals(L)["hitool"] = h;
-	globals(L)["neons"] = n;
 	globals(L)["radon"] = r;
 
 	itsLogger.Trace("luabind finished");
@@ -326,6 +323,23 @@ point GetLatLon(info_t& anInfo, size_t theIndex) { return anInfo->Grid()->LatLon
 double GetMissingValue(info_t& anInfo) { return anInfo->Data().MissingValue(); }
 void SetMissingValue(info_t& anInfo, double missingValue) { anInfo->Data().MissingValue(missingValue); }
 matrix<double> GetData(info_t& anInfo) { return anInfo->Data(); }
+void SetParam(info_t& anInfo, const param& par)
+{
+	auto r = GET_PLUGIN(radon);
+
+	const auto lvl = anInfo->PeekLevel(0);
+	auto paramInfo =
+	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
+
+	if (!paramInfo.empty())
+	{
+		anInfo->SetParam(param(paramInfo));
+	}
+	else
+	{
+		anInfo->SetParam(par);
+	}
+}
 }  // namespace info_wrapper
 
 namespace hitool_wrapper
@@ -707,41 +721,20 @@ HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h) { return h->HeightUnit(
 
 namespace modifier_wrapper
 {
-void SetLowerHeightGrid(modifier& mod, const object& lowerHeight)
-{
-	mod.LowerHeight(TableToVector(lowerHeight));
-}
-object GetLowerHeightGrid(modifier& mod)
-{
-	return VectorToTable(mod.LowerHeight());
-}
-void SetUpperHeightGrid(modifier& mod, const object& upperHeight)
-{
-	mod.UpperHeight(TableToVector(upperHeight));
-}
-object GetUpperHeightGrid(modifier& mod)
-{
-	return VectorToTable(mod.UpperHeight());
-}
-void SetFindValueGrid(modifier& mod, const object& findValue)
-{
-	mod.FindValue(TableToVector(findValue));
-}
-object GetFindValueGrid(modifier& mod)
-{
-	return VectorToTable(mod.FindValue());
-}
-object Result(modifier& mod)
-{
-	return VectorToTable(mod.Result());
-}
+void SetLowerHeightGrid(modifier& mod, const object& lowerHeight) { mod.LowerHeight(TableToVector(lowerHeight)); }
+object GetLowerHeightGrid(modifier& mod) { return VectorToTable(mod.LowerHeight()); }
+void SetUpperHeightGrid(modifier& mod, const object& upperHeight) { mod.UpperHeight(TableToVector(upperHeight)); }
+object GetUpperHeightGrid(modifier& mod) { return VectorToTable(mod.UpperHeight()); }
+void SetFindValueGrid(modifier& mod, const object& findValue) { mod.FindValue(TableToVector(findValue)); }
+object GetFindValueGrid(modifier& mod) { return VectorToTable(mod.FindValue()); }
+object Result(modifier& mod) { return VectorToTable(mod.Result()); }
 namespace findvalue
 {
 void Process(modifier_findvalue& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace findvalue
+}  // namespace findvalue
 
 namespace findheight
 {
@@ -749,7 +742,7 @@ void Process(modifier_findheight& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace findheight
+}  // namespace findheight
 
 namespace findheight_gt
 {
@@ -757,7 +750,7 @@ void Process(modifier_findheight_gt& mod, const object& data, const object& heig
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace findheight_gt
+}  // namespace findheight_gt
 
 namespace findheight_lt
 {
@@ -765,7 +758,7 @@ void Process(modifier_findheight_lt& mod, const object& data, const object& heig
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace findheight_lt
+}  // namespace findheight_lt
 
 namespace max
 {
@@ -773,7 +766,7 @@ void Process(modifier_max& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace max
+}  // namespace max
 
 namespace min
 {
@@ -781,7 +774,7 @@ void Process(modifier_min& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace min
+}  // namespace min
 
 namespace maxmin
 {
@@ -789,7 +782,7 @@ void Process(modifier_maxmin& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace maxmin
+}  // namespace maxmin
 
 namespace count
 {
@@ -797,30 +790,18 @@ void Process(modifier_count& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace count
+}  // namespace count
 
 namespace mean
 {
-object Result(modifier_mean& mod)
-{
-	return VectorToTable(mod.Result());
-}
+object Result(modifier_mean& mod) { return VectorToTable(mod.Result()); }
 void Process(modifier_mean& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace mean
+}  // namespace mean
 
-} // namespace modifier_wrapper
-
-namespace neons_wrapper
-{
-std::string GetProducerMetaData(std::shared_ptr<neons> n, const producer& prod, const std::string& attName)
-{
-	return n->ProducerMetaData(prod.Id(), attName);
-}
-
-}  // namespace neons_wrapper
+}  // namespace modifier_wrapper
 
 namespace radon_wrapper
 {
@@ -870,8 +851,9 @@ void BindLib(lua_State* L)
 	              .def("GetGrid", LUA_CMEMFN(grid*, info, Grid, void))
 	              .def("SetTime", LUA_MEMFN(void, info, SetTime, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info, SetLevel, const level&))
-	              .def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
+	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 	              // These are local functions to luatool
+	              .def("SetParam", &info_wrapper::SetParam)
 	              .def("SetIndexValue", &info_wrapper::SetValue)
 	              .def("GetIndexValue", &info_wrapper::GetValue)
 	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex)
@@ -1193,10 +1175,6 @@ void BindPlugins(lua_State* L)
 	              .def("VerticalPlusMinusArea", &hitool_wrapper::VerticalPlusMinusArea)
 	              .def("SetHeightUnit", &hitool_wrapper::SetHeightUnit)
 	              .def("GetHeightUnit", &hitool_wrapper::GetHeightUnit),
-	          class_<neons, std::shared_ptr<neons>>("neons")
-	              .def(constructor<>())
-	              .def("ClassName", &neons::ClassName)
-	              .def("GetProducerMetaData", &neons_wrapper::GetProducerMetaData),
 	          class_<radon, std::shared_ptr<radon>>("radon")
 	              .def(constructor<>())
 	              .def("GetProducerMetaData", &radon_wrapper::GetProducerMetaData)];
@@ -1258,7 +1236,7 @@ object VectorToTable(const std::vector<double>& vec)
 	object ret = newtable(myL.get());
 
 	size_t i = 0;
-	for(const double& val : vec)
+	for (const double& val : vec)
 	{
 		ret[++i] = val;
 
@@ -1290,7 +1268,7 @@ std::vector<double> TableToVector(const object& table)
 
 	luabind::iterator iter(table), end;
 
-	auto size =  std::distance(iter, end);
+	auto size = std::distance(iter, end);
 	std::vector<double> ret(size, himan::kFloatMissing);
 
 	size_t i = 0;
