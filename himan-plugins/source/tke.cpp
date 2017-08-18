@@ -91,7 +91,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	info_t FrvelInfo = Fetch(forecastTime, groundLevel, FrvelParam, forecastType, false);
 	info_t MoninObukhovInfo = Fetch(forecastTime, groundLevel, MoninObukhovParam, forecastType, false);
 	info_t MixHgtInfo = Fetch(forecastTime, groundLevel, MixHgtParam, forecastType, false);
-	info_t TGInfo = Fetch(forecastTime, level(himan::kGndLayer, 0), TGParam, forecastType, false);
+	info_t TGInfo = Fetch(forecastTime, level(himan::kGroundDepth, 0, 7), TGParam, forecastType, false);
 	info_t PGInfo = Fetch(forecastTime, groundLevel, PGParam, forecastType, false);
 	info_t SHFInfo = Fetch(forecastTime, groundLevel, SHFParam, forecastType, false);
 	info_t SHFPrevInfo = Fetch(forecastTimePrev, groundLevel, SHFParam, forecastType, false);

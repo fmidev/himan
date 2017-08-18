@@ -1479,7 +1479,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 			break;
 
 		case 112:
-			levelType = himan::kGndLayer;
+			levelType = himan::kGroundDepth;
 			break;
 
 		case 246:
@@ -1499,7 +1499,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 			l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
 			break;
 
-		case himan::kGndLayer:
+		case himan::kGroundDepth:
 		{
 			if (options.level.Value2() == himan::kHPMissingValue)
 			{
