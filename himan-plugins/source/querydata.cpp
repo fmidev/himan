@@ -277,9 +277,6 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 
 void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 {
-	const std::string precision =
-	    (info.Param().Precision() != himan::kHPMissingInt) ? "%." + to_string(info.Param().Precision()) + "f" : "%.1f";
-
 	NFmiParam nbParam(info.Param().UnivId(), info.Param().Name(), ::kFloatMissing, ::kFloatMissing,
 	                  static_cast<float>(info.Param().Scale()), static_cast<float>(info.Param().Base()), precision,
 	                  ::kLinearly);
