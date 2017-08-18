@@ -1274,11 +1274,7 @@ std::vector<double> TableToVector(const object& table)
 	luabind::iterator iter(table), end;
 
 	auto size = std::distance(iter, end);
-<<<<<<< HEAD
 	std::vector<double> ret(size, himan::MissingDouble());
-=======
-	std::vector<double> ret(size, himan::kFloatMissing);
->>>>>>> Remove neons plugin.
 
 	size_t i = 0;
 	for (; iter != end; ++iter, i++)

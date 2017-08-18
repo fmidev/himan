@@ -636,7 +636,7 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	if (!latestFromDatabase.empty())
 	{
-		return raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:00");
+		return raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:%S");
 	}
 
 	throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) + " for producer " +
