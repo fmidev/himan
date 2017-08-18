@@ -231,52 +231,7 @@ bool param::operator==(const param& other) const
 		return true;
 	}
 
-	if (itsId != other.itsId)
-	{
-		return false;
-	}
-
 	if (itsName != other.itsName)
-	{
-		return false;
-	}
-
-	if (UnivId() != static_cast<unsigned int>(kHPMissingInt) &&
-	    other.UnivId() != static_cast<unsigned int>(kHPMissingInt) && UnivId() != other.UnivId())
-	{
-		return false;
-	}
-
-	// Grib 1
-
-	if (itsGribTableVersion != kHPMissingInt && other.GribTableVersion() != kHPMissingInt &&
-	    itsGribTableVersion != other.GribTableVersion())
-	{
-		return false;
-	}
-
-	if (itsGribIndicatorOfParameter != kHPMissingInt && other.GribIndicatorOfParameter() != kHPMissingInt &&
-	    itsGribIndicatorOfParameter != other.GribIndicatorOfParameter())
-	{
-		return false;
-	}
-
-	// Grib 2
-
-	if (itsGribDiscipline != kHPMissingInt && other.GribDiscipline() != kHPMissingInt &&
-	    itsGribDiscipline != other.GribDiscipline())
-	{
-		return false;
-	}
-
-	if (itsGribCategory != kHPMissingInt && other.GribCategory() != kHPMissingInt &&
-	    itsGribCategory != other.GribCategory())
-	{
-		return false;
-	}
-
-	if (itsGribParameter != kHPMissingInt && other.GribParameter() != kHPMissingInt &&
-	    itsGribParameter != other.GribParameter())
 	{
 		return false;
 	}
@@ -291,6 +246,7 @@ bool param::operator==(const param& other) const
 	{
 		return false;
 	}
+
 
 	return true;
 }
