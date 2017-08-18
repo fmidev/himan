@@ -13,7 +13,6 @@
 
 #include "cache.h"
 #include "fetcher.h"
-#include "neons.h"
 #include "radon.h"
 #include "writer.h"
 
@@ -221,7 +220,7 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 	if (itsConfiguration->StatisticsEnabled())
 	{
 		itsTimer.Start();
-		itsConfiguration->Statistics()->UsedGPUCount(conf->CudaDeviceCount());
+		itsConfiguration->Statistics()->UsedGPUCount(static_cast<short>(conf->CudaDeviceCount()));
 	}
 
 	// Determine thread count
@@ -362,60 +361,11 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		exit(1);
 	}
 
-	// GRIB 1
-
-	if (itsConfiguration->OutputFileType() == kGRIB1 && itsInfo->Producer().Class() != kPreviClass)
+	if (itsInfo->Producer().Class() != kPreviClass)
 	{
 		HPDatabaseType dbtype = itsConfiguration->DatabaseType();
 
-		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-		{
-			auto n = GET_PLUGIN(neons);
-
-			for (unsigned int i = 0; i < params.size(); i++)
-			{
-				if (params[i].Name() == "DUMMY")
-				{
-					// special placeholder parameter which is replaced later
-					continue;
-				}
-
-				long table2Version = itsInfo->Producer().TableVersion();
-
-				if (table2Version == kHPMissingInt)
-				{
-					auto prodinfo = n->NeonsDB().GetProducerDefinition(itsInfo->Producer().Id());
-
-					if (!prodinfo.empty())
-					{
-						table2Version = boost::lexical_cast<long>(prodinfo["no_vers"]);
-					}
-				}
-
-				if (table2Version == kHPMissingInt)
-				{
-					itsBaseLogger.Warning("table2Version not found from Neons for producer " +
-					                      boost::lexical_cast<string>(itsInfo->Producer().Name()));
-					continue;
-				}
-
-				long parm_id = n->NeonsDB().GetGridParameterId(table2Version, params[i].Name());
-
-				if (parm_id == -1)
-				{
-					string msg = "Grib1 parameter definition not found from Neons for table version " +
-					             boost::lexical_cast<string>(table2Version) + ", parameter name " + params[i].Name();
-
-					itsBaseLogger.Warning(msg);
-					continue;
-				}
-
-				params[i].GribIndicatorOfParameter(parm_id);
-				params[i].GribTableVersion(table2Version);
-			}
-		}
-
-		if (dbtype == kRadon || dbtype == kNeonsAndRadon)
+		if (dbtype == kRadon)
 		{
 			auto r = GET_PLUGIN(radon);
 
@@ -424,12 +374,6 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 				if (params[i].Name() == "DUMMY")
 				{
 					// special placeholder parameter which is replaced later
-					continue;
-				}
-
-				if (params[i].GribIndicatorOfParameter() != kHPMissingInt &&
-				    params[i].GribTableVersion() != kHPMissingInt)
-				{
 					continue;
 				}
 
@@ -451,22 +395,20 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 				map<string, string> paraminfo = r->RadonDB().GetParameterFromDatabaseName(
 				    itsInfo->Producer().Id(), params[i].Name(), firstLevel.Type(), firstLevel.Value());
 
-				if (paraminfo.empty() || paraminfo["grib1_number"].empty() || paraminfo["grib1_table_version"].empty())
+				if (paraminfo.empty())
 				{
-					string msg = "Grib1 parameter definition not found from Radon for producer " +
-					             to_string(itsInfo->Producer().Id()) + ", parameter name " + params[i].Name();
-
-					itsBaseLogger.Warning(msg);
+					itsBaseLogger.Warning("Parameter '" + params[i].Name() + "'definition not found from Radon");
 					continue;
 				}
 
-				params[i].GribIndicatorOfParameter(stoi(paraminfo["grib1_number"]));
-				params[i].GribTableVersion(stoi(paraminfo["grib1_table_version"]));
+				param p(paraminfo);
 
-				if (!paraminfo["precision"].empty())
+				if (params[i].Aggregation().Type() != kUnknownAggregationType)
 				{
-					params[i].Precision(stoi(paraminfo["precision"]));
+					p.Aggregation(params[i].Aggregation());
 				}
+
+				params[i] = p;
 			}
 		}
 	}

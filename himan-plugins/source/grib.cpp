@@ -19,7 +19,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "neons.h"
 #include "radon.h"
 
 #include "cuda_helper.h"
@@ -333,7 +332,7 @@ void grib::WriteTime(info& anInfo)
 	{
 		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
 
-		long p1 = static_cast<long>((anInfo.Time().Step() - period) / divisor);
+		long p1 = static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor);
 
 		switch (anInfo.Param().Aggregation().Type())
 		{
@@ -407,7 +406,7 @@ void grib::WriteTime(info& anInfo)
 			case kDifference:
 				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitOfTimeRange);
 				itsGrib->Message().ForecastTime(
-				    static_cast<long>((anInfo.Time().Step() - period) / divisor));  // start step
+				    static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor));  // start step
 
 				if (anInfo.Param().Aggregation().TimeResolution() == kUnknownTimeResolution)
 				{
@@ -441,122 +440,28 @@ void grib::WriteParameter(info& anInfo)
 			itsGrib->Message().Table2Version(anInfo.Param().GribTableVersion());
 			itsGrib->Message().ParameterNumber(anInfo.Param().GribIndicatorOfParameter());
 		}
-		else
+		else if (anInfo.Producer().Id() != kHPMissingInt) // no-database example has 999999 as producer
 		{
-			long parm_id = anInfo.Param().GribIndicatorOfParameter();
-
-			if (itsWriteOptions.configuration->DatabaseType() == kNeons ||
-			    itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon)
-			{
-				// In neons table version is a producer property
-
-				long tableVersion = anInfo.Producer().TableVersion();
-
-				auto n = GET_PLUGIN(neons);
-
-				if (tableVersion == kHPMissingInt)
-				{
-					auto prodinfo = n->NeonsDB().GetProducerDefinition(anInfo.Producer().Id());
-
-					if (prodinfo.empty())
-					{
-						itsLogger.Warning("Producer information not found from neons for producer " +
-						                  boost::lexical_cast<string>(anInfo.Producer().Id()) +
-						                  ", setting table2version to 203");
-						tableVersion = 203;
-					}
-					else
-					{
-						tableVersion = boost::lexical_cast<long>(prodinfo["no_vers"]);
-					}
-				}
-
-				if (parm_id == kHPMissingInt)
-				{
-					parm_id = n->NeonsDB().GetGridParameterId(tableVersion, anInfo.Param().Name());
-				}
-
-				if (parm_id == -1)
-				{
-					itsLogger.Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " +
-					                  boost::lexical_cast<string>(anInfo.Producer().TableVersion()) + " in neons");
-					itsLogger.Warning("Setting parameter to 1");
-					parm_id = 1;
-				}
-
-				itsGrib->Message().ParameterNumber(parm_id);
-				itsGrib->Message().Table2Version(tableVersion);
-			}
-
-			if (itsWriteOptions.configuration->DatabaseType() == kRadon ||
-			    (itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon && parm_id == kHPMissingInt))
-			{
-				auto r = GET_PLUGIN(radon);
-
-				auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(
-				    boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
-
-				ASSERT(levelInfo.size());
-				auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(
-				    anInfo.Producer().Id(), anInfo.Param().Name(), stoi(levelInfo["id"]), anInfo.Level().Value());
-
-				if (paramInfo.empty() || paramInfo.find("grib1_number") == paramInfo.end() ||
-				    paramInfo["grib1_number"].empty())
-				{
-					itsLogger.Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
-					                  boost::lexical_cast<string>(anInfo.Producer().Id()) +
-					                  " in radon, setting table2version to 203");
-					itsGrib->Message().Table2Version(203);
-				}
-				else
-				{
-					itsGrib->Message().ParameterNumber(boost::lexical_cast<long>(paramInfo["grib1_number"]));
-					itsGrib->Message().Table2Version(boost::lexical_cast<long>(paramInfo["grib1_table_version"]));
-				}
-			}
+			itsLogger.Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
+			                  boost::lexical_cast<string>(anInfo.Producer().Id()) +
+			                  " in radon, setting table2version to 203");
+			itsGrib->Message().ParameterNumber(0);
+			itsGrib->Message().Table2Version(203);
 		}
 	}
 	else if (itsGrib->Message().Edition() == 2)
 	{
 		if (anInfo.Param().GribParameter() == kHPMissingInt)
 		{
-			auto r = GET_PLUGIN(radon);
-
-			auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(
-			    boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
-
-			ASSERT(levelInfo.size());
-			auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name(),
-			                                                           stoi(levelInfo["id"]), anInfo.Level().Value());
-
-			if (paramInfo.empty())
-			{
-				itsLogger.Warning("Parameter information not found from radon for producer " +
-				                  boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
-				                  anInfo.Param().Name());
-			}
-			else
-			{
-				try
-				{
-					auto newParam = anInfo.Param();
-					newParam.GribParameter(boost::lexical_cast<int>(paramInfo["grib2_number"]));
-					newParam.GribCategory(boost::lexical_cast<int>(paramInfo["grib2_category"]));
-					newParam.GribDiscipline(boost::lexical_cast<int>(paramInfo["grib2_discipline"]));
-					anInfo.SetParam(newParam);
-				}
-				catch (const boost::bad_lexical_cast& e)
-				{
-					itsLogger.Warning("Grib2 parameter information not found from radon for producer " +
-					                  boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
-					                  anInfo.Param().Name());
-				}
-			}
+			itsLogger.Warning("Parameter information not found from radon for producer " +
+			                  boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " + anInfo.Param().Name());
 		}
-
-		itsGrib->Message().ParameterNumber(anInfo.Param().GribParameter());
-		itsGrib->Message().ParameterCategory(anInfo.Param().GribCategory());
-		itsGrib->Message().ParameterDiscipline(anInfo.Param().GribDiscipline());
+		else
+		{
+			itsGrib->Message().ParameterNumber(anInfo.Param().GribParameter());
+			itsGrib->Message().ParameterCategory(anInfo.Param().GribCategory());
+			itsGrib->Message().ParameterDiscipline(anInfo.Param().GribDiscipline());
+		}
 
 		if (anInfo.Param().Aggregation().Type() != kUnknownAggregationType)
 		{
@@ -658,33 +563,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	if (anInfo.Producer().Centre() == kHPMissingInt)
 	{
-		if (itsWriteOptions.configuration->DatabaseType() == kNeons ||
-		    itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon)
-		{
-			auto n = GET_PLUGIN(neons);
-
-			map<string, string> producermap =
-			    n->NeonsDB().GetGridModelDefinition(static_cast<unsigned long>(anInfo.Producer().Id()));
-
-			if (!producermap["ident_id"].empty() && !producermap["model_id"].empty())
-			{
-				itsGrib->Message().Centre(boost::lexical_cast<long>(producermap["ident_id"]));
-				itsGrib->Message().Process(boost::lexical_cast<long>(producermap["model_id"]));
-			}
-			else
-			{
-				string producerId = boost::lexical_cast<string>(anInfo.Producer().Id());
-				itsLogger.Warning("Unable to get process and centre information from Neons for producer " + producerId);
-				itsLogger.Warning("Setting process to " + producerId + " and centre to 86");
-				itsGrib->Message().Centre(86);
-				itsGrib->Message().Process(anInfo.Producer().Id());
-			}
-		}
-		else
-		{
-			itsGrib->Message().Centre(86);
-			itsGrib->Message().Process(255);
-		}
+		itsGrib->Message().Centre(86);
+		itsGrib->Message().Process(255);
 	}
 	else
 	{
@@ -771,8 +651,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		simple_packed* s = reinterpret_cast<simple_packed*>(&anInfo.Grid()->PackedData());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
-		itsGrib->Message().BinaryScaleFactor(s->coefficients.binaryScaleFactor);
-		itsGrib->Message().DecimalScaleFactor(s->coefficients.decimalScaleFactor);
+		itsGrib->Message().BinaryScaleFactor(static_cast<long>(s->coefficients.binaryScaleFactor));
+		itsGrib->Message().DecimalScaleFactor(static_cast<long>(s->coefficients.decimalScaleFactor));
 		itsGrib->Message().BitsPerValue(s->coefficients.bitsPerValue);
 
 		itsLogger.Trace("bits per value: " + boost::lexical_cast<string>(itsGrib->Message().BitsPerValue()));
@@ -882,30 +762,13 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		appendToFile = false;
 	}
 
-	if (itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon ||
-	    itsWriteOptions.configuration->DatabaseType() == kRadon)
+	if (itsWriteOptions.configuration->DatabaseType() == kRadon)
 	{
 		int decimals = anInfo.Param().Precision();
 
 		if (decimals == kHPMissingInt)
 		{
-			// When neons is removed, this piece of code can be removed
-
-			auto r = GET_PLUGIN(radon);
-			auto precisionInfo = r->RadonDB().GetParameterPrecision(anInfo.Param().Name());
-
-			if (precisionInfo.empty() || precisionInfo.find("precision") == precisionInfo.end() ||
-			    precisionInfo["precision"].empty())
-			{
-				itsLogger.Trace("Precision not found for parameter " + anInfo.Param().Name() +
-				                " defaulting to 24 bits");
-			}
-			else
-			{
-				itsLogger.Trace("Using " + precisionInfo["precision"] + " decimals for " + anInfo.Param().Name() +
-				                "'s precision");
-				itsGrib->Message().ChangeDecimalPrecision(stoi(precisionInfo["precision"]));
-			}
+			itsLogger.Trace("Precision not found for parameter " + anInfo.Param().Name() + " defaulting to 24 bits");
 		}
 		else
 		{
@@ -918,9 +781,9 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	itsGrib->Message().Write(outputFile, appendToFile);
 
 	aTimer.Stop();
-	long duration = aTimer.GetTime();
+	double duration = static_cast<double>(aTimer.GetTime());
 
-	long bytes = boost::filesystem::file_size(outputFile);
+	double bytes = static_cast<double>(boost::filesystem::file_size(outputFile));
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
 
@@ -1043,8 +906,8 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			lccg->Di(itsGrib->Message().XLengthInMeters());
 			lccg->Dj(itsGrib->Message().YLengthInMeters());
 
-			lccg->StandardParallel1(itsGrib->Message().GetLongKey("Latin1InDegrees"));
-			lccg->StandardParallel2(itsGrib->Message().GetLongKey("Latin2InDegrees"));
+			lccg->StandardParallel1(static_cast<double>(itsGrib->Message().GetLongKey("Latin1InDegrees")));
+			lccg->StandardParallel2(static_cast<double>(itsGrib->Message().GetLongKey("Latin2InDegrees")));
 			lccg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
 
 			long earthIsOblate = itsGrib->Message().GetLongKey("earthIsOblate");
@@ -1063,7 +926,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			newGrid = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(newGrid.get());
 
-			gg->N(static_cast<size_t>(itsGrib->Message().GetLongKey("N")));
+			gg->N(static_cast<int>(itsGrib->Message().GetLongKey("N")));
 			gg->NumberOfPointsAlongParallels(itsGrib->Message().PL());
 			gg->Nj(static_cast<size_t>(itsGrib->Message().SizeY()));
 			gg->ScanningMode(m);
@@ -1164,7 +1027,6 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 	long number = itsGrib->Message().ParameterNumber();
 
-	shared_ptr<neons> n;
 	shared_ptr<radon> r;
 
 	auto dbtype = options.configuration->DatabaseType();
@@ -1177,21 +1039,13 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		string parmName = "";
 
-		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-		{
-			n = GET_PLUGIN(neons);
-
-			parmName =
-			    n->GribParameterName(number, no_vers, timeRangeIndicator, static_cast<long>(options.level.Type()));
-		}
-
-		if (parmName.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+		if (dbtype == kRadon)
 		{
 			r = GET_PLUGIN(radon);
 
 			auto parminfo = r->RadonDB().GetParameterFromGrib1(prod.Id(), no_vers, number, timeRangeIndicator,
 			                                                   itsGrib->Message().NormalizedLevelType(),
-			                                                   itsGrib->Message().LevelValue());
+			                                                   static_cast<double>(itsGrib->Message().LevelValue()));
 
 			if (!parminfo.empty())
 			{
@@ -1233,7 +1087,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 			case 3:  // average
 				a.Type(kAverage);
-				a.TimeResolutionValue(itsGrib->Message().P2() - itsGrib->Message().P1());
+				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
 				break;
 		}
 
@@ -1249,21 +1103,13 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		string parmName = "";
 
-		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-		{
-			auto n = GET_PLUGIN(neons);
-
-			parmName = n->GribParameterName(number, category, discipline, options.prod.Process(),
-			                                static_cast<long>(options.level.Type()));
-		}
-
-		if (parmName.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+		if (dbtype == kRadon)
 		{
 			auto r = GET_PLUGIN(radon);
 
 			auto parminfo = r->RadonDB().GetParameterFromGrib2(prod.Id(), discipline, category, number,
 			                                                   itsGrib->Message().NormalizedLevelType(),
-			                                                   itsGrib->Message().LevelValue());
+			                                                   static_cast<double>(itsGrib->Message().LevelValue()));
 
 			if (parminfo.size())
 			{
@@ -1299,22 +1145,22 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		{
 			case 0:  // Average
 				a.Type(kAverage);
-				a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
 				break;
 
 			case 1:  // Accumulation
 				a.Type(kAccumulation);
-				a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
 				break;
 
 			case 2:  // Maximum
 				a.Type(kMaximum);
-				a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
 				break;
 
 			case 3:  // Minimum
 				a.Type(kMinimum);
-				a.TimeResolutionValue(itsGrib->Message().LengthOfTimeRange());
+				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
 				break;
 		}
 
@@ -1488,7 +1334,8 @@ himan::level grib::ReadLevel(const search_options& options) const
 	switch (levelType)
 	{
 		case himan::kHeightLayer:
-			l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
+			l = level(levelType, 100 * static_cast<double>(itsGrib->Message().LevelValue()),
+			          100 * static_cast<double>(itsGrib->Message().LevelValue2()));
 			break;
 
 		case himan::kGroundDepth:
@@ -1520,16 +1367,7 @@ himan::producer grib::ReadProducer(const search_options& options) const
 
 	producer prod(centre, process);
 
-	if (options.configuration->DatabaseType() == kNeons)
-	{
-		// No easy way to get fmi producer id from from Neons based on centre/ident.
-		// Use given producer id instead.
-
-		prod.Id(options.prod.Id());
-	}
-
-	if (prod.Id() == kHPMissingInt &&
-	    (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon))
+	if (options.configuration->DatabaseType() == kRadon)
 	{
 		// Do a double check and fetch the fmi producer id from database.
 
@@ -1590,10 +1428,10 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 	{
 		// Get coefficient information
 
-		double bsf = itsGrib->Message().BinaryScaleFactor();
-		double dsf = itsGrib->Message().DecimalScaleFactor();
+		double bsf = static_cast<double>(itsGrib->Message().BinaryScaleFactor());
+		double dsf = static_cast<double>(itsGrib->Message().DecimalScaleFactor());
 		double rv = itsGrib->Message().ReferenceValue();
-		long bpv = itsGrib->Message().BitsPerValue();
+		int bpv = static_cast<int>(itsGrib->Message().BitsPerValue());
 
 		auto packed =
 		    unique_ptr<simple_packed>(new simple_packed(bpv, util::ToPower(bsf, 2), util::ToPower(-dsf, 10), rv));
@@ -1663,15 +1501,9 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
                               shared_ptr<info> newInfo) const
 {
-	shared_ptr<neons> n;
 	shared_ptr<radon> r;
 
-	if (options.configuration->DatabaseType() == kNeons || options.configuration->DatabaseType() == kNeonsAndRadon)
-	{
-		n = GET_PLUGIN(neons);
-	}
-
-	if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
+	if (options.configuration->DatabaseType() == kRadon)
 	{
 		r = GET_PLUGIN(radon);
 	}
@@ -1786,7 +1618,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	}
 
 	forecast_type ty(static_cast<HPForecastType>(itsGrib->Message().ForecastType()),
-	                 itsGrib->Message().ForecastTypeValue());
+	                 static_cast<double>(itsGrib->Message().ForecastTypeValue()));
 
 	if (options.ftype.Type() != ty.Type() || options.ftype.Value() != ty.Value())
 	{
@@ -1926,7 +1758,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	long duration = aTimer.GetTime();
 	long bytes = boost::filesystem::file_size(theInputFile);
 
-	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
+	double speed = floor((static_cast<double>(bytes) / 1024. / 1024.) / (static_cast<double>(duration) / 1000.));
 
 	itsLogger.Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
 
@@ -1978,7 +1810,8 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len,
                         size_t unpackedLen) const
 {
-	size_t i, idx = 0, v = 1;
+	size_t i, idx = 0;
+	int v = 1;
 
 	short j = 0;
 
@@ -2012,7 +1845,7 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 
 	map<string, string> param;
 
-	if (options.configuration->DatabaseType() == kRadon || options.configuration->DatabaseType() == kNeonsAndRadon)
+	if (options.configuration->DatabaseType() == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 		auto levelInfo =

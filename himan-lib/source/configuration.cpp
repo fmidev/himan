@@ -13,7 +13,7 @@ configuration::configuration()
       itsOutputFileType(kGRIB1),
       itsFileWriteOption(kSingleFile),
       itsFileCompression(kNoCompression),
-      itsDatabaseType(kNeonsAndRadon),
+      itsDatabaseType(kRadon),
       itsConfigurationFile(),
       itsAuxiliaryFiles(),
       itsOriginTime(),
