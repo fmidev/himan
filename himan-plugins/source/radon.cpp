@@ -51,7 +51,6 @@ void radon::Init()
 radon::radon() : itsInit(false), itsRadonDB() { itsLogger = logger("radon"); }
 void radon::PoolMaxWorkers(int maxWorkers)
 {
-	itsLogger.Warning("Switching worker pool size to " + std::to_string(maxWorkers));
 	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
 }
 
@@ -563,10 +562,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 		return false;
 	}
 
-	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name(),
-	                                                          stoi(levelinfo["id"]), resultInfo.Level().Value());
-
-	if (paraminfo.empty())
+	if (resultInfo.Param().Id() == kHPMissingInt)
 	{
 		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
 		                ", producer " + to_string(resultInfo.Producer().Id()));
@@ -593,7 +589,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
 	       "forecast_type_id, forecast_type_value, file_location, file_server) VALUES ("
 	    << resultInfo.Producer().Id() << ", "
-	    << "'" << analysisTime << "', " << geom_id << ", " << paraminfo["id"] << ", " << levelinfo["id"] << ", "
+	    << "'" << analysisTime << "', " << geom_id << ", " << resultInfo.Param().Id() << ", " << levelinfo["id"] << ", "
 	    << resultInfo.Level().Value() << ", " << levelValue2 << ", "
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
@@ -635,7 +631,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 		      << "analysis_time = '" << analysisTime << "' AND "
 		      << "geometry_id = " << geom_id << " AND "
-		      << "param_id = " << paraminfo["id"] << " AND "
+		      << "param_id = " << resultInfo.Param().Id() << " AND "
 		      << "level_id = " << levelinfo["id"] << " AND "
 		      << "level_value = " << resultInfo.Level().Value() << " AND "
 		      << "level_value2 = " << levelValue2 << " AND "

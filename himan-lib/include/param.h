@@ -35,6 +35,7 @@ class param
 	      long itsGribParameter);
 	param(const std::string& theName, unsigned long theUnivId, double theScale, double theBase,
 	      HPInterpolationMethod theInterpolationMethod = kBiLinear);
+	param(const std::map<std::string, std::string>& databaseInfo);
 
 	~param();
 
