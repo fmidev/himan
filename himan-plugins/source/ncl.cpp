@@ -10,7 +10,6 @@
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
 
-#include "neons.h"
 #include "radon.h"
 
 using namespace std;
@@ -29,18 +28,7 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	HPDatabaseType dbtype = conf->DatabaseType();
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		itsBottomLevel = boost::lexical_cast<int>(
-		    n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
-		itsTopLevel = boost::lexical_cast<int>(
-		    n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
-	}
-
-	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) &&
-	    (itsBottomLevel == kHPMissingInt || itsTopLevel == kHPMissingInt))
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -93,7 +81,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						  static_cast<string>(forecastLevel));
+	                      static_cast<string>(forecastLevel));
 
 	info_t HInfo = Fetch(forecastTime, HLevel, HParam, forecastType, false);
 	info_t TInfo = Fetch(forecastTime, HLevel, TParam, forecastType, false);
@@ -101,7 +89,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	if (!HInfo || !TInfo)
 	{
 		myThreadedLogger.Error("Skipping step " + to_string(forecastTime.Step()) + ", level " +
-							   static_cast<string>(forecastLevel));
+		                       static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -245,8 +233,8 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		if (!HInfo || !TInfo || !prevHInfo || !prevTInfo)
 		{
-			myThreadedLogger.Error("Not enough data for step " + to_string(forecastTime.Step()) +
-								   ", level " + static_cast<string>(forecastLevel));
+			myThreadedLogger.Error("Not enough data for step " + to_string(forecastTime.Step()) + ", level " +
+			                       static_cast<string>(forecastLevel));
 			break;
 		}
 

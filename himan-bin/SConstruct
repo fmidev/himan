@@ -99,8 +99,6 @@ else:
 	librarypaths.append(workspace + '/himan-lib/build/debug')
 
 librarypaths.append('/usr/lib64')
-librarypaths.append('/usr/lib64/oracle')
-librarypaths.append('/usr/lib/oracle/11.2/client64/lib')
 
 if have_cuda:
 	librarypaths.append(cuda_toolkit_path + '/lib64')
@@ -118,8 +116,6 @@ libraries = []
 
 libraries.append('himan')
 libraries.append('rt')
-libraries.append('clntsh')
-libraries.append('nnz11')
 libraries.append('jasper')
 libraries.append('odbc')
 libraries.append('pqxx')

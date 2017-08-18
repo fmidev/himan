@@ -15,7 +15,6 @@
 #include <boost/thread.hpp>
 
 #include "hitool.h"
-#include "neons.h"
 #include "radon.h"
 #include <NFmiLocation.h>
 #include <NFmiMetTime.h>
@@ -138,14 +137,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	long lowestHybridLevelNumber = kHPMissingInt;
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		lowestHybridLevelNumber = boost::lexical_cast<long>(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-	}
-
-	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && lowestHybridLevelNumber == kHPMissingInt)
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -155,7 +147,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	assert(lowestHybridLevelNumber != kHPMissingInt);
 
-	level lowestHybridLevel(kHybrid, lowestHybridLevelNumber);
+	level lowestHybridLevel(kHybrid, static_cast<double>(lowestHybridLevelNumber));
 
 	if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 243)
 	{
@@ -501,8 +493,8 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	myTargetInfo->Grid()->Data(gust_filtered);
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	                      boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                      boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,

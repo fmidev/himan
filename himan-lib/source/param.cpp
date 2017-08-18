@@ -125,6 +125,65 @@ param::param(const string& theName, unsigned long theUnivId, long theGribDiscipl
 {
 }
 
+param::param(const map<string, string>& databaseInfo) : param()
+{
+	if (!databaseInfo.empty())
+	{
+		itsId = stoi(databaseInfo.at("id"));
+		itsName = databaseInfo.at("name");
+		itsVersion = stoi(databaseInfo.at("version"));
+
+		try
+		{
+			itsGribIndicatorOfParameter = stoi(databaseInfo.at("grib1_number"));
+			itsGribTableVersion = stoi(databaseInfo.at("grib1_table_version"));
+		}
+		catch (const out_of_range& e)
+		{
+		}
+		catch (const invalid_argument& e)
+		{
+		}
+
+		try
+		{
+			itsGribDiscipline = stoi(databaseInfo.at("grib2_discipline"));
+			itsGribCategory = stoi(databaseInfo.at("grib2_category"));
+			itsGribParameter = stoi(databaseInfo.at("grib2_number"));
+		}
+		catch (const out_of_range& e)
+		{
+		}
+		catch (const invalid_argument& e)
+		{
+		}
+
+		try
+		{
+			itsPrecision = stoi(databaseInfo.at("precision"));
+		}
+		catch (const out_of_range& e)
+		{
+		}
+		catch (const invalid_argument& e)
+		{
+		}
+
+		try
+		{
+			itsUnivId = stoi(databaseInfo.at("univ_id"));
+			itsScale = stod(databaseInfo.at("scale"));
+			itsBase = stod(databaseInfo.at("base"));
+		}
+		catch (const out_of_range& e)
+		{
+		}
+		catch (const invalid_argument& e)
+		{
+		}
+	}
+}
+
 param::param(const param& other)
     : itsId(other.itsId),
       itsName(other.itsName),

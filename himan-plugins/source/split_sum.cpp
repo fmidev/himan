@@ -12,7 +12,6 @@
 #include <iostream>
 #include <map>
 
-#include "neons.h"
 #include "radon.h"
 #include "writer.h"
 
@@ -314,9 +313,6 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	// threads will be over 16. Connection pool is not working 100% correctly
 	// because at that point it will hang.
 	// To prevent this, make the pool larger.
-
-	auto n = GET_PLUGIN(neons);
-	n->PoolMaxWorkers(SUB_THREAD_COUNT * 12);  // 12 is the max thread count from compiled_plugin_base
 
 	auto r = GET_PLUGIN(radon);
 	r->PoolMaxWorkers(SUB_THREAD_COUNT * 12);
