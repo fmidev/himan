@@ -784,8 +784,7 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 {
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
 	{
-		itsLogger.Fatal("Invalid value for land sea mask threshold: " +
-						boost::lexical_cast<string>(theLandSeaMaskThreshold));
+		itsLogger.Fatal("Invalid value for land sea mask threshold: " + to_string(theLandSeaMaskThreshold));
 		himan::Abort();
 	}
 
