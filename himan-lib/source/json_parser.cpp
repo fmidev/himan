@@ -632,11 +632,11 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	auto r = GET_PLUGIN(radon);
 
-	auto latestFromDatabase = r->RadonDB().GetLatestTime(static_cast<int>(sourceProducer.Id()), "", offset);
+	auto latestFromDatabase = r->RadonDB().GetLatestTime(sourceProducer.Id(), "", offset);
 
 	if (!latestFromDatabase.empty())
 	{
-		return raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:00");
+		return raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:%S");
 	}
 
 	throw runtime_error("Latest time not found from " + HPDatabaseTypeToString.at(dbtype) + " for producer " +
