@@ -192,11 +192,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 	ASSERT((theInfos[0]->Time()) == opts.time);
 
-<<<<<<< HEAD
 	ASSERT((theInfos[0]->Param()) == opts.param);
-=======
-	assert((theInfos[0]->Param().Name()) == opts.param.Name());
->>>>>>> 04859e7... Remove neons plugin.
 
 	return theInfos[0];
 }
