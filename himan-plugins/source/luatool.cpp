@@ -1274,6 +1274,7 @@ std::vector<double> TableToVector(const object& table)
 	luabind::iterator iter(table), end;
 
 	auto size = std::distance(iter, end);
+
 	std::vector<double> ret(size, himan::MissingDouble());
 
 	size_t i = 0;
