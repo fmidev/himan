@@ -192,7 +192,11 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 	ASSERT((theInfos[0]->Time()) == opts.time);
 
+<<<<<<< HEAD
 	ASSERT((theInfos[0]->Param()) == opts.param);
+=======
+	assert((theInfos[0]->Param().Name()) == opts.param.Name());
+>>>>>>> 04859e7... Remove neons plugin.
 
 	return theInfos[0];
 }
@@ -785,19 +789,8 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
 	{
 		itsLogger.Fatal("Invalid value for land sea mask threshold: " +
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 						boost::lexical_cast<string>(theLandSeaMaskThreshold));
 		himan::Abort();
-=======
-=======
->>>>>>> Remove neons plugin.
-=======
->>>>>>> Remove neons plugin.
-		                boost::lexical_cast<string>(theLandSeaMaskThreshold));
-		abort();
->>>>>>> Remove neons plugin.
 	}
 
 	itsLandSeaMaskThreshold = theLandSeaMaskThreshold;
