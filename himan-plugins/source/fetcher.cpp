@@ -787,9 +787,12 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 		itsLogger.Fatal("Invalid value for land sea mask threshold: " +
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 						boost::lexical_cast<string>(theLandSeaMaskThreshold));
 		himan::Abort();
 =======
+=======
+>>>>>>> Remove neons plugin.
 =======
 >>>>>>> Remove neons plugin.
 		                boost::lexical_cast<string>(theLandSeaMaskThreshold));
