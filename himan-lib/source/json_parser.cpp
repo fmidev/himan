@@ -632,6 +632,8 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	auto r = GET_PLUGIN(radon);
 
+	auto latestFromDatabase = r->RadonDB().GetLatestTime(sourceProducer.Id(), "", offset);
+
 	if (!latestFromDatabase.empty())
 	{
 		return raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:%S");
