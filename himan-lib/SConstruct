@@ -84,12 +84,6 @@ includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append(workspace + '/fmidb/include')
 includes.append('/usr/include/gdal')
-includes.append('/usr/include/oracle/11.2/client64')
-
-if os.environ.get('ORACLE_HOME') is None:
-        includes.append('/usr/include/oracle')
-else:
-        includes.append(os.environ.get('ORACLE_HOME') + '/rdbms/public')
 
 if have_cuda:
         includes.append(cuda_toolkit_path + '/include')
@@ -104,13 +98,6 @@ env.Append(CPPPATH = includes)
 librarypaths = []
 
 librarypaths.append('/usr/lib64')
-
-if os.environ.get('ORACLE_HOME') is None:
-        librarypaths.append('/usr/lib64/oracle')
-        librarypaths.append('/usr/lib/oracle/11.2/client64/lib')
-else:
-        librarypaths.append(os.environ.get('ORACLE_HOME') + '/lib')
-
 env.Append(LIBPATH = librarypaths)
 
 # Libraries
@@ -125,7 +112,6 @@ if IS_SLES:
 libraries.append('fmidb')
 libraries.append('smartmet-newbase')
 libraries.append('dl')
-libraries.append('clntsh')
 libraries.append('pqxx')
 libraries.append('z')
 libraries.append('bz2')

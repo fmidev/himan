@@ -10,7 +10,6 @@
 #define HIMAN_AUXILIARY_INCLUDE
 
 #include "fetcher.h"
-#include "neons.h"
 #include "radon.h"
 
 #undef HIMAN_AUXILIARY_INCLUDE
@@ -351,18 +350,7 @@ std::pair<level, level> integral::LevelForHeight(const producer& prod, double he
 	long absolutelowest = kHPMissingInt;
 	long absolutehighest = kHPMissingInt;
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-		n->NeonsDB().Query(query.str());
-
-		row = n->NeonsDB().FetchRow();
-
-		absolutelowest = lexical_cast<long>(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-		absolutehighest = lexical_cast<long>(n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-	}
-
-	if (row.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 		r->RadonDB().Query(query.str());
@@ -413,7 +401,8 @@ std::pair<level, level> integral::LevelForHeight(const producer& prod, double he
 
 	assert(newlowest >= newhighest);
 
-	return std::make_pair<level, level>(level(kHybrid, newlowest), level(kHybrid, newhighest));
+	return std::make_pair<level, level>(level(kHybrid, static_cast<double>(newlowest)),
+	                                    level(kHybrid, static_cast<double>(newhighest)));
 }
 
 matrix<double> numerical_functions::Filter2D(const matrix<double>& A, const matrix<double>& B)
