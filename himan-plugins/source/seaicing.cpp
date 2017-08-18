@@ -60,7 +60,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 	if (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134)
 	{
-		ground = level(himan::kGndLayer, 0);
+		ground = level(himan::kGroundDepth, 0, 7);
 	}
 	else
 	{

@@ -1601,7 +1601,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 
 	const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 
-	if (theLevelType == kHeightLayer || theLevelType == kDepthLayer)
+	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth)
 	{
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
@@ -1610,7 +1610,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 			if (levelIntervals.size() != 2)
 			{
 				throw runtime_error(
-				    "heightlayer and depthlayer require two level values per definition (lx1_ly1, lx2_ly2, ..., "
+				    "height_layer and ground_depth requires two level values per definition (lx1_ly1, lx2_ly2, ..., "
 				    "lxN_lyN)");
 			}
 

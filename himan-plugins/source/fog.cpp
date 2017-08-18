@@ -51,7 +51,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	// this will come back to us
 	if (itsConfiguration->SourceProducer().Id() == 131)
 	{
-		ground = level(himan::kGndLayer, 0, "GNDLAYER");
+		ground = level(himan::kGroundDepth, 0, "GROUND_DEPTH");
 	}
 	else
 	{

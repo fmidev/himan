@@ -29,7 +29,7 @@ HPLevelType
     kAltitude = 103
     kHeight = 105
     kHybrid = 109
-    kGndLayer = 112
+    kGroundDepth = 112
     kDepth = 160
     kEntireAtmosphere = 200
     kEntireOcean = 201
