@@ -7,9 +7,9 @@
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger.h"
+#include "ogr_spatialref.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
-#include "ogr_spatialref.h"
 #include <fstream>
 
 #include "plugin_factory.h"
@@ -24,13 +24,13 @@
 
 #endif
 
+#include "NFmiFastQueryInfo.h"
 #include <NFmiGdalArea.h>
 #include <NFmiLatLonArea.h>
 #include <NFmiQueryData.h>
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
 #include <NFmiTimeList.h>
-#include "NFmiFastQueryInfo.h"
 
 #ifdef __clang__
 
@@ -41,10 +41,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-querydata::querydata() : itsUseDatabase(true)
-{
-	itsLogger = logger("querydata");
-}
+querydata::querydata() { itsLogger = logger("querydata"); }
 bool querydata::ToFile(info& theInfo, string& theOutputFile)
 {
 	ofstream out(theOutputFile.c_str());
@@ -278,36 +275,8 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 	return NFmiTimeDescriptor(originTime, tlist);
 }
 
-void AddToParamBag(himan::info& info, NFmiParamBag& pbag, bool readParamInfoFromDatabase)
+void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 {
-	using namespace himan;
-
-	if (info.Param().UnivId() == static_cast<long>(kHPMissingInt) && readParamInfoFromDatabase)
-	{
-		auto r = GET_PLUGIN(radon);
-
-		auto levelInfo =
-		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(info.Level().Type())));
-
-		param p = info.Param();
-
-		if (!levelInfo.empty() && !levelInfo["id"].empty())
-		{
-			auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
-			                                                          stoi(levelInfo["id"]), info.Level().Value());
-
-			if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
-			{
-				p.UnivId(stol(parmInfo["univ_id"]));
-				p.Scale(stod(parmInfo["scale"]));
-				p.Base(stod(parmInfo["base"]));
-				p.InterpolationMethod(kBiLinear);
-			}
-		}
-
-		info.SetParam(p);
-	}
-
 	NFmiParam nbParam(info.Param().UnivId(), info.Param().Name(), ::kFloatMissing, ::kFloatMissing,
 	                  static_cast<float>(info.Param().Scale()), static_cast<float>(info.Param().Base()), "%.1f",
 	                  ::kLinearly);
@@ -325,7 +294,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 	if (theActiveOnly)
 	{
-		AddToParamBag(info, pbag, itsUseDatabase);
+		AddToParamBag(info, pbag);
 	}
 	else
 	{
@@ -333,7 +302,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 		while (info.NextParam())
 		{
-			AddToParamBag(info, pbag, itsUseDatabase);
+			AddToParamBag(info, pbag);
 		}
 	}
 
@@ -702,6 +671,3 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	return newInfo;
 }
-
-bool querydata::UseDatabase() const { return itsUseDatabase; }
-void querydata::UseDatabase(bool theUseDatabase) { itsUseDatabase = theUseDatabase; }
