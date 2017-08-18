@@ -490,8 +490,14 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Grid()->Data(gust_filtered);
 
+<<<<<<< HEAD
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
+=======
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+	                      boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                      boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+>>>>>>> Remove neons plugin.
 }
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
