@@ -64,19 +64,19 @@ std::vector<std::shared_ptr<himan_plugin>> plugin_factory::Plugins(HPPluginClass
 
 std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClassName)
 {
-	for (size_t i = 0; i < itsPluginFactory.size(); i++)
+	// Try to find the requested plugin twice. Populate the plugin registry if the plugin is not found.
+	for (int i = 0; i < 2; i++)
 	{
-		if ((itsPluginFactory[i]->Plugin()->ClassName() == theClassName) ||
-		    (itsPluginFactory[i]->Plugin()->ClassName() == "himan::plugin::" + theClassName))
+		for (size_t i = 0; i < itsPluginFactory.size(); i++)
 		{
-			return itsPluginFactory[i]->Clone();
+			if ((itsPluginFactory[i]->Plugin()->ClassName() == theClassName) ||
+			    (itsPluginFactory[i]->Plugin()->ClassName() == "himan::plugin::" + theClassName))
+			{
+				return itsPluginFactory[i]->Clone();
+			}
 		}
+		ReadPlugins(theClassName);
 	}
-
-	ReadPlugins(theClassName);
-
-	return Plugin(theClassName);
-
 	throw std::runtime_error("plugin_factory: Unknown plugin clone operation requested: " + theClassName);
 }
 
