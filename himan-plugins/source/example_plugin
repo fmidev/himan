@@ -17,8 +17,6 @@ using namespace himan::plugin;
 
 example_plugin::example_plugin()
 {
-	itsClearTextFormula = "y = ax + b";
-
 	itsLogger = logger("example_plugin");
 }
 

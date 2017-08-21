@@ -20,7 +20,6 @@ using namespace himan::plugin;
 
 tpot::tpot() : itsThetaCalculation(false), itsThetaWCalculation(false), itsThetaECalculation(false)
 {
-	itsClearTextFormula = "TP = Tk * pow((1000/P), 0.286) ; TPW calculated with LCL ; TPE = X";
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger("tpot");

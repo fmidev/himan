@@ -17,8 +17,6 @@ using namespace himan::plugin;
 
 tke::tke() : itsTopLevel()
 {
-	itsClearTextFormula = "complex formula";
-
 	itsLogger = logger("tke");
 }
 

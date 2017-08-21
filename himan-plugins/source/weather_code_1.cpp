@@ -30,7 +30,6 @@ const himan::level NLevel(himan::kHeight, 0, "HEIGHT");
 
 weather_code_1::weather_code_1()
 {
-	itsClearTextFormula = "<algorithm>";
 	itsLogger = logger(itsName);
 }
 

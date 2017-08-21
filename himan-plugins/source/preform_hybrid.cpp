@@ -120,8 +120,6 @@ const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
 preform_hybrid::preform_hybrid()
 {
-	itsClearTextFormula = "<algorithm>";
-
 	itsLogger = logger("preform_hybrid");
 }
 

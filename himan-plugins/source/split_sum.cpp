@@ -27,8 +27,6 @@ map<string, himan::params> sourceParameters;
 
 split_sum::split_sum()
 {
-	itsClearTextFormula = "Hourly_sum = SUM_cur - SUM_prev; Rate = (SUM_cur - SUM_prev) / step";
-
 	itsLogger = logger("split_sum");
 
 	// Define source parameters for each output parameter

@@ -572,8 +572,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 					{
 						cout << "\tcuda-enabled\n";
 					}
-					cout << "\ttype compiled --> "
-					     << dynamic_pointer_cast<plugin::compiled_plugin>(thePlugins[i])->Formula() << endl;
+					cout << "\ttype compiled" << endl;
 					break;
 
 				case kAuxiliary:

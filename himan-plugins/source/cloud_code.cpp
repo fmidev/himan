@@ -16,7 +16,6 @@ const string itsName("cloud_code");
 
 cloud_code::cloud_code()
 {
-	itsClearTextFormula = "algorithm>";
 	itsLogger = logger(itsName);
 }
 

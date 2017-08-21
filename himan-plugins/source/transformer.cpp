@@ -25,7 +25,6 @@ transformer::transformer()
       itsLandSeaMaskThreshold(0.5),
       itsInterpolationMethod(kUnknownInterpolationMethod)
 {
-	itsClearTextFormula = "target_param = source_param * itsScale + itsBase";
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger("transformer");

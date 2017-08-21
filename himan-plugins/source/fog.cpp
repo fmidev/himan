@@ -15,7 +15,6 @@ const string itsName("fog");
 
 fog::fog()
 {
-	itsClearTextFormula = "FOG = (DT2M-TGround> -0.3 && FF10M < 5) ? 607 : 0";
 	itsLogger = logger(itsName);
 }
 

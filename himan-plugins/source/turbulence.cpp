@@ -13,8 +13,6 @@ using namespace himan::plugin;
 
 turbulence::turbulence()
 {
-	itsClearTextFormula = "complex formula";
-
 	itsLogger = logger("turbulence");
 }
 

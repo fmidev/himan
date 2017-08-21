@@ -16,8 +16,6 @@ using namespace himan::plugin;
 
 monin_obukhov::monin_obukhov()
 {
-	itsClearTextFormula = "1/L = -(k*g*Q)/(rho*cp*u*^3*T)";
-
 	itsLogger = logger("monin_obukhov");
 }
 

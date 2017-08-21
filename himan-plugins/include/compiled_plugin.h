@@ -26,11 +26,8 @@ public:
 	virtual ~compiled_plugin() {}
 	virtual void Process(std::shared_ptr<const plugin_configuration> configuration) = 0;
 
-	virtual std::string Formula() { return itsClearTextFormula; }
-	virtual void Formula(std::string theClearTextFormula) { itsClearTextFormula = theClearTextFormula; }
 	bool CudaEnabledCalculation() const { return itsCudaEnabledCalculation; }
 protected:
-	std::string itsClearTextFormula;
 	bool itsCudaEnabledCalculation;
 };
 

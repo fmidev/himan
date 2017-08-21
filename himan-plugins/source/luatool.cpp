@@ -45,7 +45,6 @@ boost::thread_specific_ptr<lua_State> myL;
 
 luatool::luatool() : itsWriteOptions()
 {
-	itsClearTextFormula = "<interpreted>";
 	itsLogger = logger("luatool");
 	myL.reset();
 }

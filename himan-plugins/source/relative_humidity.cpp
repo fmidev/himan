@@ -19,7 +19,6 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 
 relative_humidity::relative_humidity()
 {
-	itsClearTextFormula = "RH = 100 *  (P * Q / 0.622 / es) * (P - es) / (P - Q * P / 0.622)";
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger("relative_humidity");

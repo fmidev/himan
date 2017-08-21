@@ -54,8 +54,6 @@ void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_ti
 
 stability::stability() : itsLICalculation(false), itsBSCalculation(false), itsSRHCalculation(false)
 {
-	itsClearTextFormula = "<multiple algorithms>";
-
 	itsLogger = logger("stability");
 }
 

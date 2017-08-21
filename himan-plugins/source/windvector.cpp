@@ -29,9 +29,6 @@ boost::thread_specific_ptr<map<size_t, coefficients>> myCoefficientCache;
 
 windvector::windvector() : itsCalculationTarget(kUnknownElement), itsVectorCalculation(false)
 {
-	itsClearTextFormula =
-	    "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * "
-	    "round(speed)";
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger("windvector");

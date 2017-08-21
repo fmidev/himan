@@ -13,8 +13,6 @@ using namespace himan::plugin;
 
 icing::icing()
 {
-	itsClearTextFormula = "Icing = round(log(CW) +6) + VVcor + Tcor";
-
 	itsLogger = logger("icing");
 }
 
