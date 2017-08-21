@@ -86,8 +86,9 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		                         "', respectively");
 	}
 
+	PrimaryDimension(kTimeDimension);
+	SetupOutputForecastTypes(itsInfo);
 	SetParams(params);
-
 	Start();
 }
 
@@ -117,8 +118,6 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		}));
 	}
 
-	SetupOutputForecastTypes(targetInfo);
-
 	// Wait for all fetches to reach completion. Currently we don't allow
 	// fetches to fail (missing data).
 	bool allDone = true;
@@ -138,6 +137,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	vector<info_t> forecasts;
 	forecasts.reserve(itsMetaOpts.size());
 
+	targetInfo->FirstForecastType();
 	size_t findex = 0;
 	for (auto& f : futures)
 	{
@@ -145,8 +145,9 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		forecasts.push_back(Info);
 		findex++;
 
-		// Share the fetched grid with the target grid for this forecast type.
-		targetInfo->Grid(Info->SharedGrid());
+		// Copy the underlying data :(
+		targetInfo->Data() = Info->Data();
+
 		if (!targetInfo->NextForecastType())
 		{
 			log.Info("Not enough forecast types defined for target info, breaking");
@@ -160,8 +161,8 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	}
 	else
 	{
-		log.Info("creating 'control forecast' grid");
-		targetInfo->Grid(shared_ptr<grid>(itsInfo->Grid()->Clone()));
+		//log.Info("creating 'control forecast' grid");
+		//targetInfo->Grid(shared_ptr<grid>(itsInfo->Grid()->Clone()));
 	}
 
 	// First reset all the locations for the upcoming loop.
@@ -303,9 +304,7 @@ void blend::SetupOutputForecastTypes(shared_ptr<info> Info)
 	}
 
 	ftypes.push_back(forecast_type(kEpsControl, 0.0));
-
 	Info->ForecastTypes(ftypes);
-	Info->ReGrid();
 }
 
 vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf)
