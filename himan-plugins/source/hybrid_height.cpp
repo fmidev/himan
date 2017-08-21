@@ -104,7 +104,8 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	auto myThreadedLogger = logger(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
-	                      static_cast<string>(myTargetInfo->Level()));
+	                      static_cast<string>(myTargetInfo->Level()) + " forecast type " +
+	                      static_cast<string>(myTargetInfo->ForecastType()));
 
 	if (itsUseGeopotential)
 	{
@@ -166,6 +167,66 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 	}
 
 	return true;
+}
+
+void hybrid_height::Prefetch(info_t myTargetInfo)
+{
+	const auto forecastTime = myTargetInfo->Time();
+	const auto forecastType = myTargetInfo->ForecastType();
+
+	const string label = static_cast<string>(forecastTime.ValidDateTime()) + "_" + static_cast<string>(forecastType);
+
+	if (find(prefetched.begin(), prefetched.end(), label) != prefetched.end())
+	{
+		return;
+	}
+
+	{
+		lock_guard<mutex> lock(prefetchedMutex);
+		prefetched.push_back(label);
+	}
+
+	double firstLevelValue, lastLevelValue;
+
+	if (itsInfo->LevelOrder() == kTopToBottom)
+	{
+		firstLevelValue = myTargetInfo->PeekLevel(0).Value();
+		lastLevelValue = myTargetInfo->PeekLevel(myTargetInfo->SizeLevels() - 1).Value();
+	}
+	else
+	{
+		firstLevelValue = myTargetInfo->PeekLevel(myTargetInfo->SizeLevels() - 1).Value();
+		lastLevelValue = myTargetInfo->PeekLevel(0).Value();
+	}
+
+	if (firstLevelValue != lastLevelValue)
+	{
+		itsLogger.Trace("Prefetching from " + to_string(firstLevelValue - 1) + " to " + to_string(lastLevelValue));
+
+		double levelValue = firstLevelValue;
+
+		asyncs.push_back(async(launch::async,
+		                       [=](double levelValue) {
+			                       while (levelValue >= lastLevelValue)
+			                       {
+				                       levelValue--;
+
+				                       Fetch(forecastTime, level(kHybrid, levelValue), PParam, forecastType, false);
+			                       }
+			                   },
+		                       levelValue));
+
+		asyncs.push_back(async(launch::async,
+		                       [=](double levelValue) {
+			                       while (levelValue >= lastLevelValue)
+			                       {
+				                       levelValue--;
+
+				                       Fetch(forecastTime, level(kHybrid, levelValue), TParam, forecastType, false);
+			                       }
+			                   },
+		                       levelValue));
+	}
 }
 
 bool hybrid_height::WithIteration(info_t& myTargetInfo)
@@ -253,52 +314,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	// This change has a positive impact on performance especially on ensemble data processing:
 	// hybrid_level calculation time for ECMWF ensemble (51 members, singe time step) is cut to half.
 
-	const string label = static_cast<string>(forecastTime.ValidDateTime()) + "_" + static_cast<string>(forecastType);
-
-	if (find(prefetched.begin(), prefetched.end(), label) == prefetched.end())
-	{
-		{
-			lock_guard<mutex> lock(prefetchedMutex);
-			prefetched.push_back(label);
-		}
-
-		int increment = 1;
-		const double firstLevelValue = myTargetInfo->PeekLevel(0).Value();
-		const double lastLevelValue = myTargetInfo->PeekLevel(myTargetInfo->SizeLevels() - 1).Value();
-
-		itsLogger.Trace("Prefetching from " + to_string(firstLevelValue) + " to " + to_string(lastLevelValue));
-
-		if (firstLevelValue < lastLevelValue)
-		{
-			increment = -1;
-		}
-
-		asyncs.push_back(async(launch::async,
-		                       [=](level flevel) {
-			                       while (true)
-			                       {
-				                       if (flevel.Value() == lastLevelValue) break;
-
-				                       flevel.Value(flevel.Value() - increment);
-
-				                       Fetch(forecastTime, flevel, PParam, forecastType, false);
-			                       }
-			                   },
-		                       myTargetInfo->Level()));
-
-		asyncs.push_back(async(launch::async,
-		                       [=](level flevel) {
-			                       while (true)
-			                       {
-				                       if (flevel.Value() == lastLevelValue) break;
-
-				                       flevel.Value(flevel.Value() - increment);
-
-				                       Fetch(forecastTime, flevel, TParam, forecastType, false);
-			                       }
-			                   },
-		                       myTargetInfo->Level()));
-	}
+	Prefetch(myTargetInfo);
 
 	auto& target = VEC(myTargetInfo);
 
