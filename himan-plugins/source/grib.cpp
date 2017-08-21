@@ -1611,6 +1611,8 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 		size_t len = itsGrib->Message().PackedValuesLength();
 		int* unpackedBitmap = 0;
 
+		packed->unpackedLength = itsGrib->Message().SizeX() * itsGrib->Message().SizeY();
+
 		if (len > 0)
 		{
 			assert(packed->data == 0);
@@ -1618,7 +1620,6 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 
 			itsGrib->Message().PackedValues(packed->data);
 			packed->packedLength = len;
-			packed->unpackedLength = itsGrib->Message().SizeX() * itsGrib->Message().SizeY();
 
 			itsLogger.Trace("Retrieved " + boost::lexical_cast<string>(len) + " bytes of packed data from grib");
 		}
