@@ -148,8 +148,6 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 
 cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt)
 {
-	itsClearTextFormula = "<multiple algorithms>";
-
 	itsLogger = logger("cape");
 }
 

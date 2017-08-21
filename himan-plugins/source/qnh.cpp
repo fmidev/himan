@@ -38,8 +38,6 @@ using namespace himan::plugin;
 
 qnh::qnh()
 {
-	itsClearTextFormula = "y = ax + b";
-
 	itsLogger = logger("qnh");
 }
 

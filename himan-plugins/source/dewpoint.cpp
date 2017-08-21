@@ -14,7 +14,6 @@ using namespace himan::plugin;
 
 dewpoint::dewpoint()
 {
-	itsClearTextFormula = "Td = T / (1 - (T * ln(RH)*(Rw/L)))";
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger("dewpoint");

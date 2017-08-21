@@ -17,8 +17,6 @@ const string itsName("precipitation_rate");
 
 precipitation_rate::precipitation_rate()
 {
-	itsClearTextFormula = "???";
-
 	itsLogger = logger(itsName);
 }
 

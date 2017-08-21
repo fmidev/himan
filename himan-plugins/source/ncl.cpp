@@ -20,7 +20,6 @@ const string itsName("ncl");
 
 ncl::ncl() : itsBottomLevel(kHPMissingInt), itsTopLevel(kHPMissingInt), itsTargetTemperature(kHPMissingInt)
 {
-	itsClearTextFormula = "???";
 	itsLogger = logger(itsName);
 }
 

@@ -18,7 +18,6 @@ const int snow[4][3] = {{1, 2, 3}, {0, 41, 51}, {0, 42, 52}, {0, 43, 53}};
 
 weather_symbol::weather_symbol()
 {
-	itsClearTextFormula = "weather_symbol = <algorithm>";
 	itsLogger = logger("weather_symbol");
 
 	// hilake: etsi_pilvi.F

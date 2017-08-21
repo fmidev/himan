@@ -171,8 +171,6 @@ himan::info_t Mean(InputIt begin, InputIt end)
 
 pot::pot()
 {
-	itsClearTextFormula = "complex formula";
-
 	itsLogger = logger("pot");
 }
 

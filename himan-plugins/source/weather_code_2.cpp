@@ -14,7 +14,6 @@ using namespace himan::plugin;
 
 weather_code_2::weather_code_2()
 {
-	itsClearTextFormula = "weather_code_2 = ";
 	itsLogger = logger("weather_code_2");
 }
 

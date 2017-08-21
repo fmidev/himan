@@ -13,8 +13,6 @@ using namespace himan::plugin;
 
 seaicing::seaicing() : global(false)
 {
-	itsClearTextFormula = "SeaIcing = FF * ( -sIndex -T2m ) / ( 1 + 0.3 * ( T0 + sIndex ))";
-
 	itsLogger = logger("seaicing");
 }
 

@@ -17,7 +17,6 @@ const string itsName("absolute_humidity");
 
 absolute_humidity::absolute_humidity()
 {
-	itsClearTextFormula = "???";
 	itsLogger = logger(itsName);
 }
 

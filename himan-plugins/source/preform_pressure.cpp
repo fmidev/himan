@@ -55,8 +55,6 @@ const double rhLim = 90.;
 
 preform_pressure::preform_pressure()
 {
-	itsClearTextFormula = "<algorithm>";
-
 	itsLogger = logger("preform_pressure");
 }
 

@@ -31,7 +31,6 @@ fractile::fractile()
       itsLaggedSteps(0),
       itsMaximumMissingForecasts(0)
 {
-	itsClearTextFormula = "%";
 	itsCudaEnabledCalculation = false;
 	itsLogger = logger("fractile");
 }

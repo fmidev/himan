@@ -17,7 +17,6 @@ const string itsName("density");
 
 density::density()
 {
-	itsClearTextFormula = "rho = P / (Rd * T)";
 	itsLogger = logger(itsName);
 }
 

@@ -22,9 +22,6 @@ map<string, himan::info_t> lnspInfos;
 
 hybrid_pressure::hybrid_pressure()
 {
-	// Vertkoord_A and Vertkoord_B refer to full hybrid-level coefficients
-	itsClearTextFormula = "P = Vertkoord_A + P0 * Vertkoord_B";
-
 	itsLogger = logger("hybrid_pressure");
 }
 

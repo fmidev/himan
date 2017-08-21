@@ -25,8 +25,6 @@ using namespace himan::plugin;
 
 unstagger::unstagger()
 {
-	itsClearTextFormula = "U(i) = (U(i-0.5) + U(i+0.5)) / 2";
-
 	itsLogger = logger("unstagger");
 }
 

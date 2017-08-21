@@ -42,7 +42,6 @@ double VisibilityInMist(double stN, double stH, double RR, double RH);
 
 visibility::visibility()
 {
-	itsClearTextFormula = "<algorithm>";
 	itsLogger = logger("visibility");
 }
 
