@@ -628,7 +628,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	if (edition == 1 &&
 	    (anInfo.Grid()->AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
-		itsLogger.Debug("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
+		itsLogger.Trace("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
 		                ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
 		edition = 2;
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
@@ -1479,7 +1479,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 			break;
 
 		case 112:
-			levelType = himan::kGndLayer;
+			levelType = himan::kGroundDepth;
 			break;
 
 		case 246:
@@ -1499,7 +1499,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 			l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
 			break;
 
-		case himan::kGndLayer:
+		case himan::kGroundDepth:
 		{
 			if (options.level.Value2() == himan::kHPMissingValue)
 			{

@@ -7,15 +7,12 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
 
 seaicing::seaicing() : global(false)
 {
-	itsClearTextFormula = "SeaIcing = FF * ( -sIndex -T2m ) / ( 1 + 0.3 * ( T0 + sIndex ))";
-
 	itsLogger = logger("seaicing");
 }
 
@@ -61,15 +58,14 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 	if (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134)
 	{
-		ground = level(himan::kGndLayer, 0);
+		ground = level(himan::kGroundDepth, 0, 7);
 	}
 	else
 	{
 		ground = level(himan::kHeight, 0, "HEIGHT");
 	}
 
-	auto myThreadedLogger =
-	    logger("seaicingThread #" + boost::lexical_cast<string>(theThreadIndex));
+	auto myThreadedLogger = logger("seaicingThread #" + to_string(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -84,8 +80,8 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 
 	if (!TInfo || !TgInfo || !FfInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-								 static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -144,7 +140,6 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		myTargetInfo->Value(seaIcing);
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }

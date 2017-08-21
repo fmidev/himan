@@ -13,7 +13,6 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <iostream>
 
@@ -121,8 +120,6 @@ const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
 preform_hybrid::preform_hybrid()
 {
-	itsClearTextFormula = "<algorithm>";
-
 	itsLogger = logger("preform_hybrid");
 }
 
@@ -164,7 +161,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	level surface0mLevel(kHeight, 0);
 	level surface2mLevel(kHeight, 2);
 
-	auto myThreadedLogger = logger("preformHybridThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("preformHybridThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -180,7 +177,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	if (!RRInfo || !TInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}
@@ -442,9 +439,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		}
 	}
 
-	myThreadedLogger.Info("[" + deviceType +
-	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
@@ -639,7 +635,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("FreezingArea() caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("FreezingArea() caught exception " + to_string(e));
 		}
 		else
 		{
@@ -1034,7 +1030,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		{
 			if (e != kFileDataNotFound)
 			{
-				throw runtime_error("Stratus() caught exception " + boost::lexical_cast<string>(e));
+				throw runtime_error("Stratus() caught exception " + to_string(e));
 			}
 		}
 	}
@@ -1042,7 +1038,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Stratus() caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Stratus() caught exception " + to_string(e));
 		}
 		else
 		{

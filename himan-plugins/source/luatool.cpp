@@ -45,7 +45,6 @@ boost::thread_specific_ptr<lua_State> myL;
 
 luatool::luatool() : itsWriteOptions()
 {
-	itsClearTextFormula = "<interpreted>";
 	itsLogger = logger("luatool");
 	myL.reset();
 }
@@ -62,7 +61,7 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger = logger("luatoolThread #" + boost::lexical_cast<std::string>(threadIndex));
+	auto myThreadedLogger = logger("luatoolThread #" + std::to_string(threadIndex));
 
 	InitLua(myTargetInfo);
 
@@ -208,9 +207,8 @@ void BindEnum(lua_State* L)
 				 value("kAltitude", kAltitude),
 				 value("kHeight", kHeight),
 				 value("kHybrid", kHybrid),
-				 value("kGndLayer", kGndLayer),
+				 value("kGroundDepth", kGroundDepth),
 				 value("kDepth", kDepth),
-				 value("kDepthLayer", kDepthLayer),
 				 value("kEntireAtmosphere", kEntireAtmosphere),
 				 value("kEntireOcean", kEntireOcean),
 				 value("kMaximumThetaE", kMaximumThetaE),

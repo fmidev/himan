@@ -10,7 +10,6 @@
 #include "metutil.h"
 #include "plugin_factory.h"
 #include <algorithm>  // for std::transform
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <functional>  // for std::plus
 
@@ -55,8 +54,6 @@ void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_ti
 
 stability::stability() : itsLICalculation(false), itsBSCalculation(false), itsSRHCalculation(false)
 {
-	itsClearTextFormula = "<multiple algorithms>";
-
 	itsLogger = logger("stability");
 }
 
@@ -126,7 +123,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	vector<double> T500mVector, TD500mVector, P500mVector, U01Vector, V01Vector, U06Vector, V06Vector, UidVector,
 	    VidVector;
 
-	auto myThreadedLogger = logger("stabilityThread #" + boost::lexical_cast<string>(theThreadIndex));
+	auto myThreadedLogger = logger("stabilityThread #" + to_string(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -143,7 +140,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	if (!GetSourceData(T850Info, T700Info, T500Info, TD850Info, TD700Info, myTargetInfo,
 	                   itsConfiguration->UseCudaForPacking()))
 	{
-		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}
@@ -348,9 +345,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		}
 	}
 
-	myThreadedLogger.Info("[" + deviceType +
-	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, vector<double>& result)

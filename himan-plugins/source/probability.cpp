@@ -31,7 +31,6 @@ static const std::string kClassName = "himan::plugin::probability";
 static inline double Magnitude(double u, double v) { return sqrt(u * u + v * v); }
 probability::probability()
 {
-	itsClearTextFormula = "???";
 	itsCudaEnabledCalculation = false;
 	itsLogger = logger("probability");
 

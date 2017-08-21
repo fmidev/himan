@@ -9,22 +9,12 @@
 #include "auxiliary_plugin.h"
 #include "search_options.h"
 
-#ifdef __clang__
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsign-conversion"
-#pragma clang diagnostic ignored "-Winvalid-source-encoding"
-#pragma clang diagnostic ignored "-Wshorten-64-to-32"
-
-#include "NFmiFastQueryInfo.h"
-
-#pragma clang diagnostic pop
-
-#else
-
-#include "NFmiFastQueryInfo.h"
-
-#endif
+class NFmiFastQueryInfo;
+class NFmiQueryData;
+class NFmiTimeDescriptor;
+class NFmiParamDescriptor;
+class NFmiHPlaceDescriptor;
+class NFmiVPlaceDescriptor;
 
 namespace himan
 {

@@ -27,7 +27,6 @@ const himan::param TGParam("TG-K");
 
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotential(true), itsUseWriterThreads(false)
 {
-	itsClearTextFormula = "HEIGHT = prevH + (287/9.81) * (T+prevT)/2 * log(prevP / P)";
 	itsLogger = logger(itsName);
 }
 

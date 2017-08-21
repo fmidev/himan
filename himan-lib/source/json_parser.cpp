@@ -391,6 +391,25 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		HPFileType delayedFileType = conf->itsOutputFileType;
 
+		// Check local async options
+
+		try
+		{
+			string async = element.second.get<string>("async");
+			if (async == "true")
+			{
+				conf->AsyncExecution(true);
+			}
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing async key: ") + e.what());
+		}
+
 		try
 		{
 			string theFileType = boost::to_upper_copy(element.second.get<string>("file_type"));
@@ -551,6 +570,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 						}
 						pc->AddParameter(name, opts);
 					}
+				}
+				else if (key == "async")
+				{
+					pc->AsyncExecution(ParseBoolean(value));
 				}
 				else
 				{
@@ -1601,7 +1624,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 
 	const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 
-	if (theLevelType == kHeightLayer || theLevelType == kDepthLayer)
+	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth)
 	{
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
@@ -1610,7 +1633,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 			if (levelIntervals.size() != 2)
 			{
 				throw runtime_error(
-				    "heightlayer and depthlayer require two level values per definition (lx1_ly1, lx2_ly2, ..., "
+				    "height_layer and ground_depth requires two level values per definition (lx1_ly1, lx2_ly2, ..., "
 				    "lxN_lyN)");
 			}
 

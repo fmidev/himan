@@ -4,9 +4,6 @@
  * Calculate the co-located velocity field for U and V
  *
  */
-
-#include <boost/lexical_cast.hpp>
-
 #include "forecast_time.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
@@ -28,8 +25,6 @@ using namespace himan::plugin;
 
 unstagger::unstagger()
 {
-	itsClearTextFormula = "U(i) = (U(i-0.5) + U(i+0.5)) / 2";
-
 	itsLogger = logger("unstagger");
 }
 
@@ -83,7 +78,7 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger = logger("unstagger Thread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("unstagger Thread #" + to_string(threadIndex));
 
 	if (myTargetInfo->Grid()->Class() != kRegularGrid)
 	{
@@ -130,7 +125,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		{
 			throw runtime_error(ClassName() + ": Unable to proceed");
 		}
-		myThreadedLogger.Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Info("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                      static_cast<string>(forecastLevel));
 		return;
 	}
@@ -224,6 +219,6 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	c->Insert(*VInfo);
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-	                      boost::lexical_cast<string>(UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) +
-	                      "/" + boost::lexical_cast<string>(UInfo->Data().Size() + VInfo->Data().Size()));
+	                      to_string(UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) + "/" +
+	                      to_string(UInfo->Data().Size() + VInfo->Data().Size()));
 }

@@ -1,5 +1,6 @@
 #include "lambert_conformal_grid.h"
 #include "info.h"
+#include <ogr_spatialref.h>
 
 using namespace himan;
 using namespace std;
@@ -105,6 +106,8 @@ lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& oth
 	itsLogger = logger("lambert_conformal_grid");
 	SetCoordinates();  // Create transformer
 }
+
+lambert_conformal_grid::~lambert_conformal_grid() = default;
 
 size_t lambert_conformal_grid::Size() const
 {

@@ -5,9 +5,6 @@
 #include "fractile.h"
 
 #include <algorithm>
-#include <iostream>
-#include <string>
-
 #include <boost/algorithm/string.hpp>
 
 #include "logger.h"
@@ -34,7 +31,6 @@ fractile::fractile()
       itsLaggedSteps(0),
       itsMaximumMissingForecasts(0)
 {
-	itsClearTextFormula = "%";
 	itsCudaEnabledCalculation = false;
 	itsLogger = logger("fractile");
 }

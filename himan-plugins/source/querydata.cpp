@@ -9,6 +9,7 @@
 #include "logger.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
+#include "ogr_spatialref.h"
 #include <fstream>
 
 #include "plugin_factory.h"
@@ -29,6 +30,7 @@
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
 #include <NFmiTimeList.h>
+#include "NFmiFastQueryInfo.h"
 
 #ifdef __clang__
 
@@ -579,8 +581,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 				break;
 
 			default:
-				throw runtime_error("Unknown level type in querydata: " +
-				                    boost::lexical_cast<string>(qinfo.Level()->LevelType()));
+				throw runtime_error("Unknown level type in querydata: " + to_string(qinfo.Level()->LevelType()));
 				break;
 		}
 

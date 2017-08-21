@@ -10,7 +10,6 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -56,8 +55,6 @@ const double rhLim = 90.;
 
 preform_pressure::preform_pressure()
 {
-	itsClearTextFormula = "<algorithm>";
-
 	itsLogger = logger("preform_pressure");
 }
 
@@ -126,7 +123,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	level P1000(kPressure, 1000);
 
 	auto myThreadedLogger =
-	    logger("preformPressureThread #" + boost::lexical_cast<string>(threadIndex));
+	    logger("preformPressureThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -158,8 +155,8 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	if (!TInfo || !T700Info || !T850Info || !T925Info || !RHInfo || !RH700Info || !RH850Info || !RH925Info ||
 	    !W925Info || !W850Info || !RRInfo || !PInfo || !SNRInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-								 static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -379,6 +376,6 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		myTargetInfo->Value(PreForm);
 	}
 
-	myThreadedLogger.Info("[CPU] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-						  "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[CPU] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	                      to_string(myTargetInfo->Data().Size()));
 }

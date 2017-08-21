@@ -48,8 +48,8 @@ bool point_list::EqualsTo(const point_list& other) const
 
 		if (itsStations.size() != other.itsStations.size())
 		{
-			itsLogger.Trace("Station counts do not match: " + boost::lexical_cast<string>(itsStations.size()) +
-			                 " vs " + boost::lexical_cast<string>(other.itsStations.size()));
+			itsLogger.Trace("Station counts do not match: " + to_string(itsStations.size()) +
+			                 " vs " + to_string(other.itsStations.size()));
 			return false;
 		}
 
@@ -57,7 +57,7 @@ bool point_list::EqualsTo(const point_list& other) const
 		{
 			if (itsStations[i] != other.itsStations[i])
 			{
-				itsLogger.Trace("Station " + boost::lexical_cast<string>(i) + " does not match");
+				itsLogger.Trace("Station " + to_string(i) + " does not match");
 				return false;
 			}
 		}

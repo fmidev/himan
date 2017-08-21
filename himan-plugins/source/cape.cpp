@@ -4,7 +4,6 @@
  */
 
 #include "cape.h"
-#include "NFmiInterpolation.h"
 #include "logger.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
@@ -149,8 +148,6 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 
 cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt)
 {
-	itsClearTextFormula = "<multiple algorithms>";
-
 	itsLogger = logger("cape");
 }
 
@@ -1018,7 +1015,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 		vector<double> TparcelVec(P.size(), kFloatMissing);
 
-			::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		double scale = 1;
 		if (prevPenvInfo->Param().Name() == "P-PA") scale = 0.01;
@@ -1433,8 +1430,10 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 				// Linearly interpolate temperature and humidity values to 600hPa, to check
 				// if highest theta e is found there
 
-				T = NFmiInterpolation::Linear(600., P, prevPInfo->Value(), T, prevTInfo->Value());
-				RH = NFmiInterpolation::Linear(600., P, prevPInfo->Value(), RH, prevRHInfo->Value());
+				T = himan::numerical_functions::interpolation::Linear(600., P, prevPInfo->Value(), T,
+				                                                      prevTInfo->Value());
+				RH = himan::numerical_functions::interpolation::Linear(600., P, prevPInfo->Value(), RH,
+				                                                       prevRHInfo->Value());
 
 				P = 600.;
 			}
