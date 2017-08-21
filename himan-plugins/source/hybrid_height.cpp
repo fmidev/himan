@@ -8,6 +8,7 @@
 #include "plugin_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include <future>
 
 #include "cache.h"
 #include "neons.h"
@@ -24,6 +25,10 @@ const himan::params GPParam{himan::param("LNSP-N"), himan::param("P-PA")};
 const himan::param PParam("P-HPA");
 const himan::param TParam("T-K");
 const himan::param TGParam("TG-K");
+
+mutex prefetchedMutex;
+vector<string> prefetched;
+vector<future<void>> asyncs;
 
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotential(true), itsUseWriterThreads(false)
 {
@@ -238,6 +243,61 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	{
 		assert(prevLevel.Value() > myTargetInfo->Level().Value());
 		prevHV = VEC(prevHInfo);
+	}
+
+	// Prefetch next level data
+	// Iteration-style processing of hybrid_height is sequential by nature, and there is nothing
+	// we can do about it. What we can do is to make sure that all data is present in cache when the
+	// executing thread starts to process a level. That is done here: both temperature and pressure
+	// are fetched asynchronously (both separately!) to cache.
+	// This change has a positive impact on performance especially on ensemble data processing:
+	// hybrid_level calculation time for ECMWF ensemble (51 members, singe time step) is cut to half.
+
+	const string label = static_cast<string>(forecastTime.ValidDateTime()) + "_" + static_cast<string>(forecastType);
+
+	if (find(prefetched.begin(), prefetched.end(), label) == prefetched.end())
+	{
+		{
+			lock_guard<mutex> lock(prefetchedMutex);
+			prefetched.push_back(label);
+		}
+
+		int increment = 1;
+		const double firstLevelValue = myTargetInfo->PeekLevel(0).Value();
+		const double lastLevelValue = myTargetInfo->PeekLevel(myTargetInfo->SizeLevels() - 1).Value();
+
+		itsLogger.Trace("Prefetching from " + to_string(firstLevelValue) + " to " + to_string(lastLevelValue));
+
+		if (firstLevelValue < lastLevelValue)
+		{
+			increment = -1;
+		}
+
+		asyncs.push_back(async(launch::async,
+		                       [=](level flevel) {
+			                       while (true)
+			                       {
+				                       if (flevel.Value() == lastLevelValue) break;
+
+				                       flevel.Value(flevel.Value() - increment);
+
+				                       Fetch(forecastTime, flevel, PParam, forecastType, false);
+			                       }
+			                   },
+		                       myTargetInfo->Level()));
+
+		asyncs.push_back(async(launch::async,
+		                       [=](level flevel) {
+			                       while (true)
+			                       {
+				                       if (flevel.Value() == lastLevelValue) break;
+
+				                       flevel.Value(flevel.Value() - increment);
+
+				                       Fetch(forecastTime, flevel, TParam, forecastType, false);
+			                       }
+			                   },
+		                       myTargetInfo->Level()));
 	}
 
 	auto& target = VEC(myTargetInfo);
