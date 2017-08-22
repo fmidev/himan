@@ -33,46 +33,6 @@ compiled_plugin_base::compiled_plugin_base()
 {
 }
 
-bool compiled_plugin_base::AdjustDimension(info& myTargetInfo, HPDimensionType dim)
-{
-	lock_guard<mutex> lock(dimensionMutex);
-
-	if (dim == kForecastTypeDimension)
-	{
-		if (!itsInfo->NextForecastType())
-		{
-			return false;
-		}
-
-		return myTargetInfo.ForecastType(itsInfo->ForecastType());
-	}
-	else if (dim == kTimeDimension)
-	{
-		if (!itsInfo->NextTime())
-		{
-			return false;
-		}
-
-		return myTargetInfo.Time(itsInfo->Time());
-	}
-	else if (dim == kLevelDimension)
-	{
-		if (!itsInfo->NextLevel())
-		{
-			return false;
-		}
-
-		return myTargetInfo.Level(itsInfo->Level());
-	}
-	else
-	{
-		itsBaseLogger.Fatal("Invalid dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
-		exit(1);
-	}
-
-	return false;
-}
-
 bool compiled_plugin_base::Next(info& myTargetInfo)
 {
 	lock_guard<mutex> lock(dimensionMutex);
@@ -120,6 +80,47 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 		bool ret = myTargetInfo.Time(itsInfo->Time());
 		assert(ret);
 		ret = myTargetInfo.Level(itsInfo->Level());
+		assert(ret);
+		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		assert(ret);
+
+		return ret;
+	}
+
+	// future threads calling for new dimensions aren't getting any
+
+	itsDimensionsRemaining = false;
+
+	return false;
+}
+
+bool compiled_plugin_base::NextExcludingLevel(info& myTargetInfo)
+{
+	lock_guard<mutex> lock(dimensionMutex);
+
+	if (!itsDimensionsRemaining)
+	{
+		return false;
+	}
+
+	if (itsInfo->NextTime())
+	{
+		bool ret = myTargetInfo.Time(itsInfo->Time());
+		assert(ret);
+		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		assert(ret);
+
+		return ret;
+	}
+
+	// No more times at this forecast type; rewind time iterator, level iterator is
+	// already at first place
+
+	itsInfo->FirstTime();
+
+	if (itsInfo->NextForecastType())
+	{
+		bool ret = myTargetInfo.Time(itsInfo->Time());
 		assert(ret);
 		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
 		assert(ret);
@@ -191,22 +192,12 @@ void compiled_plugin_base::Start()
 		return;
 	}
 
-	boost::thread_group g;
-
-	/*
-	 * Each thread will have a copy of the target info.
-	 */
-
 	if (itsPrimaryDimension == kTimeDimension)
 	{
-		// Assure other iterators are set since some plugins might access
-		// configuration class' info-instance. This is only necessary
-		// for time dimension (since it is the only 'special' dimension we use)
-		// and it needs to be done before threaded execution starts.
-
-		itsInfo->First();
-		itsInfo->ResetTime();
+		itsInfo->FirstForecastType();
 	}
+
+	boost::thread_group g;
 
 	for (short i = 0; i < itsThreadCount; i++)
 	{
@@ -280,29 +271,26 @@ void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadInde
 
 void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
 {
-	while (AdjustDimension(*myTargetInfo, kTimeDimension))
+	while (NextExcludingLevel(*myTargetInfo))
 	{
-		for (myTargetInfo->ResetForecastType(); myTargetInfo->NextForecastType();)
+		for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
 		{
-			for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+			if (itsConfiguration->UseDynamicMemoryAllocation())
 			{
-				if (itsConfiguration->UseDynamicMemoryAllocation())
-				{
-					AllocateMemory(*myTargetInfo);
-				}
-
-				assert(myTargetInfo->Data().Size() > 0);
-
-				Calculate(myTargetInfo, threadIndex);
-
-				if (itsConfiguration->StatisticsEnabled())
-				{
-					itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-					itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-				}
-
-				WriteToFile(*myTargetInfo);
+				AllocateMemory(*myTargetInfo);
 			}
+
+			assert(myTargetInfo->Data().Size() > 0);
+
+			Calculate(myTargetInfo, threadIndex);
+
+			if (itsConfiguration->StatisticsEnabled())
+			{
+				itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
+				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
+			}
+
+			WriteToFile(*myTargetInfo);
 		}
 	}
 }
