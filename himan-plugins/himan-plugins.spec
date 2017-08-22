@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.8.21
+Version: 17.8.22
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Aug 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.22-1.fmi
+- hybrid_height optimization
 * Mon Aug 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.21-1.fmi
 - General code cleanup
 - Level type fixes
