@@ -5,8 +5,6 @@
  *
  */
 
-#include <boost/lexical_cast.hpp>
-
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
