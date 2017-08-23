@@ -13,7 +13,6 @@
 #include "json_parser.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 #include <future>
 #include <iostream>
@@ -144,7 +143,7 @@ int main(int argc, char** argv)
 
 	banner();
 
-	aLogger.Debug("Processqueue size: " + boost::lexical_cast<string>(plugins.size()));
+	aLogger.Debug("Processqueue size: " + std::to_string(plugins.size()));
 
 	vector<future<void>> asyncs;
 

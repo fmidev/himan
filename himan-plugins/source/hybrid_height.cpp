@@ -6,7 +6,6 @@
 #include "hybrid_height.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <future>
 
@@ -26,9 +25,11 @@ const himan::param PParam("P-HPA");
 const himan::param TParam("T-K");
 const himan::param TGParam("TG-K");
 
-mutex prefetchedMutex;
-vector<string> prefetched;
-vector<future<void>> asyncs;
+static mutex prefetchedMutex;
+static vector<string> prefetched;
+
+static mutex asyncMutex;
+static vector<future<void>> asyncs;
 
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotential(true), itsUseWriterThreads(false)
 {
@@ -46,16 +47,15 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		auto n = GET_PLUGIN(neons);
 
-		itsBottomLevel = boost::lexical_cast<int>(
-		    n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		itsBottomLevel = stoi(n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
 	}
 
 	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && itsBottomLevel == kHPMissingInt)
 	{
 		auto r = GET_PLUGIN(radon);
 
-		itsBottomLevel = boost::lexical_cast<int>(
-		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		itsBottomLevel =
+		    stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
 	}
 
 	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 243)
@@ -101,7 +101,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger = logger(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger(itsName + "Thread #" + to_string(threadIndex));
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
 	                      static_cast<string>(myTargetInfo->Level()) + " forecast type " +
@@ -113,8 +113,8 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 		if (!ret)
 		{
-			myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) +
-			                         ", level " + static_cast<string>(myTargetInfo->Level()));
+			myThreadedLogger.Warning("Skipping step " + to_string(myTargetInfo->Time().Step()) + ", level " +
+			                         static_cast<string>(myTargetInfo->Level()));
 			return;
 		}
 	}
@@ -124,17 +124,16 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 		if (!ret)
 		{
-			myThreadedLogger.Warning("Skipping step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) +
-			                         ", level " + static_cast<string>(myTargetInfo->Level()));
+			myThreadedLogger.Warning("Skipping step " + to_string(myTargetInfo->Time().Step()) + ", level " +
+			                         static_cast<string>(myTargetInfo->Level()));
 			return;
 		}
 	}
 
 	string deviceType = "CPU";
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-	                      boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                      boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
@@ -176,13 +175,14 @@ void hybrid_height::Prefetch(info_t myTargetInfo)
 
 	const string label = static_cast<string>(forecastTime.ValidDateTime()) + "_" + static_cast<string>(forecastType);
 
-	if (find(prefetched.begin(), prefetched.end(), label) != prefetched.end())
-	{
-		return;
-	}
-
 	{
 		lock_guard<mutex> lock(prefetchedMutex);
+
+		if (find(prefetched.begin(), prefetched.end(), label) != prefetched.end())
+		{
+			return;
+		}
+
 		prefetched.push_back(label);
 	}
 
@@ -201,6 +201,7 @@ void hybrid_height::Prefetch(info_t myTargetInfo)
 
 	if (firstLevelValue != lastLevelValue)
 	{
+		lock_guard<mutex> lock(asyncMutex);
 		itsLogger.Trace("Prefetching from " + to_string(firstLevelValue - 1) + " to " + to_string(lastLevelValue));
 
 		double levelValue = firstLevelValue;
@@ -281,8 +282,8 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 	if (!prevTInfo || !prevPInfo || (!prevHInfo && !firstLevel) || !PInfo || !TInfo)
 	{
-		itsLogger.Error("Source data missing for level " + boost::lexical_cast<string>(myTargetInfo->Level().Value()) +
-		                " step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
+		itsLogger.Error("Source data missing for level " + to_string(myTargetInfo->Level().Value()) + " step " +
+		                to_string(myTargetInfo->Time().Step()) + ", stopping processing");
 		return false;
 	}
 
@@ -348,8 +349,8 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 
 	if (myTargetInfo->Data().Size() == myTargetInfo->Data().MissingCount())
 	{
-		itsLogger.Error("All data missing for level " + boost::lexical_cast<string>(myTargetInfo->Level().Value()) +
-		                " step " + boost::lexical_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
+		itsLogger.Error("All data missing for level " + to_string(myTargetInfo->Level().Value()) + " step " +
+		                to_string(myTargetInfo->Time().Step()) + ", stopping processing");
 		return false;
 	}
 
