@@ -1,8 +1,3 @@
-/**
- * @file pot.h
- *
- */
-
 #ifndef POT_H
 #define POT_H
 

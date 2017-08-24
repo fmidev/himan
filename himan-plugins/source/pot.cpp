@@ -1,7 +1,3 @@
-/**
- * @file pot.cpp
- *
- */
 #include <math.h>
 
 #include "forecast_time.h"
@@ -174,11 +170,7 @@ void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	// param theRequestedParam(PARM_NAME, UNIV_ID, GRIB2DISCIPLINE, GRIB2CATEGORY, GRIB2NUMBER);
 	param POT("POT-PRCNT", 12100, 0, 19, 2);
-	// If this param is also used as a source param for other calculations
-	// (like for example dewpoint, relative humidity), unit should also be
-	// specified
 
 	POT.Unit(kPrcnt);
 
@@ -192,12 +184,6 @@ void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-/*
- * Calculate()
- *
- * This function does the actual calculation.
- */
-
 void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
 	/*
@@ -208,7 +194,6 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const param CapeParamHiman("CAPE1040-JKG");
 	const level CapeLevelHiman(kMaximumThetaE, 0);
 	const param RainParam("RRR-KGM2");
-	// ----
 
 	// Step from previous leadtime, taken from configuration file
 	int step = itsConfiguration->ForecastStep();
