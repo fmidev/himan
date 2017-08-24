@@ -1,8 +1,3 @@
-/**
- * @file pot.h
- *
- */
-
 #ifndef POT_H
 #define POT_H
 
@@ -68,6 +63,7 @@ class pot : public compiled_plugin, private compiled_plugin_base
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	bool itsStrictMode;
 };
 
 // the class factory
