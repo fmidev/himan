@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.8.22
+Version: 17.8.24
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -19,7 +19,7 @@ Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.7.31
 Requires: libfmidb >= 17.8.10
-Requires: smartmet-library-newbase >= 17.4.4
+Requires: smartmet-library-newbase >= 17.6.1
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -37,7 +37,7 @@ Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.8.10
 BuildRequires: libfmigrib-devel >= 17.7.31
-BuildRequires: smartmet-library-newbase-devel >= 17.4.4
+BuildRequires: smartmet-library-newbase-devel >= 17.6.1
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.53
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Aug 24 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.24-1.fmi
+- strict mode for pot plugin
 * Tue Aug 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.22-1.fmi
 - hybrid_height optimization
 * Mon Aug 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.21-1.fmi
