@@ -169,11 +169,7 @@ himan::info_t Mean(InputIt begin, InputIt end)
 *
 * */
 
-pot::pot()
-{
-	itsLogger = logger("pot");
-}
-
+pot::pot() : itsStrictMode(false) { itsLogger = logger("pot"); }
 void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -185,6 +181,11 @@ void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 	// specified
 
 	POT.Unit(kPrcnt);
+
+	if (itsConfiguration->GetValue("strict") == "true")
+	{
+		itsStrictMode = true;
+	}
 
 	SetParams({POT});
 
@@ -256,7 +257,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	auto myThreadedLogger = logger("pot_pluginThread #" + to_string(threadIndex));
 
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						   static_cast<string>(forecastLevel));
+	                       static_cast<string>(forecastLevel));
 
 	time_series CAPEts(CapeParamHiman, 4), RRts(RainParam, 3);
 
@@ -268,6 +269,12 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	if (CAPEts.Size() == 0)
 	{
+		if (itsStrictMode)
+		{
+			myThreadedLogger.Info("Cold cape not found, skipping step " + to_string(forecastTime.Step()));
+			return;
+		}
+
 		CAPEts.Param(CapeParamEC);
 		CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, forecastLevel);
 	}
