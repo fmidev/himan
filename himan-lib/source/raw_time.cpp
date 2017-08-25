@@ -34,7 +34,7 @@ raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMas
 		s >> itsDateTime;
 	}
 
-	if (itsDateTime == boost::date_time::not_a_date_time)
+	if (Empty())
 	{
 		throw std::runtime_error(ClassName() + ": Unable to create time from '" + theDateTime + "' with mask '" +
 		                         theTimeMask + "'");
@@ -63,6 +63,11 @@ bool raw_time::operator!=(const raw_time& other) const { return !(*this == other
 raw_time::operator std::string() const { return ToNeonsTime(); }
 std::string raw_time::String(const std::string& theTimeMask) const
 {
+	if (Empty())
+	{
+		throw std::runtime_error(ClassName() + ": input argument is not valid");
+	}
+
 	if (theTimeMask == "%Y-%m-%d %H:%M:%S")
 	{
 		return ToSQLTime();
@@ -77,11 +82,6 @@ std::string raw_time::String(const std::string& theTimeMask) const
 
 std::string raw_time::FormatTime(const std::string& theTimeMask) const
 {
-	if (itsDateTime == boost::date_time::not_a_date_time)
-	{
-		throw std::runtime_error(ClassName() + ": input argument is 'not-a-date-time'");
-	}
-
 	std::stringstream s;
 
 	// https://stackoverflow.com/questions/11121454/c-why-is-my-date-parsing-not-threadsafe
