@@ -3,12 +3,10 @@
  *
  */
 
-#define FMT_HEADER_ONLY
 #include "raw_time.h"
-#include <fmt/format.h>
 #include <mutex>
 
-std::mutex formatMutex;
+static std::mutex formatMutex;
 
 using namespace himan;
 
@@ -161,7 +159,11 @@ std::string raw_time::ToNeonsTime() const
 	const auto& date = itsDateTime.date();
 	const auto& time = itsDateTime.time_of_day();
 
-	return fmt::sprintf("%04d%02d%02d%02d%02d", date.year(), date.month(), date.day(), time.hours(), time.minutes());
+	char fmt[13];
+	snprintf(fmt, 13, "%04d%02d%02d%02d%02d", static_cast<int>(date.year()), static_cast<int>(date.month()),
+	         static_cast<int>(date.day()), time.hours(), time.minutes());
+
+	return std::string(fmt);
 }
 
 void raw_time::FromNeonsTime(const std::string& neonsTime)
@@ -182,8 +184,11 @@ std::string raw_time::ToSQLTime() const
 	const auto& date = itsDateTime.date();
 	const auto& time = itsDateTime.time_of_day();
 
-	return fmt::sprintf("%04d-%02d-%02d %02d:%02d:%02d", date.year(), date.month(), date.day(), time.hours(),
-	                    time.minutes(), time.seconds());
+	char fmt[20];
+	snprintf(fmt, 20, "%04d-%02d-%02d %02d:%02d:%02d", static_cast<int>(date.year()), static_cast<int>(date.month()),
+	         static_cast<int>(date.day()), time.hours(), time.minutes(), time.seconds());
+
+	return std::string(fmt);
 }
 
 void raw_time::FromSQLTime(const std::string& SQLTime) { itsDateTime = boost::posix_time::time_from_string(SQLTime); }
