@@ -547,8 +547,8 @@ void grib::WriteParameter(info& anInfo)
 				catch (const boost::bad_lexical_cast& e)
 				{
 					itsLogger.Warning("Grib2 parameter information not found from radon for producer " +
-									  boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
-									  anInfo.Param().Name());
+					                  boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
+					                  anInfo.Param().Name());
 				}
 			}
 		}
@@ -648,7 +648,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		else if (itsWriteOptions.configuration->FileCompression() != kNoCompression)
 		{
 			itsLogger.Error("Unable to write to compressed grib. Unknown file compression: " +
-							HPFileCompressionToString.at(itsWriteOptions.configuration->FileCompression()));
+			                HPFileCompressionToString.at(itsWriteOptions.configuration->FileCompression()));
 			return false;
 		}
 	}
@@ -813,7 +813,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		{
 			itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
 		}
-
 	}
 
 	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
@@ -896,13 +895,16 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 			auto r = GET_PLUGIN(radon);
 			auto precisionInfo = r->RadonDB().GetParameterPrecision(anInfo.Param().Name());
 
-			if (precisionInfo.empty() || precisionInfo.find("precision") == precisionInfo.end() || precisionInfo["precision"].empty())
+			if (precisionInfo.empty() || precisionInfo.find("precision") == precisionInfo.end() ||
+			    precisionInfo["precision"].empty())
 			{
-				itsLogger.Trace("Precision not found for parameter " + anInfo.Param().Name() + " defaulting to 24 bits");
+				itsLogger.Trace("Precision not found for parameter " + anInfo.Param().Name() +
+				                " defaulting to 24 bits");
 			}
 			else
 			{
-				itsLogger.Trace("Using " + precisionInfo["precision"] + " decimals for " + anInfo.Param().Name()  + "'s precision");
+				itsLogger.Trace("Using " + precisionInfo["precision"] + " decimals for " + anInfo.Param().Name() +
+				                "'s precision");
 				itsGrib->Message().ChangeDecimalPrecision(stoi(precisionInfo["precision"]));
 			}
 		}
@@ -1207,9 +1209,9 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		if (parmName.empty())
 		{
 			itsLogger.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) + " for no_vers: " +
-							  boost::lexical_cast<string>(no_vers) + ", number: " +
-							  boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
-							  boost::lexical_cast<string>(timeRangeIndicator));
+			                  boost::lexical_cast<string>(no_vers) + ", number: " +
+			                  boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
+			                  boost::lexical_cast<string>(timeRangeIndicator));
 		}
 		else
 		{
@@ -1279,9 +1281,9 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		if (parmName.empty())
 		{
 			itsLogger.Warning("Parameter name not found from database for discipline: " +
-							  boost::lexical_cast<string>(discipline) + ", category: " +
-							  boost::lexical_cast<string>(category) + ", number: " +
-							  boost::lexical_cast<string>(number));
+			                  boost::lexical_cast<string>(discipline) + ", category: " +
+			                  boost::lexical_cast<string>(category) + ", number: " +
+			                  boost::lexical_cast<string>(number));
 		}
 		else
 		{
@@ -1375,8 +1377,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 	}
 	else
 	{
-		itsLogger.Trace("Unable to determine himan parameter unit for grib unit " +
-						itsGrib->Message().ParameterUnit());
+		itsLogger.Trace("Unable to determine himan parameter unit for grib unit " + itsGrib->Message().ParameterUnit());
 	}
 
 	return p;
@@ -1388,24 +1389,16 @@ himan::forecast_time grib::ReadTime() const
 
 	/*
 	 * dataTime is HH24MM in long datatype.
-	 *
 	 * So, for example analysistime 00 is 0, and 06 is 600.
-	 *
 	 */
 
 	long dt = itsGrib->Message().DataTime();
-
-	string dataTime = boost::lexical_cast<string>(dt);
-
-	if (dt < 1000)
-	{
-		dataTime = "0" + dataTime;
-	}
+	char fmt[5];
+	snprintf(fmt, 5, "%04ld", dt);
 
 	long step = itsGrib->Message().NormalizedStep(true, true);
 
-	string originDateTimeStr = dataDate + dataTime;
-
+	string originDateTimeStr = dataDate + string(fmt);
 	raw_time originDateTime(originDateTimeStr, "%Y%m%d%H%M");
 
 	forecast_time t(originDateTime, originDateTime);
@@ -1572,7 +1565,7 @@ himan::producer grib::ReadProducer(const search_options& options) const
 			else
 			{
 				itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
-								  ", process " + to_string(process) + " type " + to_string(typeId));
+				                  ", process " + to_string(process) + " type " + to_string(typeId));
 			}
 		}
 	}
@@ -1697,9 +1690,9 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		if (!readIfNotMatching)
 		{
 			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Process()) + " vs " +
-							to_string(prod.Process()));
+			                to_string(prod.Process()));
 			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Centre()) + " vs " +
-							to_string(prod.Centre()));
+			                to_string(prod.Centre()));
 		}
 	}
 
@@ -1714,7 +1707,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		else
 		{
 			itsLogger.Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
-							" (found)");
+			                " (found)");
 
 			return false;
 		}
@@ -1737,20 +1730,20 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 			if (optsTime.OriginDateTime() != t.OriginDateTime())
 			{
 				itsLogger.Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
-								t.OriginDateTime().String() + " (found)");
+				                t.OriginDateTime().String() + " (found)");
 			}
 
 			if (optsTime.ValidDateTime() != t.ValidDateTime())
 			{
 				itsLogger.Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
-								t.ValidDateTime().String() + " (found)");
+				                t.ValidDateTime().String() + " (found)");
 			}
 
 			if (optsTime.StepResolution() != t.StepResolution())
 			{
 				itsLogger.Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) +
-								" (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) +
-								" (found)");
+				                " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) +
+				                " (found)");
 			}
 
 			return false;
