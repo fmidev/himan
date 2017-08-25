@@ -65,7 +65,12 @@ class raw_time
 	bool IsLeapYear() const;
 
    private:
-	std::string FormatTime(boost::posix_time::ptime theFormattedTime, const std::string& theTimeMask) const;
+	std::string FormatTime(const std::string& theTimeMask) const;
+	std::string ToNeonsTime() const;
+	void FromNeonsTime(const std::string& neonsTime);
+
+	std::string ToSQLTime() const;
+	void FromSQLTime(const std::string& SQLTime);
 
 	boost::posix_time::ptime itsDateTime;
 
