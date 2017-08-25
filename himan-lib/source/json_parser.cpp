@@ -655,7 +655,7 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 		if (!latestFromDatabase.empty())
 		{
-			latestOriginDateTime = raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:00");
+			latestOriginDateTime = raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:%S");
 		}
 	}
 
