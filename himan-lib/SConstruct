@@ -20,6 +20,9 @@ elif OS_NAME == "SUSE Linux Enterprise Server ":
 
 env = Environment()
 
+# Get color output from gcc / clang
+env['ENV']['TERM'] = os.environ['TERM']
+
 env['CC'] = 'gcc'
 env['CXX'] = 'g++'
 
