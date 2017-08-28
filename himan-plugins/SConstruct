@@ -31,6 +31,9 @@ AddOption(
 
 env = Environment()
 
+# Get color output from gcc / clang
+env['ENV']['TERM'] = os.environ['TERM']
+
 # Check build
 
 NOCUDA = GetOption('no-cuda-build')
