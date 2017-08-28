@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.8.24
+Version: 17.8.28
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 17.8.14
+Requires: himan-lib >= 17.8.28
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.7.31
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Aug 28 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.28-1.fmi
+- Fix grib plugin time formatting issue
 * Thu Aug 24 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.24-1.fmi
 - strict mode for pot plugin
 * Tue Aug 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.22-1.fmi
