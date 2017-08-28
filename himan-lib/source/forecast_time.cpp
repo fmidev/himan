@@ -69,11 +69,12 @@ int forecast_time::Step() const
 		switch (itsStepResolution)
 		{
 			case kHourResolution:
-				step = (itsValidDateTime.itsDateTime - itsOriginDateTime.itsDateTime).hours();
+				step = static_cast<int>((itsValidDateTime.itsDateTime - itsOriginDateTime.itsDateTime).hours());
 				break;
 
 			case kMinuteResolution:
-				step = (itsValidDateTime.itsDateTime - itsOriginDateTime.itsDateTime).total_seconds() / 60;
+				step = static_cast<int>((itsValidDateTime.itsDateTime - itsOriginDateTime.itsDateTime).total_seconds() /
+				                        60);
 				break;
 
 			default:
