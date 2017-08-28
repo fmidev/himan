@@ -9,8 +9,6 @@
 #include <mutex>
 #include <thread>
 
-#include <unistd.h>
-
 //
 // Forecast blender
 //
