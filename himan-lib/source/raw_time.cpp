@@ -161,7 +161,7 @@ std::string raw_time::ToNeonsTime() const
 
 	char fmt[13];
 	snprintf(fmt, 13, "%04d%02d%02d%02d%02d", static_cast<int>(date.year()), static_cast<int>(date.month()),
-	         static_cast<int>(date.day()), time.hours(), time.minutes());
+	         static_cast<int>(date.day()), static_cast<int>(time.hours()), static_cast<int>(time.minutes()));
 
 	return std::string(fmt);
 }
@@ -186,7 +186,8 @@ std::string raw_time::ToSQLTime() const
 
 	char fmt[20];
 	snprintf(fmt, 20, "%04d-%02d-%02d %02d:%02d:%02d", static_cast<int>(date.year()), static_cast<int>(date.month()),
-	         static_cast<int>(date.day()), time.hours(), time.minutes(), time.seconds());
+	         static_cast<int>(date.day()), static_cast<int>(time.hours()), static_cast<int>(time.minutes()),
+	         static_cast<int>(time.seconds()));
 
 	return std::string(fmt);
 }
