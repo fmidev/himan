@@ -9,6 +9,8 @@
 #include <mutex>
 #include <thread>
 
+#include <unistd.h>
+
 //
 // Forecast blender
 //
@@ -53,6 +55,70 @@ static info_t FetchWithProperties(shared_ptr<plugin_configuration> cnf, const fo
 static vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf);
 static vector<double> OpenAndParseWeightsFile(const std::string& wf);
 
+static mutex dimensionMutex;
+
+// We overload Start & Run functions since we don't want to step through the forecast types defined in targetInfo.
+// Presumably we don't want to iterate over levels either. (Not sure how that would be configured.)
+void blend::Run(unsigned short threadIndex)
+{
+	// Iterate through timesteps
+	auto targetInfo = make_shared<info>(*itsInfo);
+
+	while (itsDimensionsRemaining)
+	{
+		{
+			lock_guard<mutex> lock(dimensionMutex);
+
+			if (itsInfo->NextTime())
+			{
+				if (!targetInfo->Time(itsInfo->Time()))
+				{
+					throw std::runtime_error("invalid target time");
+				}
+			}
+			else
+			{
+				itsDimensionsRemaining = false;
+				break;
+			}
+		}
+
+		Calculate(targetInfo, threadIndex);
+
+		if (itsConfiguration->StatisticsEnabled())
+		{
+			itsConfiguration->Statistics()->AddToMissingCount(targetInfo->Data().MissingCount());
+			itsConfiguration->Statistics()->AddToValueCount(targetInfo->Data().Size());
+		}
+		WriteToFile(*targetInfo);
+	}
+}
+
+void blend::Start()
+{
+	itsThreadCount = static_cast<short>(itsInfo->SizeTimes());
+
+	vector<thread> threads;
+	threads.reserve(itsThreadCount);
+
+	itsInfo->Reset();
+	itsInfo->FirstForecastType();
+	itsInfo->FirstLevel();
+	itsInfo->FirstParam();
+
+	for (unsigned short i = 0; i < itsThreadCount; i++)
+	{
+		threads.push_back(move(thread(&blend::Run, this, i)));
+	}
+
+	for (auto&& t : threads)
+	{
+		t.join();
+	}
+
+	Finish();
+}
+
 void blend::Process(shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -94,6 +160,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 
 void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 {
+	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("blendThread#" + to_string(threadIndex));
 	const string deviceType = "CPU";
 
@@ -101,8 +168,6 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	HPTimeResolution currentResolution = currentTime.StepResolution();
 	const level currentLevel = targetInfo->Level();
 	const param currentParam = targetInfo->Param();
-
-	auto f = GET_PLUGIN(fetcher);
 
 	log.Info("Blending " + currentParam.Name() + " " + static_cast<string>(currentTime.ValidDateTime()));
 
@@ -117,22 +182,6 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 			                           m.prod);
 		}));
 	}
-
-	// Wait for all fetches to reach completion. Currently we don't allow
-	// fetches to fail (missing data).
-	bool allDone = true;
-	do
-	{
-		allDone = true;
-		for (auto& f : futures)
-		{
-			std::future_status status = f.wait_for(std::chrono::microseconds(1));
-			if (status != future_status::ready)
-			{
-				allDone = false;
-			}
-		}
-	} while (!allDone);
 
 	vector<info_t> forecasts;
 	forecasts.reserve(itsMetaOpts.size());
@@ -159,11 +208,6 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	{
 		throw runtime_error(ClassName() + ": unable to select the control forecast for the target info");
 	}
-	else
-	{
-		//log.Info("creating 'control forecast' grid");
-		//targetInfo->Grid(shared_ptr<grid>(itsInfo->Grid()->Clone()));
-	}
 
 	// First reset all the locations for the upcoming loop.
 	for (const auto& f : forecasts)
@@ -171,7 +215,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		f->ResetLocation();
 	}
 
-	// Used to accumulate values (in the case of missing values).
+	// Used to accumulate values in the case of missing values.
 	vector<double> values;
 	values.reserve(forecasts.size());
 
@@ -193,7 +237,6 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		{
 			if (!f->NextLocation())
 			{
-				// XXX All the infos should have the same grid by now.
 				log.Warning("unable to advance location iterator position");
 				continue;
 			}
@@ -245,8 +288,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 				i++;
 			}
 
-			// Apply the weights to the forecast values. Missing values are not considered here
-			// since this will result in a multiplication by 0.
+			// Finally apply the weights to the forecast values.
 			for (const auto&& tup : zip_range(currentWeights, values))
 			{
 				const double w = tup.get<0>();
@@ -431,10 +473,11 @@ vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf)
 	return metaOpts;
 }
 
+// Read whitespace separated list of weights after reading the initial configuration.
+// Check that the number of weights matches the number of configured forecasts.
 std::vector<double> OpenAndParseWeightsFile(const std::string& wf)
 {
-	// Do the reading after reading the configuration. CHECK that the number of weights matches the number of
-	// members we're going to be reading!
+
 	std::vector<double> values;
 
 	std::ifstream in(wf);

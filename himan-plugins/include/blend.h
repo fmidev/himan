@@ -33,6 +33,9 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
 
+	virtual void Start();
+	void Run(unsigned short threadIndex);
+
    protected:
 	virtual void Calculate(std::shared_ptr<info> targetInfo, unsigned short threadIndex);
 	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
