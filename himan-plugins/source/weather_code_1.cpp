@@ -6,9 +6,8 @@
 #include "weather_code_1.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "metutil.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -31,8 +30,7 @@ const himan::level NLevel(himan::kHeight, 0, "HEIGHT");
 
 weather_code_1::weather_code_1()
 {
-	itsClearTextFormula = "<algorithm>";
-	itsLogger = logger_factory::Instance()->GetLog(itsName);
+	itsLogger = logger(itsName);
 }
 
 void weather_code_1::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -52,15 +50,14 @@ void weather_code_1::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger(itsName + "Thread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	/*
 	 * In order to know which source precipitation parameter should be used we need
@@ -81,7 +78,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		if (myTargetInfo->SizeTimes() == 1)
 		{
 			paramStep = 1;
-			itsLogger->Warning("Unable to determine step from current configuration, assuming one hour");
+			itsLogger.Warning("Unable to determine step from current configuration, assuming one hour");
 		}
 		else
 		{
@@ -110,7 +107,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	}
 	else if (paramStep != 1)
 	{
-		myThreadedLogger->Error("Unsupported step: " + boost::lexical_cast<string>(paramStep));
+		myThreadedLogger.Error("Unsupported step: " + to_string(paramStep));
 		return;
 	}
 
@@ -154,7 +151,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		}
 		else
 		{
-			myThreadedLogger->Error("Precipitation data not found");
+			myThreadedLogger.Error("Precipitation data not found");
 			return;
 		}
 
@@ -167,8 +164,8 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	if (!Z1000Info || !Z850Info || !T850Info || !NInfo || !TInfo || !CloudInfo || !KindexInfo || !RRInfo || !NextRRInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -403,7 +400,6 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		myTargetInfo->Value(rain);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }

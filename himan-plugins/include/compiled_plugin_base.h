@@ -149,6 +149,16 @@ class compiled_plugin_base
 	virtual bool Next(info& myTargetInfo);
 
 	/**
+	 * @brief Distribute work equally to all threads so that each calling
+	 * thread will have access to all levels.
+	 *
+	 * @param myTargetInfo
+	 * @return
+	 */
+
+	virtual bool NextExcludingLevel(info& myTargetInfo);
+
+	/**
 	 * @brief Entry point for threads.
 	 *
 	 * This function will handle jobs (ie. times, levels to process) to each thread.
@@ -347,12 +357,6 @@ class compiled_plugin_base
 
 	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex);
 
-	/**
-	 * @brief Thread-safe way to distribute work for a given thread.
-	 */
-
-	bool AdjustDimension(info& myTargetInfo, HPDimensionType dim);
-
 	virtual void AllocateMemory(info myTargetInfo);
 	virtual void DeallocateMemory(info myTargetInfo);
 
@@ -364,7 +368,7 @@ class compiled_plugin_base
 	bool itsDimensionsRemaining;
 
    private:
-	std::unique_ptr<logger> itsBaseLogger;
+	logger itsBaseLogger;
 	bool itsPluginIsInitialized;
 	HPDimensionType itsPrimaryDimension;
 };

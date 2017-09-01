@@ -6,7 +6,6 @@
 #include "json_parser.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
-#include "logger_factory.h"
 #include "plugin_factory.h"
 #include "point.h"
 #include "point_list.h"
@@ -40,7 +39,7 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 bool ParseBoolean(string booleanValue);
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
-std::unique_ptr<logger> itsLogger;
+static logger itsLogger;
 
 /*
  * Parse()
@@ -61,19 +60,7 @@ std::unique_ptr<logger> itsLogger;
  *
  */
 
-unique_ptr<json_parser> json_parser::itsInstance;
-
-json_parser* json_parser::Instance()
-{
-	if (!itsInstance)
-	{
-		itsInstance = unique_ptr<json_parser>(new json_parser);
-	}
-
-	return itsInstance.get();
-}
-
-json_parser::json_parser() { itsLogger = logger_factory::Instance()->GetLog("json_parser"); }
+json_parser::json_parser() { itsLogger = logger("json_parser"); }
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
 	if (conf->ConfigurationFile().empty())
@@ -93,7 +80,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configura
 
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
-	itsLogger->Trace("Parsing configuration file '" + conf->ConfigurationFile() + "'");
+	itsLogger.Trace("Parsing configuration file '" + conf->ConfigurationFile() + "'");
 
 	boost::property_tree::ptree pt;
 
@@ -187,7 +174,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		if (conf->FileCompression() != kNoCompression && conf->FileWriteOption() == kSingleFile)
 		{
-			itsLogger->Warning(
+			itsLogger.Warning(
 			    "file_write_option value 'single' conflicts with file_compression, using 'multiple' instead");
 			conf->FileWriteOption(kMultipleFiles);
 		}
@@ -249,7 +236,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		if (theCacheLimit < 1)
 		{
-			itsLogger->Warning("cache_limit must be larger than 0");
+			itsLogger.Warning("cache_limit must be larger than 0");
 		}
 		else
 		{
@@ -403,6 +390,25 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		// Check local file_type option
 
 		HPFileType delayedFileType = conf->itsOutputFileType;
+
+		// Check local async options
+
+		try
+		{
+			string async = element.second.get<string>("async");
+			if (async == "true")
+			{
+				conf->AsyncExecution(true);
+			}
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing async key: ") + e.what());
+		}
 
 		try
 		{
@@ -565,6 +571,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 						pc->AddParameter(name, opts);
 					}
 				}
+				else if (key == "async")
+				{
+					pc->AsyncExecution(ParseBoolean(value));
+				}
 				else
 				{
 					if (value.empty())
@@ -641,16 +651,11 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	{
 		auto r = GET_PLUGIN(radon);
 
-		prod = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(sourceProducer.Id()));
+		auto latestFromDatabase = r->RadonDB().GetLatestTime(sourceProducer.Id(), "", offset);
 
-		if (!prod.empty())
+		if (!latestFromDatabase.empty())
 		{
-			auto latestFromDatabase = r->RadonDB().GetLatestTime(prod["ref_prod"], "", offset);
-
-			if (!latestFromDatabase.empty())
-			{
-				latestOriginDateTime = raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:00");
-			}
+			latestOriginDateTime = raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:%S");
 		}
 	}
 
@@ -774,7 +779,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		if (!stepUnit.empty())
 		{
-			itsLogger->Warning("Key 'step_unit' is deprecated");
+			itsLogger.Warning("Key 'step_unit' is deprecated");
 		}
 	}
 	catch (exception& e)
@@ -1318,7 +1323,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 	if (ig)
 	{
 		// Disable cuda interpolation (too inefficienct for single points)
-		itsLogger->Trace("Disabling cuda interpolation for single point data");
+		itsLogger.Trace("Disabling cuda interpolation for single point data");
 		conf->UseCudaForInterpolation(false);
 		return ig;
 	}
@@ -1431,7 +1436,6 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
 		{
 			auto n = GET_PLUGIN(neons);
-			auto r = GET_PLUGIN(radon);
 
 			for (const auto& prodstr : sourceProducersStr)
 			{
@@ -1452,7 +1456,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 				}
 				else
 				{
-					itsLogger->Warning("Failed to find source producer from Neons: " + prodstr);
+					itsLogger.Warning("Failed to find source producer from Neons: " + prodstr);
 				}
 			}
 		}
@@ -1483,20 +1487,20 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 
 					if (dbtype == kNeonsAndRadon)
 					{
-						itsLogger->Info("Forcing database type to radon");
+						itsLogger.Info("Forcing database type to radon");
 						conf->DatabaseType(kRadon);
 					}
 					sourceProducers.push_back(prod);
 				}
 				else
 				{
-					itsLogger->Warning("Failed to find source producer from Radon: " + prodstr);
+					itsLogger.Warning("Failed to find source producer from Radon: " + prodstr);
 				}
 			}
 		}
 		else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
 		{
-			itsLogger->Fatal("Source producer information was not found from database");
+			itsLogger.Fatal("Source producer information was not found from database");
 			abort();
 		}
 		else if (dbtype == kNoDatabase)
@@ -1512,12 +1516,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		itsLogger->Fatal("Source producer definitions not found: " + string(e.what()));
+		itsLogger.Fatal("Source producer definitions not found: " + string(e.what()));
 		abort();
 	}
 	catch (exception& e)
 	{
-		itsLogger->Fatal("Error parsing source producer information: " + string(e.what()));
+		itsLogger.Fatal("Error parsing source producer information: " + string(e.what()));
 		abort();
 	}
 
@@ -1551,7 +1555,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		{
 			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
 			{
-				itsLogger->Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+				itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
 			}
 			else
 			{
@@ -1572,7 +1576,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		}
 		else if (dbtype != kNoDatabase)
 		{
-			itsLogger->Warning("Unknown target producer: " + pt.get<string>("target_producer"));
+			itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 		}
 
 		conf->TargetProducer(prod);
@@ -1580,12 +1584,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		itsLogger->Fatal("Target producer definitions not found: " + string(e.what()));
+		itsLogger.Fatal("Target producer definitions not found: " + string(e.what()));
 		abort();
 	}
 	catch (exception& e)
 	{
-		itsLogger->Fatal("Error parsing target producer information: " + string(e.what()));
+		itsLogger.Fatal("Error parsing target producer information: " + string(e.what()));
 		abort();
 	}
 }
@@ -1620,7 +1624,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 
 	const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 
-	if (theLevelType == kHeightLayer || theLevelType == kDepthLayer)
+	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth)
 	{
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
@@ -1629,7 +1633,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 			if (levelIntervals.size() != 2)
 			{
 				throw runtime_error(
-				    "heightlayer and depthlayer require two level values per definition (lx1_ly1, lx2_ly2, ..., "
+				    "height_layer and ground_depth requires two level values per definition (lx1_ly1, lx2_ly2, ..., "
 				    "lxN_lyN)");
 			}
 
@@ -1675,7 +1679,7 @@ bool ParseBoolean(string booleanValue)
 
 	else
 	{
-		itsLogger->Fatal("Invalid boolean value: " + booleanValue);
+		itsLogger.Fatal("Invalid boolean value: " + booleanValue);
 		abort();
 	}
 

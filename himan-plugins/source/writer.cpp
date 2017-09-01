@@ -4,11 +4,10 @@
  */
 
 #include "writer.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 #include <fstream>
 
 #include "cache.h"
@@ -22,7 +21,7 @@ using namespace himan::plugin;
 
 writer::writer() : itsWriteOptions()
 {
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("writer"));
+	itsLogger = logger("writer");
 }
 
 bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile)
@@ -76,7 +75,7 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 		{
 			if (theInfo.Grid()->Type() == kReducedGaussian)
 			{
-				itsLogger->Error("Reduced gaussian grid cannot be written to querydata");
+				itsLogger.Error("Reduced gaussian grid cannot be written to querydata");
 				return false;
 			}
 
@@ -145,7 +144,7 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 
 				if (!ret)
 				{
-					itsLogger->Warning("Saving file information to neons failed");
+					itsLogger.Warning("Saving file information to neons failed");
 				}
 			}
 
@@ -160,16 +159,16 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 
 					if (!ret)
 					{
-						itsLogger->Error("Writing to radon failed");
+						itsLogger.Error("Writing to radon failed");
 					}
 				}
 				catch (const std::exception& e)
 				{
-					itsLogger->Error("Writing to radon failed: " + std::string(e.what()));
+					itsLogger.Error("Writing to radon failed: " + std::string(e.what()));
 				}
 				catch (...)
 				{
-					itsLogger->Error("Writing to radon failed: general exception");
+					itsLogger.Error("Writing to radon failed: general exception");
 				}
 			}
 		}

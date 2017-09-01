@@ -9,11 +9,9 @@
 #include "preform_hybrid.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <iostream>
 
@@ -121,9 +119,7 @@ const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
 preform_hybrid::preform_hybrid()
 {
-	itsClearTextFormula = "<algorithm>";
-
-	itsLogger = logger_factory::Instance()->GetLog("preform_hybrid");
+	itsLogger = logger("preform_hybrid");
 }
 
 void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -164,15 +160,14 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	level surface0mLevel(kHeight, 0);
 	level surface2mLevel(kHeight, 2);
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("preformHybridThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("preformHybridThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	// Source infos
 
@@ -181,8 +176,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	if (!RRInfo || !TInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -206,20 +201,20 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	if (!stratus)
 	{
-		myThreadedLogger->Error("stratus calculation failed, unable to proceed");
+		myThreadedLogger.Error("stratus calculation failed, unable to proceed");
 		return;
 	}
 
 	if (!freezingArea)
 	{
-		myThreadedLogger->Error("freezingArea calculation failed, unable to proceed");
+		myThreadedLogger.Error("freezingArea calculation failed, unable to proceed");
 		return;
 	}
 
 	freezingArea->First();
 	stratus->First();
 
-	myThreadedLogger->Info("Stratus and freezing area calculated");
+	myThreadedLogger.Info("Stratus and freezing area calculated");
 
 	string deviceType = "CPU";
 
@@ -442,9 +437,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			}
 		}
 	}
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
@@ -480,7 +475,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	vector<double> plusArea, minusArea, plusAreaSfc;
 	vector<double> rhAvg01, rhAvgUpper12, rhAvgUpper23;
 
-	auto logger = logger_factory::Instance()->GetLog("preform_hybrid-freezing_area");
+	auto log = logger("preform_hybrid-freezing_area");
 
 	try
 	{
@@ -488,7 +483,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		param wantedParam("T-K");
 
-		logger->Trace("Counting number of zero levels");
+		log.Trace("Counting number of zero levels");
 
 		numZeroLevels = h->VerticalCount(wantedParam, constData1, constData2, constData3);
 
@@ -525,14 +520,14 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		// Mahdollisen pinta- tai 1/2. nollarajojen välisen pakkaskerroksen koko [mC, "metriastetta"]
 		minusArea = zeroLevel1;
 
-		logger->Trace("Searching for first zero level height");
+		log.Trace("Searching for first zero level height");
 		zeroLevel1 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 1);
 
 #ifdef DEBUG
 		util::DumpVector(zeroLevel1, "zero level 1");
 #endif
 
-		logger->Trace("Searching for average temperature between ground level and first zero level");
+		log.Trace("Searching for average temperature between ground level and first zero level");
 		Tavg01 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
 
 #ifdef DEBUG
@@ -541,7 +536,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		wantedParam = param("RH-PRCNT");
 
-		logger->Trace("Searching for average humidity between ground and first zero level");
+		log.Trace("Searching for average humidity between ground and first zero level");
 		// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa
 		rhAvg01 = h->VerticalAverage(wantedParam, constData1, zeroLevel1);
 
@@ -557,21 +552,21 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			// Values between zero levels 1 <--> 2
 			wantedParam = param("T-K");
 
-			logger->Trace("Searching for second zero level height");
+			log.Trace("Searching for second zero level height");
 			zeroLevel2 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 2);
 
 #ifdef DEBUG
 			util::DumpVector(zeroLevel2, "zero level 2");
 #endif
 
-			logger->Trace("Searching for average temperature between first and second zero level");
+			log.Trace("Searching for average temperature between first and second zero level");
 			Tavg12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
 
 #ifdef DEBUG
 			util::DumpVector(Tavg12, "tavg 12");
 #endif
 
-			logger->Trace("Searching for average humidity between first and second zero level");
+			log.Trace("Searching for average humidity between first and second zero level");
 
 			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
 			wantedParam = param("RH-PRCNT");
@@ -585,14 +580,14 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			// 2 <--> 3
 			wantedParam = param("T-K");
 
-			logger->Trace("Searching for third zero level height");
+			log.Trace("Searching for third zero level height");
 			zeroLevel3 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 3);
 
 #ifdef DEBUG
 			util::DumpVector(zeroLevel3, "zero level 3");
 #endif
 
-			logger->Trace("Searching for average temperature between second and third zero level");
+			log.Trace("Searching for average temperature between second and third zero level");
 			Tavg23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
 
 #ifdef DEBUG
@@ -601,7 +596,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			wantedParam = param("RH-PRCNT");
 
-			logger->Trace("Searching for average humidity between second and third zero level");
+			log.Trace("Searching for average humidity between second and third zero level");
 
 			// Keskimääräinen RH ylemmässä plussakerroksessa
 			rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
@@ -613,14 +608,14 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			// 3 <--> 4
 			wantedParam = param("T-K");
 
-			logger->Trace("Searching for fourth zero level height");
+			log.Trace("Searching for fourth zero level height");
 			zeroLevel4 = h->VerticalHeight(wantedParam, constData1, constData2, constData3, 4);
 
 #ifdef DEBUG
 			util::DumpVector(zeroLevel4, "zero level 4");
 #endif
 
-			logger->Trace("Searching for average temperature between third and fourth zero level");
+			log.Trace("Searching for average temperature between third and fourth zero level");
 			Tavg34 = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
 
 #ifdef DEBUG
@@ -631,7 +626,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		{
 			if (e == kFileDataNotFound)
 			{
-				logger->Debug("Some zero level not found from entire data");
+				log.Debug("Some zero level not found from entire data");
 			}
 		}
 	}
@@ -639,7 +634,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("FreezingArea() caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("FreezingArea() caught exception " + to_string(e));
 		}
 		else
 		{
@@ -836,7 +831,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	vector<double> constData1(ret->Data().Size(), 0);
 
 	auto constData2 = constData1;
-	auto logger = logger_factory::Instance()->GetLog("preform_hybrid-stratus");
+	auto log = logger("preform_hybrid-stratus");
 
 	try
 	{
@@ -845,7 +840,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		vector<param> wantedParamList({param("N-0TO1"), param("N-PRCNT")});
 
-		logger->Info("Searching for stratus lower limit");
+		log.Info("Searching for stratus lower limit");
 
 		auto baseThreshold = h->VerticalMinimum(wantedParamList, 0, stLimit);
 
@@ -866,7 +861,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Param(stratusBaseParam);
 		ret->Data().Set(baseThreshold);
 
-		logger->Info("Searching for stratus upper limit");
+		log.Info("Searching for stratus upper limit");
 
 		auto topThreshold = h->VerticalMinimum(wantedParamList, stLimit, layer);
 
@@ -886,7 +881,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		// Stratus Base/top [m]
 		// _findh: 0 = viimeinen löytyvä arvo pinnasta ylöspäin, 1 = ensimmäinen löytyvä arvo
 
-		logger->Info("Searching for stratus base accurate value");
+		log.Info("Searching for stratus base accurate value");
 
 		auto stratusBase = h->VerticalHeight(wantedParamList, 0, stLimit, baseThreshold);
 
@@ -897,7 +892,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		util::DumpVector(stratusBase);
 #endif
 
-		logger->Info("Searching for stratus top accurate value");
+		log.Info("Searching for stratus top accurate value");
 		auto stratusTop = h->VerticalHeight(wantedParamList, stLimit, layer, topThreshold, 0);
 
 		ret->Param(stratusTopParam);
@@ -909,7 +904,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		try
 		{
-			logger->Info("Searching for cloudiness in layers above stratus top");
+			log.Info("Searching for cloudiness in layers above stratus top");
 
 			assert(constData1.size() == constData2.size() && constData1.size() == stratusTop.size());
 
@@ -936,7 +931,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			util::DumpVector(upperLayerN);
 #endif
 
-			logger->Info("Searching for stratus mean cloudiness");
+			log.Info("Searching for stratus mean cloudiness");
 
 			// Stratuksen keskimääräinen N
 			auto stratusMeanN = h->VerticalAverage(wantedParamList, stratusBase, stratusTop);
@@ -948,7 +943,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			ret->Param(stratusMeanCloudinessParam);
 			ret->Data().Set(stratusMeanN);
 
-			logger->Info("Searching for stratus top temperature");
+			log.Info("Searching for stratus top temperature");
 
 			param wantedParam("T-K");
 
@@ -962,7 +957,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			ret->Param(stratusTopTempParam);
 			ret->Data().Set(stratusTopTemp);
 
-			logger->Info("Searching for stratus mean temperature");
+			log.Info("Searching for stratus mean temperature");
 
 			for (size_t i = 0; i < constData1.size(); i++)
 			{
@@ -996,7 +991,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			ret->Param(stratusMeanTempParam);
 			ret->Data().Set(stratusMeanTemp);
 
-			logger->Info("Searching for mean vertical velocity in stratus");
+			log.Info("Searching for mean vertical velocity in stratus");
 
 			wantedParam = param("VV-MMS");
 
@@ -1011,12 +1006,12 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			{
 				if (e == kFileDataNotFound)
 				{
-					logger->Debug("Trying for param VV-MS");
+					log.Debug("Trying for param VV-MS");
 					wantedParam = param("VV-MS");
 
 					stratusVerticalVelocity = h->VerticalAverage(wantedParam, stratusBase, stratusTop);
 
-					BOOST_FOREACH (double& d, stratusVerticalVelocity)
+					for (double& d : stratusVerticalVelocity)
 					{
 						if (!IsMissing(d)) d *= 1000;
 					}
@@ -1034,7 +1029,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		{
 			if (e != kFileDataNotFound)
 			{
-				throw runtime_error("Stratus() caught exception " + boost::lexical_cast<string>(e));
+				throw runtime_error("Stratus() caught exception " + to_string(e));
 			}
 		}
 	}
@@ -1042,7 +1037,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Stratus() caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Stratus() caught exception " + to_string(e));
 		}
 		else
 		{

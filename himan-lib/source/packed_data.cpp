@@ -24,7 +24,7 @@ void packed_data::Set(unsigned char* newData, size_t newPackedLength, size_t new
 
 void packed_data::Bitmap(int* newBitmap, size_t newBitmapLength)
 {
-	if (newBitmapLength)
+	if (newBitmapLength && bitmapLength)
 	{
 		assert(bitmap);
 		CUDA_CHECK(cudaFreeHost(bitmap));

@@ -10,16 +10,14 @@
 #include "example_header.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 
 using namespace std;
 using namespace himan::plugin;
 
 example_plugin::example_plugin()
 {
-	itsClearTextFormula = "y = ax + b";
-
-	itsLogger = logger_factory::Instance()->GetLog("example_plugin");
+	itsLogger = logger("example_plugin");
 }
 
 void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -72,17 +70,17 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	auto myThreadedLogger = logger_factory::Instance()->GetLog("example_pluginThread #" + boost::lexical_cast<string> (threadIndex)));
+	auto myThreadedLogger = logger("example_pluginThread #" + boost::lexical_cast<string> (threadIndex)));
 
-	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                        static_cast<string>(forecastLevel));
+	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                       static_cast<string>(forecastLevel));
 
 	info_t exampleInfo = Fetch(forecastTime, forecastLevel, exampleParam);
 
 	if (!exampleInfo)
 	{
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                       static_cast<string>(forecastLevel));
+		myThreadedLogger.Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
+		                      static_cast<string>(forecastLevel));
 
 		return;
 	}
@@ -113,7 +111,7 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Value(y);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data()->MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data()->Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+	                      boost::lexical_cast<string>(myTargetInfo->Data()->MissingCount()) + "/" +
+	                      boost::lexical_cast<string>(myTargetInfo->Data()->Size()));
 }

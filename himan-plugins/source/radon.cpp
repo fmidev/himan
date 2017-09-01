@@ -4,7 +4,7 @@
  */
 
 #include "radon.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
 #include <sstream>
@@ -40,7 +40,7 @@ void radon::Init()
 		}
 		catch (int e)
 		{
-			itsLogger->Fatal("Failed to get connection");
+			itsLogger.Fatal("Failed to get connection");
 			abort();
 		}
 
@@ -48,14 +48,10 @@ void radon::Init()
 	}
 }
 
-radon::radon() : itsInit(false), itsRadonDB()
-{
-	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("radon"));
-}
-
+radon::radon() : itsInit(false), itsRadonDB() { itsLogger = logger("radon"); }
 void radon::PoolMaxWorkers(int maxWorkers)
 {
-	itsLogger->Warning("Switching worker pool size to " + std::to_string(maxWorkers));
+	itsLogger.Warning("Switching worker pool size to " + std::to_string(maxWorkers));
 	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
 }
 
@@ -67,7 +63,7 @@ vector<std::string> radon::CSV(search_options& options)
 
 	if (options.prod.Class() != kPreviClass)
 	{
-		itsLogger->Error("Grid producer does not have csv based data");
+		itsLogger.Error("Grid producer does not have csv based data");
 		return csv;
 	}
 
@@ -90,7 +86,7 @@ vector<std::string> radon::CSV(search_options& options)
 
 		if (row.empty())
 		{
-			itsLogger->Error("No tables found from as_previ for producer " + options.prod.Name());
+			itsLogger.Error("No tables found from as_previ for producer " + options.prod.Name());
 			return csv;
 		}
 
@@ -171,34 +167,13 @@ vector<std::string> radon::CSV(search_options& options)
 	return csv;
 }
 
-vector<string> radon::Files(search_options& options)
+vector<vector<string>> GetGridGeoms(himan::plugin::search_options& options, unique_ptr<NFmiRadonDB>& itsRadonDB)
 {
-	Init();
-
-	vector<string> files;
-
-	string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
-	string levelValue = boost::lexical_cast<string>(options.level.Value());
-	string levelValue2 = "-1";
-
-	if (!IsKHPMissingValue(options.level.Value2()))
-	{
-		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
-	}
-
-	string ref_prod = options.prod.Name();
-	// long no_vers = options.prod.TableVersion();
-
-	if (options.prod.Class() != kGridClass)
-	{
-		itsLogger->Error("Previ producer does not have file data");
-		return files;
-	}
-
-	string level_name = HPLevelTypeToString.at(options.level.Type());
-
 	vector<vector<string>> gridgeoms;
 	vector<string> sourceGeoms = options.configuration->SourceGeomNames();
+
+	const string ref_prod = options.prod.Name();
+	const string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	if (sourceGeoms.empty())
 	{
@@ -214,11 +189,26 @@ vector<string> radon::Files(search_options& options)
 		}
 	}
 
-	if (gridgeoms.empty())
+	return gridgeoms;
+}
+
+string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<vector<string>>& gridgeoms)
+{
+	const string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
+	string levelValue = boost::lexical_cast<string>(options.level.Value());
+	string levelValue2 = "-1";
+
+	if (options.level.Value2() != himan::kHPMissingValue)
 	{
-		// No geometries found, fetcher checks this
-		return files;
+		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
 	}
+
+	if (options.prod.Class() != himan::kGridClass)
+	{
+		throw runtime_error("Previ producer does not have file data");
+	}
+
+	const string level_name = himan::HPLevelTypeToString.at(options.level.Type());
 
 	string forecastTypeValue = "-1";  // default, deterministic/analysis
 
@@ -235,59 +225,122 @@ vector<string> radon::Files(search_options& options)
 		forecastTypeId += ",2";
 	}
 
-	for (size_t i = 0; i < gridgeoms.size(); i++)
+	const string parm_name = options.param.Name();
+
+	// HIMAN-172: Reducing radon query count
+	// Coalesce multiple-geometry queries into one if all are
+	// using the same source table.
+	// If the source table is not the same, make a union query.
+
+	bool sameTableForAllGeometries = true;
+
+	const string firstTable = gridgeoms[0][1];
+
+	for (size_t i = 1; i < gridgeoms.size(); i++)
 	{
-		string tablename = gridgeoms[i][1];
-		string geomid = gridgeoms[i][0];
-
-		string parm_name = options.param.Name();
-
-		string query =
-		    "SELECT param_id, level_id, level_value, forecast_period, file_location, file_server "
-		    "FROM " +
-		    tablename +
-		    "_v "
-		    "WHERE analysis_time = '" +
-		    analtime +
-		    "' "
-		    "AND param_name = '" +
-		    parm_name +
-		    "' "
-		    "AND level_name = upper('" +
-		    level_name +
-		    "') "
-		    "AND level_value = " +
-		    levelValue + " AND level_value2 = " + levelValue2 +
-		    " "
-		    "AND forecast_period = '" +
-		    util::MakeSQLInterval(options.time) +
-		    "' "
-		    "AND geometry_id = " +
-		    geomid +
-		    " "
-		    "AND forecast_type_id IN (" +
-		    forecastTypeId +
-		    ") "
-		    "AND forecast_type_value = " +
-		    forecastTypeValue +
-		    " "
-		    "ORDER BY forecast_period, level_id, level_value";
-
-		itsRadonDB->Query(query);
-
-		vector<string> values = itsRadonDB->FetchRow();
-
-		if (values.empty())
+		if (firstTable != gridgeoms[i][1])
 		{
-			continue;
+			sameTableForAllGeometries = false;
+		}
+	}
+
+	stringstream query;
+
+	if (sameTableForAllGeometries)
+	{
+		query << "SELECT file_location, geometry_id FROM " << firstTable << "_v "
+		      << "WHERE analysis_time = '" << analtime << "'"
+		      << " AND param_name = '" << parm_name << "'"
+		      << " AND level_name = upper('" << level_name << "')"
+		      << " AND level_value = " << levelValue << " AND level_value2 = " << levelValue2
+		      << " AND forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
+		      << "AND geometry_id IN (";
+
+		for (const auto& geom : gridgeoms)
+		{
+			query << geom[0] << ",";
 		}
 
-		itsLogger->Trace("Found data for parameter " + parm_name + " from radon geometry " + gridgeoms[i][3]);
+		query.seekp(-1, ios_base::end);
 
-		files.push_back(values[4]);
-
-		break;  // discontinue loop on first positive match
+		query << ") AND forecast_type_id IN (" << forecastTypeId << ")"
+		      << " AND forecast_type_value = " << forecastTypeValue
+		      << " ORDER BY forecast_period, level_id, level_value";
 	}
+	else
+	{
+		for (size_t i = 0; i < gridgeoms.size(); i++)
+		{
+			string tablename = gridgeoms[i][1];
+			string geomid = gridgeoms[i][0];
+
+			query << "SELECT file_location, geometry_id "
+			      << "FROM " << tablename << "_v "
+			      << "WHERE analysis_time = '" << analtime << "'"
+			      << " AND param_name = '" << parm_name << "'"
+			      << " AND level_name = upper('" << level_name << "') "
+			      << " AND level_value = " << levelValue << " AND level_value2 = " << levelValue2
+			      << " AND forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
+			      << " AND geometry_id = " << geomid << " AND forecast_type_id IN (" << forecastTypeId << ")"
+			      << " AND forecast_type_value = " << forecastTypeValue << " UNION ALL";
+		}
+
+		query.seekp(-9, ios_base::end);
+		query << " ORDER BY forecast_period, level_id, level_value";
+	}
+
+	return query.str();
+}
+
+vector<string> radon::Files(search_options& options)
+{
+	Init();
+
+	vector<string> files, values;
+
+	const auto gridgeoms = GetGridGeoms(options, itsRadonDB);
+
+	if (gridgeoms.empty())
+	{
+		return files;
+	}
+
+	const auto query = CreateFileSQLQuery(options, gridgeoms);
+
+	if (query.empty())
+	{
+		return files;
+	}
+
+	try
+	{
+		itsRadonDB->Query(query);
+		values = itsRadonDB->FetchRow();
+	}
+	catch (const pqxx::sql_error& e)
+	{
+		// Sometimes we get errors like:
+		// ERROR:  deadlock detected
+		// DETAIL:  Process 23465 waits for AccessShareLock on relation 35841462 of database 32027825; blocked by
+		// process 23477.
+		//
+		// This is caused when table partitions are dropped while himan is trying to query the table.
+		// As a workaround, re-execute the query.
+
+		itsLogger.Warning("Caught database error: " + string(e.what()));
+		sleep(1);
+		itsRadonDB->Query(query);
+		values = itsRadonDB->FetchRow();
+	}
+
+	if (values.empty())
+	{
+		return files;
+	}
+
+	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[1]);
+
+	files.push_back(values[0]);
 
 	return files;
 }
@@ -324,7 +377,7 @@ bool radon::SavePrevi(const info& resultInfo)
 
 	if (row.empty())
 	{
-		itsLogger->Warning("Data set definition not found from radon");
+		itsLogger.Warning("Data set definition not found from radon");
 		return false;
 	}
 
@@ -334,9 +387,9 @@ bool radon::SavePrevi(const info& resultInfo)
 
 	if (levelinfo.empty())
 	{
-		itsLogger->Error("Level information not found from radon for level " +
-		                 HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
-		                 boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger.Error("Level information not found from radon for level " +
+		                HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+		                to_string(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -345,8 +398,8 @@ bool radon::SavePrevi(const info& resultInfo)
 
 	if (paraminfo.empty())
 	{
-		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
-		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
+		                ", producer " + to_string(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -413,7 +466,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (resultInfo.Grid()->Class() != kRegularGrid)
 	{
-		itsLogger->Error("Only regular grid data can be stored to radon for now");
+		itsLogger.Error("Only regular grid data can be stored to radon for now");
 		return false;
 	}
 
@@ -453,8 +506,8 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 			gridType = 3;
 			break;
 		default:
-			throw runtime_error("Unsupported projection: " + boost::lexical_cast<string>(resultInfo.Grid()->Type()) +
-			                    " " + HPGridTypeToString.at(resultInfo.Grid()->Type()));
+			throw runtime_error("Unsupported projection: " + to_string(resultInfo.Grid()->Type()) + " " +
+			                    HPGridTypeToString.at(resultInfo.Grid()->Type()));
 	}
 
 	map<string, string> geominfo = itsRadonDB->GetGeometryDefinition(
@@ -463,19 +516,20 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (geominfo.empty())
 	{
-		itsLogger->Warning("Grid geometry not found from radon");
+		itsLogger.Warning("Grid geometry not found from radon");
 		return false;
 	}
 
-	string geom_id = geominfo["id"];
+	const string geom_id = geominfo["id"];
+	const string geom_name = geominfo["name"];
 	auto analysisTime = resultInfo.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	query.str("");
 
 	query << "SELECT "
-	      << "id, schema_name, partition_name "
-	      << "FROM as_grid "
-	      << "WHERE geometry_id = '" << geom_id << "'"
+	      << "id, schema_name, partition_name, record_count "
+	      << "FROM as_grid_v "
+	      << "WHERE geometry_name = '" << geom_name << "'"
 	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime << "'"
 	      << ", '" << analysisTime << "')"
 	      << " AND producer_id = " << resultInfo.Producer().Id();
@@ -486,12 +540,13 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (row.empty())
 	{
-		itsLogger->Warning("Data set definition not found from radon");
+		itsLogger.Warning("Data set definition not found from radon");
 		return false;
 	}
 
 	const string schema_name = row[1];
 	const string table_name = row[2];
+	const string record_count = row[3];
 
 	query.str("");
 
@@ -502,9 +557,9 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (levelinfo.empty())
 	{
-		itsLogger->Error("Level information not found from radon for level " +
-		                 HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
-		                 boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger.Error("Level information not found from radon for level " +
+		                HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
+		                to_string(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -513,8 +568,8 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 
 	if (paraminfo.empty())
 	{
-		itsLogger->Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
-		                 ", producer " + boost::lexical_cast<string>(resultInfo.Producer().Id()));
+		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
+		                ", producer " + to_string(resultInfo.Producer().Id()));
 		return false;
 	}
 
@@ -531,9 +586,10 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	}
 
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
+	const string fullTableName = schema_name + "." + table_name;
 
 	query
-	    << "INSERT INTO " << schema_name << "." << table_name
+	    << "INSERT INTO " << fullTableName
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
 	       "forecast_type_id, forecast_type_value, file_location, file_server) VALUES ("
 	    << resultInfo.Producer().Id() << ", "
@@ -548,13 +604,32 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	{
 		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
+
+		// After first insert we have to analyze table manually. Otherwise Himan might not be
+		// able to fetch this inserted data in subsequent plugin calls, because it checks the
+		// record_count column from as_grid_v which is only updated by database ANALYZE calls.
+		// The database DOES do this automatically, but only after a certain threshold has been
+		// passed (by default 50 changed rows).
+		//
+		// In some cases this implementation might lead to multiple ANALYZE calls being made, when
+		// the first fields are insterted from multiple parallel threads. This does not matter,
+		// ANALYZE on a near-empty table should be fast enough.
+
+		if (record_count == "0")
+		{
+			itsLogger.Trace("Analyzing table " + fullTableName + " due to first insert");
+
+			query.str("");
+			query << "ANALYZE " << fullTableName;
+			itsRadonDB->Execute(query.str());
+		}
 	}
 	catch (const pqxx::unique_violation& e)
 	{
 		itsRadonDB->Rollback();
 
 		query.str("");
-		query << "UPDATE " << schema_name << "." << table_name << " SET "
+		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << theFileName << "', "
 		      << "file_server = '" << host << "' WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
@@ -573,27 +648,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 		itsRadonDB->Commit();
 	}
 
-	itsLogger->Trace("Saved information on file '" + theFileName + "' to radon");
+	itsLogger.Trace("Saved information on file '" + theFileName + "' to radon");
 
 	return true;
-}
-
-map<string, string> radon::Grib1ParameterName(long producer, long fmiParameterId, long codeTableVersion,
-                                              long timeRangeIndicator, long levelId, double level_value)
-{
-	Init();
-
-	map<string, string> paramName = itsRadonDB->GetParameterFromGrib1(producer, codeTableVersion, fmiParameterId,
-	                                                                  timeRangeIndicator, levelId, level_value);
-	return paramName;
-}
-
-map<string, string> radon::Grib2ParameterName(long fmiParameterId, long category, long discipline, long producer,
-                                              long levelId, double level_value)
-{
-	Init();
-
-	map<string, string> paramName =
-	    itsRadonDB->GetParameterFromGrib2(producer, discipline, category, fmiParameterId, levelId, level_value);
-	return paramName;
 }

@@ -5,11 +5,9 @@
  *
  */
 
-#include <boost/lexical_cast.hpp>
-
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "metutil.h"
 #include "monin_obukhov.h"
 
@@ -18,61 +16,33 @@ using namespace himan::plugin;
 
 monin_obukhov::monin_obukhov()
 {
-	itsClearTextFormula = "1/L = -(k*g*Q)/(rho*cp*u*^3*T)";
-
-	itsLogger = logger_factory::Instance()->GetLog("monin_obukhov");
+	itsLogger = logger("monin_obukhov");
 }
 
 void monin_obukhov::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * Set target parameter properties
-	 * - name PARM_NAME, this name is found from neons. For example: T-K
-	 * - univ_id UNIV_ID, newbase-id, ie code table 204
-	 * - grib1 id must be in database
-	 * - grib2 descriptor X'Y'Z, http://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_table4-2.shtml
-	 *
-	 */
-
 	param theRequestedParam("MOL-M", 1204);
-
-	// If this param is also used as a source param for other calculations
 
 	SetParams({theRequestedParam});
 
 	Start();
 }
 
-/*
- * Calculate()
- *
- * This function does the actual calculation.
- */
-
 void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	/*
-	 * Required source parameters
-	 *
-	 * eg. param PParam("P-Pa"); for pressure in pascals
-	 *
-	 */
-
 	const param TParam("T-K");          // ground Temperature
 	const param SHFParam("FLSEN-JM2");  // accumulated surface sensible heat flux
 	const param LHFParam("FLLAT-JM2");  // accumulated surface latent heat flux
 	const param U_SParam("FRVEL-MS");   // friction velocity
 	const param PParam("P-PA");
-	// ----
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("monin_obukhov Thread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("monin_obukhov Thread #" + std::to_string(threadIndex));
 
 	// Prev/current time and level
 
-	int paramStep = 1;  // myTargetInfo->Param().Aggregation().TimeResolutionValue();
+	int paramStep = 1;
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
 	forecast_time forecastTime = myTargetInfo->Time();
@@ -81,8 +51,8 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	level forecastLevel = level(himan::kHeight, 0, "Height");
-	myThreadedLogger->Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                        static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+						  static_cast<string>(forecastLevel));
 
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 	info_t SHFInfo = Fetch(forecastTime, forecastLevel, SHFParam, forecastType, false);
@@ -106,8 +76,8 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	if (!TInfo || !SHFInfo || !U_SInfo || !PInfo || !PrevSHFInfo || !LHFInfo || !PrevLHFInfo)
 	{
-		myThreadedLogger->Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                       static_cast<string>(forecastLevel));
+		myThreadedLogger.Info("Skipping step " + std::to_string(forecastTime.Step()) + ", level " +
+							  static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -127,7 +97,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		SHF /= forecastStepSize;  // divide by time step to obtain Watts/m2
 		LHF /= forecastStepSize;  // divide by time step to obtain Watts/m2
 
-		/* Calculation of the inverse of Monin-Obukhov length to avoid division by 0 */
+		// Calculation of the inverse of Monin-Obukhov length to avoid division by 0
 
 		if (U_S != 0.0)
 		{
@@ -145,7 +115,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		myTargetInfo->Value(mol);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+						  std::to_string(myTargetInfo->Data().MissingCount()) + "/" +
+						  std::to_string(myTargetInfo->Data().Size()));
 }

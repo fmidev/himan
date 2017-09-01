@@ -6,12 +6,10 @@
 #include "stability.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "metutil.h"
 #include "plugin_factory.h"
 #include <algorithm>  // for std::transform
-#include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <functional>  // for std::plus
 
@@ -56,9 +54,7 @@ void TD500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_ti
 
 stability::stability() : itsLICalculation(false), itsBSCalculation(false), itsSRHCalculation(false)
 {
-	itsClearTextFormula = "<multiple algorithms>";
-
-	itsLogger = logger_factory::Instance()->GetLog("stability");
+	itsLogger = logger("stability");
 }
 
 void stability::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -127,16 +123,15 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	vector<double> T500mVector, TD500mVector, P500mVector, U01Vector, V01Vector, U06Vector, V06Vector, UidVector,
 	    VidVector;
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("stabilityThread #" + boost::lexical_cast<string>(theThreadIndex));
+	auto myThreadedLogger = logger("stabilityThread #" + to_string(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
 	info_t T850Info, T700Info, T500Info, TD850Info, TD700Info;
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	bool LICalculation = itsLICalculation;
 	bool BSCalculation = itsBSCalculation;
@@ -145,8 +140,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	if (!GetSourceData(T850Info, T700Info, T500Info, TD850Info, TD700Info, myTargetInfo,
 	                   itsConfiguration->UseCudaForPacking()))
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -154,7 +149,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		if (!GetLISourceData(myTargetInfo, T500mVector, TD500mVector, P500mVector))
 		{
-			myThreadedLogger->Warning("Source data not found for param LI");
+			myThreadedLogger.Warning("Source data not found for param LI");
 			LICalculation = false;
 		}
 	}
@@ -163,7 +158,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		if (!GetWindShearSourceData(myTargetInfo, U01Vector, V01Vector, U06Vector, V06Vector))
 		{
-			myThreadedLogger->Warning("Source data not found for param BulkShear");
+			myThreadedLogger.Warning("Source data not found for param BulkShear");
 			BSCalculation = false;
 		}
 	}
@@ -172,7 +167,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		if (!GetSRHSourceData(myTargetInfo, UidVector, VidVector))
 		{
-			myThreadedLogger->Warning("Source data not found for param SRH");
+			myThreadedLogger.Warning("Source data not found for param SRH");
 			SRHCalculation = false;
 		}
 	}
@@ -335,9 +330,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime, vector<double>& result)
@@ -602,7 +596,7 @@ void DumpVector(const vector<double>& vec)
 	double min = 1e38, max = -1e38, sum = 0;
 	size_t count = 0, missing = 0;
 
-	BOOST_FOREACH (double val, vec)
+	for (double val : vec)
 	{
 		if (IsMissing(val))
 		{

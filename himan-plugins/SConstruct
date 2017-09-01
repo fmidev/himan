@@ -31,6 +31,9 @@ AddOption(
 
 env = Environment()
 
+# Get color output from gcc / clang
+env['ENV']['TERM'] = os.environ['TERM']
+
 # Check build
 
 NOCUDA = GetOption('no-cuda-build')
@@ -74,7 +77,6 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 includes = []
 
 includes.append('./include')
-
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
@@ -232,7 +234,7 @@ if RELEASE:
 
 if DEBUG:
 	env.Append(CCFLAGS = ['-O0'])
-	env.Append(CCFLAGS = [ '-g' ])
+	env.Append(CCFLAGS = [ '-ggdb', '-g3'])
 
 	env.Append(CCFLAGS = cflags_extra)
 	#env.Append(CCFLAGS = cflags_difficult)

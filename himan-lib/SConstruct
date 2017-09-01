@@ -20,6 +20,9 @@ elif OS_NAME == "SUSE Linux Enterprise Server ":
 
 env = Environment()
 
+# Get color output from gcc / clang
+env['ENV']['TERM'] = os.environ['TERM']
+
 env['CC'] = 'gcc'
 env['CXX'] = 'g++'
 
@@ -228,8 +231,8 @@ if RELEASE:
 	build_dir = 'build/release'
 
 if DEBUG:
-	env.Append(CCFLAGS = ['-g'])
 	env.Append(CCFLAGS = ['-O0'])
+	env.Append(CCFLAGS = ['-ggdb', '-g3'])	
 	env.Append(CCFLAGS = cflags_extra)
 	#env.Append(CCFLAGS = cflags_difficult)
 	env.Append(CPPDEFINES = ['DEBUG'])

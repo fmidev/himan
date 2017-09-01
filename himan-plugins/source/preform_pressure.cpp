@@ -8,9 +8,9 @@
 #include "preform_pressure.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
 #include <boost/lexical_cast.hpp>
 #include <limits>
+#include "logger.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -60,9 +60,7 @@ const int missingInt = numeric_limits<int>::min();
 bool IsMissingInt(int val) { return val == missingInt; }
 preform_pressure::preform_pressure()
 {
-	itsClearTextFormula = "<algorithm>";
-
-	itsLogger = logger_factory::Instance()->GetLog("preform_pressure");
+	itsLogger = logger("preform_pressure");
 }
 
 void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -84,7 +82,7 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->OutputFileType() == kGRIB2)
 	{
-		itsLogger->Error(
+		itsLogger.Error(
 		    "GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not "
 		    "lossless");
 		return;
@@ -130,14 +128,14 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	level P1000(kPressure, 1000);
 
 	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("preformPressureThread #" + boost::lexical_cast<string>(threadIndex));
+	    logger("preformPressureThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+						  static_cast<string>(forecastLevel));
 
 	// Source infos
 
@@ -162,8 +160,8 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	if (!TInfo || !T700Info || !T850Info || !T925Info || !RHInfo || !RH700Info || !RH850Info || !RH925Info ||
 	    !W925Info || !W850Info || !RRInfo || !PInfo || !SNRInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -384,6 +382,6 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		}
 	}
 
-	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-	                       "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[CPU] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	                      to_string(myTargetInfo->Data().Size()));
 }

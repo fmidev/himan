@@ -5,12 +5,9 @@
 #include "fractile.h"
 
 #include <algorithm>
-#include <iostream>
-#include <string>
-
 #include <boost/algorithm/string.hpp>
 
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 
 #include "ensemble.h"
@@ -18,7 +15,6 @@
 #include "time_ensemble.h"
 
 #include "fetcher.h"
-#include "json_parser.h"
 #include "radon.h"
 
 #include "util.h"
@@ -35,9 +31,8 @@ fractile::fractile()
       itsLaggedSteps(0),
       itsMaximumMissingForecasts(0)
 {
-	itsClearTextFormula = "%";
 	itsCudaEnabledCalculation = false;
-	itsLogger = logger_factory::Instance()->GetLog("fractile");
+	itsLogger = logger("fractile");
 }
 
 fractile::~fractile() {}
@@ -51,7 +46,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	}
 	else
 	{
-		itsLogger->Error("Param not specified");
+		itsLogger.Error("Param not specified");
 		return;
 	}
 
@@ -87,7 +82,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 			}
 			else if (lag > 0)
 			{
-				itsLogger->Warning("negating lag value " + std::to_string(-lag));
+				itsLogger.Warning("negating lag value " + std::to_string(-lag));
 				lag = -lag;
 			}
 
@@ -126,7 +121,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		if (ensembleSizeStr.empty())
 		{
-			itsLogger->Error("Unable to find ensemble size from database");
+			itsLogger.Error("Unable to find ensemble size from database");
 			return;
 		}
 
@@ -150,7 +145,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 			}
 			catch (const boost::bad_lexical_cast& e)
 			{
-				itsLogger->Fatal("Invalid fractile value: '" + val + "'");
+				itsLogger.Fatal("Invalid fractile value: '" + val + "'");
 				abort();
 			}
 		}
@@ -177,14 +172,13 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 {
 	const std::string deviceType = "CPU";
 
-	auto threadedLogger =
-	    logger_factory::Instance()->GetLog("fractileThread # " + boost::lexical_cast<std::string>(threadIndex));
+	auto threadedLogger = logger("fractileThread # " + boost::lexical_cast<std::string>(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	threadedLogger->Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) + " level " +
-	                     static_cast<std::string>(forecastLevel));
+	threadedLogger.Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) + " level " +
+	                    static_cast<std::string>(forecastLevel));
 
 	std::unique_ptr<ensemble> ens;
 
@@ -201,7 +195,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			    new lagged_ensemble(param(itsParamName), itsEnsembleSize, kHourResolution, itsLag, itsLaggedSteps));
 			break;
 		default:
-			itsLogger->Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
+			itsLogger.Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
 			abort();
 	}
 
@@ -215,7 +209,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 	{
 		if (e == kFileDataNotFound)
 		{
-			itsLogger->Error("Failed to find ensemble data");
+			itsLogger.Error("Failed to find ensemble data");
 			return;
 		}
 	}
@@ -292,9 +286,9 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		myTargetInfo->Value(var);
 	}
 
-	threadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                     boost::lexical_cast<std::string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                     boost::lexical_cast<std::string>(myTargetInfo->Data().Size()));
+	threadedLogger.Info("[" + deviceType +
+	                    "] Missing values: " + boost::lexical_cast<std::string>(myTargetInfo->Data().MissingCount()) +
+	                    "/" + boost::lexical_cast<std::string>(myTargetInfo->Data().Size()));
 }
 
 }  // plugin

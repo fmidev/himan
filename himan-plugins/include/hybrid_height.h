@@ -36,6 +36,7 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 	bool WithIteration(info_t& myTargetInfo);
 	bool WithGeopotential(info_t& myTargetInfo);
+	void Prefetch(info_t myTargetInfo);
 
 	int itsBottomLevel;
 	bool itsUseGeopotential;

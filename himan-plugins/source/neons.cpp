@@ -4,7 +4,7 @@
  */
 
 #include "neons.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
 #include <sstream>
@@ -37,7 +37,7 @@ void neons::Init()
 		}
 		catch (int e)
 		{
-			itsLogger->Fatal("Failed to get connection");
+			itsLogger.Fatal("Failed to get connection");
 			abort();
 		}
 
@@ -47,7 +47,7 @@ void neons::Init()
 
 neons::neons() : itsInit(false), itsNeonsDB()
 {
-	itsLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("neons"));
+	itsLogger = logger("neons");
 }
 
 void neons::PoolMaxWorkers(int maxWorkers) { NFmiNeonsDBPool::Instance()->MaxWorkers(maxWorkers); }
@@ -152,7 +152,7 @@ vector<string> neons::Files(search_options& options)
 			continue;
 		}
 
-		itsLogger->Trace("Found data for parameter " + parm_name + " from neons geometry " + gridgeoms[i][0]);
+		itsLogger.Trace("Found data for parameter " + parm_name + " from neons geometry " + gridgeoms[i][0]);
 
 		files.push_back(values[4]);
 
@@ -170,7 +170,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 	if (resultInfo.Grid()->Class() != kRegularGrid)
 	{
-		itsLogger->Error("Only grid data can be stored to neons for now");
+		itsLogger.Error("Only grid data can be stored to neons for now");
 		return false;
 	}
 
@@ -196,7 +196,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 	if (row.empty())
 	{
-		itsLogger->Warning("Grid geometry not found from neons");
+		itsLogger.Warning("Grid geometry not found from neons");
 		return false;
 	}
 
@@ -227,8 +227,8 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 	if (row.empty())
 	{
-		itsLogger->Warning("Producer definition not found from neons (id: " +
-		                   boost::lexical_cast<string>(resultInfo.Producer().Id()) + ")");
+		itsLogger.Warning("Producer definition not found from neons (id: " +
+						  boost::lexical_cast<string>(resultInfo.Producer().Id()) + ")");
 		return false;
 	}
 
@@ -253,7 +253,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 	if (row.empty())
 	{
-		itsLogger->Warning("Data set definition not found from neons");
+		itsLogger.Warning("Data set definition not found from neons");
 		return false;
 	}
 
@@ -276,8 +276,8 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 	}
 	catch (int e)
 	{
-		itsLogger->Error("Error code: " + boost::lexical_cast<string>(e));
-		itsLogger->Error("Query: " + query.str());
+		itsLogger.Error("Error code: " + boost::lexical_cast<string>(e));
+		itsLogger.Error("Query: " + query.str());
 		itsNeonsDB->Rollback();
 		return false;
 	}
@@ -359,8 +359,8 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 			}
 			catch (int e)
 			{
-				itsLogger->Fatal("Error code: " + boost::lexical_cast<string>(e));
-				itsLogger->Fatal("Query: " + query.str());
+				itsLogger.Fatal("Error code: " + boost::lexical_cast<string>(e));
+				itsLogger.Fatal("Query: " + query.str());
 
 				itsNeonsDB->Rollback();
 
@@ -369,8 +369,8 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 		}
 		else
 		{
-			itsLogger->Error("Error code: " + boost::lexical_cast<string>(e));
-			itsLogger->Error("Query: " + query.str());
+			itsLogger.Error("Error code: " + boost::lexical_cast<string>(e));
+			itsLogger.Error("Query: " + query.str());
 
 			itsNeonsDB->Rollback();
 
@@ -378,7 +378,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 		}
 	}
 
-	itsLogger->Trace("Saved information on file '" + theFileName + "' to neons");
+	itsLogger.Trace("Saved information on file '" + theFileName + "' to neons");
 
 	return true;
 }

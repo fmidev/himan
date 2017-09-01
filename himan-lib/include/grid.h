@@ -71,7 +71,7 @@ class grid
 
 	virtual size_t Size() const;
 
-	virtual bool Value(size_t locationIndex, double theValue);
+	virtual void Value(size_t locationIndex, double theValue);
 	virtual double Value(size_t locationIndex) const;
 
 	virtual point FirstPoint() const = 0;
@@ -120,7 +120,7 @@ class grid
 
 	std::vector<double> itsAB;
 
-	std::unique_ptr<logger> itsLogger;
+	logger itsLogger;
 
 	HPScanningMode itsScanningMode;
 	std::unique_ptr<packed_data> itsPackedData;  //<! Variable to hold packed data

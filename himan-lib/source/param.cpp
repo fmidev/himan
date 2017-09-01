@@ -4,7 +4,6 @@
  */
 
 #include "param.h"
-#include "logger_factory.h"
 
 using namespace himan;
 using namespace std;
@@ -24,7 +23,8 @@ param::param()
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsAggregation()
+      itsAggregation(),
+      itsPrecision(kHPMissingInt)
 {
 }
 
@@ -42,7 +42,8 @@ param::param(const string& theName, unsigned long theUnivId)
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsAggregation()
+      itsAggregation(),
+      itsPrecision(kHPMissingInt)
 {
 }
 
@@ -60,7 +61,8 @@ param::param(const string& theName, unsigned long theUnivId, HPParameterUnit the
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(theUnit),
-      itsAggregation()
+      itsAggregation(),
+      itsPrecision(kHPMissingInt)
 {
 }
 
@@ -78,7 +80,8 @@ param::param(const string& theName)
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsAggregation()
+      itsAggregation(),
+      itsPrecision(kHPMissingInt)
 {
 }
 
@@ -97,7 +100,8 @@ param::param(const string& theName, unsigned long theUnivId, double theScale, do
       itsVersion(1),
       itsInterpolationMethod(theInterpolationMethod),
       itsUnit(kUnknownUnit),
-      itsAggregation()
+      itsAggregation(),
+      itsPrecision(kHPMissingInt)
 {
 }
 
@@ -116,7 +120,8 @@ param::param(const string& theName, unsigned long theUnivId, long theGribDiscipl
       itsVersion(1),
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
-      itsAggregation()
+      itsAggregation(),
+      itsPrecision(kHPMissingInt)
 {
 }
 
@@ -134,7 +139,8 @@ param::param(const param& other)
       itsVersion(other.itsVersion),
       itsInterpolationMethod(other.itsInterpolationMethod),
       itsUnit(other.itsUnit),
-      itsAggregation(other.itsAggregation)
+      itsAggregation(other.itsAggregation),
+      itsPrecision(other.itsPrecision)
 {
 }
 
@@ -154,6 +160,7 @@ param& param::operator=(const param& other)
 	itsInterpolationMethod = other.itsInterpolationMethod;
 	itsUnit = other.itsUnit;
 	itsAggregation = other.itsAggregation;
+	itsPrecision = other.itsPrecision;
 
 	return *this;
 }
@@ -263,7 +270,8 @@ void param::InterpolationMethod(HPInterpolationMethod theInterpolationMethod)
 {
 	itsInterpolationMethod = theInterpolationMethod;
 }
-
+int param::Precision() const { return itsPrecision; }
+void param::Precision(int thePrecision) { itsPrecision = thePrecision; }
 ostream& param::Write(ostream& file) const
 {
 	file << "<" << ClassName() << ">" << endl;
@@ -279,7 +287,7 @@ ostream& param::Write(ostream& file) const
 	file << "__itsUnit__ " << static_cast<int>(itsUnit) << endl;
 	file << "__itsVersion__ " << itsVersion << endl;
 	file << "__itsInterpolationMethod__ " << HPInterpolationMethodToString.at(itsInterpolationMethod) << endl;
-
+	file << "__itsPrecision__" << itsPrecision << endl;
 	file << itsAggregation;
 
 	return file;

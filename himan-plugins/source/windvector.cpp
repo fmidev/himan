@@ -7,11 +7,10 @@
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "stereographic_grid.h"
 #include "util.h"
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <iostream>
 #include <math.h>
@@ -30,12 +29,9 @@ boost::thread_specific_ptr<map<size_t, coefficients>> myCoefficientCache;
 
 windvector::windvector() : itsCalculationTarget(kUnknownElement), itsVectorCalculation(false)
 {
-	itsClearTextFormula =
-	    "speed = sqrt(U*U+V*V) ; direction = round(180/PI * atan2(U,V) + offset) ; vector = round(dir/10) + 100 * "
-	    "round(speed)";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = logger_factory::Instance()->GetLog("windvector");
+	itsLogger = logger("windvector");
 }
 
 void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
@@ -66,7 +62,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		if (itsVectorCalculation)
 		{
-			itsLogger->Warning("Unable to calculate vector for ice");
+			itsLogger.Warning("Unable to calculate vector for ice");
 		}
 	}
 	else if (itsConfiguration->Exists("for_sea") && itsConfiguration->GetValue("for_sea") == "true")
@@ -78,7 +74,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		if (itsVectorCalculation)
 		{
-			itsLogger->Warning("Unable to calculate vector for sea");
+			itsLogger.Warning("Unable to calculate vector for sea");
 		}
 	}
 	else if (itsConfiguration->Exists("for_gust") && itsConfiguration->GetValue("for_gust") == "true")
@@ -89,7 +85,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 		if (itsVectorCalculation)
 		{
-			itsLogger->Warning("Unable to calculate vector for wind gust");
+			itsLogger.Warning("Unable to calculate vector for wind gust");
 		}
 	}
 	else
@@ -170,27 +166,26 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		default:
 			throw runtime_error("Invalid calculation target element: " +
-			                    boost::lexical_cast<string>(static_cast<int>(itsCalculationTarget)));
+			                    to_string(static_cast<int>(itsCalculationTarget)));
 			break;
 	}
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("windvectorThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("windvectorThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
 	info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 	if (!UInfo || !VInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -264,9 +259,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,

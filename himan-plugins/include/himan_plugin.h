@@ -51,8 +51,8 @@ class himan_plugin
 
 	virtual HPVersionNumber Version() const = 0;
 
-   protected:
-	std::unique_ptr<logger> itsLogger;
+protected:
+	logger itsLogger;
 };
 
 // the type of the class factory

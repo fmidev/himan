@@ -8,9 +8,8 @@
 #include "tpot.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
@@ -21,10 +20,9 @@ using namespace himan::plugin;
 
 tpot::tpot() : itsThetaCalculation(false), itsThetaWCalculation(false), itsThetaECalculation(false)
 {
-	itsClearTextFormula = "TP = Tk * pow((1000/P), 0.286) ; TPW calculated with LCL ; TPE = X";
 	itsCudaEnabledCalculation = true;
 
-	itsLogger = logger_factory::Instance()->GetLog("tpot");
+	itsLogger = logger("tpot");
 }
 
 void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -41,7 +39,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		itsThetaCalculation = true;
 
-		itsLogger->Trace("Theta calculation requested");
+		itsLogger.Trace("Theta calculation requested");
 
 		param p("TP-K", 8, 0, 0, 2);
 
@@ -52,7 +50,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		itsThetaWCalculation = true;
 
-		itsLogger->Trace("ThetaW calculation requested");
+		itsLogger.Trace("ThetaW calculation requested");
 
 		// Sharing GRIB2 number with thetae!
 
@@ -65,7 +63,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		itsThetaECalculation = true;
 
-		itsLogger->Trace("ThetaE calculation requested");
+		itsLogger.Trace("ThetaE calculation requested");
 
 		param p("TPE-K", 129, 0, 0, 3);
 
@@ -98,8 +96,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("tpotThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("tpotThread #" + to_string(threadIndex));
 
 	const param TParam("T-K");
 	const params PParam = {param("P-PA"), param("P-HPA")};
@@ -108,8 +105,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	double PScale = 1;
 	double TBase = 0;
@@ -140,8 +137,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (!TInfo || (!isPressureLevel && !PInfo) || ((itsThetaWCalculation || itsThetaECalculation) && !TDInfo))
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -240,9 +237,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 double tpot::ThetaW(double P, double T, double TD)

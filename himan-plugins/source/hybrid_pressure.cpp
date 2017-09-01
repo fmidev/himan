@@ -6,8 +6,7 @@
 #include "hybrid_pressure.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
+#include "logger.h"
 
 #include "plugin_factory.h"
 #include "util.h"
@@ -23,10 +22,7 @@ map<string, himan::info_t> lnspInfos;
 
 hybrid_pressure::hybrid_pressure()
 {
-	// Vertkoord_A and Vertkoord_B refer to full hybrid-level coefficients
-	itsClearTextFormula = "P = Vertkoord_A + P0 * Vertkoord_B";
-
-	itsLogger = logger_factory::Instance()->GetLog("hybrid_pressure");
+	itsLogger = logger("hybrid_pressure");
 }
 
 void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -55,15 +51,14 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	bool isECMWF = (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134);
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("hybrid_pressureThread #" + boost::lexical_cast<string>(theThreadIndex));
+	auto myThreadedLogger = logger("hybrid_pressureThread #" + to_string(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+						  static_cast<string>(forecastLevel));
 
 	info_t PInfo;
 
@@ -91,12 +86,12 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 				if (!PInfo)
 				{
-					myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) +
-					                          ", level " + static_cast<string>(forecastLevel));
+					myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+					                         static_cast<string>(forecastLevel));
 					return;
 				}
 
-				myThreadedLogger->Info("Transforming LNSP to Pa");
+				myThreadedLogger.Info("Transforming LNSP to Pa");
 
 				for (auto& val : VEC(PInfo))
 				{
@@ -124,8 +119,8 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	if (!PInfo || !TInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -168,8 +163,8 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		result = 0.01 * (A + P * B);
 	}
 
-	myThreadedLogger->Info("[CPU] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) +
-	                       "/" + boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[CPU] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	                      to_string(myTargetInfo->Data().Size()));
 }
 
 void hybrid_pressure::WriteToFile(const info& targetInfo, write_options writeOptions)

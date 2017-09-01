@@ -6,17 +6,15 @@
 #include "weather_code_2.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "metutil.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace himan::plugin;
 
 weather_code_2::weather_code_2()
 {
-	itsClearTextFormula = "weather_code_2 = ";
-	itsLogger = logger_factory::Instance()->GetLog("weather_code_2");
+	itsLogger = logger("weather_code_2");
 }
 
 void weather_code_2::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -57,15 +55,14 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 	level T0mLevel(himan::kHeight, 0, "HEIGHT");
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("weather_code_2Thread #" + boost::lexical_cast<string>(theThreadIndex));
+	auto myThreadedLogger = logger("weather_code_2Thread #" + to_string(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	info_t CloudInfo = Fetch(forecastTime, HLevel, CloudParam, forecastType, false);
 	info_t PrecformInfo = Fetch(forecastTime, HLevel, PrecformParam, forecastType, false);
@@ -82,8 +79,8 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 	if (!CloudInfo || !PrecformInfo || !TotalPrecInfo || !TotalCloudCoverInfo || !LowCloudCoverInfo ||
 	    !MedCloudCoverInfo || !HighCloudCoverInfo || !FogInfo || !T0mInfo || !T850Info || !KInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -271,9 +268,8 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 		myTargetInfo->Value(weather_symbol);
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 double weather_code_2::rain_type(double kIndex, double T0m, double T850)

@@ -11,10 +11,10 @@
 #include "himan_common.h"
 #include "himan_plugin.h"
 #include "json_parser.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
-#include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
+#include <future>
 #include <iostream>
 #include <vector>
 
@@ -27,9 +27,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
 struct plugin_timing
 {
 	std::string plugin_name;
-	int order_number;  // plugin order number (if called more than once))
-	size_t time_elapsed;          // elapsed time in ms
+	int order_number;     // plugin order number (if called more than once))
+	size_t time_elapsed;  // elapsed time in ms
 };
+
+vector<plugin_timing> pluginTimes;
 
 int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::string& pluginName)
 {
@@ -49,6 +51,59 @@ int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::strin
 	return highest;
 }
 
+void ExecutePlugin(shared_ptr<plugin_configuration> pc)
+{
+	timer aTimer;
+	logger aLogger("himan");
+	if (pc->StatisticsEnabled())
+	{
+		aTimer.Start();
+	}
+
+	auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin>(plugin_factory::Instance()->Plugin(pc->Name()));
+
+	if (!aPlugin)
+	{
+		aLogger.Error("Unable to declare plugin " + pc->Name());
+		return;
+	}
+
+	if (pc->StatisticsEnabled())
+	{
+		pc->StartStatistics();
+	}
+
+	aLogger.Info("Calculating " + pc->Name());
+
+	try
+	{
+		aPlugin->Process(pc);
+	}
+	catch (const exception& e)
+	{
+		aLogger.Fatal(string("Caught exception: ") + e.what());
+		exit(1);
+	}
+
+	if (pc->StatisticsEnabled())
+	{
+		pc->WriteStatistics();
+
+		aTimer.Stop();
+		plugin_timing t;
+		t.plugin_name = pc->Name();
+		t.time_elapsed = aTimer.GetTime();
+		t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
+
+		pluginTimes.push_back(t);
+	}
+
+#if defined DEBUG and defined HAVE_CUDA
+	// For 'cuda-memcheck --leak-check full'
+	CUDA_CHECK(cudaDeviceReset());
+#endif
+}
+
 int main(int argc, char** argv)
 {
 	shared_ptr<configuration> conf;
@@ -63,8 +118,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	unique_ptr<logger> aLogger = unique_ptr<logger>(logger_factory::Instance()->GetLog("himan"));
-	timer aTimer;
+	logger aLogger = logger("himan");
 
 	/*
 	 * Initialize plugin factory before parsing configuration file. This prevents himan from
@@ -78,95 +132,41 @@ int main(int argc, char** argv)
 
 	try
 	{
-		plugins = json_parser::Instance()->Parse(conf);
+		json_parser parser;
+		plugins = parser.Parse(conf);
 	}
 	catch (std::runtime_error& e)
 	{
-		aLogger->Fatal(e.what());
+		aLogger.Fatal(e.what());
 		exit(1);
 	}
 
 	banner();
 
-	vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
+	aLogger.Debug("Processqueue size: " + std::to_string(plugins.size()));
 
-	aLogger->Info("Found " + boost::lexical_cast<string>(thePlugins.size()) + " plugins");
-
-	aLogger->Debug("Processqueue size: " + boost::lexical_cast<string>(plugins.size()));
-
-	vector<plugin_timing> pluginTimes;
-	size_t totalTime = 0;
+	vector<future<void>> asyncs;
 
 	while (plugins.size() > 0)
 	{
 		auto pc = plugins[0];
 
-		if (pc->StatisticsEnabled())
-		{
-			aTimer.Start();
-		}
+		plugins.erase(plugins.begin());
 
-		if (pc->Name() == "cloud_type")
+		if (pc->AsyncExecution())
 		{
-			aLogger->Warning("Plugin 'cloud_type' is deprecated -- use 'cloud_code' instead'");
-			pc->Name("cloud_code");
-		}
-		else if (pc->Name() == "fmi_weather_symbol_1")
-		{
-			aLogger->Warning("Plugin 'fmi_weather_symbol_1' is deprecated -- use 'weather_code_2' instead'");
-			pc->Name("weather_code_2");
-		}
-		else if (pc->Name() == "rain_type")
-		{
-			aLogger->Warning("Plugin 'rain_type' is deprecated -- use 'weather_code_1' instead'");
-			pc->Name("weather_code_1");
-		}
+			aLogger.Info("Asynchronous launch for " + pc->Name());
+			asyncs.push_back(async(launch::async, [](shared_ptr<plugin_configuration> pc) { ExecutePlugin(pc); }, pc));
 
-		auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin>(plugin_factory::Instance()->Plugin(pc->Name()));
-
-		if (!aPlugin)
-		{
-			aLogger->Error("Unable to declare plugin " + pc->Name());
 			continue;
 		}
 
-		if (pc->StatisticsEnabled())
-		{
-			pc->StartStatistics();
-		}
+		ExecutePlugin(pc);
+	}
 
-		aLogger->Info("Calculating " + pc->Name());
-
-		try
-		{
-			aPlugin->Process(pc);
-		}
-		catch (const exception& e)
-		{
-			aLogger->Fatal(string("Caught exception: ") + e.what());
-			exit(1);
-		}
-
-		if (pc->StatisticsEnabled())
-		{
-			pc->WriteStatistics();
-
-			aTimer.Stop();
-			plugin_timing t;
-			t.plugin_name = pc->Name();
-			t.time_elapsed = aTimer.GetTime();
-			t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
-
-			totalTime += t.time_elapsed;
-			pluginTimes.push_back(t);
-		}
-
-		plugins.erase(plugins.begin());  // remove configuration and resize container
-
-#if defined DEBUG and defined HAVE_CUDE
-		// For 'cuda-memcheck --leak-check full'
-		CUDA_CHECK(cudaDeviceReset());
-#endif
+	for (auto& fut : asyncs)
+	{
+		fut.wait();
 	}
 
 	if (!conf->StatisticsLabel().empty())
@@ -192,6 +192,13 @@ int main(int argc, char** argv)
 				}
 			}
 		} while (!passed);
+
+		size_t totalTime = 0;
+
+		for (const auto& time : pluginTimes)
+		{
+			totalTime += time.time_elapsed;
+		}
 
 		cout << endl << "*** TOTAL timings for himan ***" << endl;
 
@@ -353,7 +360,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("threads,j", po::value(&threadCount), "number of started threads")
 		("list-plugins,l", "list all defined plugins")
 		("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
-		("statistics,s", po::value(&statisticsLabel), "record statistics information")
+		("statistics,s", po::value(&statisticsLabel)->implicit_value("Himan"), "record statistics information")
 		("radon,R", "use only radon database")
 		("neons,N", "use only neons database")
 #ifdef HAVE_CUDA
@@ -414,7 +421,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		}
 	}
 
-	logger_factory::Instance()->DebugState(debugState);
+	logger::MainDebugState = debugState;
 
 	if (opt.count("version"))
 	{
@@ -473,6 +480,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCuda(false);
 		conf->UseCudaForPacking(false);
 		conf->UseCudaForUnpacking(false);
+		conf->UseCudaForInterpolation(false);
 	}
 
 	conf->CudaDeviceCount(devCount);
@@ -563,8 +571,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 					{
 						cout << "\tcuda-enabled\n";
 					}
-					cout << "\ttype compiled --> "
-					     << dynamic_pointer_cast<plugin::compiled_plugin>(thePlugins[i])->Formula() << endl;
+					cout << "\ttype compiled" << endl;
 					break;
 
 				case kAuxiliary:

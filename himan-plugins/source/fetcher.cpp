@@ -5,7 +5,7 @@
 
 #include "fetcher.h"
 #include "interpolate.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
 #include <boost/filesystem/operations.hpp>
@@ -52,7 +52,7 @@ fetcher::fetcher()
       itsApplyLandSeaMask(false),
       itsLandSeaMaskThreshold(0.5)
 {
-	itsLogger = std::unique_ptr<logger>(logger_factory::Instance()->GetLog("fetcher"));
+	itsLogger = logger("fetcher");
 }
 
 shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
@@ -104,7 +104,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		           boost::lexical_cast<string>(requestedType.Value());
 	}
 
-	itsLogger->Warning("No valid data found with given search options " + optsStr);
+	itsLogger.Warning("No valid data found with given search options " + optsStr);
 
 	throw kFileDataNotFound;
 }
@@ -120,9 +120,9 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 		if (newLevel != opts.level)
 		{
-			itsLogger->Trace("Transform level " + static_cast<string>(opts.level) + " to " +
-			                 static_cast<string>(newLevel) + " for producer " + to_string(opts.prod.Id()) +
-			                 ", parameter " + opts.param.Name());
+			itsLogger.Trace("Transform level " + static_cast<string>(opts.level) + " to " +
+			                static_cast<string>(newLevel) + " for producer " + to_string(opts.prod.Id()) +
+			                ", parameter " + opts.param.Name());
 
 			opts.level = newLevel;
 		}
@@ -155,19 +155,19 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	}
 	else
 	{
-		itsLogger->Trace("Interpolation disabled");
+		itsLogger.Trace("Interpolation disabled");
 	}
 
 	if (itsApplyLandSeaMask)
 	{
-		itsLogger->Trace("Applying land-sea mask with threshold " +
-		                 boost::lexical_cast<string>(itsLandSeaMaskThreshold));
+		itsLogger.Trace("Applying land-sea mask with threshold " +
+		                boost::lexical_cast<string>(itsLandSeaMaskThreshold));
 
 		itsApplyLandSeaMask = false;
 
 		if (!ApplyLandSeaMask(opts.configuration, *theInfos[0], opts.time, opts.ftype))
 		{
-			itsLogger->Warning("Land sea mask apply failed");
+			itsLogger.Warning("Land sea mask apply failed");
 		}
 
 		itsApplyLandSeaMask = true;
@@ -238,7 +238,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			ret = FetchFromProducer(opts, readPackedData, suppressLogging);
 			if (ret) break;
 
-			itsLogger->Warning("Sticky cache failed, trying all producers just to be sure");
+			itsLogger.Warning("Sticky cache failed, trying all producers just to be sure");
 		}
 	}
 
@@ -275,8 +275,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 			optsStr = optsStr.substr(0, optsStr.size() - 1);
 
-			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
-			           to_string(requestedTime.Step());
+			optsStr += " origintime: " + requestedTime.OriginDateTime().String() +
+			           ", step: " + to_string(requestedTime.Step());
 			optsStr += " param: " + requestedParam.Name();
 			optsStr += " level: " + static_cast<string>(requestedLevel);
 
@@ -286,7 +286,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 				           to_string(static_cast<int>(requestedType.Value()));
 			}
 
-			itsLogger->Warning("No valid data found with given search options " + optsStr);
+			itsLogger.Warning("No valid data found with given search options " + optsStr);
 		}
 
 		throw kFileDataNotFound;
@@ -308,7 +308,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 	{
 		if (!boost::filesystem::exists(inputFile))
 		{
-			itsLogger->Error("Input file '" + inputFile + "' does not exist");
+			itsLogger.Error("Input file '" + inputFile + "' does not exist");
 			continue;
 		}
 
@@ -336,7 +336,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 			}
 
 			case kNetCDF:
-				itsLogger->Error("File is NetCDF");
+				itsLogger.Error("File is NetCDF");
 				break;
 
 			case kCSV:
@@ -447,7 +447,7 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 
 		if (levelInfo.empty())
 		{
-			itsLogger->Warning("Level type '" + HPLevelTypeToString.at(targetLevel.Type()) + "' not found from radon");
+			itsLogger.Warning("Level type '" + HPLevelTypeToString.at(targetLevel.Type()) + "' not found from radon");
 			return ret;
 		}
 
@@ -456,7 +456,7 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 
 		if (paramInfo.empty())
 		{
-			itsLogger->Trace("Level transform failed: no parameter information for param " + targetParam.Name());
+			itsLogger.Trace("Level transform failed: no parameter information for param " + targetParam.Name());
 			return ret;
 		}
 
@@ -481,8 +481,8 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 
 	if (ret == targetLevel)
 	{
-		itsLogger->Trace("No level transformation found for param " + targetParam.Name() + " level " +
-		                 static_cast<string>(targetLevel));
+		itsLogger.Trace("No level transformation found for param " + targetParam.Name() + " level " +
+						static_cast<string>(targetLevel));
 	}
 
 	return ret;
@@ -536,7 +536,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 			futures.clear();
 
-			itsLogger->Trace("Processed " + to_string(maxFutureSize) + " infos");
+			itsLogger.Trace("Processed " + to_string(maxFutureSize) + " infos");
 		}
 	}
 
@@ -560,7 +560,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)
 
 		if (ret.size())
 		{
-			itsLogger->Trace("Data found from cache");
+			itsLogger.Trace("Data found from cache");
 
 			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
 			{
@@ -588,14 +588,14 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 		{
 			if (itsApplyLandSeaMask)
 			{
-				itsLogger->Fatal("Land sea mask cannot be applied when reading all auxiliary files to cache");
-				itsLogger->Fatal("Restart himan with command line option --no-auxiliary-file-full-cache-read");
+				itsLogger.Fatal("Land sea mask cannot be applied when reading all auxiliary files to cache");
+				itsLogger.Fatal("Restart himan with command line option --no-auxiliary-file-full-cache-read");
 				abort();
 			}
 
 			call_once(oflag, [&]() {
 
-				itsLogger->Debug("Start full auxiliary files read");
+				itsLogger.Debug("Start full auxiliary files read");
 
 				ret = FromFile(files, opts, true, readPackedData, true);
 
@@ -626,7 +626,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 					}
 				}
 
-				itsLogger->Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
+				itsLogger.Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
 			});
 
 			auxiliaryFilesRead = true;
@@ -641,7 +641,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 
 		if (!ret.empty())
 		{
-			itsLogger->Trace("Data found from auxiliary file(s)");
+			itsLogger.Trace("Data found from auxiliary file(s)");
 
 			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
 			{
@@ -652,7 +652,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 		}
 		else
 		{
-			itsLogger->Trace("Data not found from auxiliary file(s)");
+			itsLogger.Trace("Data not found from auxiliary file(s)");
 		}
 	}
 
@@ -679,7 +679,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 			// try neons first
 			auto n = GET_PLUGIN(neons);
 
-			itsLogger->Trace("Accessing Neons database");
+			itsLogger.Trace("Accessing Neons database");
 
 			files = n->Files(opts);
 		}
@@ -690,7 +690,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 
 			auto r = GET_PLUGIN(radon);
 
-			itsLogger->Trace("Accessing Radon database");
+			itsLogger.Trace("Accessing Radon database");
 
 			files = r->Files(opts);
 		}
@@ -700,9 +700,8 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 			const string ref_prod = opts.prod.Name();
 			const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
 			const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
-			itsLogger->Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
-			                 ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " +
-			                 opts.param.Name());
+			itsLogger.Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
+			                ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
 		}
 		else
 		{
@@ -719,7 +718,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 			auto uName = UniqueName(opts.prod, opts.param, opts.level);
 			if (find(stickyParamCache.begin(), stickyParamCache.end(), uName) == stickyParamCache.end())
 			{
-				itsLogger->Trace("Updating sticky param cache: " + UniqueName(opts.prod, opts.param, opts.level));
+				itsLogger.Trace("Updating sticky param cache: " + UniqueName(opts.prod, opts.param, opts.level));
 				stickyParamCache.push_back(uName);
 			}
 			return ret;
@@ -729,7 +728,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 	{
 		auto r = GET_PLUGIN(radon);
 
-		itsLogger->Trace("Accessing Radon database for previ data");
+		itsLogger.Trace("Accessing Radon database for previ data");
 
 		auto csv_forecasts = r->CSV(opts);
 		auto _ret = util::CSVToInfo(csv_forecasts);
@@ -826,8 +825,8 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 {
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
 	{
-		itsLogger->Fatal("Invalid value for land sea mask threshold: " +
-		                 boost::lexical_cast<string>(theLandSeaMaskThreshold));
+		itsLogger.Fatal("Invalid value for land sea mask threshold: " +
+						boost::lexical_cast<string>(theLandSeaMaskThreshold));
 		abort();
 	}
 
@@ -891,7 +890,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 			search_options opts(component->Time(), param(otherName), component->Level(), sourceProd,
 			                    component->ForecastType(), config);
 
-			itsLogger->Trace("Fetching " + otherName + " for U/V rotation");
+			itsLogger.Trace("Fetching " + otherName + " for U/V rotation");
 
 			auto ret = FetchFromAllSources(opts, component->Grid()->IsPackedData());
 

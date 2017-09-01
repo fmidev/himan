@@ -816,12 +816,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 
 		if (Pint <= targetP)
 		{
-			/*#ifdef __CUDACC__
-			            double dx = (targetP - Pint) / (Pint + Pstep - Pint);
-			            value = fma(dx, Tint, fma(-dx, T0, T0));
-			#else*/
 			value = himan::numerical_functions::interpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
-			//#endif
 			break;
 		}
 

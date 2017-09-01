@@ -4,7 +4,7 @@
 #include "hitool.h"
 #include "lagged_ensemble.h"
 #include "latitude_longitude_grid.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "metutil.h"
 #include "neons.h"
 #include "numerical_functions.h"
@@ -13,7 +13,6 @@
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
 #include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
 #include <boost/thread.hpp>
 
 #ifndef __clang_analyzer__
@@ -48,8 +47,7 @@ boost::thread_specific_ptr<lua_State> myL;
 
 luatool::luatool() : itsWriteOptions()
 {
-	itsClearTextFormula = "<interpreted>";
-	itsLogger = logger_factory::Instance()->GetLog("luatool");
+	itsLogger = logger("luatool");
 	myL.reset();
 }
 
@@ -65,25 +63,24 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("luatoolThread #" + boost::lexical_cast<std::string>(threadIndex));
+	auto myThreadedLogger = logger("luatoolThread #" + std::to_string(threadIndex));
 
 	InitLua(myTargetInfo);
 
 	assert(myL.get());
-	myThreadedLogger->Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
-	                       " level " + static_cast<std::string>(myTargetInfo->Level()));
+	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
+						  " level " + static_cast<std::string>(myTargetInfo->Level()));
 
-	globals(myL.get())["logger"] = myThreadedLogger.get();
+	globals(myL.get())["logger"] = myThreadedLogger;
 
-	BOOST_FOREACH (const std::string& luaFile, itsConfiguration->GetValueList("luafile"))
+	for (const std::string& luaFile : itsConfiguration->GetValueList("luafile"))
 	{
 		if (luaFile.empty())
 		{
 			continue;
 		}
 
-		myThreadedLogger->Info("Starting script " + luaFile);
+		myThreadedLogger.Info("Starting script " + luaFile);
 
 		ReadFile(luaFile);
 	}
@@ -146,7 +143,7 @@ void luatool::InitLua(info_t myTargetInfo)
 	globals(L)["neons"] = n;
 	globals(L)["radon"] = r;
 
-	itsLogger->Trace("luabind finished");
+	itsLogger.Trace("luabind finished");
 	myL.reset(L);
 }
 
@@ -163,7 +160,7 @@ bool luatool::ReadFile(const std::string& luaFile)
 		assert(myL.get());
 		if (luaL_dofile(myL.get(), luaFile.c_str()))
 		{
-			itsLogger->Error(lua_tostring(myL.get(), -1));
+			itsLogger.Error(lua_tostring(myL.get(), -1));
 			return false;
 		}
 	}
@@ -173,7 +170,7 @@ bool luatool::ReadFile(const std::string& luaFile)
 	}
 	catch (const std::exception& e)
 	{
-		itsLogger->Error(e.what());
+		itsLogger.Error(e.what());
 		return false;
 	}
 
@@ -212,9 +209,8 @@ void BindEnum(lua_State* L)
 				 value("kAltitude", kAltitude),
 				 value("kHeight", kHeight),
 				 value("kHybrid", kHybrid),
-				 value("kGndLayer", kGndLayer),
+				 value("kGroundDepth", kGroundDepth),
 				 value("kDepth", kDepth),
-				 value("kDepthLayer", kDepthLayer),
 				 value("kEntireAtmosphere", kEntireAtmosphere),
 				 value("kEntireOcean", kEntireOcean),
 				 value("kMaximumThetaE", kMaximumThetaE),
@@ -297,7 +293,7 @@ namespace info_wrapper
 {
 // These are convenience functions for accessing info class contents
 
-bool SetValue(std::shared_ptr<info>& anInfo, int index, double value) { return anInfo->Grid()->Value(--index, value); }
+void SetValue(std::shared_ptr<info>& anInfo, int index, double value) { anInfo->Grid()->Value(--index, value); }
 double GetValue(std::shared_ptr<info>& anInfo, int index) { return anInfo->Grid()->Value(--index); }
 size_t GetLocationIndex(std::shared_ptr<info> anInfo) { return anInfo->LocationIndex() + 1; }
 size_t GetTimeIndex(std::shared_ptr<info> anInfo) { return anInfo->TimeIndex() + 1; }

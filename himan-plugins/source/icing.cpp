@@ -6,17 +6,14 @@
 #include "icing.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
+#include "logger.h"
 
 using namespace std;
 using namespace himan::plugin;
 
 icing::icing()
 {
-	itsClearTextFormula = "Icing = round(log(CW) +6) + VVcor + Tcor";
-
-	itsLogger = logger_factory::Instance()->GetLog("icing");
+	itsLogger = logger("icing");
 }
 
 void icing::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -42,15 +39,14 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	const params VvParam = {param("VV-MS"), param("VV-MMS")};
 	const param ClParam("CLDWAT-KGKG");
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("icingThread #" + boost::lexical_cast<string>(theThreadIndex));
+	auto myThreadedLogger = logger("icingThread #" + to_string(theThreadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+						  static_cast<string>(forecastLevel));
 
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 	info_t VvInfo = Fetch(forecastTime, forecastLevel, VvParam, forecastType, false);
@@ -58,8 +54,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	if (!TInfo || !VvInfo || !ClInfo)
 	{
-		myThreadedLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                          static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -191,7 +187,6 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		result = Icing;
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }

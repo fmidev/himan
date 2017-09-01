@@ -4,9 +4,8 @@
  */
 
 #include "plugin_factory.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "util.h"
-#include <boost/regex.hpp>
 #include <cstdlib>
 #include <dlfcn.h>
 
@@ -29,8 +28,7 @@ plugin_factory* plugin_factory::Instance()
 	return itsInstance.get();
 }
 
-plugin_factory::plugin_factory()
-    : itsPluginSearchPath(), itsLogger(logger_factory::Instance()->GetLog("plugin_factory"))
+plugin_factory::plugin_factory() : itsPluginSearchPath(), itsLogger(logger("plugin_factory"))
 {
 	const char* path = std::getenv("HIMAN_LIBRARY_PATH");
 
@@ -42,18 +40,18 @@ plugin_factory::plugin_factory()
 	}
 	else
 	{
-		itsLogger->Trace(
+		itsLogger.Trace(
 		    "Environment variable HIMAN_LIBRARY_PATH not set -- search plugins only from pre-defined locations");
 	}
 
 	itsPluginSearchPath.push_back(".");
 	itsPluginSearchPath.push_back("/usr/lib64/himan-plugins");  // Default RPM location
-
-	ReadPlugins();
 }
 
 std::vector<std::shared_ptr<himan_plugin>> plugin_factory::Plugins(HPPluginClass pluginClass)
 {
+	ReadPlugins();
+
 	std::vector<std::shared_ptr<himan_plugin>> thePlugins(itsPluginFactory.size());
 
 	for (size_t i = 0; i < itsPluginFactory.size(); i++)
@@ -66,17 +64,19 @@ std::vector<std::shared_ptr<himan_plugin>> plugin_factory::Plugins(HPPluginClass
 
 std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClassName)
 {
-	std::lock_guard<std::mutex> lock(itsPluginMutex);
-
-	for (size_t i = 0; i < itsPluginFactory.size(); i++)
+	// Try to find the requested plugin twice. Populate the plugin registry if the plugin is not found.
+	for (int i = 0; i < 2; i++)
 	{
-		if ((itsPluginFactory[i]->Plugin()->ClassName() == theClassName) ||
-		    (itsPluginFactory[i]->Plugin()->ClassName() == "himan::plugin::" + theClassName))
+		for (size_t i = 0; i < itsPluginFactory.size(); i++)
 		{
-			return itsPluginFactory[i]->Clone();
+			if ((itsPluginFactory[i]->Plugin()->ClassName() == theClassName) ||
+			    (itsPluginFactory[i]->Plugin()->ClassName() == "himan::plugin::" + theClassName))
+			{
+				return itsPluginFactory[i]->Clone();
+			}
 		}
+		ReadPlugins(theClassName);
 	}
-
 	throw std::runtime_error("plugin_factory: Unknown plugin clone operation requested: " + theClassName);
 }
 
@@ -87,27 +87,30 @@ std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClass
  * that end with .so. Will not ascend to child directories (equals to "--max-depth 1").
  */
 
-void plugin_factory::ReadPlugins()
+void plugin_factory::ReadPlugins(const std::string& pluginName)
 {
+	std::lock_guard<std::mutex> lock(itsPluginMutex);
+
 	using namespace boost::filesystem;
 
 	directory_iterator end_iter;
 
 	for (size_t i = 0; i < itsPluginSearchPath.size(); i++)
 	{
-		itsLogger->Trace("Search plugins from " + itsPluginSearchPath[i]);
-
 		path p(itsPluginSearchPath[i]);
 
 		try
 		{
-			if (exists(p) && is_directory(p))  // is p a directory?
+			if (exists(p) && is_directory(p))
 			{
 				for (directory_iterator dir_iter(p); dir_iter != end_iter; ++dir_iter)
 				{
-					if (dir_iter->path().filename().extension().string() == ".so")
+					if (dir_iter->path().filename().extension().string() == ".so" &&
+					    ((dir_iter->path().stem().string() == "lib" + pluginName) || pluginName.empty()))
 					{
 						Load(dir_iter->path().string());
+
+						if (!pluginName.empty()) return;
 					}
 				}
 			}
@@ -115,7 +118,7 @@ void plugin_factory::ReadPlugins()
 
 		catch (const filesystem_error& ex)
 		{
-			itsLogger->Error(ex.what());
+			itsLogger.Error(ex.what());
 		}
 	}
 }
@@ -142,7 +145,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
 	if (!theLibraryHandle)
 	{
-		itsLogger->Error("Unable to load plugin '" + thePluginFileName + "': " + std::string(dlerror()));
+		itsLogger.Error("Unable to load plugin '" + thePluginFileName + "': " + std::string(dlerror()));
 		return false;
 	}
 
@@ -152,7 +155,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
 	if (!create_plugin)
 	{
-		itsLogger->Error("Unable to load symbol: " + std::string(dlerror()));
+		itsLogger.Error("Unable to load symbol: " + std::string(dlerror()));
 		return false;
 	}
 
@@ -162,8 +165,8 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 	{
 		if (p->ClassName() == itsPluginFactory[i]->Plugin()->ClassName())
 		{
-			itsLogger->Trace("Plugin '" + p->ClassName() + "' found more than once, skipping one found from '" +
-			                 thePluginFileName + "'");
+			itsLogger.Trace("Plugin '" + p->ClassName() + "' found more than once, skipping one found from '" +
+			                thePluginFileName + "'");
 			dlclose(theLibraryHandle);
 
 			return true;
@@ -174,7 +177,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
 	itsPluginFactory.push_back(mc);
 
-	itsLogger->Trace("Load " + thePluginFileName);
+	itsLogger.Trace("Load " + thePluginFileName);
 
 	return true;
 }

@@ -9,7 +9,6 @@
 #include "grid.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
-#include "logger_factory.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
 #include <limits>  // for std::numeric_limits<size_t>::max();
@@ -25,7 +24,7 @@ info::info()
       itsParamIterator(),
       itsForecastTypeIterator(),
       itsDimensions(),
-      itsLogger(logger_factory::Instance()->GetLog("info")),
+      itsLogger(logger("info")),
       itsLocationIndex(kIteratorResetValue)
 {
 }
@@ -47,7 +46,7 @@ info::info(const info& other)
 		itsBaseGrid = unique_ptr<grid>(other.itsBaseGrid->Clone());
 	}
 
-	itsLogger = logger_factory::Instance()->GetLog("info");
+	itsLogger = logger("info");
 }
 
 std::ostream& info::Write(std::ostream& file) const
@@ -175,7 +174,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 		if (!ForecastType(otherInfo->ForecastType()))
 		{
-			itsLogger->Fatal("Unable to set forecast type, merge failed");
+			itsLogger.Fatal("Unable to set forecast type, merge failed");
 			abort();
 		}
 
@@ -190,7 +189,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 			if (!Time(otherInfo->Time()))
 			{
-				itsLogger->Fatal("Unable to set time, merge failed");
+				itsLogger.Fatal("Unable to set time, merge failed");
 				abort();
 			}
 
@@ -205,7 +204,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 				if (!Level(otherInfo->Level()))
 				{
-					itsLogger->Fatal("Unable to set level, merge failed");
+					itsLogger.Fatal("Unable to set level, merge failed");
 					abort();
 				}
 
@@ -220,7 +219,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 
 					if (!Param(otherInfo->Param()))
 					{
-						itsLogger->Fatal("Unable to set param, merge failed");
+						itsLogger.Fatal("Unable to set param, merge failed");
 						abort();
 					}
 
@@ -524,7 +523,7 @@ point info::LatLon() const
 {
 	if (itsLocationIndex == kIteratorResetValue)
 	{
-		itsLogger->Error("Location iterator position is not set");
+		itsLogger.Error("Location iterator position is not set");
 		return point();
 	}
 
@@ -535,12 +534,12 @@ station info::Station() const
 {
 	if (itsLocationIndex == kIteratorResetValue)
 	{
-		itsLogger->Error("Location iterator position is not set");
+		itsLogger.Error("Location iterator position is not set");
 		return station();
 	}
 	else if (Grid()->Class() != kIrregularGrid)
 	{
-		itsLogger->Error("regular_grid does not hold station information");
+		itsLogger.Error("regular_grid does not hold station information");
 		return station();
 	}
 

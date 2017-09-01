@@ -1,8 +1,8 @@
 #include "probability.h"
 
-#include "logger_factory.h"
 #include "plugin_factory.h"
 
+#include "logger.h"
 #include "fetcher.h"
 #include "writer.h"
 
@@ -31,9 +31,8 @@ static const std::string kClassName = "himan::plugin::probability";
 static inline double Magnitude(double u, double v) { return sqrt(u * u + v * v); }
 probability::probability()
 {
-	itsClearTextFormula = "???";
 	itsCudaEnabledCalculation = false;
-	itsLogger = logger_factory::Instance()->GetLog("probability");
+	itsLogger = logger("probability");
 
 	itsEnsembleSize = 0;
 	itsMaximumMissingForecasts = 0;
@@ -143,7 +142,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	{
 		// default to [0,100] for compatibility
 		itsUseNormalizedResult = false;
-		itsLogger->Info(
+		itsLogger.Info(
 		    "'normalized_results' not found from the configuration, results will be written in [0,100] range");
 	}
 
@@ -170,7 +169,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 		}
 		else if (lag > 0)
 		{
-			itsLogger->Warning("negating lag value " + std::to_string(-lag));
+			itsLogger.Warning("negating lag value " + std::to_string(-lag));
 			lag = -lag;
 		}
 
@@ -247,14 +246,14 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 				if (it == pc.stationThreshold.end())
 				{
-					itsLogger->Trace("Fetching threshold for param " + pc.output.Name() + ", station " +
-					                 std::to_string(st.Id()) + " from radon");
+					itsLogger.Trace("Fetching threshold for param " + pc.output.Name() + ", station " +
+					                std::to_string(st.Id()) + " from radon");
 					double limit = r->RadonDB().GetProbabilityLimitForStation(st.Id(), pc.output.Name());
 
 					if (IsMissing(limit))
 					{
-						itsLogger->Fatal("Threshold not found for param " + pc.output.Name() + ", station " +
-						                 std::to_string(st.Id()));
+						itsLogger.Fatal("Threshold not found for param " + pc.output.Name() + ", station " +
+						                std::to_string(st.Id()));
 						abort();
 					}
 
@@ -306,7 +305,7 @@ static void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadI
                               const param_configuration& paramConf, const int infoIndex, const bool normalized,
                               std::unique_ptr<ensemble>& ens);
 
-static void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInfo, uint16_t threadIndex,
+static void CalculateWind(const logger& log, std::shared_ptr<info> targetInfo, uint16_t threadIndex,
                           const param_configuration& paramConf, int infoIndex, bool normalized,
                           std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2);
 
@@ -314,7 +313,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 {
 	info myTargetInfo = *itsInfo;
 
-	auto threadedLogger = logger_factory::Instance()->GetLog("probabilityThread # " + std::to_string(threadIndex));
+	auto threadedLogger = logger("probabilityThread # " + std::to_string(threadIndex));
 	const std::string deviceType = "CPU";
 
 	const double threshold = pc.gridThreshold;
@@ -329,7 +328,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 	if (itsUseLaggedEnsemble)
 	{
-		threadedLogger->Info("Using lagged ensemble for ensemble #1");
+		threadedLogger.Info("Using lagged ensemble for ensemble #1");
 		ens1 = std::unique_ptr<ensemble>(
 		    new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 	}
@@ -344,7 +343,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		// Wind
 		if (itsUseLaggedEnsemble)
 		{
-			threadedLogger->Info("Using lagged ensemble for ensemble #2");
+			threadedLogger.Info("Using lagged ensemble for ensemble #2");
 			ens2 = std::unique_ptr<ensemble>(
 			    new lagged_ensemble(pc.parameter2, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 		}
@@ -358,9 +357,9 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 	// NOTE we only loop through the time steps here
 	do
 	{
-		threadedLogger->Info("Calculating " + pc.output.Name() + " time " +
-		                     static_cast<std::string>(myTargetInfo.Time().ValidDateTime()) + " threshold '" +
-		                     std::to_string(threshold) + "' infoIndex " + std::to_string(infoIndex));
+		threadedLogger.Info("Calculating " + pc.output.Name() + " time " +
+		                    static_cast<std::string>(myTargetInfo.Time().ValidDateTime()) + " threshold '" +
+		                    std::to_string(threshold) + "' infoIndex " + std::to_string(infoIndex));
 
 		//
 		// Setup input data, data fetching
@@ -383,7 +382,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 			}
 			else
 			{
-				itsLogger->Fatal("Received error code " + std::to_string(e));
+				itsLogger.Fatal("Received error code " + std::to_string(e));
 				abort();
 			}
 		}
@@ -427,8 +426,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 	} while (myTargetInfo.NextTime());
 
-	threadedLogger->Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo.Data().MissingCount()) +
-	                     "/" + std::to_string(myTargetInfo.Data().Size()));
+	threadedLogger.Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo.Data().MissingCount()) +
+	                    "/" + std::to_string(myTargetInfo.Data().Size()));
 }
 
 // Usually himan writes all the parameters out on a call to WriteToFile, but probability calculates
@@ -482,7 +481,7 @@ double GetThreshold(std::shared_ptr<info>& targetInfo, const param_configuration
 	}
 }
 
-void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInfo, uint16_t threadIndex,
+void CalculateWind(const logger& log, std::shared_ptr<info> targetInfo, uint16_t threadIndex,
                    const param_configuration& paramConf, int infoIndex, bool normalized,
                    std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2)
 {
@@ -494,7 +493,7 @@ void CalculateWind(std::unique_ptr<logger>& log, std::shared_ptr<info> targetInf
 	const size_t ensembleSize = ens1->Size();
 	if (ensembleSize != ens2->Size())
 	{
-		log->Fatal(" CalculateWind(): U and V ensembles are of different size, aborting");
+		log.Fatal(" CalculateWind(): U and V ensembles are of different size, aborting");
 		abort();
 	}
 

@@ -38,7 +38,7 @@ class plugin_factory
 
 	static std::unique_ptr<plugin_factory> itsInstance;
 
-	void ReadPlugins();
+	void ReadPlugins(const std::string& pluginName = "");
 
 	bool Load(const std::string& thePluginFileName);
 
@@ -47,7 +47,7 @@ class plugin_factory
 	std::vector<std::shared_ptr<plugin_container>> itsPluginFactory;
 
 	std::vector<std::string> itsPluginSearchPath;
-	std::unique_ptr<logger> itsLogger;
+	logger itsLogger;
 
 	std::mutex itsPluginMutex;
 };

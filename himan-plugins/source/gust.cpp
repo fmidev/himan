@@ -9,7 +9,7 @@
 #include "forecast_time.h"
 #include "gust.h"
 #include "level.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include <boost/thread.hpp>
@@ -84,7 +84,7 @@ void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
 void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, info_t middleClouds, info_t highClouds,
                         info_t totalClouds);
 
-gust::gust() { itsLogger = logger_factory::Instance()->GetLog("gust"); }
+gust::gust() { itsLogger = logger("gust"); }
 void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -112,8 +112,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%H")),
 	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%M")));
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog("gust_pluginThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("gust_pluginThread #" + boost::lexical_cast<string>(threadIndex));
 
 	/*
 	 * Required source parameters
@@ -188,7 +187,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (!GustInfo || !T_LowestLevelInfo || !LCloudInfo || !MCloudInfo || !HCloudInfo || !TCloudInfo)
 	{
-		itsLogger->Error("Unable to find all source data");
+		itsLogger.Error("Unable to find all source data");
 		return;
 	}
 
@@ -248,7 +247,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			myThreadedLogger->Error("hitool was unable to find data");
+			myThreadedLogger.Error("hitool was unable to find data");
 			t.join();
 			t2.join();
 			return;
@@ -269,7 +268,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			myThreadedLogger->Error("hitool was unable to find data");
+			myThreadedLogger.Error("hitool was unable to find data");
 			t.join();
 			t2.join();
 			return;
@@ -290,7 +289,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			myThreadedLogger->Error("hitool was unable to find data");
+			myThreadedLogger.Error("hitool was unable to find data");
 			t.join();
 			t2.join();
 			return;
@@ -315,7 +314,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			myThreadedLogger->Error("hitool was unable to find data");
+			myThreadedLogger.Error("hitool was unable to find data");
 			t.join();
 			t2.join();
 			return;
@@ -336,7 +335,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			myThreadedLogger->Error("hitool was unable to find data");
+			myThreadedLogger.Error("hitool was unable to find data");
 			t.join();
 			t2.join();
 			return;
@@ -501,9 +500,9 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Grid()->Data(gust_filtered);
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
+						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
+						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
 }
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,

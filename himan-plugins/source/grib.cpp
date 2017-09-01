@@ -7,7 +7,7 @@
 #include "grid.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
-#include "logger_factory.h"
+#include "logger.h"
 #include "plugin_factory.h"
 #include "producer.h"
 #include "reduced_gaussian_grid.h"
@@ -34,7 +34,7 @@ void DecodePrecipitationFormFromGrib2(vector<double>& arr);
 
 grib::grib()
 {
-	itsLogger = logger_factory::Instance()->GetLog("grib");
+	itsLogger = logger("grib");
 
 	itsGrib = make_shared<NFmiGrib>();
 }
@@ -229,8 +229,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		}
 
 		default:
-			itsLogger->Fatal("Invalid projection while writing grib: " +
-			                 boost::lexical_cast<string>(anInfo.Grid()->Type()));
+			itsLogger.Fatal("Invalid projection while writing grib: " +
+			                boost::lexical_cast<string>(anInfo.Grid()->Type()));
 			abort();
 	}
 	/*
@@ -310,7 +310,7 @@ void grib::WriteTime(info& anInfo)
 		}
 		else
 		{
-			itsLogger->Fatal("Step too large, unable to continue");
+			itsLogger.Fatal("Step too large, unable to continue");
 			abort();
 		}
 	}
@@ -349,7 +349,7 @@ void grib::WriteTime(info& anInfo)
 
 				if (p1 < 0)
 				{
-					itsLogger->Warning("Forcing starting step from negative value to zero");
+					itsLogger.Warning("Forcing starting step from negative value to zero");
 					p1 = 0;
 				}
 
@@ -363,7 +363,7 @@ void grib::WriteTime(info& anInfo)
 
 				if (p1 < 0)
 				{
-					itsLogger->Warning("Forcing starting step from negative value to zero");
+					itsLogger.Warning("Forcing starting step from negative value to zero");
 					p1 = 0;
 				}
 				itsGrib->Message().P1(p1);
@@ -376,7 +376,7 @@ void grib::WriteTime(info& anInfo)
 
 				if (p1 < 0)
 				{
-					itsLogger->Warning("Forcing starting step from negative value to zero");
+					itsLogger.Warning("Forcing starting step from negative value to zero");
 					p1 = 0;
 				}
 
@@ -460,9 +460,9 @@ void grib::WriteParameter(info& anInfo)
 
 					if (prodinfo.empty())
 					{
-						itsLogger->Warning("Producer information not found from neons for producer " +
-						                   boost::lexical_cast<string>(anInfo.Producer().Id()) +
-						                   ", setting table2version to 203");
+						itsLogger.Warning("Producer information not found from neons for producer " +
+						                  boost::lexical_cast<string>(anInfo.Producer().Id()) +
+						                  ", setting table2version to 203");
 						tableVersion = 203;
 					}
 					else
@@ -478,9 +478,9 @@ void grib::WriteParameter(info& anInfo)
 
 				if (parm_id == -1)
 				{
-					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " +
-					                   boost::lexical_cast<string>(anInfo.Producer().TableVersion()) + " in neons");
-					itsLogger->Warning("Setting parameter to 1");
+					itsLogger.Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for code table " +
+					                  boost::lexical_cast<string>(anInfo.Producer().TableVersion()) + " in neons");
+					itsLogger.Warning("Setting parameter to 1");
 					parm_id = 1;
 				}
 
@@ -503,9 +503,9 @@ void grib::WriteParameter(info& anInfo)
 				if (paramInfo.empty() || paramInfo.find("grib1_number") == paramInfo.end() ||
 				    paramInfo["grib1_number"].empty())
 				{
-					itsLogger->Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
-					                   boost::lexical_cast<string>(anInfo.Producer().Id()) +
-					                   " in radon, setting table2version to 203");
+					itsLogger.Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
+					                  boost::lexical_cast<string>(anInfo.Producer().Id()) +
+					                  " in radon, setting table2version to 203");
 					itsGrib->Message().Table2Version(203);
 				}
 				else
@@ -531,9 +531,9 @@ void grib::WriteParameter(info& anInfo)
 
 			if (paramInfo.empty())
 			{
-				itsLogger->Warning("Parameter information not found from radon for producer " +
-				                   boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
-				                   anInfo.Param().Name());
+				itsLogger.Warning("Parameter information not found from radon for producer " +
+				                  boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
+				                  anInfo.Param().Name());
 			}
 			else
 			{
@@ -547,9 +547,9 @@ void grib::WriteParameter(info& anInfo)
 				}
 				catch (const boost::bad_lexical_cast& e)
 				{
-					itsLogger->Warning("Grib2 parameter information not found from radon for producer " +
-					                   boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
-					                   anInfo.Param().Name());
+					itsLogger.Warning("Grib2 parameter information not found from radon for producer " +
+					                  boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " +
+					                  anInfo.Param().Name());
 				}
 			}
 		}
@@ -599,7 +599,7 @@ void grib::WriteParameter(info& anInfo)
 bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
 	// grib expects non-nan values
-	anInfo.Data().MissingValue(kFloatMissing);
+	anInfo.Data().MissingValue(32700.0);
 
 	// Write only that data which is currently set at descriptors
 
@@ -608,8 +608,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
 	{
-		itsLogger->Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) +
-		                 " to grib");
+		itsLogger.Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) +
+		                " to grib");
 		return false;
 	}
 
@@ -617,7 +617,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		if (anInfo.Data().MissingCount() == anInfo.Data().Size())
 		{
-			itsLogger->Debug("Not writing empty grid");
+			itsLogger.Debug("Not writing empty grid");
 			return true;
 		}
 	}
@@ -632,8 +632,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	if (edition == 1 &&
 	    (anInfo.Grid()->AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
-		itsLogger->Debug("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
-		                 ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
+		itsLogger.Trace("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
+		                ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
 		edition = 2;
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
 		    itsWriteOptions.configuration->FileWriteOption() != kSingleFile)
@@ -651,8 +651,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		}
 		else if (itsWriteOptions.configuration->FileCompression() != kNoCompression)
 		{
-			itsLogger->Error("Unable to write to compressed grib. Unknown file compression: " +
-			                 HPFileCompressionToString.at(itsWriteOptions.configuration->FileCompression()));
+			itsLogger.Error("Unable to write to compressed grib. Unknown file compression: " +
+			                HPFileCompressionToString.at(itsWriteOptions.configuration->FileCompression()));
 			return false;
 		}
 	}
@@ -677,9 +677,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 			else
 			{
 				string producerId = boost::lexical_cast<string>(anInfo.Producer().Id());
-				itsLogger->Warning("Unable to get process and centre information from Neons for producer " +
-				                   producerId);
-				itsLogger->Warning("Setting process to " + producerId + " and centre to 86");
+				itsLogger.Warning("Unable to get process and centre information from Neons for producer " + producerId);
+				itsLogger.Warning("Setting process to " + producerId + " and centre to 86");
 				itsGrib->Message().Centre(86);
 				itsGrib->Message().Process(anInfo.Producer().Id());
 			}
@@ -766,7 +765,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	if (anInfo.Grid()->IsPackedData() && anInfo.Grid()->PackedData().ClassName() == "simple_packed")
 	{
-		itsLogger->Trace("Writing packed data");
+		itsLogger.Trace("Writing packed data");
 		simple_packed* s = reinterpret_cast<simple_packed*>(&anInfo.Grid()->PackedData());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
@@ -774,18 +773,18 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().DecimalScaleFactor(s->coefficients.decimalScaleFactor);
 		itsGrib->Message().BitsPerValue(s->coefficients.bitsPerValue);
 
-		itsLogger->Trace("bits per value: " + boost::lexical_cast<string>(itsGrib->Message().BitsPerValue()));
-		itsLogger->Trace("decimal scale factor: " +
-		                 boost::lexical_cast<string>(itsGrib->Message().DecimalScaleFactor()));
-		itsLogger->Trace("binary scale factor: " + boost::lexical_cast<string>(itsGrib->Message().BinaryScaleFactor()));
-		itsLogger->Trace("reference value: " + boost::lexical_cast<string>(itsGrib->Message().ReferenceValue()));
+		itsLogger.Trace("bits per value: " + boost::lexical_cast<string>(itsGrib->Message().BitsPerValue()));
+		itsLogger.Trace("decimal scale factor: " +
+		                boost::lexical_cast<string>(itsGrib->Message().DecimalScaleFactor()));
+		itsLogger.Trace("binary scale factor: " + boost::lexical_cast<string>(itsGrib->Message().BinaryScaleFactor()));
+		itsLogger.Trace("reference value: " + boost::lexical_cast<string>(itsGrib->Message().ReferenceValue()));
 
 		itsGrib->Message().PackedValues(s->data, anInfo.Data().Size(), 0, 0);
 	}
 	else
 #endif
 	{
-		itsLogger->Trace("Writing unpacked data");
+		itsLogger.Trace("Writing unpacked data");
 
 #ifdef DEBUG
 
@@ -811,10 +810,14 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		const auto paramName = anInfo.Param().Name();
 		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
 		{
-			EncodePrecipitationFormToGrib2(anInfo.Data().Values());
+			auto data = anInfo.Data().Values();
+			EncodePrecipitationFormToGrib2(data);
+			itsGrib->Message().Values(data.data(), static_cast<long>(data.size()));
 		}
-
-		itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
+		else
+		{
+			itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
+		}
 	}
 
 	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
@@ -881,25 +884,39 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	     itsWriteOptions.configuration->FileCompression() == kBZIP2) &&
 	    appendToFile)
 	{
-		itsLogger->Warning("Unable to append to a compressed file");
+		itsLogger.Warning("Unable to append to a compressed file");
 		appendToFile = false;
 	}
 
 	if (itsWriteOptions.configuration->DatabaseType() == kNeonsAndRadon ||
 	    itsWriteOptions.configuration->DatabaseType() == kRadon)
 	{
-		auto r = GET_PLUGIN(radon);
-		auto precisionInfo = r->RadonDB().GetParameterPrecision(anInfo.Param().Name());
-		if (precisionInfo.empty() || precisionInfo.find("precision") == precisionInfo.end() ||
-		    precisionInfo["precision"].empty())
+		int decimals = anInfo.Param().Precision();
+
+		if (decimals == kHPMissingInt)
 		{
-			itsLogger->Trace("Precision not found for parameter " + anInfo.Param().Name() + " defaulting to 24 bits");
+			// When neons is removed, this piece of code can be removed
+
+			auto r = GET_PLUGIN(radon);
+			auto precisionInfo = r->RadonDB().GetParameterPrecision(anInfo.Param().Name());
+
+			if (precisionInfo.empty() || precisionInfo.find("precision") == precisionInfo.end() ||
+			    precisionInfo["precision"].empty())
+			{
+				itsLogger.Trace("Precision not found for parameter " + anInfo.Param().Name() +
+				                " defaulting to 24 bits");
+			}
+			else
+			{
+				itsLogger.Trace("Using " + precisionInfo["precision"] + " decimals for " + anInfo.Param().Name() +
+				                "'s precision");
+				itsGrib->Message().ChangeDecimalPrecision(stoi(precisionInfo["precision"]));
+			}
 		}
 		else
 		{
-			int decimals = std::stoi(precisionInfo["precision"]);
-			itsLogger->Trace("Using " + std::to_string(decimals) + " decimals for " + anInfo.Param().Name() +
-			                 "'s precision");
+			itsLogger.Trace("Using " + std::to_string(decimals) + " decimals for " + anInfo.Param().Name() +
+			                "'s precision");
 			itsGrib->Message().ChangeDecimalPrecision(decimals);
 		}
 	}
@@ -914,7 +931,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
-	itsLogger->Info(verb + "file '" + outputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
+	itsLogger.Info(verb + "file '" + outputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
 
 	return true;
 }
@@ -1040,7 +1057,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			if (earthIsOblate)
 			{
-				itsLogger->Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
+				itsLogger.Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
 			}
 
 			lccg->Data(matrix<double>(lccg->Ni(), lccg->Nj(), 1, MissingDouble()));
@@ -1196,10 +1213,10 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		if (parmName.empty())
 		{
-			itsLogger->Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) + " for no_vers: " +
-			                   boost::lexical_cast<string>(no_vers) + ", number: " +
-			                   boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
-			                   boost::lexical_cast<string>(timeRangeIndicator));
+			itsLogger.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) + " for no_vers: " +
+			                  boost::lexical_cast<string>(no_vers) + ", number: " +
+			                  boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
+			                  boost::lexical_cast<string>(timeRangeIndicator));
 		}
 		else
 		{
@@ -1268,10 +1285,10 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		if (parmName.empty())
 		{
-			itsLogger->Warning("Parameter name not found from database for discipline: " +
-			                   boost::lexical_cast<string>(discipline) + ", category: " +
-			                   boost::lexical_cast<string>(category) + ", number: " +
-			                   boost::lexical_cast<string>(number));
+			itsLogger.Warning("Parameter name not found from database for discipline: " +
+			                  boost::lexical_cast<string>(discipline) + ", category: " +
+			                  boost::lexical_cast<string>(category) + ", number: " +
+			                  boost::lexical_cast<string>(number));
 		}
 		else
 		{
@@ -1365,8 +1382,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 	}
 	else
 	{
-		itsLogger->Trace("Unable to determine himan parameter unit for grib unit " +
-		                 itsGrib->Message().ParameterUnit());
+		itsLogger.Trace("Unable to determine himan parameter unit for grib unit " + itsGrib->Message().ParameterUnit());
 	}
 
 	return p;
@@ -1378,24 +1394,16 @@ himan::forecast_time grib::ReadTime() const
 
 	/*
 	 * dataTime is HH24MM in long datatype.
-	 *
 	 * So, for example analysistime 00 is 0, and 06 is 600.
-	 *
 	 */
 
 	long dt = itsGrib->Message().DataTime();
-
-	string dataTime = boost::lexical_cast<string>(dt);
-
-	if (dt < 1000)
-	{
-		dataTime = "0" + dataTime;
-	}
+	char fmt[5];
+	snprintf(fmt, 5, "%04ld", dt);
 
 	long step = itsGrib->Message().NormalizedStep(true, true);
 
-	string originDateTimeStr = dataDate + dataTime;
-
+	string originDateTimeStr = dataDate + string(fmt);
 	raw_time originDateTime(originDateTimeStr, "%Y%m%d%H%M");
 
 	forecast_time t(originDateTime, originDateTime);
@@ -1420,7 +1428,7 @@ himan::forecast_time grib::ReadTime() const
 			break;
 
 		default:
-			itsLogger->Warning("Unsupported unit of time range: " + boost::lexical_cast<string>(timeResolution));
+			itsLogger.Warning("Unsupported unit of time range: " + boost::lexical_cast<string>(timeResolution));
 			break;
 	}
 
@@ -1469,7 +1477,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 			break;
 
 		case 112:
-			levelType = himan::kGndLayer;
+			levelType = himan::kGroundDepth;
 			break;
 
 		case 246:
@@ -1477,7 +1485,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 			break;
 
 		default:
-			itsLogger->Fatal("Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
+			itsLogger.Fatal("Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
 			abort();
 	}
 
@@ -1489,7 +1497,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 			l = level(levelType, 100 * itsGrib->Message().LevelValue(), 100 * itsGrib->Message().LevelValue2());
 			break;
 
-		case himan::kGndLayer:
+		case himan::kGroundDepth:
 		{
 			if (IsKHPMissingValue(options.level.Value2()))
 			{
@@ -1561,8 +1569,8 @@ himan::producer grib::ReadProducer(const search_options& options) const
 			}
 			else
 			{
-				itsLogger->Warning("Producer information not found from database for centre " + to_string(centre) +
-				                   ", process " + to_string(process) + " type " + to_string(typeId));
+				itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
+				                  ", process " + to_string(process) + " type " + to_string(typeId));
 			}
 		}
 	}
@@ -1601,6 +1609,8 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 		size_t len = itsGrib->Message().PackedValuesLength();
 		int* unpackedBitmap = 0;
 
+		packed->unpackedLength = itsGrib->Message().SizeX() * itsGrib->Message().SizeY();
+
 		if (len > 0)
 		{
 			assert(packed->data == 0);
@@ -1608,13 +1618,12 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 
 			itsGrib->Message().PackedValues(packed->data);
 			packed->packedLength = len;
-			packed->unpackedLength = itsGrib->Message().SizeX() * itsGrib->Message().SizeY();
 
-			itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len) + " bytes of packed data from grib");
+			itsLogger.Trace("Retrieved " + boost::lexical_cast<string>(len) + " bytes of packed data from grib");
 		}
 		else
 		{
-			itsLogger->Trace("Grid is constant or empty");
+			itsLogger.Trace("Grid is constant or empty");
 		}
 
 		if (itsGrib->Message().Bitmap())
@@ -1622,8 +1631,8 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 			size_t bitmap_len = itsGrib->Message().BytesLength("bitmap");
 			size_t bitmap_size = static_cast<size_t>(ceil(static_cast<double>(bitmap_len) / 8));
 
-			itsLogger->Trace("Grib has bitmap, length " + boost::lexical_cast<string>(bitmap_len) + " size " +
-			                 boost::lexical_cast<string>(bitmap_size) + " bytes");
+			itsLogger.Trace("Grib has bitmap, length " + boost::lexical_cast<string>(bitmap_len) + " size " +
+			                boost::lexical_cast<string>(bitmap_size) + " bytes");
 
 			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&unpackedBitmap), bitmap_len * sizeof(int)));
 
@@ -1645,22 +1654,15 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 	{
 		size_t len = itsGrib->Message().ValuesLength();
 
-		double* d = itsGrib->Message().Values();
-
-		dm.MissingValue(itsGrib->Message().MissingValue());
-
-		dm.Set(d, len);
-
-		dm.MissingValue(MissingDouble());
-
-		free(d);
+		itsGrib->Message().GetValues(dm.ValuesAsPOD(), &len);
+                dm.MissingValue(MissingDouble());
 
 		if (decodePrecipitationForm)
 		{
 			DecodePrecipitationFormFromGrib2(dm.Values());
 		}
 
-		itsLogger->Trace("Retrieved " + boost::lexical_cast<string>(len * 8) + " bytes of unpacked data from grib");
+		itsLogger.Trace("Retrieved " + std::to_string(len * sizeof(double)) + " bytes of unpacked data from grib");
 	}
 }
 
@@ -1694,10 +1696,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	{
 		if (!readIfNotMatching)
 		{
-			itsLogger->Trace("centre/process do not match: " + to_string(options.prod.Process()) + " vs " +
-			                 to_string(prod.Process()));
-			itsLogger->Trace("centre/process do not match: " + to_string(options.prod.Centre()) + " vs " +
-			                 to_string(prod.Centre()));
+			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Process()) + " vs " +
+			                to_string(prod.Process()));
+			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Centre()) + " vs " +
+			                to_string(prod.Centre()));
 		}
 	}
 
@@ -1711,8 +1713,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else
 		{
-			itsLogger->Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
-			                 " (found)");
+			itsLogger.Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
+			                " (found)");
 
 			return false;
 		}
@@ -1730,25 +1732,25 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		{
 			forecast_time optsTime(options.time);
 
-			itsLogger->Trace("Times do not match");
+			itsLogger.Trace("Times do not match");
 
 			if (optsTime.OriginDateTime() != t.OriginDateTime())
 			{
-				itsLogger->Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
-				                 t.OriginDateTime().String() + " (found)");
+				itsLogger.Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
+				                t.OriginDateTime().String() + " (found)");
 			}
 
 			if (optsTime.ValidDateTime() != t.ValidDateTime())
 			{
-				itsLogger->Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
-				                 t.ValidDateTime().String() + " (found)");
+				itsLogger.Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
+				                t.ValidDateTime().String() + " (found)");
 			}
 
 			if (optsTime.StepResolution() != t.StepResolution())
 			{
-				itsLogger->Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) +
-				                 " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) +
-				                 " (found)");
+				itsLogger.Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) +
+				                " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) +
+				                " (found)");
 			}
 
 			return false;
@@ -1765,24 +1767,24 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else
 		{
-			itsLogger->Trace("Level does not match");
+			itsLogger.Trace("Level does not match");
 
 			if (options.level.Type() != l.Type())
 			{
-				itsLogger->Trace("Type: " + string(HPLevelTypeToString.at(options.level.Type())) + " (requested) vs " +
-				                 string(HPLevelTypeToString.at(l.Type())) + " (found)");
+				itsLogger.Trace("Type: " + string(HPLevelTypeToString.at(options.level.Type())) + " (requested) vs " +
+				                string(HPLevelTypeToString.at(l.Type())) + " (found)");
 			}
 
 			if (options.level.Value() != l.Value())
 			{
-				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
-				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
+				itsLogger.Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
+				                " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
 			}
 
 			if (options.level.Value2() != l.Value2())
 			{
-				itsLogger->Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
-				                 " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
+				itsLogger.Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
+				                " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
 			}
 
 			return false;
@@ -1800,18 +1802,18 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else
 		{
-			itsLogger->Trace("Forecast type does not match");
+			itsLogger.Trace("Forecast type does not match");
 
 			if (options.ftype.Type() != ty.Type())
 			{
-				itsLogger->Trace("Type: " + string(HPForecastTypeToString.at(options.ftype.Type())) +
-				                 " (requested) vs " + string(HPForecastTypeToString.at(ty.Type())) + " (found)");
+				itsLogger.Trace("Type: " + string(HPForecastTypeToString.at(options.ftype.Type())) +
+				                " (requested) vs " + string(HPForecastTypeToString.at(ty.Type())) + " (found)");
 			}
 
 			if (options.ftype.Value() != ty.Value())
 			{
-				itsLogger->Trace("Value: " + string(boost::lexical_cast<string>(options.ftype.Value())) +
-				                 " (requested) vs " + string(boost::lexical_cast<string>(ty.Value())) + " (found)");
+				itsLogger.Trace("Value: " + string(boost::lexical_cast<string>(options.ftype.Value())) +
+				                " (requested) vs " + string(boost::lexical_cast<string>(ty.Value())) + " (found)");
 			}
 
 			return false;
@@ -1895,7 +1897,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	if (!itsGrib->Open(theInputFile))
 	{
-		itsLogger->Error("Opening file '" + theInputFile + "' failed");
+		itsLogger.Error("Opening file '" + theInputFile + "' failed");
 		return infos;
 	}
 
@@ -1903,8 +1905,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
 	{
-		itsLogger->Error("Process and centre information for producer " +
-		                 boost::lexical_cast<string>(options.prod.Id()) + " are undefined");
+		itsLogger.Error("Process and centre information for producer " +
+		                boost::lexical_cast<string>(options.prod.Id()) + " are undefined");
 		return infos;
 	}
 
@@ -1932,7 +1934,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
 
-	itsLogger->Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
+	itsLogger.Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
 
 	return infos;
 }
@@ -1945,14 +1947,14 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 
 	if (!itsGrib->Open(theInputFile))
 	{
-		itsLogger->Error("Opening file '" + theInputFile + "' failed");
+		itsLogger.Error("Opening file '" + theInputFile + "' failed");
 		return infos;
 	}
 
 	if (options.prod.Centre() == kHPMissingInt)
 	{
-		itsLogger->Error("Process and centre information for producer " +
-		                 boost::lexical_cast<string>(options.prod.Id()) + " are undefined");
+		itsLogger.Error("Process and centre information for producer " +
+		                boost::lexical_cast<string>(options.prod.Id()) + " are undefined");
 		return infos;
 	}
 
@@ -1973,8 +1975,8 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 
 	long duration = aTimer.GetTime();
 
-	itsLogger->Debug("Read message using grib index file '" + theInputFile + "' in " +
-	                 boost::lexical_cast<std::string>(duration) + " ms");
+	itsLogger.Debug("Read message using grib index file '" + theInputFile + "' in " +
+	                boost::lexical_cast<std::string>(duration) + " ms");
 
 	return infos;
 }

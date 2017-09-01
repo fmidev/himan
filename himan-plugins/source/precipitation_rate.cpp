@@ -8,8 +8,7 @@
 #include "precipitation_rate.h"
 #include "forecast_time.h"
 #include "level.h"
-#include "logger_factory.h"
-#include <boost/lexical_cast.hpp>
+#include "logger.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -18,9 +17,7 @@ const string itsName("precipitation_rate");
 
 precipitation_rate::precipitation_rate()
 {
-	itsClearTextFormula = "???";
-
-	itsLogger = logger_factory::Instance()->GetLog(itsName);
+	itsLogger = logger(itsName);
 }
 
 void precipitation_rate::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -55,15 +52,14 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 	const param SnowParam("SNOWMR-KGKG");      // Snow mixing ratio in kg/kg
 	const param GraupelParam("GRAUPMR-KGKG");  // Graupel mixing ratio in kg/kg
 
-	auto myThreadedLogger =
-	    logger_factory::Instance()->GetLog(itsName + "Thread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger(itsName + "Thread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger->Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+						  static_cast<string>(forecastLevel));
 
 	info_t RhoInfo = Fetch(forecastTime, forecastLevel, RhoParam, forecastType, false);
 	info_t RainInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);
@@ -72,8 +68,8 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 
 	if (!RhoInfo || !RainInfo || !SnowInfo || !GraupelInfo)
 	{
-		itsLogger->Warning("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                   static_cast<string>(forecastLevel));
+		itsLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                  static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -115,7 +111,6 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 		}
 	}
 
-	myThreadedLogger->Info("[" + deviceType + "] Missing values: " +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                       boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }

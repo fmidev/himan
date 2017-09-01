@@ -69,20 +69,6 @@ class radon : public auxiliary_plugin
 
 	bool Save(const info& resultInfo, const std::string& theFileName);
 
-	/// Gets grib parameter name based on number and code table
-	/**
-	 *  \par fmiParameterId - parameter number
-	 *  \par codeTableVersion  - code table number
-	 *  \par timeRangeIndicator - time range indicator (grib 1)
-	 */
-
-	std::map<std::string, std::string> Grib1ParameterName(const long producer, const long fmiParameterId,
-	                                                      const long codeTableVersion, long timeRangeIndicator,
-	                                                      const long levelId, double level_value);
-	std::map<std::string, std::string> Grib2ParameterName(const long fmiParameterId, const long category,
-	                                                      const long discipline, const long producer,
-	                                                      const long levelId, double level_value);
-
 	/**
 	 * @brief Function to expose the NFmiRadonDB interface
 	 *

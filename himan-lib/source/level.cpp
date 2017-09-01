@@ -5,7 +5,7 @@
 
 #include "level.h"
 #include "NFmiLevel.h"
-#include <boost/lexical_cast.hpp>
+
 #include <ostream>
 
 using namespace himan;
@@ -30,13 +30,6 @@ level::level(HPLevelType theType, double theValue, double theValue2)
 {
 }
 
-level::level(const NFmiLevel& theLevel)
-    : itsType(static_cast<HPLevelType>(theLevel.LevelType())),
-      itsValue(static_cast<double>(theLevel.LevelValue())),
-      itsIndex(kHPMissingInt)
-{
-}
-
 bool level::operator==(const level& other) const
 {
 	if (this == &other)
@@ -50,11 +43,11 @@ bool level::operator==(const level& other) const
 bool level::operator!=(const level& other) const { return !(*this == other); }
 level::operator std::string() const
 {
-	std::string out = HPLevelTypeToString.at(itsType) + "/" + boost::lexical_cast<std::string>(itsValue);
+	std::string out = HPLevelTypeToString.at(itsType) + "/" + std::to_string(itsValue);
 
 	if (!IsKHPMissingValue(itsValue2))
 	{
-		out += "/" + boost::lexical_cast<std::string>(itsValue2);
+		out += "/" + std::to_string(itsValue2);
 	}
 
 	return out;

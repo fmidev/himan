@@ -4,19 +4,35 @@
  */
 
 #include "raw_time.h"
+#include <mutex>
+
+static std::mutex formatMutex;
 
 using namespace himan;
 
 raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMask)
 {
-	std::stringstream s(theDateTime);
-	std::locale l(s.getloc(), new boost::posix_time::time_input_facet(theTimeMask.c_str()));
+	if (theTimeMask == "%Y-%m-%d %H:%M:%S")
+	{
+		FromSQLTime(theDateTime);
+	}
+	else if (theTimeMask == "%Y%m%d%H%M")
+	{
+		FromNeonsTime(theDateTime);
+	}
+	else
+	{
+		std::stringstream s(theDateTime);
 
-	s.imbue(l);
+		{
+			std::lock_guard<std::mutex> lock(formatMutex);
+			s.imbue(std::locale(s.getloc(), new boost::posix_time::time_input_facet(theTimeMask.c_str())));
+		}
 
-	s >> itsDateTime;
+		s >> itsDateTime;
+	}
 
-	if (itsDateTime == boost::date_time::not_a_date_time)
+	if (Empty())
 	{
 		throw std::runtime_error(ClassName() + ": Unable to create time from '" + theDateTime + "' with mask '" +
 		                         theTimeMask + "'");
@@ -42,21 +58,38 @@ bool raw_time::operator==(const raw_time& other) const
 }
 
 bool raw_time::operator!=(const raw_time& other) const { return !(*this == other); }
-raw_time::operator std::string() const { return String("%Y%m%d%H%M"); }
-std::string raw_time::String(const std::string& theTimeMask) const { return FormatTime(itsDateTime, theTimeMask); }
-std::string raw_time::FormatTime(boost::posix_time::ptime theFormattedDateTime, const std::string& theTimeMask) const
+raw_time::operator std::string() const { return ToNeonsTime(); }
+std::string raw_time::String(const std::string& theTimeMask) const
 {
-	if (theFormattedDateTime == boost::date_time::not_a_date_time)
+	if (Empty())
 	{
-		throw std::runtime_error(ClassName() + ": input argument is 'not-a-date-time'");
+		throw std::runtime_error(ClassName() + ": input argument is not valid");
 	}
 
+	if (theTimeMask == "%Y-%m-%d %H:%M:%S")
+	{
+		return ToSQLTime();
+	}
+	else if (theTimeMask == "%Y%m%d%H%M")
+	{
+		return ToNeonsTime();
+	}
+
+	return FormatTime(theTimeMask);
+}
+
+std::string raw_time::FormatTime(const std::string& theTimeMask) const
+{
 	std::stringstream s;
-	std::locale l(s.getloc(), new boost::posix_time::time_facet(theTimeMask.c_str()));
 
-	s.imbue(l);
+	// https://stackoverflow.com/questions/11121454/c-why-is-my-date-parsing-not-threadsafe
 
-	s << theFormattedDateTime;
+	{
+		std::lock_guard<std::mutex> lock(formatMutex);
+		s.imbue(std::locale(s.getloc(), new boost::posix_time::time_facet(theTimeMask.c_str())));
+	}
+
+	s << itsDateTime;
 
 	s.flush();
 
@@ -116,7 +149,47 @@ bool raw_time::IsLeapYear() const
 std::ostream& raw_time::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
-	file << "__itsDateTime__ " << FormatTime(itsDateTime, "%Y-%m-%d %H:%M:%S") << std::endl;
+	file << "__itsDateTime__ " << FormatTime("%Y-%m-%d %H:%M:%S") << std::endl;
 
 	return file;
 }
+
+std::string raw_time::ToNeonsTime() const
+{
+	const auto& date = itsDateTime.date();
+	const auto& time = itsDateTime.time_of_day();
+
+	char fmt[13];
+	snprintf(fmt, 13, "%04d%02d%02d%02d%02d", static_cast<int>(date.year()), static_cast<int>(date.month()),
+	         static_cast<int>(date.day()), static_cast<int>(time.hours()), static_cast<int>(time.minutes()));
+
+	return std::string(fmt);
+}
+
+void raw_time::FromNeonsTime(const std::string& neonsTime)
+{
+	const auto year = static_cast<unsigned short>(stoi(neonsTime.substr(0, 4)));
+	const auto month = static_cast<unsigned short>(stoi(neonsTime.substr(4, 2)));
+	const auto day = static_cast<unsigned short>(stoi(neonsTime.substr(6, 2)));
+	const auto hour = static_cast<unsigned short>(stoi(neonsTime.substr(8, 2)));
+	const auto minute = static_cast<unsigned short>(stoi(neonsTime.substr(10, 2)));
+
+	using namespace boost;
+
+	itsDateTime = posix_time::ptime(gregorian::date(year, month, day), posix_time::time_duration(hour, minute, 0, 0));
+}
+
+std::string raw_time::ToSQLTime() const
+{
+	const auto& date = itsDateTime.date();
+	const auto& time = itsDateTime.time_of_day();
+
+	char fmt[20];
+	snprintf(fmt, 20, "%04d-%02d-%02d %02d:%02d:%02d", static_cast<int>(date.year()), static_cast<int>(date.month()),
+	         static_cast<int>(date.day()), static_cast<int>(time.hours()), static_cast<int>(time.minutes()),
+	         static_cast<int>(time.seconds()));
+
+	return std::string(fmt);
+}
+
+void raw_time::FromSQLTime(const std::string& SQLTime) { itsDateTime = boost::posix_time::time_from_string(SQLTime); }
