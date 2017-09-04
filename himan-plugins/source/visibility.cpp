@@ -138,7 +138,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double stratN = tup.get<4>();
 		double stratH = tup.get<5>();
 
-		if (IsMissing(RR) || IsMissing(RH))
+		if (IsMissing(RR) || IsMissing(RH) || IsMissing(PF))
 		{
 			continue;
 		}
@@ -189,8 +189,6 @@ double VisibilityInRain(double stN, double stH, double RR, double RH, int PF)
 	// Yli 152m (500ft) korkeudella oleva sumupilvi ei siis huononna näkyvyyttä sateessa
 
 	const double stHpre = (stH < 152) ? pow((stH / 152), 0.15) : 1;
-
-	assert(!IsMissing(PF));
 
 	switch (PF)
 	{

@@ -1130,10 +1130,10 @@ void BindLib(lua_State* L)
 	          def("LCL_", &metutil::LCL_), def("Es_", &metutil::Es_), def("Gammas_", &metutil::Gammas_),
 	          def("Gammaw_", &metutil::Gammaw_), def("MixingRatio_", &metutil::MixingRatio_),
 	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_),
-		  def("FlightLevel_", &metutil::FlightLevel_),
+		  def("FlightLevel_", &metutil::FlightLevel_)];
 		  // himan namespace
-		  def("IsMissing", (bool(*)(double))&::IsMissing),
-		  def("IsValid", (bool(*)(double))&::IsValid)];
+		  //def("IsMissing", (bool(*)(double))&::IsMissing),
+		  //def("IsValid", (bool(*)(double))&::IsValid)];
 }
 
 void BindPlugins(lua_State* L)

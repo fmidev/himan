@@ -164,7 +164,7 @@ class matrix
 			// 2. kFloatMissing which is of type double but can be different from itsMissingValue even for a double
 			// matrix
 			// ->this function should not be a member function of Matrix in this form
-			if (IsMissing(d))
+			if (himan::IsMissing(d))
 			{
 				missing++;
 				continue;
@@ -211,7 +211,7 @@ class matrix
 			{
 				double val = theValues[j];
 				// same problem as above with other missing value case
-				if (IsMissing(val)) continue;
+				if (himan::IsMissing(val)) continue;
 
 				if (val >= binmin && val < binmax)
 				{
