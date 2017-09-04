@@ -138,7 +138,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double stratN = tup.get<4>();
 		double stratH = tup.get<5>();
 
-		if (IsMissing(RR) || IsMissing(RH) || IsMissing(PF))
+		if (IsMissing(RR) || IsMissing(RH) )
 		{
 			continue;
 		}
@@ -154,7 +154,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		double visPre = defaultVis;
 
-		if (RR > 0)
+		if (RR > 0 && IsValid(PF))
 		{
 			visPre = VisibilityInRain(stratN, stratH, RR, RH, static_cast<int>(PF));
 		}
