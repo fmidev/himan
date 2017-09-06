@@ -10,16 +10,16 @@
 
 #ifdef DEBUG
 #  ifndef __CUDACC__
-#    define ASSERT(Expr)                                                                    \
-	do {                                                                                    \
-		if (!(Expr)) {                                                                      \
-			if (himan::AssertionFailed(#Expr, __LINE__, __FUNCTION__, __FILE__)) {          \
-				HIMAN_DEBUG_BREAK;                                                          \
-			} else {                                                                        \
-				himan::Abort();                                                             \
-			}                                                                               \
-		}                                                                                   \
-	} while (false)
+#    define ASSERT(Expr)                                                           \
+    do {                                                                           \
+        if (!(Expr)) {                                                             \
+            if (himan::AssertionFailed(#Expr, __LINE__, __FUNCTION__, __FILE__)) { \
+               HIMAN_DEBUG_BREAK;                                                  \
+            } else {                                                               \
+               himan::Abort();                                                     \
+            }                                                                      \
+        }                                                                          \
+    } while (false)
 #  else
 // TODO: proper CUDA version?
 #include <cassert>
