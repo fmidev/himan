@@ -4,10 +4,8 @@
  * Computes wind gusts
  */
 
-#include <boost/lexical_cast.hpp>
-
-#include "forecast_time.h"
 #include "gust.h"
+#include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
 #include "numerical_functions.h"
@@ -106,13 +104,13 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	NFmiMetTime theTime(boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%Y")),
-	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%m")),
-	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%d")),
-	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%H")),
-	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%M")));
+	NFmiMetTime theTime(stoi(myTargetInfo->Time().ValidDateTime().String("%Y")),
+	                    stoi(myTargetInfo->Time().ValidDateTime().String("%m")),
+	                    stoi(myTargetInfo->Time().ValidDateTime().String("%d")),
+	                    stoi(myTargetInfo->Time().ValidDateTime().String("%H")),
+	                    stoi(myTargetInfo->Time().ValidDateTime().String("%M")));
 
-	auto myThreadedLogger = logger("gust_pluginThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("gust_pluginThread #" + to_string(threadIndex));
 
 	/*
 	 * Required source parameters
@@ -142,15 +140,14 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		auto n = GET_PLUGIN(neons);
 
-		lowestHybridLevelNumber = boost::lexical_cast<long>(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		lowestHybridLevelNumber = stol(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
 	}
 
 	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && lowestHybridLevelNumber == kHPMissingInt)
 	{
 		auto r = GET_PLUGIN(radon);
 
-		lowestHybridLevelNumber =
-		    boost::lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+		lowestHybridLevelNumber = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
 	}
 
 	assert(lowestHybridLevelNumber != kHPMissingInt);
@@ -185,7 +182,8 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	HCloudInfo = Fetch(forecastTime, H0, HighCloudParam, forecastType, false);
 	TCloudInfo = Fetch(forecastTime, H0, TotalCloudParam, forecastType, false);
 
-	if (!GustInfo || !T_LowestLevelInfo || !LCloudInfo || !MCloudInfo || !HCloudInfo || !TCloudInfo)
+	if (!BLHInfo || !TopoInfo || !GustInfo || !T_LowestLevelInfo || !LCloudInfo || !MCloudInfo || !HCloudInfo ||
+	    !TCloudInfo)
 	{
 		itsLogger.Error("Unable to find all source data");
 		return;
@@ -243,7 +241,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -264,7 +262,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -285,7 +283,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -310,7 +308,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -331,7 +329,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -500,9 +498,8 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Grid()->Data(gust_filtered);
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
@@ -560,7 +557,7 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("DeltaT() caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("DeltaT() caught exception " + to_string(e));
 		}
 	}
 }
