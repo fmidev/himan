@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 17.8.21
+Version: 17.8.29
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -18,7 +18,7 @@ Requires: himan-plugins
 Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
 Requires: zlib
-BuildRequires: boost-devel >= 1.53
+BuildRequires: boost-devel >= 1.65
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -63,6 +63,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+ Tue Aug 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.29-1.fmi
+- boost 1.65
 * Mon Aug 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.21-1.fmi
 - General code cleanup
 * Mon Aug 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.14-1.fmi

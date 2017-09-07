@@ -82,7 +82,6 @@ includes = []
 includes.append(workspace + '/himan-lib/include')
 includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
-includes.append(workspace + '/fmidb/include')
 includes.append('/usr/include/gdal')
 includes.append('/usr/include/oracle/11.2/client64')
 
@@ -213,6 +212,7 @@ env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_35,code=sm_35'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_52,code=sm_52'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
 env.Append(NVCCFLAGS = ['-std=c++11'])
 
 env.Append(NVCCPATH = ['./include'])

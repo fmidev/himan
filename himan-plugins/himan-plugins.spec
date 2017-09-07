@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.8.28
+Version: 17.9.7
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -40,7 +40,7 @@ BuildRequires: libfmigrib-devel >= 17.7.31
 BuildRequires: smartmet-library-newbase-devel >= 17.6.1
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: boost-devel >= 1.53
+BuildRequires: boost-devel >= 1.65
 BuildRequires: scons
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
@@ -111,6 +111,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.7-1.fmi
+- Support for NVidia Pascal GP100 (CC 6.0)
+* Tue Aug 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.29-1.fmi
+- boost 1.65
 * Mon Aug 28 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.28-1.fmi
 - Fix grib plugin time formatting issue
 * Thu Aug 24 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.24-1.fmi
