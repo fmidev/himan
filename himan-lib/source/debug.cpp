@@ -12,7 +12,7 @@ static void PrintBacktrace();
 
 bool AssertionFailed(const char* expr, long line, const char* fn, const char* file)
 {
-	printf("Assertion (%s) failed at: %s::%s:%ld\n", expr, file, fn, line);
+	printf("Assertion (%s) failed at: %s::%s:%ld\n\n", expr, file, fn, line);
 	PrintBacktrace();
 	// XXX Check if we're running inside debugger, return the result here.
 	return true;
