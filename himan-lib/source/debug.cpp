@@ -29,28 +29,43 @@ void PrintBacktrace()
 	void* retAddreses[kMaxReturnAddresses];
 
 	const int size = backtrace(retAddreses, kMaxReturnAddresses);
-	if (size < 3)
-	{
-		// No useful information for us, return.
-		return;
-	}
-
 	char** symbols = backtrace_symbols(retAddreses, size);
 
 	if (symbols)
 	{
-		for (int i = 2; i < size; i++)
+		for (int i = 0; i < size; i++)
 		{
 			// XXX Of course this doesn't work with pathnames including '('!
 			const std::string symbol = std::string(symbols[i]);
-			auto start = symbol.find_last_of('(');
+			// Symbol start '('
+			size_t start = std::string::npos; // '('
 			// Stop at the start of the offset, like in:
 			// `_Z13ExecutePluginSt10shared_ptrIN5himan20plugin_configurationEE+0x2a0`
-			auto end = symbol.find_last_of('+');
-			// End of the offset.
-			auto closingParen = symbol.find_last_of(')');
-			// Address of the function can be useful (e.g. if no symbol is found).
-			auto addrStart = symbol.find_last_of('[');
+			size_t end = std::string::npos;   // '+'
+			size_t closingParen = std::string::npos;
+			size_t addrStart = std::string::npos; // '['
+
+			// Make only one pass through the string.
+			for (size_t i = 0; i < symbol.size(); i++)
+			{
+				switch(symbol[i])
+				{
+					case '(':
+						start = i;
+						break;
+					case '+':
+						end = i;
+						break;
+					case ')':
+						closingParen = i;
+						break;
+					case '[':
+						addrStart = i;
+						break;
+					default:
+						break;
+				}
+			}
 
 			if (start == std::string::npos || end == std::string::npos || closingParen == std::string::npos ||
 				addrStart == std::string::npos)
@@ -67,11 +82,18 @@ void PrintBacktrace()
 			// failed to demangle
 			if (status < 0)
 			{
-				printf("%d: %s (%s) %s\n", i - 2, cppSymbol.c_str(), offset.c_str(), addr.c_str());
+				if (cppSymbol.empty())
+				{
+					printf("%d: <no symbol> (%s) %s\n", i, offset.c_str(), addr.c_str());
+				}
+				else
+				{
+					printf("%d: %s (%s) %s\n", i, cppSymbol.c_str(), offset.c_str(), addr.c_str());
+				}
 			}
 			else
 			{
-				printf("%d: %s (%s) %s\n", i - 2, demangledName, offset.c_str(), addr.c_str());
+				printf("%d: %s (%s) %s\n", i, demangledName, offset.c_str(), addr.c_str());
 				free(demangledName);
 			}
 		}
