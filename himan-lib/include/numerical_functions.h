@@ -9,12 +9,12 @@
 #include "cuda_helper.h"
 #include "himan_common.h"
 #include "plugin_configuration.h"
-#include <valarray>
 
 namespace himan
 {
 namespace numerical_functions
 {
+
 /**
  * @class Integral
  * An object of type integral that can perform vertical integration in the atmosphere from a lower bound to an upper
@@ -262,7 +262,12 @@ CUDA_HOST CUDA_DEVICE inline double Linear(double factor, double Y1, double Y2)
 
 CUDA_HOST CUDA_DEVICE inline double Linear(double X, double X1, double X2, double Y1, double Y2)
 {
-	double factor = (X - X1) / (X2 - X1);
+	if (X1 == X2)
+	{
+		return Y1;
+	}
+
+	const double factor = (X - X1) / (X2 - X1);
 	return Linear(factor, Y1, Y2);
 }
 
