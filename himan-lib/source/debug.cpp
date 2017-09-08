@@ -5,9 +5,57 @@
 #include <cxxabi.h>
 #include <cstdio>
 #include <cstdlib>
+#include <signal.h>
 
 namespace himan
 {
+
+static void SignalHandler(int signum)
+{
+	switch (signum)
+	{
+	case SIGINT:
+		// No stack trace since this was requested by the user.
+		_Exit(1);
+		break;
+	case SIGQUIT:
+		// 'dump core signal'
+		himan::Abort();
+		break;
+	case SIGSEGV:
+		himan::Abort();
+		break;
+	default:
+		// We haven't registered any other handlers.
+		break;
+	}
+}
+
+void SignalHandlerInit()
+{
+	struct sigaction act;
+	act.sa_handler = SignalHandler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+
+	int ret;
+	if ((ret = sigaction(SIGINT, &act, nullptr)) == -1)
+	{
+		printf("Failed to initialize signal handler for SIGINT\n");
+		himan::Abort();
+	}
+	if ((ret = sigaction(SIGQUIT, &act, nullptr)) == -1)
+	{
+		printf("Failed to initialize signal handler for SIGQUIT\n");
+		himan::Abort();
+	}
+	if ((ret = sigaction(SIGSEGV, &act, nullptr)) == -1)
+	{
+		printf("Failed to initialize signal handler for SIGSEGV\n");
+		himan::Abort();
+	}
+}
+
 static void PrintBacktrace();
 
 bool AssertionFailed(const char* expr, long line, const char* fn, const char* file)

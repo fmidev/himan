@@ -31,6 +31,8 @@
 
 namespace himan
 {
+/// @brief Initialize signal handlers for SIGINT, SIGQUIT, SIGSEGV.
+void SignalHandlerInit();
 /// @brief Prints out a description of the error and returns true if we're running inside a debugger.
 bool AssertionFailed(const char* expr, long line, const char* fn, const char* file);
 /// @brief Abort execution of the program, and print out a stacktrace.

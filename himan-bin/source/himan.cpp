@@ -108,6 +108,8 @@ int main(int argc, char** argv)
 {
 	shared_ptr<configuration> conf;
 
+	SignalHandlerInit();
+
 	try
 	{
 		conf = ParseCommandLine(argc, argv);
