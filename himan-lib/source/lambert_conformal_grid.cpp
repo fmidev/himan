@@ -544,7 +544,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 	double falseEasting = FirstPoint().X();
 	double falseNorthing = FirstPoint().Y();
 
-	assert(!IsKHPMissingValue(falseEasting) && IsKHPMissingValue(falseNorthing));
+	assert(!IsKHPMissingValue(falseEasting) && !IsKHPMissingValue(falseNorthing));
 
 	if (!itsLatLonToXYTransformer->Transform(1, &falseEasting, &falseNorthing))
 	{
