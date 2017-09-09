@@ -1,8 +1,3 @@
-/**
- * @file   si_cuda.h
- *
- */
-
 #pragma once
 
 #include "himan_common.h"
@@ -16,6 +11,23 @@
  */
 
 #define LINEAR himan::numerical_functions::interpolation::Linear
+
+const himan::param LCLTParam("LCL-K");
+const himan::param LCLPParam("LCL-HPA");
+const himan::param LCLZParam("LCL-M");
+const himan::param LFCTParam("LFC-K");
+const himan::param LFCPParam("LFC-HPA");
+const himan::param LFCZParam("LFC-M");
+const himan::param ELTParam("EL-K");
+const himan::param ELPParam("EL-HPA");
+const himan::param ELZParam("EL-M");
+const himan::param LastELTParam("EL-LAST-K");
+const himan::param LastELPParam("EL-LAST-HPA");
+const himan::param LastELZParam("EL-LAST-M");
+const himan::param CAPEParam("CAPE-JKG");
+const himan::param CAPE1040Param("CAPE1040-JKG");
+const himan::param CAPE3kmParam("CAPE3KM-JKG");
+const himan::param CINParam("CIN-JKG");
 
 namespace CAPE
 {
@@ -473,9 +485,9 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 		if (prevTenv >= coldColderLimit && prevTenv <= coldWarmerLimit)
 		{
 			/* Just left cold CAPE zone for an warmer or colder area */
-			double CAPE, ELT, ELP;
-			CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE,
-			                             ELT, ELP);
+			double CAPE, x1, x2;
+			CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE, x1,
+			                             x2);
 			C = CAPE;
 		}
 	}
@@ -532,9 +544,9 @@ inline double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double p
 			if (Zenv <= 3000.)
 			{
 				// Integrate from previous height to intersection
-				double CAPE, ELT, ELP;
+				double CAPE, x1, x2;
 				CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE,
-				                             ELT, ELP);
+				                             x1, x2);
 				C = CAPE;
 			}
 
@@ -613,8 +625,8 @@ inline double CalcCIN(double Tenv, double prevTenv, double Tparcel, double prevT
 	}
 	else if (Tparcel >= Tenv && prevTparcel < prevTenv)
 	{
-		double cin, a, b;
-		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, cin, a, b);
+		double cin, x1, x2;
+		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, cin, x1, x2);
 	}
 
 	return cin;
@@ -645,10 +657,9 @@ cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configurati
                                         std::shared_ptr<info> myTargetInfo);
 void GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
                const std::vector<double>& Tsource, const std::vector<double>& Psource, const std::vector<double>& TLCL,
-               const std::vector<double>& PLCL, const std::vector<double>& PLFC, param CINParam);
+               const std::vector<double>& PLCL, const std::vector<double>& PLFC);
 void GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                const std::vector<double>& T, const std::vector<double>& P, himan::param ELTParam,
-                himan::param ELPParam, himan::param CAPEParam, himan::param CAPE1040Param, himan::param CAPE3kmParam);
+                const std::vector<double>& T, const std::vector<double>& P);
 
 extern level itsBottomLevel;
 
