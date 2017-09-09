@@ -732,8 +732,8 @@ inline double himan::metutil::DryLift_(double P, double T, double targetP)
 	}
 
 	// Sanity checks
-	assert(P > 10000);
-	assert(T > 100 && T < 400);
+	assert(IsMissingDouble(P) || P > 10000);
+	assert(IsMissingDouble(T) || (T > 100 && T < 400));
 	assert(targetP > 10000);
 
 	return T * pow((targetP / P), 0.286);
