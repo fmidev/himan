@@ -33,7 +33,7 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 	{
 		try
 		{
-			auto info = f->Fetch(config, startTime, forecastLevel, itsParam);
+			auto info = f->Fetch(config, startTime, forecastLevel, itsParam, requestedType);
 
 			startTime.ValidDateTime().Adjust(timeSpan, stepSize);
 
@@ -227,6 +227,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
+	forecast_type forecastType = myTargetInfo->ForecastType();
 	forecast_time forecastTime = myTargetInfo->Time();
 	forecast_time forecastTimeNext = myTargetInfo->Time();
 	forecastTimeNext.ValidDateTime().Adjust(timeResolution, +step);
@@ -243,7 +244,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	startTime.ValidDateTime().Adjust(kHourResolution, -2);
 
 	// create time series CAPE
-	CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, CapeLevelHiman);
+	CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, CapeLevelHiman, forecastType);
 
 	if (CAPEts.Size() == 0)
 	{
@@ -254,7 +255,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 
 		CAPEts.Param(CapeParamEC);
-		CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, forecastLevel);
+		CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, forecastLevel, forecastType);
 	}
 
 	// find max
@@ -263,7 +264,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// create time series RR
 	startTime.ValidDateTime().Adjust(kHourResolution, 1);
-	RRts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 3, forecastLevel);
+	RRts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 3, forecastLevel, forecastType);
 
 	// fnd mean
 	info_t RRMeanInfo;
