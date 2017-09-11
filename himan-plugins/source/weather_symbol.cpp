@@ -98,7 +98,7 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 		double cloudSymbol = CInfo->Value();
 		double rainType = RTInfo->Value();
 
-		if (cloudSymbol == kFloatMissing || rainType == kFloatMissing)
+		if (IsMissingValue({cloudSymbol, rainType}))
 		{
 			continue;
 		}

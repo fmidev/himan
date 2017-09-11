@@ -24,10 +24,10 @@ double min(const vector<double>& vec)
 
 	for (double val : vec)
 	{
-		if (val != kFloatMissing && val < ret) ret = val;
+		if (val < ret) ret = val;
 	}
 
-	if (ret == 1e38) ret = kFloatMissing;
+	if (ret == 1e38) ret = MissingDouble();
 
 	return ret;
 }
@@ -38,12 +38,12 @@ double max(const vector<double>& vec)
 
 	for (double val : vec)
 	{
-		if (val != kFloatMissing && val > ret) ret = val;
+		if (val > ret) ret = val;
 	}
 
-	if (ret == -1e38) ret = kFloatMissing;
-
-	return ret;
+	if (ret == -1e38) ret = MissingDouble();
+        
+        return ret;
 }
 
 pair<double, double> minmax(const vector<double>& vec)
@@ -52,7 +52,7 @@ pair<double, double> minmax(const vector<double>& vec)
 
 	for (double val : vec)
 	{
-		if (val != kFloatMissing)
+		if (IsValid(val))
 		{
 			if (val < min) min = val;
 			if (val > max) max = val;
@@ -61,8 +61,8 @@ pair<double, double> minmax(const vector<double>& vec)
 
 	if (min == 1e38)
 	{
-		min = kFloatMissing;
-		max = kFloatMissing;
+		min = MissingDouble();
+		max = MissingDouble();
 	}
 
 	return make_pair(min, max);
@@ -371,7 +371,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			double max_value = ::max(upperHeight);
 			double min_value = ::min(lowerHeight);
 
-			if (max_value == kFloatMissing || min_value == kFloatMissing)
+			if (IsMissing(max_value) || IsMissing(min_value))
 			{
 				itsLogger.Error("Min or max values of given heights are missing");
 				throw kFileDataNotFound;
@@ -398,6 +398,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 			double max_value = p.second;  // highest
 			double min_value = p.first;   // lowest
+
+                        if (IsMissing(max_value) || IsMissing(min_value))
+                        {
+                                itsLogger.Error("Min or max values of given heights are missing");
+                                throw kFileDataNotFound;
+                        }
 
 			if (itsHeightUnit == kHPa)
 			{

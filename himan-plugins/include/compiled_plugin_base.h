@@ -266,7 +266,7 @@ class compiled_plugin_base
 	 * @brief Syntactic sugar: simple function to check if any of the arguments is a missing value
 	 *
 	 * @param values List of doubles
-	 * @return True if any of the values is missing value (kFloatMissing), otherwise false
+	 * @return True if any of the values is missing value, otherwise false
 	 */
 
 	bool IsMissingValue(std::initializer_list<double> values) const;

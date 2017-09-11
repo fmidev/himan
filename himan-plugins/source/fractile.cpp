@@ -231,7 +231,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		// NOTE: `ensembleSize` stays the same
 		else
 		{
-			sortedValues.push_back(kFloatMissing);
+			sortedValues.push_back(0.0);
 		}
 
 		assert(!itsFractiles.empty());
@@ -270,13 +270,13 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		double mean = ens->Mean();
 		if (!std::isfinite(mean))
 		{
-			mean = kFloatMissing;
+			mean = MissingDouble();
 		}
 
 		double var = std::sqrt(ens->Variance());
 		if (!std::isfinite(var))
 		{
-			var = kFloatMissing;
+			var = MissingDouble();
 		}
 
 		myTargetInfo->ParamIndex(targetInfoIndex);

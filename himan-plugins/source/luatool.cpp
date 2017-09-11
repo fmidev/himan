@@ -1,8 +1,8 @@
 #include "luatool.h"
 #include "ensemble.h"
-#include "lagged_ensemble.h"
 #include "forecast_time.h"
 #include "hitool.h"
+#include "lagged_ensemble.h"
 #include "latitude_longitude_grid.h"
 #include "logger.h"
 #include "metutil.h"
@@ -25,6 +25,8 @@ extern "C" {
 #include <luabind/iterator_policy.hpp>
 #include <luabind/luabind.hpp>
 #include <luabind/operator.hpp>
+
+// void ScherlokHoms(info_t& myTargetInfo){std::cout<<myTargetInfo->Data().MissingValue() <<'\n';}
 
 using namespace himan;
 using namespace himan::plugin;
@@ -123,7 +125,7 @@ void luatool::InitLua(info_t myTargetInfo)
 	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
 	globals(L)["current_level"] = level(myTargetInfo->Level());
 	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
-	globals(L)["kFloatMissing"] = kFloatMissing;
+	globals(L)["missing"] = MissingDouble();
 
 	globals(L)["kKelvin"] = constants::kKelvin;
 
@@ -707,41 +709,20 @@ HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h) { return h->HeightUnit(
 
 namespace modifier_wrapper
 {
-void SetLowerHeightGrid(modifier& mod, const object& lowerHeight)
-{
-	mod.LowerHeight(TableToVector(lowerHeight));
-}
-object GetLowerHeightGrid(modifier& mod)
-{
-	return VectorToTable(mod.LowerHeight());
-}
-void SetUpperHeightGrid(modifier& mod, const object& upperHeight)
-{
-	mod.UpperHeight(TableToVector(upperHeight));
-}
-object GetUpperHeightGrid(modifier& mod)
-{
-	return VectorToTable(mod.UpperHeight());
-}
-void SetFindValueGrid(modifier& mod, const object& findValue)
-{
-	mod.FindValue(TableToVector(findValue));
-}
-object GetFindValueGrid(modifier& mod)
-{
-	return VectorToTable(mod.FindValue());
-}
-object Result(modifier& mod)
-{
-	return VectorToTable(mod.Result());
-}
+void SetLowerHeightGrid(modifier& mod, const object& lowerHeight) { mod.LowerHeight(TableToVector(lowerHeight)); }
+object GetLowerHeightGrid(modifier& mod) { return VectorToTable(mod.LowerHeight()); }
+void SetUpperHeightGrid(modifier& mod, const object& upperHeight) { mod.UpperHeight(TableToVector(upperHeight)); }
+object GetUpperHeightGrid(modifier& mod) { return VectorToTable(mod.UpperHeight()); }
+void SetFindValueGrid(modifier& mod, const object& findValue) { mod.FindValue(TableToVector(findValue)); }
+object GetFindValueGrid(modifier& mod) { return VectorToTable(mod.FindValue()); }
+object Result(modifier& mod) { return VectorToTable(mod.Result()); }
 namespace findvalue
 {
 void Process(modifier_findvalue& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace findvalue
+}  // namespace findvalue
 
 namespace findheight
 {
@@ -749,7 +730,7 @@ void Process(modifier_findheight& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace findheight
+}  // namespace findheight
 
 namespace findheight_gt
 {
@@ -757,7 +738,7 @@ void Process(modifier_findheight_gt& mod, const object& data, const object& heig
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace findheight_gt
+}  // namespace findheight_gt
 
 namespace findheight_lt
 {
@@ -765,7 +746,7 @@ void Process(modifier_findheight_lt& mod, const object& data, const object& heig
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace findheight_lt
+}  // namespace findheight_lt
 
 namespace max
 {
@@ -773,7 +754,7 @@ void Process(modifier_max& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace max
+}  // namespace max
 
 namespace min
 {
@@ -781,7 +762,7 @@ void Process(modifier_min& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace min
+}  // namespace min
 
 namespace maxmin
 {
@@ -789,7 +770,7 @@ void Process(modifier_maxmin& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace maxmin
+}  // namespace maxmin
 
 namespace count
 {
@@ -797,21 +778,18 @@ void Process(modifier_count& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace count
+}  // namespace count
 
 namespace mean
 {
-object Result(modifier_mean& mod)
-{
-	return VectorToTable(mod.Result());
-}
+object Result(modifier_mean& mod) { return VectorToTable(mod.Result()); }
 void Process(modifier_mean& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
 }
-} // namespace mean
+}  // namespace mean
 
-} // namespace modifier_wrapper
+}  // namespace modifier_wrapper
 
 namespace neons_wrapper
 {
@@ -1152,7 +1130,10 @@ void BindLib(lua_State* L)
 	          def("LCL_", &metutil::LCL_), def("Es_", &metutil::Es_), def("Gammas_", &metutil::Gammas_),
 	          def("Gammaw_", &metutil::Gammaw_), def("MixingRatio_", &metutil::MixingRatio_),
 	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_),
-		  def("FlightLevel_", &metutil::FlightLevel_)];
+		  def("FlightLevel_", &metutil::FlightLevel_),
+		  // himan namespace
+		  def("IsMissing", static_cast<bool(*)(double)>(&::IsMissing)),
+		  def("IsValid", static_cast<bool(*)(double)>(&::IsValid))];
 }
 
 void BindPlugins(lua_State* L)
@@ -1258,14 +1239,14 @@ object VectorToTable(const std::vector<double>& vec)
 	object ret = newtable(myL.get());
 
 	size_t i = 0;
-	for(const double& val : vec)
+	for (const double& val : vec)
 	{
 		ret[++i] = val;
 
 		/*		"Lua tables make no distinction between a table value being nil and the corresponding key not existing
 		   in
 		   the table"
-		        if (val == kFloatMissing)
+		        if (val == MissingDouble())
 		        {
 		            ret[++i] = nil;
 		        }
@@ -1290,8 +1271,8 @@ std::vector<double> TableToVector(const object& table)
 
 	luabind::iterator iter(table), end;
 
-	auto size =  std::distance(iter, end);
-	std::vector<double> ret(size, himan::kFloatMissing);
+	auto size = std::distance(iter, end);
+	std::vector<double> ret(size, himan::MissingDouble());
 
 	size_t i = 0;
 	for (; iter != end; ++iter, i++)
@@ -1302,10 +1283,9 @@ std::vector<double> TableToVector(const object& table)
 		}
 		catch (cast_failed& e)
 		{
-			ret[i] = himan::kFloatMissing;
+			ret[i] = himan::MissingDouble();
 		}
 	}
-
 	return ret;
 }
 

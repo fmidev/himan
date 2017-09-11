@@ -161,8 +161,8 @@ point latitude_longitude_grid::LatLon(size_t locationIndex) const
 {
 	assert(itsNi != static_cast<size_t>(kHPMissingInt));
 	assert(itsNj != static_cast<size_t>(kHPMissingInt));
-	assert(Di() != kHPMissingValue);
-	assert(Dj() != kHPMissingValue);
+	assert(!IsKHPMissingValue(Di()));
+	assert(!IsKHPMissingValue(Dj()));
 	assert(locationIndex < itsNi * itsNj);
 
 	point firstPoint = FirstPoint();
@@ -234,8 +234,8 @@ void latitude_longitude_grid::Di(double theDi) { itsDi = theDi; }
 void latitude_longitude_grid::Dj(double theDj) { itsDj = theDj; }
 double latitude_longitude_grid::Di() const
 {
-	if (itsDi == kHPMissingValue && itsNi != static_cast<size_t>(kHPMissingInt) &&
-	    FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
+	if (IsKHPMissingValue(itsDi) && itsNi != static_cast<size_t>(kHPMissingInt) &&
+	    !IsKHPMissingValue(FirstPoint().X()) && !IsKHPMissingValue(LastPoint().X()))
 	{
 		double fx = FirstPoint().X();
 		double lx = LastPoint().X();
@@ -249,8 +249,8 @@ double latitude_longitude_grid::Di() const
 
 double latitude_longitude_grid::Dj() const
 {
-	if (itsDj == kHPMissingValue && itsNj != static_cast<size_t>(kHPMissingInt) &&
-	    FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
+	if (IsKHPMissingValue(itsDj) && itsNj != static_cast<size_t>(kHPMissingInt) &&
+	    !IsKHPMissingValue(FirstPoint().X()) && !IsKHPMissingValue(LastPoint().X()))
 	{
 		itsDj = fabs((FirstPoint().Y() - LastPoint().Y()) / (static_cast<double>(itsNj) - 1.));
 	}
@@ -319,7 +319,7 @@ void latitude_longitude_grid::UpdateCoordinates() const
 	Di();
 	Dj();
 
-	if (FirstPoint() != missing && LastPoint() != missing && Di() != kHPMissingValue)
+	if (FirstPoint() != missing && LastPoint() != missing && !IsKHPMissingValue(Di()))
 	{
 		double span = itsBottomLeft.X() + itsTopRight.X() + Di();
 		itsIsGlobal = (span == 0. || span == 360.);

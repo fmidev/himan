@@ -65,7 +65,7 @@ struct lcl_t
 	double Q;
 
 	CUDA_DEVICE
-	lcl_t() : T(himan::kFloatMissing), P(himan::kFloatMissing), Q(himan::kFloatMissing) {}
+	lcl_t() : T(himan::MissingDouble()), P(himan::MissingDouble()), Q(himan::MissingDouble()) {}
 	CUDA_DEVICE
 	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q) {}
 };
@@ -547,12 +547,11 @@ double ThetaE_(double T, double TD, double P);
  * along Pseudoadiabats (2007)
  *
  * @param thetaE Equivalent potential temperature, Kelvin
- * @param P target pressure, Pa
  * @return Wet-bulb potential temperature ThetaW in Kelvins
  */
 
 CUDA_DEVICE
-double ThetaW_(double thetaE, double P);
+double ThetaW_(double thetaE);
 
 /**
  * @brief Calculate virtual temperature
@@ -727,14 +726,14 @@ inline double himan::metutil::E_(double R, double P)
 CUDA_DEVICE
 inline double himan::metutil::DryLift_(double P, double T, double targetP)
 {
-	if (T == kFloatMissing || P == kFloatMissing || targetP == kFloatMissing || targetP >= P)
+	if (targetP >= P)
 	{
-		return kFloatMissing;
+		return MissingDouble();
 	}
 
 	// Sanity checks
-	assert(P > 10000);
-	assert(T > 100 && T < 400);
+	assert(IsMissingDouble(P) || P > 10000);
+	assert(IsMissingDouble(T) || (T > 100 && T < 400));
 	assert(targetP > 10000);
 
 	return T * pow((targetP / P), 0.286);
@@ -781,9 +780,9 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 CUDA_DEVICE
 inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 {
-	if (T == kFloatMissing || P == kFloatMissing || targetP >= P)
+	if (IsMissingDouble(T) || IsMissingDouble(P) || targetP >= P)
 	{
-		return kFloatMissing;
+		return MissingDouble();
 	}
 
 	// Sanity checks
@@ -805,24 +804,19 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	const double Pstep = 100;  // Pa; do not increase this as quality of results is weakened
 	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
-	double value = kFloatMissing;
+	double value = MissingDouble();
 
 	while (++i < maxIter)
 	{
 		Tint = T0 - metutil::Gammaw_(Pint, Tint) * Pstep;
 
-		assert(Tint != kFloatMissing);
+		assert(Tint == Tint);
 
 		Pint -= Pstep;
 
 		if (Pint <= targetP)
 		{
-#ifdef __CUDACC__
-			double dx = (targetP - Pint) / (Pint + Pstep - Pint);
-			value = fma(dx, Tint, fma(-dx, T0, T0));
-#else
 			value = himan::numerical_functions::interpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
-#endif
 			break;
 		}
 
@@ -838,7 +832,7 @@ inline double Wobf(double T)
 	// "Wobus function" is a polynomial approximation of moist lift
 	// process. It is called from MoistLiftA_().
 
-	double ret = himan::kFloatMissing;
+	double ret = himan::MissingDouble();
 
 	T -= 20;
 
@@ -865,9 +859,9 @@ inline double Wobf(double T)
 CUDA_DEVICE
 inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 {
-	if (P == kFloatMissing || T == kFloatMissing || targetP == kFloatMissing || P < targetP)
+	if (IsMissingDouble(T) || IsMissingDouble(P) || targetP >= P)
 	{
-		return kFloatMissing;
+		return MissingDouble();
 	}
 
 	using namespace himan::constants;
@@ -877,7 +871,7 @@ inline double himan::metutil::MoistLiftA_(double P, double T, double targetP)
 
 	const double thetaw = theta - Wobf(theta) + Wobf(T);  // moist pot temp, C
 
-	double remains = 9999;  // try to minimise this
+	double remains = 9999;  // try to minimize this
 	double ratio = 1;
 
 	const double pwrp = POW(targetP / 100000, kRd_div_Cp);  // exner
@@ -928,8 +922,8 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	double Q = constants::kEp * E0 / P;
 	double C = T / pow(E0, constants::kRd_div_Cp);
 
-	double TLCL = kFloatMissing;
-	double PLCL = kFloatMissing;
+	double TLCL = MissingDouble();
+	double PLCL = MissingDouble();
 
 	double Torig = T;
 	double Porig = P;
@@ -947,8 +941,10 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 			TLCL = T;
 			PLCL = pow((TLCL / Torig), (1 / constants::kRd_div_Cp)) * P;
 
-			ret.P = PLCL * 100;                                      // Pa
-			ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL;  // K
+			ret.P = PLCL * 100;  // Pa
+
+			ret.T = TLCL;  // K
+
 			ret.Q = Q;
 		}
 		else
@@ -960,7 +956,7 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 
 	// Fallback to slower method
 
-	if (ret.P == kFloatMissing)
+	if (IsMissingDouble(ret.P))
 	{
 		T = Torig;
 		Tstep = 0.1;
@@ -978,8 +974,10 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 				TLCL = T;
 				PLCL = pow(TLCL / Torig, (1 / constants::kRd_div_Cp)) * Porig;
 
-				ret.P = PLCL * 100;                                      // Pa
-				ret.T = (TLCL == kFloatMissing) ? kFloatMissing : TLCL;  // K
+				ret.P = PLCL * 100;  // Pa
+
+				ret.T = TLCL;  // K
+
 				ret.Q = Q;
 
 				break;
@@ -995,16 +993,12 @@ inline lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 {
 	lcl_t ret;
 
-	if (P == kFloatMissing || T == kFloatMissing || TD == kFloatMissing)
-	{
-		return ret;
-	}
 	// Sanity checks
 
 	assert(P > 10000);
 	assert(T > 0);
 	assert(T < 500);
-	assert(TD > 0);
+	assert(TD > 0 && TD != 56);
 	assert(TD < 500);
 
 	double A = 1 / (TD - 56);
@@ -1023,11 +1017,6 @@ inline double himan::metutil::Es_(double T)
 	assert(T == T && T > 0 && T < 500);  // check also NaN
 
 	double Es;
-
-	if (T == kFloatMissing)
-	{
-		return kFloatMissing;
-	}
 
 	T -= himan::constants::kKelvin;
 
@@ -1050,11 +1039,6 @@ inline double himan::metutil::Gammas_(double P, double T)
 {
 	// Sanity checks
 
-	if (P == kFloatMissing || T == kFloatMissing)
-	{
-		return kFloatMissing;
-	}
-
 	assert(P > 10000);
 	assert(T > 0 && T < 500);
 
@@ -1075,11 +1059,6 @@ CUDA_DEVICE
 inline double himan::metutil::Gammaw_(double P, double T)
 {
 	// Sanity checks
-
-	if (P == kFloatMissing || T == kFloatMissing)
-	{
-		return kFloatMissing;
-	}
 
 	assert(P > 1000);
 	assert(T > 0 && T < 500);
@@ -1126,15 +1105,15 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 {
 	lcl_t LCL = LCL_(50000, T500m, TD500m);
 
-	double li = kFloatMissing;
+	double li = MissingDouble();
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (LCL.P == kFloatMissing)
+/*	if (IsMissingDouble(LCL.P))
 	{
 		return li;
 	}
-
+*/
 	if (LCL.P <= 85000)
 	{
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
@@ -1142,21 +1121,15 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 		double dryT = DryLift_(P500m, T500m, TARGET_PRESSURE);
 
-		if (dryT != kFloatMissing)
-		{
-			li = T500 - dryT;
-		}
+		li = T500 - dryT;
 	}
-	else
+	else if (LCL.P > 85000)
 	{
 		// Grid point is inside or above cloud
 
 		double wetT = Lift_(P500m, T500m, TD500m, TARGET_PRESSURE);
 
-		if (wetT != kFloatMissing)
-		{
-			li = T500 - wetT;
-		}
+		li = T500 - wetT;
 	}
 
 	return li;
@@ -1167,15 +1140,15 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 {
 	lcl_t LCL = metutil::LCL_(85000, T850, TD850);
 
-	double si = kFloatMissing;
+	double si = MissingDouble();
 
 	const double TARGET_PRESSURE = 50000;
 
-	if (LCL.P == kFloatMissing)
+/*	if (IsMissingDouble(LCL.P))
 	{
 		return si;
 	}
-
+*/
 	if (LCL.P <= 85000)
 	{
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
@@ -1183,21 +1156,15 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 		double dryT = DryLift_(85000, T850, TARGET_PRESSURE);
 
-		if (dryT != kFloatMissing)
-		{
-			si = T500 - dryT;
-		}
+		si = T500 - dryT;
 	}
-	else
+	else if (LCL.P > 85000)
 	{
 		// Grid point is inside or above cloud
 
 		double wetT = Lift_(85000, T850, TD850, TARGET_PRESSURE);
 
-		if (wetT != kFloatMissing)
-		{
-			si = T500 - wetT;
-		}
+		si = T500 - wetT;
 	}
 
 	return si;
@@ -1246,7 +1213,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	assert(thetaE > 0);
 	assert(P > 1000);
 
-	if (thetaE == kFloatMissing) return kFloatMissing;
+	if (IsMissingDouble(thetaE) || IsMissingDouble(P)) return MissingDouble();
 
 	using namespace himan::constants;
 
@@ -1272,7 +1239,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 
 	const double Dp = 1 / (0.1859 * p / p0 + 0.6512);
 
-	double Tw = kFloatMissing;
+	double Tw = MissingDouble();
 
 	if (ratio > Dp)
 	{
@@ -1344,12 +1311,8 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 }
 
 CUDA_DEVICE
-inline double himan::metutil::ThetaW_(double thetaE, double P)
+inline double himan::metutil::ThetaW_(double thetaE)
 {
-	assert(P > 1000);
-
-	if (thetaE == kFloatMissing) return kFloatMissing;
-
 	double thetaW = thetaE;
 
 	if (thetaE >= 173.15)

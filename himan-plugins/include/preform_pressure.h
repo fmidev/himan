@@ -50,7 +50,7 @@ namespace plugin
 {
 class preform_pressure : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	preform_pressure();
 
 	inline virtual ~preform_pressure() {}
@@ -62,14 +62,13 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::preform_pressure"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<himan_plugin>(new preform_pressure()); }
-
 }  // namespace plugin
 }  // namespace himan
 

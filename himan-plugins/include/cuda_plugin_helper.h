@@ -46,7 +46,6 @@ inline void PrepareInfo(info_simple* source, double* devptr, cudaStream_t& strea
 }
 
 inline void ReleaseInfo(info_simple* source) { CUDA_CHECK(cudaHostUnregister(source->values)); }
-
 inline void ReleaseInfo(info_simple* source, double* devptr, cudaStream_t& stream)
 {
 	CUDA_CHECK(cudaMemcpyAsync(source->values, devptr, source->size_x * source->size_y * sizeof(double),
@@ -58,7 +57,7 @@ inline void ReleaseInfo(info_simple* source, double* devptr, cudaStream_t& strea
 		bool pack = true;
 		for (size_t i = 0; i < source->size_x * source->size_y; i++)
 		{
-			if (source->values[0] == kFloatMissing)
+			if (IsMissing(source->values[0]))
 			{
 				pack = false;
 				break;

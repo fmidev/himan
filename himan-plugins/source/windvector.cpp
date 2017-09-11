@@ -222,7 +222,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		myTargetInfo->ParamIndex(0);
 
 		auto& FFVec = VEC(myTargetInfo);
-		vector<double> DDVec(FFVec.size(), kFloatMissing);
+		vector<double> DDVec(FFVec.size(), MissingDouble());
 
 		for (auto&& tup : zip_range(FFVec, DDVec, VEC(UInfo), VEC(VInfo)))
 		{
@@ -231,7 +231,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			double U = tup.get<2>();
 			double V = tup.get<3>();
 
-			if (U == kFloatMissing || V == kFloatMissing)
+			if (IsMissingValue({U, V}))
 			{
 				continue;
 			}
@@ -243,16 +243,13 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 				continue;
 			}
 
-			if (speed > 0)
-			{
-				dir = himan::constants::kRad * atan2(U, V) + directionOffset;
+			dir = himan::constants::kRad * atan2(U, V) + directionOffset;
 
-				// reduce the angle
-				dir = fmod(dir, 360);
+			// reduce the angle
+			dir = fmod(dir, 360);
 
-				// force it to be the positive remainder, so that 0 <= dir < 360
-				dir = round(fmod((dir + 360), 360));
-			}
+			// force it to be the positive remainder, so that 0 <= dir < 360
+			dir = round(fmod((dir + 360), 360));
 		}
 
 		if (myTargetInfo->SizeParams() > 1)

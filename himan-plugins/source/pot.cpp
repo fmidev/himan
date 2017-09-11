@@ -51,13 +51,6 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 			}
 		}
 	}
-
-	// get rid of kFloatMissings
-	for (auto& anInfo : itsInfos)
-	{
-		replace(anInfo->Data().Values().begin(), anInfo->Data().Values().end(), kFloatMissing,
-		        std::nan("kFloatMissing"));
-	}
 }
 
 void time_series::Param(param theParam) { itsParam = theParam; }
@@ -283,7 +276,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	// filter CAPE
-	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1.0 / 9.0);
+	himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1.0 / 9.0);
 	himan::matrix<double> filtered_CAPE = numerical_functions::Filter2D(CAPEMaxInfo->Data(), filter_kernel);
 
 	CAPEMaxInfo->Grid()->Data(filtered_CAPE);
@@ -321,11 +314,6 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 
 		POT = PoLift * PoThermoDyn * 100;
-
-		if (!isfinite(POT))
-		{
-			POT = kFloatMissing;  // Bring missing values back
-		}
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

@@ -524,11 +524,6 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		double currentSum = tup.get<1>();
 		double previousSum = tup.get<2>();
 
-		if (currentSum == kFloatMissing || previousSum == kFloatMissing)
-		{
-			continue;
-		}
-
 		result = (currentSum - previousSum) * invstep * scaleFactor;
 
 		if (result < 0 && myParamName != "RTOPLW-WM2")
@@ -536,7 +531,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 			result = 0;
 		}
 
-		assert(isRadiationCalculation || result >= 0);
+		assert(isRadiationCalculation || result >= 0 || IsMissing(result));
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " +

@@ -4,11 +4,12 @@
 
 #define AND &&
 #define OR ||
-#define MISS kFloatMissing
 
 #include "preform_pressure.h"
 #include "forecast_time.h"
 #include "level.h"
+#include <boost/lexical_cast.hpp>
+#include <limits>
 #include "logger.h"
 
 using namespace std;
@@ -53,6 +54,10 @@ const double stH = 15.;
 // Suht. kosteuden raja-arvo alapilvelle (925/850/700hPa) [%]
 const double rhLim = 90.;
 
+// define missing int value
+const int missingInt = numeric_limits<int>::min();
+
+bool IsMissingInt(int val) { return val == missingInt; }
 preform_pressure::preform_pressure()
 {
 	itsLogger = logger("preform_pressure");
@@ -189,7 +194,6 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	int SNOW = 3;
 	int FREEZING_DRIZZLE = 4;
 	int FREEZING_RAIN = 5;
-
 	LOCKSTEP(myTargetInfo, TInfo, T700Info, T850Info, T925Info, RHInfo, RH700Info, RH850Info, RH925Info, W925Info,
 	         W850Info, RRInfo, PInfo, SNRInfo)
 	{
@@ -197,7 +201,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// No rain --> no rain type
 
-		if (RR == 0 || RR == kFloatMissing)
+		if (RR == 0 || IsMissing(RR))
 		{
 			continue;
 		}
@@ -224,7 +228,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			continue;
 		}
 
-		int PreForm = static_cast<int>(kFloatMissing);
+		int PreForm = missingInt;
 
 		// Unit conversions
 
@@ -294,7 +298,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// jäätävää vesisadetta: "pinnassa pakkasta ja sulamiskerros pinnan lähellä"
 
-		if ((PreForm == MISS)AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
+		if (IsMissingInt(PreForm) AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
 		{
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925), tai kun Psfc ei löydy?
 			// (riittävän paksu) sulamiskerros ja pilveä 925/850hPa:ssa?
@@ -323,7 +327,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		double SNR_RR = 0;  // oletuksena kaikki sade vetta
 
-		if (SNR != MISS)
+		if (!IsMissing(SNR))
 		{
 			// lasketaan oikea suhde vain jos lumidataa on (kesalla ei ole)
 			SNR_RR = SNR / RR;
@@ -331,19 +335,19 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// lumisadetta: snowfall >=80% kokonaissateesta
 
-		if (PreForm == MISS AND(SNR_RR >= snowLim OR T <= 0))
+		if (IsMissingInt(PreForm) AND(SNR_RR >= snowLim OR T <= 0))
 		{
 			PreForm = SNOW;
 		}
 
 		// räntää: snowfall 15...80% kokonaissateesta
-		if ((PreForm == MISS)AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
+		if (IsMissingInt(PreForm) AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
 		{
 			PreForm = SLEET;
 		}
 
 		// tihkua tai vesisadetta: Rain>=85% kokonaissateesta
-		if ((PreForm == MISS)AND(SNR_RR) <= waterLim)
+		if (IsMissingInt(PreForm) AND(SNR_RR) <= waterLim)
 		{
 			// tihkua: "ei (satavaa) keskipilveä, pinnan lähellä kosteaa (stratus), sade heikkoa"
 			if ((RH700 < 80)AND(RH > 90) AND(RR <= dzLim))
@@ -367,13 +371,15 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			}
 
 			// muuten vesisadetta:
-			if (PreForm == MISS)
+			if (IsMissingInt(PreForm))
 			{
 				PreForm = RAIN;
 			}
 		}
-
-		myTargetInfo->Value(PreForm);
+		if (!IsMissingInt(PreForm))
+		{
+			myTargetInfo->Value(PreForm);
+		}
 	}
 
 	myThreadedLogger.Info("[CPU] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +

@@ -18,9 +18,9 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(cdarr_t d_T,
 
 	if (idx < opts.N)
 	{
-		d_RH[idx] = kFloatMissing;
+		d_RH[idx] = MissingDouble();
 
-		if (d_T[idx] != kFloatMissing && d_TD[idx] != kFloatMissing)
+		if (!IsMissingDouble(d_T[idx]) && !IsMissingDouble(d_TD[idx]))
 		{
 			double td = d_TD[idx] + opts.TDBase - constants::kKelvin;
 			double t = d_T[idx] + opts.TBase - constants::kKelvin;
@@ -39,9 +39,9 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(cdarr_t d_T,
 
 	if (idx < opts.N)
 	{
-		d_RH[idx] = kFloatMissing;
+		d_RH[idx] = MissingDouble();
 
-		if (d_T[idx] != kFloatMissing && d_Q[idx] != kFloatMissing && d_P[idx] != kFloatMissing)
+		if (!IsMissingDouble(d_T[idx]) && !IsMissingDouble(d_Q[idx]) && !IsMissingDouble(d_P[idx]))
 		{
 			double p = d_P[idx] * opts.PScale;
 			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
@@ -59,9 +59,9 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(cdarr_t d_T, 
 
 	if (idx < opts.N)
 	{
-		d_RH[idx] = kFloatMissing;
+		d_RH[idx] = MissingDouble();
 
-		if (d_T[idx] != kFloatMissing && d_Q[idx] != kFloatMissing)
+		if (!IsMissingDouble(d_T[idx]) && !IsMissingDouble(d_Q[idx]))
 		{
 			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
 

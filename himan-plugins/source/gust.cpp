@@ -4,10 +4,8 @@
  * Computes wind gusts
  */
 
-#include <boost/lexical_cast.hpp>
-
-#include "forecast_time.h"
 #include "gust.h"
+#include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
 #include "numerical_functions.h"
@@ -106,13 +104,13 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	NFmiMetTime theTime(boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%Y")),
-	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%m")),
-	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%d")),
-	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%H")),
-	                    boost::lexical_cast<short>(myTargetInfo->Time().ValidDateTime().String("%M")));
+	NFmiMetTime theTime(stoi(myTargetInfo->Time().ValidDateTime().String("%Y")),
+	                    stoi(myTargetInfo->Time().ValidDateTime().String("%m")),
+	                    stoi(myTargetInfo->Time().ValidDateTime().String("%d")),
+	                    stoi(myTargetInfo->Time().ValidDateTime().String("%H")),
+	                    stoi(myTargetInfo->Time().ValidDateTime().String("%M")));
 
-	auto myThreadedLogger = logger("gust_pluginThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("gust_pluginThread #" + to_string(threadIndex));
 
 	/*
 	 * Required source parameters
@@ -142,15 +140,14 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		auto n = GET_PLUGIN(neons);
 
-		lowestHybridLevelNumber = boost::lexical_cast<long>(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
+		lowestHybridLevelNumber = stol(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
 	}
 
 	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && lowestHybridLevelNumber == kHPMissingInt)
 	{
 		auto r = GET_PLUGIN(radon);
 
-		lowestHybridLevelNumber =
-		    boost::lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+		lowestHybridLevelNumber = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
 	}
 
 	assert(lowestHybridLevelNumber != kHPMissingInt);
@@ -185,27 +182,28 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	HCloudInfo = Fetch(forecastTime, H0, HighCloudParam, forecastType, false);
 	TCloudInfo = Fetch(forecastTime, H0, TotalCloudParam, forecastType, false);
 
-	if (!GustInfo || !T_LowestLevelInfo || !LCloudInfo || !MCloudInfo || !HCloudInfo || !TCloudInfo)
+	if (!BLHInfo || !TopoInfo || !GustInfo || !T_LowestLevelInfo || !LCloudInfo || !MCloudInfo || !HCloudInfo ||
+	    !TCloudInfo)
 	{
 		itsLogger.Error("Unable to find all source data");
 		return;
 	}
 
 	deltaT dT;
-	vector<double> lowAndMiddleClouds(gridSize, kFloatMissing);
+	vector<double> lowAndMiddleClouds(gridSize, himan::MissingDouble());
 
 	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
 	boost::thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
 	                 TCloudInfo);
 
 	// calc boundary layer height
-	vector<double> z_boundaryl(gridSize, kFloatMissing);
-	vector<double> z_one_third_boundaryl(gridSize, kFloatMissing);
-	vector<double> z_two_third_boundaryl(gridSize, kFloatMissing);
+	vector<double> z_boundaryl(gridSize, himan::MissingDouble());
+	vector<double> z_one_third_boundaryl(gridSize, himan::MissingDouble());
+	vector<double> z_two_third_boundaryl(gridSize, himan::MissingDouble());
 	vector<double> z_zero(gridSize, 0);
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		if (BLHInfo->Data()[i] == kFloatMissing)
+		if (IsMissing(BLHInfo->Data()[i]))
 		{
 			continue;
 		}
@@ -243,7 +241,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -264,7 +262,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -285,7 +283,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -310,7 +308,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -331,7 +329,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("Caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("Caught exception " + to_string(e));
 		}
 		else
 		{
@@ -360,9 +358,9 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		size_t i = myTargetInfo->LocationIndex();
 
 		double topo = TopoInfo->Value();
-		double esto = kFloatMissing;
-		double esto_tot = kFloatMissing;
-		double gust = kFloatMissing;
+		double esto = himan::MissingDouble();
+		double esto_tot = himan::MissingDouble();
+		double gust = himan::MissingDouble();
 		double turb_lisa = 0;
 		double turb_kerroin = 0;
 		double pilvikerroin = 0;
@@ -439,7 +437,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			gust = meanWind[i];
 		}
 
-		if (gust == kFloatMissing || gust < 1)
+		if (IsMissing(gust) || gust < 1)
 		{
 			gust = 1;
 		}
@@ -486,7 +484,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		gust = gust + turb_lisa * turb_kerroin * pilvikerroin;
 
-		if (topo > 400 || T_LowestLevelInfo->Value() == kFloatMissing || BLHInfo->Value() == kFloatMissing)
+		if (topo > 400 || IsMissing(T_LowestLevelInfo->Value()) || IsMissing(BLHInfo->Value()))
 		{
 			gust = GustInfo->Value() * 0.95;
 		}
@@ -494,15 +492,14 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Value(gust);
 	}
 
-	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing);
+	himan::matrix<double> filter_kernel(3, 3, 1, himan::MissingDouble());
 	filter_kernel.Fill(1.0 / 9.0);
 	himan::matrix<double> gust_filtered = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
 	myTargetInfo->Grid()->Data(gust_filtered);
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  boost::lexical_cast<string>(myTargetInfo->Data().MissingCount()) + "/" +
-						  boost::lexical_cast<string>(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
@@ -529,30 +526,30 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 
 		for (size_t i = 0; i < gridSize; ++i)
 		{
-			if (T_lowestLevel->Data()[i] == himan::kFloatMissing)
+			if (IsMissing(T_lowestLevel->Data()[i]))
 			{
-				dT.deltaT_100[i] = himan::kFloatMissing;
-				dT.deltaT_200[i] = himan::kFloatMissing;
-				dT.deltaT_300[i] = himan::kFloatMissing;
-				dT.deltaT_400[i] = himan::kFloatMissing;
-				dT.deltaT_500[i] = himan::kFloatMissing;
-				dT.deltaT_600[i] = himan::kFloatMissing;
-				dT.deltaT_700[i] = himan::kFloatMissing;
+				dT.deltaT_100[i] = himan::MissingDouble();
+				dT.deltaT_200[i] = himan::MissingDouble();
+				dT.deltaT_300[i] = himan::MissingDouble();
+				dT.deltaT_400[i] = himan::MissingDouble();
+				dT.deltaT_500[i] = himan::MissingDouble();
+				dT.deltaT_600[i] = himan::MissingDouble();
+				dT.deltaT_700[i] = himan::MissingDouble();
 				continue;
 			}
-			if (dT.deltaT_100[i] != himan::kFloatMissing)
+			if (!IsMissing(dT.deltaT_100[i]))
 				dT.deltaT_100[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (100.0 / 1000.0));
-			if (dT.deltaT_200[i] != himan::kFloatMissing)
+			if (!IsMissing(dT.deltaT_200[i]))
 				dT.deltaT_200[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (200.0 / 1000.0));
-			if (dT.deltaT_300[i] != himan::kFloatMissing)
+			if (!IsMissing(dT.deltaT_300[i]))
 				dT.deltaT_300[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (300.0 / 1000.0));
-			if (dT.deltaT_400[i] != himan::kFloatMissing)
+			if (!IsMissing(dT.deltaT_400[i]))
 				dT.deltaT_400[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (400.0 / 1000.0));
-			if (dT.deltaT_500[i] != himan::kFloatMissing)
+			if (!IsMissing(dT.deltaT_500[i]))
 				dT.deltaT_500[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (500.0 / 1000.0));
-			if (dT.deltaT_600[i] != himan::kFloatMissing)
+			if (!IsMissing(dT.deltaT_600[i]))
 				dT.deltaT_600[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (600.0 / 1000.0));
-			if (dT.deltaT_700[i] != himan::kFloatMissing)
+			if (!IsMissing(dT.deltaT_700[i]))
 				dT.deltaT_700[i] -= T_lowestLevel->Data()[i] + 9.8 * (0.010 - (700.0 / 1000.0));
 		}
 	}
@@ -560,7 +557,7 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error("DeltaT() caught exception " + boost::lexical_cast<string>(e));
+			throw runtime_error("DeltaT() caught exception " + to_string(e));
 		}
 	}
 }
@@ -598,31 +595,31 @@ void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize)
 
 void IntT(intT& iT, const deltaT& dT, size_t gridSize)
 {
-	iT.intT_100 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_200 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_300 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_400 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_500 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_600 = vector<double>(gridSize, himan::kFloatMissing);
-	iT.intT_700 = vector<double>(gridSize, himan::kFloatMissing);
+	iT.intT_100 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_200 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_300 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_400 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_500 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_600 = vector<double>(gridSize, himan::MissingDouble());
+	iT.intT_700 = vector<double>(gridSize, himan::MissingDouble());
 
 	for (size_t i = 0; i < gridSize; ++i)
 	{
-		if (dT.deltaT_100[i] != himan::kFloatMissing)
+		if (!IsMissing(dT.deltaT_100[i]))
 			iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100;  // why 0.5 * here? Would make sense in case of
 		                                                    // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
 		                                                    // integration using trapezoidal rule
-		if (dT.deltaT_100[i] != himan::kFloatMissing && dT.deltaT_200[i] != himan::kFloatMissing)
+		if (!IsMissing(dT.deltaT_100[i]) && !IsMissing(dT.deltaT_200[i]))
 			iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
-		if (dT.deltaT_200[i] != himan::kFloatMissing && dT.deltaT_300[i] != himan::kFloatMissing)
+		if (!IsMissing(dT.deltaT_200[i]) && !IsMissing(dT.deltaT_300[i]))
 			iT.intT_300[i] = 0.5 * (dT.deltaT_300[i] + dT.deltaT_200[i]) * 100;
-		if (dT.deltaT_300[i] != himan::kFloatMissing && dT.deltaT_400[i] != himan::kFloatMissing)
+		if (!IsMissing(dT.deltaT_300[i]) && !IsMissing(dT.deltaT_400[i]))
 			iT.intT_400[i] = 0.5 * (dT.deltaT_400[i] + dT.deltaT_300[i]) * 100;
-		if (dT.deltaT_400[i] != himan::kFloatMissing && dT.deltaT_500[i] != himan::kFloatMissing)
+		if (!IsMissing(dT.deltaT_400[i]) && !IsMissing(dT.deltaT_500[i]))
 			iT.intT_500[i] = 0.5 * (dT.deltaT_500[i] + dT.deltaT_400[i]) * 100;
-		if (dT.deltaT_500[i] != himan::kFloatMissing && dT.deltaT_600[i] != himan::kFloatMissing)
+		if (!IsMissing(dT.deltaT_500[i]) && !IsMissing(dT.deltaT_600[i]))
 			iT.intT_600[i] = 0.5 * (dT.deltaT_600[i] + dT.deltaT_500[i]) * 100;
-		if (dT.deltaT_600[i] != himan::kFloatMissing && dT.deltaT_700[i] != himan::kFloatMissing)
+		if (!IsMissing(dT.deltaT_600[i]) && !IsMissing(dT.deltaT_700[i]))
 			iT.intT_700[i] = 0.5 * (dT.deltaT_700[i] + dT.deltaT_600[i]) * 100;
 	}
 }
@@ -654,26 +651,26 @@ void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, in
 {
 	for (size_t i = 0; i < lowAndMiddleClouds.size(); ++i)
 	{
-		if (highClouds->Data()[i] == himan::kFloatMissing || highClouds->Data()[i] == 0.0)
+		if (IsMissing(highClouds->Data()[i]) || highClouds->Data()[i] == 0.0)
 		{
-			if (totalClouds->Data()[i] == himan::kFloatMissing)
-				lowAndMiddleClouds[i] = himan::kFloatMissing;
+			if (IsMissing(totalClouds->Data()[i]))
+				lowAndMiddleClouds[i] = himan::MissingDouble();
 			else
 				lowAndMiddleClouds[i] = totalClouds->Data()[i] * 100;
 		}
 		else
 		{
-			if (lowClouds->Data()[i] != himan::kFloatMissing)
+			if (!IsMissing(lowClouds->Data()[i]))
 			{
-				if (middleClouds->Data()[i] != himan::kFloatMissing)
+				if (!IsMissing(middleClouds->Data()[i]))
 					lowAndMiddleClouds[i] = max(lowClouds->Data()[i], middleClouds->Data()[i]) * 100;
 				else
 					lowAndMiddleClouds[i] = lowClouds->Data()[i] * 100;
 			}
 			else
 			{
-				if (middleClouds->Data()[i] == himan::kFloatMissing)
-					lowAndMiddleClouds[i] = himan::kFloatMissing;
+				if (IsMissing(middleClouds->Data()[i]))
+					lowAndMiddleClouds[i] = himan::MissingDouble();
 				else
 					lowAndMiddleClouds[i] = middleClouds->Data()[i] * 100;
 			}

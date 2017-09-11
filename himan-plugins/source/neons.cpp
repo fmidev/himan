@@ -23,15 +23,15 @@ void neons::Init()
 		try
 		{
 			call_once(oflag, [&]() {
-					NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
-					NFmiNeonsDBPool::Instance()->Username("wetodb");
-					NFmiNeonsDBPool::Instance()->Password(util::GetEnv("NEONS_WETODB_PASSWORD"));
+				NFmiNeonsDBPool::Instance()->ReadWriteTransaction(true);
+				NFmiNeonsDBPool::Instance()->Username("wetodb");
+				NFmiNeonsDBPool::Instance()->Password(util::GetEnv("NEONS_WETODB_PASSWORD"));
 
-					if (NFmiNeonsDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
-					{
-						NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
-					}
-				});
+				if (NFmiNeonsDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
+				{
+					NFmiNeonsDBPool::Instance()->MaxWorkers(MAX_WORKERS);
+				}
+			});
 
 			itsNeonsDB = std::unique_ptr<NFmiNeonsDB>(NFmiNeonsDBPool::Instance()->GetConnection());
 		}
@@ -51,7 +51,6 @@ neons::neons() : itsInit(false), itsNeonsDB()
 }
 
 void neons::PoolMaxWorkers(int maxWorkers) { NFmiNeonsDBPool::Instance()->MaxWorkers(maxWorkers); }
-
 vector<string> neons::Files(search_options& options)
 {
 	Init();

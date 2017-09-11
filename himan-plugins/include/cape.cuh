@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "himan_common.h"
 #include "info.h"
 #include "metutil.h"
 #include "numerical_functions.h"
@@ -18,8 +19,6 @@
 
 namespace CAPE
 {
-const double kFloatMissing = 32700.;
-
 CUDA_DEVICE
 inline himan::point GetPointOfIntersection(const himan::point& a1, const himan::point& a2, const himan::point& b1,
                                            const himan::point& b2)
@@ -29,7 +28,7 @@ inline himan::point GetPointOfIntersection(const himan::point& a1, const himan::
 
 	double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
-	himan::point null(kFloatMissing, kFloatMissing);
+	himan::point null(himan::MissingDouble(), himan::MissingDouble());
 
 	if (d == 0)
 	{
@@ -90,7 +89,7 @@ inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparc
 	auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv),
 	                                                 point(prevTparcel, prevZenv));
 
-	if (intersection.Y() == kFloatMissing) return 0;
+	if (!(intersection.Y() == intersection.Y())) return 0;
 
 	prevZenv = intersection.Y();
 
@@ -131,15 +130,16 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 	 */
 
 	out_value = 0;
-	out_ELT = CAPE::kFloatMissing;
-	out_ELP = CAPE::kFloatMissing;
+
+	out_ELT = himan::MissingDouble();
+	out_ELP = himan::MissingDouble();
 
 	using himan::point;
 
 	auto intersectionZ = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv),
 	                                                  point(Tparcel, Zenv), point(prevTparcel, prevZenv));
 
-	if (intersectionZ.Y() == kFloatMissing)
+	if (!(intersectionZ.Y() == intersectionZ.Y()))
 	{
 		return;
 	}
@@ -147,7 +147,7 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 	auto intersectionP = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv),
 	                                                  point(Tparcel, Penv), point(prevTparcel, prevPenv));
 
-	if (intersectionP.X() == kFloatMissing)
+	if (!(intersectionP.X() == intersectionP.X()))
 	{
 		return;
 	}
@@ -417,7 +417,7 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 {
 	double C = 0;
 
-	assert(Tenv != kFloatMissing && Penv != kFloatMissing && Tparcel != kFloatMissing);
+	assert((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 
 	if (Tparcel < Tenv && prevTparcel < prevTenv)
 	{
@@ -554,10 +554,11 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
                      double Zenv, double prevZenv, double& out_CAPE, double& out_ELT, double& out_ELP)
 {
 	out_CAPE = 0.;
-	out_ELT = kFloatMissing;
-	out_ELP = kFloatMissing;
 
-	assert(Tenv != kFloatMissing && Penv != kFloatMissing && Tparcel != kFloatMissing);
+	out_ELT = himan::MissingDouble();
+	out_ELP = himan::MissingDouble();
+
+	assert((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 
 	if (Tparcel < Tenv && prevTparcel < prevTenv)
 	{

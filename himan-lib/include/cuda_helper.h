@@ -28,7 +28,6 @@ typedef double* __restrict__ darr_t;
 
 namespace himan
 {
-
 /*
  * Two very commonly used data types with cuda calculations.
  * By defining double pointers __restrict__ we guarantee to the compiler

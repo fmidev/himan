@@ -111,9 +111,7 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 		// output parameter
 		double weather_symbol;
 
-		if (cloud == kFloatMissing || totalPrec == kFloatMissing || totalCC == kFloatMissing ||
-		    lowCC == kFloatMissing || medCC == kFloatMissing || highCC == kFloatMissing || fog == kFloatMissing ||
-		    T0m == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing || cloud == kFloatMissing)
+		if (IsMissingValue({cloud, totalPrec, totalCC, lowCC, medCC, highCC, fog, T0m, kIndex, T850, cloud}))
 		{
 			continue;
 		}

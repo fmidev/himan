@@ -22,7 +22,7 @@ namespace plugin
 
 class gust : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	gust();
 
 	inline virtual ~gust() {}
@@ -34,7 +34,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::gust"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 

@@ -17,7 +17,6 @@ namespace plugin
 {
 namespace tpot_cuda
 {
-
 struct options
 {
 	info_simple* t;

@@ -11,10 +11,39 @@
 #include "himan_common.h"
 #include "serialization.h"
 #include <mutex>
+#include <algorithm>
 
 namespace himan
 {
 class grid;
+
+/**
+ * @brief Compare float/double bitwise, i.e. nan comparison is possible
+ *
+ */
+
+inline bool Compare(const double& lhs, const double& rhs)
+{
+	const uint64_t* lhs_ptr = reinterpret_cast<const uint64_t*>(&lhs);
+	const uint64_t* rhs_ptr = reinterpret_cast<const uint64_t*>(&rhs);
+
+	return *lhs_ptr == *rhs_ptr;
+}
+
+inline bool Compare(const float& lhs, const float& rhs)
+{
+	const uint32_t* lhs_ptr = reinterpret_cast<const uint32_t*>(&lhs);
+	const uint32_t* rhs_ptr = reinterpret_cast<const uint32_t*>(&rhs);
+
+	return *lhs_ptr == *rhs_ptr;
+}
+
+// For all types other than float/double use == operator
+template <typename T>
+inline bool Compare(const T& lhs, const T& rhs)
+{
+	return lhs == rhs;
+}
 
 template <class T>
 class matrix
@@ -65,14 +94,14 @@ class matrix
 		assert(itsData.size() == other.itsData.size());
 
 		if (itsWidth != other.itsWidth || itsHeight != other.itsHeight || itsDepth != other.itsDepth ||
-		    itsMissingValue != other.itsMissingValue)
+		    !Compare(itsMissingValue, other.itsMissingValue))
 		{
 			return false;
 		}
 
 		for (size_t i = 0; i < itsData.size(); i++)
 		{
-			if (itsData[i] != other.itsData[i])
+			if (!Compare(itsData[i], other.itsData[i]))
 			{
 				return false;
 			}
@@ -130,7 +159,12 @@ class matrix
 		{
 			double d = theValues[i];
 
-			if (d == kFloatMissing)
+			// Choosing the lesser evil between two options to compare
+			// 1. itsMissingValue that can be of any type
+			// 2. kFloatMissing which is of type double but can be different from itsMissingValue even for a double
+			// matrix
+			// ->this function should not be a member function of Matrix in this form
+			if (himan::IsMissing(d))
 			{
 				missing++;
 				continue;
@@ -176,8 +210,8 @@ class matrix
 			for (size_t j = 0; j < theValues.size(); j++)
 			{
 				double val = theValues[j];
-
-				if (val == itsMissingValue) continue;
+				// same problem as above with other missing value case
+				if (himan::IsMissing(val)) continue;
 
 				if (val >= binmin && val < binmax)
 				{
@@ -303,7 +337,28 @@ class matrix
 	void Fill(T fillValue) { std::fill(itsData.begin(), itsData.end(), fillValue); }
 	// Only used for calculating statistics in PrintFloatData()
 
-	void MissingValue(T theMissingValue) { itsMissingValue = theMissingValue; }
+	void MissingValue(T theMissingValue)
+	{
+		std::lock_guard<std::mutex> lock(itsValueMutex);
+
+		// Replace old missing values in data by new ones
+		for (size_t i = 0; i < itsData.size(); i++)
+		{
+			if(IsMissing(i)) itsData[i] = theMissingValue;
+		}
+		/*struct Compare_val
+		{
+  			Compare_val(T x) : x(x) {}
+  			bool operator()(T y) const { return Compare(x,y); }
+
+			private:
+  			T x;
+		};
+		Compare_val Missing(itsMissingValue);
+		std::replace_if(itsData.begin(),itsData.end(),Missing,theMissingValue);*/
+		itsMissingValue = theMissingValue;
+	}
+
 	T MissingValue() const { return itsMissingValue; }
 	/**
 	 * @brief Clear contents of matrix (set size = 0)
@@ -321,7 +376,7 @@ class matrix
 	bool IsMissing(size_t theIndex) const
 	{
 		assert(itsData.size() > theIndex);
-		return (itsData[theIndex] == itsMissingValue);
+		return Compare(itsData[theIndex], itsMissingValue);
 	}
 
 	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const { return IsMissing(Index(theX, theY, theZ)); }

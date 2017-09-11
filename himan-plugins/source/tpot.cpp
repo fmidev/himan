@@ -188,7 +188,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			double T = TInfo->Value() + TBase;  // to Kelvin
 
-			double P = kFloatMissing, TD = kFloatMissing;
+			double P = MissingDouble(), TD = MissingDouble();
 
 			if (isPressureLevel)
 			{
@@ -206,13 +206,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				TD = TDInfo->Value() + TDBase;  // to Kelvin
 			}
 
-			if (T == kFloatMissing || P == kFloatMissing ||
-			    ((itsThetaECalculation || itsThetaWCalculation) && TD == kFloatMissing))
-			{
-				continue;
-			}
-
-			double theta = kFloatMissing;
+			double theta = MissingDouble();
 
 			if (itsThetaCalculation)
 			{
@@ -251,12 +245,7 @@ double tpot::ThetaW(double P, double T, double TD)
 {
 	double thetae = metutil::ThetaE_(T, TD, P);
 
-	if (thetae == kFloatMissing)
-	{
-		return kFloatMissing;
-	}
-
-	return metutil::ThetaW_(thetae, P);
+	return metutil::ThetaW_(thetae);
 }
 
 #ifdef HAVE_CUDA

@@ -135,11 +135,6 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		double topo = topoInfo->Value();
 		double pressure = pressureInfo->Value();
 
-		if (topo == kFloatMissing || pressure == kFloatMissing)
-		{
-			continue;
-		}
-
 		topo = topo * himan::constants::kIg;  // [m2/s2] -> [m]
 		if (topo < 0)
 		{

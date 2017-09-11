@@ -803,14 +803,9 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 		{
 			double lsm = lsmInfo->Value();
 
-			if (theInfo.Value() == kFloatMissing || lsm == kFloatMissing)
-			{
-				continue;
-			}
-
 			if (multiplier * lsm <= itsLandSeaMaskThreshold)
 			{
-				theInfo.Value(kFloatMissing);
+				theInfo.Value(MissingDouble());
 			}
 		}
 	}

@@ -13,6 +13,7 @@
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
 #include "util.h"
+#include <algorithm>
 #include <boost/filesystem.hpp>
 
 using namespace std;
@@ -208,7 +209,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().SetLongKey("Latin1InDegrees", static_cast<long>(lccg->StandardParallel1()));
 
-			if (lccg->StandardParallel2() != kHPMissingValue)
+			if (!IsKHPMissingValue(lccg->StandardParallel2()))
 			{
 				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
 			}
@@ -597,6 +598,9 @@ void grib::WriteParameter(info& anInfo)
 
 bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
+	// grib expects non-nan values
+	anInfo.Data().MissingValue(32700.0);
+
 	// Write only that data which is currently set at descriptors
 
 	timer aTimer;
@@ -783,6 +787,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsLogger.Trace("Writing unpacked data");
 
 #ifdef DEBUG
+
 		// Check that data is not NaN, otherwise grib_api will go to
 		// an eternal loop
 
@@ -1026,7 +1031,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->LastPoint(point(X1, Y1));
 
-			rg->Data(matrix<double>(ni, nj, 1, kFloatMissing));
+			rg->Data(matrix<double>(ni, nj, 1, MissingDouble()));
 
 			break;
 		}
@@ -1055,7 +1060,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 				itsLogger.Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
 			}
 
-			lccg->Data(matrix<double>(lccg->Ni(), lccg->Nj(), 1, kFloatMissing));
+			lccg->Data(matrix<double>(lccg->Ni(), lccg->Nj(), 1, MissingDouble()));
 
 			break;
 		}
@@ -1115,7 +1120,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			    util::CoordinatesFromFirstGridPoint(first, rg->Orientation(), ni, nj, rg->Di(), rg->Dj());
 
 			rg->TopRight(coordinates.second);
-			rg->Data(matrix<double>(ni, nj, 1, kFloatMissing));
+			rg->Data(matrix<double>(ni, nj, 1, MissingDouble()));
 
 			break;
 		}
@@ -1146,7 +1151,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->LastPoint(point(X1, Y1));
 
-			rg->Data(matrix<double>(ni, nj, 1, kFloatMissing));
+			rg->Data(matrix<double>(ni, nj, 1, MissingDouble()));
 
 			break;
 		}
@@ -1494,7 +1499,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 
 		case himan::kGroundDepth:
 		{
-			if (options.level.Value2() == himan::kHPMissingValue)
+			if (IsKHPMissingValue(options.level.Value2()))
 			{
 				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
 			}
@@ -1648,7 +1653,9 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 #endif
 	{
 		size_t len = itsGrib->Message().ValuesLength();
+
 		itsGrib->Message().GetValues(dm.ValuesAsPOD(), &len);
+                dm.MissingValue(MissingDouble());
 
 		if (decodePrecipitationForm)
 		{
@@ -2094,7 +2101,7 @@ void EncodePrecipitationFormToGrib2(vector<double>& arr)
 	{
 		switch (static_cast<int>(val))
 		{
-			// kFloatMissing - this is done to satisfy static analysis tools
+			// MissingDouble() - this is done to satisfy static analysis tools
 			case 32700:
 			// rain
 			case 1:

@@ -86,7 +86,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 
 	LOCKSTEP(myTargetInfo, TInfo)
 	{
-		double P = kFloatMissing;
+		double P = MissingDouble();
 		double T = TInfo->Value();
 
 		if (isPressureLevel)
@@ -97,11 +97,6 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 		{
 			PInfo->NextLocation();
 			P = PInfo->Value();
-		}
-
-		if (P == kFloatMissing || T == kFloatMissing)
-		{
-			continue;
 		}
 
 		// actual calculation of the density using the ideal gas law

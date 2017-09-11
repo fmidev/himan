@@ -23,7 +23,7 @@ namespace plugin
 
 class weather_symbol : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	weather_symbol();
 
 	inline virtual ~weather_symbol() {}
@@ -35,7 +35,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::weather_symbol"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	double rain_form(double rr);
 	double rain_type(double rr);

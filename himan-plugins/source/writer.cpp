@@ -3,10 +3,10 @@
  *
  */
 
+#include "writer.h"
 #include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include "writer.h"
 #include <boost/filesystem.hpp>
 #include <fstream>
 

@@ -102,7 +102,7 @@ vector<std::string> radon::CSV(search_options& options)
 
 	string levelValue2 = "-1";
 
-	if (options.level.Value2() != kHPMissingValue)
+	if (!IsKHPMissingValue(options.level.Value2()))
 	{
 		levelValue2 = boost::lexical_cast<string>(options.level.Value2());
 	}
@@ -410,7 +410,7 @@ bool radon::SavePrevi(const info& resultInfo)
 		forecastTypeValue = static_cast<int>(resultInfo.ForecastType().Value());
 	}
 
-	double levelValue2 = (resultInfo.Level().Value2() == kHPMissingValue) ? -1 : resultInfo.Level().Value2();
+	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 
 	auto localInfo = resultInfo;
 
@@ -585,7 +585,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 		forecastTypeValue = static_cast<int>(resultInfo.ForecastType().Value());
 	}
 
-	double levelValue2 = (resultInfo.Level().Value2() == kHPMissingValue) ? -1 : resultInfo.Level().Value2();
+	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = schema_name + "." + table_name;
 
 	query

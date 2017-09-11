@@ -45,7 +45,7 @@ level::operator std::string() const
 {
 	std::string out = HPLevelTypeToString.at(itsType) + "/" + std::to_string(itsValue);
 
-	if (itsValue2 != kHPMissingValue)
+	if (!IsKHPMissingValue(itsValue2))
 	{
 		out += "/" + std::to_string(itsValue2);
 	}

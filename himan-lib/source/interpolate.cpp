@@ -30,6 +30,9 @@ namespace interpolate
 {
 bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
+	// switch to old MissingDouble() for compatibility with QD stuff
+	targetData.MissingValue(kFloatMissing);
+
 	auto q = GET_PLUGIN(querydata);
 
 	std::shared_ptr<NFmiQueryData> sourceData = q->CreateQueryData(source, true);
@@ -44,6 +47,9 @@ bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 
 		targetData.Set(base.LocationIndex(), value);
 	}
+
+	// back to himan
+	targetData.MissingValue(MissingDouble());
 
 	return true;
 }
@@ -100,7 +106,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 		baseGrid->Nj(gg->Nj());
 		baseGrid->Ni(numEquatorLongitudes);
 
-		matrix<double> m(numEquatorLongitudes, gg->Nj(), 1, kFloatMissing, kFloatMissing);
+		matrix<double> m(numEquatorLongitudes, gg->Nj(), 1, MissingDouble(), MissingDouble());
 		baseGrid->Data(m);
 
 		return false;
@@ -117,7 +123,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 	lonspan = (lonspan < 0) ? lonspan + 360 : lonspan;
 	assert(lonspan >= 0 && lonspan <= 360);
 
-	std::vector<double> result(baseGrid->Data().Size(), kFloatMissing);
+	std::vector<double> result(baseGrid->Data().Size(), MissingDouble());
 
 	HPInterpolationMethod interpolationMethod =
 	    InterpolationMethod(source.Param().Name(), base.Param().InterpolationMethod());
@@ -133,7 +139,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			if (gg_y < 0 || gg_y > gg->Nj()-1) 
 			{
 				// lat outside gg grid
-				targetData.Set(i, kFloatMissing);
+				targetData.Set(i, MissingDouble());
 				continue;
 			}
 
@@ -154,7 +160,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			if (gg_x < 0 || gg_x > numCurrentLongitudes-1) 
 			{
 				// lon outside gg grid
-				targetData.Set(i, kFloatMissing);
+				targetData.Set(i, MissingDouble());
 				continue;
 			}
 			const int np_x = static_cast<int> (rint(gg_x)); // nearest grid point in x direction in current parallel
@@ -199,10 +205,10 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			                                                             // interpolation is not allowed, even for small
 			                                                             // amounts of delta y)
 
-			if (gg_y < 0 || gg_y > static_cast<double> (gg->Nj()) - 1)
+			if (gg_y < 0 || gg_y > static_cast<double>(gg->Nj()) - 1)
 			{
 				// lat outside gg grid
-				targetData.Set(i, kFloatMissing);
+				targetData.Set(i, MissingDouble());
 				continue;
 			}
 
@@ -319,6 +325,8 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 		util::Unpack({source.Grid()});
 	}
 #endif
+	// switch to old MissingDouble() for compatibility with QD stuff
+	targetData.MissingValue(kFloatMissing);
 
 	auto q = GET_PLUGIN(querydata);
 
@@ -384,6 +392,9 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 			} while (baseInfo.MoveDown());
 		}
 	}
+
+	// back to Himan
+	targetData.MissingValue(MissingDouble());
 
 	return true;
 }
@@ -488,7 +499,7 @@ bool ReorderPoints(info& base, std::vector<info_t> infos)
 		auto targetStations = dynamic_cast<point_list*>(base.Grid())->Stations();
 		auto sourceStations = dynamic_cast<point_list*>((*it)->Grid())->Stations();
 		auto sourceData = (*it)->Grid()->Data();
-		auto newData = matrix<double>(targetStations.size(), 1, 1, kFloatMissing);
+		auto newData = matrix<double>(targetStations.size(), 1, 1, MissingDouble());
 
 		if (targetStations.size() == 0 || sourceStations.size() == 0) return false;
 
@@ -665,11 +676,6 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 			{
 				double U = UVec[i];
 				double V = VVec[i];
-
-				if (U == kFloatMissing || V == kFloatMissing)
-				{
-					continue;
-				}
 
 				const point rotPoint = rll->RotatedLatLon(i);
 				const point regPoint = rll->LatLon(i);

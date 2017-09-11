@@ -16,10 +16,9 @@ namespace himan
 {
 namespace plugin
 {
-
 class transformer : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	transformer();
 
 	inline virtual ~transformer() {}
@@ -31,7 +30,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::transformer"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 2); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
 	// Check and write json parameters needed for transformer plug-in to local variables.

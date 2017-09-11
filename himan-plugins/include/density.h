@@ -22,7 +22,7 @@ namespace plugin
 
 class density : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	density();
 
 	inline virtual ~density() {}
@@ -34,14 +34,13 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::density"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<density>(new density()); }
-
 }  // namespace plugin
 }  // namespace himan
 

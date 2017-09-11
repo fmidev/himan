@@ -22,7 +22,7 @@ namespace plugin
 
 class fog : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	fog();
 
 	inline virtual ~fog() {}
@@ -34,7 +34,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::fog"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 

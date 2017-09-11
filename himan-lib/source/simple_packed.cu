@@ -5,10 +5,11 @@
 
 #include "simple_packed.h"
 
-#include "cuda_helper.h"
 #include <NFmiGribPacking.h>
 #include <cub/cub.cuh>
 #include <grib_api.h>
+
+#include "cuda_helper.h"
 
 using namespace himan;
 
@@ -169,7 +170,7 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 			// Make an assumption: if grid is static and bitmap is defined, it is probably
 			// all missing.
 
-			fillValue = kFloatMissing;
+			fillValue = himan::MissingDouble();
 		}
 
 		if (NFmiGribPacking::IsHostPointer(arr))
@@ -438,7 +439,7 @@ __device__ void simple_packed_util::UnpackFullBytes(unsigned char* __restrict__ 
 
 		if (bm == 0)
 		{
-			d_u[idx] = kFloatMissing;
+			d_u[idx] = MissingDouble();
 			value_found = 0;
 		}
 		else
@@ -491,7 +492,7 @@ __device__ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict_
 
 		if (bm == 0)
 		{
-			d_u[idx] = kFloatMissing;
+			d_u[idx] = MissingDouble();
 			value_found = 0;
 		}
 		else

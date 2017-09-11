@@ -178,6 +178,8 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 {
 	assert(theInfo.Data().Size() == qinfo.SizeLocations());
 
+	// convert missing value to kFloatMissing
+	theInfo.Grid()->Data().MissingValue(kFloatMissing);
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
@@ -220,6 +222,9 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 			qinfo.FloatValue(static_cast<float>(theInfo.Value() * scale + base));
 		}
 	}
+
+	// return to original missing value
+	theInfo.Grid()->Data().MissingValue(MissingDouble());
 
 	return true;
 }
@@ -680,8 +685,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			{
 				assert(newInfo->ParamIndex() == qinfo.ParamIndex());
 
-				matrix<double> dm(ni, nj, 1, kFloatMissing);
-
+				matrix<double> dm(ni, nj, 1, static_cast<double>(32700.f));
 				size_t i;
 
 				for (qinfo.ResetLocation(), i = 0; qinfo.NextLocation() && i < ni * nj; i++)
@@ -689,6 +693,8 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 					dm.Set(i, static_cast<double>(qinfo.FloatValue()));
 				}
 
+				// convert kFloatMissing to nan
+				dm.MissingValue(MissingDouble());
 				newInfo->Grid()->Data(dm);
 			}
 		}

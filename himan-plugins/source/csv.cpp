@@ -45,8 +45,8 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 			const string stationName = (s.Name() != "Himan default station") ? "" : s.Name();
 
 			// boost cast handles floats more elegantly
-			const string lon = (s.X() == kHPMissingValue) ? "" : boost::lexical_cast<string>(s.X());
-			const string lat = (s.Y() == kHPMissingValue) ? "" : boost::lexical_cast<string>(s.Y());
+			const string lon = (IsKHPMissingValue(s.X())) ? "" : boost::lexical_cast<string>(s.X());
+			const string lat = (IsKHPMissingValue(s.Y())) ? "" : boost::lexical_cast<string>(s.Y());
 
 			out << theInfo.Producer().Id() << "," << originTime << "," << stationId << "," << stationName << "," << lon
 			    << "," << lat << "," << theInfo.Param().Name() << "," << HPLevelTypeToString.at(theInfo.Level().Type())

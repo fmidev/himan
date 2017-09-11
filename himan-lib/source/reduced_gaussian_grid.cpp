@@ -233,7 +233,7 @@ reduced_gaussian_grid* reduced_gaussian_grid::Clone() const { return new reduced
 double reduced_gaussian_grid::Di() const { return kHPMissingValue; }
 double reduced_gaussian_grid::Dj() const
 {
-	if (itsDj == kHPMissingValue)
+	if (IsKHPMissingValue(itsDj))
 	{
 		assert(itsNj != static_cast<size_t>(kHPMissingInt));
 		itsDj = (TopLeft().Y() - BottomRight().Y()) / (static_cast<double>(itsNj) - 1.);

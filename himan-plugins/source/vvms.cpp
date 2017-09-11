@@ -145,22 +145,9 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				P = PInfo->Value();
 			}
 
-			if (IsMissingValue({T, P, VV}))
-			{
-				continue;
-			}
-
 			double w = itsScale * (287 * -VV * (T + TBase) / (himan::constants::kG * P * PScale));
 
-			// Some erroneous values of T, P or VV produce infinite values
-			if (isfinite(w))
-			{
-				myTargetInfo->Value(w);
-			}
-			else
-			{
-				myTargetInfo->Value(kFloatMissing);
-			}
+			myTargetInfo->Value(w);
 		}
 	}
 
