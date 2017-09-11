@@ -598,8 +598,6 @@ void grib::WriteParameter(info& anInfo)
 
 bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
-	// grib expects non-nan values
-	anInfo.Data().MissingValue(32700.0);
 
 	// Write only that data which is currently set at descriptors
 
@@ -755,9 +753,13 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 			break;
 	}
 
+	// set to missing value to a large value to prevent it from mixing up with valid
+	// values in the data
+	itsGrib->Message().MissingValue(1e38);
+	anInfo.Data().MissingValue(1e38);
+
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
 	{
-		itsGrib->Message().MissingValue(anInfo.Data().MissingValue());
 		itsGrib->Message().Bitmap(true);
 	}
 
@@ -786,27 +788,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger.Trace("Writing unpacked data");
 
-#ifdef DEBUG
-
-		// Check that data is not NaN, otherwise grib_api will go to
-		// an eternal loop
-
-		auto data = anInfo.Data().Values();
-		bool foundNanValue = false;
-
-		for (size_t i = 0; i < data.size(); i++)
-		{
-			double d = data[i];
-
-			if (!isfinite(d))
-			{
-				foundNanValue = true;
-				break;
-			}
-		}
-
-		assert(!foundNanValue);
-#endif
 		const auto paramName = anInfo.Param().Name();
 		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
 		{
@@ -819,6 +800,9 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 			itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
 		}
 	}
+
+	// Return missing value to nan if info is recycled (luatool)
+	anInfo.Data().MissingValue(MissingDouble());
 
 	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
 	{
