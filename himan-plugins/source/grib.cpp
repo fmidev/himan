@@ -788,27 +788,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger.Trace("Writing unpacked data");
 
-#ifdef DEBUG
-
-		// Check that data is not NaN, otherwise grib_api will go to
-		// an eternal loop
-
-		auto data = anInfo.Data().Values();
-		bool foundNanValue = false;
-
-		for (size_t i = 0; i < data.size(); i++)
-		{
-			double d = data[i];
-
-			if (!isfinite(d))
-			{
-				foundNanValue = true;
-				break;
-			}
-		}
-
-		ASSERT(!foundNanValue);
-#endif
 		const auto paramName = anInfo.Param().Name();
 
 		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
