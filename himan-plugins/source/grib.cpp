@@ -598,7 +598,6 @@ void grib::WriteParameter(info& anInfo)
 
 bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
-
 	// Write only that data which is currently set at descriptors
 
 	timer aTimer;
@@ -755,8 +754,9 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	// set to missing value to a large value to prevent it from mixing up with valid
 	// values in the data
-	itsGrib->Message().MissingValue(1e38);
-	anInfo.Data().MissingValue(1e38);
+
+	const double gribMissing = 1e38;
+	itsGrib->Message().MissingValue(gribMissing);
 
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
 	{
@@ -789,14 +789,24 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsLogger.Trace("Writing unpacked data");
 
 		const auto paramName = anInfo.Param().Name();
+
 		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
 		{
 			auto data = anInfo.Data().Values();
 			EncodePrecipitationFormToGrib2(data);
+
+			for (auto& v : data)
+			{
+				if (IsMissing(v))
+				{
+					v = gribMissing;
+				}
+			}
 			itsGrib->Message().Values(data.data(), static_cast<long>(data.size()));
 		}
 		else
 		{
+			anInfo.Data().MissingValue(gribMissing);
 			itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
 		}
 	}
@@ -1639,7 +1649,7 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 		size_t len = itsGrib->Message().ValuesLength();
 
 		itsGrib->Message().GetValues(dm.ValuesAsPOD(), &len);
-                dm.MissingValue(MissingDouble());
+		dm.MissingValue(MissingDouble());
 
 		if (decodePrecipitationForm)
 		{
@@ -2083,10 +2093,10 @@ void EncodePrecipitationFormToGrib2(vector<double>& arr)
 {
 	for (auto& val : arr)
 	{
+		if (himan::IsMissing(val)) continue;
+
 		switch (static_cast<int>(val))
 		{
-			// MissingDouble() - this is done to satisfy static analysis tools
-			case 32700:
 			// rain
 			case 1:
 				break;
@@ -2120,10 +2130,10 @@ void DecodePrecipitationFormFromGrib2(vector<double>& arr)
 {
 	for (auto& val : arr)
 	{
+		if (himan::IsMissing(val)) continue;
+
 		switch (static_cast<int>(val))
 		{
-			// kFloatMissing - this is done to satisfy static analysis tools
-			case 32700:
 			// rain
 			case 1:
 				break;
