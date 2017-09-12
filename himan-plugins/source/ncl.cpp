@@ -133,7 +133,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			prevTInfo->ResetLocation();
 		}
 
-		assert(HInfo && TInfo);
+		ASSERT(HInfo && TInfo);
 
 		LOCKSTEP(myTargetInfo, TInfo, HInfo)
 		{

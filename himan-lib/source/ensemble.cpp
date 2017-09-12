@@ -42,7 +42,7 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
       itsLogger(logger("ensemble")),
       itsMaximumMissingForecasts(0)
 {
-	assert(controlForecasts.size() < expectedEnsembleSize);
+	ASSERT(controlForecasts.size() < expectedEnsembleSize);
 
 	itsDesiredForecasts.reserve(expectedEnsembleSize);
 
@@ -115,7 +115,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 			if (e != kFileDataNotFound)
 			{
 				itsLogger.Fatal("Unable to proceed");
-				abort();
+				himan::Abort();
 			}
 			else
 			{
@@ -135,7 +135,7 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 		{
 			itsLogger.Fatal("maximum number of missing fields (" + std::to_string(itsMaximumMissingForecasts) +
 			                ") reached, aborting");
-			abort();
+			himan::Abort();
 		}
 	}
 	// Normally, we don't except any of the fields to be missing, but at this point

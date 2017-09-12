@@ -600,7 +600,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pc->Info(make_shared<info>(*anInfo));  // We have to have a copy for all configs.
 			                                       // Each plugin will later on create a data backend.
 
-			assert(pc.unique());
+			ASSERT(pc.unique());
 
 			pluginContainer.push_back(pc);
 		}
@@ -716,7 +716,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 		throw runtime_error(ClassName() + ": " + string("Error parsing origin time information: ") + e.what());
 	}
 
-	assert(!originDateTimes.empty());
+	ASSERT(!originDateTimes.empty());
 
 	/* Check time steps */
 
@@ -1069,7 +1069,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 			gg->NumberOfPointsAlongParallels(longitudes);
 
-			assert(boost::lexical_cast<size_t>(geominfo["n"]) * 2 == longitudes.size());
+			ASSERT(boost::lexical_cast<size_t>(geominfo["n"]) * 2 == longitudes.size());
 
 			const point first(boost::lexical_cast<double>(geominfo["first_point_lon"]),
 			                  boost::lexical_cast<double>(geominfo["first_point_lat"]));
@@ -1501,7 +1501,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 		else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
 		{
 			itsLogger.Fatal("Source producer information was not found from database");
-			abort();
+			himan::Abort();
 		}
 		else if (dbtype == kNoDatabase)
 		{
@@ -1517,12 +1517,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
 		itsLogger.Fatal("Source producer definitions not found: " + string(e.what()));
-		abort();
+		himan::Abort();
 	}
 	catch (exception& e)
 	{
 		itsLogger.Fatal("Error parsing source producer information: " + string(e.what()));
-		abort();
+		himan::Abort();
 	}
 
 	try
@@ -1585,12 +1585,12 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
 		itsLogger.Fatal("Target producer definitions not found: " + string(e.what()));
-		abort();
+		himan::Abort();
 	}
 	catch (exception& e)
 	{
 		itsLogger.Fatal("Error parsing target producer information: " + string(e.what()));
-		abort();
+		himan::Abort();
 	}
 }
 
@@ -1649,7 +1649,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 		}
 	}
 
-	assert(!levels.empty());
+	ASSERT(!levels.empty());
 
 	return levels;
 }
@@ -1680,7 +1680,7 @@ bool ParseBoolean(string booleanValue)
 	else
 	{
 		itsLogger.Fatal("Invalid boolean value: " + booleanValue);
-		abort();
+		himan::Abort();
 	}
 
 	return ret;
@@ -1713,7 +1713,7 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 				}
 				else
 				{
-					assert(range.size() == 2);
+					ASSERT(range.size() == 2);
 
 					int start = boost::lexical_cast<int>(range[0]);
 					int stop = boost::lexical_cast<int>(range[1]);

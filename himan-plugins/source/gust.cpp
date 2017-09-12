@@ -150,7 +150,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		lowestHybridLevelNumber = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
 	}
 
-	assert(lowestHybridLevelNumber != kHPMissingInt);
+	ASSERT(lowestHybridLevelNumber != kHPMissingInt);
 
 	level lowestHybridLevel(kHybrid, lowestHybridLevelNumber);
 

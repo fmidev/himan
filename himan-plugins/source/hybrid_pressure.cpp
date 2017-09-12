@@ -144,7 +144,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	else
 	{
 		const size_t levelValue = static_cast<size_t>(forecastLevel.Value());
-		assert(levelValue <= ab.size());
+		ASSERT(levelValue <= ab.size());
 
 		A = (ab[levelValue - 1] + ab[levelValue]) * 0.5;
 

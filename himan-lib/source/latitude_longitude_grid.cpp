@@ -159,11 +159,11 @@ point latitude_longitude_grid::XY(const himan::point& latlon) const
 
 point latitude_longitude_grid::LatLon(size_t locationIndex) const
 {
-	assert(itsNi != static_cast<size_t>(kHPMissingInt));
-	assert(itsNj != static_cast<size_t>(kHPMissingInt));
-	assert(!IsKHPMissingValue(Di()));
-	assert(!IsKHPMissingValue(Dj()));
-	assert(locationIndex < itsNi * itsNj);
+	ASSERT(itsNi != static_cast<size_t>(kHPMissingInt));
+	ASSERT(itsNj != static_cast<size_t>(kHPMissingInt));
+	ASSERT(!IsKHPMissingValue(Di()));
+	ASSERT(!IsKHPMissingValue(Dj()));
+	ASSERT(locationIndex < itsNi * itsNj);
 
 	point firstPoint = FirstPoint();
 
@@ -488,9 +488,9 @@ point rotated_latitude_longitude_grid::XY(const point& latlon) const
 {
 	if (!itsRotLatLonArea)
 	{
-		assert(itsBottomLeft != point());
-		assert(itsTopRight != point());
-		assert(itsSouthPole != point());
+		ASSERT(itsBottomLeft != point());
+		ASSERT(itsTopRight != point());
+		ASSERT(itsSouthPole != point());
 
 		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
 		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
@@ -508,8 +508,8 @@ point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 
 	if (!itsRotLatLonArea)
 	{
-		assert(itsBottomLeft != point());
-		assert(itsTopRight != point());
+		ASSERT(itsBottomLeft != point());
+		ASSERT(itsTopRight != point());
 
 		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
 		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),

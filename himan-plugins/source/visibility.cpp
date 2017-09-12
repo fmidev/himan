@@ -113,8 +113,8 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	auto stHup = h->VerticalHeightGreaterThan(NParam, 25, stMaxH, stLimit);
 	auto stNup = h->VerticalAverage(NParam, 15, stMaxH);
 
-	assert(stH.size() == stHup.size());
-	assert(st15.size() == stH.size());
+	ASSERT(stH.size() == stHup.size());
+	ASSERT(st15.size() == stH.size());
 
 	for (size_t i = 0; i < stH.size(); i++)
 	{
@@ -143,14 +143,14 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			continue;
 		}
 
-		assert(stratN <= 1.0);
-		assert(RR < 50);
+		ASSERT(stratN <= 1.0);
+		ASSERT(RR < 50);
 
 		stratN *= 100;  // Note! Cloudiness is scaled to percents
 
 		RH *= RHScale;
 
-		assert(RH < 102.);
+		ASSERT(RH < 102.);
 
 		double visPre = defaultVis;
 

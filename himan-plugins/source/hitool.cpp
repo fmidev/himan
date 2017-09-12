@@ -131,7 +131,7 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 
 		default:
 			itsLogger.Fatal("Unknown modifier type: " + boost::lexical_cast<string>(modifierType));
-			abort();
+			himan::Abort();
 			break;
 	}
 	itsLogger.Trace("Creating " + string(HPModifierTypeToString.at(mod->Type())));
@@ -140,7 +140,7 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 
 pair<level, level> hitool::LevelForHeight(const producer& prod, double height) const
 {
-	assert(itsConfiguration);
+	ASSERT(itsConfiguration);
 
 	using boost::lexical_cast;
 
@@ -275,7 +275,7 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 		}
 	}
 
-	assert(newlowest >= newhighest);
+	ASSERT(newlowest >= newhighest);
 
 	return make_pair<level, level>(level(kHybrid, newlowest), level(kHybrid, newhighest));
 }
@@ -284,7 +284,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
                                             const param& wantedParam, const vector<double>& lowerHeight,
                                             const vector<double>& upperHeight, const vector<double>& findValue) const
 {
-	assert(wantedLevelType == kHybrid);
+	ASSERT(wantedLevelType == kHybrid);
 
 	if (findValue.size())
 	{
@@ -383,7 +383,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			highestHybridLevel = static_cast<long>(levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long>(levelsForMinHeight.first.Value());
 
-			assert(lowestHybridLevel >= highestHybridLevel);
+			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
 			itsLogger.Debug("Adjusting level range to " + boost::lexical_cast<string>(lowestHybridLevel) + " .. " +
 							boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
@@ -413,8 +413,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 				max_value = min_value;
 				min_value = temp;
 
-				assert(min_value >= 10);
-				assert(max_value < 1200);
+				ASSERT(min_value >= 10);
+				ASSERT(max_value < 1200);
 			}
 
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
@@ -423,7 +423,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			highestHybridLevel = static_cast<long>(levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long>(levelsForMinHeight.first.Value());
 
-			assert(lowestHybridLevel >= highestHybridLevel);
+			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
 			itsLogger.Debug("Adjusting level range to " + boost::lexical_cast<string>(lowestHybridLevel) + " .. " +
 							boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
@@ -446,7 +446,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 		auto values = data.first;
 		auto heights = data.second;
 
-		assert(heights->Grid()->Size() == values->Grid()->Size());
+		ASSERT(heights->Grid()->Size() == values->Grid()->Size());
 
 		values->First();
 		heights->First();
@@ -466,7 +466,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 	auto ret = mod->Result();
 
-	assert(mod->HeightsCrossed() == ret.size());
+	ASSERT(mod->HeightsCrossed() == ret.size());
 	return ret;
 }
 
@@ -517,10 +517,10 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam, 
 		}
 	}
 
-	assert(values);
-	assert(heights);
-	assert(values->Grid()->Size() == heights->Grid()->Size());
-	assert(heights->Data().MissingCount() != heights->Data().Size());
+	ASSERT(values);
+	ASSERT(heights);
+	ASSERT(values->Grid()->Size() == heights->Grid()->Size());
+	ASSERT(heights->Data().MissingCount() != heights->Data().Size());
 
 	// No Merge() here since that will mess up cache
 
@@ -543,7 +543,7 @@ vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList, cons
                                       const vector<double>& lastLevelValue, const vector<double>& findValue,
                                       size_t findNth) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -664,7 +664,7 @@ vector<double> hitool::VerticalHeightGreaterThan(const vector<param>& wantedPara
                                                  const vector<double>& lastLevelValue, const vector<double>& findValue,
                                                  size_t findNth) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -755,7 +755,7 @@ vector<double> hitool::VerticalHeightLessThan(const vector<param>& wantedParamLi
                                               const vector<double>& lastLevelValue, const vector<double>& findValue,
                                               size_t findNth) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -806,7 +806,7 @@ vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, const ve
 vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, double lowerHeight,
                                        double upperHeight) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
 	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
@@ -817,7 +817,7 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, dou
 vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                        const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -874,7 +874,7 @@ vector<double> hitool::VerticalMinimum(const param& wantedParam, const vector<do
 vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, double lowerHeight,
                                        double upperHeight) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
 	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
@@ -885,7 +885,7 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, dou
 vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                        const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -950,7 +950,7 @@ vector<double> hitool::VerticalAverage(const params& wantedParamList, double low
 vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                        const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -1007,7 +1007,7 @@ vector<double> hitool::VerticalAverage(const param& wantedParam, const vector<do
 vector<double> hitool::VerticalSum(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                    const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -1072,7 +1072,7 @@ vector<double> hitool::VerticalSum(const param& wantedParam, const vector<double
 vector<double> hitool::VerticalCount(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                      const vector<double>& lastLevelValue, const vector<double>& findValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -1140,7 +1140,7 @@ vector<double> hitool::VerticalCount(const params& wantedParamList, double first
 
 vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, double wantedHeight) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	vector<double> heightInfo(itsConfiguration->Info()->Grid()->Size(), wantedHeight);
 
@@ -1149,7 +1149,7 @@ vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, doubl
 
 vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const vector<double>& heightInfo) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -1212,7 +1212,7 @@ vector<double> hitool::PlusMinusArea(const params& wantedParamList, double lower
 vector<double> hitool::PlusMinusArea(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                      const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 

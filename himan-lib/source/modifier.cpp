@@ -46,7 +46,7 @@ modifier::modifier(HPModifierType theModifierType)
 
 const std::vector<double>& modifier::Result() const
 {
-	assert(itsResult.size());
+	ASSERT(itsResult.size());
 
 	return itsResult;
 }
@@ -137,14 +137,14 @@ size_t modifier::FindNth() const { return itsFindNthValue; }
 void modifier::FindNth(size_t theNth) { itsFindNthValue = theNth; }
 double modifier::Value() const
 {
-	assert(itsIndex < itsResult.size());
+	ASSERT(itsIndex < itsResult.size());
 
 	return itsResult[itsIndex];
 }
 
 void modifier::Value(double theValue)
 {
-	assert(itsIndex < itsResult.size());
+	ASSERT(itsIndex < itsResult.size());
 
 	itsResult[itsIndex] = theValue;
 }
@@ -153,7 +153,7 @@ void modifier::Init(const std::vector<double>& theData, const std::vector<double
 {
 	if (itsResult.size() == 0)
 	{
-		assert(theData.size() == theHeights.size());
+		ASSERT(theData.size() == theHeights.size());
 
 		itsResult.resize(theData.size(), MissingDouble());
 		itsOutOfBoundHeights.resize(theData.size(), false);
@@ -171,9 +171,9 @@ void modifier::Init(const std::vector<double>& theData, const std::vector<double
 
 bool modifier::Evaluate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight)
 {
-	assert(itsIndex < itsOutOfBoundHeights.size());
-	assert(itsIndex < itsLowerHeight.size());
-	assert(itsIndex < itsUpperHeight.size());
+	ASSERT(itsIndex < itsOutOfBoundHeights.size());
+	ASSERT(itsIndex < itsLowerHeight.size());
+	ASSERT(itsIndex < itsUpperHeight.size());
 
 	if (itsOutOfBoundHeights[itsIndex])
 	{
@@ -183,7 +183,7 @@ bool modifier::Evaluate(double theValue, double theHeight, double thePreviousVal
 	const double lowerLimit = itsLowerHeight[itsIndex];
 	const double upperLimit = itsUpperHeight[itsIndex];
 
-	assert((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit));
+	ASSERT((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit));
 
 	if (IsMissing(theHeight) || IsMissing(theValue))
 	{
@@ -228,7 +228,7 @@ void modifier::Process(const std::vector<double>& theData, const std::vector<dou
 {
 	Init(theData, theHeights);
 
-	// assert(itsResult.size() == theData.size() && itsResult.size() == theHeights.size());
+	// ASSERT(itsResult.size() == theData.size() && itsResult.size() == theHeights.size());
 
 	for (itsIndex = 0; itsIndex < theData.size(); itsIndex++)
 	{
@@ -272,7 +272,7 @@ void modifier::InitializeHeights()
 {
 	// Absurd default limits if user has not specified any limits
 
-	assert(itsResult.size());
+	ASSERT(itsResult.size());
 
 	double min = (itsHeightInMeters) ? DEFAULT_MINIMUM : DEFAULT_MAXIMUM;
 	double max = (itsHeightInMeters) ? DEFAULT_MAXIMUM : DEFAULT_MINIMUM;
@@ -572,7 +572,7 @@ void modifier_count::Init(const std::vector<double>& theData, const std::vector<
 
 void modifier_count::Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight)
 {
-	assert(itsFindValue.size());
+	ASSERT(itsFindValue.size());
 	double findValue = itsFindValue[itsIndex];
 
 	// First level
@@ -636,8 +636,8 @@ void modifier_findheight::Init(const std::vector<double>& theData, const std::ve
 {
 	if (itsResult.size() == 0)
 	{
-		assert(theData.size() == theHeights.size());
-		assert(theData.size());
+		ASSERT(theData.size() == theHeights.size());
+		ASSERT(theData.size());
 
 		modifier::Init(theData, theHeights);
 
@@ -660,7 +660,7 @@ void modifier_findheight::Init(const std::vector<double>& theData, const std::ve
 void modifier_findheight::Calculate(double theValue, double theHeight, double thePreviousValue,
                                     double thePreviousHeight)
 {
-	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+	ASSERT(itsFindValue.size() && itsIndex < itsFindValue.size());
 
 	double findValue = itsFindValue[itsIndex];
 
@@ -698,8 +698,8 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 
 		if (!IsMissing(actualHeight))
 		{
-			assert(!itsHeightInMeters || (actualHeight >= lowerLimit && actualHeight <= upperLimit));
-			assert(itsHeightInMeters || (actualHeight <= lowerLimit && actualHeight >= upperLimit));
+			ASSERT(!itsHeightInMeters || (actualHeight >= lowerLimit && actualHeight <= upperLimit));
+			ASSERT(itsHeightInMeters || (actualHeight <= lowerLimit && actualHeight >= upperLimit));
 
 			if (itsFindNthValue != 0)
 			{
@@ -736,7 +736,7 @@ void modifier_findheight_gt::FindNth(size_t theNth)
 void modifier_findheight_gt::Calculate(double theValue, double theHeight, double thePreviousValue,
                                        double thePreviousHeight)
 {
-	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+	ASSERT(itsFindValue.size() && itsIndex < itsFindValue.size());
 	const double findValue = itsFindValue[itsIndex];
 
 	if (itsFindNthValue > 0 && !IsMissing(Value()))
@@ -850,7 +850,7 @@ void modifier_findheight_lt::FindNth(size_t theNth)
 void modifier_findheight_lt::Calculate(double theValue, double theHeight, double thePreviousValue,
                                        double thePreviousHeight)
 {
-	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+	ASSERT(itsFindValue.size() && itsIndex < itsFindValue.size());
 	const double findValue = itsFindValue[itsIndex];
 
 	if (itsFindNthValue > 0 && !IsMissing(Value()))
@@ -954,11 +954,11 @@ void modifier_findvalue::Init(const std::vector<double>& theData, const std::vec
 {
 	if (itsResult.size() == 0)
 	{
-		assert(theData.size() == theHeights.size());
+		ASSERT(theData.size() == theHeights.size());
 
 		modifier::Init(theData, theHeights);
 
-		assert(itsFindValue.size());
+		ASSERT(itsFindValue.size());
 
 		double lowestHeight = DEFAULT_MAXIMUM;  // sic
 		double highestHeight = DEFAULT_MINIMUM;
@@ -1024,7 +1024,7 @@ bool modifier_findvalue::CalculationFinished() const
 
 void modifier_findvalue::Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight)
 {
-	assert(itsFindValue.size() && itsIndex < itsFindValue.size());
+	ASSERT(itsFindValue.size() && itsIndex < itsFindValue.size());
 
 	double findHeight = itsFindValue[itsIndex];
 

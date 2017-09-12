@@ -98,7 +98,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		PScale = 100;
 	}
 
-	assert(TInfo->Grid()->AB() == VVInfo->Grid()->AB() &&
+	ASSERT(TInfo->Grid()->AB() == VVInfo->Grid()->AB() &&
 	       (isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB()));
 
 	SetAB(myTargetInfo, TInfo);

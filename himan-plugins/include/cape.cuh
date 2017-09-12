@@ -96,7 +96,7 @@ inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparc
 	double value = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 	value = fmin(150, fmax(-150., value));
 
-	assert(!isnan(value) && !isinf(value));
+	ASSERT(!isnan(value) && !isinf(value));
 
 	return value;
 }
@@ -153,11 +153,11 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 	}
 
 	Zenv = intersectionZ.Y();
-	assert(fabs(intersectionZ.X() - intersectionP.X()) < 1.);
+	ASSERT(fabs(intersectionZ.X() - intersectionP.X()) < 1.);
 	double value = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
 	value = fmin(150, fmax(-150., value));
 
-	assert(!isnan(value) && !isinf(value));
+	ASSERT(!isnan(value) && !isinf(value));
 
 	out_value = value;
 	out_ELT = intersectionP.X();
@@ -220,15 +220,15 @@ inline double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, dou
 		}
 	}
 
-	assert(newTparcel >= newTenv);
-	assert(areaUpperLimit > prevZenv);
+	ASSERT(newTparcel >= newTenv);
+	ASSERT(areaUpperLimit > prevZenv);
 
 	double CAPE = himan::constants::kG * (areaUpperLimit - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
 
 	CAPE = fmin(CAPE, 150.);
 
-	assert(CAPE >= 0.);
-	assert(CAPE <= 150);
+	ASSERT(CAPE >= 0.);
+	ASSERT(CAPE <= 150);
 
 	return CAPE;
 }
@@ -314,15 +314,15 @@ inline double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTen
 		}
 	}
 
-	assert(Tparcel >= Tenv);
-	assert(Zenv >= newPrevZenv);
+	ASSERT(Tparcel >= Tenv);
+	ASSERT(Zenv >= newPrevZenv);
 
 	double CAPE = himan::constants::kG * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
 	CAPE = fmin(CAPE, 150.);
 
-	assert(Zenv >= prevZenv);
-	assert(CAPE >= 0.);
-	assert(CAPE <= 150.);
+	ASSERT(Zenv >= prevZenv);
+	ASSERT(CAPE >= 0.);
+	ASSERT(CAPE <= 150.);
 
 	return CAPE;
 }
@@ -397,16 +397,16 @@ inline double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv
 		}
 	}
 
-	assert(Tparcel >= Tenv);
-	assert(newZenv <= Zenv);
-	assert(newZenv >= prevZenv);
+	ASSERT(Tparcel >= Tenv);
+	ASSERT(newZenv <= Zenv);
+	ASSERT(newZenv >= prevZenv);
 
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((newTparcel - areaLimit) / areaLimit);
-	assert(CAPE >= 0.);
+	ASSERT(CAPE >= 0.);
 
 	CAPE = fmin(CAPE, 150.);
 
-	assert(CAPE <= 150.);
+	ASSERT(CAPE <= 150.);
 
 	return CAPE;
 }
@@ -417,7 +417,7 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 {
 	double C = 0;
 
-	assert((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
+	ASSERT((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 
 	if (Tparcel < Tenv && prevTparcel < prevTenv)
 	{
@@ -452,7 +452,7 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 			{
 				// Firmly in the cold zone
 				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-				assert(C >= 0.);
+				ASSERT(C >= 0.);
 			}
 		}
 		else if ((prevTenv > coldColderLimit &&
@@ -558,7 +558,7 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 	out_ELT = himan::MissingDouble();
 	out_ELP = himan::MissingDouble();
 
-	assert((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
+	ASSERT((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 
 	if (Tparcel < Tenv && prevTparcel < prevTenv)
 	{
@@ -587,7 +587,7 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 		                             out_ELT, out_ELP);
 	}
 
-	assert(out_CAPE >= 0);
+	ASSERT(out_CAPE >= 0);
 }
 
 CUDA_DEVICE

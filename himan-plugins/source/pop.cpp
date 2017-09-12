@@ -431,7 +431,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		                  _K8 * harmonie) /
 		                 (_K1 + _K2 + _K3 + _K4 + K5 + _K6 + _K7 + _K8);
 
-		assert(out_confidence <= 1.01);
+		ASSERT(out_confidence <= 1.01);
 
 		if (out_confidence > 0)
 		{
@@ -482,8 +482,8 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			continue;
 		}
 
-		assert(out_confidence <= 1.01);
-		assert(out_area <= 1.01);
+		ASSERT(out_confidence <= 1.01);
+		ASSERT(out_area <= 1.01);
 
 		double PoP = out_confidence * out_area * 100;
 
@@ -492,10 +492,10 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			PoP = (3 * PoP + 0.5 * rr_ecprob1 + 0.5 * rr_ecprob01) * 0.25;
 		}
 
-		assert(PoP <= 100.01);
+		ASSERT(PoP <= 100.01);
 
 		long step = forecastTime.Step();
-		assert(forecastTime.StepResolution() == kHourResolution);
+		ASSERT(forecastTime.StepResolution() == kHourResolution);
 
 		// AJALLISESTI KAUKAISTEN SUURTEN POPPIEN PIENENT�MIST� - Kohta 1
 

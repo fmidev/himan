@@ -91,7 +91,7 @@ bool grid::EqualsTo(const grid& other) const
 
 packed_data& grid::PackedData()
 {
-	assert(itsPackedData);
+	ASSERT(itsPackedData);
 	return *itsPackedData;
 }
 

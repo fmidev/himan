@@ -38,7 +38,7 @@ void neons::Init()
 		catch (int e)
 		{
 			itsLogger.Fatal("Failed to get connection");
-			abort();
+			himan::Abort();
 		}
 
 		itsInit = true;
@@ -364,7 +364,7 @@ bool neons::Save(const info& resultInfo, const string& theFileName)
 
 				itsNeonsDB->Rollback();
 
-				abort();
+				himan::Abort();
 			}
 		}
 		else

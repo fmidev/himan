@@ -67,7 +67,7 @@ string plugin_configuration::GetValue(const string& key) const
 		throw runtime_error("Key '" + key + "' is a multi-value key");
 	}
 
-	assert(iter->second.size() == 1);
+	ASSERT(iter->second.size() == 1);
 	return iter->second[0];
 }
 
@@ -194,7 +194,7 @@ void plugin_configuration::WriteStatistics()
 		writingThreads = ", average over used threads";
 	}
 
-	assert(itsStatistics->itsValueCount >= itsStatistics->itsMissingValueCount);
+	ASSERT(itsStatistics->itsValueCount >= itsStatistics->itsMissingValueCount);
 
 	cout << "Thread count:\t\t" << itsStatistics->itsUsedThreadCount << endl
 	     << "Used GPU count:\t\t" << itsStatistics->itsUsedGPUCount << endl

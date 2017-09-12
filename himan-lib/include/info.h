@@ -742,10 +742,10 @@ class info
 inline std::ostream& operator<<(std::ostream& file, const info& ob) { return ob.Write(file); }
 inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
-	assert(forecastTypeIndex != kIteratorResetValue);
-	assert(timeIndex != kIteratorResetValue);
-	assert(levelIndex != kIteratorResetValue);
-	assert(paramIndex != kIteratorResetValue);
+	ASSERT(forecastTypeIndex != kIteratorResetValue);
+	ASSERT(timeIndex != kIteratorResetValue);
+	ASSERT(levelIndex != kIteratorResetValue);
+	ASSERT(paramIndex != kIteratorResetValue);
 
 	return (paramIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() +
 	        levelIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() +
@@ -755,13 +755,13 @@ inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, siz
 inline size_t himan::info::Index() const { return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex()); }
 inline grid* info::Grid() const
 {
-	assert(itsDimensions.size());
+	ASSERT(itsDimensions.size());
 	return itsDimensions[Index()].get();
 }
 
 inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
-	assert(itsDimensions.size());
+	ASSERT(itsDimensions.size());
 	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
 }
 

@@ -15,6 +15,7 @@
 #include "fetcher.h"
 #include "hitool.h"
 #include "radon.h"
+#include "debug.h"
 
 #include "cape.cuh"
 
@@ -394,9 +395,9 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	}
 
 #ifdef DEBUG
-	assert(lfcz_.size() == elz_.size());
-	assert(cape_.size() == elz_.size());
-	assert(cin_.size() == elz_.size());
+	ASSERT(lfcz_.size() == elz_.size());
+	ASSERT(cape_.size() == elz_.size());
+	ASSERT(cin_.size() == elz_.size());
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
@@ -406,10 +407,10 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		// * If both are present, LFC must be below EL
 		// * CAPE must be zero or positive real value
 		// * CIN must be zero or negative real value
-		assert((IsMissingDouble(lfcz_[i]) && IsMissingDouble(elz_[i])) ||
+		ASSERT((IsMissingDouble(lfcz_[i]) && IsMissingDouble(elz_[i])) ||
 		       (!IsMissingDouble(lfcz_[i]) && !IsMissingDouble(elz_[i]) && (lfcz_[i] < elz_[i])));
-		assert(cape_[i] >= 0);
-		assert(cin_[i] <= 0);
+		ASSERT(cape_[i] >= 0);
+		ASSERT(cin_[i] <= 0);
 	}
 #endif
 
@@ -552,12 +553,12 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 			double& cin = tup.get<0>();
 
 			double Tenv = tup.get<1>();  // K
-			assert(Tenv >= 100.);
+			ASSERT(Tenv >= 100.);
 
 			double prevTenv = tup.get<2>();
 
 			double Penv = tup.get<3>();  // hPa
-			assert(Penv < 1200.);
+			ASSERT(Penv < 1200.);
 
 			double prevPenv = tup.get<4>();
 
@@ -565,7 +566,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 			double prevZenv = tup.get<6>();  // m
 
 			double Tparcel = tup.get<7>();  // K
-			assert(Tparcel >= 100. || IsMissingDouble(Tparcel));
+			ASSERT(Tparcel >= 100. || IsMissingDouble(Tparcel));
 
 			double prevTparcel = tup.get<8>();  // K
 
@@ -600,7 +601,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 				    himan::numerical_functions::interpolation::Linear(PLFC[i], prevPenv, Penv, prevTparcel, Tparcel);
 
 				Penv = PLFC[i];
-				assert(Zenv > prevZenv);
+				ASSERT(Zenv > prevZenv);
 			}
 
 			if (IsMissingDouble(Tparcel))
@@ -616,7 +617,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 			}
 
 			cin += CAPE::CalcCIN(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
-			assert(cin <= 0);
+			ASSERT(cin <= 0);
 		}
 
 		foundCount = count(found.begin(), found.end(), true);
@@ -679,7 +680,7 @@ void cape::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>, vec
 void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, param ELTParam,
                       param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
-	assert(T.size() == P.size());
+	ASSERT(T.size() == P.size());
 
 	auto h = GET_PLUGIN(hitool);
 
@@ -755,25 +756,25 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			i++;
 
 			double Tenv = tup.get<5>();  // K
-			assert(Tenv > 100.);
+			ASSERT(Tenv > 100.);
 
 			double prevTenv = tup.get<3>();  // K
-			assert(prevTenv > 100.);
+			ASSERT(prevTenv > 100.);
 
 			double Penv = tup.get<0>();  // hPa
-			assert(Penv < 1200.);
+			ASSERT(Penv < 1200.);
 
 			double prevPenv = tup.get<4>();  // hPa
-			assert(prevPenv < 1200.);
+			ASSERT(prevPenv < 1200.);
 
 			double Zenv = tup.get<1>();      // m
 			double prevZenv = tup.get<2>();  // m
 
 			double Tparcel = tup.get<6>();  // K
-			assert(Tparcel > 100.);
+			ASSERT(Tparcel > 100.);
 
 			double prevTparcel = tup.get<7>();  // K
-			assert(prevTparcel > 100.);
+			ASSERT(prevTparcel > 100.);
 
 			if (found[i] & FCAPE)
 			{
@@ -827,16 +828,16 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 				CAPE3km[i] += C;
 
-				assert(CAPE3km[i] < 3000.);  // 3000J/kg, not 3000m
-				assert(CAPE3km[i] >= 0);
+				ASSERT(CAPE3km[i] < 3000.);  // 3000J/kg, not 3000m
+				ASSERT(CAPE3km[i] >= 0);
 			}
 
 			double C = CAPE::CalcCAPE1040(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 
 			CAPE1040[i] += C;
 
-			assert(CAPE1040[i] < 5000.);
-			assert(CAPE1040[i] >= 0);
+			ASSERT(CAPE1040[i] < 5000.);
+			ASSERT(CAPE1040[i] >= 0);
 
 			double CAPEval, ELTval, ELPval;
 
@@ -845,8 +846,8 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 			CAPE[i] += CAPEval;
 
-			assert(CAPEval >= 0.);
-			assert(CAPE[i] < 8000);
+			ASSERT(CAPEval >= 0.);
+			ASSERT(CAPE[i] < 8000);
 
 			if (!IsMissingDouble(ELTval))
 			{
@@ -907,7 +908,7 @@ pair<vector<double>, vector<double>> cape::GetLFC(shared_ptr<info> myTargetInfo,
 {
 	auto h = GET_PLUGIN(hitool);
 
-	assert(T.size() == P.size());
+	ASSERT(T.size() == P.size());
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
@@ -949,7 +950,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 {
 	auto h = GET_PLUGIN(hitool);
 
-	assert(T.size() == P.size());
+	ASSERT(T.size() == P.size());
 
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
@@ -1031,23 +1032,23 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			if (found[i]) continue;
 
 			double Tenv = tup.get<0>();  // K
-			assert(Tenv > 100.);
+			ASSERT(Tenv > 100.);
 
 			double Penv = tup.get<1>();  // hPa
-			assert(Penv < 1200.);
-			assert(P[i] < 1200.);
+			ASSERT(Penv < 1200.);
+			ASSERT(P[i] < 1200.);
 
 			double prevPenv = tup.get<2>() * scale;
-			assert(prevPenv < 1200.);
+			ASSERT(prevPenv < 1200.);
 
 			double prevTenv = tup.get<3>();  // K
-			assert(prevTenv > 100.);
+			ASSERT(prevTenv > 100.);
 
 			double Tparcel = tup.get<4>();  // K
-			assert(Tparcel > 100. || IsMissingDouble(Tparcel));
+			ASSERT(Tparcel > 100. || IsMissingDouble(Tparcel));
 
 			double prevTparcel = tup.get<5>();  // K
-			assert(Tparcel > 100. || IsMissingDouble(Tparcel));
+			ASSERT(Tparcel > 100. || IsMissingDouble(Tparcel));
 
 			double& Tresult = tup.get<6>();
 			double& Presult = tup.get<7>();
@@ -1091,8 +1092,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					}
 				}
 
-				assert(!IsMissingDouble(Tresult));
-				assert(!IsMissingDouble(Presult));
+				ASSERT(!IsMissingDouble(Tresult));
+				ASSERT(!IsMissingDouble(Presult));
 			}
 			else if (curLevel.Value() < hPa450.first.Value() && (Tenv - Tparcel) > 30.)
 			{
@@ -1277,9 +1278,9 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 			if (found[i]) continue;
 			if (IsMissingDouble(T[i]) || IsMissingDouble(P[i]) || IsMissingDouble(RH[i])) continue;
 
-			assert(T[i] > 150 && T[i] < 350);
-			assert(P[i] > 100 && P[i] < 1500);
-			assert(RH[i] > 0 && RH[i] < 102);
+			ASSERT(T[i] > 150 && T[i] < 350);
+			ASSERT(P[i] > 100 && P[i] < 1500);
+			ASSERT(RH[i] > 0 && RH[i] < 102);
 
 			Tpot[i] = metutil::Theta_(T[i], 100 * P[i]);
 			MR[i] = metutil::smarttool::MixingRatio_(T[i], RH[i], 100 * P[i]);
@@ -1290,14 +1291,14 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 		foundCount = tp.HeightsCrossed();
 
-		assert(tp.HeightsCrossed() == mr.HeightsCrossed());
+		ASSERT(tp.HeightsCrossed() == mr.HeightsCrossed());
 
 		itsLogger.Debug("Data read " + boost::lexical_cast<string>(foundCount) + "/" +
 		                boost::lexical_cast<string>(found.size()) + " gridpoints");
 
 		for (size_t i = 0; i < found.size(); i++)
 		{
-			assert((P[i] > 100 && P[i] < 1500) || IsMissingDouble(P[i]));
+			ASSERT((P[i] > 100 && P[i] < 1500) || IsMissingDouble(P[i]));
 
 			if (found[i])
 			{
@@ -1320,7 +1321,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 	for (size_t i = 0; i < Tpot.size(); i++)
 	{
-		assert((P[i] > 100 && P[i] < 1500) || IsMissingDouble(P[i]));
+		ASSERT((P[i] > 100 && P[i] < 1500) || IsMissingDouble(P[i]));
 		if (!IsMissingDouble(Tpot[i]) && !IsMissingDouble(P[i]))
 		{
 			T[i] = Tpot[i] * pow((P[i] / 1000.), 0.2854);
@@ -1439,7 +1440,7 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 
 			double TD = metutil::DewPointFromRH_(T, RH);
 			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P * 100);
-			assert(ThetaE >= 0);
+			ASSERT(ThetaE >= 0);
 
 			if (ThetaE >= refThetaE)
 			{
@@ -1448,7 +1449,7 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 				TDresult = TD;
 				Presult = P;
 
-				assert(TDresult > 100);
+				ASSERT(TDresult > 100);
 			}
 		}
 

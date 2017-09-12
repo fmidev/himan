@@ -150,8 +150,8 @@ __device__ double NearestPointInterpolation(const double* __restrict__ d_source,
 	int rx = rint(gp.x);
 	int ry = rint(gp.y);
 
-	assert(rx >= 0 && rx <= sourceInfo.size_x);
-	assert(ry >= 0 && ry <= sourceInfo.size_y);
+	ASSERT(rx >= 0 && rx <= sourceInfo.size_x);
+	ASSERT(ry >= 0 && ry <= sourceInfo.size_y);
 
 	double npValue = d_source[Index(rx, ry, sourceInfo.size_x)];
 
@@ -204,8 +204,8 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 
 	point dist(gp.x - c.x, gp.y - c.y);
 
-	assert(dist.x >= 0 && dist.x <= 1);
-	assert(dist.y >= 0 && dist.y <= 1);
+	ASSERT(dist.x >= 0 && dist.x <= 1);
+	ASSERT(dist.y >= 0 && dist.y <= 1);
 
 	// If interpolated point is very close to source grid point, pick
 	// the point value directly
@@ -419,8 +419,8 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 #endif
 		d_target[idx] = interp;
 
-		assert(interp == interp || IsMissingDouble(interp));  // no NaN
-		assert(interp < 1e30 || IsMissingDouble(interp));     // No crazy values
+		ASSERT(interp == interp || IsMissingDouble(interp));  // no NaN
+		ASSERT(interp < 1e30 || IsMissingDouble(interp));     // No crazy values
 	}
 }
 
@@ -466,7 +466,7 @@ bool InterpolateAreaGPU(himan::info& base, himan::info& source, himan::matrix<do
 	auto targetInfo = base.ToSimple();
 	targetInfo->values = targetData.ValuesAsPOD();
 
-	assert(targetInfo->values);
+	ASSERT(targetInfo->values);
 
 	PrepareInfo(sourceInfo, d_source, stream);
 	PrepareInfo(targetInfo);
@@ -639,7 +639,7 @@ void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
 			const double latin2 = GetStandardParallel(UInfo.Grid(), 2);
 			const double orientation = GetOrientation(UInfo.Grid());
 
-			assert(!himan::IsKHPMissingValue(latin1) && !himan::IsKHPMissingValue(orientation));
+			ASSERT(!himan::IsKHPMissingValue(latin1) && !himan::IsKHPMissingValue(orientation));
 			double cone;
 
 			using himan::constants::kDeg;

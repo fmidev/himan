@@ -165,10 +165,10 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		return;
 	}
 
-	assert(TInfo->Param().Unit() == kK);
-	assert(T700Info->Param().Unit() == kK);
-	assert(T850Info->Param().Unit() == kK);
-	assert(T925Info->Param().Unit() == kK);
+	ASSERT(TInfo->Param().Unit() == kK);
+	ASSERT(T700Info->Param().Unit() == kK);
+	ASSERT(T850Info->Param().Unit() == kK);
+	ASSERT(T925Info->Param().Unit() == kK);
 
 	double WScale = 1;
 
@@ -177,7 +177,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		WScale = 1000;
 	}
 
-	assert(W850Info->Param().Name() == W925Info->Param().Name());
+	ASSERT(W850Info->Param().Name() == W925Info->Param().Name());
 
 	// In Hirlam parameter name is RH-PRCNT but data is still 0 .. 1
 	double RHScale = 100;

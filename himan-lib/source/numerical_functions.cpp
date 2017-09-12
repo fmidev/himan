@@ -29,14 +29,14 @@ void integral::Function(std::function<std::valarray<double>(const std::vector<st
 
 const std::valarray<double>& integral::Result() const
 {
-	assert(itsResult.size());
+	ASSERT(itsResult.size());
 
 	return itsResult;
 }
 
 void integral::Evaluate()
 {
-	assert(Complete());
+	ASSERT(Complete());
 
 	auto f = GET_PLUGIN(fetcher);
 
@@ -232,7 +232,7 @@ void integral::UpperLevelLimit(int theHighestLevel)
 
 void integral::SetLevelLimits()
 {
-	assert(itsComplete[0] && itsComplete[1]);
+	ASSERT(itsComplete[0] && itsComplete[1]);
 
 	producer prod = itsConfiguration->SourceProducer(0);
 
@@ -251,7 +251,7 @@ void integral::SetLevelLimits()
 	itsHighestLevel = static_cast<int>(levelsForMaxHeight.second.Value());
 	itsLowestLevel = static_cast<int>(levelsForMinHeight.first.Value());
 
-	assert(itsLowestLevel >= itsHighestLevel);
+	ASSERT(itsLowestLevel >= itsHighestLevel);
 	itsComplete[2] = true;
 	itsComplete[3] = true;
 }
@@ -412,7 +412,7 @@ std::pair<level, level> integral::LevelForHeight(const producer& prod, double he
 		}
 	}
 
-	assert(newlowest >= newhighest);
+	ASSERT(newlowest >= newhighest);
 
 	return std::make_pair<level, level>(level(kHybrid, newlowest), level(kHybrid, newhighest));
 }
@@ -440,7 +440,7 @@ matrix<double> numerical_functions::Filter2D(const matrix<double>& A, const matr
 	{
 		// calculate for inner field
 		// the weights are used as given on input
-		// assert (sum(B) == 1)
+		// ASSERT (sum(B) == 1)
 		for (int j = kCenterY; j < ASizeY - kCenterY; ++j)  // columns
 		{
 			for (int i = kCenterX; i < ASizeX - kCenterX; ++i)  // rows
@@ -665,9 +665,9 @@ himan::matrix<double> numerical_functions::Max2D(const himan::matrix<double>& A,
 
 	// calculate for inner field
 	// the weights are used as given on input
-	// assert (sum(B) == 1)
+	// ASSERT (sum(B) == 1)
 
-	assert(B.MissingCount() == 0);
+	ASSERT(B.MissingCount() == 0);
 
 	for (int j = kCenterY; j < ASizeY - kCenterY; ++j)  // columns
 	{
@@ -869,9 +869,9 @@ himan::matrix<double> numerical_functions::Min2D(const himan::matrix<double>& A,
 
 	// calculate for inner field
 	// the weights are used as given on input
-	// assert (sum(B) == 1)
+	// ASSERT (sum(B) == 1)
 
-	assert(B.MissingCount() == 0);
+	ASSERT(B.MissingCount() == 0);
 
 	for (int j = kCenterY; j < ASizeY - kCenterY; ++j)  // columns
 	{

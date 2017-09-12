@@ -41,7 +41,7 @@ void radon::Init()
 		catch (int e)
 		{
 			itsLogger.Fatal("Failed to get connection");
-			abort();
+			himan::Abort();
 		}
 
 		itsInit = true;

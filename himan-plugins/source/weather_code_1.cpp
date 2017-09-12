@@ -180,7 +180,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	if (paramStep == 3)
 	{
-		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
+		ASSERT(myTargetInfo->Time().StepResolution() == kHourResolution);
 
 		RRLimit1 = 0.1;
 		RRLimit2 = 0.5;
@@ -189,7 +189,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	}
 	else if (paramStep == 6)
 	{
-		assert(myTargetInfo->Time().StepResolution() == kHourResolution);
+		ASSERT(myTargetInfo->Time().StepResolution() == kHourResolution);
 
 		RRLimit1 = 0.2;
 		RRLimit2 = 1.;

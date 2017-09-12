@@ -189,14 +189,14 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		return;
 	}
 
-	assert(UInfo->Grid()->AB() == VInfo->Grid()->AB());
+	ASSERT(UInfo->Grid()->AB() == VInfo->Grid()->AB());
 
 	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
 	{
 		SetAB(myTargetInfo, UInfo);
 	}
 
-	assert(UInfo->Grid()->Type() == VInfo->Grid()->Type());
+	ASSERT(UInfo->Grid()->Type() == VInfo->Grid()->Type());
 
 	string deviceType;
 
@@ -278,7 +278,7 @@ shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const le
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
+			ASSERT(ret->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 

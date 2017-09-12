@@ -69,7 +69,7 @@ configuration::configuration(const configuration& other)
       itsAsyncExecution(other.itsAsyncExecution)
 
 {
-	assert(itsSourceProducerIterator);
+	ASSERT(itsSourceProducerIterator);
 	itsSourceProducerIterator->Set(other.itsSourceProducerIterator->Index());
 }
 

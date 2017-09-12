@@ -298,7 +298,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	}
 	else
 	{
-		assert(prevLevel.Value() > myTargetInfo->Level().Value());
+		ASSERT(prevLevel.Value() > myTargetInfo->Level().Value());
 		prevHV = VEC(prevHInfo);
 	}
 
@@ -372,7 +372,7 @@ void hybrid_height::Write(himan::info targetInfo)
 	using namespace himan;
 	auto aWriter = GET_PLUGIN(writer);
 
-	assert(itsConfiguration->FileWriteOption() != kSingleFile);
+	ASSERT(itsConfiguration->FileWriteOption() != kSingleFile);
 
 	targetInfo.ResetParam();
 

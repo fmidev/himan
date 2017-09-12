@@ -25,6 +25,7 @@
 #endif
 
 #include "cuda_helper.h"
+#include "debug.h"
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
 #include <math.h>

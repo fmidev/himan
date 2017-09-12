@@ -43,7 +43,7 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 		{
 			if (e != kFileDataNotFound)
 			{
-				abort();
+				himan::Abort();
 			}
 			else
 			{
