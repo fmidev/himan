@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.9.11
-Release: 1.el7.fmi
+Version: 17.9.12
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -111,6 +111,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-2.fmi
+- Bugfixes for grib / precipitation form
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-1.fmi
+- Bugfixes for grib, pot
 * Mon Sep 11 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.11-1.fmi
 - Replace kFloatMissing with nan
 * Thu Sep  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.7-1.fmi
