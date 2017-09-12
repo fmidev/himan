@@ -100,8 +100,8 @@ double metutil::RelativeTopography_(int level1, int level2, double z1, double z2
 
 int metutil::LowConvection_(double T0m, double T850)
 {
-	assert(T0m > 0);
-	assert(T850 > 0);
+	ASSERT(T0m > 0);
+	ASSERT(T850 > 0);
 
 	T0m -= constants::kKelvin;
 	T850 -= constants::kKelvin;

@@ -67,7 +67,7 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 
 	InitLua(myTargetInfo);
 
-	assert(myL.get());
+	ASSERT(myL.get());
 	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
 						  " level " + static_cast<std::string>(myTargetInfo->Level()));
 
@@ -101,7 +101,7 @@ void luatool::InitLua(info_t myTargetInfo)
 
 	lua_State* L = luaL_newstate();
 
-	assert(L);
+	ASSERT(L);
 
 	luaL_openlibs(L);
 
@@ -157,7 +157,7 @@ bool luatool::ReadFile(const std::string& luaFile)
 
 	try
 	{
-		assert(myL.get());
+		ASSERT(myL.get());
 		if (luaL_dofile(myL.get(), luaFile.c_str()))
 		{
 			itsLogger.Error(lua_tostring(myL.get(), -1));
@@ -1234,7 +1234,7 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 
 object VectorToTable(const std::vector<double>& vec)
 {
-	assert(myL.get());
+	ASSERT(myL.get());
 
 	object ret = newtable(myL.get());
 
@@ -1261,7 +1261,7 @@ object VectorToTable(const std::vector<double>& vec)
 
 std::vector<double> TableToVector(const object& table)
 {
-	assert(table.is_valid());
+	ASSERT(table.is_valid());
 
 	if (type(table) == 0)
 	{

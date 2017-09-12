@@ -85,10 +85,10 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(localInfo, activeOnly);
 	NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(localInfo, activeOnly);
 
-	assert(pdesc.Size());
-	assert(tdesc.Size());
-	assert(hdesc.Size());
-	assert(vdesc.Size());
+	ASSERT(pdesc.Size());
+	ASSERT(tdesc.Size());
+	ASSERT(hdesc.Size());
+	ASSERT(vdesc.Size());
 
 	if (pdesc.Size() == 0)
 	{
@@ -176,7 +176,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 
 bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const
 {
-	assert(theInfo.Data().Size() == qinfo.SizeLocations());
+	ASSERT(theInfo.Data().Size() == qinfo.SizeLocations());
 
 	// convert missing value to kFloatMissing
 	theInfo.Grid()->Data().MissingValue(kFloatMissing);
@@ -193,7 +193,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 
 	if (theInfo.Grid()->Class() == kRegularGrid && theInfo.Grid()->ScanningMode() != kBottomLeft)
 	{
-		assert(theInfo.Grid()->ScanningMode() == kTopLeft);
+		ASSERT(theInfo.Grid()->ScanningMode() == kTopLeft);
 
 		size_t nj = theInfo.Data().SizeY();
 		size_t ni = theInfo.Data().SizeX();
@@ -424,7 +424,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			break;
 	}
 
-	assert(theArea);
+	ASSERT(theArea);
 
 	NFmiGrid theGrid(theArea, info.Grid()->Ni(), info.Grid()->Nj());
 
@@ -660,7 +660,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 		default:
 			itsLogger.Fatal("Invalid projection");
-			abort();
+			himan::Abort();
 	}
 
 	newGrid->ScanningMode(kBottomLeft);
@@ -675,15 +675,15 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	for (newInfo->ResetTime(), qinfo.ResetTime(); newInfo->NextTime() && qinfo.NextTime();)
 	{
-		assert(newInfo->TimeIndex() == qinfo.TimeIndex());
+		ASSERT(newInfo->TimeIndex() == qinfo.TimeIndex());
 
 		for (newInfo->ResetLevel(), qinfo.ResetLevel(); newInfo->NextLevel() && qinfo.NextLevel();)
 		{
-			assert(newInfo->LevelIndex() == qinfo.LevelIndex());
+			ASSERT(newInfo->LevelIndex() == qinfo.LevelIndex());
 
 			for (newInfo->ResetParam(), qinfo.ResetParam(); newInfo->NextParam() && qinfo.NextParam();)
 			{
-				assert(newInfo->ParamIndex() == qinfo.ParamIndex());
+				ASSERT(newInfo->ParamIndex() == qinfo.ParamIndex());
 
 				matrix<double> dm(ni, nj, 1, static_cast<double>(32700.f));
 				size_t i;

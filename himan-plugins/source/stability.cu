@@ -110,11 +110,11 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	const int blockSize = 512;
 	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
 
-	assert(d_t500);
-	assert(d_t700);
-	assert(d_t850);
-	assert(d_td700);
-	assert(d_td850);
+	ASSERT(d_t500);
+	ASSERT(d_t700);
+	ASSERT(d_t850);
+	ASSERT(d_td700);
+	ASSERT(d_td850);
 
 	if (opts.li)
 	{
@@ -128,9 +128,9 @@ void himan::plugin::stability_cuda::Process(options& opts)
 		Prepare(opts.td500m, &d_td500m, memsize, stream);
 		Prepare(opts.p500m, &d_p500m, memsize, stream);
 
-		assert(d_t500m);
-		assert(d_td500m);
-		assert(d_p500m);
+		ASSERT(d_t500m);
+		ASSERT(d_td500m);
+		ASSERT(d_p500m);
 	}
 
 	if (opts.bs01)
@@ -203,7 +203,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 
 void himan::plugin::stability_cuda::Prepare(const double* source, double** devptr, size_t memsize, cudaStream_t& stream)
 {
-	assert(source);
+	ASSERT(source);
 	CUDA_CHECK(cudaMalloc((void**)devptr, memsize));
 	CUDA_CHECK(cudaMemcpyAsync((void*)*devptr, (const void*)source, memsize, cudaMemcpyHostToDevice, stream));
 }

@@ -91,7 +91,7 @@ class matrix
 
 	bool operator==(const matrix& other) const
 	{
-		assert(itsData.size() == other.itsData.size());
+		ASSERT(itsData.size() == other.itsData.size());
 
 		if (itsWidth != other.itsWidth || itsHeight != other.itsHeight || itsDepth != other.itsDepth ||
 		    !Compare(itsMissingValue, other.itsMissingValue))
@@ -115,7 +115,7 @@ class matrix
 	std::string ClassName() const { return "himan::matrix"; }
 	T At(size_t combinedIndex) const
 	{
-		assert(itsData.size() > combinedIndex);
+		ASSERT(itsData.size() > combinedIndex);
 		return itsData[combinedIndex];
 	}
 
@@ -146,7 +146,7 @@ class matrix
 			return;
 		}
 
-		assert(theValues.size() > 0);
+		ASSERT(theValues.size() > 0);
 
 		double min = 1e38;
 		double max = -1e38;
@@ -254,7 +254,7 @@ class matrix
 
 	T* ValuesAsPOD()
 	{
-		assert(itsData.size());
+		ASSERT(itsData.size());
 		return itsData.data();
 	}
 
@@ -287,7 +287,7 @@ class matrix
 	 */
 	void Set(const std::vector<T>& theData)
 	{
-		assert(itsData.size() == theData.size());
+		ASSERT(itsData.size() == theData.size());
 		itsData = theData;
 	}
 
@@ -308,7 +308,7 @@ class matrix
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
 		size_t index = Index(x, y, z);
-		assert(index < itsData.size());
+		ASSERT(index < itsData.size());
 		itsData[index] = theValue;
 	}
 
@@ -326,7 +326,7 @@ class matrix
 	void Set(size_t theIndex, T theValue)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
-		assert(theIndex < itsData.size());
+		ASSERT(theIndex < itsData.size());
 		itsData[theIndex] = theValue;
 	}
 
@@ -375,7 +375,7 @@ class matrix
 
 	bool IsMissing(size_t theIndex) const
 	{
-		assert(itsData.size() > theIndex);
+		ASSERT(itsData.size() > theIndex);
 		return Compare(itsData[theIndex], itsMissingValue);
 	}
 

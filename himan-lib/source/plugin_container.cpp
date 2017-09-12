@@ -21,7 +21,7 @@ std::shared_ptr<plugin::himan_plugin> plugin_container::Clone()
 {
 	::dlerror();  // clear error handle
 
-	assert(itsLibraryHandle);
+	ASSERT(itsLibraryHandle);
 	plugin::create_t* create_plugin = reinterpret_cast<plugin::create_t*>(dlsym(itsLibraryHandle, "create"));
 
 	if (!create_plugin)

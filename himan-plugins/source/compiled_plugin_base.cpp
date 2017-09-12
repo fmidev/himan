@@ -45,11 +45,11 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 	if (itsInfo->NextLevel())
 	{
 		bool ret = myTargetInfo.Level(itsInfo->Level());
-		assert(ret);
+		ASSERT(ret);
 		ret = myTargetInfo.Time(itsInfo->Time());
-		assert(ret);
+		ASSERT(ret);
 		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
-		assert(ret);
+		ASSERT(ret);
 
 		return ret;
 	}
@@ -61,11 +61,11 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 	if (itsInfo->NextTime())
 	{
 		bool ret = myTargetInfo.Time(itsInfo->Time());
-		assert(ret);
+		ASSERT(ret);
 		ret = myTargetInfo.Level(itsInfo->Level());
-		assert(ret);
+		ASSERT(ret);
 		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
-		assert(ret);
+		ASSERT(ret);
 
 		return ret;
 	}
@@ -78,11 +78,11 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 	if (itsInfo->NextForecastType())
 	{
 		bool ret = myTargetInfo.Time(itsInfo->Time());
-		assert(ret);
+		ASSERT(ret);
 		ret = myTargetInfo.Level(itsInfo->Level());
-		assert(ret);
+		ASSERT(ret);
 		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
-		assert(ret);
+		ASSERT(ret);
 
 		return ret;
 	}
@@ -106,9 +106,9 @@ bool compiled_plugin_base::NextExcludingLevel(info& myTargetInfo)
 	if (itsInfo->NextTime())
 	{
 		bool ret = myTargetInfo.Time(itsInfo->Time());
-		assert(ret);
+		ASSERT(ret);
 		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
-		assert(ret);
+		ASSERT(ret);
 
 		return ret;
 	}
@@ -121,9 +121,9 @@ bool compiled_plugin_base::NextExcludingLevel(info& myTargetInfo)
 	if (itsInfo->NextForecastType())
 	{
 		bool ret = myTargetInfo.Time(itsInfo->Time());
-		assert(ret);
+		ASSERT(ret);
 		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
-		assert(ret);
+		ASSERT(ret);
 
 		return ret;
 	}
@@ -255,7 +255,7 @@ void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadInde
 			AllocateMemory(*myTargetInfo);
 		}
 
-		assert(myTargetInfo->Data().Size() > 0);
+		ASSERT(myTargetInfo->Data().Size() > 0);
 
 		Calculate(myTargetInfo, threadIndex);
 
@@ -280,7 +280,7 @@ void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short 
 				AllocateMemory(*myTargetInfo);
 			}
 
-			assert(myTargetInfo->Data().Size() > 0);
+			ASSERT(myTargetInfo->Data().Size() > 0);
 
 			Calculate(myTargetInfo, threadIndex);
 
@@ -545,7 +545,7 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 			continue;
 		}
 
-		assert(tempInfo->Grid()->PackedData().ClassName() == "simple_packed");
+		ASSERT(tempInfo->Grid()->PackedData().ClassName() == "simple_packed");
 
 		util::Unpack({tempInfo->Grid()});
 
@@ -623,7 +623,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
+			ASSERT(ret->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 
@@ -658,7 +658,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->Grid()->IsPackedData())
 		{
-			assert(ret->Grid()->PackedData().ClassName() == "simple_packed");
+			ASSERT(ret->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({ret->Grid()});
 

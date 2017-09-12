@@ -23,7 +23,7 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 
 	ofstream out(theOutputFile);
 
-	assert(out.is_open());
+	ASSERT(out.is_open());
 
 	out << "#producer_id,origintime,station_id,station_name,longitude,latitude,param_name,level_name,level_value,level_"
 	       "value2,"

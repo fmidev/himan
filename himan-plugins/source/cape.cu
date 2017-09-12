@@ -24,6 +24,8 @@
 #include "fetcher.h"
 #include "hitool.h"
 
+#include "debug.h"
+
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
@@ -83,7 +85,7 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 	auto h_info = fullInfo->ToSimple();
 	size_t N = h_info->size_x * h_info->size_y;
 
-	assert(N > 0);
+	ASSERT(N > 0);
 
 	// 1. Reserve memory at device for unpacked data
 	double* d_arr = 0;
@@ -94,15 +96,15 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 
 	if (tempGrid->IsPackedData())
 	{
-		assert(tempGrid->PackedData().ClassName() == "simple_packed" ||
+		ASSERT(tempGrid->PackedData().ClassName() == "simple_packed" ||
 		       tempGrid->PackedData().ClassName() == "jpeg_packed");
-		assert(N > 0);
-		assert(tempGrid->Data().Size() == N);
+		ASSERT(N > 0);
+		ASSERT(tempGrid->Data().Size() == N);
 
 		double* arr = const_cast<double*>(tempGrid->Data().ValuesAsPOD());
 		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
 
-		assert(arr);
+		ASSERT(arr);
 
 		tempGrid->PackedData().Unpack(d_arr, N, &stream);
 
@@ -173,19 +175,19 @@ __global__ void LiftLCLKernel(const double* __restrict__ d_P, const double* __re
 
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
-		assert(d_P[idx] > 10);
-		assert(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
+		ASSERT(d_P[idx] > 10);
+		ASSERT(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
 
-		assert(d_Ptarget.values[idx] > 10);
-		assert(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
+		ASSERT(d_Ptarget.values[idx] > 10);
+		ASSERT(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
 
-		assert(d_T[idx] > 100);
-		assert(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
+		ASSERT(d_T[idx] > 100);
+		ASSERT(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
 
 		double T = metutil::LiftLCL_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
 
-		assert(T > 100);
-		assert(T < 350 || IsMissingDouble(T));
+		ASSERT(T > 100);
+		ASSERT(T < 350 || IsMissingDouble(T));
 
 		d_Tparcel[idx] = T;
 	}
@@ -196,24 +198,24 @@ __global__ void MoistLiftKernel(const double* __restrict__ d_T, const double* __
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	assert(d_T);
-	assert(d_P);
+	ASSERT(d_T);
+	ASSERT(d_P);
 
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
-		assert(d_P[idx] > 10);
-		assert(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
+		ASSERT(d_P[idx] > 10);
+		ASSERT(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
 
-		assert(d_Ptarget.values[idx] > 10);
-		assert(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
+		ASSERT(d_Ptarget.values[idx] > 10);
+		ASSERT(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
 
-		assert(d_T[idx] > 100);
-		assert(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
+		ASSERT(d_T[idx] > 100);
+		ASSERT(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
 
 		double T = metutil::MoistLiftA_(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
 
-		assert(T > 100);
-		assert(T < 350 || IsMissingDouble(T));
+		ASSERT(T > 100);
+		ASSERT(T < 350 || IsMissingDouble(T));
 
 		d_Tparcel[idx] = T;
 	}
@@ -232,32 +234,32 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 	if (idx < d_Tenv.size_x * d_Tenv.size_y && d_found[idx] != 4)
 	{
 		double Tenv = d_Tenv.values[idx];
-		assert(Tenv > 100.);
+		ASSERT(Tenv > 100.);
 
 		double Penv = d_Penv.values[idx];  // hPa
-		assert(Penv < 1200.);
+		ASSERT(Penv < 1200.);
 
 		double Zenv = d_Zenv.values[idx];  // m
 
 		double prevTenv = d_prevTenv.values[idx];  // K
-		assert(prevTenv > 100.);
+		ASSERT(prevTenv > 100.);
 
 		double prevPenv = d_prevPenv.values[idx];  // hPa
-		assert(prevPenv < 1200.);
+		ASSERT(prevPenv < 1200.);
 
 		double prevZenv = d_prevZenv.values[idx];  // m
 
 		double Tparcel = d_Tparcel[idx];  // K
-		assert(Tparcel > 100. || IsMissingDouble(Tparcel));
+		ASSERT(Tparcel > 100. || IsMissingDouble(Tparcel));
 
 		double prevTparcel = d_prevTparcel[idx];  // K
-		assert(prevTparcel > 100. || IsMissingDouble(Tparcel));
+		ASSERT(prevTparcel > 100. || IsMissingDouble(Tparcel));
 
 		double LFCP = d_LFCP[idx];  // hPa
-		assert(LFCP < 1200.);
+		ASSERT(LFCP < 1200.);
 
 		double LFCT = d_LFCT[idx];  // K
-		assert(LFCT > 100.);
+		ASSERT(LFCT > 100.);
 
 		if (IsMissingDouble(Penv) || IsMissingDouble(Tenv) || IsMissingDouble(Zenv) || IsMissingDouble(prevZenv) ||
 		    IsMissingDouble(Tparcel) || Penv > LFCP)
@@ -307,24 +309,24 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 
 				d_CAPE3km[idx] += C;
 
-				assert(d_CAPE3km[idx] < 3000.);  // 3000J/kg, not 3000m
-				assert(d_CAPE3km[idx] >= 0);
+				ASSERT(d_CAPE3km[idx] < 3000.);  // 3000J/kg, not 3000m
+				ASSERT(d_CAPE3km[idx] >= 0);
 			}
 
 			double C = CAPE::CalcCAPE1040(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 
 			d_CAPE1040[idx] += C;
 
-			assert(d_CAPE1040[idx] < 5000.);
-			assert(d_CAPE1040[idx] >= 0);
+			ASSERT(d_CAPE1040[idx] < 5000.);
+			ASSERT(d_CAPE1040[idx] >= 0);
 
 			double CAPE, ELT, ELP;
 			CAPE::CalcCAPE(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE, ELT, ELP);
 
 			d_CAPE[idx] += CAPE;
 
-			assert(CAPE >= 0.);
-			assert(d_CAPE[idx] < 8000);
+			ASSERT(CAPE >= 0.);
+			ASSERT(d_CAPE[idx] < 8000);
 
 			if (!IsMissingDouble(ELT))
 			{
@@ -346,25 +348,25 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 	if (idx < d_Tenv.size_x * d_Tenv.size_y && d_found[idx] == 0)
 	{
 		double Tenv = d_Tenv.values[idx];  // K
-		assert(Tenv >= 150.);
+		ASSERT(Tenv >= 150.);
 
 		const double prevTenv = d_prevTenv.values[idx];
 
 		double Penv = d_Penv.values[idx];  // hPa
-		assert(Penv < 1200. || IsMissingDouble(Penv));
+		ASSERT(Penv < 1200. || IsMissingDouble(Penv));
 
 		const double prevPenv = d_prevPenv.values[idx];
 
 		double Tparcel = d_Tparcel[idx];  // K
-		assert(Tparcel >= 150. || IsMissingDouble(Tparcel));
+		ASSERT(Tparcel >= 150. || IsMissingDouble(Tparcel));
 
 		const double prevTparcel = d_prevTparcel[idx];
 
 		double PLFC = d_PLFC[idx];  // hPa
-		assert(PLFC < 1200. || IsMissingDouble(PLFC));
+		ASSERT(PLFC < 1200. || IsMissingDouble(PLFC));
 
 		double PLCL = d_PLCL[idx];  // hPa
-		assert(PLCL < 1200. || IsMissingDouble(PLCL));
+		ASSERT(PLCL < 1200. || IsMissingDouble(PLCL));
 
 		double Zenv = d_Zenv.values[idx];          // m
 		double prevZenv = d_prevZenv.values[idx];  // m
@@ -396,7 +398,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 
 					Penv = PLFC;
 
-					assert(Zenv > prevZenv);
+					ASSERT(Zenv > prevZenv);
 				}
 			}
 
@@ -411,7 +413,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 			if (!IsMissingDouble(Tparcel))
 			{
 				d_cinh[idx] += CAPE::CalcCIN(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
-				assert(d_cinh[idx] <= 0);
+				ASSERT(d_cinh[idx] <= 0);
 			}
 		}
 	}
@@ -425,8 +427,8 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	assert(d_T.values);
-	assert(d_P.values);
+	ASSERT(d_T.values);
+	ASSERT(d_P.values);
 
 	if (idx < d_T.size_x * d_T.size_y && d_found[idx] == 0)
 	{
@@ -434,12 +436,12 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 		double prevTparcel = d_prevTparcel[idx];
 		double Tenv = d_T.values[idx];
 
-		assert(Tenv < 350.);
-		assert(Tenv > 100.);
+		ASSERT(Tenv < 350.);
+		ASSERT(Tenv > 100.);
 
 		double prevTenv = d_prevT.values[idx];
-		assert(prevTenv < 350.);
-		assert(prevTenv > 100.);
+		ASSERT(prevTenv < 350.);
+		ASSERT(prevTenv > 100.);
 
 		double Penv = d_P.values[idx];
 		double prevPenv = d_prevP.values[idx];
@@ -461,7 +463,7 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 			if (IsMissingDouble(prevTparcel))
 			{
 				prevTparcel = d_LCLT[idx];  // previous is LCL
-				assert(!IsMissingDouble(d_LCLT[idx]));
+				ASSERT(!IsMissingDouble(d_LCLT[idx]));
 			}
 
 			if (fabs(prevTparcel - prevTenv) < 0.0001)
@@ -485,8 +487,8 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 				}
 			}
 
-			assert(d_LFCT[idx] > 100);
-			assert(d_LFCT[idx] < 350);
+			ASSERT(d_LFCT[idx] > 100);
+			ASSERT(d_LFCT[idx] < 350);
 		}
 	}
 }
@@ -498,9 +500,9 @@ __global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P,
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	assert(d_T.values);
-	assert(d_RH.values);
-	assert(d_P.values);
+	ASSERT(d_T.values);
+	ASSERT(d_RH.values);
+	ASSERT(d_P.values);
 
 	if (idx < d_T.size_x * d_T.size_y && d_found[idx] == 0)
 	{
@@ -550,9 +552,9 @@ __global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __rest
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	assert(d_T);
-	assert(d_RH);
-	assert(d_P);
+	ASSERT(d_T);
+	ASSERT(d_RH);
+	ASSERT(d_P);
 
 	if (idx < N)
 	{
@@ -560,9 +562,9 @@ __global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __rest
 		double P = d_P[idx];
 		double RH = d_RH[idx];
 
-		assert((T > 150 && T < 350) || IsMissingDouble(T));
-		assert((P > 100 && P < 1500) || IsMissingDouble(P));
-		assert((RH >= 0 && RH < 102) || IsMissingDouble(RH));
+		ASSERT((T > 150 && T < 350) || IsMissingDouble(T));
+		ASSERT((P > 100 && P < 1500) || IsMissingDouble(P));
+		ASSERT((RH >= 0 && RH < 102) || IsMissingDouble(RH));
 
 		if (IsMissingDouble(T) || IsMissingDouble(P) || IsMissingDouble(RH))
 		{
@@ -583,8 +585,8 @@ __global__ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __re
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	assert(d_T);
-	assert(d_P.values);
+	ASSERT(d_T);
+	ASSERT(d_P.values);
 
 	if (idx < N)
 	{
@@ -593,7 +595,7 @@ __global__ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __re
 		double MR = d_MR[idx];
 		double Tpot = d_Tpot[idx];
 
-		assert((P > 100 && P < 1500) || IsMissingDouble(P));
+		ASSERT((P > 100 && P < 1500) || IsMissingDouble(P));
 
 		if (!IsMissingDouble(Tpot) && !IsMissingDouble(P))
 		{
@@ -663,9 +665,9 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 		auto h_P = PrepareInfo(PInfo, stream);
 		auto h_RH = PrepareInfo(RHInfo, stream);
 
-		assert(h_T->values);
-		assert(h_RH->values);
-		assert(h_P->values);
+		ASSERT(h_T->values);
+		ASSERT(h_RH->values);
+		ASSERT(h_P->values);
 
 		bool release = true;
 
@@ -839,7 +841,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 		size_t foundCount = tp.HeightsCrossed();
 
-		assert(tp.HeightsCrossed() == mr.HeightsCrossed());
+		ASSERT(tp.HeightsCrossed() == mr.HeightsCrossed());
 
 		if (foundCount == N)
 		{
@@ -953,8 +955,8 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
 	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
 
-	assert(h_prevTenv->values);
-	assert(h_prevPenv->values);
+	ASSERT(h_prevTenv->values);
+	ASSERT(h_prevPenv->values);
 
 	curLevel.Value(curLevel.Value() - 1);
 
@@ -1221,7 +1223,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
                            const std::vector<double>& T, const std::vector<double>& P, param ELTParam, param ELPParam,
                            param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
 {
-	assert(T.size() == P.size());
+	ASSERT(T.size() == P.size());
 
 	auto h = GET_PLUGIN(hitool);
 

@@ -90,7 +90,7 @@ void info::ReGrid()
 				while (NextParam())
 				// Create empty placeholders
 				{
-					assert(Grid());
+					ASSERT(Grid());
 
 					newDimensions[Index()] = shared_ptr<grid>(Grid()->Clone());
 				}
@@ -104,7 +104,7 @@ void info::ReGrid()
 
 void info::Create(const grid* baseGrid, bool createDataBackend)
 {
-	assert(baseGrid);
+	ASSERT(baseGrid);
 
 	itsDimensions = vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
 	                                         itsLevelIterator.Size() * itsParamIterator.Size());
@@ -175,7 +175,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 		if (!ForecastType(otherInfo->ForecastType()))
 		{
 			itsLogger.Fatal("Unable to set forecast type, merge failed");
-			abort();
+			himan::Abort();
 		}
 
 		otherInfo->ResetTime();
@@ -190,7 +190,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 			if (!Time(otherInfo->Time()))
 			{
 				itsLogger.Fatal("Unable to set time, merge failed");
-				abort();
+				himan::Abort();
 			}
 
 			otherInfo->ResetLevel();
@@ -205,7 +205,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 				if (!Level(otherInfo->Level()))
 				{
 					itsLogger.Fatal("Unable to set level, merge failed");
-					abort();
+					himan::Abort();
 				}
 
 				otherInfo->ResetParam();
@@ -220,7 +220,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 					if (!Param(otherInfo->Param()))
 					{
 						itsLogger.Fatal("Unable to set param, merge failed");
-						abort();
+						himan::Abort();
 					}
 
 					Grid(shared_ptr<grid>(otherInfo->Grid()->Clone()));
@@ -417,13 +417,13 @@ size_t info::LocationIndex() { return itsLocationIndex; }
 size_t info::SizeLocations() const { return Grid()->Data().Size(); }
 matrix<double>& info::Data()
 {
-	assert(Grid());
+	ASSERT(Grid());
 	return Grid()->Data();
 }
 
 void info::Grid(shared_ptr<grid> d)
 {
-	assert(itsDimensions.size() > Index());
+	ASSERT(itsDimensions.size() > Index());
 	itsDimensions[Index()] = d;
 }
 
@@ -480,7 +480,7 @@ info_simple* info::ToSimple() const
 		 * Also allocate page-locked memory for the unpacked data.
 		 */
 
-		assert(Grid()->PackedData().ClassName() == "simple_packed");
+		ASSERT(Grid()->PackedData().ClassName() == "simple_packed");
 
 		ret->packed_values = reinterpret_cast<simple_packed*>(&Grid()->PackedData());
 	}

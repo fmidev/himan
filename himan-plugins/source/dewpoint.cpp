@@ -69,7 +69,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 		return;
 	}
 
-	assert(TInfo->Grid()->AB() == RHInfo->Grid()->AB());
+	ASSERT(TInfo->Grid()->AB() == RHInfo->Grid()->AB());
 
 	SetAB(myTargetInfo, TInfo);
 

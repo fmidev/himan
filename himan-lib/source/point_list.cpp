@@ -25,7 +25,7 @@ point_list::point_list(const vector<station>& theStations) : grid(kIrregularGrid
 
 	itsData.Resize(theStations.size(), 1, 1);
 
-	assert(itsData.Size() == theStations.size());
+	ASSERT(itsData.Size() == theStations.size());
 }
 
 point_list::point_list(const point_list& other) : grid(other), itsStations(other.itsStations)

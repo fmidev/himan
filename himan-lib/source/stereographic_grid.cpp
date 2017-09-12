@@ -90,7 +90,7 @@ void stereographic_grid::CreateAreaAndGrid() const
 
 point stereographic_grid::XY(const point& latlon) const
 {
-	assert(itsScanningMode == kBottomLeft);
+	ASSERT(itsScanningMode == kBottomLeft);
 
 	if (!itsStereGrid)
 	{
@@ -103,7 +103,7 @@ point stereographic_grid::XY(const point& latlon) const
 
 point stereographic_grid::LatLon(size_t locationIndex) const
 {
-	assert(itsScanningMode == kBottomLeft);
+	ASSERT(itsScanningMode == kBottomLeft);
 
 	if (!itsStereGrid)
 	{

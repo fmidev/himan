@@ -46,7 +46,7 @@ void AdjustTimes(forecast_time& ftime, HPTimeResolution timeSpan, int value)
 		ftime.ValidDateTime().Adjust(kDayResolution, 1);
 	}
 
-	assert(ftime.Step() >= 0);
+	ASSERT(ftime.Step() >= 0);
 }
 
 time_ensemble::time_ensemble(const param& parameter) : itsTimeSpan(kYearResolution)
@@ -97,7 +97,7 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 			if (e != kFileDataNotFound)
 			{
 				itsLogger.Fatal("Unable to proceed");
-				abort();
+				himan::Abort();
 			}
 			else
 			{

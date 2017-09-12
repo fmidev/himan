@@ -385,7 +385,7 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 	int ASizeX = int(A.SizeX());
 	int ASizeY = int(A.SizeY());
 
-	assert(dy.size() == A.SizeX() && dx.size() == A.SizeY());
+	ASSERT(dy.size() == A.SizeX() && dx.size() == A.SizeY());
 
 	// calculate for inner field
 	for (int j = 1; j < ASizeY - 1; ++j)  // rows
@@ -653,7 +653,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 		catch (std::out_of_range& e)
 		{
 			std::cerr << "Level type " << elems[7] << " is not recognized" << std::endl;
-			abort();
+			himan::Abort();
 		}
 
 		if (!elems[9].empty())
@@ -818,23 +818,23 @@ void util::Unpack(initializer_list<grid*> grids)
 			continue;
 		}
 
-		assert((*it)->PackedData().ClassName() == "simple_packed" || (*it)->PackedData().ClassName() == "jpeg_packed");
+		ASSERT((*it)->PackedData().ClassName() == "simple_packed" || (*it)->PackedData().ClassName() == "jpeg_packed");
 
 		double* arr = 0;
 		size_t N = (*it)->PackedData().unpackedLength;
 
-		assert(N > 0);
+		ASSERT(N > 0);
 
 		cudaStream_t* stream = new cudaStream_t;
 		CUDA_CHECK(cudaStreamCreate(stream));
 		streams.push_back(stream);
 
-		assert((*it)->Data().Size() == N);
+		ASSERT((*it)->Data().Size() == N);
 		arr = const_cast<double*>((*it)->Data().ValuesAsPOD());
 
 		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
 
-		assert(arr);
+		ASSERT(arr);
 
 		(*it)->PackedData().Unpack(arr, N, stream);
 

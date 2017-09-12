@@ -161,7 +161,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
 			}
 
-			assert(gg->ScanningMode() == kTopLeft);
+			ASSERT(gg->ScanningMode() == kTopLeft);
 
 			itsGrib->Message().GridType(gridType);
 
@@ -231,7 +231,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		default:
 			itsLogger.Fatal("Invalid projection while writing grib: " +
 			                boost::lexical_cast<string>(anInfo.Grid()->Type()));
-			abort();
+			himan::Abort();
 	}
 	/*
 	    if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
@@ -311,7 +311,7 @@ void grib::WriteTime(info& anInfo)
 		else
 		{
 			itsLogger.Fatal("Step too large, unable to continue");
-			abort();
+			himan::Abort();
 		}
 	}
 
@@ -385,7 +385,7 @@ void grib::WriteTime(info& anInfo)
 				break;
 		}
 
-		assert(itsGrib->Message().TimeRangeIndicator() != 10);
+		ASSERT(itsGrib->Message().TimeRangeIndicator() != 10);
 	}
 	else
 	{
@@ -496,7 +496,7 @@ void grib::WriteParameter(info& anInfo)
 				auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(
 				    boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
 
-				assert(levelInfo.size());
+				ASSERT(levelInfo.size());
 				auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(
 				    anInfo.Producer().Id(), anInfo.Param().Name(), stoi(levelInfo["id"]), anInfo.Level().Value());
 
@@ -525,7 +525,7 @@ void grib::WriteParameter(info& anInfo)
 			auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(
 			    boost::to_upper_copy(HPLevelTypeToString.at(anInfo.Level().Type())));
 
-			assert(levelInfo.size());
+			ASSERT(levelInfo.size());
 			auto paramInfo = r->RadonDB().GetParameterFromDatabaseName(anInfo.Producer().Id(), anInfo.Param().Name(),
 			                                                           stoi(levelInfo["id"]), anInfo.Level().Value());
 
@@ -788,6 +788,27 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger.Trace("Writing unpacked data");
 
+#ifdef DEBUG
+
+		// Check that data is not NaN, otherwise grib_api will go to
+		// an eternal loop
+
+		auto data = anInfo.Data().Values();
+		bool foundNanValue = false;
+
+		for (size_t i = 0; i < data.size(); i++)
+		{
+			double d = data[i];
+
+			if (!isfinite(d))
+			{
+				foundNanValue = true;
+				break;
+			}
+		}
+
+		ASSERT(!foundNanValue);
+#endif
 		const auto paramName = anInfo.Param().Name();
 
 		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
@@ -993,7 +1014,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 		 * Normalize the first value to -180.
 		 */
 
-		assert(m == kBottomLeft || m == kTopLeft);  // Want to make sure we always read from left to right
+		ASSERT(m == kBottomLeft || m == kTopLeft);  // Want to make sure we always read from left to right
 
 		firstPoint.X(-180.);
 	}
@@ -1068,7 +1089,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			gg->Nj(static_cast<size_t>(itsGrib->Message().SizeY()));
 			gg->ScanningMode(m);
 
-			assert(m == kTopLeft);
+			ASSERT(m == kTopLeft);
 
 			gg->TopLeft(firstPoint);
 
@@ -1480,7 +1501,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 
 		default:
 			itsLogger.Fatal("Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
-			abort();
+			himan::Abort();
 	}
 
 	himan::level l;
@@ -1607,7 +1628,7 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 
 		if (len > 0)
 		{
-			assert(packed->data == 0);
+			ASSERT(packed->data == 0);
 			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&packed->data), len * sizeof(unsigned char)));
 
 			itsGrib->Message().PackedValues(packed->data);
@@ -1844,7 +1865,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	unique_ptr<grid> newGrid = ReadAreaAndGrid();
 
-	assert(newGrid);
+	ASSERT(newGrid);
 
 	std::vector<double> ab;
 
@@ -2018,7 +2039,7 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 		auto levelInfo =
 		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(options.level.Type())));
 
-		assert(levelInfo.size());
+		ASSERT(levelInfo.size());
 		param = r->RadonDB().GetParameterFromDatabaseName(options.prod.Id(), options.param.Name(),
 		                                                  stoi(levelInfo["id"]), options.level.Value());
 	}

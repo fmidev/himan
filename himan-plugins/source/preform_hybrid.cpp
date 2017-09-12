@@ -149,7 +149,7 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	assert(fzStLimit >= stLimit);
+	ASSERT(fzStLimit >= stLimit);
 
 	// Required source parameters
 
@@ -218,10 +218,10 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	string deviceType = "CPU";
 
-	assert(myTargetInfo->SizeLocations() == stratus->SizeLocations());
-	assert(myTargetInfo->SizeLocations() == freezingArea->SizeLocations());
-	assert(myTargetInfo->SizeLocations() == TInfo->SizeLocations());
-	assert(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
+	ASSERT(myTargetInfo->SizeLocations() == stratus->SizeLocations());
+	ASSERT(myTargetInfo->SizeLocations() == freezingArea->SizeLocations());
+	ASSERT(myTargetInfo->SizeLocations() == TInfo->SizeLocations());
+	ASSERT(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
 
 	myTargetInfo->FirstParam();
 
@@ -315,9 +315,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			Navg *= 100;  // --> %
 		}
 
-		assert(T >= -80 && T < 80);
-		assert(!noPotentialPrecipitationForm || RR > 0);
-		assert(IsMissing(Navg) || (Navg >= 0 && Navg <= 100));
+		ASSERT(T >= -80 && T < 80);
+		ASSERT(!noPotentialPrecipitationForm || RR > 0);
+		ASSERT(IsMissing(Navg) || (Navg >= 0 && Navg <= 100));
 
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
@@ -493,7 +493,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 #ifdef DEBUG
 		for (size_t i = 0; i < numZeroLevels.size(); i++)
 		{
-			assert(!IsMissing(numZeroLevels[i]));
+			ASSERT(!IsMissing(numZeroLevels[i]));
 		}
 
 		util::DumpVector(numZeroLevels, "num zero levels");
@@ -846,7 +846,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		for (size_t i = 0; i < baseThreshold.size(); i++)
 		{
-			assert(!IsMissing(baseThreshold[i]));
+			ASSERT(!IsMissing(baseThreshold[i]));
 
 			if (baseThreshold[i] < stCover)
 			{
@@ -867,7 +867,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		for (size_t i = 0; i < topThreshold.size(); i++)
 		{
-			assert(!IsMissing(topThreshold[i]));
+			ASSERT(!IsMissing(topThreshold[i]));
 			if (topThreshold[i] < stCover)
 			{
 				topThreshold[i] = stCover;
@@ -906,7 +906,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		{
 			log.Info("Searching for cloudiness in layers above stratus top");
 
-			assert(constData1.size() == constData2.size() && constData1.size() == stratusTop.size());
+			ASSERT(constData1.size() == constData2.size() && constData1.size() == stratusTop.size());
 
 			for (size_t i = 0; i < constData1.size(); i++)
 			{

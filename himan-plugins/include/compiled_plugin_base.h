@@ -80,7 +80,7 @@ auto zip_range(Conts&... conts)
 #define RESET14(a, b, c, d, e, f, g, h, i, j, k, l, m, n) \
 	RESET13(a, b, c, d, e, f, g, h, i, j, k, l, m), ACTUAL_MACRO_B(n)
 
-#define ACTUAL_MACRO_C(x) assert(x);
+#define ACTUAL_MACRO_C(x) ASSERT(x);
 #define ASSERT1(a) ACTUAL_MACRO_C(a)
 #define ASSERT2(a, b) ASSERT1(a) ACTUAL_MACRO_C(b)
 #define ASSERT3(a, b, c) ASSERT2(a, b) ACTUAL_MACRO_C(c)

@@ -42,8 +42,8 @@ lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsemble
 void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
                             const level& forecastLevel)
 {
-	assert(itsLag < 0);
-	assert(itsNumberOfSteps > 0);
+	ASSERT(itsLag < 0);
+	ASSERT(itsNumberOfSteps > 0);
 
 	auto f = GET_PLUGIN(fetcher);
 
@@ -77,7 +77,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 				if (e != kFileDataNotFound)
 				{
 					itsLogger.Fatal("Unable to proceed");
-					abort();
+					himan::Abort();
 				}
 				else
 				{
@@ -97,7 +97,7 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 		{
 			itsLogger.Fatal("maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
 			                std::to_string(itsMaximumMissingForecasts) + " reached, aborting");
-			abort();
+			himan::Abort();
 		}
 	}
 	else
@@ -106,7 +106,7 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 		{
 			itsLogger.Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
 			                std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
-			abort();
+			himan::Abort();
 		}
 	}
 	itsLogger.Info("succesfully loaded " + std::to_string(numLoadedForecasts) + "/" +

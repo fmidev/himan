@@ -142,7 +142,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		return;
 	}
 
-	assert(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB()) &&
+	ASSERT(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB()) &&
 	                           (!TDInfo || (PInfo->Grid()->AB() == TDInfo->Grid()->AB()))));
 
 	SetAB(myTargetInfo, TInfo);

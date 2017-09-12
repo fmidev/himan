@@ -138,7 +138,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	}
 
 	auto baseInfo = make_shared<info>(*opts.configuration->Info());
-	assert(baseInfo->Dimensions().size());
+	ASSERT(baseInfo->Dimensions().size());
 
 	baseInfo->First();
 
@@ -189,11 +189,11 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 	baseInfo.reset();
 
-	assert((theInfos[0]->Level()) == opts.level);
+	ASSERT((theInfos[0]->Level()) == opts.level);
 
-	assert((theInfos[0]->Time()) == opts.time);
+	ASSERT((theInfos[0]->Time()) == opts.time);
 
-	assert((theInfos[0]->Param()) == opts.param);
+	ASSERT((theInfos[0]->Param()) == opts.param);
 
 	return theInfos[0];
 }
@@ -292,7 +292,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		throw kFileDataNotFound;
 	}
 
-	// assert(theConfiguration->SourceProducer() == theInfos[0]->Producer());
+	// ASSERT(theConfiguration->SourceProducer() == theInfos[0]->Producer());
 
 	return ret;
 }
@@ -510,7 +510,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 		    [&](vector<info_t> vec) {
 			    auto baseInfo =
 			        make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
-			    assert(baseInfo->Dimensions().size());
+			    ASSERT(baseInfo->Dimensions().size());
 
 			    baseInfo->First();
 
@@ -590,7 +590,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 			{
 				itsLogger.Fatal("Land sea mask cannot be applied when reading all auxiliary files to cache");
 				itsLogger.Fatal("Restart himan with command line option --no-auxiliary-file-full-cache-read");
-				abort();
+				himan::Abort();
 			}
 
 			call_once(oflag, [&]() {
@@ -782,10 +782,10 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 
 		lsmInfo->First();
 
-		assert(*lsmInfo->Grid() == *theInfo.Grid());
+		ASSERT(*lsmInfo->Grid() == *theInfo.Grid());
 
-		assert(itsLandSeaMaskThreshold >= -1 && itsLandSeaMaskThreshold <= 1);
-		assert(itsLandSeaMaskThreshold != 0);
+		ASSERT(itsLandSeaMaskThreshold >= -1 && itsLandSeaMaskThreshold <= 1);
+		ASSERT(itsLandSeaMaskThreshold != 0);
 
 #ifdef HAVE_CUDA
 		if (theInfo.Grid()->IsPackedData())
@@ -795,7 +795,7 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 		}
 #endif
 
-		assert(!theInfo.Grid()->IsPackedData());
+		ASSERT(!theInfo.Grid()->IsPackedData());
 
 		double multiplier = (itsLandSeaMaskThreshold > 0) ? 1. : -1.;
 
@@ -827,7 +827,7 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 	{
 		itsLogger.Fatal("Invalid value for land sea mask threshold: " +
 						boost::lexical_cast<string>(theLandSeaMaskThreshold));
-		abort();
+		himan::Abort();
 	}
 
 	itsLandSeaMaskThreshold = theLandSeaMaskThreshold;
@@ -895,7 +895,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 			auto ret = FetchFromAllSources(opts, component->Grid()->IsPackedData());
 
 			auto otherVec = ret.second;
-			assert(!otherVec.empty());
+			ASSERT(!otherVec.empty());
 
 			info_t u, v, other = otherVec[0];
 

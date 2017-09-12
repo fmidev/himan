@@ -241,11 +241,11 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 			double TD850 = TD850Info->Value();
 			double TD700 = TD700Info->Value();
 
-			assert(T850 > 0);
-			assert(T700 > 0);
-			assert(T500 > 0);
-			assert(TD850 > 0);
-			assert(TD700 > 0);
+			ASSERT(T850 > 0);
+			ASSERT(T700 > 0);
+			ASSERT(T500 > 0);
+			ASSERT(TD850 > 0);
+			ASSERT(TD700 > 0);
 
 			double value = MissingDouble();
 
@@ -273,9 +273,9 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				double TD500m = TD500mVector[locationIndex];
 				double P500m = P500mVector[locationIndex];
 
-				assert(!IsMissing(T500m));
-				assert(!IsMissing(TD500m));
-				assert(!IsMissing(P500m));
+				ASSERT(!IsMissing(T500m));
+				ASSERT(!IsMissing(TD500m));
+				ASSERT(!IsMissing(P500m));
 
 				value = metutil::LI_(T500, T500m, TD500m, P500m);
 
@@ -296,10 +296,10 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				double U06 = U06Vector[locationIndex];
 				double V06 = V06Vector[locationIndex];
 
-				assert(!IsMissing(U01));
-				assert(!IsMissing(V01));
-				assert(!IsMissing(U06));
-				assert(!IsMissing(V06));
+				ASSERT(!IsMissing(U01));
+				ASSERT(!IsMissing(V01));
+				ASSERT(!IsMissing(U06));
+				ASSERT(!IsMissing(V06));
 
 				value = metutil::BulkShear_(U01, V01);
 
@@ -319,8 +319,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 				double Uid = UidVector[locationIndex];
 				double Vid = VidVector[locationIndex];
 
-				assert(!IsMissing(Uid));
-				assert(!IsMissing(Vid));
+				ASSERT(!IsMissing(Uid));
+				ASSERT(!IsMissing(Vid));
 
 				if (!IsMissing(Uid) && !IsMissing(Vid))
 				{
@@ -346,7 +346,7 @@ void T500mSearch(shared_ptr<const plugin_configuration> conf, const forecast_tim
 #ifdef DEBUG
 	for (size_t i = 0; i < result.size(); i++)
 	{
-		assert(!IsMissing(result[i]));
+		ASSERT(!IsMissing(result[i]));
 	}
 #endif
 }
@@ -454,7 +454,7 @@ bool stability::GetLISourceData(const shared_ptr<info>& myTargetInfo, vector<dou
 
 	P500mVector = h->VerticalAverage(PParam, 0., 500.);
 
-	assert(!IsMissing(P500mVector[0]));
+	ASSERT(!IsMissing(P500mVector[0]));
 
 	if (P500mVector[0] < 1500)
 	{
@@ -572,8 +572,8 @@ bool stability::GetSRHSourceData(const shared_ptr<info>& myTargetInfo, vector<do
 	Uid.resize(Ushear.size(), MissingDouble());
 	Vid.resize(Vshear.size(), MissingDouble());
 
-	assert(Uid.size() == Vid.size());
-	assert(Uid.size() == Uavg.size());
+	ASSERT(Uid.size() == Vid.size());
+	ASSERT(Uid.size() == Uavg.size());
 
 	for (size_t i = 0; i < Ushear.size(); i++)
 	{

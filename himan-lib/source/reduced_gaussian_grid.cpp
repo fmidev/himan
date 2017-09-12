@@ -42,7 +42,7 @@ int reduced_gaussian_grid::N() const { return itsN; }
 void reduced_gaussian_grid::N(int theN) { itsN = theN; }
 size_t reduced_gaussian_grid::Size() const
 {
-	assert(itsNumberOfPointsAlongParallels.size() == 2 * static_cast<size_t>(itsN));
+	ASSERT(itsNumberOfPointsAlongParallels.size() == 2 * static_cast<size_t>(itsN));
 
 	return std::accumulate(itsNumberOfPointsAlongParallels.begin(), itsNumberOfPointsAlongParallels.end(), 0);
 }
@@ -50,7 +50,7 @@ size_t reduced_gaussian_grid::Size() const
 std::vector<int> reduced_gaussian_grid::NumberOfPointsAlongParallels() const { return itsNumberOfPointsAlongParallels; }
 void reduced_gaussian_grid::NumberOfPointsAlongParallels(std::vector<int> theNumberOfPointsAlongParallels)
 {
-	assert((itsN == kHPMissingInt && itsNumberOfPointsAlongParallels.size() == 0) ||
+	ASSERT((itsN == kHPMissingInt && itsNumberOfPointsAlongParallels.size() == 0) ||
 	       static_cast<size_t>(itsN * 2) == theNumberOfPointsAlongParallels.size());
 	itsNumberOfPointsAlongParallels = theNumberOfPointsAlongParallels;
 }
@@ -106,13 +106,13 @@ std::ostream& reduced_gaussian_grid::Write(std::ostream& file) const
 
 point reduced_gaussian_grid::LatLon(size_t x, size_t y) const
 {
-	assert(itsScanningMode == kTopLeft);
-	assert(TopLeft() != point());
-	assert(BottomRight() != point());
+	ASSERT(itsScanningMode == kTopLeft);
+	ASSERT(TopLeft() != point());
+	ASSERT(BottomRight() != point());
 
 	double lonspan = (BottomRight().X() - TopLeft().X());  // longitude span of the whole area in degrees
 	lonspan = (lonspan < 0) ? lonspan + 360 : lonspan;
-	assert(lonspan >= 0 && lonspan <= 360);
+	ASSERT(lonspan >= 0 && lonspan <= 360);
 
 	const size_t currentNumOfLongitudes = itsNumberOfPointsAlongParallels[y];
 	const double di = (lonspan / (static_cast<double>(currentNumOfLongitudes) - 1.));
@@ -131,8 +131,8 @@ point reduced_gaussian_grid::LatLon(size_t x, size_t y) const
 
 point reduced_gaussian_grid::LatLon(size_t theLocationIndex) const
 {
-	assert(itsNj > 0);
-	assert(itsNumberOfPointsAlongParallels.size() > 0);
+	ASSERT(itsNj > 0);
+	ASSERT(itsNumberOfPointsAlongParallels.size() > 0);
 
 	if (theLocationIndex < static_cast<size_t>(itsNumberOfPointsAlongParallels[0]))
 	{
@@ -154,10 +154,10 @@ point reduced_gaussian_grid::LatLon(size_t theLocationIndex) const
 		sum += numLongitudes;
 	}
 
-	assert(theLocationIndex >= sum);
+	ASSERT(theLocationIndex >= sum);
 
 	size_t x = theLocationIndex - sum;
-	assert(y > 0);
+	ASSERT(y > 0);
 
 	return LatLon(x, y);
 }
@@ -172,11 +172,11 @@ point reduced_gaussian_grid::XY(const himan::point& latlon) const
 	}
 
 	const double dj = Dj();
-	assert(dj > 0.);
+	ASSERT(dj > 0.);
 
 	const double y = static_cast<int>((TopLeft().Y() - latlon.Y()) / dj);  // grid y [0 .. Nj-1]
 
-	assert(itsNj > 0);
+	ASSERT(itsNj > 0);
 
 	if (y < 0. || y > (static_cast<double>(itsNj) - 1.))
 	{
@@ -187,11 +187,11 @@ point reduced_gaussian_grid::XY(const himan::point& latlon) const
 	const int numCurrentLongitudes =
 	    itsNumberOfPointsAlongParallels[static_cast<size_t>(rint(y))];  // number of longitudes for the nearest parallel
 
-	assert(numCurrentLongitudes > 0);
+	ASSERT(numCurrentLongitudes > 0);
 
 	double lonspan = (BottomRight().X() - TopLeft().X());  // longitude span of the whole area in degrees
 	lonspan = (lonspan < 0) ? lonspan + 360 : lonspan;
-	assert(lonspan >= 0 && lonspan <= 360);
+	ASSERT(lonspan >= 0 && lonspan <= 360);
 
 	const double di = (lonspan / (numCurrentLongitudes -
 	                              1));  // longitude distance between two points in degrees for the current parallel
@@ -235,7 +235,7 @@ double reduced_gaussian_grid::Dj() const
 {
 	if (IsKHPMissingValue(itsDj))
 	{
-		assert(itsNj != static_cast<size_t>(kHPMissingInt));
+		ASSERT(itsNj != static_cast<size_t>(kHPMissingInt));
 		itsDj = (TopLeft().Y() - BottomRight().Y()) / (static_cast<double>(itsNj) - 1.);
 	}
 

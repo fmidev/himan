@@ -19,6 +19,8 @@
 #include "radon.h"
 #include <math.h>
 
+#include "debug.h"
+
 namespace himan
 {
 namespace plugin
@@ -254,7 +256,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 					{
 						itsLogger.Fatal("Threshold not found for param " + pc.output.Name() + ", station " +
 						                std::to_string(st.Id()));
-						abort();
+						himan::Abort();
 					}
 
 					pc.stationThreshold[st.Id()] = limit;
@@ -383,7 +385,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 			else
 			{
 				itsLogger.Fatal("Received error code " + std::to_string(e));
-				abort();
+				himan::Abort();
 			}
 		}
 
@@ -392,7 +394,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		{
 			AllocateMemory(myTargetInfo);
 		}
-		assert(myTargetInfo.Data().Size() > 0);
+		ASSERT(myTargetInfo.Data().Size() > 0);
 
 		//
 		// Choose the correct calculation function for this parameter and do the actual calculation
@@ -494,7 +496,7 @@ void CalculateWind(const logger& log, std::shared_ptr<info> targetInfo, uint16_t
 	if (ensembleSize != ens2->Size())
 	{
 		log.Fatal(" CalculateWind(): U and V ensembles are of different size, aborting");
-		abort();
+		himan::Abort();
 	}
 
 	const double invN =

@@ -359,8 +359,8 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string subThreadIndex) const
 {
-	assert(myTargetInfo);
-	assert(myTargetInfo->Param().Name() == myParamName);
+	ASSERT(myTargetInfo);
+	ASSERT(myTargetInfo->Param().Name() == myParamName);
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -428,7 +428,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 		if (myTargetInfo->Time().StepResolution() != kHourResolution)
 		{
-			assert(myTargetInfo->Time().StepResolution() == kMinuteResolution);
+			ASSERT(myTargetInfo->Time().StepResolution() == kMinuteResolution);
 
 			paramStep *= 60;
 		}
@@ -531,7 +531,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 			result = 0;
 		}
 
-		assert(isRadiationCalculation || result >= 0 || IsMissing(result));
+		ASSERT(isRadiationCalculation || result >= 0 || IsMissing(result));
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " +
@@ -587,7 +587,7 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 	else if (timeResolution != kHourResolution)
 	{
 		itsLogger.Fatal("Invalid time resolution value: " + HPTimeResolutionToString.at(timeResolution));
-		abort();
+		himan::Abort();
 	}
 
 	itsLogger.Trace("Target time is " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
@@ -662,7 +662,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 	if (params.empty())
 	{
 		itsLogger.Fatal("Source parameter for " + myTargetInfo->Param().Name() + " not found");
-		abort();
+		himan::Abort();
 	}
 
 	if (myTargetInfo->Param().Name() == "RTOPLW-WM2")
