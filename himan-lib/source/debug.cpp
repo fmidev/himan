@@ -6,9 +6,23 @@
 #include <cstdio>
 #include <cstdlib>
 #include <signal.h>
+#include <sys/ptrace.h>
+#include <dlfcn.h>
 
 namespace himan
 {
+
+static bool DebuggerAttached()
+{
+	// Other possibilities:
+	// - look at /proc/{PID or self}/status to get TracerPid.
+	// - fork, try to PTRACE_ATTACH
+	if (ptrace(PTRACE_TRACEME, 0, NULL, 0) < 0)
+	{
+		return true;
+	}
+	return false;
+}
 
 static void SignalHandler(int signum)
 {
@@ -62,8 +76,7 @@ bool AssertionFailed(const char* expr, long line, const char* fn, const char* fi
 {
 	printf("Assertion (%s) failed at: %s::%s:%ld\n\n", expr, file, fn, line);
 	PrintBacktrace();
-	// XXX Check if we're running inside debugger, return the result here.
-	return true;
+	return DebuggerAttached();
 }
 
 //
@@ -132,7 +145,18 @@ void PrintBacktrace()
 			{
 				if (cppSymbol.empty())
 				{
-					printf("%d: <no symbol> (%s) %s\n", i, offset.c_str(), addr.c_str());
+					// Since we failed to demangle the symbol and there's no actual symbol associated with
+					// this address, get the address' originating shared object.
+					Dl_info info;
+
+					if (dladdr(retAddreses[i], &info) == 0)
+					{
+						printf("%d: <no symbol> (%s) %s\n", i, offset.c_str(), addr.c_str());
+					}
+					else
+					{
+						printf("%d: %s: (%s) %s\n", i, info.dli_fname, offset.c_str(), addr.c_str());
+					}
 				}
 				else
 				{
