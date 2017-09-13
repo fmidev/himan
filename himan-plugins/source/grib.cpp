@@ -755,7 +755,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	// set to missing value to a large value to prevent it from mixing up with valid
 	// values in the data
 
-	const double gribMissing = 1e38;
+	const double gribMissing = 32700.;
 	itsGrib->Message().MissingValue(gribMissing);
 
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
