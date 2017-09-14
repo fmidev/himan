@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.9.12
-Release: 3.el7.fmi
+Version: 17.9.14
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.14-1.fmi
+- First/last EL for cape plugin
 * Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-3.fmi
 - Add stack trace functionality
 * Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-2.fmi
