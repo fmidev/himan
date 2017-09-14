@@ -33,6 +33,7 @@ using namespace himan;
 using namespace himan::plugin;
 
 himan::level cape_cuda::itsBottomLevel;
+bool cape_cuda::itsUseVirtualTemperature;
 
 const unsigned char FCAPE = (1 << 2);
 const unsigned char FCAPE3km = (1 << 0);
@@ -151,6 +152,16 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 		}
 
 		return std::shared_ptr<info>();
+	}
+}
+
+__global__ void VirtualTemperatureKernel(double* __restrict__ d_T, const double* __restrict__ d_P, size_t N)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		d_T[idx] = himan::metutil::VirtualTemperature_(d_T[idx], d_P[idx] * 100);
 	}
 }
 
@@ -404,7 +415,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 				}
 			}
 
-			if (Penv < PLCL && !IsMissingDouble(Tparcel))
+			if (Penv < PLCL)
 			{
 				// Above LCL, switch to virtual temperature
 
@@ -450,7 +461,7 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 
 		double LCLP = d_LCLP[idx];
 
-		if (!IsMissingDouble(Tparcel) && d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
+		if (d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
 		{
 			// Temperature gap between environment and parcel too large --> abort search.
 			// Only for values higher in the atmosphere, to avoid the effects of inversion
@@ -458,7 +469,8 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 			d_found[idx] = 1;
 		}
 
-		if (!IsMissingDouble(Tparcel) && Penv <= LCLP && Tparcel > Tenv && d_found[idx] == 0)
+		const double diff = Tparcel - Tenv;
+		if (Penv <= LCLP && diff > 0 && d_found[idx] == 0)
 		{
 			d_found[idx] = 1;
 
@@ -468,16 +480,22 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 				ASSERT(!IsMissingDouble(d_LCLT[idx]));
 			}
 
-			if (fabs(prevTparcel - prevTenv) < 0.0001)
+			if (diff < 0.1)
 			{
 				d_LFCT[idx] = Tparcel;
 				d_LFCP[idx] = Penv;
+			}
+			else if (prevTparcel - prevTenv >= 0)
+			{
+				d_LFCT[idx] = prevTparcel;
+				d_LFCP[idx] = prevPenv;
 			}
 			else
 			{
 				auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv),
 				                                                 point(Tparcel, Penv), point(prevTparcel, prevPenv));
 
+				ASSERT(intersection.Y() < prevPenv && intersection.Y() > Penv);
 				d_LFCT[idx] = intersection.X();
 				d_LFCP[idx] = intersection.Y();
 
@@ -944,6 +962,11 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
 	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
 
+	if (cape_cuda::itsUseVirtualTemperature)
+	{
+		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_prevTenv->values, h_prevPenv->values, N);
+	}
+
 	ASSERT(h_prevTenv->values);
 	ASSERT(h_prevPenv->values);
 
@@ -981,6 +1004,11 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
 		auto h_Tenv = PrepareInfo(TenvInfo, stream);
+
+		if (cape_cuda::itsUseVirtualTemperature)
+		{
+			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_Tenv->values, h_Penv->values, N);
+		}
 
 		// Lift the particle from previous level to this level. In the first revolution
 		// of this loop the starting level is LCL. If target level level is below current level
@@ -1310,6 +1338,11 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
 	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
 
+	if (cape_cuda::itsUseVirtualTemperature)
+	{
+		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_prevTenv->values, h_prevPenv->values, N);
+	}
+
 	curLevel.Value(curLevel.Value());
 
 	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
@@ -1325,6 +1358,11 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
 		auto h_Tenv = PrepareInfo(TenvInfo, stream);
+
+		if (cape_cuda::itsUseVirtualTemperature)
+		{
+			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_Tenv->values, h_Penv->values, N);
+		}
 
 		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, *h_Penv, d_Tparcel);
 

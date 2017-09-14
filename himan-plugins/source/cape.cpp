@@ -8,7 +8,6 @@
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <future>
 
@@ -28,12 +27,6 @@ using namespace himan::plugin;
 using namespace himan::numerical_functions;
 using himan::IsMissingDouble;
 
-#ifdef DEBUG
-#define DumpVector(A, B) himan::util::DumpVector(A, B)
-#else
-#define DumpVector(A, B)
-#endif
-
 extern mutex dimensionMutex;
 
 // parameters are defined in cape.cuh
@@ -42,13 +35,24 @@ const himan::level SURFACE(himan::kHeight, 0);
 const himan::level M500(himan::kHeightLayer, 500, 0);
 const himan::level UNSTABLE(himan::kMaximumThetaE, 0);
 
+vector<double> VirtualTemperature(vector<double> T, const std::vector<double>& P)
+{
+	for (size_t i = 0; i < T.size(); i++)
+	{
+		T[i] = himan::metutil::VirtualTemperature_(T[i], P[i]);
+		ASSERT(T[i] > 100 && T[i] < 400);
+	}
+
+	return T;
+}
+
 double Max(const vector<double>& vec)
 {
 	double ret = -1e38;
 
 	for (const double& val : vec)
 	{
-		if (!IsMissingDouble(val) && val > ret) ret = val;
+		if (val > ret) ret = val;
 	}
 
 	if (ret == -1e38) ret = himan::MissingDouble();
@@ -60,7 +64,7 @@ void MultiplyWith(vector<double>& vec, double multiplier)
 {
 	for (double& val : vec)
 	{
-		if (!IsMissingDouble(val)) val *= multiplier;
+		val *= multiplier;
 	}
 }
 
@@ -138,17 +142,23 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 	}
 }
 
-cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt) { itsLogger = logger("cape"); }
+cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt), itsUseVirtualTemperature(true) { itsLogger = logger("cape"); }
 void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	compiled_plugin_base::Init(conf);
 
 	auto r = GET_PLUGIN(radon);
 
+	if (itsConfiguration->Exists("virtual_temperature"))
+	{
+		itsUseVirtualTemperature = util::ParseBoolean(itsConfiguration->GetValue("virtual_temperature"));
+	}
+
 	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(),
 	                                                                      "last hybrid level number")));
 
 #ifdef HAVE_CUDA
+	cape_cuda::itsUseVirtualTemperature = itsUseVirtualTemperature;
 	cape_cuda::itsBottomLevel = itsBottomLevel;
 #endif
 
@@ -291,7 +301,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Stop();
 
-	mySubThreadedLogger.Info("Source data calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
+	mySubThreadedLogger.Info("Source data calculated in " + to_string(aTimer.GetTime()) + " ms");
 
 	mySubThreadedLogger.Debug("Source temperature: " + ::PrintMean(get<0>(sourceValues)));
 	mySubThreadedLogger.Debug("Source dewpoint: " + ::PrintMean(get<1>(sourceValues)));
@@ -305,7 +315,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Stop();
 
-	mySubThreadedLogger.Info("LCL calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
+	mySubThreadedLogger.Info("LCL calculated in " + to_string(aTimer.GetTime()) + " ms");
 
 	mySubThreadedLogger.Debug("LCL temperature: " + ::PrintMean(LCL.first));
 	mySubThreadedLogger.Debug("LCL pressure: " + ::PrintMean(LCL.second));
@@ -329,7 +339,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Stop();
 
-	mySubThreadedLogger.Info("LFC calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
+	mySubThreadedLogger.Info("LFC calculated in " + to_string(aTimer.GetTime()) + " ms");
 
 	if (LFC.first.empty())
 	{
@@ -366,7 +376,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Stop();
 
-	mySubThreadedLogger.Info("CAPE and CIN calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
+	mySubThreadedLogger.Info("CAPE and CIN calculated in " + to_string(aTimer.GetTime()) + " ms");
 
 	// Sometimes CAPE area is infinitely small -- so that CAPE is zero but LFC is found. In this case set all derivative
 	// parameters missing.
@@ -592,14 +602,13 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 				// Integrate the final piece from previous level to LFC level
 
 				// First get LFC height in meters
-				Zenv = himan::numerical_functions::interpolation::Linear(PLFC[i], prevPenv, Penv, prevZenv, Zenv);
+				Zenv = interpolation::Linear(PLFC[i], prevPenv, Penv, prevZenv, Zenv);
 
 				// LFC environment temperature value
-				Tenv = himan::numerical_functions::interpolation::Linear(PLFC[i], prevPenv, Penv, prevTenv, Tenv);
+				Tenv = interpolation::Linear(PLFC[i], prevPenv, Penv, prevTenv, Tenv);
 
 				// LFC T parcel value
-				Tparcel =
-				    himan::numerical_functions::interpolation::Linear(PLFC[i], prevPenv, Penv, prevTparcel, Tparcel);
+				Tparcel = interpolation::Linear(PLFC[i], prevPenv, Penv, prevTparcel, Tparcel);
 
 				Penv = PLFC[i];
 				ASSERT(Zenv > prevZenv);
@@ -610,7 +619,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 				continue;
 			}
 
-			if (Penv < PLCL[i])
+			if (Penv < PLCL[i] && itsUseVirtualTemperature)
 			{
 				// Above LCL, switch to virtual temperature
 				Tparcel = metutil::VirtualTemperature_(Tparcel, Penv * 100);
@@ -623,8 +632,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 
 		foundCount = count(found.begin(), found.end(), true);
 
-		itsLogger.Trace("CIN read for " + boost::lexical_cast<string>(foundCount) + "/" +
-		                boost::lexical_cast<string>(found.size()) + " gridpoints");
+		itsLogger.Trace("CIN read for " + to_string(foundCount) + "/" + to_string(found.size()) + " gridpoints");
 
 		curLevel.Value(curLevel.Value() - 1);
 
@@ -728,10 +736,24 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 	auto prevTenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 	auto prevPenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
+	auto prevPenvVec = VEC(prevPenvInfo);
+	::MultiplyWith(prevPenvVec, 100);
+
+	vector<double> prevTenvVec;
+
+	if (itsUseVirtualTemperature)
+	{
+		prevTenvVec = VirtualTemperature(VEC(prevTenvInfo), prevPenvVec);
+	}
+	else
+	{
+		prevTenvVec = VEC(prevTenvInfo);
+	}
+
 	curLevel.Value(curLevel.Value());
 
-	auto Piter = P, Titer = T;  // integration variables
-	auto prevTparcelVec = Titer;
+	auto Piter = P, Titer = T;  // integration variables, virtual correction already made
+	vector<double> prevTparcelVec(Titer.size(), himan::MissingDouble());
 
 	// Convert pressure to Pa since metutil-library expects that
 	::MultiplyWith(Piter, 100);
@@ -748,28 +770,36 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 		ZenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
 
 		// Convert pressure to Pa since metutil-library expects that
-		auto PenvVec = PenvInfo->Data().Values();
+		auto PenvVec = VEC(PenvInfo);
 		::MultiplyWith(PenvVec, 100);
 
 		vector<double> TparcelVec(P.size(), MissingDouble());
 
 		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
+		vector<double> TenvVec;
+
+		if (itsUseVirtualTemperature)
+		{
+			TenvVec = VirtualTemperature(VEC(TenvInfo), PenvVec);
+		}
+		else
+		{
+			TenvVec = VEC(TenvInfo);
+		}
+
 		int i = -1;
-		for (auto&& tup : zip_range(VEC(PenvInfo), VEC(ZenvInfo), VEC(prevZenvInfo), VEC(prevTenvInfo),
-		                            VEC(prevPenvInfo), VEC(TenvInfo), TparcelVec, prevTparcelVec))
+		for (auto&& tup : zip_range(TenvVec, VEC(PenvInfo), VEC(ZenvInfo), prevTenvVec, VEC(prevPenvInfo),
+		                            VEC(prevZenvInfo), TparcelVec, prevTparcelVec))
 		{
 			i++;
 
-			double Tenv = tup.get<5>();      // K
-			double prevTenv = tup.get<3>();  // K
-
-			double Penv = tup.get<0>();      // hPa
-			double prevPenv = tup.get<4>();  // hPa
-
-			double Zenv = tup.get<1>();      // m
-			double prevZenv = tup.get<2>();  // m
-
+			double Tenv = tup.get<0>();         // K
+			double Penv = tup.get<1>();         // hPa
+			double Zenv = tup.get<2>();         // m
+			double prevTenv = tup.get<3>();     // K
+			double prevPenv = tup.get<4>();     // hPa
+			double prevZenv = tup.get<5>();     // m
 			double Tparcel = tup.get<6>();      // K
 			double prevTparcel = tup.get<7>();  // K
 
@@ -866,32 +896,19 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			if (val & FCAPE) foundCount++;
 		}
 
-		itsLogger.Trace("CAPE read for " + boost::lexical_cast<string>(foundCount) + "/" +
-		                boost::lexical_cast<string>(found.size()) + " gridpoints");
+		itsLogger.Trace("CAPE read for " + to_string(foundCount) + "/" + to_string(found.size()) + " gridpoints");
 		prevZenvInfo = ZenvInfo;
-		prevTenvInfo = TenvInfo;
+		prevTenvVec = TenvVec;
 		prevPenvInfo = PenvInfo;
 		prevTparcelVec = TparcelVec;
 	}
 
-	// If the CAPE area is continued all the way to level 60 and beyond, we don't have an EL for that
-	// (since integration is forcefully stopped)
-	// In this case level 60 = EL
-	/*
-	    for (size_t i = 0; i < CAPE.size(); i++)
-	    {
-	        if (CAPE[i] > 0 && IsMissingDouble(ELT[i]))
-	        {
-	            TenvInfo->LocationIndex(i);
-	            PenvInfo->LocationIndex(i);
-
-	            ELT[i] = TenvInfo->Value();
-	            ELP[i] = PenvInfo->Value();
-	            LastELT[i] = ELT[i];
-	            LastELP[i] = ELP[i];
-	        }
-	    }
-	*/
+#ifdef DEBUG
+	for (size_t i = 0; i < ELP.size(); i++)
+	{
+		ASSERT((IsMissingDouble(ELP[i]) && IsMissingDouble(LastELP[i])) || (ELP[i] >= LastELP[i]));
+	}
+#endif
 	myTargetInfo->Param(ELTParam);
 	myTargetInfo->Data().Set(ELT);
 
@@ -943,15 +960,30 @@ pair<vector<double>, vector<double>> cape::GetLFC(shared_ptr<info> myTargetInfo,
 		throw;
 	}
 
+	vector<double> _T, _Tenv;
+
+	if (itsUseVirtualTemperature)
+	{
+		auto PP = P;
+		::MultiplyWith(PP, 100);
+		_T = VirtualTemperature(T, PP);
+		_Tenv = VirtualTemperature(TenvLCL, PP);
+	}
+	else
+	{
+		_T = T;
+		_Tenv = TenvLCL;
+	}
+
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		return cape_cuda::GetLFCGPU(itsConfiguration, myTargetInfo, T, P, TenvLCL);
+		return cape_cuda::GetLFCGPU(itsConfiguration, myTargetInfo, _T, P, _Tenv);
 	}
 	else
 #endif
 	{
-		return GetLFCCPU(myTargetInfo, T, P, TenvLCL);
+		return GetLFCCPU(myTargetInfo, _T, P, _Tenv);
 	}
 }
 
@@ -967,7 +999,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	auto Piter = P, Titer = T;  // integration variables
+	auto Piter = P, Titer = T;
 
 	// Convert pressure to Pa since metutil-library expects that
 	::MultiplyWith(Piter, 100);
@@ -995,7 +1027,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	size_t foundCount = count(found.begin(), found.end(), true);
 
-	itsLogger.Debug("Found " + boost::lexical_cast<string>(foundCount) + " gridpoints that have LCL=LFC");
+	itsLogger.Debug("Found " + to_string(foundCount) + " gridpoints that have LCL=LFC");
 
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
 	// among all grid points; most commonly it's the lowest hybrid level
@@ -1005,6 +1037,20 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	auto prevPenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 	auto prevTenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+
+	vector<double> prevTenvVec;
+
+	if (itsUseVirtualTemperature)
+	{
+		auto PP = VEC(prevPenvInfo);
+		::MultiplyWith(PP, 100);
+
+		prevTenvVec = VirtualTemperature(VEC(prevTenvInfo), PP);
+	}
+	else
+	{
+		prevTenvVec = VEC(prevTenvInfo);
+	}
 
 	curLevel.Value(curLevel.Value() - 1);
 
@@ -1019,7 +1065,7 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		auto PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
 		// Convert pressure to Pa since metutil-library expects that
-		auto PenvVec = PenvInfo->Data().Values();
+		auto PenvVec = VEC(PenvInfo);
 		::MultiplyWith(PenvVec, 100);
 
 		// Lift the particle from previous level to this level. In the first revolution
@@ -1033,9 +1079,20 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		double scale = 1;
 		if (prevPenvInfo->Param().Name() == "P-PA") scale = 0.01;
 
+		vector<double> TenvVec;
+
+		if (itsUseVirtualTemperature)
+		{
+			TenvVec = VirtualTemperature(VEC(TenvInfo), PenvVec);
+		}
+		else
+		{
+			TenvVec = VEC(TenvInfo);
+		}
+
 		int i = -1;
-		for (auto&& tup : zip_range(VEC(TenvInfo), VEC(PenvInfo), VEC(prevPenvInfo), VEC(prevTenvInfo), TparcelVec,
-		                            prevTparcelVec, LFCT, LFCP))
+		for (auto&& tup :
+		     zip_range(TenvVec, VEC(PenvInfo), VEC(prevPenvInfo), prevTenvVec, TparcelVec, prevTparcelVec, LFCT, LFCP))
 		{
 			i++;
 
@@ -1063,12 +1120,9 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 			double& Tresult = tup.get<6>();
 			double& Presult = tup.get<7>();
 
-			if (IsMissingDouble(Tparcel) || Penv > P[i] + 30)
-			{
-				continue;
-			}
+			const double diff = Tparcel - Tenv;
 
-			if (Tparcel > Tenv)
+			if (diff >= 0)
 			{
 				// Parcel is now warmer than environment, we have found LFC and entering CAPE zone
 
@@ -1081,18 +1135,35 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					prevTparcel = T[i];
 				}
 
-				if (fabs(prevTparcel - prevTenv) < 0.0001)
+				if (diff < 0.1)
 				{
+					// The passing of parcel to warmer side of sounding happened quite close
+					// to current environment height, use the environment pressure without
+					// any interpolation
 					Tresult = Tparcel;
 					Presult = Penv;
 				}
+				else if (prevTparcel - prevTenv >= 0)
+				{
+					// Previous environment and parcel temperature are the same: perhaps because
+					// we set it so earlier.
+					Tresult = prevTparcel;
+					Presult = prevPenv;
+				}
+
 				else
 				{
+					// Since Tparcel > Tenv, that means prevTenv > Tparcel > Ten
+					// Use this information to linearly interpolate the pressure
+					// where the crossing happened.
+
 					auto intersection =
 					    CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv), point(Tparcel, Penv),
 					                                 point(prevTparcel, prevPenv));
 					Tresult = intersection.X();
 					Presult = intersection.Y();
+
+					ASSERT((Presult < prevPenv) && (Presult > Penv));
 
 					if (IsMissingDouble(Tresult))
 					{
@@ -1100,6 +1171,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 						Tresult = Tenv;
 						Presult = Penv;
 					}
+
+					ASSERT(Tresult > 100 && Tresult < 400);
 				}
 
 				ASSERT(!IsMissingDouble(Tresult));
@@ -1117,19 +1190,18 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		curLevel.Value(curLevel.Value() - 1);
 
 		foundCount = count(found.begin(), found.end(), true);
-		itsLogger.Trace("LFC processed for " + boost::lexical_cast<string>(foundCount) + "/" +
-		                boost::lexical_cast<string>(found.size()) + " grid points");
+		itsLogger.Trace("LFC processed for " + to_string(foundCount) + "/" + to_string(found.size()) + " grid points");
 
 		prevPenvInfo = PenvInfo;
-		prevTenvInfo = TenvInfo;
+		prevTenvVec = TenvVec;
+		prevTparcelVec = TparcelVec;
 
 		for (size_t i = 0; i < Titer.size(); i++)
 		{
 			if (found[i]) Titer[i] = MissingDouble();  // by setting this we prevent MoistLift to integrate particle
 		}
-
-		prevTparcelVec = TparcelVec;
 	}
+
 	return make_pair(LFCT, LFCP);
 }
 
@@ -1303,8 +1375,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 		ASSERT(tp.HeightsCrossed() == mr.HeightsCrossed());
 
-		itsLogger.Debug("Data read " + boost::lexical_cast<string>(foundCount) + "/" +
-		                boost::lexical_cast<string>(found.size()) + " gridpoints");
+		itsLogger.Debug("Data read " + to_string(foundCount) + "/" + to_string(found.size()) + " gridpoints");
 
 		for (size_t i = 0; i < found.size(); i++)
 		{
@@ -1470,8 +1541,8 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 			break;
 		}
 
-		itsLogger.Trace("Max ThetaE processed for " + boost::lexical_cast<string>(foundCount) + "/" +
-		                boost::lexical_cast<string>(found.size()) + " grid points");
+		itsLogger.Trace("Max ThetaE processed for " + to_string(foundCount) + "/" + to_string(found.size()) +
+		                " grid points");
 
 		curLevel.Value(curLevel.Value() - 1);
 

@@ -440,12 +440,6 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 		return C;
 	}
 
-	Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv * 100);
-	Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv * 100);
-
-	prevTenv = himan::metutil::VirtualTemperature_(prevTenv, prevPenv * 100);
-	prevTparcel = himan::metutil::VirtualTemperature_(prevTparcel, prevPenv * 100);
-
 	double coldColderLimit = 233.15;
 	double coldWarmerLimit = 263.15;
 
@@ -503,12 +497,6 @@ inline double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double p
                           double prevPenv, double Zenv, double prevZenv)
 {
 	double C = 0.;
-
-	Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv * 100);
-	Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv * 100);
-
-	prevTenv = himan::metutil::VirtualTemperature_(prevTenv, prevPenv * 100);
-	prevTparcel = himan::metutil::VirtualTemperature_(prevTparcel, prevPenv * 100);
 
 	if (Tparcel > Tenv)
 	{
@@ -580,12 +568,6 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 		// No CAPE
 		return;
 	}
-
-	Tenv = himan::metutil::VirtualTemperature_(Tenv, Penv * 100);
-	Tparcel = himan::metutil::VirtualTemperature_(Tparcel, Penv * 100);
-
-	prevTenv = himan::metutil::VirtualTemperature_(prevTenv, prevPenv * 100);
-	prevTparcel = himan::metutil::VirtualTemperature_(prevTparcel, prevPenv * 100);
 
 	if (Tparcel >= Tenv && prevTparcel >= Tenv)
 	{
@@ -664,6 +646,7 @@ void GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shar
 void GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
                 const std::vector<double>& T, const std::vector<double>& P);
 
+extern bool itsUseVirtualTemperature;
 extern level itsBottomLevel;
 
 }  // namespace si_cuda

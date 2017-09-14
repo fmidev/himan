@@ -35,7 +35,6 @@ void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
 void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 
-bool ParseBoolean(string booleanValue);
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
 static logger itsLogger;
@@ -193,7 +192,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		string theReadDataFromDatabase = pt.get<string>("read_data_from_database");
 
-		if (!ParseBoolean(theReadDataFromDatabase) || conf->DatabaseType() == kNoDatabase)
+		if (!util::ParseBoolean(theReadDataFromDatabase) || conf->DatabaseType() == kNoDatabase)
 		{
 			conf->ReadDataFromDatabase(false);
 		}
@@ -213,7 +212,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		string theUseCache = pt.get<string>("use_cache");
 
-		if (!ParseBoolean(theUseCache))
+		if (!util::ParseBoolean(theUseCache))
 		{
 			conf->UseCache(false);
 		}
@@ -306,7 +305,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	{
 		string theUseDynamicMemoryAllocation = pt.get<string>("dynamic_memory_allocation");
 
-		if (ParseBoolean(theUseDynamicMemoryAllocation))
+		if (util::ParseBoolean(theUseDynamicMemoryAllocation))
 		{
 			conf->UseDynamicMemoryAllocation(true);
 		}
@@ -375,7 +374,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			string theUseCache = element.second.get<string>("use_cache");
 
-			delayedUseCache = ParseBoolean(theUseCache);
+			delayedUseCache = util::ParseBoolean(theUseCache);
 		}
 		catch (boost::property_tree::ptree_bad_path& e)
 		{
@@ -572,7 +571,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				}
 				else if (key == "async")
 				{
-					pc->AsyncExecution(ParseBoolean(value));
+					pc->AsyncExecution(util::ParseBoolean(value));
 				}
 				else
 				{
@@ -1565,38 +1564,6 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 	ASSERT(!levels.empty());
 
 	return levels;
-}
-
-/*
- * ParseBoolean()
- *
- * Will check if given argument is a boolean value or not.
- * Note: will change argument to lower case.
- */
-
-bool ParseBoolean(string booleanValue)
-{
-	bool ret;
-
-	boost::algorithm::to_lower(booleanValue);
-
-	if (booleanValue == "yes" || booleanValue == "true" || booleanValue == "1")
-	{
-		ret = true;
-	}
-
-	else if (booleanValue == "no" || booleanValue == "false" || booleanValue == "0")
-	{
-		ret = false;
-	}
-
-	else
-	{
-		itsLogger.Fatal("Invalid boolean value: " + booleanValue);
-		himan::Abort();
-	}
-
-	return ret;
 }
 
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)

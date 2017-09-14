@@ -245,6 +245,12 @@ info_t CSVToInfo(const std::vector<std::string>& csv);
 
 double MissingPercent(const himan::info& info);
 
+/**
+ * @brief Parse boolean value from string
+ */
+
+bool ParseBoolean(const std::string& val);
+
 template <class... Conts>
 inline auto zip_range(Conts&... conts)
     -> decltype(boost::make_iterator_range(boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
