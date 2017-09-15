@@ -297,8 +297,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 		// 1. jäätävää tihkua? (tai lumijyväsiä)
 
-		if (!IsMissing(base) AND !IsMissing(top) AND !IsMissing(upperLayerN) AND !IsMissing(wAvg) AND !IsMissing(stTavg)
-		        AND !IsMissing(Ttop) AND RR <=
+		if (RR <=
 		    fzdzLim AND
 		        base<baseLimit AND(top - base) >= fzStLimit AND wAvg<wMax AND wAvg >= 0 AND Ttop> stTlimit AND stTavg>
 		            stTlimit AND T > sfcMin AND T <= sfcMax AND upperLayerN < dryNlim)
@@ -325,13 +324,12 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		{
 			// Tihkua tai vettä jos "riitävän paksu lämmin kerros pinnan yläpuolella"
 
-			if (!IsMissing(plusArea) AND plusArea > waterArea)
+			if (plusArea > waterArea)
 			{
 				// Tihkua jos riittävän paksu stratus heikolla sateen intensiteetillä ja yläpuolella kuiva kerros
 				// AND (ConvPre=0) poistettu alla olevasta (ConvPre mm/h puuttuu EC:stä; Hirlam-versiossa pidetään
 				// mukana)
-				if (!IsMissing(base) && !IsMissing(top) && !IsMissing(upperLayerN) && RR <= dzLim && base < baseLimit &&
-				    (top - base) > stLimit && upperLayerN < dryNlim)
+				if (RR <= dzLim && base < baseLimit && (top - base) > stLimit && upperLayerN < dryNlim)
 				{
 					PreForm = DRIZZLE;
 				}
@@ -342,8 +340,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan
 
-				if (!IsMissing(nZeroLevel) AND !IsMissing(rhAvg) AND !IsMissing(rhMelt)
-				        AND nZeroLevel == 1 AND rhAvg < rhMelt AND plusArea < 4000)
+				if (nZeroLevel == 1 AND rhAvg < rhMelt AND plusArea < 4000)
 				{
 					PreForm = SLEET;
 				}
@@ -351,7 +348,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 				// Lisäys, jolla korjataan vesi/tihku lumeksi, jos pintakerros pakkasella (mutta jäätävän sateen/tihkun
 				// kriteerit eivät toteudu,
 				// esim. paksu plussakerros pakkas-st/sc:n yllä)
-				if (!IsMissing(minusArea) OR(!IsMissing(plusAreaSfc) AND plusAreaSfc < snowArea))
+				if (!IsMissing(minusArea) OR plusAreaSfc < snowArea)
 				{
 					PreForm = SNOW;
 				}
@@ -359,14 +356,13 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 			// Räntää jos "ei liian paksu lämmin kerros pinnan yläpuolella"
 
-			if (!IsMissing(plusArea) AND plusArea >= snowArea AND plusArea <= waterArea)
+			if (plusArea >= snowArea AND plusArea <= waterArea)
 			{
 				PreForm = SLEET;
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi lumi rännän sijaan
 
-				if (!IsMissing(nZeroLevel) AND !IsMissing(rhAvg) AND !IsMissing(rhMelt)
-				        AND nZeroLevel == 1 AND rhAvg < rhMelt)
+				if (nZeroLevel == 1 AND rhAvg < rhMelt)
 				{
 					PreForm = SNOW;
 				}
@@ -436,7 +432,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 	vector<double> zerom(ret->Data().Size(), 0);
 	vector<double> tenkm(zerom.size(), 10000.);
-	vector<double> zerodeg(zerom.size(), himan::constants::kKelvin); // 0C
+	vector<double> zerodeg(zerom.size(), himan::constants::kKelvin);  // 0C
 
 	vector<double> numZeroLevels, zeroLevel1, zeroLevel2, zeroLevel3, zeroLevel4;
 	vector<double> Tavg01, Tavg12, Tavg23, Tavg34;
