@@ -524,29 +524,17 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 	const string geom_name = geominfo["name"];
 	auto analysisTime = resultInfo.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
-	query.str("");
+	auto tableinfo = itsRadonDB->GetTableName(resultInfo.Producer().Id(), analysisTime, geom_name);
 
-	query << "SELECT "
-	      << "id, schema_name, partition_name, record_count "
-	      << "FROM as_grid_v "
-	      << "WHERE geometry_name = '" << geom_name << "'"
-	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime << "'"
-	      << ", '" << analysisTime << "')"
-	      << " AND producer_id = " << resultInfo.Producer().Id();
-
-	itsRadonDB->Query(query.str());
-
-	auto row = itsRadonDB->FetchRow();
-
-	if (row.empty())
+	if (tableinfo.empty())
 	{
 		itsLogger.Warning("Data set definition not found from radon");
 		return false;
 	}
 
-	const string schema_name = row[1];
-	const string table_name = row[2];
-	const string record_count = row[3];
+	const string schema_name = tableinfo["schema_name"];
+	const string table_name = tableinfo["partition_name"];
+	const string record_count = tableinfo["record_count"];
 
 	query.str("");
 
