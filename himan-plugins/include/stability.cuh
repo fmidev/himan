@@ -1,10 +1,118 @@
+#pragma once
+
+// Required source and target parameters and levels
+
+const himan::param TParam("T-K");
+const himan::param TDParam("TD-K");
+const himan::param HParam("Z-M2S2");
+const himan::params PParam({himan::param("P-HPA"), himan::param("P-PA")});
+const himan::param KIParam("KINDEX-N");
+const himan::param VTIParam("VTI-N");
+const himan::param CTIParam("CTI-N");
+const himan::param TTIParam("TTI-N");
+const himan::param SIParam("SI-N");
+const himan::param LIParam("LI-N");
+const himan::param BSParam("WSH-MS");
+const himan::param EBSParam("EWSH-MS");
+const himan::param SRHParam("HLCY-M2S2");
+const himan::param TPEParam("TPE-K");
+const himan::param EHIParam("EHI-N");
+const himan::param BRNParam("BRN-N");
+const himan::param FFParam("FF-MS");
+const himan::param UParam("U-MS");
+const himan::param VParam("V-MS");
+const himan::param RHParam("RH-PRCNT");
+
+const himan::level P850Level(himan::kPressure, 850);
+const himan::level P700Level(himan::kPressure, 700);
+const himan::level P500Level(himan::kPressure, 500);
+const himan::level SixKMLevel(himan::kHeightLayer, 0, 6000);
+const himan::level OneKMLevel(himan::kHeightLayer, 0, 1000);
+const himan::level ThreeKMLevel(himan::kHeightLayer, 0, 3000);
+const himan::level EuropeanMileLevel(himan::kHeight, 1500);
+const himan::level Height0Level(himan::kHeight, 0);
+
+namespace STABILITY
+{
 /**
- * @file   stability_cuda.h
+ * @brief Cross Totals Index
  *
+ * http://glossary.ametsoc.org/wiki/Stability_index
+ *
+ * @param T500 Temperature of 500 hPa isobar in Kelvins
+ * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
+ * @return Index value (TD850 - T500)
  */
 
-#ifndef STABILITY_CUDA_H
-#define STABILITY_CUDA_H
+CUDA_DEVICE
+inline double CTI(double T500, double TD850)
+{
+	return TD850 - T500;
+}
+/**
+ * @brief Vertical Totals Index
+ *
+ * http://glossary.ametsoc.org/wiki/Stability_index
+ *
+ * @param T850 Temperature of 850 hPa isobar in Kelvins
+ * @param T500 Temperature of 500 hPa isobar in Kelvins
+ * @return Index value (T850 - T500)
+ */
+
+CUDA_DEVICE
+inline double VTI(double T850, double T500)
+{
+	return T850 - T500;
+}
+/**
+ * @brief Total Totals Index
+ *
+ * http://glossary.ametsoc.org/wiki/Stability_index
+ *
+ * @param T850 Temperature of 850 hPa isobar in Kelvins
+ * @param T500 Temperature of 500 hPa isobar in Kelvins
+ * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
+ * @return Index value ( T850 - T500 ) + ( TD850 - T500 )
+ */
+
+CUDA_DEVICE
+inline double TTI(double T850, double T500, double TD850)
+{
+	return CTI(TD850, T500) + VTI(T850, T500);
+}
+/**
+ * @brief K-Index
+ *
+ * @param T500 Temperature of 500 hPa isobar in Kelvins
+ * @param T700 Temperature of 700 hPa isobar in Kelvins
+ * @param T850 Temperature of 850 hPa isobar in Kelvins
+ * @param TD700 Dewpoint temperature of 700 hPa isobar in Kelvins
+ * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
+ * @return Index value
+ */
+
+CUDA_DEVICE
+inline double KI(double T850, double T700, double T500, double TD850, double TD700)
+{
+	return (T850 - T500 + TD850 - (T700 - TD700)) - himan::constants::kKelvin;
+}
+
+CUDA_DEVICE
+inline void UVId(double u_shr, double v_shr, double u_avg, double v_avg, double& u_id, double& v_id)
+{
+#ifdef __CUDACC__
+#define SQRT __dsqrt_rn
+#else
+#define SQRT sqrt
+#endif
+	const double mag = SQRT(u_shr * u_shr + v_shr * v_shr);
+	const double u_unit = u_shr / mag;
+	const double v_unit = v_shr / mag;
+
+	u_id = fma(v_unit, 7.5, u_avg);  // x*y+z
+	v_id = fma(-u_unit, 7.5, v_avg);
+}
+}
 
 #ifdef HAVE_CUDA
 #include "info_simple.h"
@@ -13,17 +121,14 @@ namespace himan
 {
 namespace plugin
 {
+class hitool;
+
 namespace stability_cuda
 {
+extern level itsBottomLevel;
+
 struct options
 {
-	info_simple* t500;
-	info_simple* t700;
-	info_simple* t850;
-	info_simple* td500;
-	info_simple* td700;
-	info_simple* td850;
-
 	info_simple* ki;
 	info_simple* si;
 	info_simple* li;
@@ -31,63 +136,51 @@ struct options
 	info_simple* cti;
 	info_simple* tti;
 	info_simple* bs01;
+	info_simple* bs03;
 	info_simple* bs06;
+	info_simple* ebs;
+	info_simple* srh01;
+	info_simple* srh03;
+	info_simple* ehi;
+	info_simple* brn;
+	info_simple* thetae3;
 
-	double* t500m;
-	double* td500m;
-	double* p500m;
-
-	double* u01;
-	double* v01;
-	double* u06;
-	double* v06;
-
-	size_t missing;
 	size_t N;
 
+	std::shared_ptr<himan::plugin::hitool> h;
+	std::shared_ptr<const himan::plugin_configuration> conf;
+	std::shared_ptr<himan::info> myTargetInfo;
+
 	options()
-	    : t500(0),
-	      t700(0),
-	      t850(0),
-	      td500(0),
-	      td700(0),
-	      td850(0),
-	      ki(0),
+	    : ki(0),
 	      si(0),
 	      li(0),
 	      vti(0),
 	      cti(0),
 	      tti(0),
 	      bs01(0),
+	      bs03(0),
 	      bs06(0),
-	      t500m(0),
-	      td500m(0),
-	      p500m(0),
-	      u01(0),
-	      v01(0),
-	      u06(0),
-	      v06(0),
-	      missing(0),
-	      N(0)
+	      ebs(0),
+	      srh01(0),
+	      srh03(0),
+	      ehi(0),
+	      brn(0),
+	      thetae3(0),
+	      N(0),
+	      h(),
+	      conf(),
+	      myTargetInfo()
 	{
 	}
 };
 
 void Process(options& opts);
 
-#ifdef __CUDACC__
-void Prepare(const double* source, double** devptr, size_t memsize, cudaStream_t& stream);
-
-__global__ void Calculate(cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700,
-                          cdarr_t d_t500m, cdarr_t d_td500m, cdarr_t d_p500m, cdarr_t d_u01, cdarr_t d_v01,
-                          cdarr_t d_u06, cdarr_t d_v06, darr_t d_ki, darr_t d_vti, darr_t d_cti, darr_t d_tti,
-                          darr_t d_si, darr_t d_li, darr_t d_bs01, darr_t d_bs06, options opts);
-#endif
+extern himan::level itsBottomLevel;
 
 }  // namespace stability_cuda
 }  // namespace plugin
 }  // namespace himan
 
 #endif /* HAVE_CUDA */
-
-#endif /* STABILITY_CUDA_H */
