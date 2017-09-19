@@ -48,8 +48,7 @@ Himan is able to produce the following parameters, given required source data:
 * sounding indices
   * CAPE
   * CIN
-  * LCL, LFC, EL height and temperature
-  * wind shear
+  * LPL, LCL, LFC, EL height and temperature
 * weather symbol (two different versions)
 * monin-obukhov length
 * wind gust
@@ -68,6 +67,11 @@ Himan is able to produce the following parameters, given required source data:
 * turbulent kinetic energy
 * unstaggering of Arakawa C grids
 * fog intensity
+* wind (bulk) shear
+* effective bulk shear
+* storm relative helicity
+* energy-helicity index
+* bulk richardson number
 
 # Architecture
 
