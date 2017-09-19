@@ -46,25 +46,12 @@ class stability : public compiled_plugin, private compiled_plugin_base
 	{
 		return HPVersionNumber(2, 0);
 	}
+  protected:
+	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex) override;
+	void WriteToFile(const info& targetInfo, write_options writeOptions = write_options()) override;
 
    private:
 	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-
-	bool GetSourceData(std::shared_ptr<info>& T850Info, std::shared_ptr<info>& T700Info,
-	                   std::shared_ptr<info>& T500Info, std::shared_ptr<info>& TD850Info,
-	                   std::shared_ptr<info>& TD700Info, const std::shared_ptr<info>& myTargetInfo,
-	                   bool useCudaInThisThread);
-	bool GetLISourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& T500mVector,
-	                     std::vector<double>& TD500mVector, std::vector<double>& P500mVector);
-	bool GetWindShearSourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& U01Vector,
-	                            std::vector<double>& V01Vector, std::vector<double>& U06Vector,
-	                            std::vector<double>& V06Vector);
-	bool GetSRHSourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& Uid,
-	                      std::vector<double>& Vid);
-
-	bool itsLICalculation;
-	bool itsBSCalculation;
-	bool itsSRHCalculation;
 };
 
 // the class factory

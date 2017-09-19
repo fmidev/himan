@@ -5,13 +5,37 @@ stability plugin calculates indices describing the state and stability of the at
 The indices are 
 
 * k-index
+** http://glossary.ametsoc.org/wiki/Stability_index
 * showalter index
+** http://glossary.ametsoc.org/wiki/Stability_index
 * lifted index
+** http://glossary.ametsoc.org/wiki/Stability_index
+** source data for the lifted parcel is an average from the lowest 500 meters
 * cross totals index
+** http://glossary.ametsoc.org/wiki/Stability_index
 * vertical totals index
+** http://glossary.ametsoc.org/wiki/Stability_index
 * total totals index
-* bulk shear between 0 and 1km
-* bulk shear between 0 and 6km
+** http://glossary.ametsoc.org/wiki/Stability_index
+* bulk shear
+** between 0 and 1km
+** between 0 and 3km
+** between 0 and 6km
+** https://en.wikipedia.org/wiki/Wind_shear
+* effective bulk shear
+** http://www.spc.noaa.gov/exper/mesoanalysis/help/help_eshr.html
+** Lifted parcel level is used as effective inflow base
+** effective inflow top is found when going upwards from base up to 50% of EL height
+* storm relative helicity
+** between 0 and 1km
+** between 0 and 3km
+** http://www.spc.noaa.gov/exper/mesoanalysis/help/help_srh1.html
+* equivalent potential temperature difference between 0 and 3km
+* wind speed at 1.5km
+* energy-helicity index 
+** https://en.wikipedia.org/wiki/Hydrodynamical_helicity
+* bulk richardson number
+** http://glossary.ametsoc.org/wiki/Bulk_richardson_number
 
 Plugin is optimized for GPU use.
 
@@ -63,12 +87,4 @@ Following parameters are in knots:
 
 # Per-plugin configuration options
 
-K-index, cross totals index, vertical totals index and total totals index are calculated always.
-
-li: define whether to calculate lifted index and showalter index, default: false
-
-    "li" : true
-
-bs: define whether to calculate bulk shear
-
-    "bs" : true
+None
