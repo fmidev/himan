@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.9.14
+Version: 17.9.21
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -18,7 +18,7 @@ Requires: himan-lib >= 17.8.28
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.7.31
-Requires: libfmidb >= 17.8.10
+Requires: libfmidb >= 17.9.18
 Requires: smartmet-library-newbase >= 17.6.1
 Requires: libpqxx
 
@@ -35,7 +35,7 @@ BuildRequires: cusp >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.8.10
+BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 17.7.31
 BuildRequires: smartmet-library-newbase-devel >= 17.6.1
 BuildRequires: scons
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.21-1.fmi
+- Update to preform_hybrid
 * Thu Sep 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.14-1.fmi
 - First/last EL for cape plugin
 * Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-3.fmi
