@@ -34,9 +34,11 @@ static void SignalHandler(int signum)
 		break;
 	case SIGQUIT:
 		// 'dump core signal'
+		printf("Received SIGQUIT, aborting\n");
 		himan::Abort();
 		break;
 	case SIGSEGV:
+		printf("Received SIGSEGV, aborting\n");
 		himan::Abort();
 		break;
 	default:
