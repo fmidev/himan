@@ -103,11 +103,11 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	NFmiMetTime theTime(stoi(myTargetInfo->Time().ValidDateTime().String("%Y")),
-	                    stoi(myTargetInfo->Time().ValidDateTime().String("%m")),
-	                    stoi(myTargetInfo->Time().ValidDateTime().String("%d")),
-	                    stoi(myTargetInfo->Time().ValidDateTime().String("%H")),
-	                    stoi(myTargetInfo->Time().ValidDateTime().String("%M")));
+	NFmiMetTime theTime(static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%Y"))),
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%m"))),
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%d"))),
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%H"))),
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%M"))));
 
 	auto myThreadedLogger = logger("gust_pluginThread #" + to_string(threadIndex));
 
