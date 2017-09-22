@@ -440,7 +440,7 @@ void grib::WriteParameter(info& anInfo)
 			itsGrib->Message().Table2Version(anInfo.Param().GribTableVersion());
 			itsGrib->Message().ParameterNumber(anInfo.Param().GribIndicatorOfParameter());
 		}
-		else if (anInfo.Producer().Id() != kHPMissingInt) // no-database example has 999999 as producer
+		else if (anInfo.Producer().Id() != kHPMissingInt)  // no-database example has 999999 as producer
 		{
 			itsLogger.Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
 			                  boost::lexical_cast<string>(anInfo.Producer().Id()) +
@@ -1346,8 +1346,12 @@ himan::level grib::ReadLevel(const search_options& options) const
 			}
 			else
 			{
+				long gribLevelValue2 = itsGrib->Message().LevelValue2();
+				// Missing in grib is all bits set
+				if (gribLevelValue2 == 2147483647) gribLevelValue2 = -1;
+
 				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
-				          static_cast<float>(itsGrib->Message().LevelValue2()));
+				          static_cast<float>(gribLevelValue2));
 			}
 		}
 		break;
