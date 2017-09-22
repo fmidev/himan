@@ -203,19 +203,14 @@ __global__ void MoistLiftKernel(const double* __restrict__ d_T, const double* __
 
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
-		ASSERT(d_P[idx] > 10);
-		ASSERT(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
+		ASSERT((d_P[idx] > 10 && d_P[idx] < 1500) || IsMissingDouble(d_P[idx]));
+		ASSERT((d_Ptarget.values[idx] > 10 && d_Ptarget.values[idx] < 1500) || IsMissingDouble(d_Ptarget.values[idx]));
 
-		ASSERT(d_Ptarget.values[idx] > 10);
-		ASSERT(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
-
-		ASSERT(d_T[idx] > 100);
-		ASSERT(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
+		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissingDouble(d_T[idx]));
 
 		double T = metutil::MoistLiftA_(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
 
-		ASSERT(T > 100);
-		ASSERT(T < 350 || IsMissingDouble(T));
+		ASSERT((T > 100 && T < 350) || IsMissingDouble(T));
 
 		d_Tparcel[idx] = T;
 	}
