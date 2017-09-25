@@ -16,7 +16,7 @@ using namespace std;
 using namespace himan::plugin;
 
 pop::pop()
-    : itsECEPSGeom("ECFESC250"),
+    : itsECEPSGeom("ECEUR0200"),
       itsECGeom("ECGLO0100"),
       itsPEPSGeom("PEPSSCAN"),
       itsHirlamGeom("RCR068"),
@@ -169,11 +169,11 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		cnf->SourceGeomNames({itsECEPSGeom});
 
 		// PROB-RR-1 = "RR>= 1mm 6h"
-		auto ECprob1Info = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-1"), forecastType, false);
+		auto ECprob1Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("PROB-RR-1"), forecastType, false);
 		ECprob1 = VEC(ECprob1Info);
 
 		// PROB-RR-01 = "RR>= 0.1mm 6h"
-		auto ECprob01Info = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-01"), forecastType, false);
+		auto ECprob01Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("PROB-RR-01"), forecastType, false);
 		ECprob01 = VEC(ECprob01Info);
 	}
 	catch (HPExceptionType& e)
@@ -193,14 +193,14 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	try
 	{
-		cnf->SourceProducers({producer(240, 0, 0, "ECGMTA")});
+		cnf->SourceProducers({producer(242, 0, 0, "ECM_PROB")});
 
 		// 50th fractile (median)
-		auto ECfract50Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("F50-RR-6"), forecastType, false);
+		auto ECfract50Info = f->Fetch(cnf, prevTime, level(kHeight, 0), param("F50-RR-6-MM"), forecastType, false);
 		ECfract50 = VEC(ECfract50Info);
 
 		// 75th fractile
-		auto ECfract75Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("F75-RR-6"), forecastType, false);
+		auto ECfract75Info = f->Fetch(cnf, prevTime, level(kHeight, 0), param("F75-RR-6-MM"), forecastType, false);
 		ECfract75 = VEC(ECfract75Info);
 	}
 	catch (HPExceptionType& e)

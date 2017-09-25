@@ -16,7 +16,6 @@
 #include "cache.h"
 #include "csv.h"
 #include "grib.h"
-#include "neons.h"
 #include "param.h"
 #include "querydata.h"
 #include "radon.h"
@@ -275,8 +274,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 			optsStr = optsStr.substr(0, optsStr.size() - 1);
 
-			optsStr += " origintime: " + requestedTime.OriginDateTime().String() +
-			           ", step: " + to_string(requestedTime.Step());
+			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
+			           to_string(requestedTime.Step());
 			optsStr += " param: " + requestedParam.Name();
 			optsStr += " level: " + static_cast<string>(requestedLevel);
 
@@ -416,29 +415,7 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 
 	HPDatabaseType dbtype = conf->DatabaseType();
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		string lvlName =
-		    n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
-
-		if (!lvlName.empty())
-		{
-			double lvlValue = targetLevel.Value();
-
-			HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
-
-			if (lvlType == kGround)
-			{
-				lvlValue = 0;
-			}
-
-			ret = level(lvlType, lvlValue, lvlName);
-		}
-	}
-
-	if (ret == targetLevel && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	if (ret == targetLevel && dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -477,12 +454,6 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 
 			ret = level(lvlType, lvlValue);
 		}
-	}
-
-	if (ret == targetLevel)
-	{
-		itsLogger.Trace("No level transformation found for param " + targetParam.Name() + " level " +
-						static_cast<string>(targetLevel));
 	}
 
 	return ret;
@@ -674,20 +645,8 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 	{
 		vector<string> files;
 
-		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+		if (dbtype == kRadon)
 		{
-			// try neons first
-			auto n = GET_PLUGIN(neons);
-
-			itsLogger.Trace("Accessing Neons database");
-
-			files = n->Files(opts);
-		}
-
-		if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && files.empty())
-		{
-			// try radon next
-
 			auto r = GET_PLUGIN(radon);
 
 			itsLogger.Trace("Accessing Radon database");
@@ -826,7 +785,7 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
 	{
 		itsLogger.Fatal("Invalid value for land sea mask threshold: " +
-						boost::lexical_cast<string>(theLandSeaMaskThreshold));
+						to_string(theLandSeaMaskThreshold));
 		himan::Abort();
 	}
 

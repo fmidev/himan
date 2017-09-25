@@ -13,7 +13,6 @@
 #include <boost/thread.hpp>
 
 #include "hitool.h"
-#include "neons.h"
 #include "radon.h"
 #include <NFmiLocation.h>
 #include <NFmiMetTime.h>
@@ -104,11 +103,11 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	NFmiMetTime theTime(stoi(myTargetInfo->Time().ValidDateTime().String("%Y")),
-	                    stoi(myTargetInfo->Time().ValidDateTime().String("%m")),
-	                    stoi(myTargetInfo->Time().ValidDateTime().String("%d")),
-	                    stoi(myTargetInfo->Time().ValidDateTime().String("%H")),
-	                    stoi(myTargetInfo->Time().ValidDateTime().String("%M")));
+	NFmiMetTime theTime(static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%Y"))),
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%m"))),
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%d"))),
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%H"))),
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%M"))));
 
 	auto myThreadedLogger = logger("gust_pluginThread #" + to_string(threadIndex));
 
@@ -136,14 +135,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	long lowestHybridLevelNumber = kHPMissingInt;
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		lowestHybridLevelNumber = stol(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-	}
-
-	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && lowestHybridLevelNumber == kHPMissingInt)
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -152,7 +144,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	ASSERT(lowestHybridLevelNumber != kHPMissingInt);
 
-	level lowestHybridLevel(kHybrid, lowestHybridLevelNumber);
+	level lowestHybridLevel(kHybrid, static_cast<double>(lowestHybridLevelNumber));
 
 	if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 243)
 	{

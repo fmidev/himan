@@ -831,7 +831,7 @@ inline double Wobf(double T)
 	// "Wobus function" is a polynomial approximation of moist lift
 	// process. It is called from MoistLiftA_().
 
-	double ret = himan::MissingDouble();
+	double ret;
 
 	T -= 20;
 
@@ -921,8 +921,7 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	double Q = constants::kEp * E0 / P;
 	double C = T / pow(E0, constants::kRd_div_Cp);
 
-	double TLCL = MissingDouble();
-	double PLCL = MissingDouble();
+	double TLCL, PLCL;
 
 	double Torig = T;
 	double Porig = P;
@@ -1238,7 +1237,7 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 
 	const double Dp = 1 / (0.1859 * p / p0 + 0.6512);
 
-	double Tw = MissingDouble();
+	double Tw;
 
 	if (ratio > Dp)
 	{

@@ -798,14 +798,14 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		const auto basePlus10 = Add(base, 10.);
 
-		auto top = h->VerticalHeightGreaterThan(wantedParamList, basePlus10, layerVec, stCoverVec);
+		auto top = h->VerticalHeightLessThan(wantedParamList, basePlus10, layerVec, stCoverVec);
 
 		// Mahdollinen toinen matala pilvikerros stratuksen yläpuolella
 		const auto topPlus10 = Add(top, 10.);
 		const auto base2 = h->VerticalHeightGreaterThan(wantedParamList, topPlus10, layerVec, stCoverVec);
 
 		// Top2 = seuraava (pilvi)korkeus, missä N<stCover
-		const auto top2 = h->VerticalHeightGreaterThan(wantedParamList, base2, layerVec, stCoverVec);
+		const auto top2 = h->VerticalHeightLessThan(wantedParamList, base2, layerVec, stCoverVec);
 
 		// Jos toinen pilvikerros alle 45m (150ft) korkeammalla, katsotaan sen olevan samaa stratusta
 		for (size_t i = 0; i < base.size(); i++)

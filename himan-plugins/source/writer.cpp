@@ -13,17 +13,12 @@
 #include "cache.h"
 #include "csv.h"
 #include "grib.h"
-#include "neons.h"
 #include "querydata.h"
 #include "radon.h"
 
 using namespace himan::plugin;
 
-writer::writer() : itsWriteOptions()
-{
-	itsLogger = logger("writer");
-}
-
+writer::writer() : itsWriteOptions() { itsLogger = logger("writer"); }
 bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile)
 {
 	namespace fs = boost::filesystem;
@@ -136,19 +131,7 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 		{
 			HPDatabaseType dbtype = conf->DatabaseType();
 
-			if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-			{
-				auto n = GET_PLUGIN(neons);
-
-				ret = n->Save(theInfo, theOutputFile);
-
-				if (!ret)
-				{
-					itsLogger.Warning("Saving file information to neons failed");
-				}
-			}
-
-			if (dbtype == kRadon || dbtype == kNeonsAndRadon)
+			if (dbtype == kRadon)
 			{
 				auto r = GET_PLUGIN(radon);
 
