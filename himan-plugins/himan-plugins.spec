@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.9.21
+Version: 17.9.25
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,13 +13,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 17.8.28
+Requires: himan-lib >= 17.9.25
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.7.31
 Requires: libfmidb >= 17.9.18
-Requires: smartmet-library-newbase >= 17.6.1
+Requires: smartmet-library-newbase >= 17.9.14
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -37,12 +36,11 @@ Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 17.7.31
-BuildRequires: smartmet-library-newbase-devel >= 17.6.1
+BuildRequires: smartmet-library-newbase-devel >= 17.9.14
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.65
 BuildRequires: scons
-BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
 %description
 FMI himan-plugins -- hila manipulaatio -- plugin library
@@ -82,7 +80,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libicing.so
 %{_libdir}/himan-plugins/libmonin_obukhov.so
 %{_libdir}/himan-plugins/libluatool.so
-%{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libpop.so
 %{_libdir}/himan-plugins/libpot.so
@@ -111,6 +108,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Sep 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.25-1.fmi
+- Remove Oracle support
 * Thu Sep 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.21-1.fmi
 - Update to preform_hybrid
 * Thu Sep 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.14-1.fmi

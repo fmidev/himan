@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.9.14
+Version: 17.9.25
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 17.8.10
+Requires: libfmidb >= 17.9.18
 Requires: libfmigrib >= 17.4.6
 Requires: gdal
 
@@ -28,7 +28,7 @@ BuildRequires: cuda-8-0
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.8.10
+BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 17.4.6
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.65
@@ -60,6 +60,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Sep 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.25-1.fmi
+- Remove Oracle-support
+- Fix race condition of lazy plugin load
 * Thu Sep 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.14-1.fmi
 - Update to stack trace functionality
 * Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-1.fmi

@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 17.9.12
+Version: 17.9.25
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -15,7 +15,6 @@ Requires: libgcc
 Requires: libstdc++
 Requires: himan-lib >= 17.8.14
 Requires: himan-plugins
-Requires: oracle-instantclient-basic
 Requires: gdal >= 1.11.0
 Requires: zlib
 BuildRequires: boost-devel >= 1.65
@@ -63,7 +62,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
-* Mon Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-1.fmi
+* Mon Sep 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.25-1.fmi
+- Remove Oracle support
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-1.fmi
 - Add stack trace functionality
 * Mon Sep 11 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.11-1.fmi
 - Replace kFloatMissing with nan
