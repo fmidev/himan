@@ -31,6 +31,8 @@ std::string GetParamNameFromGribShortName(const std::string& paramFileName, cons
 void EncodePrecipitationFormToGrib2(vector<double>& arr);
 void DecodePrecipitationFormFromGrib2(vector<double>& arr);
 
+const double gribMissing = 32700.;
+
 grib::grib()
 {
 	itsLogger = logger("grib");
@@ -635,7 +637,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	// set to missing value to a large value to prevent it from mixing up with valid
 	// values in the data
 
-	const double gribMissing = 32700.;
 	itsGrib->Message().MissingValue(gribMissing);
 
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
@@ -1488,6 +1489,7 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 	else
 #endif
 	{
+		dm.MissingValue(gribMissing);
 		size_t len = itsGrib->Message().ValuesLength();
 
 		itsGrib->Message().GetValues(dm.ValuesAsPOD(), &len);

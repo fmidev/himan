@@ -62,8 +62,6 @@ void cache::SplitToPool(info& anInfo, bool pin)
 
 		if (cache_pool::Instance()->Find(uniqueName))
 		{
-			// New item, but only one thread should insert it (prevent race condition)
-
 			itsLogger.Trace("Data with key " + uniqueName + " already exists at cache");
 
 			// Update timestamp of this cache item
