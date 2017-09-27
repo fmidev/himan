@@ -2,8 +2,8 @@
 
 #include "plugin_factory.h"
 
-#include "logger.h"
 #include "fetcher.h"
+#include "logger.h"
 #include "writer.h"
 
 #include "ensemble.h"
@@ -408,7 +408,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		}
 		else if (pc.output.Name() == "PROB-TC-0" || pc.output.Name() == "PROB-TC-1" ||
 		         pc.output.Name() == "PROB-TC-2" || pc.output.Name() == "PROB-TC-3" ||
-		         pc.output.Name() == "PROB-TC-4" || pc.output.Name() == "PROB-WATLEV-LOW-1")
+		         pc.output.Name() == "PROB-TC-4" || pc.output.Name() == "PROB-TC-5" ||
+		         pc.output.Name() == "PROB-WATLEV-LOW-1")
 		{
 			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized, ens1);
 		}
