@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.9.26
+Version: 17.9.27
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -108,6 +108,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Sep 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.27-1.fmi
+- Fix PROB-TC-5 calculation
 * Tue Sep 26 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.26-1.fmi
 - Fix for missing value handling when reading from grib
 * Mon Sep 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.25-1.fmi
