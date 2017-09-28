@@ -169,7 +169,8 @@ class iterator
 			return itsElements[itsIndex];
 		}
 
-		throw std::runtime_error(ClassName() + ": Invalid index value: " + std::to_string(itsIndex));
+		std::cerr << ClassName() + ": Invalid index value: " + std::to_string(itsIndex) << std::endl;
+		himan::Abort();
 	}
 
 	/**
@@ -183,7 +184,8 @@ class iterator
 			return itsElements[theIndex];
 		}
 
-		throw std::runtime_error(ClassName() + ": Invalid index value: " + std::to_string(theIndex));
+		std::cerr << ClassName() + ": Invalid index value: " + std::to_string(itsIndex) << std::endl;
+		himan::Abort();
 	}
 
 	/**
@@ -411,16 +413,23 @@ class info
 	 */
 
 	void Create(const grid* baseGrid, bool createDataBackend = false);
+	void Create(const grid* baseGrid, const param& par, const level& lev, bool createDataBackend = false);
 
 	/**
-	 * @brief Will reset data backend, ie. create new data that is not attached
-	 * to any other info instance. The data content will be the same as in the old
-	 * info.
+	 * @brief Re-order infos in the dimension vector if dimension sizes are changed
+	 *
+	 * If existing dimensions are resized, the data in the dimension vector needs
+	 * to be reordered or the calculated iterator indices are not correct and segfault
+	 * is more than likely.
+	 *
+	 * Regridding will therefore *move* the grids from the old dimension vector to a
+	 * new one. For now regridding is only supported for level and param dimensions.
 	 *
 	 * Will *not* preserve iterator positions.
 	 */
 
-	void ReGrid();
+	void Regrid(const std::vector<param>& params);
+	void Regrid(const std::vector<level>& levels);
 
 	void Producer(long theFmiProducerID);
 	void Producer(const producer& theProducer);
@@ -677,6 +686,27 @@ class info
 	 */
 
 	void Clear();
+
+	bool IsValidGrid() const;
+
+	/**
+	 * @brief Clone an info
+	 *
+	 * Simply put we create a copy of the current instance
+	 * and copy all data so that the matrices are not shared
+	 * anymore.
+	 *
+	 * This function used to be called ReGrid.
+	 *
+	 * Does retain iterator positions.
+	 */
+
+	info Clone();
+
+	time_iter& TimeIterator();
+	param_iter& ParamIterator();
+	level_iter& LevelIterator();
+	forecast_type_iter& ForecastTypeIterator();
 
    protected:
 	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
