@@ -34,7 +34,7 @@ class pop : public compiled_plugin, private compiled_plugin_base
 	std::string itsECGeom;
 	std::string itsPEPSGeom;
 	std::string itsHirlamGeom;
-	std::string itsHarmonieGeom;
+	std::string itsMEPSGeom;
 	std::string itsGFSGeom;
 };
 

@@ -20,7 +20,7 @@ pop::pop()
       itsECGeom("ECGLO0100"),
       itsPEPSGeom("PEPSSCAN"),
       itsHirlamGeom("RCR068"),
-      itsHarmonieGeom("HARMONIE022"),
+      itsMEPSGeom("MEPSSCAN2500"),
       itsGFSGeom("GFS0250")
 {
 	itsLogger = logger("pop");
@@ -53,17 +53,21 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->Exists("hirlam_geom"))
 	{
-		itsPEPSGeom = itsConfiguration->GetValue("hirlam_geom");
+		itsHirlamGeom = itsConfiguration->GetValue("hirlam_geom");
 	}
 
-	if (itsConfiguration->Exists("harmonie_geom"))
+	if (itsConfiguration->Exists("meps_geom"))
 	{
-		itsPEPSGeom = itsConfiguration->GetValue("harmonie_geom");
+		itsMEPSGeom = itsConfiguration->GetValue("meps_geom");
+	}
+	else if (itsConfiguration->Exists("harmonie_geom"))
+	{
+		itsMEPSGeom = itsConfiguration->GetValue("harmonie_geom");
 	}
 
 	if (itsConfiguration->Exists("gfs_geom"))
 	{
-		itsPEPSGeom = itsConfiguration->GetValue("gfs_geom");
+		itsGFSGeom = itsConfiguration->GetValue("gfs_geom");
 	}
 
 	Start();
@@ -92,7 +96,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const double K5 = 2;     // EC:n viimeisin malliajo
 	const double K6 = 1;     // Hirlamin viimeisin malliajo
 	const double K7 = 1;     // GFS:n viimeisin malliajo
-	const double K8 = 1;     // Harmonien viimeisin malliajo
+	const double K8 = 1;     // MEPS:n viimeisin malliajo
 
 	// Current time and level as given to this thread
 
@@ -105,7 +109,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 						   static_cast<string>(forecastLevel));
 
-	vector<double> PEPS, Hirlam, Harmonie, GFS, EC, ECprev, ECprob1, ECprob01, ECfract50, ECfract75;
+	vector<double> PEPS, Hirlam, MEPS, GFS, EC, ECprev, ECprob1, ECprob01, ECfract50, ECfract75;
 
 	/*
 	 * Required source parameters
@@ -265,23 +269,22 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	// Harmonie
+	// MEPS control
 
 	try
 	{
-		cnf->SourceGeomNames({itsHarmonieGeom});
-		cnf->SourceProducers({producer(210, 0, 0, "AROMTA")});
+		cnf->SourceGeomNames({itsMEPSGeom});
+		cnf->SourceProducers({producer(260, 0, 0, "MEPSMTA")});
 
-		forecastTime.StepResolution(kMinuteResolution);
-		auto HarmonieInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
+		auto MEPSInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecast_type(kEpsControl, 0), false);
 
-		Harmonie = VEC(HarmonieInfo);
+		MEPS = VEC(MEPSInfo);
 	}
 	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
-			Harmonie.resize(myTargetInfo->Data().Size(), MissingDouble());
+			MEPS.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -321,7 +324,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// 1. Calculate initial area and confidence of precipitation
 
 	for (auto&& tup :
-	     zip_range(confidence.Values(), area.Values(), ECfract50, ECfract75, EC, ECprev, PEPS, Hirlam, Harmonie, GFS))
+	     zip_range(confidence.Values(), area.Values(), ECfract50, ECfract75, EC, ECprev, PEPS, Hirlam, MEPS, GFS))
 	{
 		double& out_confidence = tup.get<0>();
 		double& out_area = tup.get<1>();
@@ -331,7 +334,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double rr_ecprev = tup.get<5>();
 		double rr_peps = tup.get<6>();
 		double rr_hirlam = tup.get<7>();
-		double rr_harmonie = tup.get<8>();
+		double rr_meps = tup.get<8>();
 		double rr_gfs = tup.get<9>();
 
 		if (IsMissing(rr_ec))
@@ -356,7 +359,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double ecprev = 0;
 		double peps = 0;
 		double hirlam = 0;
-		double harmonie = 0;
+		double meps = 0;
 		double gfs = 0;
 
 		if (IsMissing(rr_f50))
@@ -413,13 +416,13 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			gfs = 1;
 		}
 
-		if (IsMissing(rr_harmonie))
+		if (IsMissing(rr_meps))
 		{
 			_K8 = 0;
 		}
-		else if (rr_harmonie > 0.05)
+		else if (rr_meps > 0.05)
 		{
-			harmonie = 1;
+			meps = 1;
 		}
 
 		if (rr_ec > 0.05)
@@ -428,7 +431,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 
 		out_confidence = (_K1 * ecf50 + _K2 * ecf75 + _K3 * ecprev + _K4 * peps + K5 * ec + _K6 * hirlam + _K7 * gfs +
-		                  _K8 * harmonie) /
+		                  _K8 * meps) /
 		                 (_K1 + _K2 + _K3 + _K4 + K5 + _K6 + _K7 + _K8);
 
 		ASSERT(out_confidence <= 1.01);
