@@ -12,10 +12,10 @@
 #include <boost/thread.hpp>
 #include <future>
 
+#include "debug.h"
 #include "fetcher.h"
 #include "hitool.h"
 #include "radon.h"
-#include "debug.h"
 
 #include "cape.cuh"
 
@@ -183,6 +183,9 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 	theParams.push_back(CAPE3kmParam);
 	theParams.push_back(CINParam);
 
+	// Discard the levels defined in json
+	itsConfiguration->Info()->LevelIterator().Clear();
+
 	for (const auto& source : sourceDatas)
 	{
 		if (source == "surface")
@@ -196,14 +199,11 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 		else if (source == "most unstable")
 		{
 			itsSourceLevels.push_back(UNSTABLE);
+			SetParams({LPLTParam, LPLPParam, LPLZParam}, {UNSTABLE});
 		}
 	}
 
-	// disregard the level information provided by user
-
-	itsConfiguration->Info()->Levels(itsSourceLevels);
-
-	SetParams(theParams);
+	SetParams(theParams, itsSourceLevels);
 
 	Start();
 }
@@ -232,7 +232,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	auto sourceLevel = myTargetInfo->Level();
 
-	auto mySubThreadedLogger = logger("siThread#" + boost::lexical_cast<string>(threadIndex) + "Version" +
+	auto mySubThreadedLogger = logger("capeThread#" + boost::lexical_cast<string>(threadIndex) + "Version" +
 	                                  boost::lexical_cast<string>(static_cast<int>(sourceLevel.Type())));
 
 	mySubThreadedLogger.Info("Calculating source level type " + HPLevelTypeToString.at(sourceLevel.Type()) +
@@ -268,6 +268,25 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (get<0>(sourceValues).empty()) return;
 
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
+	h->HeightUnit(kHPa);
+
+	if (sourceLevel.Type() == kMaximumThetaE)
+	{
+		myTargetInfo->Param(LPLTParam);
+		myTargetInfo->Data().Set(get<0>(sourceValues));
+		myTargetInfo->Param(LPLPParam);
+		myTargetInfo->Data().Set(get<2>(sourceValues));
+
+		auto height = h->VerticalValue(param("HL-M"), get<1>(sourceValues));
+
+		myTargetInfo->Param(LPLZParam);
+		myTargetInfo->Data().Set(height);
+	}
+
 	aTimer.Stop();
 
 	mySubThreadedLogger.Info("Source data calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
@@ -294,12 +313,6 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Param(LCLPParam);
 	myTargetInfo->Data().Set(LCL.second);
-
-	auto h = GET_PLUGIN(hitool);
-	h->Configuration(itsConfiguration);
-	h->Time(myTargetInfo->Time());
-	h->ForecastType(myTargetInfo->ForecastType());
-	h->HeightUnit(kHPa);
 
 	auto height = h->VerticalValue(param("HL-M"), LCL.second);
 
@@ -746,16 +759,16 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 		{
 			i++;
 
-			double Tenv = tup.get<5>();  // K
+			double Tenv = tup.get<5>();      // K
 			double prevTenv = tup.get<3>();  // K
 
-			double Penv = tup.get<0>();  // hPa
+			double Penv = tup.get<0>();      // hPa
 			double prevPenv = tup.get<4>();  // hPa
 
 			double Zenv = tup.get<1>();      // m
 			double prevZenv = tup.get<2>();  // m
 
-			double Tparcel = tup.get<6>();  // K
+			double Tparcel = tup.get<6>();      // K
 			double prevTparcel = tup.get<7>();  // K
 
 			if (found[i] & FCAPE)

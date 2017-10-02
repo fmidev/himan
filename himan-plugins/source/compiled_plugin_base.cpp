@@ -165,6 +165,11 @@ void compiled_plugin_base::WriteToFile(const info& targetInfo, write_options wri
 
 	while (tempInfo.NextParam())
 	{
+		if (!tempInfo.IsValidGrid())
+		{
+			continue;
+		}
+
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
 			aWriter->ToFile(tempInfo, itsConfiguration);
@@ -189,6 +194,11 @@ void compiled_plugin_base::Start()
 	{
 		itsBaseLogger.Error("Start() called before Init()");
 		return;
+	}
+
+	if (itsInfo->itsBaseGrid)
+	{
+		itsInfo->itsBaseGrid.reset();
 	}
 
 	if (itsPrimaryDimension == kTimeDimension)
@@ -353,75 +363,121 @@ void compiled_plugin_base::SetParams(initializer_list<param> params)
 	SetParams(paramVec);
 }
 
-void compiled_plugin_base::SetParams(std::vector<param>& params)
+void compiled_plugin_base::SetParams(initializer_list<param> params, initializer_list<level> levels)
+{
+	vector<param> paramVec(params);
+	vector<level> levelVec(levels);
+
+	SetParams(paramVec, levelVec);
+}
+
+void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<level>& levels)
 {
 	if (params.empty())
 	{
-		itsBaseLogger.Fatal("size of target parameter vector is zero");
-		exit(1);
+		itsBaseLogger.Fatal("Size of target parameter vector is zero");
+		himan::Abort();
 	}
 
-	if (itsInfo->Producer().Class() != kPreviClass)
+	if (levels.empty())
 	{
-		HPDatabaseType dbtype = itsConfiguration->DatabaseType();
+		itsBaseLogger.Fatal("Size of target level vector is zero");
+		himan::Abort();
+	}
 
-		if (dbtype == kRadon)
+	if (itsInfo->Producer().Class() != kPreviClass && itsConfiguration->DatabaseType() == kRadon)
+	{
+		auto r = GET_PLUGIN(radon);
+
+		for (const auto& lvl : levels)
 		{
-			auto r = GET_PLUGIN(radon);
-
-			for (unsigned int i = 0; i < params.size(); i++)
+			for (auto& par : params)
 			{
-				if (params[i].Name() == "DUMMY")
+				if (par.Name() == "DUMMY")
 				{
 					// special placeholder parameter which is replaced later
 					continue;
 				}
 
-				// We'll fetch the parameter informatio using the type of
-				// the first level in the info. This will obviously not work
-				// correctly if multiple level types are within one info.
-
-				auto firstLevel = itsInfo->PeekLevel(0);
-				auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(
-				    boost::to_upper_copy(HPLevelTypeToString.at(firstLevel.Type())));
+				auto levelInfo =
+				    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(lvl.Type())));
 
 				if (levelInfo.empty())
 				{
-					itsBaseLogger.Warning("Level type '" + HPLevelTypeToString.at(firstLevel.Type()) +
+					itsBaseLogger.Warning("Level type '" + HPLevelTypeToString.at(lvl.Type()) +
 					                      "' not found from radon");
 					continue;
 				}
 
-				map<string, string> paraminfo = r->RadonDB().GetParameterFromDatabaseName(
-				    itsInfo->Producer().Id(), params[i].Name(), firstLevel.Type(), firstLevel.Value());
+				auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(itsInfo->Producer().Id(), par.Name(),
+				                                                           lvl.Type(), lvl.Value());
 
 				if (paraminfo.empty())
 				{
-					itsBaseLogger.Warning("Parameter '" + params[i].Name() + "'definition not found from Radon");
+					itsBaseLogger.Warning("Parameter '" + par.Name() + "' definition not found from Radon");
 					continue;
 				}
 
 				param p(paraminfo);
+				p.Aggregation(par.Aggregation());
 
-				if (params[i].Aggregation().Type() != kUnknownAggregationType)
-				{
-					p.Aggregation(params[i].Aggregation());
-				}
-
-				params[i] = p;
+				par = p;
 			}
 		}
 	}
 
-	itsInfo->Params(params);
+	// Create a vector that contains a union of current levels and new levels
+	vector<level> alllevels;
+
+	for (itsInfo->ResetLevel(); itsInfo->NextLevel();)
+	{
+		alllevels.push_back(itsInfo->Level());
+	}
+
+	for (const auto& lvl : levels)
+	{
+		if (find(alllevels.begin(), alllevels.end(), lvl) == alllevels.end())
+		{
+			alllevels.push_back(lvl);
+		}
+	}
+
+	// Create a vector that contains a union of current params and new params
+	vector<param> allparams;
+
+	for (itsInfo->ResetParam(); itsInfo->NextParam();)
+	{
+		allparams.push_back(itsInfo->Param());
+	}
+
+	for (const auto p : params)
+	{
+		if (find(allparams.begin(), allparams.end(), p) == allparams.end())
+		{
+			allparams.push_back(p);
+		}
+	}
+
+	if (itsInfo->SizeLevels() < alllevels.size())
+	{
+		itsInfo->Levels(alllevels);
+	}
+
+	if (itsInfo->SizeParams() < allparams.size())
+	{
+		itsInfo->Params(allparams);
+	}
 
 	/*
 	 * Create data structures.
 	 */
-
-	itsInfo->Create(itsInfo->itsBaseGrid.get(), !itsConfiguration->UseDynamicMemoryAllocation());
-	itsInfo->itsBaseGrid.reset();
-
+	for (const auto& lvl : levels)
+	{
+		for (const auto& par : params)
+		{
+			itsInfo->Create(itsInfo->itsBaseGrid.get(), par, lvl, !itsConfiguration->UseDynamicMemoryAllocation());
+		}
+	}
 	if (!itsConfiguration->UseDynamicMemoryAllocation())
 	{
 		itsBaseLogger.Trace("Using static memory allocation");
@@ -470,6 +526,18 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		// Start process timing
 		itsTimer.Start();
 	}
+}
+
+void compiled_plugin_base::SetParams(std::vector<param>& params)
+{
+	vector<level> levels;
+
+	for (size_t i = 0; i < itsInfo->SizeLevels(); i++)
+	{
+		levels.push_back(itsInfo->PeekLevel(i));
+	}
+
+	SetParams(params, levels);
 }
 
 #ifdef HAVE_CUDA
@@ -551,9 +619,11 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 		/*
 		 * Fetching of packed data is quite convoluted:
 		 *
-		 * 1) Fetch packed data iff cuda unpacking is enabled (UseCudaForPacking() == true): it makes no sense to unpack
+		 * 1) Fetch packed data iff cuda unpacking is enabled (UseCudaForPacking() == true): it makes no sense to
+		 * unpack
 		 * the data in himan with CPU.
-		 *    If we allow fetcher to return packed data, it will implicitly disable cache integration of fetched data.
+		 *    If we allow fetcher to return packed data, it will implicitly disable cache integration of fetched
+		 * data.
 		 *
 		 * 2a) If caller does not want packed data (returnPacked == false), unpack it here and insert to cache.
 		 *

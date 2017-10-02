@@ -503,6 +503,57 @@ void grib::WriteParameter(info& anInfo)
 	}
 }
 
+void grib::WriteLevel(info& anInfo)
+{
+	auto lev = anInfo.Level();
+
+	const long edition = itsGrib->Message().Edition();
+
+	// Himan levels equal to grib 1
+
+	if (edition == 1)
+	{
+		itsGrib->Message().LevelType(lev.Type());
+	}
+	else if (edition == 2)
+	{
+		if (lev.Type() == kHeightLayer)
+		{
+			itsGrib->Message().LevelType(103);
+			itsGrib->Message().SetLongKey("typeOfSecondFixedSurface", 103);
+		}
+		else
+		{
+			itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(lev.Type(), 2));
+		}
+	}
+
+	switch (lev.Type())
+	{
+		case kHeightLayer:
+		{
+			itsGrib->Message().LevelValue(static_cast<long>(0.01 * lev.Value()), 100);    // top
+			itsGrib->Message().LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
+			break;
+		}
+		case kPressure:
+		{
+			// pressure in grib2 is pascals
+			double scale = 1;
+			if (edition == 2)
+			{
+				scale = 100;
+			}
+
+			itsGrib->Message().LevelValue(static_cast<long>(lev.Value() * scale));
+			break;
+		}
+		default:
+			itsGrib->Message().LevelValue(static_cast<long>(lev.Value()));
+			break;
+	}
+}
+
 bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 {
 	// Write only that data which is currently set at descriptors
@@ -530,13 +581,12 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	// Check levelvalue and forecast type since those might force us to change to grib2!
 
-	double levelValue = anInfo.Level().Value();
 	HPForecastType forecastType = anInfo.ForecastType().Type();
 
 	if (edition == 1 &&
 	    (anInfo.Grid()->AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
-		itsLogger.Trace("File type forced to GRIB2 (level value: " + boost::lexical_cast<string>(levelValue) +
+		itsLogger.Trace("File type forced to GRIB2 (level value: " + to_string(anInfo.Level().Value()) +
 		                ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
 		edition = 2;
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
@@ -600,39 +650,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	// Level
 
-	auto lev = anInfo.Level();
-
-	// Himan levels equal to grib 1
-
-	if (edition == 1)
-	{
-		itsGrib->Message().LevelType(lev.Type());
-	}
-	else if (edition == 2)
-	{
-		if (lev.Type() == kHeightLayer)
-		{
-			itsGrib->Message().LevelType(103);
-			itsGrib->Message().SetLongKey("typeOfSecondFixedSurface", 103);
-		}
-		else
-		{
-			itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(lev.Type(), 2));
-		}
-	}
-
-	switch (lev.Type())
-	{
-		case kHeightLayer:
-		{
-			itsGrib->Message().LevelValue(static_cast<long>(0.01 * levelValue), 100);     // top
-			itsGrib->Message().LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
-			break;
-		}
-		default:
-			itsGrib->Message().LevelValue(static_cast<long>(levelValue));
-			break;
-	}
+	WriteLevel(anInfo);
 
 	// set to missing value to a large value to prevent it from mixing up with valid
 	// values in the data
@@ -1515,12 +1533,6 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	}
 
 	bool dataIsValid = true;
-
-	/*
-	 * One grib file may contain many grib messages. Loop though all messages
-	 * and get all that match our search options.
-	 *
-	 */
 
 	auto prod = ReadProducer(options);
 
