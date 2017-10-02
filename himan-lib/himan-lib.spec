@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.9.25
+Version: 17.10.2
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 17.9.18
-Requires: libfmigrib >= 17.4.6
+Requires: libfmigrib >= 17.9.27
 Requires: gdal
 
 %if %{defined suse_version}
@@ -29,10 +29,10 @@ BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.4.6
+BuildRequires: libfmigrib-devel >= 17.9.27
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.65
-BuildRequires: smartmet-library-newbase-devel >= 17.4.4
+BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 
 Provides: libhiman.so
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Oct  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.2-1.fmi
+- Sparse info support
 * Mon Sep 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.25-1.fmi
 - Remove Oracle-support
 - Fix race condition of lazy plugin load

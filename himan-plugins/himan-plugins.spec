@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.9.27
+Version: 17.10.2
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,12 +13,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.9.25
+Requires: himan-lib >= 17.10.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 17.7.31
+Requires: libfmigrib >= 17.9.27
 Requires: libfmidb >= 17.9.18
-Requires: smartmet-library-newbase >= 17.9.14
+Requires: smartmet-library-newbase >= 17.9.27
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -35,8 +35,8 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.7.31
-BuildRequires: smartmet-library-newbase-devel >= 17.9.14
+BuildRequires: libfmigrib-devel >= 17.9.27
+BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.65
@@ -108,6 +108,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.2-1.fmi
+- Sparse info support
+- cape-plugin: LPL parameter outpu
+- grib-plugin: fix grib2 pressure level value
+- pot-plugin: replace Harmonie with MEPS
 * Wed Sep 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.27-1.fmi
 - Fix PROB-TC-5 calculation
 * Tue Sep 26 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.26-1.fmi
