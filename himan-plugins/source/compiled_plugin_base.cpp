@@ -259,6 +259,11 @@ void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadInde
 {
 	while (Next(*myTargetInfo))
 	{
+		if (!myTargetInfo->IsValidGrid())
+		{
+			continue;
+		}
+
 		if (itsConfiguration->UseDynamicMemoryAllocation())
 		{
 			AllocateMemory(*myTargetInfo);
@@ -284,6 +289,11 @@ void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short 
 	{
 		for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
 		{
+			if (!myTargetInfo->IsValidGrid())
+			{
+				continue;
+			}
+
 			if (itsConfiguration->UseDynamicMemoryAllocation())
 			{
 				AllocateMemory(*myTargetInfo);
