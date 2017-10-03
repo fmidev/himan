@@ -14,7 +14,7 @@ namespace plugin
 enum class comparison_op
 {
 	GTEQ,
-	LTLEQ
+	LTEQ
 };
 
 /// @brief describes how output parameters are calculated from input parameters
