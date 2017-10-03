@@ -73,6 +73,22 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			{
 				param2.Name(p.second);
 			}
+			else if (p.first == "comparison")
+			{
+				if (p.second == "<=")
+				{
+					outParamConfig->comparison = comparison_op::LTEQ;
+				}
+				else if (p.second == ">=")
+				{
+					outParamConfig->comparison = comparison_op::GTEQ;
+				}
+				else
+				{
+					throw std::runtime_error("probability : configuration error:: invalid comparison operator '" +
+					                         p.second + "'");
+				}
+			}
 			else
 			{
 				auto elems = util::Split(p.first, "_", false);
@@ -216,6 +232,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 		config.targetInfoIndex = targetInfoIndex;
 		config.output.Name(name);
+		config.comparison = comparison_op::GTEQ;
 
 		param p = GetConfigurationParameter(name, conf, &config);
 
@@ -406,10 +423,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 			CalculateWind(threadedLogger, std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized,
 			              ens1, ens2);
 		}
-		else if (pc.output.Name() == "PROB-TC-0" || pc.output.Name() == "PROB-TC-1" ||
-		         pc.output.Name() == "PROB-TC-2" || pc.output.Name() == "PROB-TC-3" ||
-		         pc.output.Name() == "PROB-TC-4" || pc.output.Name() == "PROB-TC-5" ||
-		         pc.output.Name() == "PROB-WATLEV-LOW-1")
+		else if (pc.comparison == comparison_op::LTEQ)
 		{
 			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized, ens1);
 		}
