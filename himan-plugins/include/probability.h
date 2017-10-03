@@ -10,12 +10,21 @@ namespace himan
 {
 namespace plugin
 {
+
+enum class comparison_op
+{
+	GTEQ,
+	LTEQ
+};
+
 /// @brief describes how output parameters are calculated from input parameters
 struct param_configuration
 {
 	int targetInfoIndex;
 	double gridThreshold;  // for grids
 	std::map<int, double> stationThreshold;
+
+	comparison_op comparison;
 
 	param output;
 
