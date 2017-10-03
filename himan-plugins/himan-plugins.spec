@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.2
+Version: 17.10.3
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -108,6 +108,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-1.fmi
+- Fix GPU memory leak from cape plugin
 * Mon Oct  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.2-1.fmi
 - Sparse info support
 - cape-plugin: LPL parameter outpu
