@@ -99,8 +99,7 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double RH700 = RH700Info->Value();
 		double RH500 = RH500Info->Value();
 
-		if (T0m == kFloatMissing || N == kFloatMissing || kIndex == kFloatMissing || T850 == kFloatMissing ||
-		    RH850 == kFloatMissing || RH700 == kFloatMissing || RH500 == kFloatMissing)
+		if (IsMissingValue({T0m, N, kIndex, T850, RH850, RH700, RH500}))
 		{
 			continue;
 		}

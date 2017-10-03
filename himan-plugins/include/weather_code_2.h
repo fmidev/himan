@@ -23,7 +23,7 @@ namespace plugin
 
 class weather_code_2 : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	weather_code_2();
 
 	inline virtual ~weather_code_2() {}
@@ -35,7 +35,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::weather_code_2"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	double rain_type(double kIndex, double T0m, double T850);
 	double thunder_prob(double kIndex, double cloud);
@@ -44,7 +44,6 @@ private:
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<weather_code_2>(new weather_code_2()); }
-
 }  // namespace plugin
 }  // namespace himan
 

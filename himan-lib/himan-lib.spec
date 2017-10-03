@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.8.21
+Version: 17.9.12
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -31,7 +31,7 @@ Requires: eccodes
 BuildRequires: libfmidb-devel >= 17.8.10
 BuildRequires: libfmigrib-devel >= 17.4.6
 BuildRequires: zlib-devel
-BuildRequires: boost-devel >= 1.53
+BuildRequires: boost-devel >= 1.65
 BuildRequires: smartmet-library-newbase-devel >= 17.4.4
 BuildRequires: scons
 
@@ -60,6 +60,18 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-1.fmi
+- Add stack trace functionality
+* Mon Sep 11 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.11-1.fmi
+- Replace kFloatMissing with nan
+* Thu Sep  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.7-1.fmi
+- Support for NVidia Pascal GP100 (CC 6.0)
+* Tue Aug 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.29-1.fmi
+- boost 1.65
+* Mon Aug 28 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.28-1.fmi
+- Fix time formatting to be thread safe
+* Tue Aug 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.22-1.fmi
+- Fix infinite recursion bug from plugin_factory
 * Mon Aug 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.21-1.fmi
 - General code cleanup
 - Level type fixes

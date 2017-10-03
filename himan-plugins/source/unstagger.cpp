@@ -113,7 +113,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 #ifdef HAVE_CUDA
 		if (UInfo->Grid()->IsPackedData())
 		{
-			assert(UInfo->Grid()->PackedData().ClassName() == "simple_packed");
+			ASSERT(UInfo->Grid()->PackedData().ClassName() == "simple_packed");
 
 			util::Unpack({UInfo->Grid(), VInfo->Grid()});
 		}
@@ -159,7 +159,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	{
 		deviceType = "CPU";
 		// calculate for U
-		himan::matrix<double> filter_kernel_U(2, 1, 1, kFloatMissing);
+		himan::matrix<double> filter_kernel_U(2, 1, 1, MissingDouble());
 		filter_kernel_U.Fill(0.5);
 
 		himan::matrix<double> unstaggered_U = numerical_functions::Filter2D(UInfo->Data(), filter_kernel_U);
@@ -168,7 +168,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		myTargetInfo->Grid()->Data(unstaggered_U);
 
 		// calculate for V
-		himan::matrix<double> filter_kernel_V(1, 2, 1, kFloatMissing);
+		himan::matrix<double> filter_kernel_V(1, 2, 1, MissingDouble());
 		filter_kernel_V.Fill(0.5);
 
 		himan::matrix<double> unstaggered_V = numerical_functions::Filter2D(VInfo->Data(), filter_kernel_V);

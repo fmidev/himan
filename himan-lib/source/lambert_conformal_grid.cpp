@@ -260,7 +260,7 @@ point lambert_conformal_grid::XY(const point& latlon) const
 	}
 
 	double projX = latlon.X(), projY = latlon.Y();
-	assert(itsLatLonToXYTransformer);
+	ASSERT(itsLatLonToXYTransformer);
 
 	// 1. Transform latlon to projected coordinates.
 	// Projected coordinates are in meters, with false easting and
@@ -286,11 +286,11 @@ point lambert_conformal_grid::XY(const point& latlon) const
 
 point lambert_conformal_grid::LatLon(size_t locationIndex) const
 {
-	assert(itsNi != static_cast<size_t>(kHPMissingInt));
-	assert(itsNj != static_cast<size_t>(kHPMissingInt));
-	assert(Di() != kHPMissingValue);
-	assert(Dj() != kHPMissingValue);
-	assert(locationIndex < itsNi * itsNj);
+	ASSERT(itsNi != static_cast<size_t>(kHPMissingInt));
+	ASSERT(itsNj != static_cast<size_t>(kHPMissingInt));
+	ASSERT(!IsKHPMissingValue(Di()));
+	ASSERT(!IsKHPMissingValue(Dj()));
+	ASSERT(locationIndex < itsNi * itsNj);
 
 	if (!itsXYToLatLonTransformer)
 	{
@@ -311,7 +311,7 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 		y *= -1;
 	}
 
-	assert(itsXYToLatLonTransformer);
+	ASSERT(itsXYToLatLonTransformer);
 	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))
 	{
 		itsLogger.Error("Error determining latitude longitude value for xy point " +
@@ -501,7 +501,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 	// Build OGR presentation of LCC
 	std::stringstream ss;
 
-	if (itsStandardParallel1 == kHPMissingValue || itsOrientation == kHPMissingValue || FirstPoint() == point())
+	if (IsKHPMissingValue(itsStandardParallel1) || IsKHPMissingValue(itsOrientation) || FirstPoint() == point())
 	{
 		// itsLogger.Error("First standard latitude or orientation missing");
 		return false;
@@ -509,7 +509,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 
 	// If latin1==latin2, projection is effectively lccSP1
 
-	if (itsStandardParallel2 == kHPMissingValue)
+	if (IsKHPMissingValue(itsStandardParallel2))
 	{
 		itsStandardParallel2 = itsStandardParallel1;
 	}
@@ -525,7 +525,7 @@ bool lambert_conformal_grid::SetCoordinates() const
 	if (err != OGRERR_NONE)
 	{
 		itsLogger.Fatal("Error in area definition");
-		abort();
+		himan::Abort();
 	}
 
 	// Area copy will be used for transform
@@ -538,13 +538,13 @@ bool lambert_conformal_grid::SetCoordinates() const
 	itsLatLonToXYTransformer =
 	    unique_ptr<OGRCoordinateTransformation>(OGRCreateCoordinateTransformation(lccll, itsSpatialReference.get()));
 
-	assert(itsLatLonToXYTransformer);
-	assert(itsScanningMode == kBottomLeft || itsScanningMode == kTopLeft);
+	ASSERT(itsLatLonToXYTransformer);
+	ASSERT(itsScanningMode == kBottomLeft || itsScanningMode == kTopLeft);
 
 	double falseEasting = FirstPoint().X();
 	double falseNorthing = FirstPoint().Y();
 
-	assert(falseEasting != kHPMissingValue && falseNorthing != kHPMissingValue);
+	ASSERT(!IsKHPMissingValue(falseEasting) && !IsKHPMissingValue(falseNorthing));
 
 	if (!itsLatLonToXYTransformer->Transform(1, &falseEasting, &falseNorthing))
 	{

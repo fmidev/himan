@@ -80,7 +80,7 @@ auto zip_range(Conts&... conts)
 #define RESET14(a, b, c, d, e, f, g, h, i, j, k, l, m, n) \
 	RESET13(a, b, c, d, e, f, g, h, i, j, k, l, m), ACTUAL_MACRO_B(n)
 
-#define ACTUAL_MACRO_C(x) assert(x);
+#define ACTUAL_MACRO_C(x) ASSERT(x);
 #define ASSERT1(a) ACTUAL_MACRO_C(a)
 #define ASSERT2(a, b) ASSERT1(a) ACTUAL_MACRO_C(b)
 #define ASSERT3(a, b, c) ASSERT2(a, b) ACTUAL_MACRO_C(c)
@@ -178,6 +178,7 @@ class compiled_plugin_base
 	 */
 
 	void SetParams(std::vector<param>& params);
+	void SetParams(std::vector<param>& params, const std::vector<level>& levels);
 
 	/**
 	 * @brief Set target params
@@ -188,6 +189,7 @@ class compiled_plugin_base
 	 */
 
 	void SetParams(std::initializer_list<param> params);
+	void SetParams(std::initializer_list<param> params, std::initializer_list<level> levels);
 
 	/**
 	 * @brief Record timing info and write info contents to disk
@@ -266,7 +268,7 @@ class compiled_plugin_base
 	 * @brief Syntactic sugar: simple function to check if any of the arguments is a missing value
 	 *
 	 * @param values List of doubles
-	 * @return True if any of the values is missing value (kFloatMissing), otherwise false
+	 * @return True if any of the values is missing value, otherwise false
 	 */
 
 	bool IsMissingValue(std::initializer_list<double> values) const;
@@ -355,7 +357,7 @@ class compiled_plugin_base
 	 * the preferred way when f.ex. levels need to be accessed sequentially (hybrid_height).
 	 */
 
-	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex);
+	virtual void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex);
 
 	virtual void AllocateMemory(info myTargetInfo);
 	virtual void DeallocateMemory(info myTargetInfo);

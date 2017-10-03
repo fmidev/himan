@@ -159,11 +159,11 @@ point latitude_longitude_grid::XY(const himan::point& latlon) const
 
 point latitude_longitude_grid::LatLon(size_t locationIndex) const
 {
-	assert(itsNi != static_cast<size_t>(kHPMissingInt));
-	assert(itsNj != static_cast<size_t>(kHPMissingInt));
-	assert(Di() != kHPMissingValue);
-	assert(Dj() != kHPMissingValue);
-	assert(locationIndex < itsNi * itsNj);
+	ASSERT(itsNi != static_cast<size_t>(kHPMissingInt));
+	ASSERT(itsNj != static_cast<size_t>(kHPMissingInt));
+	ASSERT(!IsKHPMissingValue(Di()));
+	ASSERT(!IsKHPMissingValue(Dj()));
+	ASSERT(locationIndex < itsNi * itsNj);
 
 	point firstPoint = FirstPoint();
 
@@ -234,8 +234,8 @@ void latitude_longitude_grid::Di(double theDi) { itsDi = theDi; }
 void latitude_longitude_grid::Dj(double theDj) { itsDj = theDj; }
 double latitude_longitude_grid::Di() const
 {
-	if (itsDi == kHPMissingValue && itsNi != static_cast<size_t>(kHPMissingInt) &&
-	    FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
+	if (IsKHPMissingValue(itsDi) && itsNi != static_cast<size_t>(kHPMissingInt) &&
+	    !IsKHPMissingValue(FirstPoint().X()) && !IsKHPMissingValue(LastPoint().X()))
 	{
 		double fx = FirstPoint().X();
 		double lx = LastPoint().X();
@@ -249,8 +249,8 @@ double latitude_longitude_grid::Di() const
 
 double latitude_longitude_grid::Dj() const
 {
-	if (itsDj == kHPMissingValue && itsNj != static_cast<size_t>(kHPMissingInt) &&
-	    FirstPoint().X() != kHPMissingValue && LastPoint().X() != kHPMissingValue)
+	if (IsKHPMissingValue(itsDj) && itsNj != static_cast<size_t>(kHPMissingInt) &&
+	    !IsKHPMissingValue(FirstPoint().X()) && !IsKHPMissingValue(LastPoint().X()))
 	{
 		itsDj = fabs((FirstPoint().Y() - LastPoint().Y()) / (static_cast<double>(itsNj) - 1.));
 	}
@@ -319,7 +319,7 @@ void latitude_longitude_grid::UpdateCoordinates() const
 	Di();
 	Dj();
 
-	if (FirstPoint() != missing && LastPoint() != missing && Di() != kHPMissingValue)
+	if (FirstPoint() != missing && LastPoint() != missing && !IsKHPMissingValue(Di()))
 	{
 		double span = itsBottomLeft.X() + itsTopRight.X() + Di();
 		itsIsGlobal = (span == 0. || span == 360.);
@@ -488,9 +488,9 @@ point rotated_latitude_longitude_grid::XY(const point& latlon) const
 {
 	if (!itsRotLatLonArea)
 	{
-		assert(itsBottomLeft != point());
-		assert(itsTopRight != point());
-		assert(itsSouthPole != point());
+		ASSERT(itsBottomLeft != point());
+		ASSERT(itsTopRight != point());
+		ASSERT(itsSouthPole != point());
 
 		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
 		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
@@ -508,8 +508,8 @@ point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 
 	if (!itsRotLatLonArea)
 	{
-		assert(itsBottomLeft != point());
-		assert(itsTopRight != point());
+		ASSERT(itsBottomLeft != point());
+		ASSERT(itsTopRight != point());
 
 		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
 		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),

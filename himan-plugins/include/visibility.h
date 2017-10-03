@@ -22,7 +22,7 @@ namespace plugin
 
 class visibility : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	visibility();
 
 	inline virtual ~visibility() {}
@@ -34,7 +34,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::visibility"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	std::shared_ptr<info> FetchSourceRR(const forecast_time& wantedTime, const level& wantedLevel);
 	void VertMax(std::shared_ptr<info> myTargetInfo, std::vector<double>& in, himan::param p, int low, int high);

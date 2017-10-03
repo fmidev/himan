@@ -15,7 +15,7 @@ namespace plugin
 {
 class csv : public io_plugin
 {
-public:
+   public:
 	csv();
 
 	virtual ~csv() {}
@@ -39,7 +39,8 @@ public:
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options, bool readifNotMatching = false) const;
+	std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options,
+	                               bool readifNotMatching = false) const;
 
 	/**
 	 * @brief Write info contents to a csv file
@@ -58,7 +59,6 @@ public:
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<csv>(); }
-
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 }  // namespace plugin

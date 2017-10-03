@@ -6,9 +6,9 @@
 #include "ensemble.h"
 #include "plugin_factory.h"
 
+#include <numeric>
 #include <stddef.h>
 #include <stdint.h>
-#include <numeric>
 
 #define HIMAN_AUXILIARY_INCLUDE
 #include "fetcher.h"
@@ -42,7 +42,7 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
       itsLogger(logger("ensemble")),
       itsMaximumMissingForecasts(0)
 {
-	assert(controlForecasts.size() < expectedEnsembleSize);
+	ASSERT(controlForecasts.size() < expectedEnsembleSize);
 
 	itsDesiredForecasts.reserve(expectedEnsembleSize);
 
@@ -115,7 +115,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 			if (e != kFileDataNotFound)
 			{
 				itsLogger.Fatal("Unable to proceed");
-				abort();
+				himan::Abort();
 			}
 			else
 			{
@@ -135,7 +135,7 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 		{
 			itsLogger.Fatal("maximum number of missing fields (" + std::to_string(itsMaximumMissingForecasts) +
 			                ") reached, aborting");
-			abort();
+			himan::Abort();
 		}
 	}
 	// Normally, we don't except any of the fields to be missing, but at this point
@@ -194,7 +194,7 @@ std::vector<double> ensemble::Values() const
 	// Clients of ensemble shouldn't worry about missing values
 	std::for_each(itsForecasts.begin(), itsForecasts.end(), [&](const info_t& Info) {
 		const double v = Info->Value();
-		if (v != kFloatMissing)
+		if (IsValid(v))
 		{
 			ret.push_back(v);
 		}
@@ -215,7 +215,7 @@ double ensemble::Mean() const
 	std::vector<double> v = Values();
 	if (v.size() == 0)
 	{
-		return kFloatMissing;
+		return MissingDouble();
 	}
 
 	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
@@ -226,7 +226,7 @@ double ensemble::Variance() const
 	std::vector<double> values = Values();
 	if (values.size() == 0)
 	{
-		return kFloatMissing;
+		return MissingDouble();
 	}
 
 	const double mean = std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());

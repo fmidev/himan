@@ -74,7 +74,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 		// Double-check pattern
 
-		const auto key = static_cast<string> (forecastType) + "_" + to_string(forecastTime.Step());
+		const auto key = static_cast<string>(forecastType) + "_" + to_string(forecastTime.Step());
 
 		if (lnspInfos.find(key) == lnspInfos.end())
 		{
@@ -134,7 +134,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	std::vector<double> ab = TInfo->Grid()->AB();
 
-	double A = kFloatMissing, B = kFloatMissing;
+	double A = MissingDouble(), B = MissingDouble();
 
 	if (ab.size() == 2)
 	{
@@ -144,7 +144,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	else
 	{
 		const size_t levelValue = static_cast<size_t>(forecastLevel.Value());
-		assert(levelValue <= ab.size());
+		ASSERT(levelValue <= ab.size());
 
 		A = (ab[levelValue - 1] + ab[levelValue]) * 0.5;
 
@@ -159,11 +159,6 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	{
 		double& result = tup.get<0>();
 		double P = tup.get<1>();
-
-		if (P == kFloatMissing)
-		{
-			continue;
-		}
 
 		result = 0.01 * (A + P * B);
 	}

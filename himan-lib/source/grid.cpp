@@ -10,7 +10,7 @@ using namespace himan;
 using namespace std;
 
 grid::grid()
-    : itsData(0, 0, 1, kFloatMissing),
+    : itsData(0, 0, 1, MissingDouble()),
       itsGridClass(kUnknownGridClass),
       itsGridType(kUnknownGridType),
       itsAB(),
@@ -21,7 +21,7 @@ grid::grid()
 }
 
 grid::grid(HPGridClass theGridClass, HPGridType theGridType)
-    : itsData(0, 0, 1, kFloatMissing),
+    : itsData(0, 0, 1, MissingDouble()),
       itsGridClass(theGridClass),
       itsGridType(theGridType),
       itsAB(),
@@ -32,7 +32,7 @@ grid::grid(HPGridClass theGridClass, HPGridType theGridType)
 }
 
 grid::grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theScanningMode)
-    : itsData(0, 0, 1, kFloatMissing),
+    : itsData(0, 0, 1, MissingDouble()),
       itsGridClass(theGridClass),
       itsGridType(theGridType),
       itsAB(),
@@ -91,7 +91,7 @@ bool grid::EqualsTo(const grid& other) const
 
 packed_data& grid::PackedData()
 {
-	assert(itsPackedData);
+	ASSERT(itsPackedData);
 	return *itsPackedData;
 }
 

@@ -22,7 +22,7 @@ namespace plugin
 
 class hybrid_pressure : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	hybrid_pressure();
 
 	inline virtual ~hybrid_pressure() {}
@@ -36,14 +36,13 @@ public:
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
 	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
 
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<hybrid_pressure>(new hybrid_pressure()); }
-
 }  // namespace plugin
 }  // namespace himan
 

@@ -2,8 +2,8 @@
 
 #include "plugin_factory.h"
 
-#include "logger.h"
 #include "fetcher.h"
+#include "logger.h"
 #include "writer.h"
 
 #include "ensemble.h"
@@ -18,6 +18,8 @@
 
 #include "radon.h"
 #include <math.h>
+
+#include "debug.h"
 
 namespace himan
 {
@@ -250,11 +252,11 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 					                std::to_string(st.Id()) + " from radon");
 					double limit = r->RadonDB().GetProbabilityLimitForStation(st.Id(), pc.output.Name());
 
-					if (limit == kFloatMissing)
+					if (IsMissing(limit))
 					{
 						itsLogger.Fatal("Threshold not found for param " + pc.output.Name() + ", station " +
 						                std::to_string(st.Id()));
-						abort();
+						himan::Abort();
 					}
 
 					pc.stationThreshold[st.Id()] = limit;
@@ -383,7 +385,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 			else
 			{
 				itsLogger.Fatal("Received error code " + std::to_string(e));
-				abort();
+				himan::Abort();
 			}
 		}
 
@@ -392,7 +394,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		{
 			AllocateMemory(myTargetInfo);
 		}
-		assert(myTargetInfo.Data().Size() > 0);
+		ASSERT(myTargetInfo.Data().Size() > 0);
 
 		//
 		// Choose the correct calculation function for this parameter and do the actual calculation
@@ -406,7 +408,8 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		}
 		else if (pc.output.Name() == "PROB-TC-0" || pc.output.Name() == "PROB-TC-1" ||
 		         pc.output.Name() == "PROB-TC-2" || pc.output.Name() == "PROB-TC-3" ||
-		         pc.output.Name() == "PROB-TC-4" || pc.output.Name() == "PROB-WATLEV-LOW-1")
+		         pc.output.Name() == "PROB-TC-4" || pc.output.Name() == "PROB-TC-5" ||
+		         pc.output.Name() == "PROB-WATLEV-LOW-1")
 		{
 			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized, ens1);
 		}
@@ -494,7 +497,7 @@ void CalculateWind(const logger& log, std::shared_ptr<info> targetInfo, uint16_t
 	if (ensembleSize != ens2->Size())
 	{
 		log.Fatal(" CalculateWind(): U and V ensembles are of different size, aborting");
-		abort();
+		himan::Abort();
 	}
 
 	const double invN =
@@ -512,7 +515,7 @@ void CalculateWind(const logger& log, std::shared_ptr<info> targetInfo, uint16_t
 			const auto u = ens1->Value(i);
 			const auto v = ens2->Value(i);
 
-			if ((u == kFloatMissing) || (v == kFloatMissing))
+			if (IsMissing(u) || IsMissing(v))
 			{
 				continue;
 			}
@@ -547,7 +550,7 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
 			const auto x = ens->Value(i);
-			if ((x != kFloatMissing) && (x <= threshold))
+			if (!IsMissing(x) && (x <= threshold))
 			{
 				probability += invN;
 			}
@@ -577,7 +580,7 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, con
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
 			const auto x = ens->Value(i);
-			if ((x != kFloatMissing) && (x >= threshold))
+			if (!IsMissing(x) && (x >= threshold))
 			{
 				probability += invN;
 			}

@@ -16,7 +16,6 @@ namespace plugin
 {
 namespace vvms_cuda
 {
-
 struct options
 {
 	info_simple* t;

@@ -75,6 +75,7 @@ class grib : public io_plugin
 	void WriteAreaAndGrid(info& anInfo);
 	void WriteTime(info& anInfo);
 	void WriteParameter(info& anInfo);
+	void WriteLevel(info& anInfo);
 	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
 	                        std::shared_ptr<info> newInfo) const;
 

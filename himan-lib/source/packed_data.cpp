@@ -13,7 +13,7 @@ void packed_data::Set(unsigned char* newData, size_t newPackedLength, size_t new
 {
 	if (packedLength)
 	{
-		assert(data);
+		ASSERT(data);
 		CUDA_CHECK(cudaFreeHost(data));
 	}
 
@@ -26,7 +26,7 @@ void packed_data::Bitmap(int* newBitmap, size_t newBitmapLength)
 {
 	if (newBitmapLength && bitmapLength)
 	{
-		assert(bitmap);
+		ASSERT(bitmap);
 		CUDA_CHECK(cudaFreeHost(bitmap));
 	}
 
@@ -36,7 +36,7 @@ void packed_data::Bitmap(int* newBitmap, size_t newBitmapLength)
 
 void packed_data::Resize(size_t newPackedLength, size_t newUnpackedLength)
 {
-	assert(newPackedLength > packedLength);
+	ASSERT(newPackedLength > packedLength);
 
 	packedLength = newPackedLength;
 	unpackedLength = newUnpackedLength;
@@ -82,7 +82,7 @@ void packed_data::Clear()
 {
 	if (packedLength)
 	{
-		assert(data);
+		ASSERT(data);
 		CUDA_CHECK(cudaFreeHost(data));
 		packedLength = 0;
 		data = 0;
@@ -90,7 +90,7 @@ void packed_data::Clear()
 
 	if (bitmapLength)
 	{
-		assert(bitmap);
+		ASSERT(bitmap);
 		CUDA_CHECK(cudaFreeHost(bitmap));
 		bitmapLength = 0;
 		bitmap = 0;

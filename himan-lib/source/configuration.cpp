@@ -13,7 +13,7 @@ configuration::configuration()
       itsOutputFileType(kGRIB1),
       itsFileWriteOption(kSingleFile),
       itsFileCompression(kNoCompression),
-      itsDatabaseType(kNeonsAndRadon),
+      itsDatabaseType(kRadon),
       itsConfigurationFile(),
       itsAuxiliaryFiles(),
       itsOriginTime(),
@@ -69,7 +69,7 @@ configuration::configuration(const configuration& other)
       itsAsyncExecution(other.itsAsyncExecution)
 
 {
-	assert(itsSourceProducerIterator);
+	ASSERT(itsSourceProducerIterator);
 	itsSourceProducerIterator->Set(other.itsSourceProducerIterator->Index());
 }
 

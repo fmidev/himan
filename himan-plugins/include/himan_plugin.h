@@ -40,7 +40,7 @@ namespace plugin
 
 class himan_plugin
 {
-public:
+   public:
 	inline himan_plugin(){};
 
 	inline virtual ~himan_plugin(){};

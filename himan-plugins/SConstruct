@@ -32,7 +32,10 @@ AddOption(
 env = Environment()
 
 # Get color output from gcc / clang
-env['ENV']['TERM'] = os.environ['TERM']
+try:
+    env['ENV']['TERM'] = os.environ['TERM']
+except KeyError:
+    pass
 
 # Check build
 
@@ -82,12 +85,6 @@ includes.append(workspace + '/himan-plugins/include')
 includes.append('/usr/include/smartmet/newbase')
 includes.append('/usr/include/gdal')
 
-if os.environ.get('ORACLE_HOME') is None:
-	includes.append('/usr/include/oracle')
-	includes.append('/usr/include/oracle/11.2/client64')
-else:
-	includes.append(os.environ.get('ORACLE_HOME') + '/rdbms/public')
-
 if have_cuda:
 	includes.append(cuda_toolkit_path + '/include')
 
@@ -109,12 +106,6 @@ elif DEBUG:
 library_paths.append(workspace + '/fmidb/lib')
 library_paths.append('/usr/lib64')
 
-if os.environ.get('ORACLE_HOME') is None:
-	library_paths.append('/usr/lib64/oracle/')
-	library_paths.append('/usr/lib/oracle/11.2/client64/lib')
-else:
-	 library_paths.append(os.environ.get('ORACLE_HOME') + '/lib')
-
 env.Append(LIBPATH = library_paths)
 
 # Libraries
@@ -127,7 +118,6 @@ if have_cuda:
 libraries.append('fmigrib')
 libraries.append('fmidb')
 libraries.append('jasper')
-libraries.append('clntsh')
 libraries.append('lua')
 libraries.append('luabind')
 libraries.append('odbc')
@@ -211,6 +201,7 @@ env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_35,code=sm_35'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_52,code=sm_52'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
 
 if not IS_RHEL or (IS_RHEL and OS_VERSION >= 7.0):
 	env.Append(NVCCFLAGS = ['-std=c++11'])

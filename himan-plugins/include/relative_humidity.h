@@ -21,7 +21,7 @@ namespace plugin
 
 class relative_humidity : public compiled_plugin, private compiled_plugin_base
 {
-public:
+   public:
 	relative_humidity();
 
 	inline virtual ~relative_humidity() {}
@@ -33,7 +33,7 @@ public:
 	virtual std::string ClassName() const { return "himan::plugin::relative_humidity"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
-private:
+   private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
 #ifdef HAVE_CUDA

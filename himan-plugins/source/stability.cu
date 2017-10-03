@@ -25,36 +25,20 @@ __global__ void himan::plugin::stability_cuda::Calculate(
 		double TD850 = d_td850[idx];
 		double TD700 = d_td700[idx];
 
-		d_ki[idx] = kFloatMissing;
-		d_cti[idx] = kFloatMissing;
-		d_vti[idx] = kFloatMissing;
-		d_tti[idx] = kFloatMissing;
+		d_ki[idx] = MissingDouble();
+		d_cti[idx] = MissingDouble();
+		d_vti[idx] = MissingDouble();
+		d_tti[idx] = MissingDouble();
+
+		d_ki[idx] = himan::metutil::KI_(T850, T700, T500, TD850, TD700);
+		d_cti[idx] = himan::metutil::CTI_(T500, TD850);
+		d_vti[idx] = himan::metutil::VTI_(T850, T500);
+		d_tti[idx] = himan::metutil::TTI_(T850, T500, TD850);  // CTI + VTI
 
 		if (opts.li)
 		{
-			d_li[idx] = kFloatMissing;
-			d_si[idx] = kFloatMissing;
-		}
-
-		if (opts.bs01)
-		{
-			d_bs01[idx] = kFloatMissing;
-			d_bs06[idx] = kFloatMissing;
-		}
-
-		if (T850 != kFloatMissing && T700 != kFloatMissing && T500 != kFloatMissing && TD850 != kFloatMissing &&
-		    TD700 != kFloatMissing)
-		{
-			d_ki[idx] = himan::metutil::KI_(T850, T700, T500, TD850, TD700);
-			d_cti[idx] = himan::metutil::CTI_(T500, TD850);
-			d_vti[idx] = himan::metutil::VTI_(T850, T500);
-			d_tti[idx] = himan::metutil::TTI_(T850, T500, TD850);  // CTI + VTI
-
-			if (opts.li)
-			{
-				d_li[idx] = himan::metutil::LI_(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx]);
-				d_si[idx] = himan::metutil::SI_(T850, T500, TD850);
-			}
+			d_li[idx] = himan::metutil::LI_(T500, d_t500m[idx], d_td500m[idx], d_p500m[idx]);
+			d_si[idx] = himan::metutil::SI_(T850, T500, TD850);
 		}
 
 		if (opts.bs01)
@@ -64,11 +48,8 @@ __global__ void himan::plugin::stability_cuda::Calculate(
 			double u06 = d_u06[idx];
 			double v06 = d_v06[idx];
 
-			if (u01 != kFloatMissing && v01 != kFloatMissing && u06 != kFloatMissing && v06 != kFloatMissing)
-			{
-				d_bs01[idx] = himan::metutil::BulkShear_(u01, v01);
-				d_bs06[idx] = himan::metutil::BulkShear_(u06, v06);
-			}
+			d_bs01[idx] = himan::metutil::BulkShear_(u01, v01);
+			d_bs06[idx] = himan::metutil::BulkShear_(u06, v06);
 		}
 	}
 }
@@ -129,11 +110,11 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	const int blockSize = 512;
 	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
 
-	assert(d_t500);
-	assert(d_t700);
-	assert(d_t850);
-	assert(d_td700);
-	assert(d_td850);
+	ASSERT(d_t500);
+	ASSERT(d_t700);
+	ASSERT(d_t850);
+	ASSERT(d_td700);
+	ASSERT(d_td850);
 
 	if (opts.li)
 	{
@@ -147,9 +128,9 @@ void himan::plugin::stability_cuda::Process(options& opts)
 		Prepare(opts.td500m, &d_td500m, memsize, stream);
 		Prepare(opts.p500m, &d_p500m, memsize, stream);
 
-		assert(d_t500m);
-		assert(d_td500m);
-		assert(d_p500m);
+		ASSERT(d_t500m);
+		ASSERT(d_td500m);
+		ASSERT(d_p500m);
 	}
 
 	if (opts.bs01)
@@ -222,7 +203,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 
 void himan::plugin::stability_cuda::Prepare(const double* source, double** devptr, size_t memsize, cudaStream_t& stream)
 {
-	assert(source);
+	ASSERT(source);
 	CUDA_CHECK(cudaMalloc((void**)devptr, memsize));
 	CUDA_CHECK(cudaMemcpyAsync((void*)*devptr, (const void*)source, memsize, cudaMemcpyHostToDevice, stream));
 }

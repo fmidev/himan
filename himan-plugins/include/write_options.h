@@ -11,7 +11,6 @@ namespace himan
 {
 namespace plugin
 {
-
 struct write_options
 {
 	std::shared_ptr<const plugin_configuration> configuration;
@@ -21,7 +20,6 @@ struct write_options
 
 	write_options() : use_bitmap(true), packing_type(kSimplePacking), write_empty_grid(true) {}
 };
-
 }
 }
 

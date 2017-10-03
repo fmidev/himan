@@ -11,7 +11,6 @@
 #include <boost/format.hpp>
 
 #include "fetcher.h"
-#include "neons.h"
 #include "radon.h"
 
 using namespace std;
@@ -24,10 +23,10 @@ double min(const vector<double>& vec)
 
 	for (double val : vec)
 	{
-		if (val != kFloatMissing && val < ret) ret = val;
+		if (val < ret) ret = val;
 	}
 
-	if (ret == 1e38) ret = kFloatMissing;
+	if (ret == 1e38) ret = MissingDouble();
 
 	return ret;
 }
@@ -38,12 +37,12 @@ double max(const vector<double>& vec)
 
 	for (double val : vec)
 	{
-		if (val != kFloatMissing && val > ret) ret = val;
+		if (val > ret) ret = val;
 	}
 
-	if (ret == -1e38) ret = kFloatMissing;
-
-	return ret;
+	if (ret == -1e38) ret = MissingDouble();
+        
+        return ret;
 }
 
 pair<double, double> minmax(const vector<double>& vec)
@@ -52,7 +51,7 @@ pair<double, double> minmax(const vector<double>& vec)
 
 	for (double val : vec)
 	{
-		if (val != kFloatMissing)
+		if (IsValid(val))
 		{
 			if (val < min) min = val;
 			if (val > max) max = val;
@@ -61,18 +60,14 @@ pair<double, double> minmax(const vector<double>& vec)
 
 	if (min == 1e38)
 	{
-		min = kFloatMissing;
-		max = kFloatMissing;
+		min = MissingDouble();
+		max = MissingDouble();
 	}
 
 	return make_pair(min, max);
 }
 
-hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM)
-{
-	itsLogger = logger("hitool");
-}
-
+hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM) { itsLogger = logger("hitool"); }
 hitool::hitool(shared_ptr<plugin_configuration> conf) : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM)
 {
 	itsLogger = logger("hitool");
@@ -131,7 +126,7 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 
 		default:
 			itsLogger.Fatal("Unknown modifier type: " + boost::lexical_cast<string>(modifierType));
-			abort();
+			himan::Abort();
 			break;
 	}
 	itsLogger.Trace("Creating " + string(HPModifierTypeToString.at(mod->Type())));
@@ -140,7 +135,7 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 
 pair<level, level> hitool::LevelForHeight(const producer& prod, double height) const
 {
-	assert(itsConfiguration);
+	ASSERT(itsConfiguration);
 
 	using boost::lexical_cast;
 
@@ -215,18 +210,7 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 	long absolutelowest = kHPMissingInt, absolutehighest = kHPMissingInt;
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-		n->NeonsDB().Query(query.str());
-
-		row = n->NeonsDB().FetchRow();
-
-		absolutelowest = lexical_cast<long>(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-		absolutehighest = lexical_cast<long>(n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-	}
-
-	if (row.empty() && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 		r->RadonDB().Query(query.str());
@@ -275,16 +259,17 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 		}
 	}
 
-	assert(newlowest >= newhighest);
+	ASSERT(newlowest >= newhighest);
 
-	return make_pair<level, level>(level(kHybrid, newlowest), level(kHybrid, newhighest));
+	return make_pair<level, level>(level(kHybrid, static_cast<double>(newlowest)),
+	                               level(kHybrid, static_cast<double>(newhighest)));
 }
 
 vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wantedLevelType,
                                             const param& wantedParam, const vector<double>& lowerHeight,
                                             const vector<double>& upperHeight, const vector<double>& findValue) const
 {
-	assert(wantedLevelType == kHybrid);
+	ASSERT(wantedLevelType == kHybrid);
 
 	if (findValue.size())
 	{
@@ -316,15 +301,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 	long highestHybridLevel = kHPMissingInt, lowestHybridLevel = kHPMissingInt;
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		highestHybridLevel = boost::lexical_cast<long>(n->ProducerMetaData(prod.Id(), "first hybrid level number"));
-		lowestHybridLevel = boost::lexical_cast<long>(n->ProducerMetaData(prod.Id(), "last hybrid level number"));
-	}
-
-	if (highestHybridLevel == kHPMissingInt && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -371,7 +348,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			double max_value = ::max(upperHeight);
 			double min_value = ::min(lowerHeight);
 
-			if (max_value == kFloatMissing || min_value == kFloatMissing)
+			if (IsMissing(max_value) || IsMissing(min_value))
 			{
 				itsLogger.Error("Min or max values of given heights are missing");
 				throw kFileDataNotFound;
@@ -383,12 +360,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			highestHybridLevel = static_cast<long>(levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long>(levelsForMinHeight.first.Value());
 
-			assert(lowestHybridLevel >= highestHybridLevel);
+			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
 			itsLogger.Debug("Adjusting level range to " + boost::lexical_cast<string>(lowestHybridLevel) + " .. " +
-							boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
-							boost::str(boost::format("%.2f") % min_value) + " .. " +
-							boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
+			                boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
+			                boost::str(boost::format("%.2f") % min_value) + " .. " +
+			                boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
 		}
 		break;
 
@@ -399,6 +376,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			double max_value = p.second;  // highest
 			double min_value = p.first;   // lowest
 
+                        if (IsMissing(max_value) || IsMissing(min_value))
+                        {
+                                itsLogger.Error("Min or max values of given heights are missing");
+                                throw kFileDataNotFound;
+                        }
+
 			if (itsHeightUnit == kHPa)
 			{
 				// larger value is closer to ground
@@ -407,8 +390,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 				max_value = min_value;
 				min_value = temp;
 
-				assert(min_value >= 10);
-				assert(max_value < 1200);
+				ASSERT(min_value >= 10);
+				ASSERT(max_value < 1200);
 			}
 
 			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
@@ -417,12 +400,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			highestHybridLevel = static_cast<long>(levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long>(levelsForMinHeight.first.Value());
 
-			assert(lowestHybridLevel >= highestHybridLevel);
+			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
 			itsLogger.Debug("Adjusting level range to " + boost::lexical_cast<string>(lowestHybridLevel) + " .. " +
-							boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
-							boost::str(boost::format("%.2f") % min_value) + " .. " +
-							boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
+			                boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
+			                boost::str(boost::format("%.2f") % min_value) + " .. " +
+			                boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
 		}
 		break;
 
@@ -433,14 +416,14 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 	for (long levelValue = lowestHybridLevel; levelValue >= highestHybridLevel && !mod->CalculationFinished();
 	     levelValue--)
 	{
-		level currentLevel(kHybrid, levelValue, "HYBRID");
+		level currentLevel(kHybrid, static_cast<double>(levelValue), "HYBRID");
 
 		valueheight data = GetData(currentLevel, wantedParam, itsTime, itsForecastType);
 
 		auto values = data.first;
 		auto heights = data.second;
 
-		assert(heights->Grid()->Size() == values->Grid()->Size());
+		ASSERT(heights->Grid()->Size() == values->Grid()->Size());
 
 		values->First();
 		heights->First();
@@ -460,7 +443,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 	auto ret = mod->Result();
 
-	assert(mod->HeightsCrossed() == ret.size());
+	ASSERT(mod->HeightsCrossed() == ret.size());
 	return ret;
 }
 
@@ -511,10 +494,10 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam, 
 		}
 	}
 
-	assert(values);
-	assert(heights);
-	assert(values->Grid()->Size() == heights->Grid()->Size());
-	assert(heights->Data().MissingCount() != heights->Data().Size());
+	ASSERT(values);
+	ASSERT(heights);
+	ASSERT(values->Grid()->Size() == heights->Grid()->Size());
+	ASSERT(heights->Data().MissingCount() != heights->Data().Size());
 
 	// No Merge() here since that will mess up cache
 
@@ -537,7 +520,7 @@ vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList, cons
                                       const vector<double>& lastLevelValue, const vector<double>& findValue,
                                       size_t findNth) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -556,7 +539,7 @@ vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList, cons
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -658,7 +641,7 @@ vector<double> hitool::VerticalHeightGreaterThan(const vector<param>& wantedPara
                                                  const vector<double>& lastLevelValue, const vector<double>& findValue,
                                                  size_t findNth) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -677,7 +660,7 @@ vector<double> hitool::VerticalHeightGreaterThan(const vector<param>& wantedPara
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -749,7 +732,7 @@ vector<double> hitool::VerticalHeightLessThan(const vector<param>& wantedParamLi
                                               const vector<double>& lastLevelValue, const vector<double>& findValue,
                                               size_t findNth) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -768,7 +751,7 @@ vector<double> hitool::VerticalHeightLessThan(const vector<param>& wantedParamLi
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -800,7 +783,7 @@ vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, const ve
 vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, double lowerHeight,
                                        double upperHeight) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
 	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
@@ -811,7 +794,7 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, dou
 vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                        const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -830,7 +813,7 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, con
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -868,7 +851,7 @@ vector<double> hitool::VerticalMinimum(const param& wantedParam, const vector<do
 vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, double lowerHeight,
                                        double upperHeight) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
 	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
@@ -879,7 +862,7 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, dou
 vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                        const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -898,7 +881,7 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, con
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -944,7 +927,7 @@ vector<double> hitool::VerticalAverage(const params& wantedParamList, double low
 vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                        const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -963,7 +946,7 @@ vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList, con
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -1001,7 +984,7 @@ vector<double> hitool::VerticalAverage(const param& wantedParam, const vector<do
 vector<double> hitool::VerticalSum(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                    const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -1020,7 +1003,7 @@ vector<double> hitool::VerticalSum(const vector<param>& wantedParamList, const v
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -1066,7 +1049,7 @@ vector<double> hitool::VerticalSum(const param& wantedParam, const vector<double
 vector<double> hitool::VerticalCount(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                      const vector<double>& lastLevelValue, const vector<double>& findValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -1085,7 +1068,7 @@ vector<double> hitool::VerticalCount(const vector<param>& wantedParamList, const
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -1134,7 +1117,7 @@ vector<double> hitool::VerticalCount(const params& wantedParamList, double first
 
 vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, double wantedHeight) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	vector<double> heightInfo(itsConfiguration->Info()->Grid()->Size(), wantedHeight);
 
@@ -1143,7 +1126,7 @@ vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, doubl
 
 vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const vector<double>& heightInfo) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -1162,7 +1145,7 @@ vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else
@@ -1206,7 +1189,7 @@ vector<double> hitool::PlusMinusArea(const params& wantedParamList, double lower
 vector<double> hitool::PlusMinusArea(const vector<param>& wantedParamList, const vector<double>& firstLevelValue,
                                      const vector<double>& lastLevelValue) const
 {
-	assert(!wantedParamList.empty());
+	ASSERT(!wantedParamList.empty());
 
 	size_t p_i = 0;
 
@@ -1225,7 +1208,7 @@ vector<double> hitool::PlusMinusArea(const vector<param>& wantedParamList, const
 				if (++p_i < wantedParamList.size())
 				{
 					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-									wantedParamList[p_i].Name());
+					                wantedParamList[p_i].Name());
 					foundParam = wantedParamList[p_i];
 				}
 				else

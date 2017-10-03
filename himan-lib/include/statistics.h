@@ -17,10 +17,9 @@
 
 namespace himan
 {
-
 class statistics
 {
-public:
+   public:
 	friend class plugin_configuration;
 
 	statistics();
@@ -52,7 +51,7 @@ public:
 
 	size_t FetchingTime() const;
 
-private:
+   private:
 	void Init();
 	bool StoreToDatabase();
 	bool StoreToFile();

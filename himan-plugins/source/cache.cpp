@@ -34,7 +34,7 @@ string cache::UniqueName(const info& info)
 
 string cache::UniqueNameFromOptions(search_options& options)
 {
-	assert(options.configuration->DatabaseType() == kNoDatabase || options.prod.Id() != kHPMissingInt);
+	ASSERT(options.configuration->DatabaseType() == kNoDatabase || options.prod.Id() != kHPMissingInt);
 	string producer_id = boost::lexical_cast<string>(options.prod.Id());
 	string forecast_time = options.time.OriginDateTime().String("%Y-%m-%d_%H:%M:%S");
 	string valid_time = options.time.ValidDateTime().String("%Y-%m-%d_%H:%M:%S");
@@ -62,8 +62,6 @@ void cache::SplitToPool(info& anInfo, bool pin)
 
 		if (cache_pool::Instance()->Find(uniqueName))
 		{
-			// New item, but only one thread should insert it (prevent race condition)
-
 			itsLogger.Trace("Data with key " + uniqueName + " already exists at cache");
 
 			// Update timestamp of this cache item
@@ -80,7 +78,7 @@ void cache::SplitToPool(info& anInfo, bool pin)
 	}
 #endif
 
-	assert(!localInfo.Grid()->IsPackedData());
+	ASSERT(!localInfo.Grid()->IsPackedData());
 
 	vector<param> params;
 	vector<level> levels;
@@ -100,7 +98,7 @@ void cache::SplitToPool(info& anInfo, bool pin)
 	newInfo->ForecastTypes(ftype);
 	newInfo->Create(localInfo.Grid());
 
-	assert(uniqueName == UniqueName(*newInfo));
+	ASSERT(uniqueName == UniqueName(*newInfo));
 
 	{
 		Lock lock(itsCheckMutex);
@@ -164,7 +162,7 @@ void cache_pool::Clean()
 {
 	Lock lock(itsDeleteMutex);
 
-	assert(itsCacheLimit > 0);
+	ASSERT(itsCacheLimit > 0);
 	if (itsCache.size() <= static_cast<size_t>(itsCacheLimit))
 	{
 		return;
@@ -182,7 +180,7 @@ void cache_pool::Clean()
 		}
 	}
 
-	assert(!oldestName.empty());
+	ASSERT(!oldestName.empty());
 
 	itsCache.erase(oldestName);
 	itsLogger.Trace("Data cleared from cache: " + oldestName +

@@ -30,6 +30,9 @@ namespace interpolate
 {
 bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
+	// switch to old MissingDouble() for compatibility with QD stuff
+	targetData.MissingValue(kFloatMissing);
+
 	auto q = GET_PLUGIN(querydata);
 
 	std::shared_ptr<NFmiQueryData> sourceData = q->CreateQueryData(source, true);
@@ -38,12 +41,15 @@ bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 	for (base.ResetLocation(); base.NextLocation();)
 	{
 		const point llpoint = base.LatLon();
-		assert(llpoint != point());
+		ASSERT(llpoint != point());
 
 		const double value = sourceInfo.InterpolatedValue(NFmiPoint(llpoint.X(), llpoint.Y()));
 
 		targetData.Set(base.LocationIndex(), value);
 	}
+
+	// back to himan
+	targetData.MissingValue(MissingDouble());
 
 	return true;
 }
@@ -100,24 +106,24 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 		baseGrid->Nj(gg->Nj());
 		baseGrid->Ni(numEquatorLongitudes);
 
-		matrix<double> m(numEquatorLongitudes, gg->Nj(), 1, kFloatMissing, kFloatMissing);
+		matrix<double> m(numEquatorLongitudes, gg->Nj(), 1, MissingDouble(), MissingDouble());
 		baseGrid->Data(m);
 
 		return false;
 	}
 
-	assert(baseGrid);
-	assert(gg->TopLeft() != point());
+	ASSERT(baseGrid);
+	ASSERT(gg->TopLeft() != point());
 
 	const double dj = (gg->TopLeft().Y() - gg->BottomRight().Y()) / (static_cast<double>(gg->Nj()) - 1.);
-	assert(dj > 0);
+	ASSERT(dj > 0);
 
 	double lonspan =
 	    (gg->BottomRight().X() - gg->TopLeft().X());  // longitude span of the whole gaussian area in degrees
 	lonspan = (lonspan < 0) ? lonspan + 360 : lonspan;
-	assert(lonspan >= 0 && lonspan <= 360);
+	ASSERT(lonspan >= 0 && lonspan <= 360);
 
-	std::vector<double> result(baseGrid->Data().Size(), kFloatMissing);
+	std::vector<double> result(baseGrid->Data().Size(), MissingDouble());
 
 	HPInterpolationMethod interpolationMethod =
 	    InterpolationMethod(source.Param().Name(), base.Param().InterpolationMethod());
@@ -133,32 +139,32 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			if (gg_y < 0 || gg_y > gg->Nj()-1) 
 			{
 				// lat outside gg grid
-				targetData.Set(i, kFloatMissing);
+				targetData.Set(i, MissingDouble());
 				continue;
 			}
 
 			const int np_y = static_cast<int> (rint(gg_y)); // nearest grid point in y direction
 
 			const int numCurrentLongitudes = numOfPointsAlongParallels[static_cast<size_t> (np_y)]; // number of longitudes for the current parallel
-			assert(numCurrentLongitudes > 0);
+			ASSERT(numCurrentLongitudes > 0);
 
 			const double di = (lonspan / (numCurrentLongitudes-1)); // longitude distance between two gaussian points in degrees for the current parallel
 
-			assert(di > 0);
+			ASSERT(di > 0);
 			double gg_x = (llpoint.X() - (gg->TopLeft().X() - offset)) / di; // gaussian grid x in current parallel
 
 			if (offset != 0) gg_x = fmod(gg_x, numCurrentLongitudes-1); // wrap around if needed, do not allow any data to be from outside grid 
 
-			assert(gg_x >= 0);
+			ASSERT(gg_x >= 0);
 
 			if (gg_x < 0 || gg_x > numCurrentLongitudes-1) 
 			{
 				// lon outside gg grid
-				targetData.Set(i, kFloatMissing);
+				targetData.Set(i, MissingDouble());
 				continue;
 			}
 			const int np_x = static_cast<int> (rint(gg_x)); // nearest grid point in x direction in current parallel
-			assert(np_x <= numCurrentLongitudes-1); // 0 ... numCurrentLongitudes-1
+			ASSERT(np_x <= numCurrentLongitudes-1); // 0 ... numCurrentLongitudes-1
 
 			const double interpValue = gg->Value(np_x, np_y);
 #endif
@@ -166,8 +172,8 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			const point npoint = point(rint(gpoint.X()), rint(gpoint.Y()));
 
 			// grid point coordinates are always positive
-			assert(npoint.X() >= 0);
-			assert(npoint.Y() >= 0);
+			ASSERT(npoint.X() >= 0);
+			ASSERT(npoint.Y() >= 0);
 
 			const double interpValue = gg->Value(static_cast<size_t>(npoint.X()), static_cast<size_t>(npoint.Y()));
 			result[i] = interpValue;
@@ -199,10 +205,10 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			                                                             // interpolation is not allowed, even for small
 			                                                             // amounts of delta y)
 
-			if (gg_y < 0 || gg_y > static_cast<double> (gg->Nj()) - 1)
+			if (gg_y < 0 || gg_y > static_cast<double>(gg->Nj()) - 1)
 			{
 				// lat outside gg grid
-				targetData.Set(i, kFloatMissing);
+				targetData.Set(i, MissingDouble());
 				continue;
 			}
 
@@ -210,7 +216,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			    static_cast<int>(floor(gg_y)))];  // number of longitudes for the upper parallel
 			const int numLowerLongitudes = numOfPointsAlongParallels[static_cast<size_t>(
 			    static_cast<int>(ceil(gg_y)))];  // number of longitudes for the lower parallel
-			assert(numUpperLongitudes > 0 && numLowerLongitudes > 0);
+			ASSERT(numUpperLongitudes > 0 && numLowerLongitudes > 0);
 
 			const double dlon_upper =
 			    (lonspan / (numUpperLongitudes - 1));  // longitude distance between two points for the upper parallel
@@ -260,10 +266,10 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			double wc = dlat_upper * fabs(b.X() - llpoint.X());
 			double wd = dlat_upper * fabs(llpoint.X() - a.X());
 
-			assert(wa >= 0 && std::isfinite(wa));
-			assert(wb >= 0 && std::isfinite(wb));
-			assert(wc >= 0 && std::isfinite(wc));
-			assert(wd >= 0 && std::isfinite(wd));
+			ASSERT(wa >= 0 && std::isfinite(wa));
+			ASSERT(wb >= 0 && std::isfinite(wb));
+			ASSERT(wc >= 0 && std::isfinite(wc));
+			ASSERT(wd >= 0 && std::isfinite(wd));
 
 			if (wa == 0 && wb == 0 && wc == 0 && wd == 0)
 			{
@@ -280,7 +286,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 
 			const double wsum = 1 / (wa + wb + wc + wd);
 
-			assert(wsum > 0.);
+			ASSERT(wsum > 0.);
 
 			wa *= wsum;
 			wb *= wsum;
@@ -288,7 +294,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			wd *= wsum;
 
 			const double interpValue = av * wa + bv * wb + cv * wc + dv * wd;
-			assert(std::isfinite(interpValue));
+			ASSERT(std::isfinite(interpValue));
 
 			result[i] = interpValue;
 		}
@@ -319,14 +325,15 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 		util::Unpack({source.Grid()});
 	}
 #endif
+	// switch to old MissingDouble() for compatibility with QD stuff
+	targetData.MissingValue(kFloatMissing);
 
 	auto q = GET_PLUGIN(querydata);
 
-	q->UseDatabase(false);
 	std::shared_ptr<NFmiQueryData> baseData = q->CreateQueryData(base, true);
 	std::shared_ptr<NFmiQueryData> sourceData = q->CreateQueryData(source, true);
 
-	assert(baseData);
+	ASSERT(baseData);
 
 	NFmiFastQueryInfo baseInfo = NFmiFastQueryInfo(baseData.get());
 	NFmiFastQueryInfo sourceInfo(sourceData.get());
@@ -384,6 +391,9 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 			} while (baseInfo.MoveDown());
 		}
 	}
+
+	// back to Himan
+	targetData.MissingValue(MissingDouble());
 
 	return true;
 }
@@ -488,7 +498,7 @@ bool ReorderPoints(info& base, std::vector<info_t> infos)
 		auto targetStations = dynamic_cast<point_list*>(base.Grid())->Stations();
 		auto sourceStations = dynamic_cast<point_list*>((*it)->Grid())->Stations();
 		auto sourceData = (*it)->Grid()->Data();
-		auto newData = matrix<double>(targetStations.size(), 1, 1, kFloatMissing);
+		auto newData = matrix<double>(targetStations.size(), 1, 1, MissingDouble());
 
 		if (targetStations.size() == 0 || sourceStations.size() == 0) return false;
 
@@ -647,12 +657,12 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 
 void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 {
-	assert(UInfo.Grid()->Type() == VInfo.Grid()->Type());
+	ASSERT(UInfo.Grid()->Type() == VInfo.Grid()->Type());
 
 	auto& UVec = UInfo.Data().Values();
 	auto& VVec = VInfo.Data().Values();
 
-	assert(UInfo.Grid()->Type() != kLatitudeLongitude);
+	ASSERT(UInfo.Grid()->Type() != kLatitudeLongitude);
 	switch (UInfo.Grid()->Type())
 	{
 		case kRotatedLatitudeLongitude:
@@ -665,11 +675,6 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 			{
 				double U = UVec[i];
 				double V = VVec[i];
-
-				if (U == kFloatMissing || V == kFloatMissing)
-				{
-					continue;
-				}
 
 				const point rotPoint = rll->RotatedLatLon(i);
 				const point regPoint = rll->LatLon(i);
@@ -720,8 +725,8 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 				// http://www.mcs.anl.gov/~emconsta/wind_conversion.txt
 
 				double londiff = UInfo.LatLon().X() - orientation;
-				assert(londiff >= -180 && londiff <= 180);
-				assert(UInfo.LatLon().Y() >= 0);
+				ASSERT(londiff >= -180 && londiff <= 180);
+				ASSERT(UInfo.LatLon().Y() >= 0);
 
 				const double angle = cone * londiff * constants::kDeg;
 				double sinx, cosx;
@@ -764,7 +769,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 
 void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda)
 {
-	assert(UInfo.Grid()->UVRelativeToGrid() == VInfo.Grid()->UVRelativeToGrid());
+	ASSERT(UInfo.Grid()->UVRelativeToGrid() == VInfo.Grid()->UVRelativeToGrid());
 
 	if (!UInfo.Grid()->UVRelativeToGrid())
 	{

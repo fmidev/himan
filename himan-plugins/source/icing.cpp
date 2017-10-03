@@ -67,7 +67,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		VvScale = 1000;
 	}
 
-	assert(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
+	ASSERT(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
 
 	SetAB(myTargetInfo, TInfo);
 
@@ -83,7 +83,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		double Vv = tup.get<2>();
 		double Cl = tup.get<3>();
 
-		if (T == kFloatMissing || Vv == kFloatMissing || Cl == kFloatMissing)
+		if (IsMissingValue({T, Vv, Cl}))
 		{
 			continue;
 		}

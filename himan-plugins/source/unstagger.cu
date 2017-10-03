@@ -6,25 +6,25 @@
 
   Description:
 
-  The grid in a staggered arrangement consists of central points ('o') where most parameter values 
-  e.g. temperature and pressure are stored. The u-velocity points ('u') are shifted east by a half 
+  The grid in a staggered arrangement consists of central points ('o') where most parameter values
+  e.g. temperature and pressure are stored. The u-velocity points ('u') are shifted east by a half
   grid spacing and v-velocity points ('v') shifted south by a half grid spacing. A example on a 3x3
   grid is given below.
-  
-  o---u---o---u---o---u
-  |       |       |    
-  v       v       v 
-  |       |       |  
+
   o---u---o---u---o---u
   |       |       |
   v       v       v
   |       |       |
   o---u---o---u---o---u
   |       |       |
-  v       v       v 
+  v       v       v
+  |       |       |
+  o---u---o---u---o---u
+  |       |       |
+  v       v       v
 
-  If collocation of all parameters is required, u- and v-velocity needs to be unstaggered. The 
-  unstaggering is done by solving a set of linear equations. For the example grid shown above 
+  If collocation of all parameters is required, u- and v-velocity needs to be unstaggered. The
+  unstaggering is done by solving a set of linear equations. For the example grid shown above
   the linear equations are.
 
   Case u:                                 Case v:
@@ -184,10 +184,10 @@ std::pair<std::vector<double>, std::vector<double>> himan::plugin::unstagger_cud
 	thrust::device_ptr<double> dt_V_out = thrust::device_pointer_cast(d_V_out);
 
 	// create cusp::array1d
-	auto U_device = cusp::array1d_view<thrust::device_ptr<double>>(dt_U, dt_U + N);              
-	auto V_device = cusp::array1d_view<thrust::device_ptr<double>>(dt_V, dt_V + N);              
-	auto U_device_out = cusp::array1d_view<thrust::device_ptr<double>>(dt_U_out, dt_U_out + N);  
-	auto V_device_out = cusp::array1d_view<thrust::device_ptr<double>>(dt_V_out, dt_V_out + N);  
+	auto U_device = cusp::array1d_view<thrust::device_ptr<double>>(dt_U, dt_U + N);
+	auto V_device = cusp::array1d_view<thrust::device_ptr<double>>(dt_V, dt_V + N);
+	auto U_device_out = cusp::array1d_view<thrust::device_ptr<double>>(dt_U_out, dt_U_out + N);
+	auto V_device_out = cusp::array1d_view<thrust::device_ptr<double>>(dt_V_out, dt_V_out + N);
 
 	// perform the unstagger operation
 	cusp::multiply(thrust::cuda::par.on(stream), U_unstagger, U_device, U_device_out);

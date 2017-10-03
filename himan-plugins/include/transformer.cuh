@@ -17,7 +17,6 @@ namespace plugin
 {
 namespace transformer_cuda
 {
-
 struct options
 {
 	size_t N;

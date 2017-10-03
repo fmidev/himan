@@ -18,7 +18,7 @@ public:
 	json_parser();
 	json_parser(const json_parser& other) = delete;
 	~json_parser() = default;
-	
+
 	json_parser& operator=(const json_parser& other) = delete;
 
 	std::vector<std::shared_ptr<plugin_configuration>> Parse(std::shared_ptr<configuration> conf);

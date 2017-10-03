@@ -30,7 +30,7 @@ class modifier
 
 	virtual std::string ClassName() const { return "himan::modifier"; }
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight) = 0;
-	virtual void Clear(double fillValue = kFloatMissing);
+	virtual void Clear(double fillValue = MissingDouble());
 
 	virtual bool IsMissingValue(double theValue) const __attribute__((always_inline));
 
@@ -110,7 +110,7 @@ class modifier
 inline std::ostream& operator<<(std::ostream& file, const modifier& ob) { return ob.Write(file); }
 inline bool modifier::IsMissingValue(double theValue) const
 {
-	if (theValue == kFloatMissing)
+	if (IsMissing(theValue))
 	{
 		return true;
 	}
@@ -259,7 +259,7 @@ class modifier_findheight : public modifier
 
 	virtual bool CalculationFinished() const override;
 
-	virtual void Clear(double fillValue = kFloatMissing) override;
+	virtual void Clear(double fillValue = MissingDouble()) override;
 
    protected:
 	modifier_findheight(HPModifierType theModifierType) : modifier(theModifierType), itsValuesFound(0) {}

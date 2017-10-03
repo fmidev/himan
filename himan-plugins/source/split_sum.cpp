@@ -12,7 +12,6 @@
 #include <iostream>
 #include <map>
 
-#include "neons.h"
 #include "radon.h"
 #include "writer.h"
 
@@ -315,9 +314,6 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	// because at that point it will hang.
 	// To prevent this, make the pool larger.
 
-	auto n = GET_PLUGIN(neons);
-	n->PoolMaxWorkers(SUB_THREAD_COUNT * 12);  // 12 is the max thread count from compiled_plugin_base
-
 	auto r = GET_PLUGIN(radon);
 	r->PoolMaxWorkers(SUB_THREAD_COUNT * 12);
 
@@ -359,8 +355,8 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string subThreadIndex) const
 {
-	assert(myTargetInfo);
-	assert(myTargetInfo->Param().Name() == myParamName);
+	ASSERT(myTargetInfo);
+	ASSERT(myTargetInfo->Param().Name() == myParamName);
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -428,7 +424,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 		if (myTargetInfo->Time().StepResolution() != kHourResolution)
 		{
-			assert(myTargetInfo->Time().StepResolution() == kMinuteResolution);
+			ASSERT(myTargetInfo->Time().StepResolution() == kMinuteResolution);
 
 			paramStep *= 60;
 		}
@@ -524,11 +520,6 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		double currentSum = tup.get<1>();
 		double previousSum = tup.get<2>();
 
-		if (currentSum == kFloatMissing || previousSum == kFloatMissing)
-		{
-			continue;
-		}
-
 		result = (currentSum - previousSum) * invstep * scaleFactor;
 
 		if (result < 0 && myParamName != "RTOPLW-WM2")
@@ -536,7 +527,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 			result = 0;
 		}
 
-		assert(isRadiationCalculation || result >= 0);
+		ASSERT(isRadiationCalculation || result >= 0 || IsMissing(result));
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " +
@@ -592,7 +583,7 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 	else if (timeResolution != kHourResolution)
 	{
 		itsLogger.Fatal("Invalid time resolution value: " + HPTimeResolutionToString.at(timeResolution));
-		abort();
+		himan::Abort();
 	}
 
 	itsLogger.Trace("Target time is " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
@@ -667,7 +658,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 	if (params.empty())
 	{
 		itsLogger.Fatal("Source parameter for " + myTargetInfo->Param().Name() + " not found");
-		abort();
+		himan::Abort();
 	}
 
 	if (myTargetInfo->Param().Name() == "RTOPLW-WM2")

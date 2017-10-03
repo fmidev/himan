@@ -16,7 +16,6 @@
 
 namespace himan
 {
-
 typedef packing_coefficients simple_packed_coefficients;
 
 struct simple_packed : packed_data

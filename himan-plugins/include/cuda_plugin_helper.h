@@ -20,7 +20,7 @@ inline void PrepareInfo(info_simple* source)
 {
 	size_t memsize = source->size_x * source->size_y * sizeof(double);
 
-	assert(source->values);
+	ASSERT(source->values);
 
 	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(source->values), memsize, 0));
 }
@@ -29,7 +29,7 @@ inline void PrepareInfo(info_simple* source, double* devptr, cudaStream_t& strea
 {
 	PrepareInfo(source);
 
-	assert(devptr);
+	ASSERT(devptr);
 
 	size_t memsize = source->size_x * source->size_y * sizeof(double);
 
@@ -46,7 +46,6 @@ inline void PrepareInfo(info_simple* source, double* devptr, cudaStream_t& strea
 }
 
 inline void ReleaseInfo(info_simple* source) { CUDA_CHECK(cudaHostUnregister(source->values)); }
-
 inline void ReleaseInfo(info_simple* source, double* devptr, cudaStream_t& stream)
 {
 	CUDA_CHECK(cudaMemcpyAsync(source->values, devptr, source->size_x * source->size_y * sizeof(double),
@@ -58,7 +57,7 @@ inline void ReleaseInfo(info_simple* source, double* devptr, cudaStream_t& strea
 		bool pack = true;
 		for (size_t i = 0; i < source->size_x * source->size_y; i++)
 		{
-			if (source->values[0] == kFloatMissing)
+			if (IsMissing(source->values[0]))
 			{
 				pack = false;
 				break;
@@ -67,7 +66,7 @@ inline void ReleaseInfo(info_simple* source, double* devptr, cudaStream_t& strea
 
 		if (pack)
 		{
-			assert(source->packed_values);
+			ASSERT(source->packed_values);
 			source->packed_values->coefficients.bitsPerValue = 24;
 
 			source->packed_values->Pack(devptr, source->size_x * source->size_y, &stream);

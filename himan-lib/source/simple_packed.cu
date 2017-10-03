@@ -5,16 +5,17 @@
 
 #include "simple_packed.h"
 
-#include "cuda_helper.h"
 #include <NFmiGribPacking.h>
 #include <cub/cub.cuh>
 #include <grib_api.h>
+
+#include "cuda_helper.h"
 
 using namespace himan;
 
 long get_binary_scale_fact(double max, double min, long bpval)
 {
-	assert(max >= min);
+	ASSERT(max >= min);
 	double range = max - min;
 	double zs = 1;
 	long scale = 0;
@@ -23,7 +24,7 @@ long get_binary_scale_fact(double max, double min, long bpval)
 	unsigned long maxint = packed_data_util::GetGribPower(bpval, 2) - 1;
 	double dmaxint = (double)maxint;
 
-	assert(bpval >= 1);
+	ASSERT(bpval >= 1);
 
 	if (range == 0) return 0;
 
@@ -57,14 +58,14 @@ long get_binary_scale_fact(double max, double min, long bpval)
 		printf("grib_get_binary_scale_fact: max=%g min=%g\n", max, min);
 		scale = -last;
 	}
-	assert(scale <= last);
+	ASSERT(scale <= last);
 
 	return scale;
 }
 
 long get_decimal_scale_fact(double max, double min, long bpval, long binary_scale)
 {
-	assert(max >= min);
+	ASSERT(max >= min);
 
 	double range = max - min;
 	const long last = 127; /* Depends on edition, should be parameter */
@@ -153,8 +154,8 @@ __host__ T simple_packed::Max(T* d_arr, size_t N, cudaStream_t& stream)
 
 __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 {
-	assert(arr);
-	assert(N > 0);
+	ASSERT(arr);
+	ASSERT(N > 0);
 
 	if (packedLength == 0 && coefficients.bitsPerValue == 0)
 	{
@@ -169,7 +170,7 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 			// Make an assumption: if grid is static and bitmap is defined, it is probably
 			// all missing.
 
-			fillValue = kFloatMissing;
+			fillValue = himan::MissingDouble();
 		}
 
 		if (NFmiGribPacking::IsHostPointer(arr))
@@ -326,12 +327,12 @@ void simple_packed::Pack(double* d_arr, size_t N, cudaStream_t* stream)
 
 	// 1. Get unpacked data range
 
-	assert(d_arr);
+	ASSERT(d_arr);
 
 	double max = Max(d_arr, N, *stream);
 	double min = Min(d_arr, N, *stream);
 
-	assert(isfinite(max) && isfinite(min));
+	ASSERT(isfinite(max) && isfinite(min));
 
 #ifdef DEBUG
 	std::cout << "min: " << min << " max: " << max << std::endl;
@@ -353,7 +354,7 @@ void simple_packed::Pack(double* d_arr, size_t N, cudaStream_t* stream)
 	if (HasBitmap())
 	{
 		std::cerr << "bitmap packing not supported yet" << std::endl;
-		abort();
+		himan::Abort();
 	}
 
 	// 3. Reduce
@@ -438,7 +439,7 @@ __device__ void simple_packed_util::UnpackFullBytes(unsigned char* __restrict__ 
 
 		if (bm == 0)
 		{
-			d_u[idx] = kFloatMissing;
+			d_u[idx] = MissingDouble();
 			value_found = 0;
 		}
 		else
@@ -491,7 +492,7 @@ __device__ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict_
 
 		if (bm == 0)
 		{
-			d_u[idx] = kFloatMissing;
+			d_u[idx] = MissingDouble();
 			value_found = 0;
 		}
 		else

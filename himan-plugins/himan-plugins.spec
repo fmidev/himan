@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.8.21
-Release: 1.el7.fmi
+Version: 17.9.12
+Release: 3.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -14,12 +14,12 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 17.8.14
+Requires: himan-lib >= 17.8.28
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.7.31
 Requires: libfmidb >= 17.8.10
-Requires: smartmet-library-newbase >= 17.4.4
+Requires: smartmet-library-newbase >= 17.6.1
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -37,10 +37,10 @@ Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.8.10
 BuildRequires: libfmigrib-devel >= 17.7.31
-BuildRequires: smartmet-library-newbase-devel >= 17.4.4
+BuildRequires: smartmet-library-newbase-devel >= 17.6.1
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: boost-devel >= 1.53
+BuildRequires: boost-devel >= 1.65
 BuildRequires: scons
 BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
@@ -111,6 +111,24 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-3.fmi
+- Add stack trace functionality
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-2.fmi
+- Bugfixes for grib / precipitation form
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-1.fmi
+- Bugfixes for grib, pot
+* Mon Sep 11 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.11-1.fmi
+- Replace kFloatMissing with nan
+* Thu Sep  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.7-1.fmi
+- Support for NVidia Pascal GP100 (CC 6.0)
+* Tue Aug 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.29-1.fmi
+- boost 1.65
+* Mon Aug 28 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.28-1.fmi
+- Fix grib plugin time formatting issue
+* Thu Aug 24 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.24-1.fmi
+- strict mode for pot plugin
+* Tue Aug 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.22-1.fmi
+- hybrid_height optimization
 * Mon Aug 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.21-1.fmi
 - General code cleanup
 - Level type fixes

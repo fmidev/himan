@@ -36,7 +36,13 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	const param SHFParam("FLSEN-JM2");  // accumulated surface sensible heat flux
 	const param LHFParam("FLLAT-JM2");  // accumulated surface latent heat flux
 	const param U_SParam("FRVEL-MS");   // friction velocity
-	const param PParam("P-PA");
+
+	param PParam("P-PA");
+
+	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 243)
+	{
+		PParam = param("PGR-PA");
+	}
 
 	auto myThreadedLogger = logger("monin_obukhov Thread #" + std::to_string(threadIndex));
 
@@ -92,13 +98,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		double P = PInfo->Value();
 
 		double T_C = T - constants::kKelvin;  // Convert Temperature to Celvins
-		double mol(kFloatMissing);
-
-		if (T == kFloatMissing || SHF == kFloatMissing || LHF == kFloatMissing || U_S == kFloatMissing ||
-		    P == kFloatMissing)
-		{
-			continue;
-		}
+		double mol = MissingDouble();
 
 		SHF /= forecastStepSize;  // divide by time step to obtain Watts/m2
 		LHF /= forecastStepSize;  // divide by time step to obtain Watts/m2

@@ -13,7 +13,6 @@ namespace himan
 {
 namespace plugin
 {
-
 namespace relative_humidity_cuda
 {
 struct options

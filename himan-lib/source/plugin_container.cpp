@@ -11,19 +11,17 @@
 using namespace himan;
 
 plugin_container::plugin_container() : itsLibraryHandle(0) {}
-
 plugin_container::plugin_container(void* theLibraryHandle, std::shared_ptr<plugin::himan_plugin> thePlugin)
     : itsPlugin(thePlugin), itsLibraryHandle(theLibraryHandle)
 {
 }
 
 std::shared_ptr<plugin::himan_plugin> plugin_container::Plugin() { return itsPlugin; }
-
 std::shared_ptr<plugin::himan_plugin> plugin_container::Clone()
 {
 	::dlerror();  // clear error handle
 
-	assert(itsLibraryHandle);
+	ASSERT(itsLibraryHandle);
 	plugin::create_t* create_plugin = reinterpret_cast<plugin::create_t*>(dlsym(itsLibraryHandle, "create"));
 
 	if (!create_plugin)
@@ -37,7 +35,6 @@ std::shared_ptr<plugin::himan_plugin> plugin_container::Clone()
 }
 
 void* plugin_container::Library() { return itsLibraryHandle; }
-
 plugin_container::~plugin_container()
 {
 	// Close libraries

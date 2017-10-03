@@ -33,7 +33,7 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 	{
 		try
 		{
-			auto info = f->Fetch(config, startTime, forecastLevel, itsParam);
+			auto info = f->Fetch(config, startTime, forecastLevel, itsParam, requestedType);
 
 			startTime.ValidDateTime().Adjust(timeSpan, stepSize);
 
@@ -43,20 +43,13 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 		{
 			if (e != kFileDataNotFound)
 			{
-				abort();
+				himan::Abort();
 			}
 			else
 			{
 				startTime.ValidDateTime().Adjust(timeSpan, stepSize);
 			}
 		}
-	}
-
-	// get rid of kFloatMissings
-	for (auto& anInfo : itsInfos)
-	{
-		replace(anInfo->Data().Values().begin(), anInfo->Data().Values().end(), kFloatMissing,
-		        std::nan("kFloatMissing"));
 	}
 }
 
@@ -86,8 +79,7 @@ himan::info_t Max(InputIt begin, InputIt end)
 	}
 
 	// Set first field as first set of maximum values
-	auto maxInfo = *begin;
-	maxInfo->ReGrid();
+	auto maxInfo = make_shared<himan::info>((*begin)->Clone());
 	++begin;
 
 	for (; begin != end; ++begin)
@@ -124,8 +116,7 @@ himan::info_t Mean(InputIt begin, InputIt end)
 	}
 
 	// Set first field as first set of mean values
-	auto meanInfo = *begin;
-	meanInfo->ReGrid();
+	auto meanInfo = make_shared<himan::info>((*begin)->Clone());
 	++begin;
 
 	size_t count = 1;
@@ -234,6 +225,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
+	forecast_type forecastType = myTargetInfo->ForecastType();
 	forecast_time forecastTime = myTargetInfo->Time();
 	forecast_time forecastTimeNext = myTargetInfo->Time();
 	forecastTimeNext.ValidDateTime().Adjust(timeResolution, +step);
@@ -250,7 +242,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	startTime.ValidDateTime().Adjust(kHourResolution, -2);
 
 	// create time series CAPE
-	CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, CapeLevelHiman);
+	CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, CapeLevelHiman, forecastType);
 
 	if (CAPEts.Size() == 0)
 	{
@@ -261,7 +253,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 
 		CAPEts.Param(CapeParamEC);
-		CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, forecastLevel);
+		CAPEts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 4, forecastLevel, forecastType);
 	}
 
 	// find max
@@ -270,7 +262,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// create time series RR
 	startTime.ValidDateTime().Adjust(kHourResolution, 1);
-	RRts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 3, forecastLevel);
+	RRts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 3, forecastLevel, forecastType);
 
 	// fnd mean
 	info_t RRMeanInfo;
@@ -283,7 +275,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	// filter CAPE
-	himan::matrix<double> filter_kernel(3, 3, 1, kFloatMissing, 1.0 / 9.0);
+	himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1.0 / 9.0);
 	himan::matrix<double> filtered_CAPE = numerical_functions::Filter2D(CAPEMaxInfo->Data(), filter_kernel);
 
 	CAPEMaxInfo->Grid()->Data(filtered_CAPE);
@@ -321,11 +313,6 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 
 		POT = PoLift * PoThermoDyn * 100;
-
-		if (!isfinite(POT))
-		{
-			POT = kFloatMissing;  // Bring missing values back
-		}
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

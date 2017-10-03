@@ -1,8 +1,8 @@
 #ifndef CUDA_HELPER_H
 #define CUDA_HELPER_H
 
-#include <cassert>
 #include <iostream>
+#include "debug.h"
 
 #ifdef __CUDACC__
 #define CUDA_HOST __host__
@@ -28,7 +28,6 @@ typedef double* __restrict__ darr_t;
 
 namespace himan
 {
-
 /*
  * Two very commonly used data types with cuda calculations.
  * By defining double pointers __restrict__ we guarantee to the compiler
@@ -49,7 +48,7 @@ inline void CheckCudaError(cudaError_t errarg, const char* file, const int line)
 	if (errarg)
 	{
 		std::cerr << "Error at " << file << "(" << line << "): " << cudaGetErrorString(errarg) << std::endl;
-		abort();
+		himan::Abort();
 	}
 }
 
@@ -62,7 +61,7 @@ inline void CheckCudaErrorString(const char* errstr, const char* file, const int
 		std::cerr << "Error: " << errstr << " " << file << " at (" << line << "): " << cudaGetErrorString(err)
 		          << std::endl;
 
-		abort();
+		himan::Abort();
 	}
 }
 

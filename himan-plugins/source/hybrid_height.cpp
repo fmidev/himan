@@ -10,7 +10,6 @@
 #include <future>
 
 #include "cache.h"
-#include "neons.h"
 #include "radon.h"
 #include "writer.h"
 
@@ -43,14 +42,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	HPDatabaseType dbtype = conf->DatabaseType();
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		itsBottomLevel = stoi(n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
-	}
-
-	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && itsBottomLevel == kHPMissingInt)
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -156,11 +148,6 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 		double& result = tup.get<0>();
 		double GP = tup.get<1>();
 		double zeroGP = tup.get<2>();
-
-		if (GP == kFloatMissing || zeroGP == kFloatMissing)
-		{
-			continue;
-		}
 
 		result = (GP - zeroGP) * himan::constants::kIg;
 	}
@@ -303,7 +290,7 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 	}
 	else
 	{
-		assert(prevLevel.Value() > myTargetInfo->Level().Value());
+		ASSERT(prevLevel.Value() > myTargetInfo->Level().Value());
 		prevHV = VEC(prevHInfo);
 	}
 
@@ -328,18 +315,10 @@ bool hybrid_height::WithIteration(info_t& myTargetInfo)
 		double prevT = tup.get<4>();
 		double prevH = tup.get<5>();
 
-		if (prevT == kFloatMissing || prevP == kFloatMissing || T == kFloatMissing || P == kFloatMissing ||
-		    prevH == kFloatMissing)
-		{
-			continue;
-		}
-
 		prevP *= scale;
 
 		double deltaZ = 14.628 * (prevT + T) * log(prevP / P);
 		double totalHeight = prevH + deltaZ;
-
-		assert(isfinite(totalHeight));
 
 		result = totalHeight;
 	}
@@ -385,7 +364,7 @@ void hybrid_height::Write(himan::info targetInfo)
 	using namespace himan;
 	auto aWriter = GET_PLUGIN(writer);
 
-	assert(itsConfiguration->FileWriteOption() != kSingleFile);
+	ASSERT(itsConfiguration->FileWriteOption() != kSingleFile);
 
 	targetInfo.ResetParam();
 

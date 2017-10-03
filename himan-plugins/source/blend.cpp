@@ -240,7 +240,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 			}
 
 			const double v = f->Value();
-			if (v == kFloatMissing)
+			if (IsMissing(v))
 			{
 				numMissing++;
 				valid[findex] = false;
@@ -256,7 +256,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 
 		if (numMissing == forecasts.size())
 		{
-			F = kFloatMissing;
+			F = MissingDouble();
 		}
 		else
 		{
@@ -264,7 +264,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 			size_t i = 0;
 			for (const double& v : values)
 			{
-				if (v == kFloatMissing)
+				if (IsMissing(v))
 				{
 					const double w = currentWeights[i] / static_cast<double>(values.size() - numMissing);
 

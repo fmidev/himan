@@ -16,22 +16,29 @@ The parameters producer for each of these are:
 * _cin_: Convective inhibition, unit J/kg, values are negative
 * _lcl temperature_: temperature of lifting condensation level (~cloud base), Kelvins
 * _lcl pressure_: pressure of lifting condensation level, hPa
+* _lcl height_: height of lifting condensation level, m
 * _lfc temperature_: temperature of level of free convection, Kelvins
 * _lfc pressure_: pressure of level of free convection, hPa
-* _el temperature_: temperature of equilibrium level, Kelvins
-* _el pressure_: pressure of equilibrium level, hPa
+* _lfc height_: height of level of free convection, m
+* _el temperature (first)_: temperature of first equilibrium level found, Kelvins
+* _el pressure (first)_: pressure of first equilibrium level found, hPa
+* _el height (first)_: height of first equilibrium level found, m
+* _el temperature (last)_: temperature of last equilibrium level found, Kelvins
+* _el pressure (last)_: pressure of last equilibrium level found, hPa
+* _el height (last)_: last of first equilibrium level found, m
 
-This results then in altogether 3 * 10 = 30 separate output parameters.
+This results then in altogether 3 * 16 = 48 separate output parameters.
 
 Plugin is optimized for GPU use.
 
 # Required source parameters
 
-All parameters must be found from vertical levels starting from ground and up to ~100 Pa
+All parameters must be found from vertical levels starting from lowest hybrid level (~10 meters) up to ~100 hPa.
 
 * Air temperature, K
 * Relative humidity, %
-* Metric height of level
+* Metric height of hybrid level
+* Pressure of hybrid level
 
 # Output parameters
 
@@ -48,6 +55,9 @@ LFC-M
 EL-K
 EL-HPA
 EL-M
+EL-LAST-K
+EL-LAST-HPA
+EL-LAST-M
 
 The results are written to a level corresponding the source value type, possible values are:
 
@@ -57,7 +67,11 @@ most unstable layer
 
 # Method of calculation
 
-Values are integrated while scanning through the 3D state of the atmosphere. The final CAPE results are averaged over the nearest four grid points.
+Source data for surface-level based data is taken directly from the lowest hybrid level. For 500m mix level data potential temperature and mixing ratio are sampled with 2 hPa interval (for the lowest 500 meters) and the mean value of these is converted to temperature and dewpoint. For maximum theta e level source data equivalent potential temperature is calculated for all levels below 600hPa, and temperature and dewpoint value are taken from that level which produces the highest value.
+
+LCL values are calculated using Boltons approximations. For moist adiabatic lift of air parcel Wobus method is used. For CAPE and CIN integration virtual temperature is used. Both first and last equilibrium levels are searched, although in most cases these two are equal.
+
+The final CAPE an CIN results are averaged over the nearest grid points.
 
 # Per-plugin configuration options
 

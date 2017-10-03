@@ -16,11 +16,11 @@ using namespace std;
 using namespace himan::plugin;
 
 pop::pop()
-    : itsECEPSGeom("ECFESC250"),
+    : itsECEPSGeom("ECEUR0200"),
       itsECGeom("ECGLO0100"),
       itsPEPSGeom("PEPSSCAN"),
       itsHirlamGeom("RCR068"),
-      itsHarmonieGeom("HARMONIE022"),
+      itsMEPSGeom("MEPSSCAN2500"),
       itsGFSGeom("GFS0250")
 {
 	itsLogger = logger("pop");
@@ -53,17 +53,21 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->Exists("hirlam_geom"))
 	{
-		itsPEPSGeom = itsConfiguration->GetValue("hirlam_geom");
+		itsHirlamGeom = itsConfiguration->GetValue("hirlam_geom");
 	}
 
-	if (itsConfiguration->Exists("harmonie_geom"))
+	if (itsConfiguration->Exists("meps_geom"))
 	{
-		itsPEPSGeom = itsConfiguration->GetValue("harmonie_geom");
+		itsMEPSGeom = itsConfiguration->GetValue("meps_geom");
+	}
+	else if (itsConfiguration->Exists("harmonie_geom"))
+	{
+		itsMEPSGeom = itsConfiguration->GetValue("harmonie_geom");
 	}
 
 	if (itsConfiguration->Exists("gfs_geom"))
 	{
-		itsPEPSGeom = itsConfiguration->GetValue("gfs_geom");
+		itsGFSGeom = itsConfiguration->GetValue("gfs_geom");
 	}
 
 	Start();
@@ -92,7 +96,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const double K5 = 2;     // EC:n viimeisin malliajo
 	const double K6 = 1;     // Hirlamin viimeisin malliajo
 	const double K7 = 1;     // GFS:n viimeisin malliajo
-	const double K8 = 1;     // Harmonien viimeisin malliajo
+	const double K8 = 1;     // MEPS:n viimeisin malliajo
 
 	// Current time and level as given to this thread
 
@@ -105,7 +109,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 						   static_cast<string>(forecastLevel));
 
-	vector<double> PEPS, Hirlam, Harmonie, GFS, EC, ECprev, ECprob1, ECprob01, ECfract50, ECfract75;
+	vector<double> PEPS, Hirlam, MEPS, GFS, EC, ECprev, ECprob1, ECprob01, ECfract50, ECfract75;
 
 	/*
 	 * Required source parameters
@@ -153,7 +157,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			ECprev.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			ECprev.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -169,19 +173,19 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		cnf->SourceGeomNames({itsECEPSGeom});
 
 		// PROB-RR-1 = "RR>= 1mm 6h"
-		auto ECprob1Info = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-1"), forecastType, false);
+		auto ECprob1Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("PROB-RR-1"), forecastType, false);
 		ECprob1 = VEC(ECprob1Info);
 
 		// PROB-RR-01 = "RR>= 0.1mm 6h"
-		auto ECprob01Info = f->Fetch(cnf, prevTime, forecastLevel, param("PROB-RR-01"), forecastType, false);
+		auto ECprob01Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("PROB-RR-01"), forecastType, false);
 		ECprob01 = VEC(ECprob01Info);
 	}
 	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
-			ECprob1.resize(myTargetInfo->Data().Size(), kFloatMissing);
-			ECprob01.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			ECprob1.resize(myTargetInfo->Data().Size(), MissingDouble());
+			ECprob01.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -193,22 +197,22 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	try
 	{
-		cnf->SourceProducers({producer(240, 0, 0, "ECGMTA")});
+		cnf->SourceProducers({producer(242, 0, 0, "ECM_PROB")});
 
 		// 50th fractile (median)
-		auto ECfract50Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("F50-RR-6"), forecastType, false);
+		auto ECfract50Info = f->Fetch(cnf, prevTime, level(kHeight, 0), param("F50-RR-6-MM"), forecastType, false);
 		ECfract50 = VEC(ECfract50Info);
 
 		// 75th fractile
-		auto ECfract75Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("F75-RR-6"), forecastType, false);
+		auto ECfract75Info = f->Fetch(cnf, prevTime, level(kHeight, 0), param("F75-RR-6-MM"), forecastType, false);
 		ECfract75 = VEC(ECfract75Info);
 	}
 	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
-			ECfract50.resize(myTargetInfo->Data().Size(), kFloatMissing);
-			ECfract75.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			ECfract50.resize(myTargetInfo->Data().Size(), MissingDouble());
+			ECfract75.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -234,7 +238,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			PEPS.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			PEPS.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -257,7 +261,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			Hirlam.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			Hirlam.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -265,23 +269,22 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	// Harmonie
+	// MEPS control
 
 	try
 	{
-		cnf->SourceGeomNames({itsHarmonieGeom});
-		cnf->SourceProducers({producer(210, 0, 0, "AROMTA")});
+		cnf->SourceGeomNames({itsMEPSGeom});
+		cnf->SourceProducers({producer(260, 0, 0, "MEPSMTA")});
 
-		forecastTime.StepResolution(kMinuteResolution);
-		auto HarmonieInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
+		auto MEPSInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecast_type(kEpsControl, 0), false);
 
-		Harmonie = VEC(HarmonieInfo);
+		MEPS = VEC(MEPSInfo);
 	}
 	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
-			Harmonie.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			MEPS.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -305,7 +308,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (e == kFileDataNotFound)
 		{
-			GFS.resize(myTargetInfo->Data().Size(), kFloatMissing);
+			GFS.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -315,13 +318,13 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	const string deviceType = "CPU";
 
-	matrix<double> area(myTargetInfo->Data().SizeX(), myTargetInfo->Data().SizeY(), 1, kFloatMissing, 0);  // "A"
-	matrix<double> confidence(area.SizeX(), area.SizeY(), 1, kFloatMissing, kFloatMissing);                // "C"
+	matrix<double> area(myTargetInfo->Data().SizeX(), myTargetInfo->Data().SizeY(), 1, MissingDouble(), 0);  // "A"
+	matrix<double> confidence(area.SizeX(), area.SizeY(), 1, MissingDouble(), MissingDouble());              // "C"
 
 	// 1. Calculate initial area and confidence of precipitation
 
 	for (auto&& tup :
-	     zip_range(confidence.Values(), area.Values(), ECfract50, ECfract75, EC, ECprev, PEPS, Hirlam, Harmonie, GFS))
+	     zip_range(confidence.Values(), area.Values(), ECfract50, ECfract75, EC, ECprev, PEPS, Hirlam, MEPS, GFS))
 	{
 		double& out_confidence = tup.get<0>();
 		double& out_area = tup.get<1>();
@@ -331,10 +334,10 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double rr_ecprev = tup.get<5>();
 		double rr_peps = tup.get<6>();
 		double rr_hirlam = tup.get<7>();
-		double rr_harmonie = tup.get<8>();
+		double rr_meps = tup.get<8>();
 		double rr_gfs = tup.get<9>();
 
-		if (rr_ec == kFloatMissing)
+		if (IsMissing(rr_ec))
 		{
 			continue;
 		}
@@ -356,10 +359,10 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double ecprev = 0;
 		double peps = 0;
 		double hirlam = 0;
-		double harmonie = 0;
+		double meps = 0;
 		double gfs = 0;
 
-		if (rr_f50 == kFloatMissing)
+		if (IsMissing(rr_f50))
 		{
 			_K1 = 0;
 		}
@@ -368,7 +371,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecf50 = 1;
 		}
 
-		if (rr_f75 == kFloatMissing)
+		if (IsMissing(rr_f75))
 		{
 			_K2 = 0;
 		}
@@ -377,7 +380,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecf75 = 1;
 		}
 
-		if (rr_ecprev == kFloatMissing)
+		if (IsMissing(rr_ecprev))
 		{
 			_K3 = 0;
 		}
@@ -386,7 +389,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ecprev = 1;
 		}
 
-		if (rr_peps == kFloatMissing)
+		if (IsMissing(rr_peps))
 		{
 			_K4 = 0;
 		}
@@ -395,7 +398,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			peps = 1;
 		}
 
-		if (rr_hirlam == kFloatMissing)
+		if (IsMissing(rr_hirlam))
 		{
 			_K6 = 0;
 		}
@@ -404,7 +407,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			hirlam = 1;
 		}
 
-		if (rr_gfs == kFloatMissing)
+		if (IsMissing(rr_gfs))
 		{
 			_K7 = 0;
 		}
@@ -413,13 +416,13 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			gfs = 1;
 		}
 
-		if (rr_harmonie == kFloatMissing)
+		if (IsMissing(rr_meps))
 		{
 			_K8 = 0;
 		}
-		else if (rr_harmonie > 0.05)
+		else if (rr_meps > 0.05)
 		{
-			harmonie = 1;
+			meps = 1;
 		}
 
 		if (rr_ec > 0.05)
@@ -428,10 +431,10 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 
 		out_confidence = (_K1 * ecf50 + _K2 * ecf75 + _K3 * ecprev + _K4 * peps + K5 * ec + _K6 * hirlam + _K7 * gfs +
-		                  _K8 * harmonie) /
+		                  _K8 * meps) /
 		                 (_K1 + _K2 + _K3 + _K4 + K5 + _K6 + _K7 + _K8);
 
-		assert(out_confidence <= 1.01);
+		ASSERT(out_confidence <= 1.01);
 
 		if (out_confidence > 0)
 		{
@@ -461,7 +464,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * x = grid point that is used in averaging
 	*/
 
-	himan::matrix<double> filter_kernel(9, 9, 1, kFloatMissing, 1 / 81.);
+	himan::matrix<double> filter_kernel(9, 9, 1, MissingDouble(), 1 / 81.);
 
 	area = numerical_functions::Filter2D(area, filter_kernel);
 
@@ -477,25 +480,25 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double rr_ecprob1 = tup.get<3>();
 		double rr_ecprob01 = tup.get<4>();
 
-		if (out_confidence == kFloatMissing || out_area == kFloatMissing)
+		if (IsMissing(out_confidence) || IsMissing(out_area))
 		{
 			continue;
 		}
 
-		assert(out_confidence <= 1.01);
-		assert(out_area <= 1.01);
+		ASSERT(out_confidence <= 1.01);
+		ASSERT(out_area <= 1.01);
 
 		double PoP = out_confidence * out_area * 100;
 
-		if (rr_ecprob1 != kFloatMissing && rr_ecprob01 != kFloatMissing)
+		if (!IsMissing(rr_ecprob1) && !IsMissing(rr_ecprob01))
 		{
 			PoP = (3 * PoP + 0.5 * rr_ecprob1 + 0.5 * rr_ecprob01) * 0.25;
 		}
 
-		assert(PoP <= 100.01);
+		ASSERT(PoP <= 100.01);
 
 		long step = forecastTime.Step();
-		assert(forecastTime.StepResolution() == kHourResolution);
+		ASSERT(forecastTime.StepResolution() == kHourResolution);
 
 		// AJALLISESTI KAUKAISTEN SUURTEN POPPIEN PIENENT�MIST� - Kohta 1
 
@@ -529,7 +532,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 *
 	*/
 
-	filter_kernel = himan::matrix<double>(7, 7, 1, kFloatMissing, 1);
+	filter_kernel = himan::matrix<double>(7, 7, 1, MissingDouble(), 1);
 
 	auto max_result = numerical_functions::Max2D(myTargetInfo->Data(), filter_kernel);
 
@@ -540,7 +543,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double& out_result = tup.get<0>();
 		double _max_result = tup.get<1>();
 
-		if (out_result == kFloatMissing || _max_result == kFloatMissing)
+		if (IsMissing(out_result) || IsMissing(_max_result))
 		{
 			continue;
 		}
@@ -563,7 +566,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * We need to smooth a lot more to get similar look.
 	*/
 
-	filter_kernel = himan::matrix<double>(5, 5, 1, kFloatMissing, 1 / 25.);
+	filter_kernel = himan::matrix<double>(5, 5, 1, MissingDouble(), 1 / 25.);
 
 	auto smoothenedResult = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 

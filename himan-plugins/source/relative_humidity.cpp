@@ -103,9 +103,9 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 		}
 	}
 
-	assert(!PInfo || TInfo->Grid()->AB() == PInfo->Grid()->AB());
-	assert(!TDInfo || TInfo->Grid()->AB() == TDInfo->Grid()->AB());
-	assert(!QInfo || TInfo->Grid()->AB() == QInfo->Grid()->AB());
+	ASSERT(!PInfo || TInfo->Grid()->AB() == PInfo->Grid()->AB());
+	ASSERT(!TDInfo || TInfo->Grid()->AB() == TDInfo->Grid()->AB());
+	ASSERT(!QInfo || TInfo->Grid()->AB() == QInfo->Grid()->AB());
 
 	SetAB(myTargetInfo, TInfo);
 

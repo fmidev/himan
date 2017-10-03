@@ -146,7 +146,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 			catch (const boost::bad_lexical_cast& e)
 			{
 				itsLogger.Fatal("Invalid fractile value: '" + val + "'");
-				abort();
+				himan::Abort();
 			}
 		}
 	}
@@ -196,7 +196,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			break;
 		default:
 			itsLogger.Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
-			abort();
+			himan::Abort();
 	}
 
 	ens->MaximumMissingForecasts(itsMaximumMissingForecasts);
@@ -231,10 +231,10 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		// NOTE: `ensembleSize` stays the same
 		else
 		{
-			sortedValues.push_back(kFloatMissing);
+			sortedValues.push_back(0.0);
 		}
 
-		assert(!itsFractiles.empty());
+		ASSERT(!itsFractiles.empty());
 
 		size_t targetInfoIndex = 0;
 		for (auto P : itsFractiles)
@@ -270,13 +270,13 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		double mean = ens->Mean();
 		if (!std::isfinite(mean))
 		{
-			mean = kFloatMissing;
+			mean = MissingDouble();
 		}
 
 		double var = std::sqrt(ens->Variance());
 		if (!std::isfinite(var))
 		{
-			var = kFloatMissing;
+			var = MissingDouble();
 		}
 
 		myTargetInfo->ParamIndex(targetInfoIndex);

@@ -46,12 +46,11 @@ Precipitation form is determined in the following order:
 2. **Freezing drizzle** if
    * RR <= 0.2
    * -10 < T2m < 0
-   * precipitation is not convective
-   * stratus exists (base<300m and quantitity at least 5/8)
+   * stratus exists (base<305m and quantitity at least 4/8)
    * weak lifting at stratus (0 < wAvg < 50mm/s)
-   * stratus is thick enough (dz > 800m)
-   * temperature at stratus top Ttop > -12C
-   * average temperature at stratus avgT > -12C
+   * stratus is thick enough (dz > 700m)
+   * temperature at stratus top > -12C
+   * average temperature at stratus > -12C
    * dry layer above stratus (thickness > 1.5km, where N < 30%)
 
 3. **Freezing rain** if
@@ -61,11 +60,11 @@ Precipitation form is determined in the following order:
    * if stratus exists, melting layer above it must not be dry
 
 4. **Drizzle** or **water**, if
-   * melting layer above surface
+   * melting layer above surface (area > 200mC)
 
     * **Drizzle** if
       * RR <= 0.3
-      * stratus (base < 300m and quantity at least 5/8)
+      * stratus (base < 305m and quantity at least 4/8)
       * stratus thick enough (dz > 500m)
       * dry layer above stratus (dz > 1.5km, where N < 30%)
 
@@ -74,7 +73,7 @@ Precipitation form is determined in the following order:
     * If surface melting layer is dry (rhAvg < rhMelt), form is **sleet**
 
 4. **Sleet** if
-   * thin enough melting layer above surface
+    * thin enough melting layer above surface (50 mC < area < 200mC)
 
     * If surface melting layer is dry (rhAvg<rhMelt), form is **snow**
 

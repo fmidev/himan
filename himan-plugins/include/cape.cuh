@@ -1,10 +1,6 @@
-/**
- * @file   si_cuda.h
- *
- */
-
 #pragma once
 
+#include "himan_common.h"
 #include "info.h"
 #include "metutil.h"
 #include "numerical_functions.h"
@@ -16,10 +12,25 @@
 
 #define LINEAR himan::numerical_functions::interpolation::Linear
 
+const himan::param LCLTParam("LCL-K");
+const himan::param LCLPParam("LCL-HPA");
+const himan::param LCLZParam("LCL-M");
+const himan::param LFCTParam("LFC-K");
+const himan::param LFCPParam("LFC-HPA");
+const himan::param LFCZParam("LFC-M");
+const himan::param ELTParam("EL-K");
+const himan::param ELPParam("EL-HPA");
+const himan::param ELZParam("EL-M");
+const himan::param LastELTParam("EL-LAST-K");
+const himan::param LastELPParam("EL-LAST-HPA");
+const himan::param LastELZParam("EL-LAST-M");
+const himan::param CAPEParam("CAPE-JKG");
+const himan::param CAPE1040Param("CAPE1040-JKG");
+const himan::param CAPE3kmParam("CAPE3KM-JKG");
+const himan::param CINParam("CIN-JKG");
+
 namespace CAPE
 {
-const double kFloatMissing = 32700.;
-
 CUDA_DEVICE
 inline himan::point GetPointOfIntersection(const himan::point& a1, const himan::point& a2, const himan::point& b1,
                                            const himan::point& b2)
@@ -29,7 +40,7 @@ inline himan::point GetPointOfIntersection(const himan::point& a1, const himan::
 
 	double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
-	himan::point null(kFloatMissing, kFloatMissing);
+	himan::point null(himan::MissingDouble(), himan::MissingDouble());
 
 	if (d == 0)
 	{
@@ -90,14 +101,14 @@ inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparc
 	auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv),
 	                                                 point(prevTparcel, prevZenv));
 
-	if (intersection.Y() == kFloatMissing) return 0;
+	if (!(intersection.Y() == intersection.Y())) return 0;
 
 	prevZenv = intersection.Y();
 
 	double value = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 	value = fmin(150, fmax(-150., value));
 
-	assert(!isnan(value) && !isinf(value));
+	ASSERT(!isnan(value) && !isinf(value));
 
 	return value;
 }
@@ -131,15 +142,16 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 	 */
 
 	out_value = 0;
-	out_ELT = CAPE::kFloatMissing;
-	out_ELP = CAPE::kFloatMissing;
+
+	out_ELT = himan::MissingDouble();
+	out_ELP = himan::MissingDouble();
 
 	using himan::point;
 
 	auto intersectionZ = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv),
 	                                                  point(Tparcel, Zenv), point(prevTparcel, prevZenv));
 
-	if (intersectionZ.Y() == kFloatMissing)
+	if (!(intersectionZ.Y() == intersectionZ.Y()))
 	{
 		return;
 	}
@@ -147,17 +159,17 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 	auto intersectionP = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv),
 	                                                  point(Tparcel, Penv), point(prevTparcel, prevPenv));
 
-	if (intersectionP.X() == kFloatMissing)
+	if (!(intersectionP.X() == intersectionP.X()))
 	{
 		return;
 	}
 
 	Zenv = intersectionZ.Y();
-	assert(fabs(intersectionZ.X() - intersectionP.X()) < 1.);
+	ASSERT(fabs(intersectionZ.X() - intersectionP.X()) < 1.);
 	double value = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
 	value = fmin(150, fmax(-150., value));
 
-	assert(!isnan(value) && !isinf(value));
+	ASSERT(!isnan(value) && !isinf(value));
 
 	out_value = value;
 	out_ELT = intersectionP.X();
@@ -220,15 +232,15 @@ inline double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, dou
 		}
 	}
 
-	assert(newTparcel >= newTenv);
-	assert(areaUpperLimit > prevZenv);
+	ASSERT(newTparcel >= newTenv);
+	ASSERT(areaUpperLimit > prevZenv);
 
 	double CAPE = himan::constants::kG * (areaUpperLimit - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
 
 	CAPE = fmin(CAPE, 150.);
 
-	assert(CAPE >= 0.);
-	assert(CAPE <= 150);
+	ASSERT(CAPE >= 0.);
+	ASSERT(CAPE <= 150);
 
 	return CAPE;
 }
@@ -314,15 +326,15 @@ inline double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTen
 		}
 	}
 
-	assert(Tparcel >= Tenv);
-	assert(Zenv >= newPrevZenv);
+	ASSERT(Tparcel >= Tenv);
+	ASSERT(Zenv >= newPrevZenv);
 
 	double CAPE = himan::constants::kG * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
 	CAPE = fmin(CAPE, 150.);
 
-	assert(Zenv >= prevZenv);
-	assert(CAPE >= 0.);
-	assert(CAPE <= 150.);
+	ASSERT(Zenv >= prevZenv);
+	ASSERT(CAPE >= 0.);
+	ASSERT(CAPE <= 150.);
 
 	return CAPE;
 }
@@ -397,16 +409,16 @@ inline double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv
 		}
 	}
 
-	assert(Tparcel >= Tenv);
-	assert(newZenv <= Zenv);
-	assert(newZenv >= prevZenv);
+	ASSERT(Tparcel >= Tenv);
+	ASSERT(newZenv <= Zenv);
+	ASSERT(newZenv >= prevZenv);
 
 	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((newTparcel - areaLimit) / areaLimit);
-	assert(CAPE >= 0.);
+	ASSERT(CAPE >= 0.);
 
 	CAPE = fmin(CAPE, 150.);
 
-	assert(CAPE <= 150.);
+	ASSERT(CAPE <= 150.);
 
 	return CAPE;
 }
@@ -417,7 +429,7 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 {
 	double C = 0;
 
-	assert(Tenv != kFloatMissing && Penv != kFloatMissing && Tparcel != kFloatMissing);
+	ASSERT((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 
 	if (Tparcel < Tenv && prevTparcel < prevTenv)
 	{
@@ -452,7 +464,7 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 			{
 				// Firmly in the cold zone
 				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-				assert(C >= 0.);
+				ASSERT(C >= 0.);
 			}
 		}
 		else if ((prevTenv > coldColderLimit &&
@@ -473,9 +485,9 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 		if (prevTenv >= coldColderLimit && prevTenv <= coldWarmerLimit)
 		{
 			/* Just left cold CAPE zone for an warmer or colder area */
-			double CAPE, ELT, ELP;
-			CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE,
-			                             ELT, ELP);
+			double CAPE, x1, x2;
+			CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE, x1,
+			                             x2);
 			C = CAPE;
 		}
 	}
@@ -532,9 +544,9 @@ inline double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double p
 			if (Zenv <= 3000.)
 			{
 				// Integrate from previous height to intersection
-				double CAPE, ELT, ELP;
+				double CAPE, x1, x2;
 				CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE,
-				                             ELT, ELP);
+				                             x1, x2);
 				C = CAPE;
 			}
 
@@ -554,10 +566,11 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
                      double Zenv, double prevZenv, double& out_CAPE, double& out_ELT, double& out_ELP)
 {
 	out_CAPE = 0.;
-	out_ELT = kFloatMissing;
-	out_ELP = kFloatMissing;
 
-	assert(Tenv != kFloatMissing && Penv != kFloatMissing && Tparcel != kFloatMissing);
+	out_ELT = himan::MissingDouble();
+	out_ELP = himan::MissingDouble();
+
+	ASSERT((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 
 	if (Tparcel < Tenv && prevTparcel < prevTenv)
 	{
@@ -586,7 +599,7 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 		                             out_ELT, out_ELP);
 	}
 
-	assert(out_CAPE >= 0);
+	ASSERT(out_CAPE >= 0);
 }
 
 CUDA_DEVICE
@@ -612,8 +625,8 @@ inline double CalcCIN(double Tenv, double prevTenv, double Tparcel, double prevT
 	}
 	else if (Tparcel >= Tenv && prevTparcel < prevTenv)
 	{
-		double cin, a, b;
-		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, cin, a, b);
+		double cin, x1, x2;
+		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, cin, x1, x2);
 	}
 
 	return cin;
@@ -644,10 +657,9 @@ cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configurati
                                         std::shared_ptr<info> myTargetInfo);
 void GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
                const std::vector<double>& Tsource, const std::vector<double>& Psource, const std::vector<double>& TLCL,
-               const std::vector<double>& PLCL, const std::vector<double>& PLFC, param CINParam);
+               const std::vector<double>& PLCL, const std::vector<double>& PLFC);
 void GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                const std::vector<double>& T, const std::vector<double>& P, himan::param ELTParam,
-                himan::param ELPParam, himan::param CAPEParam, himan::param CAPE1040Param, himan::param CAPE3kmParam);
+                const std::vector<double>& T, const std::vector<double>& P);
 
 extern level itsBottomLevel;
 

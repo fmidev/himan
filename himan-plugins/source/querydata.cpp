@@ -7,6 +7,7 @@
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger.h"
+#include "ogr_spatialref.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
 #include "ogr_spatialref.h"
@@ -24,6 +25,7 @@
 
 #endif
 
+#include "NFmiFastQueryInfo.h"
 #include <NFmiGdalArea.h>
 #include <NFmiLatLonArea.h>
 #include <NFmiQueryData.h>
@@ -41,10 +43,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-querydata::querydata() : itsUseDatabase(true)
-{
-	itsLogger = logger("querydata");
-}
+querydata::querydata() { itsLogger = logger("querydata"); }
 bool querydata::ToFile(info& theInfo, string& theOutputFile)
 {
 	ofstream out(theOutputFile.c_str());
@@ -85,10 +84,10 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 	NFmiHPlaceDescriptor hdesc = CreateHPlaceDescriptor(localInfo, activeOnly);
 	NFmiVPlaceDescriptor vdesc = CreateVPlaceDescriptor(localInfo, activeOnly);
 
-	assert(pdesc.Size());
-	assert(tdesc.Size());
-	assert(hdesc.Size());
-	assert(vdesc.Size());
+	ASSERT(pdesc.Size());
+	ASSERT(tdesc.Size());
+	ASSERT(hdesc.Size());
+	ASSERT(vdesc.Size());
 
 	if (pdesc.Size() == 0)
 	{
@@ -176,8 +175,10 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 
 bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const
 {
-	assert(theInfo.Data().Size() == qinfo.SizeLocations());
+	ASSERT(theInfo.Data().Size() == qinfo.SizeLocations());
 
+	// convert missing value to kFloatMissing
+	theInfo.Grid()->Data().MissingValue(kFloatMissing);
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
@@ -191,7 +192,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 
 	if (theInfo.Grid()->Class() == kRegularGrid && theInfo.Grid()->ScanningMode() != kBottomLeft)
 	{
-		assert(theInfo.Grid()->ScanningMode() == kTopLeft);
+		ASSERT(theInfo.Grid()->ScanningMode() == kTopLeft);
 
 		size_t nj = theInfo.Data().SizeY();
 		size_t ni = theInfo.Data().SizeX();
@@ -220,6 +221,9 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 			qinfo.FloatValue(static_cast<float>(theInfo.Value() * scale + base));
 		}
 	}
+
+	// return to original missing value
+	theInfo.Grid()->Data().MissingValue(MissingDouble());
 
 	return true;
 }
@@ -273,38 +277,21 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 	return NFmiTimeDescriptor(originTime, tlist);
 }
 
-void AddToParamBag(himan::info& info, NFmiParamBag& pbag, bool readParamInfoFromDatabase)
+void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 {
-	using namespace himan;
+	string precision;
 
-	if (info.Param().UnivId() == static_cast<long>(kHPMissingInt) && readParamInfoFromDatabase)
+	if (info.Param().Precision() != himan::kHPMissingInt)
 	{
-		auto r = GET_PLUGIN(radon);
-
-		auto levelInfo =
-		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(info.Level().Type())));
-
-		param p = info.Param();
-
-		if (!levelInfo.empty() && !levelInfo["id"].empty())
-		{
-			auto parmInfo = r->RadonDB().GetParameterFromDatabaseName(info.Producer().Id(), info.Param().Name(),
-			                                                          stoi(levelInfo["id"]), info.Level().Value());
-
-			if (!parmInfo.empty() && !parmInfo["univ_id"].empty())
-			{
-				p.UnivId(stol(parmInfo["univ_id"]));
-				p.Scale(stod(parmInfo["scale"]));
-				p.Base(stod(parmInfo["base"]));
-				p.InterpolationMethod(kBiLinear);
-			}
-		}
-
-		info.SetParam(p);
+		precision = "%." + to_string(info.Param().Precision()) + "f";
+	}
+	else
+	{
+		precision = "%.1f";
 	}
 
 	NFmiParam nbParam(info.Param().UnivId(), info.Param().Name(), ::kFloatMissing, ::kFloatMissing,
-	                  static_cast<float>(info.Param().Scale()), static_cast<float>(info.Param().Base()), "%.1f",
+	                  static_cast<float>(info.Param().Scale()), static_cast<float>(info.Param().Base()), precision,
 	                  ::kLinearly);
 
 	pbag.Add(NFmiDataIdent(nbParam));
@@ -320,7 +307,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 	if (theActiveOnly)
 	{
-		AddToParamBag(info, pbag, itsUseDatabase);
+		AddToParamBag(info, pbag);
 	}
 	else
 	{
@@ -328,7 +315,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 		while (info.NextParam())
 		{
-			AddToParamBag(info, pbag, itsUseDatabase);
+			AddToParamBag(info, pbag);
 		}
 	}
 
@@ -419,7 +406,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			break;
 	}
 
-	assert(theArea);
+	ASSERT(theArea);
 
 	NFmiGrid theGrid(theArea, info.Grid()->Ni(), info.Grid()->Nj());
 
@@ -655,7 +642,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 		default:
 			itsLogger.Fatal("Invalid projection");
-			abort();
+			himan::Abort();
 	}
 
 	newGrid->ScanningMode(kBottomLeft);
@@ -670,18 +657,17 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	for (newInfo->ResetTime(), qinfo.ResetTime(); newInfo->NextTime() && qinfo.NextTime();)
 	{
-		assert(newInfo->TimeIndex() == qinfo.TimeIndex());
+		ASSERT(newInfo->TimeIndex() == qinfo.TimeIndex());
 
 		for (newInfo->ResetLevel(), qinfo.ResetLevel(); newInfo->NextLevel() && qinfo.NextLevel();)
 		{
-			assert(newInfo->LevelIndex() == qinfo.LevelIndex());
+			ASSERT(newInfo->LevelIndex() == qinfo.LevelIndex());
 
 			for (newInfo->ResetParam(), qinfo.ResetParam(); newInfo->NextParam() && qinfo.NextParam();)
 			{
-				assert(newInfo->ParamIndex() == qinfo.ParamIndex());
+				ASSERT(newInfo->ParamIndex() == qinfo.ParamIndex());
 
-				matrix<double> dm(ni, nj, 1, kFloatMissing);
-
+				matrix<double> dm(ni, nj, 1, static_cast<double>(32700.f));
 				size_t i;
 
 				for (qinfo.ResetLocation(), i = 0; qinfo.NextLocation() && i < ni * nj; i++)
@@ -689,6 +675,8 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 					dm.Set(i, static_cast<double>(qinfo.FloatValue()));
 				}
 
+				// convert kFloatMissing to nan
+				dm.MissingValue(MissingDouble());
 				newInfo->Grid()->Data(dm);
 			}
 		}
@@ -696,6 +684,3 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	return newInfo;
 }
-
-bool querydata::UseDatabase() const { return itsUseDatabase; }
-void querydata::UseDatabase(bool theUseDatabase) { itsUseDatabase = theUseDatabase; }
