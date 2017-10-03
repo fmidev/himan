@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 17.10.3
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -108,6 +108,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-2.fmi
+- Fix segfault in fetcher when U or V component was not found
 * Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-1.fmi
 - Fix GPU memory leak from cape plugin
 * Mon Oct  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.2-1.fmi
