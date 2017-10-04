@@ -737,7 +737,9 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration> conf,
                                                    std::shared_ptr<info> myTargetInfo)
 {
+	myTargetInfo->FirstValidGrid();
 	const size_t N = myTargetInfo->Data().Size();
+
 	const int blockSize = 256;
 	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
@@ -758,27 +760,16 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
 
-	auto f = GET_PLUGIN(fetcher);
-	auto PInfo = f->Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	info_t PInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
 	if (!PInfo)
 	{
 		return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
 	}
-	else
+
+	if (PInfo->Data().MissingCount() == PInfo->SizeLocations())
 	{
-		// Himan specialty: empty data grid
-
-		size_t miss = 0;
-		for (auto& val : VEC(PInfo))
-		{
-			if (IsMissingDouble(val)) miss++;
-		}
-
-		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
-		{
-			return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
-		}
+		return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
 	}
 
 	auto PVec = VEC(PInfo);

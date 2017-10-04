@@ -30,13 +30,9 @@ class cape : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::cape"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
-   protected:
-	void WriteToFile(const info& targetInfo, write_options writeOptions = write_options()) override;
-	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex) override;
 
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex);
-	void CalculateLevel(std::shared_ptr<info> myTargetInfo, const level& sourceLevel, unsigned short threadIndex);
 
 	std::pair<std::vector<double>, std::vector<double>> GetLCL(std::shared_ptr<info> myTargetInfo,
 	                                                           const cape_source& source);
