@@ -16,6 +16,7 @@
 #include "fetcher.h"
 #include "hitool.h"
 #include "radon.h"
+#include "writer.h"
 
 #include "cape.cuh"
 
@@ -183,6 +184,7 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 	theParams.push_back(CAPE3kmParam);
 	theParams.push_back(CINParam);
 
+	PrimaryDimension(kTimeDimension);
 	// Discard the levels defined in json
 	itsConfiguration->Info()->LevelIterator().Clear();
 
@@ -230,8 +232,15 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	 * 5) Integrate from surface to LFC to find CIN
 	 */
 
-	auto sourceLevel = myTargetInfo->Level();
+	for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+	{
+		auto sourceLevel = myTargetInfo->Level();
+		CalculateLevel(myTargetInfo, sourceLevel, threadIndex);
+	}
+}
 
+void cape::CalculateLevel(shared_ptr<info> myTargetInfo, const level& sourceLevel, unsigned short threadIndex)
+{
 	auto mySubThreadedLogger = logger("capeThread#" + boost::lexical_cast<string>(threadIndex) + "Version" +
 	                                  boost::lexical_cast<string>(static_cast<int>(sourceLevel.Type())));
 
@@ -1479,4 +1488,62 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 	}
 
 	return make_tuple(Ttheta, TDtheta, Ptheta);
+}
+
+void cape::WriteToFile(const info& targetInfo, write_options writeOptions)
+{
+	auto aWriter = GET_PLUGIN(writer);
+
+	aWriter->WriteOptions(writeOptions);
+
+	// writing might modify iterator positions --> create a copy
+
+	auto tempInfo = targetInfo;
+
+	tempInfo.ResetLevel();
+
+	while (tempInfo.NextLevel())
+	{
+		for (tempInfo.ResetParam(); tempInfo.NextParam();)
+		{
+			if (!tempInfo.IsValidGrid()) continue;
+
+			if (itsConfiguration->FileWriteOption() == kDatabase ||
+			    itsConfiguration->FileWriteOption() == kMultipleFiles)
+			{
+				aWriter->ToFile(tempInfo, itsConfiguration);
+			}
+			else
+			{
+				aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+			}
+		}
+	}
+	if (itsConfiguration->UseDynamicMemoryAllocation())
+	{
+		DeallocateMemory(targetInfo);
+	}
+}
+
+void cape::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
+{
+	myTargetInfo->FirstLevel();
+	while (NextExcludingLevel(*myTargetInfo))
+	{
+		if (itsConfiguration->UseDynamicMemoryAllocation())
+		{
+			AllocateMemory(*myTargetInfo);
+		}
+
+		ASSERT(myTargetInfo->Data().Size() > 0);
+
+		Calculate(myTargetInfo, threadIndex);
+
+		if (itsConfiguration->StatisticsEnabled())
+		{
+			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
+			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
+		}
+	}
+	WriteToFile(*myTargetInfo);
 }
