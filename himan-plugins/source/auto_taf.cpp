@@ -5,9 +5,84 @@
 #include "plugin_factory.h"
 #include "auto_taf.h"
 
-
 using namespace std;
 using namespace himan::plugin;
+
+bool check_vec(const vector<double> v, size_t i)
+{
+	try
+	{
+		v.at(i);
+	}
+	catch
+	{
+		return false;
+	}
+	return true;
+}
+
+void cloud_min(double& base1, double& top1)
+{
+	double min = 0.5;
+	if (base1 < min)
+	{
+		base1 = min;
+		if (top1 <= base1)
+		{
+			top1 = base1 + 0.5;
+		}
+	}
+}
+
+bool cblayer(const double& TC, const vector<double>& base, const vector<cloud_layer>& c_l, const double& cbbase, size_t i)
+{
+		if (TC>-50.0 && TC<50.0)
+			return false;
+		else if (base.size()==1)
+			return true;
+		else if (i==1 && (abs(c_l[i].base-cbbase)<=abs(c_l[i+1].base-cbbase)))
+			return true;
+		else if (i==1)
+			return false;
+		else if (i==base.size() && (abs(cloud_layer[i].base-cbbase)<abs(cloud_layer[i-1].base-cbbase)))
+			return true;
+		else if (i==base.size())
+			return false;
+		else if (abs(cloud_layer[i].base-cbbase)>abs(cloud_layer[i+1].base-cbbase))
+			return false;
+		else if (abs(cloud_layer[i].base-cbbase)>=abs(cloud_layer[i-1].base-cbbase))
+			return false;
+		else
+			return true;
+}
+
+int chclass(base)
+{
+	int chval=5;
+	if (base<200.0) {chval = 1;}
+	else if (base<500.0) {chval = 2;}
+	else if (base<1000.0) {chval = 3;}
+	else if (base<1500.0) {chval = 4;}
+	return chval;
+}
+
+int clclass(double amount)
+{
+	int clval = 8;
+	if (amount < sct) {clval = 1;}
+	else if (amount < bkn) {clval = 3;}
+	else if (amount < ovc) {clval = 6;}
+	return clval;
+}
+
+double roundedbase(double base)
+{
+	double rbase;
+	if (base > 10000.0) {rbase = 1000.0*floor((base/1000.0)+0.5);}
+	else if (base > 2500.0) {rbase = 500.0*floor((base/500.0)+0.5);}
+	else {rbase = 100.0*floor((base/100.0)+0.5);}
+	return rbase;
+}
 
 struct cloud_layer
 {
@@ -28,15 +103,16 @@ void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 	param BKN("BKN-FT");
 	param OVC("OVC-FT");
 	param CB("CB-FT");
+	param CBN("CB-PRCNT");
 
-	POT.Unit(kPrcnt);
+	CBN.Unit(kPrcnt);
 
 	if (itsConfiguration->GetValue("strict") == "true")
 	{
 		itsStrictMode = true;
 	}
 
-	SetParams({FEW,SCT,BKN,OVC,CB});
+	SetParams({FEW,SCT,BKN,OVC,CB,CBN});
 
 	Start();
 }
@@ -45,7 +121,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters
 	const param CL("CL-FT");
-	const param TCU_CB("TCU_CB-FL");
+	const param TCU_CB("CBTCU-FL");
 	const param C2("CL-2-FT");
 	const param LCL("LCL-HPA");
 
@@ -90,7 +166,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
         h->Configuration(itsConfiguration);
         h->Time(myTargetInfo->Time());
         h->ForecastType(myTargetInfo->ForecastType());
-        h->HeightUnit(kHPa);
+        h->HeightUnit(kHM);
 
 	auto levels = h->LevelForHeight(myTargetInfo->Producer(), LCL500);
 
@@ -121,7 +197,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	lvl_size = lastLevel - firstLevel + 1;
 
 	vector<vector<bool>> cloud = vector<vector<bool>>(grd_size,vector<bool>(lastLevel,false));
-	vector<vector<double>> top = vector<vector<double>>(grd_size,vector<double>());
+	vector<vector<double>> top = vector<vector<double>>(grd_size,vector<double>()); //reserve capacity needed?
 	vector<vector<double>> base = vector<vector<double>>(grd_size,vector<double>());
 	vector<vector<double>> N_max = vector<vector<double>>(grd_size,vector<double>);
 
@@ -146,16 +222,16 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 					cloud[k][j]=false;
 					if (base[k].size() > top[k].size())
 					{
-						double newtop = middle(a,j-1,r,loc);
-						top[k].push_back(newtop);
+						double newbase = (j==lastLevel) ? _N / 0.3048 : (_N + _N_upper) / 2 / 0.3048; // equals to function middle in lua script
+						top[k].push_back(newbase);
 					}
 				}
 				else
 				{
 					cloud[k][j+1]=true;
-					if (base[k].size() <= top[k].size())
+					if (base[k].size() == top[k].size())
 					{
-						double newbase = middle(a,j-1,r,loc);
+						double newbase = (j==lastLevel) ? _N / 0.3048 : (_N + _N_upper) / 2 / 0.3048;
 						base[k].push_back(newbase);
 						N_max[k].push_back(_N);
 						if (_N > sct)
@@ -167,21 +243,22 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 							few_base[k].push_back(newbase);
 						}
 					}
-					else if (_N > N_max[k][base[k].size()])
+					else if (_N > N_max[k].back())
 					{
-						N_max[k][base[k].size()] = _N;
+						N_max[k].back() = _N;
+						double newbase = (j==lastLevel) ? _N / 0.3048 : (_N + _N_upper) / 2 / 0.3048;
 						if (_N > sct && (sct_base[k].size() < base[k].size()))
 						{
-							sct_base[k][base[k].size()] = middle(a,j-1,r,loc);
+							sct_base[k].push_back(newbase);
 						}
-						else if (_N > few && (sct_base[k].size() < base[k].size()))
+						else if (_N > few && (few_base[k].size() < base[k].size()))
 						{
-							few_base[k][base[k].size()] = middle(a,j-1,r,loc);
+							few_base[k].push_back(newbase);
 						}
 					}
 				}
 			}
-			else
+			else // height is below 1000m
 			{
 				// three consecutive layers with cloud cover below threshold
 				if ((_N < cloud_treshold) && (_N_upper < cloud_treshold) && (_N_upper_upper < cloud_treshold))
@@ -190,7 +267,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 					// if we are above a cloud base cover it with a top.
                                         if (base[k].size() > top[k].size())
                                         {
-                                                double newtop = middle(a,j-1,r,loc);
+                                                double newtop = (_N + _N_upper) / 2 / 0.3048; // simplification as top layer can't be the lowest hybrid level
                                                 top[k].push_back(newtop);
                                         }
 
@@ -198,44 +275,41 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				else if ((_N > cloud_treshold) && (_N_upper > cloud_treshold) && (_N_upper_upper > cloud_treshold))
 				{
                                         cloud[k][j]=true;
-                                        if (base[k].size() <= top[k].size())
+                                        if (base[k].size() == top[k].size())
                                         {
-                                                double newbase = middle(a,j-1,r,loc);
+                                                double newbase = (j==lastLevel) ? _N / 0.3048 : (_N + _N_upper) / 2 / 0.3048;
                                                 base[k].push_back(newbase);
-                                                N_max[k][base[k].size()] = _N;
+                                                N_max[k].push_back(_N);
                                                 if (_N > sct)
                                                 {
-                                                        sct_base[k][base[k].size()] = newbase;
+                                                        sct_base[k].push_back(newbase);
                                                 }
                                                 else if (N > few)
                                                 {
-                                                        few_base[base[k].size()] = newbase;
+                                                        few_base[k].push_back(newbase);
                                                 }
                                         }
-                                        else if (_N > N_max[k][base.size()])
+                                        else if (_N > N_max[k].back())
                                         {
-                                                N_max[k][base[k].size()] = _N;
+                                                N_max[k].back() = _N;
+                                                double newbase = (j==lastLevel) ? _N / 0.3048 : (_N + _N_upper) / 2 / 0.3048;
                                                 if (_N > sct && (sct_base[k].size() < base[k].size()))
                                                 {
-                                                        sct_base[k][base[k].size()] = middle(a,j-1,r,loc);
+                                                        sct_base[k].push_back(newbase);
                                                 }
                                                 else if (_N > few && (sct_base[k].size() < base[k].size()))
                                                 {
-                                                        few_base[k][base[k].size()] = middle(a,j-1,r,loc);
+                                                        few_base[k].push_back(newbase);
                                                 }
                                         }
 				}
 				else if ((_N > cloud_treshold) && (base[k].size() > top[k].size())
 				{
 					cloud[k][j]=true;
-					if ( _N > N_max[k][base[k].size()])
+					if ( _N > N_max[k].back())
 					{
-						N_max[k][base[k].size()]=_N;
+						N_max[k].back() = _N;
 					}
-				}
-				else if ((_N < cloud_treshold) && (base[k].size() <= top[k].size())
-				{
-                                        cloud[k][j]=false;
 				}
 			}
 		}
@@ -244,27 +318,35 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
         vector<vector<cloud_layer>> c_l = vector<vector<cloud_layer>>(grd_size,vector<cloud_layer>);
 
-	for ( auto&& tup : zip_range(c_l,N_max,sct_base,few_base,base)
+	for ( auto&& tup : zip_range(c_l,N_max,sct_base,few_base,base,top)
 	{
+		vector<cloud_layer>& _c_l = tup.get<0>();
+		vector<double>& _N_max = tup.get<1>();
+		vector<double>& _sct_base = tup.get<2>();
+                vector<double>& _few_base = tup.get<3>();
+		vector<double>& _base = tup.get<4>();
+		vector<double>& _top = tup.get<5>();
+
 		for(int i=0; i<_base.size(); ++i)
 		{
-			if ((_N_max[i] >= bkn) && (_sct_base[i]))
+			if (_N_max[i] >= bkn && check_vec(_sct_base,i))
 			{
-				_cloud_layer[i].base = _sct_base[i];
+				_c_l[i].base = _sct_base.at(i);
 			}
-			else if ((_N_max[i] >= sct) && (_few_base[i]))
+			else if (_N_max[i] >= sct && check_vec(_few_base,i))
 			{
-				_cloud_layer[i].base = _few_base[i];
+				_c_l[i].base = _few_base.at(i);
 			}
 			else
 			{
-				_cloud_layer[i].base = _base[i];
+				_c_l[i].base = _base[i];
 			}
-			if (_top[i])
+
+			try
 			{
-				_cloud_layer[i].top = _top[i];
+				_c_l[i].top = _top.at(i);
 			}
-			_cloud_layer[i].amount = _N_max[i];
+			_c_l[i].amount = _N_max[i];
 		}
 	}
 
@@ -273,7 +355,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (_base.size() > 0)
 		{
-			_c_l[1].base, _c_l[1].top = cloud_min(_c_l[1].base,_c_l[1].top)
+			cloud_min(_c_l[0].base,_c_l[0].top)
 		}
 	}
 
@@ -309,7 +391,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		for (int i=0; i<base[k].size()-1; ++i)
 		{
-			if (cblayer[k][i] == cblayer[k][i+1])
+			if (cblayer(TC->Value(k),base[k],c_l[k],cbbase[k],i) == cblayer(TC->Value(k),base[k],c_l[k],cbbase[k],i+1))
 			{
 				if (c_l[k][i].base >= 1500.0 && (clclass(c_l[k][i+1].amount) > clclass(c_l[k][i].amount)))
 				{
@@ -325,9 +407,9 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 						c_l[k][i+1].amount = 0.0;
 					}
 				}
-				else if (samehclass(c_l[k][i].base,c_l[k][i+1].base)
+				else if (chclass(c_l[k][i].base) == chclass(c_l[k][i+1].base))
 				{
-					if (clclass(c_l[k][i+1].amount) > clclass(c_l[k][i]))
+					if (clclass(c_l[k][i+1].amount) > clclass(c_l[k][i].amount))
 					{
 						c_l[k][i].amount = 0.0;
 					}
@@ -402,6 +484,20 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	string deviceType = "CPU";
 
+	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Grid()->Data().Set(fewbase);
+
+        myTargetInfo->ParamIndex(1);
+        myTargetInfo->Grid()->Data().Set(sctbase);
+
+        myTargetInfo->ParamIndex(2);
+        myTargetInfo->Grid()->Data().Set(bknbase);
+
+        myTargetInfo->ParamIndex(3);
+        myTargetInfo->Grid()->Data().Set(ovcbase);
+
+        myTargetInfo->ParamIndex(4);
+        myTargetInfo->Grid()->Data().Set(cbbase);
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
