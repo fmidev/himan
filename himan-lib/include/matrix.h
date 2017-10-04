@@ -10,8 +10,8 @@
 
 #include "himan_common.h"
 #include "serialization.h"
-#include <mutex>
 #include <algorithm>
+#include <mutex>
 
 namespace himan
 {
@@ -289,6 +289,17 @@ class matrix
 	}
 
 	/**
+ * @brief Set value of whole matrix by move assignement
+ *
+ * @param theData
+ */
+	void Set(std::vector<T>&& theData)
+	{
+		ASSERT(itsData.size() == theData.size());
+		itsData = theData;
+	}
+
+	/**
 	 * @brief Set value of a matrix element
 	 *
 	 * Function will set matrix value in a serialized way -- this
@@ -329,7 +340,6 @@ class matrix
 	 * @brief Fill matrix with a given value
 	 */
 	void Fill(T fillValue) { std::fill(itsData.begin(), itsData.end(), fillValue); }
-
 	// Only used for calculating statistics in PrintFloatData()
 	void MissingValue(T theMissingValue)
 	{
@@ -338,13 +348,12 @@ class matrix
 		// Replace old missing values in data by new ones
 		for (size_t i = 0; i < itsData.size(); i++)
 		{
-			if(IsMissing(i)) itsData[i] = theMissingValue;
+			if (IsMissing(i)) itsData[i] = theMissingValue;
 		}
 		itsMissingValue = theMissingValue;
 	}
 
 	T MissingValue() const { return itsMissingValue; }
-
 	/**
 	 * @brief Clear contents of matrix (set size = 0)
 	 */
@@ -364,7 +373,6 @@ class matrix
 	}
 
 	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const { return IsMissing(Index(theX, theY, theZ)); }
-
 	/**
 	 * @brief Calculate missing values in data
 	 *
