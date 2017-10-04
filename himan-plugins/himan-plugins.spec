@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.3
-Release: 2.el7.fmi
+Version: 17.10.4
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -108,6 +108,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Oct  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.4-1.fmi
+- Fix cape issue where some times were not calculated properly
+- Add comparison type configuration option to probability plugin
 * Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-2.fmi
 - Fix segfault in fetcher when U or V component was not found
 * Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-1.fmi
