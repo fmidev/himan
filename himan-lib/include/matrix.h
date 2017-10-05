@@ -10,8 +10,8 @@
 
 #include "himan_common.h"
 #include "serialization.h"
-#include <mutex>
 #include <algorithm>
+#include <mutex>
 
 namespace himan
 {
@@ -21,7 +21,6 @@ class grid;
  * @brief Compare float/double bitwise, i.e. nan comparison is possible
  *
  */
-
 inline bool Compare(const double& lhs, const double& rhs)
 {
 	const uint64_t* lhs_ptr = reinterpret_cast<const uint64_t*>(&lhs);
@@ -243,7 +242,6 @@ class matrix
 	 * @param theHeight Y-size of matrix
 	 * @param theDepth Z-size of matrix, if 2D matrix then depth = 1
 	 */
-
 	void Resize(size_t theWidth, size_t theHeight, size_t theDepth = 1)
 	{
 		itsData.resize(theWidth * theHeight * theDepth, itsMissingValue);
@@ -271,7 +269,6 @@ class matrix
 	 * @param arr Pointer to array of values
 	 * @param len Length of the array
 	 */
-
 	void Set(T* arr, size_t len)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
@@ -292,6 +289,17 @@ class matrix
 	}
 
 	/**
+ * @brief Set value of whole matrix by move assignement
+ *
+ * @param theData
+ */
+	void Set(std::vector<T>&& theData)
+	{
+		ASSERT(itsData.size() == theData.size());
+		itsData = theData;
+	}
+
+	/**
 	 * @brief Set value of a matrix element
 	 *
 	 * Function will set matrix value in a serialized way -- this
@@ -303,7 +311,6 @@ class matrix
 	 * @param z Z index
 	 * @param theValue The value
 	 */
-
 	void Set(size_t x, size_t y, size_t z, T theValue)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
@@ -322,7 +329,6 @@ class matrix
 	 * @param theIndex Combined index of the element
 	 * @param theValue The value
 	 */
-
 	void Set(size_t theIndex, T theValue)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
@@ -333,10 +339,8 @@ class matrix
 	/**
 	 * @brief Fill matrix with a given value
 	 */
-
 	void Fill(T fillValue) { std::fill(itsData.begin(), itsData.end(), fillValue); }
 	// Only used for calculating statistics in PrintFloatData()
-
 	void MissingValue(T theMissingValue)
 	{
 		std::lock_guard<std::mutex> lock(itsValueMutex);
@@ -344,18 +348,8 @@ class matrix
 		// Replace old missing values in data by new ones
 		for (size_t i = 0; i < itsData.size(); i++)
 		{
-			if(IsMissing(i)) itsData[i] = theMissingValue;
+			if (IsMissing(i)) itsData[i] = theMissingValue;
 		}
-		/*struct Compare_val
-		{
-  			Compare_val(T x) : x(x) {}
-  			bool operator()(T y) const { return Compare(x,y); }
-
-			private:
-  			T x;
-		};
-		Compare_val Missing(itsMissingValue);
-		std::replace_if(itsData.begin(),itsData.end(),Missing,theMissingValue);*/
 		itsMissingValue = theMissingValue;
 	}
 
@@ -363,7 +357,6 @@ class matrix
 	/**
 	 * @brief Clear contents of matrix (set size = 0)
 	 */
-
 	void Clear()
 	{
 		itsData.clear();
@@ -383,17 +376,8 @@ class matrix
 	/**
 	 * @brief Calculate missing values in data
 	 *
-	 * As for the performance of this function, a brief benchmark shows that with
-	 * optimization level -O2 it takes a bit more than 1ms to loop through 1M
-	 * elements. So Hirlam would be around 1ms with 840480 grid points and global
-	 * EC ~5ms with 4.5M grid points.
-	 *
-	 * The proportion of missing values in the data does not make any difference
-	 * in performance.
-	 *
 	 * @return Number of missing values in data.
 	 */
-
 	size_t MissingCount() const
 	{
 		size_t missing = 0;
@@ -430,8 +414,6 @@ class matrix
 	}
 #endif
 };
-
-typedef matrix<double> d_matrix_t;
 
 }  // namespace himan
 
