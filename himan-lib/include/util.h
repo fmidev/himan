@@ -239,6 +239,12 @@ std::string GetEnv(const std::string& key);
 
 info_t CSVToInfo(const std::vector<std::string>& csv);
 
+/**
+ * @brief Return the percentage of missing values in info for all grids.
+ */
+
+double MissingPercent(const himan::info& info);
+
 template <class... Conts>
 inline auto zip_range(Conts&... conts)
     -> decltype(boost::make_iterator_range(boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),

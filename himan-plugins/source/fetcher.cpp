@@ -16,7 +16,6 @@
 #include "cache.h"
 #include "csv.h"
 #include "grib.h"
-#include "neons.h"
 #include "param.h"
 #include "querydata.h"
 #include "radon.h"
@@ -275,8 +274,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 			optsStr = optsStr.substr(0, optsStr.size() - 1);
 
-			optsStr += " origintime: " + requestedTime.OriginDateTime().String() +
-			           ", step: " + to_string(requestedTime.Step());
+			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
+			           to_string(requestedTime.Step());
 			optsStr += " param: " + requestedParam.Name();
 			optsStr += " level: " + static_cast<string>(requestedLevel);
 
@@ -416,29 +415,7 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 
 	HPDatabaseType dbtype = conf->DatabaseType();
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		string lvlName =
-		    n->NeonsDB().GetGridLevelName(targetParam.Name(), targetLevel.Type(), 204, sourceProducer.TableVersion());
-
-		if (!lvlName.empty())
-		{
-			double lvlValue = targetLevel.Value();
-
-			HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(lvlName));
-
-			if (lvlType == kGround)
-			{
-				lvlValue = 0;
-			}
-
-			ret = level(lvlType, lvlValue, lvlName);
-		}
-	}
-
-	if (ret == targetLevel && (dbtype == kRadon || dbtype == kNeonsAndRadon))
+	if (ret == targetLevel && dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -479,12 +456,6 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 		}
 	}
 
-	if (ret == targetLevel)
-	{
-		itsLogger.Trace("No level transformation found for param " + targetParam.Name() + " level " +
-						static_cast<string>(targetLevel));
-	}
-
 	return ret;
 }
 
@@ -507,7 +478,8 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 		futures.push_back(async(
 		    launch::async,
-		    [&](vector<info_t> vec) {
+		    [&](vector<info_t> vec)
+		    {
 			    auto baseInfo =
 			        make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
 			    ASSERT(baseInfo->Dimensions().size());
@@ -593,41 +565,42 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 				himan::Abort();
 			}
 
-			call_once(oflag, [&]() {
+			call_once(oflag, [&]()
+			          {
 
-				itsLogger.Debug("Start full auxiliary files read");
+				          itsLogger.Debug("Start full auxiliary files read");
 
-				ret = FromFile(files, opts, true, readPackedData, true);
+				          ret = FromFile(files, opts, true, readPackedData, true);
 
-				AuxiliaryFilesRotateAndInterpolate(opts, ret);
+				          AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
-				/*
-				 * Insert interpolated data to cache if
-				 * 1. Cache is not disabled locally (itsUseCache) AND
-				 * 2. Cache is not disabled globally (config->UseCache()) AND
-				 * 3. Data is not packed
-				 */
+				          /*
+				           * Insert interpolated data to cache if
+				           * 1. Cache is not disabled locally (itsUseCache) AND
+				           * 2. Cache is not disabled globally (config->UseCache()) AND
+				           * 3. Data is not packed
+				           */
 
-				auto c = GET_PLUGIN(cache);
+				          auto c = GET_PLUGIN(cache);
 
-				for (const auto& anInfo : ret)
-				{
+				          for (const auto& anInfo : ret)
+				          {
 #ifdef HAVE_CUDA
-					if (anInfo->Grid()->IsPackedData())
-					{
-						util::Unpack({anInfo->Grid()});
-					}
+					          if (anInfo->Grid()->IsPackedData())
+					          {
+						          util::Unpack({anInfo->Grid()});
+					          }
 #endif
-					// Insert each grid of an info to cache. Usually one info
-					// has only one grid but in some cases this is not true.
-					for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
-					{
-						c->Insert(*anInfo);
-					}
-				}
+					          // Insert each grid of an info to cache. Usually one info
+					          // has only one grid but in some cases this is not true.
+					          for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
+					          {
+						          c->Insert(*anInfo);
+					          }
+				          }
 
-				itsLogger.Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
-			});
+				          itsLogger.Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
+				      });
 
 			auxiliaryFilesRead = true;
 			source = HPDataFoundFrom::kCache;
@@ -674,20 +647,8 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 	{
 		vector<string> files;
 
-		if (dbtype == kNeons || dbtype == kNeonsAndRadon)
+		if (dbtype == kRadon)
 		{
-			// try neons first
-			auto n = GET_PLUGIN(neons);
-
-			itsLogger.Trace("Accessing Neons database");
-
-			files = n->Files(opts);
-		}
-
-		if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && files.empty())
-		{
-			// try radon next
-
 			auto r = GET_PLUGIN(radon);
 
 			itsLogger.Trace("Accessing Radon database");
@@ -825,8 +786,7 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 {
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
 	{
-		itsLogger.Fatal("Invalid value for land sea mask threshold: " +
-						boost::lexical_cast<string>(theLandSeaMaskThreshold));
+		itsLogger.Fatal("Invalid value for land sea mask threshold: " + to_string(theLandSeaMaskThreshold));
 		himan::Abort();
 	}
 
@@ -895,7 +855,12 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 			auto ret = FetchFromAllSources(opts, component->Grid()->IsPackedData());
 
 			auto otherVec = ret.second;
-			ASSERT(!otherVec.empty());
+
+			if (otherVec.empty())
+			{
+				// Other component not found
+				continue;
+			}
 
 			info_t u, v, other = otherVec[0];
 

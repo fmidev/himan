@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.9.11
+Version: 17.10.2
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,8 +13,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 17.8.10
-Requires: libfmigrib >= 17.4.6
+Requires: libfmidb >= 17.9.18
+Requires: libfmigrib >= 17.9.27
 Requires: gdal
 
 %if %{defined suse_version}
@@ -28,11 +28,11 @@ BuildRequires: cuda-8-0
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.8.10
-BuildRequires: libfmigrib-devel >= 17.4.6
+BuildRequires: libfmidb-devel >= 17.9.18
+BuildRequires: libfmigrib-devel >= 17.9.27
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.65
-BuildRequires: smartmet-library-newbase-devel >= 17.4.4
+BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 
 Provides: libhiman.so
@@ -60,6 +60,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Oct  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.2-1.fmi
+- Sparse info support
+* Mon Sep 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.25-1.fmi
+- Remove Oracle-support
+- Fix race condition of lazy plugin load
+* Thu Sep 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.14-1.fmi
+- Update to stack trace functionality
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-1.fmi
+- Add stack trace functionality
 * Mon Sep 11 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.11-1.fmi
 - Replace kFloatMissing with nan
 * Thu Sep  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.7-1.fmi

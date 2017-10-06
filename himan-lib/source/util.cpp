@@ -803,6 +803,32 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	return ret;
 }
 
+double util::MissingPercent(const himan::info& info)
+{
+	auto cp = info;
+
+	cp.FirstForecastType();
+	cp.FirstTime();
+	cp.FirstLevel();
+	cp.ResetParam();
+
+	size_t missing = 0, total = 0;
+
+	while (cp.Next())
+	{
+		const auto* g = cp.Grid();
+
+		if (g)
+		{
+			missing += cp.Data().MissingCount();
+			total += cp.Data().Size();
+		}
+	}
+
+	return (total == 0) ? himan::MissingDouble()
+	                    : static_cast<int>(100 * static_cast<float>(missing) / static_cast<float>(total));
+}
+
 #ifdef HAVE_CUDA
 void util::Unpack(initializer_list<grid*> grids)
 {

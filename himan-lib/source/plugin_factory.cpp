@@ -64,6 +64,7 @@ std::vector<std::shared_ptr<himan_plugin>> plugin_factory::Plugins(HPPluginClass
 
 std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClassName)
 {
+	std::lock_guard<std::mutex> lock(itsPluginMutex);
 	// Try to find the requested plugin twice. Populate the plugin registry if the plugin is not found.
 	for (int i = 0; i < 2; i++)
 	{
@@ -89,8 +90,6 @@ std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClass
 
 void plugin_factory::ReadPlugins(const std::string& pluginName)
 {
-	std::lock_guard<std::mutex> lock(itsPluginMutex);
-
 	using namespace boost::filesystem;
 
 	directory_iterator end_iter;

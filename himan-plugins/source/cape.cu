@@ -5,6 +5,7 @@
 #include <cuda_runtime.h>
 #include <thrust/count.h>
 #include <thrust/device_vector.h>
+#include <thrust/system/cuda/execution_policy.h>
 
 #include "plugin_factory.h"
 
@@ -203,19 +204,14 @@ __global__ void MoistLiftKernel(const double* __restrict__ d_T, const double* __
 
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
-		ASSERT(d_P[idx] > 10);
-		ASSERT(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
+		ASSERT((d_P[idx] > 10 && d_P[idx] < 1500) || IsMissingDouble(d_P[idx]));
+		ASSERT((d_Ptarget.values[idx] > 10 && d_Ptarget.values[idx] < 1500) || IsMissingDouble(d_Ptarget.values[idx]));
 
-		ASSERT(d_Ptarget.values[idx] > 10);
-		ASSERT(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
-
-		ASSERT(d_T[idx] > 100);
-		ASSERT(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
+		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissingDouble(d_T[idx]));
 
 		double T = metutil::MoistLiftA_(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
 
-		ASSERT(T > 100);
-		ASSERT(T < 350 || IsMissingDouble(T));
+		ASSERT((T > 100 && T < 350) || IsMissingDouble(T));
 
 		d_Tparcel[idx] = T;
 	}
@@ -226,8 +222,8 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
                            const double* __restrict d_prevTparcel, const double* __restrict__ d_LFCT,
                            const double* __restrict__ d_LFCP, double* __restrict__ d_CAPE,
                            double* __restrict__ d_CAPE1040, double* __restrict__ d_CAPE3km, double* __restrict__ d_ELT,
-                           double* __restrict__ d_ELP, unsigned char* __restrict__ d_found, int d_curLevel,
-                           int d_breakLevel)
+                           double* __restrict__ d_ELP, double* __restrict__ d_LastELT, double* __restrict__ d_LastELP,
+                           unsigned char* __restrict__ d_found, int d_curLevel, int d_breakLevel)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -253,7 +249,7 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 		ASSERT(Tparcel > 100. || IsMissingDouble(Tparcel));
 
 		double prevTparcel = d_prevTparcel[idx];  // K
-		ASSERT(prevTparcel > 100. || IsMissingDouble(Tparcel));
+		ASSERT(prevTparcel > 100. || IsMissingDouble(prevTparcel));
 
 		double LFCP = d_LFCP[idx];  // hPa
 		ASSERT(LFCP < 1200.);
@@ -330,8 +326,14 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 
 			if (!IsMissingDouble(ELT))
 			{
-				d_ELT[idx] = ELT;
-				d_ELP[idx] = ELP;
+				if (IsMissingDouble(d_ELT[idx]))
+				{
+					d_ELT[idx] = ELT;
+					d_ELP[idx] = ELP;
+				}
+
+				d_LastELT[idx] = ELT;
+				d_LastELP[idx] = ELP;
 			}
 		}
 	}
@@ -510,38 +512,31 @@ __global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P,
 		double P = d_P.values[idx];
 		double RH = d_RH.values[idx];
 
-		if (IsMissingDouble(P) || IsMissingDouble(T) || IsMissingDouble(RH))
+		if (P < 600.)
 		{
-			d_found[idx] = 1;
+			// Cut search if reach level 600hPa
+
+			// Linearly interpolate temperature and humidity values to 600hPa, to check
+			// if highest theta e is found there
+
+			T = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
+			RH = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
+
+			d_found[idx] = 1;  // Make sure this is the last time we access this grid point
+			P = 600.;
 		}
-		else
+
+		double TD = metutil::DewPointFromRH_(T, RH);
+
+		double& refThetaE = d_maxThetaE[idx];
+		double ThetaE = metutil::smarttool::ThetaE_(T, RH, P * 100);
+
+		if (ThetaE >= refThetaE)
 		{
-			if (P < 600.)
-			{
-				// Cut search if reach level 600hPa
-
-				// Linearly interpolate temperature and humidity values to 600hPa, to check
-				// if highest theta e is found there
-
-				T = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
-				RH = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
-
-				d_found[idx] = 1;  // Make sure this is the last time we access this grid point
-				P = 600.;
-			}
-
-			double TD = metutil::DewPointFromRH_(T, RH);
-
-			double& refThetaE = d_maxThetaE[idx];
-			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P * 100);
-
-			if (ThetaE >= refThetaE)
-			{
-				refThetaE = ThetaE;
-				d_Tresult[idx] = T;
-				d_TDresult[idx] = TD;
-				d_Presult[idx] = P;
-			}
+			refThetaE = ThetaE;
+			d_Tresult[idx] = T;
+			d_TDresult[idx] = TD;
+			d_Presult[idx] = P;
 		}
 	}
 }
@@ -650,6 +645,8 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 	info_simple* h_prevP = 0;
 	info_simple* h_prevRH = 0;
 
+	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
+
 	while (true)
 	{
 		auto TInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
@@ -684,9 +681,7 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(*h_T, *h_RH, *h_P, *h_prevT, *h_prevRH, *h_prevP, d_maxThetaE,
 		                                                 d_Tresult, d_TDresult, d_Presult, d_found);
 
-		std::vector<unsigned char> found(N, 0);
-		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
 		if (release)
 		{
@@ -705,9 +700,9 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 		curLevel.Value(curLevel.Value() - 1);
 
-		size_t foundCount = std::count(found.begin(), found.end(), 1);
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		if (foundCount == found.size()) break;
+		if (foundCount == N) break;
 	}
 
 	CUDA_CHECK(cudaFree(h_prevP->values));
@@ -883,6 +878,9 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	CUDA_CHECK(cudaFree(d_P));
 	CUDA_CHECK(cudaFree(d_T));
 	CUDA_CHECK(cudaFree(d_TD));
+	CUDA_CHECK(cudaFree(h_P->values));
+
+	delete h_P;
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
@@ -964,6 +962,8 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	std::vector<double> LFCT(N, himan::MissingDouble());
 	std::vector<double> LFCP(N, himan::MissingDouble());
 
+	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
+
 	for (size_t i = 0; i < N; i++)
 	{
 		if ((T[i] - TenvLCL[i]) > 0.001)
@@ -1001,7 +1001,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 		                                              d_prevTparcel, d_LCLT, d_LCLP, d_LFCT, d_LFCP, d_found,
 		                                              curLevel.Value(), hPa450.first.Value());
 
-		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
+		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
 		CUDA_CHECK(cudaFree(h_prevPenv->values));
 		CUDA_CHECK(cudaFree(h_prevTenv->values));
@@ -1014,7 +1014,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		if (static_cast<size_t>(std::count(found.begin(), found.end(), 1)) == found.size()) break;
+		if (N == foundCount) break;
 
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 		curLevel.Value(curLevel.Value() - 1);
@@ -1050,7 +1050,7 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
                           const std::vector<double>& Tsource, const std::vector<double>& Psource,
                           const std::vector<double>& TLCL, const std::vector<double>& PLCL,
-                          const std::vector<double>& PLFC, param CINParam)
+                          const std::vector<double>& PLFC)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
@@ -1145,6 +1145,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	curLevel.Value(curLevel.Value() - 1);
 
 	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
 	while (curLevel.Value() > hPa100.first.Value())
 	{
@@ -1162,7 +1163,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 		                                              d_Tparcel, d_prevTparcel, d_PLCL, d_PLFC, d_Psource, d_cinh,
 		                                              d_found);
 
-		CUDA_CHECK(cudaMemcpyAsync(&found[0], d_found, sizeof(unsigned char) * N, cudaMemcpyDeviceToHost, stream));
+		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 
 		CUDA_CHECK(cudaFree(h_prevPenv->values));
@@ -1179,7 +1180,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		if (static_cast<size_t>(std::count(found.begin(), found.end(), 1)) == found.size()) break;
+		if (N == foundCount) break;
 
 		// preserve starting position for those grid points that have value
 
@@ -1220,8 +1221,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 }
 
 void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                           const std::vector<double>& T, const std::vector<double>& P, param ELTParam, param ELPParam,
-                           param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+                           const std::vector<double>& T, const std::vector<double>& P)
 {
 	ASSERT(T.size() == P.size());
 
@@ -1258,6 +1258,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	double* d_CAPE3km = 0;
 	double* d_ELT = 0;
 	double* d_ELP = 0;
+	double* d_LastELT = 0;
+	double* d_LastELP = 0;
 	double* d_Titer = 0;
 	double* d_Piter = 0;
 	double* d_prevTparcel = 0;
@@ -1272,6 +1274,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaMalloc((double**)&d_CAPE3km, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**)&d_ELP, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**)&d_ELT, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_LastELP, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((double**)&d_LastELT, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**)&d_Piter, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**)&d_Titer, sizeof(double) * N));
 	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, sizeof(double) * N));
@@ -1297,6 +1301,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	InitializeArray<double>(d_ELP, himan::MissingDouble(), N, stream);
 	InitializeArray<double>(d_ELT, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_LastELP, himan::MissingDouble(), N, stream);
+	InitializeArray<double>(d_LastELT, himan::MissingDouble(), N, stream);
 
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
@@ -1317,6 +1323,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
 
+	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
+
 	while (curLevel.Value() > hPa100.first.Value())
 	{
 		auto PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
@@ -1329,19 +1337,29 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, *h_Penv, d_Tparcel);
 
-		CAPEKernel<<<gridSize, blockSize, 0, stream>>>(
-		    *h_Tenv, *h_Penv, *h_Zenv, *h_prevTenv, *h_prevPenv, *h_prevZenv, d_Tparcel, d_prevTparcel, d_LFCT, d_LFCP,
-		    d_CAPE, d_CAPE1040, d_CAPE3km, d_ELT, d_ELP, d_found, curLevel.Value(), hPa100.first.Value());
+		CAPEKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, *h_Zenv, *h_prevTenv, *h_prevPenv, *h_prevZenv,
+		                                               d_Tparcel, d_prevTparcel, d_LFCT, d_LFCP, d_CAPE, d_CAPE1040,
+		                                               d_CAPE3km, d_ELT, d_ELP, d_LastELT, d_LastELP, d_found,
+		                                               curLevel.Value(), hPa100.first.Value());
+
+		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
 		CUDA_CHECK(cudaFree(h_prevZenv->values));
 		CUDA_CHECK(cudaFree(h_prevTenv->values));
 		CUDA_CHECK(cudaFree(h_prevPenv->values));
 
-		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
-
 		delete h_prevZenv;
 		delete h_prevPenv;
 		delete h_prevTenv;
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		if (foundCount == N)
+		{
+			break;
+		}
+
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 
 		h_prevZenv = h_Zenv;
 		h_prevTenv = h_Tenv;
@@ -1382,6 +1400,8 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	std::vector<double> CAPE3km(T.size(), 0);
 	std::vector<double> ELT(T.size(), himan::MissingDouble());
 	std::vector<double> ELP(T.size(), himan::MissingDouble());
+	std::vector<double> LastELT(T.size(), himan::MissingDouble());
+	std::vector<double> LastELP(T.size(), himan::MissingDouble());
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -1390,11 +1410,15 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaMemcpyAsync(&CAPE3km[0], d_CAPE3km, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(&ELT[0], d_ELT, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(&ELP[0], d_ELP, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&LastELT[0], d_LastELT, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&LastELP[0], d_LastELP, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaFree(d_Tparcel));
 	CUDA_CHECK(cudaFree(d_prevTparcel));
 	CUDA_CHECK(cudaFree(d_LFCT));
 	CUDA_CHECK(cudaFree(d_LFCP));
+	CUDA_CHECK(cudaFree(d_Piter));
+	CUDA_CHECK(cudaFree(d_Titer));
 	CUDA_CHECK(cudaFree(d_found));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -1404,12 +1428,20 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaFree(d_CAPE3km));
 	CUDA_CHECK(cudaFree(d_ELT));
 	CUDA_CHECK(cudaFree(d_ELP));
+	CUDA_CHECK(cudaFree(d_LastELT));
+	CUDA_CHECK(cudaFree(d_LastELP));
 
 	myTargetInfo->Param(ELTParam);
 	myTargetInfo->Data().Set(ELT);
 
 	myTargetInfo->Param(ELPParam);
 	myTargetInfo->Data().Set(ELP);
+
+	myTargetInfo->Param(LastELTParam);
+	myTargetInfo->Data().Set(LastELT);
+
+	myTargetInfo->Param(LastELPParam);
+	myTargetInfo->Data().Set(LastELP);
 
 	myTargetInfo->Param(CAPEParam);
 	myTargetInfo->Data().Set(CAPE);

@@ -70,36 +70,97 @@ std::ostream& info::Write(std::ostream& file) const
 	return file;
 }
 
-void info::ReGrid()
+void info::Regrid(const vector<param>& newParams)
 {
-	auto newDimensions =
-	    vector<shared_ptr<grid>>(itsTimeIterator.Size() * itsLevelIterator.Size() * itsParamIterator.Size());
+	auto newDimensions = vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
+	                                              itsLevelIterator.Size() * newParams.size());
 
-	Reset();
+	FirstForecastType();
+	FirstTime();
+	FirstLevel();
+	ResetParam();
 
-	while (NextForecastType())
+	while (Next())
 	{
-		while (NextTime())
-		{
-			ResetLevel();
+		if (!Grid()) continue;
 
-			while (NextLevel())
-			{
-				ResetParam();
+		size_t newI = (ParamIndex() * SizeForecastTypes() * SizeTimes() * SizeLevels() +
+		               LevelIndex() * SizeForecastTypes() * SizeTimes() + TimeIndex() * SizeForecastTypes() +
+		               ForecastTypeIndex());
 
-				while (NextParam())
-				// Create empty placeholders
-				{
-					ASSERT(Grid());
-
-					newDimensions[Index()] = shared_ptr<grid>(Grid()->Clone());
-				}
-			}
-		}
+		newDimensions[newI] = shared_ptr<grid>(Grid()->Clone());
 	}
 
 	itsDimensions = move(newDimensions);
 	First();  // "Factory setting"
+}
+
+void info::Regrid(const vector<level>& newLevels)
+{
+	auto newDimensions = vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
+	                                              newLevels.size() * itsParamIterator.Size());
+
+	FirstForecastType();
+	FirstTime();
+	FirstLevel();
+	ResetParam();
+
+	while (Next())
+	{
+		if (!Grid()) continue;
+
+		size_t newI = (ParamIndex() * SizeForecastTypes() * SizeTimes() * newLevels.size() +
+		               LevelIndex() * SizeForecastTypes() * SizeTimes() + TimeIndex() * SizeForecastTypes() +
+		               ForecastTypeIndex());
+
+		newDimensions[newI] = shared_ptr<grid>(Grid()->Clone());
+	}
+
+	itsDimensions = move(newDimensions);
+	First();  // "Factory setting"
+}
+
+void info::Create(const grid* baseGrid, const param& par, const level& lev, bool createDataBackend)
+{
+	ASSERT(baseGrid);
+
+	if (itsDimensions.size() == 0)
+	{
+		itsDimensions = vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
+		                                         itsLevelIterator.Size() * itsParamIterator.Size());
+	}
+
+	FirstForecastType();
+	FirstTime();
+	FirstLevel();
+	ResetParam();
+
+	while (Next())
+	{
+		if (Level() == lev && Param() == par)
+		{
+			Grid(shared_ptr<grid>(baseGrid->Clone()));
+
+			if (baseGrid->Class() == kRegularGrid)
+			{
+				if (createDataBackend)
+				{
+					Grid()->Data().Resize(Grid()->Ni(), Grid()->Nj());
+				}
+			}
+			else if (baseGrid->Class() == kIrregularGrid)
+			{
+				if (baseGrid->Type() == kReducedGaussian)
+				{
+					Grid()->Data().Resize(Grid()->Size(), 1, 1);
+				}
+			}
+			else
+			{
+				throw runtime_error(ClassName() + ": Invalid grid type");
+			}
+		}
+	}
 }
 
 void info::Create(const grid* baseGrid, bool createDataBackend)
@@ -242,9 +303,28 @@ const producer& info::Producer() const { return itsProducer; }
 void info::Producer(long theFmiProducerId) { itsProducer = producer(theFmiProducerId); }
 void info::Producer(const producer& theProducer) { itsProducer = theProducer; }
 void info::ParamIterator(const param_iter& theParamIterator) { itsParamIterator = theParamIterator; }
-void info::Params(const vector<param>& theParams) { itsParamIterator = param_iter(theParams); }
+void info::Params(const vector<param>& theParams)
+{
+	// If dimensions are reduced we are not regridding, that would mean that we'd have
+	// to (most likely) remove some data which might not be what the caller wanted.
+	// We can revisit this functionality later.
+	if (!itsDimensions.empty() && itsParamIterator.Size() && itsParamIterator.Size() < theParams.size())
+	{
+		Regrid(theParams);
+	}
+
+	itsParamIterator = param_iter(theParams);
+}
 void info::LevelIterator(const level_iter& theLevelIterator) { itsLevelIterator = theLevelIterator; }
-void info::Levels(const vector<level>& theLevels) { itsLevelIterator = level_iter(theLevels); }
+void info::Levels(const vector<level>& theLevels)
+{
+	if (!itsDimensions.empty() && itsLevelIterator.Size() && itsLevelIterator.Size() < theLevels.size())
+	{
+		Regrid(theLevels);
+	}
+
+	itsLevelIterator = level_iter(theLevels);
+}
 void info::TimeIterator(const time_iter& theTimeIterator) { itsTimeIterator = theTimeIterator; }
 void info::Times(const vector<forecast_time>& theTimes) { itsTimeIterator = time_iter(theTimes); }
 bool info::Param(const param& theRequestedParam) { return itsParamIterator.Set(theRequestedParam); }
@@ -415,12 +495,7 @@ size_t info::LocationIndex() const { return itsLocationIndex; }
 void info::LocationIndex(size_t theLocationIndex) { itsLocationIndex = theLocationIndex; }
 size_t info::LocationIndex() { return itsLocationIndex; }
 size_t info::SizeLocations() const { return Grid()->Data().Size(); }
-matrix<double>& info::Data()
-{
-	ASSERT(Grid());
-	return Grid()->Data();
-}
-
+matrix<double>& info::Data() { return Grid()->Data(); }
 void info::Grid(shared_ptr<grid> d)
 {
 	ASSERT(itsDimensions.size() > Index());
@@ -574,6 +649,10 @@ void info::Clear()
 	itsForecastTypeIterator.Clear();
 }
 
+time_iter& info::TimeIterator() { return itsTimeIterator; }
+param_iter& info::ParamIterator() { return itsParamIterator; }
+level_iter& info::LevelIterator() { return itsLevelIterator; }
+forecast_type_iter& info::ForecastTypeIterator() { return itsForecastTypeIterator; }
 bool info::Next()
 {
 	// Innermost
@@ -612,4 +691,33 @@ bool info::Next()
 	}
 
 	return false;
+}
+
+bool info::IsValidGrid() const { return (Grid()); }
+info info::Clone()
+{
+	auto ret = info(*this);
+
+	ret.FirstForecastType();
+	ret.FirstTime();
+	ret.FirstLevel();
+	ret.ResetParam();
+
+	while (Next())
+	{
+		const grid* g = Grid();
+
+		if (g)
+		{
+			Grid(shared_ptr<grid>(g->Clone()));
+		}
+	}
+
+	// Return indices
+	ret.ForecastTypeIterator().Set(ForecastTypeIndex());
+	ret.TimeIterator().Set(TimeIndex());
+	ret.LevelIterator().Set(LevelIndex());
+	ret.ParamIterator().Set(ParamIndex());
+
+	return ret;
 }

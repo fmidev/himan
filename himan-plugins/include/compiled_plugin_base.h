@@ -178,6 +178,7 @@ class compiled_plugin_base
 	 */
 
 	void SetParams(std::vector<param>& params);
+	void SetParams(std::vector<param>& params, const std::vector<level>& levels);
 
 	/**
 	 * @brief Set target params
@@ -188,6 +189,7 @@ class compiled_plugin_base
 	 */
 
 	void SetParams(std::initializer_list<param> params);
+	void SetParams(std::initializer_list<param> params, std::initializer_list<level> levels);
 
 	/**
 	 * @brief Record timing info and write info contents to disk
@@ -355,7 +357,7 @@ class compiled_plugin_base
 	 * the preferred way when f.ex. levels need to be accessed sequentially (hybrid_height).
 	 */
 
-	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex);
+	virtual void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex);
 
 	virtual void AllocateMemory(info myTargetInfo);
 	virtual void DeallocateMemory(info myTargetInfo);

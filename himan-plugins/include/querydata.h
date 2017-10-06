@@ -106,8 +106,6 @@ class querydata : public io_plugin
 
 	NFmiHPlaceDescriptor CreateGrid(info& info) const;
 	NFmiHPlaceDescriptor CreatePoint(info& info) const;
-
-	bool itsUseDatabase;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

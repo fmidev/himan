@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.9.11
-Release: 1.el7.fmi
+Version: 17.10.3
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,13 +13,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: oracle-instantclient-basic >= 11.2.0.3.0
-Requires: himan-lib >= 17.8.28
+Requires: himan-lib >= 17.10.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 17.7.31
-Requires: libfmidb >= 17.8.10
-Requires: smartmet-library-newbase >= 17.6.1
+Requires: libfmigrib >= 17.9.27
+Requires: libfmidb >= 17.9.18
+Requires: smartmet-library-newbase >= 17.9.27
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -35,14 +34,13 @@ BuildRequires: cusp >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.8.10
-BuildRequires: libfmigrib-devel >= 17.7.31
-BuildRequires: smartmet-library-newbase-devel >= 17.6.1
+BuildRequires: libfmidb-devel >= 17.9.18
+BuildRequires: libfmigrib-devel >= 17.9.27
+BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.65
 BuildRequires: scons
-BuildRequires: oracle-instantclient-devel >= 11.2.0.3.0
 
 %description
 FMI himan-plugins -- hila manipulaatio -- plugin library
@@ -82,7 +80,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libicing.so
 %{_libdir}/himan-plugins/libmonin_obukhov.so
 %{_libdir}/himan-plugins/libluatool.so
-%{_libdir}/himan-plugins/libneons.so
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libpop.so
 %{_libdir}/himan-plugins/libpot.so
@@ -111,6 +108,31 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-2.fmi
+- Fix segfault in fetcher when U or V component was not found
+* Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-1.fmi
+- Fix GPU memory leak from cape plugin
+* Mon Oct  2 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.2-1.fmi
+- Sparse info support
+- cape-plugin: LPL parameter outpu
+- grib-plugin: fix grib2 pressure level value
+- pot-plugin: replace Harmonie with MEPS
+* Wed Sep 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.27-1.fmi
+- Fix PROB-TC-5 calculation
+* Tue Sep 26 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.26-1.fmi
+- Fix for missing value handling when reading from grib
+* Mon Sep 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.25-1.fmi
+- Remove Oracle support
+* Thu Sep 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.21-1.fmi
+- Update to preform_hybrid
+* Thu Sep 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.14-1.fmi
+- First/last EL for cape plugin
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-3.fmi
+- Add stack trace functionality
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-2.fmi
+- Bugfixes for grib / precipitation form
+* Tue Sep 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.12-1.fmi
+- Bugfixes for grib, pot
 * Mon Sep 11 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.11-1.fmi
 - Replace kFloatMissing with nan
 * Thu Sep  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.7-1.fmi

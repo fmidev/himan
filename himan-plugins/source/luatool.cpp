@@ -6,7 +6,6 @@
 #include "latitude_longitude_grid.h"
 #include "logger.h"
 #include "metutil.h"
-#include "neons.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "radon.h"
@@ -69,7 +68,7 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 
 	ASSERT(myL.get());
 	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
-						  " level " + static_cast<std::string>(myTargetInfo->Level()));
+	                      " level " + static_cast<std::string>(myTargetInfo->Level()));
 
 	globals(myL.get())["logger"] = myThreadedLogger;
 
@@ -135,12 +134,10 @@ void luatool::InitLua(info_t myTargetInfo)
 	h->Time(forecast_time(myTargetInfo->Time()));
 	h->ForecastType(forecast_type(myTargetInfo->ForecastType()));
 
-	auto n = GET_PLUGIN(neons);
 	auto r = GET_PLUGIN(radon);
 
 	// Useful plugins
 	globals(L)["hitool"] = h;
-	globals(L)["neons"] = n;
 	globals(L)["radon"] = r;
 
 	itsLogger.Trace("luabind finished");
@@ -328,6 +325,23 @@ point GetLatLon(info_t& anInfo, size_t theIndex) { return anInfo->Grid()->LatLon
 double GetMissingValue(info_t& anInfo) { return anInfo->Data().MissingValue(); }
 void SetMissingValue(info_t& anInfo, double missingValue) { anInfo->Data().MissingValue(missingValue); }
 matrix<double> GetData(info_t& anInfo) { return anInfo->Data(); }
+void SetParam(info_t& anInfo, const param& par)
+{
+	auto r = GET_PLUGIN(radon);
+
+	const auto lvl = anInfo->PeekLevel(0);
+	auto paramInfo =
+	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
+
+	if (!paramInfo.empty())
+	{
+		anInfo->SetParam(param(paramInfo));
+	}
+	else
+	{
+		anInfo->SetParam(par);
+	}
+}
 }  // namespace info_wrapper
 
 namespace hitool_wrapper
@@ -791,15 +805,6 @@ void Process(modifier_mean& mod, const object& data, const object& height)
 
 }  // namespace modifier_wrapper
 
-namespace neons_wrapper
-{
-std::string GetProducerMetaData(std::shared_ptr<neons> n, const producer& prod, const std::string& attName)
-{
-	return n->ProducerMetaData(prod.Id(), attName);
-}
-
-}  // namespace neons_wrapper
-
 namespace radon_wrapper
 {
 std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, const std::string& attName)
@@ -848,8 +853,9 @@ void BindLib(lua_State* L)
 	              .def("GetGrid", LUA_CMEMFN(grid*, info, Grid, void))
 	              .def("SetTime", LUA_MEMFN(void, info, SetTime, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info, SetLevel, const level&))
-	              .def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
+	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 	              // These are local functions to luatool
+	              .def("SetParam", &info_wrapper::SetParam)
 	              .def("SetIndexValue", &info_wrapper::SetValue)
 	              .def("GetIndexValue", &info_wrapper::GetValue)
 	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex)
@@ -1174,10 +1180,6 @@ void BindPlugins(lua_State* L)
 	              .def("VerticalPlusMinusArea", &hitool_wrapper::VerticalPlusMinusArea)
 	              .def("SetHeightUnit", &hitool_wrapper::SetHeightUnit)
 	              .def("GetHeightUnit", &hitool_wrapper::GetHeightUnit),
-	          class_<neons, std::shared_ptr<neons>>("neons")
-	              .def(constructor<>())
-	              .def("ClassName", &neons::ClassName)
-	              .def("GetProducerMetaData", &neons_wrapper::GetProducerMetaData),
 	          class_<radon, std::shared_ptr<radon>>("radon")
 	              .def(constructor<>())
 	              .def("GetProducerMetaData", &radon_wrapper::GetProducerMetaData)];
@@ -1272,6 +1274,7 @@ std::vector<double> TableToVector(const object& table)
 	luabind::iterator iter(table), end;
 
 	auto size = std::distance(iter, end);
+
 	std::vector<double> ret(size, himan::MissingDouble());
 
 	size_t i = 0;

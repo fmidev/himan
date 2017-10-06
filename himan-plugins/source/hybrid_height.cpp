@@ -10,7 +10,6 @@
 #include <future>
 
 #include "cache.h"
-#include "neons.h"
 #include "radon.h"
 #include "writer.h"
 
@@ -43,14 +42,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	HPDatabaseType dbtype = conf->DatabaseType();
 
-	if (dbtype == kNeons || dbtype == kNeonsAndRadon)
-	{
-		auto n = GET_PLUGIN(neons);
-
-		itsBottomLevel = stoi(n->ProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
-	}
-
-	if ((dbtype == kRadon || dbtype == kNeonsAndRadon) && itsBottomLevel == kHPMissingInt)
+	if (dbtype == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 

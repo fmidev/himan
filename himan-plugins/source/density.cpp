@@ -86,7 +86,7 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 
 	LOCKSTEP(myTargetInfo, TInfo)
 	{
-		double P = MissingDouble();
+		double P;
 		double T = TInfo->Value();
 
 		if (isPressureLevel)

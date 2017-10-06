@@ -12,10 +12,11 @@
 #include <boost/thread.hpp>
 #include <future>
 
+#include "debug.h"
 #include "fetcher.h"
 #include "hitool.h"
 #include "radon.h"
-#include "debug.h"
+#include "writer.h"
 
 #include "cape.cuh"
 
@@ -35,19 +36,7 @@ using himan::IsMissingDouble;
 
 extern mutex dimensionMutex;
 
-const himan::param LCLTParam("LCL-K", 4, 0, 0, 0);
-const himan::param LCLPParam("LCL-HPA", 4720, 0, 3, 0);
-const himan::param LCLZParam("LCL-M", 4726, 0, 3, 6);
-const himan::param LFCTParam("LFC-K", 4, 0, 0, 0);
-const himan::param LFCPParam("LFC-HPA", 4721, 0, 3, 0);
-const himan::param LFCZParam("LFC-M", 4727, 0, 3, 6);
-const himan::param ELTParam("EL-K", 4, 0, 0, 0);
-const himan::param ELPParam("EL-HPA", 4722, 0, 3, 0);
-const himan::param ELZParam("EL-M", 4728, 0, 3, 6);
-const himan::param CAPEParam("CAPE-JKG", 4723, 0, 7, 6);
-const himan::param CAPE1040Param("CAPE1040-JKG", 4729, 0, 7, 6);
-const himan::param CAPE3kmParam("CAPE3KM-JKG", 4724, 0, 7, 6);
-const himan::param CINParam("CIN-JKG", 4725, 0, 7, 7);
+// parameters are defined in cape.cuh
 
 const himan::level SURFACE(himan::kHeight, 0);
 const himan::level M500(himan::kHeightLayer, 500, 0);
@@ -149,11 +138,7 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 	}
 }
 
-cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt)
-{
-	itsLogger = logger("cape");
-}
-
+cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt) { itsLogger = logger("cape"); }
 void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	compiled_plugin_base::Init(conf);
@@ -191,10 +176,17 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 	theParams.push_back(ELTParam);
 	theParams.push_back(ELPParam);
 	theParams.push_back(ELZParam);
+	theParams.push_back(LastELTParam);
+	theParams.push_back(LastELPParam);
+	theParams.push_back(LastELZParam);
 	theParams.push_back(CAPEParam);
 	theParams.push_back(CAPE1040Param);
 	theParams.push_back(CAPE3kmParam);
 	theParams.push_back(CINParam);
+
+	PrimaryDimension(kTimeDimension);
+	// Discard the levels defined in json
+	itsConfiguration->Info()->LevelIterator().Clear();
 
 	for (const auto& source : sourceDatas)
 	{
@@ -209,14 +201,11 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 		else if (source == "most unstable")
 		{
 			itsSourceLevels.push_back(UNSTABLE);
+			SetParams({LPLTParam, LPLPParam, LPLZParam}, {UNSTABLE});
 		}
 	}
 
-	// disregard the level information provided by user
-
-	itsConfiguration->Info()->Levels(itsSourceLevels);
-
-	SetParams(theParams);
+	SetParams(theParams, itsSourceLevels);
 
 	Start();
 }
@@ -243,9 +232,16 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	 * 5) Integrate from surface to LFC to find CIN
 	 */
 
-	auto sourceLevel = myTargetInfo->Level();
+	for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+	{
+		auto sourceLevel = myTargetInfo->Level();
+		CalculateLevel(myTargetInfo, sourceLevel, threadIndex);
+	}
+}
 
-	auto mySubThreadedLogger = logger("siThread#" + boost::lexical_cast<string>(threadIndex) + "Version" +
+void cape::CalculateLevel(shared_ptr<info> myTargetInfo, const level& sourceLevel, unsigned short threadIndex)
+{
+	auto mySubThreadedLogger = logger("capeThread#" + boost::lexical_cast<string>(threadIndex) + "Version" +
 	                                  boost::lexical_cast<string>(static_cast<int>(sourceLevel.Type())));
 
 	mySubThreadedLogger.Info("Calculating source level type " + HPLevelTypeToString.at(sourceLevel.Type()) +
@@ -281,6 +277,25 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (get<0>(sourceValues).empty()) return;
 
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
+	h->HeightUnit(kHPa);
+
+	if (sourceLevel.Type() == kMaximumThetaE)
+	{
+		myTargetInfo->Param(LPLTParam);
+		myTargetInfo->Data().Set(get<0>(sourceValues));
+		myTargetInfo->Param(LPLPParam);
+		myTargetInfo->Data().Set(get<2>(sourceValues));
+
+		auto height = h->VerticalValue(param("HL-M"), get<1>(sourceValues));
+
+		myTargetInfo->Param(LPLZParam);
+		myTargetInfo->Data().Set(height);
+	}
+
 	aTimer.Stop();
 
 	mySubThreadedLogger.Info("Source data calculated in " + boost::lexical_cast<string>(aTimer.GetTime()) + " ms");
@@ -307,12 +322,6 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Param(LCLPParam);
 	myTargetInfo->Data().Set(LCL.second);
-
-	auto h = GET_PLUGIN(hitool);
-	h->Configuration(itsConfiguration);
-	h->Time(myTargetInfo->Time());
-	h->ForecastType(myTargetInfo->ForecastType());
-	h->HeightUnit(kHPa);
 
 	auto height = h->VerticalValue(param("HL-M"), LCL.second);
 
@@ -353,12 +362,11 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	aTimer.Start();
 
 	auto capeInfo = make_shared<info>(*myTargetInfo);
-	boost::thread t1(&cape::GetCAPE, this, boost::ref(capeInfo), LFC, ELTParam, ELPParam, ELZParam, CAPEParam,
-	                 CAPE1040Param, CAPE3kmParam);
+	boost::thread t1(&cape::GetCAPE, this, boost::ref(capeInfo), LFC);
 
 	auto cinInfo = make_shared<info>(*myTargetInfo);
 	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), get<0>(sourceValues), get<2>(sourceValues), LCL.first,
-	                 LCL.second, LFC.second, CINParam);
+	                 LCL.second, LFC.second);
 
 	t1.join();
 	t2.join();
@@ -446,22 +454,22 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 }
 
 void cape::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsource, const vector<double>& Psource,
-                  const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
+                  const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC)
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, TLCL, PLCL, PLFC, CINParam);
+		cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, TLCL, PLCL, PLFC);
 	}
 	else
 #endif
 	{
-		GetCINCPU(myTargetInfo, Tsource, Psource, TLCL, PLCL, PLFC, CINParam);
+		GetCINCPU(myTargetInfo, Tsource, Psource, TLCL, PLCL, PLFC);
 	}
 }
 
 void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsource, const vector<double>& Psource,
-                     const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC, param CINParam)
+                     const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC)
 {
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
@@ -648,19 +656,17 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 	myTargetInfo->Data().Set(cinh);
 }
 
-void cape::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>, vector<double>>& LFC, param ELTParam,
-                   param ELPParam, param ELZParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+void cape::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>, vector<double>>& LFC)
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		cape_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam,
-		                      CAPE1040Param, CAPE3kmParam);
+		cape_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, LFC.first, LFC.second);
 	}
 	else
 #endif
 	{
-		GetCAPECPU(myTargetInfo, LFC.first, LFC.second, ELTParam, ELPParam, CAPEParam, CAPE1040Param, CAPE3kmParam);
+		GetCAPECPU(myTargetInfo, LFC.first, LFC.second);
 	}
 
 	auto h = GET_PLUGIN(hitool);
@@ -675,10 +681,15 @@ void cape::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<double>, vec
 
 	myTargetInfo->Param(ELZParam);
 	myTargetInfo->Data().Set(height);
+
+	myTargetInfo->Param(LastELPParam);
+	height = h->VerticalValue(param("HL-M"), VEC(myTargetInfo));
+
+	myTargetInfo->Param(LastELZParam);
+	myTargetInfo->Data().Set(height);
 }
 
-void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P, param ELTParam,
-                      param ELPParam, param CAPEParam, param CAPE1040Param, param CAPE3kmParam)
+void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, const vector<double>& P)
 {
 	ASSERT(T.size() == P.size());
 
@@ -697,6 +708,8 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 	vector<double> CAPE3km(T.size(), 0);
 	vector<double> ELT(T.size(), MissingDouble());
 	vector<double> ELP(T.size(), MissingDouble());
+	vector<double> LastELT(T.size(), MissingDouble());
+	vector<double> LastELP(T.size(), MissingDouble());
 
 	// Unlike LCL, LFC is *not* found for all grid points
 
@@ -755,26 +768,17 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 		{
 			i++;
 
-			double Tenv = tup.get<5>();  // K
-			ASSERT(Tenv > 100.);
-
+			double Tenv = tup.get<5>();      // K
 			double prevTenv = tup.get<3>();  // K
-			ASSERT(prevTenv > 100.);
 
-			double Penv = tup.get<0>();  // hPa
-			ASSERT(Penv < 1200.);
-
+			double Penv = tup.get<0>();      // hPa
 			double prevPenv = tup.get<4>();  // hPa
-			ASSERT(prevPenv < 1200.);
 
 			double Zenv = tup.get<1>();      // m
 			double prevZenv = tup.get<2>();  // m
 
-			double Tparcel = tup.get<6>();  // K
-			ASSERT(Tparcel > 100.);
-
+			double Tparcel = tup.get<6>();      // K
 			double prevTparcel = tup.get<7>();  // K
-			ASSERT(prevTparcel > 100.);
 
 			if (found[i] & FCAPE)
 			{
@@ -851,8 +855,13 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 			if (!IsMissingDouble(ELTval))
 			{
-				ELT[i] = ELTval;
-				ELP[i] = ELPval;
+				if (IsMissingDouble(ELT[i]))
+				{
+					ELT[i] = ELTval;
+					ELP[i] = ELPval;
+				}
+				LastELT[i] = ELTval;
+				LastELP[i] = ELPval;
 			}
 		}
 
@@ -875,24 +884,32 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 	// If the CAPE area is continued all the way to level 60 and beyond, we don't have an EL for that
 	// (since integration is forcefully stopped)
 	// In this case level 60 = EL
+	/*
+	    for (size_t i = 0; i < CAPE.size(); i++)
+	    {
+	        if (CAPE[i] > 0 && IsMissingDouble(ELT[i]))
+	        {
+	            TenvInfo->LocationIndex(i);
+	            PenvInfo->LocationIndex(i);
 
-	for (size_t i = 0; i < CAPE.size(); i++)
-	{
-		if (CAPE[i] > 0 && IsMissingDouble(ELT[i]))
-		{
-			TenvInfo->LocationIndex(i);
-			PenvInfo->LocationIndex(i);
-
-			ELT[i] = TenvInfo->Value();
-			ELP[i] = PenvInfo->Value();
-		}
-	}
-
+	            ELT[i] = TenvInfo->Value();
+	            ELP[i] = PenvInfo->Value();
+	            LastELT[i] = ELT[i];
+	            LastELP[i] = ELP[i];
+	        }
+	    }
+	*/
 	myTargetInfo->Param(ELTParam);
 	myTargetInfo->Data().Set(ELT);
 
 	myTargetInfo->Param(ELPParam);
 	myTargetInfo->Data().Set(ELP);
+
+	myTargetInfo->Param(LastELTParam);
+	myTargetInfo->Data().Set(LastELT);
+
+	myTargetInfo->Param(LastELPParam);
+	myTargetInfo->Data().Set(LastELP);
 
 	myTargetInfo->Param(CAPEParam);
 	myTargetInfo->Data().Set(CAPE);
@@ -1471,4 +1488,62 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 	}
 
 	return make_tuple(Ttheta, TDtheta, Ptheta);
+}
+
+void cape::WriteToFile(const info& targetInfo, write_options writeOptions)
+{
+	auto aWriter = GET_PLUGIN(writer);
+
+	aWriter->WriteOptions(writeOptions);
+
+	// writing might modify iterator positions --> create a copy
+
+	auto tempInfo = targetInfo;
+
+	tempInfo.ResetLevel();
+
+	while (tempInfo.NextLevel())
+	{
+		for (tempInfo.ResetParam(); tempInfo.NextParam();)
+		{
+			if (!tempInfo.IsValidGrid()) continue;
+
+			if (itsConfiguration->FileWriteOption() == kDatabase ||
+			    itsConfiguration->FileWriteOption() == kMultipleFiles)
+			{
+				aWriter->ToFile(tempInfo, itsConfiguration);
+			}
+			else
+			{
+				aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+			}
+		}
+	}
+	if (itsConfiguration->UseDynamicMemoryAllocation())
+	{
+		DeallocateMemory(targetInfo);
+	}
+}
+
+void cape::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
+{
+	myTargetInfo->FirstLevel();
+	while (NextExcludingLevel(*myTargetInfo))
+	{
+		if (itsConfiguration->UseDynamicMemoryAllocation())
+		{
+			AllocateMemory(*myTargetInfo);
+		}
+
+		ASSERT(myTargetInfo->Data().Size() > 0);
+
+		Calculate(myTargetInfo, threadIndex);
+
+		if (itsConfiguration->StatisticsEnabled())
+		{
+			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
+			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
+		}
+	}
+	WriteToFile(*myTargetInfo);
 }
