@@ -34,7 +34,7 @@ compiled_plugins = ['icing', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid
 'cloud_code', 'ncl', 'weather_code_1', 'preform_pressure', 'preform_hybrid', 'density',
 'precipitation_rate', 'absolute_humidity', 'weather_symbol',
 'weather_code_2', 'gust', 'monin_obukhov', 'fog', 'qnh', 'luatool', 'turbulence',
-'pot','tke','visibility','fractile','pop','probability']
+'pot','tke','visibility','fractile','pop','probability','auto_taf']
 
 # List all compiled plugins that have both CPU and GPU implementation here
 
