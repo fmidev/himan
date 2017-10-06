@@ -67,10 +67,15 @@ Himan is able to produce the following parameters, given required source data:
 * probability of precipitation
 * turbulent kinetic energy
 * unstaggering of Arakawa C grids
+* fog intensity
 
 # Architecture
 
-Himan is split into three separate but not independent components: executable (himan-bin), library (himan-lib) and plugins (himan-plugins).
+Himan is split into four separate but not independent components:
+* executable (himan-bin)
+* library (himan-lib)
+* plugins (himan-plugins)
+* scripts (himan-scripts)
 
 The binary (himan) is a simple frontend and does little else but parse the command line options and initiate the execution of plugins listed in the configuration file.
 
@@ -81,6 +86,8 @@ The plugins (libX.so) contain the actual core and idea of Himan. Each plugin is 
 Plugins are split into two types: helper (auxiliary) plugins and core ("compiled") plugins. The helper plugins provide several necessary functions for the other plugins to interact with the environment. These functions are for example fetching and writing data, accessing databases, storing and fetching data from cache and so forth. Two separate but important helper plugins are hitool and luatool. Hitool exposes functions that examine the state of the atmosphere in a certain way. For example it can be used to get minimum/maximum value of some parameter in a given vertical height range. Height can be specified in meters or in Pascals. Luatool plugin is a shallow lua-language wrapper on top of Himan. With luatool one can create lua-language scripts which are much faster to write and more flexible than the C++-based plugins, especially if the given task is light weight.
 
 The purpose of the core plugins is to provide some output data given required input data. The range of operations stretches from very simple (calculate radiation power from accumulation) to more complex algorithms (determine the precipitation form). Certain plugins that operate with hybrid levels are also optimized for Nvidia GPU processors. This an addition to the normal CPU based functionality: Himan does function perfectly without GPU's.
+
+Himan also supports scripting through lua: for some post processing operations building a new cpp-plugin is a too heavyweight operation. For this reason Himan has a plugin that interprets lua-language scripts.
 
 # The name
 
