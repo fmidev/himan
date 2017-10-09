@@ -45,7 +45,7 @@ using namespace himan::plugin;
 // 3.1 Tihkua, jos
 // RR <= 0.3
 // stratus (base<305m ja määrä >4/8)
-// stratus riittävän paksu (dz>500m)
+// stratus riittävän paksu (dz>400m)
 // kuiva kerros (dz>1.5km, jossa N<30%) stratuksen yläpuolella
 //
 // 3.2 Muuten vettä
@@ -58,13 +58,13 @@ using namespace himan::plugin;
 // 4.1 Jos pinnan plussakerroksessa on kuivaa (rhAvg<rhMelt), muutetaan olomuoto rännästä lumeksi
 //
 // 5. Muuten lunta
-// korkeintaan ohut plussakerros pinnan yläpuolella
+// korkeintaan ohut plussakerros pinnan yläpuolella (area < 50mC)
 
 // Korkein sallittu pilven alarajan korkeus, jotta kyseessä stratus [m] (305m=1000ft)
 const double baseLimit = 305;
 
 // Vaadittu min. stratuksen paksuus tihkussa ja jäätävässä tihkussa [m]
-const double stLimit = 500.;
+const double stLimit = 400.;
 const double fzStLimit = 700.;
 
 // Kylmin sallittu stratuksen topin T ja kylmin sallittu st:n keskim. T [C] jäätävässä tihkussa
@@ -340,7 +340,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 				// Jos pinnan plussakerroksessa on kuivaa, korjataan olomuodoksi räntä veden sijaan
 
-				if (nZeroLevel == 1 AND rhAvg < rhMelt AND plusArea < 4000)
+				if (nZeroLevel == 1 AND rhAvg < rhMelt AND plusArea < 2600)
 				{
 					PreForm = SLEET;
 				}

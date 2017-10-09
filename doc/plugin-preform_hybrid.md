@@ -65,7 +65,7 @@ Precipitation form is determined in the following order:
     * **Drizzle** if
       * RR <= 0.3
       * stratus (base < 305m and quantity at least 4/8)
-      * stratus thick enough (dz > 500m)
+      * stratus thick enough (dz > 400m)
       * dry layer above stratus (dz > 1.5km, where N < 30%)
 
     * Otherwise **water**
@@ -78,7 +78,7 @@ Precipitation form is determined in the following order:
     * If surface melting layer is dry (rhAvg<rhMelt), form is **snow**
 
 5. Otherwise **snow**
-   * Only thin melting layer above surface is allowed
+   * Only thin melting layer above surface is allowed (area < 50mC)
 
 # Per-plugin configuration options
 
