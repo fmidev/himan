@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.5
+Version: 17.10.9
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -108,6 +108,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct  9 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.9-1.fmi
+- preform_hybrid update
 * Thu Oct  5 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.5-1.fmi
 - Proper fix for cape plugin issue
 * Wed Oct  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.4-1.fmi
