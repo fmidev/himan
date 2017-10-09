@@ -259,6 +259,8 @@ void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadInde
 {
 	while (Next(*myTargetInfo))
 	{
+		myTargetInfo->FirstValidGrid();
+
 		if (itsConfiguration->UseDynamicMemoryAllocation())
 		{
 			AllocateMemory(*myTargetInfo);
@@ -284,12 +286,12 @@ void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short 
 	{
 		for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
 		{
+			myTargetInfo->FirstValidGrid();
+
 			if (itsConfiguration->UseDynamicMemoryAllocation())
 			{
 				AllocateMemory(*myTargetInfo);
 			}
-
-			ASSERT(myTargetInfo->Data().Size() > 0);
 
 			Calculate(myTargetInfo, threadIndex);
 
@@ -714,7 +716,10 @@ void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 
 	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)
 	{
-		myTargetInfo.Data().Resize(myTargetInfo.Grid()->Ni(), myTargetInfo.Grid()->Nj());
+		if (myTargetInfo.IsValidGrid())
+		{
+			myTargetInfo.Data().Resize(myTargetInfo.Grid()->Ni(), myTargetInfo.Grid()->Nj());
+		}
 	}
 
 	myTargetInfo.ParamIndex(paramIndex);
@@ -731,7 +736,10 @@ void compiled_plugin_base::DeallocateMemory(info myTargetInfo)
 
 	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)
 	{
-		myTargetInfo.Grid()->Data().Clear();
+		if (myTargetInfo.IsValidGrid())
+		{
+			myTargetInfo.Grid()->Data().Clear();
+		}
 	}
 
 	myTargetInfo.ParamIndex(paramIndex);

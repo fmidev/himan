@@ -478,7 +478,8 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 		futures.push_back(async(
 		    launch::async,
-		    [&](vector<info_t> vec) {
+		    [&](vector<info_t> vec)
+		    {
 			    auto baseInfo =
 			        make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
 			    ASSERT(baseInfo->Dimensions().size());
@@ -564,41 +565,42 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 				himan::Abort();
 			}
 
-			call_once(oflag, [&]() {
+			call_once(oflag, [&]()
+			          {
 
-				itsLogger.Debug("Start full auxiliary files read");
+				          itsLogger.Debug("Start full auxiliary files read");
 
-				ret = FromFile(files, opts, true, readPackedData, true);
+				          ret = FromFile(files, opts, true, readPackedData, true);
 
-				AuxiliaryFilesRotateAndInterpolate(opts, ret);
+				          AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
-				/*
-				 * Insert interpolated data to cache if
-				 * 1. Cache is not disabled locally (itsUseCache) AND
-				 * 2. Cache is not disabled globally (config->UseCache()) AND
-				 * 3. Data is not packed
-				 */
+				          /*
+				           * Insert interpolated data to cache if
+				           * 1. Cache is not disabled locally (itsUseCache) AND
+				           * 2. Cache is not disabled globally (config->UseCache()) AND
+				           * 3. Data is not packed
+				           */
 
-				auto c = GET_PLUGIN(cache);
+				          auto c = GET_PLUGIN(cache);
 
-				for (const auto& anInfo : ret)
-				{
+				          for (const auto& anInfo : ret)
+				          {
 #ifdef HAVE_CUDA
-					if (anInfo->Grid()->IsPackedData())
-					{
-						util::Unpack({anInfo->Grid()});
-					}
+					          if (anInfo->Grid()->IsPackedData())
+					          {
+						          util::Unpack({anInfo->Grid()});
+					          }
 #endif
-					// Insert each grid of an info to cache. Usually one info
-					// has only one grid but in some cases this is not true.
-					for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
-					{
-						c->Insert(*anInfo);
-					}
-				}
+					          // Insert each grid of an info to cache. Usually one info
+					          // has only one grid but in some cases this is not true.
+					          for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
+					          {
+						          c->Insert(*anInfo);
+					          }
+				          }
 
-				itsLogger.Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
-			});
+				          itsLogger.Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
+				      });
 
 			auxiliaryFilesRead = true;
 			source = HPDataFoundFrom::kCache;
@@ -784,8 +786,7 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 {
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
 	{
-		itsLogger.Fatal("Invalid value for land sea mask threshold: " +
-						to_string(theLandSeaMaskThreshold));
+		itsLogger.Fatal("Invalid value for land sea mask threshold: " + to_string(theLandSeaMaskThreshold));
 		himan::Abort();
 	}
 
@@ -854,7 +855,12 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 			auto ret = FetchFromAllSources(opts, component->Grid()->IsPackedData());
 
 			auto otherVec = ret.second;
-			ASSERT(!otherVec.empty());
+
+			if (otherVec.empty())
+			{
+				// Other component not found
+				continue;
+			}
 
 			info_t u, v, other = otherVec[0];
 

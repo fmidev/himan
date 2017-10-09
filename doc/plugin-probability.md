@@ -45,6 +45,10 @@ threshold: threshold for given parameter, in parameter units.
 
     "threshold" : "273.15"
 
+comparison: specify either "<=" or ">=" for whether the threshold value is tested to be less than or greater than, respectively. (default: ">=")
+
+	"comparison" : "<="
+
 normalized_results: Define if plugin should scale the probability values to [0,1] (default: [0,100])
 
     "normalized_results" : "true"

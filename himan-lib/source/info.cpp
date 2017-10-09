@@ -721,3 +721,17 @@ info info::Clone()
 
 	return ret;
 }
+
+void info::FirstValidGrid()
+{
+	for (ResetParam(); NextParam();)
+	{
+		if (IsValidGrid())
+		{
+			return;
+		}
+	}
+
+	itsLogger.Fatal("A dimension with no valid infos? Madness!");
+	himan::Abort();
+}

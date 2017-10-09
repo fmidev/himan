@@ -30,6 +30,7 @@ class cape : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::cape"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex);
 

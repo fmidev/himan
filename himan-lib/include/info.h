@@ -690,6 +690,15 @@ class info
 	bool IsValidGrid() const;
 
 	/**
+	 * @brief Set the iterator positions to first valid grid found.
+	 *
+	 * If info sparsity=0 then it is the first iterator position.
+	 * Will change iterator position only in the inner-most dimension
+	 * (parameter).
+	 */
+	void FirstValidGrid();
+
+	/**
 	 * @brief Clone an info
 	 *
 	 * Simply put we create a copy of the current instance
