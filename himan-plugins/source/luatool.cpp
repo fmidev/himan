@@ -64,7 +64,7 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 {
 	auto myThreadedLogger = logger("luatoolThread #" + std::to_string(threadIndex));
 
-	InitLua(myTargetInfo);
+	InitLua();
 
 	ASSERT(myL.get());
 	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
@@ -81,6 +81,7 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 
 		myThreadedLogger.Info("Starting script " + luaFile);
 
+		ResetVariables(myTargetInfo);
 		ReadFile(luaFile);
 	}
 
@@ -88,16 +89,8 @@ void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threa
 	myL.release();
 }
 
-void luatool::InitLua(info_t myTargetInfo)
+void luatool::InitLua()
 {
-	/*
-	 * An ideal solution would be to initialize the basic stuff once in a single threaded environment,
-	 * and then just set the thread-specific stuff in the thread-specific section of code.
-	 *
-	 * Unfortunately lua does not support copying of the global lua_State* variable so this is not possible.
-	 * So now we have to re-bind all functions for every thread execution :-(
-	 */
-
 	lua_State* L = luaL_newstate();
 
 	ASSERT(L);
@@ -112,8 +105,15 @@ void luatool::InitLua(info_t myTargetInfo)
 	BindLib(L);
 	BindPlugins(L);
 
+	myL.reset(L);
+}
+
+void luatool::ResetVariables(info_t myTargetInfo)
+{
 	// Set some variable that are needed in luatool calculations
 	// but are too hard or complicated to create in the lua side
+
+	const auto L = myL.get();
 
 	globals(L)["luatool"] = boost::ref(*this);
 	globals(L)["result"] = myTargetInfo;
@@ -139,9 +139,6 @@ void luatool::InitLua(info_t myTargetInfo)
 	// Useful plugins
 	globals(L)["hitool"] = h;
 	globals(L)["radon"] = r;
-
-	itsLogger.Trace("luabind finished");
-	myL.reset(L);
 }
 
 bool luatool::ReadFile(const std::string& luaFile)

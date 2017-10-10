@@ -183,7 +183,12 @@ bool modifier::Evaluate(double theValue, double theHeight, double thePreviousVal
 	const double lowerLimit = itsLowerHeight[itsIndex];
 	const double upperLimit = itsUpperHeight[itsIndex];
 
-	ASSERT((itsHeightInMeters && lowerLimit <= upperLimit) || (!itsHeightInMeters && lowerLimit >= upperLimit));
+	// If height range is negative (lower higher than upper), skip this gridpoint
+	if ((itsHeightInMeters && lowerLimit > upperLimit) || (!itsHeightInMeters && lowerLimit < upperLimit))
+	{
+		itsOutOfBoundHeights[itsIndex] = true;
+		return false;
+	}
 
 	if (IsMissing(theHeight) || IsMissing(theValue))
 	{
