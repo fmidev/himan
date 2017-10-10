@@ -378,23 +378,23 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		vector<double>& _few_base = tup.get<3>();
 		vector<double>& _base = tup.get<4>();
 		vector<double>& _top = tup.get<5>();
-		for (size_t i = 0; i < _base.size(); ++i)
+		for (size_t j = 0; j < _base.size(); ++j)
 		{
-			if (_N_max[i] >= bkn && _sct_base.size() > i)
+			if (_N_max[j] >= bkn && _sct_base.size() > j)
 			{
-				_c_l[i].base = _sct_base[i];
+				_c_l[j].base = _sct_base[j];
 			}
-			else if (_N_max[i] >= sct && _few_base.size() > i)
+			else if (_N_max[j] >= sct && _few_base.size() > j)
 			{
-				_c_l[i].base = _few_base[i];
+				_c_l[j].base = _few_base[j];
 			}
 			else
 			{
-				_c_l[i].base = _base[i];
+				_c_l[j].base = _base[j];
 			}
 
-			_c_l[i].top = _top[i];
-			_c_l[i].amount = _N_max[i];
+			_c_l[j].top = _top[j];
+			_c_l[j].amount = _N_max[j];
 		}
 	}
 
@@ -413,25 +413,25 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// change the corridors below the ceiling2 from the LowestLayer bkn layer to the sct layers
 	for (size_t k = 0; k < grd_size; ++k)
 	{
-		for (size_t i = 0; i < base[k].size(); ++i)
+		for (size_t j = 0; j < base[k].size(); ++j)
 		{
-			if (c_l[k][i].base < Ceiling2->Data().At(k) && c_l[k][i].amount >= bkn)
+			if (c_l[k][j].base < Ceiling2->Data().At(k) && c_l[k][j].amount >= bkn)
 			{
-				if (i == base[k].size() - 1)
+				if (j == base[k].size() - 1)
 				{
-					c_l[k][i].base = Ceiling2->Data().At(k);
+					c_l[k][j].base = Ceiling2->Data().At(k);
 				}
-				else if (c_l[k][i + 1].base > Ceiling2->Data().At(k))
+				else if (c_l[k][j + 1].base > Ceiling2->Data().At(k))
 				{
-					c_l[k][i].base = Ceiling2->Data().At(k);
+					c_l[k][j].base = Ceiling2->Data().At(k);
 				}
 				else
 				{
-					if (c_l[k][i].amount > c_l[k][i + 1].amount)
+					if (c_l[k][j].amount > c_l[k][j + 1].amount)
 					{
-						c_l[k][i + 1].amount = c_l[k][i].amount;
+						c_l[k][j + 1].amount = c_l[k][j].amount;
 					}
-					c_l[k][i].amount = .50;
+					c_l[k][j].amount = .50;
 				}
 			}
 		}
@@ -441,34 +441,34 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	for (size_t k = 0; k < grd_size; ++k)
 	{
 		if (base[k].size() < 3) continue;
-		for (size_t i = 0; i < base[k].size() - 2; ++i)
+		for (size_t j = 0; j < base[k].size() - 2; ++j)
 		{
-			if (CBLayer(TC->Data().At(k), base[k], c_l[k], cbbase[k], i) ==
-			    CBLayer(TC->Data().At(k), base[k], c_l[k], cbbase[k], i + 1))
+			if (CBLayer(TC->Data().At(k), base[k], c_l[k], cbbase[k], j) ==
+			    CBLayer(TC->Data().At(k), base[k], c_l[k], cbbase[k], j + 1))
 			{
-				if (c_l[k][i].base >= 1500.0 && (CLClass(c_l[k][i + 1].amount) > CLClass(c_l[k][i].amount)))
+				if (c_l[k][j].base >= 1500.0 && (CLClass(c_l[k][j + 1].amount) > CLClass(c_l[k][j].amount)))
 				{
-					if (RoundedBase(c_l[k][i + 1].base) - RoundedBase(c_l[k][i].base < 6.0))
+					if (RoundedBase(c_l[k][j + 1].base) - RoundedBase(c_l[k][j].base < 6.0))
 					{
-						c_l[k][i].amount = 0.0;
+						c_l[k][j].amount = 0.0;
 					}
 				}
-				else if (c_l[k][i].base >= 1500.0)
+				else if (c_l[k][j].base >= 1500.0)
 				{
-					if (RoundedBase(c_l[k][i + 1].base) - RoundedBase(c_l[k][i].base) < 6.0)
+					if (RoundedBase(c_l[k][j + 1].base) - RoundedBase(c_l[k][j].base) < 6.0)
 					{
-						c_l[k][i + 1].amount = 0.0;
+						c_l[k][j + 1].amount = 0.0;
 					}
 				}
-				else if (CHClass(c_l[k][i].base) == CHClass(c_l[k][i + 1].base))
+				else if (CHClass(c_l[k][j].base) == CHClass(c_l[k][j + 1].base))
 				{
-					if (CLClass(c_l[k][i + 1].amount) > CLClass(c_l[k][i].amount))
+					if (CLClass(c_l[k][j + 1].amount) > CLClass(c_l[k][j].amount))
 					{
-						c_l[k][i].amount = 0.0;
+						c_l[k][j].amount = 0.0;
 					}
 					else
 					{
-						c_l[k][i + 1].amount = 0.0;
+						c_l[k][j + 1].amount = 0.0;
 					}
 				}
 			}
