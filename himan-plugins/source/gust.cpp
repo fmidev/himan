@@ -139,7 +139,15 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		auto r = GET_PLUGIN(radon);
 
-		lowestHybridLevelNumber = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+		try
+		{
+			lowestHybridLevelNumber = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+		}
+		catch (const std::invalid_argument&)
+		{
+			myThreadedLogger.Error("Radon metadata for last hybrid level not available");
+			himan::Abort();
+		}
 	}
 
 	ASSERT(lowestHybridLevelNumber != kHPMissingInt);
