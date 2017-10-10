@@ -8,7 +8,6 @@ namespace himan
 {
 namespace plugin
 {
-
 /**
  * @class auto_taf
  *
@@ -27,7 +26,7 @@ class auto_taf : public compiled_plugin, private compiled_plugin_base
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::pot"; }
+	virtual std::string ClassName() const { return "himan::plugin::auto_taf"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
    private:
@@ -37,7 +36,7 @@ class auto_taf : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<pot>(); }
+extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<auto_taf>(); }
 }  // namespace plugin
 }  // namespace himan
 
