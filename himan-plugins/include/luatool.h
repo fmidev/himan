@@ -71,7 +71,8 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 
    private:
 	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-	void InitLua(info_t myTargetInfo);
+	void InitLua();
+	void ResetVariables(info_t myTargetInfo);
 	bool ReadFile(const std::string& luaFile);
 
 	write_options itsWriteOptions;
