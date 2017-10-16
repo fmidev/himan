@@ -120,17 +120,38 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	size_t Ni = myTargetInfo->Grid()->Ni();
 	size_t Nj = myTargetInfo->Grid()->Nj();
 
-	vector<double> dx(Nj, MissingDouble());
-	vector<double> dy(Ni, MissingDouble());
+	vector<double> dx, dy;
 
-	for (size_t i = 0; i < Ni; ++i)
+	switch(UInfo->Grid()->Type())
 	{
-		dy[i] = util::LatitudeLength(0) * Dj / 360;
-	}
+		case kLambertConformalConic :
+		{
+			dx = vector<double>(Nj, Di);
+			dy = vector<double>(Ni, Dj);
+			break;
+		};
+		case kLatitudeLongitude :
+		case kRotatedLatitudeLongitude :
+		{
+			dx = vector<double>(Nj, MissingDouble());
+			dy = vector<double>(Ni, MissingDouble());
 
-	for (size_t j = 0; j < Nj; ++j)
-	{
-		dx[j] = util::LatitudeLength(firstPoint.Y() + double(j) * Dj) * Di / 360;
+			for (size_t i = 0; i < Ni; ++i)
+			{
+				dy[i] = util::LatitudeLength(0) * Dj / 360;
+			}
+
+			for (size_t j = 0; j < Nj; ++j)
+			{
+				dx[j] = util::LatitudeLength(firstPoint.Y() + double(j) * Dj) * Di / 360;
+			}
+			break;
+		}
+		default :
+		{
+			myThreadedLogger.Error("Grid not supported for CAT calculation.");
+			exit(1);
+		}
 	}
 
 	pair<matrix<double>, matrix<double>> gradU = util::CentralDifference(UInfo->Data(), dx, dy);
