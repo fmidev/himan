@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.10
+Version: 17.10.16
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -108,6 +108,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Oct 16 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.16-1.fmi
+- Fix to turbulence with lambert projection
 * Tue Oct 10 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.10-1.fmi
 - Fix to luatool global variable inheriting
 * Mon Oct  9 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.9-1.fmi
