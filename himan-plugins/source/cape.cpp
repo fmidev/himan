@@ -538,7 +538,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 		auto PenvVec = PenvInfo->Data().Values();
 		::MultiplyWith(PenvVec, 100);
 
-		metutil::LiftLCL(&Piter[0], &Titer[0], &PLCLPa[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+		metutil::LiftLCLA(&Piter[0], &Titer[0], &PLCLPa[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		int i = -1;
 
