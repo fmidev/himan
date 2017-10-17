@@ -46,12 +46,18 @@ static info_t FetchWithProperties(shared_ptr<plugin_configuration> cnf, const fo
 	}
 	catch (HPExceptionType& e)
 	{
-		throw;
+		if (e != kFileDataNotFound)
+		{
+			himan::Abort();
+		}
+		else
+		{
+			return nullptr;
+		}
 	}
 }
 
 static vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf);
-static vector<double> OpenAndParseWeightsFile(const std::string& wf);
 
 static mutex dimensionMutex;
 
@@ -132,24 +138,6 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 
 	itsMetaOpts = ParseProducerOptions(conf);
 
-	// Weights are stored in a separate file and read after parsing the JSON configuration.
-	// We'll check that the number of weights matches the number of forecasts.
-	const string wf = conf->Exists("weights_file") ? conf->GetValue("weights_file") : "";
-	if (wf.empty())
-	{
-		throw std::runtime_error(ClassName() + ": weights file not specified");
-	}
-	itsWeights = OpenAndParseWeightsFile(wf);
-
-	if (itsWeights.size() != itsMetaOpts.size())
-	{
-		throw std::runtime_error(ClassName() +
-		                         ": weights file and configuration doesn't have the"
-		                         " same number of elements '" +
-		                         to_string(itsWeights.size()) + "' and '" + to_string(itsMetaOpts.size()) +
-		                         "', respectively");
-	}
-
 	PrimaryDimension(kTimeDimension);
 	SetupOutputForecastTypes(itsInfo);
 	SetParams(params);
@@ -169,7 +157,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 
 	log.Info("Blending " + currentParam.Name() + " " + static_cast<string>(currentTime.ValidDateTime()));
 
-	// Construct a bunch of jobs for parallel fetching.
+	// Construct a bunch of jobs for parallel fetching and interpolation.
 	vector<future<info_t>> futures;
 
 	for (const auto& m : itsMetaOpts)
@@ -181,6 +169,8 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		}));
 	}
 
+	// Copy the fetched forecasts into the target info so that we can simply write it out after calculation.
+	// TODO: Don't copy the data? Should just point to the already existing data?
 	vector<info_t> forecasts;
 	forecasts.reserve(itsMetaOpts.size());
 
@@ -192,12 +182,10 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		forecasts.push_back(Info);
 		findex++;
 
-		// Copy the underlying data :(
 		targetInfo->Data() = Info->Data();
-
 		if (!targetInfo->NextForecastType())
 		{
-			log.Info("Not enough forecast types defined for target info, breaking");
+			log.Warning("Not enough forecast types defined for target info, breaking");
 			break;
 		}
 	}
@@ -219,10 +207,28 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 
 	// To store information about missing forecast values.
 	vector<bool> valid;
-	valid.reserve(forecasts.size());
+	valid.resize(forecasts.size());
 
-	// Create a copy of the weights for possible rebalancing.
-	vector<double> currentWeights = itsWeights;
+	// Pick weights from the current set into this vector
+	vector<info_t> weights;  // (*targetInfo, forecasts.size());
+	weights.reserve(forecasts.size());
+
+	vector<double> currentWeights;
+	currentWeights.reserve(forecasts.size());
+
+	// Create unit weight grids based on the target info. This is in preparation for the precalculated
+	// weight grids stored on disk.
+	for (size_t i = 0; i < forecasts.size(); i++)
+	{
+		auto w = std::make_shared<info>(*targetInfo);
+		w->Create(targetInfo->Grid(), true);
+
+		const double unitWeight = 1.0 / static_cast<double>(forecasts.size());
+		w->Data().Fill(unitWeight);
+		w->ResetLocation();
+
+		weights.push_back(w);
+	}
 
 	targetInfo->ResetLocation();
 	while (targetInfo->NextLocation())
@@ -231,11 +237,21 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 
 		size_t numMissing = 0;
 		size_t findex = 0;
-		for (const auto& f : forecasts)
+
+		for (const auto&& tup : zip_range(forecasts, weights))
 		{
+			info_t f = tup.get<0>();
+			info_t w = tup.get<1>();
+
 			if (!f->NextLocation())
 			{
-				log.Warning("unable to advance location iterator position");
+				log.Warning("unable to advance forecast location iterator position");
+				continue;
+			}
+
+			if (!w->NextLocation())
+			{
+				log.Warning("unable to advance weight location iterator position");
 				continue;
 			}
 
@@ -250,7 +266,15 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 				valid[findex] = true;
 			}
 
+			double wv = w->Value();
+			if (IsMissing(wv))
+			{
+				wv = 0.0;
+			}
+
 			values.push_back(v);
+			currentWeights.push_back(wv);
+
 			findex++;
 		}
 
@@ -267,7 +291,6 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 				if (IsMissing(v))
 				{
 					const double w = currentWeights[i] / static_cast<double>(values.size() - numMissing);
-
 					for (size_t wi = 0; wi < currentWeights.size(); wi++)
 					{
 						if (valid[wi])
@@ -297,6 +320,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 
 		targetInfo->Value(F);
 
+		currentWeights.clear();
 		values.clear();
 	}
 
@@ -388,7 +412,7 @@ vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf)
 						}
 						else
 						{
-							assert(range.size() == 2);
+							ASSERT(range.size() == 2);
 							int current = stoi(range[0]);
 							const int stop = stoi(range[1]);
 
@@ -469,30 +493,6 @@ vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf)
 		}
 	}
 	return metaOpts;
-}
-
-// Read whitespace separated list of weights after reading the initial configuration.
-// Check that the number of weights matches the number of configured forecasts.
-std::vector<double> OpenAndParseWeightsFile(const std::string& wf)
-{
-
-	std::vector<double> values;
-
-	std::ifstream in(wf);
-	std::string line;
-
-	while (std::getline(in, line))
-	{
-		std::istringstream stream(line);
-
-		double value;
-		while (stream >> value)
-		{
-			values.push_back(value);
-		}
-	}
-
-	return values;
 }
 
 }  // namespace plugin
