@@ -9,11 +9,18 @@
 #include "radon.h"
 #include "util.h"
 #include <algorithm>
-#include <boost/format.hpp>
 
 using namespace std;
 using namespace himan;
 using namespace himan::plugin;
+
+// thresholds for cloud values
+const double cloud_treshold = 0.05;
+const double few = .130;  // 1/8
+const double sct = .370;  // 3/8
+const double bkn = .620;  // 5/8
+const double ovc = .900;  // 7/8
+
 
 struct cloud_layer
 {
@@ -85,10 +92,6 @@ int CHClass(double base)
 
 int CLClass(double amount)
 {
-	const double sct = .370;
-	const double bkn = .620;
-	const double ovc = .900;
-
 	int clval = 8;
 	if (amount < sct)
 	{
@@ -138,19 +141,14 @@ void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	param FEW("FEW-FT");
-	param SCT("SCT-FT");
-	param BKN("BKN-FT");
-	param OVC("OVC-FT");
+	param FEW("FEW1-FT");
+	param SCT("SCT1-FT");
+	param BKN("BKN1-FT");
+	param OVC("OVC1-FT");
 	param CB("CB-FT");
 	param CBN("CB-PRCNT");
 
 	CBN.Unit(kPrcnt);
-
-	if (itsConfiguration->GetValue("strict") == "true")
-	{
-		itsStrictMode = true;
-	}
 
 	SetParams({FEW, SCT, BKN, OVC, CB, CBN});
 
@@ -165,33 +163,11 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const param C2("CL-2-FT");
 	const param LCL("LCL-HPA");
 
-	// thresholds for cloud values
-	const double cloud_treshold = 0.05;
-	const double few = .130;  // 1/8
-	const double sct = .370;  // 3/8
-	const double bkn = .620;  // 5/8
-	const double ovc = .900;  // 7/8
-
 	// Get producer meta information
 	producer prod = itsConfiguration->SourceProducer(0);
 	auto r = GET_PLUGIN(radon);
-	stringstream query, query2;
-
-	query << "SELECT value FROM producer_meta "
-	      << "WHERE attribute = 'first hybrid level number' "
-	      << "AND producer_id = " << prod.Id();
-
-	r->RadonDB().Query(query.str());
-	vector<string> row = r->RadonDB().FetchRow();
-	size_t firstLevel = boost::lexical_cast<size_t>(row[0]);
-
-	query2 << "SELECT value FROM producer_meta "
-	       << "WHERE attribute = 'last hybrid level number' "
-	       << "AND producer_id = " << prod.Id();
-
-	r->RadonDB().Query(query2.str());
-	row = r->RadonDB().FetchRow();
-	size_t lastLevel = boost::lexical_cast<size_t>(row[0]);
+	size_t firstLevel = stoi(r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
+	size_t lastLevel = stoi(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
 	// Finished get producer meta information
 
 	auto myThreadedLogger = logger("auto_taf_pluginThread #" + to_string(threadIndex));
@@ -203,7 +179,13 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// find height of cb base and convert to feet
 	level HL500 = level(kHeightLayer, 500, 0);
-	info_t LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
+
+	info_t	LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
+	if (!LCL500)
+	{
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
+		return;
+	}
 
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
@@ -219,14 +201,20 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	h->HeightUnit(kM);
 
 	auto cbbase = h->VerticalHeight(param("P-HPA"), levelsMin.second.Value(), levelsMax.first.Value(), VEC(LCL500));
-	info_t TC;
-	TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
 
-	auto Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
+	info_t TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
+	info_t Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
+
+        if (!TC || !Ceiling2)
+        {
+                myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
+                return;
+        }
+
 	for (auto&& tup : zip_range(cbbase, VEC(TC)))
 	{
 		double& _CB = tup.get<0>();
-		double& _TC = tup.get<1>();
+		const double& _TC = tup.get<1>();
 		if (abs(_TC) > 50.0)
 		{
 			_CB = _CB / 0.3048;
@@ -241,7 +229,6 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// mark cloud layers
 	size_t grd_size = VEC(TC).size();
 
-	vector<vector<bool>> cloud = vector<vector<bool>>(grd_size, vector<bool>(lastLevel, false));
 	vector<vector<double>> top = vector<vector<double>>(grd_size, vector<double>());
 	vector<vector<double>> base = vector<vector<double>>(grd_size, vector<double>());
 	vector<vector<double>> sct_base = vector<vector<double>>(grd_size, vector<double>());
@@ -252,12 +239,18 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	for (size_t j = lastLevel - 1; j > firstLevel + 1; --j)
 	{
-		auto N = Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), Nparam, forecastType, false);
-		auto N_upper = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
-		auto N_upper_upper =
-		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j - 1)), Nparam, forecastType, false);
-		auto Height =
-		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), param("HL-M"), forecastType, false);
+		info_t N = Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), Nparam, forecastType, false);
+		info_t N_upper = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
+		info_t N_upper_upper = Fetch(forecastTime, level(kHybrid, static_cast<double>(j - 1)), Nparam, forecastType, false);
+		info_t Height = Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), param("HL-M"), forecastType, false);
+
+        	if (!N || !N_upper || !N_upper_upper || !Height)
+        	{
+                	myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+			to_string(j));
+                	continue;
+        	}
+
 		for (size_t k = 0; k < grd_size; ++k)
 		{
 			const double& _N = N->Data().At(k);
@@ -265,11 +258,10 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			const double& _N_upper_upper = N_upper_upper->Data().At(k);
 			const double& _Height = Height->Data().At(k);
 
-			if (_Height > 1000.0)
+			if (_Height < 1000.0)
 			{
 				if (_N < cloud_treshold)
 				{
-					cloud[k][j] = false;
 					if (base[k].size() > top[k].size())
 					{
 						double newbase = _Height / 0.3048;
@@ -278,7 +270,6 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				}
 				else
 				{
-					cloud[k][j + 1] = true;
 					if (base[k].size() == top[k].size())
 					{
 						double newbase = _Height / 0.3048;
@@ -308,12 +299,11 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 					}
 				}
 			}
-			else  // height is below 1000m
+			else  // height is above 1000m
 			{
 				// three consecutive layers with cloud cover below threshold
 				if ((_N < cloud_treshold) && (_N_upper < cloud_treshold) && (_N_upper_upper < cloud_treshold))
 				{
-					cloud[k][j] = false;
 					// if we are above a cloud base cover it with a top.
 					if (base[k].size() > top[k].size())
 					{
@@ -323,7 +313,6 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				}
 				else if ((_N > cloud_treshold) && (_N_upper > cloud_treshold) && (_N_upper_upper > cloud_treshold))
 				{
-					cloud[k][j] = true;
 					if (base[k].size() == top[k].size())
 					{
 						double newbase = _Height / 0.3048;
@@ -354,7 +343,6 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				}
 				else if ((_N > cloud_treshold) && (base[k].size() > top[k].size()))
 				{
-					cloud[k][j] = true;
 					if (_N > N_max[k].back())
 					{
 						N_max[k].back() = _N;
@@ -362,7 +350,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				}
 			}
 			// update the maximum number of cloud layers in the whole grid
-			if (base[k].size() > max_num_cl) max_num_cl = base[k].size();
+			max_num_cl = max(max_num_cl, base[k].size());
 		}
 	}
 	// end mark cloud layers
@@ -431,7 +419,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 					{
 						c_l[k][j + 1].amount = c_l[k][j].amount;
 					}
-					c_l[k][j].amount = .50;
+					c_l[k][j].amount = sct;
 				}
 			}
 		}
@@ -448,7 +436,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			{
 				if (c_l[k][j].base >= 1500.0 && (CLClass(c_l[k][j + 1].amount) > CLClass(c_l[k][j].amount)))
 				{
-					if (RoundedBase(c_l[k][j + 1].base) - RoundedBase(c_l[k][j].base < 6.0))
+					if (RoundedBase(c_l[k][j + 1].base) - RoundedBase(c_l[k][j].base) < 6.0)
 					{
 						c_l[k][j].amount = 0.0;
 					}
