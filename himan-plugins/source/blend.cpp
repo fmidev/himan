@@ -169,7 +169,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		}));
 	}
 
-	// Copy the fetched forecasts into the target info so that we can simply write it out after calculation.
+	// Copy the fetched forecasts into the target info so that we can simply write them out after calculation.
 	// TODO: Don't copy the data? Should just point to the already existing data?
 	vector<info_t> forecasts;
 	forecasts.reserve(itsMetaOpts.size());
@@ -179,6 +179,12 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	for (auto& f : futures)
 	{
 		info_t Info = f.get();
+
+		if (!Info)
+		{
+			continue;
+		}
+
 		forecasts.push_back(Info);
 		findex++;
 
@@ -188,6 +194,12 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 			log.Warning("Not enough forecast types defined for target info, breaking");
 			break;
 		}
+	}
+
+	if (forecasts.empty())
+	{
+		log.Error("Failed to acquire any source data");
+		himan::Abort();
 	}
 
 	if (!targetInfo->ForecastType(forecast_type(kEpsControl, 0.0)))
