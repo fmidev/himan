@@ -185,7 +185,7 @@ __global__ void LiftLCLKernel(const double* __restrict__ d_P, const double* __re
 		ASSERT(d_T[idx] > 100);
 		ASSERT(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
 
-		double T = metutil::LiftLCL_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
+		double T = metutil::LiftLCLA_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
 
 		ASSERT(T > 100);
 		ASSERT(T < 350 || IsMissingDouble(T));
@@ -553,25 +553,18 @@ __global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __rest
 
 	if (idx < N)
 	{
-		double T = d_T[idx];
-		double P = d_P[idx];
-		double RH = d_RH[idx];
+		const double T = d_T[idx];
+		const double P = d_P[idx];
+		const double RH = d_RH[idx];
 
 		ASSERT((T > 150 && T < 350) || IsMissingDouble(T));
 		ASSERT((P > 100 && P < 1500) || IsMissingDouble(P));
 		ASSERT((RH >= 0 && RH < 102) || IsMissingDouble(RH));
 
-		if (IsMissingDouble(T) || IsMissingDouble(P) || IsMissingDouble(RH))
-		{
-			d_P[idx] = MissingDouble();
-		}
-		else
-		{
-			d_Tpot[idx] = metutil::Theta_(T, 100 * P);
-			d_MR[idx] = metutil::smarttool::MixingRatio_(T, RH, 100 * P);
+		d_Tpot[idx] = metutil::Theta_(T, 100 * P);
+		d_MR[idx] = metutil::smarttool::MixingRatio_(T, RH, 100 * P);
 
-			d_P[idx] = P - 2.0;
-		}
+		d_P[idx] = P - 2.0;
 	}
 }
 
@@ -801,21 +794,24 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	InitializeArray<double>(d_Tpot, himan::MissingDouble(), N, stream);
 	InitializeArray<double>(d_MR, himan::MissingDouble(), N, stream);
 
+	std::vector<double> Tpot(N, himan::MissingDouble());
+	std::vector<double> MR(N, himan::MissingDouble());
+
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(Tpot.data()), sizeof(double) * N, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(MR.data()), sizeof(double) * N, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(PVec.data()), sizeof(double) * N, 0));
+
+	CUDA_CHECK(cudaMemcpyAsync(d_P, &PVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+
 	while (true)
 	{
 		auto TVec = h->VerticalValue(param("T-K"), PVec);
-		auto RHVec = h->VerticalValue(param("RH-PRCNT"), PVec);
-
 		CUDA_CHECK(cudaMemcpyAsync(d_T, &TVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+
+		auto RHVec = h->VerticalValue(param("RH-PRCNT"), PVec);
 		CUDA_CHECK(cudaMemcpyAsync(d_RH, &RHVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-		CUDA_CHECK(cudaMemcpyAsync(d_P, &PVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
-
-		std::vector<double> Tpot(N, himan::MissingDouble());
-		std::vector<double> MR(N, himan::MissingDouble());
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		CUDA_CHECK(cudaMemcpyAsync(&Tpot[0], d_Tpot, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 		CUDA_CHECK(cudaMemcpyAsync(&MR[0], d_MR, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
@@ -834,15 +830,19 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 			break;
 		}
 
-		CUDA_CHECK(cudaMemcpyAsync(&PVec[0], d_P, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+		for (auto& v : PVec) v -= 2.0;
 	}
+
+	CUDA_CHECK(cudaHostUnregister(Tpot.data()));
+	CUDA_CHECK(cudaHostUnregister(MR.data()));
+	CUDA_CHECK(cudaHostUnregister(PVec.data()));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// Calculate averages
 
-	auto Tpot = tp.Result();
-	auto MR = mr.Result();
+	Tpot = tp.Result();
+	MR = mr.Result();
 
 	// Copy averages to GPU for final calculation
 	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, &Tpot[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
