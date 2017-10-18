@@ -251,6 +251,8 @@ double Lift_(double P, double T, double TD, double targetP);
  *
  * Overcoat for DryLift/MoistLift, with user-given LCL level pressure
  *
+ * A-version used LCL approximation functions.
+ *
  * @param P Initial pressure in Pascals
  * @param T Initial temperature in Kelvins
  * @param PLCL LCL level pressure in Pascals
@@ -258,11 +260,15 @@ double Lift_(double P, double T, double TD, double targetP);
  * @return Parcel temperature in wanted pressure in Kelvins
  */
 
-CUDA_KERNEL
 void LiftLCL(cdarr_t P, cdarr_t T, cdarr_t LCP, cdarr_t targetP, darr_t result, size_t N);
 
 CUDA_DEVICE
 double LiftLCL_(double P, double T, double LCLP, double targetP);
+
+void LiftLCLA(cdarr_t P, cdarr_t T, cdarr_t LCP, cdarr_t targetP, darr_t result, size_t N);
+
+CUDA_DEVICE
+double LiftLCLA_(double P, double T, double LCLP, double targetP);
 
 /**
  * @brief Lift a parcel of air moist-adiabatically to wanted pressure
@@ -777,6 +783,29 @@ inline double himan::metutil::LiftLCL_(double P, double T, double LCLP, double t
 }
 
 CUDA_DEVICE
+inline double himan::metutil::LiftLCLA_(double P, double T, double LCLP, double targetP)
+{
+	if (LCLP < targetP)
+	{
+		// LCL level is higher than requested pressure, only dry lift is needed
+		return DryLift_(P, T, targetP);
+	}
+
+	// Wanted height is above LCL
+	if (P < LCLP)
+	{
+		// Current level is above LCL, only moist lift is required
+		return MoistLiftA_(P, T, targetP);
+	}
+
+	// First lift dry adiabatically to LCL height
+	double LCLT = DryLift_(P, T, LCLP);
+
+	// Lift from LCL to wanted pressure
+	return MoistLiftA_(LCLP, LCLT, targetP);
+}
+
+CUDA_DEVICE
 inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 {
 	if (IsMissingDouble(T) || IsMissingDouble(P) || targetP >= P)
@@ -1107,11 +1136,11 @@ inline double himan::metutil::LI_(double T500, double T500m, double TD500m, doub
 
 	const double TARGET_PRESSURE = 50000;
 
-/*	if (IsMissingDouble(LCL.P))
-	{
-		return li;
-	}
-*/
+	/*	if (IsMissingDouble(LCL.P))
+	    {
+	        return li;
+	    }
+	*/
 	if (LCL.P <= 85000)
 	{
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
@@ -1142,11 +1171,11 @@ inline double himan::metutil::SI_(double T850, double T500, double TD850)
 
 	const double TARGET_PRESSURE = 50000;
 
-/*	if (IsMissingDouble(LCL.P))
-	{
-		return si;
-	}
-*/
+	/*	if (IsMissingDouble(LCL.P))
+	    {
+	        return si;
+	    }
+	*/
 	if (LCL.P <= 85000)
 	{
 		// LCL pressure is below wanted pressure, no need to do wet-adiabatic

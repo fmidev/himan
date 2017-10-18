@@ -805,6 +805,7 @@ inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) 
 }
 
 inline void info::Value(double theValue) { Grid()->Data().Set(itsLocationIndex, theValue); }
+
 inline double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
 typedef std::shared_ptr<info> info_t;
 

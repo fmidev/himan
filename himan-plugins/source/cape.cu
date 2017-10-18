@@ -33,6 +33,7 @@ using namespace himan;
 using namespace himan::plugin;
 
 himan::level cape_cuda::itsBottomLevel;
+bool cape_cuda::itsUseVirtualTemperature;
 
 const unsigned char FCAPE = (1 << 2);
 const unsigned char FCAPE3km = (1 << 0);
@@ -154,6 +155,16 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 	}
 }
 
+__global__ void VirtualTemperatureKernel(double* __restrict__ d_T, const double* __restrict__ d_P, size_t N)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		d_T[idx] = himan::metutil::VirtualTemperature_(d_T[idx], d_P[idx] * 100);
+	}
+}
+
 __global__ void CopyLFCIteratorValuesKernel(double* __restrict__ d_Titer, const double* __restrict__ d_Tparcel,
                                             double* __restrict__ d_Piter, info_simple d_Penv)
 {
@@ -185,7 +196,7 @@ __global__ void LiftLCLKernel(const double* __restrict__ d_P, const double* __re
 		ASSERT(d_T[idx] > 100);
 		ASSERT(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
 
-		double T = metutil::LiftLCL_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
+		double T = metutil::LiftLCLA_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
 
 		ASSERT(T > 100);
 		ASSERT(T < 350 || IsMissingDouble(T));
@@ -404,7 +415,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 				}
 			}
 
-			if (Penv < PLCL && !IsMissingDouble(Tparcel))
+			if (Penv < PLCL)
 			{
 				// Above LCL, switch to virtual temperature
 
@@ -450,7 +461,7 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 
 		double LCLP = d_LCLP[idx];
 
-		if (!IsMissingDouble(Tparcel) && d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
+		if (d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
 		{
 			// Temperature gap between environment and parcel too large --> abort search.
 			// Only for values higher in the atmosphere, to avoid the effects of inversion
@@ -458,7 +469,8 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 			d_found[idx] = 1;
 		}
 
-		if (!IsMissingDouble(Tparcel) && Penv <= LCLP && Tparcel > Tenv && d_found[idx] == 0)
+		const double diff = Tparcel - Tenv;
+		if (Penv <= LCLP && diff > 0 && d_found[idx] == 0)
 		{
 			d_found[idx] = 1;
 
@@ -468,16 +480,22 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 				ASSERT(!IsMissingDouble(d_LCLT[idx]));
 			}
 
-			if (fabs(prevTparcel - prevTenv) < 0.0001)
+			if (diff < 0.1)
 			{
 				d_LFCT[idx] = Tparcel;
 				d_LFCP[idx] = Penv;
+			}
+			else if (prevTparcel - prevTenv >= 0)
+			{
+				d_LFCT[idx] = prevTparcel;
+				d_LFCP[idx] = prevPenv;
 			}
 			else
 			{
 				auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv),
 				                                                 point(Tparcel, Penv), point(prevTparcel, prevPenv));
 
+				ASSERT(intersection.Y() < prevPenv && intersection.Y() > Penv);
 				d_LFCT[idx] = intersection.X();
 				d_LFCP[idx] = intersection.Y();
 
@@ -553,25 +571,18 @@ __global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __rest
 
 	if (idx < N)
 	{
-		double T = d_T[idx];
-		double P = d_P[idx];
-		double RH = d_RH[idx];
+		const double T = d_T[idx];
+		const double P = d_P[idx];
+		const double RH = d_RH[idx];
 
 		ASSERT((T > 150 && T < 350) || IsMissingDouble(T));
 		ASSERT((P > 100 && P < 1500) || IsMissingDouble(P));
 		ASSERT((RH >= 0 && RH < 102) || IsMissingDouble(RH));
 
-		if (IsMissingDouble(T) || IsMissingDouble(P) || IsMissingDouble(RH))
-		{
-			d_P[idx] = MissingDouble();
-		}
-		else
-		{
-			d_Tpot[idx] = metutil::Theta_(T, 100 * P);
-			d_MR[idx] = metutil::smarttool::MixingRatio_(T, RH, 100 * P);
+		d_Tpot[idx] = metutil::Theta_(T, 100 * P);
+		d_MR[idx] = metutil::smarttool::MixingRatio_(T, RH, 100 * P);
 
-			d_P[idx] = P - 2.0;
-		}
+		d_P[idx] = P - 2.0;
 	}
 }
 
@@ -801,21 +812,24 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	InitializeArray<double>(d_Tpot, himan::MissingDouble(), N, stream);
 	InitializeArray<double>(d_MR, himan::MissingDouble(), N, stream);
 
+	std::vector<double> Tpot(N, himan::MissingDouble());
+	std::vector<double> MR(N, himan::MissingDouble());
+
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(Tpot.data()), sizeof(double) * N, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(MR.data()), sizeof(double) * N, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(PVec.data()), sizeof(double) * N, 0));
+
+	CUDA_CHECK(cudaMemcpyAsync(d_P, &PVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+
 	while (true)
 	{
 		auto TVec = h->VerticalValue(param("T-K"), PVec);
-		auto RHVec = h->VerticalValue(param("RH-PRCNT"), PVec);
-
 		CUDA_CHECK(cudaMemcpyAsync(d_T, &TVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+
+		auto RHVec = h->VerticalValue(param("RH-PRCNT"), PVec);
 		CUDA_CHECK(cudaMemcpyAsync(d_RH, &RHVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-		CUDA_CHECK(cudaMemcpyAsync(d_P, &PVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
-
-		std::vector<double> Tpot(N, himan::MissingDouble());
-		std::vector<double> MR(N, himan::MissingDouble());
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		CUDA_CHECK(cudaMemcpyAsync(&Tpot[0], d_Tpot, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 		CUDA_CHECK(cudaMemcpyAsync(&MR[0], d_MR, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
@@ -834,15 +848,19 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 			break;
 		}
 
-		CUDA_CHECK(cudaMemcpyAsync(&PVec[0], d_P, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+		for (auto& v : PVec) v -= 2.0;
 	}
+
+	CUDA_CHECK(cudaHostUnregister(Tpot.data()));
+	CUDA_CHECK(cudaHostUnregister(MR.data()));
+	CUDA_CHECK(cudaHostUnregister(PVec.data()));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	// Calculate averages
 
-	auto Tpot = tp.Result();
-	auto MR = mr.Result();
+	Tpot = tp.Result();
+	MR = mr.Result();
 
 	// Copy averages to GPU for final calculation
 	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, &Tpot[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
@@ -944,6 +962,11 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
 	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
 
+	if (cape_cuda::itsUseVirtualTemperature)
+	{
+		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_prevTenv->values, h_prevPenv->values, N);
+	}
+
 	ASSERT(h_prevTenv->values);
 	ASSERT(h_prevPenv->values);
 
@@ -981,6 +1004,11 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
 		auto h_Tenv = PrepareInfo(TenvInfo, stream);
+
+		if (cape_cuda::itsUseVirtualTemperature)
+		{
+			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_Tenv->values, h_Penv->values, N);
+		}
 
 		// Lift the particle from previous level to this level. In the first revolution
 		// of this loop the starting level is LCL. If target level level is below current level
@@ -1310,6 +1338,11 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
 	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
 
+	if (cape_cuda::itsUseVirtualTemperature)
+	{
+		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_prevTenv->values, h_prevPenv->values, N);
+	}
+
 	curLevel.Value(curLevel.Value());
 
 	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
@@ -1325,6 +1358,11 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
 		auto h_Tenv = PrepareInfo(TenvInfo, stream);
+
+		if (cape_cuda::itsUseVirtualTemperature)
+		{
+			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_Tenv->values, h_Penv->values, N);
+		}
 
 		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, *h_Penv, d_Tparcel);
 

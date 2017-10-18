@@ -84,3 +84,8 @@ Where value is one of:
 * surface
 * 500m mix
 * most unstable
+
+virtual_temperature: define if virtual temperature correction should be used when air parcel is saturated. Default is true.
+
+    "virtual_temperature" : true | false
+

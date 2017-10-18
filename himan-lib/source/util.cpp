@@ -829,6 +829,25 @@ double util::MissingPercent(const himan::info& info)
 	                    : static_cast<int>(100 * static_cast<float>(missing) / static_cast<float>(total));
 }
 
+bool util::ParseBoolean(const string& val)
+{
+	string lval = boost::algorithm::to_lower_copy(val);
+
+	if (lval == "yes" || lval == "true" || lval == "1")
+	{
+		return true;
+	}
+	else if (lval == "no" || lval == "false" || lval == "0")
+	{
+		return false;
+	}
+	else
+	{
+		cerr << "Invalid boolean value: " << val << endl;
+		himan::Abort();
+	}
+}
+
 #ifdef HAVE_CUDA
 void util::Unpack(initializer_list<grid*> grids)
 {
