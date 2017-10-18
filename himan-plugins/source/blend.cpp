@@ -217,12 +217,8 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	vector<double> values;
 	values.reserve(forecasts.size());
 
-	// To store information about missing forecast values.
-	vector<bool> valid;
-	valid.resize(forecasts.size());
-
 	// Pick weights from the current set into this vector
-	vector<info_t> weights;  // (*targetInfo, forecasts.size());
+	vector<info_t> weights;
 	weights.reserve(forecasts.size());
 
 	vector<double> currentWeights;
@@ -246,9 +242,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	while (targetInfo->NextLocation())
 	{
 		double F = 0.0;
-
 		size_t numMissing = 0;
-		size_t findex = 0;
 
 		for (const auto&& tup : zip_range(forecasts, weights))
 		{
@@ -271,23 +265,17 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 			if (IsMissing(v))
 			{
 				numMissing++;
-				valid[findex] = false;
-			}
-			else
-			{
-				valid[findex] = true;
+				continue;
 			}
 
 			double wv = w->Value();
 			if (IsMissing(wv))
 			{
-				wv = 0.0;
+				continue;
 			}
 
 			values.push_back(v);
 			currentWeights.push_back(wv);
-
-			findex++;
 		}
 
 		if (numMissing == forecasts.size())
@@ -296,29 +284,15 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		}
 		else
 		{
-			// Rebalance the weights in the case of 'missing values'.
-			size_t i = 0;
-			for (const double& v : values)
+			double sw = 0.0;
+			for (const auto& w : currentWeights)
 			{
-				if (IsMissing(v))
-				{
-					const double w = currentWeights[i] / static_cast<double>(values.size() - numMissing);
-					for (size_t wi = 0; wi < currentWeights.size(); wi++)
-					{
-						if (valid[wi])
-						{
-							currentWeights[wi] += w;
-						}
-						else
-						{
-							if (wi <= i)
-							{
-								currentWeights[wi] = 0.0;
-							}
-						}
-					}
-				}
-				i++;
+				sw += w;
+			}
+
+			if (sw <= 0.0)
+			{
+				continue;
 			}
 
 			// Finally apply the weights to the forecast values.
@@ -328,6 +302,8 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 				const double v = tup.get<1>();
 				F += w * v;
 			}
+
+			F /= sw;
 		}
 
 		targetInfo->Value(F);
