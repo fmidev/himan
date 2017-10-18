@@ -527,9 +527,9 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				{
 					pc->Name(value);
 				}
-				else if (key == "param_list")
+				else if (key == "param_list" || key == "options")
 				{
-					boost::property_tree::ptree params = plugin.second.get_child("param_list");
+					boost::property_tree::ptree params = plugin.second.get_child(key);
 
 					if (params.empty())
 					{
@@ -557,7 +557,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 								                    "' value is empty");
 							}
 
-							if (paramOptName == "name")
+							if (paramOptName == "name" || paramOptName == "producer")
 							{
 								name = paramOptValue;
 							}

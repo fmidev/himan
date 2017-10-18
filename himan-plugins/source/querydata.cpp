@@ -10,6 +10,7 @@
 #include "ogr_spatialref.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
+#include "ogr_spatialref.h"
 #include <fstream>
 
 #include "plugin_factory.h"
@@ -31,6 +32,7 @@
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
 #include <NFmiTimeList.h>
+#include "NFmiFastQueryInfo.h"
 
 #ifdef __clang__
 
