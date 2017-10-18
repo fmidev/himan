@@ -19,9 +19,6 @@
 
 #include "cape.cuh"
 
-const unsigned char FCAPE = (1 << 2);
-const unsigned char FCAPE3km = (1 << 0);
-
 using namespace std;
 using namespace himan::plugin;
 using namespace himan::numerical_functions;
@@ -611,7 +608,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 				Tparcel = interpolation::Linear(PLFC[i], prevPenv, Penv, prevTparcel, Tparcel);
 
 				Penv = PLFC[i];
-				ASSERT(Zenv > prevZenv);
+				ASSERT(Zenv >= prevZenv);
 			}
 
 			if (IsMissingDouble(Tparcel))
@@ -714,16 +711,15 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 	// Unlike LCL, LFC is *not* found for all grid points
 
-	size_t foundCount = 0;
-
 	for (size_t i = 0; i < P.size(); i++)
 	{
 		if (IsMissingDouble(P[i]))
 		{
-			found[i] |= FCAPE;
-			foundCount++;
+			found[i] = true;
 		}
 	}
+
+	size_t foundCount = count(found.begin(), found.end(), true);
 
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
@@ -760,9 +756,9 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 	info_t TenvInfo, PenvInfo, ZenvInfo;
 
-	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50.);
 
-	while (curLevel.Value() > hPa100.first.Value() && foundCount != found.size())
+	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
 		// Get environment temperature, pressure and height values for this level
 		PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
@@ -803,7 +799,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			double Tparcel = tup.get<6>();      // K
 			double prevTparcel = tup.get<7>();  // K
 
-			if (found[i] & FCAPE)
+			if (found[i])
 			{
 				continue;
 			}
@@ -840,22 +836,16 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 				// Temperature gap between environment and parcel too large --> abort search.
 				// Only for values higher in the atmosphere, to avoid the effects of inversion
 
-				found[i] |= FCAPE;
+				found[i] = true;
 				continue;
 			}
 
-			if (prevZenv >= 3000. && Zenv >= 3000.)
-			{
-				found[i] |= FCAPE3km;
-			}
-
-			if ((found[i] & FCAPE3km) == 0)
+			if (prevZenv < 3000.)
 			{
 				double C = CAPE::CalcCAPE3km(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 
 				CAPE3km[i] += C;
 
-				ASSERT(CAPE3km[i] < 3000.);  // 3000J/kg, not 3000m
 				ASSERT(CAPE3km[i] >= 0);
 			}
 
@@ -863,7 +853,6 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 			CAPE1040[i] += C;
 
-			ASSERT(CAPE1040[i] < 5000.);
 			ASSERT(CAPE1040[i] >= 0);
 
 			double CAPEval, ELTval, ELPval;
@@ -872,9 +861,7 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 			               ELPval);
 
 			CAPE[i] += CAPEval;
-
 			ASSERT(CAPEval >= 0.);
-			ASSERT(CAPE[i] < 8000);
 
 			if (!IsMissingDouble(ELTval))
 			{
@@ -890,17 +877,33 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 
 		curLevel.Value(curLevel.Value() - 1);
 
-		foundCount = 0;
-		for (auto& val : found)
-		{
-			if (val & FCAPE) foundCount++;
-		}
+		foundCount = count(found.begin(), found.end(), true);
 
 		itsLogger.Trace("CAPE read for " + to_string(foundCount) + "/" + to_string(found.size()) + " gridpoints");
 		prevZenvInfo = ZenvInfo;
 		prevTenvVec = TenvVec;
 		prevPenvInfo = PenvInfo;
 		prevTparcelVec = TparcelVec;
+	}
+
+	// If the CAPE area is continued all the way to stopLevel and beyond, we don't have an EL for that
+	// (since integration is forcefully stopped)
+	// In this case let last level be EL
+
+	for (size_t i = 0; i < CAPE.size(); i++)
+
+	{
+		if (CAPE[i] > 0 && IsMissingDouble(ELT[i]))
+		{
+			TenvInfo->LocationIndex(i);
+			PenvInfo->LocationIndex(i);
+
+			ELT[i] = TenvInfo->Value();
+			ELP[i] = PenvInfo->Value();
+
+			LastELT[i] = ELT[i];
+			LastELP[i] = ELP[i];
+		}
 	}
 
 #ifdef DEBUG
@@ -1054,11 +1057,11 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 	curLevel.Value(curLevel.Value() - 1);
 
-	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 150.);
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
 	vector<double> prevTparcelVec(P.size(), MissingDouble());
 
-	while (curLevel.Value() > hPa150.first.Value() && foundCount != found.size())
+	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
 		// Get environment temperature and pressure values for this level
 		auto TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
@@ -1163,15 +1166,20 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 					Tresult = intersection.X();
 					Presult = intersection.Y();
 
-					ASSERT((Presult < prevPenv) && (Presult > Penv));
-
-					if (IsMissingDouble(Tresult))
+					if (Presult > prevPenv)
+					{
+						// Do not allow LFC to be below previous level
+						Tresult = prevTparcel;
+						Presult = prevPenv;
+					}
+					else if (IsMissingDouble(Tresult))
 					{
 						// Intersection not found, use exact level value
-						Tresult = Tenv;
+						Tresult = Tparcel;
 						Presult = Penv;
 					}
 
+					ASSERT((Presult <= prevPenv) && (Presult > Penv));
 					ASSERT(Tresult > 100 && Tresult < 400);
 				}
 
@@ -1520,6 +1528,7 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 			}
 
 			double TD = metutil::DewPointFromRH_(T, RH);
+
 			double ThetaE = metutil::smarttool::ThetaE_(T, RH, P * 100);
 			ASSERT(ThetaE >= 0);
 
