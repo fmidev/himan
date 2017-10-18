@@ -262,15 +262,10 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 			}
 
 			const double v = f->Value();
-			if (IsMissing(v))
+			const double wv = w->Value();
+			if (IsMissing(v) || IsMissing(wv))
 			{
 				numMissing++;
-				continue;
-			}
-
-			double wv = w->Value();
-			if (IsMissing(wv))
-			{
 				continue;
 			}
 
