@@ -35,9 +35,6 @@ using namespace himan::plugin;
 himan::level cape_cuda::itsBottomLevel;
 bool cape_cuda::itsUseVirtualTemperature;
 
-const unsigned char FCAPE = (1 << 2);
-const unsigned char FCAPE3km = (1 << 0);
-
 extern double Max(const std::vector<double>& vec);
 
 template <typename T>
@@ -301,22 +298,16 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 			// Temperature gap between environment and parcel too large --> abort search.
 			// Only for values higher in the atmosphere, to avoid the effects of inversion
 
-			d_found[idx] |= FCAPE;
+			d_found[idx] = 1;
 		}
 		else
 		{
-			if (prevZenv >= 3000. && Zenv >= 3000.)
-			{
-				d_found[idx] |= FCAPE3km;
-			}
-
-			if ((d_found[idx] & FCAPE3km) == 0)
+			if (prevZenv < 3000.)
 			{
 				double C = CAPE::CalcCAPE3km(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 
 				d_CAPE3km[idx] += C;
 
-				ASSERT(d_CAPE3km[idx] < 3000.);  // 3000J/kg, not 3000m
 				ASSERT(d_CAPE3km[idx] >= 0);
 			}
 
@@ -324,7 +315,6 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 
 			d_CAPE1040[idx] += C;
 
-			ASSERT(d_CAPE1040[idx] < 5000.);
 			ASSERT(d_CAPE1040[idx] >= 0);
 
 			double CAPE, ELT, ELP;
@@ -333,7 +323,6 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 			d_CAPE[idx] += CAPE;
 
 			ASSERT(CAPE >= 0.);
-			ASSERT(d_CAPE[idx] < 8000);
 
 			if (!IsMissingDouble(ELT))
 			{
@@ -459,7 +448,11 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 		double Penv = d_P.values[idx];
 		double prevPenv = d_prevP.values[idx];
 
+		ASSERT(Penv > 50.);
+		ASSERT(Penv < 1200.);
 		double LCLP = d_LCLP[idx];
+		ASSERT(prevPenv > 50.);
+		ASSERT(prevPenv < 1200.);
 
 		if (d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
 		{
@@ -470,7 +463,8 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 		}
 
 		const double diff = Tparcel - Tenv;
-		if (Penv <= LCLP && diff > 0 && d_found[idx] == 0)
+
+		if (Penv < LCLP && diff > 0)
 		{
 			d_found[idx] = 1;
 
@@ -495,14 +489,21 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 				auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv),
 				                                                 point(Tparcel, Penv), point(prevTparcel, prevPenv));
 
-				ASSERT(intersection.Y() < prevPenv && intersection.Y() > Penv);
 				d_LFCT[idx] = intersection.X();
 				d_LFCP[idx] = intersection.Y();
 
-				if (IsMissingDouble(d_LFCT[idx]))
+				if (d_LFCP[idx] > prevPenv)
+				{
+					// Do not allow LFC to be below previous level; if intersection fails to put it in the correct
+					// "bin" (between previous and current pressure), use the only information that certain:
+					// the crossing has happened at least at current pressure
+					d_LFCT[idx] = Tparcel;
+					d_LFCP[idx] = Penv;
+				}
+				else if (IsMissingDouble(d_LFCT[idx]))
 				{
 					// Intersection not found, use exact level value
-					d_LFCT[idx] = Tenv;
+					d_LFCT[idx] = Tparcel;
 					d_LFCP[idx] = Penv;
 				}
 			}
@@ -691,6 +692,8 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(*h_T, *h_RH, *h_P, *h_prevT, *h_prevRH, *h_prevP, d_maxThetaE,
 		                                                 d_Tresult, d_TDresult, d_Presult, d_found);
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
@@ -994,9 +997,9 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
-	auto hPa150 = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 150.);
 
-	while (curLevel.Value() > hPa150.first.Value())
+	while (curLevel.Value() > stopLevel.first.Value())
 	{
 		// Get environment temperature and pressure values for this level
 		auto TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
@@ -1019,6 +1022,8 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 		LFCKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, *h_prevTenv, *h_prevPenv, d_Tparcel,
 		                                              d_prevTparcel, d_LCLT, d_LCLP, d_LFCT, d_LFCP, d_found,
 		                                              curLevel.Value(), hPa450.first.Value());
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
@@ -1260,7 +1265,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	{
 		if (IsMissingDouble(P[i]))
 		{
-			found[i] |= FCAPE;
+			found[i] = 1;
 		}
 	}
 
@@ -1345,15 +1350,18 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	curLevel.Value(curLevel.Value());
 
-	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50.);
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
 
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
-	while (curLevel.Value() > hPa100.first.Value())
+	info_t PenvInfo, TenvInfo, ZenvInfo;
+
+	while (curLevel.Value() > stopLevel.first.Value())
 	{
-		auto PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
-		auto TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		auto ZenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+		PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+		ZenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
 
 		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
@@ -1369,7 +1377,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		CAPEKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, *h_Zenv, *h_prevTenv, *h_prevPenv, *h_prevZenv,
 		                                               d_Tparcel, d_prevTparcel, d_LFCT, d_LFCP, d_CAPE, d_CAPE1040,
 		                                               d_CAPE3km, d_ELT, d_ELP, d_LastELT, d_LastELP, d_found,
-		                                               curLevel.Value(), hPa100.first.Value());
+		                                               curLevel.Value(), hPa450.first.Value());
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
@@ -1381,6 +1389,10 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		delete h_prevPenv;
 		delete h_prevTenv;
 
+		h_prevZenv = h_Zenv;
+		h_prevTenv = h_Tenv;
+		h_prevPenv = h_Penv;
+
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		if (foundCount == N)
@@ -1389,10 +1401,6 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		}
 
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
-
-		h_prevZenv = h_Zenv;
-		h_prevTenv = h_Tenv;
-		h_prevPenv = h_Penv;
 
 		curLevel.Value(curLevel.Value() - 1);
 	}
@@ -1404,25 +1412,6 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	delete h_prevZenv;
 	delete h_prevPenv;
 	delete h_prevTenv;
-
-#if 0
-		
-	// If the CAPE area is continued all the way to level 60 and beyond, we don't have an EL for that
-	// (since integration is forcefully stopped)
-	// In this case level 60 = EL
-	
-	for (size_t i = 0; i < CAPE.size(); i++)
-	{
-		if (CAPE[i] > 0 && ELT[i] == MissingDouble())
-		{
-			TenvInfo->LocationIndex(i);
-			PenvInfo->LocationIndex(i);
-			
-			ELT[i] = TenvInfo->Value();
-			ELP[i] = PenvInfo->Value();
-		}
-	}
-#endif
 
 	std::vector<double> CAPE(T.size(), 0);
 	std::vector<double> CAPE1040(T.size(), 0);
@@ -1451,6 +1440,25 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaFree(d_found));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	// If the CAPE area is continued all the way to stopLevel and beyond, we don't have an EL for that
+	// (since integration is forcefully stopped)
+	// In this case let last level be EL
+
+	for (size_t i = 0; i < CAPE.size(); i++)
+	{
+		if (CAPE[i] > 0 && ELT[i] == MissingDouble())
+		{
+			TenvInfo->LocationIndex(i);
+			PenvInfo->LocationIndex(i);
+
+			ELT[i] = TenvInfo->Value();
+			ELP[i] = PenvInfo->Value();
+
+			LastELT[i] = TenvInfo->Value();
+			LastELP[i] = PenvInfo->Value();
+		}
+	}
 
 	CUDA_CHECK(cudaFree(d_CAPE));
 	CUDA_CHECK(cudaFree(d_CAPE1040));
