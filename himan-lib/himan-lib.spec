@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.10.10
+Version: 17.10.18
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed Oct 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.18-1.fmi
+- Minor additions
 * Tue Oct 10 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.10-1.fmi
 - Fix to modifier height handling
 * Thu Oct  5 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.5-1.fmi

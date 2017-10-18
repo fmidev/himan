@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.16
+Version: 17.10.18
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.10.2
+Requires: himan-lib >= 17.10.18
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.9.27
@@ -63,6 +63,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libabsolute_humidity.so
+%{_libdir}/himan-plugins/libblend.so
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libcape.so
 %{_libdir}/himan-plugins/libcloud_code.so
@@ -108,7 +109,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Tue Oct 16 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.16-1.fmi
+* Wed Oct 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.18-1.fmi
+- Add blend plugin
+- Fixes to cape
+* Mon Oct 16 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.16-1.fmi
 - Fix to turbulence with lambert projection
 * Tue Oct 10 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.10-1.fmi
 - Fix to luatool global variable inheriting
