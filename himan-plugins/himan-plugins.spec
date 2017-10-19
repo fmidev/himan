@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.18
+Version: 17.10.19
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -63,6 +63,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libabsolute_humidity.so
+%{_libdir}/himan-plugins/libauto_taf.so
 %{_libdir}/himan-plugins/libblend.so
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libcape.so
@@ -109,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Oct 19 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.19-1.fmi
+- Add auto_taf plugin
 * Wed Oct 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.18-1.fmi
 - Add blend plugin
 - Fixes to cape
