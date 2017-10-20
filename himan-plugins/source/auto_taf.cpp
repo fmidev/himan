@@ -1,5 +1,4 @@
 #include "auto_taf.h"
-#include "fetcher.h"
 #include "forecast_time.h"
 #include "hitool.h"
 #include "info.h"
@@ -19,7 +18,6 @@ const double few = .130;  // 1/8
 const double sct = .370;  // 3/8
 const double bkn = .620;  // 5/8
 const double ovc = .900;  // 7/8
-
 
 struct cloud_layer
 {
@@ -135,7 +133,7 @@ double LowestLayer(const vector<cloud_layer>& c_l, double threshold, size_t end)
 	return MissingDouble();
 }
 
-auto_taf::auto_taf() : itsStrictMode(false) { itsLogger = logger("auto_taf"); }
+auto_taf::auto_taf() { itsLogger = logger("auto_taf"); }
 void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -179,7 +177,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// find height of cb base and convert to feet
 	level HL500 = level(kHeightLayer, 500, 0);
 
-	info_t	LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
+	info_t LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
 	if (!LCL500)
 	{
 		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
@@ -204,11 +202,11 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	info_t TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
 	info_t Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
 
-        if (!TC || !Ceiling2)
-        {
-                myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
-                return;
-        }
+	if (!TC || !Ceiling2)
+	{
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
+		return;
+	}
 
 	for (auto&& tup : zip_range(cbbase, VEC(TC)))
 	{
@@ -240,15 +238,16 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		info_t N = Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), Nparam, forecastType, false);
 		info_t N_upper = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
-		info_t N_upper_upper = Fetch(forecastTime, level(kHybrid, static_cast<double>(j - 1)), Nparam, forecastType, false);
-		info_t Height = Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), param("HL-M"), forecastType, false);
+		info_t N_upper_upper =
+		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j - 1)), Nparam, forecastType, false);
+		info_t Height =
+		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), param("HL-M"), forecastType, false);
 
-        	if (!N || !N_upper || !N_upper_upper || !Height)
-        	{
-                	myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
-			to_string(j));
-                	continue;
-        	}
+		if (!N || !N_upper || !N_upper_upper || !Height)
+		{
+			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " + to_string(j));
+			continue;
+		}
 
 		for (size_t k = 0; k < grd_size; ++k)
 		{
@@ -472,7 +471,16 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	for (size_t k = 0; k < grd_size; ++k)
 	{
-		size_t n = base[k].size() - 1;
+		size_t n = base[k].size();
+
+		if (n == 0)
+		{
+			// No cloud layers for this grid point
+			continue;
+		}
+
+		n = n - 1;
+
 		if (c_l[k][3].amount > ovc || c_l[k][2].amount > ovc || c_l[k][1].amount > ovc || c_l[k][0].amount > ovc)
 		{
 			ovcbase[k] = LowestLayer(c_l[k], ovc, 4);
