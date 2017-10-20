@@ -188,7 +188,6 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		forecasts.push_back(Info);
 		findex++;
 
-		// 
 		targetInfo->Data() = Info->Data();
 
 		if (!targetInfo->NextForecastType())
