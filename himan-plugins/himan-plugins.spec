@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.19
+Version: 17.10.20
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Oct 20 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.20-1.fmi
+- auto_taf fixes
 * Thu Oct 19 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.19-1.fmi
 - Add auto_taf plugin
 * Wed Oct 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.18-1.fmi
