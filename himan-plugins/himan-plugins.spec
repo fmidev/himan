@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.20
+Version: 17.10.25
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: himan-lib >= 17.10.18
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 17.9.27
+Requires: libfmigrib >= 17.10.25
 Requires: libfmidb >= 17.9.18
 Requires: smartmet-library-newbase >= 17.9.27
 Requires: libpqxx
@@ -35,7 +35,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.9.27
+BuildRequires: libfmigrib-devel >= 17.10.25
 BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Oct 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.25-1.fmi
+- New fmigrib
 * Thu Oct 20 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.20-1.fmi
 - auto_taf fixes
 * Thu Oct 19 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.19-1.fmi
