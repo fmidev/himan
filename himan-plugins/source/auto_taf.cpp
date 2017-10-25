@@ -124,11 +124,15 @@ double RoundedBase(double base)
 }
 
 // return the height of the LowestLayer cloud layer with cloudiness above given threshold in range [0,end)
-double LowestLayer(const vector<cloud_layer>& c_l, double threshold, size_t end)
+double LowestLayer(const vector<cloud_layer>& c_l, double threshold, size_t& end)
 {
 	for (size_t i = 0; i < end; ++i)
 	{
-		if (c_l[i].amount > threshold) return c_l[i].base;
+		if (c_l[i].amount > threshold)
+		{
+			end = i;
+			return c_l[i].base;
+		}
 	}
 	return MissingDouble();
 }
@@ -472,6 +476,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	for (size_t k = 0; k < grd_size; ++k)
 	{
 		size_t n = base[k].size();
+		size_t m = 4;
 
 		if (n == 0)
 		{
@@ -479,32 +484,19 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			continue;
 		}
 
-		n = n - 1;
+		--n;
 
-		if (c_l[k][3].amount > ovc || c_l[k][2].amount > ovc || c_l[k][1].amount > ovc || c_l[k][0].amount > ovc)
-		{
-			ovcbase[k] = LowestLayer(c_l[k], ovc, 4);
-			continue;
-		}
-		if (abs(TC->Data().At(k)) > 50.0)
+		ovcbase[k] = LowestLayer(c_l[k], ovc, m);
+
+		if (abs(TC->Data().At(k)) > 50.0 && m == 4)
 		{
 			cbbase[k] = c_l[k][n].base;
 			cbN[k] = c_l[k][n].amount * 100.0;  // cloud amount in %
 		}
-		if (c_l[k][2].amount > bkn || c_l[k][1].amount > bkn || c_l[k][0].amount > bkn)
-		{
-			bknbase[k] = LowestLayer(c_l[k], bkn, 3);
-			continue;
-		}
-		if (c_l[k][1].amount > sct || c_l[k][0].amount > sct)
-		{
-			sctbase[k] = LowestLayer(c_l[k], sct, 2);
-			continue;
-		}
-		if (c_l[k][0].amount > few)
-		{
-			fewbase[k] = c_l[k][0].base;
-		}
+
+		bknbase[k] = LowestLayer(c_l[k], bkn, m=min(m,size_t(3)));
+		sctbase[k] = LowestLayer(c_l[k], sct, m=min(m,size_t(2)));
+		fewbase[k] = LowestLayer(c_l[k], few, m=min(m,size_t(1)));
 	}
 
 	myTargetInfo->ParamIndex(0);
