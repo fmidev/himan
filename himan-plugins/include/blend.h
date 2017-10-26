@@ -15,7 +15,6 @@ struct meta
 	std::string geom;
 	forecast_type type;
 	forecast_time ftime;
-	level lvl;
 };
 
 class blend : public compiled_plugin, private compiled_plugin_base

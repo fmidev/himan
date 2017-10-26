@@ -164,7 +164,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	{
 		futures.push_back(async(launch::async, [=]() {
 			auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
-			return FetchWithProperties(cnf, currentTime, currentResolution, m.lvl, currentParam, m.type, m.geom,
+			return FetchWithProperties(cnf, currentTime, currentResolution, currentLevel, currentParam, m.type, m.geom,
 			                           m.prod);
 		}));
 	}
@@ -189,6 +189,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		findex++;
 
 		targetInfo->Data() = Info->Data();
+
 		if (!targetInfo->NextForecastType())
 		{
 			log.Warning("Not enough forecast types defined for target info, breaking");
@@ -365,8 +366,6 @@ vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf)
 	{
 		const string producerName = p;
 		string geom;
-		string levelType;
-		int levelValue = -1;
 		vector<forecast_type> ftypes;
 
 		auto options = conf->GetParameterOptions(p);
@@ -427,14 +426,6 @@ vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf)
 			{
 				geom = option.second;
 			}
-			else if (option.first == "leveltype")
-			{
-				levelType = option.second;
-			}
-			else if (option.first == "level")
-			{
-				levelValue = stoi(option.second);
-			}
 			else
 			{
 				throw runtime_error(kClassName + ": invalid configuration " + option.first + " : " + option.second);
@@ -457,16 +448,14 @@ vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf)
 		const long ident = stol(producerDefinition["model_id"]);
 		const producer prod(prodId, centre, ident, name);
 
-		if (levelValue != -1 && !levelType.empty() && !geom.empty() && !ftypes.empty())
+		if (!geom.empty() && !ftypes.empty())
 		{
-			const level lvl = level(HPStringToLevelType.at(levelType), levelValue);
 			for (const auto& f : ftypes)
 			{
 				meta m;
 				m.prod = prod;
 				m.geom = geom;
 				m.type = f;
-				m.lvl = lvl;
 				metaOpts.push_back(m);
 			}
 		}

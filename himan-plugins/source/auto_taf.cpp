@@ -1,4 +1,5 @@
 #include "auto_taf.h"
+#include "fetcher.h"
 #include "forecast_time.h"
 #include "hitool.h"
 #include "info.h"
@@ -124,11 +125,15 @@ double RoundedBase(double base)
 }
 
 // return the height of the LowestLayer cloud layer with cloudiness above given threshold in range [0,end)
-double LowestLayer(const vector<cloud_layer>& c_l, double threshold, size_t end)
+double LowestLayer(const vector<cloud_layer>& c_l, double threshold, size_t& end)
 {
 	for (size_t i = 0; i < end; ++i)
 	{
-		if (c_l[i].amount > threshold) return c_l[i].base;
+		if (c_l[i].amount > threshold)
+		{
+			end = i;
+			return c_l[i].base;
+		}
 	}
 	return MissingDouble();
 }
@@ -228,8 +233,6 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	vector<vector<double>> top = vector<vector<double>>(grd_size, vector<double>());
 	vector<vector<double>> base = vector<vector<double>>(grd_size, vector<double>());
-	vector<vector<double>> sct_base = vector<vector<double>>(grd_size, vector<double>());
-	vector<vector<double>> few_base = vector<vector<double>>(grd_size, vector<double>());
 	vector<vector<double>> N_max = vector<vector<double>>(grd_size, vector<double>());
 
 	size_t max_num_cl = 4;  // maximum number of cloud layers
@@ -262,8 +265,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				{
 					if (base[k].size() > top[k].size())
 					{
-						double newbase = _Height / 0.3048;
-						top[k].push_back(newbase);
+						double newtop = _Height / 0.3048;
+						top[k].push_back(newtop);
 					}
 				}
 				else
@@ -273,27 +276,10 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 						double newbase = _Height / 0.3048;
 						base[k].push_back(newbase);
 						N_max[k].push_back(_N);
-						if (_N > sct)
-						{
-							sct_base[k].push_back(newbase);
-						}
-						else if (_N > few)
-						{
-							few_base[k].push_back(newbase);
-						}
 					}
 					else if (_N > N_max[k].back())
 					{
 						N_max[k].back() = _N;
-						double newbase = _Height / 0.3048;
-						if (_N > sct && (sct_base[k].size() < base[k].size()))
-						{
-							sct_base[k].push_back(newbase);
-						}
-						else if (_N > few && (few_base[k].size() < base[k].size()))
-						{
-							few_base[k].push_back(newbase);
-						}
 					}
 				}
 			}
@@ -316,27 +302,10 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 						double newbase = _Height / 0.3048;
 						base[k].push_back(newbase);
 						N_max[k].push_back(_N);
-						if (_N > sct)
-						{
-							sct_base[k].push_back(newbase);
-						}
-						else if (_N > few)
-						{
-							few_base[k].push_back(newbase);
-						}
 					}
 					else if (_N > N_max[k].back())
 					{
 						N_max[k].back() = _N;
-						double newbase = _Height / 0.3048;
-						if (_N > sct && (sct_base[k].size() < base[k].size()))
-						{
-							sct_base[k].push_back(newbase);
-						}
-						else if (_N > few && (sct_base[k].size() < base[k].size()))
-						{
-							few_base[k].push_back(newbase);
-						}
 					}
 				}
 				else if ((_N > cloud_treshold) && (base[k].size() > top[k].size()))
@@ -356,29 +325,15 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// gather cloud data in cloud layer struct
 	vector<vector<cloud_layer>> c_l = vector<vector<cloud_layer>>(grd_size, vector<cloud_layer>(max_num_cl));
 
-	for (auto&& tup : zip_range(c_l, N_max, sct_base, few_base, base, top))
+	for (auto&& tup : zip_range(c_l, N_max, base, top))
 	{
 		vector<cloud_layer>& _c_l = tup.get<0>();
 		vector<double>& _N_max = tup.get<1>();
-		vector<double>& _sct_base = tup.get<2>();
-		vector<double>& _few_base = tup.get<3>();
-		vector<double>& _base = tup.get<4>();
-		vector<double>& _top = tup.get<5>();
+		vector<double>& _base = tup.get<2>();
+		vector<double>& _top = tup.get<3>();
 		for (size_t j = 0; j < _base.size(); ++j)
 		{
-			if (_N_max[j] >= bkn && _sct_base.size() > j)
-			{
-				_c_l[j].base = _sct_base[j];
-			}
-			else if (_N_max[j] >= sct && _few_base.size() > j)
-			{
-				_c_l[j].base = _few_base[j];
-			}
-			else
-			{
-				_c_l[j].base = _base[j];
-			}
-
+			_c_l[j].base = _base[j];
 			_c_l[j].top = _top[j];
 			_c_l[j].amount = _N_max[j];
 		}
@@ -472,6 +427,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	for (size_t k = 0; k < grd_size; ++k)
 	{
 		size_t n = base[k].size();
+		size_t m = 4;
 
 		if (n == 0)
 		{
@@ -479,32 +435,25 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			continue;
 		}
 
-		n = n - 1;
+		--n;
 
-		if (c_l[k][3].amount > ovc || c_l[k][2].amount > ovc || c_l[k][1].amount > ovc || c_l[k][0].amount > ovc)
-		{
-			ovcbase[k] = LowestLayer(c_l[k], ovc, 4);
-			continue;
-		}
-		if (abs(TC->Data().At(k)) > 50.0)
+		ovcbase[k] = LowestLayer(c_l[k], ovc, m);
+
+		if (abs(TC->Data().At(k)) > 50.0 && m == 4)
 		{
 			cbbase[k] = c_l[k][n].base;
 			cbN[k] = c_l[k][n].amount * 100.0;  // cloud amount in %
 		}
-		if (c_l[k][2].amount > bkn || c_l[k][1].amount > bkn || c_l[k][0].amount > bkn)
-		{
-			bknbase[k] = LowestLayer(c_l[k], bkn, 3);
-			continue;
-		}
-		if (c_l[k][1].amount > sct || c_l[k][0].amount > sct)
-		{
-			sctbase[k] = LowestLayer(c_l[k], sct, 2);
-			continue;
-		}
-		if (c_l[k][0].amount > few)
-		{
-			fewbase[k] = c_l[k][0].base;
-		}
+		if (m == 0) continue;
+		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
+		if (m == 0) continue;
+		sctbase[k] = LowestLayer(c_l[k], sct, m = min(m, size_t(2)));
+		if (m == 0) continue;
+		fewbase[k] = LowestLayer(c_l[k], few, m = min(m, size_t(1)));
+
+		assert(!(fewbase[k] > sctbase[k]));
+		assert(!(sctbase[k] > bknbase[k]));
+		assert(!(bknbase[k] > ovcbase[k]));
 	}
 
 	myTargetInfo->ParamIndex(0);

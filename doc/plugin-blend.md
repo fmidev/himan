@@ -21,16 +21,14 @@ The plugin outputs an ensemble consisting of the source forecasts as perturbed m
 
 param: Specifies the parameter to be blended
 options: Specifies a list of producer specifications of the form: 
-```{ "producer" : PROD, "geom" : GEOM, "forecast_type" : FTYPE, "leveltype" : LTYPE, "level" : L }```
+```{ "producer" : PROD, "geom" : GEOM, "forecast_type" : FTYPE }```
 
 Full plugin configuration example:
 ```
 "plugins" : [ { "name" : "blend", "param" : "T-K",
 		"options" : [
-			{ "producer" : "HL2", "geom" : "RCR068", "forecast_type" : "deterministic",
-			  "leveltype" : "height", "level" : 0 },
-			{ "producer" : "MEPS", "geom" : "MEPSNOFMI2500", "forecast_type" : "cf",
-			  "leveltype" : "height", "level" : 0 } ]
+			{ "producer" : "HL2", "geom" : "RCR068", "forecast_type" : "deterministic" },
+			{ "producer" : "MEPS", "geom" : "MEPSNOFMI2500", "forecast_type" : "cf" } ]
 		} ]
 ```
 
