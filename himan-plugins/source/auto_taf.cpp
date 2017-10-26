@@ -182,7 +182,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// find height of cb base and convert to feet
 	level HL500 = level(kHeightLayer, 500, 0);
 
-	info_t	LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
+	info_t LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
 	if (!LCL500)
 	{
 		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
@@ -207,11 +207,11 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	info_t TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
 	info_t Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
 
-        if (!TC || !Ceiling2)
-        {
-                myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
-                return;
-        }
+	if (!TC || !Ceiling2)
+	{
+		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
+		return;
+	}
 
 	for (auto&& tup : zip_range(cbbase, VEC(TC)))
 	{
@@ -233,8 +233,6 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	vector<vector<double>> top = vector<vector<double>>(grd_size, vector<double>());
 	vector<vector<double>> base = vector<vector<double>>(grd_size, vector<double>());
-	vector<vector<double>> sct_base = vector<vector<double>>(grd_size, vector<double>());
-	vector<vector<double>> few_base = vector<vector<double>>(grd_size, vector<double>());
 	vector<vector<double>> N_max = vector<vector<double>>(grd_size, vector<double>());
 
 	size_t max_num_cl = 4;  // maximum number of cloud layers
@@ -243,15 +241,16 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		info_t N = Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), Nparam, forecastType, false);
 		info_t N_upper = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
-		info_t N_upper_upper = Fetch(forecastTime, level(kHybrid, static_cast<double>(j - 1)), Nparam, forecastType, false);
-		info_t Height = Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), param("HL-M"), forecastType, false);
+		info_t N_upper_upper =
+		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j - 1)), Nparam, forecastType, false);
+		info_t Height =
+		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), param("HL-M"), forecastType, false);
 
-        	if (!N || !N_upper || !N_upper_upper || !Height)
-        	{
-                	myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
-			to_string(j));
-                	continue;
-        	}
+		if (!N || !N_upper || !N_upper_upper || !Height)
+		{
+			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " + to_string(j));
+			continue;
+		}
 
 		for (size_t k = 0; k < grd_size; ++k)
 		{
@@ -266,8 +265,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				{
 					if (base[k].size() > top[k].size())
 					{
-						double newbase = _Height / 0.3048;
-						top[k].push_back(newbase);
+						double newtop = _Height / 0.3048;
+						top[k].push_back(newtop);
 					}
 				}
 				else
@@ -277,27 +276,10 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 						double newbase = _Height / 0.3048;
 						base[k].push_back(newbase);
 						N_max[k].push_back(_N);
-						if (_N > sct)
-						{
-							sct_base[k].push_back(newbase);
-						}
-						else if (_N > few)
-						{
-							few_base[k].push_back(newbase);
-						}
 					}
 					else if (_N > N_max[k].back())
 					{
 						N_max[k].back() = _N;
-						double newbase = _Height / 0.3048;
-						if (_N > sct && (sct_base[k].size() < base[k].size()))
-						{
-							sct_base[k].push_back(newbase);
-						}
-						else if (_N > few && (few_base[k].size() < base[k].size()))
-						{
-							few_base[k].push_back(newbase);
-						}
 					}
 				}
 			}
@@ -320,27 +302,10 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 						double newbase = _Height / 0.3048;
 						base[k].push_back(newbase);
 						N_max[k].push_back(_N);
-						if (_N > sct)
-						{
-							sct_base[k].push_back(newbase);
-						}
-						else if (_N > few)
-						{
-							few_base[k].push_back(newbase);
-						}
 					}
 					else if (_N > N_max[k].back())
 					{
 						N_max[k].back() = _N;
-						double newbase = _Height / 0.3048;
-						if (_N > sct && (sct_base[k].size() < base[k].size()))
-						{
-							sct_base[k].push_back(newbase);
-						}
-						else if (_N > few && (sct_base[k].size() < base[k].size()))
-						{
-							few_base[k].push_back(newbase);
-						}
 					}
 				}
 				else if ((_N > cloud_treshold) && (base[k].size() > top[k].size()))
@@ -360,29 +325,15 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// gather cloud data in cloud layer struct
 	vector<vector<cloud_layer>> c_l = vector<vector<cloud_layer>>(grd_size, vector<cloud_layer>(max_num_cl));
 
-	for (auto&& tup : zip_range(c_l, N_max, sct_base, few_base, base, top))
+	for (auto&& tup : zip_range(c_l, N_max, base, top))
 	{
 		vector<cloud_layer>& _c_l = tup.get<0>();
 		vector<double>& _N_max = tup.get<1>();
-		vector<double>& _sct_base = tup.get<2>();
-		vector<double>& _few_base = tup.get<3>();
-		vector<double>& _base = tup.get<4>();
-		vector<double>& _top = tup.get<5>();
+		vector<double>& _base = tup.get<2>();
+		vector<double>& _top = tup.get<3>();
 		for (size_t j = 0; j < _base.size(); ++j)
 		{
-			if (_N_max[j] >= bkn && _sct_base.size() > j)
-			{
-				_c_l[j].base = _sct_base[j];
-			}
-			else if (_N_max[j] >= sct && _few_base.size() > j)
-			{
-				_c_l[j].base = _few_base[j];
-			}
-			else
-			{
-				_c_l[j].base = _base[j];
-			}
-
+			_c_l[j].base = _base[j];
 			_c_l[j].top = _top[j];
 			_c_l[j].amount = _N_max[j];
 		}
@@ -493,10 +444,16 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			cbbase[k] = c_l[k][n].base;
 			cbN[k] = c_l[k][n].amount * 100.0;  // cloud amount in %
 		}
+		if (m == 0) continue;
+		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
+		if (m == 0) continue;
+		sctbase[k] = LowestLayer(c_l[k], sct, m = min(m, size_t(2)));
+		if (m == 0) continue;
+		fewbase[k] = LowestLayer(c_l[k], few, m = min(m, size_t(1)));
 
-		bknbase[k] = LowestLayer(c_l[k], bkn, m=min(m,size_t(3)));
-		sctbase[k] = LowestLayer(c_l[k], sct, m=min(m,size_t(2)));
-		fewbase[k] = LowestLayer(c_l[k], few, m=min(m,size_t(1)));
+		assert(!(fewbase[k] > sctbase[k]));
+		assert(!(sctbase[k] > bknbase[k]));
+		assert(!(bknbase[k] > ovcbase[k]));
 	}
 
 	myTargetInfo->ParamIndex(0);
