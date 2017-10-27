@@ -8,25 +8,34 @@
 using namespace himan;
 
 aggregation::aggregation()
-    : itsType(kUnknownAggregationType), itsTimeResolution(kUnknownTimeResolution), itsTimeResolutionValue(kHPMissingInt)
+    : itsType(kUnknownAggregationType),
+      itsTimeResolution(kUnknownTimeResolution),
+      itsTimeResolutionValue(kHPMissingInt),
+      itsFirstTimeValue(kHPMissingInt)
 {
 }
 
-aggregation::aggregation(HPAggregationType theType, HPTimeResolution theTimeResolution, int theTimeResolutionValue)
-    : itsType(theType), itsTimeResolution(theTimeResolution), itsTimeResolutionValue(theTimeResolutionValue)
+aggregation::aggregation(HPAggregationType theType, HPTimeResolution theTimeResolution, int theTimeResolutionValue,
+                         int theFirstTimeValue)
+    : itsType(theType),
+      itsTimeResolution(theTimeResolution),
+      itsTimeResolutionValue(theTimeResolutionValue),
+      itsFirstTimeValue(theFirstTimeValue)
 {
 }
 
 aggregation::aggregation(const aggregation& other)
     : itsType(other.itsType),
       itsTimeResolution(other.itsTimeResolution),
-      itsTimeResolutionValue(other.itsTimeResolutionValue)
+      itsTimeResolutionValue(other.itsTimeResolutionValue),
+      itsFirstTimeValue(other.itsFirstTimeValue)
 {
 }
 
 aggregation& aggregation::operator=(const aggregation& other)
 {
 	itsTimeResolutionValue = other.itsTimeResolutionValue;
+	itsFirstTimeValue = other.itsFirstTimeValue;
 	itsTimeResolution = other.itsTimeResolution;
 	itsType = other.itsType;
 
@@ -50,6 +59,11 @@ bool aggregation::operator==(const aggregation& other) const
 		return false;
 	}
 
+	if (itsFirstTimeValue != other.itsFirstTimeValue)
+	{
+		return false;
+	}
+
 	if (itsTimeResolutionValue != other.itsTimeResolutionValue)
 	{
 		return false;
@@ -65,6 +79,8 @@ HPTimeResolution aggregation::TimeResolution() const { return itsTimeResolution;
 void aggregation::TimeResolution(HPTimeResolution theTimeResolution) { itsTimeResolution = theTimeResolution; }
 int aggregation::TimeResolutionValue() const { return itsTimeResolutionValue; }
 void aggregation::TimeResolutionValue(int theTimeResolutionValue) { itsTimeResolutionValue = theTimeResolutionValue; }
+void aggregation::FirstTimeValue(int theFirstTimeValue) { itsFirstTimeValue = theFirstTimeValue; }
+int aggregation::FirstTimeValue() const { return itsFirstTimeValue; }
 std::ostream& aggregation::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
@@ -73,6 +89,7 @@ std::ostream& aggregation::Write(std::ostream& file) const
 	file << "__itsTimeResolution__ " << itsTimeResolution << " (" << HPTimeResolutionToString.at(itsTimeResolution)
 	     << ")" << std::endl;
 	file << "__itsTimeResolutionValue__ " << itsTimeResolutionValue << std::endl;
+	file << "__itsFirstTimeValue__ " << itsFirstTimeValue << std::endl;
 
 	return file;
 }

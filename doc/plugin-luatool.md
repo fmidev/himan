@@ -93,7 +93,7 @@ HPGridType
 
 ## aggregation
 
-aggregation is a parameter component, defining for example that it is a cumulative
+aggregation is a parameter component, defining for example that it is an accumulation.
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
@@ -104,6 +104,8 @@ aggregation is a parameter component, defining for example that it is a cumulati
 |   | SetTimeResolution | HPTimeResolution  | Set time resolution type |
 | number | GetTimeResolution | | Returns time resolution value |
 |   | SetTimeResolution | number  | Set time resolution value |
+| number | GetFirstTimeValue | | Returns the starting time (leadtime) of the aggregation |
+|   | SetTimeResolution | number  | Sets the starting time (leadtime) of the aggregation |
 
 ## forecast_time
 
