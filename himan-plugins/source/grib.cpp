@@ -1120,6 +1120,10 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 				a.Type(kAverage);
 				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
 				break;
+			case 4: // accumulation
+				a.Type(kAccumulation);
+				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
+				break;
 		}
 
 		if (a.TimeResolutionValue() != kHPMissingInt)
