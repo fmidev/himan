@@ -4,6 +4,7 @@
 #include "numerical_functions.h"
 #include <thrust/sort.h>
 
+#include "himan_common.h"
 #include "stereographic_grid.h"
 
 // these functions are defined in lambert_conformal_grid.cpp
@@ -47,19 +48,87 @@ __global__ void Swap(double* __restrict__ arr, size_t ni, size_t nj)
 	}
 }
 
-void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, ::point* grid)
+// Cache for grid points calculated by CreateGrid.
+// In some cases this can save us a considerable amount of time (from 2300ms to 30ms).
+struct cached_grid
 {
+	std::string source;
+	std::string target;
+	std::vector<point> points;
+
+	__host__ cached_grid(const std::string& source, const std::string& target)
+	    : source(source), target(target), points()
+	{
+	}
+	__host__ cached_grid(const std::string& source, const std::string& target, const std::vector<point>& pts)
+	    : source(source), target(target), points(pts)
+	{
+	}
+
+	__host__ cached_grid(const cached_grid& other) : source(other.source), target(other.target), points(other.points) {}
+	__host__ cached_grid& operator=(const cached_grid& other)
+	{
+		source = other.source;
+		target = other.target;
+		points = other.points;
+		return *this;
+	}
+};
+
+__host__ inline bool operator==(const cached_grid& a, const cached_grid& b)
+{
+	return (a.source == b.source) && (a.target == b.target);
+}
+
+typedef std::lock_guard<std::mutex> lock_guard;
+
+static std::vector<cached_grid> s_cachedGrids;
+static std::mutex s_cachedGridMutex;
+
+// This results in (for example): 'lcc_889_949', 'rll_1030_816'.
+// Should be enough for uniquely determining a grid during one run.
+static __host__ std::string CacheEntryName(const himan::info& Info)
+{
+	std::stringstream ss;
+	ss << himan::HPGridTypeToString.at(Info.Grid()->Type()) << "_" << Info.Grid()->Ni() << "_" << Info.Grid()->Nj();
+	return ss.str();
+}
+
+void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<point>& grid)
+{
+	int i = 0;
 	targetInfo.ResetLocation();
 
-	int i = 0;
+	const std::string sourceName = CacheEntryName(sourceInfo);
+	const std::string targetName = CacheEntryName(targetInfo);
 
-	while (targetInfo.NextLocation())
+	std::vector<cached_grid>::iterator entry;
+	std::vector<cached_grid>::iterator end;
 	{
-		himan::point gp = sourceInfo.Grid()->XY(targetInfo.LatLon());
+		lock_guard lock(s_cachedGridMutex);
+		end = s_cachedGrids.end();
+		entry = std::find(s_cachedGrids.begin(), s_cachedGrids.end(), cached_grid(sourceName, targetName));
+	}
 
-		grid[i].x = gp.X();
-		grid[i].y = gp.Y();
-		i++;
+	if (entry != end)
+	{
+		std::copy(entry->points.begin(), entry->points.end(), grid.begin());
+	}
+	else
+	{
+		while (targetInfo.NextLocation())
+		{
+			himan::point gp = sourceInfo.Grid()->XY(targetInfo.LatLon());
+
+			grid[i].x = gp.X();
+			grid[i].y = gp.Y();
+			i++;
+		}
+
+		{
+			lock_guard lock(s_cachedGridMutex);
+			s_cachedGrids.push_back(cached_grid(sourceName, targetName, grid));
+		}
 	}
 }
 
@@ -446,15 +515,13 @@ bool InterpolateAreaGPU(himan::info& base, himan::info& source, himan::matrix<do
 	// Determine all grid point coordinates that need to be interpolated.
 	const size_t N = base.SizeLocations();
 
-	point* grid_ = 0;
+	std::vector<point> grid_(N);
 	point* d_grid = 0;
-
-	CUDA_CHECK(cudaMallocHost((void**)&grid_, N * sizeof(::point)));
 
 	CreateGrid(source, base, grid_);
 
 	CUDA_CHECK(cudaMalloc((void**)&d_grid, sizeof(::point) * N));
-	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid_, sizeof(::point) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid_.data(), sizeof(::point) * N, cudaMemcpyHostToDevice, stream));
 
 	double* d_source = 0;
 	double* d_target = 0;
@@ -478,9 +545,7 @@ bool InterpolateAreaGPU(himan::info& base, himan::info& source, himan::matrix<do
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	CUDA_CHECK(cudaFreeHost(grid_));
 	himan::ReleaseInfo(sourceInfo);
-
 	himan::ReleaseInfo(targetInfo, d_target, stream);
 
 	CUDA_CHECK(cudaFree(d_source));
