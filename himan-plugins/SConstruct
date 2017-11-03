@@ -103,7 +103,6 @@ if RELEASE:
 elif DEBUG:
 	library_paths.append(workspace + '/himan-lib/build/debug')
 
-library_paths.append(workspace + '/fmidb/lib')
 library_paths.append('/usr/lib64')
 
 env.Append(LIBPATH = library_paths)
