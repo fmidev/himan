@@ -479,6 +479,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			// nearest cloud layer is lowest cloud layer
 			else if(nearest_cl == c_l[k].begin())
 			{
+				//pass
 			}
 			// select closest of layers above and below cbbase
 			else if (nearest_cl->base - cbbase[k] < cbbase[k] - (--nearest_cl)->base)
@@ -486,12 +487,9 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				++nearest_cl;
 			}
 
-			if(nearest_cl == c_l[k].begin() && cbbase[k] - nearest_cl->base > 500.0 && nearest_cl->base < 5000.)
+			if(nearest_cl == c_l[k].begin() && cbbase[k] - nearest_cl->base > 500.0)
 			{
-				if(nearest_cl->amount >= ovc)
-				{
-					nearest_cl->amount = bkn;
-				}
+				//pass
 			}
 			else if(nearest_cl->base < 5000.)
 			{
