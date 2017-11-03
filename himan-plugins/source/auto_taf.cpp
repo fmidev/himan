@@ -23,7 +23,7 @@ const double ovc = .900;  // 7/8
 struct cloud_layer
 {
 	cloud_layer() : base(MissingDouble()), amount(MissingDouble()), top(MissingDouble()){};
-	~cloud_layer() = default;
+	cloud_layer(double base, double amount, double top) : base(base), amount(amount), top(top){};	
 
 	double base;
 	double amount;
@@ -468,8 +468,37 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		if (abs(TC->Data().At(k)) > 50.0 && m == 4)
 		{
-			cbbase[k] = c_l[k][n].base;
-			cbN[k] = c_l[k][n].amount * 100.0;  // cloud amount in %
+			// find nearest cloud layer above or equal cbbase
+			auto nearest_cl = lower_bound(c_l[k].begin(), c_l[k].end(),cloud_layer(cbbase[k],MissingDouble(),MissingDouble()),[](const cloud_layer &a, const cloud_layer &b){return a.base < b.base;});
+
+			// no cloud layers above initial cbbase, use highest cloud layer
+			if(nearest_cl == c_l[k].end())
+			{
+				cbbase[k] = (--nearest_cl)->base;
+			}
+			// nearest cloud layer is lowest cloud layer
+			else if(nearest_cl == c_l[k].begin())
+			{
+			}
+			// select closest of layers above and below cbbase
+			else if (nearest_cl->base - cbbase[k] < cbbase[k] - (--nearest_cl)->base)
+			{
+				++nearest_cl;
+			}
+
+			if(nearest_cl == c_l[k].begin() && cbbase[k] - nearest_cl->base > 500.0 && nearest_cl->base < 5000.)
+			{
+				if(nearest_cl->amount >= ovc)
+				{
+					nearest_cl->amount = bkn;
+				}
+			}
+			else if(nearest_cl->base < 5000.)
+			{
+				cbbase[k] = nearest_cl->base;
+			}
+
+			cbN[k] = nearest_cl->amount * 100.0;  // cloud amount in %
 			continue;
 		}
 		if (m == 0) continue;
