@@ -358,20 +358,12 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		{
 			if (c_l[k][j].base < Ceiling2->Data().At(k) && c_l[k][j].amount >= bkn)
 			{
-				if (j == base[k].size() - 1)
-				{
-					c_l[k][j].base = Ceiling2->Data().At(k);
-				}
-				else if (c_l[k][j + 1].base > Ceiling2->Data().At(k))
+				if (c_l[k][j].top > Ceiling2->Data().At(k))
 				{
 					c_l[k][j].base = Ceiling2->Data().At(k);
 				}
 				else
 				{
-					if (c_l[k][j].amount > c_l[k][j + 1].amount)
-					{
-						c_l[k][j + 1].amount = c_l[k][j].amount;
-					}
 					c_l[k][j].amount = sct;
 				}
 			}
@@ -381,38 +373,73 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// cut off odd cloud layers
 	for (size_t k = 0; k < grd_size; ++k)
 	{
-		if (base[k].size() < 3) continue;
-		for (size_t j = 0; j < base[k].size() - 2; ++j)
+		if (base[k].size() == 0) continue;
+
+		// is there a cload layer in height class
+		vector<bool> height_class(4,false);
+		vector<double> height_bounds = {200.0, 500.0, 1000.0, 1400.0};
+		vector<size_t> layers_to_remove;
+
+		for (size_t j = 0; j < base[k].size(); ++j)
 		{
-			if (CBLayer(TC->Data().At(k), base[k], c_l[k], cbbase[k], j) ==
-			    CBLayer(TC->Data().At(k), base[k], c_l[k], cbbase[k], j + 1))
+			// low cloud height class <200ft
+			if(height_class[0] && c_l[k][j].base < height_bounds[0])
 			{
-				if (c_l[k][j].base >= 1500.0 && (CLClass(c_l[k][j + 1].amount) > CLClass(c_l[k][j].amount)))
-				{
-					if (RoundedBase(c_l[k][j + 1].base) - RoundedBase(c_l[k][j].base) < 6.0)
-					{
-						c_l[k][j].amount = 0.0;
-					}
-				}
-				else if (c_l[k][j].base >= 1500.0)
-				{
-					if (RoundedBase(c_l[k][j + 1].base) - RoundedBase(c_l[k][j].base) < 6.0)
-					{
-						c_l[k][j + 1].amount = 0.0;
-					}
-				}
-				else if (CHClass(c_l[k][j].base) == CHClass(c_l[k][j + 1].base))
-				{
-					if (CLClass(c_l[k][j + 1].amount) > CLClass(c_l[k][j].amount))
-					{
-						c_l[k][j].amount = 0.0;
-					}
-					else
-					{
-						c_l[k][j + 1].amount = 0.0;
-					}
-				}
+				height_class[0] = true;
+				continue;
 			}
+			else if (c_l[k][j].base < height_bounds[0])
+			{
+				layers_to_remove.push_back(j);
+				continue;
+			}
+
+			// low cloud height class 200ft-500ft
+			if(height_class[1] && c_l[k][j].base < height_bounds[1] && c_l[k][j].base >= height_bounds[0])
+			{
+				height_class[1] = true;
+				continue;
+			}
+			else if(c_l[k][j].base < height_bounds[1] && c_l[k][j].base >= height_bounds[0])
+			{
+				layers_to_remove.push_back(j);
+				continue;
+			}
+
+                        // low cloud height class 500ft-1000ft
+                        if(height_class[2] && c_l[k][j].base < height_bounds[2] && c_l[k][j].base >= height_bounds[1])
+                        {
+                                height_class[2] = true;
+                                continue;
+                        }
+                        else if(c_l[k][j].base < height_bounds[2] && c_l[k][j].base >= height_bounds[1])
+                        {
+                                layers_to_remove.push_back(j);
+                                continue;
+                        }
+
+                        // low cloud height class 1000ft-1500ft
+                        if(height_class[3] && c_l[k][j].base < height_bounds[3] && c_l[k][j].base >= height_bounds[2])
+                        {
+                                height_class[1] = true;
+                                continue;
+                        }
+                        else if(c_l[k][j].base < height_bounds[3] && c_l[k][j].base >= height_bounds[2])
+                        {
+                                layers_to_remove.push_back(j);
+                                continue;
+                        }
+
+			// heights above 1500ft
+			if(j != 0 && RoundedBase(c_l[k][j].base) - RoundedBase(c_l[k][j-1].base) < 500.0)
+			{
+				layers_to_remove.push_back(j);
+			}
+		}
+		while(layers_to_remove.size()>0)
+		{
+			c_l[k].erase(c_l[k].begin() + layers_to_remove.back());
+			layers_to_remove.pop_back();
 		}
 	}
 
