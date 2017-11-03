@@ -470,6 +470,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		{
 			cbbase[k] = c_l[k][n].base;
 			cbN[k] = c_l[k][n].amount * 100.0;  // cloud amount in %
+			continue;
 		}
 		if (m == 0) continue;
 		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
