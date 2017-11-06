@@ -10,7 +10,6 @@ namespace himan
 {
 namespace plugin
 {
-
 enum class comparison_op
 {
 	GTEQ,
@@ -53,7 +52,7 @@ class probability : public compiled_plugin, private compiled_plugin_base
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
    private:
-	virtual void Calculate(uint16_t threadIndex, const param_configuration& pc);
+	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
 	int itsEnsembleSize;
 	int itsMaximumMissingForecasts;

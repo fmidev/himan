@@ -282,8 +282,6 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 				if (it == pc.stationThreshold.end())
 				{
-					itsLogger.Trace("Fetching threshold for param " + pc.output.Name() + ", station " +
-					                std::to_string(st.Id()) + " from radon");
 					double limit = r->RadonDB().GetProbabilityLimitForStation(st.Id(), pc.output.Name());
 
 					if (IsMissing(limit))
@@ -293,44 +291,16 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 						himan::Abort();
 					}
 
+					itsLogger.Trace("Threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) +
+					                " is " + std::to_string(limit));
+
 					pc.stationThreshold[st.Id()] = limit;
 				}
 			}
 		}
 	}
 
-	// NOTE
-	// NOTE We circumvent the usual Himan Start => Run => RunAll / RunTimeDimension - control flow structure
-	// NOTE
-
-	//
-	// 3. Process parameters in LIFO order by spawning threads for each parameter.
-	//	  (We don't divide timesteps between threads)
-	//
-	boost::thread_group g;
-	auto paramConfigurations = itsParamConfigurations;
-
-	// Set iterators at this stage to avoid invalid indexing when loading from auxiliary files
-	itsInfo->First();
-
-	int threadIdx = 0;
-
-	for (const auto& pc : paramConfigurations)
-	{
-		g.add_thread(new boost::thread(&himan::plugin::probability::Calculate, this, threadIdx, boost::ref(pc)));
-
-		if (threadIdx == itsThreadCount)
-		{
-			g.join_all();
-			threadIdx = 0;
-		}
-
-		threadIdx++;
-	}
-
-	g.join_all();
-
-	Finish();
+	Start();
 }
 
 static void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex,
@@ -345,57 +315,51 @@ static void CalculateWind(const logger& log, std::shared_ptr<info> targetInfo, u
                           const param_configuration& paramConf, int infoIndex, bool normalized,
                           std::unique_ptr<ensemble>& ens1, std::unique_ptr<ensemble>& ens2);
 
-void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
+void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
-	info myTargetInfo = *itsInfo;
-
 	auto threadedLogger = logger("probabilityThread # " + std::to_string(threadIndex));
 	const std::string deviceType = "CPU";
 
-	const double threshold = pc.gridThreshold;
-	const int infoIndex = pc.targetInfoIndex;
-	const int ensembleSize = itsEnsembleSize;
-	const bool normalized = itsUseNormalizedResult;
-
-	myTargetInfo.First();
-
-	std::unique_ptr<ensemble> ens1;
-	std::unique_ptr<ensemble> ens2;  // used with wind calculation
-
-	if (itsUseLaggedEnsemble)
+	for (const auto& pc : itsParamConfigurations)
 	{
-		threadedLogger.Info("Using lagged ensemble for ensemble #1");
-		ens1 = std::unique_ptr<ensemble>(
-		    new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
-	}
-	else
-	{
-		ens1 = std::unique_ptr<ensemble>(new ensemble(pc.parameter, ensembleSize));
-	}
-	ens1->MaximumMissingForecasts(itsMaximumMissingForecasts);
+		const int infoIndex = pc.targetInfoIndex;
+		const int ensembleSize = itsEnsembleSize;
+		const bool normalized = itsUseNormalizedResult;
 
-	if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
-	{
-		// Wind
+		std::unique_ptr<ensemble> ens1;
+		std::unique_ptr<ensemble> ens2;  // used with wind calculation
+
 		if (itsUseLaggedEnsemble)
 		{
-			threadedLogger.Info("Using lagged ensemble for ensemble #2");
-			ens2 = std::unique_ptr<ensemble>(
-			    new lagged_ensemble(pc.parameter2, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+			threadedLogger.Info("Using lagged ensemble for ensemble #1");
+			ens1 = std::unique_ptr<ensemble>(
+			    new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 		}
 		else
 		{
-			ens2 = std::unique_ptr<ensemble>(new ensemble(pc.parameter2, ensembleSize));
+			ens1 = std::unique_ptr<ensemble>(new ensemble(pc.parameter, ensembleSize));
 		}
-		ens2->MaximumMissingForecasts(itsMaximumMissingForecasts);
-	}
 
-	// NOTE we only loop through the time steps here
-	do
-	{
+		ens1->MaximumMissingForecasts(itsMaximumMissingForecasts);
+
+		if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
+		{
+			// Wind
+			if (itsUseLaggedEnsemble)
+			{
+				threadedLogger.Info("Using lagged ensemble for ensemble #2");
+				ens2 = std::unique_ptr<ensemble>(
+				    new lagged_ensemble(pc.parameter2, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+			}
+			else
+			{
+				ens2 = std::unique_ptr<ensemble>(new ensemble(pc.parameter2, ensembleSize));
+			}
+			ens2->MaximumMissingForecasts(itsMaximumMissingForecasts);
+		}
+
 		threadedLogger.Info("Calculating " + pc.output.Name() + " time " +
-		                    static_cast<std::string>(myTargetInfo.Time().ValidDateTime()) + " threshold '" +
-		                    std::to_string(threshold) + "' infoIndex " + std::to_string(infoIndex));
+		                    static_cast<std::string>(myTargetInfo->Time().ValidDateTime()));
 
 		//
 		// Setup input data, data fetching
@@ -403,11 +367,11 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 
 		try
 		{
-			ens1->Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
+			ens1->Fetch(itsConfiguration, myTargetInfo->Time(), myTargetInfo->Level());
 
 			if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 			{
-				ens2->Fetch(itsConfiguration, myTargetInfo.Time(), myTargetInfo.Level());
+				ens2->Fetch(itsConfiguration, myTargetInfo->Time(), myTargetInfo->Level());
 			}
 		}
 		catch (const HPExceptionType& e)
@@ -423,12 +387,7 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 			}
 		}
 
-		// Output memory
-		if (itsConfiguration->UseDynamicMemoryAllocation())
-		{
-			AllocateMemory(myTargetInfo);
-		}
-		ASSERT(myTargetInfo.Data().Size() > 0);
+		ASSERT(myTargetInfo->Data().Size() > 0);
 
 		//
 		// Choose the correct calculation function for this parameter and do the actual calculation
@@ -437,31 +396,20 @@ void probability::Calculate(uint16_t threadIndex, const param_configuration& pc)
 		//
 		if (pc.parameter.Name() == "U-MS" || pc.parameter.Name() == "V-MS")
 		{
-			CalculateWind(threadedLogger, std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized,
-			              ens1, ens2);
+			CalculateWind(threadedLogger, myTargetInfo, threadIndex, pc, infoIndex, normalized, ens1, ens2);
 		}
 		else if (pc.comparison == comparison_op::LTEQ)
 		{
-			CalculateNegative(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized, ens1);
+			CalculateNegative(myTargetInfo, threadIndex, pc, infoIndex, normalized, ens1);
 		}
 		else
 		{
-			CalculateNormal(std::make_shared<info>(myTargetInfo), threadIndex, pc, infoIndex, normalized, ens1);
+			CalculateNormal(myTargetInfo, threadIndex, pc, infoIndex, normalized, ens1);
 		}
+	}
 
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo.Data().MissingCount());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo.Data().Size());
-		}
-
-		// Finally write this parameter out
-		WriteToFile(myTargetInfo, pc.targetInfoIndex);
-
-	} while (myTargetInfo.NextTime());
-
-	threadedLogger.Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo.Data().MissingCount()) +
-	                    "/" + std::to_string(myTargetInfo.Data().Size()));
+	threadedLogger.Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo->Data().MissingCount()) +
+	                    "/" + std::to_string(myTargetInfo->Data().Size()));
 }
 
 // Usually himan writes all the parameters out on a call to WriteToFile, but probability calculates
