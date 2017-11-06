@@ -43,69 +43,6 @@ void CloudMin(double& base1, double& top1)
 	}
 }
 
-bool CBLayer(const double& TC, const vector<double>& base, const vector<cloud_layer>& c_l, const double& cbbase,
-             size_t i)
-{
-	if (TC > -50.0 && TC < 50.0)
-		return false;
-	else if (base.size() == 1)
-		return true;
-	else if (i == 0 && (abs(c_l.at(i).base - cbbase) <= abs(c_l.at(i + 1).base - cbbase)))
-		return true;
-	else if (i == 0)
-		return false;
-	else if (i == (base.size() - 1) && (abs(c_l.at(i).base - cbbase) < abs(c_l.at(i - 1).base - cbbase)))
-		return true;
-	else if (i == (base.size() - 1))
-		return false;
-	else if (abs(c_l.at(i).base - cbbase) > abs(c_l.at(i + 1).base - cbbase))
-		return false;
-	else if (abs(c_l.at(i).base - cbbase) >= abs(c_l.at(i - 1).base - cbbase))
-		return false;
-	else
-		return true;
-}
-
-int CHClass(double base)
-{
-	int chval = 5;
-	if (base < 200.0)
-	{
-		chval = 1;
-	}
-	else if (base < 500.0)
-	{
-		chval = 2;
-	}
-	else if (base < 1000.0)
-	{
-		chval = 3;
-	}
-	else if (base < 1500.0)
-	{
-		chval = 4;
-	}
-	return chval;
-}
-
-int CLClass(double amount)
-{
-	int clval = 8;
-	if (amount < sct)
-	{
-		clval = 1;
-	}
-	else if (amount < bkn)
-	{
-		clval = 3;
-	}
-	else if (amount < ovc)
-	{
-		clval = 6;
-	}
-	return clval;
-}
-
 double RoundedBase(double base)
 {
 	double rbase;
@@ -464,9 +401,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		--n;
 
-		ovcbase[k] = LowestLayer(c_l[k], ovc, m);
-
-		if (abs(TC->Data().At(k)) > 50.0 && m == 4)
+		if (abs(TC->Data().At(k)) > 50.0)
 		{
 			// find nearest cloud layer above or equal cbbase
 			auto nearest_cl = lower_bound(c_l[k].begin(), c_l[k].end(),cloud_layer(cbbase[k],MissingDouble(),MissingDouble()),[](const cloud_layer &a, const cloud_layer &b){return a.base < b.base;});
@@ -489,16 +424,31 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 			if(nearest_cl == c_l[k].begin() && cbbase[k] - nearest_cl->base > 500.0)
 			{
-				//pass
+				// create cblayer as new cloud layer
+				c_l[k].insert(nearest_cl+1,cloud_layer(cbbase[k],nearest_cl->amount,MissingDouble()));
+				if(nearest_cl->amount >= ovc)
+				{
+					cbN[k] = nearest_cl->amount * 100.0;
+					nearest_cl->amount = bkn;
+					m=1;
+				}
+				else
+				{
+					cbN[k] = (nearest_cl)->amount * 100.0;
+					m=5;
+				}
 			}
 			else if(nearest_cl->base < 5000.)
 			{
 				cbbase[k] = nearest_cl->base;
 			}
-
-			cbN[k] = nearest_cl->amount * 100.0;  // cloud amount in %
-			continue;
+			else
+			{
+				cbN[k] = nearest_cl->amount * 100.0;  // cloud amount in %
+			}
 		}
+
+                ovcbase[k] = LowestLayer(c_l[k], ovc, m);
 		if (m == 0) continue;
 		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
 		if (m == 0) continue;
@@ -506,9 +456,21 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		if (m == 0) continue;
 		fewbase[k] = LowestLayer(c_l[k], few, m = min(m, size_t(1)));
 
+		if(cbbase[k] > ovcbase[k]) cbbase[k] = MissingDouble();
+		if(ovcbase[k] == cbbase[k]) ovcbase[k] = MissingDouble();
+		if(bknbase[k] >= cbbase[k]) bknbase[k] = MissingDouble();
+		if(sctbase[k] >= cbbase[k]) sctbase[k] = MissingDouble();		
+		if(fewbase[k] >= cbbase[k]) fewbase[k] = MissingDouble();
+
+
+		// Check against illegal outcomes for TAF
 		assert(!(fewbase[k] > sctbase[k]));
 		assert(!(sctbase[k] > bknbase[k]));
 		assert(!(bknbase[k] > ovcbase[k]));
+		assert(!(cbbase[k] >= ovcbase[k]));
+		assert(!(bknbase[k] >= cbbase[k]));
+		assert(!(sctbase[k] >= cbbase[k]));
+		assert(!(fewbase[k] >= cbbase[k]));
 	}
 
 	myTargetInfo->ParamIndex(0);
