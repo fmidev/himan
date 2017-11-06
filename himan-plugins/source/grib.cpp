@@ -634,6 +634,18 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	if (static_cast<int>(anInfo.ForecastType().Type()) > 2)
 	{
 		itsGrib->Message().ForecastTypeValue(static_cast<long>(anInfo.ForecastType().Value()));
+		auto r = GET_PLUGIN(radon);
+
+		try
+		{
+			const long ensembleSize = stol(r->RadonDB().GetProducerMetaData(anInfo.Producer().Id(), "ensemble size"));
+			itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", ensembleSize);
+		}
+		catch (const invalid_argument& e)
+		{
+			itsLogger.Warning("Unable to get valid ensemble size information from radon for producer " +
+			                  to_string(anInfo.Producer().Id()));
+		}
 	}
 
 	// Parameter
@@ -1106,6 +1118,10 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 			case 3:  // average
 				a.Type(kAverage);
+				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
+				break;
+			case 4: // accumulation
+				a.Type(kAccumulation);
 				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
 				break;
 		}
