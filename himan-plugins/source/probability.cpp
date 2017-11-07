@@ -45,9 +45,26 @@ probability::probability()
 }
 
 probability::~probability() {}
+param GetParamFromDatabase(const std::string& paramName, const std::shared_ptr<const plugin_configuration> conf)
+{
+	param p;
+	auto r = GET_PLUGIN(radon);
+
+	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(conf->Info()->Producer().Id(), paramName);
+
+	if (paraminfo.empty())
+	{
+		p.Name(paramName);
+		return p;
+	}
+
+	return param(paraminfo);
+}
+
 /// @brief Configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
+
 static param GetConfigurationParameter(const std::string& name, const std::shared_ptr<const plugin_configuration> conf,
                                        param_configuration* outParamConfig)
 {
@@ -67,11 +84,11 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 			}
 			else if (p.first == "input_param1")
 			{
-				param1.Name(p.second);
+				param1 = GetParamFromDatabase(p.second, conf);
 			}
 			else if (p.first == "input_param2")
 			{
-				param2.Name(p.second);
+				param2 = GetParamFromDatabase(p.second, conf);
 			}
 			else if (p.first == "comparison")
 			{
