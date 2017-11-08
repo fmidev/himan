@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.11.6
+Version: 17.11.8
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Nov  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.8-1.fmi
+- Radon previ read optimization
 * Mon Nov  6 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.6-1.fmi
 - Update to auto_taf and grib
 * Thu Oct 26 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.26-1.fmi
