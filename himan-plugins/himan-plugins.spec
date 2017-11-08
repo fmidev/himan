@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 17.11.8
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Nov  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.8-2.fmi
+- Update to auto_taf
 * Wed Nov  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.8-1.fmi
 - Radon previ read optimization
 * Mon Nov  6 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.6-1.fmi
