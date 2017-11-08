@@ -343,7 +343,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
                           info_simple d_Zenv, info_simple d_prevZenv, const double* __restrict__ d_Tparcel,
                           const double* __restrict__ d_prevTparcel, const double* __restrict__ d_PLCL,
                           const double* __restrict__ d_PLFC, const double* __restrict__ d_Psource,
-                          double* __restrict__ d_cinh, unsigned char* __restrict__ d_found)
+                          double* __restrict__ d_cinh, unsigned char* __restrict__ d_found, bool useVirtualTemperature)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -404,7 +404,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 				}
 			}
 
-			if (Penv < PLCL)
+			if (Penv < PLCL && useVirtualTemperature)
 			{
 				// Above LCL, switch to virtual temperature
 
@@ -1185,7 +1185,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 		CINKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_prevTenv, *h_Penv, *h_prevPenv, *h_Zenv, *h_prevZenv,
 		                                              d_Tparcel, d_prevTparcel, d_PLCL, d_PLFC, d_Psource, d_cinh,
-		                                              d_found);
+		                                              d_found, cape_cuda::itsUseVirtualTemperature);
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
