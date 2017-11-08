@@ -23,7 +23,7 @@ const double ovc = .900;  // 7/8
 struct cloud_layer
 {
 	cloud_layer() : base(MissingDouble()), amount(MissingDouble()), top(MissingDouble()){};
-	cloud_layer(double base, double amount, double top) : base(base), amount(amount), top(top){};	
+	cloud_layer(double base, double amount, double top) : base(base), amount(amount), top(top){};
 
 	double base;
 	double amount;
@@ -174,16 +174,12 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	size_t max_num_cl = 4;  // maximum number of cloud layers
 
-	for (size_t j = lastLevel - 1; j > firstLevel + 1; --j)
+	for (size_t j = lastLevel; j > firstLevel; --j)
 	{
-		info_t N = Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), Nparam, forecastType, false);
-		info_t N_upper = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
-		info_t N_upper_upper =
-		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j - 1)), Nparam, forecastType, false);
-		info_t Height =
-		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j + 1)), param("HL-M"), forecastType, false);
+		info_t N = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
+		info_t Height = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), param("HL-M"), forecastType, false);
 
-		if (!N || !N_upper || !N_upper_upper || !Height)
+		if (!N || !Height)
 		{
 			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " + to_string(j));
 			continue;
@@ -192,67 +188,30 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		for (size_t k = 0; k < grd_size; ++k)
 		{
 			const double& _N = N->Data().At(k);
-			const double& _N_upper = N_upper->Data().At(k);
-			const double& _N_upper_upper = N_upper_upper->Data().At(k);
 			const double& _Height = Height->Data().At(k);
 
-			if (_Height < 1000.0)
+			if (_N < cloud_treshold)
 			{
-				if (_N < cloud_treshold)
+				if (base[k].size() > top[k].size())
 				{
-					if (base[k].size() > top[k].size())
-					{
-						double newtop = _Height / 0.3048;
-						top[k].push_back(newtop);
-					}
-				}
-				else
-				{
-					if (base[k].size() == top[k].size())
-					{
-						double newbase = _Height / 0.3048;
-						base[k].push_back(newbase);
-						N_max[k].push_back(_N);
-					}
-					else if (_N > N_max[k].back())
-					{
-						N_max[k].back() = _N;
-					}
+					double newtop = _Height / 0.3048;
+					top[k].push_back(newtop);
 				}
 			}
-			else  // height is above 1000m
+			else
 			{
-				// three consecutive layers with cloud cover below threshold
-				if ((_N < cloud_treshold) && (_N_upper < cloud_treshold) && (_N_upper_upper < cloud_treshold))
+				if (base[k].size() == top[k].size())
 				{
-					// if we are above a cloud base cover it with a top.
-					if (base[k].size() > top[k].size())
-					{
-						double newtop = _Height / 0.3048;
-						top[k].push_back(newtop);
-					}
+					double newbase = _Height / 0.3048;
+					base[k].push_back(newbase);
+					N_max[k].push_back(_N);
 				}
-				else if ((_N > cloud_treshold) && (_N_upper > cloud_treshold) && (_N_upper_upper > cloud_treshold))
+				else if (_N > N_max[k].back())
 				{
-					if (base[k].size() == top[k].size())
-					{
-						double newbase = _Height / 0.3048;
-						base[k].push_back(newbase);
-						N_max[k].push_back(_N);
-					}
-					else if (_N > N_max[k].back())
-					{
-						N_max[k].back() = _N;
-					}
-				}
-				else if ((_N > cloud_treshold) && (base[k].size() > top[k].size()))
-				{
-					if (_N > N_max[k].back())
-					{
-						N_max[k].back() = _N;
-					}
+					N_max[k].back() = _N;
 				}
 			}
+
 			// update the maximum number of cloud layers in the whole grid
 			max_num_cl = max(max_num_cl, base[k].size());
 		}
@@ -313,14 +272,14 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		if (base[k].size() == 0) continue;
 
 		// is there a cload layer in height class
-		vector<bool> height_class(4,false);
+		vector<bool> height_class(4, false);
 		vector<double> height_bounds = {200.0, 500.0, 1000.0, 1400.0};
 		vector<size_t> layers_to_remove;
 
 		for (size_t j = 0; j < base[k].size(); ++j)
 		{
 			// low cloud height class <200ft
-			if(height_class[0] && c_l[k][j].base < height_bounds[0])
+			if (!height_class[0] && c_l[k][j].base < height_bounds[0])
 			{
 				height_class[0] = true;
 				continue;
@@ -332,48 +291,48 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			}
 
 			// low cloud height class 200ft-500ft
-			if(height_class[1] && c_l[k][j].base < height_bounds[1] && c_l[k][j].base >= height_bounds[0])
+			if (!height_class[1] && c_l[k][j].base < height_bounds[1] && c_l[k][j].base >= height_bounds[0])
 			{
 				height_class[1] = true;
 				continue;
 			}
-			else if(c_l[k][j].base < height_bounds[1] && c_l[k][j].base >= height_bounds[0])
+			else if (c_l[k][j].base < height_bounds[1] && c_l[k][j].base >= height_bounds[0])
 			{
 				layers_to_remove.push_back(j);
 				continue;
 			}
 
-                        // low cloud height class 500ft-1000ft
-                        if(height_class[2] && c_l[k][j].base < height_bounds[2] && c_l[k][j].base >= height_bounds[1])
-                        {
-                                height_class[2] = true;
-                                continue;
-                        }
-                        else if(c_l[k][j].base < height_bounds[2] && c_l[k][j].base >= height_bounds[1])
-                        {
-                                layers_to_remove.push_back(j);
-                                continue;
-                        }
+			// low cloud height class 500ft-1000ft
+			if (!height_class[2] && c_l[k][j].base < height_bounds[2] && c_l[k][j].base >= height_bounds[1])
+			{
+				height_class[2] = true;
+				continue;
+			}
+			else if (c_l[k][j].base < height_bounds[2] && c_l[k][j].base >= height_bounds[1])
+			{
+				layers_to_remove.push_back(j);
+				continue;
+			}
 
-                        // low cloud height class 1000ft-1500ft
-                        if(height_class[3] && c_l[k][j].base < height_bounds[3] && c_l[k][j].base >= height_bounds[2])
-                        {
-                                height_class[1] = true;
-                                continue;
-                        }
-                        else if(c_l[k][j].base < height_bounds[3] && c_l[k][j].base >= height_bounds[2])
-                        {
-                                layers_to_remove.push_back(j);
-                                continue;
-                        }
+			// low cloud height class 1000ft-1500ft
+			if (!height_class[3] && c_l[k][j].base < height_bounds[3] && c_l[k][j].base >= height_bounds[2])
+			{
+				height_class[3] = true;
+				continue;
+			}
+			else if (c_l[k][j].base < height_bounds[3] && c_l[k][j].base >= height_bounds[2])
+			{
+				layers_to_remove.push_back(j);
+				continue;
+			}
 
 			// heights above 1500ft
-			if(j != 0 && RoundedBase(c_l[k][j].base) - RoundedBase(c_l[k][j-1].base) < 500.0)
+			if (j != 0 && RoundedBase(c_l[k][j].base) - RoundedBase(c_l[k][j - 1].base) < 500.0)
 			{
 				layers_to_remove.push_back(j);
 			}
 		}
-		while(layers_to_remove.size()>0)
+		while (layers_to_remove.size() > 0)
 		{
 			c_l[k].erase(c_l[k].begin() + layers_to_remove.back());
 			layers_to_remove.pop_back();
@@ -404,17 +363,19 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		if (abs(TC->Data().At(k)) > 50.0)
 		{
 			// find nearest cloud layer above or equal cbbase
-			auto nearest_cl = lower_bound(c_l[k].begin(), c_l[k].end(),cloud_layer(cbbase[k],MissingDouble(),MissingDouble()),[](const cloud_layer &a, const cloud_layer &b){return a.base < b.base;});
+			auto nearest_cl =
+			    lower_bound(c_l[k].begin(), c_l[k].end(), cloud_layer(cbbase[k], MissingDouble(), MissingDouble()),
+			                [](const cloud_layer& a, const cloud_layer& b) { return a.base < b.base; });
 
 			// no cloud layers above initial cbbase, use highest cloud layer
-			if(nearest_cl == c_l[k].end())
+			if (nearest_cl == c_l[k].end())
 			{
 				cbbase[k] = (--nearest_cl)->base;
 			}
 			// nearest cloud layer is lowest cloud layer
-			else if(nearest_cl == c_l[k].begin())
+			else if (nearest_cl == c_l[k].begin())
 			{
-				//pass
+				// pass
 			}
 			// select closest of layers above and below cbbase
 			else if (nearest_cl->base - cbbase[k] < cbbase[k] - (--nearest_cl)->base)
@@ -422,23 +383,23 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				++nearest_cl;
 			}
 
-			if(nearest_cl == c_l[k].begin() && cbbase[k] - nearest_cl->base > 500.0)
+			if (nearest_cl == c_l[k].begin() && cbbase[k] - nearest_cl->base > 500.0)
 			{
 				// create cblayer as new cloud layer
-				c_l[k].insert(nearest_cl+1,cloud_layer(cbbase[k],nearest_cl->amount,MissingDouble()));
-				if(nearest_cl->amount >= ovc)
+				c_l[k].insert(nearest_cl + 1, cloud_layer(cbbase[k], nearest_cl->amount, MissingDouble()));
+				if (nearest_cl->amount >= ovc)
 				{
 					cbN[k] = nearest_cl->amount * 100.0;
 					nearest_cl->amount = bkn;
-					m=1;
+					m = 1;
 				}
 				else
 				{
 					cbN[k] = (nearest_cl)->amount * 100.0;
-					m=5;
+					m = 5;
 				}
 			}
-			else if(nearest_cl->base < 5000.)
+			else if (nearest_cl->base < 5000.)
 			{
 				cbbase[k] = nearest_cl->base;
 			}
@@ -448,7 +409,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			}
 		}
 
-                ovcbase[k] = LowestLayer(c_l[k], ovc, m);
+		ovcbase[k] = LowestLayer(c_l[k], ovc, m);
 		if (m == 0) continue;
 		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
 		if (m == 0) continue;
@@ -456,12 +417,11 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		if (m == 0) continue;
 		fewbase[k] = LowestLayer(c_l[k], few, m = min(m, size_t(1)));
 
-		if(cbbase[k] > ovcbase[k]) cbbase[k] = MissingDouble();
-		if(ovcbase[k] == cbbase[k]) ovcbase[k] = MissingDouble();
-		if(bknbase[k] >= cbbase[k]) bknbase[k] = MissingDouble();
-		if(sctbase[k] >= cbbase[k]) sctbase[k] = MissingDouble();		
-		if(fewbase[k] >= cbbase[k]) fewbase[k] = MissingDouble();
-
+		if (cbbase[k] > ovcbase[k]) cbbase[k] = MissingDouble();
+		if (ovcbase[k] == cbbase[k]) ovcbase[k] = MissingDouble();
+		if (bknbase[k] >= cbbase[k]) bknbase[k] = MissingDouble();
+		if (sctbase[k] >= cbbase[k]) sctbase[k] = MissingDouble();
+		if (fewbase[k] >= cbbase[k]) fewbase[k] = MissingDouble();
 
 		// Check against illegal outcomes for TAF
 		assert(!(fewbase[k] > sctbase[k]));
