@@ -16,6 +16,10 @@ class timer
 {
    public:
 	timer() {}
+	timer(bool start)
+	{
+		if (start) Start();
+	}
 	~timer() {}
 	inline void Start() { clock_gettime(CLOCK_REALTIME, &start_ts); }
 	inline void Stop() { clock_gettime(CLOCK_REALTIME, &stop_ts); }
