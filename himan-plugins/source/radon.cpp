@@ -49,11 +49,7 @@ void radon::Init()
 }
 
 radon::radon() : itsInit(false), itsRadonDB() { itsLogger = logger("radon"); }
-void radon::PoolMaxWorkers(int maxWorkers)
-{
-	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
-}
-
+void radon::PoolMaxWorkers(int maxWorkers) { NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers); }
 vector<std::string> radon::CSV(search_options& options)
 {
 	Init();
@@ -116,12 +112,12 @@ vector<std::string> radon::CSV(search_options& options)
 	      << "st_x(s.position) AS longitude,"
 	      << "st_y(s.position) AS latitude,"
 	      << "t.value "
-	      << "FROM " << tableName << "_v t, station s "
+	      << "FROM " << tableName << " t, station s "
 	      << "WHERE "
 	      << "t.station_id = s.id "
 	      << "AND t.analysis_time = '" << analtime << "' "
-	      << "AND t.param_name = '" + options.param.Name() << "' "
-	      << "AND t.level_name = upper('" + HPLevelTypeToString.at(options.level.Type()) << "') "
+	      << "AND t.param_id = " << options.param.Id() << " "
+	      << "AND t.level_id = " << options.level.Type() << " "
 	      << "AND t.level_value = " << options.level.Value() << " "
 	      << "AND (t.level_value2 = " << options.level.Value2() << " OR t.level_value2 = -1) "
 	      << "AND t.forecast_period = '" << period << "' "
