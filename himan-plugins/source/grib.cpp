@@ -367,6 +367,7 @@ void grib::WriteTime(info& anInfo)
 					itsLogger.Warning("Forcing starting step from negative value to zero");
 					p1 = 0;
 				}
+
 				itsGrib->Message().P1(p1);
 				itsGrib->Message().P2(static_cast<long>(anInfo.Time().Step() / divisor));
 				break;
@@ -407,9 +408,17 @@ void grib::WriteTime(info& anInfo)
 			case kAccumulation:
 			case kDifference:
 				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitOfTimeRange);
-				itsGrib->Message().ForecastTime(
-				    static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor));  // start step
 
+				long firstTime = static_cast<long>(anInfo.Param().Aggregation().FirstTimeValue());
+
+				if (firstTime == kHPMissingInt)
+				{
+					firstTime = static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor);
+				}
+
+				itsGrib->Message().ForecastTime(firstTime);  // start step
+
+#if 0
 				if (anInfo.Param().Aggregation().TimeResolution() == kUnknownTimeResolution)
 				{
 					// Although parameter is an accumulation, the period is unknown
@@ -418,6 +427,7 @@ void grib::WriteTime(info& anInfo)
 					    static_cast<long>(itsWriteOptions.configuration->ForecastStep() / divisor));  // step length
 				}
 				else
+#endif
 				{
 					// Accumulation period is known
 					// eg. RR-1-MM
@@ -919,7 +929,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->LastPoint(point(X1, Y1));
 
-			rg->Data(matrix<double>(ni, nj, 1, MissingDouble()));
+			rg->Data().Resize(ni, nj);
 
 			break;
 		}
@@ -948,7 +958,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 				itsLogger.Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
 			}
 
-			lccg->Data(matrix<double>(lccg->Ni(), lccg->Nj(), 1, MissingDouble()));
+			lccg->Data().Resize(lccg->Ni(), lccg->Nj());
 
 			break;
 		}
@@ -1008,7 +1018,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			    util::CoordinatesFromFirstGridPoint(first, rg->Orientation(), ni, nj, rg->Di(), rg->Dj());
 
 			rg->TopRight(coordinates.second);
-			rg->Data(matrix<double>(ni, nj, 1, MissingDouble()));
+			rg->Data().Resize(ni, nj);
 
 			break;
 		}
@@ -1039,7 +1049,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->LastPoint(point(X1, Y1));
 
-			rg->Data(matrix<double>(ni, nj, 1, MissingDouble()));
+			rg->Data().Resize(ni, nj);
 
 			break;
 		}
@@ -1118,15 +1128,17 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 			case 3:  // average
 				a.Type(kAverage);
+				a.FirstTimeValue(static_cast<int>(itsGrib->Message().P1()));
 				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
 				break;
-			case 4: // accumulation
+			case 4:  // accumulation
 				a.Type(kAccumulation);
+				a.FirstTimeValue(static_cast<int>(itsGrib->Message().P1()));
 				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
 				break;
 		}
 
-		if (a.TimeResolutionValue() != kHPMissingInt)
+		if (a.Type() != kUnknownAggregationType)
 		{
 			p.Aggregation(a);
 		}
@@ -1180,21 +1192,25 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		{
 			case 0:  // Average
 				a.Type(kAverage);
+				a.FirstTimeValue(static_cast<int>(itsGrib->Message().ForecastTime()));
 				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
 				break;
 
 			case 1:  // Accumulation
 				a.Type(kAccumulation);
+				a.FirstTimeValue(static_cast<int>(itsGrib->Message().ForecastTime()));
 				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
 				break;
 
 			case 2:  // Maximum
 				a.Type(kMaximum);
+				a.FirstTimeValue(static_cast<int>(itsGrib->Message().ForecastTime()));
 				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
 				break;
 
 			case 3:  // Minimum
 				a.Type(kMinimum);
+				a.FirstTimeValue(static_cast<int>(itsGrib->Message().ForecastTime()));
 				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
 				break;
 		}

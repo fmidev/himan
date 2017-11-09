@@ -1012,14 +1012,16 @@ void BindLib(lua_State* L)
 	              .def("Error", &logger::Error)
 	              .def("Fatal", &logger::Fatal),
 	          class_<aggregation>("aggregation")
-	              .def(constructor<HPAggregationType, HPTimeResolution, int>())
+	              .def(constructor<HPAggregationType, HPTimeResolution, int, int>())
 	              .def("ClassName", &aggregation::ClassName)
 	              .def("GetType", LUA_CMEMFN(HPAggregationType, aggregation, Type, void))
 	              .def("SetType", LUA_MEMFN(void, aggregation, Type, HPAggregationType))
 	              .def("GetTimeResolution", LUA_CMEMFN(HPTimeResolution, aggregation, TimeResolution, void))
 	              .def("SetTimeResolution", LUA_MEMFN(void, aggregation, TimeResolution, HPTimeResolution))
 	              .def("GetTimeResolutionValue", LUA_CMEMFN(int, aggregation, TimeResolutionValue, void))
-	              .def("SetTimeResolutionValue", LUA_MEMFN(void, aggregation, TimeResolutionValue, int)),
+	              .def("SetTimeResolutionValue", LUA_MEMFN(void, aggregation, TimeResolutionValue, int))
+	              .def("GetFirstTimeValue", LUA_CMEMFN(int, aggregation, FirstTimeValue, void))
+	              .def("SetFirstTimeValue", LUA_MEMFN(void, aggregation, FirstTimeValue, int)),
 	          class_<configuration, std::shared_ptr<configuration>>("configuration")
 	              .def(constructor<>())
 	              .def("ClassName", &configuration::ClassName)

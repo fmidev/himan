@@ -85,7 +85,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-1-MM", 353, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -95,7 +95,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-3-MM", 354, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3, kHPMissingInt));
 		params.push_back(parm);
 	}
 
@@ -104,7 +104,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-6-MM", 355, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -114,7 +114,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-12-MM", 356, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 12));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 12, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -124,7 +124,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-24-MM", 53, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -134,7 +134,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SN-3-MM");
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -144,7 +144,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SN-6-MM");
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -154,7 +154,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SN-24-MM", 766, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -164,7 +164,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRC-3-MM", 1025, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3, kHPMissingInt));
 		params.push_back(parm);
 	}
 
@@ -173,7 +173,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRR-KGM2", 49, 0, 1, 52);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kUnknownTimeResolution, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -183,7 +183,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRRC-KGM2", 201, 0, 1, 196);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kUnknownTimeResolution, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -193,7 +193,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRRL-KGM2", 200, 0, 1, 54);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kUnknownTimeResolution, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -205,7 +205,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("GRR-MMH", 1168);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kUnknownTimeResolution, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -217,7 +217,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRRS-KGM2", 1170);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kUnknownTimeResolution, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -229,7 +229,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SNR-KGM2", 264, 0, 1, 53);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kUnknownTimeResolution, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -239,7 +239,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SNRC-KGM2", 269, 0, 1, 55);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kUnknownTimeResolution, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -249,7 +249,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SNRL-KGM2", 268, 0, 1, 56);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kUnknownTimeResolution, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
 
 		params.push_back(parm);
 	}
@@ -301,7 +301,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		param parm("RR-6-MM", 355, 0, 1, 8);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6));
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6, kHPMissingInt));
 
 		params.push_back(parm);
 	}

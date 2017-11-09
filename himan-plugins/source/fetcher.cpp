@@ -201,12 +201,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
                                        level requestedLevel, param requestedParam, forecast_type requestedType,
                                        bool readPackedData, bool suppressLogging)
 {
-	timer t;
-
-	if (config->StatisticsEnabled())
-	{
-		t.Start();
-	}
+	timer t(true);
 
 	// Check sticky param cache first
 
@@ -290,8 +285,6 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		throw kFileDataNotFound;
 	}
-
-	// ASSERT(theConfiguration->SourceProducer() == theInfos[0]->Producer());
 
 	return ret;
 }
@@ -478,8 +471,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 		futures.push_back(async(
 		    launch::async,
-		    [&](vector<info_t> vec)
-		    {
+		    [&](vector<info_t> vec) {
 			    auto baseInfo =
 			        make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
 			    ASSERT(baseInfo->Dimensions().size());
@@ -565,42 +557,44 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 				himan::Abort();
 			}
 
-			call_once(oflag, [&]()
-			          {
+			call_once(oflag, [&]() {
 
-				          itsLogger.Debug("Start full auxiliary files read");
+				itsLogger.Debug("Start full auxiliary files read");
 
-				          ret = FromFile(files, opts, true, readPackedData, true);
+				timer t(true);
 
-				          AuxiliaryFilesRotateAndInterpolate(opts, ret);
+				ret = FromFile(files, opts, true, readPackedData, true);
 
-				          /*
-				           * Insert interpolated data to cache if
-				           * 1. Cache is not disabled locally (itsUseCache) AND
-				           * 2. Cache is not disabled globally (config->UseCache()) AND
-				           * 3. Data is not packed
-				           */
+				AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
-				          auto c = GET_PLUGIN(cache);
+				/*
+				 * Insert interpolated data to cache if
+				 * 1. Cache is not disabled locally (itsUseCache) AND
+				 * 2. Cache is not disabled globally (config->UseCache()) AND
+				 * 3. Data is not packed
+				 */
 
-				          for (const auto& anInfo : ret)
-				          {
+				auto c = GET_PLUGIN(cache);
+
+				for (const auto& anInfo : ret)
+				{
 #ifdef HAVE_CUDA
-					          if (anInfo->Grid()->IsPackedData())
-					          {
-						          util::Unpack({anInfo->Grid()});
-					          }
+					if (anInfo->Grid()->IsPackedData())
+					{
+						util::Unpack({anInfo->Grid()});
+					}
 #endif
-					          // Insert each grid of an info to cache. Usually one info
-					          // has only one grid but in some cases this is not true.
-					          for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
-					          {
-						          c->Insert(*anInfo);
-					          }
-				          }
-
-				          itsLogger.Debug("Auxiliary files read finished, cache size is now " + to_string(c->Size()));
-				      });
+					// Insert each grid of an info to cache. Usually one info
+					// has only one grid but in some cases this is not true.
+					for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
+					{
+						c->Insert(*anInfo);
+					}
+				}
+				t.Stop();
+				itsLogger.Debug("Auxiliary files read finished in " + to_string(t.GetTime())
+				                + "ms, cache size is now " + to_string(c->Size()));
+			});
 
 			auxiliaryFilesRead = true;
 			source = HPDataFoundFrom::kCache;

@@ -151,6 +151,8 @@ void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 		itsUseVirtualTemperature = util::ParseBoolean(itsConfiguration->GetValue("virtual_temperature"));
 	}
 
+	itsLogger.Info("Virtual temperature correction is " + string(itsUseVirtualTemperature ? "enabled" : "disabled"));
+
 	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(),
 	                                                                      "last hybrid level number")));
 

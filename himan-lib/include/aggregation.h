@@ -16,7 +16,8 @@ class aggregation
 {
    public:
 	aggregation();
-	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theResolutionValue);
+	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theFirstTimeValue,
+	            int theLastTimeValue);
 	~aggregation() {}
 	aggregation(const aggregation& other);
 	aggregation& operator=(const aggregation& other);
@@ -31,6 +32,9 @@ class aggregation
 	HPTimeResolution TimeResolution() const;
 	void TimeResolution(HPTimeResolution theTimeResolution);
 
+	int FirstTimeValue() const;
+	void FirstTimeValue(int theFirstTimeValue);
+
 	int TimeResolutionValue() const;
 	void TimeResolutionValue(int theTimeResolutionValue);
 
@@ -40,6 +44,7 @@ class aggregation
 	HPAggregationType itsType;
 	HPTimeResolution itsTimeResolution;
 	int itsTimeResolutionValue;
+	int itsFirstTimeValue;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -47,7 +52,8 @@ class aggregation
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsTimeResolution), CEREAL_NVP(itsTimeResolutionValue));
+		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsTimeResolution), CEREAL_NVP(itsTimeResolutionValue),
+		   CEREAL_NVP(itsFirstTimeValue));
 	}
 #endif
 };

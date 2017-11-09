@@ -15,6 +15,8 @@
 using namespace std;
 using namespace himan::plugin;
 
+mutex aggregationMutex;
+
 #include "cuda_helper.h"
 
 transformer::transformer()
@@ -236,6 +238,19 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
+	}
+
+	if (itsSourceParam == itsTargetParam && sourceInfo->Param().Aggregation().Type() != kUnknownAggregationType)
+	{
+		// If source parameter is an aggregation, copy that to target param
+		param p = myTargetInfo->Param();
+		aggregation a = sourceInfo->Param().Aggregation();
+		p.Aggregation(a);
+
+		{
+			lock_guard<mutex> lock(aggregationMutex);
+			myTargetInfo->ParamIterator().Replace(p);
+		}
 	}
 
 	SetAB(myTargetInfo, sourceInfo);
