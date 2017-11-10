@@ -14,6 +14,24 @@
 #include "fetcher.h"
 #undef HIMAN_AUXILIARY_INCLUDE
 
+namespace
+{
+std::vector<double> RemoveMissingValues(const std::vector<double>& vec)
+{
+	std::vector<double> ret;
+	ret.reserve(vec.size());
+
+	for (const auto& v : vec)
+	{
+		if (!himan::IsValid(v))
+		{
+			ret.emplace_back(v);
+		}
+	}
+	return ret;
+}
+}
+
 namespace himan
 {
 ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize)
@@ -191,28 +209,21 @@ std::vector<double> ensemble::Values() const
 	std::vector<double> ret;
 	ret.reserve(Size());
 
-	// Clients of ensemble shouldn't worry about missing values
-	std::for_each(itsForecasts.begin(), itsForecasts.end(), [&](const info_t& Info) {
-		const double v = Info->Value();
-		if (IsValid(v))
-		{
-			ret.push_back(v);
-		}
-	});
+	std::for_each(itsForecasts.begin(), itsForecasts.end(), [&](const info_t& Info) { ret.emplace_back(Info->Value()); });
 
 	return ret;
 }
 
 std::vector<double> ensemble::SortedValues() const
 {
-	std::vector<double> v = Values();
+	std::vector<double> v = RemoveMissingValues(Values());
 	std::sort(v.begin(), v.end());
 	return v;
 }
 
 double ensemble::Mean() const
 {
-	std::vector<double> v = Values();
+	std::vector<double> v = RemoveMissingValues(Values());
 	if (v.size() == 0)
 	{
 		return MissingDouble();
@@ -223,7 +234,7 @@ double ensemble::Mean() const
 
 double ensemble::Variance() const
 {
-	std::vector<double> values = Values();
+	std::vector<double> values = RemoveMissingValues(Values());
 	if (values.size() == 0)
 	{
 		return MissingDouble();
@@ -243,7 +254,7 @@ double ensemble::Variance() const
 
 double ensemble::CentralMoment(int N) const
 {
-	std::vector<double> v = Values();
+	std::vector<double> v = RemoveMissingValues(Values());
 	double mu = Mean();
 	std::for_each(v.begin(), v.end(), [=](double& d) { d = std::pow(d - mu, N); });
 	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
