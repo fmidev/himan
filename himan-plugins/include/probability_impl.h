@@ -27,6 +27,8 @@ param_configuration<double> ToParamConfiguration(const partial_param_configurati
 		pc.thresholds.push_back(stod(v));
 	}
 
+	pc.useGaussianSpread = partial.useGaussianSpread;
+
 	return pc;
 }
 
@@ -128,6 +130,7 @@ void Probability(std::shared_ptr<himan::info> targetInfo, const param_configurat
 		}
 
 		const T threshold = GetThreshold<T>(targetInfo, paramConf, isGrid);
+
 		const long int cnt = std::count_if(values.begin(), values.end(), std::bind2nd(comp_op, threshold));
 		const double probability = scale * static_cast<double>(cnt) / static_cast<double>(values.size());
 
@@ -135,4 +138,39 @@ void Probability(std::shared_ptr<himan::info> targetInfo, const param_configurat
 	}
 }
 
+template <typename T>
+void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info> targetInfo, const param_configuration<T>& paramConf,
+                                   std::unique_ptr<himan::ensemble>& ens)
+{
+	targetInfo->Param(paramConf.output);
+	targetInfo->ResetLocation();
+	ens->ResetLocation();
+
+	const bool isGrid = (targetInfo->Grid()->Type() != himan::kPointList);
+
+	while (targetInfo->NextLocation() && ens->NextLocation())
+	{
+		const double mean = ens->Mean();
+
+		if (himan::IsMissing(mean))
+		{
+			continue;
+		}
+
+		const double stde = sqrt(ens->Variance());
+		const T threshold = GetThreshold<T>(targetInfo, paramConf, isGrid);
+
+		const double norm = (threshold - mean) / stde;           // normalize to normal distribution mean=0, stde=1
+		double probability = 0.5 * (1 + erf(norm * M_SQRT1_2));  // cdf and error function:
+		                                                         // https://www.johndcook.com/erf_and_normal_cdf.pdf
+		                                                         // probability is now -∞ -> threshold
+
+		if (paramConf.comparison == comparison_op::GTEQ)
+		{
+			probability = 1 - probability;
+		}
+
+		targetInfo->Value(probability);
+	}
+}
 }  // namespace PROB

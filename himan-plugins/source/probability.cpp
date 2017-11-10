@@ -128,11 +128,20 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		}
 	}
 
-	if (param.Name() == "XX-X")
+	if (name == "XX-X")
 	{
 		throw std::runtime_error("probability : configuration error:: input parameter not specified for '" + name +
 		                         "'");
 	}
+
+	const auto iname = param.Name();
+
+	bool spread =
+	    (iname == "T-K" || iname == "T-C" || iname == "WATLEV-CM" || iname == "TD-K" || iname == "P-PA" ||
+	     iname == "P-HPA") &&
+	    (outParamConfig->comparison == comparison_op::LTEQ || outParamConfig->comparison == comparison_op::GTEQ);
+
+	outParamConfig->useGaussianSpread = spread;
 	outParamConfig->parameter = param;
 
 	return himan::param(name);
@@ -325,6 +334,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 		config.output.Name(name);
 		config.comparison = comparison_op::GTEQ;
+		config.useGaussianSpread = false;
 
 		param p = GetConfigurationParameter(name, conf, &config);
 
@@ -350,7 +360,6 @@ void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	for (const auto& pc : itsParamConfigurations)
 	{
-		const int ensembleSize = itsEnsembleSize;
 		const bool normalized = itsUseNormalizedResult;
 
 		std::unique_ptr<ensemble> ens;
@@ -359,11 +368,11 @@ void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		{
 			threadedLogger.Info("Using lagged ensemble");
 			ens = std::unique_ptr<ensemble>(
-			    new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+			    new lagged_ensemble(pc.parameter, itsEnsembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 		}
 		else
 		{
-			ens = std::unique_ptr<ensemble>(new ensemble(pc.parameter, ensembleSize));
+			ens = std::unique_ptr<ensemble>(new ensemble(pc.parameter, itsEnsembleSize));
 		}
 
 		ens->MaximumMissingForecasts(itsMaximumMissingForecasts);
@@ -390,7 +399,13 @@ void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		ASSERT(myTargetInfo->Data().Size() > 0);
 
-		switch (pc.comparison)
+		threadedLogger.Debug("Gaussian spread is " + std::string((pc.useGaussianSpread) ? "enabled" : "disabled"));
+
+		if (pc.useGaussianSpread)
+		{
+			ProbabilityWithGaussianSpread<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens);
+		}
+		else
 		{
 			case comparison_op::LTEQ:
 				Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), normalized, ens,

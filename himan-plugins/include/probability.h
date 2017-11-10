@@ -9,7 +9,6 @@ namespace himan
 {
 namespace plugin
 {
-
 class probability : public compiled_plugin, private compiled_plugin_base
 {
    public:

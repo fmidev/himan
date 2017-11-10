@@ -41,6 +41,10 @@ struct partial_param_configuration
 
 	// Input parameter used for calculating the 'target'.
 	himan::param parameter;
+
+	// if parameter has gaussian distribution, the probabilities can be derived
+	// from the distribution
+	bool useGaussianSpread;
 };
 
 /*
@@ -72,6 +76,8 @@ struct param_configuration
 
 	// Input parameter used for calculating the 'target'.
 	himan::param parameter;
+
+	bool useGaussianSpread;
 };
 
 }  // namespace PROB
