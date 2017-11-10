@@ -23,7 +23,7 @@ std::vector<double> RemoveMissingValues(const std::vector<double>& vec)
 
 	for (const auto& v : vec)
 	{
-		if (!himan::IsValid(v))
+		if (himan::IsValid(v))
 		{
 			ret.emplace_back(v);
 		}
