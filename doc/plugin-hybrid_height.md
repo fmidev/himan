@@ -25,9 +25,16 @@ If using geopotential, metric height is
 
     h = gp / g
 
-If using iterative approach
+When using iterative approach the hypsometric equation is used (https://en.wikipedia.org/wiki/Hypsometric_equation)
 
-    h = 2 * g * (prevt - t) * log(prevp / p) + prevh
+    h = (R / g) * ((prevt - t) / 2) * log(prevp / p) + prevh
+
+Where
+
+* R is the specific gas constant for dry air
+* g is gravitational constant
+
+Note: virtual temperature is not used.
 
 In the iterative approach, the calculation is started from the lowest level in a single threaded fashion.
 
