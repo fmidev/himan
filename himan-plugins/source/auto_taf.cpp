@@ -96,6 +96,13 @@ void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
+#ifdef DEBUG
+	auto pxy = myTargetInfo->Grid()->XY(point(25.211,60.313));
+	auto pdebug = myTargetInfo->Data().Index(static_cast<size_t>(round(pxy.X())),static_cast<size_t>(round(pxy.Y())),0);
+	cout << "index of debug point " << pdebug << '\n';
+
+	vector<pair<double,double>> cloud_profile;
+#endif
 	// Required source parameters
 	const params Nparam{param("N-0TO1"), param("N-PRCNT")};
 	const param TCU_CB("CBTCU-FL");
@@ -211,7 +218,12 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 					N_max[k].back() = _N;
 				}
 			}
-
+#ifdef DEBUG
+			if(k==pdebug)
+			{
+				cloud_profile.emplace_back(_Height/0.3048,_N);
+			}
+#endif
 			// update the maximum number of cloud layers in the whole grid
 			max_num_cl = max(max_num_cl, base[k].size());
 		}
@@ -399,39 +411,65 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 					m = 5;
 				}
 			}
-			else if (nearest_cl->base < 5000.)
-			{
-				cbbase[k] = nearest_cl->base;
-			}
 			else
 			{
+				cbbase[k] = nearest_cl->base;
 				cbN[k] = nearest_cl->amount * 100.0;  // cloud amount in %
 			}
+
+	                if(IsMissing(cbN[k])) cbbase[k] = MissingDouble();
 		}
 
 		ovcbase[k] = LowestLayer(c_l[k], ovc, m);
-		if (m == 0) continue;
-		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
-		if (m == 0) continue;
-		sctbase[k] = LowestLayer(c_l[k], sct, m = min(m, size_t(2)));
-		if (m == 0) continue;
-		fewbase[k] = LowestLayer(c_l[k], few, m = min(m, size_t(1)));
-
-		if (cbbase[k] > ovcbase[k]) cbbase[k] = MissingDouble();
+                if (cbbase[k] > ovcbase[k]) cbbase[k] = MissingDouble();
 		if (ovcbase[k] == cbbase[k]) ovcbase[k] = MissingDouble();
-		if (bknbase[k] >= cbbase[k]) bknbase[k] = MissingDouble();
-		if (sctbase[k] >= cbbase[k]) sctbase[k] = MissingDouble();
-		if (fewbase[k] >= cbbase[k]) fewbase[k] = MissingDouble();
+		if (m == 0) continue;
 
-		// Check against illegal outcomes for TAF
-		assert(!(fewbase[k] > sctbase[k]));
-		assert(!(sctbase[k] > bknbase[k]));
-		assert(!(bknbase[k] > ovcbase[k]));
-		assert(!(cbbase[k] >= ovcbase[k]));
-		assert(!(bknbase[k] >= cbbase[k]));
-		assert(!(sctbase[k] >= cbbase[k]));
-		assert(!(fewbase[k] >= cbbase[k]));
+		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
+		if (bknbase[k] >= cbbase[k]) bknbase[k] = MissingDouble();
+		if (m == 0) continue;
+
+		sctbase[k] = LowestLayer(c_l[k], sct, m = min(m, size_t(2)));
+                if (sctbase[k] >= cbbase[k]) sctbase[k] = MissingDouble();
+		if (m == 0) continue;
+
+		fewbase[k] = LowestLayer(c_l[k], cloud_treshold, m = min(m, size_t(1)));
+                if (fewbase[k] >= cbbase[k]) fewbase[k] = MissingDouble();
 	}
+
+#ifdef DEBUG
+	for(size_t k = 0; k < grd_size; ++k)
+	{
+                // Check against illegal outcomes for TAF
+                assert(!(fewbase[k] > sctbase[k]));
+                assert(!(sctbase[k] > bknbase[k]));
+                assert(!(bknbase[k] > ovcbase[k]));
+                assert(!(cbbase[k] >= ovcbase[k]));
+                assert(!(bknbase[k] >= cbbase[k]));
+                assert(!(sctbase[k] >= cbbase[k]));
+                assert(!(fewbase[k] >= cbbase[k]));
+
+		if(k==pdebug){
+			auto p = myTargetInfo->Grid()->LatLon(pdebug);
+			cout << p.X() << " " << p.Y() << " " << k << '\n';
+			cout << "few " << fewbase[k] << '\n';
+			cout << "sct " << sctbase[k] << '\n';
+			cout << "bkn " << bknbase[k] << '\n';
+			cout << "ovc " << ovcbase[k] << '\n';
+			cout << "cb " << cbbase[k] << '\n';
+			cout << "tcu " << TC->Data().At(k) << '\n';
+			cout << "ceil2 " << Ceiling2->Data().At(k) << '\n';
+			for(auto& x : c_l[k])
+			{
+				cout << "base " << x.base << " top " << x.top << " amount " << x.amount << '\n';
+			}
+		}
+	}
+	for(auto& x : cloud_profile)
+	{
+		cout << "height " << x.first << " N " << x.second << '\n';
+	}
+#endif
 
 	myTargetInfo->ParamIndex(0);
 	myTargetInfo->Grid()->Data().Set(move(fewbase));

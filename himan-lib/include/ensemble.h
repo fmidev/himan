@@ -59,7 +59,7 @@ class ensemble
 	/// @brief Returns the current values of the ensemble
 	std::vector<double> Values() const;
 
-	/// @brief Returns the current values of the ensemble sorted in increasing order
+	/// @brief Returns the current values of the ensemble sorted in increasing order, missing values are removed
 	std::vector<double> SortedValues() const;
 
 	/// @brief Returns the mean value of the ensemble
