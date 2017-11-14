@@ -389,9 +389,9 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	cinInfo->Param(CINParam);
 	auto& cin_ = VEC(cinInfo);
 	capeInfo->Param(ELZParam);
-	auto elz_ = VEC(capeInfo);
+	const auto& elz_ = VEC(capeInfo);
 	capeInfo->Param(CAPEParam);
-	auto cape_ = VEC(capeInfo);
+	const auto& cape_ = VEC(capeInfo);
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
@@ -766,6 +766,11 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<double>& T, co
 		PenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 		TenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
 		ZenvInfo = Fetch(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
+
+		if (!PenvInfo || !TenvInfo || !ZenvInfo)
+		{
+			break;
+		}
 
 		// Convert pressure to Pa since metutil-library expects that
 		auto PenvVec = VEC(PenvInfo);
@@ -1267,8 +1272,8 @@ cape_source cape::GetSurfaceValues(shared_ptr<info> myTargetInfo)
 		return make_tuple(vector<double>(), vector<double>(), vector<double>());
 	}
 
-	auto T = VEC(TInfo);
-	auto RH = VEC(RHInfo);
+	const auto& T = VEC(TInfo);
+	const auto& RH = VEC(RHInfo);
 
 	vector<double> TD(T.size(), MissingDouble());
 
