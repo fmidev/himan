@@ -1,49 +1,63 @@
 #include "debug.h"
 #include "himan_common.h"
 
-#include <execinfo.h>
-#include <cxxabi.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cxxabi.h>
+#include <dlfcn.h>
+#include <execinfo.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <sys/ptrace.h>
-#include <dlfcn.h>
-
 namespace himan
 {
-
 static bool DebuggerAttached()
 {
-	// Other possibilities:
-	// - look at /proc/{PID or self}/status to get TracerPid.
-	// - fork, try to PTRACE_ATTACH
-	if (ptrace(PTRACE_TRACEME, 0, NULL, 0) < 0)
+	// (https://stackoverflow.com/a/24969863)
+	// - look at /proc/{PID or self}/status to get TracerPid. (current)
+	// - fork, try to PTRACE_ATTACH (previous, hanged in some occasions)
+
+	char buf[1024];
+	int debugger_present = 0;
+
+	int status_fd = open("/proc/self/status", O_RDONLY);
+	if (status_fd == -1) return 0;
+
+	ssize_t num_read = read(status_fd, buf, sizeof(buf) - 1);
+
+	if (num_read > 0)
 	{
-		return true;
+		static const char TracerPid[] = "TracerPid:";
+		char* tracer_pid;
+
+		buf[num_read] = '\0';
+		tracer_pid = strstr(buf, TracerPid);
+		if (tracer_pid) debugger_present = !!atoi(tracer_pid + sizeof(TracerPid) - 1);
 	}
-	return false;
+
+	return debugger_present;
 }
 
 static void SignalHandler(int signum)
 {
 	switch (signum)
 	{
-	case SIGINT:
-		// No stack trace since this was requested by the user.
-		_Exit(1);
-		break;
-	case SIGQUIT:
-		// 'dump core signal'
-		printf("Received SIGQUIT, aborting\n");
-		himan::Abort();
-		break;
-	case SIGSEGV:
-		printf("Received SIGSEGV, aborting\n");
-		himan::Abort();
-		break;
-	default:
-		// We haven't registered any other handlers.
-		break;
+		case SIGINT:
+			// No stack trace since this was requested by the user.
+			_Exit(1);
+			break;
+		case SIGQUIT:
+			// 'dump core signal'
+			printf("Received SIGQUIT, aborting\n");
+			himan::Abort();
+			break;
+		case SIGSEGV:
+			printf("Received SIGSEGV, aborting\n");
+			himan::Abort();
+			break;
+		default:
+			// We haven't registered any other handlers.
+			break;
 	}
 }
 
@@ -101,17 +115,17 @@ void PrintBacktrace()
 			// XXX Of course this doesn't work with pathnames including '('!
 			const std::string symbol = std::string(symbols[i]);
 			// Symbol start '('
-			size_t start = std::string::npos; // '('
+			size_t start = std::string::npos;  // '('
 			// Stop at the start of the offset, like in:
 			// `_Z13ExecutePluginSt10shared_ptrIN5himan20plugin_configurationEE+0x2a0`
-			size_t end = std::string::npos;   // '+'
+			size_t end = std::string::npos;  // '+'
 			size_t closingParen = std::string::npos;
-			size_t addrStart = std::string::npos; // '['
+			size_t addrStart = std::string::npos;  // '['
 
 			// Make only one pass through the string.
 			for (size_t i = 0; i < symbol.size(); i++)
 			{
-				switch(symbol[i])
+				switch (symbol[i])
 				{
 					case '(':
 						start = i;
@@ -131,7 +145,7 @@ void PrintBacktrace()
 			}
 
 			if (start == std::string::npos || end == std::string::npos || closingParen == std::string::npos ||
-				addrStart == std::string::npos)
+			    addrStart == std::string::npos)
 			{
 				continue;
 			}
@@ -180,4 +194,4 @@ void Abort()
 	PrintBacktrace();
 	abort();
 }
-} // namespace himan
+}  // namespace himan
