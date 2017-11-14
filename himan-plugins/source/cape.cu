@@ -184,19 +184,16 @@ __global__ void LiftLCLKernel(const double* __restrict__ d_P, const double* __re
 
 	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
 	{
-		ASSERT(d_P[idx] > 10);
-		ASSERT(d_P[idx] < 1500 || IsMissingDouble(d_P[idx]));
+		ASSERT((d_P[idx] > 10 && d_P[idx] < 1500) || IsMissingDouble(d_P[idx]));
 
 		ASSERT(d_Ptarget.values[idx] > 10);
-		ASSERT(d_Ptarget.values[idx] < 1500 || IsMissingDouble(d_Ptarget.values[idx]));
+		ASSERT((d_Ptarget.values[idx] > 10 && d_Ptarget.values[idx] < 1500) || IsMissingDouble(d_Ptarget.values[idx]));
 
-		ASSERT(d_T[idx] > 100);
-		ASSERT(d_T[idx] < 350 || IsMissingDouble(d_T[idx]));
+		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissingDouble(d_T[idx]));
 
 		double T = metutil::LiftLCLA_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
 
-		ASSERT(T > 100);
-		ASSERT(T < 350 || IsMissingDouble(T));
+		ASSERT((T > 100 && T < 350) || IsMissingDouble(T));
 
 		d_Tparcel[idx] = T;
 	}
@@ -260,10 +257,7 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 		ASSERT(prevTparcel > 100. || IsMissingDouble(prevTparcel));
 
 		double LFCP = d_LFCP[idx];  // hPa
-		ASSERT(LFCP < 1200.);
-
 		double LFCT = d_LFCT[idx];  // K
-		ASSERT(LFCT > 100.);
 
 		if (IsMissingDouble(Penv) || IsMissingDouble(Tenv) || IsMissingDouble(Zenv) || IsMissingDouble(prevZenv) ||
 		    IsMissingDouble(Tparcel) || Penv > LFCP)
@@ -271,6 +265,9 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 			// Missing data or current grid point is below LFC
 			return;
 		}
+
+		ASSERT(LFCP < 1200.);
+		ASSERT(LFCT > 100.);
 
 		if (IsMissingDouble(prevTparcel) && !IsMissingDouble(Tparcel))
 		{
@@ -400,7 +397,7 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 
 					Penv = PLFC;
 
-					ASSERT(Zenv > prevZenv);
+					ASSERT(Zenv >= prevZenv);
 				}
 			}
 

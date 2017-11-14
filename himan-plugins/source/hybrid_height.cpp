@@ -17,70 +17,6 @@ const himan::param TParam("T-K");
 const himan::param HParam("HL-M");
 const himan::param ZParam("Z-M2S2");
 
-static mutex prefetchedMutex;
-static vector<string> prefetched;
-
-static mutex asyncMutex;
-static vector<future<void>> asyncs;
-
-void ProcessGridInParts(himan::info_t myTargetInfo, himan::info_t PInfo, himan::info_t prevPInfo, himan::info_t TInfo,
-                        himan::info_t prevTInfo, himan::info_t prevHInfo)
-{
-	vector<future<void>> futures;
-
-	int split = 4;
-
-	while (PInfo->SizeLocations() % split != 0)
-	{
-		split--;
-	}
-
-	if (split < 1)
-	{
-		throw std::runtime_error("Unexpected error");
-	}
-
-	int N = static_cast<int>(PInfo->SizeLocations() / split);
-
-	auto& target = VEC(myTargetInfo);
-	const auto& PVec = VEC(PInfo);
-	const auto& prevPVec = VEC(prevPInfo);
-	const auto& TVec = VEC(TInfo);
-	const auto& prevTVec = VEC(prevTInfo);
-	const auto& prevHVec = VEC(prevHInfo);
-
-	for (int i = 0; i < split; i++)
-	{
-		futures.emplace_back(async(launch::async,
-		                           [&](int start, int N) {
-			                           const size_t stop = start + N;
-
-			                           for (size_t i = start; i < stop; i++)
-			                           {
-				                           double& result = target[i];
-				                           double P = PVec[i];
-				                           double prevP = prevPVec[i];
-				                           double T = TVec[i];
-				                           double prevT = prevTVec[i];
-				                           double prevH = prevHVec[i];
-
-				                           double deltaZ = 14.628 * (prevT + T) * log(prevP / P);
-				                           double totalHeight = prevH + deltaZ;
-
-				                           ASSERT(isfinite(totalHeight));
-				                           result = totalHeight;
-			                           }
-
-			                       },
-		                           i * N, N));
-	}
-
-	for (auto& f : futures)
-	{
-		f.get();
-	}
-}
-
 hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotential(true)
 {
 	itsLogger = logger(itsName);
@@ -166,10 +102,8 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 {
 	const himan::level H0(himan::kHeight, 0);
 
-	auto GPInfo = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(),
-	                    itsConfiguration->UseCuda());
-	auto zeroGPInfo =
-	    Fetch(myTargetInfo->Time(), H0, ZParam, myTargetInfo->ForecastType(), itsConfiguration->UseCuda());
+	auto GPInfo = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(), false);
+	auto zeroGPInfo = Fetch(myTargetInfo->Time(), H0, ZParam, myTargetInfo->ForecastType(), false);
 
 	if (!GPInfo || !zeroGPInfo)
 	{
@@ -179,14 +113,16 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 	SetAB(myTargetInfo, GPInfo);
 
 	auto& target = VEC(myTargetInfo);
+	const auto& zeroGP = VEC(zeroGPInfo);
+	const auto& GP = VEC(GPInfo);
 
-	for (auto&& tup : zip_range(target, VEC(GPInfo), VEC(zeroGPInfo)))
+	for (auto&& tup : zip_range(target, GP, zeroGP))
 	{
 		double& result = tup.get<0>();
-		const double GP = tup.get<1>();
-		const double zeroGP = tup.get<2>();
+		const double gp = tup.get<1>();
+		const double zerogp = tup.get<2>();
 
-		result = (GP - zeroGP) * himan::constants::kIg;
+		result = (gp - zerogp) * himan::constants::kIg;
 	}
 
 	return true;
@@ -372,7 +308,8 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 				auto prevH = Fetch(forecastTime, prevLevel, HParam, forecastType, false);
 				if (!prevH)
 				{
-					itsLogger.Error("Unable to get height of level below level " + static_cast<string>(myTargetInfo->Level()));
+					itsLogger.Error("Unable to get height of level below level " +
+					                static_cast<string>(myTargetInfo->Level()));
 					return false;
 				}
 
@@ -380,7 +317,6 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<double>());
 			}
-
 		}
 
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
