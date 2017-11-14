@@ -8,7 +8,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include <boost/thread.hpp>
+#include <future>
 
 namespace himan
 {
@@ -29,19 +29,17 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 	virtual std::string ClassName() const { return "himan::plugin::hybrid_height"; }
 	virtual HPPluginClass PluginClass() const { return kCompiled; }
 	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 2); }
-	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
+   protected:
+	void RunTimeDimension(himan::info_t myTargetInfo, unsigned short threadIndex) override;
 
    private:
-	void Write(himan::info targetInfo);
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
-	bool WithIteration(info_t& myTargetInfo);
+	bool WithHypsometricEquation(info_t& myTargetInfo);
 	bool WithGeopotential(info_t& myTargetInfo);
-	void Prefetch(info_t myTargetInfo);
+	std::shared_ptr<himan::info> GetSurfacePressure(std::shared_ptr<himan::info>& myTargetInfo);
 
 	int itsBottomLevel;
 	bool itsUseGeopotential;
-	bool itsUseWriterThreads;
-	mutable boost::thread_group itsWriterGroup;
 };
 
 // the class factory
