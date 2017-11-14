@@ -822,7 +822,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(MR.data()), sizeof(double) * N, 0));
 	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(PVec.data()), sizeof(double) * N, 0));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_P, &PVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_P, PVec.data(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
 	while (true)
 	{
@@ -834,8 +834,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
 
-		CUDA_CHECK(cudaMemcpyAsync(&Tpot[0], d_Tpot, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-		CUDA_CHECK(cudaMemcpyAsync(&MR[0], d_MR, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(Tpot.data(), d_Tpot, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(MR.data(), d_MR, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -866,8 +866,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	MR = mr.Result();
 
 	// Copy averages to GPU for final calculation
-	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, &Tpot[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_MR, &MR[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, Tpot.data(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_MR, MR.data(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 
 	auto Psurf = Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
 	auto h_P = PrepareInfo(Psurf, stream);
@@ -880,8 +880,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, *h_P, d_Tpot, d_MR, N);
 
-	CUDA_CHECK(cudaMemcpyAsync(&T[0], d_T, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&TD[0], d_TD, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(T.data(), d_T, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(TD.data(), d_TD, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	CUDA_CHECK(cudaFree(d_Tpot));
@@ -1362,6 +1362,11 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 		PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 		TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 		ZenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+
+		if (!PenvInfo || !TenvInfo || !ZenvInfo)
+		{
+			break;
+		}
 
 		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
 		auto h_Penv = PrepareInfo(PenvInfo, stream);
