@@ -32,22 +32,28 @@ ensemble_type: define the type of ensemble. Currently supported is the tradition
 
     "ensemble_type" : "ensemble | time_ensemble"
 
-input_param1: name of first input parameter
+input_param: name of first input parameter
 
-    "input_param1" : "T-K"
-
-input_param2: name of second (optional) input parameter
-
-    "input_param1" : "U-MS"
-    "input_param2" : "V-MS"
+    "input_param" : "T-K"
 
 threshold: threshold for given parameter, in parameter units.
 
     "threshold" : "273.15"
 
-comparison: specify either "<=" or ">=" for whether the threshold value is tested to be less than or greater than, respectively. (default: ">=")
+comparison: specify a comparison operator (default: ">=")
 
-	"comparison" : "<="
+    "comparison" : "<="
+
+Possible values for comparison operator are
+
+    ">=": greater than or equal
+    "<=": less than or equal
+    "=": equal to
+    "!=" or "<>": not equal to
+    "=[]": value belongs to a set of values. The set of values are defined with key "threshold" separated by commas
+    "[]": value belongs to a range bounded by [lower value, upper value], endpoint included. The set of values are defined with key "threshold" separated by commas, exactly two values must be given.
+
+Note that all comparison are made with floating point values.
 
 normalized_results: Define if plugin should scale the probability values to [0,1] (default: [0,100])
 
