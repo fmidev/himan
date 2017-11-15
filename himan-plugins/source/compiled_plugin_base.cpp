@@ -387,7 +387,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 		himan::Abort();
 	}
 
-	if (itsInfo->Producer().Class() != kPreviClass && itsConfiguration->DatabaseType() == kRadon)
+	if (itsConfiguration->DatabaseType() == kRadon)
 	{
 		auto r = GET_PLUGIN(radon);
 
