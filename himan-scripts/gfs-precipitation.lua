@@ -102,7 +102,7 @@ function Rate(rrparam, targetparam)
 
   -- Set correct time range indicator (ie. aggregation type)
 
-  agg = aggregation(HPAggregationType.kAccumulation, HPTimeResolution.kHourResolution, 1)
+  agg = aggregation(HPAggregationType.kAccumulation, HPTimeResolution.kHourResolution, 1, 999999)
   agg:SetType(HPAggregationType.kAccumulation)
 
   targetparam:SetAggregation(agg)
