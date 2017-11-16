@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.10.3
-Release: 2.el7.fmi
+Version: 17.11.14
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,10 +13,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.10.2
+Requires: himan-lib >= 17.11.9
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 17.9.27
+Requires: libfmigrib >= 17.10.25
 Requires: libfmidb >= 17.9.18
 Requires: smartmet-library-newbase >= 17.9.27
 Requires: libpqxx
@@ -35,7 +35,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.9.27
+BuildRequires: libfmigrib-devel >= 17.10.25
 BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -63,6 +63,8 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libabsolute_humidity.so
+%{_libdir}/himan-plugins/libauto_taf.so
+%{_libdir}/himan-plugins/libblend.so
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libcape.so
 %{_libdir}/himan-plugins/libcloud_code.so
@@ -108,6 +110,43 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Nov 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.14-1.fmi
+- Bugfix to cape
+- hybrid_height performance improvements
+* Mon Nov 13 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.13-1.fmi
+- Update to auto_taf
+- probability performance improvements
+* Thu Nov  9 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.9-1.fmi
+- grib plugin optimization
+- transformer copies source parameter aggregation info if needed
+* Wed Nov  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.8-2.fmi
+- Update to auto_taf
+* Wed Nov  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.8-1.fmi
+- Radon previ read optimization
+* Mon Nov  6 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.6-1.fmi
+- Update to auto_taf and grib
+* Thu Oct 26 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.26-1.fmi
+- Update to auto_taf
+* Wed Oct 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.25-1.fmi
+- New fmigrib
+* Thu Oct 20 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.20-1.fmi
+- auto_taf fixes
+* Thu Oct 19 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.19-1.fmi
+- Add auto_taf plugin
+* Wed Oct 18 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.18-1.fmi
+- Add blend plugin
+- Fixes to cape
+* Mon Oct 16 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.16-1.fmi
+- Fix to turbulence with lambert projection
+* Tue Oct 10 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.10-1.fmi
+- Fix to luatool global variable inheriting
+* Mon Oct  9 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.9-1.fmi
+- preform_hybrid update
+* Thu Oct  5 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.5-1.fmi
+- Proper fix for cape plugin issue
+* Wed Oct  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.4-1.fmi
+- Fix cape issue where some times were not calculated properly
+- Add comparison type configuration option to probability plugin
 * Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-2.fmi
 - Fix segfault in fetcher when U or V component was not found
 * Tue Oct  3 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.3-1.fmi
