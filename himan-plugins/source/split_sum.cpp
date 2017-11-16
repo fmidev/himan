@@ -1,8 +1,3 @@
-/**
- * @file split_sum.cpp
- *
- */
-
 #include "split_sum.h"
 #include "forecast_time.h"
 #include "level.h"
@@ -39,7 +34,7 @@ split_sum::split_sum()
 
 	sourceParameters["RRC-3-MM"] = {param("RRC-KGM2")};
 
-	sourceParameters["RRR-KGM2"] = {param("RR-KGM2")};  // So-called HHSade
+	sourceParameters["RRR-KGM2"] = {param("RR-KGM2")};
 	sourceParameters["RRRC-KGM2"] = {param("RRC-KGM2")};
 	sourceParameters["RRRL-KGM2"] = {param("RRL-KGM2")};
 
@@ -57,6 +52,7 @@ split_sum::split_sum()
 
 	// Solid (snow + graupel + hail)
 	sourceParameters["RRRS-KGM2"] = {param("RRS-KGM2")};
+	sourceParameters["RRS-3-MM"] = {param("RRS-KGM2")};
 
 	// Radiation
 	sourceParameters["RADGLO-WM2"] = {param("RADGLOA-JM2"), param("RADGLO-WM2")};
@@ -218,6 +214,16 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		parm.Unit(kKgm2);
 
 		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+
+		params.push_back(parm);
+	}
+
+	if (itsConfiguration->Exists("rrs3h") && itsConfiguration->GetValue("rrs3h") == "true")
+	{
+		param parm("RRS-3-MM");
+		parm.Unit(kKgm2);
+
+		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3, kHPMissingInt));
 
 		params.push_back(parm);
 	}

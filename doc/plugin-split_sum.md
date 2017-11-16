@@ -59,6 +59,7 @@ Other
 
 * GRR-MMH: graupel precipitation rate (kg/m^2 or mm/h)
 * RRRS-KGM2: solid precipitation rate (snow + graupel + hail) (kg/m^2 or mm/h)
+* RRS-3-MM: three hour solid precipitation accumulation (mm)
 
 Radiation
 
@@ -107,10 +108,11 @@ Calculate precipitation rate, large scale precipitation rate or convective preci
     "snrl" : true
     "snrc" : true
 
-Calculate graupel precipitation rate and solid precipitation rate.
+Calculate graupel precipitation rate, solid precipitation rate and solid precipitation accumulation.
 
     "grr" : true
     "rrrs" : true
+    "rrs3h" : true
 
 Calculate power from radiation accumulation for global radiation, long wave radiation, short wave radiation, radiation at the top of atmosphere and net long wave radiation.
 
