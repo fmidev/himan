@@ -197,6 +197,7 @@ if have_cuda:
 env.Append(NVCCDEFINES=['HAVE_CUDA'])
 
 env.Append(NVCCFLAGS = ['-m64'])
+env.Append(NVCCFLAGS = ['-O2'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
 env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
 env.Append(NVCCFLAGS = ['-Xcompiler','-O2'])
@@ -216,7 +217,6 @@ build_dir = ""
 env.Append(NOCUDA = NOCUDA)
 
 if RELEASE:
-	env.Append(CCFLAGS = ['-O2'])
 	env.Append(CPPDEFINES = ['NDEBUG'])
 	build_dir = 'build/release'
 
