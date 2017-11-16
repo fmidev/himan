@@ -536,7 +536,8 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 	{
 		const auto& values = ens->Values();
 
-		if (values.empty() || count(values.begin(), values.end(), MissingDouble()) == static_cast<int>(values.size()))
+		if (values.empty() ||
+		    std::count_if(values.begin(), values.end(), himan::IsMissingDouble) == static_cast<int>(values.size()))
 		{
 			targetInfo->Value(MissingDouble());
 			continue;
@@ -574,7 +575,8 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, con
 	{
 		const auto& values = ens->Values();
 
-		if (values.empty() || count(values.begin(), values.end(), MissingDouble()) == static_cast<int>(values.size()))
+		if (values.empty() ||
+		    count_if(values.begin(), values.end(), himan::IsMissingDouble) == static_cast<int>(values.size()))
 		{
 			targetInfo->Value(MissingDouble());
 			continue;
