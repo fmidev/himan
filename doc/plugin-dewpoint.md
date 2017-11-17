@@ -8,7 +8,7 @@ Plugin has been optimized for GPU use.
 
 # Required source parameters
 
-* t = air temperature (K)
+* T = air temperature (K)
 * r = relative humidity (%)
 * g = gas constant ratio between water vapor and air, 461.5 J / K * kg
 * h = latent heat for water vaporization, 2.5e6 J / kg
@@ -21,7 +21,7 @@ Unit of resulting parameter is Kelvin.
 
 # Method of calculation
 
-    td = t / (1 - t * ln(r * 0.01) * g / h)
+    td = T / (1 - T * ln(r * 0.01) * g / h)
 
 # Per-plugin configuration options
 
