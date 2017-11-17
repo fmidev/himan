@@ -492,7 +492,7 @@ void CalculateWind(const logger& log, std::shared_ptr<info> targetInfo, uint16_t
 		const auto values1 = ens1->Values();
 		const auto values2 = ens2->Values();
 
-		if (values1.empty() ||
+		if (values1.empty() || values2.empty() ||
 		    count(values1.begin(), values1.end(), MissingDouble()) == static_cast<int>(values1.size()) ||
 		    count(values2.begin(), values2.end(), MissingDouble()) == static_cast<int>(values2.size()))
 		{
