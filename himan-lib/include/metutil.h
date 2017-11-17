@@ -1118,7 +1118,7 @@ inline double himan::metutil::VTI_(double T850, double T500) { return T850 - T50
 CUDA_DEVICE
 inline double himan::metutil::TTI_(double T850, double T500, double TD850)
 {
-	return CTI_(TD850, T500) + VTI_(T850, T500);
+	return CTI_(T500, TD850) + VTI_(T850, T500);
 }
 
 CUDA_DEVICE
