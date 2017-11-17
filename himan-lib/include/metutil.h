@@ -1112,7 +1112,7 @@ inline double himan::metutil::Gammaw_(double P, double T)
 }
 
 CUDA_DEVICE
-inline double himan::metutil::CTI_(double TD500, double T850) { return TD850 - T500; }
+inline double himan::metutil::CTI_(double T500, double TD850) { return TD850 - T500; }
 CUDA_DEVICE
 inline double himan::metutil::VTI_(double T850, double T500) { return T850 - T500; }
 CUDA_DEVICE
