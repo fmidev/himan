@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.11.13
+Version: 17.11.17
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Nov 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.17-1.fmi
+- Fix rotated_latitude_longitude area initialization
 * Mon Nov 13 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.13-1.fmi
 - ensemble::Values() returns missing values
 * Thu Nov  9 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.9-1.fmi

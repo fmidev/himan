@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.11.14
+Version: 17.11.17
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Nov 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.17-1.fmi
+- Tweaking of radon and probability plugins
 * Tue Nov 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.14-1.fmi
 - Bugfix to cape
 - hybrid_height performance improvements
