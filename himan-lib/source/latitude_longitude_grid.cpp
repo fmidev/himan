@@ -488,13 +488,7 @@ point rotated_latitude_longitude_grid::XY(const point& latlon) const
 {
 	if (!itsRotLatLonArea)
 	{
-		ASSERT(itsBottomLeft != point());
-		ASSERT(itsTopRight != point());
-		ASSERT(itsSouthPole != point());
-
-		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
-		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
-		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
+		InitNewbaseArea();
 	}
 
 	auto rotpoint = itsRotLatLonArea->ToRotLatLon(NFmiPoint(latlon.X(), latlon.Y()));
@@ -508,12 +502,7 @@ point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 
 	if (!itsRotLatLonArea)
 	{
-		ASSERT(itsBottomLeft != point());
-		ASSERT(itsTopRight != point());
-
-		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
-		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
-		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
+		InitNewbaseArea();
 	}
 
 	auto regpoint = itsRotLatLonArea->ToRegLatLon(NFmiPoint(rll.X(), rll.Y()));
@@ -533,4 +522,17 @@ ostream& rotated_latitude_longitude_grid::Write(std::ostream& file) const
 	file << itsSouthPole;
 
 	return file;
+}
+
+void rotated_latitude_longitude_grid::InitNewbaseArea() const
+{
+	call_once(itsNewbaseAreaFlag, [&]() {
+		ASSERT(itsBottomLeft != point());
+		ASSERT(itsTopRight != point());
+		ASSERT(itsSouthPole != point());
+
+		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
+		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
+		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
+	});
 }
