@@ -177,6 +177,11 @@ vector<vector<string>> GetGridGeoms(himan::plugin::search_options& options, uniq
 	}
 	else
 	{
+		// TODO: This set of queries could be coalesced into just one query, but in that case we need
+		// to make sure that the order of the returned geometries (if there are more than one) is the
+		// same as what was given to us (i.e. what was specified in the configuration file).
+		// See CreateFileSQLQuery() for guide how to do it.
+
 		for (size_t i = 0; i < sourceGeoms.size(); i++)
 		{
 			vector<vector<string>> geoms = itsRadonDB->GetGridGeoms(ref_prod, analtime, sourceGeoms[i]);
@@ -261,6 +266,22 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 		query << ") AND forecast_type_id IN (" << forecastTypeId << ")"
 		      << " AND forecast_type_value = " << forecastTypeValue
 		      << " ORDER BY forecast_period, level_id, level_value";
+
+		// Add custom sort order, as we want to preserve to order from conf file
+
+		// Note: with postgres >= 9.5 we could use:
+		// ... ORDER BY array_position([1, 2, 3], geometry_id)
+
+		query << ", idx(array[";
+
+		for (const auto& geom : gridgeoms)
+		{
+			query << "'" << geom[0] << "',";
+		}
+
+		query.seekp(-1, ios_base::end);
+
+		query << "], geometry_id::text)";
 	}
 	else
 	{
