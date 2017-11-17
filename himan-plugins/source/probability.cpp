@@ -242,7 +242,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	params calculatedParams;
 
 	int targetInfoIndex = 0;
-	const auto& names = conf->GetParameterNames();
+	const auto names = conf->GetParameterNames();
 	for (const std::string& name : names)
 	{
 		param_configuration config;
@@ -534,7 +534,7 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
-		const auto& values = ens->Values();
+		const auto values = ens->Values();
 
 		if (values.empty() ||
 		    std::count_if(values.begin(), values.end(), himan::IsMissingDouble) == static_cast<int>(values.size()))
@@ -573,7 +573,7 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, con
 
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
-		const auto& values = ens->Values();
+		const auto values = ens->Values();
 
 		if (values.empty() ||
 		    count_if(values.begin(), values.end(), himan::IsMissingDouble) == static_cast<int>(values.size()))
