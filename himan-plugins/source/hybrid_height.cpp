@@ -195,7 +195,13 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 	if (firstLevel)
 	{
 		prevPInfo = GetSurfacePressure(myTargetInfo);
+
 		prevTInfo = Fetch(forecastTime, level(himan::kHeight, 2), TParam, forecastType, false);
+
+		if (!prevTInfo)
+		{
+			prevTInfo = Fetch(forecastTime, level(himan::kHybrid, itsBottomLevel), TParam, forecastType, false);
+		}
 	}
 	else
 	{
@@ -212,6 +218,13 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
 	{
+		if (itsConfiguration->UseDynamicMemoryAllocation())
+		{
+			AllocateMemory(*myTargetInfo);
+		}
+
+		ASSERT(myTargetInfo->Data().Size() > 0);
+
 		auto PInfo = Fetch(forecastTime, myTargetInfo->Level(), PParam, forecastType, false);
 		auto TInfo = Fetch(forecastTime, myTargetInfo->Level(), TParam, forecastType, false);
 
@@ -279,7 +292,6 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 	{
 		// Check if we have data in grid. If all values are missing, it is impossible to continue
 		// processing any level above this one.
-
 		if (myTargetInfo->Data().Size() == myTargetInfo->Data().MissingCount())
 		{
 			itsLogger.Error("All data missing for level " + to_string(myTargetInfo->Level().Value()) + " step " +
@@ -350,13 +362,6 @@ void hybrid_height::RunTimeDimension(info_t myTargetInfo, unsigned short threadI
 
 	while (NextExcludingLevel(*myTargetInfo))
 	{
-		if (itsConfiguration->UseDynamicMemoryAllocation())
-		{
-			AllocateMemory(*myTargetInfo);
-		}
-
-		ASSERT(myTargetInfo->Data().Size() > 0);
-
 		Calculate(myTargetInfo, threadIndex);
 	}
 }
