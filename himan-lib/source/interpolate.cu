@@ -52,8 +52,8 @@ __global__ void Swap(double* __restrict__ arr, size_t ni, size_t nj)
 // In some cases this can save us a considerable amount of time (from 2300ms to 30ms).
 struct cached_grid
 {
-	std::string source;
-	std::string target;
+	const std::string source;
+	const std::string target;
 	std::vector<point> points;
 
 	__host__ cached_grid(const std::string& source, const std::string& target)
@@ -65,20 +65,12 @@ struct cached_grid
 	{
 	}
 
-	__host__ cached_grid(const cached_grid& other) : source(other.source), target(other.target), points(other.points) {}
-	__host__ cached_grid& operator=(const cached_grid& other)
-	{
-		source = other.source;
-		target = other.target;
-		points = other.points;
-		return *this;
-	}
-};
+	__host__ cached_grid(const cached_grid& other) = default;
+	__host__ cached_grid& operator=(const cached_grid& other) = default;
 
-__host__ inline bool operator==(const cached_grid& a, const cached_grid& b)
-{
-	return (a.source == b.source) && (a.target == b.target);
-}
+	__host__ cached_grid& operator=(cached_grid&& other) noexcept = delete;
+
+};
 
 typedef std::lock_guard<std::mutex> lock_guard;
 
@@ -107,7 +99,9 @@ void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<po
 	{
 		lock_guard lock(s_cachedGridMutex);
 		end = s_cachedGrids.end();
-		entry = std::find(s_cachedGrids.begin(), s_cachedGrids.end(), cached_grid(sourceName, targetName));
+		entry = std::find_if(s_cachedGrids.begin(), s_cachedGrids.end(), [&](const cached_grid& g) {
+			return sourceName == g.source && targetName == g.target;
+		});
 	}
 
 	if (entry != end)
@@ -127,7 +121,7 @@ void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<po
 
 		{
 			lock_guard lock(s_cachedGridMutex);
-			s_cachedGrids.push_back(cached_grid(sourceName, targetName, grid));
+			s_cachedGrids.emplace_back(sourceName, targetName, grid);
 		}
 	}
 }
