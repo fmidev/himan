@@ -31,8 +31,6 @@ enum class comparison_op
 
 struct partial_param_configuration
 {
-	int targetInfoIndex;
-
 	std::vector<std::string> thresholds;
 	std::map<int, std::string> stationThresholds;
 
@@ -65,8 +63,6 @@ struct partial_param_configuration
 template <typename T>
 struct param_configuration
 {
-	int targetInfoIndex;
-
 	std::vector<T> thresholds;
 
 	comparison_op comparison;

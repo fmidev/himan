@@ -95,7 +95,7 @@ struct BTWNCompare : public std::binary_function<double, std::vector<double>, bo
 	bool operator()(double a, const std::vector<double>& b) const
 	{
 		ASSERT(b.size() == 2);
-		return (a >= b[0] && a <= b[1]);
+		return (a >= b[0] && a < b[1]);
 	}
 };
 
@@ -112,14 +112,16 @@ void Probability(std::shared_ptr<himan::info> targetInfo, const param_configurat
 
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
-		const auto& values = ens->Values();
+		auto values = ens->Values();
 
 		// HIMAN-184: if ensemble has no values, or all values are missing, the resulting probability should
 		// be missing
 
-		if (values.empty() || std::count_if(values.begin(), values.end(), [](const double& v) {
-			                      return himan::IsMissingDouble(v);
-			                  }) == static_cast<int>(values.size()))
+		values.erase(
+		    std::remove_if(values.begin(), values.end(), [](const double& v) { return himan::IsMissingDouble(v); }),
+		    values.end());
+
+		if (values.empty())
 		{
 			targetInfo->Value(himan::MissingDouble());
 			continue;

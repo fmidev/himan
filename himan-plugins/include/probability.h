@@ -20,9 +20,7 @@ class probability : public compiled_plugin, private compiled_plugin_base
 	probability(const probability& other) = delete;
 	probability& operator=(const probability& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
-
-	virtual void WriteToFile(const info& targetInfo, size_t targetInfoIndex, write_options opts = write_options());
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
 	virtual std::string ClassName() const
 	{

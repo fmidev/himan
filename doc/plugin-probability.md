@@ -51,7 +51,7 @@ Possible values for comparison operator are
     "=": equal to
     "!=" or "<>": not equal to
     "=[]": value belongs to a set of values. The set of values are defined with key "threshold" separated by commas
-    "[]": value belongs to a range bounded by [lower value, upper value], endpoint included. The set of values are defined with key "threshold" separated by commas, exactly two values must be given.
+    "[)": value belongs to a range bounded by [lower value, upper value), lower endpoint included. The set of values are defined with key "threshold" separated by commas, exactly two values must be given.
 
 Note that all comparison are made with floating point values.
 
