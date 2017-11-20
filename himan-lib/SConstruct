@@ -215,7 +215,6 @@ build_dir = ""
 env.Append(NOCUDA = NOCUDA)
 
 if RELEASE:
-	env.Append(CCFLAGS = ['-O2'])
 	env.Append(CPPDEFINES = ['NDEBUG'])
 
 	env.Append(NVCCFLAGS = ['-O2'])
