@@ -33,6 +33,72 @@ void DecodePrecipitationFormFromGrib2(vector<double>& arr);
 
 const double gribMissing = 32700.;
 
+long DetermineBitsPerValue(const vector<double>& values, double precision)
+{
+	/*
+	 * Calculate the minimum amount of bits required to represent the data in the precision specified.
+	 * We calculate the number manually here because if we let grib_api do it it leads to the data
+	 * being packed twice:
+	 * - first time with 24 bits when we set the data array (grib_set_double_array(...))
+	 * - second time when we request precision change (grib_set_long(changeDecimalPrecision, ...))
+	 */
+
+	himan::logger log("grib");
+
+	int bitsPerValue = 24;  // default if no precision is set
+
+	if (precision == himan::kHPMissingInt)
+	{
+		return bitsPerValue;
+	}
+
+	// https://www.wmo.int/pages/prog/www/WDM/Guides/Guide-binary-2.html
+
+	// define manual minmax search as std::minmax_element uses std::less
+	// for comparison which does not work well with nan
+	double min = 1e38, max = -1e38;
+
+	for (const auto& v : values)
+	{
+		// man fmin:
+		// "If one argument is a NaN, the other argument is returned."
+		min = fmin(min, v);
+		max = fmax(max, v);
+	}
+
+	// Required scale value to reach wanted precision
+	const double D = pow(10, precision);
+
+	// Range of scaled data, ie the largest value we must be able to write
+	const int range = static_cast<int>(ceil(D * max - D * min));
+
+	if (range == 0)
+	{
+		// static grid (max == min)
+		bitsPerValue = 0;
+	}
+	else
+	{
+		// Number of bits required to represent the largest value
+		// Range is incremented with one because we have to able to encode
+		// value zero also. For example if range=4 and precision=0, possible values
+		// are 0,1,2,3,4 --> 3 bits are required.
+
+		bitsPerValue = static_cast<int>(ceil(log2(range + 1)));
+	}
+
+	// Fallback if the calculation above fails
+	if (bitsPerValue < 0 || bitsPerValue > 24)
+	{
+		log.Error("bits per value calculation failed, defaulting to 24");
+		log.Trace("D=" + to_string(static_cast<int>(D)) + " min=" + to_string(min) + " max=" + to_string(max) +
+		          " range=" + to_string(range));
+		bitsPerValue = 24;
+	}
+
+	return bitsPerValue;
+}
+
 grib::grib()
 {
 	itsLogger = logger("grib");
@@ -709,27 +775,46 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger.Trace("Writing unpacked data");
 
+		/*
+		 * Possible precipitation form value encoding must be done before determining
+		 * bits per value, as the range of values is changed.
+		 */
+
 		const auto paramName = anInfo.Param().Name();
+		const int precision = anInfo.Param().Precision();
+
+		long bitsPerValue;
 
 		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
 		{
-			auto data = anInfo.Data().Values();
-			EncodePrecipitationFormToGrib2(data);
+			// We take a copy of the data, because the values at cache should not change
+			auto values = anInfo.Data().Values();
 
-			for (auto& v : data)
-			{
-				if (IsMissing(v))
-				{
-					v = gribMissing;
-				}
-			}
-			itsGrib->Message().Values(data.data(), static_cast<long>(data.size()));
+			EncodePrecipitationFormToGrib2(values);
+			bitsPerValue = DetermineBitsPerValue(values, precision);
+
+			// Change missing value 'nan' to a real fp value
+			replace_if(values.begin(), values.end(), [](const double& v) { return IsMissingDouble(v); }, gribMissing);
+
+			itsGrib->Message().BitsPerValue(bitsPerValue);
+			itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
 		}
 		else
 		{
+			// In this branch no copy is made
+			const auto& values = anInfo.Data().Values();
+			bitsPerValue = DetermineBitsPerValue(values, precision);
+
+			// Change missing value 'nan' to a real fp value
 			anInfo.Data().MissingValue(gribMissing);
-			itsGrib->Message().Values(anInfo.Data().ValuesAsPOD(), static_cast<long>(anInfo.Data().Size()));
+
+			itsGrib->Message().BitsPerValue(bitsPerValue);
+			itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
 		}
+
+		itsLogger.Trace("Using " +
+		                (precision == kHPMissingInt ? "maximum precision" : to_string(precision) + " decimals") + " (" +
+		                to_string(bitsPerValue) + " bits) to store " + paramName);
 	}
 
 	// Return missing value to nan if info is recycled (luatool)
@@ -801,22 +886,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger.Warning("Unable to append to a compressed file");
 		appendToFile = false;
-	}
-
-	if (itsWriteOptions.configuration->DatabaseType() == kRadon)
-	{
-		int decimals = anInfo.Param().Precision();
-
-		if (decimals == kHPMissingInt)
-		{
-			itsLogger.Trace("Precision not found for parameter " + anInfo.Param().Name() + " defaulting to 24 bits");
-		}
-		else
-		{
-			itsLogger.Trace("Using " + std::to_string(decimals) + " decimals for " + anInfo.Param().Name() +
-			                "'s precision");
-			itsGrib->Message().ChangeDecimalPrecision(decimals);
-		}
 	}
 
 	itsGrib->Message().Write(outputFile, appendToFile);
