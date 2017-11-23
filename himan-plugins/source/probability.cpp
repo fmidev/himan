@@ -242,7 +242,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	params calculatedParams;
 
 	int targetInfoIndex = 0;
-	const auto& names = conf->GetParameterNames();
+	const auto names = conf->GetParameterNames();
 	for (const std::string& name : names)
 	{
 		param_configuration config;
@@ -489,10 +489,21 @@ void CalculateWind(const logger& log, std::shared_ptr<info> targetInfo, uint16_t
 		double probability = 0.0;
 		const double threshold = GetThreshold(targetInfo, paramConf, isGrid);
 
+		const auto values1 = ens1->Values();
+		const auto values2 = ens2->Values();
+
+		if (values1.empty() || values2.empty() ||
+		    count(values1.begin(), values1.end(), MissingDouble()) == static_cast<int>(values1.size()) ||
+		    count(values2.begin(), values2.end(), MissingDouble()) == static_cast<int>(values2.size()))
+		{
+			targetInfo->Value(MissingDouble());
+			continue;
+		}
+
 		for (size_t i = 0; i < ensembleSize; i++)
 		{
-			const auto u = ens1->Value(i);
-			const auto v = ens2->Value(i);
+			const auto u = values1[i];
+			const auto v = values2[i];
 
 			if (IsMissing(u) || IsMissing(v))
 			{
@@ -523,17 +534,26 @@ void CalculateNegative(std::shared_ptr<info> targetInfo, uint16_t threadIndex, c
 
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
+		const auto values = ens->Values();
+
+		if (values.empty() ||
+		    std::count_if(values.begin(), values.end(), himan::IsMissingDouble) == static_cast<int>(values.size()))
+		{
+			targetInfo->Value(MissingDouble());
+			continue;
+		}
+
 		double probability = 0.0;
 		const double threshold = GetThreshold(targetInfo, paramConf, isGrid);
 
-		for (size_t i = 0; i < ensembleSize; i++)
+		for (const auto& val : values)
 		{
-			const auto x = ens->Value(i);
-			if (!IsMissing(x) && (x <= threshold))
+			if (val <= threshold)
 			{
 				probability += invN;
 			}
 		}
+
 		targetInfo->Value(probability);
 	}
 }
@@ -553,13 +573,21 @@ void CalculateNormal(std::shared_ptr<info> targetInfo, uint16_t threadIndex, con
 
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
-		double probability = 0.0;
-		const double threshold = GetThreshold(targetInfo, paramConf, isGrid);
+		const auto values = ens->Values();
 
-		for (size_t i = 0; i < ensembleSize; i++)
+		if (values.empty() ||
+		    count_if(values.begin(), values.end(), himan::IsMissingDouble) == static_cast<int>(values.size()))
 		{
-			const auto x = ens->Value(i);
-			if (!IsMissing(x) && (x >= threshold))
+			targetInfo->Value(MissingDouble());
+			continue;
+		}
+
+		const double threshold = GetThreshold(targetInfo, paramConf, isGrid);
+		double probability = 0.0;
+
+		for (const auto& val : values)
+		{
+			if (val >= threshold)
 			{
 				probability += invN;
 			}

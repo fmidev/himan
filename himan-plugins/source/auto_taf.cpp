@@ -97,7 +97,7 @@ void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
 #ifdef DEBUG
-	auto pxy = myTargetInfo->Grid()->XY(point(25.211, 60.313));
+	auto pxy = myTargetInfo->Grid()->XY(point(24.975133948461, 60.363380893204));
 	auto pdebug =
 	    myTargetInfo->Data().Index(static_cast<size_t>(round(pxy.X())), static_cast<size_t>(round(pxy.Y())), 0);
 	cout << "index of debug point " << pdebug << '\n';
@@ -189,7 +189,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	size_t max_num_cl = 4;  // maximum number of cloud layers
 
-	for (size_t j = lastLevel; j > firstLevel; --j)
+	for (size_t j = lastLevel - 1; j > firstLevel; --j)
 	{
 		info_t N = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
 		info_t Height = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), param("HL-M"), forecastType, false);
@@ -459,6 +459,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		assert(!(bknbase[k] >= cbbase[k]));
 		assert(!(sctbase[k] >= cbbase[k]));
 		assert(!(fewbase[k] >= cbbase[k]));
+		assert(!(bknbase[k] < TC->Data().At(k)));
+		assert(!(ovcbase[k] < TC->Data().At(k)));
 
 		if (k == pdebug)
 		{

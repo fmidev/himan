@@ -11,6 +11,7 @@
 #include "packed_data.h"
 #include "point.h"
 #include "serialization.h"
+#include <mutex>
 #include <string>
 
 class NFmiRotatedLatLonArea;
@@ -164,8 +165,11 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;
+	void InitNewbaseArea() const;
+
 	mutable std::unique_ptr<NFmiRotatedLatLonArea> itsRotLatLonArea;
 
+	mutable std::once_flag itsNewbaseAreaFlag;
 	point itsSouthPole;
 
 #ifdef SERIALIZATION

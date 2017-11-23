@@ -474,7 +474,7 @@ double LI_(double T500, double T500m, double TD500m, double P500m);
  */
 
 CUDA_DEVICE
-double KI_(double T500, double T700, double T850, double TD700, double TD850);
+double KI_(double T850, double T700, double T500, double TD850, double TD700);
 
 /**
  * @brief Calculate bulk wind shear between two layers in the atmosphere
@@ -1112,13 +1112,13 @@ inline double himan::metutil::Gammaw_(double P, double T)
 }
 
 CUDA_DEVICE
-inline double himan::metutil::CTI_(double TD850, double T500) { return TD850 - T500; }
+inline double himan::metutil::CTI_(double T500, double TD850) { return TD850 - T500; }
 CUDA_DEVICE
 inline double himan::metutil::VTI_(double T850, double T500) { return T850 - T500; }
 CUDA_DEVICE
 inline double himan::metutil::TTI_(double T850, double T500, double TD850)
 {
-	return CTI_(TD850, T500) + VTI_(T850, T500);
+	return CTI_(T500, TD850) + VTI_(T850, T500);
 }
 
 CUDA_DEVICE
