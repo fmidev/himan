@@ -8,7 +8,7 @@ Basic functionality:
 * himan will launch as many threads as are needed and each of the threads will execute the script(s) simultaneously
 * lua scripts control the writing of output files
 * lua scripts can access hitool-plugin functionality
-* interpolation, cache, database access etc are all done automatically like with any other plugin
+* interpolation, cache, database access etc. are all done automatically like with any other plugin
 * luatool plugin does not support cuda calculation, but it can use cuda to unpack grib data (through the regular himan functionlity)
 * luatool-plugin can execute one or more scripts
 * in lua language, array indexing starts with one. luatool-plugin automatically converts indexes between lua and C++ when converting data from std::vector<double> to lua native table and vice versa
@@ -404,9 +404,9 @@ Note! The argument for WriteToFile MUST be 'result'!
 | table | Fetch | forecast_time, level, param | Fetch data with given search arguments |
 | | WriteToFile | table | Writes gived data to file |
 
-## kFloatMissing
+## Missing
 
-Variable kFloatMissing is used in Himan to represent a missing value. It's value is 32700. 
+Variable Missing is used in Himan to represent a missing value. It's value is NaN.
 
 ## neons
 
@@ -541,8 +541,6 @@ luatool:WriteToFile(result)
 Calculates cloud base height in feet.
 
 ```
-local kFloatMissing = kFloatMissing
- 
 -- Max height to check for cloud base [m]
 local maxH = 14000
  
@@ -583,26 +581,23 @@ for i = 1, #lowNmax do
  
     local ceil = kFloatMissing
  
-    if nh ~= kFloatMissing and nmax ~= kFloatMissing then
+    -- Nthreshold is not always found for low clouds starting from ~sfc
  
-        -- Nthreshold is not always found for low clouds starting from ~sfc
+    if nmax > Nthreshold then
+        nh = 14
+    end
  
-        if nmax > Nthreshold then
-            nh = 14
-        end
+    -- Result converted to feet:
+    -- below 100ft at 50ft resolution  (15m ~ 50ft)
+    -- below 10000ft at 100ft resolution  (10000ft = 3048m)
+    -- above 10000ft at 500ft resolution
  
-        -- Result converted to feet:
-        -- below 100ft at 50ft resolution  (15m ~ 50ft)
-        -- below 10000ft at 100ft resolution  (10000ft = 3048m)
-        -- above 10000ft at 500ft resolution
- 
-        if nh < 15 then
-            ceil = math.floor(0.5 + nh/30.48*2) * 50
-        elseif nh < 3048 then
-            ceil = math.floor(0.5 + nh/30.48) * 100
-        else
-            ceil = math.floor(0.5 + nh/304.8*2) * 500
-        end
+    if nh < 15 then
+        ceil = math.floor(0.5 + nh/30.48*2) * 50
+    elseif nh < 3048 then
+        ceil = math.floor(0.5 + nh/30.48) * 100
+    else
+        ceil = math.floor(0.5 + nh/304.8*2) * 500
     end
  
     ceiling[i] = ceil

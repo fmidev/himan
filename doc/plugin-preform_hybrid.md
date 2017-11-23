@@ -1,6 +1,6 @@
 # Summary
 
-preform_hybrid plugin calculates the form of precipitation using surface and htbrid level information. Possible values are drizzle, rain, sleet, snow, freezing drizzle and freezing rain.
+preform_hybrid plugin calculates the form of precipitation using surface and hybrid level information. Possible values are drizzle, rain, sleet, snow, freezing drizzle and freezing rain.
 
 # Required source parameters
 

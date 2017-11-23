@@ -17,7 +17,7 @@ precipitation rate from following models
 * ECMWF ENS probability of 6h precipition sum >= 0.1mm
 * FMI Multi-Model Ensemble PEPS probability of 1h precipition sum >= 0.2mm (1)
 
-Result data is averaged using a stencile sizes ranging from 25 to 81 grid points. 
+Result data is averaged using a stencile with sizes ranging from 25 to 81 grid points. 
 
 # Output parameters
 
@@ -30,7 +30,8 @@ Unit of resulting parameter is %.
  The mathematical definition of Probability of Precipitation is defined as: PoP = C * A
  
  C = the confidence that precipitation will occur somewhere in the forecast area
- A = the percent of the area that will receive measurable precipitation, if it occurs at all
+
+ A = the percentage of the area that will receive measurable precipitation, if it occurs at all
 
 # Per-plugin configuration options
 

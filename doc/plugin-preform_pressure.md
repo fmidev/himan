@@ -52,7 +52,7 @@ Precipitation form is determined in the following order:
    * layer must have high enough humidity
 
 4. **Snow** if
-   * snowfall / RR > 0.8 or tai T <= 0C
+   * snowfall / RR > 0.8 or T <= 0C
 
 5. **Sleet** if
    * 0.15 < snowfall / RR < 0.8
