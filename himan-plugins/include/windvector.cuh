@@ -37,7 +37,9 @@ struct options
 	size_t missing;
 	size_t N;
 
-	options() : u(0), v(0), speed(0), dir(0), target_type(kUnknownElement), missing(0), N(0) {}
+	options() : u(0), v(0), speed(0), dir(0), target_type(kUnknownElement), missing(0), N(0)
+	{
+	}
 };
 
 void Process(options& opts);

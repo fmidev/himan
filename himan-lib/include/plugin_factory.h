@@ -18,7 +18,9 @@ namespace himan
 class plugin_factory
 {
    public:
-	~plugin_factory() {}
+	~plugin_factory()
+	{
+	}
 	static plugin_factory* Instance();
 
 	std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins(HPPluginClass = kUnknownPlugin);  // Kinda ugly

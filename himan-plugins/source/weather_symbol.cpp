@@ -87,7 +87,8 @@ void weather_symbol::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 	if (!CInfo || !RTInfo)
 	{
-		itsLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " + static_cast<string>(forecastLevel));
+		itsLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		                  static_cast<string>(forecastLevel));
 		return;
 	}
 

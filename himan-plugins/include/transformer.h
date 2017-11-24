@@ -21,15 +21,27 @@ class transformer : public compiled_plugin, private compiled_plugin_base
    public:
 	transformer();
 
-	inline virtual ~transformer() {}
+	inline virtual ~transformer()
+	{
+	}
 	transformer(const transformer& other) = delete;
 	transformer& operator=(const transformer& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::transformer"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 2); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::transformer";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 2);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
@@ -55,7 +67,10 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<transformer>(new transformer()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<transformer>(new transformer());
+}
 }  // namespace plugin
 }  // namespace himan
 

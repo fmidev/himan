@@ -24,15 +24,27 @@ class relative_humidity : public compiled_plugin, private compiled_plugin_base
    public:
 	relative_humidity();
 
-	inline virtual ~relative_humidity() {}
+	inline virtual ~relative_humidity()
+	{
+	}
 	relative_humidity(const relative_humidity& other) = delete;
 	relative_humidity& operator=(const relative_humidity& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::relative_humidity"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::relative_humidity";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 0);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 

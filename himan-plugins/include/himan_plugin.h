@@ -51,7 +51,7 @@ class himan_plugin
 
 	virtual HPVersionNumber Version() const = 0;
 
-protected:
+   protected:
 	logger itsLogger;
 };
 

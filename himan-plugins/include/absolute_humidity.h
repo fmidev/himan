@@ -30,15 +30,27 @@ class absolute_humidity : public compiled_plugin, private compiled_plugin_base
    public:
 	absolute_humidity();
 
-	inline virtual ~absolute_humidity() {}
+	inline virtual ~absolute_humidity()
+	{
+	}
 	absolute_humidity(const absolute_humidity& other) = delete;
 	absolute_humidity& operator=(const absolute_humidity& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::absolute_humidity"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::absolute_humidity";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 };

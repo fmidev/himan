@@ -138,7 +138,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		double stratN = tup.get<4>();
 		double stratH = tup.get<5>();
 
-		if (IsMissing(RR) || IsMissing(RH) )
+		if (IsMissing(RR) || IsMissing(RH))
 		{
 			continue;
 		}

@@ -2,10 +2,10 @@
  * @file vvms.cpp
  *
  */
+#include "vvms.h"
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include "vvms.h"
 
 using namespace std;
 using namespace himan::plugin;

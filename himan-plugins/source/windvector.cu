@@ -17,7 +17,8 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 	{
 		double U = d_u[idx], V = d_v[idx];
 		d_speed[idx] = himan::MissingDouble();
-		if (d_dir) d_dir[idx] = himan::MissingDouble();
+		if (d_dir)
+			d_dir[idx] = himan::MissingDouble();
 
 		double speed = sqrt(U * U + V * V);
 

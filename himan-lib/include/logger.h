@@ -18,7 +18,9 @@ class logger
 	logger();
 	explicit logger(const std::string& theUserName);
 	logger(const std::string& theUserName, HPDebugState theDebugState);
-	~logger() {}
+	~logger()
+	{
+	}
 
 	logger(const logger& other) = default;
 	logger& operator=(const logger& other) = default;
@@ -63,7 +65,10 @@ class logger
 		}
 	};
 
-	void Fatal(const std::string& msg) const { printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str()); };
+	void Fatal(const std::string& msg) const
+	{
+		printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str());
+	};
 
 	static HPDebugState MainDebugState;
 

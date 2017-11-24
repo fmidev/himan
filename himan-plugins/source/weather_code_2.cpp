@@ -135,7 +135,8 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 			else
 			{
 				// Total cloud cover less than 11%
-				if (totalCC <= 0.1) weather_symbol = 0;  // clear: sun (moon and/or stars)
+				if (totalCC <= 0.1)
+					weather_symbol = 0;  // clear: sun (moon and/or stars)
 				// !!!Attention, N-0TO1 and NX-PRCNT are not percent. They're between 0 and 1!!!
 				else if ((lowCC + medCC) <= 0.10 && totalCC > 0.10)
 					weather_symbol = 1;  // thin high clouds: the sun and transparent cloud

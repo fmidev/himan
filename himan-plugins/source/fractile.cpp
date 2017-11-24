@@ -35,7 +35,9 @@ fractile::fractile()
 	itsLogger = logger("fractile");
 }
 
-fractile::~fractile() {}
+fractile::~fractile()
+{
+}
 void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -286,9 +288,9 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		myTargetInfo->Value(var);
 	}
 
-	threadedLogger.Info("[" + deviceType +
-	                    "] Missing values: " + boost::lexical_cast<std::string>(myTargetInfo->Data().MissingCount()) +
-	                    "/" + boost::lexical_cast<std::string>(myTargetInfo->Data().Size()));
+	threadedLogger.Info("[" + deviceType + "] Missing values: " +
+	                    boost::lexical_cast<std::string>(myTargetInfo->Data().MissingCount()) + "/" +
+	                    boost::lexical_cast<std::string>(myTargetInfo->Data().Size()));
 }
 
 }  // plugin

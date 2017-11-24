@@ -18,7 +18,10 @@
 
 using namespace himan::plugin;
 
-writer::writer() : itsWriteOptions() { itsLogger = logger("writer"); }
+writer::writer() : itsWriteOptions()
+{
+	itsLogger = logger("writer");
+}
 bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile)
 {
 	namespace fs = boost::filesystem;
@@ -176,5 +179,11 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 	return ret;
 }
 
-write_options writer::WriteOptions() const { return itsWriteOptions; }
-void writer::WriteOptions(const write_options& theWriteOptions) { itsWriteOptions = theWriteOptions; }
+write_options writer::WriteOptions() const
+{
+	return itsWriteOptions;
+}
+void writer::WriteOptions(const write_options& theWriteOptions)
+{
+	itsWriteOptions = theWriteOptions;
+}

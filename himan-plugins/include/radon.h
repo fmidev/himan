@@ -48,9 +48,18 @@ class radon : public auxiliary_plugin
 	radon(const radon& other) = delete;
 	radon& operator=(const radon& other) = delete;
 
-	virtual std::string ClassName() const { return "himan::plugin::radon"; }
-	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::radon";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
 	/**
 	 * @brief Return filename of a field
 	 */
@@ -105,7 +114,10 @@ inline NFmiRadonDB& radon::RadonDB()
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<radon>(new radon()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<radon>(new radon());
+}
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 
 }  // namespace plugin

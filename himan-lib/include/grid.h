@@ -33,7 +33,10 @@ class grid
 	grid(const grid& other);
 	grid& operator=(const grid& other) = delete;
 
-	virtual std::string ClassName() const { return "himan::grid"; }
+	virtual std::string ClassName() const
+	{
+		return "himan::grid";
+	}
 	virtual bool operator==(const grid& other) const;
 	virtual bool operator!=(const grid& other) const;
 
@@ -147,7 +150,10 @@ class grid
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const grid& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const grid& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* GRID_H */

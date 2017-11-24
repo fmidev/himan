@@ -28,7 +28,10 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 		}
 	}
 }
-__device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options opts) { return metutil::Theta_(T, P); }
+__device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options opts)
+{
+	return metutil::Theta_(T, P);
+}
 __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD, options opts)
 {
 	double thetaE = ThetaE(T, P, TD, opts);

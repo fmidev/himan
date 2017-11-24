@@ -106,7 +106,10 @@ grib::grib()
 	itsGrib = make_shared<NFmiGrib>();
 }
 
-shared_ptr<NFmiGrib> grib::Reader() { return itsGrib; }
+shared_ptr<NFmiGrib> grib::Reader()
+{
+	return itsGrib;
+}
 void grib::WriteAreaAndGrid(info& anInfo)
 {
 	long edition = itsGrib->Message().Edition();
@@ -948,7 +951,8 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 	if (itsGrib->Message().Edition() == 2 && (centre == 98 || centre == 86) && X0 != 0)
 	{
 		X0 -= 360;
-		if (X0 < -180) X0 += 360;
+		if (X0 < -180)
+			X0 += 360;
 	}
 
 	himan::point firstPoint(X0, Y0);
@@ -1468,7 +1472,8 @@ himan::level grib::ReadLevel(const search_options& options) const
 			{
 				long gribLevelValue2 = itsGrib->Message().LevelValue2();
 				// Missing in grib is all bits set
-				if (gribLevelValue2 == 2147483647) gribLevelValue2 = -1;
+				if (gribLevelValue2 == 2147483647)
+					gribLevelValue2 = -1;
 
 				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
 				          static_cast<float>(gribLevelValue2));
@@ -1870,7 +1875,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			aTimer.Stop();
 
-			if (!readIfNotMatching) break;  // We found what we were looking for
+			if (!readIfNotMatching)
+				break;  // We found what we were looking for
 		}
 	}
 
@@ -2045,7 +2051,8 @@ void EncodePrecipitationFormToGrib2(vector<double>& arr)
 {
 	for (auto& val : arr)
 	{
-		if (himan::IsMissing(val)) continue;
+		if (himan::IsMissing(val))
+			continue;
 
 		switch (static_cast<int>(val))
 		{
@@ -2082,7 +2089,8 @@ void DecodePrecipitationFormFromGrib2(vector<double>& arr)
 {
 	for (auto& val : arr)
 	{
-		if (himan::IsMissing(val)) continue;
+		if (himan::IsMissing(val))
+			continue;
 
 		switch (static_cast<int>(val))
 		{

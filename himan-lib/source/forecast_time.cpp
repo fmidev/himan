@@ -7,7 +7,9 @@
 
 using namespace himan;
 
-forecast_time::forecast_time() {}
+forecast_time::forecast_time()
+{
+}
 forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime)
     : itsOriginDateTime(theOriginDateTime), itsValidDateTime(theValidDateTime), itsStepResolution(kHourResolution)
 {
@@ -58,7 +60,10 @@ bool forecast_time::operator==(const forecast_time& other) const
 	        itsStepResolution == other.itsStepResolution);
 }
 
-bool forecast_time::operator!=(const forecast_time& other) const { return !(*this == other); }
+bool forecast_time::operator!=(const forecast_time& other) const
+{
+	return !(*this == other);
+}
 int forecast_time::Step() const
 {
 	if (itsValidDateTime.itsDateTime != boost::date_time::not_a_date_time &&
@@ -88,20 +93,41 @@ int forecast_time::Step() const
 	return kHPMissingInt;
 }
 
-raw_time& forecast_time::OriginDateTime() { return itsOriginDateTime; }
-const raw_time& forecast_time::OriginDateTime() const { return itsOriginDateTime; }
-void forecast_time::OriginDateTime(const raw_time& theOriginDateTime) { itsOriginDateTime = theOriginDateTime; }
+raw_time& forecast_time::OriginDateTime()
+{
+	return itsOriginDateTime;
+}
+const raw_time& forecast_time::OriginDateTime() const
+{
+	return itsOriginDateTime;
+}
+void forecast_time::OriginDateTime(const raw_time& theOriginDateTime)
+{
+	itsOriginDateTime = theOriginDateTime;
+}
 void forecast_time::OriginDateTime(const std::string& theOriginDateTime, const std::string& theDateMask)
 {
 	itsOriginDateTime = raw_time(theOriginDateTime, theDateMask);
 }
 
-raw_time& forecast_time::ValidDateTime() { return itsValidDateTime; }
-const raw_time& forecast_time::ValidDateTime() const { return itsValidDateTime; }
+raw_time& forecast_time::ValidDateTime()
+{
+	return itsValidDateTime;
+}
+const raw_time& forecast_time::ValidDateTime() const
+{
+	return itsValidDateTime;
+}
 void forecast_time::ValidDateTime(const std::string& theValidDateTime, const std::string& theDateMask)
 {
 	itsValidDateTime = raw_time(theValidDateTime, theDateMask);
 }
 
-HPTimeResolution forecast_time::StepResolution() const { return itsStepResolution; }
-void forecast_time::StepResolution(HPTimeResolution theStepResolution) { itsStepResolution = theStepResolution; }
+HPTimeResolution forecast_time::StepResolution() const
+{
+	return itsStepResolution;
+}
+void forecast_time::StepResolution(HPTimeResolution theStepResolution)
+{
+	itsStepResolution = theStepResolution;
+}

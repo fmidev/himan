@@ -45,7 +45,10 @@ inline void PrepareInfo(info_simple* source, double* devptr, cudaStream_t& strea
 	}
 }
 
-inline void ReleaseInfo(info_simple* source) { CUDA_CHECK(cudaHostUnregister(source->values)); }
+inline void ReleaseInfo(info_simple* source)
+{
+	CUDA_CHECK(cudaHostUnregister(source->values));
+}
 inline void ReleaseInfo(info_simple* source, double* devptr, cudaStream_t& stream)
 {
 	CUDA_CHECK(cudaMemcpyAsync(source->values, devptr, source->size_x * source->size_y * sizeof(double),

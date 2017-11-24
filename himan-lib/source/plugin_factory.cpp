@@ -109,7 +109,8 @@ void plugin_factory::ReadPlugins(const std::string& pluginName)
 					{
 						Load(dir_iter->path().string());
 
-						if (!pluginName.empty()) return;
+						if (!pluginName.empty())
+							return;
 					}
 				}
 			}

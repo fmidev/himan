@@ -64,9 +64,13 @@ struct lcl_t
 	double Q;
 
 	CUDA_DEVICE
-	lcl_t() : T(himan::MissingDouble()), P(himan::MissingDouble()), Q(himan::MissingDouble()) {}
+	lcl_t() : T(himan::MissingDouble()), P(himan::MissingDouble()), Q(himan::MissingDouble())
+	{
+	}
 	CUDA_DEVICE
-	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q) {}
+	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q)
+	{
+	}
 };
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -693,11 +697,15 @@ double E_(double RH, double es);
 }  // namespace himan
 
 CUDA_DEVICE
-inline double himan::metutil::DewPointFromRHSimple_(double T, double RH) { return (T - ((100 - RH) * 0.2)); }
+inline double himan::metutil::DewPointFromRHSimple_(double T, double RH)
+{
+	return (T - ((100 - RH) * 0.2));
+}
 CUDA_DEVICE
 inline double himan::metutil::DewPointFromRH_(double T, double RH)
 {
-	if (RH == 0.) RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
+	if (RH == 0.)
+		RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
 	ASSERT(RH > 0.);
 	// ASSERT(RH < 101.);
 	ASSERT(T > 0. && T < 500.);
@@ -1112,9 +1120,15 @@ inline double himan::metutil::Gammaw_(double P, double T)
 }
 
 CUDA_DEVICE
-inline double himan::metutil::CTI_(double T500, double TD850) { return TD850 - T500; }
+inline double himan::metutil::CTI_(double T500, double TD850)
+{
+	return TD850 - T500;
+}
 CUDA_DEVICE
-inline double himan::metutil::VTI_(double T850, double T500) { return T850 - T500; }
+inline double himan::metutil::VTI_(double T850, double T500)
+{
+	return T850 - T500;
+}
 CUDA_DEVICE
 inline double himan::metutil::TTI_(double T850, double T500, double TD850)
 {
@@ -1240,7 +1254,8 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	ASSERT(thetaE > 0);
 	ASSERT(P > 1000);
 
-	if (IsMissingDouble(thetaE) || IsMissingDouble(P)) return MissingDouble();
+	if (IsMissingDouble(thetaE) || IsMissingDouble(P))
+		return MissingDouble();
 
 	using namespace himan::constants;
 

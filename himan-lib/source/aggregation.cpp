@@ -72,15 +72,42 @@ bool aggregation::operator==(const aggregation& other) const
 	return true;
 }
 
-bool aggregation::operator!=(const aggregation& other) const { return !(*this == other); }
-HPAggregationType aggregation::Type() const { return itsType; }
-void aggregation::Type(HPAggregationType theType) { itsType = theType; }
-HPTimeResolution aggregation::TimeResolution() const { return itsTimeResolution; }
-void aggregation::TimeResolution(HPTimeResolution theTimeResolution) { itsTimeResolution = theTimeResolution; }
-int aggregation::TimeResolutionValue() const { return itsTimeResolutionValue; }
-void aggregation::TimeResolutionValue(int theTimeResolutionValue) { itsTimeResolutionValue = theTimeResolutionValue; }
-void aggregation::FirstTimeValue(int theFirstTimeValue) { itsFirstTimeValue = theFirstTimeValue; }
-int aggregation::FirstTimeValue() const { return itsFirstTimeValue; }
+bool aggregation::operator!=(const aggregation& other) const
+{
+	return !(*this == other);
+}
+HPAggregationType aggregation::Type() const
+{
+	return itsType;
+}
+void aggregation::Type(HPAggregationType theType)
+{
+	itsType = theType;
+}
+HPTimeResolution aggregation::TimeResolution() const
+{
+	return itsTimeResolution;
+}
+void aggregation::TimeResolution(HPTimeResolution theTimeResolution)
+{
+	itsTimeResolution = theTimeResolution;
+}
+int aggregation::TimeResolutionValue() const
+{
+	return itsTimeResolutionValue;
+}
+void aggregation::TimeResolutionValue(int theTimeResolutionValue)
+{
+	itsTimeResolutionValue = theTimeResolutionValue;
+}
+void aggregation::FirstTimeValue(int theFirstTimeValue)
+{
+	itsFirstTimeValue = theFirstTimeValue;
+}
+int aggregation::FirstTimeValue() const
+{
+	return itsFirstTimeValue;
+}
 std::ostream& aggregation::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;

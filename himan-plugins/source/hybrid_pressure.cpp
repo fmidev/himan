@@ -58,7 +58,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						  static_cast<string>(forecastLevel));
+	                      static_cast<string>(forecastLevel));
 
 	info_t PInfo;
 

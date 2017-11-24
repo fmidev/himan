@@ -104,7 +104,8 @@ inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparc
 	auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv), point(Tparcel, Zenv),
 	                                                 point(prevTparcel, prevZenv));
 
-	if (!(intersection.Y() == intersection.Y())) return 0;
+	if (!(intersection.Y() == intersection.Y()))
+		return 0;
 
 	prevZenv = intersection.Y();
 

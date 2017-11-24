@@ -9,7 +9,6 @@ namespace himan
 {
 namespace numerical_functions
 {
-
 /**
  * @brief Compute convolution of matrix A by matrix B
  * @param A Data
@@ -94,10 +93,9 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 	const int i = blockIdx.x * blockDim.x + threadIdx.x;
 	const int j = blockIdx.y * blockDim.y + threadIdx.y;
 
-	size_t kernelMissingCount = 0;
-
 	if (i < M && j < N)
 	{
+		size_t kernelMissingCount = 0;
 		double convolutionValue = 0.0;
 		double kernelWeightSum = 0.0;
 

@@ -26,7 +26,9 @@ struct options
 	double t_base;
 	double rh_scale;
 
-	options() : t(0), rh(0), td(0), N(0), missing(0), t_base(0), rh_scale(1) {}
+	options() : t(0), rh(0), td(0), N(0), missing(0), t_base(0), rh_scale(1)
+	{
+	}
 };
 
 void Process(options& opts);

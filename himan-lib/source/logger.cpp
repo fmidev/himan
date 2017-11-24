@@ -7,12 +7,12 @@
 
 namespace himan
 {
-
 HPDebugState logger::MainDebugState = himan::kInfoMsg;
 
-logger::logger() : itsDebugState(kInfoMsg), itsUserName("HimanDefaultLogger") {}
-logger::logger(const std::string& theUserName)
-    : itsDebugState(MainDebugState), itsUserName(theUserName)
+logger::logger() : itsDebugState(kInfoMsg), itsUserName("HimanDefaultLogger")
+{
+}
+logger::logger(const std::string& theUserName) : itsDebugState(MainDebugState), itsUserName(theUserName)
 {
 }
 logger::logger(const std::string& theUserName, HPDebugState theDebugState)
@@ -20,4 +20,4 @@ logger::logger(const std::string& theUserName, HPDebugState theDebugState)
 {
 }
 
-} // namespace himan
+}  // namespace himan

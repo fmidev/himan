@@ -2,12 +2,12 @@
  * @file pop.cpp
  *
  */
+#include "pop.h"
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
-#include "pop.h"
 #include "util.h"
 
 #include "fetcher.h"
@@ -107,7 +107,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	auto myThreadedLogger = logger("popThread #" + to_string(threadIndex));
 
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						   static_cast<string>(forecastLevel));
+	                       static_cast<string>(forecastLevel));
 
 	vector<double> PEPS, Hirlam, MEPS, GFS, EC, ECprev, ECprob1, ECprob01, ECfract50, ECfract75;
 
@@ -276,7 +276,8 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		cnf->SourceGeomNames({itsMEPSGeom});
 		cnf->SourceProducers({producer(260, 0, 0, "MEPSMTA")});
 
-		auto MEPSInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecast_type(kEpsControl, 0), false);
+		auto MEPSInfo =
+		    f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecast_type(kEpsControl, 0), false);
 
 		MEPS = VEC(MEPSInfo);
 	}
@@ -430,9 +431,9 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ec = 1;
 		}
 
-		out_confidence = (_K1 * ecf50 + _K2 * ecf75 + _K3 * ecprev + _K4 * peps + K5 * ec + _K6 * hirlam + _K7 * gfs +
-		                  _K8 * meps) /
-		                 (_K1 + _K2 + _K3 + _K4 + K5 + _K6 + _K7 + _K8);
+		out_confidence =
+		    (_K1 * ecf50 + _K2 * ecf75 + _K3 * ecprev + _K4 * peps + K5 * ec + _K6 * hirlam + _K7 * gfs + _K8 * meps) /
+		    (_K1 + _K2 + _K3 + _K4 + K5 + _K6 + _K7 + _K8);
 
 		ASSERT(out_confidence <= 1.01);
 

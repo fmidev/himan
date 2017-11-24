@@ -42,9 +42,18 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	luatool();
 	virtual ~luatool();
 
-	virtual std::string ClassName() const { return "himan::plugin::luatool"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::luatool";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
 	void Process(std::shared_ptr<const plugin_configuration> configuration);
 
 	std::shared_ptr<info> FetchInfo(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
@@ -78,7 +87,10 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	write_options itsWriteOptions;
 };
 
-extern "C" std::shared_ptr<luatool> create() { return std::make_shared<luatool>(); }
+extern "C" std::shared_ptr<luatool> create()
+{
+	return std::make_shared<luatool>();
+}
 }  // namespace plugin
 }  // namespace himan
 

@@ -26,15 +26,27 @@ class stability : public compiled_plugin, private compiled_plugin_base
    public:
 	stability();
 
-	inline virtual ~stability() {}
+	inline virtual ~stability()
+	{
+	}
 	stability(const stability& other) = delete;
 	stability& operator=(const stability& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::stability"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(2, 0); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::stability";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(2, 0);
+	}
+
    private:
 	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
@@ -57,7 +69,10 @@ class stability : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<stability>(new stability()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<stability>(new stability());
+}
 }  // namespace plugin
 }  // namespace himan
 

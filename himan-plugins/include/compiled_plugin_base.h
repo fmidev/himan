@@ -105,7 +105,9 @@ class compiled_plugin_base
 {
    public:
 	compiled_plugin_base();
-	inline virtual ~compiled_plugin_base() {}
+	inline virtual ~compiled_plugin_base()
+	{
+	}
 	compiled_plugin_base(const compiled_plugin_base& other) = delete;
 	compiled_plugin_base& operator=(const compiled_plugin_base& other) = delete;
 
@@ -121,7 +123,10 @@ class compiled_plugin_base
 	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options());
 
    protected:
-	virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::compiled_plugin_base";
+	}
 	/**
 	 * @brief Set primary dimension
 	 *

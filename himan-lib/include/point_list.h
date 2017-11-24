@@ -26,7 +26,10 @@ class point_list : public grid
 	point_list(const point_list& other);
 	point_list& operator=(const point_list& other) = delete;
 
-	std::string ClassName() const { return "himan::point_list"; }
+	std::string ClassName() const
+	{
+		return "himan::point_list";
+	}
 	std::ostream& Write(std::ostream& file) const;
 
 	size_t Size() const override;
@@ -73,7 +76,10 @@ class point_list : public grid
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const point_list& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const point_list& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #ifdef SERIALIZATION

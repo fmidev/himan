@@ -48,7 +48,9 @@ template <class T>
 class matrix
 {
    public:
-	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0) {}
+	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0)
+	{
+	}
 	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue)
 	    : itsData(theWidth * theHeight * theDepth),
 	      itsWidth(theWidth),
@@ -109,16 +111,28 @@ class matrix
 		return true;
 	}
 
-	bool operator!=(const matrix& other) const { return !(*this == other); }
-	T& operator[](const size_t& i) { return itsData[i]; }
-	std::string ClassName() const { return "himan::matrix"; }
+	bool operator!=(const matrix& other) const
+	{
+		return !(*this == other);
+	}
+	T& operator[](const size_t& i)
+	{
+		return itsData[i];
+	}
+	std::string ClassName() const
+	{
+		return "himan::matrix";
+	}
 	T At(size_t combinedIndex) const
 	{
 		ASSERT(itsData.size() > combinedIndex);
 		return itsData[combinedIndex];
 	}
 
-	T At(size_t x, size_t y, size_t z = 0) const { return itsData[Index(x, y, z)]; }
+	T At(size_t x, size_t y, size_t z = 0) const
+	{
+		return itsData[Index(x, y, z)];
+	}
 	std::ostream& Write(std::ostream& file) const
 	{
 		file << "<" << ClassName() << ">" << std::endl;
@@ -202,7 +216,8 @@ class matrix
 
 		for (int i = 1; i <= binn; i++)
 		{
-			if (i == binn) binmax += 0.001;
+			if (i == binn)
+				binmax += 0.001;
 
 			size_t count = 0;
 
@@ -210,7 +225,8 @@ class matrix
 			{
 				double val = theValues[j];
 				// same problem as above with other missing value case
-				if (himan::IsMissing(val)) continue;
+				if (himan::IsMissing(val))
+					continue;
 
 				if (val >= binmin && val < binmax)
 				{
@@ -218,7 +234,8 @@ class matrix
 				}
 			}
 
-			if (i == binn) binmax -= 0.001;
+			if (i == binn)
+				binmax -= 0.001;
 
 			file << binmin << ":" << binmax << " " << count << std::endl;
 
@@ -228,13 +245,34 @@ class matrix
 	}
 #endif
 
-	size_t Size() const { return itsData.size(); }
-	size_t SizeX() const { return itsWidth; }
-	size_t SizeY() const { return itsHeight; }
-	size_t SizeZ() const { return itsDepth; }
-	void SizeX(size_t theWidth) { Resize(theWidth, itsHeight, itsDepth); }
-	void SizeY(size_t theHeight) { Resize(itsWidth, theHeight, itsDepth); }
-	void SizeZ(size_t theDepth) { Resize(itsWidth, itsHeight, theDepth); }
+	size_t Size() const
+	{
+		return itsData.size();
+	}
+	size_t SizeX() const
+	{
+		return itsWidth;
+	}
+	size_t SizeY() const
+	{
+		return itsHeight;
+	}
+	size_t SizeZ() const
+	{
+		return itsDepth;
+	}
+	void SizeX(size_t theWidth)
+	{
+		Resize(theWidth, itsHeight, itsDepth);
+	}
+	void SizeY(size_t theHeight)
+	{
+		Resize(itsWidth, theHeight, itsDepth);
+	}
+	void SizeZ(size_t theDepth)
+	{
+		Resize(itsWidth, itsHeight, theDepth);
+	}
 	/**
 	 * @brief Resize matrix to given size
 	 *
@@ -256,8 +294,14 @@ class matrix
 		return itsData.data();
 	}
 
-	std::vector<T>& Values() { return itsData; }
-	friend std::ostream& operator<<(std::ostream& file, const matrix<T>& ob) { return ob.Write(file); }
+	std::vector<T>& Values()
+	{
+		return itsData;
+	}
+	friend std::ostream& operator<<(std::ostream& file, const matrix<T>& ob)
+	{
+		return ob.Write(file);
+	}
 	/**
 	 * @brief Set value of whole matrix or a slice of it.
 	 *
@@ -339,7 +383,10 @@ class matrix
 	/**
 	 * @brief Fill matrix with a given value
 	 */
-	void Fill(T fillValue) { std::fill(itsData.begin(), itsData.end(), fillValue); }
+	void Fill(T fillValue)
+	{
+		std::fill(itsData.begin(), itsData.end(), fillValue);
+	}
 	// Only used for calculating statistics in PrintFloatData()
 	void MissingValue(T theMissingValue)
 	{
@@ -348,12 +395,16 @@ class matrix
 		// Replace old missing values in data by new ones
 		for (size_t i = 0; i < itsData.size(); i++)
 		{
-			if (IsMissing(i)) itsData[i] = theMissingValue;
+			if (IsMissing(i))
+				itsData[i] = theMissingValue;
 		}
 		itsMissingValue = theMissingValue;
 	}
 
-	T MissingValue() const { return itsMissingValue; }
+	T MissingValue() const
+	{
+		return itsMissingValue;
+	}
 	/**
 	 * @brief Clear contents of matrix (set size = 0)
 	 */
@@ -372,7 +423,10 @@ class matrix
 		return Compare(itsData[theIndex], itsMissingValue);
 	}
 
-	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const { return IsMissing(Index(theX, theY, theZ)); }
+	bool IsMissing(size_t theX, size_t theY, size_t theZ = 1) const
+	{
+		return IsMissing(Index(theX, theY, theZ));
+	}
 	/**
 	 * @brief Calculate missing values in data
 	 *
@@ -393,7 +447,11 @@ class matrix
 		return missing;
 	}
 
-	size_t Index(size_t x, size_t y, size_t z) const { return z * itsWidth * itsHeight + y * itsWidth + x; }
+	size_t Index(size_t x, size_t y, size_t z) const
+	{
+		return z * itsWidth * itsHeight + y * itsWidth + x;
+	}
+
    private:
 	std::vector<T> itsData;
 

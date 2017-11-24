@@ -32,15 +32,27 @@ class preform_hybrid : public compiled_plugin, private compiled_plugin_base
    public:
 	preform_hybrid();
 
-	inline virtual ~preform_hybrid() {}
+	inline virtual ~preform_hybrid()
+	{
+	}
 	preform_hybrid(const preform_hybrid& other) = delete;
 	preform_hybrid& operator=(const preform_hybrid& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::preform_hybrid"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::preform_hybrid";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
+
    protected:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
@@ -63,7 +75,10 @@ class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<himan_plugin>(new preform_hybrid()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<himan_plugin>(new preform_hybrid());
+}
 }  // namespace plugin
 }  // namespace himan
 
