@@ -835,8 +835,8 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		// Stratuksen Topin lämpötila (jäätävä tihku)
 		auto Ttop = h->VerticalValue(param("T-K"), top);
 
-		ret->Param(stratusTopParam);
-		ret->Data().Set(top);
+		ret->Param(stratusTopTempParam);
+		ret->Data().Set(Ttop);
 
 		// Stratuksen keskimääräinen lämpötila (poissulkemaan
 		// kylmät <-10C stratukset, joiden toppi >-10C) (jäätävä tihku)
@@ -882,10 +882,6 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		if (e != kFileDataNotFound)
 		{
 			throw runtime_error("Stratus() caught exception " + to_string(e));
-		}
-		else
-		{
-			return;
 		}
 	}
 
