@@ -12,7 +12,8 @@ User defined output parameters, see per-plugin configuration options.
 
 # Method of calculation
 
-Plugin will check how many ensemble members forecast values larger or smaller than given threshold, missing values are excluded. The probability _direction_ of certain parameters is hard coded. For example if target parameter is PROB-TC-0, plugin will calculate the probability of temperature being _below_ zero.
+Plugin will check how many ensemble members forecast values fulfill the given conditition (often being larger or smaller than some threshold). Plugin does not support multi-parameter probabilities.
+If ensemble contains missing values, they are removed before producing the probability value.
 
 # Per-plugin configuration options
 
