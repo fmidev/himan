@@ -57,7 +57,7 @@ std::vector<int> reduced_gaussian_grid::NumberOfPointsAlongParallels() const
 {
 	return itsNumberOfPointsAlongParallels;
 }
-void reduced_gaussian_grid::NumberOfPointsAlongParallels(std::vector<int> theNumberOfPointsAlongParallels)
+void reduced_gaussian_grid::NumberOfPointsAlongParallels(const std::vector<int>& theNumberOfPointsAlongParallels)
 {
 	ASSERT((itsN == kHPMissingInt && itsNumberOfPointsAlongParallels.size() == 0) ||
 	       static_cast<size_t>(itsN * 2) == theNumberOfPointsAlongParallels.size());

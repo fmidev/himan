@@ -16,8 +16,8 @@ class aggregation
 {
    public:
 	aggregation();
-	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theFirstTimeValue,
-	            int theLastTimeValue);
+	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theTimeResolutionValue,
+	            int theFirstTimeValue);
 	~aggregation()
 	{
 	}

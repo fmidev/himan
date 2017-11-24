@@ -275,7 +275,7 @@ void configuration::UseCache(bool theUseCache)
 {
 	itsUseCache = theUseCache;
 }
-void configuration::SourceGeomNames(std::vector<std::string> theNames)
+void configuration::SourceGeomNames(const std::vector<std::string>& theNames)
 {
 	itsSourceGeomNames = theNames;
 }

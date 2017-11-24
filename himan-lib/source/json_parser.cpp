@@ -628,8 +628,6 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	HPDatabaseType dbtype = conf->DatabaseType();
 	producer sourceProducer = conf->SourceProducer();
 
-	map<string, string> prod;
-
 	raw_time latestOriginDateTime;
 
 	auto r = GET_PLUGIN(radon);

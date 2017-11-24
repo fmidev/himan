@@ -52,7 +52,7 @@ class reduced_gaussian_grid : public grid
 	bool Swap(HPScanningMode newScanningMode) override;
 
 	std::vector<int> NumberOfPointsAlongParallels() const;
-	void NumberOfPointsAlongParallels(std::vector<int> theNumberOfPointsAlongParallels);
+	void NumberOfPointsAlongParallels(const std::vector<int>& theNumberOfPointsAlongParallels);
 
 	reduced_gaussian_grid* Clone() const override;
 
