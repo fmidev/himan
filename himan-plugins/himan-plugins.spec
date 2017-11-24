@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.22.17
+Version: 17.11.24
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.11.9
+Requires: himan-lib >= 17.11.22
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.10.25
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Nov 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.24-1.fmi
+- preform-hybrid bugfix
 * Wed Nov 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.22-1.fmi
 - Update to auto_taf
 - Remove double-packing from grib plugin
